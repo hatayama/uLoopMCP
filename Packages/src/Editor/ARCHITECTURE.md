@@ -8,36 +8,131 @@ This document details the architecture of the C# code within the `Packages/src/E
 
 ```mermaid
 graph TB
-    subgraph "MCP Clients"
-        Claude[Claude]
-        Cursor[Cursor]
-        VSCode[VSCode]
+    subgraph "1. LLM Tools (MCP Clients)"
+        Claude[Claude Code<br/>MCP Client]
+        Cursor[Cursor<br/>MCP Client]
+        VSCode[VSCode<br/>MCP Client]
     end
     
-    subgraph "TypeScript Server"
-        MCP[UnityMcpServer<br/>MCP Protocol]
-        UC[UnityClient<br/>TCP Client]
+    subgraph "2. TypeScript Server (MCP Server + Unity TCP Client)"
+        MCP[UnityMcpServer<br/>MCP Protocol Server<br/>server.ts]
+        UC[UnityClient<br/>TypeScript TCP Client<br/>unity-client.ts]
+        UCM[UnityConnectionManager<br/>Connection Orchestrator<br/>unity-connection-manager.ts]
+        UD[UnityDiscovery<br/>Unity Port Scanner<br/>unity-discovery.ts]
     end
     
-    subgraph "Unity Editor"
-        MB[McpBridgeServer<br/>TCP Server]
-        CMD[Tool System]
-        UI[McpEditorWindow<br/>GUI]
+    subgraph "3. Unity Editor (TCP Server)"
+        MB[McpBridgeServer<br/>TCP Server<br/>McpBridgeServer.cs]
+        CMD[Tool System<br/>UnityApiHandler.cs]
+        UI[McpEditorWindow<br/>GUI<br/>McpEditorWindow.cs]
         API[Unity APIs]
+        SM[McpSessionManager<br/>McpSessionManager.cs]
     end
     
-    Claude -.->|MCP Protocol| MCP
-    Cursor -.->|MCP Protocol| MCP
-    VSCode -.->|MCP Protocol| MCP
+    Claude -.->|MCP Protocol<br/>stdio/TCP| MCP
+    Cursor -.->|MCP Protocol<br/>stdio/TCP| MCP
+    VSCode -.->|MCP Protocol<br/>stdio/TCP| MCP
     
     MCP <--> UC
-    UC <-->|TCP/JSON-RPC| MB
-    UC -->|Client Name| MB
+    UCM --> UC
+    UCM --> UD
+    UD -.->|Port Discovery<br/>Polling| MB
+    UC <-->|TCP/JSON-RPC<br/>Port 8700+| MB
+    UC -->|setClientName| MB
     MB <--> CMD
     CMD <--> API
     UI --> MB
     UI --> CMD
+    MB --> SM
+    
+    classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef server fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef bridge fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    
+    class Claude,Cursor,VSCode client
+    class MCP,MB server
+    class UC,UD,UCM bridge
 ```
+
+### Client-Server Relationship Breakdown
+
+```mermaid
+graph LR
+    subgraph "Communication Layers"
+        LLM[LLM Tools<br/>CLIENT]
+        TS[TypeScript Server<br/>SERVER for MCP<br/>CLIENT for Unity]
+        Unity[Unity Editor<br/>SERVER for TCP]
+    end
+    
+    LLM -->|"MCP Protocol<br/>stdio/TCP<br/>Port: Various"| TS
+    TS -->|"TCP/JSON-RPC<br/>Port: 8700-9100"| Unity
+    
+    classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef server fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef hybrid fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    
+    class LLM client
+    class Unity server
+    class TS hybrid
+```
+
+### Protocol and Communication Details
+
+```mermaid
+sequenceDiagram
+    participant LLM as LLM Tool<br/>(CLIENT)
+    participant TS as TypeScript Server<br/>(MCP SERVER)
+    participant UC as UnityClient<br/>(TypeScript TCP CLIENT)<br/>unity-client.ts
+    participant Unity as Unity Editor<br/>(TCP SERVER)<br/>McpBridgeServer.cs
+    
+    Note over LLM, Unity: 1. MCP Protocol Layer (stdio/TCP)
+    LLM->>TS: MCP initialize request
+    TS->>LLM: MCP initialize response
+    
+    Note over LLM, Unity: 2. TCP Protocol Layer (JSON-RPC)
+    LLM->>TS: MCP tools/call request
+    TS->>UC: Parse and forward
+    UC->>Unity: TCP JSON-RPC request
+    Unity->>UC: TCP JSON-RPC response
+    UC->>TS: Parse and forward
+    TS->>LLM: MCP tools/call response
+    
+    Note over LLM, Unity: Client-Server Roles:
+    Note over LLM: CLIENT: Initiates requests
+    Note over TS: SERVER: Serves MCP protocol
+    Note over UC: TypeScript TCP CLIENT: Connects to Unity
+    Note over Unity: SERVER: Accepts TCP connections
+```
+
+### Communication Protocol Summary
+
+| Component | Role | Protocol | Port | Connection Type |
+|-----------|------|----------|------|----------------|
+| **LLM Tools** (Claude, Cursor, VSCode) | **CLIENT** | MCP Protocol | stdio/Various | Initiates MCP requests |
+| **TypeScript Server** | **SERVER** (for MCP)<br/>**CLIENT** (for Unity) | MCP ↔ TCP/JSON-RPC | stdio ↔ 8700-9100 | Bridge between protocols |
+| **Unity Editor** | **SERVER** | TCP/JSON-RPC | 8700-9100 | Accepts TCP connections |
+
+### Communication Flow Details
+
+#### Layer 1: LLM Tools ↔ TypeScript Server (MCP Protocol)
+- **Protocol**: Model Context Protocol (MCP)
+- **Transport**: stdio or TCP
+- **Data Format**: JSON-RPC 2.0 with MCP extensions
+- **Connection**: LLM tools act as MCP clients
+- **Lifecycle**: Managed by LLM tool (Claude, Cursor, VSCode)
+
+#### Layer 2: TypeScript Server ↔ Unity Editor (TCP Protocol)
+- **Protocol**: Custom TCP with JSON-RPC 2.0
+- **Transport**: TCP Socket
+- **Ports**: 8700, 8800, 8900, 9000, 9100, 8600 (auto-discovery)
+- **Connection**: TypeScript server acts as TCP client
+- **Lifecycle**: Managed by UnityConnectionManager with automatic reconnection
+
+#### Key Architectural Points:
+1. **TypeScript Server serves as a Protocol Bridge**: Converts MCP protocol to TCP/JSON-RPC
+2. **Unity Editor is the final TCP Server**: Processes tool requests and executes Unity operations
+3. **LLM Tools are pure MCP Clients**: Send tool requests through standard MCP protocol
+4. **Automatic Discovery**: TypeScript server discovers Unity instances through port scanning
 
 Its primary responsibilities are:
 1.  **Running a TCP Server (`McpBridgeServer`)**: Listens for connections from the TypeScript server to receive tool requests.
@@ -200,7 +295,123 @@ To avoid manual and error-prone JSON parsing, the system uses a schema-driven ap
 
 This design eliminates inconsistencies between the server and client and provides strong type safety within the C# code.
 
-### 2.7. Client Identification Flow
+### 2.7. TypeScript Server to Unity Connection Architecture
+
+#### 2.7.1. Connection Discovery and Management Components
+
+The system implements a sophisticated connection discovery and management system that handles Unity Editor's frequent restarts and domain reloads:
+
+- **`UnityClient`** (`unity-client.ts`): **TypeScript TCP client** that establishes and maintains connection to Unity Editor
+- **`UnityDiscovery`** (`unity-discovery.ts`): **TypeScript singleton discovery service** that locates running Unity instances through port scanning
+- **`UnityConnectionManager`** (`unity-connection-manager.ts`): **TypeScript orchestrator** that manages connection lifecycle and state management
+- **`SafeTimer`** (`safe-timer.ts`): **TypeScript utility** that ensures proper timer cleanup to prevent orphaned processes
+
+#### 2.7.2. Initial Connection Sequence
+
+```mermaid
+sequenceDiagram
+    box LLM CLIENT
+    participant MCP as MCP Client
+    end
+    
+    box TypeScript MCP SERVER
+    participant TS as TypeScript Server<br/>server.ts
+    end
+    
+    box TypeScript Unity CLIENT
+    participant UCM as UnityConnectionManager<br/>unity-connection-manager.ts
+    participant UD as UnityDiscovery<br/>unity-discovery.ts
+    participant UC as UnityClient<br/>unity-client.ts
+    end
+    
+    box Unity TCP SERVER
+    participant Unity as Unity Editor<br/>McpBridgeServer.cs
+    end
+    
+    MCP->>TS: initialize (clientInfo.name)
+    TS->>TS: Store client name
+    TS->>UCM: Initialize connection
+    UCM->>UD: Start discovery (1s polling)
+    
+    loop Every 1 second
+        UD->>Unity: Check ports [8700, 8800, 8900, 9000, 9100, 8600]
+        Unity-->>UD: Port 8700 responds
+    end
+    
+    UD->>UC: Connect to port 8700
+    UC->>Unity: TCP connection established
+    UC->>Unity: Send setClientName command
+    Unity->>Unity: Update UI with client name
+    UD->>UD: Stop discovery (connection successful)
+```
+
+#### 2.7.3. Connection Health Monitoring and Reconnection
+
+The system implements a robust reconnection mechanism that handles various failure scenarios:
+
+**Connection State Detection:**
+- **Socket Events**: `error`, `close`, `end` events trigger reconnection
+- **Health Checks**: Periodic ping commands to verify connection integrity
+- **Timeout Handling**: Connection attempts timeout after configured interval
+
+**Reconnection Polling Process:**
+1. **Detection Phase**: `UnityDiscovery` detects connection loss
+2. **Restart Discovery**: Automatic restart of discovery process with 1-second intervals
+3. **Port Scanning**: Systematic scanning of Unity ports (8700, 8800, 8900, 9000, 9100, 8600)
+4. **Connection Establishment**: Automatic reconnection when Unity becomes available
+5. **State Restoration**: Re-execution of `reconnectHandlers` to restore client state
+
+```mermaid
+sequenceDiagram
+    box TypeScript CLIENT
+    participant UC as UnityClient<br/>unity-client.ts
+    participant UD as UnityDiscovery<br/>unity-discovery.ts
+    end
+    
+    box Unity TCP SERVER
+    participant Unity as Unity Editor<br/>McpBridgeServer.cs
+    participant UI as Unity UI<br/>McpEditorWindow.cs
+    end
+    
+    Note over Unity: Connection Lost (Editor restart/domain reload)
+    UC->>UC: Detect connection loss
+    UC->>UD: Trigger handleConnectionLost()
+    UD->>UD: Restart discovery timer
+    
+    loop Every 1 second until Unity found
+        UD->>Unity: Scan ports [8700, 8800, 8900, 9000, 9100, 8600]
+        Unity-->>UD: No response (Unity not ready)
+    end
+    
+    Unity->>Unity: Unity Editor starts
+    UD->>Unity: Port scan detects Unity
+    UD->>UC: Initiate reconnection
+    UC->>Unity: Establish new TCP connection
+    UC->>UC: Execute reconnectHandlers
+    UC->>Unity: Send setClientName command
+    Unity->>UI: Update client display
+```
+
+#### 2.7.4. SafeTimer Implementation for Process Cleanup
+
+The system uses a custom `SafeTimer` class to prevent orphaned processes:
+
+**Features:**
+- **Automatic Cleanup**: Registers process exit handlers to clean up timers
+- **Singleton Pattern**: Prevents multiple timer instances for the same operation
+- **Development Monitoring**: Tracks active timer count for debugging
+- **Graceful Shutdown**: Ensures timers are properly disposed on process termination
+
+**Implementation Details:**
+```typescript
+// Automatic cleanup on process exit
+process.on('exit', () => SafeTimer.cleanup());
+process.on('SIGINT', () => SafeTimer.cleanup());
+process.on('SIGTERM', () => SafeTimer.cleanup());
+```
+
+#### 2.7.5. Client Identification Flow
+
 The system ensures proper client identification to prevent "Unknown Client" display issues:
 
 1. **Initial State**: Unity Editor shows "No connected tools found" when no clients are connected.
@@ -371,15 +582,20 @@ Contains low-level, general-purpose helper classes.
 
 ```mermaid
 sequenceDiagram
-    participant TS as TypeScript Client
-    participant MB as McpBridgeServer
-    participant JP as JsonRpcProcessor
-    participant UA as UnityApiHandler
-    participant SC as McpSecurityChecker
-    participant UR as UnityCommandRegistry
-    participant AC as AbstractUnityCommand
-    participant CC as ConcreteCommand
+    box TypeScript CLIENT
+    participant TS as TypeScript Client<br/>unity-client.ts
+    end
+    
+    box Unity TCP SERVER
+    participant MB as McpBridgeServer<br/>McpBridgeServer.cs
+    participant JP as JsonRpcProcessor<br/>JsonRpcProcessor.cs
+    participant UA as UnityApiHandler<br/>UnityApiHandler.cs
+    participant SC as McpSecurityChecker<br/>McpSecurityChecker.cs
+    participant UR as UnityCommandRegistry<br/>UnityCommandRegistry.cs
+    participant AC as AbstractUnityCommand<br/>AbstractUnityCommand.cs
+    participant CC as ConcreteCommand<br/>*Command.cs
     participant UT as Unity Tool<br/>(CompileController etc)
+    end
 
     TS->>MB: JSON String
     MB->>JP: ProcessRequest(json)
@@ -422,39 +638,248 @@ sequenceDiagram
 
 This workflow ensures clean separation of concerns while maintaining responsiveness and proper state management throughout the application lifecycle.
 
-### 5.3. Session Management Flow
+### 5.3. TypeScript-Unity Connection Lifecycle
+
+#### 5.3.1. Complete Connection Establishment Flow
 
 ```mermaid
 sequenceDiagram
-    participant TS as TypeScript Server
-    participant MB as McpBridgeServer
-    participant SM as McpSessionManager
-    participant UI as McpEditorWindow
-    participant Unity as Unity Editor
+    box LLM CLIENT
+    participant MCP as MCP Client
+    end
     
-    TS->>MB: Connect + SetClientName
+    box TypeScript MCP SERVER
+    participant TS as TypeScript Server<br/>server.ts
+    end
+    
+    box TypeScript Unity CLIENT
+    participant UCM as UnityConnectionManager<br/>unity-connection-manager.ts
+    participant UD as UnityDiscovery<br/>unity-discovery.ts
+    participant UC as UnityClient<br/>unity-client.ts
+    end
+    
+    box Unity TCP SERVER
+    participant Unity as Unity Editor
+    participant MB as McpBridgeServer<br/>McpBridgeServer.cs
+    participant SM as McpSessionManager<br/>McpSessionManager.cs
+    participant UI as McpEditorWindow<br/>McpEditorWindow.cs
+    end
+    
+    MCP->>TS: initialize (clientInfo.name)
+    TS->>TS: Store client name
+    TS->>UCM: Initialize connection
+    UCM->>UD: Start discovery (1s polling)
+    
+    loop Unity Discovery
+        UD->>Unity: Port scan [8700, 8800, 8900, 9000, 9100, 8600]
+        Unity-->>UD: Port 8700 responds
+    end
+    
+    UD->>UC: Connect to Unity
+    UC->>Unity: TCP connection request
+    Unity->>MB: Accept connection
+    MB->>MB: Create ConnectedClient
+    MB->>SM: RegisterClient(clientInfo)
+    SM->>SM: Store session state
+    
+    UC->>Unity: Send setClientName command
+    Unity->>SM: Update client name
+    SM->>UI: Update client display
+    UI->>UI: Show connected client
+    
+    UD->>UD: Stop discovery (success)
+```
+
+#### 5.3.2. Connection Loss Detection and Recovery
+
+```mermaid
+sequenceDiagram
+    box TypeScript CLIENT
+    participant UC as UnityClient<br/>unity-client.ts
+    participant UD as UnityDiscovery<br/>unity-discovery.ts
+    end
+    
+    box Unity TCP SERVER
+    participant Unity as Unity Editor
+    participant MB as McpBridgeServer<br/>McpBridgeServer.cs
+    participant SM as McpSessionManager<br/>McpSessionManager.cs
+    participant UI as McpEditorWindow<br/>McpEditorWindow.cs
+    end
+    
+    Note over Unity: Connection Lost (Editor restart/domain reload)
+    
+    Unity->>MB: Connection terminated
+    MB->>SM: Client disconnected
+    SM->>UI: Update connection status
+    UI->>UI: Show "No connected tools found"
+    
+    UC->>UC: Detect socket error/close
+    UC->>UD: Trigger handleConnectionLost()
+    UD->>UD: Restart discovery timer
+    
+    loop Every 1 second
+        UD->>Unity: Port scan [8700, 8800, 8900, 9000, 9100, 8600]
+        Unity-->>UD: No response (Unity not ready)
+    end
+    
+    Note over Unity: Unity Editor restarts
+    Unity->>Unity: Initialize McpBridgeServer
+    
+    UD->>Unity: Port scan detects Unity
+    UD->>UC: Initiate reconnection
+    UC->>Unity: Establish new TCP connection
+    Unity->>MB: Accept reconnection
+    MB->>SM: Register reconnected client
+    
+    UC->>UC: Execute reconnectHandlers
+    UC->>Unity: Send setClientName command
+    Unity->>SM: Update client name
+    SM->>UI: Update client display
+    UI->>UI: Show reconnected client
+```
+
+#### 5.3.3. Session Management with Domain Reload Resilience
+
+```mermaid
+sequenceDiagram
+    box TypeScript Unity CLIENT
+    participant UC as UnityClient<br/>unity-client.ts
+    end
+    
+    box Unity TCP SERVER
+    participant MB as McpBridgeServer<br/>McpBridgeServer.cs
+    participant SM as McpSessionManager<br/>McpSessionManager.cs
+    participant UI as McpEditorWindow<br/>McpEditorWindow.cs
+    participant Unity as Unity Editor
+    participant SC as McpServerController<br/>McpServerController.cs
+    end
+    
+    UC->>MB: Connect + SetClientName
     MB->>SM: RegisterClient(clientInfo)
     SM->>SM: Store session state
     SM->>UI: Update client display
     UI->>UI: Show connected client
     
+    Note over Unity: Domain Reload Triggered
+    Unity->>SC: OnBeforeAssemblyReload
+    SC->>SC: Save server state to SessionState
+    SC->>MB: Stop server gracefully
+    MB->>SM: Persist session data
+    SM->>SM: Store client info to SessionState
+    
     Note over Unity: Domain Reload Occurs
-    Unity->>SM: OnBeforeAssemblyReload
-    SM->>SM: Persist session state
-    Unity->>SM: OnAfterAssemblyReload
-    SM->>SM: Restore session state
-    SM->>MB: Restore connections
-    SM->>UI: Update UI state
+    Unity->>SC: OnAfterAssemblyReload
+    SC->>SC: Read server state from SessionState
+    SC->>MB: Restart server if was running
+    MB->>SM: Restore session manager
+    SM->>SM: Restore client info from SessionState
+    SM->>UI: Update UI with restored state
+    
+    Note over UC: TypeScript detects connection loss
+    UC->>UC: Trigger reconnection process
+    UC->>MB: Reconnect to Unity
+    MB->>SM: Update session with reconnected client
+    SM->>UI: Update client display
 ```
 
-### 5.4. Security Validation Flow
+#### 5.3.4. Multi-Client Session Management
 
 ```mermaid
 sequenceDiagram
-    participant UA as UnityApiHandler
-    participant SC as McpSecurityChecker
+    box LLM CLIENTS
+    participant C1 as Claude Client
+    participant C2 as Cursor Client
+    end
+    
+    box TypeScript MCP SERVER
+    participant TS as TypeScript Server<br/>server.ts
+    end
+    
+    box TypeScript Unity CLIENT
+    participant UC as UnityClient<br/>unity-client.ts
+    end
+    
+    box Unity TCP SERVER
+    participant MB as McpBridgeServer<br/>McpBridgeServer.cs
+    participant SM as McpSessionManager<br/>McpSessionManager.cs
+    participant UI as McpEditorWindow<br/>McpEditorWindow.cs
+    end
+    
+    C1->>TS: initialize (clientInfo.name = "Claude")
+    TS->>UC: Setup connection with client name
+    UC->>MB: Connect + SetClientName("Claude")
+    MB->>SM: RegisterClient("Claude")
+    SM->>UI: Show "Claude" connected
+    
+    C2->>TS: initialize (clientInfo.name = "Cursor")
+    TS->>UC: Setup connection with client name
+    UC->>MB: Connect + SetClientName("Cursor")
+    MB->>SM: RegisterClient("Cursor")
+    SM->>SM: Replace previous client info
+    SM->>UI: Show "Cursor" connected
+    
+    Note over SM: Only latest client is displayed
+    Note over SM: Session state tracks last connected client
+```
+
+### 5.4. Connection Resilience and Recovery Patterns
+
+#### 5.4.1. Connection State Management
+
+The system maintains connection state through multiple layers:
+
+**TypeScript Side State Tracking:**
+- `UnityClient._connected`: Boolean flag indicating active connection
+- `UnityDiscovery.isRunning`: Controls discovery process lifecycle
+- `reconnectHandlers`: Array of functions executed on reconnection
+
+**Unity Side State Tracking:**
+- `McpBridgeServer.connectedClients`: Concurrent dictionary of active connections
+- `McpSessionManager`: Persistent session state across domain reloads
+- `McpServerController`: Static server lifecycle management
+
+#### 5.4.2. Recovery Mechanisms
+
+**Graceful Degradation:**
+- Commands continue to queue during connection loss
+- UI displays appropriate connection status
+- Background processes maintain state integrity
+
+**Automatic Recovery:**
+- 1-second polling interval for Unity discovery
+- Exponential backoff for connection attempts
+- State restoration through `reconnectHandlers`
+
+**Error Handling:**
+- Socket-level error detection and logging
+- Timeout handling for connection attempts
+- Graceful handling of Unity Editor crashes
+
+#### 5.4.3. Port Management Strategy
+
+The system uses a systematic port discovery approach:
+
+**Port Range:** `[8700, 8800, 8900, 9000, 9100, 8600]`
+**Discovery Strategy:**
+1. Start with default port (8700)
+2. Increment by 100 for additional instances
+3. Fall back to 8600 as final attempt
+
+**Port Conflict Resolution:**
+- Automatic port selection based on availability
+- Support for multiple Unity instances
+- Environment variable override capability
+
+### 5.5. Security Validation Flow
+
+```mermaid
+sequenceDiagram
+    box Unity TCP SERVER
+    participant UA as UnityApiHandler<br/>UnityApiHandler.cs
+    participant SC as McpSecurityChecker<br/>McpSecurityChecker.cs
     participant Settings as Security Settings
-    participant Command as Command Instance
+    participant Command as Command Instance<br/>*Command.cs
+    end
     
     UA->>SC: ValidateCommand(commandName)
     SC->>Settings: Check security policy
@@ -470,3 +895,32 @@ sequenceDiagram
     end
     UA->>Command: Execute (if validated)
 ```
+
+### 5.6. Implementation Notes
+
+#### 5.6.1. TypeScript Implementation Details
+
+**Key Classes Location:**
+- `UnityClient`: `/Packages/src/TypeScriptServer~/src/unity-client.ts`
+- `UnityDiscovery`: `/Packages/src/TypeScriptServer~/src/unity-discovery.ts`
+- `UnityConnectionManager`: `/Packages/src/TypeScriptServer~/src/unity-connection-manager.ts`
+- `SafeTimer`: `/Packages/src/TypeScriptServer~/src/safe-timer.ts`
+
+**Critical Implementation Features:**
+- **Singleton Pattern**: `UnityDiscovery` prevents multiple discovery instances
+- **Event-Driven Architecture**: Socket events trigger state changes
+- **Process Cleanup**: `SafeTimer` ensures no orphaned processes
+- **Error Resilience**: Comprehensive error handling and recovery
+
+#### 5.6.2. Unity C# Implementation Details
+
+**Key Classes Location:**
+- `McpBridgeServer`: `/Packages/src/Editor/Server/McpBridgeServer.cs`
+- `McpServerController`: `/Packages/src/Editor/Server/McpServerController.cs`
+- `McpSessionManager`: `/Packages/src/Editor/Core/McpSessionManager.cs`
+
+**Critical Implementation Features:**
+- **Thread Safety**: Concurrent collections for client management
+- **Domain Reload Resilience**: `SessionState` persistence
+- **Lifecycle Management**: `[InitializeOnLoad]` attribute for automatic startup
+- **Client Isolation**: Individual thread handling for each client connection
