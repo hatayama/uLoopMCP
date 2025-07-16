@@ -222,12 +222,12 @@ namespace io.github.hatayama.uLoopMCP
                 configureCallback: (editor) => ConfigureEditor(),
                 foldoutCallback: UpdateShowLLMToolSettings);
 
-            SecuritySettingsData securityData = CreateSecuritySettingsData();
-            _view.DrawSecuritySettings(
-                data: securityData,
-                foldoutCallback: UpdateShowSecuritySettings,
-                enableTestsCallback: UpdateEnableTestsExecution,
-                allowMenuCallback: UpdateAllowMenuItemExecution);
+            // SecuritySettingsData securityData = CreateSecuritySettingsData();
+            // _view.DrawSecuritySettings(
+            //     data: securityData,
+            //     foldoutCallback: UpdateShowSecuritySettings,
+            //     enableTestsCallback: UpdateEnableTestsExecution,
+            //     allowMenuCallback: UpdateAllowMenuItemExecution);
 
 #if ULOOPMCP_DEBUG
             DrawDeveloperTools();
@@ -365,16 +365,16 @@ namespace io.github.hatayama.uLoopMCP
             return new EditorConfigData(_model.UI.SelectedEditorType, _model.UI.ShowLLMToolSettings, isServerRunning, currentPort, isConfigured, hasPortMismatch, configurationError);
         }
 
-        /// <summary>
-        /// Create security settings data for view rendering
-        /// </summary>
-        private SecuritySettingsData CreateSecuritySettingsData()
-        {
-            return new SecuritySettingsData(
-                _model.UI.ShowSecuritySettings,
-                McpEditorSettings.GetEnableTestsExecution(),
-                McpEditorSettings.GetAllowMenuItemExecution());
-        }
+        // /// <summary>
+        // /// Create security settings data for view rendering
+        // /// </summary>
+        // private SecuritySettingsData CreateSecuritySettingsData()
+        // {
+        //     return new SecuritySettingsData(
+        //         _model.UI.ShowSecuritySettings,
+        //         McpEditorSettings.GetEnableTestsExecution(),
+        //         McpEditorSettings.GetAllowMenuItemExecution());
+        // }
 
         /// <summary>
         /// Configure editor settings
@@ -470,29 +470,29 @@ namespace io.github.hatayama.uLoopMCP
             _model.UpdateMainScrollPosition(position);
         }
 
-        /// <summary>
-        /// Update ShowSecuritySettings setting
-        /// </summary>
-        private void UpdateShowSecuritySettings(bool show)
-        {
-            _model.UpdateShowSecuritySettings(show);
-        }
+        // /// <summary>
+        // /// Update ShowSecuritySettings setting
+        // /// </summary>
+        // private void UpdateShowSecuritySettings(bool show)
+        // {
+        //     _model.UpdateShowSecuritySettings(show);
+        // }
 
-        /// <summary>
-        /// Update EnableTestsExecution setting with persistence
-        /// </summary>
-        private void UpdateEnableTestsExecution(bool enable)
-        {
-            _model.UpdateEnableTestsExecution(enable);
-        }
+        // /// <summary>
+        // /// Update EnableTestsExecution setting with persistence
+        // /// </summary>
+        // private void UpdateEnableTestsExecution(bool enable)
+        // {
+        //     _model.UpdateEnableTestsExecution(enable);
+        // }
 
-        /// <summary>
-        /// Update AllowMenuItemExecution setting with persistence
-        /// </summary>
-        private void UpdateAllowMenuItemExecution(bool allow)
-        {
-            _model.UpdateAllowMenuItemExecution(allow);
-        }
+        // /// <summary>
+        // /// Update AllowMenuItemExecution setting with persistence
+        // /// </summary>
+        // private void UpdateAllowMenuItemExecution(bool allow)
+        // {
+        //     _model.UpdateAllowMenuItemExecution(allow);
+        // }
 
 
         /// <summary>
