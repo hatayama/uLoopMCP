@@ -384,11 +384,15 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Handles communication with the client.
+        /// Handles communication with the client using Content-Length framing.
         /// </summary>
         private async Task HandleClient(TcpClient client, CancellationToken cancellationToken)
         {
             string clientEndpoint = client.Client.RemoteEndPoint?.ToString() ?? McpServerConfig.UNKNOWN_CLIENT_ENDPOINT;
+            
+            // Initialize new components for Content-Length framing
+            DynamicBufferManager bufferManager = null;
+            MessageReassembler messageReassembler = null;
             
             try
             {
@@ -407,8 +411,12 @@ namespace io.github.hatayama.uLoopMCP
                     ConnectedClient connectedClient = new ConnectedClient(clientEndpoint, stream);
                     bool addResult = connectedClients.TryAdd(clientKey, connectedClient);
                     
-                    byte[] buffer = new byte[McpServerConfig.BUFFER_SIZE];
-                    string incompleteJson = string.Empty; // Buffer for incomplete JSON
+                    // Initialize new framing components
+                    bufferManager = new DynamicBufferManager();
+                    messageReassembler = new MessageReassembler(bufferManager);
+                    
+                    // Start with initial buffer size
+                    byte[] buffer = bufferManager.GetBuffer(BufferConfig.INITIAL_BUFFER_SIZE);
                     
                     while (!cancellationToken.IsCancellationRequested && client.Connected)
                     {
@@ -419,30 +427,36 @@ namespace io.github.hatayama.uLoopMCP
                             break; // Client disconnected.
                         }
                         
-                        string receivedData = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                        // Add received data to message reassembler
+                        messageReassembler.AddData(buffer, bytesRead);
                         
-
-
-                        // Combine with any incomplete JSON from previous buffer
-                        string dataToProcess = incompleteJson + receivedData;
-                        incompleteJson = string.Empty;
-
-                        // Extract complete JSON messages
-                        string[] completeJsonMessages = ExtractCompleteJsonMessages(dataToProcess, out incompleteJson);
-
+                        // Extract any complete messages
+                        string[] completeJsonMessages = messageReassembler.ExtractCompleteMessages();
+                        
                         foreach (string requestJson in completeJsonMessages)
                         {
                             if (string.IsNullOrWhiteSpace(requestJson)) continue;
                             
-                            // JSON-RPC processing and response sending with client context.
+                            // JSON-RPC processing and response sending with client context
+                            McpLogger.LogDebug($"[McpBridgeServer] Processing request from {clientEndpoint}: {requestJson}");
                             string responseJson = await JsonRpcProcessor.ProcessRequest(requestJson, clientEndpoint);
                             
                             // Only send response if it's not null (notifications return null)
                             if (!string.IsNullOrEmpty(responseJson))
                             {
-                                byte[] responseData = Encoding.UTF8.GetBytes(responseJson + "\n");
+                                McpLogger.LogDebug($"[McpBridgeServer] Sending response to {clientEndpoint}: {responseJson}");
+                                // Send response with Content-Length framing
+                                string framedResponse = CreateContentLengthFrame(responseJson);
+                                byte[] responseData = Encoding.UTF8.GetBytes(framedResponse);
+                                McpLogger.LogDebug($"[McpBridgeServer] Framed response size: {responseData.Length} bytes, Content-Length: {Encoding.UTF8.GetByteCount(responseJson)}");
                                 await stream.WriteAsync(responseData, 0, responseData.Length, cancellationToken);
                             }
+                        }
+                        
+                        // Validate reassembler state and clear if needed
+                        if (!messageReassembler.ValidateState())
+                        {
+                            McpLogger.LogWarning($"[HandleClient] Message reassembler state invalid for client {clientEndpoint}, cleared");
                         }
                     }
                 }
@@ -477,6 +491,16 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
+                // Dispose of framing components
+                try
+                {
+                    messageReassembler?.Dispose();
+                    bufferManager?.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    McpLogger.LogWarning($"Error disposing framing components for client {clientEndpoint}: {ex.Message}");
+                }
                 
                 // Remove client from connected clients list
                 // Find client by endpoint to get the correct key
@@ -502,7 +526,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Sends a JSON-RPC notification to all connected clients.
+        /// Sends a JSON-RPC notification to all connected clients using Content-Length framing.
         /// </summary>
         /// <param name="method">The notification method name</param>
         /// <param name="parameters">The notification parameters (optional)</param>
@@ -516,15 +540,17 @@ namespace io.github.hatayama.uLoopMCP
             // Create JSON-RPC notification
             JsonRpcNotification notification = new JsonRpcNotification("2.0", method, parameters);
 
-            string notificationJson = JsonConvert.SerializeObject(notification) + "\n";
-            byte[] notificationData = Encoding.UTF8.GetBytes(notificationJson);
-
+            string notificationJson = JsonConvert.SerializeObject(notification);
+            
+            // Frame the notification with Content-Length header
+            string framedNotification = CreateContentLengthFrame(notificationJson);
+            byte[] notificationData = Encoding.UTF8.GetBytes(framedNotification);
 
             await SendNotificationData(notificationData);
         }
 
         /// <summary>
-        /// Sends a pre-formatted JSON-RPC notification to all connected clients.
+        /// Sends a pre-formatted JSON-RPC notification to all connected clients using Content-Length framing.
         /// </summary>
         /// <param name="notificationJson">The complete JSON-RPC notification string</param>
         public void SendNotificationToClients(string notificationJson)
@@ -534,13 +560,10 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // Ensure the JSON ends with a newline
-            if (!notificationJson.EndsWith("\n"))
-            {
-                notificationJson += "\n";
-            }
-
-            byte[] notificationData = Encoding.UTF8.GetBytes(notificationJson);
+            // Frame the notification with Content-Length header
+            string framedNotification = CreateContentLengthFrame(notificationJson);
+            byte[] notificationData = Encoding.UTF8.GetBytes(framedNotification);
+            
             _ = SendNotificationData(notificationData);
         }
 
@@ -579,76 +602,25 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
+
+
         /// <summary>
-        /// Extract complete JSON messages from received data using JsonTextReader
-        /// Handles both objects and arrays, with proper Unicode and escape sequence support
+        /// Creates a Content-Length framed message for JSON-RPC 2.0 communication.
         /// </summary>
-        private string[] ExtractCompleteJsonMessages(string data, out string remainingIncomplete)
+        /// <param name="jsonContent">The JSON content to frame</param>
+        /// <returns>The framed message with Content-Length header</returns>
+        private string CreateContentLengthFrame(string jsonContent)
         {
-            List<string> completeMessages = new List<string>();
-            remainingIncomplete = string.Empty;
-            
-            if (string.IsNullOrEmpty(data))
+            if (string.IsNullOrEmpty(jsonContent))
             {
-                return completeMessages.ToArray();
+                return string.Empty;
             }
             
-            // Split by lines first, then process each potential JSON
-            string[] lines = data.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            StringBuilder accumulatedJson = new StringBuilder();
+            // Calculate content length in bytes (UTF-8 encoding)
+            int contentLength = Encoding.UTF8.GetByteCount(jsonContent);
             
-            foreach (string line in lines)
-            {
-                string trimmedLine = line.Trim();
-                if (string.IsNullOrEmpty(trimmedLine))
-                    continue;
-                
-                accumulatedJson.AppendLine(trimmedLine);
-                string jsonCandidate = accumulatedJson.ToString().Trim();
-                
-                // Try to parse as complete JSON using Newtonsoft
-                if (IsCompleteJson(jsonCandidate))
-                {
-                    completeMessages.Add(jsonCandidate);
-                    accumulatedJson.Clear();
-                }
-            }
-            
-            // Any remaining accumulated data is incomplete
-            if (accumulatedJson.Length > 0)
-            {
-                remainingIncomplete = accumulatedJson.ToString().Trim();
-            }
-            
-            return completeMessages.ToArray();
-        }
-        
-        /// <summary>
-        /// Check if a string contains a complete, valid JSON structure
-        /// </summary>
-        private bool IsCompleteJson(string jsonString)
-        {
-            if (string.IsNullOrWhiteSpace(jsonString))
-                return false;
-                
-            try
-            {
-                using (var stringReader = new StringReader(jsonString))
-                using (var jsonReader = new JsonTextReader(stringReader))
-                {
-                    // Try to parse the entire string
-                    while (jsonReader.Read())
-                    {
-                        // JsonTextReader will throw if JSON is malformed or incomplete
-                    }
-                    return true;
-                }
-            }
-            catch (JsonReaderException)
-            {
-                // Incomplete or malformed JSON - this is expected behavior
-                return false;
-            }
+            // Create the framed message: Content-Length: <n>\r\n\r\n<json_content>
+            return $"Content-Length: {contentLength}\r\n\r\n{jsonContent}";
         }
 
         /// <summary>

@@ -1,5 +1,7 @@
 import * as net from 'net';
 import { UNITY_CONNECTION } from '../src/constants.js';
+import { ContentLengthFramer } from '../src/utils/content-length-framer.js';
+import { DynamicBuffer } from '../src/utils/dynamic-buffer.js';
 import {
     CompileResult,
     GetLogsResult,
@@ -12,14 +14,16 @@ import {
 } from './types.js';
 
 /**
- * Unity TCP/IP client (for direct communication debugging).
+ * Unity TCP/IP client (for direct communication debugging) with Content-Length framing.
  * This client communicates directly via TCP/IP without depending on bundled files.
+ * Uses Content-Length framing protocol for reliable JSON-RPC communication.
  */
 export class UnityDebugClient {
     private socket: net.Socket | null = null;
     private _connected: boolean = false;
     private readonly port: number;
     private readonly host: string;
+    private dynamicBuffer: DynamicBuffer = new DynamicBuffer();
 
     constructor() {
         this.port = parseInt(process.env.UNITY_TCP_PORT || UNITY_CONNECTION.DEFAULT_PORT, 10);
@@ -52,6 +56,7 @@ export class UnityDebugClient {
 
             this.socket.on('close', () => {
                 this._connected = false;
+                this.dynamicBuffer.clear();
                 console.log('🔌 Disconnected from Unity');
             });
 
@@ -86,25 +91,40 @@ export class UnityDebugClient {
                 }
             };
 
-            this.socket!.write(JSON.stringify(request) + '\n');
+            const requestFrame = ContentLengthFramer.createFrame(JSON.stringify(request));
+            this.socket!.write(requestFrame);
 
             const timeout = setTimeout(() => {
                 reject(new Error('Unity ping timeout'));
             }, 5000);
 
-            this.socket!.once('data', (data) => {
-                clearTimeout(timeout);
+            const handleData = (data: Buffer) => {
                 try {
-                    const response: JsonRpcResponse<PingResult> = JSON.parse(data.toString());
-                    if (response.error) {
-                        reject(new Error(`Unity ping error: ${response.error.message}`));
-                    } else {
-                        resolve(response.result || { message: 'Unity pong', timestamp: new Date().toISOString() });
+                    this.dynamicBuffer.append(data.toString());
+                    const frames = this.dynamicBuffer.extractAllFrames();
+                    
+                    for (const frame of frames) {
+                        const response: JsonRpcResponse<PingResult> = JSON.parse(frame);
+                        if ('id' in response && response.id === requestId) {
+                            clearTimeout(timeout);
+                            this.socket!.off('data', handleData);
+                            
+                            if (response.error) {
+                                reject(new Error(`Unity ping error: ${response.error.message}`));
+                            } else {
+                                resolve(response.result || { message: 'Unity pong', timestamp: new Date().toISOString() });
+                            }
+                            return;
+                        }
                     }
                 } catch (error) {
+                    clearTimeout(timeout);
+                    this.socket!.off('data', handleData);
                     reject(new Error('Invalid ping response from Unity'));
                 }
-            });
+            };
+            
+            this.socket!.on('data', handleData);
         });
     }
 
@@ -127,7 +147,8 @@ export class UnityDebugClient {
                 }
             };
 
-            this.socket!.write(JSON.stringify(request) + '\n');
+            const requestFrame = ContentLengthFramer.createFrame(JSON.stringify(request));
+            this.socket!.write(requestFrame);
 
             const timeout = setTimeout(() => {
                 reject(new Error('Unity compile timeout'));
@@ -191,25 +212,40 @@ export class UnityDebugClient {
                 }
             };
 
-            this.socket!.write(JSON.stringify(request) + '\n');
+            const requestFrame = ContentLengthFramer.createFrame(JSON.stringify(request));
+            this.socket!.write(requestFrame);
 
             const timeout = setTimeout(() => {
                 reject(new Error('Unity getLogs timeout'));
             }, 10000);
 
-            this.socket!.once('data', (data) => {
-                clearTimeout(timeout);
+            const handleData = (data: Buffer) => {
                 try {
-                    const response: JsonRpcResponse<GetLogsResult> = JSON.parse(data.toString());
-                    if (response.error) {
-                        reject(new Error(`Unity getLogs error: ${response.error.message}`));
-                    } else {
-                        resolve(response.result!);
+                    this.dynamicBuffer.append(data.toString());
+                    const frames = this.dynamicBuffer.extractAllFrames();
+                    
+                    for (const frame of frames) {
+                        const response: JsonRpcResponse<GetLogsResult> = JSON.parse(frame);
+                        if ('id' in response && response.id === requestId) {
+                            clearTimeout(timeout);
+                            this.socket!.off('data', handleData);
+                            
+                            if (response.error) {
+                                reject(new Error(`Unity getLogs error: ${response.error.message}`));
+                            } else {
+                                resolve(response.result!);
+                            }
+                            return;
+                        }
                     }
                 } catch (error) {
+                    clearTimeout(timeout);
+                    this.socket!.off('data', handleData);
                     reject(new Error('Invalid getLogs response from Unity'));
                 }
-            });
+            };
+            
+            this.socket!.on('data', handleData);
         });
     }
 
@@ -238,25 +274,40 @@ export class UnityDebugClient {
                 }
             };
 
-            this.socket!.write(JSON.stringify(request) + '\n');
+            const requestFrame = ContentLengthFramer.createFrame(JSON.stringify(request));
+            this.socket!.write(requestFrame);
 
             const timeout = setTimeout(() => {
                 reject(new Error('Unity runTests timeout'));
             }, 60000); // 60 second timeout
 
-            this.socket!.once('data', (data) => {
-                clearTimeout(timeout);
+            const handleData = (data: Buffer) => {
                 try {
-                    const response: JsonRpcResponse<TestResult> = JSON.parse(data.toString());
-                    if (response.error) {
-                        reject(new Error(`Unity runTests error: ${response.error.message}`));
-                    } else {
-                        resolve(response.result!);
+                    this.dynamicBuffer.append(data.toString());
+                    const frames = this.dynamicBuffer.extractAllFrames();
+                    
+                    for (const frame of frames) {
+                        const response: JsonRpcResponse<TestResult> = JSON.parse(frame);
+                        if ('id' in response && response.id === requestId) {
+                            clearTimeout(timeout);
+                            this.socket!.off('data', handleData);
+                            
+                            if (response.error) {
+                                reject(new Error(`Unity runTests error: ${response.error.message}`));
+                            } else {
+                                resolve(response.result!);
+                            }
+                            return;
+                        }
                     }
                 } catch (error) {
+                    clearTimeout(timeout);
+                    this.socket!.off('data', handleData);
                     reject(new Error('Invalid runTests response from Unity'));
                 }
-            });
+            };
+            
+            this.socket!.on('data', handleData);
         });
     }
 
@@ -291,21 +342,35 @@ export class UnityDebugClient {
                 reject(new Error('Request timeout'));
             }, 10000);
 
-            this.socket!.write(JSON.stringify(request) + '\n');
+            const requestFrame = ContentLengthFramer.createFrame(JSON.stringify(request));
+            this.socket!.write(requestFrame);
             console.log('📡 Request sent to Unity');
 
-            this.socket!.once('data', (data) => {
-                clearTimeout(timeout);
-                console.log('📨 Received data from Unity');
+            const handleData = (data: Buffer) => {
                 try {
-                    const response: JsonRpcResponse<T> = JSON.parse(data.toString());
-                    resolve(response);
+                    this.dynamicBuffer.append(data.toString());
+                    const frames = this.dynamicBuffer.extractAllFrames();
+                    
+                    for (const frame of frames) {
+                        const response: JsonRpcResponse<T> = JSON.parse(frame);
+                        if ('id' in response && response.id === request.id) {
+                            clearTimeout(timeout);
+                            this.socket!.off('data', handleData);
+                            console.log('📨 Received valid response from Unity');
+                            resolve(response);
+                            return;
+                        }
+                    }
                 } catch (error) {
+                    clearTimeout(timeout);
+                    this.socket!.off('data', handleData);
                     console.error('❌ Failed to parse response:', error);
                     console.error('Raw data:', data.toString());
                     reject(new Error('Invalid response from Unity'));
                 }
-            });
+            };
+            
+            this.socket!.on('data', handleData);
         });
     }
 
@@ -317,6 +382,7 @@ export class UnityDebugClient {
             this.socket.destroy();
             this.socket = null;
         }
+        this.dynamicBuffer.clear();
         this._connected = false;
     }
 }

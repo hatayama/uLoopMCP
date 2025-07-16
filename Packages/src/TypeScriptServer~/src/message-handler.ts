@@ -1,5 +1,7 @@
 import { JSONRPC } from './constants.js';
-import { errorToFile, warnToFile } from './utils/log-to-file.js';
+import { errorToFile, warnToFile, debugToFile } from './utils/log-to-file.js';
+import { ContentLengthFramer } from './utils/content-length-framer.js';
+import { DynamicBuffer } from './utils/dynamic-buffer.js';
 
 // Constants for JSON-RPC error types
 const JsonRpcErrorTypes = {
@@ -60,14 +62,17 @@ const hasValidId = (msg: unknown): msg is { id: number } => {
 };
 
 /**
- * Handles JSON-RPC message processing
+ * Handles JSON-RPC message processing with Content-Length framing support
  * Follows Single Responsibility Principle - only handles message parsing and routing
  *
- * Design document reference: Packages/src/TypeScriptServer~/ARCHITECTURE.md
+ * Design document reference: .kiro/specs/tcp-protocol-improvement/design.md
+ * Architecture reference: Packages/src/TypeScriptServer~/ARCHITECTURE.md
  *
  * Related classes:
  * - UnityClient: Uses this class for JSON-RPC message handling
  * - UnityMcpServer: Indirectly uses via UnityClient for Unity communication
+ * - ContentLengthFramer: Handles framing/parsing of Content-Length protocol
+ * - DynamicBuffer: Manages buffering of incoming data fragments
  */
 export class MessageHandler {
   private notificationHandlers: Map<string, (params: unknown) => void> = new Map();
@@ -75,6 +80,9 @@ export class MessageHandler {
     number,
     { resolve: (value: unknown) => void; reject: (reason: unknown) => void }
   > = new Map();
+
+  // Content-Length framing components
+  private dynamicBuffer: DynamicBuffer = new DynamicBuffer();
 
   /**
    * Register notification handler for specific method
@@ -102,28 +110,46 @@ export class MessageHandler {
   }
 
   /**
-   * Handle incoming data from Unity
+   * Handle incoming data from Unity using Content-Length framing
    */
-  handleIncomingData(data: string): void {
+  handleIncomingData(data: Buffer | string): void {
     try {
-      const lines = data.split('\n').filter((line) => line.trim());
+      const dataSize = data instanceof Buffer ? data.length : data.length;
+      debugToFile(`[MessageHandler] Received ${dataSize} bytes of data`);
 
-      for (const line of lines) {
-        const message: unknown = JSON.parse(line);
+      // Append new data to dynamic buffer (Buffer or string - DynamicBuffer handles both)
+      this.dynamicBuffer.append(data);
+      debugToFile('[MessageHandler] Data appended to buffer successfully');
 
-        // Check if this is a notification (no id field)
-        if (isJsonRpcNotification(message)) {
-          this.handleNotification(message);
-        } else if (isJsonRpcResponse(message)) {
-          // This is a response to a request
-          this.handleResponse(message);
-        } else if (hasValidId(message)) {
-          // Fallback for other messages with valid id
-          this.handleResponse(message as JsonRpcResponse);
+      // Extract all complete frames
+      const frames = this.dynamicBuffer.extractAllFrames();
+      debugToFile(`[MessageHandler] Extracted ${frames.length} complete frames`);
+
+      for (const frame of frames) {
+        if (!frame || frame.trim() === '') {
+          continue;
+        }
+
+        try {
+          const message: unknown = JSON.parse(frame);
+
+          // Check if this is a notification (no id field)
+          if (isJsonRpcNotification(message)) {
+            this.handleNotification(message);
+          } else if (isJsonRpcResponse(message)) {
+            // This is a response to a request
+            this.handleResponse(message);
+          } else if (hasValidId(message)) {
+            // Fallback for other messages with valid id
+            this.handleResponse(message as JsonRpcResponse);
+          }
+        } catch (parseError) {
+          errorToFile('[MessageHandler] Error parsing JSON frame:', parseError);
+          errorToFile('[MessageHandler] Problematic frame:', frame);
         }
       }
     } catch (error) {
-      errorToFile('[MessageHandler] Error parsing incoming data:', error);
+      errorToFile('[MessageHandler] Error processing incoming data:', error);
     }
   }
 
@@ -188,7 +214,7 @@ export class MessageHandler {
   }
 
   /**
-   * Create JSON-RPC request
+   * Create JSON-RPC request with Content-Length framing
    */
   createRequest(method: string, params: Record<string, unknown>, id: number): string {
     const request = {
@@ -197,6 +223,21 @@ export class MessageHandler {
       method,
       params,
     };
-    return JSON.stringify(request) + '\n';
+    const jsonContent = JSON.stringify(request);
+    return ContentLengthFramer.createFrame(jsonContent);
+  }
+
+  /**
+   * Clear the dynamic buffer (for connection reset)
+   */
+  clearBuffer(): void {
+    this.dynamicBuffer.clear();
+  }
+
+  /**
+   * Get buffer statistics for debugging
+   */
+  getBufferStats(): { size: number; frames: number } {
+    return this.dynamicBuffer.getStats();
   }
 }
