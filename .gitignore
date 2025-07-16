@@ -123,6 +123,7 @@ Packages/*/TypeScriptServer/.tsbuildinfo
 
 # ログファイル
 *.log
+uLoopMCPOutputs/
 
 # Runtime data
 pids

@@ -1,0 +1,299 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+import { OUTPUT_DIRECTORIES } from '../constants.js';
+
+/**
+ * AI-friendly structured logger for TypeScript MCP Server
+ * 
+ * Design document reference: Packages/src/TypeScriptServer~/ARCHITECTURE.md
+ * 
+ * Related classes:
+ * - log-to-file.ts: Traditional file logger that this class replaces
+ * - UnityDiscovery: Uses this logger for connection discovery tracking
+ * - UnityClient: Uses this logger for connection event tracking
+ * 
+ * Key features:
+ * - Structured JSON logging with operation, context, correlation_id
+ * - AI-friendly format for Claude Code analysis
+ * - Automatic file rotation and memory management
+ * - Correlation ID tracking for related operations
+ */
+
+export interface VibeLogEntry {
+  timestamp: string;
+  level: string;
+  operation: string;
+  message: string;
+  context?: any;
+  correlation_id: string;
+  source: string;
+  human_note?: string;
+  ai_todo?: string;
+  environment: EnvironmentInfo;
+}
+
+export interface EnvironmentInfo {
+  node_version: string;
+  platform: string;
+  process_id: number;
+  memory_usage: {
+    rss: number;
+    heapTotal: number;
+    heapUsed: number;
+  };
+}
+
+export class VibeLogger {
+  private static readonly LOG_DIRECTORY = path.join(process.cwd(), OUTPUT_DIRECTORIES.ROOT, OUTPUT_DIRECTORIES.VIBE_LOGS);
+  private static readonly LOG_FILE_PREFIX = 'typescript_vibe';
+  private static readonly MAX_FILE_SIZE_MB = 10;
+  private static readonly MAX_MEMORY_LOGS = 1000;
+  
+  private static memoryLogs: VibeLogEntry[] = [];
+  private static isDevelopment = process.env.NODE_ENV === 'development';
+  
+  /**
+   * Log an info level message with structured context
+   */
+  static logInfo(
+    operation: string,
+    message: string,
+    context?: any,
+    correlationId?: string,
+    humanNote?: string,
+    aiTodo?: string
+  ): void {
+    this.log('INFO', operation, message, context, correlationId, humanNote, aiTodo);
+  }
+  
+  /**
+   * Log a warning level message with structured context
+   */
+  static logWarning(
+    operation: string,
+    message: string,
+    context?: any,
+    correlationId?: string,
+    humanNote?: string,
+    aiTodo?: string
+  ): void {
+    this.log('WARNING', operation, message, context, correlationId, humanNote, aiTodo);
+  }
+  
+  /**
+   * Log an error level message with structured context
+   */
+  static logError(
+    operation: string,
+    message: string,
+    context?: any,
+    correlationId?: string,
+    humanNote?: string,
+    aiTodo?: string
+  ): void {
+    this.log('ERROR', operation, message, context, correlationId, humanNote, aiTodo);
+  }
+  
+  /**
+   * Log a debug level message with structured context
+   */
+  static logDebug(
+    operation: string,
+    message: string,
+    context?: any,
+    correlationId?: string,
+    humanNote?: string,
+    aiTodo?: string
+  ): void {
+    this.log('DEBUG', operation, message, context, correlationId, humanNote, aiTodo);
+  }
+  
+  /**
+   * Log an exception with structured context
+   */
+  static logException(
+    operation: string,
+    error: Error,
+    context?: any,
+    correlationId?: string,
+    humanNote?: string,
+    aiTodo?: string
+  ): void {
+    const exceptionContext = {
+      original_context: context,
+      exception: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause
+      }
+    };
+    
+    this.log('ERROR', operation, `Exception occurred: ${error.message}`, exceptionContext, 
+             correlationId, humanNote, aiTodo);
+  }
+  
+  /**
+   * Generate a new correlation ID for tracking related operations
+   */
+  static generateCorrelationId(): string {
+    const timestamp = new Date().toISOString().slice(11, 19).replace(/:/g, '');
+    return `ts_${uuidv4().slice(0, 8)}_${timestamp}`;
+  }
+  
+  /**
+   * Get logs for AI analysis (formatted for Claude Code)
+   * Output directory: {project_root}/uLoopMCPOutputs/vibe-logs/
+   */
+  static getLogsForAi(operation?: string, correlationId?: string, maxCount: number = 100): string {
+    let filteredLogs = [...this.memoryLogs];
+    
+    if (operation) {
+      filteredLogs = filteredLogs.filter(log => log.operation.includes(operation));
+    }
+    
+    if (correlationId) {
+      filteredLogs = filteredLogs.filter(log => log.correlation_id === correlationId);
+    }
+    
+    if (filteredLogs.length > maxCount) {
+      filteredLogs = filteredLogs.slice(-maxCount);
+    }
+    
+    return JSON.stringify(filteredLogs, null, 2);
+  }
+  
+  /**
+   * Clear all memory logs
+   */
+  static clearMemoryLogs(): void {
+    this.memoryLogs = [];
+  }
+  
+  /**
+   * Core logging method
+   */
+  private static log(
+    level: string,
+    operation: string,
+    message: string,
+    context?: any,
+    correlationId?: string,
+    humanNote?: string,
+    aiTodo?: string
+  ): void {
+    const logEntry: VibeLogEntry = {
+      timestamp: new Date().toISOString(),
+      level,
+      operation,
+      message,
+      context: this.sanitizeContext(context),
+      correlation_id: correlationId || this.generateCorrelationId(),
+      source: 'TypeScript',
+      human_note: humanNote,
+      ai_todo: aiTodo,
+      environment: this.getEnvironmentInfo()
+    };
+    
+    // Add to memory logs
+    this.memoryLogs.push(logEntry);
+    
+    // Rotate memory logs if too many
+    if (this.memoryLogs.length > this.MAX_MEMORY_LOGS) {
+      this.memoryLogs.shift();
+    }
+    
+    // Save to file
+    this.saveLogToFile(logEntry);
+    
+    // Also output to console in development
+    if (this.isDevelopment) {
+      console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
+    }
+  }
+  
+  /**
+   * Save log entry to file
+   */
+  private static saveLogToFile(logEntry: VibeLogEntry): void {
+    try {
+      if (!fs.existsSync(this.LOG_DIRECTORY)) {
+        fs.mkdirSync(this.LOG_DIRECTORY, { recursive: true });
+      }
+      
+      const fileName = `${this.LOG_FILE_PREFIX}_${this.formatDate()}.json`;
+      const filePath = path.join(this.LOG_DIRECTORY, fileName);
+      
+      // Check file size and rotate if necessary
+      if (fs.existsSync(filePath)) {
+        const stats = fs.statSync(filePath);
+        if (stats.size > this.MAX_FILE_SIZE_MB * 1024 * 1024) {
+          const rotatedFileName = `${this.LOG_FILE_PREFIX}_${this.formatDateTime()}.json`;
+          const rotatedFilePath = path.join(this.LOG_DIRECTORY, rotatedFileName);
+          fs.renameSync(filePath, rotatedFilePath);
+        }
+      }
+      
+      const jsonLog = JSON.stringify(logEntry) + '\n';
+      fs.appendFileSync(filePath, jsonLog);
+    } catch (error) {
+      // Fallback to console if file logging fails
+      console.error(`[VibeLogger] Failed to save log to file: ${error}`);
+      console.log(`[VibeLogger] ${logEntry.level} | ${logEntry.operation} | ${logEntry.message}`);
+    }
+  }
+  
+  /**
+   * Get current environment information
+   */
+  private static getEnvironmentInfo(): EnvironmentInfo {
+    const memUsage = process.memoryUsage();
+    return {
+      node_version: process.version,
+      platform: process.platform,
+      process_id: process.pid,
+      memory_usage: {
+        rss: memUsage.rss,
+        heapTotal: memUsage.heapTotal,
+        heapUsed: memUsage.heapUsed
+      }
+    };
+  }
+  
+  /**
+   * Sanitize context to prevent circular references
+   */
+  private static sanitizeContext(context: any): any {
+    if (!context) return undefined;
+    
+    try {
+      return JSON.parse(JSON.stringify(context));
+    } catch (error) {
+      return {
+        error: 'Failed to serialize context',
+        original_type: typeof context,
+        circular_reference: true
+      };
+    }
+  }
+  
+  /**
+   * Format date for file naming
+   */
+  private static formatDate(): string {
+    const now = new Date();
+    return now.toISOString().slice(0, 10).replace(/-/g, '');
+  }
+  
+  /**
+   * Format datetime for file rotation
+   */
+  private static formatDateTime(): string {
+    const now = new Date();
+    return now.toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '_');
+  }
+}
+
+// Export singleton instance for convenience
+export const vibeLogger = VibeLogger;

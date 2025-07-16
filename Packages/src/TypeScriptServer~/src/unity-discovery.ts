@@ -1,6 +1,7 @@
 import * as net from 'net';
 import { UNITY_CONNECTION, POLLING } from './constants.js';
 import { infoToFile, errorToFile, debugToFile } from './utils/log-to-file.js';
+import { VibeLogger } from './utils/vibe-logger.js';
 import { UnityClient } from './unity-client.js';
 
 /**
@@ -123,14 +124,31 @@ export class UnityDiscovery {
    * Handles both Unity discovery and connection health monitoring
    */
   private async unifiedDiscoveryAndConnectionCheck(): Promise<void> {
+    const correlationId = VibeLogger.generateCorrelationId();
+    
     if (this.isDiscovering) {
-      if (this.isDevelopment) {
-        debugToFile('[UnityDiscovery] Discovery already in progress - skipping');
-      }
+      VibeLogger.logDebug(
+        'unity_discovery_skip_in_progress',
+        'Discovery already in progress - skipping',
+        { is_discovering: true },
+        correlationId
+      );
       return;
     }
 
     this.isDiscovering = true;
+    
+    VibeLogger.logInfo(
+      'unity_discovery_cycle_start',
+      'Starting unified discovery and connection check cycle',
+      {
+        unity_connected: this.unityClient.connected,
+        polling_interval_ms: POLLING.INTERVAL_MS,
+        active_timer_count: UnityDiscovery.activeTimerCount
+      },
+      correlationId,
+      'This cycle checks connection health and attempts Unity discovery if needed.'
+    );
 
     try {
       // If already connected, check connection health
@@ -139,13 +157,24 @@ export class UnityDiscovery {
 
         if (isConnectionHealthy) {
           // Connection is healthy - stop discovery
+          VibeLogger.logInfo(
+            'unity_discovery_connection_healthy',
+            'Connection is healthy - stopping discovery',
+            { connection_healthy: true },
+            correlationId
+          );
           this.stop();
           return;
         } else {
           // Connection lost - trigger callback and continue discovery
-          if (this.isDevelopment) {
-            debugToFile('[UnityDiscovery] Connection lost - resuming discovery');
-          }
+          VibeLogger.logWarning(
+            'unity_discovery_connection_lost',
+            'Connection lost - resuming discovery',
+            { connection_healthy: false },
+            correlationId,
+            'Connection health check failed. Will attempt to rediscover Unity.',
+            'Check Unity server status and network connectivity if this persists.'
+          );
 
           if (this.onConnectionLostCallback) {
             this.onConnectionLostCallback();
@@ -156,6 +185,12 @@ export class UnityDiscovery {
       // Discover Unity by checking port range
       await this.discoverUnityOnPorts();
     } finally {
+      VibeLogger.logDebug(
+        'unity_discovery_cycle_end',
+        'Discovery cycle completed',
+        { is_discovering: false },
+        correlationId
+      );
       this.isDiscovering = false;
     }
   }
@@ -175,6 +210,7 @@ export class UnityDiscovery {
    * Discover Unity by checking default port range
    */
   private async discoverUnityOnPorts(): Promise<void> {
+    const correlationId = VibeLogger.generateCorrelationId();
     const basePort = parseInt(process.env.UNITY_TCP_PORT || UNITY_CONNECTION.DEFAULT_PORT, 10);
     // Expanded port range for better Unity discovery
     const portRange = [
@@ -186,10 +222,33 @@ export class UnityDiscovery {
       basePort - 100, // Also check lower ports
     ];
 
+    VibeLogger.logInfo(
+      'unity_discovery_port_scan_start',
+      'Starting Unity port discovery scan',
+      {
+        base_port: basePort,
+        port_range: portRange,
+        total_ports: portRange.length
+      },
+      correlationId,
+      'Scanning multiple ports to find Unity MCP server.'
+    );
+
     for (const port of portRange) {
       try {
         if (await this.isUnityAvailable(port)) {
-          infoToFile(`[Unity Discovery] Unity discovered on port ${port}`);
+          VibeLogger.logInfo(
+            'unity_discovery_success',
+            'Unity discovered and connection established',
+            {
+              discovered_port: port,
+              base_port: basePort,
+              port_offset: port - basePort
+            },
+            correlationId,
+            'Unity MCP server found and connection established successfully.',
+            'Monitor for tools/list_changed notifications after this discovery.'
+          );
 
           // Update client port and notify callback
           this.unityClient.updatePort(port);
@@ -203,6 +262,20 @@ export class UnityDiscovery {
         // Continue checking other ports
       }
     }
+    
+    VibeLogger.logWarning(
+      'unity_discovery_no_unity_found',
+      'No Unity server found on any port in range',
+      {
+        base_port: basePort,
+        ports_checked: portRange,
+        total_attempts: portRange.length
+      },
+      correlationId,
+      'Unity MCP server not found on any of the checked ports. Unity may not be running or using a different port.',
+      'Check Unity console for MCP server status and verify port configuration.'
+    );
+  }
   }
 
   /**
