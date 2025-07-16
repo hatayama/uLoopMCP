@@ -1,6 +1,6 @@
-using Newtonsoft.Json;
+using io.github.hatayama.uLoopMCP;
 
-namespace io.github.hatayama.uLoopMCP
+namespace Samples
 {
     /// <summary>
     /// Response schema for HelloWorld tool

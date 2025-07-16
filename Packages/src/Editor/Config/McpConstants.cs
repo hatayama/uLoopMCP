@@ -94,7 +94,6 @@ namespace io.github.hatayama.uLoopMCP
         // Security constants
         public const int MAX_JSON_SIZE_BYTES = 1024 * 1024; // 1MB limit for JSON files
         public const int MAX_SETTINGS_SIZE_BYTES = 1024 * 16; // 16KB limit for settings files
-        public const string ULOOPMCP_NAMESPACE_PREFIX = "io.github.hatayama.uLoopMCP";
         public const string SECURITY_LOG_PREFIX = "[uLoopMCP Security]";
         
         // Security: Allowed namespaces for reflection operations
@@ -102,7 +101,7 @@ namespace io.github.hatayama.uLoopMCP
             "UnityEditor",
             "Unity.EditorCoroutines", 
             "Unity.VisualScripting",
-            ULOOPMCP_NAMESPACE_PREFIX
+            "io.github.hatayama.uLoopMCP"
         };
         
         // Security: Denied types for reflection operations

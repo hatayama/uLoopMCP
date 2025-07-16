@@ -156,11 +156,6 @@ namespace io.github.hatayama.uLoopMCP
                     return false;
                 }
                 
-                // Must be in uLoopMCP namespace (security restriction)
-                if (!type.Namespace?.StartsWith(McpConstants.ULOOPMCP_NAMESPACE_PREFIX) == true)
-                {
-                    return false;
-                }
                 
                 // Must have parameterless constructor
                 if (type.GetConstructor(Type.EmptyTypes) == null)

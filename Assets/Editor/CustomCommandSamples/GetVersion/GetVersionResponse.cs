@@ -1,4 +1,6 @@
-namespace io.github.hatayama.uLoopMCP
+using io.github.hatayama.uLoopMCP;
+
+namespace Samples
 {
     /// <summary>
     /// Response schema for GetVersion tool
