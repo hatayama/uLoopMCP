@@ -134,6 +134,132 @@ sequenceDiagram
 3. **LLM Tools are pure MCP Clients**: Send tool requests through standard MCP protocol
 4. **Automatic Discovery**: TypeScript server discovers Unity instances through port scanning
 
+### TCP/JSON-RPC Communication Specification
+
+#### Transport Layer
+- **Protocol**: TCP/IP over localhost
+- **Default Port**: 8700 (configurable via environment variable)
+- **Message Format**: JSON-RPC 2.0 compliant
+- **Message Delimiter**: Newline character (`\n`)
+- **Buffer Size**: 4096 bytes
+
+#### JSON-RPC 2.0 Message Format
+
+**Request Message:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1647834567890,
+  "method": "ping",
+  "params": {
+    "Message": "Hello Unity MCP!"
+  }
+}
+```
+
+**Success Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1647834567890,
+  "result": {
+    "Message": "Unity MCP Bridge received: Hello Unity MCP!",
+    "ExecutionTimeMs": 5
+  }
+}
+```
+
+**Error Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1647834567890,
+  "error": {
+    "code": -32603,
+    "message": "Tool blocked by security settings",
+    "data": {
+      "type": "security_blocked",
+      "command": "find-gameobjects",
+      "reason": "GameObject search is disabled"
+    }
+  }
+}
+```
+
+#### Connection Lifecycle
+
+1. **Initial Connection**
+   - TypeScript UnityClient connects to Unity McpBridgeServer
+   - TCP socket established on localhost:8700
+   - Connection test with ping command
+
+2. **Client Registration**
+   - `set-client-name` command sent immediately after connection
+   - Client identity stored in Unity session manager
+   - UI updated to show connected client
+
+3. **Command Processing**
+   - JSON-RPC requests processed through UnityApiHandler
+   - Security validation via McpSecurityChecker
+   - Tool execution through UnityCommandRegistry
+
+4. **Connection Monitoring**
+   - Automatic reconnection on connection loss
+   - Periodic health checks via ping commands
+   - SafeTimer cleanup on process termination
+
+#### Push Notifications
+
+Unity can send real-time push notifications to all connected TypeScript clients when tools or system state changes occur:
+
+**Notification Format:**
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/tools/list_changed",
+  "params": {
+    "timestamp": "2025-07-16T12:34:56.789Z",
+    "message": "Unity tools have been updated"
+  }
+}
+```
+
+**Notification Triggers:**
+- Assembly reloads/recompilation
+- Custom tool registration
+- Manual tool change notifications via `TriggerToolChangeNotification()`
+
+**Broadcast Mechanism:**
+- Sent to all connected clients simultaneously
+- Uses same TCP/JSON-RPC communication channel
+- Message terminated with newline character (`\n`)
+
+**TypeScript Client Reception:**
+```typescript
+// TypeScript clients receive notifications via:
+socket.on('data', (buffer: Buffer) => {
+  const message = buffer.toString('utf8');
+  if (message.includes('"method":"notifications/tools/list_changed"')) {
+    // Handle tool list update
+    this.refreshToolList();
+  }
+});
+```
+
+#### Error Handling
+
+- **SecurityBlocked**: Tool blocked by security settings
+- **InternalError**: Unity internal processing errors
+- **Timeout**: Network timeout (default: 2 minutes)
+- **Connection Loss**: Automatic reconnection with exponential backoff
+
+#### Security Features
+
+- **localhost-only**: External connections blocked
+- **Tool-level Security**: McpSecurityChecker validates each command
+- **Configurable Access Control**: Unity Editor security settings
+- **Session Management**: Client isolation and state tracking
+
 Its primary responsibilities are:
 1.  **Running a TCP Server (`McpBridgeServer`)**: Listens for connections from the TypeScript server to receive tool requests.
 2.  **Executing Unity Operations**: Processes received tool requests to perform actions within the Unity Editor, such as compiling the project, running tests, or retrieving logs.

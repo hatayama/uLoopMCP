@@ -134,6 +134,132 @@ sequenceDiagram
 3. **LLMツールは純粋なMCPクライアント**: 標準MCPプロトコルを通じてツールリクエストを送信
 4. **自動発見**: TypeScriptサーバーがポートスキャンでUnityインスタンスを発見
 
+### TCP/JSON-RPC通信仕様
+
+#### トランスポート層
+- **プロトコル**: localhost上のTCP/IP
+- **デフォルトポート**: 8700（環境変数で設定可能）
+- **メッセージ形式**: JSON-RPC 2.0準拠
+- **メッセージ区切り**: 改行文字（`\n`）
+- **バッファサイズ**: 4096バイト
+
+#### JSON-RPC 2.0メッセージ形式
+
+**リクエストメッセージ：**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1647834567890,
+  "method": "ping",
+  "params": {
+    "Message": "Hello Unity MCP!"
+  }
+}
+```
+
+**成功レスポンス：**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1647834567890,
+  "result": {
+    "Message": "Unity MCP Bridge received: Hello Unity MCP!",
+    "ExecutionTimeMs": 5
+  }
+}
+```
+
+**エラーレスポンス：**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1647834567890,
+  "error": {
+    "code": -32603,
+    "message": "Tool blocked by security settings",
+    "data": {
+      "type": "security_blocked",
+      "command": "find-gameobjects",
+      "reason": "GameObject search is disabled"
+    }
+  }
+}
+```
+
+#### 接続ライフサイクル
+
+1. **初期接続**
+   - TypeScript UnityClientがUnity McpBridgeServerに接続
+   - localhost:8700でTCPソケット確立
+   - pingコマンドで接続テスト
+
+2. **クライアント登録**
+   - 接続直後に`set-client-name`コマンドを送信
+   - Unity セッションマネージャーにクライアント識別情報を保存
+   - UIを更新して接続されたクライアントを表示
+
+3. **コマンド処理**
+   - JSON-RPCリクエストをUnityApiHandlerで処理
+   - McpSecurityCheckerでセキュリティ検証
+   - UnityCommandRegistryでツール実行
+
+4. **接続監視**
+   - 接続断時の自動再接続
+   - pingコマンドによる定期ヘルスチェック
+   - プロセス終了時のSafeTimerクリーンアップ
+
+#### プッシュ通知
+
+Unityは、ツールやシステム状態の変更が発生した際に、接続されている全てのTypeScriptクライアントにリアルタイムプッシュ通知を送信できます：
+
+**通知フォーマット:**
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/tools/list_changed",
+  "params": {
+    "timestamp": "2025-07-16T12:34:56.789Z",
+    "message": "Unity tools have been updated"
+  }
+}
+```
+
+**通知トリガー:**
+- アセンブリリロード/再コンパイル
+- カスタムツール登録
+- `TriggerToolChangeNotification()`による手動ツール変更通知
+
+**ブロードキャスト機能:**
+- 接続中の全クライアントに同時送信
+- TCP/JSON-RPC通信チャネルを使用
+- 改行文字（`\n`）でメッセージ終端
+
+**TypeScriptクライアント受信:**
+```typescript
+// TypeScriptクライアントは以下により通知を受信:
+socket.on('data', (buffer: Buffer) => {
+  const message = buffer.toString('utf8');
+  if (message.includes('"method":"notifications/tools/list_changed"')) {
+    // ツールリスト更新処理
+    this.refreshToolList();
+  }
+});
+```
+
+#### エラーハンドリング
+
+- **SecurityBlocked**: セキュリティ設定によりツールがブロック
+- **InternalError**: Unity内部処理エラー
+- **Timeout**: ネットワークタイムアウト（デフォルト：2分）
+- **Connection Loss**: 指数バックオフによる自動再接続
+
+#### セキュリティ機能
+
+- **localhost制限**: 外部接続をブロック
+- **ツールレベルセキュリティ**: McpSecurityCheckerが各コマンドを検証
+- **設定可能なアクセス制御**: Unity Editorセキュリティ設定
+- **セッション管理**: クライアント分離と状態追跡
+
 主な責務：
 1. **TCPサーバー（`McpBridgeServer`）の実行**: TypeScriptサーバーからの接続を待ち受け、ツールリクエストを受信
 2. **Unity操作の実行**: 受信したツールリクエストを処理し、プロジェクトのコンパイル、テスト実行、ログ取得などのUnity Editor内での操作を実行
