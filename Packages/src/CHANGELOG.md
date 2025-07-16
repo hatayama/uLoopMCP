@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.28.2](https://github.com/hatayama/uLoopMCP/compare/v0.28.1...v0.28.2) (2025-07-16)
+
+
+### Bug Fixes
+
+* improve reconnection speed after Unity domain reload ([#211](https://github.com/hatayama/uLoopMCP/issues/211)) ([b7e173c](https://github.com/hatayama/uLoopMCP/commit/b7e173c56bfa588471f0c3e6f7f6b59567cf06bf))
+
 ## [0.28.1](https://github.com/hatayama/uLoopMCP/compare/v0.28.0...v0.28.1) (2025-07-16)
 
 
