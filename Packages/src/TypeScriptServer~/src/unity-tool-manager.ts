@@ -1,7 +1,6 @@
 import { UnityClient } from './unity-client.js';
 import { DynamicUnityCommandTool } from './tools/dynamic-unity-command-tool.js';
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { errorToFile, debugToFile } from './utils/log-to-file.js';
 import { ENVIRONMENT } from './constants.js';
 
 /**
@@ -75,7 +74,7 @@ export class UnityToolManager {
 
       return tools;
     } catch (error) {
-      errorToFile('[Unity Tool Manager] Failed to get tools from Unity:', error);
+      // Failed to get tools from Unity
       return [];
     }
   }
@@ -96,7 +95,7 @@ export class UnityToolManager {
 
       // Tool details processed successfully
     } catch (error) {
-      errorToFile('[Unity Tool Manager] Failed to initialize dynamic tools:', error);
+      // Failed to initialize dynamic tools
       // Continue without dynamic tools
     }
   }
@@ -109,44 +108,21 @@ export class UnityToolManager {
     // Include development-only tools if in development mode
     const params = { IncludeDevelopmentOnly: this.isDevelopment };
 
-    debugToFile('[Unity Tool Manager] Requesting tool details from Unity with params:', params);
-    const startTime = Date.now();
+    // Requesting tool details from Unity with params
 
-    try {
-      const toolDetailsResponse = await this.unityClient.executeTool('get-tool-details', params);
-      const duration = Date.now() - startTime;
+    const toolDetailsResponse = await this.unityClient.executeTool('get-tool-details', params);
+    // Received tool details response
 
-      debugToFile(
-        '[Unity Tool Manager] Received tool details response in',
-        duration,
-        'ms:',
-        toolDetailsResponse,
-      );
-
-      // Handle new GetToolDetailsResponse structure
-      const toolDetails =
-        (toolDetailsResponse as { Tools?: unknown[] })?.Tools || toolDetailsResponse;
-      if (!Array.isArray(toolDetails)) {
-        errorToFile('[Unity Tool Manager] Invalid tool details response:', toolDetailsResponse);
-        return null;
-      }
-
-      debugToFile(
-        '[Unity Tool Manager] Successfully parsed',
-        toolDetails.length,
-        'tools from Unity',
-      );
-      return toolDetails as unknown[];
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      errorToFile(
-        '[Unity Tool Manager] Failed to fetch tool details after',
-        duration,
-        'ms:',
-        error,
-      );
-      throw error;
+    // Handle new GetToolDetailsResponse structure
+    const toolDetails =
+      (toolDetailsResponse as { Tools?: unknown[] })?.Tools || toolDetailsResponse;
+    if (!Array.isArray(toolDetails)) {
+      // Invalid tool details response
+      return null;
     }
+
+    // Successfully parsed tools from Unity
+    return toolDetails as unknown[];
   }
 
   /**
@@ -202,7 +178,7 @@ export class UnityToolManager {
   async refreshDynamicToolsSafe(sendNotification?: () => void): Promise<void> {
     if (this.isRefreshing) {
       if (this.isDevelopment) {
-        debugToFile('[Unity Tool Manager] refreshDynamicToolsSafe skipped: already in progress');
+        // refreshDynamicToolsSafe skipped: already in progress
       }
       return;
     }
@@ -210,12 +186,7 @@ export class UnityToolManager {
     this.isRefreshing = true;
     try {
       if (this.isDevelopment) {
-        const stack = new Error().stack;
-        const callerLine = stack?.split('\n')[2]?.trim() || 'Unknown caller';
-        const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
-        debugToFile(
-          `[Unity Tool Manager] refreshDynamicToolsSafe called at ${timestamp} from: ${callerLine}`,
-        );
+        // refreshDynamicToolsSafe called
       }
 
       await this.refreshDynamicTools(sendNotification);

@@ -1,5 +1,3 @@
-import { errorToFile } from './utils/log-to-file.js';
-
 /**
  * Manages TCP connection state without polling
  * Follows Single Responsibility Principle - only handles connection state monitoring
@@ -39,7 +37,7 @@ export class ConnectionManager {
       try {
         this.onReconnectedCallback();
       } catch (error) {
-        errorToFile('[ConnectionManager] Error in reconnection callback:', error);
+        // Error in reconnection callback
       }
     }
   }
@@ -52,7 +50,7 @@ export class ConnectionManager {
       try {
         this.onConnectionLostCallback();
       } catch (error) {
-        errorToFile('[ConnectionManager] Error in connection lost callback:', error);
+        // Error in connection lost callback
       }
     }
   }

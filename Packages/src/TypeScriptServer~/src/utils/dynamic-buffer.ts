@@ -1,5 +1,4 @@
 import { ContentLengthFramer, FrameExtractionResult } from './content-length-framer.js';
-import { errorToFile, warnToFile } from './log-to-file.js';
 
 /**
  * Dynamic buffer for handling Content-Length framed messages with proper UTF-8 support.
@@ -90,7 +89,7 @@ export class DynamicBuffer {
         extracted: true,
       };
     } catch (error) {
-      errorToFile(`${DynamicBuffer.LOG_PREFIX} Error extracting frame:`, error);
+      // Error extracting frame from buffer
       return { frame: null, extracted: false };
     }
   }
@@ -172,9 +171,7 @@ export class DynamicBuffer {
       this.buffer.length > this.maxBufferSize * DynamicBuffer.BUFFER_UTILIZATION_THRESHOLD &&
       !this.hasCompleteFrameHeader()
     ) {
-      warnToFile(
-        `${DynamicBuffer.LOG_PREFIX} Large buffer without complete frame header, clearing buffer`,
-      );
+      // Large buffer without complete frame header, clearing buffer
       this.clear();
       return false;
     }
@@ -193,9 +190,7 @@ export class DynamicBuffer {
       );
       const contentLengthIndex = this.buffer.indexOf(contentLengthBuffer);
       if (contentLengthIndex === -1) {
-        warnToFile(
-          `${DynamicBuffer.LOG_PREFIX} No Content-Length header found in large buffer, clearing buffer`,
-        );
+        // No Content-Length header found in large buffer, clearing buffer
         this.clear();
         return false;
       }

@@ -480,8 +480,8 @@ function getErrorMap() {
 
 // node_modules/zod/dist/esm/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path3, errorMaps, issueData } = params;
-  const fullPath = [...path3, ...issueData.path || []];
+  const { data, path: path2, errorMaps, issueData } = params;
+  const fullPath = [...path2, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -597,11 +597,11 @@ var errorUtil;
 
 // node_modules/zod/dist/esm/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path3, key) {
+  constructor(parent, value, path2, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path3;
+    this._path = path2;
     this._key = key;
   }
   get path() {
@@ -5531,90 +5531,6 @@ var OUTPUT_DIRECTORIES = {
   VIBE_LOGS: "VibeLogs"
 };
 
-// src/utils/log-to-file.ts
-import * as fs from "fs";
-import * as path from "path";
-import { fileURLToPath } from "url";
-var isValidPath = (filePath) => {
-  const normalized = path.normalize(filePath);
-  return !normalized.includes("..") && path.isAbsolute(normalized);
-};
-var findProjectRoot = () => {
-  const __filename = fileURLToPath(import.meta.url);
-  let currentDir = path.dirname(__filename);
-  let searchDepth = 0;
-  const maxSearchDepth = 10;
-  while (searchDepth < maxSearchDepth) {
-    const parentDir = path.dirname(currentDir);
-    if (currentDir === parentDir) {
-      break;
-    }
-    const unityIndicators = ["ProjectSettings", "Assets", "Packages"];
-    const hasUnityFiles = unityIndicators.every((indicator) => {
-      try {
-        const checkPath = path.join(currentDir, indicator);
-        return isValidPath(checkPath) && fs.existsSync(checkPath);
-      } catch {
-        return false;
-      }
-    });
-    if (hasUnityFiles) {
-      return currentDir;
-    }
-    currentDir = parentDir;
-    searchDepth++;
-  }
-  return process.cwd();
-};
-var logDir = path.join(findProjectRoot(), "ULoopMCPLogs");
-var timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-").split("T");
-var dateStr = timestamp[0];
-var timeStr = timestamp[1].split(".")[0];
-var logFile = path.join(logDir, `mcp-debug-${dateStr}_${timeStr}.log`);
-var directoryCreated = false;
-var writeToFile = (message) => {
-  try {
-    if (!directoryCreated) {
-      if (!isValidPath(logDir)) {
-        return;
-      }
-      fs.mkdirSync(logDir, { recursive: true });
-      directoryCreated = true;
-    }
-    if (!isValidPath(logFile)) {
-      return;
-    }
-    const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-    fs.appendFileSync(logFile, `${timestamp2} ${message}
-`);
-  } catch (error) {
-  }
-};
-var debugToFile = (...args) => {
-  if (process.env.MCP_DEBUG) {
-    const message = args.map((arg) => typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)).join(" ");
-    writeToFile(`[MCP-DEBUG] ${message}`);
-  }
-};
-var infoToFile = (...args) => {
-  if (process.env.MCP_DEBUG) {
-    const message = args.map((arg) => typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)).join(" ");
-    writeToFile(`[MCP-INFO] ${message}`);
-  }
-};
-var warnToFile = (...args) => {
-  if (process.env.MCP_DEBUG) {
-    const message = args.map((arg) => typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)).join(" ");
-    writeToFile(`[MCP-WARN] ${message}`);
-  }
-};
-var errorToFile = (...args) => {
-  if (process.env.MCP_DEBUG) {
-    const message = args.map((arg) => typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)).join(" ");
-    writeToFile(`[MCP-ERROR] ${message}`);
-  }
-};
-
 // src/utils/safe-timer.ts
 var SafeTimer = class _SafeTimer {
   static activeTimers = /* @__PURE__ */ new Set();
@@ -6402,26 +6318,44 @@ var UnityClient = class {
     this.reconnectHandlers.delete(handler);
   }
   /**
-   * Actually test Unity's connection status
-   * Check actual communication possibility, not just socket status
+   * Lightweight connection health check
+   * Tests socket state without creating new connections
    */
   async testConnection() {
     if (!this._connected || this.socket === null || this.socket.destroyed) {
       return false;
     }
-    await this.ping(UNITY_CONNECTION.CONNECTION_TEST_MESSAGE);
-    return true;
+    if (!this.socket.readable || !this.socket.writable) {
+      this._connected = false;
+      return false;
+    }
+    try {
+      await Promise.race([
+        this.ping(UNITY_CONNECTION.CONNECTION_TEST_MESSAGE),
+        new Promise(
+          (_, reject) => setTimeout(() => reject(new Error("Health check timeout")), 1e3)
+        )
+      ]);
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
   /**
    * Connect to Unity (reconnect if necessary)
+   * Now more conservative about creating new connections
    */
   async ensureConnected() {
-    try {
-      if (await this.testConnection()) {
-        return;
+    if (this._connected && this.socket && !this.socket.destroyed && this.socket.readable && this.socket.writable) {
+      try {
+        if (await this.testConnection()) {
+          return;
+        }
+      } catch (error) {
       }
-    } catch (error) {
-      this._connected = false;
+    }
+    if (this._connected && this.socket && !this.socket.destroyed) {
+      return;
     }
     this.disconnect();
     await this.connect();
@@ -6438,7 +6372,6 @@ var UnityClient = class {
           try {
             handler();
           } catch (error) {
-            errorToFile("[UnityClient] Error in reconnect handler:", error);
           }
         });
         resolve2();
@@ -6448,7 +6381,6 @@ var UnityClient = class {
         if (this.socket?.connecting) {
           reject(new Error(`Unity connection failed: ${error.message}`));
         } else {
-          errorToFile("[UnityClient] Connection error:", error);
           this.handleConnectionLoss();
         }
       });
@@ -6457,7 +6389,6 @@ var UnityClient = class {
         this.handleConnectionLoss();
       });
       this.socket.on("end", () => {
-        errorToFile("[UnityClient] Connection ended by server");
         this._connected = false;
         this.handleConnectionLoss();
       });
@@ -6491,10 +6422,8 @@ var UnityClient = class {
     try {
       const response = await this.sendRequest(request);
       if (response.error) {
-        errorToFile(`Failed to set client name: ${response.error.message}`);
       }
     } catch (error) {
-      errorToFile("[UnityClient] Error setting client name:", error);
     }
   }
   /**
@@ -6513,7 +6442,7 @@ var UnityClient = class {
         // Updated to match PingSchema property name
       }
     };
-    const response = await this.sendRequest(request);
+    const response = await this.sendRequest(request, 1e3);
     if (response.error) {
       throw new Error(`Unity error: ${response.error.message}`);
     }
@@ -6564,24 +6493,12 @@ var UnityClient = class {
       method: toolName,
       params
     };
-    debugToFile(`[Unity Client] Executing tool: ${toolName} with params:`, params);
-    debugToFile("[Unity Client] Request:", request);
     const timeoutMs = TIMEOUTS.NETWORK;
     try {
       const response = await this.sendRequest(request, timeoutMs);
-      const executionTime = Date.now() - startTime;
-      debugToFile(
-        `[Unity Client] Tool ${toolName} completed in ${executionTime}ms, response:`,
-        response
-      );
       return this.handleToolResponse(response, toolName);
     } catch (error) {
-      const executionTime = Date.now() - startTime;
-      errorToFile(`[Unity Client] Tool ${toolName} failed after ${executionTime}ms:`, error);
       if (error instanceof Error && error.message.includes("timed out")) {
-        errorToFile(
-          `[TIMEOUT] Tool: ${toolName}, NetworkTimeout: ${timeoutMs}ms, ExecutionTime: ${executionTime}ms, RequestId: ${request.id}, Params: ${JSON.stringify(params)}`
-        );
       }
       throw error;
     }
@@ -6605,9 +6522,6 @@ var UnityClient = class {
     return new Promise((resolve2, reject) => {
       const timeout_duration = timeoutMs || TIMEOUTS.NETWORK;
       const timeoutTimer = safeSetTimeout(() => {
-        errorToFile(
-          `[NETWORK_TIMEOUT] Method: ${request.method}, RequestId: ${request.id}, NetworkTimeout: ${timeout_duration}ms, Params: ${JSON.stringify(request.params || {})}`
-        );
         this.messageHandler.clearPendingRequests(`Request ${ERROR_MESSAGES.TIMEOUT}`);
         reject(new Error(`Request ${ERROR_MESSAGES.TIMEOUT}`));
       }, timeout_duration);
@@ -6666,12 +6580,9 @@ var UnityClient = class {
   }
 };
 
-// src/unity-discovery.ts
-import * as net2 from "net";
-
 // src/utils/vibe-logger.ts
-import * as fs2 from "fs";
-import * as path2 from "path";
+import * as fs from "fs";
+import * as path from "path";
 
 // node_modules/uuid/dist/esm/stringify.js
 var byteToHex = [];
@@ -6727,13 +6638,17 @@ var v4_default = v4;
 // src/utils/vibe-logger.ts
 var VibeLogger = class {
   // Navigate from TypeScriptServer~ to project root: ../../../
-  static PROJECT_ROOT = path2.resolve(process.cwd(), "../../../");
-  static LOG_DIRECTORY = path2.join(this.PROJECT_ROOT, OUTPUT_DIRECTORIES.ROOT, OUTPUT_DIRECTORIES.VIBE_LOGS);
+  static PROJECT_ROOT = path.resolve(process.cwd(), "../../../");
+  static LOG_DIRECTORY = path.join(
+    this.PROJECT_ROOT,
+    OUTPUT_DIRECTORIES.ROOT,
+    OUTPUT_DIRECTORIES.VIBE_LOGS
+  );
   static LOG_FILE_PREFIX = "typescript_vibe";
   static MAX_FILE_SIZE_MB = 10;
   static MAX_MEMORY_LOGS = 1e3;
   static memoryLogs = [];
-  static isDevelopment = process.env.NODE_ENV === "development";
+  static isDebugEnabled = process.env.MCP_DEBUG === "true";
   /**
    * Log an info level message with structured context
    */
@@ -6785,8 +6700,8 @@ var VibeLogger = class {
    * Generate a new correlation ID for tracking related operations
    */
   static generateCorrelationId() {
-    const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().slice(11, 19).replace(/:/g, "");
-    return `ts_${v4_default().slice(0, 8)}_${timestamp2}`;
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString().slice(11, 19).replace(/:/g, "");
+    return `ts_${v4_default().slice(0, 8)}_${timestamp}`;
   }
   /**
    * Get logs for AI analysis (formatted for Claude Code)
@@ -6813,8 +6728,12 @@ var VibeLogger = class {
   }
   /**
    * Core logging method
+   * Only logs when MCP_DEBUG environment variable is set to 'true'
    */
   static log(level, operation, message, context, correlationId, humanNote, aiTodo) {
+    if (!this.isDebugEnabled) {
+      return;
+    }
     const logEntry = {
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       level,
@@ -6832,33 +6751,74 @@ var VibeLogger = class {
       this.memoryLogs.shift();
     }
     this.saveLogToFile(logEntry);
-    if (this.isDevelopment) {
-      console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
-    }
+    console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
   }
   /**
-   * Save log entry to file
+   * Save log entry to file with retry mechanism for concurrent access
    */
   static saveLogToFile(logEntry) {
     try {
-      if (!fs2.existsSync(this.LOG_DIRECTORY)) {
-        fs2.mkdirSync(this.LOG_DIRECTORY, { recursive: true });
+      if (!fs.existsSync(this.LOG_DIRECTORY)) {
+        fs.mkdirSync(this.LOG_DIRECTORY, { recursive: true });
       }
       const fileName = `${this.LOG_FILE_PREFIX}_${this.formatDate()}.json`;
-      const filePath = path2.join(this.LOG_DIRECTORY, fileName);
-      if (fs2.existsSync(filePath)) {
-        const stats = fs2.statSync(filePath);
+      const filePath = path.join(this.LOG_DIRECTORY, fileName);
+      if (fs.existsSync(filePath)) {
+        const stats = fs.statSync(filePath);
         if (stats.size > this.MAX_FILE_SIZE_MB * 1024 * 1024) {
           const rotatedFileName = `${this.LOG_FILE_PREFIX}_${this.formatDateTime()}.json`;
-          const rotatedFilePath = path2.join(this.LOG_DIRECTORY, rotatedFileName);
-          fs2.renameSync(filePath, rotatedFilePath);
+          const rotatedFilePath = path.join(this.LOG_DIRECTORY, rotatedFileName);
+          fs.renameSync(filePath, rotatedFilePath);
         }
       }
       const jsonLog = JSON.stringify(logEntry) + "\n";
-      fs2.appendFileSync(filePath, jsonLog);
+      const maxRetries = 3;
+      const baseDelayMs = 50;
+      for (let retry = 0; retry < maxRetries; retry++) {
+        try {
+          fs.appendFileSync(filePath, jsonLog, { flag: "a" });
+          return;
+        } catch (error) {
+          if (this.isFileSharingViolation(error) && retry < maxRetries - 1) {
+            const delayMs = baseDelayMs * Math.pow(2, retry);
+            this.sleep(delayMs);
+          } else {
+            throw error;
+          }
+        }
+      }
     } catch (error) {
       console.error(`[VibeLogger] Failed to save log to file: ${error}`);
       console.log(`[VibeLogger] ${logEntry.level} | ${logEntry.operation} | ${logEntry.message}`);
+    }
+  }
+  /**
+   * Check if error is a file sharing violation
+   */
+  static isFileSharingViolation(error) {
+    if (!error) {
+      return false;
+    }
+    const sharingViolationCodes = [
+      "EBUSY",
+      // Resource busy or locked
+      "EACCES",
+      // Permission denied (can indicate file in use)
+      "EPERM",
+      // Operation not permitted
+      "EMFILE",
+      // Too many open files
+      "ENFILE"
+      // File table overflow
+    ];
+    return error.code && sharingViolationCodes.includes(error.code);
+  }
+  /**
+   * Synchronous sleep function for retry delays
+   */
+  static sleep(ms) {
+    const start = Date.now();
+    while (Date.now() - start < ms) {
     }
   }
   /**
@@ -6881,7 +6841,9 @@ var VibeLogger = class {
    * Sanitize context to prevent circular references
    */
   static sanitizeContext(context) {
-    if (!context) return void 0;
+    if (!context) {
+      return void 0;
+    }
     try {
       return JSON.parse(JSON.stringify(context));
     } catch (error) {
@@ -6909,6 +6871,7 @@ var VibeLogger = class {
 };
 
 // src/unity-discovery.ts
+import * as net2 from "net";
 var UnityDiscovery = class _UnityDiscovery {
   discoveryInterval = null;
   unityClient;
@@ -6923,16 +6886,15 @@ var UnityDiscovery = class _UnityDiscovery {
   constructor(unityClient) {
     this.unityClient = unityClient;
     this.isDevelopment = process.env.NODE_ENV === "development";
-    if (_UnityDiscovery.instance) {
-      if (this.isDevelopment) {
-        debugToFile(
-          "[UnityDiscovery] WARNING: Multiple instances detected. Using singleton pattern."
-        );
-        debugToFile(`[UnityDiscovery] Active timer count: ${_UnityDiscovery.activeTimerCount}`);
-      }
-      return _UnityDiscovery.instance;
+  }
+  /**
+   * Get singleton instance of UnityDiscovery
+   */
+  static getInstance(unityClient) {
+    if (!_UnityDiscovery.instance) {
+      _UnityDiscovery.instance = new _UnityDiscovery(unityClient);
     }
-    _UnityDiscovery.instance = this;
+    return _UnityDiscovery.instance;
   }
   /**
    * Set callback for when Unity is discovered
@@ -6951,28 +6913,16 @@ var UnityDiscovery = class _UnityDiscovery {
    */
   start() {
     if (this.discoveryInterval) {
-      if (this.isDevelopment) {
-        debugToFile("[UnityDiscovery] Timer already running - skipping duplicate start");
-      }
       return;
     }
     if (this.isDiscovering) {
-      if (this.isDevelopment) {
-        debugToFile("[UnityDiscovery] Discovery already in progress - skipping start");
-      }
       return;
     }
-    infoToFile("[Unity Discovery] Starting unified discovery and connection management...");
     void this.unifiedDiscoveryAndConnectionCheck();
     this.discoveryInterval = setInterval(() => {
       void this.unifiedDiscoveryAndConnectionCheck();
     }, POLLING.INTERVAL_MS);
     _UnityDiscovery.activeTimerCount++;
-    if (this.isDevelopment) {
-      debugToFile(`[UnityDiscovery] Timer started with ${POLLING.INTERVAL_MS}ms interval`);
-      debugToFile(`[UnityDiscovery] Active timer count: ${_UnityDiscovery.activeTimerCount}`);
-      this.logTimerStatus();
-    }
   }
   /**
    * Stop Unity discovery polling
@@ -6983,12 +6933,6 @@ var UnityDiscovery = class _UnityDiscovery {
       this.discoveryInterval = null;
       this.isDiscovering = false;
       _UnityDiscovery.activeTimerCount = Math.max(0, _UnityDiscovery.activeTimerCount - 1);
-      infoToFile("[Unity Discovery] Unity discovery and connection management stopped");
-      if (this.isDevelopment) {
-        debugToFile("[UnityDiscovery] Timer stopped and cleanup completed");
-        debugToFile(`[UnityDiscovery] Active timer count: ${_UnityDiscovery.activeTimerCount}`);
-        this.logTimerStatus();
-      }
     }
   }
   /**
@@ -7032,16 +6976,13 @@ var UnityDiscovery = class _UnityDiscovery {
           return;
         } else {
           VibeLogger.logWarning(
-            "unity_discovery_connection_lost",
-            "Connection lost - resuming discovery",
+            "unity_discovery_connection_unhealthy",
+            "Connection appears unhealthy - continuing discovery without assuming loss",
             { connection_healthy: false },
             correlationId,
-            "Connection health check failed. Will attempt to rediscover Unity.",
-            "Check Unity server status and network connectivity if this persists."
+            "Connection health check failed. Will continue discovery but not assume complete loss.",
+            "Connection may recover on next cycle. Monitor for persistent issues."
           );
-          if (this.onConnectionLostCallback) {
-            this.onConnectionLostCallback();
-          }
         }
       }
       await this.discoverUnityOnPorts();
@@ -7056,11 +6997,17 @@ var UnityDiscovery = class _UnityDiscovery {
     }
   }
   /**
-   * Check if the current connection is healthy
+   * Check if the current connection is healthy with timeout protection
    */
   async checkConnectionHealth() {
     try {
-      return await this.unityClient.testConnection();
+      const healthCheck = await Promise.race([
+        this.unityClient.testConnection(),
+        new Promise(
+          (_, reject) => setTimeout(() => reject(new Error("Connection health check timeout")), 1e3)
+        )
+      ]);
+      return healthCheck;
     } catch (error) {
       return false;
     }
@@ -7107,8 +7054,21 @@ var UnityDiscovery = class _UnityDiscovery {
             "Monitor for tools/list_changed notifications after this discovery."
           );
           this.unityClient.updatePort(port);
-          if (this.onDiscoveredCallback) {
-            await this.onDiscoveredCallback(port);
+          try {
+            await this.unityClient.connect();
+            if (this.onDiscoveredCallback) {
+              await this.onDiscoveredCallback(port);
+            }
+          } catch (error) {
+            VibeLogger.logError(
+              "unity_discovery_connection_failed",
+              "Failed to establish connection after discovery",
+              { port, error: error.message },
+              correlationId,
+              "Connection attempt failed despite successful port scan.",
+              "Check Unity server status and network connectivity."
+            );
+            continue;
           }
           return;
         }
@@ -7135,7 +7095,6 @@ var UnityDiscovery = class _UnityDiscovery {
     if (this.unityClient.connected) {
       return true;
     }
-    infoToFile("[Unity Discovery] Force discovery initiated");
     await this.unifiedDiscoveryAndConnectionCheck();
     return this.unityClient.connected;
   }
@@ -7143,9 +7102,6 @@ var UnityDiscovery = class _UnityDiscovery {
    * Handle connection lost event (called by UnityClient)
    */
   handleConnectionLost() {
-    if (this.isDevelopment) {
-      debugToFile("[UnityDiscovery] Connection lost event received - restarting discovery");
-    }
     if (!this.discoveryInterval) {
       this.start();
     }
@@ -7190,9 +7146,8 @@ var UnityDiscovery = class _UnityDiscovery {
       intervalMs: POLLING.INTERVAL_MS,
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     };
-    debugToFile("[UnityDiscovery] Timer Status:", status);
     if (_UnityDiscovery.activeTimerCount > 1) {
-      errorToFile(
+      console.warn(
         `[UnityDiscovery] WARNING: Multiple timers detected! Count: ${_UnityDiscovery.activeTimerCount}`
       );
     }
@@ -7221,7 +7176,7 @@ var UnityConnectionManager = class {
   constructor(unityClient) {
     this.unityClient = unityClient;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
-    this.unityDiscovery = new UnityDiscovery(this.unityClient);
+    this.unityDiscovery = UnityDiscovery.getInstance(this.unityClient);
     this.unityClient.setUnityDiscovery(this.unityDiscovery);
   }
   /**
@@ -7244,11 +7199,21 @@ var UnityConnectionManager = class {
           resolve2();
           return;
         }
-        this.unityDiscovery.start();
-        this.unityDiscovery.setOnDiscoveredCallback(() => {
-          void this.unityClient.ensureConnected().then(() => {
+        if (this.isInitialized) {
+          const connectionInterval = setInterval(() => {
+            if (this.unityClient.connected) {
+              clearTimeout(timeout);
+              clearInterval(connectionInterval);
+              resolve2();
+            }
+          }, 100);
+          return;
+        }
+        this.initialize(() => {
+          return new Promise((resolveCallback) => {
             clearTimeout(timeout);
             resolve2();
+            resolveCallback();
           });
         });
       };
@@ -7260,17 +7225,16 @@ var UnityConnectionManager = class {
    */
   async handleUnityDiscovered(onConnectionEstablished) {
     try {
-      await this.unityClient.ensureConnected();
-      infoToFile("[Unity Connection] Unity connection established");
+      if (this.isDevelopment) {
+        debugToFile("[Unity Connection] Unity discovered - skipping redundant connection check");
+      }
+      infoToFile("[Unity Connection] Unity connection established via discovery");
       if (onConnectionEstablished) {
         await onConnectionEstablished();
       }
       this.unityDiscovery.stop();
     } catch (error) {
-      errorToFile(
-        "[Unity Connection] Failed to establish Unity connection after discovery:",
-        error
-      );
+      errorToFile("[Unity Connection] Failed to handle Unity discovery:", error);
     }
   }
   /**
@@ -7644,9 +7608,9 @@ var UnityToolManager = class {
       if (this.isDevelopment) {
         const stack = new Error().stack;
         const callerLine = stack?.split("\n")[2]?.trim() || "Unknown caller";
-        const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().split("T")[1].slice(0, 12);
+        const timestamp = (/* @__PURE__ */ new Date()).toISOString().split("T")[1].slice(0, 12);
         debugToFile(
-          `[Unity Tool Manager] refreshDynamicToolsSafe called at ${timestamp2} from: ${callerLine}`
+          `[Unity Tool Manager] refreshDynamicToolsSafe called at ${timestamp} from: ${callerLine}`
         );
       }
       await this.refreshDynamicTools(sendNotification);
@@ -7728,20 +7692,12 @@ var McpClientCompatibility = class {
       if (fallbackName) {
         this.clientName = fallbackName;
         await this.unityClient.setClientName(fallbackName);
-        infoToFile(`[MCP Client Compatibility] Fallback client name set to Unity: ${fallbackName}`);
       } else {
-        infoToFile("[MCP Client Compatibility] No client name set, waiting for initialize request");
       }
     } else {
       await this.unityClient.setClientName(this.clientName);
-      infoToFile(
-        `[MCP Client Compatibility] Client name already set, sending to Unity: ${this.clientName}`
-      );
     }
     this.unityClient.onReconnect(() => {
-      infoToFile(
-        `[MCP Client Compatibility] Reconnected - resending client name: ${this.clientName}`
-      );
       void this.unityClient.setClientName(this.clientName);
     });
   }
@@ -7763,16 +7719,8 @@ var McpClientCompatibility = class {
    */
   logClientCompatibility(clientName) {
     const isSupported = this.isListChangedSupported(clientName);
-    const compatibilityType = isSupported ? "list_changed supported" : "list_changed unsupported";
-    infoToFile(`[MCP Client Compatibility] Client: ${clientName} - ${compatibilityType}`);
     if (!isSupported) {
-      debugToFile(
-        `[MCP Client Compatibility] Client ${clientName} will use synchronous initialization`
-      );
     } else {
-      debugToFile(
-        `[MCP Client Compatibility] Client ${clientName} will use asynchronous initialization`
-      );
     }
   }
 };
@@ -7797,9 +7745,9 @@ var UnityEventHandler = class {
   setupUnityEventListener(onToolsChanged) {
     this.unityClient.onNotification("notifications/tools/list_changed", (params) => {
       if (this.isDevelopment) {
-        const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().split("T")[1].slice(0, 12);
+        const timestamp = (/* @__PURE__ */ new Date()).toISOString().split("T")[1].slice(0, 12);
         debugToFile(
-          `[TRACE] Unity notification received at ${timestamp2}: notifications/tools/list_changed`
+          `[TRACE] Unity notification received at ${timestamp}: notifications/tools/list_changed`
         );
         debugToFile(`[TRACE] Notification params: ${JSON.stringify(params)}`);
       }
@@ -8001,9 +7949,7 @@ var UnityMcpServer = class {
   eventHandler;
   constructor() {
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
-    infoToFile("Unity MCP Server Starting");
-    infoToFile(`Environment variable: NODE_ENV=${process.env.NODE_ENV}`);
-    infoToFile(`Development mode: ${this.isDevelopment}`);
+    VibeLogger.logInfo("mcp_server_starting", "Unity MCP Server Starting");
     this.server = new Server(
       {
         name: MCP_SERVER_NAME,
@@ -8042,20 +7988,15 @@ var UnityMcpServer = class {
       if (clientName) {
         this.clientCompatibility.setClientName(clientName);
         this.clientCompatibility.logClientCompatibility(clientName);
-        infoToFile(`[Unity MCP] Client name received: ${clientName}`);
       }
       if (!this.isInitialized) {
         this.isInitialized = true;
         if (this.clientCompatibility.isListChangedUnsupported(clientName)) {
-          infoToFile(
-            `[Unity MCP] Sync initialization for list_changed unsupported client: ${clientName}`
-          );
           try {
             await this.clientCompatibility.initializeClient(clientName);
             this.toolManager.setClientName(clientName);
             await this.connectionManager.waitForUnityConnectionWithTimeout(1e4);
             const tools = await this.toolManager.getToolsFromUnity();
-            infoToFile(`[Unity MCP] Returning ${tools.length} tools for ${clientName}`);
             return {
               protocolVersion: MCP_PROTOCOL_VERSION,
               capabilities: {
@@ -8070,7 +8011,13 @@ var UnityMcpServer = class {
               tools
             };
           } catch (error) {
-            errorToFile(`[Unity MCP] Unity connection timeout for ${clientName}:`, error);
+            VibeLogger.logError(
+              "mcp_unity_connection_timeout",
+              "Unity connection timeout",
+              { client_name: clientName, error_message: error.message },
+              void 0,
+              "Unity connection timed out - check Unity MCP bridge status"
+            );
             return {
               protocolVersion: MCP_PROTOCOL_VERSION,
               capabilities: {
@@ -8086,15 +8033,17 @@ var UnityMcpServer = class {
             };
           }
         } else {
-          infoToFile(
-            `[Unity MCP] Async initialization for list_changed supported client: ${clientName}`
-          );
           void this.clientCompatibility.initializeClient(clientName);
           this.toolManager.setClientName(clientName);
           void this.toolManager.initializeDynamicTools().then(() => {
-            infoToFile("[Unity MCP] Unity connection established successfully");
           }).catch((error) => {
-            errorToFile("[Unity MCP] Unity connection initialization failed:", error);
+            VibeLogger.logError(
+              "mcp_unity_connection_init_failed",
+              "Unity connection initialization failed",
+              { error_message: error.message },
+              void 0,
+              "Unity connection could not be established - check Unity MCP bridge"
+            );
             this.unityDiscovery.start();
           });
         }
@@ -8114,12 +8063,10 @@ var UnityMcpServer = class {
     });
     this.server.setRequestHandler(ListToolsRequestSchema, () => {
       const tools = this.toolManager.getAllTools();
-      debugToFile(`Providing ${tools.length} tools`, { toolNames: tools.map((t) => t.name) });
       return { tools };
     });
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
-      debugToFile(`Tool executed: ${name}`, { args });
       try {
         if (this.toolManager.hasTool(name)) {
           const dynamicTool = this.toolManager.getTool(name);
@@ -8157,14 +8104,11 @@ var UnityMcpServer = class {
       if (clientName) {
         this.toolManager.setClientName(clientName);
         await this.toolManager.initializeDynamicTools();
-        infoToFile("[Unity MCP] Unity connection established and tools initialized");
         this.eventHandler.sendToolsChangedNotification();
       } else {
-        infoToFile("[Unity MCP] Unity connection established, waiting for client name");
       }
     });
     if (this.isDevelopment) {
-      debugToFile("[Unity MCP] Server starting with unified discovery service");
     }
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
@@ -8172,10 +8116,16 @@ var UnityMcpServer = class {
 };
 var server = new UnityMcpServer();
 server.start().catch((error) => {
-  errorToFile("[FATAL] Server startup failed:", error);
-  errorToFile("[FATAL] Unity MCP Server startup failed:");
-  errorToFile("Error details:", error instanceof Error ? error.message : String(error));
-  errorToFile("Stack trace:", error instanceof Error ? error.stack : "No stack trace available");
-  errorToFile("Make sure Unity is running and the MCP bridge is properly configured.");
+  VibeLogger.logError(
+    "mcp_server_startup_fatal",
+    "Unity MCP Server startup failed",
+    {
+      error_message: error instanceof Error ? error.message : String(error),
+      stack_trace: error instanceof Error ? error.stack : "No stack trace available",
+      error_type: error instanceof Error ? error.constructor.name : typeof error
+    },
+    void 0,
+    "Fatal server startup error - check Unity MCP bridge configuration"
+  );
   process.exit(1);
 });

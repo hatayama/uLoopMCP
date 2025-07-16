@@ -141,16 +141,12 @@ namespace io.github.hatayama.uLoopMCP
             
             VibeLogger.LogInfo(
                 "domain_reload_start",
-                "Domain reload starting - preparing to disconnect TypeScript server",
+                "Domain reload starting",
                 new {
-                    server_exists = serverExists,
                     server_running = serverRunning,
-                    server_port = mcpServer?.Port,
-                    connected_clients = mcpServer?.GetConnectedClients()?.Count ?? 0
+                    server_port = mcpServer?.Port
                 },
-                correlationId,
-                "This marks the beginning of a domain reload cycle. TypeScript connection will be temporarily lost.",
-                "If connection problems occur after domain reload, analyze the correlation_id timeline."
+                correlationId
             );
             
             // If the server is running, save its state and stop it.
@@ -175,41 +171,18 @@ namespace io.github.hatayama.uLoopMCP
                     VibeLogger.LogInfo(
                         "domain_reload_server_stopping",
                         "Stopping MCP server before domain reload",
-                        new {
-                            port = portToSave,
-                            server_running = mcpServer.IsRunning
-                        },
-                        correlationId,
-                        "Server must be stopped cleanly to release TCP port before domain reload."
+                        new { port = portToSave },
+                        correlationId
                     );
                     
                     mcpServer.Dispose();
                     mcpServer = null;
                     
-                    // ここで接続が切れた直後の長時間コンパイルを擬似再現
-                    VibeLogger.LogWarning(
-                        "domain_reload_simulate_long_compile",
-                        "Simulating long compilation with Thread.Sleep",
-                        new {
-                            sleep_duration_ms = 15000,
-                            reason = "Testing domain reload connection recovery"
-                        },
-                        correlationId,
-                        "This is a test simulation. In real scenarios, this would be actual compilation time.",
-                        "Remove this sleep after testing is complete."
-                    );
-                    
-                    System.Threading.Thread.Sleep(15000); // 15秒遅延
-                    
                     VibeLogger.LogInfo(
-                        "domain_reload_server_stopped",
-                        "MCP server stopped successfully after simulated long compile",
-                        new {
-                            sleep_completed = true,
-                            tcp_port_released = true
-                        },
-                        correlationId,
-                        "Server has been stopped and TCP port should be released."
+                        "domain_reload_server_stopped", 
+                        "MCP server stopped successfully",
+                        new { tcp_port_released = true },
+                        correlationId
                     );
                     
                     // Wait a moment to ensure the TCP connection is properly released.
@@ -255,15 +228,8 @@ namespace io.github.hatayama.uLoopMCP
             VibeLogger.LogInfo(
                 "domain_reload_complete",
                 "Domain reload completed - starting server recovery process",
-                new {
-                    show_reconnecting_ui = showReconnectingUI,
-                    session_server_running = sessionManager.IsServerRunning,
-                    session_server_port = sessionManager.ServerPort,
-                    is_after_compile = sessionManager.IsAfterCompile
-                },
-                correlationId,
-                "Domain reload has completed. Server recovery process will now begin.",
-                "Monitor the server restoration process and tool notification sending."
+                new { session_server_port = sessionManager.ServerPort },
+                correlationId
             );
             
             if (showReconnectingUI)

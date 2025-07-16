@@ -1,6 +1,5 @@
 import * as net from 'net';
 import { UNITY_CONNECTION, POLLING } from './constants.js';
-import { infoToFile, errorToFile, debugToFile } from './utils/log-to-file.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 import { UnityClient } from './unity-client.js';
 
@@ -28,21 +27,19 @@ export class UnityDiscovery {
   private static instance: UnityDiscovery | null = null;
   private static activeTimerCount: number = 0; // Track active timers for debugging
 
-  constructor(unityClient: UnityClient) {
+  private constructor(unityClient: UnityClient) {
     this.unityClient = unityClient;
     this.isDevelopment = process.env.NODE_ENV === 'development';
+  }
 
-    // Singleton enforcement
-    if (UnityDiscovery.instance) {
-      if (this.isDevelopment) {
-        debugToFile(
-          '[UnityDiscovery] WARNING: Multiple instances detected. Using singleton pattern.',
-        );
-        debugToFile(`[UnityDiscovery] Active timer count: ${UnityDiscovery.activeTimerCount}`);
-      }
-      return UnityDiscovery.instance;
+  /**
+   * Get singleton instance of UnityDiscovery
+   */
+  static getInstance(unityClient: UnityClient): UnityDiscovery {
+    if (!UnityDiscovery.instance) {
+      UnityDiscovery.instance = new UnityDiscovery(unityClient);
     }
-    UnityDiscovery.instance = this;
+    return UnityDiscovery.instance;
   }
 
   /**
@@ -64,20 +61,12 @@ export class UnityDiscovery {
    */
   start(): void {
     if (this.discoveryInterval) {
-      if (this.isDevelopment) {
-        debugToFile('[UnityDiscovery] Timer already running - skipping duplicate start');
-      }
       return; // Already running
     }
 
     if (this.isDiscovering) {
-      if (this.isDevelopment) {
-        debugToFile('[UnityDiscovery] Discovery already in progress - skipping start');
-      }
       return; // Already discovering
     }
-
-    infoToFile('[Unity Discovery] Starting unified discovery and connection management...');
 
     // Immediate discovery attempt
     void this.unifiedDiscoveryAndConnectionCheck();
@@ -89,12 +78,6 @@ export class UnityDiscovery {
 
     // Track active timer count for debugging
     UnityDiscovery.activeTimerCount++;
-
-    if (this.isDevelopment) {
-      debugToFile(`[UnityDiscovery] Timer started with ${POLLING.INTERVAL_MS}ms interval`);
-      debugToFile(`[UnityDiscovery] Active timer count: ${UnityDiscovery.activeTimerCount}`);
-      this.logTimerStatus();
-    }
   }
 
   /**
@@ -108,14 +91,6 @@ export class UnityDiscovery {
 
       // Track active timer count for debugging
       UnityDiscovery.activeTimerCount = Math.max(0, UnityDiscovery.activeTimerCount - 1);
-
-      infoToFile('[Unity Discovery] Unity discovery and connection management stopped');
-
-      if (this.isDevelopment) {
-        debugToFile('[UnityDiscovery] Timer stopped and cleanup completed');
-        debugToFile(`[UnityDiscovery] Active timer count: ${UnityDiscovery.activeTimerCount}`);
-        this.logTimerStatus();
-      }
     }
   }
 
@@ -125,33 +100,33 @@ export class UnityDiscovery {
    */
   private async unifiedDiscoveryAndConnectionCheck(): Promise<void> {
     const correlationId = VibeLogger.generateCorrelationId();
-    
+
     if (this.isDiscovering) {
       VibeLogger.logDebug(
         'unity_discovery_skip_in_progress',
         'Discovery already in progress - skipping',
         { is_discovering: true },
-        correlationId
+        correlationId,
       );
       return;
     }
 
     this.isDiscovering = true;
-    
+
     VibeLogger.logInfo(
       'unity_discovery_cycle_start',
       'Starting unified discovery and connection check cycle',
       {
         unity_connected: this.unityClient.connected,
         polling_interval_ms: POLLING.INTERVAL_MS,
-        active_timer_count: UnityDiscovery.activeTimerCount
+        active_timer_count: UnityDiscovery.activeTimerCount,
       },
       correlationId,
-      'This cycle checks connection health and attempts Unity discovery if needed.'
+      'This cycle checks connection health and attempts Unity discovery if needed.',
     );
 
     try {
-      // If already connected, check connection health
+      // If already connected, check connection health (lightweight)
       if (this.unityClient.connected) {
         const isConnectionHealthy = await this.checkConnectionHealth();
 
@@ -161,24 +136,24 @@ export class UnityDiscovery {
             'unity_discovery_connection_healthy',
             'Connection is healthy - stopping discovery',
             { connection_healthy: true },
-            correlationId
+            correlationId,
           );
           this.stop();
           return;
         } else {
-          // Connection lost - trigger callback and continue discovery
+          // Connection might be temporarily unhealthy
+          // Don't immediately assume it's lost - give it time to recover
           VibeLogger.logWarning(
-            'unity_discovery_connection_lost',
-            'Connection lost - resuming discovery',
+            'unity_discovery_connection_unhealthy',
+            'Connection appears unhealthy - continuing discovery without assuming loss',
             { connection_healthy: false },
             correlationId,
-            'Connection health check failed. Will attempt to rediscover Unity.',
-            'Check Unity server status and network connectivity if this persists.'
+            'Connection health check failed. Will continue discovery but not assume complete loss.',
+            'Connection may recover on next cycle. Monitor for persistent issues.',
           );
 
-          if (this.onConnectionLostCallback) {
-            this.onConnectionLostCallback();
-          }
+          // Don't trigger connection lost callback immediately
+          // Let discovery continue and see if connection recovers
         }
       }
 
@@ -189,19 +164,27 @@ export class UnityDiscovery {
         'unity_discovery_cycle_end',
         'Discovery cycle completed',
         { is_discovering: false },
-        correlationId
+        correlationId,
       );
       this.isDiscovering = false;
     }
   }
 
   /**
-   * Check if the current connection is healthy
+   * Check if the current connection is healthy with timeout protection
    */
   private async checkConnectionHealth(): Promise<boolean> {
     try {
-      return await this.unityClient.testConnection();
+      // Add an additional timeout layer to prevent hanging
+      const healthCheck = await Promise.race([
+        this.unityClient.testConnection(),
+        new Promise<boolean>((_, reject) =>
+          setTimeout(() => reject(new Error('Connection health check timeout')), 1000),
+        ),
+      ]);
+      return healthCheck;
     } catch (error) {
+      // Return false on any error or timeout
       return false;
     }
   }
@@ -228,10 +211,10 @@ export class UnityDiscovery {
       {
         base_port: basePort,
         port_range: portRange,
-        total_ports: portRange.length
+        total_ports: portRange.length,
       },
       correlationId,
-      'Scanning multiple ports to find Unity MCP server.'
+      'Scanning multiple ports to find Unity MCP server.',
     );
 
     for (const port of portRange) {
@@ -243,17 +226,34 @@ export class UnityDiscovery {
             {
               discovered_port: port,
               base_port: basePort,
-              port_offset: port - basePort
+              port_offset: port - basePort,
             },
             correlationId,
             'Unity MCP server found and connection established successfully.',
-            'Monitor for tools/list_changed notifications after this discovery.'
+            'Monitor for tools/list_changed notifications after this discovery.',
           );
 
-          // Update client port and notify callback
+          // Update client port and establish connection
           this.unityClient.updatePort(port);
-          if (this.onDiscoveredCallback) {
-            await this.onDiscoveredCallback(port);
+
+          // Since isUnityAvailable() confirmed TCP connectivity,
+          // we can safely establish the connection without redundant checks
+          try {
+            await this.unityClient.connect();
+
+            if (this.onDiscoveredCallback) {
+              await this.onDiscoveredCallback(port);
+            }
+          } catch (error) {
+            VibeLogger.logError(
+              'unity_discovery_connection_failed',
+              'Failed to establish connection after discovery',
+              { port, error: error instanceof Error ? error.message : String(error) },
+              correlationId,
+              'Connection attempt failed despite successful port scan.',
+              'Check Unity server status and network connectivity.',
+            );
+            continue; // Try next port
           }
           return;
         }
@@ -262,18 +262,18 @@ export class UnityDiscovery {
         // Continue checking other ports
       }
     }
-    
+
     VibeLogger.logWarning(
       'unity_discovery_no_unity_found',
       'No Unity server found on any port in range',
       {
         base_port: basePort,
         ports_checked: portRange,
-        total_attempts: portRange.length
+        total_attempts: portRange.length,
       },
       correlationId,
       'Unity MCP server not found on any of the checked ports. Unity may not be running or using a different port.',
-      'Check Unity console for MCP server status and verify port configuration.'
+      'Check Unity console for MCP server status and verify port configuration.',
     );
   }
 
@@ -285,8 +285,6 @@ export class UnityDiscovery {
       return true;
     }
 
-    infoToFile('[Unity Discovery] Force discovery initiated');
-
     // Use the unified discovery method
     await this.unifiedDiscoveryAndConnectionCheck();
 
@@ -297,10 +295,6 @@ export class UnityDiscovery {
    * Handle connection lost event (called by UnityClient)
    */
   handleConnectionLost(): void {
-    if (this.isDevelopment) {
-      debugToFile('[UnityDiscovery] Connection lost event received - restarting discovery');
-    }
-
     // Restart discovery if not already running
     if (!this.discoveryInterval) {
       this.start();
@@ -346,22 +340,9 @@ export class UnityDiscovery {
       return;
     }
 
-    const status = {
-      isTimerActive: this.discoveryInterval !== null,
-      isDiscovering: this.isDiscovering,
-      activeTimerCount: UnityDiscovery.activeTimerCount,
-      isConnected: this.unityClient.connected,
-      intervalMs: POLLING.INTERVAL_MS,
-      timestamp: new Date().toISOString(),
-    };
-
-    debugToFile('[UnityDiscovery] Timer Status:', status);
-
     // Warning if multiple timers are detected
     if (UnityDiscovery.activeTimerCount > 1) {
-      errorToFile(
-        `[UnityDiscovery] WARNING: Multiple timers detected! Count: ${UnityDiscovery.activeTimerCount}`,
-      );
+      // WARNING: Multiple timers detected
     }
   }
 

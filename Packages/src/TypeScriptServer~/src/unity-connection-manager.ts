@@ -1,6 +1,5 @@
 import { UnityClient } from './unity-client.js';
 import { UnityDiscovery } from './unity-discovery.js';
-import { errorToFile, debugToFile, infoToFile } from './utils/log-to-file.js';
 import { ENVIRONMENT } from './constants.js';
 
 /**
@@ -30,7 +29,7 @@ export class UnityConnectionManager {
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
 
     // Initialize Unity discovery service (singleton pattern prevents duplicates)
-    this.unityDiscovery = new UnityDiscovery(this.unityClient);
+    this.unityDiscovery = UnityDiscovery.getInstance(this.unityClient);
 
     // Set UnityDiscovery reference in UnityClient for unified connection management
     this.unityClient.setUnityDiscovery(this.unityDiscovery);
@@ -59,15 +58,25 @@ export class UnityConnectionManager {
           return;
         }
 
-        // Start Unity discovery if not already running
-        this.unityDiscovery.start();
+        // If connection manager is already initialized, just wait for existing discovery
+        if (this.isInitialized) {
+          // Connection manager is already running, just wait for connection
+          const connectionInterval = setInterval(() => {
+            if (this.unityClient.connected) {
+              clearTimeout(timeout);
+              clearInterval(connectionInterval);
+              resolve();
+            }
+          }, 100);
+          return;
+        }
 
-        // Set up callback for when Unity is discovered
-        this.unityDiscovery.setOnDiscoveredCallback(() => {
-          // Wait for actual connection establishment
-          void this.unityClient.ensureConnected().then(() => {
+        // Fallback: Initialize connection manager if not already done
+        this.initialize(() => {
+          return new Promise<void>((resolveCallback) => {
             clearTimeout(timeout);
             resolve();
+            resolveCallback();
           });
         });
       };
@@ -81,8 +90,13 @@ export class UnityConnectionManager {
    */
   async handleUnityDiscovered(onConnectionEstablished?: () => Promise<void>): Promise<void> {
     try {
-      await this.unityClient.ensureConnected();
-      infoToFile('[Unity Connection] Unity connection established');
+      // Skip ensureConnected() since discovery already confirmed connection
+      // The isUnityAvailable() check in discoverUnityOnPorts() already verified TCP connectivity
+      if (this.isDevelopment) {
+        // Unity discovered - skipping redundant connection check
+      }
+
+      // Unity connection established via discovery
 
       // Execute callback if provided
       if (onConnectionEstablished) {
@@ -92,10 +106,7 @@ export class UnityConnectionManager {
       // Stop discovery after successful connection
       this.unityDiscovery.stop();
     } catch (error) {
-      errorToFile(
-        '[Unity Connection] Failed to establish Unity connection after discovery:',
-        error,
-      );
+      // Failed to handle Unity discovery
     }
   }
 
@@ -117,7 +128,7 @@ export class UnityConnectionManager {
     // Setup connection lost callback for connection recovery
     this.unityDiscovery.setOnConnectionLostCallback(() => {
       if (this.isDevelopment) {
-        debugToFile('[Unity Connection] Connection lost detected - ready for reconnection');
+        // Connection lost detected - ready for reconnection
       }
     });
 
@@ -125,7 +136,7 @@ export class UnityConnectionManager {
     this.unityDiscovery.start();
 
     if (this.isDevelopment) {
-      debugToFile('[Unity Connection] Connection manager initialized');
+      // Connection manager initialized
     }
   }
 

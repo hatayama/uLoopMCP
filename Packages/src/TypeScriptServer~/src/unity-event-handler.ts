@@ -1,7 +1,6 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { UnityClient } from './unity-client.js';
 import { UnityConnectionManager } from './unity-connection-manager.js';
-import { errorToFile, debugToFile, infoToFile } from './utils/log-to-file.js';
 import { ENVIRONMENT, NOTIFICATION_METHODS } from './constants.js';
 
 /**
@@ -41,22 +40,15 @@ export class UnityEventHandler {
    */
   setupUnityEventListener(onToolsChanged: () => Promise<void>): void {
     // Listen for MCP standard notifications from Unity
-    this.unityClient.onNotification('notifications/tools/list_changed', (params: unknown) => {
+    this.unityClient.onNotification('notifications/tools/list_changed', (_params: unknown) => {
       if (this.isDevelopment) {
-        const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
-        debugToFile(
-          `[TRACE] Unity notification received at ${timestamp}: notifications/tools/list_changed`,
-        );
-        debugToFile(`[TRACE] Notification params: ${JSON.stringify(params)}`);
+        // Unity notification received: notifications/tools/list_changed
       }
 
       try {
         void onToolsChanged();
       } catch (error) {
-        errorToFile(
-          '[Unity Event Handler] Failed to update dynamic tools via Unity notification:',
-          error,
-        );
+        // Failed to update dynamic tools via Unity notification
       }
     });
   }
@@ -67,9 +59,7 @@ export class UnityEventHandler {
   sendToolsChangedNotification(): void {
     if (this.isNotifying) {
       if (this.isDevelopment) {
-        debugToFile(
-          '[Unity Event Handler] sendToolsChangedNotification skipped: already notifying',
-        );
+        // sendToolsChangedNotification skipped: already notifying
       }
       return;
     }
@@ -81,10 +71,10 @@ export class UnityEventHandler {
         params: {},
       });
       if (this.isDevelopment) {
-        debugToFile('[Unity Event Handler] tools/list_changed notification sent');
+        // tools/list_changed notification sent
       }
     } catch (error) {
-      errorToFile('[Unity Event Handler] Failed to send tools changed notification:', error);
+      // Failed to send tools changed notification
     } finally {
       this.isNotifying = false;
     }
@@ -96,19 +86,19 @@ export class UnityEventHandler {
   setupSignalHandlers(): void {
     // Handle Ctrl+C (SIGINT)
     process.on('SIGINT', () => {
-      infoToFile('[Unity Event Handler] Received SIGINT, shutting down...');
+      // Received SIGINT, shutting down...
       this.gracefulShutdown();
     });
 
     // Handle kill command (SIGTERM)
     process.on('SIGTERM', () => {
-      infoToFile('[Unity Event Handler] Received SIGTERM, shutting down...');
+      // Received SIGTERM, shutting down...
       this.gracefulShutdown();
     });
 
     // Handle terminal close (SIGHUP)
     process.on('SIGHUP', () => {
-      infoToFile('[Unity Event Handler] Received SIGHUP, shutting down...');
+      // Received SIGHUP, shutting down...
       this.gracefulShutdown();
     });
 
@@ -116,24 +106,24 @@ export class UnityEventHandler {
     // BUG FIX: Added STDIN monitoring to detect when Cursor/parent MCP client disconnects
     // This prevents orphaned Node processes from remaining after IDE shutdown
     process.stdin.on('close', () => {
-      infoToFile('[Unity Event Handler] STDIN closed, shutting down...');
+      // STDIN closed, shutting down...
       this.gracefulShutdown();
     });
 
     process.stdin.on('end', () => {
-      infoToFile('[Unity Event Handler] STDIN ended, shutting down...');
+      // STDIN ended, shutting down...
       this.gracefulShutdown();
     });
 
     // Handle uncaught exceptions
     // BUG FIX: Added comprehensive error handling to prevent hanging processes
-    process.on('uncaughtException', (error) => {
-      errorToFile('[Unity Event Handler] Uncaught exception:', error);
+    process.on('uncaughtException', (_error) => {
+      // Uncaught exception
       this.gracefulShutdown();
     });
 
-    process.on('unhandledRejection', (reason, promise) => {
-      errorToFile('[Unity Event Handler] Unhandled rejection at:', promise, 'reason:', reason);
+    process.on('unhandledRejection', (_reason, _promise) => {
+      // Unhandled rejection
       this.gracefulShutdown();
     });
   }
@@ -149,7 +139,7 @@ export class UnityEventHandler {
     }
 
     this.isShuttingDown = true;
-    infoToFile('[Unity Event Handler] Starting graceful shutdown...');
+    // Starting graceful shutdown...
 
     try {
       // Disconnect from Unity and stop all intervals
@@ -162,10 +152,10 @@ export class UnityEventHandler {
         global.gc();
       }
     } catch (error) {
-      errorToFile('[Unity Event Handler] Error during cleanup:', error);
+      // Error during cleanup
     }
 
-    infoToFile('[Unity Event Handler] Graceful shutdown completed');
+    // Graceful shutdown completed
     process.exit(0);
   }
 

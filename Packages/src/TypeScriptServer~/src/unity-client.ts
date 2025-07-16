@@ -1,6 +1,6 @@
 import * as net from 'net';
 import { UNITY_CONNECTION, JSONRPC, TIMEOUTS, ERROR_MESSAGES } from './constants.js';
-import { errorToFile, debugToFile } from './utils/log-to-file.js';
+// Debug logging removed
 import { safeSetTimeout } from './utils/safe-timer.js';
 import { ConnectionManager } from './connection-manager.js';
 import { MessageHandler } from './message-handler.js';
@@ -85,33 +85,70 @@ export class UnityClient {
   }
 
   /**
-   * Actually test Unity's connection status
-   * Check actual communication possibility, not just socket status
+   * Lightweight connection health check
+   * Tests socket state without creating new connections
    */
   async testConnection(): Promise<boolean> {
+    // First check: basic connection state (lightweight)
     if (!this._connected || this.socket === null || this.socket.destroyed) {
       return false;
     }
 
-    // Send a simple ping to test if actual communication is possible
-    await this.ping(UNITY_CONNECTION.CONNECTION_TEST_MESSAGE);
-    return true;
+    // Second check: socket readability/writability (lightweight)
+    if (!this.socket.readable || !this.socket.writable) {
+      this._connected = false;
+      return false;
+    }
+
+    // Third check: ping test with timeout (only if socket state is good)
+    try {
+      // Add timeout to prevent hanging
+      await Promise.race([
+        this.ping(UNITY_CONNECTION.CONNECTION_TEST_MESSAGE),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Health check timeout')), 1000),
+        ),
+      ]);
+      return true;
+    } catch (error) {
+      // Ping failed or timed out, but don't disconnect - just report unhealthy
+      // This prevents creating new connections during health checks
+      return false;
+    }
   }
 
   /**
    * Connect to Unity (reconnect if necessary)
+   * Now more conservative about creating new connections
    */
   async ensureConnected(): Promise<void> {
-    // Test if already connected and actual communication is possible
-    try {
-      if (await this.testConnection()) {
-        return;
+    // First: quick socket state check
+    if (
+      this._connected &&
+      this.socket &&
+      !this.socket.destroyed &&
+      this.socket.readable &&
+      this.socket.writable
+    ) {
+      // Socket looks healthy, do a lightweight ping test
+      try {
+        if (await this.testConnection()) {
+          return; // Connection is healthy
+        }
+      } catch (error) {
+        // Ping failed, but don't immediately reconnect
+        // Give it another chance before creating new connection
       }
-    } catch (error) {
-      this._connected = false;
     }
 
-    // Reconnect if connection is lost
+    // Second chance: basic socket state check only
+    if (this._connected && this.socket && !this.socket.destroyed) {
+      // Socket exists but might be temporarily unresponsive
+      // Don't create new connection immediately
+      return;
+    }
+
+    // Only reconnect if socket is actually destroyed/null
     this.disconnect();
     await this.connect();
   }
@@ -131,7 +168,7 @@ export class UnityClient {
           try {
             handler();
           } catch (error) {
-            errorToFile('[UnityClient] Error in reconnect handler:', error);
+            // Error in reconnect handler
           }
         });
 
@@ -146,7 +183,6 @@ export class UnityClient {
           reject(new Error(`Unity connection failed: ${error.message}`));
         } else {
           // Error after connection was established
-          errorToFile('[UnityClient] Connection error:', error);
           this.handleConnectionLoss();
         }
       });
@@ -158,7 +194,6 @@ export class UnityClient {
 
       // Handle graceful end of connection
       this.socket.on('end', () => {
-        errorToFile('[UnityClient] Connection ended by server');
         this._connected = false;
         this.handleConnectionLoss();
       });
@@ -202,10 +237,10 @@ export class UnityClient {
       const response = await this.sendRequest(request);
 
       if (response.error) {
-        errorToFile(`Failed to set client name: ${response.error.message}`);
+        // Failed to set client name
       }
     } catch (error) {
-      errorToFile('[UnityClient] Error setting client name:', error);
+      // Error setting client name
     }
   }
 
@@ -226,7 +261,7 @@ export class UnityClient {
       },
     };
 
-    const response = await this.sendRequest(request);
+    const response = await this.sendRequest(request, 1000); // 1秒でタイムアウト
 
     if (response.error) {
       throw new Error(`Unity error: ${response.error.message}`);
@@ -292,7 +327,6 @@ export class UnityClient {
    * Execute any Unity tool dynamically
    */
   async executeTool(toolName: string, params: Record<string, unknown> = {}): Promise<unknown> {
-    const startTime = Date.now();
     const request = {
       jsonrpc: JSONRPC.VERSION,
       id: this.generateId(),
@@ -300,30 +334,19 @@ export class UnityClient {
       params: params,
     };
 
-    debugToFile(`[Unity Client] Executing tool: ${toolName} with params:`, params);
-    debugToFile('[Unity Client] Request:', request);
+    // Executing tool with params
 
-    // Unity側でタイムアウト制御されるため、TS側は長めのネットワークタイムアウトのみ
+    // Unity handles timeout control, so TS uses longer network timeout
     const timeoutMs = TIMEOUTS.NETWORK;
 
     try {
       const response = await this.sendRequest(request, timeoutMs);
-      const executionTime = Date.now() - startTime;
-      debugToFile(
-        `[Unity Client] Tool ${toolName} completed in ${executionTime}ms, response:`,
-        response,
-      );
 
       return this.handleToolResponse(response, toolName);
     } catch (error) {
-      const executionTime = Date.now() - startTime;
-      errorToFile(`[Unity Client] Tool ${toolName} failed after ${executionTime}ms:`, error);
-
       // Log timeout details to file for debugging in production
       if (error instanceof Error && error.message.includes('timed out')) {
-        errorToFile(
-          `[TIMEOUT] Tool: ${toolName}, NetworkTimeout: ${timeoutMs}ms, ExecutionTime: ${executionTime}ms, RequestId: ${request.id}, Params: ${JSON.stringify(params)}`,
-        );
+        // Timeout occurred
       }
 
       throw error;
@@ -361,11 +384,7 @@ export class UnityClient {
 
       // Use SafeTimer for automatic cleanup to prevent orphaned processes
       const timeoutTimer = safeSetTimeout(() => {
-        // Log network-level timeout details for debugging
-        errorToFile(
-          `[NETWORK_TIMEOUT] Method: ${request.method}, RequestId: ${request.id}, NetworkTimeout: ${timeout_duration}ms, Params: ${JSON.stringify(request.params || {})}`,
-        );
-
+        // Network timeout occurred
         this.messageHandler.clearPendingRequests(`Request ${ERROR_MESSAGES.TIMEOUT}`);
         reject(new Error(`Request ${ERROR_MESSAGES.TIMEOUT}`));
       }, timeout_duration);

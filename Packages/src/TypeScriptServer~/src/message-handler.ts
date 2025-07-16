@@ -1,5 +1,4 @@
 import { JSONRPC } from './constants.js';
-import { errorToFile, warnToFile, debugToFile } from './utils/log-to-file.js';
 import { ContentLengthFramer } from './utils/content-length-framer.js';
 import { DynamicBuffer } from './utils/dynamic-buffer.js';
 
@@ -114,16 +113,15 @@ export class MessageHandler {
    */
   handleIncomingData(data: Buffer | string): void {
     try {
-      const dataSize = data instanceof Buffer ? data.length : data.length;
-      debugToFile(`[MessageHandler] Received ${dataSize} bytes of data`);
+      // Debug: Received ${data instanceof Buffer ? data.length : data.length} bytes of data
 
       // Append new data to dynamic buffer (Buffer or string - DynamicBuffer handles both)
       this.dynamicBuffer.append(data);
-      debugToFile('[MessageHandler] Data appended to buffer successfully');
+      // Debug: Data appended to buffer successfully
 
       // Extract all complete frames
       const frames = this.dynamicBuffer.extractAllFrames();
-      debugToFile(`[MessageHandler] Extracted ${frames.length} complete frames`);
+      // Debug: Extracted ${frames.length} complete frames
 
       for (const frame of frames) {
         if (!frame || frame.trim() === '') {
@@ -144,12 +142,12 @@ export class MessageHandler {
             this.handleResponse(message as JsonRpcResponse);
           }
         } catch (parseError) {
-          errorToFile('[MessageHandler] Error parsing JSON frame:', parseError);
-          errorToFile('[MessageHandler] Problematic frame:', frame);
+          // Error: Error parsing JSON frame: ${parseError}
+          // Error: Problematic frame: ${frame}
         }
       }
     } catch (error) {
-      errorToFile('[MessageHandler] Error processing incoming data:', error);
+      // Error: Error processing incoming data: ${error}
     }
   }
 
@@ -164,7 +162,7 @@ export class MessageHandler {
       try {
         handler(params);
       } catch (error) {
-        errorToFile(`[MessageHandler] Error in notification handler for ${method}:`, error);
+        // Error: Error in notification handler for ${method}: ${error}
       }
     }
   }
@@ -199,7 +197,7 @@ export class MessageHandler {
         pending.resolve(response);
       }
     } else {
-      warnToFile(`[MessageHandler] Received response for unknown request ID: ${id}`);
+      // Warning: Received response for unknown request ID: ${id}
     }
   }
 

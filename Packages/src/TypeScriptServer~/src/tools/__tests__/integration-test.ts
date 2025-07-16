@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { McpConnectionValidator } from './mcp-connection.test.js';
-import { infoToFile, errorToFile } from '../../utils/log-to-file.js';
 
 /**
  * TDD Integration Test Suite
@@ -16,14 +15,14 @@ class IntegrationTestSuite {
    */
   private runTest(testName: string, testFn: () => void): void {
     try {
-      infoToFile(`${testName}...`);
+      // infoToFile(`${testName}...`);
       testFn();
       this.testResults.push({ name: testName, passed: true });
-      infoToFile(`${testName} PASSED`);
+      // infoToFile(`${testName} PASSED`);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.testResults.push({ name: testName, passed: false, error: errorMsg });
-      errorToFile(`${testName} FAILED: ${errorMsg}`);
+      // errorToFile(`${testName} FAILED: ${errorMsg}`);
       throw error; // Fail fast
     }
   }
@@ -123,10 +122,10 @@ class IntegrationTestSuite {
    * Run all integration tests
    */
   runAllTests(): void {
-    infoToFile('Starting TDD Integration Test Suite');
-    infoToFile('Contract-based testing with fail-fast approach');
-    infoToFile('5-second notification interval validation');
-    infoToFile('='.repeat(60));
+    // infoToFile('Starting TDD Integration Test Suite');
+    // infoToFile('Contract-based testing with fail-fast approach');
+    // infoToFile('5-second notification interval validation');
+    // infoToFile('='.repeat(60));
 
     try {
       this.runTest('MCP Server Setup & Configuration', () => this.testMcpServerSetup());
@@ -136,26 +135,26 @@ class IntegrationTestSuite {
       this.runTest('Tool Count Toggle Logic', () => this.testToolCountLogic());
 
       // Success summary
-      infoToFile('='.repeat(60));
-      infoToFile('ALL INTEGRATION TESTS PASSED');
-      infoToFile('MCP Server ready for Cursor deployment');
-      infoToFile('5-second notification interval confirmed');
-      infoToFile('Contract-based validation successful');
+      // infoToFile('='.repeat(60));
+      // infoToFile('ALL INTEGRATION TESTS PASSED');
+      // infoToFile('MCP Server ready for Cursor deployment');
+      // infoToFile('5-second notification interval confirmed');
+      // infoToFile('Contract-based validation successful');
 
       process.exit(0);
     } catch (error) {
       // Failure summary
-      errorToFile('='.repeat(60));
-      errorToFile('INTEGRATION TESTS FAILED');
-      errorToFile('Fail-fast triggered - deployment blocked');
+      // errorToFile('='.repeat(60));
+      // errorToFile('INTEGRATION TESTS FAILED');
+      // errorToFile('Fail-fast triggered - deployment blocked');
 
       // Show test results
-      errorToFile('\nTest Results:');
+      // errorToFile('\nTest Results:');
       for (const result of this.testResults) {
-        const status = result.passed ? 'PASSED' : 'FAILED';
-        errorToFile(`${status} ${result.name}`);
+        // const status = result.passed ? 'PASSED' : 'FAILED';
+        // errorToFile(`${status} ${result.name}`);
         if (result.error) {
-          errorToFile(`   Error: ${result.error}`);
+          // errorToFile(`   Error: ${result.error}`);
         }
       }
 
@@ -170,7 +169,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   try {
     suite.runAllTests();
   } catch (error) {
-    errorToFile('Fatal integration test error:', error);
+    console.error(
+      'Fatal integration test error:',
+      error instanceof Error ? error.message : String(error),
+    );
     process.exit(1);
   }
 }

@@ -35,13 +35,11 @@ namespace io.github.hatayama.uLoopMCP
         // Environment variable keys for development mode
         public const string ENV_KEY_ULOOPMCP_DEBUG = "ULOOPMCP_DEBUG";
         public const string ENV_KEY_ULOOPMCP_PRODUCTION = "ULOOPMCP_PRODUCTION";
-        public const string ENV_KEY_NODE_ENV = "NODE_ENV";
         public const string ENV_KEY_MCP_DEBUG = "MCP_DEBUG";
         // MCP_CLIENT_NAME removed - now using clientInfo.name from MCP protocol
         
         // Environment variable values
         public const string ENV_VALUE_TRUE = "true";
-        public const string ENV_VALUE_DEVELOPMENT = "development";
         
         // Client names for different editors
         public const string CLIENT_NAME_CURSOR = "Cursor";
