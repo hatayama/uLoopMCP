@@ -1,5 +1,4 @@
 import { JSONRPC } from './constants.js';
-import { errorToFile, warnToFile, debugToFile } from './utils/log-to-file.js';
 import { ContentLengthFramer } from './utils/content-length-framer.js';
 import { DynamicBuffer } from './utils/dynamic-buffer.js';
 
@@ -113,43 +112,36 @@ export class MessageHandler {
    * Handle incoming data from Unity using Content-Length framing
    */
   handleIncomingData(data: Buffer | string): void {
-    try {
-      const dataSize = data instanceof Buffer ? data.length : data.length;
-      debugToFile(`[MessageHandler] Received ${dataSize} bytes of data`);
+    // Append new data to dynamic buffer (Buffer or string - DynamicBuffer handles both)
+    this.dynamicBuffer.append(data);
 
-      // Append new data to dynamic buffer (Buffer or string - DynamicBuffer handles both)
-      this.dynamicBuffer.append(data);
-      debugToFile('[MessageHandler] Data appended to buffer successfully');
+    // Extract all complete frames
+    const frames = this.dynamicBuffer.extractAllFrames();
 
-      // Extract all complete frames
-      const frames = this.dynamicBuffer.extractAllFrames();
-      debugToFile(`[MessageHandler] Extracted ${frames.length} complete frames`);
-
-      for (const frame of frames) {
-        if (!frame || frame.trim() === '') {
-          continue;
-        }
-
-        try {
-          const message: unknown = JSON.parse(frame);
-
-          // Check if this is a notification (no id field)
-          if (isJsonRpcNotification(message)) {
-            this.handleNotification(message);
-          } else if (isJsonRpcResponse(message)) {
-            // This is a response to a request
-            this.handleResponse(message);
-          } else if (hasValidId(message)) {
-            // Fallback for other messages with valid id
-            this.handleResponse(message as JsonRpcResponse);
-          }
-        } catch (parseError) {
-          errorToFile('[MessageHandler] Error parsing JSON frame:', parseError);
-          errorToFile('[MessageHandler] Problematic frame:', frame);
-        }
+    for (const frame of frames) {
+      if (!frame || frame.trim() === '') {
+        continue;
       }
-    } catch (error) {
-      errorToFile('[MessageHandler] Error processing incoming data:', error);
+
+      try {
+        const message: unknown = JSON.parse(frame);
+
+        // Check if this is a notification (no id field)
+        if (isJsonRpcNotification(message)) {
+          this.handleNotification(message);
+        } else if (isJsonRpcResponse(message)) {
+          // This is a response to a request
+          this.handleResponse(message);
+        } else if (hasValidId(message)) {
+          // Fallback for other messages with valid id
+          this.handleResponse(message as JsonRpcResponse);
+        }
+      } catch (parseError) {
+        // eslint-disable-next-line no-console
+        console.error('Error parsing JSON frame:', parseError);
+        // eslint-disable-next-line no-console
+        console.error('Problematic frame:', frame);
+      }
     }
   }
 
@@ -164,7 +156,8 @@ export class MessageHandler {
       try {
         handler(params);
       } catch (error) {
-        errorToFile(`[MessageHandler] Error in notification handler for ${method}:`, error);
+        // eslint-disable-next-line no-console
+        console.error(`Error in notification handler for ${method}:`, error);
       }
     }
   }
@@ -199,7 +192,8 @@ export class MessageHandler {
         pending.resolve(response);
       }
     } else {
-      warnToFile(`[MessageHandler] Received response for unknown request ID: ${id}`);
+      // eslint-disable-next-line no-console
+      console.error(`Received response for unknown request ID: ${id}`);
     }
   }
 

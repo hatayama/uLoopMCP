@@ -1,4 +1,4 @@
-import { errorToFile } from './utils/log-to-file.js';
+import { VibeLogger } from './utils/vibe-logger.js';
 
 /**
  * Manages TCP connection state without polling
@@ -39,7 +39,11 @@ export class ConnectionManager {
       try {
         this.onReconnectedCallback();
       } catch (error) {
-        errorToFile('[ConnectionManager] Error in reconnection callback:', error);
+        VibeLogger.logError(
+          'connection_manager_reconnect_error',
+          'Error in reconnection callback',
+          { error },
+        );
       }
     }
   }
@@ -52,7 +56,11 @@ export class ConnectionManager {
       try {
         this.onConnectionLostCallback();
       } catch (error) {
-        errorToFile('[ConnectionManager] Error in connection lost callback:', error);
+        VibeLogger.logError(
+          'connection_manager_connection_lost_error',
+          'Error in connection lost callback',
+          { error },
+        );
       }
     }
   }

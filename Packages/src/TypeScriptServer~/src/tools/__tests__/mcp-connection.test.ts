@@ -1,6 +1,5 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { infoToFile, errorToFile } from '../../utils/log-to-file.js';
 
 /**
  * Contract: MCP Server Connection Validator
@@ -115,26 +114,13 @@ export class McpConnectionValidator {
    * @throws {Error} On first validation failure
    */
   runAllValidations(): void {
-    infoToFile('Starting MCP Connection Validation Tests...');
+    this.createServer();
 
-    try {
-      infoToFile('Testing server creation...');
-      this.createServer();
+    this.registerHandlers();
 
-      infoToFile('Testing handler registration...');
-      this.registerHandlers();
+    this.testNotification();
 
-      infoToFile('Testing notification capability...');
-      this.testNotification();
-
-      infoToFile('Testing JSON RPC compliance...');
-      this.validateJsonRpcCompliance();
-
-      infoToFile('All MCP connection tests passed!');
-    } catch (error) {
-      errorToFile('MCP Connection Test Failed:', error);
-      throw error; // Fail fast
-    }
+    this.validateJsonRpcCompliance();
   }
 }
 

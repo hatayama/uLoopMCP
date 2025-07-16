@@ -408,6 +408,7 @@ namespace io.github.hatayama.uLoopMCP
                 using (client)
                 using (NetworkStream stream = client.GetStream())
                 {
+                    
                     // Check for existing connection from same endpoint and close it
                     string clientKey = GenerateClientKey(clientEndpoint);
                     if (connectedClients.TryGetValue(clientKey, out ConnectedClient existingClient))
@@ -418,7 +419,7 @@ namespace io.github.hatayama.uLoopMCP
                     
                     // Add new client to connected clients for notification broadcasting
                     ConnectedClient connectedClient = new ConnectedClient(clientEndpoint, stream);
-                    bool addResult = connectedClients.TryAdd(clientKey, connectedClient);
+                    connectedClients.TryAdd(clientKey, connectedClient);
                     
                     // Initialize new framing components
                     bufferManager = new DynamicBufferManager();
@@ -453,11 +454,16 @@ namespace io.github.hatayama.uLoopMCP
                             // Only send response if it's not null (notifications return null)
                             if (!string.IsNullOrEmpty(responseJson))
                             {
-                                McpLogger.LogDebug($"[McpBridgeServer] Sending response to {clientEndpoint}: {responseJson}");
+                                // Check stream and client state before attempting write
+                                if (!stream.CanWrite || !client.Connected || cancellationToken.IsCancellationRequested)
+                                {
+                                    return; // Skip the write operation
+                                }
+                                
                                 // Send response with Content-Length framing
                                 string framedResponse = CreateContentLengthFrame(responseJson);
                                 byte[] responseData = Encoding.UTF8.GetBytes(framedResponse);
-                                McpLogger.LogDebug($"[McpBridgeServer] Framed response size: {responseData.Length} bytes, Content-Length: {Encoding.UTF8.GetByteCount(responseJson)}");
+                                
                                 await stream.WriteAsync(responseData, 0, responseData.Length, cancellationToken);
                             }
                         }
@@ -516,16 +522,10 @@ namespace io.github.hatayama.uLoopMCP
                 ConnectedClient clientToRemove = connectedClients.Values
                     .FirstOrDefault(c => c.Endpoint == clientEndpoint);
                     
-                bool removeResult = false;
                 if (clientToRemove != null)
                 {
                     string clientKey = GenerateClientKey(clientToRemove.Endpoint);
-                    removeResult = connectedClients.TryRemove(clientKey, out ConnectedClient removedClient);
-                    
-                }
-                else
-                {
-                    // Client not found in collection - might have been removed concurrently
+                    connectedClients.TryRemove(clientKey, out ConnectedClient removedClient);
                 }
                 
                 

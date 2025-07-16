@@ -1,5 +1,4 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { infoToFile, warnToFile, errorToFile, debugToFile } from './log-to-file.js';
 import { NOTIFICATION_METHODS } from '../constants.js';
 
 /**
@@ -48,12 +47,12 @@ export class NotificationTester {
    */
   startPeriodicTest(intervalMs: number = 10000): void {
     if (this.isRunning) {
-      warnToFile('Notification test is already running');
+      // Notification test is already running
       return;
     }
 
     this.isRunning = true;
-    infoToFile(`Starting periodic notification test every ${intervalMs}ms`);
+    // Starting periodic notification test
 
     this.testInterval = setInterval(() => {
       this.performNotificationTest();
@@ -72,7 +71,7 @@ export class NotificationTester {
       this.testInterval = null;
     }
     this.isRunning = false;
-    infoToFile('Periodic notification test stopped');
+    // Periodic notification test stopped
   }
 
   /**
@@ -82,13 +81,7 @@ export class NotificationTester {
     // Toggle tool count between 5 and 8
     this.toolCount = this.toolCount === 5 ? 8 : 5;
 
-    const testData = {
-      previousCount: this.toolCount === 5 ? 8 : 5,
-      newCount: this.toolCount,
-      timestamp: new Date().toISOString(),
-    };
-
-    debugToFile('Periodic Test: Tool Count Change', testData);
+    // Periodic Test: Tool Count Change
 
     try {
       // Send tools/list_changed notification
@@ -97,12 +90,9 @@ export class NotificationTester {
         params: {},
       });
 
-      infoToFile('Sending notification: notifications/tools/list_changed', {
-        simulatedToolCount: this.toolCount,
-        success: true,
-      });
+      // Sending notification: notifications/tools/list_changed
     } catch (error) {
-      errorToFile('Failed to send notification', error);
+      // Failed to send notification
     }
   }
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { McpConnectionValidator } from './mcp-connection.test.js';
-import { infoToFile, errorToFile } from '../../utils/log-to-file.js';
 
 /**
  * TDD Integration Test Suite
@@ -16,14 +15,11 @@ class IntegrationTestSuite {
    */
   private runTest(testName: string, testFn: () => void): void {
     try {
-      infoToFile(`${testName}...`);
       testFn();
       this.testResults.push({ name: testName, passed: true });
-      infoToFile(`${testName} PASSED`);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.testResults.push({ name: testName, passed: false, error: errorMsg });
-      errorToFile(`${testName} FAILED: ${errorMsg}`);
       throw error; // Fail fast
     }
   }
@@ -123,11 +119,6 @@ class IntegrationTestSuite {
    * Run all integration tests
    */
   runAllTests(): void {
-    infoToFile('Starting TDD Integration Test Suite');
-    infoToFile('Contract-based testing with fail-fast approach');
-    infoToFile('5-second notification interval validation');
-    infoToFile('='.repeat(60));
-
     try {
       this.runTest('MCP Server Setup & Configuration', () => this.testMcpServerSetup());
       this.runTest('JSON RPC Protocol Compliance', () => this.testJsonRpcCompliance());
@@ -135,30 +126,8 @@ class IntegrationTestSuite {
       this.runTest('Notification Timing (5s interval)', () => this.testNotificationTiming());
       this.runTest('Tool Count Toggle Logic', () => this.testToolCountLogic());
 
-      // Success summary
-      infoToFile('='.repeat(60));
-      infoToFile('ALL INTEGRATION TESTS PASSED');
-      infoToFile('MCP Server ready for Cursor deployment');
-      infoToFile('5-second notification interval confirmed');
-      infoToFile('Contract-based validation successful');
-
       process.exit(0);
     } catch (error) {
-      // Failure summary
-      errorToFile('='.repeat(60));
-      errorToFile('INTEGRATION TESTS FAILED');
-      errorToFile('Fail-fast triggered - deployment blocked');
-
-      // Show test results
-      errorToFile('\nTest Results:');
-      for (const result of this.testResults) {
-        const status = result.passed ? 'PASSED' : 'FAILED';
-        errorToFile(`${status} ${result.name}`);
-        if (result.error) {
-          errorToFile(`   Error: ${result.error}`);
-        }
-      }
-
       process.exit(1);
     }
   }
@@ -170,7 +139,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   try {
     suite.runAllTests();
   } catch (error) {
-    errorToFile('Fatal integration test error:', error);
     process.exit(1);
   }
 }

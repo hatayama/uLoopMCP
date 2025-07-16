@@ -8,7 +8,7 @@ import {
   InitializeRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { UnityClient } from './unity-client.js';
-import { errorToFile, debugToFile, infoToFile } from './utils/log-to-file.js';
+import { VibeLogger } from './utils/vibe-logger.js';
 import { UnityDiscovery } from './unity-discovery.js';
 import { UnityConnectionManager } from './unity-connection-manager.js';
 import { UnityToolManager } from './unity-tool-manager.js';
@@ -52,9 +52,7 @@ class UnityMcpServer {
     // Simple environment variable check
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
 
-    infoToFile('Unity MCP Server Starting');
-    infoToFile(`Environment variable: NODE_ENV=${process.env.NODE_ENV}`);
-    infoToFile(`Development mode: ${this.isDevelopment}`);
+    VibeLogger.logInfo('mcp_server_starting', 'Unity MCP Server Starting');
 
     this.server = new Server(
       {
@@ -109,7 +107,7 @@ class UnityMcpServer {
       if (clientName) {
         this.clientCompatibility.setClientName(clientName);
         this.clientCompatibility.logClientCompatibility(clientName);
-        infoToFile(`[Unity MCP] Client name received: ${clientName}`);
+        // Client name received - no logging needed for normal operation
       }
 
       // Initialize Unity connection after receiving client name
@@ -118,9 +116,7 @@ class UnityMcpServer {
 
         if (this.clientCompatibility.isListChangedUnsupported(clientName)) {
           // list_changed unsupported client: wait for Unity connection
-          infoToFile(
-            `[Unity MCP] Sync initialization for list_changed unsupported client: ${clientName}`,
-          );
+          // Sync initialization for list_changed unsupported client
 
           try {
             await this.clientCompatibility.initializeClient(clientName);
@@ -128,7 +124,7 @@ class UnityMcpServer {
             await this.connectionManager.waitForUnityConnectionWithTimeout(10000);
             const tools = await this.toolManager.getToolsFromUnity();
 
-            infoToFile(`[Unity MCP] Returning ${tools.length} tools for ${clientName}`);
+            // Returning tools for client
             return {
               protocolVersion: MCP_PROTOCOL_VERSION,
               capabilities: {
@@ -143,7 +139,16 @@ class UnityMcpServer {
               tools,
             };
           } catch (error) {
-            errorToFile(`[Unity MCP] Unity connection timeout for ${clientName}:`, error);
+            VibeLogger.logError(
+              'mcp_unity_connection_timeout',
+              'Unity connection timeout',
+              {
+                client_name: clientName,
+                error_message: error instanceof Error ? error.message : String(error),
+              },
+              undefined,
+              'Unity connection timed out - check Unity MCP bridge status',
+            );
             return {
               protocolVersion: MCP_PROTOCOL_VERSION,
               capabilities: {
@@ -160,9 +165,7 @@ class UnityMcpServer {
           }
         } else {
           // list_changed supported client: asynchronous approach
-          infoToFile(
-            `[Unity MCP] Async initialization for list_changed supported client: ${clientName}`,
-          );
+          // Async initialization for list_changed supported client
 
           // Start Unity connection initialization in background
           void this.clientCompatibility.initializeClient(clientName);
@@ -170,10 +173,16 @@ class UnityMcpServer {
           void this.toolManager
             .initializeDynamicTools()
             .then(() => {
-              infoToFile('[Unity MCP] Unity connection established successfully');
+              // Unity connection established successfully
             })
             .catch((error) => {
-              errorToFile('[Unity MCP] Unity connection initialization failed:', error);
+              VibeLogger.logError(
+                'mcp_unity_connection_init_failed',
+                'Unity connection initialization failed',
+                { error_message: error instanceof Error ? error.message : String(error) },
+                undefined,
+                'Unity connection could not be established - check Unity MCP bridge',
+              );
               // Start Unity discovery to retry connection (singleton pattern prevents duplicates)
               this.unityDiscovery.start();
             });
@@ -198,7 +207,7 @@ class UnityMcpServer {
     this.server.setRequestHandler(ListToolsRequestSchema, () => {
       const tools = this.toolManager.getAllTools();
 
-      debugToFile(`Providing ${tools.length} tools`, { toolNames: tools.map((t) => t.name) });
+      // Providing tools to client
       return { tools };
     });
 
@@ -206,7 +215,7 @@ class UnityMcpServer {
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
 
-      debugToFile(`Tool executed: ${name}`, { args });
+      // Tool executed
 
       try {
         // Check if it's a dynamic Unity tool
@@ -253,17 +262,17 @@ class UnityMcpServer {
       if (clientName) {
         this.toolManager.setClientName(clientName);
         await this.toolManager.initializeDynamicTools();
-        infoToFile('[Unity MCP] Unity connection established and tools initialized');
+        // Unity connection established and tools initialized
 
         // Send immediate tools changed notification for faster recovery
         this.eventHandler.sendToolsChangedNotification();
       } else {
-        infoToFile('[Unity MCP] Unity connection established, waiting for client name');
+        // Unity connection established, waiting for client name
       }
     });
 
     if (this.isDevelopment) {
-      debugToFile('[Unity MCP] Server starting with unified discovery service');
+      // Server starting with unified discovery service
     }
 
     // Connect to MCP transport first - wait for client name before connecting to Unity
@@ -276,10 +285,16 @@ class UnityMcpServer {
 const server = new UnityMcpServer();
 
 server.start().catch((error) => {
-  errorToFile('[FATAL] Server startup failed:', error);
-  errorToFile('[FATAL] Unity MCP Server startup failed:');
-  errorToFile('Error details:', error instanceof Error ? error.message : String(error));
-  errorToFile('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
-  errorToFile('Make sure Unity is running and the MCP bridge is properly configured.');
+  VibeLogger.logError(
+    'mcp_server_startup_fatal',
+    'Unity MCP Server startup failed',
+    {
+      error_message: error instanceof Error ? error.message : String(error),
+      stack_trace: error instanceof Error ? error.stack : 'No stack trace available',
+      error_type: error instanceof Error ? error.constructor.name : typeof error,
+    },
+    undefined,
+    'Fatal server startup error - check Unity MCP bridge configuration',
+  );
   process.exit(1);
 });

@@ -139,3 +139,9 @@ export const LIST_CHANGED_UNSUPPORTED_CLIENTS = [
   'gemini',
   'codeium',
 ] as const;
+
+// File output directories
+export const OUTPUT_DIRECTORIES = {
+  ROOT: 'uLoopMCPOutputs',
+  VIBE_LOGS: 'VibeLogs',
+} as const;

@@ -128,15 +128,26 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static void OnBeforeAssemblyReload()
         {
+            // Generate correlation ID for tracking this domain reload cycle
+            string correlationId = VibeLogger.GenerateCorrelationId();
             
             // Set the domain reload start flag.
             McpSessionManager sessionManager = McpSessionManager.instance;
             sessionManager.IsDomainReloadInProgress = true;
             
-            // Debug: Log server state before assembly reload
+            // Log server state before assembly reload
             bool serverExists = mcpServer != null;
             bool serverRunning = mcpServer?.IsRunning ?? false;
-            McpLogger.LogDebug($"[RECONNECTION] OnBeforeAssemblyReload: serverExists={serverExists}, serverRunning={serverRunning}");
+            
+            VibeLogger.LogInfo(
+                "domain_reload_start",
+                "Domain reload starting",
+                new {
+                    server_running = serverRunning,
+                    server_port = mcpServer?.Port
+                },
+                correlationId
+            );
             
             // If the server is running, save its state and stop it.
             if (mcpServer?.IsRunning == true)
@@ -157,15 +168,40 @@ namespace io.github.hatayama.uLoopMCP
                 // Stop the server completely (using Dispose to ensure the TCP connection is released).
                 try
                 {
+                    VibeLogger.LogInfo(
+                        "domain_reload_server_stopping",
+                        "Stopping MCP server before domain reload",
+                        new { port = portToSave },
+                        correlationId
+                    );
+                    
                     mcpServer.Dispose();
                     mcpServer = null;
+                    
+                    VibeLogger.LogInfo(
+                        "domain_reload_server_stopped", 
+                        "MCP server stopped successfully",
+                        new { tcp_port_released = true },
+                        correlationId
+                    );
                     
                     // Wait a moment to ensure the TCP connection is properly released.
                     System.Threading.Thread.Sleep(100);
                 }
                 catch (System.Exception ex)
                 {
-                    McpLogger.LogError($"Critical error during server shutdown before assembly reload: {ex.Message}");
+                    VibeLogger.LogException(
+                        "domain_reload_server_shutdown_error",
+                        ex,
+                        new {
+                            port = portToSave,
+                            server_was_running = true
+                        },
+                        correlationId,
+                        "Critical error during server shutdown before assembly reload. This may cause port conflicts on restart.",
+                        "Investigate server shutdown process and ensure proper TCP port release."
+                    );
+                    
                     // Don't suppress this exception - server shutdown failure could leave ports locked
                     // and cause startup issues after domain reload
                     throw new System.InvalidOperationException(
@@ -179,13 +215,22 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static void OnAfterAssemblyReload()
         {
+            // Generate correlation ID for tracking this domain reload recovery
+            string correlationId = VibeLogger.GenerateCorrelationId();
+            
             // Clear the domain reload completion flag.
             McpSessionManager sessionManager = McpSessionManager.instance;
             sessionManager.ClearDomainReloadFlag();
             
             // Start UI timeout if UI display flag is set
             bool showReconnectingUI = sessionManager.ShowReconnectingUI;
-            McpLogger.LogDebug($"[RECONNECTION] OnAfterAssemblyReload: showReconnectingUI={showReconnectingUI}");
+            
+            VibeLogger.LogInfo(
+                "domain_reload_complete",
+                "Domain reload completed - starting server recovery process",
+                new { session_server_port = sessionManager.ServerPort },
+                correlationId
+            );
             
             if (showReconnectingUI)
             {

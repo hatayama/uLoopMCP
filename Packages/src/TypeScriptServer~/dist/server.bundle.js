@@ -5076,7 +5076,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken } = options !== null && options !== void 0 ? options : {};
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       var _a, _b, _c, _d, _e, _f;
       if (!this._transport) {
         reject(new Error("Not connected"));
@@ -5127,7 +5127,7 @@ var Protocol = class {
         }
         try {
           const result = resultSchema.parse(response.result);
-          resolve(result);
+          resolve2(result);
         } catch (error) {
           reject(error);
         }
@@ -5462,12 +5462,12 @@ var StdioServerTransport = class {
     (_a = this.onclose) === null || _a === void 0 ? void 0 : _a.call(this);
   }
   send(message) {
-    return new Promise((resolve) => {
+    return new Promise((resolve2) => {
       const json = serializeMessage(message);
       if (this._stdout.write(json)) {
-        resolve();
+        resolve2();
       } else {
-        this._stdout.once("drain", resolve);
+        this._stdout.once("drain", resolve2);
       }
     });
   }
@@ -5526,89 +5526,9 @@ var LIST_CHANGED_UNSUPPORTED_CLIENTS = [
   "gemini",
   "codeium"
 ];
-
-// src/utils/log-to-file.ts
-import * as fs from "fs";
-import * as path from "path";
-import { fileURLToPath } from "url";
-var isValidPath = (filePath) => {
-  const normalized = path.normalize(filePath);
-  return !normalized.includes("..") && path.isAbsolute(normalized);
-};
-var findProjectRoot = () => {
-  const __filename = fileURLToPath(import.meta.url);
-  let currentDir = path.dirname(__filename);
-  let searchDepth = 0;
-  const maxSearchDepth = 10;
-  while (searchDepth < maxSearchDepth) {
-    const parentDir = path.dirname(currentDir);
-    if (currentDir === parentDir) {
-      break;
-    }
-    const unityIndicators = ["ProjectSettings", "Assets", "Packages"];
-    const hasUnityFiles = unityIndicators.every((indicator) => {
-      try {
-        const checkPath = path.join(currentDir, indicator);
-        return isValidPath(checkPath) && fs.existsSync(checkPath);
-      } catch {
-        return false;
-      }
-    });
-    if (hasUnityFiles) {
-      return currentDir;
-    }
-    currentDir = parentDir;
-    searchDepth++;
-  }
-  return process.cwd();
-};
-var logDir = path.join(findProjectRoot(), "ULoopMCPLogs");
-var timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-").split("T");
-var dateStr = timestamp[0];
-var timeStr = timestamp[1].split(".")[0];
-var logFile = path.join(logDir, `mcp-debug-${dateStr}_${timeStr}.log`);
-var directoryCreated = false;
-var writeToFile = (message) => {
-  try {
-    if (!directoryCreated) {
-      if (!isValidPath(logDir)) {
-        return;
-      }
-      fs.mkdirSync(logDir, { recursive: true });
-      directoryCreated = true;
-    }
-    if (!isValidPath(logFile)) {
-      return;
-    }
-    const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-    fs.appendFileSync(logFile, `${timestamp2} ${message}
-`);
-  } catch (error) {
-  }
-};
-var debugToFile = (...args) => {
-  if (process.env.MCP_DEBUG) {
-    const message = args.map((arg) => typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)).join(" ");
-    writeToFile(`[MCP-DEBUG] ${message}`);
-  }
-};
-var infoToFile = (...args) => {
-  if (process.env.MCP_DEBUG) {
-    const message = args.map((arg) => typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)).join(" ");
-    writeToFile(`[MCP-INFO] ${message}`);
-  }
-};
-var warnToFile = (...args) => {
-  if (process.env.MCP_DEBUG) {
-    const message = args.map((arg) => typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)).join(" ");
-    writeToFile(`[MCP-WARN] ${message}`);
-  }
-};
-var errorToFile = (...args) => {
-  if (process.env.MCP_DEBUG) {
-    const message = args.map((arg) => typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)).join(" ");
-    writeToFile(`[MCP-ERROR] ${message}`);
-  }
+var OUTPUT_DIRECTORIES = {
+  ROOT: "uLoopMCPOutputs",
+  VIBE_LOGS: "VibeLogs"
 };
 
 // src/utils/safe-timer.ts
@@ -5702,6 +5622,344 @@ function safeSetTimeout(callback, delay) {
   return new SafeTimer(callback, delay, false);
 }
 
+// src/utils/vibe-logger.ts
+import * as fs from "fs";
+import * as path from "path";
+import { fileURLToPath } from "url";
+
+// node_modules/uuid/dist/esm/stringify.js
+var byteToHex = [];
+for (let i = 0; i < 256; ++i) {
+  byteToHex.push((i + 256).toString(16).slice(1));
+}
+function unsafeStringify(arr, offset = 0) {
+  return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
+}
+
+// node_modules/uuid/dist/esm/rng.js
+import { randomFillSync } from "crypto";
+var rnds8Pool = new Uint8Array(256);
+var poolPtr = rnds8Pool.length;
+function rng() {
+  if (poolPtr > rnds8Pool.length - 16) {
+    randomFillSync(rnds8Pool);
+    poolPtr = 0;
+  }
+  return rnds8Pool.slice(poolPtr, poolPtr += 16);
+}
+
+// node_modules/uuid/dist/esm/native.js
+import { randomUUID } from "crypto";
+var native_default = { randomUUID };
+
+// node_modules/uuid/dist/esm/v4.js
+function v4(options, buf, offset) {
+  if (native_default.randomUUID && !buf && !options) {
+    return native_default.randomUUID();
+  }
+  options = options || {};
+  const rnds = options.random ?? options.rng?.() ?? rng();
+  if (rnds.length < 16) {
+    throw new Error("Random bytes length must be >= 16");
+  }
+  rnds[6] = rnds[6] & 15 | 64;
+  rnds[8] = rnds[8] & 63 | 128;
+  if (buf) {
+    offset = offset || 0;
+    if (offset < 0 || offset + 16 > buf.length) {
+      throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+    }
+    for (let i = 0; i < 16; ++i) {
+      buf[offset + i] = rnds[i];
+    }
+    return buf;
+  }
+  return unsafeStringify(rnds);
+}
+var v4_default = v4;
+
+// src/utils/vibe-logger.ts
+var VibeLogger = class _VibeLogger {
+  // Navigate from TypeScriptServer~ to project root: ../../../
+  static PROJECT_ROOT = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../../.."
+  );
+  static LOG_DIRECTORY = path.join(
+    _VibeLogger.PROJECT_ROOT,
+    OUTPUT_DIRECTORIES.ROOT,
+    OUTPUT_DIRECTORIES.VIBE_LOGS
+  );
+  static LOG_FILE_PREFIX = "typescript_vibe";
+  static MAX_FILE_SIZE_MB = 10;
+  static MAX_MEMORY_LOGS = 1e3;
+  static memoryLogs = [];
+  static isDebugEnabled = process.env.MCP_DEBUG === "true";
+  /**
+   * Log an info level message with structured context
+   */
+  static logInfo(operation, message, context, correlationId, humanNote, aiTodo) {
+    _VibeLogger.log("INFO", operation, message, context, correlationId, humanNote, aiTodo);
+  }
+  /**
+   * Log a warning level message with structured context
+   */
+  static logWarning(operation, message, context, correlationId, humanNote, aiTodo) {
+    _VibeLogger.log("WARNING", operation, message, context, correlationId, humanNote, aiTodo);
+  }
+  /**
+   * Log an error level message with structured context
+   */
+  static logError(operation, message, context, correlationId, humanNote, aiTodo) {
+    _VibeLogger.log("ERROR", operation, message, context, correlationId, humanNote, aiTodo);
+  }
+  /**
+   * Log a debug level message with structured context
+   */
+  static logDebug(operation, message, context, correlationId, humanNote, aiTodo) {
+    _VibeLogger.log("DEBUG", operation, message, context, correlationId, humanNote, aiTodo);
+  }
+  /**
+   * Log an exception with structured context
+   */
+  static logException(operation, error, context, correlationId, humanNote, aiTodo) {
+    const exceptionContext = {
+      original_context: context,
+      exception: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause
+      }
+    };
+    _VibeLogger.log(
+      "ERROR",
+      operation,
+      `Exception occurred: ${error.message}`,
+      exceptionContext,
+      correlationId,
+      humanNote,
+      aiTodo
+    );
+  }
+  /**
+   * Generate a new correlation ID for tracking related operations
+   */
+  static generateCorrelationId() {
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString().slice(11, 19).replace(/:/g, "");
+    return `ts_${v4_default().slice(0, 8)}_${timestamp}`;
+  }
+  /**
+   * Get logs for AI analysis (formatted for Claude Code)
+   * Output directory: {project_root}/uLoopMCPOutputs/VibeLogs/
+   */
+  static getLogsForAi(operation, correlationId, maxCount = 100) {
+    let filteredLogs = [..._VibeLogger.memoryLogs];
+    if (operation) {
+      filteredLogs = filteredLogs.filter((log) => log.operation.includes(operation));
+    }
+    if (correlationId) {
+      filteredLogs = filteredLogs.filter((log) => log.correlation_id === correlationId);
+    }
+    if (filteredLogs.length > maxCount) {
+      filteredLogs = filteredLogs.slice(-maxCount);
+    }
+    return JSON.stringify(filteredLogs, null, 2);
+  }
+  /**
+   * Clear all memory logs
+   */
+  static clearMemoryLogs() {
+    _VibeLogger.memoryLogs = [];
+  }
+  /**
+   * Core logging method
+   * Only logs when MCP_DEBUG environment variable is set to 'true'
+   */
+  static log(level, operation, message, context, correlationId, humanNote, aiTodo) {
+    if (!_VibeLogger.isDebugEnabled) {
+      return;
+    }
+    const logEntry = {
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      level,
+      operation,
+      message,
+      context: _VibeLogger.sanitizeContext(context),
+      correlation_id: correlationId || _VibeLogger.generateCorrelationId(),
+      source: "TypeScript",
+      human_note: humanNote,
+      ai_todo: aiTodo,
+      environment: _VibeLogger.getEnvironmentInfo()
+    };
+    _VibeLogger.memoryLogs.push(logEntry);
+    if (_VibeLogger.memoryLogs.length > _VibeLogger.MAX_MEMORY_LOGS) {
+      _VibeLogger.memoryLogs.shift();
+    }
+    _VibeLogger.saveLogToFile(logEntry).catch((error) => {
+      console.error(
+        `[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`
+      );
+    });
+    if (_VibeLogger.isDebugEnabled) {
+      console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
+    }
+  }
+  /**
+   * Validate file name to prevent dangerous characters
+   */
+  static validateFileName(fileName) {
+    const safeFileNameRegex = /^[a-zA-Z0-9._-]+$/;
+    return safeFileNameRegex.test(fileName) && !fileName.includes("..");
+  }
+  /**
+   * Validate file path to prevent directory traversal attacks
+   */
+  static validateFilePath(filePath) {
+    const normalizedPath = path.normalize(filePath);
+    const logDirectory = path.normalize(_VibeLogger.LOG_DIRECTORY);
+    return normalizedPath.startsWith(logDirectory + path.sep) || normalizedPath === logDirectory;
+  }
+  /**
+   * Save log entry to file with retry mechanism for concurrent access
+   */
+  static async saveLogToFile(logEntry) {
+    try {
+      const logDirectory = path.normalize(_VibeLogger.LOG_DIRECTORY);
+      if (!_VibeLogger.validateFilePath(logDirectory)) {
+        throw new Error("Invalid log directory path");
+      }
+      if (!fs.existsSync(logDirectory)) {
+        fs.mkdirSync(logDirectory, { recursive: true });
+      }
+      const fileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDate()}.json`;
+      if (!_VibeLogger.validateFileName(fileName)) {
+        throw new Error("Invalid file name detected");
+      }
+      const filePath = path.resolve(logDirectory, fileName);
+      if (!filePath.startsWith(logDirectory)) {
+        throw new Error("Resolved file path escapes the log directory");
+      }
+      if (!_VibeLogger.validateFilePath(filePath)) {
+        throw new Error("Invalid file path detected");
+      }
+      if (fs.existsSync(filePath)) {
+        const stats = fs.statSync(filePath);
+        if (stats.size > _VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
+          const rotatedFileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDateTime()}.json`;
+          if (!_VibeLogger.validateFileName(rotatedFileName)) {
+            throw new Error("Invalid rotated file name detected");
+          }
+          const rotatedFilePath = path.resolve(logDirectory, rotatedFileName);
+          if (!rotatedFilePath.startsWith(path.resolve(logDirectory))) {
+            throw new Error("Rotated file path escapes the allowed directory");
+          }
+          const sanitizedFilePath = path.resolve(logDirectory, path.basename(filePath));
+          if (!sanitizedFilePath.startsWith(path.resolve(logDirectory))) {
+            throw new Error("Original file path escapes the allowed directory");
+          }
+          fs.renameSync(sanitizedFilePath, rotatedFilePath);
+        }
+      }
+      const jsonLog = JSON.stringify(logEntry) + "\n";
+      const maxRetries = 3;
+      const baseDelayMs = 50;
+      for (let retry = 0; retry < maxRetries; retry++) {
+        try {
+          fs.appendFileSync(filePath, jsonLog, { flag: "a" });
+          return;
+        } catch (error) {
+          if (_VibeLogger.isFileSharingViolation(error) && retry < maxRetries - 1) {
+            const delayMs = baseDelayMs * Math.pow(2, retry);
+            await _VibeLogger.sleep(delayMs);
+          } else {
+            throw error;
+          }
+        }
+      }
+    } catch (error) {
+      console.error(
+        `[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`
+      );
+      console.log(`[VibeLogger] ${logEntry.level} | ${logEntry.operation} | ${logEntry.message}`);
+    }
+  }
+  /**
+   * Check if error is a file sharing violation
+   */
+  static isFileSharingViolation(error) {
+    if (!error) {
+      return false;
+    }
+    const sharingViolationCodes = [
+      "EBUSY",
+      // Resource busy or locked
+      "EACCES",
+      // Permission denied (can indicate file in use)
+      "EPERM",
+      // Operation not permitted
+      "EMFILE",
+      // Too many open files
+      "ENFILE"
+      // File table overflow
+    ];
+    return error && typeof error === "object" && "code" in error && typeof error.code === "string" && sharingViolationCodes.includes(error.code);
+  }
+  /**
+   * Asynchronous sleep function for retry delays
+   */
+  static async sleep(ms) {
+    return new Promise((resolve2) => setTimeout(resolve2, ms));
+  }
+  /**
+   * Get current environment information
+   */
+  static getEnvironmentInfo() {
+    const memUsage = process.memoryUsage();
+    return {
+      node_version: process.version,
+      platform: process.platform,
+      process_id: process.pid,
+      memory_usage: {
+        rss: memUsage.rss,
+        heapTotal: memUsage.heapTotal,
+        heapUsed: memUsage.heapUsed
+      }
+    };
+  }
+  /**
+   * Sanitize context to prevent circular references
+   */
+  static sanitizeContext(context) {
+    if (!context) {
+      return void 0;
+    }
+    try {
+      return JSON.parse(JSON.stringify(context));
+    } catch (error) {
+      return {
+        error: "Failed to serialize context",
+        original_type: typeof context,
+        circular_reference: true
+      };
+    }
+  }
+  /**
+   * Format date for file naming
+   */
+  static formatDate() {
+    const now = /* @__PURE__ */ new Date();
+    return now.toISOString().slice(0, 10).replace(/-/g, "");
+  }
+  /**
+   * Format datetime for file rotation
+   */
+  static formatDateTime() {
+    const now = /* @__PURE__ */ new Date();
+    return now.toISOString().slice(0, 19).replace(/[-:]/g, "").replace("T", "_");
+  }
+};
+
 // src/connection-manager.ts
 var ConnectionManager = class {
   onReconnectedCallback = null;
@@ -5726,7 +5984,11 @@ var ConnectionManager = class {
       try {
         this.onReconnectedCallback();
       } catch (error) {
-        errorToFile("[ConnectionManager] Error in reconnection callback:", error);
+        VibeLogger.logError(
+          "connection_manager_reconnect_error",
+          "Error in reconnection callback",
+          { error }
+        );
       }
     }
   }
@@ -5738,7 +6000,11 @@ var ConnectionManager = class {
       try {
         this.onConnectionLostCallback();
       } catch (error) {
-        errorToFile("[ConnectionManager] Error in connection lost callback:", error);
+        VibeLogger.logError(
+          "connection_manager_connection_lost_error",
+          "Error in connection lost callback",
+          { error }
+        );
       }
     }
   }
@@ -5778,12 +6044,12 @@ var ContentLengthFramer = class _ContentLengthFramer {
       throw new Error(_ContentLengthFramer.ERROR_MESSAGE_JSON_EMPTY);
     }
     const contentLength = Buffer.byteLength(jsonContent, _ContentLengthFramer.ENCODING_UTF8);
-    if (contentLength > this.MAX_MESSAGE_SIZE) {
+    if (contentLength > _ContentLengthFramer.MAX_MESSAGE_SIZE) {
       throw new Error(
-        `Message size ${contentLength} exceeds maximum allowed size ${this.MAX_MESSAGE_SIZE}`
+        `Message size ${contentLength} exceeds maximum allowed size ${_ContentLengthFramer.MAX_MESSAGE_SIZE}`
       );
     }
-    return `${this.CONTENT_LENGTH_HEADER} ${contentLength}${this.HEADER_SEPARATOR}${jsonContent}`;
+    return `${_ContentLengthFramer.CONTENT_LENGTH_HEADER} ${contentLength}${_ContentLengthFramer.HEADER_SEPARATOR}${jsonContent}`;
   }
   /**
    * Parses a Content-Length header from incoming data.
@@ -5799,7 +6065,7 @@ var ContentLengthFramer = class _ContentLengthFramer {
       };
     }
     try {
-      const separatorIndex = data.indexOf(this.HEADER_SEPARATOR);
+      const separatorIndex = data.indexOf(_ContentLengthFramer.HEADER_SEPARATOR);
       if (separatorIndex === -1) {
         return {
           contentLength: -1,
@@ -5808,8 +6074,8 @@ var ContentLengthFramer = class _ContentLengthFramer {
         };
       }
       const headerSection = data.substring(0, separatorIndex);
-      const headerLength = separatorIndex + this.HEADER_SEPARATOR.length;
-      const contentLength = this.parseContentLength(headerSection);
+      const headerLength = separatorIndex + _ContentLengthFramer.HEADER_SEPARATOR.length;
+      const contentLength = _ContentLengthFramer.parseContentLength(headerSection);
       if (contentLength === -1) {
         return {
           contentLength: -1,
@@ -5820,8 +6086,17 @@ var ContentLengthFramer = class _ContentLengthFramer {
       const expectedTotalLength = headerLength + contentLength;
       const actualByteLength = Buffer.byteLength(data, _ContentLengthFramer.ENCODING_UTF8);
       const isComplete = actualByteLength >= expectedTotalLength;
-      debugToFile(
-        `${_ContentLengthFramer.LOG_PREFIX} Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`
+      VibeLogger.logDebug(
+        "frame_analysis",
+        `Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`,
+        {
+          dataLength: data.length,
+          actualByteLength,
+          contentLength,
+          headerLength,
+          expectedTotalLength,
+          isComplete
+        }
       );
       return {
         contentLength,
@@ -5829,7 +6104,17 @@ var ContentLengthFramer = class _ContentLengthFramer {
         isComplete
       };
     } catch (error) {
-      errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Error parsing frame:`, error);
+      VibeLogger.logError(
+        "parse_frame_error",
+        `Error parsing frame: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          error: error instanceof Error ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          } : { raw: String(error) }
+        }
+      );
       return {
         contentLength: -1,
         headerLength: -1,
@@ -5851,7 +6136,10 @@ var ContentLengthFramer = class _ContentLengthFramer {
       };
     }
     try {
-      const separatorBuffer = Buffer.from(this.HEADER_SEPARATOR, _ContentLengthFramer.ENCODING_UTF8);
+      const separatorBuffer = Buffer.from(
+        _ContentLengthFramer.HEADER_SEPARATOR,
+        _ContentLengthFramer.ENCODING_UTF8
+      );
       const separatorIndex = data.indexOf(separatorBuffer);
       if (separatorIndex === -1) {
         return {
@@ -5862,7 +6150,7 @@ var ContentLengthFramer = class _ContentLengthFramer {
       }
       const headerSection = data.subarray(0, separatorIndex).toString(_ContentLengthFramer.ENCODING_UTF8);
       const headerLength = separatorIndex + separatorBuffer.length;
-      const contentLength = this.parseContentLength(headerSection);
+      const contentLength = _ContentLengthFramer.parseContentLength(headerSection);
       if (contentLength === -1) {
         return {
           contentLength: -1,
@@ -5873,8 +6161,17 @@ var ContentLengthFramer = class _ContentLengthFramer {
       const expectedTotalLength = headerLength + contentLength;
       const actualByteLength = data.length;
       const isComplete = actualByteLength >= expectedTotalLength;
-      debugToFile(
-        `${_ContentLengthFramer.LOG_PREFIX} Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`
+      VibeLogger.logDebug(
+        "frame_analysis_buffer",
+        `Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`,
+        {
+          dataLength: data.length,
+          actualByteLength,
+          contentLength,
+          headerLength,
+          expectedTotalLength,
+          isComplete
+        }
       );
       return {
         contentLength,
@@ -5882,7 +6179,17 @@ var ContentLengthFramer = class _ContentLengthFramer {
         isComplete
       };
     } catch (error) {
-      errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Error parsing frame:`, error);
+      VibeLogger.logError(
+        "parse_frame_buffer_error",
+        `Error parsing frame: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          error: error instanceof Error ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          } : { raw: String(error) }
+        }
+      );
       return {
         contentLength: -1,
         headerLength: -1,
@@ -5921,7 +6228,17 @@ var ContentLengthFramer = class _ContentLengthFramer {
         remainingData
       };
     } catch (error) {
-      errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Error extracting frame:`, error);
+      VibeLogger.logError(
+        "extract_frame_error",
+        `Error extracting frame: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          error: error instanceof Error ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          } : { raw: String(error) }
+        }
+      );
       return {
         jsonContent: null,
         remainingData: data
@@ -5957,7 +6274,17 @@ var ContentLengthFramer = class _ContentLengthFramer {
         remainingData
       };
     } catch (error) {
-      errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Error extracting frame:`, error);
+      VibeLogger.logError(
+        "extract_frame_buffer_error",
+        `Error extracting frame: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          error: error instanceof Error ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          } : { raw: String(error) }
+        }
+      );
       return {
         jsonContent: null,
         remainingData: data
@@ -5970,7 +6297,7 @@ var ContentLengthFramer = class _ContentLengthFramer {
    * @returns True if the content length is valid, false otherwise
    */
   static isValidContentLength(contentLength) {
-    return contentLength >= 0 && contentLength <= this.MAX_MESSAGE_SIZE;
+    return contentLength >= 0 && contentLength <= _ContentLengthFramer.MAX_MESSAGE_SIZE;
   }
   /**
    * Parses the Content-Length value from the header section.
@@ -5985,7 +6312,7 @@ var ContentLengthFramer = class _ContentLengthFramer {
     for (const line of lines) {
       const trimmedLine = line.trim();
       const lowerLine = trimmedLine.toLowerCase();
-      if (lowerLine.includes("content-length:") || lowerLine.includes("-length:") || lowerLine.includes("ength:") || lowerLine.includes("ngth:") || lowerLine.includes("gth:") || lowerLine.includes("th:") || lowerLine.includes("h:")) {
+      if (lowerLine.startsWith("content-length:")) {
         const colonIndex = trimmedLine.indexOf(":");
         if (colonIndex === -1 || colonIndex >= trimmedLine.length - 1) {
           continue;
@@ -5993,28 +6320,13 @@ var ContentLengthFramer = class _ContentLengthFramer {
         const valueString = trimmedLine.substring(colonIndex + 1).trim();
         const parsedValue = parseInt(valueString, 10);
         if (isNaN(parsedValue)) {
-          errorToFile(
-            `${_ContentLengthFramer.LOG_PREFIX} Invalid Content-Length value: '${valueString}' from line: '${trimmedLine}'`
-          );
           return -1;
         }
-        if (!this.isValidContentLength(parsedValue)) {
-          errorToFile(
-            `${_ContentLengthFramer.LOG_PREFIX} Content-Length value ${parsedValue} exceeds maximum allowed size ${this.MAX_MESSAGE_SIZE}`
-          );
+        if (!_ContentLengthFramer.isValidContentLength(parsedValue)) {
           return -1;
         }
         return parsedValue;
       }
-    }
-    errorToFile(
-      `${_ContentLengthFramer.LOG_PREFIX} Content-Length header not found in header section (${headerSection.length} chars): ${headerSection.substring(0, _ContentLengthFramer.DEBUG_PREVIEW_LENGTH)}${headerSection.length > _ContentLengthFramer.DEBUG_PREVIEW_LENGTH ? _ContentLengthFramer.PREVIEW_SUFFIX : ""}`
-    );
-    errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Header section lines for debugging:`);
-    for (let i = 0; i < lines.length; i++) {
-      errorToFile(
-        `${_ContentLengthFramer.LOG_PREFIX} Line ${i}: "${lines[i]}" (length: ${lines[i].length}, toLowerCase: "${lines[i].toLowerCase()}")`
-      );
     }
     return -1;
   }
@@ -6085,7 +6397,6 @@ var DynamicBuffer = class _DynamicBuffer {
         extracted: true
       };
     } catch (error) {
-      errorToFile(`${_DynamicBuffer.LOG_PREFIX} Error extracting frame:`, error);
       return { frame: null, extracted: false };
     }
   }
@@ -6095,7 +6406,7 @@ var DynamicBuffer = class _DynamicBuffer {
    */
   extractAllFrames() {
     const frames = [];
-    while (true) {
+    while (this.buffer.length > 0) {
       const result = this.extractFrame();
       if (!result.extracted || !result.frame) {
         break;
@@ -6151,9 +6462,6 @@ var DynamicBuffer = class _DynamicBuffer {
    */
   validateAndCleanup() {
     if (this.buffer.length > this.maxBufferSize * _DynamicBuffer.BUFFER_UTILIZATION_THRESHOLD && !this.hasCompleteFrameHeader()) {
-      warnToFile(
-        `${_DynamicBuffer.LOG_PREFIX} Large buffer without complete frame header, clearing buffer`
-      );
       this.clear();
       return false;
     }
@@ -6169,9 +6477,6 @@ var DynamicBuffer = class _DynamicBuffer {
       );
       const contentLengthIndex = this.buffer.indexOf(contentLengthBuffer);
       if (contentLengthIndex === -1) {
-        warnToFile(
-          `${_DynamicBuffer.LOG_PREFIX} No Content-Length header found in large buffer, clearing buffer`
-        );
         this.clear();
         return false;
       }
@@ -6227,40 +6532,32 @@ var MessageHandler = class {
   /**
    * Register a pending request
    */
-  registerPendingRequest(id, resolve, reject) {
-    this.pendingRequests.set(id, { resolve, reject });
+  registerPendingRequest(id, resolve2, reject) {
+    this.pendingRequests.set(id, { resolve: resolve2, reject });
   }
   /**
    * Handle incoming data from Unity using Content-Length framing
    */
   handleIncomingData(data) {
-    try {
-      const dataSize = data instanceof Buffer ? data.length : data.length;
-      debugToFile(`[MessageHandler] Received ${dataSize} bytes of data`);
-      this.dynamicBuffer.append(data);
-      debugToFile("[MessageHandler] Data appended to buffer successfully");
-      const frames = this.dynamicBuffer.extractAllFrames();
-      debugToFile(`[MessageHandler] Extracted ${frames.length} complete frames`);
-      for (const frame of frames) {
-        if (!frame || frame.trim() === "") {
-          continue;
-        }
-        try {
-          const message = JSON.parse(frame);
-          if (isJsonRpcNotification(message)) {
-            this.handleNotification(message);
-          } else if (isJsonRpcResponse(message)) {
-            this.handleResponse(message);
-          } else if (hasValidId(message)) {
-            this.handleResponse(message);
-          }
-        } catch (parseError) {
-          errorToFile("[MessageHandler] Error parsing JSON frame:", parseError);
-          errorToFile("[MessageHandler] Problematic frame:", frame);
-        }
+    this.dynamicBuffer.append(data);
+    const frames = this.dynamicBuffer.extractAllFrames();
+    for (const frame of frames) {
+      if (!frame || frame.trim() === "") {
+        continue;
       }
-    } catch (error) {
-      errorToFile("[MessageHandler] Error processing incoming data:", error);
+      try {
+        const message = JSON.parse(frame);
+        if (isJsonRpcNotification(message)) {
+          this.handleNotification(message);
+        } else if (isJsonRpcResponse(message)) {
+          this.handleResponse(message);
+        } else if (hasValidId(message)) {
+          this.handleResponse(message);
+        }
+      } catch (parseError) {
+        console.error("Error parsing JSON frame:", parseError);
+        console.error("Problematic frame:", frame);
+      }
     }
   }
   /**
@@ -6273,7 +6570,7 @@ var MessageHandler = class {
       try {
         handler(params);
       } catch (error) {
-        errorToFile(`[MessageHandler] Error in notification handler for ${method}:`, error);
+        console.error(`Error in notification handler for ${method}:`, error);
       }
     }
   }
@@ -6300,7 +6597,7 @@ var MessageHandler = class {
         pending.resolve(response);
       }
     } else {
-      warnToFile(`[MessageHandler] Received response for unknown request ID: ${id}`);
+      console.error(`Received response for unknown request ID: ${id}`);
     }
   }
   /**
@@ -6393,26 +6690,44 @@ var UnityClient = class {
     this.reconnectHandlers.delete(handler);
   }
   /**
-   * Actually test Unity's connection status
-   * Check actual communication possibility, not just socket status
+   * Lightweight connection health check
+   * Tests socket state without creating new connections
    */
   async testConnection() {
     if (!this._connected || this.socket === null || this.socket.destroyed) {
       return false;
     }
-    await this.ping(UNITY_CONNECTION.CONNECTION_TEST_MESSAGE);
-    return true;
+    if (!this.socket.readable || !this.socket.writable) {
+      this._connected = false;
+      return false;
+    }
+    try {
+      await Promise.race([
+        this.ping(UNITY_CONNECTION.CONNECTION_TEST_MESSAGE),
+        new Promise(
+          (_, reject) => setTimeout(() => reject(new Error("Health check timeout")), 1e3)
+        )
+      ]);
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
   /**
    * Connect to Unity (reconnect if necessary)
+   * Now more conservative about creating new connections
    */
   async ensureConnected() {
-    try {
-      if (await this.testConnection()) {
-        return;
+    if (this._connected && this.socket && !this.socket.destroyed && this.socket.readable && this.socket.writable) {
+      try {
+        if (await this.testConnection()) {
+          return;
+        }
+      } catch (error) {
       }
-    } catch (error) {
-      this._connected = false;
+    }
+    if (this._connected && this.socket && !this.socket.destroyed) {
+      return;
     }
     this.disconnect();
     await this.connect();
@@ -6421,7 +6736,7 @@ var UnityClient = class {
    * Connect to Unity
    */
   async connect() {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       this.socket = new net.Socket();
       this.socket.connect(this.port, this.host, () => {
         this._connected = true;
@@ -6429,17 +6744,15 @@ var UnityClient = class {
           try {
             handler();
           } catch (error) {
-            errorToFile("[UnityClient] Error in reconnect handler:", error);
           }
         });
-        resolve();
+        resolve2();
       });
       this.socket.on("error", (error) => {
         this._connected = false;
         if (this.socket?.connecting) {
           reject(new Error(`Unity connection failed: ${error.message}`));
         } else {
-          errorToFile("[UnityClient] Connection error:", error);
           this.handleConnectionLoss();
         }
       });
@@ -6448,7 +6761,6 @@ var UnityClient = class {
         this.handleConnectionLoss();
       });
       this.socket.on("end", () => {
-        errorToFile("[UnityClient] Connection ended by server");
         this._connected = false;
         this.handleConnectionLoss();
       });
@@ -6482,10 +6794,8 @@ var UnityClient = class {
     try {
       const response = await this.sendRequest(request);
       if (response.error) {
-        errorToFile(`Failed to set client name: ${response.error.message}`);
       }
     } catch (error) {
-      errorToFile("[UnityClient] Error setting client name:", error);
     }
   }
   /**
@@ -6504,7 +6814,7 @@ var UnityClient = class {
         // Updated to match PingSchema property name
       }
     };
-    const response = await this.sendRequest(request);
+    const response = await this.sendRequest(request, 1e3);
     if (response.error) {
       throw new Error(`Unity error: ${response.error.message}`);
     }
@@ -6548,31 +6858,18 @@ var UnityClient = class {
    * Execute any Unity tool dynamically
    */
   async executeTool(toolName, params = {}) {
-    const startTime = Date.now();
     const request = {
       jsonrpc: JSONRPC.VERSION,
       id: this.generateId(),
       method: toolName,
       params
     };
-    debugToFile(`[Unity Client] Executing tool: ${toolName} with params:`, params);
-    debugToFile("[Unity Client] Request:", request);
     const timeoutMs = TIMEOUTS.NETWORK;
     try {
       const response = await this.sendRequest(request, timeoutMs);
-      const executionTime = Date.now() - startTime;
-      debugToFile(
-        `[Unity Client] Tool ${toolName} completed in ${executionTime}ms, response:`,
-        response
-      );
       return this.handleToolResponse(response, toolName);
     } catch (error) {
-      const executionTime = Date.now() - startTime;
-      errorToFile(`[Unity Client] Tool ${toolName} failed after ${executionTime}ms:`, error);
       if (error instanceof Error && error.message.includes("timed out")) {
-        errorToFile(
-          `[TIMEOUT] Tool: ${toolName}, NetworkTimeout: ${timeoutMs}ms, ExecutionTime: ${executionTime}ms, RequestId: ${request.id}, Params: ${JSON.stringify(params)}`
-        );
       }
       throw error;
     }
@@ -6593,12 +6890,9 @@ var UnityClient = class {
    * Send request and wait for response
    */
   async sendRequest(request, timeoutMs) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       const timeout_duration = timeoutMs || TIMEOUTS.NETWORK;
       const timeoutTimer = safeSetTimeout(() => {
-        errorToFile(
-          `[NETWORK_TIMEOUT] Method: ${request.method}, RequestId: ${request.id}, NetworkTimeout: ${timeout_duration}ms, Params: ${JSON.stringify(request.params || {})}`
-        );
         this.messageHandler.clearPendingRequests(`Request ${ERROR_MESSAGES.TIMEOUT}`);
         reject(new Error(`Request ${ERROR_MESSAGES.TIMEOUT}`));
       }, timeout_duration);
@@ -6606,7 +6900,7 @@ var UnityClient = class {
         request.id,
         (response) => {
           timeoutTimer.stop();
-          resolve(response);
+          resolve2(response);
         },
         (error) => {
           timeoutTimer.stop();
@@ -6673,16 +6967,15 @@ var UnityDiscovery = class _UnityDiscovery {
   constructor(unityClient) {
     this.unityClient = unityClient;
     this.isDevelopment = process.env.NODE_ENV === "development";
-    if (_UnityDiscovery.instance) {
-      if (this.isDevelopment) {
-        debugToFile(
-          "[UnityDiscovery] WARNING: Multiple instances detected. Using singleton pattern."
-        );
-        debugToFile(`[UnityDiscovery] Active timer count: ${_UnityDiscovery.activeTimerCount}`);
-      }
-      return _UnityDiscovery.instance;
+  }
+  /**
+   * Get singleton instance of UnityDiscovery
+   */
+  static getInstance(unityClient) {
+    if (!_UnityDiscovery.instance) {
+      _UnityDiscovery.instance = new _UnityDiscovery(unityClient);
     }
-    _UnityDiscovery.instance = this;
+    return _UnityDiscovery.instance;
   }
   /**
    * Set callback for when Unity is discovered
@@ -6701,28 +6994,16 @@ var UnityDiscovery = class _UnityDiscovery {
    */
   start() {
     if (this.discoveryInterval) {
-      if (this.isDevelopment) {
-        debugToFile("[UnityDiscovery] Timer already running - skipping duplicate start");
-      }
       return;
     }
     if (this.isDiscovering) {
-      if (this.isDevelopment) {
-        debugToFile("[UnityDiscovery] Discovery already in progress - skipping start");
-      }
       return;
     }
-    infoToFile("[Unity Discovery] Starting unified discovery and connection management...");
     void this.unifiedDiscoveryAndConnectionCheck();
     this.discoveryInterval = setInterval(() => {
       void this.unifiedDiscoveryAndConnectionCheck();
     }, POLLING.INTERVAL_MS);
     _UnityDiscovery.activeTimerCount++;
-    if (this.isDevelopment) {
-      debugToFile(`[UnityDiscovery] Timer started with ${POLLING.INTERVAL_MS}ms interval`);
-      debugToFile(`[UnityDiscovery] Active timer count: ${_UnityDiscovery.activeTimerCount}`);
-      this.logTimerStatus();
-    }
   }
   /**
    * Stop Unity discovery polling
@@ -6733,12 +7014,6 @@ var UnityDiscovery = class _UnityDiscovery {
       this.discoveryInterval = null;
       this.isDiscovering = false;
       _UnityDiscovery.activeTimerCount = Math.max(0, _UnityDiscovery.activeTimerCount - 1);
-      infoToFile("[Unity Discovery] Unity discovery and connection management stopped");
-      if (this.isDevelopment) {
-        debugToFile("[UnityDiscovery] Timer stopped and cleanup completed");
-        debugToFile(`[UnityDiscovery] Active timer count: ${_UnityDiscovery.activeTimerCount}`);
-        this.logTimerStatus();
-      }
     }
   }
   /**
@@ -6746,39 +7021,74 @@ var UnityDiscovery = class _UnityDiscovery {
    * Handles both Unity discovery and connection health monitoring
    */
   async unifiedDiscoveryAndConnectionCheck() {
+    const correlationId = VibeLogger.generateCorrelationId();
     if (this.isDiscovering) {
-      if (this.isDevelopment) {
-        debugToFile("[UnityDiscovery] Discovery already in progress - skipping");
-      }
+      VibeLogger.logDebug(
+        "unity_discovery_skip_in_progress",
+        "Discovery already in progress - skipping",
+        { is_discovering: true },
+        correlationId
+      );
       return;
     }
     this.isDiscovering = true;
+    VibeLogger.logInfo(
+      "unity_discovery_cycle_start",
+      "Starting unified discovery and connection check cycle",
+      {
+        unity_connected: this.unityClient.connected,
+        polling_interval_ms: POLLING.INTERVAL_MS,
+        active_timer_count: _UnityDiscovery.activeTimerCount
+      },
+      correlationId,
+      "This cycle checks connection health and attempts Unity discovery if needed."
+    );
     try {
       if (this.unityClient.connected) {
         const isConnectionHealthy = await this.checkConnectionHealth();
         if (isConnectionHealthy) {
+          VibeLogger.logInfo(
+            "unity_discovery_connection_healthy",
+            "Connection is healthy - stopping discovery",
+            { connection_healthy: true },
+            correlationId
+          );
           this.stop();
           return;
         } else {
-          if (this.isDevelopment) {
-            debugToFile("[UnityDiscovery] Connection lost - resuming discovery");
-          }
-          if (this.onConnectionLostCallback) {
-            this.onConnectionLostCallback();
-          }
+          VibeLogger.logWarning(
+            "unity_discovery_connection_unhealthy",
+            "Connection appears unhealthy - continuing discovery without assuming loss",
+            { connection_healthy: false },
+            correlationId,
+            "Connection health check failed. Will continue discovery but not assume complete loss.",
+            "Connection may recover on next cycle. Monitor for persistent issues."
+          );
         }
       }
       await this.discoverUnityOnPorts();
     } finally {
+      VibeLogger.logDebug(
+        "unity_discovery_cycle_end",
+        "Discovery cycle completed",
+        { is_discovering: false },
+        correlationId
+      );
       this.isDiscovering = false;
     }
   }
   /**
-   * Check if the current connection is healthy
+   * Check if the current connection is healthy with timeout protection
    */
   async checkConnectionHealth() {
     try {
-      return await this.unityClient.testConnection();
+      const healthCheck = await Promise.race([
+        this.unityClient.testConnection(),
+        new Promise(
+          (_, reject) => setTimeout(() => reject(new Error("Connection health check timeout")), 1e3)
+        )
+      ]);
+      return healthCheck;
     } catch (error) {
       return false;
     }
@@ -6787,6 +7097,7 @@ var UnityDiscovery = class _UnityDiscovery {
    * Discover Unity by checking default port range
    */
   async discoverUnityOnPorts() {
+    const correlationId = VibeLogger.generateCorrelationId();
     const basePort = parseInt(process.env.UNITY_TCP_PORT || UNITY_CONNECTION.DEFAULT_PORT, 10);
     const portRange = [
       basePort,
@@ -6797,19 +7108,66 @@ var UnityDiscovery = class _UnityDiscovery {
       basePort - 100
       // Also check lower ports
     ];
+    VibeLogger.logInfo(
+      "unity_discovery_port_scan_start",
+      "Starting Unity port discovery scan",
+      {
+        base_port: basePort,
+        port_range: portRange,
+        total_ports: portRange.length
+      },
+      correlationId,
+      "Scanning multiple ports to find Unity MCP server."
+    );
     for (const port of portRange) {
       try {
         if (await this.isUnityAvailable(port)) {
-          infoToFile(`[Unity Discovery] Unity discovered on port ${port}`);
+          VibeLogger.logInfo(
+            "unity_discovery_success",
+            "Unity discovered and connection established",
+            {
+              discovered_port: port,
+              base_port: basePort,
+              port_offset: port - basePort
+            },
+            correlationId,
+            "Unity MCP server found and connection established successfully.",
+            "Monitor for tools/list_changed notifications after this discovery."
+          );
           this.unityClient.updatePort(port);
-          if (this.onDiscoveredCallback) {
-            await this.onDiscoveredCallback(port);
+          try {
+            await this.unityClient.connect();
+            if (this.onDiscoveredCallback) {
+              await this.onDiscoveredCallback(port);
+            }
+          } catch (error) {
+            VibeLogger.logError(
+              "unity_discovery_connection_failed",
+              "Failed to establish connection after discovery",
+              { port, error: error instanceof Error ? error.message : String(error) },
+              correlationId,
+              "Connection attempt failed despite successful port scan.",
+              "Check Unity server status and network connectivity."
+            );
+            continue;
           }
           return;
         }
       } catch (error) {
       }
     }
+    VibeLogger.logWarning(
+      "unity_discovery_no_unity_found",
+      "No Unity server found on any port in range",
+      {
+        base_port: basePort,
+        ports_checked: portRange,
+        total_attempts: portRange.length
+      },
+      correlationId,
+      "Unity MCP server not found on any of the checked ports. Unity may not be running or using a different port.",
+      "Check Unity console for MCP server status and verify port configuration."
+    );
   }
   /**
    * Force immediate Unity discovery for connection recovery
@@ -6818,7 +7176,6 @@ var UnityDiscovery = class _UnityDiscovery {
     if (this.unityClient.connected) {
       return true;
     }
-    infoToFile("[Unity Discovery] Force discovery initiated");
     await this.unifiedDiscoveryAndConnectionCheck();
     return this.unityClient.connected;
   }
@@ -6826,9 +7183,6 @@ var UnityDiscovery = class _UnityDiscovery {
    * Handle connection lost event (called by UnityClient)
    */
   handleConnectionLost() {
-    if (this.isDevelopment) {
-      debugToFile("[UnityDiscovery] Connection lost event received - restarting discovery");
-    }
     if (!this.discoveryInterval) {
       this.start();
     }
@@ -6840,21 +7194,21 @@ var UnityDiscovery = class _UnityDiscovery {
    * Check if Unity is available on specific port
    */
   async isUnityAvailable(port) {
-    return new Promise((resolve) => {
+    return new Promise((resolve2) => {
       const socket = new net2.Socket();
       const timeout = 500;
       const timer = setTimeout(() => {
         socket.destroy();
-        resolve(false);
+        resolve2(false);
       }, timeout);
       socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
         clearTimeout(timer);
         socket.destroy();
-        resolve(true);
+        resolve2(true);
       });
       socket.on("error", () => {
         clearTimeout(timer);
-        resolve(false);
+        resolve2(false);
       });
     });
   }
@@ -6865,19 +7219,7 @@ var UnityDiscovery = class _UnityDiscovery {
     if (!this.isDevelopment) {
       return;
     }
-    const status = {
-      isTimerActive: this.discoveryInterval !== null,
-      isDiscovering: this.isDiscovering,
-      activeTimerCount: _UnityDiscovery.activeTimerCount,
-      isConnected: this.unityClient.connected,
-      intervalMs: POLLING.INTERVAL_MS,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    debugToFile("[UnityDiscovery] Timer Status:", status);
     if (_UnityDiscovery.activeTimerCount > 1) {
-      errorToFile(
-        `[UnityDiscovery] WARNING: Multiple timers detected! Count: ${_UnityDiscovery.activeTimerCount}`
-      );
     }
   }
   /**
@@ -6904,7 +7246,7 @@ var UnityConnectionManager = class {
   constructor(unityClient) {
     this.unityClient = unityClient;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
-    this.unityDiscovery = new UnityDiscovery(this.unityClient);
+    this.unityDiscovery = UnityDiscovery.getInstance(this.unityClient);
     this.unityClient.setUnityDiscovery(this.unityDiscovery);
   }
   /**
@@ -6917,21 +7259,31 @@ var UnityConnectionManager = class {
    * Wait for Unity connection with timeout
    */
   async waitForUnityConnectionWithTimeout(timeoutMs) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error(`Unity connection timeout after ${timeoutMs}ms`));
       }, timeoutMs);
       const checkConnection = () => {
         if (this.unityClient.connected) {
           clearTimeout(timeout);
-          resolve();
+          resolve2();
           return;
         }
-        this.unityDiscovery.start();
-        this.unityDiscovery.setOnDiscoveredCallback(() => {
-          void this.unityClient.ensureConnected().then(() => {
+        if (this.isInitialized) {
+          const connectionInterval = setInterval(() => {
+            if (this.unityClient.connected) {
+              clearTimeout(timeout);
+              clearInterval(connectionInterval);
+              resolve2();
+            }
+          }, 100);
+          return;
+        }
+        this.initialize(() => {
+          return new Promise((resolveCallback) => {
             clearTimeout(timeout);
-            resolve();
+            resolve2();
+            resolveCallback();
           });
         });
       };
@@ -6943,17 +7295,13 @@ var UnityConnectionManager = class {
    */
   async handleUnityDiscovered(onConnectionEstablished) {
     try {
-      await this.unityClient.ensureConnected();
-      infoToFile("[Unity Connection] Unity connection established");
+      if (this.isDevelopment) {
+      }
       if (onConnectionEstablished) {
         await onConnectionEstablished();
       }
       this.unityDiscovery.stop();
     } catch (error) {
-      errorToFile(
-        "[Unity Connection] Failed to establish Unity connection after discovery:",
-        error
-      );
     }
   }
   /**
@@ -6969,12 +7317,10 @@ var UnityConnectionManager = class {
     });
     this.unityDiscovery.setOnConnectionLostCallback(() => {
       if (this.isDevelopment) {
-        debugToFile("[Unity Connection] Connection lost detected - ready for reconnection");
       }
     });
     this.unityDiscovery.start();
     if (this.isDevelopment) {
-      debugToFile("[Unity Connection] Connection manager initialized");
     }
   }
   /**
@@ -7220,7 +7566,6 @@ var UnityToolManager = class {
       }
       return tools;
     } catch (error) {
-      errorToFile("[Unity Tool Manager] Failed to get tools from Unity:", error);
       return [];
     }
   }
@@ -7236,7 +7581,6 @@ var UnityToolManager = class {
       }
       this.createDynamicToolsFromTools(toolDetails);
     } catch (error) {
-      errorToFile("[Unity Tool Manager] Failed to initialize dynamic tools:", error);
     }
   }
   /**
@@ -7244,38 +7588,12 @@ var UnityToolManager = class {
    */
   async fetchToolDetailsFromUnity() {
     const params = { IncludeDevelopmentOnly: this.isDevelopment };
-    debugToFile("[Unity Tool Manager] Requesting tool details from Unity with params:", params);
-    const startTime = Date.now();
-    try {
-      const toolDetailsResponse = await this.unityClient.executeTool("get-tool-details", params);
-      const duration = Date.now() - startTime;
-      debugToFile(
-        "[Unity Tool Manager] Received tool details response in",
-        duration,
-        "ms:",
-        toolDetailsResponse
-      );
-      const toolDetails = toolDetailsResponse?.Tools || toolDetailsResponse;
-      if (!Array.isArray(toolDetails)) {
-        errorToFile("[Unity Tool Manager] Invalid tool details response:", toolDetailsResponse);
-        return null;
-      }
-      debugToFile(
-        "[Unity Tool Manager] Successfully parsed",
-        toolDetails.length,
-        "tools from Unity"
-      );
-      return toolDetails;
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      errorToFile(
-        "[Unity Tool Manager] Failed to fetch tool details after",
-        duration,
-        "ms:",
-        error
-      );
-      throw error;
+    const toolDetailsResponse = await this.unityClient.executeTool("get-tool-details", params);
+    const toolDetails = toolDetailsResponse?.Tools || toolDetailsResponse;
+    if (!Array.isArray(toolDetails)) {
+      return null;
     }
+    return toolDetails;
   }
   /**
    * Create dynamic tools from Unity tool details
@@ -7318,19 +7636,12 @@ var UnityToolManager = class {
   async refreshDynamicToolsSafe(sendNotification) {
     if (this.isRefreshing) {
       if (this.isDevelopment) {
-        debugToFile("[Unity Tool Manager] refreshDynamicToolsSafe skipped: already in progress");
       }
       return;
     }
     this.isRefreshing = true;
     try {
       if (this.isDevelopment) {
-        const stack = new Error().stack;
-        const callerLine = stack?.split("\n")[2]?.trim() || "Unknown caller";
-        const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().split("T")[1].slice(0, 12);
-        debugToFile(
-          `[Unity Tool Manager] refreshDynamicToolsSafe called at ${timestamp2} from: ${callerLine}`
-        );
       }
       await this.refreshDynamicTools(sendNotification);
     } finally {
@@ -7411,20 +7722,12 @@ var McpClientCompatibility = class {
       if (fallbackName) {
         this.clientName = fallbackName;
         await this.unityClient.setClientName(fallbackName);
-        infoToFile(`[MCP Client Compatibility] Fallback client name set to Unity: ${fallbackName}`);
       } else {
-        infoToFile("[MCP Client Compatibility] No client name set, waiting for initialize request");
       }
     } else {
       await this.unityClient.setClientName(this.clientName);
-      infoToFile(
-        `[MCP Client Compatibility] Client name already set, sending to Unity: ${this.clientName}`
-      );
     }
     this.unityClient.onReconnect(() => {
-      infoToFile(
-        `[MCP Client Compatibility] Reconnected - resending client name: ${this.clientName}`
-      );
       void this.unityClient.setClientName(this.clientName);
     });
   }
@@ -7446,16 +7749,8 @@ var McpClientCompatibility = class {
    */
   logClientCompatibility(clientName) {
     const isSupported = this.isListChangedSupported(clientName);
-    const compatibilityType = isSupported ? "list_changed supported" : "list_changed unsupported";
-    infoToFile(`[MCP Client Compatibility] Client: ${clientName} - ${compatibilityType}`);
     if (!isSupported) {
-      debugToFile(
-        `[MCP Client Compatibility] Client ${clientName} will use synchronous initialization`
-      );
     } else {
-      debugToFile(
-        `[MCP Client Compatibility] Client ${clientName} will use asynchronous initialization`
-      );
     }
   }
 };
@@ -7478,21 +7773,14 @@ var UnityEventHandler = class {
    * Setup Unity event listener for automatic tool updates
    */
   setupUnityEventListener(onToolsChanged) {
-    this.unityClient.onNotification("notifications/tools/list_changed", (params) => {
+    this.unityClient.onNotification("notifications/tools/list_changed", (_params) => {
       if (this.isDevelopment) {
-        const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().split("T")[1].slice(0, 12);
-        debugToFile(
-          `[TRACE] Unity notification received at ${timestamp2}: notifications/tools/list_changed`
-        );
-        debugToFile(`[TRACE] Notification params: ${JSON.stringify(params)}`);
+        console.log("Unity notification received: notifications/tools/list_changed");
       }
       try {
         void onToolsChanged();
       } catch (error) {
-        errorToFile(
-          "[Unity Event Handler] Failed to update dynamic tools via Unity notification:",
-          error
-        );
+        console.error("Failed to update dynamic tools via Unity notification:", error);
       }
     });
   }
@@ -7502,9 +7790,7 @@ var UnityEventHandler = class {
   sendToolsChangedNotification() {
     if (this.isNotifying) {
       if (this.isDevelopment) {
-        debugToFile(
-          "[Unity Event Handler] sendToolsChangedNotification skipped: already notifying"
-        );
+        console.log("sendToolsChangedNotification skipped: already notifying");
       }
       return;
     }
@@ -7515,10 +7801,10 @@ var UnityEventHandler = class {
         params: {}
       });
       if (this.isDevelopment) {
-        debugToFile("[Unity Event Handler] tools/list_changed notification sent");
+        console.log("tools/list_changed notification sent");
       }
     } catch (error) {
-      errorToFile("[Unity Event Handler] Failed to send tools changed notification:", error);
+      console.error("Failed to send tools changed notification:", error);
     } finally {
       this.isNotifying = false;
     }
@@ -7528,31 +7814,31 @@ var UnityEventHandler = class {
    */
   setupSignalHandlers() {
     process.on("SIGINT", () => {
-      infoToFile("[Unity Event Handler] Received SIGINT, shutting down...");
+      console.log("Received SIGINT, shutting down...");
       this.gracefulShutdown();
     });
     process.on("SIGTERM", () => {
-      infoToFile("[Unity Event Handler] Received SIGTERM, shutting down...");
+      console.log("Received SIGTERM, shutting down...");
       this.gracefulShutdown();
     });
     process.on("SIGHUP", () => {
-      infoToFile("[Unity Event Handler] Received SIGHUP, shutting down...");
+      console.log("Received SIGHUP, shutting down...");
       this.gracefulShutdown();
     });
     process.stdin.on("close", () => {
-      infoToFile("[Unity Event Handler] STDIN closed, shutting down...");
+      console.log("STDIN closed, shutting down...");
       this.gracefulShutdown();
     });
     process.stdin.on("end", () => {
-      infoToFile("[Unity Event Handler] STDIN ended, shutting down...");
+      console.log("STDIN ended, shutting down...");
       this.gracefulShutdown();
     });
     process.on("uncaughtException", (error) => {
-      errorToFile("[Unity Event Handler] Uncaught exception:", error);
+      console.error("Uncaught exception:", error);
       this.gracefulShutdown();
     });
     process.on("unhandledRejection", (reason, promise) => {
-      errorToFile("[Unity Event Handler] Unhandled rejection at:", promise, "reason:", reason);
+      console.error("Unhandled rejection at:", promise, "reason:", reason);
       this.gracefulShutdown();
     });
   }
@@ -7565,16 +7851,16 @@ var UnityEventHandler = class {
       return;
     }
     this.isShuttingDown = true;
-    infoToFile("[Unity Event Handler] Starting graceful shutdown...");
+    console.log("Starting graceful shutdown...");
     try {
       this.connectionManager.disconnect();
       if (global.gc) {
         global.gc();
       }
     } catch (error) {
-      errorToFile("[Unity Event Handler] Error during cleanup:", error);
+      console.error("Error during cleanup:", error);
     }
-    infoToFile("[Unity Event Handler] Graceful shutdown completed");
+    console.log("Graceful shutdown completed");
     process.exit(0);
   }
   /**
@@ -7646,6 +7932,8 @@ var package_default = {
   license: "MIT",
   dependencies: {
     "@modelcontextprotocol/sdk": "1.12.2",
+    "@types/uuid": "^10.0.0",
+    uuid: "^11.1.0",
     zod: "3.25.64"
   },
   devDependencies: {
@@ -7682,9 +7970,7 @@ var UnityMcpServer = class {
   eventHandler;
   constructor() {
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
-    infoToFile("Unity MCP Server Starting");
-    infoToFile(`Environment variable: NODE_ENV=${process.env.NODE_ENV}`);
-    infoToFile(`Development mode: ${this.isDevelopment}`);
+    VibeLogger.logInfo("mcp_server_starting", "Unity MCP Server Starting");
     this.server = new Server(
       {
         name: MCP_SERVER_NAME,
@@ -7723,20 +8009,15 @@ var UnityMcpServer = class {
       if (clientName) {
         this.clientCompatibility.setClientName(clientName);
         this.clientCompatibility.logClientCompatibility(clientName);
-        infoToFile(`[Unity MCP] Client name received: ${clientName}`);
       }
       if (!this.isInitialized) {
         this.isInitialized = true;
         if (this.clientCompatibility.isListChangedUnsupported(clientName)) {
-          infoToFile(
-            `[Unity MCP] Sync initialization for list_changed unsupported client: ${clientName}`
-          );
           try {
             await this.clientCompatibility.initializeClient(clientName);
             this.toolManager.setClientName(clientName);
             await this.connectionManager.waitForUnityConnectionWithTimeout(1e4);
             const tools = await this.toolManager.getToolsFromUnity();
-            infoToFile(`[Unity MCP] Returning ${tools.length} tools for ${clientName}`);
             return {
               protocolVersion: MCP_PROTOCOL_VERSION,
               capabilities: {
@@ -7751,7 +8032,16 @@ var UnityMcpServer = class {
               tools
             };
           } catch (error) {
-            errorToFile(`[Unity MCP] Unity connection timeout for ${clientName}:`, error);
+            VibeLogger.logError(
+              "mcp_unity_connection_timeout",
+              "Unity connection timeout",
+              {
+                client_name: clientName,
+                error_message: error instanceof Error ? error.message : String(error)
+              },
+              void 0,
+              "Unity connection timed out - check Unity MCP bridge status"
+            );
             return {
               protocolVersion: MCP_PROTOCOL_VERSION,
               capabilities: {
@@ -7767,15 +8057,17 @@ var UnityMcpServer = class {
             };
           }
         } else {
-          infoToFile(
-            `[Unity MCP] Async initialization for list_changed supported client: ${clientName}`
-          );
           void this.clientCompatibility.initializeClient(clientName);
           this.toolManager.setClientName(clientName);
           void this.toolManager.initializeDynamicTools().then(() => {
-            infoToFile("[Unity MCP] Unity connection established successfully");
           }).catch((error) => {
-            errorToFile("[Unity MCP] Unity connection initialization failed:", error);
+            VibeLogger.logError(
+              "mcp_unity_connection_init_failed",
+              "Unity connection initialization failed",
+              { error_message: error instanceof Error ? error.message : String(error) },
+              void 0,
+              "Unity connection could not be established - check Unity MCP bridge"
+            );
             this.unityDiscovery.start();
           });
         }
@@ -7795,12 +8087,10 @@ var UnityMcpServer = class {
     });
     this.server.setRequestHandler(ListToolsRequestSchema, () => {
       const tools = this.toolManager.getAllTools();
-      debugToFile(`Providing ${tools.length} tools`, { toolNames: tools.map((t) => t.name) });
       return { tools };
     });
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
-      debugToFile(`Tool executed: ${name}`, { args });
       try {
         if (this.toolManager.hasTool(name)) {
           const dynamicTool = this.toolManager.getTool(name);
@@ -7838,14 +8128,11 @@ var UnityMcpServer = class {
       if (clientName) {
         this.toolManager.setClientName(clientName);
         await this.toolManager.initializeDynamicTools();
-        infoToFile("[Unity MCP] Unity connection established and tools initialized");
         this.eventHandler.sendToolsChangedNotification();
       } else {
-        infoToFile("[Unity MCP] Unity connection established, waiting for client name");
       }
     });
     if (this.isDevelopment) {
-      debugToFile("[Unity MCP] Server starting with unified discovery service");
     }
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
@@ -7853,10 +8140,16 @@ var UnityMcpServer = class {
 };
 var server = new UnityMcpServer();
 server.start().catch((error) => {
-  errorToFile("[FATAL] Server startup failed:", error);
-  errorToFile("[FATAL] Unity MCP Server startup failed:");
-  errorToFile("Error details:", error instanceof Error ? error.message : String(error));
-  errorToFile("Stack trace:", error instanceof Error ? error.stack : "No stack trace available");
-  errorToFile("Make sure Unity is running and the MCP bridge is properly configured.");
+  VibeLogger.logError(
+    "mcp_server_startup_fatal",
+    "Unity MCP Server startup failed",
+    {
+      error_message: error instanceof Error ? error.message : String(error),
+      stack_trace: error instanceof Error ? error.stack : "No stack trace available",
+      error_type: error instanceof Error ? error.constructor.name : typeof error
+    },
+    void 0,
+    "Fatal server startup error - check Unity MCP bridge configuration"
+  );
   process.exit(1);
 });

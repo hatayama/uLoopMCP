@@ -1,5 +1,5 @@
 import { UnityClient } from './unity-client.js';
-import { debugToFile, infoToFile } from './utils/log-to-file.js';
+// Debug logging removed
 import { LIST_CHANGED_UNSUPPORTED_CLIENTS, DEFAULT_CLIENT_NAME } from './constants.js';
 
 /**
@@ -67,23 +67,19 @@ export class McpClientCompatibility {
       if (fallbackName) {
         this.clientName = fallbackName;
         await this.unityClient.setClientName(fallbackName);
-        infoToFile(`[MCP Client Compatibility] Fallback client name set to Unity: ${fallbackName}`);
+        // Fallback client name set to Unity
       } else {
-        infoToFile('[MCP Client Compatibility] No client name set, waiting for initialize request');
+        // No client name set, waiting for initialize request
       }
     } else {
       // Send the already set client name to Unity
       await this.unityClient.setClientName(this.clientName);
-      infoToFile(
-        `[MCP Client Compatibility] Client name already set, sending to Unity: ${this.clientName}`,
-      );
+      // Client name already set, sending to Unity
     }
 
     // Register reconnect handler to re-send client name after reconnection
     this.unityClient.onReconnect(() => {
-      infoToFile(
-        `[MCP Client Compatibility] Reconnected - resending client name: ${this.clientName}`,
-      );
+      // Reconnected - resending client name
       void this.unityClient.setClientName(this.clientName);
     });
   }
@@ -108,18 +104,13 @@ export class McpClientCompatibility {
    */
   logClientCompatibility(clientName: string): void {
     const isSupported = this.isListChangedSupported(clientName);
-    const compatibilityType = isSupported ? 'list_changed supported' : 'list_changed unsupported';
 
-    infoToFile(`[MCP Client Compatibility] Client: ${clientName} - ${compatibilityType}`);
+    // Client compatibility logged
 
     if (!isSupported) {
-      debugToFile(
-        `[MCP Client Compatibility] Client ${clientName} will use synchronous initialization`,
-      );
+      // Client will use synchronous initialization
     } else {
-      debugToFile(
-        `[MCP Client Compatibility] Client ${clientName} will use asynchronous initialization`,
-      );
+      // Client will use asynchronous initialization
     }
   }
 }

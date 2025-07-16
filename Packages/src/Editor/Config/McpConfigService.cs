@@ -239,17 +239,9 @@ namespace io.github.hatayama.uLoopMCP
             // Remove old development mode environment variables (cleanup legacy settings)
             updatedEnv.Remove(McpConstants.ENV_KEY_ULOOPMCP_DEBUG);
             updatedEnv.Remove(McpConstants.ENV_KEY_ULOOPMCP_PRODUCTION);
-            updatedEnv.Remove(McpConstants.ENV_KEY_NODE_ENV);
             updatedEnv.Remove(McpConstants.ENV_KEY_MCP_DEBUG);
             
             // MCP_CLIENT_NAME is no longer used - client identification handled by MCP protocol
-            
-            // Add NODE_ENV for development mode (simplified approach)
-            if (developmentMode)
-            {
-                updatedEnv[McpConstants.ENV_KEY_NODE_ENV] = McpConstants.ENV_VALUE_DEVELOPMENT;
-            }
-            // For production mode, simply don't set NODE_ENV (default behavior)
             
             // Add MCP_DEBUG for MCP debug logs
             if (enableMcpLogs)

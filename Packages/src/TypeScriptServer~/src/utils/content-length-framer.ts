@@ -3,7 +3,7 @@
  * Handles HTTP-style headers with format: "Content-Length: <n>\r\n\r\n<json_content>"
  */
 
-import { errorToFile, debugToFile } from './log-to-file.js';
+import { VibeLogger } from './vibe-logger.js';
 
 export interface FrameParseResult {
   contentLength: number;
@@ -96,8 +96,17 @@ export class ContentLengthFramer {
       const actualByteLength = Buffer.byteLength(data, ContentLengthFramer.ENCODING_UTF8);
       const isComplete = actualByteLength >= expectedTotalLength;
 
-      debugToFile(
-        `${ContentLengthFramer.LOG_PREFIX} Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`,
+      VibeLogger.logDebug(
+        'frame_analysis',
+        `Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`,
+        {
+          dataLength: data.length,
+          actualByteLength,
+          contentLength,
+          headerLength,
+          expectedTotalLength,
+          isComplete,
+        },
       );
 
       return {
@@ -106,7 +115,20 @@ export class ContentLengthFramer {
         isComplete,
       };
     } catch (error) {
-      errorToFile(`${ContentLengthFramer.LOG_PREFIX} Error parsing frame:`, error);
+      VibeLogger.logError(
+        'parse_frame_error',
+        `Error parsing frame: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          error:
+            error instanceof Error
+              ? {
+                  name: error.name,
+                  message: error.message,
+                  stack: error.stack,
+                }
+              : { raw: String(error) },
+        },
+      );
       return {
         contentLength: -1,
         headerLength: -1,
@@ -166,8 +188,17 @@ export class ContentLengthFramer {
       const actualByteLength = data.length;
       const isComplete = actualByteLength >= expectedTotalLength;
 
-      debugToFile(
-        `${ContentLengthFramer.LOG_PREFIX} Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`,
+      VibeLogger.logDebug(
+        'frame_analysis_buffer',
+        `Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`,
+        {
+          dataLength: data.length,
+          actualByteLength,
+          contentLength,
+          headerLength,
+          expectedTotalLength,
+          isComplete,
+        },
       );
 
       return {
@@ -176,7 +207,20 @@ export class ContentLengthFramer {
         isComplete,
       };
     } catch (error) {
-      errorToFile(`${ContentLengthFramer.LOG_PREFIX} Error parsing frame:`, error);
+      VibeLogger.logError(
+        'parse_frame_buffer_error',
+        `Error parsing frame: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          error:
+            error instanceof Error
+              ? {
+                  name: error.name,
+                  message: error.message,
+                  stack: error.stack,
+                }
+              : { raw: String(error) },
+        },
+      );
       return {
         contentLength: -1,
         headerLength: -1,
@@ -232,7 +276,20 @@ export class ContentLengthFramer {
         remainingData,
       };
     } catch (error) {
-      errorToFile(`${ContentLengthFramer.LOG_PREFIX} Error extracting frame:`, error);
+      VibeLogger.logError(
+        'extract_frame_error',
+        `Error extracting frame: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          error:
+            error instanceof Error
+              ? {
+                  name: error.name,
+                  message: error.message,
+                  stack: error.stack,
+                }
+              : { raw: String(error) },
+        },
+      );
       return {
         jsonContent: null,
         remainingData: data,
@@ -283,7 +340,20 @@ export class ContentLengthFramer {
         remainingData,
       };
     } catch (error) {
-      errorToFile(`${ContentLengthFramer.LOG_PREFIX} Error extracting frame:`, error);
+      VibeLogger.logError(
+        'extract_frame_buffer_error',
+        `Error extracting frame: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          error:
+            error instanceof Error
+              ? {
+                  name: error.name,
+                  message: error.message,
+                  stack: error.stack,
+                }
+              : { raw: String(error) },
+        },
+      );
       return {
         jsonContent: null,
         remainingData: data,
@@ -331,16 +401,12 @@ export class ContentLengthFramer {
         // Try to parse the integer value
         const parsedValue = parseInt(valueString, 10);
         if (isNaN(parsedValue)) {
-          errorToFile(
-            `${ContentLengthFramer.LOG_PREFIX} Invalid Content-Length value: '${valueString}' from line: '${trimmedLine}'`,
-          );
+          // Invalid Content-Length value
           return -1;
         }
 
         if (!ContentLengthFramer.isValidContentLength(parsedValue)) {
-          errorToFile(
-            `${ContentLengthFramer.LOG_PREFIX} Content-Length value ${parsedValue} exceeds maximum allowed size ${ContentLengthFramer.MAX_MESSAGE_SIZE}`,
-          );
+          // Content-Length value exceeds maximum allowed size
           return -1;
         }
 
@@ -348,18 +414,7 @@ export class ContentLengthFramer {
       }
     }
 
-    // More detailed error message for debugging
-    errorToFile(
-      `${ContentLengthFramer.LOG_PREFIX} Content-Length header not found in header section (${headerSection.length} chars): ${headerSection.substring(0, ContentLengthFramer.DEBUG_PREVIEW_LENGTH)}${headerSection.length > ContentLengthFramer.DEBUG_PREVIEW_LENGTH ? ContentLengthFramer.PREVIEW_SUFFIX : ''}`,
-    );
-    errorToFile(`${ContentLengthFramer.LOG_PREFIX} Header section lines for debugging:`);
-    lines.forEach((line, index) => {
-      if (line !== undefined && typeof line === 'string') {
-        errorToFile(
-          `${ContentLengthFramer.LOG_PREFIX} Line ${index}: "${line}" (length: ${line.length}, toLowerCase: "${line.toLowerCase()}")`,
-        );
-      }
-    });
+    // Content-Length header not found in header section
     return -1;
   }
 }

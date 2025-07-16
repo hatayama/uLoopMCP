@@ -119,12 +119,6 @@ namespace io.github.hatayama.uLoopMCP
                 { McpConstants.UNITY_TCP_PORT_ENV_KEY, port.ToString() }
             };
             
-            // Add NODE_ENV for development mode (simplified approach)
-            if (developmentMode)
-            {
-                env[McpConstants.ENV_KEY_NODE_ENV] = McpConstants.ENV_VALUE_DEVELOPMENT;
-            }
-            // For production mode, simply don't set NODE_ENV (default behavior)
 
             return new McpServerConfigData(
                 command: McpConstants.NODE_COMMAND,
