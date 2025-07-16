@@ -7,7 +7,7 @@ namespace io.github.hatayama.uLoopMCP
     /// Unity 6 ConsoleWindowUtility API recreation for older Unity versions
     /// Provides event-driven console log monitoring and simple count retrieval
     /// </summary>
-    public static class GenelicConsoleWindowUtility
+    public static class GenericConsoleWindowUtility
     {
         private static ConsoleLogRetriever logRetriever;
         private static int lastLogCount = 0;
@@ -21,7 +21,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static event System.Action consoleLogsChanged;
 
-        static GenelicConsoleWindowUtility()
+        static GenericConsoleWindowUtility()
         {
             Initialize();
         }
@@ -150,10 +150,10 @@ namespace io.github.hatayama.uLoopMCP
         {
             try
             {
-                var logEntriesType = System.Reflection.Assembly.GetAssembly(typeof(EditorWindow))
+                var _logEntriesType = System.Reflection.Assembly.GetAssembly(typeof(EditorWindow))
                     .GetType("UnityEditor.LogEntries");
                 
-                var clearMethod = logEntriesType.GetMethod("Clear", 
+                var clearMethod = _logEntriesType.GetMethod("Clear", 
                     System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                 
                 if (clearMethod != null)
