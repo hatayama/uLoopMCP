@@ -126,7 +126,7 @@ namespace io.github.hatayama.uLoopMCP
         
         /// <summary>
         /// Get logs for AI analysis (formatted for Claude Code)
-        /// Output directory: {project_root}/uLoopMCPOutputs/vibe-logs/
+        /// Output directory: {project_root}/uLoopMCPOutputs/VibeLogs/
         /// </summary>
         public static string GetLogsForAi(string operation = null, string correlationId = null, int maxCount = 100)
         {

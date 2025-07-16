@@ -78,7 +78,7 @@ namespace io.github.hatayama.uLoopMCP
         public const string TEST_RESULTS_DIR = "TestResults";
         public const string SEARCH_RESULTS_DIR = "SearchResults";
         public const string HIERARCHY_RESULTS_DIR = "HierarchyResults";
-        public const string VIBE_LOGS_DIR = "vibe-logs";
+        public const string VIBE_LOGS_DIR = "VibeLogs";
         
         // SessionState keys
         public const string SESSION_KEY_SERVER_RUNNING = "uLoopMCP.ServerRunning";

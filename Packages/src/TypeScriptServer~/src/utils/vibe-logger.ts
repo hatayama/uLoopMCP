@@ -144,7 +144,7 @@ export class VibeLogger {
   
   /**
    * Get logs for AI analysis (formatted for Claude Code)
-   * Output directory: {project_root}/uLoopMCPOutputs/vibe-logs/
+   * Output directory: {project_root}/uLoopMCPOutputs/VibeLogs/
    */
   static getLogsForAi(operation?: string, correlationId?: string, maxCount: number = 100): string {
     let filteredLogs = [...this.memoryLogs];

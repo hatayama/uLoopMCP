@@ -143,5 +143,5 @@ export const LIST_CHANGED_UNSUPPORTED_CLIENTS = [
 // File output directories
 export const OUTPUT_DIRECTORIES = {
   ROOT: 'uLoopMCPOutputs',
-  VIBE_LOGS: 'vibe-logs',
+  VIBE_LOGS: 'VibeLogs',
 } as const;
