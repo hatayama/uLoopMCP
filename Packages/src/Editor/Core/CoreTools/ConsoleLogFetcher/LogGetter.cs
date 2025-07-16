@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using System.Text.RegularExpressions;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -81,8 +82,10 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         /// <param name="logType">The log type to filter by (if null or "All", all types are included).</param>
         /// <param name="searchText">The text to search for within messages (if null or empty, no search is performed).</param>
+        /// <param name="useRegex">Whether to use regular expression for search.</param>
+        /// <param name="searchInStackTrace">Whether to search within stack trace as well.</param>
         /// <returns>The filtered log data.</returns>
-        public static LogDisplayDto GetConsoleLog(McpLogType logType, string searchText)
+        public static LogDisplayDto GetConsoleLog(McpLogType logType, string searchText, bool useRegex, bool searchInStackTrace)
         {
             // Get logs based on type
             System.Collections.Generic.List<LogEntryDto> allEntries;
@@ -99,8 +102,26 @@ namespace io.github.hatayama.uLoopMCP
             // Filter by search text if provided
             if (!string.IsNullOrEmpty(searchText))
             {
-                allEntries = allEntries.FindAll(entry => 
-                    entry.Message.IndexOf(searchText, System.StringComparison.OrdinalIgnoreCase) >= 0);
+                if (useRegex)
+                {
+                    Regex regex = new Regex(searchText);
+                    allEntries = allEntries.FindAll(entry => 
+                    {
+                        bool messageMatch = regex.IsMatch(entry.Message);
+                        bool stackTraceMatch = searchInStackTrace && !string.IsNullOrEmpty(entry.StackTrace) && regex.IsMatch(entry.StackTrace);
+                        return messageMatch || stackTraceMatch;
+                    });
+                }
+                else
+                {
+                    allEntries = allEntries.FindAll(entry => 
+                    {
+                        bool messageMatch = entry.Message.IndexOf(searchText, System.StringComparison.OrdinalIgnoreCase) >= 0;
+                        bool stackTraceMatch = searchInStackTrace && !string.IsNullOrEmpty(entry.StackTrace) && 
+                                             entry.StackTrace.IndexOf(searchText, System.StringComparison.OrdinalIgnoreCase) >= 0;
+                        return messageMatch || stackTraceMatch;
+                    });
+                }
             }
             
             return new LogDisplayDto(allEntries.ToArray(), allEntries.Count);

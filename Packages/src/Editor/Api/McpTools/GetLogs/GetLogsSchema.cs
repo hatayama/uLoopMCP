@@ -39,6 +39,18 @@ namespace io.github.hatayama.uLoopMCP
         public string SearchText { get; set; } = "";
 
         /// <summary>
+        /// Whether to use regular expression for search
+        /// </summary>
+        [Description("Whether to use regular expression for search")]
+        public bool UseRegex { get; set; } = false;
+
+        /// <summary>
+        /// Whether to search within stack trace as well
+        /// </summary>
+        [Description("Whether to search within stack trace as well")]
+        public bool SearchInStackTrace { get; set; } = false;
+
+        /// <summary>
         /// Whether to display stack trace
         /// </summary>
         [Description("Whether to display stack trace")]

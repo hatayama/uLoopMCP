@@ -25,6 +25,8 @@ namespace io.github.hatayama.uLoopMCP
             McpLogType logType = parameters.LogType;
             int maxCount = parameters.MaxCount;
             string searchText = parameters.SearchText;
+            bool useRegex = parameters.UseRegex;
+            bool searchInStackTrace = parameters.SearchInStackTrace;
             bool includeStackTrace = parameters.IncludeStackTrace;
             
             // Convert enum to string for LogGetter
@@ -45,7 +47,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                logData = LogGetter.GetConsoleLog(logType, searchText);
+                logData = LogGetter.GetConsoleLog(logType, searchText, useRegex, searchInStackTrace);
             }
             
             // Check for cancellation before processing
