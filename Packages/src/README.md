@@ -43,11 +43,16 @@ You can choose between incremental compilation and forced full compilation.
 ```
 
 #### 2. get-logs - Retrieve Logs Same as Unity Console
-Filter by LogType or search target string. You can also choose whether to include stacktrace.
+Filter by LogType or search target string with advanced search capabilities. You can also choose whether to include stacktrace.
 This allows you to retrieve logs while keeping the context small.
 **MaxCount behavior**: Returns the latest logs (tail-like behavior). When MaxCount=10, returns the most recent 10 logs.
+**Advanced Search Features**:
+- **Regular Expression Support**: Use `UseRegex: true` for powerful pattern matching
+- **Stack Trace Search**: Use `SearchInStackTrace: true` to search within stack traces
 ```
 → get-logs (LogType: Error, SearchText: "NullReference", MaxCount: 10)
+→ get-logs (LogType: All, SearchText: "(?i).*error.*", UseRegex: true, MaxCount: 20)
+→ get-logs (LogType: All, SearchText: "MyClass", SearchInStackTrace: true, MaxCount: 50)
 → Identify cause from stacktrace, fix relevant code
 ```
 
@@ -153,11 +158,13 @@ All tools automatically include the following timing information:
   - `Message` (string): Optional message for additional information
 
 ### 2. get-logs
-- **Description**: Retrieves log information from Unity console with filtering and search capabilities
+- **Description**: Retrieves log information from Unity console with filtering and advanced search capabilities
 - **Parameters**: 
   - `LogType` (enum): Log type to filter - "Error", "Warning", "Log", "All" (default: "All")
   - `MaxCount` (number): Maximum number of logs to retrieve (default: 100)
   - `SearchText` (string): Text to search within log messages (retrieve all if empty) (default: "")
+  - `UseRegex` (boolean): Whether to use regular expression for search (default: false)
+  - `SearchInStackTrace` (boolean): Whether to search within stack trace as well (default: false)
   - `IncludeStackTrace` (boolean): Whether to display stack traces (default: true)
 - **Response**: 
   - `TotalCount` (number): Total number of logs available

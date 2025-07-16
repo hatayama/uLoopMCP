@@ -46,8 +46,13 @@ AssetDatabase.Refresh()をした後、コンパイルして結果を返却しま
 LogTypeや検索対象の文字列で絞り込む事ができます。また、stacktraceの有無も選択できます。
 これにより、コンテキストを小さく保ちながらlogを取得できます。
 **MaxCountの動作**: 最新のログから指定数を取得します（tail的な動作）。MaxCount=10なら最新の10件のログを返します。
+**高度な検索機能**:
+- **正規表現サポート**: `UseRegex: true`で強力なパターンマッチングが可能
+- **スタックトレース検索**: `SearchInStackTrace: true`でスタックトレース内も検索対象
 ```
 → get-logs (LogType: Error, SearchText: "NullReference", MaxCount: 10)
+→ get-logs (LogType: All, SearchText: "(?i).*error.*", UseRegex: true, MaxCount: 20)
+→ get-logs (LogType: All, SearchText: "MyClass", SearchInStackTrace: true, MaxCount: 50)
 → スタックトレースから原因箇所を特定、該当コードを修正
 ```
 
@@ -153,11 +158,13 @@ UnitySearchが提供する検索プロバイダーを取得します
   - `Message` (string): 追加情報のためのオプションメッセージ
 
 ### 2. get-logs
-- **説明**: フィルタリングおよび検索機能付きでUnityコンソールからログ情報を取得します
+- **説明**: フィルタリングおよび高度な検索機能付きでUnityコンソールからログ情報を取得します
 - **パラメータ**: 
   - `LogType` (enum): フィルタするログタイプ - "Error", "Warning", "Log", "All"（デフォルト: "All"）
   - `MaxCount` (number): 取得するログの最大数（デフォルト: 100）
   - `SearchText` (string): ログメッセージ内で検索するテキスト（空の場合はすべて取得）（デフォルト: ""）
+  - `UseRegex` (boolean): 検索に正規表現を使用するかどうか（デフォルト: false）
+  - `SearchInStackTrace` (boolean): スタックトレース内も検索対象に含めるかどうか（デフォルト: false）
   - `IncludeStackTrace` (boolean): スタックトレースを表示するかどうか（デフォルト: true）
 - **レスポンス**: 
   - `TotalCount` (number): 利用可能なログの総数
