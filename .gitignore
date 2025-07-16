@@ -84,6 +84,7 @@ crashlytics-build.properties
 .cursor
 .claude
 .gemini
+.kiro
 CLAUDE.md
 GEMINI.md
 .mcp.json

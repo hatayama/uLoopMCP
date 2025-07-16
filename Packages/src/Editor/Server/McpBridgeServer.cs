@@ -78,6 +78,15 @@ namespace io.github.hatayama.uLoopMCP
     {
         // Note: Domain reload progress is now tracked via McpSessionManager
         
+        // HResult error codes for normal disconnection detection
+        private static readonly HashSet<int> NormalDisconnectionHResults = new HashSet<int>
+        {
+            unchecked((int)0x800703E3), // ERROR_OPERATION_ABORTED
+            unchecked((int)0x80070040), // ERROR_NETNAME_DELETED
+            unchecked((int)0x80072745), // ERROR_CONNECTION_ABORTED
+            unchecked((int)0x80072746)  // ERROR_CONNECTION_RESET
+        };
+        
         private TcpListener tcpListener;
         private CancellationTokenSource cancellationTokenSource;
         private Task serverTask;
@@ -633,23 +642,49 @@ namespace io.github.hatayama.uLoopMCP
             switch (ex)
             {
                 case SocketException sockEx:
-                    return sockEx.SocketErrorCode == SocketError.ConnectionReset ||
-                           sockEx.SocketErrorCode == SocketError.ConnectionAborted ||
-                           sockEx.SocketErrorCode == SocketError.Shutdown ||
-                           sockEx.SocketErrorCode == SocketError.NotConnected;
+                    return sockEx.SocketErrorCode is SocketError.ConnectionReset or
+                                                     SocketError.ConnectionAborted or
+                                                     SocketError.OperationAborted or
+                                                     SocketError.Shutdown or
+                                                     SocketError.NotConnected;
                     
                 case ObjectDisposedException:
                     return true;
                     
                 case IOException ioEx when ioEx.InnerException is SocketException innerSockEx:
-                    return innerSockEx.SocketErrorCode == SocketError.ConnectionReset ||
-                           innerSockEx.SocketErrorCode == SocketError.ConnectionAborted ||
-                           innerSockEx.SocketErrorCode == SocketError.Shutdown ||
-                           innerSockEx.SocketErrorCode == SocketError.NotConnected;
+                    return innerSockEx.SocketErrorCode is SocketError.ConnectionReset or
+                                                          SocketError.ConnectionAborted or
+                                                          SocketError.OperationAborted or
+                                                          SocketError.Shutdown or
+                                                          SocketError.NotConnected;
+                
+                case IOException ioEx:
+                    // Check HResult codes for common disconnection scenarios
+                    return NormalDisconnectionHResults.Contains(ioEx.HResult) ||
+                           IsNormalDisconnectionByInnerException(ioEx);
                     
                 default:
                     return false;
             }
+        }
+
+        /// <summary>
+        /// Recursively checks inner exceptions for normal disconnection scenarios
+        /// </summary>
+        /// <param name="ex">The exception to check</param>
+        /// <returns>True if any inner exception indicates a normal disconnection</returns>
+        private static bool IsNormalDisconnectionByInnerException(Exception ex)
+        {
+            Exception innerEx = ex.InnerException;
+            while (innerEx != null)
+            {
+                if (IsNormalDisconnectionException(innerEx))
+                {
+                    return true;
+                }
+                innerEx = innerEx.InnerException;
+            }
+            return false;
         }
 
         /// <summary>
