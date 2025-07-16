@@ -5797,25 +5797,60 @@ var VibeLogger = class _VibeLogger {
       _VibeLogger.memoryLogs.shift();
     }
     _VibeLogger.saveLogToFile(logEntry).catch((error) => {
-      console.error(`[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(
+        `[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`
+      );
     });
-    console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
+    if (_VibeLogger.isDebugEnabled) {
+      console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
+    }
+  }
+  /**
+   * Validate file name to prevent dangerous characters
+   */
+  static validateFileName(fileName) {
+    const safeFileNameRegex = /^[a-zA-Z0-9._-]+$/;
+    return safeFileNameRegex.test(fileName) && !fileName.includes("..");
+  }
+  /**
+   * Validate file path to prevent directory traversal attacks
+   */
+  static validateFilePath(filePath) {
+    const normalizedPath = path.normalize(filePath);
+    const logDirectory = path.normalize(_VibeLogger.LOG_DIRECTORY);
+    return normalizedPath.startsWith(logDirectory + path.sep) || normalizedPath === logDirectory;
   }
   /**
    * Save log entry to file with retry mechanism for concurrent access
    */
   static async saveLogToFile(logEntry) {
     try {
-      if (!fs.existsSync(_VibeLogger.LOG_DIRECTORY)) {
-        fs.mkdirSync(_VibeLogger.LOG_DIRECTORY, { recursive: true });
+      const logDirectory = path.normalize(_VibeLogger.LOG_DIRECTORY);
+      if (!_VibeLogger.validateFilePath(logDirectory)) {
+        throw new Error("Invalid log directory path");
+      }
+      if (!fs.existsSync(logDirectory)) {
+        fs.mkdirSync(logDirectory, { recursive: true });
       }
       const fileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDate()}.json`;
-      const filePath = path.join(_VibeLogger.LOG_DIRECTORY, fileName);
+      if (!_VibeLogger.validateFileName(fileName)) {
+        throw new Error("Invalid file name detected");
+      }
+      const filePath = path.normalize(path.join(logDirectory, fileName));
+      if (!_VibeLogger.validateFilePath(filePath)) {
+        throw new Error("Invalid file path detected");
+      }
       if (fs.existsSync(filePath)) {
         const stats = fs.statSync(filePath);
         if (stats.size > _VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
           const rotatedFileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDateTime()}.json`;
-          const rotatedFilePath = path.join(_VibeLogger.LOG_DIRECTORY, rotatedFileName);
+          if (!_VibeLogger.validateFileName(rotatedFileName)) {
+            throw new Error("Invalid rotated file name detected");
+          }
+          const rotatedFilePath = path.normalize(path.join(logDirectory, rotatedFileName));
+          if (!_VibeLogger.validateFilePath(rotatedFilePath)) {
+            throw new Error("Invalid rotated file path detected");
+          }
           fs.renameSync(filePath, rotatedFilePath);
         }
       }
@@ -6497,29 +6532,25 @@ var MessageHandler = class {
    * Handle incoming data from Unity using Content-Length framing
    */
   handleIncomingData(data) {
-    try {
-      this.dynamicBuffer.append(data);
-      const frames = this.dynamicBuffer.extractAllFrames();
-      for (const frame of frames) {
-        if (!frame || frame.trim() === "") {
-          continue;
-        }
-        try {
-          const message = JSON.parse(frame);
-          if (isJsonRpcNotification(message)) {
-            this.handleNotification(message);
-          } else if (isJsonRpcResponse(message)) {
-            this.handleResponse(message);
-          } else if (hasValidId(message)) {
-            this.handleResponse(message);
-          }
-        } catch (parseError) {
-          console.error("Error parsing JSON frame:", parseError);
-          console.error("Problematic frame:", frame);
-        }
+    this.dynamicBuffer.append(data);
+    const frames = this.dynamicBuffer.extractAllFrames();
+    for (const frame of frames) {
+      if (!frame || frame.trim() === "") {
+        continue;
       }
-    } catch (error) {
-      console.error("Error processing incoming data:", error);
+      try {
+        const message = JSON.parse(frame);
+        if (isJsonRpcNotification(message)) {
+          this.handleNotification(message);
+        } else if (isJsonRpcResponse(message)) {
+          this.handleResponse(message);
+        } else if (hasValidId(message)) {
+          this.handleResponse(message);
+        }
+      } catch (parseError) {
+        console.error("Error parsing JSON frame:", parseError);
+        console.error("Problematic frame:", frame);
+      }
     }
   }
   /**
