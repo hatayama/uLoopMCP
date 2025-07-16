@@ -128,16 +128,6 @@ class IntegrationTestSuite {
 
       process.exit(0);
     } catch (error) {
-      // Show test results
-      console.error('\nTest Results:');
-      for (const result of this.testResults) {
-        const status = result.passed ? 'PASSED' : 'FAILED';
-        console.error(`${status} ${result.name}`);
-        if (result.error) {
-          console.error(`   Error: ${result.error}`);
-        }
-      }
-
       process.exit(1);
     }
   }
@@ -149,10 +139,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   try {
     suite.runAllTests();
   } catch (error) {
-    console.error(
-      'Fatal integration test error:',
-      error instanceof Error ? error.message : String(error),
-    );
     process.exit(1);
   }
 }

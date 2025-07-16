@@ -235,8 +235,10 @@ export class VibeLogger {
       );
     });
 
-    // Also output to console when debugging
-    console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
+    // Also output to console when debugging (only in debug mode)
+    if (VibeLogger.isDebugEnabled) {
+      console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
+    }
   }
 
   /**

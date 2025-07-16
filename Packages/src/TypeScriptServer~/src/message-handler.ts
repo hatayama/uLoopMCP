@@ -112,38 +112,34 @@ export class MessageHandler {
    * Handle incoming data from Unity using Content-Length framing
    */
   handleIncomingData(data: Buffer | string): void {
-    try {
-      // Append new data to dynamic buffer (Buffer or string - DynamicBuffer handles both)
-      this.dynamicBuffer.append(data);
+    // Append new data to dynamic buffer (Buffer or string - DynamicBuffer handles both)
+    this.dynamicBuffer.append(data);
 
-      // Extract all complete frames
-      const frames = this.dynamicBuffer.extractAllFrames();
+    // Extract all complete frames
+    const frames = this.dynamicBuffer.extractAllFrames();
 
-      for (const frame of frames) {
-        if (!frame || frame.trim() === '') {
-          continue;
-        }
-
-        try {
-          const message: unknown = JSON.parse(frame);
-
-          // Check if this is a notification (no id field)
-          if (isJsonRpcNotification(message)) {
-            this.handleNotification(message);
-          } else if (isJsonRpcResponse(message)) {
-            // This is a response to a request
-            this.handleResponse(message);
-          } else if (hasValidId(message)) {
-            // Fallback for other messages with valid id
-            this.handleResponse(message as JsonRpcResponse);
-          }
-        } catch (parseError) {
-          console.error('Error parsing JSON frame:', parseError);
-          console.error('Problematic frame:', frame);
-        }
+    for (const frame of frames) {
+      if (!frame || frame.trim() === '') {
+        continue;
       }
-    } catch (error) {
-      console.error('Error processing incoming data:', error);
+
+      try {
+        const message: unknown = JSON.parse(frame);
+
+        // Check if this is a notification (no id field)
+        if (isJsonRpcNotification(message)) {
+          this.handleNotification(message);
+        } else if (isJsonRpcResponse(message)) {
+          // This is a response to a request
+          this.handleResponse(message);
+        } else if (hasValidId(message)) {
+          // Fallback for other messages with valid id
+          this.handleResponse(message as JsonRpcResponse);
+        }
+      } catch (parseError) {
+        console.error('Error parsing JSON frame:', parseError);
+        console.error('Problematic frame:', frame);
+      }
     }
   }
 

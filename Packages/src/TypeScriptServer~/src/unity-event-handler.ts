@@ -41,7 +41,9 @@ export class UnityEventHandler {
   setupUnityEventListener(onToolsChanged: () => Promise<void>): void {
     // Listen for MCP standard notifications from Unity
     this.unityClient.onNotification('notifications/tools/list_changed', (_params: unknown) => {
+      // Only log in development mode
       if (this.isDevelopment) {
+        // eslint-disable-next-line no-console
         console.log('Unity notification received: notifications/tools/list_changed');
       }
 

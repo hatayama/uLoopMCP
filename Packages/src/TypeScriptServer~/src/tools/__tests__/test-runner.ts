@@ -15,8 +15,6 @@ function runMcpValidationTests(): void {
 
     process.exit(0);
   } catch (error) {
-    console.error('Fail-fast triggered:', error instanceof Error ? error.message : String(error));
-
     process.exit(1);
   }
 }
@@ -26,7 +24,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   try {
     runMcpValidationTests();
   } catch (error) {
-    console.error('Fatal error:', error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }

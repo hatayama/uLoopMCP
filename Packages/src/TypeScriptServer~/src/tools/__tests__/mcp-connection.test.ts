@@ -114,21 +114,13 @@ export class McpConnectionValidator {
    * @throws {Error} On first validation failure
    */
   runAllValidations(): void {
-    try {
-      this.createServer();
+    this.createServer();
 
-      this.registerHandlers();
+    this.registerHandlers();
 
-      this.testNotification();
+    this.testNotification();
 
-      this.validateJsonRpcCompliance();
-    } catch (error) {
-      console.error(
-        'MCP Connection Test Failed:',
-        error instanceof Error ? error.message : String(error),
-      );
-      throw error; // Fail fast
-    }
+    this.validateJsonRpcCompliance();
   }
 }
 
