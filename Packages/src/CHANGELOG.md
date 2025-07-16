@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.27.0](https://github.com/hatayama/uLoopMCP/compare/v0.26.5...v0.27.0) (2025-07-16)
+
+
+### Features
+
+* improve Content-Length framing with Buffer support and test reorganization ([#203](https://github.com/hatayama/uLoopMCP/issues/203)) ([63f4452](https://github.com/hatayama/uLoopMCP/commit/63f4452f4fa501c1a3f1c9fcb78dbc538fbed08f))
+
 ## [0.26.5](https://github.com/hatayama/uLoopMCP/compare/v0.26.4...v0.26.5) (2025-07-16)
 
 
