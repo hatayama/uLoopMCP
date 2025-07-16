@@ -137,7 +137,9 @@ export class MessageHandler {
           this.handleResponse(message as JsonRpcResponse);
         }
       } catch (parseError) {
+        // eslint-disable-next-line no-console
         console.error('Error parsing JSON frame:', parseError);
+        // eslint-disable-next-line no-console
         console.error('Problematic frame:', frame);
       }
     }
@@ -154,6 +156,7 @@ export class MessageHandler {
       try {
         handler(params);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error(`Error in notification handler for ${method}:`, error);
       }
     }
@@ -189,6 +192,7 @@ export class MessageHandler {
         pending.resolve(response);
       }
     } else {
+      // eslint-disable-next-line no-console
       console.error(`Received response for unknown request ID: ${id}`);
     }
   }

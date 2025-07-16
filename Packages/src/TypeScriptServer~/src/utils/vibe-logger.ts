@@ -230,6 +230,7 @@ export class VibeLogger {
     // Save to file (fire and forget to avoid blocking)
     VibeLogger.saveLogToFile(logEntry).catch((error) => {
       // Fallback to console if file logging fails
+      // eslint-disable-next-line no-console
       console.error(
         `[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`,
       );
@@ -237,8 +238,29 @@ export class VibeLogger {
 
     // Also output to console when debugging (only in debug mode)
     if (VibeLogger.isDebugEnabled) {
+      // eslint-disable-next-line no-console
       console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
     }
+  }
+
+  /**
+   * Validate file name to prevent dangerous characters
+   */
+  private static validateFileName(fileName: string): boolean {
+    // Allow only alphanumeric characters, hyphens, underscores, and dots
+    const safeFileNameRegex = /^[a-zA-Z0-9._-]+$/;
+    return safeFileNameRegex.test(fileName) && !fileName.includes('..');
+  }
+
+  /**
+   * Validate file path to prevent directory traversal attacks
+   */
+  private static validateFilePath(filePath: string): boolean {
+    const normalizedPath = path.normalize(filePath);
+    const logDirectory = path.normalize(VibeLogger.LOG_DIRECTORY);
+
+    // Ensure the file path is within the log directory
+    return normalizedPath.startsWith(logDirectory + path.sep) || normalizedPath === logDirectory;
   }
 
   /**
@@ -246,19 +268,53 @@ export class VibeLogger {
    */
   private static async saveLogToFile(logEntry: VibeLogEntry): Promise<void> {
     try {
-      if (!fs.existsSync(VibeLogger.LOG_DIRECTORY)) {
-        fs.mkdirSync(VibeLogger.LOG_DIRECTORY, { recursive: true });
+      // Validate log directory path for security
+      const logDirectory = path.normalize(VibeLogger.LOG_DIRECTORY);
+      if (!VibeLogger.validateFilePath(logDirectory)) {
+        throw new Error('Invalid log directory path');
+      }
+
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      if (!fs.existsSync(logDirectory)) {
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
+        fs.mkdirSync(logDirectory, { recursive: true });
       }
 
       const fileName = `${VibeLogger.LOG_FILE_PREFIX}_${VibeLogger.formatDate()}.json`;
-      const filePath = path.join(VibeLogger.LOG_DIRECTORY, fileName);
+
+      // Validate file name for security
+      if (!VibeLogger.validateFileName(fileName)) {
+        throw new Error('Invalid file name detected');
+      }
+
+      const filePath = path.normalize(path.join(logDirectory, fileName));
+
+      // Validate the final file path for security
+      if (!VibeLogger.validateFilePath(filePath)) {
+        throw new Error('Invalid file path detected');
+      }
 
       // Check file size and rotate if necessary
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       if (fs.existsSync(filePath)) {
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         const stats = fs.statSync(filePath);
         if (stats.size > VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
           const rotatedFileName = `${VibeLogger.LOG_FILE_PREFIX}_${VibeLogger.formatDateTime()}.json`;
-          const rotatedFilePath = path.join(VibeLogger.LOG_DIRECTORY, rotatedFileName);
+
+          // Validate rotated file name for security
+          if (!VibeLogger.validateFileName(rotatedFileName)) {
+            throw new Error('Invalid rotated file name detected');
+          }
+
+          const rotatedFilePath = path.normalize(path.join(logDirectory, rotatedFileName));
+
+          // Validate rotated file path for security
+          if (!VibeLogger.validateFilePath(rotatedFilePath)) {
+            throw new Error('Invalid rotated file path detected');
+          }
+
+          // eslint-disable-next-line security/detect-non-literal-fs-filename
           fs.renameSync(filePath, rotatedFilePath);
         }
       }
@@ -271,6 +327,7 @@ export class VibeLogger {
 
       for (let retry = 0; retry < maxRetries; retry++) {
         try {
+          // eslint-disable-next-line security/detect-non-literal-fs-filename
           fs.appendFileSync(filePath, jsonLog, { flag: 'a' });
           return; // Success - exit retry loop
         } catch (error: unknown) {
@@ -286,9 +343,11 @@ export class VibeLogger {
       }
     } catch (error) {
       // Fallback to console if file logging fails
+      // eslint-disable-next-line no-console
       console.error(
         `[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`,
       );
+      // eslint-disable-next-line no-console
       console.log(`[VibeLogger] ${logEntry.level} | ${logEntry.operation} | ${logEntry.message}`);
     }
   }

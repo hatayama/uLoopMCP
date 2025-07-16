@@ -50,6 +50,7 @@ export class UnityEventHandler {
       try {
         void onToolsChanged();
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Failed to update dynamic tools via Unity notification:', error);
       }
     });
@@ -61,6 +62,7 @@ export class UnityEventHandler {
   sendToolsChangedNotification(): void {
     if (this.isNotifying) {
       if (this.isDevelopment) {
+        // eslint-disable-next-line no-console
         console.log('sendToolsChangedNotification skipped: already notifying');
       }
       return;
@@ -73,9 +75,11 @@ export class UnityEventHandler {
         params: {},
       });
       if (this.isDevelopment) {
+        // eslint-disable-next-line no-console
         console.log('tools/list_changed notification sent');
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to send tools changed notification:', error);
     } finally {
       this.isNotifying = false;
@@ -88,18 +92,21 @@ export class UnityEventHandler {
   setupSignalHandlers(): void {
     // Handle Ctrl+C (SIGINT)
     process.on('SIGINT', () => {
+      // eslint-disable-next-line no-console
       console.log('Received SIGINT, shutting down...');
       this.gracefulShutdown();
     });
 
     // Handle kill command (SIGTERM)
     process.on('SIGTERM', () => {
+      // eslint-disable-next-line no-console
       console.log('Received SIGTERM, shutting down...');
       this.gracefulShutdown();
     });
 
     // Handle terminal close (SIGHUP)
     process.on('SIGHUP', () => {
+      // eslint-disable-next-line no-console
       console.log('Received SIGHUP, shutting down...');
       this.gracefulShutdown();
     });
@@ -108,11 +115,13 @@ export class UnityEventHandler {
     // BUG FIX: Added STDIN monitoring to detect when Cursor/parent MCP client disconnects
     // This prevents orphaned Node processes from remaining after IDE shutdown
     process.stdin.on('close', () => {
+      // eslint-disable-next-line no-console
       console.log('STDIN closed, shutting down...');
       this.gracefulShutdown();
     });
 
     process.stdin.on('end', () => {
+      // eslint-disable-next-line no-console
       console.log('STDIN ended, shutting down...');
       this.gracefulShutdown();
     });
@@ -120,11 +129,13 @@ export class UnityEventHandler {
     // Handle uncaught exceptions
     // BUG FIX: Added comprehensive error handling to prevent hanging processes
     process.on('uncaughtException', (error) => {
+      // eslint-disable-next-line no-console
       console.error('Uncaught exception:', error);
       this.gracefulShutdown();
     });
 
     process.on('unhandledRejection', (reason, promise) => {
+      // eslint-disable-next-line no-console
       console.error('Unhandled rejection at:', promise, 'reason:', reason);
       this.gracefulShutdown();
     });
@@ -141,6 +152,7 @@ export class UnityEventHandler {
     }
 
     this.isShuttingDown = true;
+    // eslint-disable-next-line no-console
     console.log('Starting graceful shutdown...');
 
     try {
@@ -154,9 +166,11 @@ export class UnityEventHandler {
         global.gc();
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error during cleanup:', error);
     }
 
+    // eslint-disable-next-line no-console
     console.log('Graceful shutdown completed');
     process.exit(0);
   }
