@@ -45,7 +45,9 @@ export interface EnvironmentInfo {
 }
 
 export class VibeLogger {
-  private static readonly LOG_DIRECTORY = path.join(process.cwd(), OUTPUT_DIRECTORIES.ROOT, OUTPUT_DIRECTORIES.VIBE_LOGS);
+  // Navigate from TypeScriptServer~ to project root: ../../../
+  private static readonly PROJECT_ROOT = path.resolve(process.cwd(), '../../../');
+  private static readonly LOG_DIRECTORY = path.join(this.PROJECT_ROOT, OUTPUT_DIRECTORIES.ROOT, OUTPUT_DIRECTORIES.VIBE_LOGS);
   private static readonly LOG_FILE_PREFIX = 'typescript_vibe';
   private static readonly MAX_FILE_SIZE_MB = 10;
   private static readonly MAX_MEMORY_LOGS = 1000;
@@ -214,7 +216,7 @@ export class VibeLogger {
   }
   
   /**
-   * Save log entry to file
+   * Save log entry to file with retry mechanism for concurrent access
    */
   private static saveLogToFile(logEntry: VibeLogEntry): void {
     try {
@@ -236,11 +238,58 @@ export class VibeLogger {
       }
       
       const jsonLog = JSON.stringify(logEntry) + '\n';
-      fs.appendFileSync(filePath, jsonLog);
+      
+      // Use retry mechanism with exponential backoff for file writing
+      const maxRetries = 3;
+      const baseDelayMs = 50;
+      
+      for (let retry = 0; retry < maxRetries; retry++) {
+        try {
+          fs.appendFileSync(filePath, jsonLog, { flag: 'a' });
+          return; // Success - exit retry loop
+        } catch (error: any) {
+          if (this.isFileSharingViolation(error) && retry < maxRetries - 1) {
+            // Wait with exponential backoff for sharing violations
+            const delayMs = baseDelayMs * Math.pow(2, retry);
+            this.sleep(delayMs);
+          } else {
+            // For other errors or final retry, throw
+            throw error;
+          }
+        }
+      }
     } catch (error) {
       // Fallback to console if file logging fails
       console.error(`[VibeLogger] Failed to save log to file: ${error}`);
       console.log(`[VibeLogger] ${logEntry.level} | ${logEntry.operation} | ${logEntry.message}`);
+    }
+  }
+  
+  /**
+   * Check if error is a file sharing violation
+   */
+  private static isFileSharingViolation(error: any): boolean {
+    if (!error) return false;
+    
+    // Check for common file sharing violation error codes
+    const sharingViolationCodes = [
+      'EBUSY',    // Resource busy or locked
+      'EACCES',   // Permission denied (can indicate file in use)
+      'EPERM',    // Operation not permitted
+      'EMFILE',   // Too many open files
+      'ENFILE'    // File table overflow
+    ];
+    
+    return error.code && sharingViolationCodes.includes(error.code);
+  }
+  
+  /**
+   * Synchronous sleep function for retry delays
+   */
+  private static sleep(ms: number): void {
+    const start = Date.now();
+    while (Date.now() - start < ms) {
+      // Busy wait for specified duration
     }
   }
   

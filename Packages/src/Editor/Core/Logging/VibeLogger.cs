@@ -210,7 +210,7 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// Save log entry to file
+        /// Save log entry to file with file locking for concurrent access
         /// </summary>
         private static void SaveLogToFile(VibeLogEntry logEntry)
         {
@@ -235,7 +235,47 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             string jsonLog = JsonConvert.SerializeObject(logEntry) + "\n";
-            File.AppendAllText(filePath, jsonLog);
+            
+            // Use file locking with retry mechanism to handle concurrent access
+            int maxRetries = 3;
+            int retryDelayMs = 50;
+            
+            for (int retry = 0; retry < maxRetries; retry++)
+            {
+                try
+                {
+                    using (var fileStream = new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.Read))
+                    using (var writer = new StreamWriter(fileStream))
+                    {
+                        writer.Write(jsonLog);
+                        writer.Flush();
+                        return; // Success - exit retry loop
+                    }
+                }
+                catch (IOException ex) when (IsFileSharingViolation(ex) && retry < maxRetries - 1)
+                {
+                    // Wait and retry for sharing violations
+                    System.Threading.Thread.Sleep(retryDelayMs * (retry + 1));
+                }
+                catch (Exception ex)
+                {
+                    // For other exceptions, throw immediately
+                    throw new InvalidOperationException($"Failed to write VibeLogger entry to file: {ex.Message}", ex);
+                }
+            }
+            
+            // If all retries failed, throw with sharing violation context
+            throw new InvalidOperationException($"Failed to write VibeLogger entry after {maxRetries} retries due to file sharing violations");
+        }
+        
+        /// <summary>
+        /// Check if exception is a file sharing violation
+        /// </summary>
+        private static bool IsFileSharingViolation(IOException ex)
+        {
+            // ERROR_SHARING_VIOLATION (0x80070020)
+            const int ERROR_SHARING_VIOLATION = unchecked((int)0x80070020);
+            return ex.HResult == ERROR_SHARING_VIOLATION;
         }
         
         /// <summary>
