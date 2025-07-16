@@ -438,14 +438,17 @@ namespace io.github.hatayama.uLoopMCP
                             if (string.IsNullOrWhiteSpace(requestJson)) continue;
                             
                             // JSON-RPC processing and response sending with client context
+                            McpLogger.LogDebug($"[McpBridgeServer] Processing request from {clientEndpoint}: {requestJson}");
                             string responseJson = await JsonRpcProcessor.ProcessRequest(requestJson, clientEndpoint);
                             
                             // Only send response if it's not null (notifications return null)
                             if (!string.IsNullOrEmpty(responseJson))
                             {
+                                McpLogger.LogDebug($"[McpBridgeServer] Sending response to {clientEndpoint}: {responseJson}");
                                 // Send response with Content-Length framing
                                 string framedResponse = CreateContentLengthFrame(responseJson);
                                 byte[] responseData = Encoding.UTF8.GetBytes(framedResponse);
+                                McpLogger.LogDebug($"[McpBridgeServer] Framed response size: {responseData.Length} bytes, Content-Length: {Encoding.UTF8.GetByteCount(responseJson)}");
                                 await stream.WriteAsync(responseData, 0, responseData.Length, cancellationToken);
                             }
                         }

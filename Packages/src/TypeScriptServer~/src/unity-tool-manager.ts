@@ -108,17 +108,45 @@ export class UnityToolManager {
     // Get detailed tool information including schemas
     // Include development-only tools if in development mode
     const params = { IncludeDevelopmentOnly: this.isDevelopment };
-    const toolDetailsResponse = await this.unityClient.executeTool('get-tool-details', params);
 
-    // Handle new GetToolDetailsResponse structure
-    const toolDetails =
-      (toolDetailsResponse as { Tools?: unknown[] })?.Tools || toolDetailsResponse;
-    if (!Array.isArray(toolDetails)) {
-      errorToFile('[Unity Tool Manager] Invalid tool details response:', toolDetailsResponse);
-      return null;
+    debugToFile('[Unity Tool Manager] Requesting tool details from Unity with params:', params);
+    const startTime = Date.now();
+
+    try {
+      const toolDetailsResponse = await this.unityClient.executeTool('get-tool-details', params);
+      const duration = Date.now() - startTime;
+
+      debugToFile(
+        '[Unity Tool Manager] Received tool details response in',
+        duration,
+        'ms:',
+        toolDetailsResponse,
+      );
+
+      // Handle new GetToolDetailsResponse structure
+      const toolDetails =
+        (toolDetailsResponse as { Tools?: unknown[] })?.Tools || toolDetailsResponse;
+      if (!Array.isArray(toolDetails)) {
+        errorToFile('[Unity Tool Manager] Invalid tool details response:', toolDetailsResponse);
+        return null;
+      }
+
+      debugToFile(
+        '[Unity Tool Manager] Successfully parsed',
+        toolDetails.length,
+        'tools from Unity',
+      );
+      return toolDetails as unknown[];
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      errorToFile(
+        '[Unity Tool Manager] Failed to fetch tool details after',
+        duration,
+        'ms:',
+        error,
+      );
+      throw error;
     }
-
-    return toolDetails as unknown[];
   }
 
   /**

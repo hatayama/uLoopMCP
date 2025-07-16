@@ -3,7 +3,7 @@
  * Handles HTTP-style headers with format: "Content-Length: <n>\r\n\r\n<json_content>"
  */
 
-import { errorToFile } from './log-to-file.js';
+import { errorToFile, debugToFile } from './log-to-file.js';
 
 export interface FrameParseResult {
   contentLength: number;
@@ -13,7 +13,7 @@ export interface FrameParseResult {
 
 export interface FrameExtractionResult {
   jsonContent: string | null;
-  remainingData: string;
+  remainingData: string | Buffer;
 }
 
 /**
@@ -24,6 +24,11 @@ export class ContentLengthFramer {
   private static readonly HEADER_SEPARATOR = '\r\n\r\n';
   private static readonly LINE_SEPARATOR = '\r\n';
   private static readonly MAX_MESSAGE_SIZE = 1024 * 1024; // 1MB
+  private static readonly ENCODING_UTF8 = 'utf8';
+  private static readonly LOG_PREFIX = '[ContentLengthFramer]';
+  private static readonly ERROR_MESSAGE_JSON_EMPTY = 'JSON content cannot be empty';
+  private static readonly DEBUG_PREVIEW_LENGTH = 50;
+  private static readonly PREVIEW_SUFFIX = '...';
 
   /**
    * Creates a Content-Length framed message from JSON content.
@@ -32,10 +37,10 @@ export class ContentLengthFramer {
    */
   static createFrame(jsonContent: string): string {
     if (!jsonContent) {
-      throw new Error('JSON content cannot be empty');
+      throw new Error(ContentLengthFramer.ERROR_MESSAGE_JSON_EMPTY);
     }
 
-    const contentLength = Buffer.byteLength(jsonContent, 'utf8');
+    const contentLength = Buffer.byteLength(jsonContent, ContentLengthFramer.ENCODING_UTF8);
 
     if (contentLength > this.MAX_MESSAGE_SIZE) {
       throw new Error(
@@ -77,6 +82,7 @@ export class ContentLengthFramer {
       const headerLength = separatorIndex + this.HEADER_SEPARATOR.length;
 
       // Parse Content-Length from header
+      // Parse Content-Length from header
       const contentLength = this.parseContentLength(headerSection);
       if (contentLength === -1) {
         return {
@@ -86,9 +92,14 @@ export class ContentLengthFramer {
         };
       }
 
-      // Check if the complete frame is available
+      // Check if the complete frame is available using byte length
       const expectedTotalLength = headerLength + contentLength;
-      const isComplete = data.length >= expectedTotalLength;
+      const actualByteLength = Buffer.byteLength(data, ContentLengthFramer.ENCODING_UTF8);
+      const isComplete = actualByteLength >= expectedTotalLength;
+
+      debugToFile(
+        `${ContentLengthFramer.LOG_PREFIX} Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`,
+      );
 
       return {
         contentLength,
@@ -96,7 +107,74 @@ export class ContentLengthFramer {
         isComplete,
       };
     } catch (error) {
-      errorToFile('[ContentLengthFramer] Error parsing frame:', error);
+      errorToFile(`${ContentLengthFramer.LOG_PREFIX} Error parsing frame:`, error);
+      return {
+        contentLength: -1,
+        headerLength: -1,
+        isComplete: false,
+      };
+    }
+  }
+
+  /**
+   * Parses a Content-Length header from incoming Buffer data.
+   * @param data The incoming data Buffer
+   * @returns Parse result with content length, header length, and completion status
+   */
+  static parseFrameFromBuffer(data: Buffer): FrameParseResult {
+    if (!data || data.length === 0) {
+      return {
+        contentLength: -1,
+        headerLength: -1,
+        isComplete: false,
+      };
+    }
+
+    try {
+      // Find the header separator in Buffer
+      const separatorBuffer = Buffer.from(this.HEADER_SEPARATOR, ContentLengthFramer.ENCODING_UTF8);
+      const separatorIndex = data.indexOf(separatorBuffer);
+      if (separatorIndex === -1) {
+        // Header not complete yet
+        return {
+          contentLength: -1,
+          headerLength: -1,
+          isComplete: false,
+        };
+      }
+
+      // Extract header section
+      const headerSection = data
+        .subarray(0, separatorIndex)
+        .toString(ContentLengthFramer.ENCODING_UTF8);
+      const headerLength = separatorIndex + separatorBuffer.length;
+
+      // Parse Content-Length from header
+      const contentLength = this.parseContentLength(headerSection);
+      if (contentLength === -1) {
+        return {
+          contentLength: -1,
+          headerLength: -1,
+          isComplete: false,
+        };
+      }
+
+      // Check if the complete frame is available using byte length
+      const expectedTotalLength = headerLength + contentLength;
+      const actualByteLength = data.length;
+      const isComplete = actualByteLength >= expectedTotalLength;
+
+      debugToFile(
+        `${ContentLengthFramer.LOG_PREFIX} Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`,
+      );
+
+      return {
+        contentLength,
+        headerLength,
+        isComplete,
+      };
+    } catch (error) {
+      errorToFile(`${ContentLengthFramer.LOG_PREFIX} Error parsing frame:`, error);
       return {
         contentLength: -1,
         headerLength: -1,
@@ -126,6 +204,61 @@ export class ContentLengthFramer {
 
     try {
       const expectedTotalLength = headerLength + contentLength;
+      const actualByteLength = Buffer.byteLength(data, ContentLengthFramer.ENCODING_UTF8);
+
+      if (actualByteLength < expectedTotalLength) {
+        // Frame is not complete yet
+        return {
+          jsonContent: null,
+          remainingData: data,
+        };
+      }
+
+      // Extract JSON content by byte length
+      const dataBuffer = Buffer.from(data, ContentLengthFramer.ENCODING_UTF8);
+      const jsonContent = dataBuffer
+        .subarray(headerLength, headerLength + contentLength)
+        .toString(ContentLengthFramer.ENCODING_UTF8);
+
+      // Extract remaining data after this frame
+      const remainingData = dataBuffer
+        .subarray(expectedTotalLength)
+        .toString(ContentLengthFramer.ENCODING_UTF8);
+
+      return {
+        jsonContent,
+        remainingData,
+      };
+    } catch (error) {
+      errorToFile(`${ContentLengthFramer.LOG_PREFIX} Error extracting frame:`, error);
+      return {
+        jsonContent: null,
+        remainingData: data,
+      };
+    }
+  }
+
+  /**
+   * Extracts a complete frame from the Buffer data.
+   * @param data The Buffer containing the frame
+   * @param contentLength The expected content length
+   * @param headerLength The header length including separators
+   * @returns The extracted JSON content and remaining data
+   */
+  static extractFrameFromBuffer(
+    data: Buffer,
+    contentLength: number,
+    headerLength: number,
+  ): FrameExtractionResult {
+    if (!data || data.length === 0 || contentLength < 0 || headerLength < 0) {
+      return {
+        jsonContent: null,
+        remainingData: data || Buffer.alloc(0),
+      };
+    }
+
+    try {
+      const expectedTotalLength = headerLength + contentLength;
 
       if (data.length < expectedTotalLength) {
         // Frame is not complete yet
@@ -136,17 +269,19 @@ export class ContentLengthFramer {
       }
 
       // Extract JSON content
-      const jsonContent = data.substring(headerLength, headerLength + contentLength);
+      const jsonContent = data
+        .subarray(headerLength, headerLength + contentLength)
+        .toString(ContentLengthFramer.ENCODING_UTF8);
 
       // Extract remaining data after this frame
-      const remainingData = data.substring(expectedTotalLength);
+      const remainingData = data.subarray(expectedTotalLength);
 
       return {
         jsonContent,
         remainingData,
       };
     } catch (error) {
-      errorToFile('[ContentLengthFramer] Error extracting frame:', error);
+      errorToFile(`${ContentLengthFramer.LOG_PREFIX} Error extracting frame:`, error);
       return {
         jsonContent: null,
         remainingData: data,
@@ -173,14 +308,24 @@ export class ContentLengthFramer {
       return -1;
     }
 
-    // Split header into lines
-    const lines = headerSection.split(this.LINE_SEPARATOR);
+    // Handle both standard line separators and potential fragmentation
+    const lines = headerSection.split(/\r?\n/);
 
     for (const line of lines) {
       const trimmedLine = line.trim();
 
-      // Check if this line contains Content-Length header (case-insensitive)
-      if (trimmedLine.toLowerCase().startsWith(this.CONTENT_LENGTH_HEADER.toLowerCase())) {
+      // More robust check for Content-Length header (case-insensitive)
+      // Handle TCP fragmentation where header might be truncated
+      const lowerLine = trimmedLine.toLowerCase();
+      if (
+        lowerLine.includes('content-length:') ||
+        lowerLine.includes('-length:') ||
+        lowerLine.includes('ength:') ||
+        lowerLine.includes('ngth:') ||
+        lowerLine.includes('gth:') ||
+        lowerLine.includes('th:') ||
+        lowerLine.includes('h:')
+      ) {
         // Extract the value after the colon
         const colonIndex = trimmedLine.indexOf(':');
         if (colonIndex === -1 || colonIndex >= trimmedLine.length - 1) {
@@ -192,13 +337,15 @@ export class ContentLengthFramer {
         // Try to parse the integer value
         const parsedValue = parseInt(valueString, 10);
         if (isNaN(parsedValue)) {
-          errorToFile(`[ContentLengthFramer] Invalid Content-Length value: '${valueString}'`);
+          errorToFile(
+            `${ContentLengthFramer.LOG_PREFIX} Invalid Content-Length value: '${valueString}' from line: '${trimmedLine}'`,
+          );
           return -1;
         }
 
         if (!this.isValidContentLength(parsedValue)) {
           errorToFile(
-            `[ContentLengthFramer] Content-Length value ${parsedValue} exceeds maximum allowed size ${this.MAX_MESSAGE_SIZE}`,
+            `${ContentLengthFramer.LOG_PREFIX} Content-Length value ${parsedValue} exceeds maximum allowed size ${this.MAX_MESSAGE_SIZE}`,
           );
           return -1;
         }
@@ -207,7 +354,16 @@ export class ContentLengthFramer {
       }
     }
 
-    errorToFile(`[ContentLengthFramer] Content-Length header not found in: ${headerSection}`);
+    // More detailed error message for debugging
+    errorToFile(
+      `${ContentLengthFramer.LOG_PREFIX} Content-Length header not found in header section (${headerSection.length} chars): ${headerSection.substring(0, ContentLengthFramer.DEBUG_PREVIEW_LENGTH)}${headerSection.length > ContentLengthFramer.DEBUG_PREVIEW_LENGTH ? ContentLengthFramer.PREVIEW_SUFFIX : ''}`,
+    );
+    errorToFile(`${ContentLengthFramer.LOG_PREFIX} Header section lines for debugging:`);
+    for (let i = 0; i < lines.length; i++) {
+      errorToFile(
+        `${ContentLengthFramer.LOG_PREFIX} Line ${i}: "${lines[i]}" (length: ${lines[i].length}, toLowerCase: "${lines[i].toLowerCase()}")`,
+      );
+    }
     return -1;
   }
 }

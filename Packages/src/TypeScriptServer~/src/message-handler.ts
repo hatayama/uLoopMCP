@@ -1,5 +1,5 @@
 import { JSONRPC } from './constants.js';
-import { errorToFile, warnToFile } from './utils/log-to-file.js';
+import { errorToFile, warnToFile, debugToFile } from './utils/log-to-file.js';
 import { ContentLengthFramer } from './utils/content-length-framer.js';
 import { DynamicBuffer } from './utils/dynamic-buffer.js';
 
@@ -112,13 +112,18 @@ export class MessageHandler {
   /**
    * Handle incoming data from Unity using Content-Length framing
    */
-  handleIncomingData(data: string): void {
+  handleIncomingData(data: Buffer | string): void {
     try {
-      // Append new data to dynamic buffer
-      this.dynamicBuffer.append(Buffer.from(data, 'utf8'));
+      const dataSize = data instanceof Buffer ? data.length : data.length;
+      debugToFile(`[MessageHandler] Received ${dataSize} bytes of data`);
+
+      // Append new data to dynamic buffer (Buffer or string - DynamicBuffer handles both)
+      this.dynamicBuffer.append(data);
+      debugToFile('[MessageHandler] Data appended to buffer successfully');
 
       // Extract all complete frames
       const frames = this.dynamicBuffer.extractAllFrames();
+      debugToFile(`[MessageHandler] Extracted ${frames.length} complete frames`);
 
       for (const frame of frames) {
         if (!frame || frame.trim() === '') {

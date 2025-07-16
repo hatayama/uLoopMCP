@@ -132,6 +132,22 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
+            // Early detection of abnormal states - throw exceptions immediately
+            if (expectedContentLength < 0)
+            {
+                throw new InvalidOperationException($"Invalid Content-Length value: {expectedContentLength}. Message framing is corrupted.");
+            }
+            
+            if (headerLength < 0)
+            {
+                throw new InvalidOperationException($"Invalid header length: {headerLength}. Message framing is corrupted.");
+            }
+            
+            if (expectedContentLength > BufferConfig.MAX_MESSAGE_SIZE)
+            {
+                throw new InvalidOperationException($"Content-Length {expectedContentLength} exceeds maximum message size {BufferConfig.MAX_MESSAGE_SIZE}.");
+            }
+            
             // Check if we have the complete message
             int expectedTotalLength = headerLength + expectedContentLength;
             if (currentDataLength < expectedTotalLength)
@@ -140,16 +156,23 @@ namespace io.github.hatayama.uLoopMCP
                 return null;
             }
             
+            // Validate buffer bounds before extraction
+            if (headerLength + expectedContentLength > currentDataLength)
+            {
+                throw new InvalidOperationException($"Buffer underflow: trying to read {expectedContentLength} bytes at offset {headerLength}, but only {currentDataLength} bytes available.");
+            }
+            
             // Extract the JSON content
             string jsonContent = Encoding.UTF8.GetString(assemblyBuffer, headerLength, expectedContentLength);
+            
+            // Log before resetting state
+            McpLogger.LogDebug($"[MessageReassembler] Extracted complete message of {expectedContentLength} bytes");
             
             // Remove the processed message from the buffer
             RemoveProcessedData(expectedTotalLength);
             
             // Reset parsing state for next message
             ResetParsingState();
-            
-            McpLogger.LogDebug($"[MessageReassembler] Extracted complete message of {expectedContentLength} bytes");
             
             return jsonContent;
         }
@@ -167,6 +190,17 @@ namespace io.github.hatayama.uLoopMCP
             
             if (parseResult)
             {
+                // Early validation of parsed values
+                if (expectedContentLength < 0)
+                {
+                    throw new InvalidOperationException($"FrameParser returned invalid Content-Length: {expectedContentLength}");
+                }
+                
+                if (headerLength < 0)
+                {
+                    throw new InvalidOperationException($"FrameParser returned invalid header length: {headerLength}");
+                }
+                
                 headerParsed = true;
                 McpLogger.LogDebug($"[MessageReassembler] Parsed header: ContentLength={expectedContentLength}, HeaderLength={headerLength}");
             }
@@ -253,24 +287,26 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
             
-            // Check for reasonable buffer size
+            // Check for reasonable buffer size - throw exception instead of silently clearing
             if (currentDataLength > BufferConfig.MAX_MESSAGE_SIZE)
             {
-                McpLogger.LogWarning($"[MessageReassembler] Buffer size {currentDataLength} exceeds maximum message size, clearing");
-                Clear();
-                return false;
+                throw new InvalidOperationException($"Buffer size {currentDataLength} exceeds maximum message size {BufferConfig.MAX_MESSAGE_SIZE}. Data corruption detected.");
             }
             
-            // Check for stale incomplete data (this would need external timeout tracking)
+            // Check for stale incomplete data - throw exception for corrupted state
             if (headerParsed && expectedContentLength > 0)
             {
                 int expectedTotalLength = headerLength + expectedContentLength;
                 if (expectedTotalLength > BufferConfig.MAX_MESSAGE_SIZE)
                 {
-                    McpLogger.LogWarning($"[MessageReassembler] Expected message size {expectedTotalLength} exceeds maximum, clearing");
-                    Clear();
-                    return false;
+                    throw new InvalidOperationException($"Expected message size {expectedTotalLength} exceeds maximum {BufferConfig.MAX_MESSAGE_SIZE}. Message framing is corrupted.");
                 }
+            }
+            
+            // Validate consistency of parsing state
+            if (headerParsed && (expectedContentLength < 0 || headerLength < 0))
+            {
+                throw new InvalidOperationException($"Inconsistent parsing state: headerParsed={headerParsed}, expectedContentLength={expectedContentLength}, headerLength={headerLength}");
             }
             
             return true;
@@ -288,22 +324,16 @@ namespace io.github.hatayama.uLoopMCP
                 return string.Empty;
             }
             
-            try
+            // Remove try-catch that hides exceptions - let encoding errors bubble up
+            int previewLength = Math.Min(currentDataLength, maxLength);
+            string preview = Encoding.UTF8.GetString(assemblyBuffer, 0, previewLength);
+            
+            if (currentDataLength > maxLength)
             {
-                int previewLength = Math.Min(currentDataLength, maxLength);
-                string preview = Encoding.UTF8.GetString(assemblyBuffer, 0, previewLength);
-                
-                if (currentDataLength > maxLength)
-                {
-                    preview += "...";
-                }
-                
-                return preview;
+                preview += "...";
             }
-            catch (Exception ex)
-            {
-                return $"[Error getting preview: {ex.Message}]";
-            }
+            
+            return preview;
         }
         
         /// <summary>

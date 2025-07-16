@@ -1,9 +1,8 @@
 using System;
 using System.Text;
 using NUnit.Framework;
-using io.github.hatayama.uLoopMCP;
 
-namespace uLoopMCP.Tests.Editor
+namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Unit tests for MessageReassembler class.

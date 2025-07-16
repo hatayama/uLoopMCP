@@ -2,11 +2,22 @@ import { ContentLengthFramer, FrameExtractionResult } from './content-length-fra
 import { errorToFile, warnToFile } from './log-to-file.js';
 
 /**
- * Dynamic buffer for handling Content-Length framed messages.
- * Manages buffer growth and frame extraction for TCP communication.
+ * Dynamic buffer for handling Content-Length framed messages with proper UTF-8 support.
+ * Manages buffer growth and frame extraction for TCP communication using Buffer internally.
  */
 export class DynamicBuffer {
-  private buffer: string = '';
+  // 定数定義
+  private static readonly ENCODING_UTF8 = 'utf8';
+  private static readonly HEADER_SEPARATOR = '\r\n\r\n';
+  private static readonly CONTENT_LENGTH_HEADER = 'content-length:';
+  private static readonly LOG_PREFIX = '[DynamicBuffer]';
+  private static readonly PREVIEW_SUFFIX = '...';
+  private static readonly PREVIEW_LENGTH_FRAME_ERROR = 200;
+  private static readonly LARGE_BUFFER_THRESHOLD = 1024;
+  private static readonly BUFFER_UTILIZATION_THRESHOLD = 0.8;
+  private static readonly DEFAULT_PREVIEW_LENGTH = 100;
+  private static readonly STATS_PREVIEW_LENGTH = 50;
+  private buffer: Buffer = Buffer.alloc(0);
   private readonly maxBufferSize: number;
   private readonly initialBufferSize: number;
 
@@ -17,22 +28,27 @@ export class DynamicBuffer {
 
   /**
    * Appends new data to the buffer.
-   * @param data The data to append
+   * @param data The data to append (Buffer or string)
    * @throws Error if buffer would exceed maximum size
    */
-  append(data: string): void {
+  append(data: Buffer | string): void {
     if (!data) {
       return;
     }
 
-    const newSize = this.buffer.length + data.length;
+    // Convert string to Buffer if needed, preserving UTF-8 encoding
+    const dataBuffer = Buffer.isBuffer(data)
+      ? data
+      : Buffer.from(data, DynamicBuffer.ENCODING_UTF8);
+
+    const newSize = this.buffer.length + dataBuffer.length;
     if (newSize > this.maxBufferSize) {
       throw new Error(
         `Buffer size would exceed maximum allowed size: ${newSize} > ${this.maxBufferSize}`,
       );
     }
 
-    this.buffer += data;
+    this.buffer = Buffer.concat([this.buffer, dataBuffer]);
   }
 
   /**
@@ -45,16 +61,16 @@ export class DynamicBuffer {
     }
 
     try {
-      // Parse the frame header
-      const parseResult = ContentLengthFramer.parseFrame(this.buffer);
+      // Parse the frame header using Buffer-based parsing
+      const parseResult = ContentLengthFramer.parseFrameFromBuffer(this.buffer);
 
       if (!parseResult.isComplete) {
         // Frame is not complete yet
         return { frame: null, extracted: false };
       }
 
-      // Extract the complete frame
-      const extractionResult: FrameExtractionResult = ContentLengthFramer.extractFrame(
+      // Extract the complete frame using Buffer-based extraction
+      const extractionResult: FrameExtractionResult = ContentLengthFramer.extractFrameFromBuffer(
         this.buffer,
         parseResult.contentLength,
         parseResult.headerLength,
@@ -64,15 +80,17 @@ export class DynamicBuffer {
         return { frame: null, extracted: false };
       }
 
-      // Update buffer with remaining data
-      this.buffer = extractionResult.remainingData;
+      // Update buffer with remaining data (convert to Buffer if needed)
+      this.buffer = Buffer.isBuffer(extractionResult.remainingData)
+        ? extractionResult.remainingData
+        : Buffer.from(extractionResult.remainingData, DynamicBuffer.ENCODING_UTF8);
 
       return {
         frame: extractionResult.jsonContent,
         extracted: true,
       };
     } catch (error) {
-      errorToFile('[DynamicBuffer] Error extracting frame:', error);
+      errorToFile(`${DynamicBuffer.LOG_PREFIX} Error extracting frame:`, error);
       return { frame: null, extracted: false };
     }
   }
@@ -118,14 +136,16 @@ export class DynamicBuffer {
    * @returns True if header separator is found, false otherwise
    */
   hasCompleteFrameHeader(): boolean {
-    return this.buffer.includes('\r\n\r\n');
+    return this.buffer.includes(
+      Buffer.from(DynamicBuffer.HEADER_SEPARATOR, DynamicBuffer.ENCODING_UTF8),
+    );
   }
 
   /**
    * Clears the buffer.
    */
   clear(): void {
-    this.buffer = '';
+    this.buffer = Buffer.alloc(0);
   }
 
   /**
@@ -133,11 +153,14 @@ export class DynamicBuffer {
    * @param maxLength Maximum length of preview (default: 100)
    * @returns Truncated buffer content for debugging
    */
-  getPreview(maxLength: number = 100): string {
+  getPreview(maxLength: number = DynamicBuffer.DEFAULT_PREVIEW_LENGTH): string {
     if (this.buffer.length <= maxLength) {
-      return this.buffer;
+      return this.buffer.toString(DynamicBuffer.ENCODING_UTF8);
     }
-    return this.buffer.substring(0, maxLength) + '...';
+    return (
+      this.buffer.subarray(0, maxLength).toString(DynamicBuffer.ENCODING_UTF8) +
+      DynamicBuffer.PREVIEW_SUFFIX
+    );
   }
 
   /**
@@ -146,20 +169,33 @@ export class DynamicBuffer {
    */
   validateAndCleanup(): boolean {
     // Check for extremely large buffer without complete frames
-    if (this.buffer.length > this.maxBufferSize * 0.8 && !this.hasCompleteFrameHeader()) {
-      warnToFile('[DynamicBuffer] Large buffer without complete frame header, clearing buffer');
+    if (
+      this.buffer.length > this.maxBufferSize * DynamicBuffer.BUFFER_UTILIZATION_THRESHOLD &&
+      !this.hasCompleteFrameHeader()
+    ) {
+      warnToFile(
+        `${DynamicBuffer.LOG_PREFIX} Large buffer without complete frame header, clearing buffer`,
+      );
       this.clear();
       return false;
     }
 
     // Check for malformed data (no header separator after reasonable amount of data)
-    const headerSeparatorIndex = this.buffer.indexOf('\r\n\r\n');
-    if (headerSeparatorIndex === -1 && this.buffer.length > 1024) {
+    const headerSeparatorBuffer = Buffer.from(
+      DynamicBuffer.HEADER_SEPARATOR,
+      DynamicBuffer.ENCODING_UTF8,
+    );
+    const headerSeparatorIndex = this.buffer.indexOf(headerSeparatorBuffer);
+    if (headerSeparatorIndex === -1 && this.buffer.length > DynamicBuffer.LARGE_BUFFER_THRESHOLD) {
       // Look for potential malformed headers
-      const contentLengthIndex = this.buffer.toLowerCase().indexOf('content-length:');
+      const contentLengthBuffer = Buffer.from(
+        DynamicBuffer.CONTENT_LENGTH_HEADER,
+        DynamicBuffer.ENCODING_UTF8,
+      );
+      const contentLengthIndex = this.buffer.indexOf(contentLengthBuffer);
       if (contentLengthIndex === -1) {
         warnToFile(
-          '[DynamicBuffer] No Content-Length header found in large buffer, clearing buffer',
+          `${DynamicBuffer.LOG_PREFIX} No Content-Length header found in large buffer, clearing buffer`,
         );
         this.clear();
         return false;
@@ -185,7 +221,7 @@ export class DynamicBuffer {
       maxSize: this.maxBufferSize,
       utilization: (this.buffer.length / this.maxBufferSize) * 100,
       hasCompleteHeader: this.hasCompleteFrameHeader(),
-      preview: this.getPreview(50),
+      preview: this.getPreview(DynamicBuffer.STATS_PREVIEW_LENGTH),
     };
   }
 }

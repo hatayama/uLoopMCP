@@ -5757,12 +5757,17 @@ var ConnectionManager = class {
 };
 
 // src/utils/content-length-framer.ts
-var ContentLengthFramer = class {
+var ContentLengthFramer = class _ContentLengthFramer {
   static CONTENT_LENGTH_HEADER = "Content-Length:";
   static HEADER_SEPARATOR = "\r\n\r\n";
   static LINE_SEPARATOR = "\r\n";
   static MAX_MESSAGE_SIZE = 1024 * 1024;
   // 1MB
+  static ENCODING_UTF8 = "utf8";
+  static LOG_PREFIX = "[ContentLengthFramer]";
+  static ERROR_MESSAGE_JSON_EMPTY = "JSON content cannot be empty";
+  static DEBUG_PREVIEW_LENGTH = 50;
+  static PREVIEW_SUFFIX = "...";
   /**
    * Creates a Content-Length framed message from JSON content.
    * @param jsonContent The JSON content to frame
@@ -5770,9 +5775,9 @@ var ContentLengthFramer = class {
    */
   static createFrame(jsonContent) {
     if (!jsonContent) {
-      throw new Error("JSON content cannot be empty");
+      throw new Error(_ContentLengthFramer.ERROR_MESSAGE_JSON_EMPTY);
     }
-    const contentLength = Buffer.byteLength(jsonContent, "utf8");
+    const contentLength = Buffer.byteLength(jsonContent, _ContentLengthFramer.ENCODING_UTF8);
     if (contentLength > this.MAX_MESSAGE_SIZE) {
       throw new Error(
         `Message size ${contentLength} exceeds maximum allowed size ${this.MAX_MESSAGE_SIZE}`
@@ -5813,14 +5818,71 @@ var ContentLengthFramer = class {
         };
       }
       const expectedTotalLength = headerLength + contentLength;
-      const isComplete = data.length >= expectedTotalLength;
+      const actualByteLength = Buffer.byteLength(data, _ContentLengthFramer.ENCODING_UTF8);
+      const isComplete = actualByteLength >= expectedTotalLength;
+      debugToFile(
+        `${_ContentLengthFramer.LOG_PREFIX} Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`
+      );
       return {
         contentLength,
         headerLength,
         isComplete
       };
     } catch (error) {
-      errorToFile("[ContentLengthFramer] Error parsing frame:", error);
+      errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Error parsing frame:`, error);
+      return {
+        contentLength: -1,
+        headerLength: -1,
+        isComplete: false
+      };
+    }
+  }
+  /**
+   * Parses a Content-Length header from incoming Buffer data.
+   * @param data The incoming data Buffer
+   * @returns Parse result with content length, header length, and completion status
+   */
+  static parseFrameFromBuffer(data) {
+    if (!data || data.length === 0) {
+      return {
+        contentLength: -1,
+        headerLength: -1,
+        isComplete: false
+      };
+    }
+    try {
+      const separatorBuffer = Buffer.from(this.HEADER_SEPARATOR, _ContentLengthFramer.ENCODING_UTF8);
+      const separatorIndex = data.indexOf(separatorBuffer);
+      if (separatorIndex === -1) {
+        return {
+          contentLength: -1,
+          headerLength: -1,
+          isComplete: false
+        };
+      }
+      const headerSection = data.subarray(0, separatorIndex).toString(_ContentLengthFramer.ENCODING_UTF8);
+      const headerLength = separatorIndex + separatorBuffer.length;
+      const contentLength = this.parseContentLength(headerSection);
+      if (contentLength === -1) {
+        return {
+          contentLength: -1,
+          headerLength: -1,
+          isComplete: false
+        };
+      }
+      const expectedTotalLength = headerLength + contentLength;
+      const actualByteLength = data.length;
+      const isComplete = actualByteLength >= expectedTotalLength;
+      debugToFile(
+        `${_ContentLengthFramer.LOG_PREFIX} Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`
+      );
+      return {
+        contentLength,
+        headerLength,
+        isComplete
+      };
+    } catch (error) {
+      errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Error parsing frame:`, error);
       return {
         contentLength: -1,
         headerLength: -1,
@@ -5844,20 +5906,58 @@ var ContentLengthFramer = class {
     }
     try {
       const expectedTotalLength = headerLength + contentLength;
+      const actualByteLength = Buffer.byteLength(data, _ContentLengthFramer.ENCODING_UTF8);
+      if (actualByteLength < expectedTotalLength) {
+        return {
+          jsonContent: null,
+          remainingData: data
+        };
+      }
+      const dataBuffer = Buffer.from(data, _ContentLengthFramer.ENCODING_UTF8);
+      const jsonContent = dataBuffer.subarray(headerLength, headerLength + contentLength).toString(_ContentLengthFramer.ENCODING_UTF8);
+      const remainingData = dataBuffer.subarray(expectedTotalLength).toString(_ContentLengthFramer.ENCODING_UTF8);
+      return {
+        jsonContent,
+        remainingData
+      };
+    } catch (error) {
+      errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Error extracting frame:`, error);
+      return {
+        jsonContent: null,
+        remainingData: data
+      };
+    }
+  }
+  /**
+   * Extracts a complete frame from the Buffer data.
+   * @param data The Buffer containing the frame
+   * @param contentLength The expected content length
+   * @param headerLength The header length including separators
+   * @returns The extracted JSON content and remaining data
+   */
+  static extractFrameFromBuffer(data, contentLength, headerLength) {
+    if (!data || data.length === 0 || contentLength < 0 || headerLength < 0) {
+      return {
+        jsonContent: null,
+        remainingData: data || Buffer.alloc(0)
+      };
+    }
+    try {
+      const expectedTotalLength = headerLength + contentLength;
       if (data.length < expectedTotalLength) {
         return {
           jsonContent: null,
           remainingData: data
         };
       }
-      const jsonContent = data.substring(headerLength, headerLength + contentLength);
-      const remainingData = data.substring(expectedTotalLength);
+      const jsonContent = data.subarray(headerLength, headerLength + contentLength).toString(_ContentLengthFramer.ENCODING_UTF8);
+      const remainingData = data.subarray(expectedTotalLength);
       return {
         jsonContent,
         remainingData
       };
     } catch (error) {
-      errorToFile("[ContentLengthFramer] Error extracting frame:", error);
+      errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Error extracting frame:`, error);
       return {
         jsonContent: null,
         remainingData: data
@@ -5881,10 +5981,11 @@ var ContentLengthFramer = class {
     if (!headerSection) {
       return -1;
     }
-    const lines = headerSection.split(this.LINE_SEPARATOR);
+    const lines = headerSection.split(/\r?\n/);
     for (const line of lines) {
       const trimmedLine = line.trim();
-      if (trimmedLine.toLowerCase().startsWith(this.CONTENT_LENGTH_HEADER.toLowerCase())) {
+      const lowerLine = trimmedLine.toLowerCase();
+      if (lowerLine.includes("content-length:") || lowerLine.includes("-length:") || lowerLine.includes("ength:") || lowerLine.includes("ngth:") || lowerLine.includes("gth:") || lowerLine.includes("th:") || lowerLine.includes("h:")) {
         const colonIndex = trimmedLine.indexOf(":");
         if (colonIndex === -1 || colonIndex >= trimmedLine.length - 1) {
           continue;
@@ -5892,26 +5993,47 @@ var ContentLengthFramer = class {
         const valueString = trimmedLine.substring(colonIndex + 1).trim();
         const parsedValue = parseInt(valueString, 10);
         if (isNaN(parsedValue)) {
-          errorToFile(`[ContentLengthFramer] Invalid Content-Length value: '${valueString}'`);
+          errorToFile(
+            `${_ContentLengthFramer.LOG_PREFIX} Invalid Content-Length value: '${valueString}' from line: '${trimmedLine}'`
+          );
           return -1;
         }
         if (!this.isValidContentLength(parsedValue)) {
           errorToFile(
-            `[ContentLengthFramer] Content-Length value ${parsedValue} exceeds maximum allowed size ${this.MAX_MESSAGE_SIZE}`
+            `${_ContentLengthFramer.LOG_PREFIX} Content-Length value ${parsedValue} exceeds maximum allowed size ${this.MAX_MESSAGE_SIZE}`
           );
           return -1;
         }
         return parsedValue;
       }
     }
-    errorToFile(`[ContentLengthFramer] Content-Length header not found in: ${headerSection}`);
+    errorToFile(
+      `${_ContentLengthFramer.LOG_PREFIX} Content-Length header not found in header section (${headerSection.length} chars): ${headerSection.substring(0, _ContentLengthFramer.DEBUG_PREVIEW_LENGTH)}${headerSection.length > _ContentLengthFramer.DEBUG_PREVIEW_LENGTH ? _ContentLengthFramer.PREVIEW_SUFFIX : ""}`
+    );
+    errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Header section lines for debugging:`);
+    for (let i = 0; i < lines.length; i++) {
+      errorToFile(
+        `${_ContentLengthFramer.LOG_PREFIX} Line ${i}: "${lines[i]}" (length: ${lines[i].length}, toLowerCase: "${lines[i].toLowerCase()}")`
+      );
+    }
     return -1;
   }
 };
 
 // src/utils/dynamic-buffer.ts
-var DynamicBuffer = class {
-  buffer = "";
+var DynamicBuffer = class _DynamicBuffer {
+  // 定数定義
+  static ENCODING_UTF8 = "utf8";
+  static HEADER_SEPARATOR = "\r\n\r\n";
+  static CONTENT_LENGTH_HEADER = "content-length:";
+  static LOG_PREFIX = "[DynamicBuffer]";
+  static PREVIEW_SUFFIX = "...";
+  static PREVIEW_LENGTH_FRAME_ERROR = 200;
+  static LARGE_BUFFER_THRESHOLD = 1024;
+  static BUFFER_UTILIZATION_THRESHOLD = 0.8;
+  static DEFAULT_PREVIEW_LENGTH = 100;
+  static STATS_PREVIEW_LENGTH = 50;
+  buffer = Buffer.alloc(0);
   maxBufferSize;
   initialBufferSize;
   constructor(maxBufferSize = 1024 * 1024, initialBufferSize = 4096) {
@@ -5920,20 +6042,21 @@ var DynamicBuffer = class {
   }
   /**
    * Appends new data to the buffer.
-   * @param data The data to append
+   * @param data The data to append (Buffer or string)
    * @throws Error if buffer would exceed maximum size
    */
   append(data) {
     if (!data) {
       return;
     }
-    const newSize = this.buffer.length + data.length;
+    const dataBuffer = Buffer.isBuffer(data) ? data : Buffer.from(data, _DynamicBuffer.ENCODING_UTF8);
+    const newSize = this.buffer.length + dataBuffer.length;
     if (newSize > this.maxBufferSize) {
       throw new Error(
         `Buffer size would exceed maximum allowed size: ${newSize} > ${this.maxBufferSize}`
       );
     }
-    this.buffer += data;
+    this.buffer = Buffer.concat([this.buffer, dataBuffer]);
   }
   /**
    * Attempts to extract a complete frame from the buffer.
@@ -5944,11 +6067,11 @@ var DynamicBuffer = class {
       return { frame: null, extracted: false };
     }
     try {
-      const parseResult = ContentLengthFramer.parseFrame(this.buffer);
+      const parseResult = ContentLengthFramer.parseFrameFromBuffer(this.buffer);
       if (!parseResult.isComplete) {
         return { frame: null, extracted: false };
       }
-      const extractionResult = ContentLengthFramer.extractFrame(
+      const extractionResult = ContentLengthFramer.extractFrameFromBuffer(
         this.buffer,
         parseResult.contentLength,
         parseResult.headerLength
@@ -5956,13 +6079,13 @@ var DynamicBuffer = class {
       if (!extractionResult.jsonContent) {
         return { frame: null, extracted: false };
       }
-      this.buffer = extractionResult.remainingData;
+      this.buffer = Buffer.isBuffer(extractionResult.remainingData) ? extractionResult.remainingData : Buffer.from(extractionResult.remainingData, _DynamicBuffer.ENCODING_UTF8);
       return {
         frame: extractionResult.jsonContent,
         extracted: true
       };
     } catch (error) {
-      errorToFile("[DynamicBuffer] Error extracting frame:", error);
+      errorToFile(`${_DynamicBuffer.LOG_PREFIX} Error extracting frame:`, error);
       return { frame: null, extracted: false };
     }
   }
@@ -6001,41 +6124,53 @@ var DynamicBuffer = class {
    * @returns True if header separator is found, false otherwise
    */
   hasCompleteFrameHeader() {
-    return this.buffer.includes("\r\n\r\n");
+    return this.buffer.includes(
+      Buffer.from(_DynamicBuffer.HEADER_SEPARATOR, _DynamicBuffer.ENCODING_UTF8)
+    );
   }
   /**
    * Clears the buffer.
    */
   clear() {
-    this.buffer = "";
+    this.buffer = Buffer.alloc(0);
   }
   /**
    * Gets a preview of the buffer content for debugging.
    * @param maxLength Maximum length of preview (default: 100)
    * @returns Truncated buffer content for debugging
    */
-  getPreview(maxLength = 100) {
+  getPreview(maxLength = _DynamicBuffer.DEFAULT_PREVIEW_LENGTH) {
     if (this.buffer.length <= maxLength) {
-      return this.buffer;
+      return this.buffer.toString(_DynamicBuffer.ENCODING_UTF8);
     }
-    return this.buffer.substring(0, maxLength) + "...";
+    return this.buffer.subarray(0, maxLength).toString(_DynamicBuffer.ENCODING_UTF8) + _DynamicBuffer.PREVIEW_SUFFIX;
   }
   /**
    * Validates the buffer state and performs cleanup if necessary.
    * @returns True if buffer is in valid state, false if cleanup was performed
    */
   validateAndCleanup() {
-    if (this.buffer.length > this.maxBufferSize * 0.8 && !this.hasCompleteFrameHeader()) {
-      warnToFile("[DynamicBuffer] Large buffer without complete frame header, clearing buffer");
+    if (this.buffer.length > this.maxBufferSize * _DynamicBuffer.BUFFER_UTILIZATION_THRESHOLD && !this.hasCompleteFrameHeader()) {
+      warnToFile(
+        `${_DynamicBuffer.LOG_PREFIX} Large buffer without complete frame header, clearing buffer`
+      );
       this.clear();
       return false;
     }
-    const headerSeparatorIndex = this.buffer.indexOf("\r\n\r\n");
-    if (headerSeparatorIndex === -1 && this.buffer.length > 1024) {
-      const contentLengthIndex = this.buffer.toLowerCase().indexOf("content-length:");
+    const headerSeparatorBuffer = Buffer.from(
+      _DynamicBuffer.HEADER_SEPARATOR,
+      _DynamicBuffer.ENCODING_UTF8
+    );
+    const headerSeparatorIndex = this.buffer.indexOf(headerSeparatorBuffer);
+    if (headerSeparatorIndex === -1 && this.buffer.length > _DynamicBuffer.LARGE_BUFFER_THRESHOLD) {
+      const contentLengthBuffer = Buffer.from(
+        _DynamicBuffer.CONTENT_LENGTH_HEADER,
+        _DynamicBuffer.ENCODING_UTF8
+      );
+      const contentLengthIndex = this.buffer.indexOf(contentLengthBuffer);
       if (contentLengthIndex === -1) {
         warnToFile(
-          "[DynamicBuffer] No Content-Length header found in large buffer, clearing buffer"
+          `${_DynamicBuffer.LOG_PREFIX} No Content-Length header found in large buffer, clearing buffer`
         );
         this.clear();
         return false;
@@ -6053,7 +6188,7 @@ var DynamicBuffer = class {
       maxSize: this.maxBufferSize,
       utilization: this.buffer.length / this.maxBufferSize * 100,
       hasCompleteHeader: this.hasCompleteFrameHeader(),
-      preview: this.getPreview(50)
+      preview: this.getPreview(_DynamicBuffer.STATS_PREVIEW_LENGTH)
     };
   }
 };
@@ -6100,8 +6235,12 @@ var MessageHandler = class {
    */
   handleIncomingData(data) {
     try {
-      this.dynamicBuffer.append(Buffer.from(data, "utf8"));
+      const dataSize = data instanceof Buffer ? data.length : data.length;
+      debugToFile(`[MessageHandler] Received ${dataSize} bytes of data`);
+      this.dynamicBuffer.append(data);
+      debugToFile("[MessageHandler] Data appended to buffer successfully");
       const frames = this.dynamicBuffer.extractAllFrames();
+      debugToFile(`[MessageHandler] Extracted ${frames.length} complete frames`);
       for (const frame of frames) {
         if (!frame || frame.trim() === "") {
           continue;
@@ -6314,7 +6453,7 @@ var UnityClient = class {
         this.handleConnectionLoss();
       });
       this.socket.on("data", (data) => {
-        this.messageHandler.handleIncomingData(data.toString());
+        this.messageHandler.handleIncomingData(data);
       });
     });
   }
@@ -6416,12 +6555,20 @@ var UnityClient = class {
       method: toolName,
       params
     };
+    debugToFile(`[Unity Client] Executing tool: ${toolName} with params:`, params);
+    debugToFile("[Unity Client] Request:", request);
     const timeoutMs = TIMEOUTS.NETWORK;
     try {
       const response = await this.sendRequest(request, timeoutMs);
+      const executionTime = Date.now() - startTime;
+      debugToFile(
+        `[Unity Client] Tool ${toolName} completed in ${executionTime}ms, response:`,
+        response
+      );
       return this.handleToolResponse(response, toolName);
     } catch (error) {
       const executionTime = Date.now() - startTime;
+      errorToFile(`[Unity Client] Tool ${toolName} failed after ${executionTime}ms:`, error);
       if (error instanceof Error && error.message.includes("timed out")) {
         errorToFile(
           `[TIMEOUT] Tool: ${toolName}, NetworkTimeout: ${timeoutMs}ms, ExecutionTime: ${executionTime}ms, RequestId: ${request.id}, Params: ${JSON.stringify(params)}`
@@ -7097,13 +7244,38 @@ var UnityToolManager = class {
    */
   async fetchToolDetailsFromUnity() {
     const params = { IncludeDevelopmentOnly: this.isDevelopment };
-    const toolDetailsResponse = await this.unityClient.executeTool("get-tool-details", params);
-    const toolDetails = toolDetailsResponse?.Tools || toolDetailsResponse;
-    if (!Array.isArray(toolDetails)) {
-      errorToFile("[Unity Tool Manager] Invalid tool details response:", toolDetailsResponse);
-      return null;
+    debugToFile("[Unity Tool Manager] Requesting tool details from Unity with params:", params);
+    const startTime = Date.now();
+    try {
+      const toolDetailsResponse = await this.unityClient.executeTool("get-tool-details", params);
+      const duration = Date.now() - startTime;
+      debugToFile(
+        "[Unity Tool Manager] Received tool details response in",
+        duration,
+        "ms:",
+        toolDetailsResponse
+      );
+      const toolDetails = toolDetailsResponse?.Tools || toolDetailsResponse;
+      if (!Array.isArray(toolDetails)) {
+        errorToFile("[Unity Tool Manager] Invalid tool details response:", toolDetailsResponse);
+        return null;
+      }
+      debugToFile(
+        "[Unity Tool Manager] Successfully parsed",
+        toolDetails.length,
+        "tools from Unity"
+      );
+      return toolDetails;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      errorToFile(
+        "[Unity Tool Manager] Failed to fetch tool details after",
+        duration,
+        "ms:",
+        error
+      );
+      throw error;
     }
-    return toolDetails;
   }
   /**
    * Create dynamic tools from Unity tool details

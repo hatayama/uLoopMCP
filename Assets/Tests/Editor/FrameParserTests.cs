@@ -2,9 +2,8 @@ using System.Text;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using io.github.hatayama.uLoopMCP;
 
-namespace uLoopMCP.Tests.Editor
+namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Unit tests for FrameParser class.
@@ -140,10 +139,11 @@ namespace uLoopMCP.Tests.Editor
         public void IsCompleteFrame_CompleteFrame_ReturnsTrue()
         {
             // Arrange
-            string message = "Content-Length: 25\r\n\r\n{\"jsonrpc\":\"2.0\",\"id\":1}";
+            string jsonContent = "{\"jsonrpc\":\"2.0\",\"id\":1}";
+            string message = $"Content-Length: {jsonContent.Length}\r\n\r\n{jsonContent}";
             byte[] buffer = Encoding.UTF8.GetBytes(message);
-            int contentLength = 25;
-            int headerLength = 22;
+            int contentLength = jsonContent.Length; // Use actual content length
+            int headerLength = message.Length - jsonContent.Length; // Calculate header length
             
             // Act
             bool result = frameParser.IsCompleteFrame(buffer, buffer.Length, contentLength, headerLength);

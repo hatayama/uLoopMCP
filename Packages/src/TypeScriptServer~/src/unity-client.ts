@@ -1,6 +1,6 @@
 import * as net from 'net';
 import { UNITY_CONNECTION, JSONRPC, TIMEOUTS, ERROR_MESSAGES } from './constants.js';
-import { errorToFile } from './utils/log-to-file.js';
+import { errorToFile, debugToFile } from './utils/log-to-file.js';
 import { safeSetTimeout } from './utils/safe-timer.js';
 import { ConnectionManager } from './connection-manager.js';
 import { MessageHandler } from './message-handler.js';
@@ -165,7 +165,8 @@ export class UnityClient {
 
       // Handle incoming data (both notifications and responses)
       this.socket.on('data', (data) => {
-        this.messageHandler.handleIncomingData(data.toString());
+        // Handle incoming data as Buffer for proper Content-Length framing
+        this.messageHandler.handleIncomingData(data);
       });
     });
   }
@@ -299,14 +300,24 @@ export class UnityClient {
       params: params,
     };
 
+    debugToFile(`[Unity Client] Executing tool: ${toolName} with params:`, params);
+    debugToFile('[Unity Client] Request:', request);
+
     // Unity側でタイムアウト制御されるため、TS側は長めのネットワークタイムアウトのみ
     const timeoutMs = TIMEOUTS.NETWORK;
 
     try {
       const response = await this.sendRequest(request, timeoutMs);
+      const executionTime = Date.now() - startTime;
+      debugToFile(
+        `[Unity Client] Tool ${toolName} completed in ${executionTime}ms, response:`,
+        response,
+      );
+
       return this.handleToolResponse(response, toolName);
     } catch (error) {
       const executionTime = Date.now() - startTime;
+      errorToFile(`[Unity Client] Tool ${toolName} failed after ${executionTime}ms:`, error);
 
       // Log timeout details to file for debugging in production
       if (error instanceof Error && error.message.includes('timed out')) {

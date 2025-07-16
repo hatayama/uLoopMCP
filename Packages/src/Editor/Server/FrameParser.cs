@@ -31,43 +31,33 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
             
-            try
+            // Convert buffer to string for header parsing
+            string data = Encoding.UTF8.GetString(buffer, 0, length);
+            
+            // Find the header separator
+            int separatorIndex = data.IndexOf(HEADER_SEPARATOR, StringComparison.Ordinal);
+            if (separatorIndex == -1)
             {
-                // Convert buffer to string for header parsing
-                string data = Encoding.UTF8.GetString(buffer, 0, length);
-                
-                // Find the header separator
-                int separatorIndex = data.IndexOf(HEADER_SEPARATOR, StringComparison.Ordinal);
-                if (separatorIndex == -1)
-                {
-                    // Header not complete yet
-                    return false;
-                }
-                
-                // Extract header section
-                string headerSection = data.Substring(0, separatorIndex);
-                int tempHeaderLength = separatorIndex + HEADER_SEPARATOR.Length;
-                
-                // Parse Content-Length from header
-                bool parseResult = TryParseContentLength(headerSection, out contentLength);
-                
-                // Only set headerLength if parsing was successful
-                if (parseResult)
-                {
-                    headerLength = tempHeaderLength;
-                    return true;
-                }
-                else
-                {
-                    // Reset values on failure
-                    contentLength = -1;
-                    headerLength = -1;
-                    return false;
-                }
+                // Header not complete yet
+                return false;
             }
-            catch (Exception ex)
+            
+            // Extract header section
+            string headerSection = data.Substring(0, separatorIndex);
+            int tempHeaderLength = separatorIndex + HEADER_SEPARATOR.Length;
+            
+            // Parse Content-Length from header
+            bool parseResult = TryParseContentLength(headerSection, out contentLength);
+            
+            // Only set headerLength if parsing was successful
+            if (parseResult)
             {
-                McpLogger.LogError($"[FrameParser] Error parsing frame: {ex.Message}");
+                headerLength = tempHeaderLength;
+                return true;
+            }
+            else
+            {
+                // Reset values on failure
                 contentLength = -1;
                 headerLength = -1;
                 return false;
@@ -107,16 +97,8 @@ namespace io.github.hatayama.uLoopMCP
                 return null;
             }
             
-            try
-            {
-                // Extract JSON content after the header
-                return Encoding.UTF8.GetString(buffer, headerLength, contentLength);
-            }
-            catch (Exception ex)
-            {
-                McpLogger.LogError($"[FrameParser] Error extracting JSON content: {ex.Message}");
-                return null;
-            }
+            // Extract JSON content after the header - let encoding exceptions bubble up
+            return Encoding.UTF8.GetString(buffer, headerLength, contentLength);
         }
         
         /// <summary>
