@@ -215,8 +215,8 @@ namespace io.github.hatayama.uLoopMCP
             catch (Exception ex)
             {
                 // Fallback to Unity console if file logging fails
-                Debug.LogError($"[VibeLogger] Failed to save log to file: {ex.Message}");
-                Debug.Log($"[VibeLogger] {level} | {operation} | {message}");
+                UnityEngine.Debug.LogError($"[VibeLogger] Failed to save log to file: {ex.Message}");
+                UnityEngine.Debug.Log($"[VibeLogger] {level} | {operation} | {message}");
             }
         }
         
