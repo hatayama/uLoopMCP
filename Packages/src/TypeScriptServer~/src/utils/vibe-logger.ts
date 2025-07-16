@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import { OUTPUT_DIRECTORIES } from '../constants.js';
 
@@ -46,9 +47,12 @@ export interface EnvironmentInfo {
 
 export class VibeLogger {
   // Navigate from TypeScriptServer~ to project root: ../../../
-  private static readonly PROJECT_ROOT = path.resolve(process.cwd(), '../../../');
+  private static readonly PROJECT_ROOT = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '../../../..',
+  );
   private static readonly LOG_DIRECTORY = path.join(
-    this.PROJECT_ROOT,
+    VibeLogger.PROJECT_ROOT,
     OUTPUT_DIRECTORIES.ROOT,
     OUTPUT_DIRECTORIES.VIBE_LOGS,
   );
@@ -70,7 +74,7 @@ export class VibeLogger {
     humanNote?: string,
     aiTodo?: string,
   ): void {
-    this.log('INFO', operation, message, context, correlationId, humanNote, aiTodo);
+    VibeLogger.log('INFO', operation, message, context, correlationId, humanNote, aiTodo);
   }
 
   /**
@@ -84,7 +88,7 @@ export class VibeLogger {
     humanNote?: string,
     aiTodo?: string,
   ): void {
-    this.log('WARNING', operation, message, context, correlationId, humanNote, aiTodo);
+    VibeLogger.log('WARNING', operation, message, context, correlationId, humanNote, aiTodo);
   }
 
   /**
@@ -98,7 +102,7 @@ export class VibeLogger {
     humanNote?: string,
     aiTodo?: string,
   ): void {
-    this.log('ERROR', operation, message, context, correlationId, humanNote, aiTodo);
+    VibeLogger.log('ERROR', operation, message, context, correlationId, humanNote, aiTodo);
   }
 
   /**
@@ -112,7 +116,7 @@ export class VibeLogger {
     humanNote?: string,
     aiTodo?: string,
   ): void {
-    this.log('DEBUG', operation, message, context, correlationId, humanNote, aiTodo);
+    VibeLogger.log('DEBUG', operation, message, context, correlationId, humanNote, aiTodo);
   }
 
   /**
@@ -136,7 +140,7 @@ export class VibeLogger {
       },
     } as const;
 
-    this.log(
+    VibeLogger.log(
       'ERROR',
       operation,
       `Exception occurred: ${error.message}`,
@@ -160,7 +164,7 @@ export class VibeLogger {
    * Output directory: {project_root}/uLoopMCPOutputs/VibeLogs/
    */
   static getLogsForAi(operation?: string, correlationId?: string, maxCount: number = 100): string {
-    let filteredLogs = [...this.memoryLogs];
+    let filteredLogs = [...VibeLogger.memoryLogs];
 
     if (operation) {
       filteredLogs = filteredLogs.filter((log) => log.operation.includes(operation));
@@ -181,7 +185,7 @@ export class VibeLogger {
    * Clear all memory logs
    */
   static clearMemoryLogs(): void {
-    this.memoryLogs = [];
+    VibeLogger.memoryLogs = [];
   }
 
   /**
@@ -198,7 +202,7 @@ export class VibeLogger {
     aiTodo?: string,
   ): void {
     // Only log when MCP_DEBUG is enabled
-    if (!this.isDebugEnabled) {
+    if (!VibeLogger.isDebugEnabled) {
       return;
     }
 
@@ -207,24 +211,24 @@ export class VibeLogger {
       level,
       operation,
       message,
-      context: this.sanitizeContext(context),
-      correlation_id: correlationId || this.generateCorrelationId(),
+      context: VibeLogger.sanitizeContext(context),
+      correlation_id: correlationId || VibeLogger.generateCorrelationId(),
       source: 'TypeScript',
       human_note: humanNote,
       ai_todo: aiTodo,
-      environment: this.getEnvironmentInfo(),
+      environment: VibeLogger.getEnvironmentInfo(),
     };
 
     // Add to memory logs
-    this.memoryLogs.push(logEntry);
+    VibeLogger.memoryLogs.push(logEntry);
 
     // Rotate memory logs if too many
-    if (this.memoryLogs.length > this.MAX_MEMORY_LOGS) {
-      this.memoryLogs.shift();
+    if (VibeLogger.memoryLogs.length > VibeLogger.MAX_MEMORY_LOGS) {
+      VibeLogger.memoryLogs.shift();
     }
 
     // Save to file
-    this.saveLogToFile(logEntry);
+    VibeLogger.saveLogToFile(logEntry);
 
     // Also output to console when debugging
     console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
@@ -235,19 +239,19 @@ export class VibeLogger {
    */
   private static saveLogToFile(logEntry: VibeLogEntry): void {
     try {
-      if (!fs.existsSync(this.LOG_DIRECTORY)) {
-        fs.mkdirSync(this.LOG_DIRECTORY, { recursive: true });
+      if (!fs.existsSync(VibeLogger.LOG_DIRECTORY)) {
+        fs.mkdirSync(VibeLogger.LOG_DIRECTORY, { recursive: true });
       }
 
-      const fileName = `${this.LOG_FILE_PREFIX}_${this.formatDate()}.json`;
-      const filePath = path.join(this.LOG_DIRECTORY, fileName);
+      const fileName = `${VibeLogger.LOG_FILE_PREFIX}_${VibeLogger.formatDate()}.json`;
+      const filePath = path.join(VibeLogger.LOG_DIRECTORY, fileName);
 
       // Check file size and rotate if necessary
       if (fs.existsSync(filePath)) {
         const stats = fs.statSync(filePath);
-        if (stats.size > this.MAX_FILE_SIZE_MB * 1024 * 1024) {
-          const rotatedFileName = `${this.LOG_FILE_PREFIX}_${this.formatDateTime()}.json`;
-          const rotatedFilePath = path.join(this.LOG_DIRECTORY, rotatedFileName);
+        if (stats.size > VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
+          const rotatedFileName = `${VibeLogger.LOG_FILE_PREFIX}_${VibeLogger.formatDateTime()}.json`;
+          const rotatedFilePath = path.join(VibeLogger.LOG_DIRECTORY, rotatedFileName);
           fs.renameSync(filePath, rotatedFilePath);
         }
       }
@@ -263,10 +267,10 @@ export class VibeLogger {
           fs.appendFileSync(filePath, jsonLog, { flag: 'a' });
           return; // Success - exit retry loop
         } catch (error: unknown) {
-          if (this.isFileSharingViolation(error) && retry < maxRetries - 1) {
+          if (VibeLogger.isFileSharingViolation(error) && retry < maxRetries - 1) {
             // Wait with exponential backoff for sharing violations
             const delayMs = baseDelayMs * Math.pow(2, retry);
-            this.sleep(delayMs);
+            VibeLogger.sleep(delayMs);
           } else {
             // For other errors or final retry, throw
             throw error;

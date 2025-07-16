@@ -42,13 +42,13 @@ export class UnityEventHandler {
     // Listen for MCP standard notifications from Unity
     this.unityClient.onNotification('notifications/tools/list_changed', (_params: unknown) => {
       if (this.isDevelopment) {
-        // Unity notification received: notifications/tools/list_changed
+        console.log('Unity notification received: notifications/tools/list_changed');
       }
 
       try {
         void onToolsChanged();
       } catch (error) {
-        // Failed to update dynamic tools via Unity notification
+        console.error('Failed to update dynamic tools via Unity notification:', error);
       }
     });
   }
@@ -59,7 +59,7 @@ export class UnityEventHandler {
   sendToolsChangedNotification(): void {
     if (this.isNotifying) {
       if (this.isDevelopment) {
-        // sendToolsChangedNotification skipped: already notifying
+        console.log('sendToolsChangedNotification skipped: already notifying');
       }
       return;
     }
@@ -71,10 +71,10 @@ export class UnityEventHandler {
         params: {},
       });
       if (this.isDevelopment) {
-        // tools/list_changed notification sent
+        console.log('tools/list_changed notification sent');
       }
     } catch (error) {
-      // Failed to send tools changed notification
+      console.error('Failed to send tools changed notification:', error);
     } finally {
       this.isNotifying = false;
     }
@@ -86,19 +86,19 @@ export class UnityEventHandler {
   setupSignalHandlers(): void {
     // Handle Ctrl+C (SIGINT)
     process.on('SIGINT', () => {
-      // Received SIGINT, shutting down...
+      console.log('Received SIGINT, shutting down...');
       this.gracefulShutdown();
     });
 
     // Handle kill command (SIGTERM)
     process.on('SIGTERM', () => {
-      // Received SIGTERM, shutting down...
+      console.log('Received SIGTERM, shutting down...');
       this.gracefulShutdown();
     });
 
     // Handle terminal close (SIGHUP)
     process.on('SIGHUP', () => {
-      // Received SIGHUP, shutting down...
+      console.log('Received SIGHUP, shutting down...');
       this.gracefulShutdown();
     });
 
@@ -106,24 +106,24 @@ export class UnityEventHandler {
     // BUG FIX: Added STDIN monitoring to detect when Cursor/parent MCP client disconnects
     // This prevents orphaned Node processes from remaining after IDE shutdown
     process.stdin.on('close', () => {
-      // STDIN closed, shutting down...
+      console.log('STDIN closed, shutting down...');
       this.gracefulShutdown();
     });
 
     process.stdin.on('end', () => {
-      // STDIN ended, shutting down...
+      console.log('STDIN ended, shutting down...');
       this.gracefulShutdown();
     });
 
     // Handle uncaught exceptions
     // BUG FIX: Added comprehensive error handling to prevent hanging processes
-    process.on('uncaughtException', (_error) => {
-      // Uncaught exception
+    process.on('uncaughtException', (error) => {
+      console.error('Uncaught exception:', error);
       this.gracefulShutdown();
     });
 
-    process.on('unhandledRejection', (_reason, _promise) => {
-      // Unhandled rejection
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('Unhandled rejection at:', promise, 'reason:', reason);
       this.gracefulShutdown();
     });
   }
@@ -139,7 +139,7 @@ export class UnityEventHandler {
     }
 
     this.isShuttingDown = true;
-    // Starting graceful shutdown...
+    console.log('Starting graceful shutdown...');
 
     try {
       // Disconnect from Unity and stop all intervals
@@ -152,10 +152,10 @@ export class UnityEventHandler {
         global.gc();
       }
     } catch (error) {
-      // Error during cleanup
+      console.error('Error during cleanup:', error);
     }
 
-    // Graceful shutdown completed
+    console.log('Graceful shutdown completed');
     process.exit(0);
   }
 

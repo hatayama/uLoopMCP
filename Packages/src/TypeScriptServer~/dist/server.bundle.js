@@ -5622,6 +5622,302 @@ function safeSetTimeout(callback, delay) {
   return new SafeTimer(callback, delay, false);
 }
 
+// src/utils/vibe-logger.ts
+import * as fs from "fs";
+import * as path from "path";
+import { fileURLToPath } from "url";
+
+// node_modules/uuid/dist/esm/stringify.js
+var byteToHex = [];
+for (let i = 0; i < 256; ++i) {
+  byteToHex.push((i + 256).toString(16).slice(1));
+}
+function unsafeStringify(arr, offset = 0) {
+  return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
+}
+
+// node_modules/uuid/dist/esm/rng.js
+import { randomFillSync } from "crypto";
+var rnds8Pool = new Uint8Array(256);
+var poolPtr = rnds8Pool.length;
+function rng() {
+  if (poolPtr > rnds8Pool.length - 16) {
+    randomFillSync(rnds8Pool);
+    poolPtr = 0;
+  }
+  return rnds8Pool.slice(poolPtr, poolPtr += 16);
+}
+
+// node_modules/uuid/dist/esm/native.js
+import { randomUUID } from "crypto";
+var native_default = { randomUUID };
+
+// node_modules/uuid/dist/esm/v4.js
+function v4(options, buf, offset) {
+  if (native_default.randomUUID && !buf && !options) {
+    return native_default.randomUUID();
+  }
+  options = options || {};
+  const rnds = options.random ?? options.rng?.() ?? rng();
+  if (rnds.length < 16) {
+    throw new Error("Random bytes length must be >= 16");
+  }
+  rnds[6] = rnds[6] & 15 | 64;
+  rnds[8] = rnds[8] & 63 | 128;
+  if (buf) {
+    offset = offset || 0;
+    if (offset < 0 || offset + 16 > buf.length) {
+      throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+    }
+    for (let i = 0; i < 16; ++i) {
+      buf[offset + i] = rnds[i];
+    }
+    return buf;
+  }
+  return unsafeStringify(rnds);
+}
+var v4_default = v4;
+
+// src/utils/vibe-logger.ts
+var VibeLogger = class _VibeLogger {
+  // Navigate from TypeScriptServer~ to project root: ../../../
+  static PROJECT_ROOT = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../../.."
+  );
+  static LOG_DIRECTORY = path.join(
+    _VibeLogger.PROJECT_ROOT,
+    OUTPUT_DIRECTORIES.ROOT,
+    OUTPUT_DIRECTORIES.VIBE_LOGS
+  );
+  static LOG_FILE_PREFIX = "typescript_vibe";
+  static MAX_FILE_SIZE_MB = 10;
+  static MAX_MEMORY_LOGS = 1e3;
+  static memoryLogs = [];
+  static isDebugEnabled = process.env.MCP_DEBUG === "true";
+  /**
+   * Log an info level message with structured context
+   */
+  static logInfo(operation, message, context, correlationId, humanNote, aiTodo) {
+    _VibeLogger.log("INFO", operation, message, context, correlationId, humanNote, aiTodo);
+  }
+  /**
+   * Log a warning level message with structured context
+   */
+  static logWarning(operation, message, context, correlationId, humanNote, aiTodo) {
+    _VibeLogger.log("WARNING", operation, message, context, correlationId, humanNote, aiTodo);
+  }
+  /**
+   * Log an error level message with structured context
+   */
+  static logError(operation, message, context, correlationId, humanNote, aiTodo) {
+    _VibeLogger.log("ERROR", operation, message, context, correlationId, humanNote, aiTodo);
+  }
+  /**
+   * Log a debug level message with structured context
+   */
+  static logDebug(operation, message, context, correlationId, humanNote, aiTodo) {
+    _VibeLogger.log("DEBUG", operation, message, context, correlationId, humanNote, aiTodo);
+  }
+  /**
+   * Log an exception with structured context
+   */
+  static logException(operation, error, context, correlationId, humanNote, aiTodo) {
+    const exceptionContext = {
+      original_context: context,
+      exception: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause
+      }
+    };
+    _VibeLogger.log(
+      "ERROR",
+      operation,
+      `Exception occurred: ${error.message}`,
+      exceptionContext,
+      correlationId,
+      humanNote,
+      aiTodo
+    );
+  }
+  /**
+   * Generate a new correlation ID for tracking related operations
+   */
+  static generateCorrelationId() {
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString().slice(11, 19).replace(/:/g, "");
+    return `ts_${v4_default().slice(0, 8)}_${timestamp}`;
+  }
+  /**
+   * Get logs for AI analysis (formatted for Claude Code)
+   * Output directory: {project_root}/uLoopMCPOutputs/VibeLogs/
+   */
+  static getLogsForAi(operation, correlationId, maxCount = 100) {
+    let filteredLogs = [..._VibeLogger.memoryLogs];
+    if (operation) {
+      filteredLogs = filteredLogs.filter((log) => log.operation.includes(operation));
+    }
+    if (correlationId) {
+      filteredLogs = filteredLogs.filter((log) => log.correlation_id === correlationId);
+    }
+    if (filteredLogs.length > maxCount) {
+      filteredLogs = filteredLogs.slice(-maxCount);
+    }
+    return JSON.stringify(filteredLogs, null, 2);
+  }
+  /**
+   * Clear all memory logs
+   */
+  static clearMemoryLogs() {
+    _VibeLogger.memoryLogs = [];
+  }
+  /**
+   * Core logging method
+   * Only logs when MCP_DEBUG environment variable is set to 'true'
+   */
+  static log(level, operation, message, context, correlationId, humanNote, aiTodo) {
+    if (!_VibeLogger.isDebugEnabled) {
+      return;
+    }
+    const logEntry = {
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      level,
+      operation,
+      message,
+      context: _VibeLogger.sanitizeContext(context),
+      correlation_id: correlationId || _VibeLogger.generateCorrelationId(),
+      source: "TypeScript",
+      human_note: humanNote,
+      ai_todo: aiTodo,
+      environment: _VibeLogger.getEnvironmentInfo()
+    };
+    _VibeLogger.memoryLogs.push(logEntry);
+    if (_VibeLogger.memoryLogs.length > _VibeLogger.MAX_MEMORY_LOGS) {
+      _VibeLogger.memoryLogs.shift();
+    }
+    _VibeLogger.saveLogToFile(logEntry);
+    console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
+  }
+  /**
+   * Save log entry to file with retry mechanism for concurrent access
+   */
+  static saveLogToFile(logEntry) {
+    try {
+      if (!fs.existsSync(_VibeLogger.LOG_DIRECTORY)) {
+        fs.mkdirSync(_VibeLogger.LOG_DIRECTORY, { recursive: true });
+      }
+      const fileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDate()}.json`;
+      const filePath = path.join(_VibeLogger.LOG_DIRECTORY, fileName);
+      if (fs.existsSync(filePath)) {
+        const stats = fs.statSync(filePath);
+        if (stats.size > _VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
+          const rotatedFileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDateTime()}.json`;
+          const rotatedFilePath = path.join(_VibeLogger.LOG_DIRECTORY, rotatedFileName);
+          fs.renameSync(filePath, rotatedFilePath);
+        }
+      }
+      const jsonLog = JSON.stringify(logEntry) + "\n";
+      const maxRetries = 3;
+      const baseDelayMs = 50;
+      for (let retry = 0; retry < maxRetries; retry++) {
+        try {
+          fs.appendFileSync(filePath, jsonLog, { flag: "a" });
+          return;
+        } catch (error) {
+          if (_VibeLogger.isFileSharingViolation(error) && retry < maxRetries - 1) {
+            const delayMs = baseDelayMs * Math.pow(2, retry);
+            _VibeLogger.sleep(delayMs);
+          } else {
+            throw error;
+          }
+        }
+      }
+    } catch (error) {
+      console.error(
+        `[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`
+      );
+      console.log(`[VibeLogger] ${logEntry.level} | ${logEntry.operation} | ${logEntry.message}`);
+    }
+  }
+  /**
+   * Check if error is a file sharing violation
+   */
+  static isFileSharingViolation(error) {
+    if (!error) {
+      return false;
+    }
+    const sharingViolationCodes = [
+      "EBUSY",
+      // Resource busy or locked
+      "EACCES",
+      // Permission denied (can indicate file in use)
+      "EPERM",
+      // Operation not permitted
+      "EMFILE",
+      // Too many open files
+      "ENFILE"
+      // File table overflow
+    ];
+    return error && typeof error === "object" && "code" in error && typeof error.code === "string" && sharingViolationCodes.includes(error.code);
+  }
+  /**
+   * Synchronous sleep function for retry delays
+   */
+  static sleep(ms) {
+    const start = Date.now();
+    while (Date.now() - start < ms) {
+    }
+  }
+  /**
+   * Get current environment information
+   */
+  static getEnvironmentInfo() {
+    const memUsage = process.memoryUsage();
+    return {
+      node_version: process.version,
+      platform: process.platform,
+      process_id: process.pid,
+      memory_usage: {
+        rss: memUsage.rss,
+        heapTotal: memUsage.heapTotal,
+        heapUsed: memUsage.heapUsed
+      }
+    };
+  }
+  /**
+   * Sanitize context to prevent circular references
+   */
+  static sanitizeContext(context) {
+    if (!context) {
+      return void 0;
+    }
+    try {
+      return JSON.parse(JSON.stringify(context));
+    } catch (error) {
+      return {
+        error: "Failed to serialize context",
+        original_type: typeof context,
+        circular_reference: true
+      };
+    }
+  }
+  /**
+   * Format date for file naming
+   */
+  static formatDate() {
+    const now = /* @__PURE__ */ new Date();
+    return now.toISOString().slice(0, 10).replace(/-/g, "");
+  }
+  /**
+   * Format datetime for file rotation
+   */
+  static formatDateTime() {
+    const now = /* @__PURE__ */ new Date();
+    return now.toISOString().slice(0, 19).replace(/[-:]/g, "").replace("T", "_");
+  }
+};
+
 // src/connection-manager.ts
 var ConnectionManager = class {
   onReconnectedCallback = null;
@@ -5646,7 +5942,11 @@ var ConnectionManager = class {
       try {
         this.onReconnectedCallback();
       } catch (error) {
-        errorToFile("[ConnectionManager] Error in reconnection callback:", error);
+        VibeLogger.logError(
+          "connection_manager_reconnect_error",
+          "Error in reconnection callback",
+          { error }
+        );
       }
     }
   }
@@ -5658,7 +5958,11 @@ var ConnectionManager = class {
       try {
         this.onConnectionLostCallback();
       } catch (error) {
-        errorToFile("[ConnectionManager] Error in connection lost callback:", error);
+        VibeLogger.logError(
+          "connection_manager_connection_lost_error",
+          "Error in connection lost callback",
+          { error }
+        );
       }
     }
   }
@@ -5740,8 +6044,17 @@ var ContentLengthFramer = class _ContentLengthFramer {
       const expectedTotalLength = headerLength + contentLength;
       const actualByteLength = Buffer.byteLength(data, _ContentLengthFramer.ENCODING_UTF8);
       const isComplete = actualByteLength >= expectedTotalLength;
-      debugToFile(
-        `${_ContentLengthFramer.LOG_PREFIX} Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`
+      VibeLogger.logDebug(
+        "frame_analysis",
+        `Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`,
+        {
+          dataLength: data.length,
+          actualByteLength,
+          contentLength,
+          headerLength,
+          expectedTotalLength,
+          isComplete
+        }
       );
       return {
         contentLength,
@@ -5749,7 +6062,17 @@ var ContentLengthFramer = class _ContentLengthFramer {
         isComplete
       };
     } catch (error) {
-      errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Error parsing frame:`, error);
+      VibeLogger.logError(
+        "parse_frame_error",
+        `Error parsing frame: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          error: error instanceof Error ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          } : { raw: String(error) }
+        }
+      );
       return {
         contentLength: -1,
         headerLength: -1,
@@ -5796,8 +6119,17 @@ var ContentLengthFramer = class _ContentLengthFramer {
       const expectedTotalLength = headerLength + contentLength;
       const actualByteLength = data.length;
       const isComplete = actualByteLength >= expectedTotalLength;
-      debugToFile(
-        `${_ContentLengthFramer.LOG_PREFIX} Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`
+      VibeLogger.logDebug(
+        "frame_analysis_buffer",
+        `Frame analysis: dataLength=${data.length}, actualByteLength=${actualByteLength}, contentLength=${contentLength}, headerLength=${headerLength}, expectedTotal=${expectedTotalLength}, isComplete=${isComplete}`,
+        {
+          dataLength: data.length,
+          actualByteLength,
+          contentLength,
+          headerLength,
+          expectedTotalLength,
+          isComplete
+        }
       );
       return {
         contentLength,
@@ -5805,7 +6137,17 @@ var ContentLengthFramer = class _ContentLengthFramer {
         isComplete
       };
     } catch (error) {
-      errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Error parsing frame:`, error);
+      VibeLogger.logError(
+        "parse_frame_buffer_error",
+        `Error parsing frame: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          error: error instanceof Error ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          } : { raw: String(error) }
+        }
+      );
       return {
         contentLength: -1,
         headerLength: -1,
@@ -5844,7 +6186,17 @@ var ContentLengthFramer = class _ContentLengthFramer {
         remainingData
       };
     } catch (error) {
-      errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Error extracting frame:`, error);
+      VibeLogger.logError(
+        "extract_frame_error",
+        `Error extracting frame: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          error: error instanceof Error ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          } : { raw: String(error) }
+        }
+      );
       return {
         jsonContent: null,
         remainingData: data
@@ -5880,7 +6232,17 @@ var ContentLengthFramer = class _ContentLengthFramer {
         remainingData
       };
     } catch (error) {
-      errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Error extracting frame:`, error);
+      VibeLogger.logError(
+        "extract_frame_buffer_error",
+        `Error extracting frame: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          error: error instanceof Error ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          } : { raw: String(error) }
+        }
+      );
       return {
         jsonContent: null,
         remainingData: data
@@ -5916,31 +6278,14 @@ var ContentLengthFramer = class _ContentLengthFramer {
         const valueString = trimmedLine.substring(colonIndex + 1).trim();
         const parsedValue = parseInt(valueString, 10);
         if (isNaN(parsedValue)) {
-          errorToFile(
-            `${_ContentLengthFramer.LOG_PREFIX} Invalid Content-Length value: '${valueString}' from line: '${trimmedLine}'`
-          );
           return -1;
         }
         if (!_ContentLengthFramer.isValidContentLength(parsedValue)) {
-          errorToFile(
-            `${_ContentLengthFramer.LOG_PREFIX} Content-Length value ${parsedValue} exceeds maximum allowed size ${_ContentLengthFramer.MAX_MESSAGE_SIZE}`
-          );
           return -1;
         }
         return parsedValue;
       }
     }
-    errorToFile(
-      `${_ContentLengthFramer.LOG_PREFIX} Content-Length header not found in header section (${headerSection.length} chars): ${headerSection.substring(0, _ContentLengthFramer.DEBUG_PREVIEW_LENGTH)}${headerSection.length > _ContentLengthFramer.DEBUG_PREVIEW_LENGTH ? _ContentLengthFramer.PREVIEW_SUFFIX : ""}`
-    );
-    errorToFile(`${_ContentLengthFramer.LOG_PREFIX} Header section lines for debugging:`);
-    lines.forEach((line, index) => {
-      if (line !== void 0 && typeof line === "string") {
-        errorToFile(
-          `${_ContentLengthFramer.LOG_PREFIX} Line ${index}: "${line}" (length: ${line.length}, toLowerCase: "${line.toLowerCase()}")`
-        );
-      }
-    });
     return -1;
   }
 };
@@ -6010,7 +6355,6 @@ var DynamicBuffer = class _DynamicBuffer {
         extracted: true
       };
     } catch (error) {
-      errorToFile(`${_DynamicBuffer.LOG_PREFIX} Error extracting frame:`, error);
       return { frame: null, extracted: false };
     }
   }
@@ -6076,9 +6420,6 @@ var DynamicBuffer = class _DynamicBuffer {
    */
   validateAndCleanup() {
     if (this.buffer.length > this.maxBufferSize * _DynamicBuffer.BUFFER_UTILIZATION_THRESHOLD && !this.hasCompleteFrameHeader()) {
-      warnToFile(
-        `${_DynamicBuffer.LOG_PREFIX} Large buffer without complete frame header, clearing buffer`
-      );
       this.clear();
       return false;
     }
@@ -6094,9 +6435,6 @@ var DynamicBuffer = class _DynamicBuffer {
       );
       const contentLengthIndex = this.buffer.indexOf(contentLengthBuffer);
       if (contentLengthIndex === -1) {
-        warnToFile(
-          `${_DynamicBuffer.LOG_PREFIX} No Content-Length header found in large buffer, clearing buffer`
-        );
         this.clear();
         return false;
       }
@@ -6160,12 +6498,8 @@ var MessageHandler = class {
    */
   handleIncomingData(data) {
     try {
-      const dataSize = data instanceof Buffer ? data.length : data.length;
-      debugToFile(`[MessageHandler] Received ${dataSize} bytes of data`);
       this.dynamicBuffer.append(data);
-      debugToFile("[MessageHandler] Data appended to buffer successfully");
       const frames = this.dynamicBuffer.extractAllFrames();
-      debugToFile(`[MessageHandler] Extracted ${frames.length} complete frames`);
       for (const frame of frames) {
         if (!frame || frame.trim() === "") {
           continue;
@@ -6180,12 +6514,12 @@ var MessageHandler = class {
             this.handleResponse(message);
           }
         } catch (parseError) {
-          errorToFile("[MessageHandler] Error parsing JSON frame:", parseError);
-          errorToFile("[MessageHandler] Problematic frame:", frame);
+          console.error("Error parsing JSON frame:", parseError);
+          console.error("Problematic frame:", frame);
         }
       }
     } catch (error) {
-      errorToFile("[MessageHandler] Error processing incoming data:", error);
+      console.error("Error processing incoming data:", error);
     }
   }
   /**
@@ -6198,7 +6532,7 @@ var MessageHandler = class {
       try {
         handler(params);
       } catch (error) {
-        errorToFile(`[MessageHandler] Error in notification handler for ${method}:`, error);
+        console.error(`Error in notification handler for ${method}:`, error);
       }
     }
   }
@@ -6225,7 +6559,7 @@ var MessageHandler = class {
         pending.resolve(response);
       }
     } else {
-      warnToFile(`[MessageHandler] Received response for unknown request ID: ${id}`);
+      console.error(`Received response for unknown request ID: ${id}`);
     }
   }
   /**
@@ -6486,7 +6820,6 @@ var UnityClient = class {
    * Execute any Unity tool dynamically
    */
   async executeTool(toolName, params = {}) {
-    const startTime = Date.now();
     const request = {
       jsonrpc: JSONRPC.VERSION,
       id: this.generateId(),
@@ -6577,296 +6910,6 @@ var UnityClient = class {
    */
   setReconnectedCallback(callback) {
     this.connectionManager.setReconnectedCallback(callback);
-  }
-};
-
-// src/utils/vibe-logger.ts
-import * as fs from "fs";
-import * as path from "path";
-
-// node_modules/uuid/dist/esm/stringify.js
-var byteToHex = [];
-for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 256).toString(16).slice(1));
-}
-function unsafeStringify(arr, offset = 0) {
-  return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
-}
-
-// node_modules/uuid/dist/esm/rng.js
-import { randomFillSync } from "crypto";
-var rnds8Pool = new Uint8Array(256);
-var poolPtr = rnds8Pool.length;
-function rng() {
-  if (poolPtr > rnds8Pool.length - 16) {
-    randomFillSync(rnds8Pool);
-    poolPtr = 0;
-  }
-  return rnds8Pool.slice(poolPtr, poolPtr += 16);
-}
-
-// node_modules/uuid/dist/esm/native.js
-import { randomUUID } from "crypto";
-var native_default = { randomUUID };
-
-// node_modules/uuid/dist/esm/v4.js
-function v4(options, buf, offset) {
-  if (native_default.randomUUID && !buf && !options) {
-    return native_default.randomUUID();
-  }
-  options = options || {};
-  const rnds = options.random ?? options.rng?.() ?? rng();
-  if (rnds.length < 16) {
-    throw new Error("Random bytes length must be >= 16");
-  }
-  rnds[6] = rnds[6] & 15 | 64;
-  rnds[8] = rnds[8] & 63 | 128;
-  if (buf) {
-    offset = offset || 0;
-    if (offset < 0 || offset + 16 > buf.length) {
-      throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
-    }
-    for (let i = 0; i < 16; ++i) {
-      buf[offset + i] = rnds[i];
-    }
-    return buf;
-  }
-  return unsafeStringify(rnds);
-}
-var v4_default = v4;
-
-// src/utils/vibe-logger.ts
-var VibeLogger = class {
-  // Navigate from TypeScriptServer~ to project root: ../../../
-  static PROJECT_ROOT = path.resolve(process.cwd(), "../../../");
-  static LOG_DIRECTORY = path.join(
-    this.PROJECT_ROOT,
-    OUTPUT_DIRECTORIES.ROOT,
-    OUTPUT_DIRECTORIES.VIBE_LOGS
-  );
-  static LOG_FILE_PREFIX = "typescript_vibe";
-  static MAX_FILE_SIZE_MB = 10;
-  static MAX_MEMORY_LOGS = 1e3;
-  static memoryLogs = [];
-  static isDebugEnabled = process.env.MCP_DEBUG === "true";
-  /**
-   * Log an info level message with structured context
-   */
-  static logInfo(operation, message, context, correlationId, humanNote, aiTodo) {
-    this.log("INFO", operation, message, context, correlationId, humanNote, aiTodo);
-  }
-  /**
-   * Log a warning level message with structured context
-   */
-  static logWarning(operation, message, context, correlationId, humanNote, aiTodo) {
-    this.log("WARNING", operation, message, context, correlationId, humanNote, aiTodo);
-  }
-  /**
-   * Log an error level message with structured context
-   */
-  static logError(operation, message, context, correlationId, humanNote, aiTodo) {
-    this.log("ERROR", operation, message, context, correlationId, humanNote, aiTodo);
-  }
-  /**
-   * Log a debug level message with structured context
-   */
-  static logDebug(operation, message, context, correlationId, humanNote, aiTodo) {
-    this.log("DEBUG", operation, message, context, correlationId, humanNote, aiTodo);
-  }
-  /**
-   * Log an exception with structured context
-   */
-  static logException(operation, error, context, correlationId, humanNote, aiTodo) {
-    const exceptionContext = {
-      original_context: context,
-      exception: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        cause: error.cause
-      }
-    };
-    this.log(
-      "ERROR",
-      operation,
-      `Exception occurred: ${error.message}`,
-      exceptionContext,
-      correlationId,
-      humanNote,
-      aiTodo
-    );
-  }
-  /**
-   * Generate a new correlation ID for tracking related operations
-   */
-  static generateCorrelationId() {
-    const timestamp = (/* @__PURE__ */ new Date()).toISOString().slice(11, 19).replace(/:/g, "");
-    return `ts_${v4_default().slice(0, 8)}_${timestamp}`;
-  }
-  /**
-   * Get logs for AI analysis (formatted for Claude Code)
-   * Output directory: {project_root}/uLoopMCPOutputs/VibeLogs/
-   */
-  static getLogsForAi(operation, correlationId, maxCount = 100) {
-    let filteredLogs = [...this.memoryLogs];
-    if (operation) {
-      filteredLogs = filteredLogs.filter((log) => log.operation.includes(operation));
-    }
-    if (correlationId) {
-      filteredLogs = filteredLogs.filter((log) => log.correlation_id === correlationId);
-    }
-    if (filteredLogs.length > maxCount) {
-      filteredLogs = filteredLogs.slice(-maxCount);
-    }
-    return JSON.stringify(filteredLogs, null, 2);
-  }
-  /**
-   * Clear all memory logs
-   */
-  static clearMemoryLogs() {
-    this.memoryLogs = [];
-  }
-  /**
-   * Core logging method
-   * Only logs when MCP_DEBUG environment variable is set to 'true'
-   */
-  static log(level, operation, message, context, correlationId, humanNote, aiTodo) {
-    if (!this.isDebugEnabled) {
-      return;
-    }
-    const logEntry = {
-      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-      level,
-      operation,
-      message,
-      context: this.sanitizeContext(context),
-      correlation_id: correlationId || this.generateCorrelationId(),
-      source: "TypeScript",
-      human_note: humanNote,
-      ai_todo: aiTodo,
-      environment: this.getEnvironmentInfo()
-    };
-    this.memoryLogs.push(logEntry);
-    if (this.memoryLogs.length > this.MAX_MEMORY_LOGS) {
-      this.memoryLogs.shift();
-    }
-    this.saveLogToFile(logEntry);
-    console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
-  }
-  /**
-   * Save log entry to file with retry mechanism for concurrent access
-   */
-  static saveLogToFile(logEntry) {
-    try {
-      if (!fs.existsSync(this.LOG_DIRECTORY)) {
-        fs.mkdirSync(this.LOG_DIRECTORY, { recursive: true });
-      }
-      const fileName = `${this.LOG_FILE_PREFIX}_${this.formatDate()}.json`;
-      const filePath = path.join(this.LOG_DIRECTORY, fileName);
-      if (fs.existsSync(filePath)) {
-        const stats = fs.statSync(filePath);
-        if (stats.size > this.MAX_FILE_SIZE_MB * 1024 * 1024) {
-          const rotatedFileName = `${this.LOG_FILE_PREFIX}_${this.formatDateTime()}.json`;
-          const rotatedFilePath = path.join(this.LOG_DIRECTORY, rotatedFileName);
-          fs.renameSync(filePath, rotatedFilePath);
-        }
-      }
-      const jsonLog = JSON.stringify(logEntry) + "\n";
-      const maxRetries = 3;
-      const baseDelayMs = 50;
-      for (let retry = 0; retry < maxRetries; retry++) {
-        try {
-          fs.appendFileSync(filePath, jsonLog, { flag: "a" });
-          return;
-        } catch (error) {
-          if (this.isFileSharingViolation(error) && retry < maxRetries - 1) {
-            const delayMs = baseDelayMs * Math.pow(2, retry);
-            this.sleep(delayMs);
-          } else {
-            throw error;
-          }
-        }
-      }
-    } catch (error) {
-      console.error(`[VibeLogger] Failed to save log to file: ${error}`);
-      console.log(`[VibeLogger] ${logEntry.level} | ${logEntry.operation} | ${logEntry.message}`);
-    }
-  }
-  /**
-   * Check if error is a file sharing violation
-   */
-  static isFileSharingViolation(error) {
-    if (!error) {
-      return false;
-    }
-    const sharingViolationCodes = [
-      "EBUSY",
-      // Resource busy or locked
-      "EACCES",
-      // Permission denied (can indicate file in use)
-      "EPERM",
-      // Operation not permitted
-      "EMFILE",
-      // Too many open files
-      "ENFILE"
-      // File table overflow
-    ];
-    return error.code && sharingViolationCodes.includes(error.code);
-  }
-  /**
-   * Synchronous sleep function for retry delays
-   */
-  static sleep(ms) {
-    const start = Date.now();
-    while (Date.now() - start < ms) {
-    }
-  }
-  /**
-   * Get current environment information
-   */
-  static getEnvironmentInfo() {
-    const memUsage = process.memoryUsage();
-    return {
-      node_version: process.version,
-      platform: process.platform,
-      process_id: process.pid,
-      memory_usage: {
-        rss: memUsage.rss,
-        heapTotal: memUsage.heapTotal,
-        heapUsed: memUsage.heapUsed
-      }
-    };
-  }
-  /**
-   * Sanitize context to prevent circular references
-   */
-  static sanitizeContext(context) {
-    if (!context) {
-      return void 0;
-    }
-    try {
-      return JSON.parse(JSON.stringify(context));
-    } catch (error) {
-      return {
-        error: "Failed to serialize context",
-        original_type: typeof context,
-        circular_reference: true
-      };
-    }
-  }
-  /**
-   * Format date for file naming
-   */
-  static formatDate() {
-    const now = /* @__PURE__ */ new Date();
-    return now.toISOString().slice(0, 10).replace(/-/g, "");
-  }
-  /**
-   * Format datetime for file rotation
-   */
-  static formatDateTime() {
-    const now = /* @__PURE__ */ new Date();
-    return now.toISOString().slice(0, 19).replace(/[-:]/g, "").replace("T", "_");
   }
 };
 
@@ -7063,7 +7106,7 @@ var UnityDiscovery = class _UnityDiscovery {
             VibeLogger.logError(
               "unity_discovery_connection_failed",
               "Failed to establish connection after discovery",
-              { port, error: error.message },
+              { port, error: error instanceof Error ? error.message : String(error) },
               correlationId,
               "Connection attempt failed despite successful port scan.",
               "Check Unity server status and network connectivity."
@@ -7138,18 +7181,7 @@ var UnityDiscovery = class _UnityDiscovery {
     if (!this.isDevelopment) {
       return;
     }
-    const status = {
-      isTimerActive: this.discoveryInterval !== null,
-      isDiscovering: this.isDiscovering,
-      activeTimerCount: _UnityDiscovery.activeTimerCount,
-      isConnected: this.unityClient.connected,
-      intervalMs: POLLING.INTERVAL_MS,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    };
     if (_UnityDiscovery.activeTimerCount > 1) {
-      console.warn(
-        `[UnityDiscovery] WARNING: Multiple timers detected! Count: ${_UnityDiscovery.activeTimerCount}`
-      );
     }
   }
   /**
@@ -7226,15 +7258,12 @@ var UnityConnectionManager = class {
   async handleUnityDiscovered(onConnectionEstablished) {
     try {
       if (this.isDevelopment) {
-        debugToFile("[Unity Connection] Unity discovered - skipping redundant connection check");
       }
-      infoToFile("[Unity Connection] Unity connection established via discovery");
       if (onConnectionEstablished) {
         await onConnectionEstablished();
       }
       this.unityDiscovery.stop();
     } catch (error) {
-      errorToFile("[Unity Connection] Failed to handle Unity discovery:", error);
     }
   }
   /**
@@ -7250,12 +7279,10 @@ var UnityConnectionManager = class {
     });
     this.unityDiscovery.setOnConnectionLostCallback(() => {
       if (this.isDevelopment) {
-        debugToFile("[Unity Connection] Connection lost detected - ready for reconnection");
       }
     });
     this.unityDiscovery.start();
     if (this.isDevelopment) {
-      debugToFile("[Unity Connection] Connection manager initialized");
     }
   }
   /**
@@ -7501,7 +7528,6 @@ var UnityToolManager = class {
       }
       return tools;
     } catch (error) {
-      errorToFile("[Unity Tool Manager] Failed to get tools from Unity:", error);
       return [];
     }
   }
@@ -7517,7 +7543,6 @@ var UnityToolManager = class {
       }
       this.createDynamicToolsFromTools(toolDetails);
     } catch (error) {
-      errorToFile("[Unity Tool Manager] Failed to initialize dynamic tools:", error);
     }
   }
   /**
@@ -7525,38 +7550,12 @@ var UnityToolManager = class {
    */
   async fetchToolDetailsFromUnity() {
     const params = { IncludeDevelopmentOnly: this.isDevelopment };
-    debugToFile("[Unity Tool Manager] Requesting tool details from Unity with params:", params);
-    const startTime = Date.now();
-    try {
-      const toolDetailsResponse = await this.unityClient.executeTool("get-tool-details", params);
-      const duration = Date.now() - startTime;
-      debugToFile(
-        "[Unity Tool Manager] Received tool details response in",
-        duration,
-        "ms:",
-        toolDetailsResponse
-      );
-      const toolDetails = toolDetailsResponse?.Tools || toolDetailsResponse;
-      if (!Array.isArray(toolDetails)) {
-        errorToFile("[Unity Tool Manager] Invalid tool details response:", toolDetailsResponse);
-        return null;
-      }
-      debugToFile(
-        "[Unity Tool Manager] Successfully parsed",
-        toolDetails.length,
-        "tools from Unity"
-      );
-      return toolDetails;
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      errorToFile(
-        "[Unity Tool Manager] Failed to fetch tool details after",
-        duration,
-        "ms:",
-        error
-      );
-      throw error;
+    const toolDetailsResponse = await this.unityClient.executeTool("get-tool-details", params);
+    const toolDetails = toolDetailsResponse?.Tools || toolDetailsResponse;
+    if (!Array.isArray(toolDetails)) {
+      return null;
     }
+    return toolDetails;
   }
   /**
    * Create dynamic tools from Unity tool details
@@ -7599,19 +7598,12 @@ var UnityToolManager = class {
   async refreshDynamicToolsSafe(sendNotification) {
     if (this.isRefreshing) {
       if (this.isDevelopment) {
-        debugToFile("[Unity Tool Manager] refreshDynamicToolsSafe skipped: already in progress");
       }
       return;
     }
     this.isRefreshing = true;
     try {
       if (this.isDevelopment) {
-        const stack = new Error().stack;
-        const callerLine = stack?.split("\n")[2]?.trim() || "Unknown caller";
-        const timestamp = (/* @__PURE__ */ new Date()).toISOString().split("T")[1].slice(0, 12);
-        debugToFile(
-          `[Unity Tool Manager] refreshDynamicToolsSafe called at ${timestamp} from: ${callerLine}`
-        );
       }
       await this.refreshDynamicTools(sendNotification);
     } finally {
@@ -7743,21 +7735,14 @@ var UnityEventHandler = class {
    * Setup Unity event listener for automatic tool updates
    */
   setupUnityEventListener(onToolsChanged) {
-    this.unityClient.onNotification("notifications/tools/list_changed", (params) => {
+    this.unityClient.onNotification("notifications/tools/list_changed", (_params) => {
       if (this.isDevelopment) {
-        const timestamp = (/* @__PURE__ */ new Date()).toISOString().split("T")[1].slice(0, 12);
-        debugToFile(
-          `[TRACE] Unity notification received at ${timestamp}: notifications/tools/list_changed`
-        );
-        debugToFile(`[TRACE] Notification params: ${JSON.stringify(params)}`);
+        console.log("Unity notification received: notifications/tools/list_changed");
       }
       try {
         void onToolsChanged();
       } catch (error) {
-        errorToFile(
-          "[Unity Event Handler] Failed to update dynamic tools via Unity notification:",
-          error
-        );
+        console.error("Failed to update dynamic tools via Unity notification:", error);
       }
     });
   }
@@ -7767,9 +7752,7 @@ var UnityEventHandler = class {
   sendToolsChangedNotification() {
     if (this.isNotifying) {
       if (this.isDevelopment) {
-        debugToFile(
-          "[Unity Event Handler] sendToolsChangedNotification skipped: already notifying"
-        );
+        console.log("sendToolsChangedNotification skipped: already notifying");
       }
       return;
     }
@@ -7780,10 +7763,10 @@ var UnityEventHandler = class {
         params: {}
       });
       if (this.isDevelopment) {
-        debugToFile("[Unity Event Handler] tools/list_changed notification sent");
+        console.log("tools/list_changed notification sent");
       }
     } catch (error) {
-      errorToFile("[Unity Event Handler] Failed to send tools changed notification:", error);
+      console.error("Failed to send tools changed notification:", error);
     } finally {
       this.isNotifying = false;
     }
@@ -7793,31 +7776,31 @@ var UnityEventHandler = class {
    */
   setupSignalHandlers() {
     process.on("SIGINT", () => {
-      infoToFile("[Unity Event Handler] Received SIGINT, shutting down...");
+      console.log("Received SIGINT, shutting down...");
       this.gracefulShutdown();
     });
     process.on("SIGTERM", () => {
-      infoToFile("[Unity Event Handler] Received SIGTERM, shutting down...");
+      console.log("Received SIGTERM, shutting down...");
       this.gracefulShutdown();
     });
     process.on("SIGHUP", () => {
-      infoToFile("[Unity Event Handler] Received SIGHUP, shutting down...");
+      console.log("Received SIGHUP, shutting down...");
       this.gracefulShutdown();
     });
     process.stdin.on("close", () => {
-      infoToFile("[Unity Event Handler] STDIN closed, shutting down...");
+      console.log("STDIN closed, shutting down...");
       this.gracefulShutdown();
     });
     process.stdin.on("end", () => {
-      infoToFile("[Unity Event Handler] STDIN ended, shutting down...");
+      console.log("STDIN ended, shutting down...");
       this.gracefulShutdown();
     });
     process.on("uncaughtException", (error) => {
-      errorToFile("[Unity Event Handler] Uncaught exception:", error);
+      console.error("Uncaught exception:", error);
       this.gracefulShutdown();
     });
     process.on("unhandledRejection", (reason, promise) => {
-      errorToFile("[Unity Event Handler] Unhandled rejection at:", promise, "reason:", reason);
+      console.error("Unhandled rejection at:", promise, "reason:", reason);
       this.gracefulShutdown();
     });
   }
@@ -7830,16 +7813,16 @@ var UnityEventHandler = class {
       return;
     }
     this.isShuttingDown = true;
-    infoToFile("[Unity Event Handler] Starting graceful shutdown...");
+    console.log("Starting graceful shutdown...");
     try {
       this.connectionManager.disconnect();
       if (global.gc) {
         global.gc();
       }
     } catch (error) {
-      errorToFile("[Unity Event Handler] Error during cleanup:", error);
+      console.error("Error during cleanup:", error);
     }
-    infoToFile("[Unity Event Handler] Graceful shutdown completed");
+    console.log("Graceful shutdown completed");
     process.exit(0);
   }
   /**
@@ -8014,7 +7997,10 @@ var UnityMcpServer = class {
             VibeLogger.logError(
               "mcp_unity_connection_timeout",
               "Unity connection timeout",
-              { client_name: clientName, error_message: error.message },
+              {
+                client_name: clientName,
+                error_message: error instanceof Error ? error.message : String(error)
+              },
               void 0,
               "Unity connection timed out - check Unity MCP bridge status"
             );
@@ -8040,7 +8026,7 @@ var UnityMcpServer = class {
             VibeLogger.logError(
               "mcp_unity_connection_init_failed",
               "Unity connection initialization failed",
-              { error_message: error.message },
+              { error_message: error instanceof Error ? error.message : String(error) },
               void 0,
               "Unity connection could not be established - check Unity MCP bridge"
             );

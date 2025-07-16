@@ -1,3 +1,5 @@
+import { VibeLogger } from './utils/vibe-logger.js';
+
 /**
  * Manages TCP connection state without polling
  * Follows Single Responsibility Principle - only handles connection state monitoring
@@ -37,7 +39,11 @@ export class ConnectionManager {
       try {
         this.onReconnectedCallback();
       } catch (error) {
-        // Error in reconnection callback
+        VibeLogger.logError(
+          'connection_manager_reconnect_error',
+          'Error in reconnection callback',
+          { error },
+        );
       }
     }
   }
@@ -50,7 +56,11 @@ export class ConnectionManager {
       try {
         this.onConnectionLostCallback();
       } catch (error) {
-        // Error in connection lost callback
+        VibeLogger.logError(
+          'connection_manager_connection_lost_error',
+          'Error in connection lost callback',
+          { error },
+        );
       }
     }
   }

@@ -142,12 +142,12 @@ export class MessageHandler {
             this.handleResponse(message as JsonRpcResponse);
           }
         } catch (parseError) {
-          // Error: Error parsing JSON frame: ${parseError}
-          // Error: Problematic frame: ${frame}
+          console.error('Error parsing JSON frame:', parseError);
+          console.error('Problematic frame:', frame);
         }
       }
     } catch (error) {
-      // Error: Error processing incoming data: ${error}
+      console.error('Error processing incoming data:', error);
     }
   }
 
@@ -162,7 +162,7 @@ export class MessageHandler {
       try {
         handler(params);
       } catch (error) {
-        // Error: Error in notification handler for ${method}: ${error}
+        console.error(`Error in notification handler for ${method}:`, error);
       }
     }
   }
@@ -197,7 +197,7 @@ export class MessageHandler {
         pending.resolve(response);
       }
     } else {
-      // Warning: Received response for unknown request ID: ${id}
+      console.error(`Received response for unknown request ID: ${id}`);
     }
   }
 

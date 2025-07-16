@@ -299,7 +299,7 @@ namespace io.github.hatayama.uLoopMCP
                 unity_version = Application.unityVersion,
                 platform = Application.platform.ToString(),
                 editor_mode = Application.isEditor ? "Editor" : "Runtime",
-                domain_reload_state = McpSessionManager.instance.IsDomainReloadInProgress ? "InProgress" : "Idle"
+                domain_reload_state = McpSessionManager.instance?.IsDomainReloadInProgress == true ? "InProgress" : "Idle"
             };
         }
     }
