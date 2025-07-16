@@ -21,7 +21,7 @@ namespace io.github.hatayama.uLoopMCP
 #if UNITY_6000_0_OR_NEWER
                 ConsoleWindowUtility.consoleLogsChanged += value;
 #else
-                GenelicConsoleWindowUtility.consoleLogsChanged += value;
+                GenericConsoleWindowUtility.consoleLogsChanged += value;
 #endif
             }
             remove
@@ -29,7 +29,7 @@ namespace io.github.hatayama.uLoopMCP
 #if UNITY_6000_0_OR_NEWER
                 ConsoleWindowUtility.consoleLogsChanged -= value;
 #else
-                GenelicConsoleWindowUtility.consoleLogsChanged -= value;
+                GenericConsoleWindowUtility.consoleLogsChanged -= value;
 #endif
             }
         }
@@ -45,7 +45,7 @@ namespace io.github.hatayama.uLoopMCP
 #if UNITY_6000_0_OR_NEWER
             ConsoleWindowUtility.GetConsoleLogCounts(out errorCount, out warningCount, out logCount);
 #else
-            GenelicConsoleWindowUtility.GetConsoleLogCounts(out errorCount, out warningCount, out logCount);
+            GenericConsoleWindowUtility.GetConsoleLogCounts(out errorCount, out warningCount, out logCount);
 #endif
         }
 
@@ -57,7 +57,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void ClearConsole()
         {
-            GenelicConsoleWindowUtility.ClearConsole();
+            GenericConsoleWindowUtility.ClearConsole();
         }
 
         /// <summary>
