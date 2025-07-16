@@ -276,7 +276,6 @@ export class UnityDiscovery {
       'Check Unity console for MCP server status and verify port configuration.'
     );
   }
-  }
 
   /**
    * Force immediate Unity discovery for connection recovery

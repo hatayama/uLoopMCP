@@ -17,7 +17,7 @@
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "security:check": "eslint src --ext .ts",
-    "security:fix": "eslint src --ext .ts --fix", 
+    "security:fix": "eslint src --ext .ts --fix",
     "security:only": "eslint src --ext .ts --config .eslintrc.security.json",
     "security:sarif": "eslint src --ext .ts -f @microsoft/eslint-formatter-sarif -o security-results.sarif",
     "security:sarif-only": "eslint src --ext .ts --config .eslintrc.security.json -f @microsoft/eslint-formatter-sarif -o typescript-security.sarif",
@@ -58,6 +58,8 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.12.2",
+    "@types/uuid": "^10.0.0",
+    "uuid": "^11.1.0",
     "zod": "3.25.64"
   },
   "devDependencies": {

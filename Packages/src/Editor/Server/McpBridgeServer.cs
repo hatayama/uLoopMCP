@@ -398,6 +398,19 @@ namespace io.github.hatayama.uLoopMCP
         private async Task HandleClient(TcpClient client, CancellationToken cancellationToken)
         {
             string clientEndpoint = client.Client.RemoteEndPoint?.ToString() ?? McpServerConfig.UNKNOWN_CLIENT_ENDPOINT;
+            string correlationId = VibeLogger.GenerateCorrelationId();
+            
+            VibeLogger.LogInfo(
+                "mcp_client_connection_start",
+                "Starting client connection handling",
+                new {
+                    client_endpoint = clientEndpoint,
+                    client_connected = client.Connected,
+                    cancellation_requested = cancellationToken.IsCancellationRequested
+                },
+                correlationId,
+                "New client connection initiated. Starting message handling loop."
+            );
             
             // Initialize new components for Content-Length framing
             DynamicBufferManager bufferManager = null;
@@ -408,10 +421,35 @@ namespace io.github.hatayama.uLoopMCP
                 using (client)
                 using (NetworkStream stream = client.GetStream())
                 {
+                    VibeLogger.LogInfo(
+                        "mcp_network_stream_acquired",
+                        "NetworkStream acquired for client",
+                        new {
+                            client_endpoint = clientEndpoint,
+                            stream_can_read = stream.CanRead,
+                            stream_can_write = stream.CanWrite,
+                            stream_can_timeout = stream.CanTimeout
+                        },
+                        correlationId,
+                        "NetworkStream successfully acquired and ready for communication."
+                    );
+                    
                     // Check for existing connection from same endpoint and close it
                     string clientKey = GenerateClientKey(clientEndpoint);
                     if (connectedClients.TryGetValue(clientKey, out ConnectedClient existingClient))
                     {
+                        VibeLogger.LogWarning(
+                            "mcp_existing_client_cleanup",
+                            "Closing existing connection from same endpoint",
+                            new {
+                                client_endpoint = clientEndpoint,
+                                existing_client_connected_at = existingClient.ConnectedAt,
+                                client_key = clientKey
+                            },
+                            correlationId,
+                            "Duplicate connection detected. Closing previous connection before establishing new one."
+                        );
+                        
                         existingClient.Stream?.Close();
                         connectedClients.TryRemove(clientKey, out _);
                     }
@@ -419,6 +457,19 @@ namespace io.github.hatayama.uLoopMCP
                     // Add new client to connected clients for notification broadcasting
                     ConnectedClient connectedClient = new ConnectedClient(clientEndpoint, stream);
                     bool addResult = connectedClients.TryAdd(clientKey, connectedClient);
+                    
+                    VibeLogger.LogInfo(
+                        "mcp_client_registered",
+                        "Client registered in connected clients collection",
+                        new {
+                            client_endpoint = clientEndpoint,
+                            client_key = clientKey,
+                            add_result = addResult,
+                            total_connected_clients = connectedClients.Count
+                        },
+                        correlationId,
+                        "Client successfully registered for notification broadcasting."
+                    );
                     
                     // Initialize new framing components
                     bufferManager = new DynamicBufferManager();
@@ -453,12 +504,80 @@ namespace io.github.hatayama.uLoopMCP
                             // Only send response if it's not null (notifications return null)
                             if (!string.IsNullOrEmpty(responseJson))
                             {
-                                McpLogger.LogDebug($"[McpBridgeServer] Sending response to {clientEndpoint}: {responseJson}");
+                                VibeLogger.LogInfo(
+                                    "mcp_response_sending_start",
+                                    "Starting response send to client",
+                                    new {
+                                        client_endpoint = clientEndpoint,
+                                        response_length = responseJson.Length,
+                                        stream_can_write = stream.CanWrite,
+                                        client_connected = client.Connected,
+                                        cancellation_requested = cancellationToken.IsCancellationRequested
+                                    },
+                                    correlationId,
+                                    "About to send JSON-RPC response to client. Checking stream state before write."
+                                );
+                                
+                                // Check stream and client state before attempting write
+                                if (!stream.CanWrite || !client.Connected || cancellationToken.IsCancellationRequested)
+                                {
+                                    VibeLogger.LogWarning(
+                                        "mcp_response_send_skipped",
+                                        "Skipping response send due to invalid stream or client state",
+                                        new {
+                                            client_endpoint = clientEndpoint,
+                                            stream_can_write = stream.CanWrite,
+                                            client_connected = client.Connected,
+                                            cancellation_requested = cancellationToken.IsCancellationRequested,
+                                            reason = !stream.CanWrite ? "stream_not_writable" : 
+                                                    !client.Connected ? "client_disconnected" : "cancellation_requested"
+                                        },
+                                        correlationId,
+                                        "Response send skipped to prevent ObjectDisposedException or write to closed connection.",
+                                        "This is normal behavior during domain reload or client disconnection."
+                                    );
+                                    return; // Skip the write operation
+                                }
+                                
                                 // Send response with Content-Length framing
                                 string framedResponse = CreateContentLengthFrame(responseJson);
                                 byte[] responseData = Encoding.UTF8.GetBytes(framedResponse);
-                                McpLogger.LogDebug($"[McpBridgeServer] Framed response size: {responseData.Length} bytes, Content-Length: {Encoding.UTF8.GetByteCount(responseJson)}");
-                                await stream.WriteAsync(responseData, 0, responseData.Length, cancellationToken);
+                                
+                                try
+                                {
+                                    await stream.WriteAsync(responseData, 0, responseData.Length, cancellationToken);
+                                    
+                                    VibeLogger.LogInfo(
+                                        "mcp_response_sent_success",
+                                        "Response sent successfully to client",
+                                        new {
+                                            client_endpoint = clientEndpoint,
+                                            bytes_sent = responseData.Length,
+                                            content_length = Encoding.UTF8.GetByteCount(responseJson)
+                                        },
+                                        correlationId,
+                                        "JSON-RPC response successfully written to NetworkStream."
+                                    );
+                                }
+                                catch (ObjectDisposedException ex)
+                                {
+                                    VibeLogger.LogError(
+                                        "mcp_response_send_disposed_error",
+                                        "Cannot write to disposed NetworkStream",
+                                        new {
+                                            client_endpoint = clientEndpoint,
+                                            exception_message = ex.Message,
+                                            object_name = ex.ObjectName,
+                                            client_connected = client.Connected,
+                                            stream_can_write = false, // Stream is disposed
+                                            cancellation_requested = cancellationToken.IsCancellationRequested
+                                        },
+                                        correlationId,
+                                        "NetworkStream was disposed while trying to send response. This indicates a connection cleanup race condition.",
+                                        "Investigate connection disposal timing during domain reload cycles."
+                                    );
+                                    throw; // Re-throw to maintain existing error handling
+                                }
                             }
                         }
                         
@@ -495,11 +614,36 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
+                VibeLogger.LogException(
+                    "mcp_client_handling_error",
+                    ex,
+                    new {
+                        client_endpoint = clientEndpoint,
+                        client_connected = client?.Connected,
+                        exception_type = ex.GetType().Name,
+                        domain_reload_in_progress = McpSessionManager.instance.IsDomainReloadInProgress
+                    },
+                    correlationId,
+                    "Unexpected error occurred while handling client connection.",
+                    "Analyze the exception type and timing relative to domain reload cycles."
+                );
+                
                 McpLogger.LogError($"Error handling client {clientEndpoint}: {ex.Message}\n{ex.StackTrace}");
                 OnError?.Invoke(ex.Message);
             }
             finally
             {
+                VibeLogger.LogInfo(
+                    "mcp_client_cleanup_start",
+                    "Starting client connection cleanup",
+                    new {
+                        client_endpoint = clientEndpoint,
+                        total_connected_clients_before = connectedClients.Count
+                    },
+                    correlationId,
+                    "Client connection handling completed. Starting cleanup process."
+                );
+                
                 // Dispose of framing components
                 try
                 {
@@ -508,6 +652,16 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 catch (Exception ex)
                 {
+                    VibeLogger.LogWarning(
+                        "mcp_framing_components_dispose_error",
+                        "Error disposing framing components",
+                        new {
+                            client_endpoint = clientEndpoint,
+                            exception_message = ex.Message
+                        },
+                        correlationId,
+                        "Failed to properly dispose message reassembler or buffer manager."
+                    );
                     McpLogger.LogWarning($"Error disposing framing components for client {clientEndpoint}: {ex.Message}");
                 }
                 
@@ -522,10 +676,32 @@ namespace io.github.hatayama.uLoopMCP
                     string clientKey = GenerateClientKey(clientToRemove.Endpoint);
                     removeResult = connectedClients.TryRemove(clientKey, out ConnectedClient removedClient);
                     
+                    VibeLogger.LogInfo(
+                        "mcp_client_removed_from_collection",
+                        "Client removed from connected clients collection",
+                        new {
+                            client_endpoint = clientEndpoint,
+                            client_key = clientKey,
+                            remove_result = removeResult,
+                            total_connected_clients_after = connectedClients.Count
+                        },
+                        correlationId,
+                        "Client connection cleanup completed successfully."
+                    );
                 }
                 else
                 {
-                    // Client not found in collection - might have been removed concurrently
+                    VibeLogger.LogWarning(
+                        "mcp_client_not_found_in_collection",
+                        "Client not found in connected clients collection during cleanup",
+                        new {
+                            client_endpoint = clientEndpoint,
+                            total_connected_clients = connectedClients.Count
+                        },
+                        correlationId,
+                        "Client was not found in the collection during cleanup. May have been removed concurrently.",
+                        "Check for race conditions in client connection management."
+                    );
                 }
                 
                 
