@@ -42,13 +42,13 @@ export class ContentLengthFramer {
 
     const contentLength = Buffer.byteLength(jsonContent, ContentLengthFramer.ENCODING_UTF8);
 
-    if (contentLength > this.MAX_MESSAGE_SIZE) {
+    if (contentLength > ContentLengthFramer.MAX_MESSAGE_SIZE) {
       throw new Error(
-        `Message size ${contentLength} exceeds maximum allowed size ${this.MAX_MESSAGE_SIZE}`,
+        `Message size ${contentLength} exceeds maximum allowed size ${ContentLengthFramer.MAX_MESSAGE_SIZE}`,
       );
     }
 
-    return `${this.CONTENT_LENGTH_HEADER} ${contentLength}${this.HEADER_SEPARATOR}${jsonContent}`;
+    return `${ContentLengthFramer.CONTENT_LENGTH_HEADER} ${contentLength}${ContentLengthFramer.HEADER_SEPARATOR}${jsonContent}`;
   }
 
   /**
@@ -67,7 +67,7 @@ export class ContentLengthFramer {
 
     try {
       // Find the header separator
-      const separatorIndex = data.indexOf(this.HEADER_SEPARATOR);
+      const separatorIndex = data.indexOf(ContentLengthFramer.HEADER_SEPARATOR);
       if (separatorIndex === -1) {
         // Header not complete yet
         return {
@@ -79,11 +79,10 @@ export class ContentLengthFramer {
 
       // Extract header section
       const headerSection = data.substring(0, separatorIndex);
-      const headerLength = separatorIndex + this.HEADER_SEPARATOR.length;
+      const headerLength = separatorIndex + ContentLengthFramer.HEADER_SEPARATOR.length;
 
       // Parse Content-Length from header
-      // Parse Content-Length from header
-      const contentLength = this.parseContentLength(headerSection);
+      const contentLength = ContentLengthFramer.parseContentLength(headerSection);
       if (contentLength === -1) {
         return {
           contentLength: -1,
@@ -132,7 +131,10 @@ export class ContentLengthFramer {
 
     try {
       // Find the header separator in Buffer
-      const separatorBuffer = Buffer.from(this.HEADER_SEPARATOR, ContentLengthFramer.ENCODING_UTF8);
+      const separatorBuffer = Buffer.from(
+        ContentLengthFramer.HEADER_SEPARATOR,
+        ContentLengthFramer.ENCODING_UTF8,
+      );
       const separatorIndex = data.indexOf(separatorBuffer);
       if (separatorIndex === -1) {
         // Header not complete yet
@@ -150,7 +152,7 @@ export class ContentLengthFramer {
       const headerLength = separatorIndex + separatorBuffer.length;
 
       // Parse Content-Length from header
-      const contentLength = this.parseContentLength(headerSection);
+      const contentLength = ContentLengthFramer.parseContentLength(headerSection);
       if (contentLength === -1) {
         return {
           contentLength: -1,
@@ -295,7 +297,7 @@ export class ContentLengthFramer {
    * @returns True if the content length is valid, false otherwise
    */
   static isValidContentLength(contentLength: number): boolean {
-    return contentLength >= 0 && contentLength <= this.MAX_MESSAGE_SIZE;
+    return contentLength >= 0 && contentLength <= ContentLengthFramer.MAX_MESSAGE_SIZE;
   }
 
   /**
@@ -314,18 +316,10 @@ export class ContentLengthFramer {
     for (const line of lines) {
       const trimmedLine = line.trim();
 
-      // More robust check for Content-Length header (case-insensitive)
-      // Handle TCP fragmentation where header might be truncated
+      // Check for Content-Length header (case-insensitive)
+      // Use more precise matching to avoid false positives
       const lowerLine = trimmedLine.toLowerCase();
-      if (
-        lowerLine.includes('content-length:') ||
-        lowerLine.includes('-length:') ||
-        lowerLine.includes('ength:') ||
-        lowerLine.includes('ngth:') ||
-        lowerLine.includes('gth:') ||
-        lowerLine.includes('th:') ||
-        lowerLine.includes('h:')
-      ) {
+      if (lowerLine.startsWith('content-length:')) {
         // Extract the value after the colon
         const colonIndex = trimmedLine.indexOf(':');
         if (colonIndex === -1 || colonIndex >= trimmedLine.length - 1) {
@@ -343,9 +337,9 @@ export class ContentLengthFramer {
           return -1;
         }
 
-        if (!this.isValidContentLength(parsedValue)) {
+        if (!ContentLengthFramer.isValidContentLength(parsedValue)) {
           errorToFile(
-            `${ContentLengthFramer.LOG_PREFIX} Content-Length value ${parsedValue} exceeds maximum allowed size ${this.MAX_MESSAGE_SIZE}`,
+            `${ContentLengthFramer.LOG_PREFIX} Content-Length value ${parsedValue} exceeds maximum allowed size ${ContentLengthFramer.MAX_MESSAGE_SIZE}`,
           );
           return -1;
         }
@@ -360,7 +354,7 @@ export class ContentLengthFramer {
     );
     errorToFile(`${ContentLengthFramer.LOG_PREFIX} Header section lines for debugging:`);
     lines.forEach((line, index) => {
-      if (line !== undefined) {
+      if (line !== undefined && typeof line === 'string') {
         errorToFile(
           `${ContentLengthFramer.LOG_PREFIX} Line ${index}: "${line}" (length: ${line.length}, toLowerCase: "${line.toLowerCase()}")`,
         );

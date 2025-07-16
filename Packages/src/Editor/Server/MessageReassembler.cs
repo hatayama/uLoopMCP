@@ -162,8 +162,16 @@ namespace io.github.hatayama.uLoopMCP
                 throw new InvalidOperationException($"Buffer underflow: trying to read {expectedContentLength} bytes at offset {headerLength}, but only {currentDataLength} bytes available.");
             }
             
-            // Extract the JSON content
-            string jsonContent = Encoding.UTF8.GetString(assemblyBuffer, headerLength, expectedContentLength);
+            // Extract the JSON content with proper error handling
+            string jsonContent;
+            try
+            {
+                jsonContent = Encoding.UTF8.GetString(assemblyBuffer, headerLength, expectedContentLength);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new InvalidOperationException($"Invalid UTF-8 sequence detected in message content at offset {headerLength}, length {expectedContentLength}: {ex.Message}", ex);
+            }
             
             // Log before resetting state
             McpLogger.LogDebug($"[MessageReassembler] Extracted complete message of {expectedContentLength} bytes");
@@ -324,9 +332,17 @@ namespace io.github.hatayama.uLoopMCP
                 return string.Empty;
             }
             
-            // Remove try-catch that hides exceptions - let encoding errors bubble up
+            // Safe UTF-8 decoding with proper error handling
             int previewLength = Math.Min(currentDataLength, maxLength);
-            string preview = Encoding.UTF8.GetString(assemblyBuffer, 0, previewLength);
+            string preview;
+            try
+            {
+                preview = Encoding.UTF8.GetString(assemblyBuffer, 0, previewLength);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new InvalidOperationException($"Invalid UTF-8 sequence detected in buffer preview (length {previewLength}): {ex.Message}", ex);
+            }
             
             if (currentDataLength > maxLength)
             {

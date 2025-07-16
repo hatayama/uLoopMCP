@@ -31,20 +31,18 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
             
-            // Convert buffer to string for header parsing
-            string data = Encoding.UTF8.GetString(buffer, 0, length);
-            
-            // Find the header separator
-            int separatorIndex = data.IndexOf(HEADER_SEPARATOR, StringComparison.Ordinal);
+            // Find the header separator without converting entire buffer to string
+            byte[] separatorBytes = Encoding.UTF8.GetBytes(HEADER_SEPARATOR);
+            int separatorIndex = FindByteSequence(buffer, length, separatorBytes);
             if (separatorIndex == -1)
             {
                 // Header not complete yet
                 return false;
             }
             
-            // Extract header section
-            string headerSection = data.Substring(0, separatorIndex);
-            int tempHeaderLength = separatorIndex + HEADER_SEPARATOR.Length;
+            // Extract header section only - convert only the header part to string
+            string headerSection = Encoding.UTF8.GetString(buffer, 0, separatorIndex);
+            int tempHeaderLength = separatorIndex + separatorBytes.Length;
             
             // Parse Content-Length from header
             bool parseResult = TryParseContentLength(headerSection, out contentLength);
@@ -171,8 +169,37 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
-            McpLogger.LogError($"[FrameParser] Content-Length header not found in: {headerSection}");
+            McpLogger.LogError("[FrameParser] Content-Length header not found in header section");
             return false;
+        }
+        
+        /// <summary>
+        /// Finds the first occurrence of a byte sequence in a buffer.
+        /// </summary>
+        /// <param name="buffer">The buffer to search in</param>
+        /// <param name="bufferLength">The length of valid data in the buffer</param>
+        /// <param name="sequence">The byte sequence to find</param>
+        /// <returns>The index of the first occurrence, or -1 if not found</returns>
+        private static int FindByteSequence(byte[] buffer, int bufferLength, byte[] sequence)
+        {
+            if (buffer == null || sequence == null || sequence.Length == 0 || bufferLength < sequence.Length)
+                return -1;
+
+            for (int i = 0; i <= bufferLength - sequence.Length; i++)
+            {
+                bool found = true;
+                for (int j = 0; j < sequence.Length; j++)
+                {
+                    if (buffer[i + j] != sequence[j])
+                    {
+                        found = false;
+                        break;
+                    }
+                }
+                if (found)
+                    return i;
+            }
+            return -1;
         }
     }
     

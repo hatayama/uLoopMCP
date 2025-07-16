@@ -148,9 +148,9 @@ namespace io.github.hatayama.uLoopMCP
             byte[] largeBuffer = bufferManager.GetBuffer(2048);
             
             // Assert
-            // The buffer manager should reuse the larger buffer (4096) for the 2048 request
-            // since 4096 >= 2048, so they should be the same reference
-            Assert.AreSame(smallBuffer, largeBuffer);
+            // The buffer manager should create a new buffer since the pooled buffer (1024) 
+            // is smaller than the required size (2048)
+            Assert.AreNotSame(smallBuffer, largeBuffer);
             Assert.GreaterOrEqual(largeBuffer.Length, 2048);
         }
         

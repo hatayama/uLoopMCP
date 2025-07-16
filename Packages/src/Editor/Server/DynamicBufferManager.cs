@@ -51,7 +51,7 @@ namespace io.github.hatayama.uLoopMCP
             byte[] suitableBuffer = null;
             var tempBuffers = new List<byte[]>();
             
-            // Look for a suitable buffer
+            // Look for a suitable buffer - stop when found
             while (bufferPool.TryDequeue(out byte[] pooledBuffer))
             {
                 lock (lockObject)
@@ -62,6 +62,7 @@ namespace io.github.hatayama.uLoopMCP
                 if (pooledBuffer.Length >= requiredSize && suitableBuffer == null)
                 {
                     suitableBuffer = pooledBuffer;
+                    break; // Stop searching once we find a suitable buffer
                 }
                 else
                 {
@@ -251,12 +252,13 @@ namespace io.github.hatayama.uLoopMCP
             
             lock (lockObject)
             {
+                int buffersReleased = 0;
                 while (bufferPool.TryDequeue(out _))
                 {
-                    currentPoolSize--;
+                    buffersReleased++;
                 }
                 
-                McpLogger.LogInfo($"[DynamicBufferManager] Cleared buffer pool, released {currentPoolSize} buffers");
+                McpLogger.LogInfo($"[DynamicBufferManager] Cleared buffer pool, released {buffersReleased} buffers");
                 currentPoolSize = 0;
             }
         }

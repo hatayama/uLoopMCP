@@ -102,8 +102,7 @@ export class DynamicBuffer {
   extractAllFrames(): string[] {
     const frames: string[] = [];
 
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    while (this.buffer.length > 0) {
       const result = this.extractFrame();
       if (!result.extracted || !result.frame) {
         break;
