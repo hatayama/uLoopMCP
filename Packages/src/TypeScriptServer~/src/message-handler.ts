@@ -113,15 +113,11 @@ export class MessageHandler {
    */
   handleIncomingData(data: Buffer | string): void {
     try {
-      // Debug: Received ${data instanceof Buffer ? data.length : data.length} bytes of data
-
       // Append new data to dynamic buffer (Buffer or string - DynamicBuffer handles both)
       this.dynamicBuffer.append(data);
-      // Debug: Data appended to buffer successfully
 
       // Extract all complete frames
       const frames = this.dynamicBuffer.extractAllFrames();
-      // Debug: Extracted ${frames.length} complete frames
 
       for (const frame of frames) {
         if (!frame || frame.trim() === '') {

@@ -5796,13 +5796,15 @@ var VibeLogger = class _VibeLogger {
     if (_VibeLogger.memoryLogs.length > _VibeLogger.MAX_MEMORY_LOGS) {
       _VibeLogger.memoryLogs.shift();
     }
-    _VibeLogger.saveLogToFile(logEntry);
+    _VibeLogger.saveLogToFile(logEntry).catch((error) => {
+      console.error(`[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`);
+    });
     console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
   }
   /**
    * Save log entry to file with retry mechanism for concurrent access
    */
-  static saveLogToFile(logEntry) {
+  static async saveLogToFile(logEntry) {
     try {
       if (!fs.existsSync(_VibeLogger.LOG_DIRECTORY)) {
         fs.mkdirSync(_VibeLogger.LOG_DIRECTORY, { recursive: true });
@@ -5827,7 +5829,7 @@ var VibeLogger = class _VibeLogger {
         } catch (error) {
           if (_VibeLogger.isFileSharingViolation(error) && retry < maxRetries - 1) {
             const delayMs = baseDelayMs * Math.pow(2, retry);
-            _VibeLogger.sleep(delayMs);
+            await _VibeLogger.sleep(delayMs);
           } else {
             throw error;
           }
@@ -5862,12 +5864,10 @@ var VibeLogger = class _VibeLogger {
     return error && typeof error === "object" && "code" in error && typeof error.code === "string" && sharingViolationCodes.includes(error.code);
   }
   /**
-   * Synchronous sleep function for retry delays
+   * Asynchronous sleep function for retry delays
    */
-  static sleep(ms) {
-    const start = Date.now();
-    while (Date.now() - start < ms) {
-    }
+  static async sleep(ms) {
+    return new Promise((resolve2) => setTimeout(resolve2, ms));
   }
   /**
    * Get current environment information

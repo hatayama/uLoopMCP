@@ -227,8 +227,13 @@ export class VibeLogger {
       VibeLogger.memoryLogs.shift();
     }
 
-    // Save to file
-    VibeLogger.saveLogToFile(logEntry);
+    // Save to file (fire and forget to avoid blocking)
+    VibeLogger.saveLogToFile(logEntry).catch((error) => {
+      // Fallback to console if file logging fails
+      console.error(
+        `[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
 
     // Also output to console when debugging
     console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
@@ -237,7 +242,7 @@ export class VibeLogger {
   /**
    * Save log entry to file with retry mechanism for concurrent access
    */
-  private static saveLogToFile(logEntry: VibeLogEntry): void {
+  private static async saveLogToFile(logEntry: VibeLogEntry): Promise<void> {
     try {
       if (!fs.existsSync(VibeLogger.LOG_DIRECTORY)) {
         fs.mkdirSync(VibeLogger.LOG_DIRECTORY, { recursive: true });
@@ -270,7 +275,7 @@ export class VibeLogger {
           if (VibeLogger.isFileSharingViolation(error) && retry < maxRetries - 1) {
             // Wait with exponential backoff for sharing violations
             const delayMs = baseDelayMs * Math.pow(2, retry);
-            VibeLogger.sleep(delayMs);
+            await VibeLogger.sleep(delayMs);
           } else {
             // For other errors or final retry, throw
             throw error;
@@ -313,13 +318,10 @@ export class VibeLogger {
   }
 
   /**
-   * Synchronous sleep function for retry delays
+   * Asynchronous sleep function for retry delays
    */
-  private static sleep(ms: number): void {
-    const start = Date.now();
-    while (Date.now() - start < ms) {
-      // Busy wait for specified duration
-    }
+  private static async sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
