@@ -287,7 +287,10 @@ export class VibeLogger {
         throw new Error('Invalid file name detected');
       }
 
-      const filePath = path.normalize(path.join(logDirectory, fileName));
+      const filePath = path.resolve(logDirectory, fileName);
+      if (!filePath.startsWith(logDirectory)) {
+        throw new Error('Resolved file path escapes the log directory');
+      }
 
       // Validate the final file path for security
       if (!VibeLogger.validateFilePath(filePath)) {
@@ -307,15 +310,20 @@ export class VibeLogger {
             throw new Error('Invalid rotated file name detected');
           }
 
-          const rotatedFilePath = path.normalize(path.join(logDirectory, rotatedFileName));
+          const rotatedFilePath = path.resolve(logDirectory, rotatedFileName);
 
-          // Validate rotated file path for security
-          if (!VibeLogger.validateFilePath(rotatedFilePath)) {
-            throw new Error('Invalid rotated file path detected');
+          // Ensure rotated file path is within the allowed directory
+          if (!rotatedFilePath.startsWith(path.resolve(logDirectory))) {
+            throw new Error('Rotated file path escapes the allowed directory');
+          }
+
+          const sanitizedFilePath = path.resolve(logDirectory, path.basename(filePath));
+          if (!sanitizedFilePath.startsWith(path.resolve(logDirectory))) {
+            throw new Error('Original file path escapes the allowed directory');
           }
 
           // eslint-disable-next-line security/detect-non-literal-fs-filename
-          fs.renameSync(filePath, rotatedFilePath);
+          fs.renameSync(sanitizedFilePath, rotatedFilePath);
         }
       }
 

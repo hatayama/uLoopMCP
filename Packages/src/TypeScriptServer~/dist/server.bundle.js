@@ -5836,7 +5836,10 @@ var VibeLogger = class _VibeLogger {
       if (!_VibeLogger.validateFileName(fileName)) {
         throw new Error("Invalid file name detected");
       }
-      const filePath = path.normalize(path.join(logDirectory, fileName));
+      const filePath = path.resolve(logDirectory, fileName);
+      if (!filePath.startsWith(logDirectory)) {
+        throw new Error("Resolved file path escapes the log directory");
+      }
       if (!_VibeLogger.validateFilePath(filePath)) {
         throw new Error("Invalid file path detected");
       }
@@ -5847,11 +5850,15 @@ var VibeLogger = class _VibeLogger {
           if (!_VibeLogger.validateFileName(rotatedFileName)) {
             throw new Error("Invalid rotated file name detected");
           }
-          const rotatedFilePath = path.normalize(path.join(logDirectory, rotatedFileName));
-          if (!_VibeLogger.validateFilePath(rotatedFilePath)) {
-            throw new Error("Invalid rotated file path detected");
+          const rotatedFilePath = path.resolve(logDirectory, rotatedFileName);
+          if (!rotatedFilePath.startsWith(path.resolve(logDirectory))) {
+            throw new Error("Rotated file path escapes the allowed directory");
           }
-          fs.renameSync(filePath, rotatedFilePath);
+          const sanitizedFilePath = path.resolve(logDirectory, path.basename(filePath));
+          if (!sanitizedFilePath.startsWith(path.resolve(logDirectory))) {
+            throw new Error("Original file path escapes the allowed directory");
+          }
+          fs.renameSync(sanitizedFilePath, rotatedFilePath);
         }
       }
       const jsonLog = JSON.stringify(logEntry) + "\n";
