@@ -53,28 +53,23 @@ describe('ContentLengthFramer Large Message Bug', () => {
     });
 
     // Ensure the content is close to 14.6KB (14576 bytes)
-    console.log(`Generated JSON content size: ${largeJsonContent.length} bytes`);
+    expect(largeJsonContent.length).toBeGreaterThan(14000);
 
     // Create Content-Length frame
     const contentLength = Buffer.byteLength(largeJsonContent, 'utf8');
     const frame = `Content-Length: ${contentLength}\r\n\r\n${largeJsonContent}`;
 
-    console.log(`Frame size: ${frame.length} bytes, Content-Length: ${contentLength}`);
+    // Verify frame size is appropriate
+    expect(frame.length).toBeGreaterThan(contentLength);
 
     // Test parseFrame method
     const parseResult = ContentLengthFramer.parseFrame(frame);
 
-    console.log('Parse result:', {
-      contentLength: parseResult.contentLength,
-      headerLength: parseResult.headerLength,
-      isComplete: parseResult.isComplete,
-      expectedTotal: parseResult.headerLength + parseResult.contentLength,
-      actualFrameSize: frame.length,
-    });
-
-    // Assertions
+    // Verify parse result structure
     expect(parseResult.contentLength).toBe(contentLength);
     expect(parseResult.headerLength).toBeGreaterThan(0);
+    expect(parseResult.isComplete).toBe(true);
+    expect(parseResult.headerLength + parseResult.contentLength).toBe(frame.length);
     expect(parseResult.isComplete).toBe(true); // This should be true but currently fails
 
     // Test extractFrame method
@@ -99,20 +94,16 @@ describe('ContentLengthFramer Large Message Bug', () => {
 
     const frame = `Content-Length: ${exactContentLength}\r\n\r\n${jsonContent}`;
 
-    console.log(`Exact test - Frame size: ${frame.length}, Expected: ${exactFrameSize}`);
+    // Verify frame size matches expected size
+    expect(frame.length).toBe(exactFrameSize);
 
     const parseResult = ContentLengthFramer.parseFrame(frame);
 
-    console.log('Exact scenario parse result:', {
-      contentLength: parseResult.contentLength,
-      headerLength: parseResult.headerLength,
-      isComplete: parseResult.isComplete,
-      expectedTotal: parseResult.headerLength + parseResult.contentLength,
-      actualFrameSize: frame.length,
-    });
-
+    // Verify exact scenario parse result
     expect(parseResult.contentLength).toBe(exactContentLength);
+    expect(parseResult.headerLength).toBeGreaterThan(0);
     expect(parseResult.isComplete).toBe(true);
+    expect(parseResult.headerLength + parseResult.contentLength).toBe(frame.length);
   });
 
   test('Frame size calculation edge cases', () => {
@@ -123,14 +114,13 @@ describe('ContentLengthFramer Large Message Bug', () => {
       { contentLength: 1, description: 'Tiny message' },
     ];
 
-    testCases.forEach(({ contentLength, description }) => {
+    testCases.forEach(({ contentLength }) => {
       const jsonContent = 'x'.repeat(contentLength);
       const frame = `Content-Length: ${contentLength}\r\n\r\n${jsonContent}`;
 
       const parseResult = ContentLengthFramer.parseFrame(frame);
 
-      console.log(`${description} - Size: ${frame.length}, isComplete: ${parseResult.isComplete}`);
-
+      // Verify frame parsing results
       expect(parseResult.isComplete).toBe(true);
       expect(parseResult.contentLength).toBe(contentLength);
     });

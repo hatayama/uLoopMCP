@@ -359,11 +359,13 @@ export class ContentLengthFramer {
       `${ContentLengthFramer.LOG_PREFIX} Content-Length header not found in header section (${headerSection.length} chars): ${headerSection.substring(0, ContentLengthFramer.DEBUG_PREVIEW_LENGTH)}${headerSection.length > ContentLengthFramer.DEBUG_PREVIEW_LENGTH ? ContentLengthFramer.PREVIEW_SUFFIX : ''}`,
     );
     errorToFile(`${ContentLengthFramer.LOG_PREFIX} Header section lines for debugging:`);
-    for (let i = 0; i < lines.length; i++) {
-      errorToFile(
-        `${ContentLengthFramer.LOG_PREFIX} Line ${i}: "${lines[i]}" (length: ${lines[i].length}, toLowerCase: "${lines[i].toLowerCase()}")`,
-      );
-    }
+    lines.forEach((line, index) => {
+      if (line !== undefined) {
+        errorToFile(
+          `${ContentLengthFramer.LOG_PREFIX} Line ${index}: "${line}" (length: ${line.length}, toLowerCase: "${line.toLowerCase()}")`,
+        );
+      }
+    });
     return -1;
   }
 }
