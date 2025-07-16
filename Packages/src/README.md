@@ -372,20 +372,6 @@ All tools automatically include the following timing information:
 
 </details>
 
-## Security Settings
-
-> [!IMPORTANT]
-> **Features Disabled by Default**
->
-> The following features are disabled by default because they can execute arbitrary code freely:
-> - `execute-menu-item`: Executing menu items
-> - `run-tests`: Test execution
->
-> To use these features, you need to enable the corresponding settings in the Security Settings of the uLoopMCP window:
-> - **Allow Test Execution**: Enables the `run-tests` tool
-> - **Allow Menu Item Execution**: Enables the `execute-menu-item` tool
-   > Only enable these features in trusted environments.
-
 ## Usage
 1. Select Window > uLoopMCP. A dedicated window will open, so press the "Start Server" button.  
 <img width="335" alt="image" src="https://github.com/user-attachments/assets/4cfd7f26-7739-442d-bad9-b3f6d113a0d7" />

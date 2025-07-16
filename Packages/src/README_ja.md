@@ -370,20 +370,6 @@ UnitySearchが提供する検索プロバイダーを取得します
 - [変更履歴](CHANGELOG.md) - バージョン履歴と更新
 </details>
 
-## セキュリティ設定
-
-> [!IMPORTANT]
-> **デフォルトで無効化されている機能**
->
-> 任意のコードを自由に実行できてしまうため、以下の機能はデフォルトで無効化されています：
-> - `execute-menu-item`: メニュー項目の実行
-> - `run-tests`: テストの実行
->
-> これらの機能を使用するには、uLoopMCPウィンドウのSecurity Settingsで該当する設定を有効にする必要があります：
-> - **Allow Test Execution**: `run-tests`ツールを有効にします
-> - **Allow Menu Item Execution**: `execute-menu-item`ツールを有効にします
-    > これらの機能を有効にする場合は、信頼できる環境でのみ使用してください。
-
 ## 使用方法
 1. Window > uLoopMCPを選択します。専用ウィンドウが開くので、「Start Server」ボタンを押してください。  
 <img width="335" alt="image" src="https://github.com/user-attachments/assets/4cfd7f26-7739-442d-bad9-b3f6d113a0d7" />

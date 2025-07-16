@@ -7,21 +7,21 @@ namespace io.github.hatayama.uLoopMCP
     /// Unity 6 ConsoleWindowUtility API recreation for older Unity versions
     /// Provides event-driven console log monitoring and simple count retrieval
     /// </summary>
-    public static class GenelicConsoleWindowUtility
+    public static class GenericConsoleWindowUtility
     {
-        private static ConsoleLogRetriever logRetriever;
-        private static int lastLogCount = 0;
-        private static int lastErrorCount = 0;
-        private static int lastWarningCount = 0;
-        private static double lastCheckTime = 0;
-        private static readonly double CheckInterval = 1.0; // Check every 1000ms (1 second)
+        private static ConsoleLogRetriever _logRetriever;
+        private static int _lastLogCount = 0;
+        private static int _lastErrorCount = 0;
+        private static int _lastWarningCount = 0;
+        private static double _lastCheckTime = 0;
+        private static readonly double _CheckInterval = 1.0; // Check every 1000ms (1 second)
 
         /// <summary>
         /// Event that fires when console logs change (Unity 6 compatible)
         /// </summary>
         public static event System.Action consoleLogsChanged;
 
-        static GenelicConsoleWindowUtility()
+        static GenericConsoleWindowUtility()
         {
             Initialize();
         }
@@ -31,7 +31,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static void Initialize()
         {
-            logRetriever = new ConsoleLogRetriever();
+            _logRetriever = new ConsoleLogRetriever();
             EditorApplication.update += CheckForLogChanges;
         }
 
@@ -40,12 +40,12 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static void CheckForLogChanges()
         {
-            if (logRetriever == null) return;
+            if (_logRetriever == null) return;
             
             double currentTime = EditorApplication.timeSinceStartup;
-            if (currentTime - lastCheckTime < CheckInterval) return;
+            if (currentTime - _lastCheckTime < _CheckInterval) return;
             
-            lastCheckTime = currentTime;
+            _lastCheckTime = currentTime;
 
             try
             {
@@ -53,11 +53,11 @@ namespace io.github.hatayama.uLoopMCP
                 GetConsoleLogCounts(out int errorCount, out int warningCount, out int logCount);
                 
                 // Check if anything changed
-                if (errorCount != lastErrorCount || warningCount != lastWarningCount || logCount != lastLogCount)
+                if (errorCount != _lastErrorCount || warningCount != _lastWarningCount || logCount != _lastLogCount)
                 {
-                    lastErrorCount = errorCount;
-                    lastWarningCount = warningCount;
-                    lastLogCount = logCount;
+                    _lastErrorCount = errorCount;
+                    _lastWarningCount = warningCount;
+                    _lastLogCount = logCount;
                     
                     // Fire the event
                     consoleLogsChanged?.Invoke();
@@ -67,7 +67,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 Debug.LogError($"Log monitoring failed: {ex.Message}");
                 // Mark as failed and stop monitoring to prevent repeated errors
-                logRetriever = null;
+                _logRetriever = null;
                 EditorApplication.update -= CheckForLogChanges;
                 
                 // This is a critical failure - log monitoring is now broken
@@ -88,20 +88,20 @@ namespace io.github.hatayama.uLoopMCP
             warningCount = 0;
             logCount = 0;
 
-            if (logRetriever == null) return;
+            if (_logRetriever == null) return;
 
             try
             {
                 // Save current mask state
-                int originalMask = logRetriever.GetCurrentMask();
+                int originalMask = _logRetriever.GetCurrentMask();
                 
                 try
                 {
                     // Temporarily set mask to show all log types to get accurate counts
-                    logRetriever.SetMask(7); // Show all: Error(1) + Warning(2) + Log(4) = 7
+                    _logRetriever.SetMask(7); // Show all: Error(1) + Warning(2) + Log(4) = 7
                     
                     // Use Unity's internal GetCount method which respects Console clear state
-                    int totalCount = logRetriever.GetLogCount();
+                    int totalCount = _logRetriever.GetLogCount();
                     
                     if (totalCount == 0)
                     {
@@ -110,7 +110,7 @@ namespace io.github.hatayama.uLoopMCP
                     }
                     
                     // Get all logs and count by type
-                    var allLogs = logRetriever.GetAllLogs();
+                    var allLogs = _logRetriever.GetAllLogs();
                     
                     foreach (LogEntryDto log in allLogs)
                     {
@@ -131,7 +131,7 @@ namespace io.github.hatayama.uLoopMCP
                 finally
                 {
                     // Always restore original mask
-                    logRetriever.SetMask(GetSimpleMaskFromUnityMask(originalMask));
+                    _logRetriever.SetMask(GetSimpleMaskFromUnityMask(originalMask));
                 }
             }
             catch (System.Exception ex)
@@ -150,10 +150,10 @@ namespace io.github.hatayama.uLoopMCP
         {
             try
             {
-                var logEntriesType = System.Reflection.Assembly.GetAssembly(typeof(EditorWindow))
+                var _logEntriesType = System.Reflection.Assembly.GetAssembly(typeof(EditorWindow))
                     .GetType("UnityEditor.LogEntries");
                 
-                var clearMethod = logEntriesType.GetMethod("Clear", 
+                var clearMethod = _logEntriesType.GetMethod("Clear", 
                     System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                 
                 if (clearMethod != null)
@@ -161,9 +161,9 @@ namespace io.github.hatayama.uLoopMCP
                     clearMethod.Invoke(null, null);
                     
                     // Reset our tracking counts
-                    lastLogCount = 0;
-                    lastErrorCount = 0;
-                    lastWarningCount = 0;
+                    _lastLogCount = 0;
+                    _lastErrorCount = 0;
+                    _lastWarningCount = 0;
                     // Fire the change event
                     consoleLogsChanged?.Invoke();
                 }
@@ -183,12 +183,12 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>List of all log entries</returns>
         public static System.Collections.Generic.List<LogEntryDto> GetAllLogs()
         {
-            if (logRetriever == null) 
+            if (_logRetriever == null) 
                 return new System.Collections.Generic.List<LogEntryDto>();
             
             try
             {
-                return logRetriever.GetAllLogs();
+                return _logRetriever.GetAllLogs();
             }
             catch (System.Exception ex)
             {
@@ -205,11 +205,11 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Current console mask</returns>
         public static int GetCurrentMask()
         {
-            if (logRetriever == null) return 0;
+            if (_logRetriever == null) return 0;
             
             try
             {
-                return logRetriever.GetCurrentMask();
+                return _logRetriever.GetCurrentMask();
             }
             catch (System.Exception ex)
             {
@@ -226,11 +226,11 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="mask">Mask value to set</param>
         public static void SetMask(int mask)
         {
-            if (logRetriever == null) return;
+            if (_logRetriever == null) return;
             
             try
             {
-                logRetriever.SetMask(mask);
+                _logRetriever.SetMask(mask);
             }
             catch (System.Exception ex)
             {
