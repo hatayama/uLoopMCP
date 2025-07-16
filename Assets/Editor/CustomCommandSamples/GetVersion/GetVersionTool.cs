@@ -1,8 +1,9 @@
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using io.github.hatayama.uLoopMCP;
 
-namespace io.github.hatayama.uLoopMCP
+namespace Samples
 {
     /// <summary>
     /// GetVersion tool handler

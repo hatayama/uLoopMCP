@@ -1,7 +1,7 @@
-using Newtonsoft.Json;
 using System.ComponentModel;
+using io.github.hatayama.uLoopMCP;
 
-namespace io.github.hatayama.uLoopMCP
+namespace Samples
 {
     /// <summary>
     /// Supported languages for greeting

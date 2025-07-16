@@ -1,8 +1,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using io.github.hatayama.uLoopMCP;
 
-namespace io.github.hatayama.uLoopMCP
+namespace Samples
 {
     /// <summary>
     /// Hello World custom tool - Type-safe implementation using Schema and Response
