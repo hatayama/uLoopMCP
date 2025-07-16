@@ -11,7 +11,7 @@
     },
     "com.unity.ext.nunit": {
       "version": "2.0.3",
-      "depth": 1,
+      "depth": 0,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
