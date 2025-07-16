@@ -260,6 +260,7 @@ socket.on('data', (buffer: Buffer) => {
 - **設定可能なアクセス制御**: Unity Editorセキュリティ設定
 - **セッション管理**: クライアント分離と状態追跡
 
+
 主な責務：
 1. **TCPサーバー（`McpBridgeServer`）の実行**: TypeScriptサーバーからの接続を待ち受け、ツールリクエストを受信
 2. **Unity操作の実行**: 受信したツールリクエストを処理し、プロジェクトのコンパイル、テスト実行、ログ取得などのUnity Editor内での操作を実行
@@ -1081,3 +1082,440 @@ sequenceDiagram
 - **ドメインリロード耐性**: `SessionState`永続化
 - **ライフサイクル管理**: 自動起動用の`[InitializeOnLoad]`属性
 - **クライアント分離**: 各クライアント接続の個別スレッド処理
+
+---
+
+# TypeScriptサーバーアーキテクチャ
+
+## 6. TypeScriptサーバー概要
+
+`Packages/src/TypeScriptServer~` に配置されるTypeScriptサーバーは、MCP対応クライアント（Cursor、Claude、VSCodeなど）とUnity Editorの仲介役として動作します。Node.jsプロセスとして実行され、Model Context Protocol (MCP)を使用してstdio経由でクライアントと通信し、TCPソケット接続を通じてUnity Editorにツールリクエストをリレーします。
+
+### 主要責務
+1. **MCPサーバー実装**: `@modelcontextprotocol/sdk`を使用してMCPサーバー仕様を実装し、クライアントからのリクエスト（`tools/list`、`tools/call`など）を処理
+2. **動的ツール管理**: Unity Editorから利用可能なツールを取得し、MCPクライアントに公開する対応する「ツール」を動的に作成
+3. **Unity通信**: Unity Editor内で動作する`McpBridgeServer`への永続的TCP接続を管理
+4. **ツール転送**: MCPクライアントからの`tools/call`リクエストをJSON-RPCリクエストに変換し、実行のためUnityサーバーに送信
+5. **通知処理**: Unityからの`notifications/tools/list_changed`イベントをリッスンし、Unityプロジェクトでツールが追加・削除された際に自動的にツールセットを更新
+
+## 7. TypeScriptサーバーアーキテクチャ図
+
+### 7.1. TypeScriptシステム概要
+
+```mermaid
+graph TB
+    subgraph "MCPクライアント"
+        Claude[Claude]
+        Cursor[Cursor]
+        VSCode[VSCode]
+        Codeium[Codeium]
+    end
+    
+    subgraph "TypeScriptサーバー（Node.jsプロセス）"
+        MCP[UnityMcpServer<br/>MCPプロトコルハンドラー<br/>server.ts]
+        UCM[UnityConnectionManager<br/>接続ライフサイクル<br/>unity-connection-manager.ts]
+        UTM[UnityToolManager<br/>動的ツール管理<br/>unity-tool-manager.ts]
+        MCC[McpClientCompatibility<br/>クライアント固有動作<br/>mcp-client-compatibility.ts]
+        UEH[UnityEventHandler<br/>イベント処理<br/>unity-event-handler.ts]
+        UC[UnityClient<br/>TCP通信<br/>unity-client.ts]
+        UD[UnityDiscovery<br/>Unityインスタンス発見<br/>unity-discovery.ts]
+        CM[ConnectionManager<br/>接続状態<br/>connection-manager.ts]
+        MH[MessageHandler<br/>JSON-RPC処理<br/>message-handler.ts]
+        Tools[DynamicUnityCommandTool<br/>ツールインスタンス<br/>dynamic-unity-command-tool.ts]
+    end
+    
+    subgraph "Unity Editor"
+        Bridge[McpBridgeServer<br/>TCPサーバー<br/>McpBridgeServer.cs]
+    end
+    
+    Claude -.->|MCPプロトコル<br/>stdio| MCP
+    Cursor -.->|MCPプロトコル<br/>stdio| MCP
+    VSCode -.->|MCPプロトコル<br/>stdio| MCP
+    Codeium -.->|MCPプロトコル<br/>stdio| MCP
+    
+    MCP --> UCM
+    MCP --> UTM
+    MCP --> MCC
+    MCP --> UEH
+    UCM --> UC
+    UCM --> UD
+    UTM --> UC
+    UTM --> Tools
+    UEH --> UC
+    UEH --> UCM
+    UC --> CM
+    UC --> MH
+    UC --> UD
+    UD --> UC
+    UC -->|TCP/JSON-RPC<br/>ポート8700+| Bridge
+```
+
+### 7.2. TypeScriptクラス関係図
+
+```mermaid
+classDiagram
+    class UnityMcpServer {
+        -server: Server
+        -unityClient: UnityClient
+        -connectionManager: UnityConnectionManager
+        -toolManager: UnityToolManager
+        -clientCompatibility: McpClientCompatibility
+        -eventHandler: UnityEventHandler
+        +start()
+        +setupHandlers()
+        +handleInitialize()
+        +handleListTools()
+        +handleCallTool()
+    }
+
+    class UnityConnectionManager {
+        -unityClient: UnityClient
+        -unityDiscovery: UnityDiscovery
+        -isDevelopment: boolean
+        -isInitialized: boolean
+        +getUnityDiscovery()
+        +waitForUnityConnectionWithTimeout()
+        +handleUnityDiscovered()
+        +initialize()
+        +setupReconnectionCallback()
+        +isConnected()
+        +disconnect()
+    }
+
+    class UnityToolManager {
+        -unityClient: UnityClient
+        -isDevelopment: boolean
+        -dynamicTools: Map<string, DynamicUnityCommandTool>
+        -isRefreshing: boolean
+        -clientName: string
+        +setClientName()
+        +getDynamicTools()
+        +getAllTools()
+        +getTool()
+        +hasTool()
+        +initializeDynamicTools()
+        +refreshDynamicToolsSafe()
+        +fetchCommandDetailsFromUnity()
+        +createDynamicToolsFromCommands()
+        +getToolsFromUnity()
+    }
+
+    class McpClientCompatibility {
+        -unityClient: UnityClient
+        -clientName: string
+        -isDevelopment: boolean
+        +setClientName()
+        +getClientName()
+        +isListChangedUnsupported()
+        +handleClientNameInitialization()
+        +initializeClient()
+        +logClientCompatibility()
+    }
+
+    class UnityEventHandler {
+        -server: Server
+        -unityClient: UnityClient
+        -connectionManager: UnityConnectionManager
+        -toolManager: UnityToolManager
+        -lastNotificationTime: number
+        +setupUnityEventListener()
+        +sendToolsChangedNotification()
+        +setupSignalHandlers()
+        +gracefulShutdown()
+    }
+
+    class UnityClient {
+        -socket: Socket
+        -connectionManager: ConnectionManager
+        -messageHandler: MessageHandler
+        -unityDiscovery: UnityDiscovery
+        -_connected: boolean
+        +connect()
+        +disconnect()
+        +executeCommand()
+        +ensureConnected()
+        +isConnected()
+        +getConnectionManager()
+        +getMessageHandler()
+    }
+
+    class UnityDiscovery {
+        <<singleton>>
+        -static instance: UnityDiscovery
+        -discoveryTimer: SafeTimer
+        -isRunning: boolean
+        -onUnityDiscovered: Function
+        -onConnectionLost: Function
+        +static getInstance()
+        +startDiscovery()
+        +stopDiscovery()
+        +handleConnectionLost()
+        +setCallbacks()
+        -scanForUnity()
+    }
+
+    class ConnectionManager {
+        -onReconnectedCallback: Function
+        -onConnectionLostCallback: Function
+        +setReconnectedCallback()
+        +setConnectionLostCallback()
+        +triggerReconnected()
+        +triggerConnectionLost()
+    }
+
+    class MessageHandler {
+        -notificationHandlers: Map<string, Function>
+        -pendingRequests: Map<number, PendingRequest>
+        +handleIncomingData()
+        +createRequest()
+        +registerPendingRequest()
+        +clearPendingRequests()
+        +registerNotificationHandler()
+    }
+
+    class BaseTool {
+        <<abstract>>
+        #context: ToolContext
+        +handle()
+        #validateArgs()*
+        #execute()*
+        #formatResponse()
+    }
+
+    class DynamicUnityCommandTool {
+        +name: string
+        +description: string
+        +inputSchema: object
+        +execute()
+        -hasNoParameters()
+        -generateInputSchema()
+    }
+
+    class ToolContext {
+        +unityClient: UnityClient
+        +clientName: string
+        +isDevelopment: boolean
+    }
+
+    UnityMcpServer "1" --> "1" UnityConnectionManager : オーケストレート
+    UnityMcpServer "1" --> "1" UnityToolManager : 管理
+    UnityMcpServer "1" --> "1" McpClientCompatibility : 処理
+    UnityMcpServer "1" --> "1" UnityEventHandler : 処理
+    UnityMcpServer "1" --> "1" UnityClient : 通信
+    UnityConnectionManager "1" --> "1" UnityClient : 制御
+    UnityConnectionManager "1" --> "1" UnityDiscovery : 使用
+    UnityToolManager "1" --> "1" UnityClient : 実行
+    UnityToolManager "1" --> "*" DynamicUnityCommandTool : 作成
+    McpClientCompatibility "1" --> "1" UnityClient : 設定
+    UnityEventHandler "1" --> "1" UnityClient : リッスン
+    UnityEventHandler "1" --> "1" UnityConnectionManager : 調整
+    UnityEventHandler "1" --> "1" UnityToolManager : 更新
+    UnityClient "1" --> "1" ConnectionManager : 委任
+    UnityClient "1" --> "1" MessageHandler : 委任
+    UnityClient "1" --> "1" UnityDiscovery : 使用
+    DynamicUnityCommandTool --|> BaseTool : 継承
+    DynamicUnityCommandTool --> ToolContext : 使用
+    ToolContext --> UnityClient : 参照
+```
+
+### 7.3. TypeScriptツール実行シーケンス
+
+```mermaid
+sequenceDiagram
+    participant MC as MCPクライアント<br/>(Claude/Cursor)
+    participant US as UnityMcpServer<br/>server.ts
+    participant UTM as UnityToolManager<br/>unity-tool-manager.ts
+    participant DT as DynamicUnityCommandTool<br/>dynamic-unity-command-tool.ts
+    participant UC as UnityClient<br/>unity-client.ts
+    participant MH as MessageHandler<br/>message-handler.ts
+    participant UE as Unity Editor<br/>McpBridgeServer.cs
+
+    MC->>US: CallToolリクエスト
+    US->>UTM: getTool(toolName)
+    UTM-->>US: DynamicUnityCommandTool
+    US->>DT: execute(args)
+    DT->>UC: executeCommand()
+    UC->>MH: createRequest()
+    UC->>UE: JSON-RPC送信
+    UE-->>UC: JSON-RPCレスポンス
+    UC->>MH: handleIncomingData()
+    MH-->>UC: Promise解決
+    UC-->>DT: コマンド結果
+    DT-->>US: ツールレスポンス
+    US-->>MC: CallToolレスポンス
+```
+
+## 8. TypeScript核心アーキテクチャ原則
+
+### 8.1. 動的で拡張可能なツーリング
+サーバーの核心的な強みは、Unityで利用可能なツール（コマンド）に動的に適応する能力です：
+
+- **`UnityToolManager`**: 専用メソッドを通じて全ての動的ツール管理を処理：
+  - `initializeDynamicTools()`: ツール初期化プロセスをオーケストレート
+  - `fetchCommandDetailsFromUnity()`: Unityからコマンドメタデータを取得
+  - `createDynamicToolsFromCommands()`: メタデータからツールインスタンスを作成
+  - `refreshDynamicToolsSafe()`: 重複防止機能付きでツールを安全に更新
+- **`McpClientCompatibility`**: クライアント固有の要件を管理：
+  - `handleClientNameInitialization()`: クライアント名同期を管理
+  - `isListChangedUnsupported()`: list_changed通知をサポートしないクライアントを検出
+- **`DynamicUnityCommandTool`**: Unityから受信したスキーマ情報（名前、説明、パラメータ）を取得し、MCP準拠のツールをその場で構築する汎用「ツール」ファクトリ
+
+### 8.2. 疎結合と単一責任
+アーキテクチャは責務の明確な分離のためMartin FowlerのExtract Classパターンに従います：
+
+- **`server.ts` (`UnityMcpServer`)**: メインアプリケーションエントリーポイント、MCPプロトコル処理とコンポーネントオーケストレーションに専念
+- **`unity-connection-manager.ts` (`UnityConnectionManager`)**: Unity接続ライフサイクル、発見、再接続ロジックを管理
+- **`unity-tool-manager.ts` (`UnityToolManager`)**: Unityコマンドの取得からツールインスタンスの作成・更新まで、動的ツール管理の全側面を処理
+- **`mcp-client-compatibility.ts` (`McpClientCompatibility`)**: クライアント固有の動作と互換性要件を管理
+- **`unity-event-handler.ts` (`UnityEventHandler`)**: イベント処理、通知、シグナルハンドリング、グレースフルシャットダウン手順を処理
+- **`unity-client.ts` (`UnityClient`)**: Unity EditorへのTCP接続を管理、以下に委任：
+  - **`connection-manager.ts` (`ConnectionManager`)**: 接続状態管理を処理
+  - **`message-handler.ts` (`MessageHandler`)**: JSON-RPCメッセージ解析とルーティングを処理
+- **`unity-discovery.ts` (`UnityDiscovery`)**: 1秒間隔ポーリングでUnityインスタンス発見を行うシングルトンサービス
+
+### 8.3. 回復力とロバストネス
+サーバーは接続断とプロセスライフサイクルイベントに対して回復力を持つよう設計されています：
+
+- **接続管理**: `UnityConnectionManager`が`UnityDiscovery`を通じて接続ライフサイクルをオーケストレート（シングルトンパターンで複数タイマーを防止）
+- **グレースフルシャットダウン**: `UnityEventHandler`が全シグナル処理（`SIGINT`、`SIGTERM`、`SIGHUP`）を処理し、`stdin`を監視してグレースフルシャットダウンを保証
+- **クライアント互換性**: `McpClientCompatibility`が異なるクライアント動作を管理し、list_changed通知をサポートしないクライアント（Claude Code、Gemini、Windsurf、Codeium）の適切な初期化を保証
+- **セーフタイマー**: `safe-timer.ts`ユーティリティがプロセス終了時に自動的にクリアされる`setTimeout`と`setInterval`ラッパーを提供
+- **遅延Unity接続**: サーバーはMCPクライアントが名前を提供するまでUnityへの接続を待機し、Unity UIに「Unknown Client」が表示されることを防止
+
+### 8.4. セーフログ
+サーバーはJSON-RPC通信に`stdio`を使用するため、`console.log`をデバッグに使用することはできません：
+- **`log-to-file.ts`**: セーフなファイルベースログ機能を提供。`MCP_DEBUG`環境変数が設定されると、全てのデバッグ、情報、警告、エラーメッセージが`~/.claude/uloopmcp-logs/`のタイムスタンプ付きログファイルに書き込まれます
+
+## 9. TypeScript主要コンポーネント（ファイル詳細）
+
+### `src/server.ts`
+Martin FowlerのExtract Classリファクタリングで簡素化されたアプリケーションのメインエントリーポイント：
+- **`UnityMcpServer`クラス**:
+    - `@modelcontextprotocol/sdk` `Server`を初期化
+    - 専門的なマネージャークラスをインスタンス化・オーケストレート
+    - `InitializeRequestSchema`、`ListToolsRequestSchema`、`CallToolRequestSchema`を処理
+    - クライアント互換性に基づいて適切なマネージャーに初期化を委任
+
+### `src/unity-connection-manager.ts`
+発見と再接続に焦点を当てたUnity接続ライフサイクルを管理：
+- **`UnityConnectionManager`クラス**:
+    - `UnityDiscovery`を通じてUnity接続確立をオーケストレート
+    - 同期初期化のための`waitForUnityConnectionWithTimeout()`を提供
+    - 接続コールバックを処理し、再接続シナリオを管理
+    - タイマー競合を防ぐシングルトン`UnityDiscovery`サービスと統合
+
+### `src/unity-tool-manager.ts`
+動的ツール管理とライフサイクルの全側面を処理：
+- **`UnityToolManager`クラス**:
+    - `initializeDynamicTools()`: Unityコマンドを取得し対応するツールを作成
+    - `refreshDynamicToolsSafe()`: 重複防止機能付きでツールを安全に更新
+    - `fetchCommandDetailsFromUnity()`: Unityからコマンドメタデータを取得
+    - `createDynamicToolsFromCommands()`: Unityスキーマからツールインスタンスを作成
+    - `dynamicTools` Mapを管理し、ツールアクセスメソッドを提供
+
+### `src/mcp-client-compatibility.ts`
+クライアント固有の互換性と動作の違いを管理：
+- **`McpClientCompatibility`クラス**:
+    - `isListChangedUnsupported()`: list_changed通知をサポートしないクライアントを検出
+    - `handleClientNameInitialization()`: クライアント名設定と環境変数フォールバックを管理
+    - `initializeClient()`: クライアント固有の初期化手順をオーケストレート
+    - Claude Code、Gemini、Windsurf、Codeiumクライアントの互換性を処理
+
+### `src/unity-event-handler.ts`
+イベント処理、通知、グレースフルシャットダウンを管理：
+- **`UnityEventHandler`クラス**:
+    - `setupUnityEventListener()`: Unity通知リスナーを設定
+    - `sendToolsChangedNotification()`: 重複防止機能付きでMCP list_changed通知を送信
+    - `setupSignalHandlers()`: グレースフルシャットダウンのためのプロセスシグナルハンドラーを設定
+    - `gracefulShutdown()`: クリーンアップとプロセス終了を処理
+
+### `src/unity-client.ts`
+Unity Editorとの全通信をカプセル化：
+- **`UnityClient`クラス**:
+    - TCP通信のための`net.Socket`を管理
+    - `connect()`で接続確立、`ensureConnected()`で回復力のある接続管理を提供
+    - `executeCommand()`でUnityにJSON-RPCリクエストを送信し、レスポンスを待機
+    - 受信データを処理し、レスポンスと非同期通知を区別
+
+### `src/unity-discovery.ts`
+Unityインスタンス発見のためのシングルトンサービス：
+- **`UnityDiscovery`クラス**:
+    - 複数の発見タイマーを防ぐシングルトンパターンを実装
+    - Unity Editorインスタンスの1秒間隔ポーリングを提供
+    - ポート [8700, 8800, 8900, 9000, 9100, 8600] をスキャン
+    - 接続コールバックと接続断イベントを処理
+
+### `src/tools/dynamic-unity-command-tool.ts`
+Unityコマンドに基づくツールのファクトリ：
+- **`DynamicUnityCommandTool`クラス**:
+    - `generateInputSchema()`でC#スキーマ定義をJSONスキーマ形式に変換
+    - `execute()`メソッドで`UnityClient`経由でツール呼び出しをUnityに転送
+    - 一貫したツールインターフェースのため`BaseTool`抽象クラスを継承
+
+### `src/utils/`
+ヘルパーユーティリティを含む：
+- **`log-to-file.ts`**: セーフなファイルベースログ関数（`debugToFile`、`infoToFile`など）
+- **`safe-timer.ts`**: 堅牢なタイマー管理のための`SafeTimer`クラスと`safeSetTimeout`/`safeSetInterval`関数
+
+### `src/constants.ts`
+全ての共有定数の中央ファイル：
+- MCPプロトコル定数
+- 環境変数
+- デフォルトメッセージとタイムアウト値
+- ポート範囲と発見設定
+
+## 10. TypeScript主要ワークフロー
+
+### 10.1. サーバー起動とツール初期化
+1. `UnityMcpServer`が専門的なマネージャークラスをインスタンス化
+2. `UnityMcpServer.start()`が呼び出される
+3. `UnityEventHandler.setupUnityEventListener()`が通知リスナーを設定
+4. `UnityConnectionManager.initialize()`が接続発見プロセスを開始
+5. MCPサーバーが`StdioServerTransport`に接続し、リクエストを処理する準備完了
+6. サーバーがMCPクライアントからの`initialize`リクエストを待機
+7. `initialize`リクエスト受信時：
+   - `clientInfo.name`からクライアント名を抽出
+   - `McpClientCompatibility.setClientName()`がクライアント情報を保存
+   - クライアント互換性に基づいて同期または非同期初期化を使用
+8. 同期初期化の場合（list_changed未サポートクライアント）：
+   - `UnityConnectionManager.waitForUnityConnectionWithTimeout()`がUnityを待機
+   - `UnityToolManager.getToolsFromUnity()`がツールを取得し即座に返却
+9. 非同期初期化の場合（list_changedサポートクライアント）：
+   - `UnityToolManager.initializeDynamicTools()`がバックグラウンド初期化を開始
+   - ツールが発見され`UnityEventHandler.sendToolsChangedNotification()`がクライアントに通知
+
+### 10.2. ツール呼び出しの処理
+1. MCPクライアントが`stdin`経由で`tools/call`リクエストを送信
+2. `UnityMcpServer`の`CallToolRequestSchema`ハンドラーが呼び出される
+3. `UnityToolManager.hasTool()`を呼び出してリクエストされたツールの存在を確認
+4. `UnityToolManager.getTool()`を呼び出して対応する`DynamicUnityCommandTool`インスタンスを取得
+5. ツールインスタンスの`execute()`メソッドを呼び出す
+6. ツールの`execute()`メソッドが`this.context.unityClient.executeCommand()`をツール名と引数で呼び出す
+7. `UnityClient`がTCP経由でUnityにJSON-RPCリクエストを送信
+8. Unityがコマンドを実行しレスポンスを返送
+9. `UnityClient`がレスポンスを受信しpromiseを解決、ツールに結果を返却
+10. ツールが結果をMCP準拠レスポンスに整形して返却
+11. `UnityMcpServer`が`stdout`経由でクライアントに最終レスポンスを送信
+
+## 11. TypeScript開発・テストインフラストラクチャ
+
+### 11.1. ビルドシステム
+- **esbuild**: プロダクションビルド用高速JavaScriptバンドラー
+- **TypeScript**: 型安全JavaScript開発
+- **Node.js**: サーバー実行のランタイム環境
+
+### 11.2. テストフレームワーク
+- **Jest**: JavaScriptテストフレームワーク
+- **ユニットテスト**: 個別コンポーネントテスト
+- **統合テスト**: コンポーネント間相互作用テスト
+
+### 11.3. コード品質
+- **ESLint**: JavaScript/TypeScriptリント
+- **Prettier**: コード整形
+- **型チェック**: 厳密なTypeScriptコンパイル
+
+### 11.4. デバッグ・監視
+- **ファイルベースログ**: `~/.claude/uloopmcp-logs/`への安全なログ
+- **デバッグ環境変数**: 詳細ログのための`MCP_DEBUG`
+- **プロセス監視**: シグナルハンドリングとグレースフルシャットダウン
+- **接続ヘルス**: 自動再接続と発見

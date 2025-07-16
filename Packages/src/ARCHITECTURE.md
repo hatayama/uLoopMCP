@@ -1050,3 +1050,440 @@ sequenceDiagram
 - **Domain Reload Resilience**: `SessionState` persistence
 - **Lifecycle Management**: `[InitializeOnLoad]` attribute for automatic startup
 - **Client Isolation**: Individual thread handling for each client connection
+
+---
+
+# TypeScript Server Architecture
+
+## 6. TypeScript Server Overview
+
+The TypeScript server located in `Packages/src/TypeScriptServer~` acts as the intermediary between MCP-compatible clients (like Cursor, Claude, or VSCode) and the Unity Editor. It runs as a Node.js process, communicates with clients via standard I/O (stdio) using the Model Context Protocol (MCP), and relays tool requests to the Unity Editor via TCP socket connections.
+
+### Primary Responsibilities
+1. **MCP Server Implementation**: Implements the MCP server specification using `@modelcontextprotocol/sdk` to handle requests from clients (e.g., `tools/list`, `tools/call`)
+2. **Dynamic Tool Management**: Fetches available tools from Unity Editor and dynamically creates corresponding "tools" to expose to MCP clients
+3. **Unity Communication**: Manages persistent TCP connections to the `McpBridgeServer` running inside Unity Editor
+4. **Tool Forwarding**: Translates `tools/call` requests from MCP clients into JSON-RPC requests and sends them to Unity server for execution
+5. **Notification Handling**: Listens for `notifications/tools/list_changed` events from Unity to automatically refresh toolset when tools are added or removed
+
+## 7. TypeScript Server Architecture Diagrams
+
+### 7.1. TypeScript System Overview
+
+```mermaid
+graph TB
+    subgraph "MCP Clients"
+        Claude[Claude]
+        Cursor[Cursor]
+        VSCode[VSCode]
+        Codeium[Codeium]
+    end
+    
+    subgraph "TypeScript Server (Node.js Process)"
+        MCP[UnityMcpServer<br/>MCP Protocol Handler<br/>server.ts]
+        UCM[UnityConnectionManager<br/>Connection Lifecycle<br/>unity-connection-manager.ts]
+        UTM[UnityToolManager<br/>Dynamic Tool Management<br/>unity-tool-manager.ts]
+        MCC[McpClientCompatibility<br/>Client-Specific Behavior<br/>mcp-client-compatibility.ts]
+        UEH[UnityEventHandler<br/>Event Processing<br/>unity-event-handler.ts]
+        UC[UnityClient<br/>TCP Communication<br/>unity-client.ts]
+        UD[UnityDiscovery<br/>Unity Instance Discovery<br/>unity-discovery.ts]
+        CM[ConnectionManager<br/>Connection State<br/>connection-manager.ts]
+        MH[MessageHandler<br/>JSON-RPC Processing<br/>message-handler.ts]
+        Tools[DynamicUnityCommandTool<br/>Tool Instances<br/>dynamic-unity-command-tool.ts]
+    end
+    
+    subgraph "Unity Editor"
+        Bridge[McpBridgeServer<br/>TCP Server<br/>McpBridgeServer.cs]
+    end
+    
+    Claude -.->|MCP Protocol<br/>stdio| MCP
+    Cursor -.->|MCP Protocol<br/>stdio| MCP
+    VSCode -.->|MCP Protocol<br/>stdio| MCP
+    Codeium -.->|MCP Protocol<br/>stdio| MCP
+    
+    MCP --> UCM
+    MCP --> UTM
+    MCP --> MCC
+    MCP --> UEH
+    UCM --> UC
+    UCM --> UD
+    UTM --> UC
+    UTM --> Tools
+    UEH --> UC
+    UEH --> UCM
+    UC --> CM
+    UC --> MH
+    UC --> UD
+    UD --> UC
+    UC -->|TCP/JSON-RPC<br/>Port 8700+| Bridge
+```
+
+### 7.2. TypeScript Class Relationships
+
+```mermaid
+classDiagram
+    class UnityMcpServer {
+        -server: Server
+        -unityClient: UnityClient
+        -connectionManager: UnityConnectionManager
+        -toolManager: UnityToolManager
+        -clientCompatibility: McpClientCompatibility
+        -eventHandler: UnityEventHandler
+        +start()
+        +setupHandlers()
+        +handleInitialize()
+        +handleListTools()
+        +handleCallTool()
+    }
+
+    class UnityConnectionManager {
+        -unityClient: UnityClient
+        -unityDiscovery: UnityDiscovery
+        -isDevelopment: boolean
+        -isInitialized: boolean
+        +getUnityDiscovery()
+        +waitForUnityConnectionWithTimeout()
+        +handleUnityDiscovered()
+        +initialize()
+        +setupReconnectionCallback()
+        +isConnected()
+        +disconnect()
+    }
+
+    class UnityToolManager {
+        -unityClient: UnityClient
+        -isDevelopment: boolean
+        -dynamicTools: Map<string, DynamicUnityCommandTool>
+        -isRefreshing: boolean
+        -clientName: string
+        +setClientName()
+        +getDynamicTools()
+        +getAllTools()
+        +getTool()
+        +hasTool()
+        +initializeDynamicTools()
+        +refreshDynamicToolsSafe()
+        +fetchCommandDetailsFromUnity()
+        +createDynamicToolsFromCommands()
+        +getToolsFromUnity()
+    }
+
+    class McpClientCompatibility {
+        -unityClient: UnityClient
+        -clientName: string
+        -isDevelopment: boolean
+        +setClientName()
+        +getClientName()
+        +isListChangedUnsupported()
+        +handleClientNameInitialization()
+        +initializeClient()
+        +logClientCompatibility()
+    }
+
+    class UnityEventHandler {
+        -server: Server
+        -unityClient: UnityClient
+        -connectionManager: UnityConnectionManager
+        -toolManager: UnityToolManager
+        -lastNotificationTime: number
+        +setupUnityEventListener()
+        +sendToolsChangedNotification()
+        +setupSignalHandlers()
+        +gracefulShutdown()
+    }
+
+    class UnityClient {
+        -socket: Socket
+        -connectionManager: ConnectionManager
+        -messageHandler: MessageHandler
+        -unityDiscovery: UnityDiscovery
+        -_connected: boolean
+        +connect()
+        +disconnect()
+        +executeCommand()
+        +ensureConnected()
+        +isConnected()
+        +getConnectionManager()
+        +getMessageHandler()
+    }
+
+    class UnityDiscovery {
+        <<singleton>>
+        -static instance: UnityDiscovery
+        -discoveryTimer: SafeTimer
+        -isRunning: boolean
+        -onUnityDiscovered: Function
+        -onConnectionLost: Function
+        +static getInstance()
+        +startDiscovery()
+        +stopDiscovery()
+        +handleConnectionLost()
+        +setCallbacks()
+        -scanForUnity()
+    }
+
+    class ConnectionManager {
+        -onReconnectedCallback: Function
+        -onConnectionLostCallback: Function
+        +setReconnectedCallback()
+        +setConnectionLostCallback()
+        +triggerReconnected()
+        +triggerConnectionLost()
+    }
+
+    class MessageHandler {
+        -notificationHandlers: Map<string, Function>
+        -pendingRequests: Map<number, PendingRequest>
+        +handleIncomingData()
+        +createRequest()
+        +registerPendingRequest()
+        +clearPendingRequests()
+        +registerNotificationHandler()
+    }
+
+    class BaseTool {
+        <<abstract>>
+        #context: ToolContext
+        +handle()
+        #validateArgs()*
+        #execute()*
+        #formatResponse()
+    }
+
+    class DynamicUnityCommandTool {
+        +name: string
+        +description: string
+        +inputSchema: object
+        +execute()
+        -hasNoParameters()
+        -generateInputSchema()
+    }
+
+    class ToolContext {
+        +unityClient: UnityClient
+        +clientName: string
+        +isDevelopment: boolean
+    }
+
+    UnityMcpServer "1" --> "1" UnityConnectionManager : orchestrates
+    UnityMcpServer "1" --> "1" UnityToolManager : manages
+    UnityMcpServer "1" --> "1" McpClientCompatibility : handles
+    UnityMcpServer "1" --> "1" UnityEventHandler : processes
+    UnityMcpServer "1" --> "1" UnityClient : communicates
+    UnityConnectionManager "1" --> "1" UnityClient : controls
+    UnityConnectionManager "1" --> "1" UnityDiscovery : uses
+    UnityToolManager "1" --> "1" UnityClient : executes
+    UnityToolManager "1" --> "*" DynamicUnityCommandTool : creates
+    McpClientCompatibility "1" --> "1" UnityClient : configures
+    UnityEventHandler "1" --> "1" UnityClient : listens
+    UnityEventHandler "1" --> "1" UnityConnectionManager : coordinates
+    UnityEventHandler "1" --> "1" UnityToolManager : refreshes
+    UnityClient "1" --> "1" ConnectionManager : delegates
+    UnityClient "1" --> "1" MessageHandler : delegates
+    UnityClient "1" --> "1" UnityDiscovery : uses
+    DynamicUnityCommandTool --|> BaseTool : extends
+    DynamicUnityCommandTool --> ToolContext : uses
+    ToolContext --> UnityClient : references
+```
+
+### 7.3. TypeScript Tool Execution Sequence
+
+```mermaid
+sequenceDiagram
+    participant MC as MCP Client<br/>(Claude/Cursor)
+    participant US as UnityMcpServer<br/>server.ts
+    participant UTM as UnityToolManager<br/>unity-tool-manager.ts
+    participant DT as DynamicUnityCommandTool<br/>dynamic-unity-command-tool.ts
+    participant UC as UnityClient<br/>unity-client.ts
+    participant MH as MessageHandler<br/>message-handler.ts
+    participant UE as Unity Editor<br/>McpBridgeServer.cs
+
+    MC->>US: CallTool Request
+    US->>UTM: getTool(toolName)
+    UTM-->>US: DynamicUnityCommandTool
+    US->>DT: execute(args)
+    DT->>UC: executeCommand()
+    UC->>MH: createRequest()
+    UC->>UE: Send JSON-RPC
+    UE-->>UC: JSON-RPC Response
+    UC->>MH: handleIncomingData()
+    MH-->>UC: Resolve Promise
+    UC-->>DT: Command Result
+    DT-->>US: Tool Response
+    US-->>MC: CallTool Response
+```
+
+## 8. TypeScript Core Architectural Principles
+
+### 8.1. Dynamic and Extensible Tooling
+The server's core strength is its ability to dynamically adapt to tools (commands) available in Unity:
+
+- **`UnityToolManager`**: Handles all dynamic tool management through dedicated methods:
+  - `initializeDynamicTools()`: Orchestrates the tool initialization process
+  - `fetchCommandDetailsFromUnity()`: Retrieves command metadata from Unity
+  - `createDynamicToolsFromCommands()`: Creates tool instances from metadata
+  - `refreshDynamicToolsSafe()`: Safely refreshes tools with duplicate prevention
+- **`McpClientCompatibility`**: Manages client-specific requirements:
+  - `handleClientNameInitialization()`: Manages client name synchronization
+  - `isListChangedUnsupported()`: Detects clients that don't support list_changed notifications
+- **`DynamicUnityCommandTool`**: Generic "tool" factory that takes schema information received from Unity (name, description, parameters) and constructs MCP-compliant tools on the fly
+
+### 8.2. Decoupling and Single Responsibility
+The architecture follows Martin Fowler's Extract Class pattern for clean separation of responsibilities:
+
+- **`server.ts` (`UnityMcpServer`)**: Main application entry point, focused solely on MCP protocol handling and component orchestration
+- **`unity-connection-manager.ts` (`UnityConnectionManager`)**: Manages Unity connection lifecycle, discovery, and reconnection logic
+- **`unity-tool-manager.ts` (`UnityToolManager`)**: Handles all aspects of dynamic tool management, from fetching Unity commands to creating and refreshing tool instances
+- **`mcp-client-compatibility.ts` (`McpClientCompatibility`)**: Manages client-specific behaviors and compatibility requirements
+- **`unity-event-handler.ts` (`UnityEventHandler`)**: Handles event processing, notifications, signal handling, and graceful shutdown procedures
+- **`unity-client.ts` (`UnityClient`)**: Manages TCP connection to Unity Editor, delegates to:
+  - **`connection-manager.ts` (`ConnectionManager`)**: Handles connection state management
+  - **`message-handler.ts` (`MessageHandler`)**: Processes JSON-RPC message parsing and routing
+- **`unity-discovery.ts` (`UnityDiscovery`)**: Singleton service for Unity instance discovery with 1-second polling
+
+### 8.3. Resilience and Robustness
+The server is designed to be resilient to connection drops and process lifecycle events:
+
+- **Connection Management**: `UnityConnectionManager` orchestrates connection lifecycle through `UnityDiscovery` (singleton pattern prevents multiple timers)
+- **Graceful Shutdown**: `UnityEventHandler` handles all signal processing (`SIGINT`, `SIGTERM`, `SIGHUP`) and monitors `stdin` to ensure graceful shutdown
+- **Client Compatibility**: `McpClientCompatibility` manages different client behaviors, ensuring proper initialization for clients that don't support list_changed notifications (Claude Code, Gemini, Windsurf, Codeium)
+- **Safe Timers**: The `safe-timer.ts` utility provides `setTimeout` and `setInterval` wrappers that automatically clear themselves when the process exits
+- **Delayed Unity Connection**: Server waits for MCP client to provide its name before connecting to Unity, preventing "Unknown Client" from appearing in Unity UI
+
+### 8.4. Safe Logging
+Because the server uses `stdio` for JSON-RPC communication, `console.log` cannot be used for debugging:
+- **`log-to-file.ts`**: Provides safe, file-based logging mechanism. When `MCP_DEBUG` environment variable is set, all debug, info, warning, and error messages are written to timestamped log files in `~/.claude/uloopmcp-logs/`
+
+## 9. TypeScript Key Components (File Breakdown)
+
+### `src/server.ts`
+Main entry point of the application, simplified through Martin Fowler's Extract Class refactoring:
+- **`UnityMcpServer` class**:
+    - Initializes the `@modelcontextprotocol/sdk` `Server`
+    - Instantiates and orchestrates specialized manager classes
+    - Handles `InitializeRequestSchema`, `ListToolsRequestSchema`, and `CallToolRequestSchema`
+    - Delegates initialization to appropriate managers based on client compatibility
+
+### `src/unity-connection-manager.ts`
+Manages Unity connection lifecycle with focus on discovery and reconnection:
+- **`UnityConnectionManager` class**:
+    - Orchestrates Unity connection establishment through `UnityDiscovery`
+    - Provides `waitForUnityConnectionWithTimeout()` for synchronous initialization
+    - Handles connection callbacks and manages reconnection scenarios
+    - Integrates with singleton `UnityDiscovery` service to prevent timer conflicts
+
+### `src/unity-tool-manager.ts`
+Handles all aspects of dynamic tool management and lifecycle:
+- **`UnityToolManager` class**:
+    - `initializeDynamicTools()`: Fetches Unity commands and creates corresponding tools
+    - `refreshDynamicToolsSafe()`: Safely refreshes tools with duplicate prevention
+    - `fetchCommandDetailsFromUnity()`: Retrieves command metadata from Unity
+    - `createDynamicToolsFromCommands()`: Creates tool instances from Unity schemas
+    - Manages the `dynamicTools` Map and provides tool access methods
+
+### `src/mcp-client-compatibility.ts`
+Manages client-specific compatibility and behavior differences:
+- **`McpClientCompatibility` class**:
+    - `isListChangedUnsupported()`: Detects clients that don't support list_changed notifications
+    - `handleClientNameInitialization()`: Manages client name setup and environment variable fallbacks
+    - `initializeClient()`: Orchestrates client-specific initialization procedures
+    - Handles compatibility for Claude Code, Gemini, Windsurf, and Codeium clients
+
+### `src/unity-event-handler.ts`
+Manages event processing, notifications, and graceful shutdown:
+- **`UnityEventHandler` class**:
+    - `setupUnityEventListener()`: Configures Unity notification listeners
+    - `sendToolsChangedNotification()`: Sends MCP list_changed notifications with duplicate prevention
+    - `setupSignalHandlers()`: Configures process signal handlers for graceful shutdown
+    - `gracefulShutdown()`: Handles cleanup and process termination
+
+### `src/unity-client.ts`
+Encapsulates all communication with Unity Editor:
+- **`UnityClient` class**:
+    - Manages `net.Socket` for TCP communication
+    - `connect()` establishes connection, `ensureConnected()` provides resilient connection management
+    - `executeCommand()` sends JSON-RPC requests to Unity and waits for responses
+    - Handles incoming data, distinguishing between responses and asynchronous notifications
+
+### `src/unity-discovery.ts`
+Singleton service for Unity instance discovery:
+- **`UnityDiscovery` class**:
+    - Implements singleton pattern to prevent multiple discovery timers
+    - Provides 1-second polling for Unity Editor instances
+    - Scans ports [8700, 8800, 8900, 9000, 9100, 8600]
+    - Handles connection callbacks and connection loss events
+
+### `src/tools/dynamic-unity-command-tool.ts`
+Factory for tools based on Unity commands:
+- **`DynamicUnityCommandTool` class**:
+    - `generateInputSchema()` translates C# schema definition into JSON Schema format
+    - `execute()` method forwards tool calls to Unity via `UnityClient`
+    - Extends `BaseTool` abstract class for consistent tool interface
+
+### `src/utils/`
+Contains helper utilities:
+- **`log-to-file.ts`**: Safe, file-based logging functions (`debugToFile`, `infoToFile`, etc.)
+- **`safe-timer.ts`**: `SafeTimer` class and `safeSetTimeout`/`safeSetInterval` functions for robust timer management
+
+### `src/constants.ts`
+Central file for all shared constants:
+- MCP protocol constants
+- Environment variables
+- Default messages and timeout values
+- Port ranges and discovery settings
+
+## 10. TypeScript Key Workflows
+
+### 10.1. Server Startup and Tool Initialization
+1. `UnityMcpServer` instantiates specialized manager classes
+2. `UnityMcpServer.start()` called
+3. `UnityEventHandler.setupUnityEventListener()` configures notification listeners
+4. `UnityConnectionManager.initialize()` starts connection discovery process
+5. MCP server connects to `StdioServerTransport`, ready to serve requests
+6. Server waits for `initialize` request from MCP client
+7. Upon receiving `initialize` request:
+   - Client name extracted from `clientInfo.name`
+   - `McpClientCompatibility.setClientName()` stores client information
+   - Based on client compatibility, either synchronous or asynchronous initialization used
+8. For synchronous initialization (list_changed unsupported clients):
+   - `UnityConnectionManager.waitForUnityConnectionWithTimeout()` waits for Unity
+   - `UnityToolManager.getToolsFromUnity()` fetches and returns tools immediately
+9. For asynchronous initialization (list_changed supported clients):
+   - `UnityToolManager.initializeDynamicTools()` starts background initialization
+   - Tools discovered and `UnityEventHandler.sendToolsChangedNotification()` notifies client
+
+### 10.2. Handling a Tool Call
+1. MCP client sends `tools/call` request via `stdin`
+2. `UnityMcpServer`'s `CallToolRequestSchema` handler invoked
+3. Calls `UnityToolManager.hasTool()` to check if requested tool exists
+4. Calls `UnityToolManager.getTool()` to retrieve corresponding `DynamicUnityCommandTool` instance
+5. Calls `execute()` method on tool instance
+6. Tool's `execute()` method calls `this.context.unityClient.executeCommand()` with tool name and arguments
+7. `UnityClient` sends JSON-RPC request to Unity over TCP
+8. Unity executes command and sends response back
+9. `UnityClient` receives response and resolves promise, returning result to tool
+10. Tool formats result into MCP-compliant response and returns it
+11. `UnityMcpServer` sends final response to client via `stdout`
+
+## 11. TypeScript Development and Testing Infrastructure
+
+### 11.1. Build System
+- **esbuild**: Fast JavaScript bundler for production builds
+- **TypeScript**: Type-safe JavaScript development
+- **Node.js**: Runtime environment for server execution
+
+### 11.2. Testing Framework
+- **Jest**: JavaScript testing framework
+- **Unit Tests**: Individual component testing
+- **Integration Tests**: Cross-component interaction testing
+
+### 11.3. Code Quality
+- **ESLint**: JavaScript/TypeScript linting
+- **Prettier**: Code formatting
+- **Type Checking**: Strict TypeScript compilation
+
+### 11.4. Debugging and Monitoring
+- **File-based Logging**: Safe logging to `~/.claude/uloopmcp-logs/`
+- **Debug Environment Variables**: `MCP_DEBUG` for detailed logging
+- **Process Monitoring**: Signal handling and graceful shutdown
+- **Connection Health**: Automatic reconnection and discovery
