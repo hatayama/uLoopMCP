@@ -140,13 +140,21 @@ sequenceDiagram
 - **プロトコル**: localhost上のTCP/IP
 - **デフォルトポート**: 8700（環境変数で設定可能）
 - **メッセージ形式**: JSON-RPC 2.0準拠
-- **メッセージ区切り**: 改行文字（`\n`）
-- **バッファサイズ**: 4096バイト
+- **メッセージフレーミング**: Content-Lengthヘッダー（RFC準拠）
+- **動的バッファ管理**: 最大1MBまでの動的バッファリング
+- **断片化メッセージ対応**: TCP断片化メッセージの再組み立て機能
 
 #### JSON-RPC 2.0メッセージ形式
 
-**リクエストメッセージ：**
-```json
+**フレーミング形式：**
+```
+Content-Length: <message_size>\r\n\r\n<json_content>
+```
+
+**リクエストメッセージ例：**
+```
+Content-Length: 120
+
 {
   "jsonrpc": "2.0",
   "id": 1647834567890,
@@ -213,7 +221,9 @@ sequenceDiagram
 Unityは、ツールやシステム状態の変更が発生した際に、接続されている全てのTypeScriptクライアントにリアルタイムプッシュ通知を送信できます：
 
 **通知フォーマット:**
-```json
+```
+Content-Length: 156
+
 {
   "jsonrpc": "2.0",
   "method": "notifications/tools/list_changed",
@@ -232,16 +242,21 @@ Unityは、ツールやシステム状態の変更が発生した際に、接続
 **ブロードキャスト機能:**
 - 接続中の全クライアントに同時送信
 - TCP/JSON-RPC通信チャネルを使用
-- 改行文字（`\n`）でメッセージ終端
+- Content-Lengthヘッダー付きフレーミング
 
 **TypeScriptクライアント受信:**
 ```typescript
-// TypeScriptクライアントは以下により通知を受信:
+// TypeScriptクライアントはContent-Lengthフレーミングで通知を受信:
 socket.on('data', (buffer: Buffer) => {
-  const message = buffer.toString('utf8');
-  if (message.includes('"method":"notifications/tools/list_changed"')) {
-    // ツールリスト更新処理
-    this.refreshToolList();
+  this.dynamicBuffer.append(buffer.toString('utf8'));
+  const frames = this.dynamicBuffer.extractAllFrames();
+  
+  for (const frame of frames) {
+    const message = JSON.parse(frame);
+    if (message.method === 'notifications/tools/list_changed') {
+      // ツールリスト更新処理
+      this.refreshToolList();
+    }
   }
 });
 ```
@@ -651,7 +666,10 @@ Unity Editorの重要な課題は、アプリケーションの状態をリセ�
 
 このディレクトリはコアネットワーキングとライフサイクル管理コンポーネントを含みます。
 
-- **`McpBridgeServer.cs`**: 低レベルTCPサーバー。指定されたポートでリッスンし、クライアント接続を受け入れ、ネットワークストリーム上でのJSONデータの読み取り/書き込みを処理。バックグラウンドスレッドで動作。
+- **`McpBridgeServer.cs`**: 低レベルTCPサーバー。指定されたポートでリッスンし、クライアント接続を受け入れ、Content-Lengthフレーミングを使用したJSONデータの読み取り/書き込みを処理。バックグラウンドスレッドで動作。
+- **`FrameParser.cs`**: Content-Lengthヘッダーの解析・検証を行う専用クラス。フレーム完全性の確認とJSONコンテンツの抽出を処理。
+- **`DynamicBufferManager.cs`**: 動的バッファプール管理クラス。メモリ効率化とバッファの再利用を実現。最大1MBまでの動的バッファリングをサポート。
+- **`MessageReassembler.cs`**: TCP断片化メッセージの再組み立てクラス。部分的に受信されたフレームを適切に処理し、完全なメッセージを抽出。
 - **`McpServerController.cs`**: サーバーの高レベル静的マネージャー。`McpBridgeServer`インスタンスのライフサイクル（Start、Stop、Restart）を制御。ドメインリロードを越えた状態管理の中央ポイント。
 - **`McpServerConfig.cs`**: サーバー設定（例：デフォルトポート、バッファサイズ）の定数を保持する静的クラス。
 
@@ -1120,7 +1138,9 @@ graph TB
         UC[UnityClient<br/>TCP通信<br/>unity-client.ts]
         UD[UnityDiscovery<br/>Unityインスタンス発見<br/>unity-discovery.ts]
         CM[ConnectionManager<br/>接続状態<br/>connection-manager.ts]
-        MH[MessageHandler<br/>JSON-RPC処理<br/>message-handler.ts]
+        MH[MessageHandler<br/>Content-Lengthフレーミング<br/>message-handler.ts]
+        CLF[ContentLengthFramer<br/>フレーム処理<br/>content-length-framer.ts]
+        DB[DynamicBuffer<br/>バッファ管理<br/>dynamic-buffer.ts]
         Tools[DynamicUnityCommandTool<br/>ツールインスタンス<br/>dynamic-unity-command-tool.ts]
     end
     
@@ -1147,7 +1167,9 @@ graph TB
     UC --> MH
     UC --> UD
     UD --> UC
-    UC -->|TCP/JSON-RPC<br/>ポート8700+| Bridge
+    MH --> CLF
+    MH --> DB
+    UC -->|TCP/JSON-RPC<br/>Content-Lengthフレーミング<br/>ポート8700+| Bridge
 ```
 
 ### 7.2. TypeScriptクラス関係図
@@ -1266,11 +1288,33 @@ classDiagram
     class MessageHandler {
         -notificationHandlers: Map<string, Function>
         -pendingRequests: Map<number, PendingRequest>
+        -dynamicBuffer: DynamicBuffer
         +handleIncomingData()
         +createRequest()
         +registerPendingRequest()
         +clearPendingRequests()
+        +clearBuffer()
+        +getBufferStats()
         +registerNotificationHandler()
+    }
+
+    class ContentLengthFramer {
+        <<static>>
+        +createFrame(jsonContent: string): string
+        +parseFrame(data: string): FrameParseResult
+        +extractFrame(data: string, contentLength: number, headerLength: number): FrameExtractionResult
+        +isValidContentLength(length: number): boolean
+    }
+
+    class DynamicBuffer {
+        -buffer: string
+        -maxBufferSize: number
+        +append(data: string): void
+        +extractFrame(): FrameExtractionResult
+        +extractAllFrames(): string[]
+        +clear(): void
+        +getStats(): BufferStats
+        +validateAndCleanup(): boolean
     }
 
     class BaseTool {
@@ -1313,6 +1357,8 @@ classDiagram
     UnityClient "1" --> "1" ConnectionManager : 委任
     UnityClient "1" --> "1" MessageHandler : 委任
     UnityClient "1" --> "1" UnityDiscovery : 使用
+    MessageHandler "1" --> "1" DynamicBuffer : 管理
+    MessageHandler --> ContentLengthFramer : 使用
     DynamicUnityCommandTool --|> BaseTool : 継承
     DynamicUnityCommandTool --> ToolContext : 使用
     ToolContext --> UnityClient : 参照
@@ -1327,7 +1373,7 @@ sequenceDiagram
     participant UTM as UnityToolManager<br/>unity-tool-manager.ts
     participant DT as DynamicUnityCommandTool<br/>dynamic-unity-command-tool.ts
     participant UC as UnityClient<br/>unity-client.ts
-    participant MH as MessageHandler<br/>message-handler.ts
+    participant MH as MessageHandler<br/>Content-Lengthフレーミング<br/>message-handler.ts
     participant UE as Unity Editor<br/>McpBridgeServer.cs
 
     MC->>US: CallToolリクエスト
@@ -1336,9 +1382,11 @@ sequenceDiagram
     US->>DT: execute(args)
     DT->>UC: executeCommand()
     UC->>MH: createRequest()
-    UC->>UE: JSON-RPC送信
-    UE-->>UC: JSON-RPCレスポンス
+    Note over MH: Content-Lengthフレーム作成
+    UC->>UE: Content-Lengthフレーミング送信
+    UE-->>UC: Content-Lengthフレーミングレスポンス
     UC->>MH: handleIncomingData()
+    Note over MH: DynamicBufferでフレーム抽出
     MH-->>UC: Promise解決
     UC-->>DT: コマンド結果
     DT-->>US: ツールレスポンス
@@ -1370,7 +1418,9 @@ sequenceDiagram
 - **`unity-event-handler.ts` (`UnityEventHandler`)**: イベント処理、通知、シグナルハンドリング、グレースフルシャットダウン手順を処理
 - **`unity-client.ts` (`UnityClient`)**: Unity EditorへのTCP接続を管理、以下に委任：
   - **`connection-manager.ts` (`ConnectionManager`)**: 接続状態管理を処理
-  - **`message-handler.ts` (`MessageHandler`)**: JSON-RPCメッセージ解析とルーティングを処理
+  - **`message-handler.ts` (`MessageHandler`)**: Content-Lengthフレーミングを使用したJSON-RPCメッセージ解析とルーティングを処理
+    - **`content-length-framer.ts` (`ContentLengthFramer`)**: Content-Lengthヘッダーの作成・解析・抽出機能を提供
+    - **`dynamic-buffer.ts` (`DynamicBuffer`)**: 動的バッファ管理とフレーム抽出機能を提供
 - **`unity-discovery.ts` (`UnityDiscovery`)**: 1秒間隔ポーリングでUnityインスタンス発見を行うシングルトンサービス
 
 ### 8.3. 回復力とロバストネス

@@ -307,17 +307,22 @@ export class UnityClient {
       return this.handleToolResponse(response, toolName);
     } catch (error) {
       const executionTime = Date.now() - startTime;
-      
+
       // Log timeout details to file for debugging in production
       if (error instanceof Error && error.message.includes('timed out')) {
-        errorToFile(`[TIMEOUT] Tool: ${toolName}, NetworkTimeout: ${timeoutMs}ms, ExecutionTime: ${executionTime}ms, RequestId: ${request.id}, Params: ${JSON.stringify(params)}`);
+        errorToFile(
+          `[TIMEOUT] Tool: ${toolName}, NetworkTimeout: ${timeoutMs}ms, ExecutionTime: ${executionTime}ms, RequestId: ${request.id}, Params: ${JSON.stringify(params)}`,
+        );
       }
-      
+
       throw error;
     }
   }
 
-  private handleToolResponse(response: { error?: { message: string }; result?: unknown }, toolName: string): unknown {
+  private handleToolResponse(
+    response: { error?: { message: string }; result?: unknown },
+    toolName: string,
+  ): unknown {
     if (response.error) {
       throw new Error(`Failed to execute tool '${toolName}': ${response.error.message}`);
     }
@@ -346,8 +351,10 @@ export class UnityClient {
       // Use SafeTimer for automatic cleanup to prevent orphaned processes
       const timeoutTimer = safeSetTimeout(() => {
         // Log network-level timeout details for debugging
-        errorToFile(`[NETWORK_TIMEOUT] Method: ${request.method}, RequestId: ${request.id}, NetworkTimeout: ${timeout_duration}ms, Params: ${JSON.stringify(request.params || {})}`);
-        
+        errorToFile(
+          `[NETWORK_TIMEOUT] Method: ${request.method}, RequestId: ${request.id}, NetworkTimeout: ${timeout_duration}ms, Params: ${JSON.stringify(request.params || {})}`,
+        );
+
         this.messageHandler.clearPendingRequests(`Request ${ERROR_MESSAGES.TIMEOUT}`);
         reject(new Error(`Request ${ERROR_MESSAGES.TIMEOUT}`));
       }, timeout_duration);
@@ -390,6 +397,9 @@ export class UnityClient {
     // Clean up all pending requests and their timers
     // CRITICAL: This prevents orphaned processes by ensuring all setTimeout timers are cleared
     this.messageHandler.clearPendingRequests('Connection closed');
+
+    // Clear the Content-Length framing buffer
+    this.messageHandler.clearBuffer();
 
     if (this.socket) {
       this.socket.destroy();

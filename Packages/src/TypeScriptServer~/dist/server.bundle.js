@@ -5756,6 +5756,308 @@ var ConnectionManager = class {
   }
 };
 
+// src/utils/content-length-framer.ts
+var ContentLengthFramer = class {
+  static CONTENT_LENGTH_HEADER = "Content-Length:";
+  static HEADER_SEPARATOR = "\r\n\r\n";
+  static LINE_SEPARATOR = "\r\n";
+  static MAX_MESSAGE_SIZE = 1024 * 1024;
+  // 1MB
+  /**
+   * Creates a Content-Length framed message from JSON content.
+   * @param jsonContent The JSON content to frame
+   * @returns The framed message with Content-Length header
+   */
+  static createFrame(jsonContent) {
+    if (!jsonContent) {
+      throw new Error("JSON content cannot be empty");
+    }
+    const contentLength = Buffer.byteLength(jsonContent, "utf8");
+    if (contentLength > this.MAX_MESSAGE_SIZE) {
+      throw new Error(
+        `Message size ${contentLength} exceeds maximum allowed size ${this.MAX_MESSAGE_SIZE}`
+      );
+    }
+    return `${this.CONTENT_LENGTH_HEADER} ${contentLength}${this.HEADER_SEPARATOR}${jsonContent}`;
+  }
+  /**
+   * Parses a Content-Length header from incoming data.
+   * @param data The incoming data string
+   * @returns Parse result with content length, header length, and completion status
+   */
+  static parseFrame(data) {
+    if (!data) {
+      return {
+        contentLength: -1,
+        headerLength: -1,
+        isComplete: false
+      };
+    }
+    try {
+      const separatorIndex = data.indexOf(this.HEADER_SEPARATOR);
+      if (separatorIndex === -1) {
+        return {
+          contentLength: -1,
+          headerLength: -1,
+          isComplete: false
+        };
+      }
+      const headerSection = data.substring(0, separatorIndex);
+      const headerLength = separatorIndex + this.HEADER_SEPARATOR.length;
+      const contentLength = this.parseContentLength(headerSection);
+      if (contentLength === -1) {
+        return {
+          contentLength: -1,
+          headerLength: -1,
+          isComplete: false
+        };
+      }
+      const expectedTotalLength = headerLength + contentLength;
+      const isComplete = data.length >= expectedTotalLength;
+      return {
+        contentLength,
+        headerLength,
+        isComplete
+      };
+    } catch (error) {
+      errorToFile("[ContentLengthFramer] Error parsing frame:", error);
+      return {
+        contentLength: -1,
+        headerLength: -1,
+        isComplete: false
+      };
+    }
+  }
+  /**
+   * Extracts a complete frame from the data buffer.
+   * @param data The data buffer containing the frame
+   * @param contentLength The expected content length
+   * @param headerLength The header length including separators
+   * @returns The extracted JSON content and remaining data
+   */
+  static extractFrame(data, contentLength, headerLength) {
+    if (!data || contentLength < 0 || headerLength < 0) {
+      return {
+        jsonContent: null,
+        remainingData: data || ""
+      };
+    }
+    try {
+      const expectedTotalLength = headerLength + contentLength;
+      if (data.length < expectedTotalLength) {
+        return {
+          jsonContent: null,
+          remainingData: data
+        };
+      }
+      const jsonContent = data.substring(headerLength, headerLength + contentLength);
+      const remainingData = data.substring(expectedTotalLength);
+      return {
+        jsonContent,
+        remainingData
+      };
+    } catch (error) {
+      errorToFile("[ContentLengthFramer] Error extracting frame:", error);
+      return {
+        jsonContent: null,
+        remainingData: data
+      };
+    }
+  }
+  /**
+   * Validates that the Content-Length value is within acceptable limits.
+   * @param contentLength The content length to validate
+   * @returns True if the content length is valid, false otherwise
+   */
+  static isValidContentLength(contentLength) {
+    return contentLength >= 0 && contentLength <= this.MAX_MESSAGE_SIZE;
+  }
+  /**
+   * Parses the Content-Length value from the header section.
+   * @param headerSection The header section string
+   * @returns The parsed content length, or -1 if parsing failed
+   */
+  static parseContentLength(headerSection) {
+    if (!headerSection) {
+      return -1;
+    }
+    const lines = headerSection.split(this.LINE_SEPARATOR);
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (trimmedLine.toLowerCase().startsWith(this.CONTENT_LENGTH_HEADER.toLowerCase())) {
+        const colonIndex = trimmedLine.indexOf(":");
+        if (colonIndex === -1 || colonIndex >= trimmedLine.length - 1) {
+          continue;
+        }
+        const valueString = trimmedLine.substring(colonIndex + 1).trim();
+        const parsedValue = parseInt(valueString, 10);
+        if (isNaN(parsedValue)) {
+          errorToFile(`[ContentLengthFramer] Invalid Content-Length value: '${valueString}'`);
+          return -1;
+        }
+        if (!this.isValidContentLength(parsedValue)) {
+          errorToFile(
+            `[ContentLengthFramer] Content-Length value ${parsedValue} exceeds maximum allowed size ${this.MAX_MESSAGE_SIZE}`
+          );
+          return -1;
+        }
+        return parsedValue;
+      }
+    }
+    errorToFile(`[ContentLengthFramer] Content-Length header not found in: ${headerSection}`);
+    return -1;
+  }
+};
+
+// src/utils/dynamic-buffer.ts
+var DynamicBuffer = class {
+  buffer = "";
+  maxBufferSize;
+  initialBufferSize;
+  constructor(maxBufferSize = 1024 * 1024, initialBufferSize = 4096) {
+    this.maxBufferSize = maxBufferSize;
+    this.initialBufferSize = initialBufferSize;
+  }
+  /**
+   * Appends new data to the buffer.
+   * @param data The data to append
+   * @throws Error if buffer would exceed maximum size
+   */
+  append(data) {
+    if (!data) {
+      return;
+    }
+    const newSize = this.buffer.length + data.length;
+    if (newSize > this.maxBufferSize) {
+      throw new Error(
+        `Buffer size would exceed maximum allowed size: ${newSize} > ${this.maxBufferSize}`
+      );
+    }
+    this.buffer += data;
+  }
+  /**
+   * Attempts to extract a complete frame from the buffer.
+   * @returns The extracted frame and whether extraction was successful
+   */
+  extractFrame() {
+    if (!this.buffer) {
+      return { frame: null, extracted: false };
+    }
+    try {
+      const parseResult = ContentLengthFramer.parseFrame(this.buffer);
+      if (!parseResult.isComplete) {
+        return { frame: null, extracted: false };
+      }
+      const extractionResult = ContentLengthFramer.extractFrame(
+        this.buffer,
+        parseResult.contentLength,
+        parseResult.headerLength
+      );
+      if (!extractionResult.jsonContent) {
+        return { frame: null, extracted: false };
+      }
+      this.buffer = extractionResult.remainingData;
+      return {
+        frame: extractionResult.jsonContent,
+        extracted: true
+      };
+    } catch (error) {
+      errorToFile("[DynamicBuffer] Error extracting frame:", error);
+      return { frame: null, extracted: false };
+    }
+  }
+  /**
+   * Extracts all available complete frames from the buffer.
+   * @returns Array of extracted JSON frames
+   */
+  extractAllFrames() {
+    const frames = [];
+    while (true) {
+      const result = this.extractFrame();
+      if (!result.extracted || !result.frame) {
+        break;
+      }
+      frames.push(result.frame);
+    }
+    return frames;
+  }
+  /**
+   * Checks if the buffer has any data.
+   * @returns True if buffer contains data, false otherwise
+   */
+  hasData() {
+    return this.buffer.length > 0;
+  }
+  /**
+   * Gets the current buffer size.
+   * @returns The current buffer size in characters
+   */
+  getSize() {
+    return this.buffer.length;
+  }
+  /**
+   * Checks if a complete frame might be available.
+   * This is a quick check without full parsing.
+   * @returns True if header separator is found, false otherwise
+   */
+  hasCompleteFrameHeader() {
+    return this.buffer.includes("\r\n\r\n");
+  }
+  /**
+   * Clears the buffer.
+   */
+  clear() {
+    this.buffer = "";
+  }
+  /**
+   * Gets a preview of the buffer content for debugging.
+   * @param maxLength Maximum length of preview (default: 100)
+   * @returns Truncated buffer content for debugging
+   */
+  getPreview(maxLength = 100) {
+    if (this.buffer.length <= maxLength) {
+      return this.buffer;
+    }
+    return this.buffer.substring(0, maxLength) + "...";
+  }
+  /**
+   * Validates the buffer state and performs cleanup if necessary.
+   * @returns True if buffer is in valid state, false if cleanup was performed
+   */
+  validateAndCleanup() {
+    if (this.buffer.length > this.maxBufferSize * 0.8 && !this.hasCompleteFrameHeader()) {
+      warnToFile("[DynamicBuffer] Large buffer without complete frame header, clearing buffer");
+      this.clear();
+      return false;
+    }
+    const headerSeparatorIndex = this.buffer.indexOf("\r\n\r\n");
+    if (headerSeparatorIndex === -1 && this.buffer.length > 1024) {
+      const contentLengthIndex = this.buffer.toLowerCase().indexOf("content-length:");
+      if (contentLengthIndex === -1) {
+        warnToFile(
+          "[DynamicBuffer] No Content-Length header found in large buffer, clearing buffer"
+        );
+        this.clear();
+        return false;
+      }
+    }
+    return true;
+  }
+  /**
+   * Gets buffer statistics for monitoring and debugging.
+   * @returns Buffer statistics object
+   */
+  getStats() {
+    return {
+      size: this.buffer.length,
+      maxSize: this.maxBufferSize,
+      utilization: this.buffer.length / this.maxBufferSize * 100,
+      hasCompleteHeader: this.hasCompleteFrameHeader(),
+      preview: this.getPreview(50)
+    };
+  }
+};
+
 // src/message-handler.ts
 var JsonRpcErrorTypes = {
   SECURITY_BLOCKED: "security_blocked",
@@ -5773,6 +6075,8 @@ var hasValidId = (msg) => {
 var MessageHandler = class {
   notificationHandlers = /* @__PURE__ */ new Map();
   pendingRequests = /* @__PURE__ */ new Map();
+  // Content-Length framing components
+  dynamicBuffer = new DynamicBuffer();
   /**
    * Register notification handler for specific method
    */
@@ -5792,23 +6096,32 @@ var MessageHandler = class {
     this.pendingRequests.set(id, { resolve, reject });
   }
   /**
-   * Handle incoming data from Unity
+   * Handle incoming data from Unity using Content-Length framing
    */
   handleIncomingData(data) {
     try {
-      const lines = data.split("\n").filter((line) => line.trim());
-      for (const line of lines) {
-        const message = JSON.parse(line);
-        if (isJsonRpcNotification(message)) {
-          this.handleNotification(message);
-        } else if (isJsonRpcResponse(message)) {
-          this.handleResponse(message);
-        } else if (hasValidId(message)) {
-          this.handleResponse(message);
+      this.dynamicBuffer.append(Buffer.from(data, "utf8"));
+      const frames = this.dynamicBuffer.extractAllFrames();
+      for (const frame of frames) {
+        if (!frame || frame.trim() === "") {
+          continue;
+        }
+        try {
+          const message = JSON.parse(frame);
+          if (isJsonRpcNotification(message)) {
+            this.handleNotification(message);
+          } else if (isJsonRpcResponse(message)) {
+            this.handleResponse(message);
+          } else if (hasValidId(message)) {
+            this.handleResponse(message);
+          }
+        } catch (parseError) {
+          errorToFile("[MessageHandler] Error parsing JSON frame:", parseError);
+          errorToFile("[MessageHandler] Problematic frame:", frame);
         }
       }
     } catch (error) {
-      errorToFile("[MessageHandler] Error parsing incoming data:", error);
+      errorToFile("[MessageHandler] Error processing incoming data:", error);
     }
   }
   /**
@@ -5861,7 +6174,7 @@ var MessageHandler = class {
     this.pendingRequests.clear();
   }
   /**
-   * Create JSON-RPC request
+   * Create JSON-RPC request with Content-Length framing
    */
   createRequest(method, params, id) {
     const request = {
@@ -5870,7 +6183,20 @@ var MessageHandler = class {
       method,
       params
     };
-    return JSON.stringify(request) + "\n";
+    const jsonContent = JSON.stringify(request);
+    return ContentLengthFramer.createFrame(jsonContent);
+  }
+  /**
+   * Clear the dynamic buffer (for connection reset)
+   */
+  clearBuffer() {
+    this.dynamicBuffer.clear();
+  }
+  /**
+   * Get buffer statistics for debugging
+   */
+  getBufferStats() {
+    return this.dynamicBuffer.getStats();
   }
 };
 
@@ -6097,7 +6423,9 @@ var UnityClient = class {
     } catch (error) {
       const executionTime = Date.now() - startTime;
       if (error instanceof Error && error.message.includes("timed out")) {
-        errorToFile(`[TIMEOUT] Tool: ${toolName}, NetworkTimeout: ${timeoutMs}ms, ExecutionTime: ${executionTime}ms, RequestId: ${request.id}, Params: ${JSON.stringify(params)}`);
+        errorToFile(
+          `[TIMEOUT] Tool: ${toolName}, NetworkTimeout: ${timeoutMs}ms, ExecutionTime: ${executionTime}ms, RequestId: ${request.id}, Params: ${JSON.stringify(params)}`
+        );
       }
       throw error;
     }
@@ -6121,7 +6449,9 @@ var UnityClient = class {
     return new Promise((resolve, reject) => {
       const timeout_duration = timeoutMs || TIMEOUTS.NETWORK;
       const timeoutTimer = safeSetTimeout(() => {
-        errorToFile(`[NETWORK_TIMEOUT] Method: ${request.method}, RequestId: ${request.id}, NetworkTimeout: ${timeout_duration}ms, Params: ${JSON.stringify(request.params || {})}`);
+        errorToFile(
+          `[NETWORK_TIMEOUT] Method: ${request.method}, RequestId: ${request.id}, NetworkTimeout: ${timeout_duration}ms, Params: ${JSON.stringify(request.params || {})}`
+        );
         this.messageHandler.clearPendingRequests(`Request ${ERROR_MESSAGES.TIMEOUT}`);
         reject(new Error(`Request ${ERROR_MESSAGES.TIMEOUT}`));
       }, timeout_duration);
@@ -6156,6 +6486,7 @@ var UnityClient = class {
   disconnect() {
     this.connectionManager.stopPolling();
     this.messageHandler.clearPendingRequests("Connection closed");
+    this.messageHandler.clearBuffer();
     if (this.socket) {
       this.socket.destroy();
       this.socket = null;

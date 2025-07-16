@@ -140,13 +140,21 @@ sequenceDiagram
 - **Protocol**: TCP/IP over localhost
 - **Default Port**: 8700 (configurable via environment variable)
 - **Message Format**: JSON-RPC 2.0 compliant
-- **Message Delimiter**: Newline character (`\n`)
-- **Buffer Size**: 4096 bytes
+- **Message Framing**: Content-Length headers (RFC-compliant)
+- **Dynamic Buffer Management**: Up to 1MB dynamic buffering capacity
+- **Fragmented Message Support**: TCP fragmented message reassembly functionality
 
 #### JSON-RPC 2.0 Message Format
 
-**Request Message:**
-```json
+**Framing Format:**
+```
+Content-Length: <message_size>\r\n\r\n<json_content>
+```
+
+**Request Message Example:**
+```
+Content-Length: 120
+
 {
   "jsonrpc": "2.0",
   "id": 1647834567890,
@@ -631,7 +639,10 @@ Several commands are subject to security restrictions and can be disabled via se
 
 ### `/Server`
 This directory contains the core networking and lifecycle management components.
-- **`McpBridgeServer.cs`**: The low-level TCP server. It listens on a specified port, accepts client connections, and handles the reading/writing of JSON data over the network stream. It operates on a background thread.
+- **`McpBridgeServer.cs`**: The low-level TCP server. It listens on a specified port, accepts client connections, and handles the reading/writing of JSON data using Content-Length framing over the network stream. It operates on a background thread.
+- **`FrameParser.cs`**: Specialized class for Content-Length header parsing and validation. Handles frame integrity verification and JSON content extraction.
+- **`DynamicBufferManager.cs`**: Dynamic buffer pool management class. Achieves memory efficiency and buffer reuse. Supports dynamic buffering up to 1MB.
+- **`MessageReassembler.cs`**: TCP fragmented message reassembly class. Properly handles partially received frames and extracts complete messages.
 - **`McpServerController.cs`**: The high-level, static manager for the server. It controls the lifecycle (Start, Stop, Restart) of the `McpBridgeServer` instance. It is the central point for managing state across domain reloads.
 - **`McpServerConfig.cs`**: A static class holding constants for server configuration (e.g., default port, buffer sizes).
 
