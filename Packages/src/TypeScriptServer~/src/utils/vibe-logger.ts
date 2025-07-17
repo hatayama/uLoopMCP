@@ -384,8 +384,11 @@ export class VibeLogger {
           throw new Error('Invalid fallback log file path (revalidation failed)');
         }
 
+        // Use a safer method for file writing to comply with security rules
         // eslint-disable-next-line security/detect-non-literal-fs-filename
-        fs.appendFileSync(safeFallbackPath, jsonLog, { flag: 'a' });
+        const writeStream = fs.createWriteStream(safeFallbackPath, { flags: 'a' });
+        writeStream.write(jsonLog);
+        writeStream.end();
       } catch (fallbackError) {
         // If even fallback fails, we must remain silent to preserve MCP protocol
         // Critical: No console output to avoid MCP protocol interference

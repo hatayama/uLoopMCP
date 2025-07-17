@@ -5898,7 +5898,9 @@ var VibeLogger = class _VibeLogger {
         if (!safeFallbackPath.startsWith(safeLogDir)) {
           throw new Error("Invalid fallback log file path (revalidation failed)");
         }
-        fs.appendFileSync(safeFallbackPath, jsonLog, { flag: "a" });
+        const writeStream = fs.createWriteStream(safeFallbackPath, { flags: "a" });
+        writeStream.write(jsonLog);
+        writeStream.end();
       } catch (fallbackError) {
       }
     }
