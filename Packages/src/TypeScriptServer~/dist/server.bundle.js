@@ -6507,10 +6507,10 @@ var isJsonRpcNotification = (msg) => {
   return typeof msg === "object" && msg !== null && "method" in msg && typeof msg.method === "string" && !("id" in msg);
 };
 var isJsonRpcResponse = (msg) => {
-  return typeof msg === "object" && msg !== null && "id" in msg && typeof msg.id === "number" && !("method" in msg);
+  return typeof msg === "object" && msg !== null && "id" in msg && typeof msg.id === "string" && !("method" in msg);
 };
 var hasValidId = (msg) => {
-  return typeof msg === "object" && msg !== null && "id" in msg && typeof msg.id === "number";
+  return typeof msg === "object" && msg !== null && "id" in msg && typeof msg.id === "string";
 };
 var MessageHandler = class {
   notificationHandlers = /* @__PURE__ */ new Map();
@@ -6652,6 +6652,8 @@ var UnityClient = class {
   unityDiscovery = null;
   // Reference to UnityDiscovery for connection loss handling
   requestIdCounter = 0;
+  processId = process.pid;
+  randomSeed = Math.floor(Math.random() * 1e3);
   constructor() {
     const unityTcpPort = process.env.UNITY_TCP_PORT;
     if (!unityTcpPort) {
@@ -6894,8 +6896,8 @@ var UnityClient = class {
     return response.result;
   }
   /**
-   * Generate unique request ID
-   * Uses counter + timestamp to ensure uniqueness even within same millisecond
+   * Generate unique request ID as string
+   * Uses timestamp + process ID + random seed + counter for guaranteed uniqueness across processes
    */
   generateId() {
     this.requestIdCounter++;
@@ -6903,7 +6905,10 @@ var UnityClient = class {
       this.requestIdCounter = 1;
     }
     const timestamp = Date.now();
-    return timestamp * 1e4 + this.requestIdCounter;
+    const processId = this.processId;
+    const randomSeed = this.randomSeed;
+    const counter = this.requestIdCounter.toString().padStart(4, "0");
+    return `ts_${timestamp}_${processId}_${randomSeed}_${counter}`;
   }
   /**
    * Send request and wait for response
