@@ -117,6 +117,18 @@ Retrieve information about the currently active Hierarchy in nested JSON format.
 → For large scenes, hierarchy data is saved to file and path is returned instead of raw JSON
 ```
 
+> [!IMPORTANT]
+> **Security Settings**
+>
+> `run-tests` and `execute-menu-item` tools are disabled by default because AI can execute arbitrary code.
+> To use these tools, enable the corresponding settings in the uLoopMCP window "Security Settings":
+> - **Allow Tests Execution**: Enable `run-tests` tool
+> - **Allow Menu Item Execution**: Enable `execute-menu-item` tool
+> - **Allow Third Party Tools**: Enable user-developed custom tools
+>
+> Setting changes take effect immediately without server restart.
+> **Warning**: When using these features for AI-driven code generation, we strongly recommend running in sandbox environments or containers to prepare for unexpected behavior and security risks.
+
 ## Feature Specifications
 <details>
 <summary>View Detailed Specifications</summary>
@@ -362,18 +374,6 @@ All tools automatically include the following timing information:
   - `MenuItemFound` (boolean): Whether the menu item was found in the system
 
 ---
-
-> [!IMPORTANT]
-> **Security Settings**
->
-> `run-tests` and `execute-menu-item` tools are disabled by default because AI can execute arbitrary code.
-> To use these tools, enable the corresponding settings in the uLoopMCP window "Security Settings":
-> - **Allow Tests Execution**: Enable `run-tests` tool
-> - **Allow Menu Item Execution**: Enable `execute-menu-item` tool
-> - **Allow Third Party Tools**: Enable user-developed custom tools
->
-> Setting changes take effect immediately without server restart.
-> **Warning**: When using these features for AI-driven code generation, we strongly recommend running in sandbox environments or containers to prepare for unexpected behavior and security risks.
 
 ## Related Documentation
 

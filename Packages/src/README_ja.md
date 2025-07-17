@@ -117,6 +117,18 @@ UnitySearchが提供する検索プロバイダーを取得します
 → 大きなシーンでは、Hierarchyデータがファイルに保存され、生のJSONの代わりにパスが返されます
 ```
 
+> [!IMPORTANT]
+> **セキュリティ設定について**
+>
+> `run-tests`と`execute-menu-item`ツールは、AIが任意のコードを実行できてしまうため、デフォルトで無効化されています。
+> これらのツールを使用するには、uLoopMCPウィンドウの「Security Settings」で該当する項目を有効化してください：
+> - **Allow Tests Execution**: `run-tests`ツールを有効化
+> - **Allow Menu Item Execution**: `execute-menu-item`ツールを有効化
+> - **Allow Third Party Tools**: ユーザーが独自に拡張したtoolを有効化
+>
+> 設定変更は即座に反映され、サーバー再起動は不要です。
+> **注意**: これらの機能を使ってAIによるコード生成を扱う際は、予期せぬ動作やセキュリティリスクに備えるため、sandbox環境やコンテナ上での実行を強く推奨します。
+
 ## 機能詳細仕様
 <details>
 <summary>詳細仕様を見る</summary>
@@ -361,18 +373,6 @@ UnitySearchが提供する検索プロバイダーを取得します
   - `MenuItemFound` (boolean): メニューアイテムがシステムで見つかったかどうか
 
 ---
-
-> [!IMPORTANT]
-> **セキュリティ設定について**
->
-> `run-tests`と`execute-menu-item`ツールは、AIが任意のコードを実行できてしまうため、デフォルトで無効化されています。
-> これらのツールを使用するには、uLoopMCPウィンドウの「Security Settings」で該当する項目を有効化してください：
-> - **Allow Tests Execution**: `run-tests`ツールを有効化
-> - **Allow Menu Item Execution**: `execute-menu-item`ツールを有効化
-> - **Allow Third Party Tools**: ユーザーが独自に拡張したtoolを有効化
->
-> 設定変更は即座に反映され、サーバー再起動は不要です。
-> **注意**: これらの機能を使ってAIによるコード生成を扱う際は、予期せぬ動作やセキュリティリスクに備えるため、sandbox環境やコンテナ上での実行を強く推奨します。
 
 ## 関連ドキュメント
 
