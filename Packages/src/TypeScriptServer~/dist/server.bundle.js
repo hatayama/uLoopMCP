@@ -6644,6 +6644,7 @@ var MessageHandler = class {
 var UnityClient = class _UnityClient {
   static MAX_COUNTER = 9999;
   static COUNTER_PADDING = 4;
+  static instance = null;
   socket = null;
   _connected = false;
   port;
@@ -6667,6 +6668,24 @@ var UnityClient = class _UnityClient {
       throw new Error(`UNITY_TCP_PORT must be a valid port number (1-65535), got: ${unityTcpPort}`);
     }
     this.port = parsedPort;
+  }
+  /**
+   * Get the singleton instance of UnityClient
+   */
+  static getInstance() {
+    if (!_UnityClient.instance) {
+      _UnityClient.instance = new _UnityClient();
+    }
+    return _UnityClient.instance;
+  }
+  /**
+   * Reset the singleton instance (for testing purposes)
+   */
+  static resetInstance() {
+    if (_UnityClient.instance) {
+      _UnityClient.instance.disconnect();
+      _UnityClient.instance = null;
+    }
   }
   /**
    * Update Unity connection port (for discovery)
@@ -8029,7 +8048,7 @@ var UnityMcpServer = class {
         }
       }
     );
-    this.unityClient = new UnityClient();
+    this.unityClient = UnityClient.getInstance();
     this.connectionManager = new UnityConnectionManager(this.unityClient);
     this.unityDiscovery = this.connectionManager.getUnityDiscovery();
     this.toolManager = new UnityToolManager(this.unityClient);

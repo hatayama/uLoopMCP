@@ -14,6 +14,7 @@ interface UnityDiscovery {
 
 /**
  * TCP/IP client for communication with Unity
+ * Implemented as Singleton to prevent multiple Unity connections
  *
  * Design document reference: Packages/src/TypeScriptServer~/ARCHITECTURE.md
  *
@@ -26,6 +27,7 @@ interface UnityDiscovery {
 export class UnityClient {
   private static readonly MAX_COUNTER = 9999;
   private static readonly COUNTER_PADDING = 4;
+  private static instance: UnityClient | null = null;
 
   private socket: net.Socket | null = null;
   private _connected: boolean = false;
@@ -39,7 +41,7 @@ export class UnityClient {
   private readonly processId: number = process.pid;
   private readonly randomSeed: number = Math.floor(Math.random() * 1000);
 
-  constructor() {
+  private constructor() {
     const unityTcpPort: string | undefined = process.env.UNITY_TCP_PORT;
 
     if (!unityTcpPort) {
@@ -52,6 +54,26 @@ export class UnityClient {
     }
 
     this.port = parsedPort;
+  }
+
+  /**
+   * Get the singleton instance of UnityClient
+   */
+  static getInstance(): UnityClient {
+    if (!UnityClient.instance) {
+      UnityClient.instance = new UnityClient();
+    }
+    return UnityClient.instance;
+  }
+
+  /**
+   * Reset the singleton instance (for testing purposes)
+   */
+  static resetInstance(): void {
+    if (UnityClient.instance) {
+      UnityClient.instance.disconnect();
+      UnityClient.instance = null;
+    }
   }
 
   /**
