@@ -11,12 +11,12 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class ComponentSerializer
     {
-        private readonly ComponentPropertySerializer propertySerializer;
+        private readonly ComponentPropertySerializer _propertySerializer;
         
         
         public ComponentSerializer()
         {
-            this.propertySerializer = new ComponentPropertySerializer();
+            _propertySerializer = new ComponentPropertySerializer();
         }
         
         public ComponentInfo[] SerializeComponents(GameObject gameObject)
@@ -33,7 +33,7 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
                 
                 string componentTypeName = component.GetType().Name;
-                ComponentPropertyInfo[] properties = propertySerializer.SerializeProperties(component);
+                ComponentPropertyInfo[] properties = _propertySerializer.SerializeProperties(component);
                 
                 ComponentInfo info = new ComponentInfo
                 {

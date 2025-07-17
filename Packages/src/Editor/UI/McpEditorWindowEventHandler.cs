@@ -105,8 +105,7 @@ namespace io.github.hatayama.uLoopMCP
         private void OnClientConnected(string clientEndpoint)
         {
             // Enhanced logging for debugging client connection
-            var connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
-            int totalCount = connectedClients?.Count ?? 0;
+            // Count check for debugging purposes only
             
             
             // Clear reconnecting flags when client connects
@@ -128,8 +127,7 @@ namespace io.github.hatayama.uLoopMCP
         private void OnClientDisconnected(string clientEndpoint)
         {
             // Enhanced logging for debugging client disconnection issues
-            var connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
-            int remainingCount = connectedClients?.Count ?? 0;
+            // Count check for debugging purposes only
             
             
             
@@ -165,7 +163,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void CheckServerStateChanges()
         {
-            (bool isRunning, int port, bool wasRestored) = McpServerController.GetServerStatus();
+            (bool isRunning, int port, bool _) = McpServerController.GetServerStatus();
             var connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
             int connectedCount = connectedClients?.Count ?? 0;
 

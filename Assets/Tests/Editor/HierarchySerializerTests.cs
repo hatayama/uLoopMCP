@@ -17,10 +17,10 @@ namespace io.github.hatayama.uLoopMCP
         public void SerializeHierarchy_WithValidNodes_ReturnsCorrectResponse()
         {
             // Arrange
-            List<HierarchyNode> nodes = new List<HierarchyNode>
+            List<HierarchyNode> nodes = new()
             {
-                new HierarchyNode(1, "Root", null, 0, true, new[] { "Transform" }),
-                new HierarchyNode(2, "Child", 1, 1, true, new[] { "Transform", "MeshRenderer" })
+                new(1, "Root", null, 0, true, new[] { "Transform" }),
+                new(2, "Child", 1, 1, true, new[] { "Transform", "MeshRenderer" })
             };
             
             HierarchyContext context = new HierarchyContext("editor", "TestScene", 0, 0);
@@ -59,12 +59,12 @@ namespace io.github.hatayama.uLoopMCP
         public void SerializeHierarchy_CalculatesCorrectMaxDepth()
         {
             // Arrange
-            List<HierarchyNode> nodes = new List<HierarchyNode>
+            List<HierarchyNode> nodes = new()
             {
-                new HierarchyNode(1, "Root", null, 0, true, new string[0]),
-                new HierarchyNode(2, "Level1", 1, 1, true, new string[0]),
-                new HierarchyNode(3, "Level2", 2, 2, true, new string[0]),
-                new HierarchyNode(4, "Level3", 3, 3, true, new string[0])
+                new(1, "Root", null, 0, true, new string[0]),
+                new(2, "Level1", 1, 1, true, new string[0]),
+                new(3, "Level2", 2, 2, true, new string[0]),
+                new(4, "Level3", 3, 3, true, new string[0])
             };
             
             HierarchyContext context = new HierarchyContext("editor", "DeepScene", 0, 0);

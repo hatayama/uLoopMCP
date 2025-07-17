@@ -14,7 +14,7 @@ namespace io.github.hatayama.uLoopMCP
         private readonly McpEditorType _editorType;
         
         // Security: Safe JSON serializer settings
-        private static readonly JsonSerializerSettings SafeJsonSettings = new JsonSerializerSettings
+        private static readonly JsonSerializerSettings SafeJsonSettings = new()
         {
             TypeNameHandling = TypeNameHandling.None, // Disable type information
             DateParseHandling = DateParseHandling.None,

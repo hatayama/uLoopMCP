@@ -12,15 +12,15 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const string LOG_PREFIX = "[uLoopMCP]";
         
-        [SerializeField] private bool enableDebugLog = false;
+        [SerializeField] private bool _enableDebugLog = false;
         
         /// <summary>
         /// Whether to output debug logs
         /// </summary>
         public static bool EnableDebugLog 
         { 
-            get => instance.enableDebugLog; 
-            set => instance.enableDebugLog = value; 
+            get => instance._enableDebugLog; 
+            set => instance._enableDebugLog = value; 
         }
         
         /// <summary>

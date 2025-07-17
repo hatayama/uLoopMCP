@@ -434,7 +434,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 else
                 {
-                    Vector2 scrollPos = EditorGUILayout.BeginScrollView(
+                    EditorGUILayout.BeginScrollView(
                         data.CommunicationLogScrollPosition, 
                         GUILayout.Height(data.CommunicationLogHeight)
                     );

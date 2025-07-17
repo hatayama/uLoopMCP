@@ -45,7 +45,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Current client context for async operations
         /// </summary>
-        private static readonly AsyncLocal<ClientExecutionContext> _currentClientContext = new AsyncLocal<ClientExecutionContext>();
+        private static readonly AsyncLocal<ClientExecutionContext> _currentClientContext = new();
         
         /// <summary>
         /// Get current client context (ProcessID and Endpoint)

@@ -30,8 +30,8 @@ namespace io.github.hatayama.uLoopMCP
         private static readonly int MAX_FILE_SIZE_MB = 10;
         private static readonly int MAX_MEMORY_LOGS = 1000;
         
-        private static readonly List<VibeLogEntry> memoryLogs = new List<VibeLogEntry>();
-        private static readonly object lockObject = new object();
+        private static readonly List<VibeLogEntry> memoryLogs = new();
+        private static readonly object lockObject = new();
         
         [Serializable]
         public class VibeLogEntry

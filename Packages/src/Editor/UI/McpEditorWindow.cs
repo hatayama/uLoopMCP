@@ -262,7 +262,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private ServerStatusData CreateServerStatusData()
         {
-            (bool isRunning, int port, bool wasRestored) = McpServerController.GetServerStatus();
+            (bool isRunning, int port, bool _) = McpServerController.GetServerStatus();
             string status = isRunning ? "Running" : "Stopped";
             Color statusColor = isRunning ? Color.green : Color.red;
 

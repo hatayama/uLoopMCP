@@ -10,11 +10,11 @@ using Newtonsoft.Json.Linq;
 /// </summary>
 public class UnitySearchTester : EditorWindow
 {
-    private string searchQuery = "*.cs";
-    private int maxResults = 10;
-    private bool saveToFile = false;
-    private string lastResult = "";
-    private Vector2 scrollPosition;
+    private string _searchQuery = "*.cs";
+    private int _maxResults = 10;
+    private bool _saveToFile = false;
+    private string _lastResult = "";
+    private Vector2 _scrollPosition;
     
     [MenuItem("uLoopMCP/Windows/Unity Search Tester")]
     public static void ShowWindow()
@@ -28,9 +28,9 @@ public class UnitySearchTester : EditorWindow
         GUILayout.Space(10);
         
         // Input fields
-        searchQuery = EditorGUILayout.TextField("Search Query:", searchQuery);
-        maxResults = EditorGUILayout.IntField("Max Results:", maxResults);
-        saveToFile = EditorGUILayout.Toggle("Save to File:", saveToFile);
+        _searchQuery = EditorGUILayout.TextField("Search Query:", _searchQuery);
+        _maxResults = EditorGUILayout.IntField("Max Results:", _maxResults);
+        _saveToFile = EditorGUILayout.Toggle("Save to File:", _saveToFile);
         
         GUILayout.Space(10);
         
@@ -59,8 +59,8 @@ public class UnitySearchTester : EditorWindow
         
         // Results display
         GUILayout.Label("Last Result:", EditorStyles.boldLabel);
-        scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, GUILayout.Height(200));
-        EditorGUILayout.TextArea(lastResult, GUILayout.ExpandHeight(true));
+        _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, GUILayout.Height(200));
+        EditorGUILayout.TextArea(_lastResult, GUILayout.ExpandHeight(true));
         EditorGUILayout.EndScrollView();
     }
     
@@ -69,9 +69,9 @@ public class UnitySearchTester : EditorWindow
         UnitySearchTool tool = new UnitySearchTool();
         UnitySearchSchema schema = new UnitySearchSchema
         {
-            SearchQuery = searchQuery,
-            MaxResults = maxResults,
-            SaveToFile = saveToFile
+            SearchQuery = _searchQuery,
+            MaxResults = _maxResults,
+            SaveToFile = _saveToFile
         };
         
         await ExecuteTest(tool, schema, "Basic Search");
@@ -84,8 +84,8 @@ public class UnitySearchTester : EditorWindow
         {
             SearchQuery = "*",
             FileExtensions = new string[] { "cs" },
-            MaxResults = maxResults,
-            SaveToFile = saveToFile
+            MaxResults = _maxResults,
+            SaveToFile = _saveToFile
         };
         
         await ExecuteTest(tool, schema, "File Extension Filter");
@@ -98,8 +98,8 @@ public class UnitySearchTester : EditorWindow
         {
             SearchQuery = "*",
             AssetTypes = new string[] { "MonoScript" },
-            MaxResults = maxResults,
-            SaveToFile = saveToFile
+            MaxResults = _maxResults,
+            SaveToFile = _saveToFile
         };
         
         await ExecuteTest(tool, schema, "Asset Type Filter");
@@ -111,7 +111,7 @@ public class UnitySearchTester : EditorWindow
         UnitySearchSchema schema = new UnitySearchSchema
         {
             SearchQuery = "",
-            MaxResults = maxResults
+            MaxResults = _maxResults
         };
         
         await ExecuteTest(tool, schema, "Empty Query Test");
@@ -157,18 +157,18 @@ public class UnitySearchTester : EditorWindow
                     }
                 }
                 
-                lastResult = result;
+                _lastResult = result;
                 Debug.Log($"Unity Search Test: {testName} completed - {(response.Success ? "SUCCESS" : "FAILED")}");
             }
             else
             {
-                lastResult = $"=== {testName} ===\nFailed to cast response to UnitySearchResponse";
+                _lastResult = $"=== {testName} ===\nFailed to cast response to UnitySearchResponse";
                 Debug.LogError($"Unity Search Test: {testName} - Failed to cast response");
             }
         }
         catch (System.Exception ex)
         {
-            lastResult = $"=== {testName} ===\nException: {ex.Message}\nStackTrace: {ex.StackTrace}";
+            _lastResult = $"=== {testName} ===\nException: {ex.Message}\nStackTrace: {ex.StackTrace}";
             Debug.LogError($"Unity Search Test: {testName} - Exception: {ex.Message}");
         }
         

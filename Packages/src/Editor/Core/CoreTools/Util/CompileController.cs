@@ -13,9 +13,9 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class CompileController : IDisposable
     {
-        private bool isCompiling = false;
-        private List<CompilerMessage> compileMessages = new List<CompilerMessage>();
-        private TaskCompletionSource<CompileResult> currentCompileTask;
+        private bool _isCompiling = false;
+        private List<CompilerMessage> _compileMessages = new();
+        private TaskCompletionSource<CompileResult> _currentCompileTask;
 
         /// <summary>
         /// Event that occurs when compilation is complete.
@@ -35,12 +35,12 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Gets whether a compilation is currently in progress.
         /// </summary>
-        public bool IsCompiling => isCompiling;
+        public bool IsCompiling => _isCompiling;
         
         /// <summary>
         /// Gets the current list of compiler messages.
         /// </summary>
-        public IReadOnlyList<CompilerMessage> CompileMessages => compileMessages.AsReadOnly();
+        public IReadOnlyList<CompilerMessage> CompileMessages => _compileMessages.AsReadOnly();
 
         /// <summary>
         /// Executes compilation asynchronously.
@@ -50,19 +50,19 @@ namespace io.github.hatayama.uLoopMCP
         /// <exception cref="InvalidOperationException">Thrown when the task is not found during compilation.</exception>
         public async Task<CompileResult> TryCompileAsync(bool forceRecompile = false)
         {
-            if (isCompiling)
+            if (_isCompiling)
             {
                 // If compilation is already in progress, wait for the current task.
-                if (currentCompileTask != null)
+                if (_currentCompileTask != null)
                 {
-                    return await currentCompileTask.Task;
+                    return await _currentCompileTask.Task;
                 }
                 throw new InvalidOperationException("Compilation is in progress, but the task could not be found.");
             }
 
-            isCompiling = true;
-            compileMessages.Clear();
-            currentCompileTask = new TaskCompletionSource<CompileResult>();
+            _isCompiling = true;
+            _compileMessages.Clear();
+            _currentCompileTask = new TaskCompletionSource<CompileResult>();
 
             // Execute asset refresh.
             AssetDatabase.Refresh();
@@ -83,7 +83,7 @@ namespace io.github.hatayama.uLoopMCP
                 CompilationPipeline.RequestScriptCompilation();
             }
 
-            return await currentCompileTask.Task;
+            return await _currentCompileTask.Task;
         }
 
         /// <summary>
@@ -91,7 +91,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void ClearMessages()
         {
-            compileMessages.Clear();
+            _compileMessages.Clear();
         }
 
         /// <summary>
@@ -104,14 +104,14 @@ namespace io.github.hatayama.uLoopMCP
             CompilationPipeline.compilationFinished -= HandleCompileFinished;
             CompilationPipeline.assemblyCompilationFinished -= HandleAssemblyFinished;
 
-            isCompiling = false;
+            _isCompiling = false;
 
             CompileResult result = CreateCompileResult();
             OnCompileCompleted?.Invoke(result);
 
             // Set the result on the TaskCompletionSource.
-            TaskCompletionSource<CompileResult> task = currentCompileTask;
-            currentCompileTask = null;
+            TaskCompletionSource<CompileResult> task = _currentCompileTask;
+            _currentCompileTask = null;
             task?.SetResult(result);
         }
 
@@ -126,7 +126,7 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (CompilerMessage message in messages)
             {
-                compileMessages.Add(message);
+                _compileMessages.Add(message);
             }
 
             OnAssemblyCompiled?.Invoke(assemblyName, messages);
@@ -138,18 +138,18 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>The compilation result.</returns>
         private CompileResult CreateCompileResult()
         {
-            int errorCount = compileMessages.Count(m => m.type == CompilerMessageType.Error);
-            int warningCount = compileMessages.Count(m => m.type == CompilerMessageType.Warning);
+            int errorCount = _compileMessages.Count(m => m.type == CompilerMessageType.Error);
+            int warningCount = _compileMessages.Count(m => m.type == CompilerMessageType.Warning);
 
-            CompilerMessage[] errors = compileMessages.Where(m => m.type == CompilerMessageType.Error).ToArray();
-            CompilerMessage[] warnings = compileMessages.Where(m => m.type == CompilerMessageType.Warning).ToArray();
+            CompilerMessage[] errors = _compileMessages.Where(m => m.type == CompilerMessageType.Error).ToArray();
+            CompilerMessage[] warnings = _compileMessages.Where(m => m.type == CompilerMessageType.Warning).ToArray();
 
             return new CompileResult(
                 success: errorCount == 0,
                 errorCount: errorCount,
                 warningCount: warningCount,
                 completedAt: DateTime.Now,
-                messages: compileMessages.ToArray(),
+                messages: _compileMessages.ToArray(),
                 errors: errors,
                 warnings: warnings
             );
@@ -165,10 +165,10 @@ namespace io.github.hatayama.uLoopMCP
             CompilationPipeline.assemblyCompilationFinished -= HandleAssemblyFinished;
 
             // If there is an incomplete task, cancel it.
-            if (currentCompileTask != null && !currentCompileTask.Task.IsCompleted)
+            if (_currentCompileTask != null && !_currentCompileTask.Task.IsCompleted)
             {
-                currentCompileTask.SetCanceled();
-                currentCompileTask = null;
+                _currentCompileTask.SetCanceled();
+                _currentCompileTask = null;
             }
         }
 
@@ -178,8 +178,8 @@ namespace io.github.hatayama.uLoopMCP
         public void Dispose()
         {
             Cleanup();
-            compileMessages?.Clear();
-            compileMessages = null;
+            _compileMessages?.Clear();
+            _compileMessages = null;
 
             // Clear all events.
             OnCompileCompleted = null;

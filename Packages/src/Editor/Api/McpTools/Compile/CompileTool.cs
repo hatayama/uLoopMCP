@@ -33,7 +33,7 @@ namespace io.github.hatayama.uLoopMCP
             string stateError = ValidateCompilationState();
             if (!string.IsNullOrEmpty(stateError))
             {
-                CompileIssue[] stateErrors = { new CompileIssue(stateError, "", 0) };
+                CompileIssue[] stateErrors = { new(stateError, "", 0) };
                 return new CompileResponse(
                     success: false,
                     errorCount: 1,

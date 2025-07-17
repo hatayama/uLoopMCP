@@ -8,9 +8,9 @@ namespace io.github.hatayama.uLoopMCP
     public class CompileEditorWindow : EditorWindow
     {
         private CompileController _compileController;
-        private CompileLogDisplay logDisplay;
-        private Vector2 scrollPosition;
-        private bool forceRecompile = false;
+        private CompileLogDisplay _logDisplay;
+        private Vector2 _scrollPosition;
+        private bool _forceRecompile = false;
 
         // Note: Compile window data is now managed via McpSessionManager
 
@@ -25,22 +25,22 @@ namespace io.github.hatayama.uLoopMCP
         private void OnEnable()
         {
             // Create instances only if they don't exist yet
-            if (_compileController == null || logDisplay == null)
+            if (_compileController == null || _logDisplay == null)
             {
                 _compileController = new CompileController();
-                logDisplay = new CompileLogDisplay();
+                _logDisplay = new CompileLogDisplay();
 
                 // Restore persisted logs from McpSessionManager
                 bool hasPersistedData = McpSessionManager.instance.CompileWindowHasData;
                 if (hasPersistedData)
                 {
                     string persistentLogText = McpSessionManager.instance.CompileWindowLogText;
-                    logDisplay.RestoreFromText(persistentLogText);
+                    _logDisplay.RestoreFromText(persistentLogText);
                 }
 
                 // Subscribe to events
-                _compileController.OnCompileStarted += logDisplay.AppendStartMessage;
-                _compileController.OnAssemblyCompiled += logDisplay.AppendAssemblyMessage;
+                _compileController.OnCompileStarted += _logDisplay.AppendStartMessage;
+                _compileController.OnAssemblyCompiled += _logDisplay.AppendAssemblyMessage;
                 _compileController.OnCompileCompleted += OnCompileCompleted;
             }
             else
@@ -48,8 +48,8 @@ namespace io.github.hatayama.uLoopMCP
                 // If an instance already exists, re-subscribe as the event subscription might have been lost
                 if (!_compileController.IsCompiling)
                 {
-                    _compileController.OnCompileStarted += logDisplay.AppendStartMessage;
-                    _compileController.OnAssemblyCompiled += logDisplay.AppendAssemblyMessage;
+                    _compileController.OnCompileStarted += _logDisplay.AppendStartMessage;
+                    _compileController.OnAssemblyCompiled += _logDisplay.AppendAssemblyMessage;
                     _compileController.OnCompileCompleted += OnCompileCompleted;
                 }
             }
@@ -61,7 +61,7 @@ namespace io.github.hatayama.uLoopMCP
 
             // Set to null only on OnDisable for a complete cleanup
             _compileController = null;
-            logDisplay = null;
+            _logDisplay = null;
         }
 
         private void DisposeInstances()
@@ -69,10 +69,10 @@ namespace io.github.hatayama.uLoopMCP
             if (_compileController != null)
             {
                 // Unsubscribe from events
-                if (logDisplay != null)
+                if (_logDisplay != null)
                 {
-                    _compileController.OnCompileStarted -= logDisplay.AppendStartMessage;
-                    _compileController.OnAssemblyCompiled -= logDisplay.AppendAssemblyMessage;
+                    _compileController.OnCompileStarted -= _logDisplay.AppendStartMessage;
+                    _compileController.OnAssemblyCompiled -= _logDisplay.AppendAssemblyMessage;
                 }
                 _compileController.OnCompileCompleted -= OnCompileCompleted;
 
@@ -80,26 +80,26 @@ namespace io.github.hatayama.uLoopMCP
                 // Set to null only on OnDisable
             }
 
-            if (logDisplay != null)
+            if (_logDisplay != null)
             {
-                logDisplay.Dispose();
+                _logDisplay.Dispose();
                 // Set to null only on OnDisable
             }
         }
 
         private void OnGUI()
         {
-            if (_compileController == null || logDisplay == null) return;
+            if (_compileController == null || _logDisplay == null) return;
 
             GUILayout.Label("Unity Compile Tool", EditorStyles.boldLabel);
 
             // Force recompile option
-            forceRecompile = EditorGUILayout.Toggle("Force Recompile", forceRecompile);
+            _forceRecompile = EditorGUILayout.Toggle("Force Recompile", _forceRecompile);
             GUILayout.Space(5);
 
             EditorGUI.BeginDisabledGroup(_compileController.IsCompiling);
             string buttonText = _compileController.IsCompiling ? "Compiling..." :
-                               (forceRecompile ? "Run Force Compile" : "Run Compile");
+                               (_forceRecompile ? "Run Force Compile" : "Run Compile");
             if (GUILayout.Button(buttonText, GUILayout.Height(30)))
             {
                 // Execute compilation using async/await
@@ -119,8 +119,8 @@ namespace io.github.hatayama.uLoopMCP
 
             GUILayout.Label("Compilation Result:", EditorStyles.boldLabel);
 
-            scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, GUILayout.Height(300));
-            EditorGUILayout.TextArea(logDisplay.LogText, GUILayout.ExpandHeight(true));
+            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, GUILayout.Height(300));
+            EditorGUILayout.TextArea(_logDisplay.LogText, GUILayout.ExpandHeight(true));
             EditorGUILayout.EndScrollView();
 
             DrawMessageDetails();
@@ -128,7 +128,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private async Task ExecuteCompileAsync()
         {
-            CompileResult result = await _compileController.TryCompileAsync(forceRecompile);
+            CompileResult result = await _compileController.TryCompileAsync(_forceRecompile);
             
             // Output result to log (for debugging)
             UnityEngine.Debug.Log($"Compilation finished: Success={result.Success}, Errors={result.error.Length}, Warnings={result.warning.Length}");
@@ -136,10 +136,10 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnCompileCompleted(CompileResult result)
         {
-            logDisplay.AppendCompletionMessage(result);
+            _logDisplay.AppendCompletionMessage(result);
 
             // Persist log to McpSessionManager
-            McpSessionManager.instance.CompileWindowLogText = logDisplay.LogText;
+            McpSessionManager.instance.CompileWindowLogText = _logDisplay.LogText;
             McpSessionManager.instance.CompileWindowHasData = true;
 
             Repaint();
@@ -166,7 +166,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void ClearLog()
         {
-            logDisplay.Clear();
+            _logDisplay.Clear();
             _compileController.ClearMessages();
 
             // Also clear McpSessionManager data

@@ -109,6 +109,12 @@ namespace io.github.hatayama.uLoopMCP
             {
                 using (SystemDiagnostics.Process process = SystemDiagnostics.Process.Start(startInfo))
                 {
+                    if (process == null)
+                    {
+                        Debug.LogError("Failed to start npm install process");
+                        return false;
+                    }
+                    
                     string output = process.StandardOutput.ReadToEnd();
                     string error = process.StandardError.ReadToEnd();
                     
@@ -167,6 +173,12 @@ namespace io.github.hatayama.uLoopMCP
                 
                 using (SystemDiagnostics.Process whichProcess = SystemDiagnostics.Process.Start(whichInfo))
                 {
+                    if (whichProcess == null)
+                    {
+                        Debug.LogError("Failed to start 'which npm' process");
+                        return string.Empty;
+                    }
+                    
                     string whichOutput = whichProcess.StandardOutput.ReadToEnd().Trim();
                     string whichError = whichProcess.StandardError.ReadToEnd().Trim();
                     whichProcess.WaitForExit();
@@ -319,6 +331,12 @@ namespace io.github.hatayama.uLoopMCP
             {
                 using (SystemDiagnostics.Process process = SystemDiagnostics.Process.Start(startInfo))
                 {
+                    if (process == null)
+                    {
+                        Debug.LogError($"Failed to start {command} {arguments} process");
+                        return;
+                    }
+                    
                     string output = process.StandardOutput.ReadToEnd();
                     string error = process.StandardError.ReadToEnd();
                     

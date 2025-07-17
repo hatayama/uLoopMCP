@@ -10,19 +10,19 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class MessageReassembler : IDisposable
     {
-        private readonly DynamicBufferManager bufferManager;
-        private byte[] assemblyBuffer;
-        private int currentDataLength = 0;
-        private bool disposed = false;
+        private readonly DynamicBufferManager _bufferManager;
+        private byte[] _assemblyBuffer;
+        private int _currentDataLength = 0;
+        private bool _disposed = false;
         
         // Frame parsing state
-        private int expectedContentLength = -1;
-        private int headerLength = -1;
-        private bool headerParsed = false;
+        private int _expectedContentLength = -1;
+        private int _headerLength = -1;
+        private bool _headerParsed = false;
         
         // Statistics
-        private int totalMessagesReassembled = 0;
-        private int totalDataChunksProcessed = 0;
+        private int _totalMessagesReassembled = 0;
+        private int _totalDataChunksProcessed = 0;
         
         /// <summary>
         /// Initializes a new instance of the MessageReassembler.
@@ -30,24 +30,24 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="bufferManager">The buffer manager to use for memory management</param>
         public MessageReassembler(DynamicBufferManager bufferManager = null)
         {
-            this.bufferManager = bufferManager ?? new DynamicBufferManager();
-            this.assemblyBuffer = this.bufferManager.GetBuffer(BufferConfig.INITIAL_BUFFER_SIZE);
+            this._bufferManager = bufferManager ?? new DynamicBufferManager();
+            this._assemblyBuffer = this._bufferManager.GetBuffer(BufferConfig.INITIAL_BUFFER_SIZE);
         }
         
         /// <summary>
         /// Gets whether there is incomplete data waiting for more chunks.
         /// </summary>
-        public bool HasIncompleteData => currentDataLength > 0;
+        public bool HasIncompleteData => _currentDataLength > 0;
         
         /// <summary>
         /// Gets the current amount of data in the assembly buffer.
         /// </summary>
-        public int CurrentDataLength => currentDataLength;
+        public int CurrentDataLength => _currentDataLength;
         
         /// <summary>
         /// Gets whether the header has been parsed and we're waiting for content.
         /// </summary>
-        public bool IsWaitingForContent => headerParsed && expectedContentLength > 0;
+        public bool IsWaitingForContent => _headerParsed && _expectedContentLength > 0;
         
         /// <summary>
         /// Adds new data to the reassembly buffer.
@@ -56,7 +56,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="length">The length of valid data in the chunk</param>
         public void AddData(byte[] data, int length)
         {
-            if (disposed)
+            if (_disposed)
             {
                 throw new ObjectDisposedException(nameof(MessageReassembler));
             }
@@ -71,20 +71,20 @@ namespace io.github.hatayama.uLoopMCP
                 throw new ArgumentException("Length cannot exceed data array size", nameof(length));
             }
             
-            totalDataChunksProcessed++;
+            _totalDataChunksProcessed++;
             
             // Ensure we have enough space in the assembly buffer
-            int requiredSize = currentDataLength + length;
-            if (requiredSize > assemblyBuffer.Length)
+            int requiredSize = _currentDataLength + length;
+            if (requiredSize > _assemblyBuffer.Length)
             {
-                bufferManager.ResizeBuffer(ref assemblyBuffer, currentDataLength, requiredSize);
+                _bufferManager.ResizeBuffer(ref _assemblyBuffer, _currentDataLength, requiredSize);
             }
             
             // Copy new data to assembly buffer
-            Array.Copy(data, 0, assemblyBuffer, currentDataLength, length);
-            currentDataLength += length;
+            Array.Copy(data, 0, _assemblyBuffer, _currentDataLength, length);
+            _currentDataLength += length;
             
-            McpLogger.LogDebug($"[MessageReassembler] Added {length} bytes, total: {currentDataLength}");
+            McpLogger.LogDebug($"[MessageReassembler] Added {length} bytes, total: {_currentDataLength}");
         }
         
         /// <summary>
@@ -93,14 +93,14 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Array of complete JSON messages, or empty array if none available</returns>
         public string[] ExtractCompleteMessages()
         {
-            if (disposed)
+            if (_disposed)
             {
                 throw new ObjectDisposedException(nameof(MessageReassembler));
             }
             
             var completeMessages = new List<string>();
             
-            while (currentDataLength > 0)
+            while (_currentDataLength > 0)
             {
                 string extractedMessage = TryExtractSingleMessage();
                 if (extractedMessage == null)
@@ -110,7 +110,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 
                 completeMessages.Add(extractedMessage);
-                totalMessagesReassembled++;
+                _totalMessagesReassembled++;
             }
             
             return completeMessages.ToArray();
@@ -123,7 +123,7 @@ namespace io.github.hatayama.uLoopMCP
         private string TryExtractSingleMessage()
         {
             // If we haven't parsed the header yet, try to parse it
-            if (!headerParsed)
+            if (!_headerParsed)
             {
                 if (!TryParseHeader())
                 {
@@ -133,48 +133,48 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             // Early detection of abnormal states - throw exceptions immediately
-            if (expectedContentLength < 0)
+            if (_expectedContentLength < 0)
             {
-                throw new InvalidOperationException($"Invalid Content-Length value: {expectedContentLength}. Message framing is corrupted.");
+                throw new InvalidOperationException($"Invalid Content-Length value: {_expectedContentLength}. Message framing is corrupted.");
             }
             
-            if (headerLength < 0)
+            if (_headerLength < 0)
             {
-                throw new InvalidOperationException($"Invalid header length: {headerLength}. Message framing is corrupted.");
+                throw new InvalidOperationException($"Invalid header length: {_headerLength}. Message framing is corrupted.");
             }
             
-            if (expectedContentLength > BufferConfig.MAX_MESSAGE_SIZE)
+            if (_expectedContentLength > BufferConfig.MAX_MESSAGE_SIZE)
             {
-                throw new InvalidOperationException($"Content-Length {expectedContentLength} exceeds maximum message size {BufferConfig.MAX_MESSAGE_SIZE}.");
+                throw new InvalidOperationException($"Content-Length {_expectedContentLength} exceeds maximum message size {BufferConfig.MAX_MESSAGE_SIZE}.");
             }
             
             // Check if we have the complete message
-            int expectedTotalLength = headerLength + expectedContentLength;
-            if (currentDataLength < expectedTotalLength)
+            int expectedTotalLength = _headerLength + _expectedContentLength;
+            if (_currentDataLength < expectedTotalLength)
             {
                 // Message not complete yet
                 return null;
             }
             
             // Validate buffer bounds before extraction
-            if (headerLength + expectedContentLength > currentDataLength)
+            if (_headerLength + _expectedContentLength > _currentDataLength)
             {
-                throw new InvalidOperationException($"Buffer underflow: trying to read {expectedContentLength} bytes at offset {headerLength}, but only {currentDataLength} bytes available.");
+                throw new InvalidOperationException($"Buffer underflow: trying to read {_expectedContentLength} bytes at offset {_headerLength}, but only {_currentDataLength} bytes available.");
             }
             
             // Extract the JSON content with proper error handling
             string jsonContent;
             try
             {
-                jsonContent = Encoding.UTF8.GetString(assemblyBuffer, headerLength, expectedContentLength);
+                jsonContent = Encoding.UTF8.GetString(_assemblyBuffer, _headerLength, _expectedContentLength);
             }
             catch (ArgumentException ex)
             {
-                throw new InvalidOperationException($"Invalid UTF-8 sequence detected in message content at offset {headerLength}, length {expectedContentLength}: {ex.Message}", ex);
+                throw new InvalidOperationException($"Invalid UTF-8 sequence detected in message content at offset {_headerLength}, length {_expectedContentLength}: {ex.Message}", ex);
             }
             
             // Log before resetting state
-            McpLogger.LogDebug($"[MessageReassembler] Extracted complete message of {expectedContentLength} bytes");
+            McpLogger.LogDebug($"[MessageReassembler] Extracted complete message of {_expectedContentLength} bytes");
             
             // Remove the processed message from the buffer
             RemoveProcessedData(expectedTotalLength);
@@ -193,24 +193,24 @@ namespace io.github.hatayama.uLoopMCP
         {
             var frameParser = new FrameParser();
             
-            bool parseResult = frameParser.TryParseFrame(assemblyBuffer, currentDataLength, 
-                out expectedContentLength, out headerLength);
+            bool parseResult = frameParser.TryParseFrame(_assemblyBuffer, _currentDataLength, 
+                out _expectedContentLength, out _headerLength);
             
             if (parseResult)
             {
                 // Early validation of parsed values
-                if (expectedContentLength < 0)
+                if (_expectedContentLength < 0)
                 {
-                    throw new InvalidOperationException($"FrameParser returned invalid Content-Length: {expectedContentLength}");
+                    throw new InvalidOperationException($"FrameParser returned invalid Content-Length: {_expectedContentLength}");
                 }
                 
-                if (headerLength < 0)
+                if (_headerLength < 0)
                 {
-                    throw new InvalidOperationException($"FrameParser returned invalid header length: {headerLength}");
+                    throw new InvalidOperationException($"FrameParser returned invalid header length: {_headerLength}");
                 }
                 
-                headerParsed = true;
-                McpLogger.LogDebug($"[MessageReassembler] Parsed header: ContentLength={expectedContentLength}, HeaderLength={headerLength}");
+                _headerParsed = true;
+                McpLogger.LogDebug($"[MessageReassembler] Parsed header: ContentLength={_expectedContentLength}, HeaderLength={_headerLength}");
             }
             
             return parseResult;
@@ -222,21 +222,21 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="bytesToRemove">Number of bytes to remove from the beginning</param>
         private void RemoveProcessedData(int bytesToRemove)
         {
-            if (bytesToRemove <= 0 || bytesToRemove > currentDataLength)
+            if (bytesToRemove <= 0 || bytesToRemove > _currentDataLength)
             {
                 return;
             }
             
             // Move remaining data to the beginning of the buffer
-            int remainingDataLength = currentDataLength - bytesToRemove;
+            int remainingDataLength = _currentDataLength - bytesToRemove;
             if (remainingDataLength > 0)
             {
-                Array.Copy(assemblyBuffer, bytesToRemove, assemblyBuffer, 0, remainingDataLength);
+                Array.Copy(_assemblyBuffer, bytesToRemove, _assemblyBuffer, 0, remainingDataLength);
             }
             
-            currentDataLength = remainingDataLength;
+            _currentDataLength = remainingDataLength;
             
-            McpLogger.LogDebug($"[MessageReassembler] Removed {bytesToRemove} processed bytes, remaining: {currentDataLength}");
+            McpLogger.LogDebug($"[MessageReassembler] Removed {bytesToRemove} processed bytes, remaining: {_currentDataLength}");
         }
         
         /// <summary>
@@ -244,9 +244,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void ResetParsingState()
         {
-            headerParsed = false;
-            expectedContentLength = -1;
-            headerLength = -1;
+            _headerParsed = false;
+            _expectedContentLength = -1;
+            _headerLength = -1;
         }
         
         /// <summary>
@@ -255,12 +255,12 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void Clear()
         {
-            if (disposed)
+            if (_disposed)
             {
                 return;
             }
             
-            currentDataLength = 0;
+            _currentDataLength = 0;
             ResetParsingState();
             McpLogger.LogDebug("[MessageReassembler] Cleared assembly buffer");
         }
@@ -273,14 +273,14 @@ namespace io.github.hatayama.uLoopMCP
         {
             return new MessageReassemblerStats
             {
-                TotalMessagesReassembled = totalMessagesReassembled,
-                TotalDataChunksProcessed = totalDataChunksProcessed,
-                CurrentBufferSize = assemblyBuffer?.Length ?? 0,
-                CurrentDataLength = currentDataLength,
+                TotalMessagesReassembled = _totalMessagesReassembled,
+                TotalDataChunksProcessed = _totalDataChunksProcessed,
+                CurrentBufferSize = _assemblyBuffer?.Length ?? 0,
+                CurrentDataLength = _currentDataLength,
                 HasIncompleteData = HasIncompleteData,
                 IsWaitingForContent = IsWaitingForContent,
-                ExpectedContentLength = expectedContentLength,
-                HeaderLength = headerLength
+                ExpectedContentLength = _expectedContentLength,
+                HeaderLength = _headerLength
             };
         }
         
@@ -290,21 +290,21 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>True if state is valid, false if cleanup is needed</returns>
         public bool ValidateState()
         {
-            if (disposed)
+            if (_disposed)
             {
                 return false;
             }
             
             // Check for reasonable buffer size - throw exception instead of silently clearing
-            if (currentDataLength > BufferConfig.MAX_MESSAGE_SIZE)
+            if (_currentDataLength > BufferConfig.MAX_MESSAGE_SIZE)
             {
-                throw new InvalidOperationException($"Buffer size {currentDataLength} exceeds maximum message size {BufferConfig.MAX_MESSAGE_SIZE}. Data corruption detected.");
+                throw new InvalidOperationException($"Buffer size {_currentDataLength} exceeds maximum message size {BufferConfig.MAX_MESSAGE_SIZE}. Data corruption detected.");
             }
             
             // Check for stale incomplete data - throw exception for corrupted state
-            if (headerParsed && expectedContentLength > 0)
+            if (_headerParsed && _expectedContentLength > 0)
             {
-                int expectedTotalLength = headerLength + expectedContentLength;
+                int expectedTotalLength = _headerLength + _expectedContentLength;
                 if (expectedTotalLength > BufferConfig.MAX_MESSAGE_SIZE)
                 {
                     throw new InvalidOperationException($"Expected message size {expectedTotalLength} exceeds maximum {BufferConfig.MAX_MESSAGE_SIZE}. Message framing is corrupted.");
@@ -312,9 +312,9 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             // Validate consistency of parsing state
-            if (headerParsed && (expectedContentLength < 0 || headerLength < 0))
+            if (_headerParsed && (_expectedContentLength < 0 || _headerLength < 0))
             {
-                throw new InvalidOperationException($"Inconsistent parsing state: headerParsed={headerParsed}, expectedContentLength={expectedContentLength}, headerLength={headerLength}");
+                throw new InvalidOperationException($"Inconsistent parsing state: headerParsed={_headerParsed}, expectedContentLength={_expectedContentLength}, headerLength={_headerLength}");
             }
             
             return true;
@@ -327,24 +327,24 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>String representation of buffer content</returns>
         public string GetBufferPreview(int maxLength = 100)
         {
-            if (disposed || currentDataLength == 0)
+            if (_disposed || _currentDataLength == 0)
             {
                 return string.Empty;
             }
             
             // Safe UTF-8 decoding with proper error handling
-            int previewLength = Math.Min(currentDataLength, maxLength);
+            int previewLength = Math.Min(_currentDataLength, maxLength);
             string preview;
             try
             {
-                preview = Encoding.UTF8.GetString(assemblyBuffer, 0, previewLength);
+                preview = Encoding.UTF8.GetString(_assemblyBuffer, 0, previewLength);
             }
             catch (ArgumentException ex)
             {
                 throw new InvalidOperationException($"Invalid UTF-8 sequence detected in buffer preview (length {previewLength}): {ex.Message}", ex);
             }
             
-            if (currentDataLength > maxLength)
+            if (_currentDataLength > maxLength)
             {
                 preview += "...";
             }
@@ -357,16 +357,16 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void Dispose()
         {
-            if (!disposed)
+            if (!_disposed)
             {
-                if (assemblyBuffer != null)
+                if (_assemblyBuffer != null)
                 {
-                    bufferManager.ReturnBuffer(assemblyBuffer);
-                    assemblyBuffer = null;
+                    _bufferManager.ReturnBuffer(_assemblyBuffer);
+                    _assemblyBuffer = null;
                 }
                 
-                bufferManager?.Dispose();
-                disposed = true;
+                _bufferManager?.Dispose();
+                _disposed = true;
                 
                 McpLogger.LogInfo("[MessageReassembler] Disposed");
             }
