@@ -291,147 +291,180 @@ export class VibeLogger {
   }
 
   /**
+   * Prepare and validate log directory and file path
+   */
+  private static prepareLogFilePath(): string {
+    // Validate log directory path for security
+    const logDirectory = path.normalize(VibeLogger.LOG_DIRECTORY);
+    if (!VibeLogger.validateFilePath(logDirectory)) {
+      throw new Error('Invalid log directory path');
+    }
+
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    if (!fs.existsSync(logDirectory)) {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      fs.mkdirSync(logDirectory, { recursive: true });
+    }
+
+    const fileName = `${VibeLogger.LOG_FILE_PREFIX}_${VibeLogger.formatDate()}.json`;
+
+    // Validate file name for security
+    if (!VibeLogger.validateFileName(fileName)) {
+      throw new Error('Invalid file name detected');
+    }
+
+    const filePath = path.resolve(logDirectory, fileName);
+    if (!filePath.startsWith(logDirectory)) {
+      throw new Error('Resolved file path escapes the log directory');
+    }
+
+    // Validate the final file path for security
+    if (!VibeLogger.validateFilePath(filePath)) {
+      throw new Error('Invalid file path detected');
+    }
+
+    return filePath;
+  }
+
+  /**
+   * Rotate log file if it exceeds maximum size
+   */
+  private static rotateLogFileIfNeeded(filePath: string): void {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    if (!fs.existsSync(filePath)) {
+      return;
+    }
+
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    const stats = fs.statSync(filePath);
+    if (stats.size <= VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
+      return;
+    }
+
+    const logDirectory = path.dirname(filePath);
+    const rotatedFileName = `${VibeLogger.LOG_FILE_PREFIX}_${VibeLogger.formatDateTime()}.json`;
+
+    // Validate rotated file name for security
+    if (!VibeLogger.validateFileName(rotatedFileName)) {
+      throw new Error('Invalid rotated file name detected');
+    }
+
+    const rotatedFilePath = path.resolve(logDirectory, rotatedFileName);
+
+    // Ensure rotated file path is within the allowed directory
+    if (!rotatedFilePath.startsWith(path.resolve(logDirectory))) {
+      throw new Error('Rotated file path escapes the allowed directory');
+    }
+
+    const sanitizedFilePath = path.resolve(logDirectory, path.basename(filePath));
+    if (!sanitizedFilePath.startsWith(path.resolve(logDirectory))) {
+      throw new Error('Original file path escapes the allowed directory');
+    }
+
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    fs.renameSync(sanitizedFilePath, rotatedFilePath);
+  }
+
+  /**
+   * Write log to file with retry mechanism for concurrent access
+   */
+  private static async writeLogWithRetry(filePath: string, jsonLog: string): Promise<void> {
+    const maxRetries = 3;
+    const baseDelayMs = 50;
+
+    for (let retry = 0; retry < maxRetries; retry++) {
+      try {
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
+        fs.appendFileSync(filePath, jsonLog, { flag: 'a' });
+        return; // Success - exit retry loop
+      } catch (error: unknown) {
+        if (VibeLogger.isFileSharingViolation(error) && retry < maxRetries - 1) {
+          // Wait with exponential backoff for sharing violations
+          const delayMs = baseDelayMs * Math.pow(2, retry);
+          await VibeLogger.sleep(delayMs);
+        } else {
+          // For other errors or final retry, throw
+          throw error;
+        }
+      }
+    }
+  }
+
+  /**
    * Save log entry to file with retry mechanism for concurrent access
    */
   private static async saveLogToFile(logEntry: VibeLogEntry): Promise<void> {
     try {
-      // Validate log directory path for security
-      const logDirectory = path.normalize(VibeLogger.LOG_DIRECTORY);
-      if (!VibeLogger.validateFilePath(logDirectory)) {
-        throw new Error('Invalid log directory path');
-      }
-
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
-      if (!fs.existsSync(logDirectory)) {
-        // eslint-disable-next-line security/detect-non-literal-fs-filename
-        fs.mkdirSync(logDirectory, { recursive: true });
-      }
-
-      const fileName = `${VibeLogger.LOG_FILE_PREFIX}_${VibeLogger.formatDate()}.json`;
-
-      // Validate file name for security
-      if (!VibeLogger.validateFileName(fileName)) {
-        throw new Error('Invalid file name detected');
-      }
-
-      const filePath = path.resolve(logDirectory, fileName);
-      if (!filePath.startsWith(logDirectory)) {
-        throw new Error('Resolved file path escapes the log directory');
-      }
-
-      // Validate the final file path for security
-      if (!VibeLogger.validateFilePath(filePath)) {
-        throw new Error('Invalid file path detected');
-      }
+      const filePath = VibeLogger.prepareLogFilePath();
 
       // Check file size and rotate if necessary
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
-      if (fs.existsSync(filePath)) {
-        // eslint-disable-next-line security/detect-non-literal-fs-filename
-        const stats = fs.statSync(filePath);
-        if (stats.size > VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
-          const rotatedFileName = `${VibeLogger.LOG_FILE_PREFIX}_${VibeLogger.formatDateTime()}.json`;
-
-          // Validate rotated file name for security
-          if (!VibeLogger.validateFileName(rotatedFileName)) {
-            throw new Error('Invalid rotated file name detected');
-          }
-
-          const rotatedFilePath = path.resolve(logDirectory, rotatedFileName);
-
-          // Ensure rotated file path is within the allowed directory
-          if (!rotatedFilePath.startsWith(path.resolve(logDirectory))) {
-            throw new Error('Rotated file path escapes the allowed directory');
-          }
-
-          const sanitizedFilePath = path.resolve(logDirectory, path.basename(filePath));
-          if (!sanitizedFilePath.startsWith(path.resolve(logDirectory))) {
-            throw new Error('Original file path escapes the allowed directory');
-          }
-
-          // eslint-disable-next-line security/detect-non-literal-fs-filename
-          fs.renameSync(sanitizedFilePath, rotatedFilePath);
-        }
-      }
+      VibeLogger.rotateLogFileIfNeeded(filePath);
 
       const jsonLog = JSON.stringify(logEntry) + '\n';
-
-      // Use retry mechanism with exponential backoff for file writing
-      const maxRetries = 3;
-      const baseDelayMs = 50;
-
-      for (let retry = 0; retry < maxRetries; retry++) {
-        try {
-          // eslint-disable-next-line security/detect-non-literal-fs-filename
-          fs.appendFileSync(filePath, jsonLog, { flag: 'a' });
-          return; // Success - exit retry loop
-        } catch (error: unknown) {
-          if (VibeLogger.isFileSharingViolation(error) && retry < maxRetries - 1) {
-            // Wait with exponential backoff for sharing violations
-            const delayMs = baseDelayMs * Math.pow(2, retry);
-            await VibeLogger.sleep(delayMs);
-          } else {
-            // For other errors or final retry, throw
-            throw error;
-          }
-        }
-      }
+      await VibeLogger.writeLogWithRetry(filePath, jsonLog);
     } catch (error) {
-      // File logging failed - try alternative log file to preserve important logs
-      try {
-        // Security: Use safe path construction to prevent path traversal
-        const basePath = process.cwd();
-        const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
-        if (!sanitizedRoot.startsWith(basePath)) {
-          throw new Error('Invalid OUTPUT_DIRECTORIES.ROOT path');
-        }
+      // File logging failed - try fallback logging
+      VibeLogger.tryFallbackLogging(logEntry, error);
+    }
+  }
 
-        const safeLogDir = path.join(sanitizedRoot, 'FallbackLogs');
-        // eslint-disable-next-line security/detect-non-literal-fs-filename
-        fs.mkdirSync(safeLogDir, { recursive: true });
-
-        // Security: Sanitize filename components to prevent path traversal
-        const safeDate = VibeLogger.formatDateTime()
-          .split(' ')[0]
-          .replace(/[^0-9-]/g, '');
-        const safeFilename = `${VibeLogger.LOG_FILE_PREFIX}_fallback_${safeDate}.json`;
-        const safeFallbackPath = path.resolve(safeLogDir, safeFilename);
-
-        // Security: Validate that the resolved file path is within our expected directory
-        if (!safeFallbackPath.startsWith(safeLogDir)) {
-          throw new Error('Invalid fallback log file path');
-        }
-
-        const fallbackEntry = {
-          ...logEntry,
-          fallback_reason: error instanceof Error ? error.message : String(error),
-          original_timestamp: logEntry.timestamp,
-        };
-
-        const jsonLog = JSON.stringify(fallbackEntry) + '\n';
-
-        // Final validation before writing to the file
-        if (!safeFallbackPath.startsWith(safeLogDir)) {
-          throw new Error('Invalid fallback log file path (revalidation failed)');
-        }
-
-        // Use a safer method for file writing to comply with security rules
-        // eslint-disable-next-line security/detect-non-literal-fs-filename
-        const writeStream = fs.createWriteStream(safeFallbackPath, { flags: 'a' });
-        writeStream.write(jsonLog);
-        writeStream.end();
-      } catch (fallbackError) {
-        // If even fallback fails, try to write to a last-resort emergency log file
-        VibeLogger.writeEmergencyLog({
-          timestamp: new Date().toISOString(),
-          level: 'EMERGENCY',
-          message: 'VibeLogger fallback failed',
-          original_error: error instanceof Error ? error.message : String(error),
-          fallback_error:
-            fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-          original_log_entry: logEntry,
-        });
+  /**
+   * Try fallback logging when main logging fails
+   */
+  private static tryFallbackLogging(logEntry: VibeLogEntry, error: unknown): void {
+    try {
+      // Security: Use safe path construction to prevent path traversal
+      const basePath = process.cwd();
+      const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
+      if (!sanitizedRoot.startsWith(basePath)) {
+        throw new Error('Invalid OUTPUT_DIRECTORIES.ROOT path');
       }
+
+      const safeLogDir = path.join(sanitizedRoot, 'FallbackLogs');
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      fs.mkdirSync(safeLogDir, { recursive: true });
+
+      // Security: Sanitize filename components to prevent path traversal
+      const safeDate = VibeLogger.formatDateTime()
+        .split(' ')[0]
+        .replace(/[^0-9-]/g, '');
+      const safeFilename = `${VibeLogger.LOG_FILE_PREFIX}_fallback_${safeDate}.json`;
+      const safeFallbackPath = path.resolve(safeLogDir, safeFilename);
+
+      // Security: Validate that the resolved file path is within our expected directory
+      if (!safeFallbackPath.startsWith(safeLogDir)) {
+        throw new Error('Invalid fallback log file path');
+      }
+
+      const fallbackEntry = {
+        ...logEntry,
+        fallback_reason: error instanceof Error ? error.message : String(error),
+        original_timestamp: logEntry.timestamp,
+      };
+
+      const jsonLog = JSON.stringify(fallbackEntry) + '\n';
+
+      // Final validation before writing to the file
+      if (!safeFallbackPath.startsWith(safeLogDir)) {
+        throw new Error('Invalid fallback log file path (revalidation failed)');
+      }
+
+      // Use a safer method for file writing to comply with security rules
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      const writeStream = fs.createWriteStream(safeFallbackPath, { flags: 'a' });
+      writeStream.write(jsonLog);
+      writeStream.end();
+    } catch (fallbackError) {
+      // If even fallback fails, try to write to a last-resort emergency log file
+      VibeLogger.writeEmergencyLog({
+        timestamp: new Date().toISOString(),
+        level: 'EMERGENCY',
+        message: 'VibeLogger fallback failed',
+        original_error: error instanceof Error ? error.message : String(error),
+        fallback_error:
+          fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+        original_log_entry: logEntry,
+      });
     }
   }
 

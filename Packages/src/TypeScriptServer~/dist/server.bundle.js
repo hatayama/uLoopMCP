@@ -5841,99 +5841,127 @@ var VibeLogger = class _VibeLogger {
     return normalizedPath.startsWith(logDirectory + path.sep) || normalizedPath === logDirectory;
   }
   /**
+   * Prepare and validate log directory and file path
+   */
+  static prepareLogFilePath() {
+    const logDirectory = path.normalize(_VibeLogger.LOG_DIRECTORY);
+    if (!_VibeLogger.validateFilePath(logDirectory)) {
+      throw new Error("Invalid log directory path");
+    }
+    if (!fs.existsSync(logDirectory)) {
+      fs.mkdirSync(logDirectory, { recursive: true });
+    }
+    const fileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDate()}.json`;
+    if (!_VibeLogger.validateFileName(fileName)) {
+      throw new Error("Invalid file name detected");
+    }
+    const filePath = path.resolve(logDirectory, fileName);
+    if (!filePath.startsWith(logDirectory)) {
+      throw new Error("Resolved file path escapes the log directory");
+    }
+    if (!_VibeLogger.validateFilePath(filePath)) {
+      throw new Error("Invalid file path detected");
+    }
+    return filePath;
+  }
+  /**
+   * Rotate log file if it exceeds maximum size
+   */
+  static rotateLogFileIfNeeded(filePath) {
+    if (!fs.existsSync(filePath)) {
+      return;
+    }
+    const stats = fs.statSync(filePath);
+    if (stats.size <= _VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
+      return;
+    }
+    const logDirectory = path.dirname(filePath);
+    const rotatedFileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDateTime()}.json`;
+    if (!_VibeLogger.validateFileName(rotatedFileName)) {
+      throw new Error("Invalid rotated file name detected");
+    }
+    const rotatedFilePath = path.resolve(logDirectory, rotatedFileName);
+    if (!rotatedFilePath.startsWith(path.resolve(logDirectory))) {
+      throw new Error("Rotated file path escapes the allowed directory");
+    }
+    const sanitizedFilePath = path.resolve(logDirectory, path.basename(filePath));
+    if (!sanitizedFilePath.startsWith(path.resolve(logDirectory))) {
+      throw new Error("Original file path escapes the allowed directory");
+    }
+    fs.renameSync(sanitizedFilePath, rotatedFilePath);
+  }
+  /**
+   * Write log to file with retry mechanism for concurrent access
+   */
+  static async writeLogWithRetry(filePath, jsonLog) {
+    const maxRetries = 3;
+    const baseDelayMs = 50;
+    for (let retry = 0; retry < maxRetries; retry++) {
+      try {
+        fs.appendFileSync(filePath, jsonLog, { flag: "a" });
+        return;
+      } catch (error) {
+        if (_VibeLogger.isFileSharingViolation(error) && retry < maxRetries - 1) {
+          const delayMs = baseDelayMs * Math.pow(2, retry);
+          await _VibeLogger.sleep(delayMs);
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+  /**
    * Save log entry to file with retry mechanism for concurrent access
    */
   static async saveLogToFile(logEntry) {
     try {
-      const logDirectory = path.normalize(_VibeLogger.LOG_DIRECTORY);
-      if (!_VibeLogger.validateFilePath(logDirectory)) {
-        throw new Error("Invalid log directory path");
-      }
-      if (!fs.existsSync(logDirectory)) {
-        fs.mkdirSync(logDirectory, { recursive: true });
-      }
-      const fileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDate()}.json`;
-      if (!_VibeLogger.validateFileName(fileName)) {
-        throw new Error("Invalid file name detected");
-      }
-      const filePath = path.resolve(logDirectory, fileName);
-      if (!filePath.startsWith(logDirectory)) {
-        throw new Error("Resolved file path escapes the log directory");
-      }
-      if (!_VibeLogger.validateFilePath(filePath)) {
-        throw new Error("Invalid file path detected");
-      }
-      if (fs.existsSync(filePath)) {
-        const stats = fs.statSync(filePath);
-        if (stats.size > _VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
-          const rotatedFileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDateTime()}.json`;
-          if (!_VibeLogger.validateFileName(rotatedFileName)) {
-            throw new Error("Invalid rotated file name detected");
-          }
-          const rotatedFilePath = path.resolve(logDirectory, rotatedFileName);
-          if (!rotatedFilePath.startsWith(path.resolve(logDirectory))) {
-            throw new Error("Rotated file path escapes the allowed directory");
-          }
-          const sanitizedFilePath = path.resolve(logDirectory, path.basename(filePath));
-          if (!sanitizedFilePath.startsWith(path.resolve(logDirectory))) {
-            throw new Error("Original file path escapes the allowed directory");
-          }
-          fs.renameSync(sanitizedFilePath, rotatedFilePath);
-        }
-      }
+      const filePath = _VibeLogger.prepareLogFilePath();
+      _VibeLogger.rotateLogFileIfNeeded(filePath);
       const jsonLog = JSON.stringify(logEntry) + "\n";
-      const maxRetries = 3;
-      const baseDelayMs = 50;
-      for (let retry = 0; retry < maxRetries; retry++) {
-        try {
-          fs.appendFileSync(filePath, jsonLog, { flag: "a" });
-          return;
-        } catch (error) {
-          if (_VibeLogger.isFileSharingViolation(error) && retry < maxRetries - 1) {
-            const delayMs = baseDelayMs * Math.pow(2, retry);
-            await _VibeLogger.sleep(delayMs);
-          } else {
-            throw error;
-          }
-        }
-      }
+      await _VibeLogger.writeLogWithRetry(filePath, jsonLog);
     } catch (error) {
-      try {
-        const basePath = process.cwd();
-        const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
-        if (!sanitizedRoot.startsWith(basePath)) {
-          throw new Error("Invalid OUTPUT_DIRECTORIES.ROOT path");
-        }
-        const safeLogDir = path.join(sanitizedRoot, "FallbackLogs");
-        fs.mkdirSync(safeLogDir, { recursive: true });
-        const safeDate = _VibeLogger.formatDateTime().split(" ")[0].replace(/[^0-9-]/g, "");
-        const safeFilename = `${_VibeLogger.LOG_FILE_PREFIX}_fallback_${safeDate}.json`;
-        const safeFallbackPath = path.resolve(safeLogDir, safeFilename);
-        if (!safeFallbackPath.startsWith(safeLogDir)) {
-          throw new Error("Invalid fallback log file path");
-        }
-        const fallbackEntry = {
-          ...logEntry,
-          fallback_reason: error instanceof Error ? error.message : String(error),
-          original_timestamp: logEntry.timestamp
-        };
-        const jsonLog = JSON.stringify(fallbackEntry) + "\n";
-        if (!safeFallbackPath.startsWith(safeLogDir)) {
-          throw new Error("Invalid fallback log file path (revalidation failed)");
-        }
-        const writeStream = fs.createWriteStream(safeFallbackPath, { flags: "a" });
-        writeStream.write(jsonLog);
-        writeStream.end();
-      } catch (fallbackError) {
-        _VibeLogger.writeEmergencyLog({
-          timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-          level: "EMERGENCY",
-          message: "VibeLogger fallback failed",
-          original_error: error instanceof Error ? error.message : String(error),
-          fallback_error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-          original_log_entry: logEntry
-        });
+      _VibeLogger.tryFallbackLogging(logEntry, error);
+    }
+  }
+  /**
+   * Try fallback logging when main logging fails
+   */
+  static tryFallbackLogging(logEntry, error) {
+    try {
+      const basePath = process.cwd();
+      const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
+      if (!sanitizedRoot.startsWith(basePath)) {
+        throw new Error("Invalid OUTPUT_DIRECTORIES.ROOT path");
       }
+      const safeLogDir = path.join(sanitizedRoot, "FallbackLogs");
+      fs.mkdirSync(safeLogDir, { recursive: true });
+      const safeDate = _VibeLogger.formatDateTime().split(" ")[0].replace(/[^0-9-]/g, "");
+      const safeFilename = `${_VibeLogger.LOG_FILE_PREFIX}_fallback_${safeDate}.json`;
+      const safeFallbackPath = path.resolve(safeLogDir, safeFilename);
+      if (!safeFallbackPath.startsWith(safeLogDir)) {
+        throw new Error("Invalid fallback log file path");
+      }
+      const fallbackEntry = {
+        ...logEntry,
+        fallback_reason: error instanceof Error ? error.message : String(error),
+        original_timestamp: logEntry.timestamp
+      };
+      const jsonLog = JSON.stringify(fallbackEntry) + "\n";
+      if (!safeFallbackPath.startsWith(safeLogDir)) {
+        throw new Error("Invalid fallback log file path (revalidation failed)");
+      }
+      const writeStream = fs.createWriteStream(safeFallbackPath, { flags: "a" });
+      writeStream.write(jsonLog);
+      writeStream.end();
+    } catch (fallbackError) {
+      _VibeLogger.writeEmergencyLog({
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        level: "EMERGENCY",
+        message: "VibeLogger fallback failed",
+        original_error: error instanceof Error ? error.message : String(error),
+        fallback_error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+        original_log_entry: logEntry
+      });
     }
   }
   /**
