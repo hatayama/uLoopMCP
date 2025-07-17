@@ -120,7 +120,7 @@ UnitySearchが提供する検索プロバイダーを取得します
 > [!IMPORTANT]
 > **セキュリティ設定について**
 >
-> `run-tests`と`execute-menu-item`ツールは、AIが任意のコードを実行できてしまうため、デフォルトで無効化されています。
+> `run-tests`と`execute-menu-item`ツールは、AIが任意のコードを実行できてしまうため、デフォルトで無効化されています。  
 > これらのツールを使用するには、uLoopMCPウィンドウの「Security Settings」で該当する項目を有効化してください：
 > - **Allow Tests Execution**: `run-tests`ツールを有効化
 > - **Allow Menu Item Execution**: `execute-menu-item`ツールを有効化

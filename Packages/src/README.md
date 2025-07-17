@@ -120,7 +120,7 @@ Retrieve information about the currently active Hierarchy in nested JSON format.
 > [!IMPORTANT]
 > **Security Settings**
 >
-> `run-tests` and `execute-menu-item` tools are disabled by default because AI can execute arbitrary code.
+> `run-tests` and `execute-menu-item` tools are disabled by default because AI can execute arbitrary code.  
 > To use these tools, enable the corresponding settings in the uLoopMCP window "Security Settings":
 > - **Allow Tests Execution**: Enable `run-tests` tool
 > - **Allow Menu Item Execution**: Enable `execute-menu-item` tool
