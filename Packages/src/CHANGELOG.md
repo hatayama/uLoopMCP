@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.29.1](https://github.com/hatayama/uLoopMCP/compare/v0.29.0...v0.29.1) (2025-07-17)
+
+
+### Bug Fixes
+
+* domain reload connection stability and eliminate duplicate tool connections ([#220](https://github.com/hatayama/uLoopMCP/issues/220)) ([c983ed0](https://github.com/hatayama/uLoopMCP/commit/c983ed0fbbe24145e2834d98e6d2f4f6bb19fe3c))
+
 ## [0.29.0](https://github.com/hatayama/uLoopMCP/compare/v0.28.4...v0.29.0) (2025-07-17)
 
 
