@@ -34,6 +34,12 @@ namespace io.github.hatayama.uLoopMCP
             // Also display detailed information of the search target path
             string projectRoot = Path.GetDirectoryName(Application.dataPath);
             
+            if (projectRoot == null)
+            {
+                McpLogger.LogError("Failed to get project root directory");
+                return;
+            }
+            
             McpLogger.LogInfo("=== Search Details ===");
             McpLogger.LogInfo($"Project root: {projectRoot}");
             

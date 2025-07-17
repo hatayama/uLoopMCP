@@ -193,10 +193,10 @@ namespace io.github.hatayama.uLoopMCP
                 for (int i = 0; i < 5; i++)
                 {
                     int taskId = i;
-                    DelayedTask(taskId);
+                    _ = DelayedTask(taskId);
                 }
                 
-                async void DelayedTask(int id)
+                async Task DelayedTask(int id)
                 {
                     await EditorDelay.DelayFrame(2);
                     executionLog.Add($"Task{id}");
@@ -453,7 +453,8 @@ namespace io.github.hatayama.uLoopMCP
             object executionLock = new object();
             
             // Use ManualResetEventSlim to synchronize thread startup
-            using (ManualResetEventSlim startSignal = new ManualResetEventSlim(false))
+            ManualResetEventSlim startSignal = new ManualResetEventSlim(false);
+            try
             {
                 int threadsReady = 0;
                 
@@ -552,6 +553,10 @@ namespace io.github.hatayama.uLoopMCP
                 HashSet<int> uniqueRegistrationThreads = new HashSet<int>(registrationThreadIds);
                 Assert.Greater(uniqueRegistrationThreads.Count, 1, "Tasks should be registered from multiple different threads");
                 Assert.AreEqual(threadCount, uniqueRegistrationThreads.Count, $"Tasks should be registered from exactly {threadCount} different threads");
+            }
+            finally
+            {
+                startSignal?.Dispose();
             }
         }
         
