@@ -351,24 +351,27 @@ export class VibeLogger {
         // Security: Use safe path construction to prevent path traversal
         const basePath = process.cwd();
         const safeLogDir = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT, 'FallbackLogs');
-        
+
         // Security: Validate that the resolved path is within our expected directory
         if (!safeLogDir.startsWith(path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT))) {
           throw new Error('Invalid log directory path');
         }
-        
+
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         fs.mkdirSync(safeLogDir, { recursive: true });
 
         // Security: Sanitize filename components to prevent path traversal
-        const safeDate = VibeLogger.formatDateTime().split(' ')[0].replace(/[^0-9-]/g, '');
+        const safeDate = VibeLogger.formatDateTime()
+          .split(' ')[0]
+          .replace(/[^0-9-]/g, '');
         const safeFilename = `${VibeLogger.LOG_FILE_PREFIX}_fallback_${safeDate}.json`;
         const safeFallbackPath = path.resolve(safeLogDir, safeFilename);
-        
+
         // Security: Validate that the resolved file path is within our expected directory
         if (!safeFallbackPath.startsWith(safeLogDir)) {
           throw new Error('Invalid fallback log file path');
         }
-        
+
         const fallbackEntry = {
           ...logEntry,
           fallback_reason: error instanceof Error ? error.message : String(error),
@@ -376,6 +379,13 @@ export class VibeLogger {
         };
 
         const jsonLog = JSON.stringify(fallbackEntry) + '\n';
+
+        // Final validation before writing to the file
+        if (!safeFallbackPath.startsWith(safeLogDir)) {
+          throw new Error('Invalid fallback log file path (revalidation failed)');
+        }
+
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         fs.appendFileSync(safeFallbackPath, jsonLog, { flag: 'a' });
       } catch (fallbackError) {
         // If even fallback fails, we must remain silent to preserve MCP protocol
