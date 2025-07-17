@@ -35,16 +35,16 @@ export class UnityClient {
 
   constructor() {
     const unityTcpPort: string | undefined = process.env.UNITY_TCP_PORT;
-    
+
     if (!unityTcpPort) {
       throw new Error('UNITY_TCP_PORT environment variable is required but not set');
     }
-    
+
     const parsedPort: number = parseInt(unityTcpPort, 10);
     if (isNaN(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
       throw new Error(`UNITY_TCP_PORT must be a valid port number (1-65535), got: ${unityTcpPort}`);
     }
-    
+
     this.port = parsedPort;
   }
 
