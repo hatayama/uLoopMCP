@@ -6648,7 +6648,15 @@ var UnityClient = class {
   unityDiscovery = null;
   // Reference to UnityDiscovery for connection loss handling
   constructor() {
-    this.port = parseInt(process.env.UNITY_TCP_PORT || UNITY_CONNECTION.DEFAULT_PORT, 10);
+    const unityTcpPort = process.env.UNITY_TCP_PORT;
+    if (!unityTcpPort) {
+      throw new Error("UNITY_TCP_PORT environment variable is required but not set");
+    }
+    const parsedPort = parseInt(unityTcpPort, 10);
+    if (isNaN(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
+      throw new Error(`UNITY_TCP_PORT must be a valid port number (1-65535), got: ${unityTcpPort}`);
+    }
+    this.port = parsedPort;
   }
   /**
    * Update Unity connection port (for discovery)
@@ -7098,7 +7106,14 @@ var UnityDiscovery = class _UnityDiscovery {
    */
   async discoverUnityOnPorts() {
     const correlationId = VibeLogger.generateCorrelationId();
-    const basePort = parseInt(process.env.UNITY_TCP_PORT || UNITY_CONNECTION.DEFAULT_PORT, 10);
+    const unityTcpPort = process.env.UNITY_TCP_PORT;
+    if (!unityTcpPort) {
+      throw new Error("UNITY_TCP_PORT environment variable is required but not set");
+    }
+    const basePort = parseInt(unityTcpPort, 10);
+    if (isNaN(basePort) || basePort <= 0 || basePort > 65535) {
+      throw new Error(`UNITY_TCP_PORT must be a valid port number (1-65535), got: ${unityTcpPort}`);
+    }
     const portRange = [
       basePort,
       basePort + 100,
