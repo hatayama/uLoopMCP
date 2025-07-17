@@ -94,7 +94,7 @@ export class UnityConnectionManager {
       // Ensure UnityClient connection state is properly set
       // Even though discovery confirmed TCP connectivity, we need to ensure the connection state is updated
       await this.unityClient.ensureConnected();
-      
+
       if (this.isDevelopment) {
         // Unity discovered - connection state updated
       }

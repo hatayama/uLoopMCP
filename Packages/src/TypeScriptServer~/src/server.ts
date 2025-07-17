@@ -111,11 +111,12 @@ class UnityMcpServer {
         {
           client_name: clientName,
           client_info: clientInfo,
-          is_list_changed_unsupported: this.clientCompatibility.isListChangedUnsupported(clientName),
+          is_list_changed_unsupported:
+            this.clientCompatibility.isListChangedUnsupported(clientName),
         },
         undefined,
         'This logs the client name received during MCP initialize request',
-        'Analyze this to ensure claude-code is properly detected'
+        'Analyze this to ensure claude-code is properly detected',
       );
 
       if (clientName) {
