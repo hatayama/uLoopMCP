@@ -390,8 +390,30 @@ export class VibeLogger {
         writeStream.write(jsonLog);
         writeStream.end();
       } catch (fallbackError) {
-        // If even fallback fails, we must remain silent to preserve MCP protocol
-        // Critical: No console output to avoid MCP protocol interference
+        // If even fallback fails, try to write to a last-resort emergency log file
+        try {
+          const emergencyLogDir = path.join(process.cwd(), 'emergency-logs');
+          // eslint-disable-next-line security/detect-non-literal-fs-filename
+          fs.mkdirSync(emergencyLogDir, { recursive: true });
+
+          const emergencyLogPath = path.join(emergencyLogDir, 'vibe-logger-emergency.log');
+          const emergencyEntry = {
+            timestamp: new Date().toISOString(),
+            level: 'EMERGENCY',
+            message: 'VibeLogger fallback failed',
+            original_error: error instanceof Error ? error.message : String(error),
+            fallback_error:
+              fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+            original_log_entry: logEntry,
+          };
+
+          const emergencyLog = JSON.stringify(emergencyEntry) + '\n';
+          // eslint-disable-next-line security/detect-non-literal-fs-filename
+          fs.appendFileSync(emergencyLogPath, emergencyLog);
+        } catch (emergencyError) {
+          // If even emergency logging fails, we must remain silent to preserve MCP protocol
+          // Critical: No console output to avoid MCP protocol interference
+        }
       }
     }
   }

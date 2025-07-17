@@ -5902,6 +5902,22 @@ var VibeLogger = class _VibeLogger {
         writeStream.write(jsonLog);
         writeStream.end();
       } catch (fallbackError) {
+        try {
+          const emergencyLogDir = path.join(process.cwd(), "emergency-logs");
+          fs.mkdirSync(emergencyLogDir, { recursive: true });
+          const emergencyLogPath = path.join(emergencyLogDir, "vibe-logger-emergency.log");
+          const emergencyEntry = {
+            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+            level: "EMERGENCY",
+            message: "VibeLogger fallback failed",
+            original_error: error instanceof Error ? error.message : String(error),
+            fallback_error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+            original_log_entry: logEntry
+          };
+          const emergencyLog = JSON.stringify(emergencyEntry) + "\n";
+          fs.appendFileSync(emergencyLogPath, emergencyLog);
+        } catch (emergencyError) {
+        }
       }
     }
   }
