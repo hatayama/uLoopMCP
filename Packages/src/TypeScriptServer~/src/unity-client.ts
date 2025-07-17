@@ -32,6 +32,7 @@ export class UnityClient {
   private connectionManager: ConnectionManager = new ConnectionManager();
   private messageHandler: MessageHandler = new MessageHandler();
   private unityDiscovery: UnityDiscovery | null = null; // Reference to UnityDiscovery for connection loss handling
+  private requestIdCounter: number = 0;
 
   constructor() {
     const unityTcpPort: string | undefined = process.env.UNITY_TCP_PORT;
@@ -376,9 +377,15 @@ export class UnityClient {
 
   /**
    * Generate unique request ID
+   * Uses counter + timestamp to ensure uniqueness even within same millisecond
    */
   private generateId(): number {
-    return Date.now();
+    this.requestIdCounter++;
+    if (this.requestIdCounter > 9999) {
+      this.requestIdCounter = 1;
+    }
+    const timestamp = Date.now();
+    return timestamp * 10000 + this.requestIdCounter;
   }
 
   /**
@@ -440,6 +447,9 @@ export class UnityClient {
 
     // Clear the Content-Length framing buffer
     this.messageHandler.clearBuffer();
+
+    // Reset request ID counter to prevent ID conflicts on reconnection
+    this.requestIdCounter = 0;
 
     if (this.socket) {
       this.socket.destroy();

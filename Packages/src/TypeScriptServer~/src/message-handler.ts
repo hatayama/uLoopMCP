@@ -77,7 +77,7 @@ export class MessageHandler {
   private notificationHandlers: Map<string, (params: unknown) => void> = new Map();
   private pendingRequests: Map<
     number,
-    { resolve: (value: unknown) => void; reject: (reason: unknown) => void }
+    { resolve: (value: unknown) => void; reject: (reason: unknown) => void; timestamp: number }
   > = new Map();
 
   // Content-Length framing components
@@ -105,7 +105,7 @@ export class MessageHandler {
     resolve: (value: unknown) => void,
     reject: (reason: unknown) => void,
   ): void {
-    this.pendingRequests.set(id, { resolve, reject });
+    this.pendingRequests.set(id, { resolve, reject, timestamp: Date.now() });
   }
 
   /**
@@ -192,8 +192,18 @@ export class MessageHandler {
         pending.resolve(response);
       }
     } else {
+      // This can happen due to connection issues, reconnection, or timing issues
+      // Log as warning instead of error since it's not always a critical issue
+      const activeRequestIds = Array.from(this.pendingRequests.keys()).join(', ');
+      const currentTime = Date.now();
+
       // eslint-disable-next-line no-console
-      console.error(`Received response for unknown request ID: ${id}`);
+      console.warn(
+        `Received response for unknown request ID: ${id}. ` +
+          'This may be a delayed response from before reconnection. ' +
+          `Active request IDs: [${activeRequestIds}], ` +
+          `Current time: ${currentTime}`,
+      );
     }
   }
 
