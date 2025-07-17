@@ -359,6 +359,14 @@ export class UnityClient {
    * Execute any Unity tool dynamically
    */
   async executeTool(toolName: string, params: Record<string, unknown> = {}): Promise<unknown> {
+    // Ensure connection before executing tool
+    if (!this.connected) {
+      throw new Error('Not connected to Unity. Please wait for connection to be established.');
+    }
+
+    // Ensure client name is set (this completes the connection handshake)
+    await this.setClientName();
+
     const request = {
       jsonrpc: JSONRPC.VERSION,
       id: this.generateId(),

@@ -6905,6 +6905,10 @@ var UnityClient = class _UnityClient {
    * Execute any Unity tool dynamically
    */
   async executeTool(toolName, params = {}) {
+    if (!this.connected) {
+      throw new Error("Not connected to Unity. Please wait for connection to be established.");
+    }
+    await this.setClientName();
     const request = {
       jsonrpc: JSONRPC.VERSION,
       id: this.generateId(),
