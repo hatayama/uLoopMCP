@@ -90,12 +90,14 @@ namespace io.github.hatayama.uLoopMCP
         public readonly bool ShowSecuritySettings;
         public readonly bool EnableTestsExecution;
         public readonly bool AllowMenuItemExecution;
+        public readonly bool AllowThirdPartyTools;
 
-        public SecuritySettingsData(bool showSecuritySettings, bool enableTestsExecution, bool allowMenuItemExecution)
+        public SecuritySettingsData(bool showSecuritySettings, bool enableTestsExecution, bool allowMenuItemExecution, bool allowThirdPartyTools)
         {
             ShowSecuritySettings = showSecuritySettings;
             EnableTestsExecution = enableTestsExecution;
             AllowMenuItemExecution = allowMenuItemExecution;
+            AllowThirdPartyTools = allowThirdPartyTools;
         }
     }
 

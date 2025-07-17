@@ -74,7 +74,7 @@ namespace io.github.hatayama.uLoopMCP
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
-                showSecuritySettings: ui.ShowSecuritySettings));
+                showSecuritySettings: settings.showSecuritySettings));
 
 #if ULOOPMCP_DEBUG
             UpdateDebugState(debug => new DebugState(
@@ -321,7 +321,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Update ShowSecuritySettings setting
+        /// Update ShowSecuritySettings setting with persistence
         /// </summary>
         public void UpdateShowSecuritySettings(bool show)
         {
@@ -333,6 +333,7 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: show));
+            McpEditorSettings.SetShowSecuritySettings(show);
         }
 
         /// <summary>
@@ -349,6 +350,14 @@ namespace io.github.hatayama.uLoopMCP
         public void UpdateAllowMenuItemExecution(bool allow)
         {
             McpEditorSettings.SetAllowMenuItemExecution(allow);
+        }
+
+        /// <summary>
+        /// Update AllowThirdPartyTools setting with persistence
+        /// </summary>
+        public void UpdateAllowThirdPartyTools(bool allow)
+        {
+            McpEditorSettings.SetAllowThirdPartyTools(allow);
         }
 
 

@@ -12,6 +12,7 @@ namespace io.github.hatayama.uLoopMCP
     /// Supports both EditorApplication.ExecuteMenuItem and reflection-based execution
     /// </summary>
     [McpTool(
+        RequiredSecuritySetting = SecuritySettings.AllowMenuItemExecution,
         Description = "Execute Unity MenuItem by path"
     )]
     public class ExecuteMenuItemTool : AbstractUnityTool<ExecuteMenuItemSchema, ExecuteMenuItemResponse>
