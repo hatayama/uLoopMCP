@@ -1,5 +1,11 @@
 import * as net from 'net';
-import { UNITY_CONNECTION, JSONRPC, TIMEOUTS, ERROR_MESSAGES } from './constants.js';
+import {
+  UNITY_CONNECTION,
+  JSONRPC,
+  TIMEOUTS,
+  ERROR_MESSAGES,
+  DEFAULT_CLIENT_NAME,
+} from './constants.js';
 // Debug logging removed
 import { safeSetTimeout } from './utils/safe-timer.js';
 import { ConnectionManager } from './connection-manager.js';
@@ -40,6 +46,7 @@ export class UnityClient {
   private requestIdCounter: number = 0; // Will be incremented to 1 on first use
   private readonly processId: number = process.pid;
   private readonly randomSeed: number = Math.floor(Math.random() * 1000);
+  private storedClientName: string | null = null;
 
   private constructor() {
     const unityTcpPort: string | undefined = process.env.UNITY_TCP_PORT;
@@ -72,6 +79,7 @@ export class UnityClient {
   static resetInstance(): void {
     if (UnityClient.instance) {
       UnityClient.instance.disconnect();
+      UnityClient.instance.storedClientName = null;
       UnityClient.instance = null;
     }
   }
@@ -239,10 +247,13 @@ export class UnityClient {
   }
 
   /**
-   * Detect client name from environment variables
+   * Detect client name from stored value, environment variables, or default
    */
   private detectClientName(): string {
-    return process.env.MCP_CLIENT_NAME || 'MCP Client';
+    if (this.storedClientName) {
+      return this.storedClientName;
+    }
+    return process.env.MCP_CLIENT_NAME || DEFAULT_CLIENT_NAME;
   }
 
   /**
@@ -251,6 +262,11 @@ export class UnityClient {
   async setClientName(clientName?: string): Promise<void> {
     if (!this.connected) {
       return; // Skip if not connected
+    }
+
+    // Store client name if explicitly provided
+    if (clientName) {
+      this.storedClientName = clientName;
     }
 
     // Use provided client name or fallback to environment detection

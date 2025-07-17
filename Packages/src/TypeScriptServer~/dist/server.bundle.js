@@ -6786,6 +6786,7 @@ var UnityClient = class _UnityClient {
   // Will be incremented to 1 on first use
   processId = process.pid;
   randomSeed = Math.floor(Math.random() * 1e3);
+  storedClientName = null;
   constructor() {
     const unityTcpPort = process.env.UNITY_TCP_PORT;
     if (!unityTcpPort) {
@@ -6812,6 +6813,7 @@ var UnityClient = class _UnityClient {
   static resetInstance() {
     if (_UnityClient.instance) {
       _UnityClient.instance.disconnect();
+      _UnityClient.instance.storedClientName = null;
       _UnityClient.instance = null;
     }
   }
@@ -6936,10 +6938,13 @@ var UnityClient = class _UnityClient {
     });
   }
   /**
-   * Detect client name from environment variables
+   * Detect client name from stored value, environment variables, or default
    */
   detectClientName() {
-    return process.env.MCP_CLIENT_NAME || "MCP Client";
+    if (this.storedClientName) {
+      return this.storedClientName;
+    }
+    return process.env.MCP_CLIENT_NAME || DEFAULT_CLIENT_NAME;
   }
   /**
    * Send client name to Unity for identification
@@ -6947,6 +6952,9 @@ var UnityClient = class _UnityClient {
   async setClientName(clientName) {
     if (!this.connected) {
       return;
+    }
+    if (clientName) {
+      this.storedClientName = clientName;
     }
     const finalClientName = clientName || this.detectClientName();
     const request = {
@@ -7471,6 +7479,7 @@ var UnityConnectionManager = class {
    */
   async handleUnityDiscovered(onConnectionEstablished) {
     try {
+      await this.unityClient.ensureConnected();
       if (this.isDevelopment) {
       }
       if (onConnectionEstablished) {
@@ -8190,6 +8199,18 @@ var UnityMcpServer = class {
     this.server.setRequestHandler(InitializeRequestSchema, async (request) => {
       const clientInfo = request.params?.clientInfo;
       const clientName = clientInfo?.name || "";
+      VibeLogger.logInfo(
+        "mcp_client_name_received",
+        `MCP client name received: ${clientName}`,
+        {
+          client_name: clientName,
+          client_info: clientInfo,
+          is_list_changed_unsupported: this.clientCompatibility.isListChangedUnsupported(clientName)
+        },
+        void 0,
+        "This logs the client name received during MCP initialize request",
+        "Analyze this to ensure claude-code is properly detected"
+      );
       if (clientName) {
         this.clientCompatibility.setClientName(clientName);
         this.clientCompatibility.logClientCompatibility(clientName);
