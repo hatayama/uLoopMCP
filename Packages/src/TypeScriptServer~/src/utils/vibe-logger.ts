@@ -236,11 +236,7 @@ export class VibeLogger {
       );
     });
 
-    // Also output to console when debugging (only in debug mode)
-    if (VibeLogger.isDebugEnabled) {
-      // eslint-disable-next-line no-console
-      console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
-    }
+    // VibeLogger is designed for file output only - console output removed to prevent MCP protocol interference
   }
 
   /**
@@ -350,13 +346,29 @@ export class VibeLogger {
         }
       }
     } catch (error) {
-      // Fallback to console if file logging fails
-      // eslint-disable-next-line no-console
-      console.error(
-        `[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      // eslint-disable-next-line no-console
-      console.log(`[VibeLogger] ${logEntry.level} | ${logEntry.operation} | ${logEntry.message}`);
+      // File logging failed - try alternative log file to preserve important logs
+      try {
+        const fallbackLogDir = path.join(process.cwd(), OUTPUT_DIRECTORIES.ROOT, 'FallbackLogs');
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
+        fs.mkdirSync(fallbackLogDir, { recursive: true });
+
+        const fallbackFilePath = path.join(
+          fallbackLogDir,
+          `${VibeLogger.LOG_FILE_PREFIX}_fallback_${VibeLogger.formatDateTime().split(' ')[0]}.json`,
+        );
+        const fallbackEntry = {
+          ...logEntry,
+          fallback_reason: error instanceof Error ? error.message : String(error),
+          original_timestamp: logEntry.timestamp,
+        };
+
+        const jsonLog = JSON.stringify(fallbackEntry) + '\n';
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
+        fs.appendFileSync(fallbackFilePath, jsonLog, { flag: 'a' });
+      } catch (fallbackError) {
+        // If even fallback fails, we must remain silent to preserve MCP protocol
+        // Critical: No console output to avoid MCP protocol interference
+      }
     }
   }
 

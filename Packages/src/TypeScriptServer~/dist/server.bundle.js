@@ -5801,9 +5801,6 @@ var VibeLogger = class _VibeLogger {
         `[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`
       );
     });
-    if (_VibeLogger.isDebugEnabled) {
-      console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
-    }
   }
   /**
    * Validate file name to prevent dangerous characters
@@ -5878,10 +5875,22 @@ var VibeLogger = class _VibeLogger {
         }
       }
     } catch (error) {
-      console.error(
-        `[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`
-      );
-      console.log(`[VibeLogger] ${logEntry.level} | ${logEntry.operation} | ${logEntry.message}`);
+      try {
+        const fallbackLogDir = path.join(process.cwd(), OUTPUT_DIRECTORIES.ROOT, "FallbackLogs");
+        fs.mkdirSync(fallbackLogDir, { recursive: true });
+        const fallbackFilePath = path.join(
+          fallbackLogDir,
+          `${_VibeLogger.LOG_FILE_PREFIX}_fallback_${_VibeLogger.formatDateTime().split(" ")[0]}.json`
+        );
+        const fallbackEntry = {
+          ...logEntry,
+          fallback_reason: error instanceof Error ? error.message : String(error),
+          original_timestamp: logEntry.timestamp
+        };
+        const jsonLog = JSON.stringify(fallbackEntry) + "\n";
+        fs.appendFileSync(fallbackFilePath, jsonLog, { flag: "a" });
+      } catch (fallbackError) {
+      }
     }
   }
   /**
@@ -6751,11 +6760,11 @@ var UnityClient = class _UnityClient {
     }
   }
   /**
-   * Connect to Unity (reconnect if necessary)
-   * Now more conservative about creating new connections
+   * Ensure connection to Unity (singleton-safe reconnection)
+   * Properly manages single connection instance
    */
   async ensureConnected() {
-    if (this._connected && this.socket && !this.socket.destroyed && this.socket.readable && this.socket.writable) {
+    if (this._connected && this.socket && !this.socket.destroyed) {
       try {
         if (await this.testConnection()) {
           return;
@@ -6763,16 +6772,17 @@ var UnityClient = class _UnityClient {
       } catch (error) {
       }
     }
-    if (this._connected && this.socket && !this.socket.destroyed) {
-      return;
-    }
     this.disconnect();
     await this.connect();
   }
   /**
    * Connect to Unity
+   * Creates a new socket connection (should only be called after disconnect)
    */
   async connect() {
+    if (this._connected && this.socket && !this.socket.destroyed) {
+      return;
+    }
     return new Promise((resolve2, reject) => {
       this.socket = new net.Socket();
       this.socket.connect(this.port, this.host, () => {
@@ -7190,21 +7200,8 @@ var UnityDiscovery = class _UnityDiscovery {
             "Monitor for tools/list_changed notifications after this discovery."
           );
           this.unityClient.updatePort(port);
-          try {
-            await this.unityClient.connect();
-            if (this.onDiscoveredCallback) {
-              await this.onDiscoveredCallback(port);
-            }
-          } catch (error) {
-            VibeLogger.logError(
-              "unity_discovery_connection_failed",
-              "Failed to establish connection after discovery",
-              { port, error: error instanceof Error ? error.message : String(error) },
-              correlationId,
-              "Connection attempt failed despite successful port scan.",
-              "Check Unity server status and network connectivity."
-            );
-            continue;
+          if (this.onDiscoveredCallback) {
+            await this.onDiscoveredCallback(port);
           }
           return;
         }

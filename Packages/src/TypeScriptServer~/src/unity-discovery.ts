@@ -242,27 +242,12 @@ export class UnityDiscovery {
             'Monitor for tools/list_changed notifications after this discovery.',
           );
 
-          // Update client port and establish connection
+          // Update client port - connection management is UnityClient's responsibility
           this.unityClient.updatePort(port);
 
-          // Since isUnityAvailable() confirmed TCP connectivity,
-          // we can safely establish the connection without redundant checks
-          try {
-            await this.unityClient.connect();
-
-            if (this.onDiscoveredCallback) {
-              await this.onDiscoveredCallback(port);
-            }
-          } catch (error) {
-            VibeLogger.logError(
-              'unity_discovery_connection_failed',
-              'Failed to establish connection after discovery',
-              { port, error: error instanceof Error ? error.message : String(error) },
-              correlationId,
-              'Connection attempt failed despite successful port scan.',
-              'Check Unity server status and network connectivity.',
-            );
-            continue; // Try next port
+          // Notify discovery callback - let higher-level components handle connection
+          if (this.onDiscoveredCallback) {
+            await this.onDiscoveredCallback(port);
           }
           return;
         }

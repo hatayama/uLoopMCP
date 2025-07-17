@@ -32,7 +32,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// The server's port number.
         /// </summary>
-        public static int ServerPort => mcpServer?.Port ?? McpServerConfig.DEFAULT_PORT;
+        public static int ServerPort => mcpServer?.Port ?? McpEditorSettings.GetCustomPort();
 
         static McpServerController()
         {
@@ -53,24 +53,27 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Starts the server.
         /// </summary>
-        public static void StartServer(int port = McpServerConfig.DEFAULT_PORT)
+        public static void StartServer(int port = -1)
         {
+            // Use saved port if no port specified
+            int actualPort = port == -1 ? McpEditorSettings.GetCustomPort() : port;
+            
             // Find available port starting from the requested port
-            int availablePort = FindAvailablePort(port);
+            int availablePort = FindAvailablePort(actualPort);
             
             // Show confirmation dialog if port was changed
-            if (availablePort != port)
+            if (availablePort != actualPort)
             {
                 bool userConfirmed = UnityEditor.EditorUtility.DisplayDialog(
                     "Port Conflict",
-                    $"Port {port} is already in use.\n\nWould you like to use port {availablePort} instead?",
+                    $"Port {actualPort} is already in use.\n\nWould you like to use port {availablePort} instead?",
                     "OK",
                     "Cancel"
                 );
                 
                 if (!userConfirmed)
                 {
-                    McpLogger.LogInfo($"Server startup cancelled by user. Requested port {port} was in use.");
+                    McpLogger.LogInfo($"Server startup cancelled by user. Requested port {actualPort} was in use.");
                     return;
                 }
             }
@@ -97,9 +100,9 @@ namespace io.github.hatayama.uLoopMCP
             sessionManager.ServerPort = availablePort;
             
             // Log warning if port was changed
-            if (availablePort != port)
+            if (availablePort != actualPort)
             {
-                McpLogger.LogWarning($"Requested port {port} was in use. Server started on port {availablePort} instead.");
+                McpLogger.LogWarning($"Requested port {actualPort} was in use. Server started on port {availablePort} instead.");
             }
             
             McpLogger.LogInfo($"Unity MCP Server started on port {availablePort}");

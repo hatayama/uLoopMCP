@@ -156,45 +156,39 @@ export class UnityClient {
   }
 
   /**
-   * Connect to Unity (reconnect if necessary)
-   * Now more conservative about creating new connections
+   * Ensure connection to Unity (singleton-safe reconnection)
+   * Properly manages single connection instance
    */
   async ensureConnected(): Promise<void> {
-    // First: quick socket state check
-    if (
-      this._connected &&
-      this.socket &&
-      !this.socket.destroyed &&
-      this.socket.readable &&
-      this.socket.writable
-    ) {
-      // Socket looks healthy, do a lightweight ping test
+    // If already connected and healthy, return immediately
+    if (this._connected && this.socket && !this.socket.destroyed) {
       try {
+        // Quick health check - if it passes, we're good
         if (await this.testConnection()) {
-          return; // Connection is healthy
+          return;
         }
       } catch (error) {
-        // Ping failed, but don't immediately reconnect
-        // Give it another chance before creating new connection
+        // Health check failed - need to reconnect
       }
     }
 
-    // Second chance: basic socket state check only
-    if (this._connected && this.socket && !this.socket.destroyed) {
-      // Socket exists but might be temporarily unresponsive
-      // Don't create new connection immediately
-      return;
-    }
-
-    // Only reconnect if socket is actually destroyed/null
+    // Disconnect any existing connection before creating new one
     this.disconnect();
+
+    // Create new connection
     await this.connect();
   }
 
   /**
    * Connect to Unity
+   * Creates a new socket connection (should only be called after disconnect)
    */
   async connect(): Promise<void> {
+    // Ensure we don't create multiple connections
+    if (this._connected && this.socket && !this.socket.destroyed) {
+      return; // Already connected
+    }
+
     return new Promise((resolve, reject) => {
       this.socket = new net.Socket();
 
