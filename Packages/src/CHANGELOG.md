@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.28.3](https://github.com/hatayama/uLoopMCP/compare/v0.28.2...v0.28.3) (2025-07-17)
+
+
+### Bug Fixes
+
+* Enforce mandatory UNITY_TCP_PORT environment variable validation ([#213](https://github.com/hatayama/uLoopMCP/issues/213)) ([415b834](https://github.com/hatayama/uLoopMCP/commit/415b8349518c60a7176fb4f603f8e17091d85872))
+
 ## [0.28.2](https://github.com/hatayama/uLoopMCP/compare/v0.28.1...v0.28.2) (2025-07-16)
 
 
