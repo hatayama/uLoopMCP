@@ -13,7 +13,7 @@ namespace io.github.hatayama.uLoopMCP
     public static class EditorDelayManager
     {
         private static readonly List<DelayTask> delayTasks = new();
-        private static readonly object lockObject = new object();
+        private static readonly object lockObject = new();
         private static int currentFrameCount = 0;
 
         /// <summary>

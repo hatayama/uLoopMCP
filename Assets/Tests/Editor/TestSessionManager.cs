@@ -13,37 +13,25 @@ namespace io.github.hatayama.uLoopMCP
         public bool TestBoolValue
         {
             get => testBoolValue;
-            set
-            {
-                testBoolValue = value;
-            }
+            set => testBoolValue = value;
         }
 
         public int TestIntValue
         {
             get => testIntValue;
-            set
-            {
-                testIntValue = value;
-            }
+            set => testIntValue = value;
         }
 
         public string TestStringValue
         {
             get => testStringValue;
-            set
-            {
-                testStringValue = value ?? "";
-            }
+            set => testStringValue = value ?? "";
         }
 
         public float TestFloatValue
         {
             get => testFloatValue;
-            set
-            {
-                testFloatValue = value;
-            }
+            set => testFloatValue = value;
         }
 
         public void ResetAllValues()

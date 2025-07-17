@@ -16,7 +16,7 @@ namespace io.github.hatayama.uLoopMCP
     public class EditorDelayTests
     {
         private int frameCountAtStart;
-        private readonly List<string> executionLog = new List<string>();
+        private readonly List<string> executionLog = new();
         
         [SetUp]
         public void SetUp()
@@ -453,107 +453,106 @@ namespace io.github.hatayama.uLoopMCP
             object executionLock = new object();
             
             // Use ManualResetEventSlim to synchronize thread startup
-            ManualResetEventSlim startSignal = new ManualResetEventSlim(false);
-            int threadsReady = 0;
-            
-            // Act - Start multiple threads that register delay tasks
-            List<Task> threadTasks = new List<Task>();
-            for (int threadId = 0; threadId < threadCount; threadId++)
+            using (ManualResetEventSlim startSignal = new ManualResetEventSlim(false))
             {
-                int capturedThreadId = threadId;
-                threadTasks.Add(Task.Run(() => RegisterTasksFromThread(capturedThreadId)));
-            }
-            
-            void RegisterTasksFromThread(int threadId)
-            {
-                int currentThreadId = Thread.CurrentThread.ManagedThreadId;
+                int threadsReady = 0;
                 
-                // Signal that this thread is ready
-                Interlocked.Increment(ref threadsReady);
-                
-                // Wait for all threads to be ready
-                startSignal.Wait();
-                
-                // Register tasks synchronously
-                List<Task> delayTasks = new List<Task>();
-                for (int i = 0; i < tasksPerThread; i++)
+                // Act - Start multiple threads that register delay tasks
+                List<Task> threadTasks = new List<Task>();
+                for (int threadId = 0; threadId < threadCount; threadId++)
                 {
-                    int taskId = i;
-                    Task delayTask = DelayedTaskFromThread(threadId, taskId, currentThreadId);
-                    delayTasks.Add(delayTask);
+                    int capturedThreadId = threadId;
+                    threadTasks.Add(Task.Run(() => RegisterTasksFromThread(capturedThreadId)));
                 }
                 
-                // Wait for all tasks in this thread to complete
-                Task.WaitAll(delayTasks.ToArray());
-                
-                async Task DelayedTaskFromThread(int tId, int tTaskId, int regThreadId)
+                void RegisterTasksFromThread(int threadId)
                 {
-                    await EditorDelay.DelayFrame(2);
+                    int currentThreadId = Thread.CurrentThread.ManagedThreadId;
                     
-                    lock (executionLock)
+                    // Signal that this thread is ready
+                    Interlocked.Increment(ref threadsReady);
+                    
+                    // Wait for all threads to be ready
+                    startSignal.Wait();
+                    
+                    // Register tasks synchronously
+                    List<Task> delayTasks = new List<Task>();
+                    for (int i = 0; i < tasksPerThread; i++)
                     {
-                        completedTasks++;
-                        executionFrames.Add(EditorDelayManager.CurrentFrameCount);
-                        registrationThreadIds.Add(regThreadId);
-                        executionThreadIds.Add(Thread.CurrentThread.ManagedThreadId);
-                        executionLog.Add($"Thread{tId}-Task{tTaskId}");
+                        int taskId = i;
+                        Task delayTask = DelayedTaskFromThread(threadId, taskId, currentThreadId);
+                        delayTasks.Add(delayTask);
+                    }
+                    
+                    // Wait for all tasks in this thread to complete
+                    Task.WaitAll(delayTasks.ToArray());
+                    
+                    async Task DelayedTaskFromThread(int tId, int tTaskId, int regThreadId)
+                    {
+                        await EditorDelay.DelayFrame(2);
+                        
+                        lock (executionLock)
+                        {
+                            completedTasks++;
+                            executionFrames.Add(EditorDelayManager.CurrentFrameCount);
+                            registrationThreadIds.Add(regThreadId);
+                            executionThreadIds.Add(Thread.CurrentThread.ManagedThreadId);
+                            executionLog.Add($"Thread{tId}-Task{tTaskId}");
+                        }
                     }
                 }
-            }
-            
-            // Wait for all threads to be ready
-            while (threadsReady < threadCount)
-            {
-                yield return null;
-            }
-            
-            // Signal all threads to start registering tasks
-            startSignal.Set();
-            
-            // Wait for task registration to complete with dynamic waiting
-            const int maxWaitFrames = 10;
-            int waitFrames = 0;
-            while (waitFrames < maxWaitFrames && EditorDelayManager.PendingTaskCount != totalTasks)
-            {
-                yield return null;
-                waitFrames++;
-            }
-            
-            // Assert - All tasks should be registered
-            Assert.AreEqual(totalTasks, EditorDelayManager.PendingTaskCount, $"All {totalTasks} tasks should be registered and pending (waited {waitFrames} frames)");
-            
-            // Wait for execution (2 frames + buffer) with dynamic waiting
-            const int maxExecutionWaitFrames = 15;
-            int executionWaitFrames = 0;
-            while (executionWaitFrames < maxExecutionWaitFrames && 
-                   (completedTasks < totalTasks || EditorDelayManager.PendingTaskCount > 0))
-            {
-                yield return null;
-                executionWaitFrames++;
-            }
-            
-            // Assert - All tasks completed successfully
-            Assert.AreEqual(totalTasks, completedTasks, $"All {totalTasks} tasks should be completed (waited {executionWaitFrames} frames)");
-            Assert.AreEqual(0, EditorDelayManager.PendingTaskCount, "No tasks should be pending after completion");
-            Assert.AreEqual(totalTasks, executionLog.Count, "All tasks should be logged");
-            
-            // Verify all tasks executed at the same frame
-            if (executionFrames.Count > 0)
-            {
-                int expectedFrame = executionFrames[0];
-                foreach (int frame in executionFrames)
+                
+                // Wait for all threads to be ready
+                while (threadsReady < threadCount)
                 {
-                    Assert.AreEqual(expectedFrame, frame, "All tasks should execute at the same frame regardless of registration thread");
+                    yield return null;
                 }
+                
+                // Signal all threads to start registering tasks
+                startSignal.Set();
+                
+                // Wait for task registration to complete with dynamic waiting
+                const int maxWaitFrames = 10;
+                int waitFrames = 0;
+                while (waitFrames < maxWaitFrames && EditorDelayManager.PendingTaskCount != totalTasks)
+                {
+                    yield return null;
+                    waitFrames++;
+                }
+                
+                // Assert - All tasks should be registered
+                Assert.AreEqual(totalTasks, EditorDelayManager.PendingTaskCount, $"All {totalTasks} tasks should be registered and pending (waited {waitFrames} frames)");
+                
+                // Wait for execution (2 frames + buffer) with dynamic waiting
+                const int maxExecutionWaitFrames = 15;
+                int executionWaitFrames = 0;
+                while (executionWaitFrames < maxExecutionWaitFrames && 
+                       (completedTasks < totalTasks || EditorDelayManager.PendingTaskCount > 0))
+                {
+                    yield return null;
+                    executionWaitFrames++;
+                }
+                
+                // Assert - All tasks completed successfully
+                Assert.AreEqual(totalTasks, completedTasks, $"All {totalTasks} tasks should be completed (waited {executionWaitFrames} frames)");
+                Assert.AreEqual(0, EditorDelayManager.PendingTaskCount, "No tasks should be pending after completion");
+                Assert.AreEqual(totalTasks, executionLog.Count, "All tasks should be logged");
+                
+                // Verify all tasks executed at the same frame
+                if (executionFrames.Count > 0)
+                {
+                    int expectedFrame = executionFrames[0];
+                    foreach (int frame in executionFrames)
+                    {
+                        Assert.AreEqual(expectedFrame, frame, "All tasks should execute at the same frame regardless of registration thread");
+                    }
+                }
+                
+                // Verify that tasks were actually registered from different threads
+                HashSet<int> uniqueRegistrationThreads = new HashSet<int>(registrationThreadIds);
+                Assert.Greater(uniqueRegistrationThreads.Count, 1, "Tasks should be registered from multiple different threads");
+                Assert.AreEqual(threadCount, uniqueRegistrationThreads.Count, $"Tasks should be registered from exactly {threadCount} different threads");
             }
-            
-            // Verify that tasks were actually registered from different threads
-            HashSet<int> uniqueRegistrationThreads = new HashSet<int>(registrationThreadIds);
-            Assert.Greater(uniqueRegistrationThreads.Count, 1, "Tasks should be registered from multiple different threads");
-            Assert.AreEqual(threadCount, uniqueRegistrationThreads.Count, $"Tasks should be registered from exactly {threadCount} different threads");
-            
-            // Cleanup
-            startSignal.Dispose();
         }
         
         /// <summary>

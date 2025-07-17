@@ -37,7 +37,7 @@ namespace io.github.hatayama.uLoopMCP
             this.cancellationToken = cancellationToken;
         }
         
-        public Awaiter GetAwaiter() => new Awaiter(frameCount, cancellationToken);
+        public Awaiter GetAwaiter() => new(frameCount, cancellationToken);
         
         /// <summary>
         /// Awaiter structure for async/await

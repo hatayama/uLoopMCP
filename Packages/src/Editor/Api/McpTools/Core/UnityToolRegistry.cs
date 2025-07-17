@@ -19,7 +19,7 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class UnityToolRegistry
     {
-        private readonly Dictionary<string, IUnityTool> tools = new Dictionary<string, IUnityTool>();
+        private readonly Dictionary<string, IUnityTool> tools = new();
 
         /// <summary>
         /// Singleton instance for global access

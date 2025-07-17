@@ -5,7 +5,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     public class CompileLogDisplay : System.IDisposable
     {
-        private StringBuilder logBuilder = new StringBuilder();
+        private StringBuilder logBuilder = new();
 
         public string LogText => logBuilder?.ToString() ?? "Compile results will be displayed here.";
 

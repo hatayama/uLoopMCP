@@ -19,8 +19,8 @@ namespace io.github.hatayama.uLoopMCP
         [SerializeField] private string pendingRequestsJson = "{}";
         [SerializeField] private string compileWindowLogText = "";
         [SerializeField] private bool compileWindowHasData;
-        [SerializeField] private List<string> pendingCompileRequestIds = new List<string>();
-        [SerializeField] private List<CompileRequestData> compileRequests = new List<CompileRequestData>();
+        [SerializeField] private List<string> pendingCompileRequestIds = new();
+        [SerializeField] private List<CompileRequestData> compileRequests = new();
 
         [System.Serializable]
         public class CompileRequestData
@@ -63,13 +63,13 @@ namespace io.github.hatayama.uLoopMCP
         public bool ShowReconnectingUI
         {
             get => showReconnectingUI;
-            set { showReconnectingUI = value; }
+            set => showReconnectingUI = value;
         }
 
         public bool ShowPostCompileReconnectingUI
         {
             get => showPostCompileReconnectingUI;
-            set { showPostCompileReconnectingUI = value; }
+            set => showPostCompileReconnectingUI = value;
         }
 
         // UI related

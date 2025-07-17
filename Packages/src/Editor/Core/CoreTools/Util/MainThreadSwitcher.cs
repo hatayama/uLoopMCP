@@ -106,7 +106,7 @@ namespace io.github.hatayama.uLoopMCP
             this.cancellationToken = cancellationToken;
         }
         
-        public Awaiter GetAwaiter() => new Awaiter(cancellationToken);
+        public Awaiter GetAwaiter() => new(cancellationToken);
 
         public struct Awaiter : INotifyCompletion
         {
@@ -160,7 +160,7 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public struct SwitchToMainThreadDelayCallAwaitable
     {
-        public Awaiter GetAwaiter() => new Awaiter();
+        public Awaiter GetAwaiter() => new();
 
         public struct Awaiter : INotifyCompletion
         {

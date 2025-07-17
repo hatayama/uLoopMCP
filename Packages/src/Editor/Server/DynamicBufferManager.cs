@@ -10,8 +10,8 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class DynamicBufferManager : IDisposable
     {
-        private readonly ConcurrentQueue<byte[]> bufferPool = new ConcurrentQueue<byte[]>();
-        private readonly object lockObject = new object();
+        private readonly ConcurrentQueue<byte[]> bufferPool = new();
+        private readonly object lockObject = new();
         private bool disposed = false;
         
         // Statistics for monitoring

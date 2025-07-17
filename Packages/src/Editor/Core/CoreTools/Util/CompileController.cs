@@ -14,7 +14,7 @@ namespace io.github.hatayama.uLoopMCP
     public class CompileController : IDisposable
     {
         private bool isCompiling = false;
-        private List<CompilerMessage> compileMessages = new List<CompilerMessage>();
+        private List<CompilerMessage> compileMessages = new();
         private TaskCompletionSource<CompileResult> currentCompileTask;
 
         /// <summary>

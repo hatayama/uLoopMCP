@@ -79,7 +79,7 @@ namespace io.github.hatayama.uLoopMCP
         // Note: Domain reload progress is now tracked via McpSessionManager
         
         // HResult error codes for normal disconnection detection
-        private static readonly HashSet<int> NormalDisconnectionHResults = new HashSet<int>
+        private static readonly HashSet<int> NormalDisconnectionHResults = new()
         {
             unchecked((int)0x800703E3), // ERROR_OPERATION_ABORTED
             unchecked((int)0x80070040), // ERROR_NETNAME_DELETED
@@ -93,7 +93,7 @@ namespace io.github.hatayama.uLoopMCP
         private bool isRunning = false;
         
         // Client management for broadcasting notifications
-        private readonly ConcurrentDictionary<string, ConnectedClient> connectedClients = new ConcurrentDictionary<string, ConnectedClient>();
+        private readonly ConcurrentDictionary<string, ConnectedClient> connectedClients = new();
         
         /// <summary>
         /// Whether the server is running.
