@@ -184,7 +184,10 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Starts the server.
         /// </summary>
-        /// <param name="port">The port number (default: 7400).</param>
+        /// <param name="port">
+        /// The port number to bind to. Use -1 to fall back to the saved custom port
+        /// from <see cref="McpEditorSettings.GetCustomPort"/>. Defaults to -1.
+        /// </param>
         public void StartServer(int port = -1)
         {
             if (_isRunning)

@@ -53,6 +53,10 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Starts the server.
         /// </summary>
+        /// <param name="port">
+        /// The port number to bind to. Use -1 to fall back to the saved custom port
+        /// from <see cref="McpEditorSettings.GetCustomPort"/>. Defaults to -1.
+        /// </param>
         public static void StartServer(int port = -1)
         {
             // Use saved port if no port specified

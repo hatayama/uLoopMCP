@@ -5876,19 +5876,25 @@ var VibeLogger = class _VibeLogger {
       }
     } catch (error) {
       try {
-        const fallbackLogDir = path.join(process.cwd(), OUTPUT_DIRECTORIES.ROOT, "FallbackLogs");
-        fs.mkdirSync(fallbackLogDir, { recursive: true });
-        const fallbackFilePath = path.join(
-          fallbackLogDir,
-          `${_VibeLogger.LOG_FILE_PREFIX}_fallback_${_VibeLogger.formatDateTime().split(" ")[0]}.json`
-        );
+        const basePath = process.cwd();
+        const safeLogDir = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT, "FallbackLogs");
+        if (!safeLogDir.startsWith(path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT))) {
+          throw new Error("Invalid log directory path");
+        }
+        fs.mkdirSync(safeLogDir, { recursive: true });
+        const safeDate = _VibeLogger.formatDateTime().split(" ")[0].replace(/[^0-9-]/g, "");
+        const safeFilename = `${_VibeLogger.LOG_FILE_PREFIX}_fallback_${safeDate}.json`;
+        const safeFallbackPath = path.resolve(safeLogDir, safeFilename);
+        if (!safeFallbackPath.startsWith(safeLogDir)) {
+          throw new Error("Invalid fallback log file path");
+        }
         const fallbackEntry = {
           ...logEntry,
           fallback_reason: error instanceof Error ? error.message : String(error),
           original_timestamp: logEntry.timestamp
         };
         const jsonLog = JSON.stringify(fallbackEntry) + "\n";
-        fs.appendFileSync(fallbackFilePath, jsonLog, { flag: "a" });
+        fs.appendFileSync(safeFallbackPath, jsonLog, { flag: "a" });
       } catch (fallbackError) {
       }
     }
