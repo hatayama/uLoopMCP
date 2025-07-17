@@ -87,18 +87,18 @@ namespace io.github.hatayama.uLoopMCP
             unchecked((int)0x80072746)  // ERROR_CONNECTION_RESET
         };
         
-        private TcpListener tcpListener;
-        private CancellationTokenSource cancellationTokenSource;
-        private Task serverTask;
-        private bool isRunning = false;
+        private TcpListener _tcpListener;
+        private CancellationTokenSource _cancellationTokenSource;
+        private Task _serverTask;
+        private bool _isRunning = false;
         
         // Client management for broadcasting notifications
-        private readonly ConcurrentDictionary<string, ConnectedClient> connectedClients = new();
+        private readonly ConcurrentDictionary<string, ConnectedClient> _connectedClients = new();
         
         /// <summary>
         /// Whether the server is running.
         /// </summary>
-        public bool IsRunning => isRunning;
+        public bool IsRunning => _isRunning;
         
         /// <summary>
         /// The server's port number.
@@ -134,7 +134,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public IReadOnlyCollection<ConnectedClient> GetConnectedClients()
         {
-            return connectedClients.Values.ToArray();
+            return _connectedClients.Values.ToArray();
         }
 
         /// <summary>
@@ -143,14 +143,14 @@ namespace io.github.hatayama.uLoopMCP
         public void UpdateClientName(string clientEndpoint, string clientName)
         {
             // Find client by endpoint (backward compatibility)
-            ConnectedClient targetClient = connectedClients.Values
+            ConnectedClient targetClient = _connectedClients.Values
                 .FirstOrDefault(c => c.Endpoint == clientEndpoint);
                 
             if (targetClient != null)
             {
                 string clientKey = GenerateClientKey(targetClient.Endpoint);
                 ConnectedClient updatedClient = targetClient.WithClientName(clientName);
-                bool updateResult = connectedClients.TryUpdate(clientKey, updatedClient, targetClient);
+                bool updateResult = _connectedClients.TryUpdate(clientKey, updatedClient, targetClient);
                 
                 McpLogger.LogInfo($"[UpdateClientName] {clientEndpoint}: '{targetClient.ClientName}' → '{clientName}' (Success: {updateResult})");
                 McpLogger.LogInfo($"[UpdateClientName] ConnectedAt preserved: {updatedClient.ConnectedAt:HH:mm:ss.fff}");
@@ -187,27 +187,27 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="port">The port number (default: 7400).</param>
         public void StartServer(int port = McpServerConfig.DEFAULT_PORT)
         {
-            if (isRunning)
+            if (_isRunning)
             {
                 return;
             }
 
             Port = port;
-            cancellationTokenSource = new CancellationTokenSource();
+            _cancellationTokenSource = new CancellationTokenSource();
             
             try
             {
-                tcpListener = new TcpListener(IPAddress.Loopback, Port);
-                tcpListener.Start();
-                isRunning = true;
+                _tcpListener = new TcpListener(IPAddress.Loopback, Port);
+                _tcpListener.Start();
+                _isRunning = true;
                 
-                serverTask = Task.Run(() => ServerLoop(cancellationTokenSource.Token));
+                _serverTask = Task.Run(() => ServerLoop(_cancellationTokenSource.Token));
                 
                 McpLogger.LogInfo($"Unity MCP Server started on port {Port}");
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
             {
-                isRunning = false;
+                _isRunning = false;
                 string errorMessage = $"Port {Port} is already in use. Please choose a different port.";
                 McpLogger.LogError(errorMessage);
                 OnError?.Invoke(errorMessage);
@@ -215,7 +215,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                isRunning = false;
+                _isRunning = false;
                 string errorMessage = $"Failed to start MCP Server: {ex.Message}";
                 McpLogger.LogError(errorMessage);
                 OnError?.Invoke(errorMessage);
@@ -228,51 +228,51 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void StopServer()
         {
-            if (!isRunning)
+            if (!_isRunning)
             {
                 return;
             }
 
             McpLogger.LogInfo("Stopping Unity MCP Server...");
-            isRunning = false;
+            _isRunning = false;
             
             // Explicitly disconnect all connected clients before stopping the server
             DisconnectAllClients();
             
             // Request cancellation.
-            cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Cancel();
             
             // Stop the TCP listener.
             try
             {
-                tcpListener?.Stop();
+                _tcpListener?.Stop();
             }
             finally
             {
                 // Set the TCP listener to null regardless of success/failure
-                tcpListener = null;
+                _tcpListener = null;
             }
             
             // Wait for the server task to complete.
             try
             {
-                serverTask?.Wait(TimeSpan.FromSeconds(McpServerConfig.SHUTDOWN_TIMEOUT_SECONDS));
+                _serverTask?.Wait(TimeSpan.FromSeconds(McpServerConfig.SHUTDOWN_TIMEOUT_SECONDS));
             }
             finally
             {
                 // Set the server task to null regardless of success/failure
-                serverTask = null;
+                _serverTask = null;
             }
             
             // Dispose of the cancellation token source.
             try
             {
-                cancellationTokenSource?.Dispose();
+                _cancellationTokenSource?.Dispose();
             }
             finally
             {
                 // Set the cancellation token source to null regardless of success/failure
-                cancellationTokenSource = null;
+                _cancellationTokenSource = null;
             }
             
 
@@ -286,16 +286,16 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void DisconnectAllClients()
         {
-            if (connectedClients.IsEmpty)
+            if (_connectedClients.IsEmpty)
             {
                 return;
             }
 
-            McpLogger.LogInfo($"Disconnecting {connectedClients.Count} connected clients...");
+            McpLogger.LogInfo($"Disconnecting {_connectedClients.Count} connected clients...");
             
             List<string> clientsToRemove = new List<string>();
             
-            foreach (KeyValuePair<string, ConnectedClient> client in connectedClients)
+            foreach (KeyValuePair<string, ConnectedClient> client in _connectedClients)
             {
                 try
                 {
@@ -316,7 +316,7 @@ namespace io.github.hatayama.uLoopMCP
             // Remove all clients from the connected clients list
             foreach (string clientKey in clientsToRemove)
             {
-                connectedClients.TryRemove(clientKey, out _);
+                _connectedClients.TryRemove(clientKey, out _);
             }
             
             McpLogger.LogInfo("All clients disconnected");
@@ -327,11 +327,11 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private async Task ServerLoop(CancellationToken cancellationToken)
         {
-            while (!cancellationToken.IsCancellationRequested && isRunning)
+            while (!cancellationToken.IsCancellationRequested && _isRunning)
             {
                 try
                 {
-                    TcpClient client = await AcceptTcpClientAsync(tcpListener, cancellationToken);
+                    TcpClient client = await AcceptTcpClientAsync(_tcpListener, cancellationToken);
                     if (client != null)
                     {
                         string clientEndpoint = client.Client.RemoteEndPoint?.ToString() ?? McpServerConfig.UNKNOWN_CLIENT_ENDPOINT;
@@ -411,15 +411,15 @@ namespace io.github.hatayama.uLoopMCP
                     
                     // Check for existing connection from same endpoint and close it
                     string clientKey = GenerateClientKey(clientEndpoint);
-                    if (connectedClients.TryGetValue(clientKey, out ConnectedClient existingClient))
+                    if (_connectedClients.TryGetValue(clientKey, out ConnectedClient existingClient))
                     {
                         existingClient.Stream?.Close();
-                        connectedClients.TryRemove(clientKey, out _);
+                        _connectedClients.TryRemove(clientKey, out _);
                     }
                     
                     // Add new client to connected clients for notification broadcasting
                     ConnectedClient connectedClient = new ConnectedClient(clientEndpoint, stream);
-                    connectedClients.TryAdd(clientKey, connectedClient);
+                    _connectedClients.TryAdd(clientKey, connectedClient);
                     
                     // Initialize new framing components
                     bufferManager = new DynamicBufferManager();
@@ -519,13 +519,13 @@ namespace io.github.hatayama.uLoopMCP
                 
                 // Remove client from connected clients list
                 // Find client by endpoint to get the correct key
-                ConnectedClient clientToRemove = connectedClients.Values
+                ConnectedClient clientToRemove = _connectedClients.Values
                     .FirstOrDefault(c => c.Endpoint == clientEndpoint);
                     
                 if (clientToRemove != null)
                 {
                     string clientKey = GenerateClientKey(clientToRemove.Endpoint);
-                    connectedClients.TryRemove(clientKey, out _);
+                    _connectedClients.TryRemove(clientKey, out _);
                 }
                 
                 
@@ -541,7 +541,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="parameters">The notification parameters (optional)</param>
         public async Task SendNotificationToClients(string method, object parameters = null)
         {
-            if (connectedClients.IsEmpty)
+            if (_connectedClients.IsEmpty)
             {
                 return;
             }
@@ -564,7 +564,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="notificationJson">The complete JSON-RPC notification string</param>
         public void SendNotificationToClients(string notificationJson)
         {
-            if (connectedClients.IsEmpty)
+            if (_connectedClients.IsEmpty)
             {
                 return;
             }
@@ -583,7 +583,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             List<string> clientsToRemove = new List<string>();
             
-            foreach (KeyValuePair<string, ConnectedClient> client in connectedClients)
+            foreach (KeyValuePair<string, ConnectedClient> client in _connectedClients)
             {
                 try
                 {
@@ -607,7 +607,7 @@ namespace io.github.hatayama.uLoopMCP
             // Remove disconnected clients
             foreach (string clientKey in clientsToRemove)
             {
-                connectedClients.TryRemove(clientKey, out _);
+                _connectedClients.TryRemove(clientKey, out _);
             }
         }
 
@@ -693,9 +693,9 @@ namespace io.github.hatayama.uLoopMCP
         public void Dispose()
         {
             StopServer();
-            cancellationTokenSource?.Dispose();
-            tcpListener = null;
-            serverTask = null;
+            _cancellationTokenSource?.Dispose();
+            _tcpListener = null;
+            _serverTask = null;
         }
     }
 } 

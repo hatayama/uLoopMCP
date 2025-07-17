@@ -5,13 +5,13 @@ namespace io.github.hatayama.uLoopMCP
 {
     public class LogGetterEditorWindow : EditorWindow
     {
-        private LogGetterPresenter presenter;
-        private Vector2 scrollPosition;
-        private LogDisplayDto displayData;
+        private LogGetterPresenter _presenter;
+        private Vector2 _scrollPosition;
+        private LogDisplayDto _displayData;
         
         // For log type filtering
-        private string selectedLogType = "All";
-        private readonly string[] logTypeOptions = { "All", "Log", "Warning", "Error", "Assert" };
+        private string _selectedLogType = "All";
+        private readonly string[] _logTypeOptions = { "All", "Log", "Warning", "Error", "Assert" };
 
         [MenuItem("uLoopMCP/Windows/Log Viewer")]
         public static void ShowWindow()
@@ -23,31 +23,31 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnEnable()
         {
-            presenter = new LogGetterPresenter();
-            presenter.OnLogDataUpdated += OnLogDataUpdated;
-            displayData = new LogDisplayDto(new LogEntryDto[0], 0);
+            _presenter = new LogGetterPresenter();
+            _presenter.OnLogDataUpdated += OnLogDataUpdated;
+            _displayData = new LogDisplayDto(new LogEntryDto[0], 0);
             
         }
 
         private void OnDisable()
         {
-            if (presenter != null)
+            if (_presenter != null)
             {
-                presenter.OnLogDataUpdated -= OnLogDataUpdated;
-                presenter.Dispose();
-                presenter = null;
+                _presenter.OnLogDataUpdated -= OnLogDataUpdated;
+                _presenter.Dispose();
+                _presenter = null;
             }
         }
 
         private void OnLogDataUpdated(LogDisplayDto data)
         {
-            displayData = data;
+            _displayData = data;
             Repaint();
         }
 
         private void OnGUI()
         {
-            if (presenter == null) return;
+            if (_presenter == null) return;
 
             GUILayout.Label("Unity Console Log Getter", EditorStyles.boldLabel);
             GUILayout.Space(10);
@@ -56,28 +56,28 @@ namespace io.github.hatayama.uLoopMCP
             EditorGUILayout.BeginHorizontal();
             GUILayout.Label("Log Type:", GUILayout.Width(80));
             
-            int selectedIndex = System.Array.IndexOf(logTypeOptions, selectedLogType);
+            int selectedIndex = System.Array.IndexOf(_logTypeOptions, _selectedLogType);
             if (selectedIndex == -1) selectedIndex = 0;
             
-            selectedIndex = EditorGUILayout.Popup(selectedIndex, logTypeOptions, GUILayout.Width(100));
-            selectedLogType = logTypeOptions[selectedIndex];
+            selectedIndex = EditorGUILayout.Popup(selectedIndex, _logTypeOptions, GUILayout.Width(100));
+            _selectedLogType = _logTypeOptions[selectedIndex];
             
             EditorGUILayout.EndHorizontal();
             GUILayout.Space(5);
 
             // Get Logs button
-            string buttonText = selectedLogType == "All" ? "Get All Logs" : $"Get {selectedLogType} Logs";
+            string buttonText = _selectedLogType == "All" ? "Get All Logs" : $"Get {_selectedLogType} Logs";
             if (GUILayout.Button(buttonText, GUILayout.Height(30)))
             {
-                McpLogType mcpLogType = ConvertStringToMcpLogType(selectedLogType);
-                presenter.GetLogs(mcpLogType);
+                McpLogType mcpLogType = ConvertStringToMcpLogType(_selectedLogType);
+                _presenter.GetLogs(mcpLogType);
             }
 
             GUILayout.Space(5);
 
             if (GUILayout.Button("Clear Logs", GUILayout.Height(25)))
             {
-                presenter.ClearLogs();
+                _presenter.ClearLogs();
                 LogGetter.ClearCustomLogs();
             }
 
@@ -115,11 +115,11 @@ namespace io.github.hatayama.uLoopMCP
             // Display log statistics
             DrawLogStatistics();
 
-            GUILayout.Label($"Displayed Logs: {displayData.TotalCount} items", EditorStyles.boldLabel);
+            GUILayout.Label($"Displayed Logs: {_displayData.TotalCount} items", EditorStyles.boldLabel);
 
-            scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, GUILayout.Height(400));
+            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, GUILayout.Height(400));
 
-            foreach (LogEntryDto logEntry in displayData.LogEntries)
+            foreach (LogEntryDto logEntry in _displayData.LogEntries)
             {
                 DrawLogEntry(logEntry);
             }
@@ -130,7 +130,7 @@ namespace io.github.hatayama.uLoopMCP
         private void DrawLogStatistics()
         {
             // Display statistics of currently displayed logs (to avoid infinite loops)
-            LogDisplayDto allLogs = displayData;
+            LogDisplayDto allLogs = _displayData;
             
             int logCount = 0;
             int warningCount = 0;

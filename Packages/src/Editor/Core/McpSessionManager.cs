@@ -6,21 +6,21 @@ namespace io.github.hatayama.uLoopMCP
 {
     public sealed class McpSessionManager : ScriptableSingleton<McpSessionManager>
     {
-        [SerializeField] private bool isServerRunning;
-        [SerializeField] private int serverPort = McpServerConfig.DEFAULT_PORT;
-        [SerializeField] private bool isAfterCompile;
-        [SerializeField] private bool isDomainReloadInProgress;
-        [SerializeField] private bool isReconnecting;
-        [SerializeField] private bool showReconnectingUI;
-        [SerializeField] private bool showPostCompileReconnectingUI;
-        [SerializeField] private int selectedEditorType = (int)McpEditorType.Cursor;
-        [SerializeField] private float communicationLogHeight = McpUIConstants.DEFAULT_COMMUNICATION_LOG_HEIGHT;
-        [SerializeField] private string communicationLogsJson = "[]";
-        [SerializeField] private string pendingRequestsJson = "{}";
-        [SerializeField] private string compileWindowLogText = "";
-        [SerializeField] private bool compileWindowHasData;
-        [SerializeField] private List<string> pendingCompileRequestIds = new();
-        [SerializeField] private List<CompileRequestData> compileRequests = new();
+        [SerializeField] private bool _isServerRunning;
+        [SerializeField] private int _serverPort = McpServerConfig.DEFAULT_PORT;
+        [SerializeField] private bool _isAfterCompile;
+        [SerializeField] private bool _isDomainReloadInProgress;
+        [SerializeField] private bool _isReconnecting;
+        [SerializeField] private bool _showReconnectingUI;
+        [SerializeField] private bool _showPostCompileReconnectingUI;
+        [SerializeField] private int _selectedEditorType = (int)McpEditorType.Cursor;
+        [SerializeField] private float _communicationLogHeight = McpUIConstants.DEFAULT_COMMUNICATION_LOG_HEIGHT;
+        [SerializeField] private string _communicationLogsJson = "[]";
+        [SerializeField] private string _pendingRequestsJson = "{}";
+        [SerializeField] private string _compileWindowLogText = "";
+        [SerializeField] private bool _compileWindowHasData;
+        [SerializeField] private List<string> _pendingCompileRequestIds = new();
+        [SerializeField] private List<CompileRequestData> _compileRequests = new();
 
         [System.Serializable]
         public class CompileRequestData
@@ -32,169 +32,169 @@ namespace io.github.hatayama.uLoopMCP
         // Server related
         public bool IsServerRunning
         {
-            get => isServerRunning;
-            set => isServerRunning = value;
+            get => _isServerRunning;
+            set => _isServerRunning = value;
         }
 
         public int ServerPort
         {
-            get => serverPort;
-            set => serverPort = value;
+            get => _serverPort;
+            set => _serverPort = value;
         }
 
         public bool IsAfterCompile
         {
-            get => isAfterCompile;
-            set => isAfterCompile = value;
+            get => _isAfterCompile;
+            set => _isAfterCompile = value;
         }
 
         public bool IsDomainReloadInProgress
         {
-            get => isDomainReloadInProgress;
-            set => isDomainReloadInProgress = value;
+            get => _isDomainReloadInProgress;
+            set => _isDomainReloadInProgress = value;
         }
 
         public bool IsReconnecting
         {
-            get => isReconnecting;
-            set => isReconnecting = value;
+            get => _isReconnecting;
+            set => _isReconnecting = value;
         }
 
         public bool ShowReconnectingUI
         {
-            get => showReconnectingUI;
-            set => showReconnectingUI = value;
+            get => _showReconnectingUI;
+            set => _showReconnectingUI = value;
         }
 
         public bool ShowPostCompileReconnectingUI
         {
-            get => showPostCompileReconnectingUI;
-            set => showPostCompileReconnectingUI = value;
+            get => _showPostCompileReconnectingUI;
+            set => _showPostCompileReconnectingUI = value;
         }
 
         // UI related
         public McpEditorType SelectedEditorType
         {
-            get => (McpEditorType)selectedEditorType;
-            set => selectedEditorType = (int)value;
+            get => (McpEditorType)_selectedEditorType;
+            set => _selectedEditorType = (int)value;
         }
 
         public float CommunicationLogHeight
         {
-            get => communicationLogHeight;
-            set => communicationLogHeight = value;
+            get => _communicationLogHeight;
+            set => _communicationLogHeight = value;
         }
 
         // Communication Log related
         public string CommunicationLogsJson
         {
-            get => communicationLogsJson;
-            set => communicationLogsJson = value;
+            get => _communicationLogsJson;
+            set => _communicationLogsJson = value;
         }
 
         public string PendingRequestsJson
         {
-            get => pendingRequestsJson;
-            set => pendingRequestsJson = value;
+            get => _pendingRequestsJson;
+            set => _pendingRequestsJson = value;
         }
 
         // CompileWindow related
         public string CompileWindowLogText
         {
-            get => compileWindowLogText;
-            set => compileWindowLogText = value;
+            get => _compileWindowLogText;
+            set => _compileWindowLogText = value;
         }
 
         public bool CompileWindowHasData
         {
-            get => compileWindowHasData;
-            set => compileWindowHasData = value;
+            get => _compileWindowHasData;
+            set => _compileWindowHasData = value;
         }
 
         // CompileSessionState related properties
         public string[] PendingCompileRequestIds
         {
-            get => pendingCompileRequestIds.ToArray();
-            set => pendingCompileRequestIds = new List<string>(value);
+            get => _pendingCompileRequestIds.ToArray();
+            set => _pendingCompileRequestIds = new List<string>(value);
         }
 
         // Methods
 
         public void ClearServerSession()
         {
-            isServerRunning = false;
-            serverPort = McpServerConfig.DEFAULT_PORT;
+            _isServerRunning = false;
+            _serverPort = McpServerConfig.DEFAULT_PORT;
         }
 
         public void ClearAfterCompileFlag()
         {
-            isAfterCompile = false;
+            _isAfterCompile = false;
         }
 
         public void ClearReconnectingFlags()
         {
-            isReconnecting = false;
-            showReconnectingUI = false;
+            _isReconnecting = false;
+            _showReconnectingUI = false;
         }
 
         public void ClearPostCompileReconnectingUI()
         {
-            showPostCompileReconnectingUI = false;
+            _showPostCompileReconnectingUI = false;
         }
 
         public void ClearDomainReloadFlag()
         {
-            isDomainReloadInProgress = false;
+            _isDomainReloadInProgress = false;
         }
 
         public void ClearCommunicationLogs()
         {
-            communicationLogsJson = "[]";
-            pendingRequestsJson = "{}";
+            _communicationLogsJson = "[]";
+            _pendingRequestsJson = "{}";
         }
 
         public void ClearCompileWindowData()
         {
-            compileWindowLogText = "";
-            compileWindowHasData = false;
+            _compileWindowLogText = "";
+            _compileWindowHasData = false;
         }
 
         public string GetCompileRequestJson(string requestId)
         {
-            CompileRequestData request = compileRequests.Find(r => r.requestId == requestId);
+            CompileRequestData request = _compileRequests.Find(r => r.requestId == requestId);
             return request?.json;
         }
 
         public void SetCompileRequestJson(string requestId, string json)
         {
-            CompileRequestData existingRequest = compileRequests.Find(r => r.requestId == requestId);
+            CompileRequestData existingRequest = _compileRequests.Find(r => r.requestId == requestId);
             if (existingRequest != null)
             {
                 existingRequest.json = json;
             }
             else
             {
-                compileRequests.Add(new CompileRequestData { requestId = requestId, json = json });
+                _compileRequests.Add(new CompileRequestData { requestId = requestId, json = json });
             }
         }
 
         public void ClearAllCompileRequests()
         {
-            compileRequests.Clear();
-            pendingCompileRequestIds.Clear();
+            _compileRequests.Clear();
+            _pendingCompileRequestIds.Clear();
         }
 
         public void AddPendingCompileRequest(string requestId)
         {
-            if (!pendingCompileRequestIds.Contains(requestId))
+            if (!_pendingCompileRequestIds.Contains(requestId))
             {
-                pendingCompileRequestIds.Add(requestId);
+                _pendingCompileRequestIds.Add(requestId);
             }
         }
 
         public void RemovePendingCompileRequest(string requestId)
         {
-            pendingCompileRequestIds.Remove(requestId);
+            _pendingCompileRequestIds.Remove(requestId);
         }
     }
 }

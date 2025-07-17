@@ -28,29 +28,29 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public struct DelayFrameAwaitable
     {
-        private readonly int frameCount;
-        private readonly CancellationToken cancellationToken;
+        private readonly int _frameCount;
+        private readonly CancellationToken _cancellationToken;
         
         public DelayFrameAwaitable(int frameCount, CancellationToken cancellationToken)
         {
-            this.frameCount = frameCount;
-            this.cancellationToken = cancellationToken;
+            this._frameCount = frameCount;
+            this._cancellationToken = cancellationToken;
         }
         
-        public Awaiter GetAwaiter() => new(frameCount, cancellationToken);
+        public Awaiter GetAwaiter() => new(_frameCount, _cancellationToken);
         
         /// <summary>
         /// Awaiter structure for async/await
         /// </summary>
         public struct Awaiter : INotifyCompletion
         {
-            private readonly int frameCount;
-            private readonly CancellationToken cancellationToken;
+            private readonly int _frameCount;
+            private readonly CancellationToken _cancellationToken;
             
             public Awaiter(int frameCount, CancellationToken cancellationToken)
             {
-                this.frameCount = frameCount;
-                this.cancellationToken = cancellationToken;
+                this._frameCount = frameCount;
+                this._cancellationToken = cancellationToken;
             }
             
             /// <summary>
@@ -60,8 +60,8 @@ namespace io.github.hatayama.uLoopMCP
             {
                 get
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    return frameCount <= 0; // Complete immediately if 0 frames or less
+                    _cancellationToken.ThrowIfCancellationRequested();
+                    return _frameCount <= 0; // Complete immediately if 0 frames or less
                 }
             }
             
@@ -70,7 +70,7 @@ namespace io.github.hatayama.uLoopMCP
             /// </summary>
             public void GetResult()
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                _cancellationToken.ThrowIfCancellationRequested();
             }
             
             /// <summary>
@@ -79,7 +79,7 @@ namespace io.github.hatayama.uLoopMCP
             /// </summary>
             public void OnCompleted(Action continuation)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                _cancellationToken.ThrowIfCancellationRequested();
                 
                 if (IsCompleted)
                 {
@@ -88,7 +88,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 
                 // Register continuation processing to EditorDelayManager
-                EditorDelayManager.RegisterDelay(continuation, frameCount, cancellationToken);
+                EditorDelayManager.RegisterDelay(continuation, _frameCount, _cancellationToken);
             }
         }
     }

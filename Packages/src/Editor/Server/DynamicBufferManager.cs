@@ -10,14 +10,14 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class DynamicBufferManager : IDisposable
     {
-        private readonly ConcurrentQueue<byte[]> bufferPool = new();
-        private readonly object lockObject = new();
-        private bool disposed = false;
+        private readonly ConcurrentQueue<byte[]> _bufferPool = new();
+        private readonly object _lockObject = new();
+        private bool _disposed = false;
         
         // Statistics for monitoring
-        private int totalBuffersCreated = 0;
-        private int totalBuffersReused = 0;
-        private int currentPoolSize = 0;
+        private int _totalBuffersCreated = 0;
+        private int _totalBuffersReused = 0;
+        private int _currentPoolSize = 0;
         
         /// <summary>
         /// Maximum number of buffers to keep in the pool to prevent memory bloat.
@@ -32,7 +32,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>A byte array of at least the required size</returns>
         public byte[] GetBuffer(int requiredSize)
         {
-            if (disposed)
+            if (_disposed)
             {
                 throw new ObjectDisposedException(nameof(DynamicBufferManager));
             }
@@ -52,11 +52,11 @@ namespace io.github.hatayama.uLoopMCP
             var tempBuffers = new List<byte[]>();
             
             // Look for a suitable buffer - stop when found
-            while (bufferPool.TryDequeue(out byte[] pooledBuffer))
+            while (_bufferPool.TryDequeue(out byte[] pooledBuffer))
             {
-                lock (lockObject)
+                lock (_lockObject)
                 {
-                    currentPoolSize--;
+                    _currentPoolSize--;
                 }
                 
                 if (pooledBuffer.Length >= requiredSize && suitableBuffer == null)
@@ -74,19 +74,19 @@ namespace io.github.hatayama.uLoopMCP
             // Put back the buffers that were too small
             foreach (var buffer in tempBuffers)
             {
-                lock (lockObject)
+                lock (_lockObject)
                 {
-                    if (currentPoolSize < MAX_POOL_SIZE)
+                    if (_currentPoolSize < MAX_POOL_SIZE)
                     {
-                        bufferPool.Enqueue(buffer);
-                        currentPoolSize++;
+                        _bufferPool.Enqueue(buffer);
+                        _currentPoolSize++;
                     }
                 }
             }
             
             if (suitableBuffer != null)
             {
-                totalBuffersReused++;
+                _totalBuffersReused++;
                 McpLogger.LogDebug($"[DynamicBufferManager] Reused buffer of size {suitableBuffer.Length} for required size {requiredSize}");
                 return suitableBuffer;
             }
@@ -95,7 +95,7 @@ namespace io.github.hatayama.uLoopMCP
             int newBufferSize = CalculateOptimalBufferSize(requiredSize);
             byte[] newBuffer = new byte[newBufferSize];
             
-            totalBuffersCreated++;
+            _totalBuffersCreated++;
             McpLogger.LogDebug($"[DynamicBufferManager] Created new buffer of size {newBufferSize} for required size {requiredSize}");
             
             return newBuffer;
@@ -108,7 +108,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="buffer">The buffer to return to the pool</param>
         public void ReturnBuffer(byte[] buffer)
         {
-            if (disposed || buffer == null)
+            if (_disposed || buffer == null)
             {
                 return;
             }
@@ -120,19 +120,19 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
             
-            lock (lockObject)
+            lock (_lockObject)
             {
                 // Limit pool size to prevent memory bloat
-                if (currentPoolSize >= MAX_POOL_SIZE)
+                if (_currentPoolSize >= MAX_POOL_SIZE)
                 {
-                    McpLogger.LogDebug($"[DynamicBufferManager] Pool full ({currentPoolSize}), discarding buffer");
+                    McpLogger.LogDebug($"[DynamicBufferManager] Pool full ({_currentPoolSize}), discarding buffer");
                     return;
                 }
                 
-                currentPoolSize++;
+                _currentPoolSize++;
             }
             
-            bufferPool.Enqueue(buffer);
+            _bufferPool.Enqueue(buffer);
             McpLogger.LogDebug($"[DynamicBufferManager] Returned buffer of size {buffer.Length} to pool");
         }
         
@@ -145,7 +145,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="newSize">The new required buffer size</param>
         public void ResizeBuffer(ref byte[] buffer, int currentDataLength, int newSize)
         {
-            if (disposed)
+            if (_disposed)
             {
                 throw new ObjectDisposedException(nameof(DynamicBufferManager));
             }
@@ -226,15 +226,15 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Statistics about buffer usage</returns>
         public BufferManagerStats GetStats()
         {
-            lock (lockObject)
+            lock (_lockObject)
             {
                 return new BufferManagerStats
                 {
-                    TotalBuffersCreated = totalBuffersCreated,
-                    TotalBuffersReused = totalBuffersReused,
-                    CurrentPoolSize = currentPoolSize,
+                    TotalBuffersCreated = _totalBuffersCreated,
+                    TotalBuffersReused = _totalBuffersReused,
+                    CurrentPoolSize = _currentPoolSize,
                     MaxPoolSize = MAX_POOL_SIZE,
-                    ReuseRate = totalBuffersCreated > 0 ? (double)totalBuffersReused / (totalBuffersCreated + totalBuffersReused) * 100 : 0
+                    ReuseRate = _totalBuffersCreated > 0 ? (double)_totalBuffersReused / (_totalBuffersCreated + _totalBuffersReused) * 100 : 0
                 };
             }
         }
@@ -245,21 +245,21 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void ClearPool()
         {
-            if (disposed)
+            if (_disposed)
             {
                 return;
             }
             
-            lock (lockObject)
+            lock (_lockObject)
             {
                 int buffersReleased = 0;
-                while (bufferPool.TryDequeue(out _))
+                while (_bufferPool.TryDequeue(out _))
                 {
                     buffersReleased++;
                 }
                 
                 McpLogger.LogInfo($"[DynamicBufferManager] Cleared buffer pool, released {buffersReleased} buffers");
-                currentPoolSize = 0;
+                _currentPoolSize = 0;
             }
         }
         
@@ -295,10 +295,10 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void Dispose()
         {
-            if (!disposed)
+            if (!_disposed)
             {
                 ClearPool();
-                disposed = true;
+                _disposed = true;
                 McpLogger.LogInfo("[DynamicBufferManager] Disposed");
             }
         }

@@ -11,7 +11,7 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class ConsoleLogRetriever
     {
-        private readonly Type logEntriesType;
+        private readonly Type _logEntriesType;
 
         /// <summary>
         /// Initializes the retriever with necessary reflection types
@@ -19,10 +19,10 @@ namespace io.github.hatayama.uLoopMCP
         public ConsoleLogRetriever()
         {
             Assembly editorAssembly = Assembly.GetAssembly(typeof(EditorWindow));
-            logEntriesType = editorAssembly.GetType("UnityEditor.LogEntries");
+            _logEntriesType = editorAssembly.GetType("UnityEditor.LogEntries");
             editorAssembly.GetType("UnityEditor.ConsoleWindow");
 
-            if (logEntriesType == null)
+            if (_logEntriesType == null)
             {
                 throw new InvalidOperationException("LogEntries type not found. Unity version compatibility issue.");
             }
@@ -72,7 +72,7 @@ namespace io.github.hatayama.uLoopMCP
         private void RestoreOriginalMask(int originalUnityMask)
         {
             // Use consoleFlags property to restore the exact Unity mask
-            PropertyInfo consoleFlagsProperty = logEntriesType.GetProperty("consoleFlags", BindingFlags.Public | BindingFlags.Static);
+            PropertyInfo consoleFlagsProperty = _logEntriesType.GetProperty("consoleFlags", BindingFlags.Public | BindingFlags.Static);
             if (consoleFlagsProperty != null)
             {
                 consoleFlagsProperty.SetValue(null, originalUnityMask);
@@ -143,7 +143,7 @@ namespace io.github.hatayama.uLoopMCP
         public int GetCurrentMask()
         {
             // Use the consoleFlags property discovered in the investigation
-            PropertyInfo consoleFlagsProperty = logEntriesType.GetProperty("consoleFlags", BindingFlags.Public | BindingFlags.Static);
+            PropertyInfo consoleFlagsProperty = _logEntriesType.GetProperty("consoleFlags", BindingFlags.Public | BindingFlags.Static);
             if (consoleFlagsProperty != null)
             {
                 object result = consoleFlagsProperty.GetValue(null);
@@ -164,7 +164,7 @@ namespace io.github.hatayama.uLoopMCP
             int unityMask = ConvertToUnityMask(mask);
 
             // Use the consoleFlags property
-            PropertyInfo consoleFlagsProperty = logEntriesType.GetProperty("consoleFlags", BindingFlags.Public | BindingFlags.Static);
+            PropertyInfo consoleFlagsProperty = _logEntriesType.GetProperty("consoleFlags", BindingFlags.Public | BindingFlags.Static);
             if (consoleFlagsProperty != null)
             {
                 consoleFlagsProperty.SetValue(null, unityMask);
@@ -207,7 +207,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public int GetLogCount()
         {
-            MethodInfo getCount = logEntriesType.GetMethod("GetCount", BindingFlags.Public | BindingFlags.Static);
+            MethodInfo getCount = _logEntriesType.GetMethod("GetCount", BindingFlags.Public | BindingFlags.Static);
             if (getCount != null)
             {
                 object result = getCount.Invoke(null, null);
@@ -237,7 +237,7 @@ namespace io.github.hatayama.uLoopMCP
             object logEntryInstance = Activator.CreateInstance(logEntryType);
 
             // Use GetEntryInternal method discovered in investigation
-            MethodInfo getEntryInternal = logEntriesType.GetMethod("GetEntryInternal", BindingFlags.Public | BindingFlags.Static);
+            MethodInfo getEntryInternal = _logEntriesType.GetMethod("GetEntryInternal", BindingFlags.Public | BindingFlags.Static);
             if (getEntryInternal == null)
             {
                 Debug.LogError("GetEntryInternal method not found");

@@ -9,17 +9,17 @@ using Newtonsoft.Json.Linq;
 namespace io.github.hatayama.uLoopMCP
 {
     // Related classes:
-    // - UnityToolExecutor: Uses this registry to execute tools.
-    // - IUnityTool: The interface for all tools stored in this registry.
+    // - UnityToolExecutor: Uses this registry to execute _tools.
+    // - IUnityTool: The interface for all _tools stored in this registry.
     // - AbstractUnityTool: The base class for most tool implementations.
-    // - McpToolAttribute: Attribute used to discover and register tools automatically.
+    // - McpToolAttribute: Attribute used to discover and register _tools automatically.
     /// <summary>
     /// Unity MCP tool registry class
-    /// Supports dynamic tool registration, allowing users to add their own tools
+    /// Supports dynamic tool registration, allowing users to add their own _tools
     /// </summary>
     public class UnityToolRegistry
     {
-        private readonly Dictionary<string, IUnityTool> tools = new();
+        private readonly Dictionary<string, IUnityTool> _tools = new();
 
         /// <summary>
         /// Singleton instance for global access
@@ -28,7 +28,7 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Default constructor
-        /// Auto-registers standard tools
+        /// Auto-registers standard _tools
         /// </summary>
         public UnityToolRegistry()
         {
@@ -37,19 +37,19 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Register standard tools
+        /// Register standard _tools
         /// </summary>
         private void RegisterDefaultTools()
         {
-            // Register tools with attribute-based discovery
+            // Register _tools with attribute-based discovery
             RegisterToolsWithAttributes();
 
-            // Manual registration for tools without attributes (for backward compatibility)
+            // Manual registration for _tools without attributes (for backward compatibility)
             RegisterManualTools();
         }
 
         /// <summary>
-        /// Register tools using attribute-based discovery
+        /// Register _tools using attribute-based discovery
         /// </summary>
         private void RegisterToolsWithAttributes()
         {
@@ -72,7 +72,7 @@ namespace io.github.hatayama.uLoopMCP
                     toolTypes.AddRange(types);
                 }
 
-                // Register all tools - filtering will be handled by TypeScript side
+                // Register all _tools - filtering will be handled by TypeScript side
                 foreach (Type type in toolTypes)
                 {
                     // Security: Validate type before creating instance
@@ -88,18 +88,18 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                McpLogger.LogError($"Failed to register tools with attributes: {ex.Message}");
+                McpLogger.LogError($"Failed to register _tools with attributes: {ex.Message}");
                 throw;
             }
         }
 
 
         /// <summary>
-        /// Register tools manually (for backward compatibility)
+        /// Register _tools manually (for backward compatibility)
         /// </summary>
         private void RegisterManualTools()
         {
-            // Only register tools that don't have the McpTool attribute
+            // Only register _tools that don't have the McpTool attribute
             // This prevents double registration
 
             if (!IsToolTypeRegistered<PingTool>())
@@ -128,7 +128,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private bool IsToolTypeRegistered<T>() where T : IUnityTool
         {
-            return tools.Values.Any(tool => tool.GetType() == typeof(T));
+            return _tools.Values.Any(tool => tool.GetType() == typeof(T));
         }
         
         /// <summary>
@@ -188,7 +188,7 @@ namespace io.github.hatayama.uLoopMCP
                 throw new ArgumentException("Tool name cannot be null or empty", nameof(tool));
             }
 
-            tools[tool.ToolName] = tool;
+            _tools[tool.ToolName] = tool;
         }
 
         /// <summary>
@@ -197,7 +197,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="toolName">Name of tool to unregister</param>
         public void UnregisterTool(string toolName)
         {
-            tools.Remove(toolName);
+            _tools.Remove(toolName);
         }
 
         /// <summary>
@@ -210,7 +210,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <exception cref="McpSecurityException">When tool is blocked by security settings</exception>
         public async Task<BaseToolResponse> ExecuteToolAsync(string toolName, JToken paramsToken)
         {
-            if (!tools.TryGetValue(toolName, out IUnityTool tool))
+            if (!_tools.TryGetValue(toolName, out IUnityTool tool))
             {
                 throw new ArgumentException($"Unknown tool: {toolName}");
             }
@@ -227,12 +227,12 @@ namespace io.github.hatayama.uLoopMCP
 
 
         /// <summary>
-        /// Get detailed information of registered tools
+        /// Get detailed information of registered _tools
         /// </summary>
         /// <returns>Array of tool information</returns>
         public ToolInfo[] GetRegisteredTools()
         {
-            return tools.Values.Select(tool => 
+            return _tools.Values.Select(tool => 
             {
                 // Check if tool has McpTool attribute with DisplayDevelopmentOnly
                 bool displayDevelopmentOnly = false;
@@ -248,7 +248,7 @@ namespace io.github.hatayama.uLoopMCP
                 // Get description from attribute
                 string description = attribute?.Description ?? "";
                 
-                // Modify description for blocked tools
+                // Modify description for blocked _tools
                 if (!isAllowed)
                 {
                     description = $"[BLOCKED] {description} - Blocked by security settings";
@@ -265,7 +265,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Tool type or null if not found</returns>
         public Type GetToolType(string toolName)
         {
-            if (tools.TryGetValue(toolName, out IUnityTool tool))
+            if (_tools.TryGetValue(toolName, out IUnityTool tool))
             {
                 return tool.GetType();
             }
@@ -279,11 +279,11 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>True if registered</returns>
         public bool IsToolRegistered(string toolName)
         {
-            return tools.ContainsKey(toolName);
+            return _tools.ContainsKey(toolName);
         }
 
         /// <summary>
-        /// Manually trigger tools changed notification
+        /// Manually trigger _tools changed notification
         /// Used for manual notifications and post-compilation notifications
         /// </summary>
         public static void TriggerToolsChangedNotification()

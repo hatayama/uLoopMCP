@@ -25,30 +25,30 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class MainThreadSwitcher
     {
-        private static int mainThreadId;
-        private static SynchronizationContext unitySynchronizationContext;
+        private static int _mainThreadId;
+        private static SynchronizationContext _unitySynchronizationContext;
         
         /// <summary>
         /// Gets the ID of the main thread.
         /// </summary>
-        public static int MainThreadId => mainThreadId;
+        public static int MainThreadId => _mainThreadId;
         
         /// <summary>
         /// Determines whether the current thread is the main thread.
         /// </summary>
-        public static bool IsMainThread => Thread.CurrentThread.ManagedThreadId == mainThreadId;
+        public static bool IsMainThread => Thread.CurrentThread.ManagedThreadId == _mainThreadId;
 
         /// <summary>
         /// Gets the UnitySynchronizationContext.
         /// </summary>
-        public static SynchronizationContext UnitySynchronizationContext => unitySynchronizationContext;
+        public static SynchronizationContext UnitySynchronizationContext => _unitySynchronizationContext;
 
         [InitializeOnLoadMethod]
         static void Initialize()
         {
             // Record the main thread ID and SynchronizationContext.
-            mainThreadId = Thread.CurrentThread.ManagedThreadId;
-            unitySynchronizationContext = SynchronizationContext.Current;
+            _mainThreadId = Thread.CurrentThread.ManagedThreadId;
+            _unitySynchronizationContext = SynchronizationContext.Current;
         }
 
         /// <summary>

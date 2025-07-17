@@ -5,13 +5,13 @@ namespace io.github.hatayama.uLoopMCP
 {
     public class DomainReloadDisableScope : IDisposable
     {
-        private readonly bool originalEnabled;
-        private readonly EnterPlayModeOptions originalOptions;
+        private readonly bool _originalEnabled;
+        private readonly EnterPlayModeOptions _originalOptions;
         
         public DomainReloadDisableScope()
         {
-            originalEnabled = EditorSettings.enterPlayModeOptionsEnabled;
-            originalOptions = EditorSettings.enterPlayModeOptions;
+            _originalEnabled = EditorSettings.enterPlayModeOptionsEnabled;
+            _originalOptions = EditorSettings.enterPlayModeOptions;
             
             EditorSettings.enterPlayModeOptionsEnabled = true;
             EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload;
@@ -19,8 +19,8 @@ namespace io.github.hatayama.uLoopMCP
         
         public void Dispose()
         {
-            EditorSettings.enterPlayModeOptionsEnabled = originalEnabled;
-            EditorSettings.enterPlayModeOptions = originalOptions;
+            EditorSettings.enterPlayModeOptionsEnabled = _originalEnabled;
+            EditorSettings.enterPlayModeOptions = _originalOptions;
         }
     }
 }
