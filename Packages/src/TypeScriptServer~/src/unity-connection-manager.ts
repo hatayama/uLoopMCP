@@ -91,10 +91,12 @@ export class UnityConnectionManager {
    */
   async handleUnityDiscovered(onConnectionEstablished?: () => Promise<void>): Promise<void> {
     try {
-      // Skip ensureConnected() since discovery already confirmed connection
-      // The isUnityAvailable() check in discoverUnityOnPorts() already verified TCP connectivity
+      // Ensure UnityClient connection state is properly set
+      // Even though discovery confirmed TCP connectivity, we need to ensure the connection state is updated
+      await this.unityClient.ensureConnected();
+
       if (this.isDevelopment) {
-        // Unity discovered - skipping redundant connection check
+        // Unity discovered - connection state updated
       }
 
       // Unity connection established via discovery

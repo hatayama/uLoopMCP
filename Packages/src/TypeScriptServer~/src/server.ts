@@ -104,6 +104,21 @@ class UnityMcpServer {
       const clientInfo = request.params?.clientInfo;
       const clientName = clientInfo?.name || '';
 
+      // Debug logging for client name detection
+      VibeLogger.logInfo(
+        'mcp_client_name_received',
+        `MCP client name received: ${clientName}`,
+        {
+          client_name: clientName,
+          client_info: clientInfo,
+          is_list_changed_unsupported:
+            this.clientCompatibility.isListChangedUnsupported(clientName),
+        },
+        undefined,
+        'This logs the client name received during MCP initialize request',
+        'Analyze this to ensure claude-code is properly detected',
+      );
+
       if (clientName) {
         this.clientCompatibility.setClientName(clientName);
         this.clientCompatibility.logClientCompatibility(clientName);

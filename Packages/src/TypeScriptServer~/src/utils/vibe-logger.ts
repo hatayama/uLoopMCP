@@ -206,6 +206,7 @@ export class VibeLogger {
         return; // Path traversal guard
       }
 
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       fs.mkdirSync(emergencyLogDir, { recursive: true });
 
       const emergencyLogPath = path.resolve(emergencyLogDir, 'vibe-logger-emergency.log');
@@ -214,6 +215,7 @@ export class VibeLogger {
       }
 
       const emergencyLog = JSON.stringify(emergencyEntry) + '\n';
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       fs.appendFileSync(emergencyLogPath, emergencyLog);
     } catch (error) {
       // Silent failure to prevent MCP protocol interference
@@ -344,6 +346,7 @@ export class VibeLogger {
         throw new Error('Log directory path escapes project root');
       }
 
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       fs.mkdirSync(absoluteLogDir, { recursive: true });
     }
 
@@ -403,6 +406,7 @@ export class VibeLogger {
       throw new Error('Original file path escapes the allowed directory');
     }
 
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     fs.renameSync(sanitizedFilePath, rotatedFilePath);
   }
 
@@ -480,6 +484,7 @@ export class VibeLogger {
         throw new Error('Fallback log directory path traversal detected');
       }
 
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       fs.mkdirSync(safeLogDir, { recursive: true });
 
       // Security: Sanitize filename components to prevent path traversal
@@ -503,6 +508,7 @@ export class VibeLogger {
       const jsonLog = JSON.stringify(fallbackEntry) + '\n';
 
       // Use fs.promises.open for safer file writing
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       const fileHandle = await fs.promises.open(safeFallbackPath, 'a');
       try {
         await fileHandle.writeFile(jsonLog, { encoding: 'utf8' });
