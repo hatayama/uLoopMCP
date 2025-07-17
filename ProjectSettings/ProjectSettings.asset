@@ -806,6 +806,7 @@ PlayerSettings:
   webGLPowerPreference: 2
   scriptingDefineSymbols:
     Standalone: ULOOPMCP_DEBUG
+    iPhone: ULOOPMCP_DEBUG
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

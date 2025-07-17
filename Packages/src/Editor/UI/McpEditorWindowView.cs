@@ -75,7 +75,10 @@ namespace io.github.hatayama.uLoopMCP
             // Auto start checkbox
             EditorGUILayout.BeginHorizontal();
             bool newAutoStart = EditorGUILayout.Toggle(data.AutoStartServer, GUILayout.Width(20));
-            EditorGUILayout.LabelField("Auto Start Server", GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true));
+            if (GUILayout.Button("Auto Start Server", EditorStyles.label, GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true)))
+            {
+                newAutoStart = !data.AutoStartServer;
+            }
             if (newAutoStart != data.AutoStartServer)
             {
                 autoStartCallback?.Invoke(newAutoStart);
@@ -311,7 +314,10 @@ namespace io.github.hatayama.uLoopMCP
                 
                 EditorGUILayout.BeginHorizontal();
                 bool newEnableDevelopmentMode = EditorGUILayout.Toggle(data.EnableDevelopmentMode, GUILayout.Width(20));
-                EditorGUILayout.LabelField("Enable Development Mode", GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true));
+                if (GUILayout.Button("Enable Development Mode", EditorStyles.label, GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true)))
+                {
+                    newEnableDevelopmentMode = !data.EnableDevelopmentMode;
+                }
                 if (newEnableDevelopmentMode != data.EnableDevelopmentMode)
                 {
                     devModeCallback?.Invoke(newEnableDevelopmentMode);
@@ -330,7 +336,10 @@ namespace io.github.hatayama.uLoopMCP
                 // Log control toggle
                 EditorGUILayout.BeginHorizontal();
                 bool newEnableMcpLogs = EditorGUILayout.Toggle(data.EnableMcpLogs, GUILayout.Width(20));
-                EditorGUILayout.LabelField("Enable MCP Logs", GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true));
+                if (GUILayout.Button("Enable MCP Logs", EditorStyles.label, GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true)))
+                {
+                    newEnableMcpLogs = !data.EnableMcpLogs;
+                }
                 if (newEnableMcpLogs != data.EnableMcpLogs)
                 {
                     mcpLogsCallback?.Invoke(newEnableMcpLogs);
@@ -340,7 +349,10 @@ namespace io.github.hatayama.uLoopMCP
                 // Communication logs toggle
                 EditorGUILayout.BeginHorizontal();
                 bool newEnableCommunicationLogs = EditorGUILayout.Toggle(data.EnableCommunicationLogs, GUILayout.Width(20));
-                EditorGUILayout.LabelField("Enable Communication Logs", GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true));
+                if (GUILayout.Button("Enable Communication Logs", EditorStyles.label, GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true)))
+                {
+                    newEnableCommunicationLogs = !data.EnableCommunicationLogs;
+                }
                 if (newEnableCommunicationLogs != data.EnableCommunicationLogs)
                 {
                     commLogsCallback?.Invoke(newEnableCommunicationLogs);
@@ -533,7 +545,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Draw security settings section
         /// </summary>
-        public void DrawSecuritySettings(SecuritySettingsData data, Action<bool> foldoutCallback, Action<bool> enableTestsCallback, Action<bool> allowMenuCallback)
+        public void DrawSecuritySettings(SecuritySettingsData data, Action<bool> foldoutCallback, Action<bool> enableTestsCallback, Action<bool> allowMenuCallback, Action<bool> allowThirdPartyCallback)
         {
             EditorGUILayout.BeginVertical("box");
             
@@ -547,19 +559,22 @@ namespace io.github.hatayama.uLoopMCP
             {
                 EditorGUILayout.Space();
                 
-                // Security warning with combined message and custom padding
-                GUIStyle helpBoxStyle = new GUIStyle(EditorStyles.helpBox);
-                helpBoxStyle.padding = new RectOffset(12, 12, 8, 8);
-                helpBoxStyle.margin = new RectOffset(4, 4, 4, 4);
-                
-                EditorGUILayout.LabelField("These settings control dangerous MCP operations. Only enable if you trust the AI system.\n\nChanges take effect immediately - no server restart required.", helpBoxStyle);
+                // Security warning using Unity's HelpBox with error type for red text
+                EditorGUILayout.HelpBox("These settings control dangerous MCP operations. Only enable if you trust the AI system.\n\nFor safer operation, consider using sandbox environments or containers.\n\nChanges take effect immediately - no server restart required.", MessageType.Error);
                 
                 EditorGUILayout.Space();
+                
+                // Create red label style for dangerous options
+                GUIStyle redLabelStyle = new GUIStyle(EditorStyles.label);
+                redLabelStyle.normal.textColor = Color.red;
                 
                 // Enable Tests Execution
                 EditorGUILayout.BeginHorizontal();
                 bool newEnableTests = EditorGUILayout.Toggle(data.EnableTestsExecution, GUILayout.Width(20));
-                EditorGUILayout.LabelField("Allow Tests Execution", GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true));
+                if (GUILayout.Button("Allow Tests Execution", redLabelStyle, GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true)))
+                {
+                    newEnableTests = !data.EnableTestsExecution;
+                }
                 if (newEnableTests != data.EnableTestsExecution)
                 {
                     enableTestsCallback?.Invoke(newEnableTests);
@@ -571,10 +586,28 @@ namespace io.github.hatayama.uLoopMCP
                 // Allow Menu Item Execution
                 EditorGUILayout.BeginHorizontal();
                 bool newAllowMenu = EditorGUILayout.Toggle(data.AllowMenuItemExecution, GUILayout.Width(20));
-                EditorGUILayout.LabelField("Allow Menu Item Execution", GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true));
+                if (GUILayout.Button("Allow Menu Item Execution", redLabelStyle, GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true)))
+                {
+                    newAllowMenu = !data.AllowMenuItemExecution;
+                }
                 if (newAllowMenu != data.AllowMenuItemExecution)
                 {
                     allowMenuCallback?.Invoke(newAllowMenu);
+                }
+                EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.Space(2);
+                
+                // Allow Third Party Tools
+                EditorGUILayout.BeginHorizontal();
+                bool newAllowThirdParty = EditorGUILayout.Toggle(data.AllowThirdPartyTools, GUILayout.Width(20));
+                if (GUILayout.Button("Allow Third Party Tools", redLabelStyle, GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true)))
+                {
+                    newAllowThirdParty = !data.AllowThirdPartyTools;
+                }
+                if (newAllowThirdParty != data.AllowThirdPartyTools)
+                {
+                    allowThirdPartyCallback?.Invoke(newAllowThirdParty);
                 }
                 EditorGUILayout.EndHorizontal();
                 

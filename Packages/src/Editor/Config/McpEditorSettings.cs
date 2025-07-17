@@ -22,6 +22,10 @@ namespace io.github.hatayama.uLoopMCP
         // Security Settings - Safe-by-Default
         public bool enableTestsExecution = false;
         public bool allowMenuItemExecution = false;
+        public bool allowThirdPartyTools = false;
+        
+        // UI State Settings
+        public bool showSecuritySettings = false;
     }
 
     /// <summary>
@@ -225,6 +229,42 @@ namespace io.github.hatayama.uLoopMCP
         {
             McpEditorSettingsData settings = GetSettings();
             McpEditorSettingsData newSettings = settings with { allowMenuItemExecution = allowMenuItemExecution };
+            SaveSettings(newSettings);
+        }
+
+        /// <summary>
+        /// Gets the third party tools execution allowed flag.
+        /// </summary>
+        public static bool GetAllowThirdPartyTools()
+        {
+            return GetSettings().allowThirdPartyTools;
+        }
+
+        /// <summary>
+        /// Sets the third party tools execution allowed flag.
+        /// </summary>
+        public static void SetAllowThirdPartyTools(bool allowThirdPartyTools)
+        {
+            McpEditorSettingsData settings = GetSettings();
+            McpEditorSettingsData newSettings = settings with { allowThirdPartyTools = allowThirdPartyTools };
+            SaveSettings(newSettings);
+        }
+
+        /// <summary>
+        /// Gets the show security settings flag.
+        /// </summary>
+        public static bool GetShowSecuritySettings()
+        {
+            return GetSettings().showSecuritySettings;
+        }
+
+        /// <summary>
+        /// Sets the show security settings flag.
+        /// </summary>
+        public static void SetShowSecuritySettings(bool showSecuritySettings)
+        {
+            McpEditorSettingsData settings = GetSettings();
+            McpEditorSettingsData newSettings = settings with { showSecuritySettings = showSecuritySettings };
             SaveSettings(newSettings);
         }
 

@@ -3,48 +3,48 @@ using System.ComponentModel;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// セキュリティ設定の種類を定義するenum
-    /// 各セキュリティ設定は、特定のコマンドの実行を制御します
+    /// Defines enum for security settings types
+    /// Each security setting controls the execution of specific commands
     /// 
-    /// 関連クラス:
-    /// - McpSecurityChecker: セキュリティチェックのメインロジック
-    /// - McpToolAttribute: コマンドのセキュリティ設定を指定する属性
-    /// - ExecuteMenuItemCommand: メニューアイテム実行コマンド
-    /// - RunTestsCommand: テスト実行コマンド
+    /// Related classes:
+    /// - McpSecurityChecker: Main security check logic
+    /// - McpToolAttribute: Attribute to specify command security settings
+    /// - ExecuteMenuItemTool: Menu item execution tool
+    /// - RunTestsTool: Test execution tool
     /// </summary>
     public enum SecuritySettings
     {
         /// <summary>
-        /// セキュリティ設定が不要（デフォルト）
+        /// No security setting required (default)
         /// </summary>
         [Description("")]
         None,
 
         /// <summary>
-        /// テストの実行を許可する設定
-        /// run-testsコマンドで使用
+        /// Allow test execution setting
+        /// Used by run-tests command
         /// </summary>
         [Description("enableTestsExecution")]
         EnableTestsExecution,
 
         /// <summary>
-        /// メニューアイテムの実行を許可する設定
-        /// execute-menu-itemコマンドで使用
+        /// Allow menu item execution setting
+        /// Used by execute-menu-item command
         /// </summary>
         [Description("allowMenuItemExecution")]
         AllowMenuItemExecution
     }
 
     /// <summary>
-    /// SecuritySettings enumの拡張メソッド
+    /// Extension methods for SecuritySettings enum
     /// </summary>
     public static class SecuritySettingsExtensions
     {
         /// <summary>
-        /// SecuritySettings enumから文字列値を取得
+        /// Get string value from SecuritySettings enum
         /// </summary>
-        /// <param name="setting">SecuritySettings enum値</param>
-        /// <returns>対応する文字列値</returns>
+        /// <param name="setting">SecuritySettings enum value</param>
+        /// <returns>Corresponding string value</returns>
         public static string ToStringValue(this SecuritySettings setting)
         {
             var field = setting.GetType().GetField(setting.ToString());
