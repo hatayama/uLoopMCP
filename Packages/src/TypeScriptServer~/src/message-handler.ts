@@ -16,7 +16,7 @@ interface JsonRpcNotification {
 }
 
 interface JsonRpcResponse {
-  id: number;
+  id: string;
   result?: unknown;
   error?: {
     message: string;
@@ -46,17 +46,17 @@ const isJsonRpcResponse = (msg: unknown): msg is JsonRpcResponse => {
     typeof msg === 'object' &&
     msg !== null &&
     'id' in msg &&
-    typeof (msg as JsonRpcResponse).id === 'number' &&
+    typeof (msg as JsonRpcResponse).id === 'string' &&
     !('method' in msg)
   );
 };
 
-const hasValidId = (msg: unknown): msg is { id: number } => {
+const hasValidId = (msg: unknown): msg is { id: string } => {
   return (
     typeof msg === 'object' &&
     msg !== null &&
     'id' in msg &&
-    typeof (msg as { id: number }).id === 'number'
+    typeof (msg as { id: string }).id === 'string'
   );
 };
 
@@ -76,8 +76,8 @@ const hasValidId = (msg: unknown): msg is { id: number } => {
 export class MessageHandler {
   private notificationHandlers: Map<string, (params: unknown) => void> = new Map();
   private pendingRequests: Map<
-    number,
-    { resolve: (value: unknown) => void; reject: (reason: unknown) => void }
+    string,
+    { resolve: (value: unknown) => void; reject: (reason: unknown) => void; timestamp: number }
   > = new Map();
 
   // Content-Length framing components
@@ -101,11 +101,11 @@ export class MessageHandler {
    * Register a pending request
    */
   registerPendingRequest(
-    id: number,
+    id: string,
     resolve: (value: unknown) => void,
     reject: (reason: unknown) => void,
   ): void {
-    this.pendingRequests.set(id, { resolve, reject });
+    this.pendingRequests.set(id, { resolve, reject, timestamp: Date.now() });
   }
 
   /**
@@ -192,8 +192,18 @@ export class MessageHandler {
         pending.resolve(response);
       }
     } else {
+      // This can happen due to connection issues, reconnection, or timing issues
+      // Log as warning instead of error since it's not always a critical issue
+      const activeRequestIds = Array.from(this.pendingRequests.keys()).join(', ');
+      const currentTime = Date.now();
+
       // eslint-disable-next-line no-console
-      console.error(`Received response for unknown request ID: ${id}`);
+      console.warn(
+        `Received response for unknown request ID: ${id}. ` +
+          'This may be a delayed response from before reconnection. ' +
+          `Active request IDs: [${activeRequestIds}], ` +
+          `Current time: ${currentTime}`,
+      );
     }
   }
 
@@ -210,7 +220,7 @@ export class MessageHandler {
   /**
    * Create JSON-RPC request with Content-Length framing
    */
-  createRequest(method: string, params: Record<string, unknown>, id: number): string {
+  createRequest(method: string, params: Record<string, unknown>, id: string): string {
     const request = {
       jsonrpc: JSONRPC.VERSION,
       id,

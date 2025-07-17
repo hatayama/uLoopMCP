@@ -6507,10 +6507,10 @@ var isJsonRpcNotification = (msg) => {
   return typeof msg === "object" && msg !== null && "method" in msg && typeof msg.method === "string" && !("id" in msg);
 };
 var isJsonRpcResponse = (msg) => {
-  return typeof msg === "object" && msg !== null && "id" in msg && typeof msg.id === "number" && !("method" in msg);
+  return typeof msg === "object" && msg !== null && "id" in msg && typeof msg.id === "string" && !("method" in msg);
 };
 var hasValidId = (msg) => {
-  return typeof msg === "object" && msg !== null && "id" in msg && typeof msg.id === "number";
+  return typeof msg === "object" && msg !== null && "id" in msg && typeof msg.id === "string";
 };
 var MessageHandler = class {
   notificationHandlers = /* @__PURE__ */ new Map();
@@ -6533,7 +6533,7 @@ var MessageHandler = class {
    * Register a pending request
    */
   registerPendingRequest(id, resolve2, reject) {
-    this.pendingRequests.set(id, { resolve: resolve2, reject });
+    this.pendingRequests.set(id, { resolve: resolve2, reject, timestamp: Date.now() });
   }
   /**
    * Handle incoming data from Unity using Content-Length framing
@@ -6597,7 +6597,11 @@ var MessageHandler = class {
         pending.resolve(response);
       }
     } else {
-      console.error(`Received response for unknown request ID: ${id}`);
+      const activeRequestIds = Array.from(this.pendingRequests.keys()).join(", ");
+      const currentTime = Date.now();
+      console.warn(
+        `Received response for unknown request ID: ${id}. This may be a delayed response from before reconnection. Active request IDs: [${activeRequestIds}], Current time: ${currentTime}`
+      );
     }
   }
   /**
@@ -6637,7 +6641,9 @@ var MessageHandler = class {
 };
 
 // src/unity-client.ts
-var UnityClient = class {
+var UnityClient = class _UnityClient {
+  static MAX_COUNTER = 9999;
+  static COUNTER_PADDING = 4;
   socket = null;
   _connected = false;
   port;
@@ -6647,6 +6653,10 @@ var UnityClient = class {
   messageHandler = new MessageHandler();
   unityDiscovery = null;
   // Reference to UnityDiscovery for connection loss handling
+  requestIdCounter = 0;
+  // Will be incremented to 1 on first use
+  processId = process.pid;
+  randomSeed = Math.floor(Math.random() * 1e3);
   constructor() {
     const unityTcpPort = process.env.UNITY_TCP_PORT;
     if (!unityTcpPort) {
@@ -6889,10 +6899,20 @@ var UnityClient = class {
     return response.result;
   }
   /**
-   * Generate unique request ID
+   * Generate unique request ID as string
+   * Uses timestamp + process ID + random seed + counter for guaranteed uniqueness across processes
    */
   generateId() {
-    return Date.now();
+    if (this.requestIdCounter >= _UnityClient.MAX_COUNTER) {
+      this.requestIdCounter = 1;
+    } else {
+      this.requestIdCounter++;
+    }
+    const timestamp = Date.now();
+    const processId = this.processId;
+    const randomSeed = this.randomSeed;
+    const counter = this.requestIdCounter.toString().padStart(_UnityClient.COUNTER_PADDING, "0");
+    return `ts_${timestamp}_${processId}_${randomSeed}_${counter}`;
   }
   /**
    * Send request and wait for response
@@ -6936,6 +6956,7 @@ var UnityClient = class {
     this.connectionManager.stopPolling();
     this.messageHandler.clearPendingRequests("Connection closed");
     this.messageHandler.clearBuffer();
+    this.requestIdCounter = 0;
     if (this.socket) {
       this.socket.destroy();
       this.socket = null;
@@ -7258,6 +7279,7 @@ var UnityConnectionManager = class {
   unityDiscovery;
   isDevelopment;
   isInitialized = false;
+  isReconnecting = false;
   constructor(unityClient) {
     this.unityClient = unityClient;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
@@ -7343,8 +7365,16 @@ var UnityConnectionManager = class {
    */
   setupReconnectionCallback(callback) {
     this.unityClient.setReconnectedCallback(() => {
+      if (this.isReconnecting) {
+        if (this.isDevelopment) {
+        }
+        return;
+      }
+      this.isReconnecting = true;
       void this.unityDiscovery.forceDiscovery().then(() => {
         return callback();
+      }).finally(() => {
+        this.isReconnecting = false;
       });
     });
   }

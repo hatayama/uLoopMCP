@@ -24,6 +24,9 @@ interface UnityDiscovery {
  * - MessageHandler: Handles JSON-RPC message processing
  */
 export class UnityClient {
+  private static readonly MAX_COUNTER = 9999;
+  private static readonly COUNTER_PADDING = 4;
+
   private socket: net.Socket | null = null;
   private _connected: boolean = false;
   private port: number;
@@ -32,6 +35,9 @@ export class UnityClient {
   private connectionManager: ConnectionManager = new ConnectionManager();
   private messageHandler: MessageHandler = new MessageHandler();
   private unityDiscovery: UnityDiscovery | null = null; // Reference to UnityDiscovery for connection loss handling
+  private requestIdCounter: number = 0; // Will be incremented to 1 on first use
+  private readonly processId: number = process.pid;
+  private readonly randomSeed: number = Math.floor(Math.random() * 1000);
 
   constructor() {
     const unityTcpPort: string | undefined = process.env.UNITY_TCP_PORT;
@@ -375,19 +381,33 @@ export class UnityClient {
   }
 
   /**
-   * Generate unique request ID
+   * Generate unique request ID as string
+   * Uses timestamp + process ID + random seed + counter for guaranteed uniqueness across processes
    */
-  private generateId(): number {
-    return Date.now();
+  private generateId(): string {
+    if (this.requestIdCounter >= UnityClient.MAX_COUNTER) {
+      this.requestIdCounter = 1;
+    } else {
+      this.requestIdCounter++;
+    }
+
+    // Format: "ts_[timestamp]_[processId]_[randomSeed]_[counter]"
+    // Example: "ts_1752718618309_58009_123_0001"
+    const timestamp = Date.now();
+    const processId = this.processId;
+    const randomSeed = this.randomSeed;
+    const counter = this.requestIdCounter.toString().padStart(UnityClient.COUNTER_PADDING, '0');
+
+    return `ts_${timestamp}_${processId}_${randomSeed}_${counter}`;
   }
 
   /**
    * Send request and wait for response
    */
   private async sendRequest(
-    request: { id: number; method: string; [key: string]: unknown },
+    request: { id: string; method: string; [key: string]: unknown },
     timeoutMs?: number,
-  ): Promise<{ id: number; error?: { message: string }; result?: unknown }> {
+  ): Promise<{ id: string; error?: { message: string }; result?: unknown }> {
     return new Promise((resolve, reject) => {
       // Use provided timeout or default to NETWORK timeout
       const timeout_duration = timeoutMs || TIMEOUTS.NETWORK;
@@ -404,7 +424,7 @@ export class UnityClient {
         request.id,
         (response) => {
           timeoutTimer.stop(); // Clean up timer
-          resolve(response as { id: number; error?: { message: string }; result?: unknown });
+          resolve(response as { id: string; error?: { message: string }; result?: unknown });
         },
         (error) => {
           timeoutTimer.stop(); // Clean up timer
@@ -440,6 +460,9 @@ export class UnityClient {
 
     // Clear the Content-Length framing buffer
     this.messageHandler.clearBuffer();
+
+    // Reset request ID counter to prevent ID conflicts on reconnection
+    this.requestIdCounter = 0;
 
     if (this.socket) {
       this.socket.destroy();

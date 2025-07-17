@@ -23,6 +23,7 @@ export class UnityConnectionManager {
   private unityDiscovery: UnityDiscovery;
   private readonly isDevelopment: boolean;
   private isInitialized: boolean = false;
+  private isReconnecting: boolean = false;
 
   constructor(unityClient: UnityClient) {
     this.unityClient = unityClient;
@@ -145,10 +146,25 @@ export class UnityConnectionManager {
    */
   setupReconnectionCallback(callback: () => Promise<void>): void {
     this.unityClient.setReconnectedCallback(() => {
+      // Prevent duplicate reconnection handling
+      if (this.isReconnecting) {
+        if (this.isDevelopment) {
+          // Reconnection already in progress, skipping duplicate callback
+        }
+        return;
+      }
+
+      this.isReconnecting = true;
+
       // Force Unity discovery for faster reconnection
-      void this.unityDiscovery.forceDiscovery().then(() => {
-        return callback();
-      });
+      void this.unityDiscovery
+        .forceDiscovery()
+        .then(() => {
+          return callback();
+        })
+        .finally(() => {
+          this.isReconnecting = false;
+        });
     });
   }
 
