@@ -31,7 +31,12 @@ namespace io.github.hatayama.uLoopMCP
             string fileName = $"{timestamp}.xml";
 
             // Save to uLoopMCPOutputs/TestResults folder at project root (same level as Assets)
-            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+            DirectoryInfo parentDir = Directory.GetParent(Application.dataPath);
+            if (parentDir == null)
+            {
+                throw new System.InvalidOperationException("Unable to determine project root directory");
+            }
+            string projectRoot = parentDir.FullName;
             string testResultsDir = Path.Combine(projectRoot, McpConstants.OUTPUT_ROOT_DIR, McpConstants.TEST_RESULTS_DIR);
 
             // Create directory if it doesn't exist
