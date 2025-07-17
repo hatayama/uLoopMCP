@@ -470,6 +470,7 @@ The type-safe design allows for reliable custom tool implementation in minimal t
 
 > [!IMPORTANT]  
 > **Security Settings**
+> 
 > Project-specific tools require enabling **Allow Third Party Tools** in the Security Settings.
 
 <details>
