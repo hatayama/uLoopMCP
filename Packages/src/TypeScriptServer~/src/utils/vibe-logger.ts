@@ -392,7 +392,14 @@ export class VibeLogger {
       } catch (fallbackError) {
         // If even fallback fails, try to write to a last-resort emergency log file
         try {
-          const emergencyLogDir = path.join(process.cwd(), 'emergency-logs');
+          // Security: Use safe path construction consistent with other logging
+          const basePath = process.cwd();
+          const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
+          if (!sanitizedRoot.startsWith(basePath)) {
+            throw new Error('Invalid OUTPUT_DIRECTORIES.ROOT path for emergency logging');
+          }
+
+          const emergencyLogDir = path.join(sanitizedRoot, 'EmergencyLogs');
           // eslint-disable-next-line security/detect-non-literal-fs-filename
           fs.mkdirSync(emergencyLogDir, { recursive: true });
 

@@ -5903,7 +5903,12 @@ var VibeLogger = class _VibeLogger {
         writeStream.end();
       } catch (fallbackError) {
         try {
-          const emergencyLogDir = path.join(process.cwd(), "emergency-logs");
+          const basePath = process.cwd();
+          const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
+          if (!sanitizedRoot.startsWith(basePath)) {
+            throw new Error("Invalid OUTPUT_DIRECTORIES.ROOT path for emergency logging");
+          }
+          const emergencyLogDir = path.join(sanitizedRoot, "EmergencyLogs");
           fs.mkdirSync(emergencyLogDir, { recursive: true });
           const emergencyLogPath = path.join(emergencyLogDir, "vibe-logger-emergency.log");
           const emergencyEntry = {
