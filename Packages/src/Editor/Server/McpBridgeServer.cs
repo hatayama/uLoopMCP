@@ -103,7 +103,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// The server's port number.
         /// </summary>
-        public int Port { get; private set; } = McpServerConfig.DEFAULT_PORT;
+        public int Port { get; private set; } = McpEditorSettings.GetCustomPort();
         
         /// <summary>
         /// Event on client connection.
@@ -184,15 +184,18 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Starts the server.
         /// </summary>
-        /// <param name="port">The port number (default: 7400).</param>
-        public void StartServer(int port = McpServerConfig.DEFAULT_PORT)
+        /// <param name="port">
+        /// The port number to bind to. Use -1 to fall back to the saved custom port
+        /// from <see cref="McpEditorSettings.GetCustomPort"/>. Defaults to -1.
+        /// </param>
+        public void StartServer(int port = -1)
         {
             if (_isRunning)
             {
                 return;
             }
 
-            Port = port;
+            Port = port == -1 ? McpEditorSettings.GetCustomPort() : port;
             _cancellationTokenSource = new CancellationTokenSource();
             
             try

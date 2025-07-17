@@ -68,7 +68,7 @@ class UnityMcpServer {
       },
     );
 
-    this.unityClient = new UnityClient();
+    this.unityClient = UnityClient.getInstance();
 
     // Initialize Unity connection manager
     this.connectionManager = new UnityConnectionManager(this.unityClient);

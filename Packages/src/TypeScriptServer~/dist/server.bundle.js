@@ -5773,6 +5773,31 @@ var VibeLogger = class _VibeLogger {
     _VibeLogger.memoryLogs = [];
   }
   /**
+   * Write emergency log entry (for when main logging fails)
+   * Static method to avoid circular dependency
+   */
+  static writeEmergencyLog(emergencyEntry) {
+    try {
+      const basePath = process.cwd();
+      const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
+      if (!_VibeLogger.validateWithin(basePath, sanitizedRoot)) {
+        return;
+      }
+      const emergencyLogDir = path.resolve(sanitizedRoot, "EmergencyLogs");
+      if (!_VibeLogger.validateWithin(sanitizedRoot, emergencyLogDir)) {
+        return;
+      }
+      fs.mkdirSync(emergencyLogDir, { recursive: true });
+      const emergencyLogPath = path.resolve(emergencyLogDir, "vibe-logger-emergency.log");
+      if (!_VibeLogger.validateWithin(emergencyLogDir, emergencyLogPath)) {
+        return;
+      }
+      const emergencyLog = JSON.stringify(emergencyEntry) + "\n";
+      fs.appendFileSync(emergencyLogPath, emergencyLog);
+    } catch (error) {
+    }
+  }
+  /**
    * Core logging method
    * Only logs when MCP_DEBUG environment variable is set to 'true'
    */
@@ -5797,13 +5822,14 @@ var VibeLogger = class _VibeLogger {
       _VibeLogger.memoryLogs.shift();
     }
     _VibeLogger.saveLogToFile(logEntry).catch((error) => {
-      console.error(
-        `[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`
-      );
+      _VibeLogger.writeEmergencyLog({
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        level: "EMERGENCY",
+        message: "VibeLogger saveLogToFile failed",
+        original_error: error instanceof Error ? error.message : String(error),
+        original_log_entry: logEntry
+      });
     });
-    if (_VibeLogger.isDebugEnabled) {
-      console.log(`[VibeLogger] ${level} | ${operation} | ${message}`);
-    }
   }
   /**
    * Validate file name to prevent dangerous characters
@@ -5821,67 +5847,169 @@ var VibeLogger = class _VibeLogger {
     return normalizedPath.startsWith(logDirectory + path.sep) || normalizedPath === logDirectory;
   }
   /**
+   * Validate that target path is within base directory
+   */
+  static validateWithin(base, target) {
+    const resolvedBase = path.resolve(base);
+    const resolvedTarget = path.resolve(target);
+    return resolvedTarget.startsWith(resolvedBase);
+  }
+  /**
+   * Safe wrapper for fs.existsSync with path validation
+   */
+  static safeExistsSync(filePath) {
+    try {
+      const absolutePath = path.resolve(filePath);
+      const expectedDir = path.resolve(_VibeLogger.LOG_DIRECTORY);
+      if (!_VibeLogger.validateWithin(expectedDir, absolutePath)) {
+        return false;
+      }
+      return fs.existsSync(absolutePath);
+    } catch (error) {
+      return false;
+    }
+  }
+  /**
+   * Prepare and validate log directory and file path
+   */
+  static prepareLogFilePath() {
+    const logDirectory = path.normalize(_VibeLogger.LOG_DIRECTORY);
+    if (!_VibeLogger.validateFilePath(logDirectory)) {
+      throw new Error("Invalid log directory path");
+    }
+    if (!_VibeLogger.safeExistsSync(logDirectory)) {
+      const absoluteLogDir = path.resolve(logDirectory);
+      const expectedBaseDir = path.resolve(_VibeLogger.PROJECT_ROOT);
+      if (!_VibeLogger.validateWithin(expectedBaseDir, absoluteLogDir)) {
+        throw new Error("Log directory path escapes project root");
+      }
+      fs.mkdirSync(absoluteLogDir, { recursive: true });
+    }
+    const fileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDate()}.json`;
+    if (!_VibeLogger.validateFileName(fileName)) {
+      throw new Error("Invalid file name detected");
+    }
+    const filePath = path.resolve(logDirectory, fileName);
+    if (!_VibeLogger.validateWithin(logDirectory, filePath)) {
+      throw new Error("Resolved file path escapes the log directory");
+    }
+    if (!_VibeLogger.validateFilePath(filePath)) {
+      throw new Error("Invalid file path detected");
+    }
+    return filePath;
+  }
+  /**
+   * Rotate log file if it exceeds maximum size
+   */
+  static rotateLogFileIfNeeded(filePath) {
+    if (!_VibeLogger.safeExistsSync(filePath)) {
+      return;
+    }
+    const absoluteFilePath = path.resolve(filePath);
+    const stats = fs.statSync(absoluteFilePath);
+    if (stats.size <= _VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
+      return;
+    }
+    const logDirectory = path.dirname(filePath);
+    const rotatedFileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDateTime()}.json`;
+    if (!_VibeLogger.validateFileName(rotatedFileName)) {
+      throw new Error("Invalid rotated file name detected");
+    }
+    const rotatedFilePath = path.resolve(logDirectory, rotatedFileName);
+    if (!_VibeLogger.validateWithin(logDirectory, rotatedFilePath)) {
+      throw new Error("Rotated file path escapes the allowed directory");
+    }
+    const sanitizedFilePath = path.resolve(logDirectory, path.basename(filePath));
+    if (!_VibeLogger.validateWithin(logDirectory, sanitizedFilePath)) {
+      throw new Error("Original file path escapes the allowed directory");
+    }
+    fs.renameSync(sanitizedFilePath, rotatedFilePath);
+  }
+  /**
+   * Write log to file with retry mechanism for concurrent access
+   */
+  static async writeLogWithRetry(filePath, jsonLog) {
+    const maxRetries = 3;
+    const baseDelayMs = 50;
+    const absoluteFilePath = path.resolve(filePath);
+    const expectedLogDir = path.resolve(_VibeLogger.LOG_DIRECTORY);
+    if (!_VibeLogger.validateWithin(expectedLogDir, absoluteFilePath)) {
+      throw new Error("File path escapes log directory");
+    }
+    for (let retry = 0; retry < maxRetries; retry++) {
+      try {
+        const fileHandle = await fs.promises.open(absoluteFilePath, "a");
+        try {
+          await fileHandle.writeFile(jsonLog, { encoding: "utf8" });
+        } finally {
+          await fileHandle.close();
+        }
+        return;
+      } catch (error) {
+        if (_VibeLogger.isFileSharingViolation(error) && retry < maxRetries - 1) {
+          const delayMs = baseDelayMs * Math.pow(2, retry);
+          await _VibeLogger.sleep(delayMs);
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+  /**
    * Save log entry to file with retry mechanism for concurrent access
    */
   static async saveLogToFile(logEntry) {
     try {
-      const logDirectory = path.normalize(_VibeLogger.LOG_DIRECTORY);
-      if (!_VibeLogger.validateFilePath(logDirectory)) {
-        throw new Error("Invalid log directory path");
-      }
-      if (!fs.existsSync(logDirectory)) {
-        fs.mkdirSync(logDirectory, { recursive: true });
-      }
-      const fileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDate()}.json`;
-      if (!_VibeLogger.validateFileName(fileName)) {
-        throw new Error("Invalid file name detected");
-      }
-      const filePath = path.resolve(logDirectory, fileName);
-      if (!filePath.startsWith(logDirectory)) {
-        throw new Error("Resolved file path escapes the log directory");
-      }
-      if (!_VibeLogger.validateFilePath(filePath)) {
-        throw new Error("Invalid file path detected");
-      }
-      if (fs.existsSync(filePath)) {
-        const stats = fs.statSync(filePath);
-        if (stats.size > _VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
-          const rotatedFileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDateTime()}.json`;
-          if (!_VibeLogger.validateFileName(rotatedFileName)) {
-            throw new Error("Invalid rotated file name detected");
-          }
-          const rotatedFilePath = path.resolve(logDirectory, rotatedFileName);
-          if (!rotatedFilePath.startsWith(path.resolve(logDirectory))) {
-            throw new Error("Rotated file path escapes the allowed directory");
-          }
-          const sanitizedFilePath = path.resolve(logDirectory, path.basename(filePath));
-          if (!sanitizedFilePath.startsWith(path.resolve(logDirectory))) {
-            throw new Error("Original file path escapes the allowed directory");
-          }
-          fs.renameSync(sanitizedFilePath, rotatedFilePath);
-        }
-      }
+      const filePath = _VibeLogger.prepareLogFilePath();
+      _VibeLogger.rotateLogFileIfNeeded(filePath);
       const jsonLog = JSON.stringify(logEntry) + "\n";
-      const maxRetries = 3;
-      const baseDelayMs = 50;
-      for (let retry = 0; retry < maxRetries; retry++) {
-        try {
-          fs.appendFileSync(filePath, jsonLog, { flag: "a" });
-          return;
-        } catch (error) {
-          if (_VibeLogger.isFileSharingViolation(error) && retry < maxRetries - 1) {
-            const delayMs = baseDelayMs * Math.pow(2, retry);
-            await _VibeLogger.sleep(delayMs);
-          } else {
-            throw error;
-          }
-        }
-      }
+      await _VibeLogger.writeLogWithRetry(filePath, jsonLog);
     } catch (error) {
-      console.error(
-        `[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`
-      );
-      console.log(`[VibeLogger] ${logEntry.level} | ${logEntry.operation} | ${logEntry.message}`);
+      await _VibeLogger.tryFallbackLogging(logEntry, error);
+    }
+  }
+  /**
+   * Try fallback logging when main logging fails
+   */
+  static async tryFallbackLogging(logEntry, error) {
+    try {
+      const basePath = process.cwd();
+      const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
+      if (!_VibeLogger.validateWithin(basePath, sanitizedRoot)) {
+        throw new Error("Invalid OUTPUT_DIRECTORIES.ROOT path");
+      }
+      const safeLogDir = path.resolve(sanitizedRoot, "FallbackLogs");
+      if (!_VibeLogger.validateWithin(sanitizedRoot, safeLogDir)) {
+        throw new Error("Fallback log directory path traversal detected");
+      }
+      fs.mkdirSync(safeLogDir, { recursive: true });
+      const safeDate = _VibeLogger.formatDateTime().split(" ")[0].replace(/[^0-9-]/g, "");
+      const safeFilename = `${_VibeLogger.LOG_FILE_PREFIX}_fallback_${safeDate}.json`;
+      const safeFallbackPath = path.resolve(safeLogDir, safeFilename);
+      if (!_VibeLogger.validateWithin(safeLogDir, safeFallbackPath)) {
+        throw new Error("Invalid fallback log file path");
+      }
+      const fallbackEntry = {
+        ...logEntry,
+        fallback_reason: error instanceof Error ? error.message : String(error),
+        original_timestamp: logEntry.timestamp
+      };
+      const jsonLog = JSON.stringify(fallbackEntry) + "\n";
+      const fileHandle = await fs.promises.open(safeFallbackPath, "a");
+      try {
+        await fileHandle.writeFile(jsonLog, { encoding: "utf8" });
+      } finally {
+        await fileHandle.close();
+      }
+    } catch (fallbackError) {
+      _VibeLogger.writeEmergencyLog({
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        level: "EMERGENCY",
+        message: "VibeLogger fallback failed",
+        original_error: error instanceof Error ? error.message : String(error),
+        fallback_error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+        original_log_entry: logEntry
+      });
     }
   }
   /**
@@ -6644,6 +6772,7 @@ var MessageHandler = class {
 var UnityClient = class _UnityClient {
   static MAX_COUNTER = 9999;
   static COUNTER_PADDING = 4;
+  static instance = null;
   socket = null;
   _connected = false;
   port;
@@ -6667,6 +6796,24 @@ var UnityClient = class _UnityClient {
       throw new Error(`UNITY_TCP_PORT must be a valid port number (1-65535), got: ${unityTcpPort}`);
     }
     this.port = parsedPort;
+  }
+  /**
+   * Get the singleton instance of UnityClient
+   */
+  static getInstance() {
+    if (!_UnityClient.instance) {
+      _UnityClient.instance = new _UnityClient();
+    }
+    return _UnityClient.instance;
+  }
+  /**
+   * Reset the singleton instance (for testing purposes)
+   */
+  static resetInstance() {
+    if (_UnityClient.instance) {
+      _UnityClient.instance.disconnect();
+      _UnityClient.instance = null;
+    }
   }
   /**
    * Update Unity connection port (for discovery)
@@ -6732,11 +6879,11 @@ var UnityClient = class _UnityClient {
     }
   }
   /**
-   * Connect to Unity (reconnect if necessary)
-   * Now more conservative about creating new connections
+   * Ensure connection to Unity (singleton-safe reconnection)
+   * Properly manages single connection instance
    */
   async ensureConnected() {
-    if (this._connected && this.socket && !this.socket.destroyed && this.socket.readable && this.socket.writable) {
+    if (this._connected && this.socket && !this.socket.destroyed) {
       try {
         if (await this.testConnection()) {
           return;
@@ -6744,16 +6891,17 @@ var UnityClient = class _UnityClient {
       } catch (error) {
       }
     }
-    if (this._connected && this.socket && !this.socket.destroyed) {
-      return;
-    }
     this.disconnect();
     await this.connect();
   }
   /**
    * Connect to Unity
+   * Creates a new socket connection (should only be called after disconnect)
    */
   async connect() {
+    if (this._connected && this.socket && !this.socket.destroyed) {
+      return;
+    }
     return new Promise((resolve2, reject) => {
       this.socket = new net.Socket();
       this.socket.connect(this.port, this.host, () => {
@@ -6876,6 +7024,10 @@ var UnityClient = class _UnityClient {
    * Execute any Unity tool dynamically
    */
   async executeTool(toolName, params = {}) {
+    if (!this.connected) {
+      throw new Error("Not connected to Unity. Please wait for connection to be established.");
+    }
+    await this.setClientName();
     const request = {
       jsonrpc: JSONRPC.VERSION,
       id: this.generateId(),
@@ -7171,21 +7323,8 @@ var UnityDiscovery = class _UnityDiscovery {
             "Monitor for tools/list_changed notifications after this discovery."
           );
           this.unityClient.updatePort(port);
-          try {
-            await this.unityClient.connect();
-            if (this.onDiscoveredCallback) {
-              await this.onDiscoveredCallback(port);
-            }
-          } catch (error) {
-            VibeLogger.logError(
-              "unity_discovery_connection_failed",
-              "Failed to establish connection after discovery",
-              { port, error: error instanceof Error ? error.message : String(error) },
-              correlationId,
-              "Connection attempt failed despite successful port scan.",
-              "Check Unity server status and network connectivity."
-            );
-            continue;
+          if (this.onDiscoveredCallback) {
+            await this.onDiscoveredCallback(port);
           }
           return;
         }
@@ -8029,7 +8168,7 @@ var UnityMcpServer = class {
         }
       }
     );
-    this.unityClient = new UnityClient();
+    this.unityClient = UnityClient.getInstance();
     this.connectionManager = new UnityConnectionManager(this.unityClient);
     this.unityDiscovery = this.connectionManager.getUnityDiscovery();
     this.toolManager = new UnityToolManager(this.unityClient);

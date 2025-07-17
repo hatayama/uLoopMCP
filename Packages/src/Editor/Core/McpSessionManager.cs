@@ -123,7 +123,6 @@ namespace io.github.hatayama.uLoopMCP
         public void ClearServerSession()
         {
             _isServerRunning = false;
-            _serverPort = McpServerConfig.DEFAULT_PORT;
         }
 
         public void ClearAfterCompileFlag()

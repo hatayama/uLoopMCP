@@ -14,6 +14,7 @@ interface UnityDiscovery {
 
 /**
  * TCP/IP client for communication with Unity
+ * Implemented as Singleton to prevent multiple Unity connections
  *
  * Design document reference: Packages/src/TypeScriptServer~/ARCHITECTURE.md
  *
@@ -26,6 +27,7 @@ interface UnityDiscovery {
 export class UnityClient {
   private static readonly MAX_COUNTER = 9999;
   private static readonly COUNTER_PADDING = 4;
+  private static instance: UnityClient | null = null;
 
   private socket: net.Socket | null = null;
   private _connected: boolean = false;
@@ -39,7 +41,7 @@ export class UnityClient {
   private readonly processId: number = process.pid;
   private readonly randomSeed: number = Math.floor(Math.random() * 1000);
 
-  constructor() {
+  private constructor() {
     const unityTcpPort: string | undefined = process.env.UNITY_TCP_PORT;
 
     if (!unityTcpPort) {
@@ -52,6 +54,26 @@ export class UnityClient {
     }
 
     this.port = parsedPort;
+  }
+
+  /**
+   * Get the singleton instance of UnityClient
+   */
+  static getInstance(): UnityClient {
+    if (!UnityClient.instance) {
+      UnityClient.instance = new UnityClient();
+    }
+    return UnityClient.instance;
+  }
+
+  /**
+   * Reset the singleton instance (for testing purposes)
+   */
+  static resetInstance(): void {
+    if (UnityClient.instance) {
+      UnityClient.instance.disconnect();
+      UnityClient.instance = null;
+    }
   }
 
   /**
@@ -134,45 +156,39 @@ export class UnityClient {
   }
 
   /**
-   * Connect to Unity (reconnect if necessary)
-   * Now more conservative about creating new connections
+   * Ensure connection to Unity (singleton-safe reconnection)
+   * Properly manages single connection instance
    */
   async ensureConnected(): Promise<void> {
-    // First: quick socket state check
-    if (
-      this._connected &&
-      this.socket &&
-      !this.socket.destroyed &&
-      this.socket.readable &&
-      this.socket.writable
-    ) {
-      // Socket looks healthy, do a lightweight ping test
+    // If already connected and healthy, return immediately
+    if (this._connected && this.socket && !this.socket.destroyed) {
       try {
+        // Quick health check - if it passes, we're good
         if (await this.testConnection()) {
-          return; // Connection is healthy
+          return;
         }
       } catch (error) {
-        // Ping failed, but don't immediately reconnect
-        // Give it another chance before creating new connection
+        // Health check failed - need to reconnect
       }
     }
 
-    // Second chance: basic socket state check only
-    if (this._connected && this.socket && !this.socket.destroyed) {
-      // Socket exists but might be temporarily unresponsive
-      // Don't create new connection immediately
-      return;
-    }
-
-    // Only reconnect if socket is actually destroyed/null
+    // Disconnect any existing connection before creating new one
     this.disconnect();
+
+    // Create new connection
     await this.connect();
   }
 
   /**
    * Connect to Unity
+   * Creates a new socket connection (should only be called after disconnect)
    */
   async connect(): Promise<void> {
+    // Ensure we don't create multiple connections
+    if (this._connected && this.socket && !this.socket.destroyed) {
+      return; // Already connected
+    }
+
     return new Promise((resolve, reject) => {
       this.socket = new net.Socket();
 
@@ -343,6 +359,14 @@ export class UnityClient {
    * Execute any Unity tool dynamically
    */
   async executeTool(toolName: string, params: Record<string, unknown> = {}): Promise<unknown> {
+    // Ensure connection before executing tool
+    if (!this.connected) {
+      throw new Error('Not connected to Unity. Please wait for connection to be established.');
+    }
+
+    // Ensure client name is set (this completes the connection handshake)
+    await this.setClientName();
+
     const request = {
       jsonrpc: JSONRPC.VERSION,
       id: this.generateId(),
