@@ -6809,11 +6809,28 @@ var UnityClient = class _UnityClient {
         ClientName: finalClientName
       }
     };
-    try {
-      const response = await this.sendRequest(request);
-      if (response.error) {
+    const maxRetries = 3;
+    const timeoutMs = 1e3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await this.sendRequest(request, timeoutMs);
+        if (response.error) {
+          if (attempt === maxRetries) {
+            throw new Error(
+              `Failed to set client name after ${maxRetries} attempts: ${response.error.message}`
+            );
+          }
+        } else {
+          return;
+        }
+      } catch (error) {
+        if (attempt === maxRetries) {
+          throw new Error(
+            `Failed to set client name after ${maxRetries} attempts: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+        await new Promise((resolve2) => setTimeout(resolve2, attempt * 500));
       }
-    } catch (error) {
     }
   }
   /**
@@ -6866,11 +6883,30 @@ var UnityClient = class _UnityClient {
       method: "get-tool-details",
       params: { IncludeDevelopmentOnly: includeDevelopmentOnly }
     };
-    const response = await this.sendRequest(request);
-    if (response.error) {
-      throw new Error(`Failed to get tool details: ${response.error.message}`);
+    const maxRetries = 3;
+    const timeoutMs = 1e3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await this.sendRequest(request, timeoutMs);
+        if (response.error) {
+          if (attempt === maxRetries) {
+            throw new Error(
+              `Failed to get tool details after ${maxRetries} attempts: ${response.error.message}`
+            );
+          }
+        } else {
+          return response.result || [];
+        }
+      } catch (error) {
+        if (attempt === maxRetries) {
+          throw new Error(
+            `Failed to get tool details after ${maxRetries} attempts: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+        await new Promise((resolve2) => setTimeout(resolve2, attempt * 500));
+      }
     }
-    return response.result || [];
+    return [];
   }
   /**
    * Execute any Unity tool dynamically
@@ -7880,10 +7916,34 @@ var UnityEventHandler = class {
     });
     process.on("uncaughtException", (error) => {
       console.error("Uncaught exception:", error);
+      VibeLogger.logError(
+        "uncaught_exception",
+        "Uncaught exception occurred",
+        {
+          error_message: error.message,
+          error_stack: error.stack,
+          error_name: error.name
+        },
+        void 0,
+        "Critical error that caused process termination",
+        "AI should investigate root cause and improve error handling"
+      );
       this.gracefulShutdown();
     });
     process.on("unhandledRejection", (reason, promise) => {
       console.error("Unhandled rejection at:", promise, "reason:", reason);
+      VibeLogger.logError(
+        "unhandled_rejection",
+        "Unhandled promise rejection occurred",
+        {
+          rejection_reason: reason instanceof Error ? reason.message : String(reason),
+          rejection_stack: reason instanceof Error ? reason.stack : void 0,
+          promise_info: `Promise (${typeof promise})`
+        },
+        void 0,
+        "Unhandled promise rejection that could cause process instability",
+        "AI should investigate async code and add proper error handling"
+      );
       this.gracefulShutdown();
     });
   }

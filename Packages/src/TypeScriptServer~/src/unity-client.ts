@@ -249,14 +249,34 @@ export class UnityClient {
       },
     };
 
-    try {
-      const response = await this.sendRequest(request);
+    // Retry logic with 1-second timeout
+    const maxRetries = 3;
+    const timeoutMs = 1000;
 
-      if (response.error) {
-        // Failed to set client name
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await this.sendRequest(request, timeoutMs);
+
+        if (response.error) {
+          if (attempt === maxRetries) {
+            throw new Error(
+              `Failed to set client name after ${maxRetries} attempts: ${response.error.message}`,
+            );
+          }
+          // Retry on error response
+        } else {
+          // Successfully set client name
+          return;
+        }
+      } catch (error) {
+        if (attempt === maxRetries) {
+          throw new Error(
+            `Failed to set client name after ${maxRetries} attempts: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise((resolve) => setTimeout(resolve, attempt * 500));
       }
-    } catch (error) {
-      // Error setting client name
     }
   }
 
@@ -324,19 +344,43 @@ export class UnityClient {
       params: { IncludeDevelopmentOnly: includeDevelopmentOnly },
     };
 
-    const response = await this.sendRequest(request);
+    // Retry logic with 1-second timeout
+    const maxRetries = 3;
+    const timeoutMs = 1000;
 
-    if (response.error) {
-      throw new Error(`Failed to get tool details: ${response.error.message}`);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await this.sendRequest(request, timeoutMs);
+
+        if (response.error) {
+          if (attempt === maxRetries) {
+            throw new Error(
+              `Failed to get tool details after ${maxRetries} attempts: ${response.error.message}`,
+            );
+          }
+          // Retry on error response
+        } else {
+          return (
+            (response.result as Array<{
+              name: string;
+              description: string;
+              parameterSchema?: unknown;
+            }>) || []
+          );
+        }
+      } catch (error) {
+        if (attempt === maxRetries) {
+          throw new Error(
+            `Failed to get tool details after ${maxRetries} attempts: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+      }
     }
 
-    return (
-      (response.result as Array<{
-        name: string;
-        description: string;
-        parameterSchema?: unknown;
-      }>) || []
-    );
+    // This should never be reached, but TypeScript requires a return
+    return [];
   }
 
   /**

@@ -2,6 +2,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { UnityClient } from './unity-client.js';
 import { UnityConnectionManager } from './unity-connection-manager.js';
 import { ENVIRONMENT, NOTIFICATION_METHODS } from './constants.js';
+import { VibeLogger } from './utils/vibe-logger.js';
 
 /**
  * Unity Event Handler - Manages Unity notifications and event processing
@@ -131,12 +132,40 @@ export class UnityEventHandler {
     process.on('uncaughtException', (error) => {
       // eslint-disable-next-line no-console
       console.error('Uncaught exception:', error);
+
+      VibeLogger.logError(
+        'uncaught_exception',
+        'Uncaught exception occurred',
+        {
+          error_message: error.message,
+          error_stack: error.stack,
+          error_name: error.name,
+        },
+        undefined,
+        'Critical error that caused process termination',
+        'AI should investigate root cause and improve error handling',
+      );
+
       this.gracefulShutdown();
     });
 
     process.on('unhandledRejection', (reason, promise) => {
       // eslint-disable-next-line no-console
       console.error('Unhandled rejection at:', promise, 'reason:', reason);
+
+      VibeLogger.logError(
+        'unhandled_rejection',
+        'Unhandled promise rejection occurred',
+        {
+          rejection_reason: reason instanceof Error ? reason.message : String(reason),
+          rejection_stack: reason instanceof Error ? reason.stack : undefined,
+          promise_info: `Promise (${typeof promise})`,
+        },
+        undefined,
+        'Unhandled promise rejection that could cause process instability',
+        'AI should investigate async code and add proper error handling',
+      );
+
       this.gracefulShutdown();
     });
   }
