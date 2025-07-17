@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.29.0](https://github.com/hatayama/uLoopMCP/compare/v0.28.4...v0.29.0) (2025-07-17)
+
+
+### Features
+
+* restore and enhance security settings with third-party tool control ([#217](https://github.com/hatayama/uLoopMCP/issues/217)) ([144c04d](https://github.com/hatayama/uLoopMCP/commit/144c04ddc4275c7f6a4e2a3e52e02e54a2326c55))
+
 ## [0.28.4](https://github.com/hatayama/uLoopMCP/compare/v0.28.3...v0.28.4) (2025-07-17)
 
 
