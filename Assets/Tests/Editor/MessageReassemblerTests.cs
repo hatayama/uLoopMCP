@@ -265,7 +265,7 @@ namespace io.github.hatayama.uLoopMCP
             
             // Act
             reassembler.AddData(data, data.Length);
-            string[] messages = reassembler.ExtractCompleteMessages();
+            reassembler.ExtractCompleteMessages();
             MessageReassemblerStats stats = reassembler.GetStats();
             
             // Assert

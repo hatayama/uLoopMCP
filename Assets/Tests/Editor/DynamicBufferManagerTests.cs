@@ -252,9 +252,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Arrange
             byte[] buffer1 = bufferManager.GetBuffer(1024);
-            byte[] buffer2 = bufferManager.GetBuffer(1024);
+            bufferManager.GetBuffer(1024);
             bufferManager.ReturnBuffer(buffer1);
-            byte[] buffer3 = bufferManager.GetBuffer(1024); // Should reuse buffer1
+            bufferManager.GetBuffer(1024); // Should reuse buffer1
             
             // Act
             BufferManagerStats stats = bufferManager.GetStats();

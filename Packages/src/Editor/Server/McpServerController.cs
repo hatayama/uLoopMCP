@@ -136,7 +136,6 @@ namespace io.github.hatayama.uLoopMCP
             sessionManager.IsDomainReloadInProgress = true;
             
             // Log server state before assembly reload
-            bool serverExists = mcpServer != null;
             bool serverRunning = mcpServer?.IsRunning ?? false;
             
             VibeLogger.LogInfo(

@@ -72,7 +72,7 @@ namespace io.github.hatayama.uLoopMCP
             int startFrame = EditorDelayManager.CurrentFrameCount;
             
             // Arrange & Act
-            var task = DelayedExecution();
+            _ = DelayedExecution();
             
             async Task DelayedExecution()
             {
@@ -105,7 +105,7 @@ namespace io.github.hatayama.uLoopMCP
             int startFrame = EditorDelayManager.CurrentFrameCount;
             
             // Arrange & Act
-            var task = DelayedExecution();
+            _ = DelayedExecution();
             
             async Task DelayedExecution()
             {
@@ -137,9 +137,9 @@ namespace io.github.hatayama.uLoopMCP
             int startFrame = EditorDelayManager.CurrentFrameCount;
             var executionFrames = new List<(string task, int frame)>();
             
-            var task1 = Task1(); // After 1 frame
-            var task2 = Task2(); // After 3 frames
-            var task3 = Task3(); // After 2 frames
+            _ = Task1(); // After 1 frame
+            _ = Task2(); // After 3 frames
+            _ = Task3(); // After 2 frames
             
             async Task Task1()
             {
@@ -228,7 +228,7 @@ namespace io.github.hatayama.uLoopMCP
             // Act & Assert - Cancellation exception should be thrown immediately
             try
             {
-                var task = DelayedTask();
+                _ = DelayedTask();
                 async Task DelayedTask()
                 {
                     try
@@ -392,8 +392,8 @@ namespace io.github.hatayama.uLoopMCP
             const int delayFrames = 2;
             
             // Act - Start tasks from both main thread and background thread
-            var mainThreadTask = MainThreadDelayTask();
-            var backgroundThreadTask = Task.Run(BackgroundThreadDelayTask);
+            _ = MainThreadDelayTask();
+            _ = Task.Run(BackgroundThreadDelayTask);
             
             async Task MainThreadDelayTask()
             {
@@ -579,8 +579,8 @@ namespace io.github.hatayama.uLoopMCP
             int cancellationThreadId = -1;
             
             // Act - Start tasks from different threads with shared cancellation token
-            var mainThreadTask = MainThreadCancellableTask();
-            var backgroundThreadTask = Task.Run(BackgroundThreadCancellableTask);
+            _ = MainThreadCancellableTask();
+            _ = Task.Run(BackgroundThreadCancellableTask);
             
             async Task MainThreadCancellableTask()
             {

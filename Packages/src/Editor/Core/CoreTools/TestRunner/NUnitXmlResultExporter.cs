@@ -18,7 +18,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void LogTestResultAsXml(ITestResultAdaptor testResult)
         {
-            string xmlContent = GenerateNUnitXml(testResult);
+            GenerateNUnitXml(testResult);
             // Test Result XML generated
         }
 

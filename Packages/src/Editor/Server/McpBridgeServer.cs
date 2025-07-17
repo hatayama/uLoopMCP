@@ -525,7 +525,7 @@ namespace io.github.hatayama.uLoopMCP
                 if (clientToRemove != null)
                 {
                     string clientKey = GenerateClientKey(clientToRemove.Endpoint);
-                    connectedClients.TryRemove(clientKey, out ConnectedClient removedClient);
+                    connectedClients.TryRemove(clientKey, out _);
                 }
                 
                 

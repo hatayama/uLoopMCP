@@ -334,9 +334,9 @@ namespace io.github.hatayama.uLoopMCP
             // 8405248 (0x801D00) - appears to be Error type
 
             // Let's try different bit extraction strategies
-            int lowerBits = mode & 0x7; // Lower 3 bits
-            int midBits = (mode >> 8) & 0x7; // Bits 8-10
-            int higherBits = (mode >> 16) & 0x7; // Bits 16-18
+            // int lowerBits = mode & 0x7; // Lower 3 bits
+            // int midBits = (mode >> 8) & 0x7; // Bits 8-10
+            // int higherBits = (mode >> 16) & 0x7; // Bits 16-18
 
             // Based on observed patterns, try to determine type
             if (mode == 8406016) return LogType.Log; // This is a test log message

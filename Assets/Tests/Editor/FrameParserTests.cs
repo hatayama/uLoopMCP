@@ -249,7 +249,7 @@ namespace io.github.hatayama.uLoopMCP
             byte[] buffer = Encoding.UTF8.GetBytes(message);
             
             // Act
-            bool result = frameParser.TryParseFrame(buffer, buffer.Length, out int contentLength, out int headerLength);
+            bool result = frameParser.TryParseFrame(buffer, buffer.Length, out int contentLength, out int _);
             
             // Assert
             Assert.IsTrue(result);
