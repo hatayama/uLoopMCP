@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.29.2](https://github.com/hatayama/uLoopMCP/compare/v0.29.1...v0.29.2) (2025-07-17)
+
+
+### Bug Fixes
+
+* MCP client name display and Unity connection timeout issues ([#222](https://github.com/hatayama/uLoopMCP/issues/222)) ([e002763](https://github.com/hatayama/uLoopMCP/commit/e00276380dc534855296fa7a12590b8cecd6e730))
+
 ## [0.29.1](https://github.com/hatayama/uLoopMCP/compare/v0.29.0...v0.29.1) (2025-07-17)
 
 
