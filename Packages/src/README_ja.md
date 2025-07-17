@@ -469,7 +469,7 @@ uLoopMCPはコアパッケージへの変更を必要とせず、プロジェク
 > [!IMPORTANT]  
 > **セキュリティ設定について**
 > 
-> プロジェクト固有に開発したツールは、**Allow Third Party Tools** を有効化する必要があります。 
+> プロジェクト固有に開発したツールは、uLoopMCPウィンドウの「Security Settings」で **Allow Third Party Tools** を有効化する必要があります。 
 
 <details>
 <summary>実装ガイドを見る</summary>
