@@ -5773,6 +5773,25 @@ var VibeLogger = class _VibeLogger {
     _VibeLogger.memoryLogs = [];
   }
   /**
+   * Write emergency log entry (for when main logging fails)
+   * Static method to avoid circular dependency
+   */
+  static writeEmergencyLog(emergencyEntry) {
+    try {
+      const basePath = process.cwd();
+      const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
+      if (!sanitizedRoot.startsWith(basePath)) {
+        return;
+      }
+      const emergencyLogDir = path.join(sanitizedRoot, "EmergencyLogs");
+      fs.mkdirSync(emergencyLogDir, { recursive: true });
+      const emergencyLogPath = path.join(emergencyLogDir, "vibe-logger-emergency.log");
+      const emergencyLog = JSON.stringify(emergencyEntry) + "\n";
+      fs.appendFileSync(emergencyLogPath, emergencyLog);
+    } catch (error) {
+    }
+  }
+  /**
    * Core logging method
    * Only logs when MCP_DEBUG environment variable is set to 'true'
    */
@@ -5797,9 +5816,13 @@ var VibeLogger = class _VibeLogger {
       _VibeLogger.memoryLogs.shift();
     }
     _VibeLogger.saveLogToFile(logEntry).catch((error) => {
-      console.error(
-        `[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`
-      );
+      _VibeLogger.writeEmergencyLog({
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        level: "EMERGENCY",
+        message: "VibeLogger saveLogToFile failed",
+        original_error: error instanceof Error ? error.message : String(error),
+        original_log_entry: logEntry
+      });
     });
   }
   /**
@@ -5902,27 +5925,14 @@ var VibeLogger = class _VibeLogger {
         writeStream.write(jsonLog);
         writeStream.end();
       } catch (fallbackError) {
-        try {
-          const basePath = process.cwd();
-          const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
-          if (!sanitizedRoot.startsWith(basePath)) {
-            throw new Error("Invalid OUTPUT_DIRECTORIES.ROOT path for emergency logging");
-          }
-          const emergencyLogDir = path.join(sanitizedRoot, "EmergencyLogs");
-          fs.mkdirSync(emergencyLogDir, { recursive: true });
-          const emergencyLogPath = path.join(emergencyLogDir, "vibe-logger-emergency.log");
-          const emergencyEntry = {
-            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-            level: "EMERGENCY",
-            message: "VibeLogger fallback failed",
-            original_error: error instanceof Error ? error.message : String(error),
-            fallback_error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-            original_log_entry: logEntry
-          };
-          const emergencyLog = JSON.stringify(emergencyEntry) + "\n";
-          fs.appendFileSync(emergencyLogPath, emergencyLog);
-        } catch (emergencyError) {
-        }
+        _VibeLogger.writeEmergencyLog({
+          timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+          level: "EMERGENCY",
+          message: "VibeLogger fallback failed",
+          original_error: error instanceof Error ? error.message : String(error),
+          fallback_error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+          original_log_entry: logEntry
+        });
       }
     }
   }

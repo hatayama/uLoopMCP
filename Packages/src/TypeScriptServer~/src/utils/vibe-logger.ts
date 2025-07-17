@@ -189,6 +189,33 @@ export class VibeLogger {
   }
 
   /**
+   * Write emergency log entry (for when main logging fails)
+   * Static method to avoid circular dependency
+   */
+  private static writeEmergencyLog(emergencyEntry: Record<string, unknown>): void {
+    try {
+      // Security: Use safe path construction consistent with other logging
+      const basePath = process.cwd();
+      const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
+      if (!sanitizedRoot.startsWith(basePath)) {
+        return; // Silent failure to prevent protocol interference
+      }
+
+      const emergencyLogDir = path.join(sanitizedRoot, 'EmergencyLogs');
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      fs.mkdirSync(emergencyLogDir, { recursive: true });
+
+      const emergencyLogPath = path.join(emergencyLogDir, 'vibe-logger-emergency.log');
+      const emergencyLog = JSON.stringify(emergencyEntry) + '\n';
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      fs.appendFileSync(emergencyLogPath, emergencyLog);
+    } catch (error) {
+      // Silent failure to prevent MCP protocol interference
+      // If even emergency logging fails, we cannot do anything more
+    }
+  }
+
+  /**
    * Core logging method
    * Only logs when MCP_DEBUG environment variable is set to 'true'
    */
@@ -229,11 +256,15 @@ export class VibeLogger {
 
     // Save to file (fire and forget to avoid blocking)
     VibeLogger.saveLogToFile(logEntry).catch((error) => {
-      // Fallback to console if file logging fails
-      // eslint-disable-next-line no-console
-      console.error(
-        `[VibeLogger] Failed to save log to file: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      // File logging failed - write to emergency log instead of console
+      // Critical: No console output to avoid MCP protocol interference
+      VibeLogger.writeEmergencyLog({
+        timestamp: new Date().toISOString(),
+        level: 'EMERGENCY',
+        message: 'VibeLogger saveLogToFile failed',
+        original_error: error instanceof Error ? error.message : String(error),
+        original_log_entry: logEntry,
+      });
     });
 
     // VibeLogger is designed for file output only - console output removed to prevent MCP protocol interference
@@ -391,36 +422,15 @@ export class VibeLogger {
         writeStream.end();
       } catch (fallbackError) {
         // If even fallback fails, try to write to a last-resort emergency log file
-        try {
-          // Security: Use safe path construction consistent with other logging
-          const basePath = process.cwd();
-          const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
-          if (!sanitizedRoot.startsWith(basePath)) {
-            throw new Error('Invalid OUTPUT_DIRECTORIES.ROOT path for emergency logging');
-          }
-
-          const emergencyLogDir = path.join(sanitizedRoot, 'EmergencyLogs');
-          // eslint-disable-next-line security/detect-non-literal-fs-filename
-          fs.mkdirSync(emergencyLogDir, { recursive: true });
-
-          const emergencyLogPath = path.join(emergencyLogDir, 'vibe-logger-emergency.log');
-          const emergencyEntry = {
-            timestamp: new Date().toISOString(),
-            level: 'EMERGENCY',
-            message: 'VibeLogger fallback failed',
-            original_error: error instanceof Error ? error.message : String(error),
-            fallback_error:
-              fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-            original_log_entry: logEntry,
-          };
-
-          const emergencyLog = JSON.stringify(emergencyEntry) + '\n';
-          // eslint-disable-next-line security/detect-non-literal-fs-filename
-          fs.appendFileSync(emergencyLogPath, emergencyLog);
-        } catch (emergencyError) {
-          // If even emergency logging fails, we must remain silent to preserve MCP protocol
-          // Critical: No console output to avoid MCP protocol interference
-        }
+        VibeLogger.writeEmergencyLog({
+          timestamp: new Date().toISOString(),
+          level: 'EMERGENCY',
+          message: 'VibeLogger fallback failed',
+          original_error: error instanceof Error ? error.message : String(error),
+          fallback_error:
+            fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+          original_log_entry: logEntry,
+        });
       }
     }
   }
