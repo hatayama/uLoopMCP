@@ -126,7 +126,7 @@ Retrieve information about the currently active Hierarchy in nested JSON format.
 > - **Allow Menu Item Execution**: Enable `execute-menu-item` tool
 > - **Allow Third Party Tools**: Enable user-developed custom tools
 >
-> Setting changes take effect immediately without server restart.
+> Setting changes take effect immediately without server restart.  
 > **Warning**: When using these features for AI-driven code generation, we strongly recommend running in sandbox environments or containers to prepare for unexpected behavior and security risks.
 
 ## Feature Specifications
