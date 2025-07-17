@@ -363,6 +363,18 @@ All tools automatically include the following timing information:
 
 ---
 
+> [!IMPORTANT]
+> **Security Settings**
+>
+> `run-tests` and `execute-menu-item` tools are disabled by default because AI can execute arbitrary code.
+> To use these tools, enable the corresponding settings in the uLoopMCP window "Security Settings":
+> - **Allow Tests Execution**: Enable `run-tests` tool
+> - **Allow Menu Item Execution**: Enable `execute-menu-item` tool
+> - **Allow Third Party Tools**: Enable user-developed custom tools
+>
+> Setting changes take effect immediately without server restart.
+> **Warning**: When using these features for AI-driven code generation, we strongly recommend running in sandbox environments or containers to prepare for unexpected behavior and security risks.
+
 ## Related Documentation
 
 - [Main README](README_ja.md) - Project overview and setup
@@ -453,6 +465,11 @@ Scope(s): io.github.hatayama.uloopmcp
 ## Project-Specific Tool Development
 uLoopMCP enables efficient development of project-specific MCP tools without requiring changes to the core package.  
 The type-safe design allows for reliable custom tool implementation in minimal time.
+(If you ask AI, they should be able to make it for you soon ✨)
+
+> [!IMPORTANT]  
+> **Security Settings**
+> Project-specific tools require enabling **Allow Third Party Tools** in the Security Settings.
 
 <details>
 <summary>View Implementation Guide</summary>

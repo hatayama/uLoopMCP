@@ -362,6 +362,18 @@ UnitySearchが提供する検索プロバイダーを取得します
 
 ---
 
+> [!IMPORTANT]
+> **セキュリティ設定について**
+>
+> `run-tests`と`execute-menu-item`ツールは、AIが任意のコードを実行できてしまうため、デフォルトで無効化されています。
+> これらのツールを使用するには、uLoopMCPウィンドウの「Security Settings」で該当する項目を有効化してください：
+> - **Allow Tests Execution**: `run-tests`ツールを有効化
+> - **Allow Menu Item Execution**: `execute-menu-item`ツールを有効化
+> - **Allow Third Party Tools**: ユーザーが独自に拡張したtoolを有効化
+>
+> 設定変更は即座に反映され、サーバー再起動は不要です。
+> **注意**: これらの機能を使ってAIによるコード生成を扱う際は、予期せぬ動作やセキュリティリスクに備えるため、sandbox環境やコンテナ上での実行を強く推奨します。
+
 ## 関連ドキュメント
 
 - [メインREADME](README_ja.md) - プロジェクト概要とセットアップ
@@ -451,6 +463,11 @@ Scope(s): io.github.hatayama.uloopmcp
 ## プロジェクト固有のツール開発
 uLoopMCPはコアパッケージへの変更を必要とせず、プロジェクト固有のMCPツールを効率的に開発できます。  
 型安全な設計により、信頼性の高いカスタムツールを短時間で実装可能です。
+(AIに依頼すればすぐに作ってくれるはずです✨)
+
+> [!IMPORTANT]  
+> **セキュリティ設定について**
+> プロジェクト固有に開発したツールは、**Allow Third Party Tools** を有効化する必要があります。 
 
 <details>
 <summary>実装ガイドを見る</summary>
