@@ -5877,10 +5877,11 @@ var VibeLogger = class _VibeLogger {
     } catch (error) {
       try {
         const basePath = process.cwd();
-        const safeLogDir = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT, "FallbackLogs");
-        if (!safeLogDir.startsWith(path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT))) {
-          throw new Error("Invalid log directory path");
+        const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
+        if (!sanitizedRoot.startsWith(basePath)) {
+          throw new Error("Invalid OUTPUT_DIRECTORIES.ROOT path");
         }
+        const safeLogDir = path.join(sanitizedRoot, "FallbackLogs");
         fs.mkdirSync(safeLogDir, { recursive: true });
         const safeDate = _VibeLogger.formatDateTime().split(" ")[0].replace(/[^0-9-]/g, "");
         const safeFilename = `${_VibeLogger.LOG_FILE_PREFIX}_fallback_${safeDate}.json`;

@@ -350,13 +350,12 @@ export class VibeLogger {
       try {
         // Security: Use safe path construction to prevent path traversal
         const basePath = process.cwd();
-        const safeLogDir = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT, 'FallbackLogs');
-
-        // Security: Validate that the resolved path is within our expected directory
-        if (!safeLogDir.startsWith(path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT))) {
-          throw new Error('Invalid log directory path');
+        const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
+        if (!sanitizedRoot.startsWith(basePath)) {
+          throw new Error('Invalid OUTPUT_DIRECTORIES.ROOT path');
         }
 
+        const safeLogDir = path.join(sanitizedRoot, 'FallbackLogs');
         // eslint-disable-next-line security/detect-non-literal-fs-filename
         fs.mkdirSync(safeLogDir, { recursive: true });
 
