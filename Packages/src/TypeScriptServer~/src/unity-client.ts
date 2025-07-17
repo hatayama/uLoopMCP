@@ -24,6 +24,9 @@ interface UnityDiscovery {
  * - MessageHandler: Handles JSON-RPC message processing
  */
 export class UnityClient {
+  private static readonly MAX_COUNTER = 9999;
+  private static readonly COUNTER_PADDING = 4;
+
   private socket: net.Socket | null = null;
   private _connected: boolean = false;
   private port: number;
@@ -32,7 +35,7 @@ export class UnityClient {
   private connectionManager: ConnectionManager = new ConnectionManager();
   private messageHandler: MessageHandler = new MessageHandler();
   private unityDiscovery: UnityDiscovery | null = null; // Reference to UnityDiscovery for connection loss handling
-  private requestIdCounter: number = 0;
+  private requestIdCounter: number = 0; // Will be incremented to 1 on first use
   private readonly processId: number = process.pid;
   private readonly randomSeed: number = Math.floor(Math.random() * 1000);
 
@@ -382,9 +385,10 @@ export class UnityClient {
    * Uses timestamp + process ID + random seed + counter for guaranteed uniqueness across processes
    */
   private generateId(): string {
-    this.requestIdCounter++;
-    if (this.requestIdCounter > 9999) {
+    if (this.requestIdCounter >= UnityClient.MAX_COUNTER) {
       this.requestIdCounter = 1;
+    } else {
+      this.requestIdCounter++;
     }
 
     // Format: "ts_[timestamp]_[processId]_[randomSeed]_[counter]"
@@ -392,7 +396,7 @@ export class UnityClient {
     const timestamp = Date.now();
     const processId = this.processId;
     const randomSeed = this.randomSeed;
-    const counter = this.requestIdCounter.toString().padStart(4, '0');
+    const counter = this.requestIdCounter.toString().padStart(UnityClient.COUNTER_PADDING, '0');
 
     return `ts_${timestamp}_${processId}_${randomSeed}_${counter}`;
   }
@@ -420,7 +424,7 @@ export class UnityClient {
         request.id,
         (response) => {
           timeoutTimer.stop(); // Clean up timer
-          resolve(response as { id: number; error?: { message: string }; result?: unknown });
+          resolve(response as { id: string; error?: { message: string }; result?: unknown });
         },
         (error) => {
           timeoutTimer.stop(); // Clean up timer

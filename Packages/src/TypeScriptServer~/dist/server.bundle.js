@@ -6641,7 +6641,9 @@ var MessageHandler = class {
 };
 
 // src/unity-client.ts
-var UnityClient = class {
+var UnityClient = class _UnityClient {
+  static MAX_COUNTER = 9999;
+  static COUNTER_PADDING = 4;
   socket = null;
   _connected = false;
   port;
@@ -6652,6 +6654,7 @@ var UnityClient = class {
   unityDiscovery = null;
   // Reference to UnityDiscovery for connection loss handling
   requestIdCounter = 0;
+  // Will be incremented to 1 on first use
   processId = process.pid;
   randomSeed = Math.floor(Math.random() * 1e3);
   constructor() {
@@ -6900,14 +6903,15 @@ var UnityClient = class {
    * Uses timestamp + process ID + random seed + counter for guaranteed uniqueness across processes
    */
   generateId() {
-    this.requestIdCounter++;
-    if (this.requestIdCounter > 9999) {
+    if (this.requestIdCounter >= _UnityClient.MAX_COUNTER) {
       this.requestIdCounter = 1;
+    } else {
+      this.requestIdCounter++;
     }
     const timestamp = Date.now();
     const processId = this.processId;
     const randomSeed = this.randomSeed;
-    const counter = this.requestIdCounter.toString().padStart(4, "0");
+    const counter = this.requestIdCounter.toString().padStart(_UnityClient.COUNTER_PADDING, "0");
     return `ts_${timestamp}_${processId}_${randomSeed}_${counter}`;
   }
   /**
