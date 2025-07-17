@@ -139,12 +139,6 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     EditorGUILayout.HelpBox($"Error loading {editorName} configuration: {data.ConfigurationError}", MessageType.Error);
                 }
-                else if (data.IsConfigured && data.HasPortMismatch)
-                {
-                    // Only show port mismatch warning when necessary
-                    EditorGUILayout.HelpBox($"Warning: {editorName} settings port number may not match current server port ({data.CurrentPort}).", MessageType.Warning);
-                }
-                // Remove all other HelpBox messages
                 
                 EditorGUILayout.Space();
                 
@@ -152,16 +146,25 @@ namespace io.github.hatayama.uLoopMCP
                 string buttonText;
                 if (data.IsConfigured)
                 {
-                    buttonText = data.IsServerRunning ? $"Update {editorName} Settings\n(Port {data.CurrentPort})" : $"Update {editorName} Settings";
+                    if (data.HasPortMismatch)
+                    {
+                        buttonText = data.IsServerRunning ? 
+                            $"Update {editorName} Settings\n(Port mismatch - Server: {data.CurrentPort})" : 
+                            $"Update {editorName} Settings\n(Port mismatch)";
+                    }
+                    else
+                    {
+                        buttonText = data.IsServerRunning ? $"Update {editorName} Settings\n(Port {data.CurrentPort})" : $"Update {editorName} Settings";
+                    }
                 }
                 else
                 {
                     buttonText = $"Settings not found. \nConfigure {editorName}";
                 }
                 
-                // Apply warning yellow color for unconfigured state
+                // Apply warning yellow color for unconfigured state or port mismatch
                 Color originalColor = GUI.backgroundColor;
-                if (!data.IsConfigured)
+                if (!data.IsConfigured || data.HasPortMismatch)
                 {
                     GUI.backgroundColor = new Color(1f, 0.9f, 0.4f); // Warning yellow
                 }
