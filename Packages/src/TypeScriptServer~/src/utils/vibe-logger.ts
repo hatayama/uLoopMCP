@@ -197,17 +197,23 @@ export class VibeLogger {
       // Security: Use safe path construction consistent with other logging
       const basePath = process.cwd();
       const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
-      if (!sanitizedRoot.startsWith(basePath)) {
+      if (!VibeLogger.validateWithin(basePath, sanitizedRoot)) {
         return; // Silent failure to prevent protocol interference
       }
 
-      const emergencyLogDir = path.join(sanitizedRoot, 'EmergencyLogs');
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      const emergencyLogDir = path.resolve(sanitizedRoot, 'EmergencyLogs');
+      if (!VibeLogger.validateWithin(sanitizedRoot, emergencyLogDir)) {
+        return; // Path traversal guard
+      }
+
       fs.mkdirSync(emergencyLogDir, { recursive: true });
 
-      const emergencyLogPath = path.join(emergencyLogDir, 'vibe-logger-emergency.log');
+      const emergencyLogPath = path.resolve(emergencyLogDir, 'vibe-logger-emergency.log');
+      if (!VibeLogger.validateWithin(emergencyLogDir, emergencyLogPath)) {
+        return; // Path traversal guard
+      }
+
       const emergencyLog = JSON.stringify(emergencyEntry) + '\n';
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
       fs.appendFileSync(emergencyLogPath, emergencyLog);
     } catch (error) {
       // Silent failure to prevent MCP protocol interference
@@ -291,6 +297,35 @@ export class VibeLogger {
   }
 
   /**
+   * Validate that target path is within base directory
+   */
+  private static validateWithin(base: string, target: string): boolean {
+    const resolvedBase = path.resolve(base);
+    const resolvedTarget = path.resolve(target);
+    return resolvedTarget.startsWith(resolvedBase);
+  }
+
+  /**
+   * Safe wrapper for fs.existsSync with path validation
+   */
+  private static safeExistsSync(filePath: string): boolean {
+    try {
+      const absolutePath = path.resolve(filePath);
+      const expectedDir = path.resolve(VibeLogger.LOG_DIRECTORY);
+
+      // Validate path is within expected directory
+      if (!VibeLogger.validateWithin(expectedDir, absolutePath)) {
+        return false;
+      }
+
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      return fs.existsSync(absolutePath);
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
    * Prepare and validate log directory and file path
    */
   private static prepareLogFilePath(): string {
@@ -300,10 +335,16 @@ export class VibeLogger {
       throw new Error('Invalid log directory path');
     }
 
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    if (!fs.existsSync(logDirectory)) {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
-      fs.mkdirSync(logDirectory, { recursive: true });
+    if (!VibeLogger.safeExistsSync(logDirectory)) {
+      // Security: Ensure directory path is absolute and within expected bounds
+      const absoluteLogDir = path.resolve(logDirectory);
+      const expectedBaseDir = path.resolve(VibeLogger.PROJECT_ROOT);
+
+      if (!VibeLogger.validateWithin(expectedBaseDir, absoluteLogDir)) {
+        throw new Error('Log directory path escapes project root');
+      }
+
+      fs.mkdirSync(absoluteLogDir, { recursive: true });
     }
 
     const fileName = `${VibeLogger.LOG_FILE_PREFIX}_${VibeLogger.formatDate()}.json`;
@@ -314,7 +355,7 @@ export class VibeLogger {
     }
 
     const filePath = path.resolve(logDirectory, fileName);
-    if (!filePath.startsWith(logDirectory)) {
+    if (!VibeLogger.validateWithin(logDirectory, filePath)) {
       throw new Error('Resolved file path escapes the log directory');
     }
 
@@ -330,13 +371,14 @@ export class VibeLogger {
    * Rotate log file if it exceeds maximum size
    */
   private static rotateLogFileIfNeeded(filePath: string): void {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    if (!fs.existsSync(filePath)) {
+    if (!VibeLogger.safeExistsSync(filePath)) {
       return;
     }
 
+    // Security: Use absolute path for file operations
+    const absoluteFilePath = path.resolve(filePath);
     // eslint-disable-next-line security/detect-non-literal-fs-filename
-    const stats = fs.statSync(filePath);
+    const stats = fs.statSync(absoluteFilePath);
     if (stats.size <= VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
       return;
     }
@@ -352,16 +394,15 @@ export class VibeLogger {
     const rotatedFilePath = path.resolve(logDirectory, rotatedFileName);
 
     // Ensure rotated file path is within the allowed directory
-    if (!rotatedFilePath.startsWith(path.resolve(logDirectory))) {
+    if (!VibeLogger.validateWithin(logDirectory, rotatedFilePath)) {
       throw new Error('Rotated file path escapes the allowed directory');
     }
 
     const sanitizedFilePath = path.resolve(logDirectory, path.basename(filePath));
-    if (!sanitizedFilePath.startsWith(path.resolve(logDirectory))) {
+    if (!VibeLogger.validateWithin(logDirectory, sanitizedFilePath)) {
       throw new Error('Original file path escapes the allowed directory');
     }
 
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     fs.renameSync(sanitizedFilePath, rotatedFilePath);
   }
 
@@ -372,10 +413,24 @@ export class VibeLogger {
     const maxRetries = 3;
     const baseDelayMs = 50;
 
+    // Security: Use absolute path and validate before writing
+    const absoluteFilePath = path.resolve(filePath);
+    const expectedLogDir = path.resolve(VibeLogger.LOG_DIRECTORY);
+
+    if (!VibeLogger.validateWithin(expectedLogDir, absoluteFilePath)) {
+      throw new Error('File path escapes log directory');
+    }
+
     for (let retry = 0; retry < maxRetries; retry++) {
       try {
+        // Use fs.promises.open for safer file handling
         // eslint-disable-next-line security/detect-non-literal-fs-filename
-        fs.appendFileSync(filePath, jsonLog, { flag: 'a' });
+        const fileHandle = await fs.promises.open(absoluteFilePath, 'a');
+        try {
+          await fileHandle.writeFile(jsonLog, { encoding: 'utf8' });
+        } finally {
+          await fileHandle.close();
+        }
         return; // Success - exit retry loop
       } catch (error: unknown) {
         if (VibeLogger.isFileSharingViolation(error) && retry < maxRetries - 1) {
@@ -404,24 +459,27 @@ export class VibeLogger {
       await VibeLogger.writeLogWithRetry(filePath, jsonLog);
     } catch (error) {
       // File logging failed - try fallback logging
-      VibeLogger.tryFallbackLogging(logEntry, error);
+      await VibeLogger.tryFallbackLogging(logEntry, error);
     }
   }
 
   /**
    * Try fallback logging when main logging fails
    */
-  private static tryFallbackLogging(logEntry: VibeLogEntry, error: unknown): void {
+  private static async tryFallbackLogging(logEntry: VibeLogEntry, error: unknown): Promise<void> {
     try {
       // Security: Use safe path construction to prevent path traversal
       const basePath = process.cwd();
       const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
-      if (!sanitizedRoot.startsWith(basePath)) {
+      if (!VibeLogger.validateWithin(basePath, sanitizedRoot)) {
         throw new Error('Invalid OUTPUT_DIRECTORIES.ROOT path');
       }
 
-      const safeLogDir = path.join(sanitizedRoot, 'FallbackLogs');
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      const safeLogDir = path.resolve(sanitizedRoot, 'FallbackLogs');
+      if (!VibeLogger.validateWithin(sanitizedRoot, safeLogDir)) {
+        throw new Error('Fallback log directory path traversal detected');
+      }
+
       fs.mkdirSync(safeLogDir, { recursive: true });
 
       // Security: Sanitize filename components to prevent path traversal
@@ -432,7 +490,7 @@ export class VibeLogger {
       const safeFallbackPath = path.resolve(safeLogDir, safeFilename);
 
       // Security: Validate that the resolved file path is within our expected directory
-      if (!safeFallbackPath.startsWith(safeLogDir)) {
+      if (!VibeLogger.validateWithin(safeLogDir, safeFallbackPath)) {
         throw new Error('Invalid fallback log file path');
       }
 
@@ -444,16 +502,13 @@ export class VibeLogger {
 
       const jsonLog = JSON.stringify(fallbackEntry) + '\n';
 
-      // Final validation before writing to the file
-      if (!safeFallbackPath.startsWith(safeLogDir)) {
-        throw new Error('Invalid fallback log file path (revalidation failed)');
+      // Use fs.promises.open for safer file writing
+      const fileHandle = await fs.promises.open(safeFallbackPath, 'a');
+      try {
+        await fileHandle.writeFile(jsonLog, { encoding: 'utf8' });
+      } finally {
+        await fileHandle.close();
       }
-
-      // Use a safer method for file writing to comply with security rules
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
-      const writeStream = fs.createWriteStream(safeFallbackPath, { flags: 'a' });
-      writeStream.write(jsonLog);
-      writeStream.end();
     } catch (fallbackError) {
       // If even fallback fails, try to write to a last-resort emergency log file
       VibeLogger.writeEmergencyLog({
