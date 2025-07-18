@@ -5806,7 +5806,7 @@ var VibeLogger = class _VibeLogger {
       return;
     }
     const logEntry = {
-      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      timestamp: _VibeLogger.formatTimestamp(),
       level,
       operation,
       message,
@@ -5823,7 +5823,7 @@ var VibeLogger = class _VibeLogger {
     }
     _VibeLogger.saveLogToFile(logEntry).catch((error) => {
       _VibeLogger.writeEmergencyLog({
-        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        timestamp: _VibeLogger.formatTimestamp(),
         level: "EMERGENCY",
         message: "VibeLogger saveLogToFile failed",
         original_error: error instanceof Error ? error.message : String(error),
@@ -6003,7 +6003,7 @@ var VibeLogger = class _VibeLogger {
       }
     } catch (fallbackError) {
       _VibeLogger.writeEmergencyLog({
-        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        timestamp: _VibeLogger.formatTimestamp(),
         level: "EMERGENCY",
         message: "VibeLogger fallback failed",
         original_error: error instanceof Error ? error.message : String(error),
@@ -6071,6 +6071,17 @@ var VibeLogger = class _VibeLogger {
         circular_reference: true
       };
     }
+  }
+  /**
+   * Format timestamp for log entries (local timezone)
+   */
+  static formatTimestamp() {
+    const now = /* @__PURE__ */ new Date();
+    const offset = now.getTimezoneOffset();
+    const offsetHours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0");
+    const offsetMinutes = String(Math.abs(offset) % 60).padStart(2, "0");
+    const offsetSign = offset <= 0 ? "+" : "-";
+    return now.toISOString().replace("Z", `${offsetSign}${offsetHours}:${offsetMinutes}`);
   }
   /**
    * Format date for file naming
@@ -8229,7 +8240,7 @@ var package_default = {
     "security:fix": "eslint src --ext .ts --fix",
     "security:only": "eslint src --ext .ts --config .eslintrc.security.json",
     "security:sarif": "eslint src --ext .ts -f @microsoft/eslint-formatter-sarif -o security-results.sarif",
-    "security:sarif-only": "eslint src --ext .ts --config .eslintrc.security.json -f @microsoft/eslint-formatter-sarif -o typescript-security.sarif",
+    "security:sarif-only": "eslint src --ext .ts --config .eslintrc.security.json -f @microsoft/eslint-formatter-sarif -o typescript-security.sarif --max-warnings 0",
     format: "prettier --write src/**/*.ts",
     "format:check": "prettier --check src/**/*.ts",
     "lint:check": "npm run lint && npm run format:check",

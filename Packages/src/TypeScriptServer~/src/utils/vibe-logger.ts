@@ -244,7 +244,7 @@ export class VibeLogger {
     }
 
     const logEntry: VibeLogEntry = {
-      timestamp: new Date().toISOString(),
+      timestamp: VibeLogger.formatTimestamp(),
       level,
       operation,
       message,
@@ -269,7 +269,7 @@ export class VibeLogger {
       // File logging failed - write to emergency log instead of console
       // Critical: No console output to avoid MCP protocol interference
       VibeLogger.writeEmergencyLog({
-        timestamp: new Date().toISOString(),
+        timestamp: VibeLogger.formatTimestamp(),
         level: 'EMERGENCY',
         message: 'VibeLogger saveLogToFile failed',
         original_error: error instanceof Error ? error.message : String(error),
@@ -527,7 +527,7 @@ export class VibeLogger {
     } catch (fallbackError) {
       // If even fallback fails, try to write to a last-resort emergency log file
       VibeLogger.writeEmergencyLog({
-        timestamp: new Date().toISOString(),
+        timestamp: VibeLogger.formatTimestamp(),
         level: 'EMERGENCY',
         message: 'VibeLogger fallback failed',
         original_error: error instanceof Error ? error.message : String(error),
@@ -605,6 +605,19 @@ export class VibeLogger {
         circular_reference: true,
       };
     }
+  }
+
+  /**
+   * Format timestamp for log entries (local timezone)
+   */
+  private static formatTimestamp(): string {
+    const now = new Date();
+    const offset = now.getTimezoneOffset();
+    const offsetHours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
+    const offsetMinutes = String(Math.abs(offset) % 60).padStart(2, '0');
+    const offsetSign = offset <= 0 ? '+' : '-';
+
+    return now.toISOString().replace('Z', `${offsetSign}${offsetHours}:${offsetMinutes}`);
   }
 
   /**
