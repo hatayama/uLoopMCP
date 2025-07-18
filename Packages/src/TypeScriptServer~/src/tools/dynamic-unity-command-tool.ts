@@ -69,6 +69,9 @@ export class DynamicUnityCommandTool extends BaseTool {
     const required: string[] = [];
 
     // Convert Unity parameter schema to JSON Schema format using constants
+    if (!parameterSchema) {
+      throw new Error('Parameter schema is undefined');
+    }
     const propertiesObj = parameterSchema[PARAMETER_SCHEMA.PROPERTIES_PROPERTY] as Record<
       string,
       UnityParameterInfo
@@ -107,11 +110,19 @@ export class DynamicUnityCommandTool extends BaseTool {
         property.default = defaultValue;
       }
 
-      // eslint-disable-next-line security/detect-object-injection
-      properties[propName] = property;
+      // SECURITY: propName is validated input from Unity's tool schema - safe for object property assignment
+      Object.defineProperty(properties, propName, {
+        value: property,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
     }
 
     // Add required parameters using constants
+    if (!parameterSchema) {
+      throw new Error('Parameter schema is undefined');
+    }
     const requiredParams = parameterSchema[PARAMETER_SCHEMA.REQUIRED_PROPERTY];
     if (requiredParams && Array.isArray(requiredParams)) {
       required.push(...(requiredParams as string[]));

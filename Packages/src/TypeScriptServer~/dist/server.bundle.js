@@ -6683,8 +6683,17 @@ var MessageHandler = class {
           this.handleResponse(message);
         }
       } catch (parseError) {
-        console.error("Error parsing JSON frame:", parseError);
-        console.error("Problematic frame:", frame);
+        VibeLogger.logError(
+          "json_parse_error",
+          "Error parsing JSON frame",
+          {
+            error: parseError instanceof Error ? parseError.message : String(parseError),
+            frame: frame.substring(0, 200)
+            // Truncate for security
+          },
+          void 0,
+          "Invalid JSON received from Unity, frame may be corrupted"
+        );
       }
     }
   }
@@ -6698,7 +6707,13 @@ var MessageHandler = class {
       try {
         handler(params);
       } catch (error) {
-        console.error(`Error in notification handler for ${method}:`, error);
+        VibeLogger.logError(
+          "notification_handler_error",
+          `Error in notification handler for ${method}`,
+          { error: error instanceof Error ? error.message : String(error) },
+          void 0,
+          "Exception occurred while processing notification"
+        );
       }
     }
   }
@@ -6727,8 +6742,17 @@ var MessageHandler = class {
     } else {
       const activeRequestIds = Array.from(this.pendingRequests.keys()).join(", ");
       const currentTime = Date.now();
-      console.warn(
-        `Received response for unknown request ID: ${id}. This may be a delayed response from before reconnection. Active request IDs: [${activeRequestIds}], Current time: ${currentTime}`
+      VibeLogger.logWarning(
+        "unknown_request_response",
+        `Received response for unknown request ID: ${id}`,
+        {
+          unknown_request_id: id,
+          active_request_ids: activeRequestIds,
+          current_time: currentTime
+        },
+        void 0,
+        "This may be a delayed response from before reconnection",
+        "Monitor if this pattern indicates connection stability issues"
       );
     }
   }
@@ -7614,6 +7638,9 @@ var DynamicUnityCommandTool = class extends BaseTool {
     }
     const properties = {};
     const required = [];
+    if (!parameterSchema) {
+      throw new Error("Parameter schema is undefined");
+    }
     const propertiesObj = parameterSchema[PARAMETER_SCHEMA.PROPERTIES_PROPERTY];
     for (const [propName, propInfo] of Object.entries(propertiesObj)) {
       const info = propInfo;
@@ -7637,7 +7664,15 @@ var DynamicUnityCommandTool = class extends BaseTool {
         };
         property.default = defaultValue;
       }
-      properties[propName] = property;
+      Object.defineProperty(properties, propName, {
+        value: property,
+        writable: true,
+        enumerable: true,
+        configurable: true
+      });
+    }
+    if (!parameterSchema) {
+      throw new Error("Parameter schema is undefined");
     }
     const requiredParams = parameterSchema[PARAMETER_SCHEMA.REQUIRED_PROPERTY];
     if (requiredParams && Array.isArray(requiredParams)) {
@@ -7754,7 +7789,7 @@ var UnityToolManager = class {
         tools.push({
           name: toolName,
           description: dynamicTool.description,
-          inputSchema: dynamicTool.inputSchema
+          inputSchema: this.convertToMcpSchema(dynamicTool.inputSchema)
         });
       }
       return tools;
@@ -7808,7 +7843,7 @@ var UnityToolManager = class {
         toolName,
         description,
         parameterSchema
-        // Pass schema information
+        // Type assertion for schema compatibility
       );
       this.dynamicTools.set(finalToolName, dynamicTool);
     }
@@ -7862,7 +7897,7 @@ var UnityToolManager = class {
       tools.push({
         name: toolName,
         description: dynamicTool.description,
-        inputSchema: dynamicTool.inputSchema
+        inputSchema: this.convertToMcpSchema(dynamicTool.inputSchema)
       });
     }
     return tools;
@@ -7872,6 +7907,23 @@ var UnityToolManager = class {
    */
   getToolsCount() {
     return this.dynamicTools.size;
+  }
+  /**
+   * Convert input schema to MCP-compatible format safely
+   */
+  convertToMcpSchema(inputSchema) {
+    if (!inputSchema || typeof inputSchema !== "object") {
+      return { type: "object" };
+    }
+    const schema = inputSchema;
+    const result = { type: "object" };
+    if (schema.properties && typeof schema.properties === "object") {
+      result.properties = schema.properties;
+    }
+    if (Array.isArray(schema.required)) {
+      result.required = schema.required;
+    }
+    return result;
   }
 };
 
@@ -7968,12 +8020,24 @@ var UnityEventHandler = class {
   setupUnityEventListener(onToolsChanged) {
     this.unityClient.onNotification("notifications/tools/list_changed", (_params) => {
       if (this.isDevelopment) {
-        console.log("Unity notification received: notifications/tools/list_changed");
+        VibeLogger.logInfo(
+          "unity_notification_received",
+          "Unity notification received: notifications/tools/list_changed",
+          void 0,
+          void 0,
+          "Unity notified that tool list has changed"
+        );
       }
       try {
         void onToolsChanged();
       } catch (error) {
-        console.error("Failed to update dynamic tools via Unity notification:", error);
+        VibeLogger.logError(
+          "unity_notification_error",
+          "Failed to update dynamic tools via Unity notification",
+          { error: error instanceof Error ? error.message : String(error) },
+          void 0,
+          "Error occurred while processing Unity tool list change notification"
+        );
       }
     });
   }
@@ -7983,7 +8047,13 @@ var UnityEventHandler = class {
   sendToolsChangedNotification() {
     if (this.isNotifying) {
       if (this.isDevelopment) {
-        console.log("sendToolsChangedNotification skipped: already notifying");
+        VibeLogger.logDebug(
+          "tools_notification_skipped",
+          "sendToolsChangedNotification skipped: already notifying",
+          void 0,
+          void 0,
+          "Duplicate notification prevented"
+        );
       }
       return;
     }
@@ -7994,10 +8064,22 @@ var UnityEventHandler = class {
         params: {}
       });
       if (this.isDevelopment) {
-        console.log("tools/list_changed notification sent");
+        VibeLogger.logInfo(
+          "tools_notification_sent",
+          "tools/list_changed notification sent",
+          void 0,
+          void 0,
+          "Successfully notified client of tool list changes"
+        );
       }
     } catch (error) {
-      console.error("Failed to send tools changed notification:", error);
+      VibeLogger.logError(
+        "tools_notification_error",
+        "Failed to send tools changed notification",
+        { error: error instanceof Error ? error.message : String(error) },
+        void 0,
+        "Error occurred while sending tool list change notification"
+      );
     } finally {
       this.isNotifying = false;
     }
@@ -8007,31 +8089,73 @@ var UnityEventHandler = class {
    */
   setupSignalHandlers() {
     process.on("SIGINT", () => {
-      console.log("Received SIGINT, shutting down...");
+      VibeLogger.logInfo(
+        "sigint_received",
+        "Received SIGINT, shutting down...",
+        void 0,
+        void 0,
+        "User pressed Ctrl+C, initiating graceful shutdown"
+      );
       this.gracefulShutdown();
     });
     process.on("SIGTERM", () => {
-      console.log("Received SIGTERM, shutting down...");
+      VibeLogger.logInfo(
+        "sigterm_received",
+        "Received SIGTERM, shutting down...",
+        void 0,
+        void 0,
+        "Process termination signal received, initiating graceful shutdown"
+      );
       this.gracefulShutdown();
     });
     process.on("SIGHUP", () => {
-      console.log("Received SIGHUP, shutting down...");
+      VibeLogger.logInfo(
+        "sighup_received",
+        "Received SIGHUP, shutting down...",
+        void 0,
+        void 0,
+        "Terminal hangup signal received, initiating graceful shutdown"
+      );
       this.gracefulShutdown();
     });
     process.stdin.on("close", () => {
-      console.log("STDIN closed, shutting down...");
+      VibeLogger.logInfo(
+        "stdin_closed",
+        "STDIN closed, shutting down...",
+        void 0,
+        void 0,
+        "Parent process disconnected, preventing orphaned process"
+      );
       this.gracefulShutdown();
     });
     process.stdin.on("end", () => {
-      console.log("STDIN ended, shutting down...");
+      VibeLogger.logInfo(
+        "stdin_ended",
+        "STDIN ended, shutting down...",
+        void 0,
+        void 0,
+        "STDIN stream ended, initiating graceful shutdown"
+      );
       this.gracefulShutdown();
     });
     process.on("uncaughtException", (error) => {
-      console.error("Uncaught exception:", error);
+      VibeLogger.logException(
+        "uncaught_exception",
+        error,
+        void 0,
+        void 0,
+        "Uncaught exception occurred, shutting down safely"
+      );
       this.gracefulShutdown();
     });
     process.on("unhandledRejection", (reason, promise) => {
-      console.error("Unhandled rejection at:", promise, "reason:", reason);
+      VibeLogger.logError(
+        "unhandled_rejection",
+        "Unhandled promise rejection",
+        { reason: String(reason), promise: String(promise) },
+        void 0,
+        "Unhandled promise rejection occurred, shutting down safely"
+      );
       this.gracefulShutdown();
     });
   }
@@ -8044,16 +8168,34 @@ var UnityEventHandler = class {
       return;
     }
     this.isShuttingDown = true;
-    console.log("Starting graceful shutdown...");
+    VibeLogger.logInfo(
+      "graceful_shutdown_start",
+      "Starting graceful shutdown...",
+      void 0,
+      void 0,
+      "Initiating graceful shutdown process"
+    );
     try {
       this.connectionManager.disconnect();
       if (global.gc) {
         global.gc();
       }
     } catch (error) {
-      console.error("Error during cleanup:", error);
+      VibeLogger.logError(
+        "cleanup_error",
+        "Error during cleanup",
+        { error: error instanceof Error ? error.message : String(error) },
+        void 0,
+        "Error occurred during graceful shutdown cleanup"
+      );
     }
-    console.log("Graceful shutdown completed");
+    VibeLogger.logInfo(
+      "graceful_shutdown_complete",
+      "Graceful shutdown completed",
+      void 0,
+      void 0,
+      "All cleanup completed, process will exit"
+    );
     process.exit(0);
   }
   /**
@@ -8302,8 +8444,11 @@ var UnityMcpServer = class {
           if (!dynamicTool) {
             throw new Error(`Tool ${name} is not available`);
           }
-          const result = await dynamicTool.execute(args);
-          return result;
+          const result = await dynamicTool.execute(args ?? {});
+          return {
+            content: result.content,
+            isError: result.isError
+          };
         }
         throw new Error(`Unknown tool: ${name}`);
       } catch (error) {

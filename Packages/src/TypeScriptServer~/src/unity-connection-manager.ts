@@ -125,6 +125,7 @@ export class UnityConnectionManager {
 
     // Setup discovery callback
     this.unityDiscovery.setOnDiscoveredCallback(() => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       void this.handleUnityDiscovered(onConnectionEstablished);
     });
 

@@ -1,6 +1,7 @@
 import { JSONRPC } from './constants.js';
 import { ContentLengthFramer } from './utils/content-length-framer.js';
 import { DynamicBuffer } from './utils/dynamic-buffer.js';
+import { VibeLogger } from './utils/vibe-logger.js';
 
 // Constants for JSON-RPC error types
 const JsonRpcErrorTypes = {
@@ -137,10 +138,16 @@ export class MessageHandler {
           this.handleResponse(message as JsonRpcResponse);
         }
       } catch (parseError) {
-        // eslint-disable-next-line no-console
-        console.error('Error parsing JSON frame:', parseError);
-        // eslint-disable-next-line no-console
-        console.error('Problematic frame:', frame);
+        VibeLogger.logError(
+          'json_parse_error',
+          'Error parsing JSON frame',
+          {
+            error: parseError instanceof Error ? parseError.message : String(parseError),
+            frame: frame.substring(0, 200), // Truncate for security
+          },
+          undefined,
+          'Invalid JSON received from Unity, frame may be corrupted',
+        );
       }
     }
   }
@@ -156,8 +163,13 @@ export class MessageHandler {
       try {
         handler(params);
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error(`Error in notification handler for ${method}:`, error);
+        VibeLogger.logError(
+          'notification_handler_error',
+          `Error in notification handler for ${method}`,
+          { error: error instanceof Error ? error.message : String(error) },
+          undefined,
+          'Exception occurred while processing notification',
+        );
       }
     }
   }
@@ -197,12 +209,18 @@ export class MessageHandler {
       const activeRequestIds = Array.from(this.pendingRequests.keys()).join(', ');
       const currentTime = Date.now();
 
-      // eslint-disable-next-line no-console
-      console.warn(
-        `Received response for unknown request ID: ${id}. ` +
-          'This may be a delayed response from before reconnection. ' +
-          `Active request IDs: [${activeRequestIds}], ` +
-          `Current time: ${currentTime}`,
+      // Use structured logging instead of console for better debugging
+      VibeLogger.logWarning(
+        'unknown_request_response',
+        `Received response for unknown request ID: ${id}`,
+        {
+          unknown_request_id: id,
+          active_request_ids: activeRequestIds,
+          current_time: currentTime,
+        },
+        undefined,
+        'This may be a delayed response from before reconnection',
+        'Monitor if this pattern indicates connection stability issues',
       );
     }
   }
@@ -241,7 +259,13 @@ export class MessageHandler {
   /**
    * Get buffer statistics for debugging
    */
-  getBufferStats(): { size: number; frames: number } {
+  getBufferStats(): {
+    size: number;
+    maxSize: number;
+    utilization: number;
+    hasCompleteHeader: boolean;
+    preview: string;
+  } {
     return this.dynamicBuffer.getStats();
   }
 }

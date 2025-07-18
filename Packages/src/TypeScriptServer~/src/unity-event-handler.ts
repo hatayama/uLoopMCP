@@ -2,6 +2,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { UnityClient } from './unity-client.js';
 import { UnityConnectionManager } from './unity-connection-manager.js';
 import { ENVIRONMENT, NOTIFICATION_METHODS } from './constants.js';
+import { VibeLogger } from './utils/vibe-logger.js';
 
 /**
  * Unity Event Handler - Manages Unity notifications and event processing
@@ -43,15 +44,25 @@ export class UnityEventHandler {
     this.unityClient.onNotification('notifications/tools/list_changed', (_params: unknown) => {
       // Only log in development mode
       if (this.isDevelopment) {
-        // eslint-disable-next-line no-console
-        console.log('Unity notification received: notifications/tools/list_changed');
+        VibeLogger.logInfo(
+          'unity_notification_received',
+          'Unity notification received: notifications/tools/list_changed',
+          undefined,
+          undefined,
+          'Unity notified that tool list has changed',
+        );
       }
 
       try {
         void onToolsChanged();
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to update dynamic tools via Unity notification:', error);
+        VibeLogger.logError(
+          'unity_notification_error',
+          'Failed to update dynamic tools via Unity notification',
+          { error: error instanceof Error ? error.message : String(error) },
+          undefined,
+          'Error occurred while processing Unity tool list change notification',
+        );
       }
     });
   }
@@ -62,8 +73,13 @@ export class UnityEventHandler {
   sendToolsChangedNotification(): void {
     if (this.isNotifying) {
       if (this.isDevelopment) {
-        // eslint-disable-next-line no-console
-        console.log('sendToolsChangedNotification skipped: already notifying');
+        VibeLogger.logDebug(
+          'tools_notification_skipped',
+          'sendToolsChangedNotification skipped: already notifying',
+          undefined,
+          undefined,
+          'Duplicate notification prevented',
+        );
       }
       return;
     }
@@ -75,12 +91,22 @@ export class UnityEventHandler {
         params: {},
       });
       if (this.isDevelopment) {
-        // eslint-disable-next-line no-console
-        console.log('tools/list_changed notification sent');
+        VibeLogger.logInfo(
+          'tools_notification_sent',
+          'tools/list_changed notification sent',
+          undefined,
+          undefined,
+          'Successfully notified client of tool list changes',
+        );
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to send tools changed notification:', error);
+      VibeLogger.logError(
+        'tools_notification_error',
+        'Failed to send tools changed notification',
+        { error: error instanceof Error ? error.message : String(error) },
+        undefined,
+        'Error occurred while sending tool list change notification',
+      );
     } finally {
       this.isNotifying = false;
     }
@@ -92,22 +118,37 @@ export class UnityEventHandler {
   setupSignalHandlers(): void {
     // Handle Ctrl+C (SIGINT)
     process.on('SIGINT', () => {
-      // eslint-disable-next-line no-console
-      console.log('Received SIGINT, shutting down...');
+      VibeLogger.logInfo(
+        'sigint_received',
+        'Received SIGINT, shutting down...',
+        undefined,
+        undefined,
+        'User pressed Ctrl+C, initiating graceful shutdown',
+      );
       this.gracefulShutdown();
     });
 
     // Handle kill command (SIGTERM)
     process.on('SIGTERM', () => {
-      // eslint-disable-next-line no-console
-      console.log('Received SIGTERM, shutting down...');
+      VibeLogger.logInfo(
+        'sigterm_received',
+        'Received SIGTERM, shutting down...',
+        undefined,
+        undefined,
+        'Process termination signal received, initiating graceful shutdown',
+      );
       this.gracefulShutdown();
     });
 
     // Handle terminal close (SIGHUP)
     process.on('SIGHUP', () => {
-      // eslint-disable-next-line no-console
-      console.log('Received SIGHUP, shutting down...');
+      VibeLogger.logInfo(
+        'sighup_received',
+        'Received SIGHUP, shutting down...',
+        undefined,
+        undefined,
+        'Terminal hangup signal received, initiating graceful shutdown',
+      );
       this.gracefulShutdown();
     });
 
@@ -115,28 +156,48 @@ export class UnityEventHandler {
     // BUG FIX: Added STDIN monitoring to detect when Cursor/parent MCP client disconnects
     // This prevents orphaned Node processes from remaining after IDE shutdown
     process.stdin.on('close', () => {
-      // eslint-disable-next-line no-console
-      console.log('STDIN closed, shutting down...');
+      VibeLogger.logInfo(
+        'stdin_closed',
+        'STDIN closed, shutting down...',
+        undefined,
+        undefined,
+        'Parent process disconnected, preventing orphaned process',
+      );
       this.gracefulShutdown();
     });
 
     process.stdin.on('end', () => {
-      // eslint-disable-next-line no-console
-      console.log('STDIN ended, shutting down...');
+      VibeLogger.logInfo(
+        'stdin_ended',
+        'STDIN ended, shutting down...',
+        undefined,
+        undefined,
+        'STDIN stream ended, initiating graceful shutdown',
+      );
       this.gracefulShutdown();
     });
 
     // Handle uncaught exceptions
     // BUG FIX: Added comprehensive error handling to prevent hanging processes
     process.on('uncaughtException', (error) => {
-      // eslint-disable-next-line no-console
-      console.error('Uncaught exception:', error);
+      VibeLogger.logException(
+        'uncaught_exception',
+        error,
+        undefined,
+        undefined,
+        'Uncaught exception occurred, shutting down safely',
+      );
       this.gracefulShutdown();
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-      // eslint-disable-next-line no-console
-      console.error('Unhandled rejection at:', promise, 'reason:', reason);
+      VibeLogger.logError(
+        'unhandled_rejection',
+        'Unhandled promise rejection',
+        { reason: String(reason), promise: String(promise) },
+        undefined,
+        'Unhandled promise rejection occurred, shutting down safely',
+      );
       this.gracefulShutdown();
     });
   }
@@ -152,8 +213,13 @@ export class UnityEventHandler {
     }
 
     this.isShuttingDown = true;
-    // eslint-disable-next-line no-console
-    console.log('Starting graceful shutdown...');
+    VibeLogger.logInfo(
+      'graceful_shutdown_start',
+      'Starting graceful shutdown...',
+      undefined,
+      undefined,
+      'Initiating graceful shutdown process',
+    );
 
     try {
       // Disconnect from Unity and stop all intervals
@@ -166,12 +232,22 @@ export class UnityEventHandler {
         global.gc();
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error during cleanup:', error);
+      VibeLogger.logError(
+        'cleanup_error',
+        'Error during cleanup',
+        { error: error instanceof Error ? error.message : String(error) },
+        undefined,
+        'Error occurred during graceful shutdown cleanup',
+      );
     }
 
-    // eslint-disable-next-line no-console
-    console.log('Graceful shutdown completed');
+    VibeLogger.logInfo(
+      'graceful_shutdown_complete',
+      'Graceful shutdown completed',
+      undefined,
+      undefined,
+      'All cleanup completed, process will exit',
+    );
     process.exit(0);
   }
 

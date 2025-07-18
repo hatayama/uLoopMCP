@@ -3,6 +3,9 @@ import { DynamicUnityCommandTool } from './tools/dynamic-unity-command-tool.js';
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { ENVIRONMENT } from './constants.js';
 
+// Import UnityParameterSchema type from the tool file
+type UnityParameterSchema = { [key: string]: unknown };
+
 /**
  * Unity Tool Manager - Manages dynamic tool generation and management
  *
@@ -68,7 +71,7 @@ export class UnityToolManager {
         tools.push({
           name: toolName,
           description: dynamicTool.description,
-          inputSchema: dynamicTool.inputSchema,
+          inputSchema: this.convertToMcpSchema(dynamicTool.inputSchema),
         });
       }
 
@@ -152,7 +155,7 @@ export class UnityToolManager {
         toolContext,
         toolName,
         description,
-        parameterSchema, // Pass schema information
+        parameterSchema as UnityParameterSchema | undefined, // Type assertion for schema compatibility
       );
 
       this.dynamicTools.set(finalToolName, dynamicTool);
@@ -218,7 +221,7 @@ export class UnityToolManager {
       tools.push({
         name: toolName,
         description: dynamicTool.description,
-        inputSchema: dynamicTool.inputSchema,
+        inputSchema: this.convertToMcpSchema(dynamicTool.inputSchema),
       });
     }
     return tools;
@@ -229,5 +232,35 @@ export class UnityToolManager {
    */
   getToolsCount(): number {
     return this.dynamicTools.size;
+  }
+
+  /**
+   * Convert input schema to MCP-compatible format safely
+   */
+  private convertToMcpSchema(inputSchema: unknown): {
+    type: 'object';
+    properties?: Record<string, unknown>;
+    required?: string[];
+  } {
+    if (!inputSchema || typeof inputSchema !== 'object') {
+      return { type: 'object' };
+    }
+
+    const schema = inputSchema as Record<string, unknown>;
+    const result: {
+      type: 'object';
+      properties?: Record<string, unknown>;
+      required?: string[];
+    } = { type: 'object' };
+
+    if (schema.properties && typeof schema.properties === 'object') {
+      result.properties = schema.properties as Record<string, unknown>;
+    }
+
+    if (Array.isArray(schema.required)) {
+      result.required = schema.required as string[];
+    }
+
+    return result;
   }
 }
