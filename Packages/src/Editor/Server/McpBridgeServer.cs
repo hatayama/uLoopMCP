@@ -159,6 +159,9 @@ namespace io.github.hatayama.uLoopMCP
                 if (updateResult && clientName != McpConstants.UNKNOWN_CLIENT_NAME)
                 {
                     McpServerController.ClearReconnectingFlag();
+                    
+                    // Save LLM tool information when Unity connects
+                    ConnectedLLMToolsStorage.Instance.AddTool(updatedClient);
                 }
             }
             else
@@ -322,6 +325,9 @@ namespace io.github.hatayama.uLoopMCP
                 _connectedClients.TryRemove(clientKey, out _);
             }
             
+            // Delete all LLM tool information when Unity disconnects
+            ConnectedLLMToolsStorage.Instance.ClearConnectedTools();
+            
             McpLogger.LogInfo("All clients disconnected");
         }
 
@@ -418,6 +424,9 @@ namespace io.github.hatayama.uLoopMCP
                     {
                         existingClient.Stream?.Close();
                         _connectedClients.TryRemove(clientKey, out _);
+                        
+                        // Delete LLM tool information when Unity disconnects
+                        ConnectedLLMToolsStorage.Instance.RemoveTool(existingClient.ClientName);
                     }
                     
                     // Add new client to connected clients for notification broadcasting
@@ -529,6 +538,9 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     string clientKey = GenerateClientKey(clientToRemove.Endpoint);
                     _connectedClients.TryRemove(clientKey, out _);
+                    
+                    // Delete LLM tool information when Unity disconnects
+                    ConnectedLLMToolsStorage.Instance.RemoveTool(clientToRemove.ClientName);
                 }
                 
                 
@@ -610,7 +622,11 @@ namespace io.github.hatayama.uLoopMCP
             // Remove disconnected clients
             foreach (string clientKey in clientsToRemove)
             {
-                _connectedClients.TryRemove(clientKey, out _);
+                if (_connectedClients.TryRemove(clientKey, out ConnectedClient removedClient))
+                {
+                    // Delete LLM tool information when Unity disconnects
+                    ConnectedLLMToolsStorage.Instance.RemoveTool(removedClient.ClientName);
+                }
             }
         }
 
