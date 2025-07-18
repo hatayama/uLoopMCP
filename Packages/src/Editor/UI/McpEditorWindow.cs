@@ -57,6 +57,53 @@ namespace io.github.hatayama.uLoopMCP
             InitializeServerOperations();
             LoadSavedSettings();
             RestoreSessionState();
+            
+            // Start grace period immediately if we have stored tools
+            // Force ScriptableSingleton initialization
+            ConnectedLLMToolsStorage storageInstance = ConnectedLLMToolsStorage.Instance;
+            int storedToolCount = storageInstance.ConnectedTools.Count;
+            VibeLogger.LogInfo("editor_window_on_enable", $"OnEnable - Stored tools count: {storedToolCount}", new { stored_count = storedToolCount });
+            
+            // Debug: EditorPrefs-based storage doesn't use asset files
+            VibeLogger.LogInfo("editor_window_storage_debug", $"Using EditorPrefs storage", new { storage_type = "EditorPrefs" });
+            
+            // Debug: List all stored tools
+            if (storedToolCount > 0)
+            {
+                VibeLogger.LogInfo("editor_window_grace_period_start", $"Starting grace period for {storedToolCount} stored tools", new { stored_count = storedToolCount });
+                foreach (ConnectedLLMToolData tool in ConnectedLLMToolsStorage.Instance.ConnectedTools)
+                {
+                    VibeLogger.LogInfo("editor_window_stored_tool", $"Stored tool: {tool.Name} -> {tool.Endpoint}", new { name = tool.Name, endpoint = tool.Endpoint });
+                }
+                DomainReloadReconnectionManager.Instance.StartGracePeriod();
+            }
+            else
+            {
+                VibeLogger.LogInfo("editor_window_no_stored_tools", "No stored tools, skipping grace period", new { });
+                
+                // Check if stored tools become available after 1 frame delay
+                EditorApplication.delayCall += () =>
+                {
+                    ConnectedLLMToolsStorage delayedStorageInstance = ConnectedLLMToolsStorage.Instance;
+                    int delayedStoredToolCount = delayedStorageInstance.ConnectedTools.Count;
+                    VibeLogger.LogInfo("editor_window_delayed_check", $"After 1 frame delay - Stored tools count: {delayedStoredToolCount}", new { stored_count = delayedStoredToolCount });
+                    
+                    if (delayedStoredToolCount > 0)
+                    {
+                        VibeLogger.LogInfo("editor_window_delayed_grace_period_start", $"Starting delayed grace period for {delayedStoredToolCount} stored tools", new { stored_count = delayedStoredToolCount });
+                        foreach (ConnectedLLMToolData tool in delayedStorageInstance.ConnectedTools)
+                        {
+                            VibeLogger.LogInfo("editor_window_delayed_stored_tool", $"Delayed stored tool: {tool.Name} -> {tool.Endpoint}", new { name = tool.Name, endpoint = tool.Endpoint });
+                        }
+                        DomainReloadReconnectionManager.Instance.StartGracePeriod();
+                    }
+                    else
+                    {
+                        VibeLogger.LogInfo("editor_window_delayed_no_stored_tools", "After 1 frame delay - Still no stored tools", new { });
+                    }
+                };
+            }
+            
             HandlePostCompileMode();
         }
 
@@ -130,6 +177,8 @@ namespace io.github.hatayama.uLoopMCP
 
             // Check if after compilation
             bool isAfterCompile = McpSessionManager.instance.IsAfterCompile;
+
+            // Grace period is already started in OnEnable() if needed
 
             // Determine if server should be started automatically
             bool shouldStartAutomatically = isAfterCompile || _model.UI.AutoStartServer;
@@ -310,8 +359,27 @@ namespace io.github.hatayama.uLoopMCP
             bool hasNamedClients = connectedClients != null &&
                                    connectedClients.Any(client => client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME);
 
-            // Show reconnecting if either flag is true and no named clients are connected
-            bool showReconnectingUI = (showReconnectingUIFlag || showPostCompileUIFlag) && !hasNamedClients;
+            // Check if we're in domain reload grace period
+            bool isInGracePeriod = DomainReloadReconnectionManager.Instance.IsInGracePeriod;
+            
+            // Check if we have stored tools available
+            var storedTools = ConnectedLLMToolsStorage.Instance.GetStoredToolsAsConnectedClients();
+            bool hasStoredTools = storedTools.Any();
+
+
+            // PRIORITY 1: If we have stored tools, always show them (especially during grace period)
+            if (hasStoredTools && (isInGracePeriod || (!hasNamedClients && (showReconnectingUIFlag || showPostCompileUIFlag))))
+            {
+                connectedClients = storedTools.ToList();
+                hasNamedClients = true;
+            }
+
+            // PRIORITY 2: Show reconnecting UI only if no stored tools and no real clients and not in grace period
+            bool showReconnectingUI = !hasStoredTools && 
+                                      !isInGracePeriod && 
+                                      (showReconnectingUIFlag || showPostCompileUIFlag) && 
+                                      !hasNamedClients;
+
 
             // Clear post-compile flag when named clients are connected
             if (hasNamedClients && showPostCompileUIFlag)

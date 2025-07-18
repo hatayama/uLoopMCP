@@ -33,7 +33,7 @@ namespace io.github.hatayama.uLoopMCP
         public ConnectedClient(string endpoint, NetworkStream stream, string clientName = McpConstants.UNKNOWN_CLIENT_NAME)
         {
             Endpoint = endpoint;
-            Stream = stream;
+            Stream = stream; // Allow null stream for UI display purposes
             ClientName = clientName;
             ConnectedAt = DateTime.Now;
         }
@@ -42,7 +42,7 @@ namespace io.github.hatayama.uLoopMCP
         private ConnectedClient(string endpoint, NetworkStream stream, string clientName, DateTime connectedAt)
         {
             Endpoint = endpoint;
-            Stream = stream;
+            Stream = stream; // Allow null stream for UI display purposes
             ClientName = clientName;
             ConnectedAt = connectedAt;
         }
@@ -130,11 +130,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Get list of connected clients
+        /// Get list of connected clients sorted by name
         /// </summary>
         public IReadOnlyCollection<ConnectedClient> GetConnectedClients()
         {
-            return _connectedClients.Values.ToArray();
+            return _connectedClients.Values.OrderBy(client => client.ClientName).ToArray();
         }
 
         /// <summary>
@@ -162,6 +162,9 @@ namespace io.github.hatayama.uLoopMCP
                     
                     // Save LLM tool information when Unity connects
                     ConnectedLLMToolsStorage.Instance.AddTool(updatedClient);
+                    
+                    // Register tool as reconnected during grace period
+                    DomainReloadReconnectionManager.Instance.RegisterReconnectedTool(clientName);
                 }
             }
             else
@@ -325,8 +328,11 @@ namespace io.github.hatayama.uLoopMCP
                 _connectedClients.TryRemove(clientKey, out _);
             }
             
-            // Delete all LLM tool information when Unity disconnects
-            ConnectedLLMToolsStorage.Instance.ClearConnectedTools();
+            // Only clear LLM tool information if this is not a domain reload
+            if (!McpSessionManager.instance.IsDomainReloadInProgress)
+            {
+                ConnectedLLMToolsStorage.Instance.ClearConnectedTools();
+            }
             
             McpLogger.LogInfo("All clients disconnected");
         }
