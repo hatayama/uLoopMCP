@@ -119,7 +119,15 @@ jobs:
 
     - name: Run TypeScript security-only check
       working-directory: Packages/src/TypeScriptServer~
-      run: npm run security:sarif-only || echo "Security ESLint completed with issues - SARIF file generated"
+      run: |
+        npm run security:sarif-only || echo "Security ESLint completed with issues - SARIF file generated"
+        
+        # Filter out suppressed warnings from SARIF to prevent false positives in GitHub Security tab
+        if [ -f typescript-security.sarif ]; then
+          # Use jq to filter out results that have suppressions
+          cat typescript-security.sarif | jq '.runs[].results |= map(select(.suppressions | length == 0))' > typescript-security-filtered.sarif
+          mv typescript-security-filtered.sarif typescript-security.sarif
+        fi
 
     - name: Upload TypeScript SARIF results
       uses: github/codeql-action/upload-sarif@v3
