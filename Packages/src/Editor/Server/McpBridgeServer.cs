@@ -161,7 +161,7 @@ namespace io.github.hatayama.uLoopMCP
                     McpServerController.ClearReconnectingFlag();
                     
                     // Save LLM tool information when Unity connects
-                    ConnectedLLMToolsStorage.Instance.AddTool(updatedClient);
+                    ConnectedLLMToolsStorage.instance.AddTool(updatedClient);
                     
                     // Register tool as reconnected during grace period
                     DomainReloadReconnectionManager.Instance.RegisterReconnectedTool(clientName);
@@ -331,7 +331,7 @@ namespace io.github.hatayama.uLoopMCP
             // Only clear LLM tool information if this is not a domain reload
             if (!McpSessionManager.instance.IsDomainReloadInProgress)
             {
-                ConnectedLLMToolsStorage.Instance.ClearConnectedTools();
+                ConnectedLLMToolsStorage.instance.ClearConnectedTools();
             }
             
             McpLogger.LogInfo("All clients disconnected");
@@ -432,7 +432,7 @@ namespace io.github.hatayama.uLoopMCP
                         _connectedClients.TryRemove(clientKey, out _);
                         
                         // Delete LLM tool information when Unity disconnects
-                        ConnectedLLMToolsStorage.Instance.RemoveTool(existingClient.ClientName);
+                        ConnectedLLMToolsStorage.instance.RemoveTool(existingClient.ClientName);
                     }
                     
                     // Add new client to connected clients for notification broadcasting
@@ -546,7 +546,7 @@ namespace io.github.hatayama.uLoopMCP
                     _connectedClients.TryRemove(clientKey, out _);
                     
                     // Delete LLM tool information when Unity disconnects
-                    ConnectedLLMToolsStorage.Instance.RemoveTool(clientToRemove.ClientName);
+                    ConnectedLLMToolsStorage.instance.RemoveTool(clientToRemove.ClientName);
                 }
                 
                 
@@ -631,7 +631,7 @@ namespace io.github.hatayama.uLoopMCP
                 if (_connectedClients.TryRemove(clientKey, out ConnectedClient removedClient))
                 {
                     // Delete LLM tool information when Unity disconnects
-                    ConnectedLLMToolsStorage.Instance.RemoveTool(removedClient.ClientName);
+                    ConnectedLLMToolsStorage.instance.RemoveTool(removedClient.ClientName);
                 }
             }
         }

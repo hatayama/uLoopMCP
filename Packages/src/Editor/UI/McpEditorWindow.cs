@@ -60,7 +60,7 @@ namespace io.github.hatayama.uLoopMCP
             
             // Start grace period immediately if we have stored tools
             // Force ScriptableSingleton initialization
-            ConnectedLLMToolsStorage storageInstance = ConnectedLLMToolsStorage.Instance;
+            ConnectedLLMToolsStorage storageInstance = ConnectedLLMToolsStorage.instance;
             int storedToolCount = storageInstance.ConnectedTools.Count;
             VibeLogger.LogInfo("editor_window_on_enable", $"OnEnable - Stored tools count: {storedToolCount}", new { stored_count = storedToolCount });
             
@@ -71,7 +71,7 @@ namespace io.github.hatayama.uLoopMCP
             if (storedToolCount > 0)
             {
                 VibeLogger.LogInfo("editor_window_grace_period_start", $"Starting grace period for {storedToolCount} stored tools", new { stored_count = storedToolCount });
-                foreach (ConnectedLLMToolData tool in ConnectedLLMToolsStorage.Instance.ConnectedTools)
+                foreach (ConnectedLLMToolData tool in ConnectedLLMToolsStorage.instance.ConnectedTools)
                 {
                     VibeLogger.LogInfo("editor_window_stored_tool", $"Stored tool: {tool.Name} -> {tool.Endpoint}", new { name = tool.Name, endpoint = tool.Endpoint });
                 }
@@ -84,7 +84,7 @@ namespace io.github.hatayama.uLoopMCP
                 // Check if stored tools become available after 1 frame delay
                 EditorApplication.delayCall += () =>
                 {
-                    ConnectedLLMToolsStorage delayedStorageInstance = ConnectedLLMToolsStorage.Instance;
+                    ConnectedLLMToolsStorage delayedStorageInstance = ConnectedLLMToolsStorage.instance;
                     int delayedStoredToolCount = delayedStorageInstance.ConnectedTools.Count;
                     VibeLogger.LogInfo("editor_window_delayed_check", $"After 1 frame delay - Stored tools count: {delayedStoredToolCount}", new { stored_count = delayedStoredToolCount });
                     
@@ -363,7 +363,7 @@ namespace io.github.hatayama.uLoopMCP
             bool isInGracePeriod = DomainReloadReconnectionManager.Instance.IsInGracePeriod;
             
             // Check if we have stored tools available
-            var storedTools = ConnectedLLMToolsStorage.Instance.GetStoredToolsAsConnectedClients();
+            var storedTools = ConnectedLLMToolsStorage.instance.GetStoredToolsAsConnectedClients();
             bool hasStoredTools = storedTools.Any();
 
 

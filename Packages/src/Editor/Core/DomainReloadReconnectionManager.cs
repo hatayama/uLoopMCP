@@ -100,7 +100,7 @@ namespace io.github.hatayama.uLoopMCP
             EditorApplication.update -= CheckGracePeriodExpiration;
 
             // Remove tools that didn't reconnect during grace period
-            ConnectedLLMToolsStorage storage = ConnectedLLMToolsStorage.Instance;
+            ConnectedLLMToolsStorage storage = ConnectedLLMToolsStorage.instance;
             List<string> toolsToRemove = new();
 
             foreach (ConnectedLLMToolData tool in storage.ConnectedTools)
@@ -155,7 +155,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public IEnumerable<string> GetPendingReconnectionTools()
         {
-            ConnectedLLMToolsStorage storage = ConnectedLLMToolsStorage.Instance;
+            ConnectedLLMToolsStorage storage = ConnectedLLMToolsStorage.instance;
             return storage.ConnectedTools
                 .Where(tool => !_reconnectedToolNames.Contains(tool.Name))
                 .Select(tool => tool.Name);
