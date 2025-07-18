@@ -365,18 +365,21 @@ namespace io.github.hatayama.uLoopMCP
 
             // Check if we're in domain reload grace period
             bool isInGracePeriod = DomainReloadReconnectionManager.Instance.IsInGracePeriod;
+            Debug.LogWarning($"[hatayama] isInGracePeriod: {isInGracePeriod}");
             
             // Check if we have stored tools available (with caching)
-            var storedTools = GetCachedStoredTools();
+            IEnumerable<ConnectedClient> storedTools = GetCachedStoredTools();
             bool hasStoredTools = storedTools.Any();
 
 
             // PRIORITY 1: If we have stored tools, always show them (especially during grace period)
-            if (hasStoredTools && (isInGracePeriod || (!hasNamedClients && (showReconnectingUIFlag || showPostCompileUIFlag))))
+            if (isInGracePeriod)
             {
                 connectedClients = storedTools.ToList();
                 hasNamedClients = true;
             }
+            
+            Debug.LogWarning($"[hatayama] connectedClients: {storedTools.Count()}");
 
             // PRIORITY 2: Show reconnecting UI only if no stored tools and no real clients and not in grace period
             bool showReconnectingUI = !hasStoredTools && 
