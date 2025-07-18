@@ -556,30 +556,6 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Sends a JSON-RPC notification to all connected clients using Content-Length framing.
-        /// </summary>
-        /// <param name="method">The notification method name</param>
-        /// <param name="parameters">The notification parameters (optional)</param>
-        public async Task SendNotificationToClients(string method, object parameters = null)
-        {
-            if (_connectedClients.IsEmpty)
-            {
-                return;
-            }
-
-            // Create JSON-RPC notification
-            JsonRpcNotification notification = new JsonRpcNotification("2.0", method, parameters);
-
-            string notificationJson = JsonConvert.SerializeObject(notification);
-            
-            // Frame the notification with Content-Length header
-            string framedNotification = CreateContentLengthFrame(notificationJson);
-            byte[] notificationData = Encoding.UTF8.GetBytes(framedNotification);
-
-            await SendNotificationData(notificationData);
-        }
-
-        /// <summary>
         /// Sends a pre-formatted JSON-RPC notification to all connected clients using Content-Length framing.
         /// </summary>
         /// <param name="notificationJson">The complete JSON-RPC notification string</param>

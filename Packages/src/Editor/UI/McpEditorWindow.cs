@@ -65,7 +65,8 @@ namespace io.github.hatayama.uLoopMCP
             // Start grace period immediately if we have stored tools
             ConnectedLLMToolsStorage storageInstance = ConnectedLLMToolsStorage.instance;
             int storedToolCount = storageInstance.ConnectedTools.Count;
-            
+
+            Debug.LogWarning($"[hatayama] storedToolCount: {storedToolCount}");
             if (storedToolCount > 0)
             {
                 DomainReloadReconnectionManager.Instance.StartGracePeriod();
@@ -351,7 +352,8 @@ namespace io.github.hatayama.uLoopMCP
         private ConnectedToolsData CreateConnectedToolsData()
         {
             bool isServerRunning = McpServerController.IsServerRunning;
-            var connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
+            IReadOnlyCollection<ConnectedClient> connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
+            Debug.LogWarning($"[hatayama] connectedClients: {connectedClients.Count}");
 
             // Check reconnecting UI flags from McpSessionManager
             bool showReconnectingUIFlag = McpSessionManager.instance.ShowReconnectingUI;
