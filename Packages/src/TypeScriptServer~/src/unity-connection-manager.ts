@@ -124,8 +124,9 @@ export class UnityConnectionManager {
     this.isInitialized = true;
 
     // Setup discovery callback
-    this.unityDiscovery.setOnDiscoveredCallback(async () => {
-      await this.handleUnityDiscovered(onConnectionEstablished);
+    this.unityDiscovery.setOnDiscoveredCallback(() => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      void this.handleUnityDiscovered(onConnectionEstablished);
     });
 
     // Setup connection lost callback for connection recovery
