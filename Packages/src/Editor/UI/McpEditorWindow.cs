@@ -59,47 +59,24 @@ namespace io.github.hatayama.uLoopMCP
             RestoreSessionState();
             
             // Start grace period immediately if we have stored tools
-            // Force ScriptableSingleton initialization
             ConnectedLLMToolsStorage storageInstance = ConnectedLLMToolsStorage.instance;
             int storedToolCount = storageInstance.ConnectedTools.Count;
-            VibeLogger.LogInfo("editor_window_on_enable", $"OnEnable - Stored tools count: {storedToolCount}", new { stored_count = storedToolCount });
             
-            // Debug: EditorPrefs-based storage doesn't use asset files
-            VibeLogger.LogInfo("editor_window_storage_debug", $"Using EditorPrefs storage", new { storage_type = "EditorPrefs" });
-            
-            // Debug: List all stored tools
             if (storedToolCount > 0)
             {
-                VibeLogger.LogInfo("editor_window_grace_period_start", $"Starting grace period for {storedToolCount} stored tools", new { stored_count = storedToolCount });
-                foreach (ConnectedLLMToolData tool in ConnectedLLMToolsStorage.instance.ConnectedTools)
-                {
-                    VibeLogger.LogInfo("editor_window_stored_tool", $"Stored tool: {tool.Name} -> {tool.Endpoint}", new { name = tool.Name, endpoint = tool.Endpoint });
-                }
                 DomainReloadReconnectionManager.Instance.StartGracePeriod();
             }
             else
             {
-                VibeLogger.LogInfo("editor_window_no_stored_tools", "No stored tools, skipping grace period", new { });
-                
                 // Check if stored tools become available after 1 frame delay
                 EditorApplication.delayCall += () =>
                 {
                     ConnectedLLMToolsStorage delayedStorageInstance = ConnectedLLMToolsStorage.instance;
                     int delayedStoredToolCount = delayedStorageInstance.ConnectedTools.Count;
-                    VibeLogger.LogInfo("editor_window_delayed_check", $"After 1 frame delay - Stored tools count: {delayedStoredToolCount}", new { stored_count = delayedStoredToolCount });
                     
                     if (delayedStoredToolCount > 0)
                     {
-                        VibeLogger.LogInfo("editor_window_delayed_grace_period_start", $"Starting delayed grace period for {delayedStoredToolCount} stored tools", new { stored_count = delayedStoredToolCount });
-                        foreach (ConnectedLLMToolData tool in delayedStorageInstance.ConnectedTools)
-                        {
-                            VibeLogger.LogInfo("editor_window_delayed_stored_tool", $"Delayed stored tool: {tool.Name} -> {tool.Endpoint}", new { name = tool.Name, endpoint = tool.Endpoint });
-                        }
                         DomainReloadReconnectionManager.Instance.StartGracePeriod();
-                    }
-                    else
-                    {
-                        VibeLogger.LogInfo("editor_window_delayed_no_stored_tools", "After 1 frame delay - Still no stored tools", new { });
                     }
                 };
             }
