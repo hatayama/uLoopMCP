@@ -239,8 +239,12 @@ class UnityMcpServer {
           if (!dynamicTool) {
             throw new Error(`Tool ${name} is not available`);
           }
-          const result: ToolResponse = await dynamicTool.execute(args);
-          return result;
+          const result: ToolResponse = await dynamicTool.execute(args ?? {});
+          // Convert ToolResponse to MCP-compatible format
+          return {
+            content: result.content,
+            isError: result.isError,
+          };
         }
 
         // All tools should be handled by dynamic tools

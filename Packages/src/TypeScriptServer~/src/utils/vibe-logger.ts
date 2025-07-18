@@ -206,7 +206,8 @@ export class VibeLogger {
         return; // Path traversal guard
       }
 
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      // SECURITY: Path validated with validateWithin() above - safe from path traversal
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- Path sanitized by validateWithin()
       fs.mkdirSync(emergencyLogDir, { recursive: true });
 
       const emergencyLogPath = path.resolve(emergencyLogDir, 'vibe-logger-emergency.log');
@@ -215,7 +216,8 @@ export class VibeLogger {
       }
 
       const emergencyLog = JSON.stringify(emergencyEntry) + '\n';
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      // SECURITY: Path validated with validateWithin() above - safe from path traversal
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- Path sanitized by validateWithin()
       fs.appendFileSync(emergencyLogPath, emergencyLog);
     } catch (error) {
       // Silent failure to prevent MCP protocol interference
@@ -321,6 +323,7 @@ export class VibeLogger {
       }
 
       // eslint-disable-next-line security/detect-non-literal-fs-filename
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- Path sanitized by validateWithin()
       return fs.existsSync(absolutePath);
     } catch (error) {
       return false;
@@ -347,6 +350,7 @@ export class VibeLogger {
       }
 
       // eslint-disable-next-line security/detect-non-literal-fs-filename
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- Path sanitized by validateWithin()
       fs.mkdirSync(absoluteLogDir, { recursive: true });
     }
 
@@ -380,7 +384,8 @@ export class VibeLogger {
 
     // Security: Use absolute path for file operations
     const absoluteFilePath = path.resolve(filePath);
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    // SECURITY: Using absolute path with security validation - safe from path traversal
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- Path sanitized by validateWithin()
     const stats = fs.statSync(absoluteFilePath);
     if (stats.size <= VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
       return;
@@ -406,7 +411,8 @@ export class VibeLogger {
       throw new Error('Original file path escapes the allowed directory');
     }
 
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    // SECURITY: Both paths validated with validateWithin() above - safe from path traversal
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- Both paths sanitized by validateWithin()
     fs.renameSync(sanitizedFilePath, rotatedFilePath);
   }
 
@@ -428,6 +434,7 @@ export class VibeLogger {
     for (let retry = 0; retry < maxRetries; retry++) {
       try {
         // Use fs.promises.open for safer file handling
+        // eslint-disable-next-line security/detect-non-literal-fs-filename -- Path sanitized by validateWithin()
         // eslint-disable-next-line security/detect-non-literal-fs-filename
         const fileHandle = await fs.promises.open(absoluteFilePath, 'a');
         try {
@@ -484,7 +491,8 @@ export class VibeLogger {
         throw new Error('Fallback log directory path traversal detected');
       }
 
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      // SECURITY: Path validated with validateWithin() above - safe from path traversal
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- Path sanitized by validateWithin()
       fs.mkdirSync(safeLogDir, { recursive: true });
 
       // Security: Sanitize filename components to prevent path traversal
@@ -508,6 +516,7 @@ export class VibeLogger {
       const jsonLog = JSON.stringify(fallbackEntry) + '\n';
 
       // Use fs.promises.open for safer file writing
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- Path sanitized by validateWithin()
       // eslint-disable-next-line security/detect-non-literal-fs-filename
       const fileHandle = await fs.promises.open(safeFallbackPath, 'a');
       try {

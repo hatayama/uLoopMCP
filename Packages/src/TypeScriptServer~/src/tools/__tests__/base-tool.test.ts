@@ -18,7 +18,7 @@ class DummyTool extends BaseTool {
 
 describe('BaseTool', (): void => {
   it('should format response as text', async (): Promise<void> => {
-    const context: ToolContext = { unityClient: {} };
+    const context: ToolContext = { unityClient: { executeTool: jest.fn() } };
     const tool = new DummyTool(context);
     const res = await tool.handle({});
     expect(res.content[0].type).toBe('text');
@@ -31,7 +31,7 @@ describe('BaseTool', (): void => {
         return Promise.reject(new Error('fail!'));
       }
     }
-    const context: ToolContext = { unityClient: {} };
+    const context: ToolContext = { unityClient: { executeTool: jest.fn() } };
     const tool = new ErrorTool(context);
     const res = await tool.handle({});
     expect(res.content[0].text).toContain('Error in dummy: fail!');
