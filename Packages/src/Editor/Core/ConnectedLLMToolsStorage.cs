@@ -56,48 +56,6 @@ namespace io.github.hatayama.uLoopMCP
         public IReadOnlyList<ConnectedLLMToolData> ConnectedTools => _connectedTools.AsReadOnly();
 
         /// <summary>
-        /// Get the number of connected tools
-        /// </summary>
-        public int Count => _connectedTools.Count;
-
-        /// <summary>
-        /// Check if a tool with the specified name is connected
-        /// </summary>
-        public bool HasTool(string toolName)
-        {
-            return _connectedTools.Any(tool => tool.Name == toolName);
-        }
-
-        /// <summary>
-        /// Get a tool with the specified name
-        /// </summary>
-        public ConnectedLLMToolData GetTool(string toolName)
-        {
-            return _connectedTools.FirstOrDefault(tool => tool.Name == toolName);
-        }
-
-        /// <summary>
-        /// Save tool information when Unity connects
-        /// </summary>
-        public void SaveConnectedTools(IEnumerable<ConnectedClient> clients)
-        {
-            _connectedTools.Clear();
-            
-            foreach (ConnectedClient client in clients)
-            {
-                if (client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME)
-                {
-                    ConnectedLLMToolData toolData = new(
-                        client.ClientName, 
-                        client.Endpoint, 
-                        client.ConnectedAt
-                    );
-                    _connectedTools.Add(toolData);
-                }
-            }
-        }
-
-        /// <summary>
         /// Delete tool information when Unity disconnects
         /// </summary>
         public void ClearConnectedTools()

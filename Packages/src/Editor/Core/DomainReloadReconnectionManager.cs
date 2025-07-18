@@ -58,23 +58,6 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Get remaining seconds in grace period
-        /// </summary>
-        public float RemainingGracePeriodSeconds
-        {
-            get
-            {
-                if (!_isInGracePeriod)
-                {
-                    return 0f;
-                }
-
-                float elapsedSeconds = (float)(DateTime.Now - _domainReloadCompletedAt).TotalSeconds;
-                return Mathf.Max(0f, GRACE_PERIOD_SECONDS - elapsedSeconds);
-            }
-        }
-
-        /// <summary>
         /// Start grace period after domain reload completion
         /// </summary>
         public void StartGracePeriod()
@@ -82,8 +65,6 @@ namespace io.github.hatayama.uLoopMCP
             _domainReloadCompletedAt = DateTime.Now;
             _isInGracePeriod = true;
             _reconnectedToolNames.Clear();
-            
-            EditorApplication.update += CheckGracePeriodExpiration;
         }
 
         /// <summary>
@@ -97,7 +78,6 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             _isInGracePeriod = false;
-            EditorApplication.update -= CheckGracePeriodExpiration;
 
             // Remove tools that didn't reconnect during grace period
             ConnectedLLMToolsStorage storage = ConnectedLLMToolsStorage.instance;
@@ -130,45 +110,5 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        /// <summary>
-        /// Check if grace period has expired (called from EditorApplication.update)
-        /// </summary>
-        private void CheckGracePeriodExpiration()
-        {
-            if (!IsInGracePeriod)
-            {
-                // Grace period ended, this will trigger cleanup
-                return;
-            }
-        }
-
-        /// <summary>
-        /// Force end grace period (for testing or manual control)
-        /// </summary>
-        public void ForceEndGracePeriod()
-        {
-            EndGracePeriod();
-        }
-
-        /// <summary>
-        /// Get list of tools that haven't reconnected yet
-        /// </summary>
-        public IEnumerable<string> GetPendingReconnectionTools()
-        {
-            ConnectedLLMToolsStorage storage = ConnectedLLMToolsStorage.instance;
-            return storage.ConnectedTools
-                .Where(tool => !_reconnectedToolNames.Contains(tool.Name))
-                .Select(tool => tool.Name);
-        }
-
-        /// <summary>
-        /// Reset manager state (for testing)
-        /// </summary>
-        public void Reset()
-        {
-            _isInGracePeriod = false;
-            _reconnectedToolNames.Clear();
-            EditorApplication.update -= CheckGracePeriodExpiration;
-        }
     }
 }

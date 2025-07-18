@@ -40,6 +40,10 @@ namespace io.github.hatayama.uLoopMCP
 
         // Server operations handler (MVP pattern helper)
         private McpServerOperations _serverOperations;
+        
+        // Cache for stored tools to avoid repeated calls
+        private IEnumerable<ConnectedClient> _cachedStoredTools;
+        private float _lastStoredToolsUpdateTime;
 
         [MenuItem("Window/uLoopMCP")]
         public static void ShowWindow()
@@ -68,17 +72,13 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                // Check if stored tools become available after 1 frame delay
-                EditorApplication.delayCall += () =>
+                ConnectedLLMToolsStorage delayedStorageInstance = ConnectedLLMToolsStorage.instance;
+                int delayedStoredToolCount = delayedStorageInstance.ConnectedTools.Count;
+                
+                if (delayedStoredToolCount > 0)
                 {
-                    ConnectedLLMToolsStorage delayedStorageInstance = ConnectedLLMToolsStorage.instance;
-                    int delayedStoredToolCount = delayedStorageInstance.ConnectedTools.Count;
-                    
-                    if (delayedStoredToolCount > 0)
-                    {
-                        DomainReloadReconnectionManager.Instance.StartGracePeriod();
-                    }
-                };
+                    DomainReloadReconnectionManager.Instance.StartGracePeriod();
+                }
             }
             
             HandlePostCompileMode();
@@ -321,6 +321,31 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Get stored tools with caching to avoid repeated calls
+        /// </summary>
+        private IEnumerable<ConnectedClient> GetCachedStoredTools()
+        {
+            const float cacheDuration = 0.1f; // 100ms cache
+            float currentTime = Time.realtimeSinceStartup;
+            
+            if (_cachedStoredTools == null || (currentTime - _lastStoredToolsUpdateTime) > cacheDuration)
+            {
+                _cachedStoredTools = ConnectedLLMToolsStorage.instance.GetStoredToolsAsConnectedClients();
+                _lastStoredToolsUpdateTime = currentTime;
+            }
+            
+            return _cachedStoredTools;
+        }
+
+        /// <summary>
+        /// Invalidate cached stored tools (call when tools change)
+        /// </summary>
+        private void InvalidateStoredToolsCache()
+        {
+            _cachedStoredTools = null;
+        }
+
+        /// <summary>
         /// Create connected tools data for view rendering
         /// </summary>
         private ConnectedToolsData CreateConnectedToolsData()
@@ -339,8 +364,8 @@ namespace io.github.hatayama.uLoopMCP
             // Check if we're in domain reload grace period
             bool isInGracePeriod = DomainReloadReconnectionManager.Instance.IsInGracePeriod;
             
-            // Check if we have stored tools available
-            var storedTools = ConnectedLLMToolsStorage.instance.GetStoredToolsAsConnectedClients();
+            // Check if we have stored tools available (with caching)
+            var storedTools = GetCachedStoredTools();
             bool hasStoredTools = storedTools.Any();
 
 
