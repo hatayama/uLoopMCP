@@ -20,7 +20,7 @@ namespace io.github.hatayama.uLoopMCP
         private readonly HashSet<string> _reconnectedToolNames = new();
         private DateTime _domainReloadCompletedAt;
         private bool _isInGracePeriod = false;
-        private const float GRACE_PERIOD_SECONDS = 10f;
+        private const float GRACE_PERIOD_SECONDS = 3f;
 
         public static DomainReloadReconnectionManager Instance
         {
