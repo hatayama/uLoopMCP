@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.29.3](https://github.com/hatayama/uLoopMCP/compare/v0.29.2...v0.29.3) (2025-07-18)
+
+
+### Bug Fixes
+
+* resolve ESLint security warnings and TypeScript compilation errors ([#224](https://github.com/hatayama/uLoopMCP/issues/224)) ([737c313](https://github.com/hatayama/uLoopMCP/commit/737c313a4e50d837b809144f94d6d3ef11ca90bc))
+
 ## [0.29.2](https://github.com/hatayama/uLoopMCP/compare/v0.29.1...v0.29.2) (2025-07-17)
 
 
