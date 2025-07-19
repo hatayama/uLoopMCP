@@ -214,7 +214,7 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            Debug.LogWarning($"[hatayama] data.Clients.Count: {data.Clients.Count}");
+            // Debug.LogWarning($"[hatayama] data.Clients.Count: {data.Clients.Count}");
             
             if (data.Clients != null && data.Clients.Count > 0)
             {
@@ -230,14 +230,14 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 else
                 {
-                    Debug.LogWarning($"[hatayama] No connected 1");
+                    // Debug.LogWarning($"[hatayama] No connected 1");
                     // All clients have invalid names, show as if no clients
                     EditorGUILayout.HelpBox("No connected tools found.", MessageType.Info);
                 }
             }
             else
             {
-                Debug.LogWarning($"[hatayama] No connected 2");
+                // Debug.LogWarning($"[hatayama] No connected 2");
                 EditorGUILayout.HelpBox("No connected tools found.", MessageType.Info);
             }
         }

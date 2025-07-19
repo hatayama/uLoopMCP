@@ -68,6 +68,7 @@ namespace io.github.hatayama.uLoopMCP
             _instance = this;
             
             // Migrate data from ConnectedLLMToolsStorage if needed
+            Debug.Log($"[hatayama] _connectedTools.Count: {_connectedTools.Count}");
             if (_connectedTools.Count == 0)
             {
                 IEnumerable<ConnectedClient> storedTools = ConnectedLLMToolsStorage.instance.GetStoredToolsAsConnectedClients();
@@ -153,6 +154,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void ClearConnectedTools()
         {
+            Debug.LogWarning($"[hatayama] ClearConnectedTools called! Stack trace:\n{System.Environment.StackTrace}");
             _connectedTools.Clear();
         }
 
@@ -407,6 +409,7 @@ namespace io.github.hatayama.uLoopMCP
                 _lastStoredToolsUpdateTime = currentTime;
             }
             
+            Debug.LogWarning($"[hatayama] GetCachedStoredTools returning {_cachedStoredTools.Count()} tools");
             return _cachedStoredTools;
         }
 
@@ -425,7 +428,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             bool isServerRunning = McpServerController.IsServerRunning;
             IReadOnlyCollection<ConnectedClient> connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
-            Debug.LogWarning($"[hatayama] connectedClients: {connectedClients.Count}");
+            // Debug.LogWarning($"[hatayama] connectedClients: {connectedClients.Count}");
 
             // Check reconnecting UI flags from McpSessionManager
             bool showReconnectingUIFlag = McpSessionManager.instance.ShowReconnectingUI;
@@ -438,10 +441,13 @@ namespace io.github.hatayama.uLoopMCP
             // Check if we have stored tools available (with caching)
             IEnumerable<ConnectedClient> storedTools = GetCachedStoredTools();
             bool hasStoredTools = storedTools.Any();
+            
+            Debug.LogWarning($"[hatayama] CreateConnectedToolsData: hasStoredTools={hasStoredTools}, hasNamedClients={hasNamedClients}");
 
-            // If we have stored tools but no real connected clients, show stored tools
-            if (hasStoredTools && !hasNamedClients)
+            // If we have stored tools, show them (prioritize stored tools over server clients)
+            if (hasStoredTools)
             {
+                Debug.LogWarning($"[hatayama] Using stored tools, count={storedTools.Count()}");
                 connectedClients = storedTools.ToList();
                 hasNamedClients = true;
             }
