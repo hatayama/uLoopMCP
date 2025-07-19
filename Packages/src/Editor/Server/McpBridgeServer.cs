@@ -299,7 +299,7 @@ namespace io.github.hatayama.uLoopMCP
                     }
                     clientsToRemove.Add(client.Key);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     clientsToRemove.Add(client.Key); // Remove even if disconnect failed
                 }
@@ -366,7 +366,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return await Task.Run(() => listener.AcceptTcpClient(), cancellationToken);
             }
-            catch (ThreadAbortException ex)
+            catch (ThreadAbortException)
             {
                 // Log and re-throw ThreadAbortException
                 if (!McpSessionManager.instance.IsDomainReloadInProgress)
@@ -495,7 +495,7 @@ namespace io.github.hatayama.uLoopMCP
                     messageReassembler?.Dispose();
                     bufferManager?.Dispose();
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                 }
                 
@@ -578,7 +578,7 @@ namespace io.github.hatayama.uLoopMCP
                         clientsToRemove.Add(client.Key);
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // Log the error before removing the client
                     clientsToRemove.Add(client.Key);

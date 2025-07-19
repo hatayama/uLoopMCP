@@ -59,14 +59,7 @@ namespace io.github.hatayama.uLoopMCP
             if (frames <= 0)
             {
                 // Execute immediately if 0 frames or less
-                try
-                {
-                    continuation.Invoke();
-                }
-                catch (Exception ex)
-                {
-                }
-
+                continuation.Invoke();
                 return;
             }
 

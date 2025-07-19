@@ -347,7 +347,7 @@ namespace io.github.hatayama.uLoopMCP
                 
                 // Tools changed notification will be sent by OnAfterAssemblyReload
             }
-            catch (System.Exception ex)
+            catch (System.Exception)
             {
                 
                 // If the maximum number of retries has not been reached, try again.

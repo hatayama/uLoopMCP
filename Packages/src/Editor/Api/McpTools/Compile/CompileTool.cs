@@ -38,7 +38,6 @@ namespace io.github.hatayama.uLoopMCP
                     success: false,
                     errorCount: 1,
                     warningCount: 0,
-                    completedAt: System.DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
                     errors: stateErrors,
                     warnings: new CompileIssue[0]
                 );
@@ -55,13 +54,18 @@ namespace io.github.hatayama.uLoopMCP
             CompileIssue[] errors = result.error.Select(e => new CompileIssue(e.message, e.file, e.line)).ToArray();
             CompileIssue[] warnings = result.warning.Select(w => new CompileIssue(w.message, w.file, w.line)).ToArray();
             
+            // Add special message for force compile
+            string message = forceRecompile 
+                ? "Force compilation executed. Error/warning messages are not included in this response due to domain reload timing. Use get-logs tool to retrieve compilation messages after execution."
+                : null;
+            
             return new CompileResponse(
                 success: result.Success,
                 errorCount: result.error.Length,
                 warningCount: result.warning.Length,
-                completedAt: result.CompletedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
                 errors: errors,
-                warnings: warnings
+                warnings: warnings,
+                message: message
             );
         }
         

@@ -86,7 +86,7 @@ namespace io.github.hatayama.uLoopMCP
                     RegisterTool(tool);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 throw;
             }

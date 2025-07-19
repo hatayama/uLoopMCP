@@ -89,28 +89,21 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static SearchContext CreateSearchContext(UnitySearchSchema schema)
         {
-            try
+            SearchContext context;
+            
+            if (schema.Providers != null && schema.Providers.Length > 0)
             {
-                SearchContext context;
-                
-                if (schema.Providers != null && schema.Providers.Length > 0)
-                {
-                    // Use specific providers
-                    context = SearchService.CreateContext(schema.Providers, schema.SearchQuery, 
-                                                         ConvertSearchFlags(schema.SearchFlags));
-                }
-                else
-                {
-                    // Use all active providers
-                    context = SearchService.CreateContext(schema.SearchQuery, ConvertSearchFlags(schema.SearchFlags));
-                }
+                // Use specific providers
+                context = SearchService.CreateContext(schema.Providers, schema.SearchQuery, 
+                                                     ConvertSearchFlags(schema.SearchFlags));
+            }
+            else
+            {
+                // Use all active providers
+                context = SearchService.CreateContext(schema.SearchQuery, ConvertSearchFlags(schema.SearchFlags));
+            }
 
-                return context;
-            }
-            catch (Exception ex)
-            {
-                return null;
-            }
+            return context;
         }
 
         /// <summary>
@@ -250,7 +243,7 @@ namespace io.github.hatayama.uLoopMCP
                 return new UnitySearchResponse(filePath, schema.OutputFormat.ToString(), saveReason,
                                              results.Length, schema.SearchQuery, providersUsed, searchDurationMs);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Fallback to inline response
                 return new UnitySearchResponse(results, results.Length, schema.SearchQuery, 

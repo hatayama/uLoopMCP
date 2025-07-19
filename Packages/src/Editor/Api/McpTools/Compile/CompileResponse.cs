@@ -42,10 +42,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public int WarningCount { get; set; }
 
-        /// <summary>
-        /// Compilation completion timestamp
-        /// </summary>
-        public string CompletedAt { get; set; }
 
         /// <summary>
         /// Compilation errors
@@ -65,13 +61,12 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Create a new CompileResponse
         /// </summary>
-        public CompileResponse(bool success, int errorCount, int warningCount, string completedAt, 
+        public CompileResponse(bool success, int errorCount, int warningCount, 
                              CompileIssue[] errors, CompileIssue[] warnings, string message = null)
         {
             Success = success;
             ErrorCount = errorCount;
             WarningCount = warningCount;
-            CompletedAt = completedAt;
             Errors = errors ?? Array.Empty<CompileIssue>();
             Warnings = warnings ?? Array.Empty<CompileIssue>();
             Message = message;

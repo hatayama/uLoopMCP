@@ -52,7 +52,7 @@ namespace io.github.hatayama.uLoopMCP
                 // Port is already in use - this is expected behavior
                 return true;
             }
-            catch (SocketException ex)
+            catch (SocketException)
             {
                 // Other socket errors should be logged with specific information
                 return true; // Treat as "in use" to be safe

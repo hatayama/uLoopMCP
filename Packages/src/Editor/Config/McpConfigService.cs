@@ -34,22 +34,15 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public bool IsConfigured()
         {
-            try
+            string configPath = UnityMcpPathResolver.GetConfigPath(_editorType);
+            if (!_repository.Exists(configPath))
             {
-                string configPath = UnityMcpPathResolver.GetConfigPath(_editorType);
-                if (!_repository.Exists(configPath))
-                {
-                    return false;
-                }
+                return false;
+            }
 
-                McpConfig config = _repository.Load(configPath);
-                // Check if a setting with a port number exists.
-                return config.mcpServers.Keys.Any(key => key.StartsWith(McpConstants.PROJECT_NAME));
-            }
-            catch (System.Exception ex)
-            {
-                throw;
-            }
+            McpConfig config = _repository.Load(configPath);
+            // Check if a setting with a port number exists.
+            return config.mcpServers.Keys.Any(key => key.StartsWith(McpConstants.PROJECT_NAME));
         }
 
         /// <summary>
