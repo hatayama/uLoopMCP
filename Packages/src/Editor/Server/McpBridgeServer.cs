@@ -57,6 +57,10 @@ namespace io.github.hatayama.uLoopMCP
     {
         // Note: Domain reload progress is now tracked via McpSessionManager
         
+        // Events for server lifecycle notifications
+        public static event System.Action OnServerStopping;
+        public static event System.Action OnServerStarted;
+        
         // HResult error codes for normal disconnection detection
         private static readonly HashSet<int> NormalDisconnectionHResults = new()
         {
@@ -178,6 +182,9 @@ namespace io.github.hatayama.uLoopMCP
                 
                 _serverTask = Task.Run(() => ServerLoop(_cancellationTokenSource.Token));
                 
+                // Notify that server has started
+                OnServerStarted?.Invoke();
+                
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
             {
@@ -205,6 +212,9 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            // Notify that server is stopping
+            OnServerStopping?.Invoke();
+            
             _isRunning = false;
             
             // Explicitly disconnect all connected clients before stopping the server

@@ -56,6 +56,9 @@ namespace io.github.hatayama.uLoopMCP
         /// Get current instance for external access
         /// </summary>
         public static McpEditorWindow Instance => _instance;
+        
+        // Backup storage for server restart
+        private List<ConnectedLLMToolData> _toolsBackup;
 
         [MenuItem("Window/uLoopMCP")]
         public static void ShowWindow()
@@ -68,10 +71,12 @@ namespace io.github.hatayama.uLoopMCP
         {
             _instance = this;
             InitializeAll();
+            SubscribeToServerEvents();
         }
 
         private void OnDestroy()
         {
+            UnsubscribeFromServerEvents();
             if (_instance == this)
             {
                 _instance = null;
@@ -146,7 +151,47 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Backup current connected tools for server restart
+        /// Subscribe to server lifecycle events
+        /// </summary>
+        private void SubscribeToServerEvents()
+        {
+            McpBridgeServer.OnServerStopping += OnServerStopping;
+            McpBridgeServer.OnServerStarted += OnServerStarted;
+        }
+        
+        /// <summary>
+        /// Unsubscribe from server lifecycle events
+        /// </summary>
+        private void UnsubscribeFromServerEvents()
+        {
+            McpBridgeServer.OnServerStopping -= OnServerStopping;
+            McpBridgeServer.OnServerStarted -= OnServerStarted;
+        }
+        
+        /// <summary>
+        /// Handle server stopping event - backup connected tools
+        /// </summary>
+        private void OnServerStopping()
+        {
+            _toolsBackup = _connectedTools
+                .Where(tool => tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
+                .ToList();
+        }
+        
+        /// <summary>
+        /// Handle server started event - restore connected tools
+        /// </summary>
+        private void OnServerStarted()
+        {
+            if (_toolsBackup != null && _toolsBackup.Count > 0)
+            {
+                RestoreConnectedTools(_toolsBackup);
+                _toolsBackup = null;
+            }
+        }
+        
+        /// <summary>
+        /// Backup current connected tools for server restart (legacy method for compatibility)
         /// </summary>
         public List<ConnectedLLMToolData> BackupConnectedTools()
         {

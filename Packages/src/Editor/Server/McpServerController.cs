@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
 using UnityEditor;
 using Newtonsoft.Json;
-using System.Collections.Generic;
 
 
 namespace io.github.hatayama.uLoopMCP
@@ -315,9 +314,6 @@ namespace io.github.hatayama.uLoopMCP
             
             try
             {
-                // Backup connected tools before stopping the server
-                List<ConnectedLLMToolData> toolsBackup = McpEditorWindow.Instance?.BackupConnectedTools();
-                
                 // If there is an existing server instance, ensure it is stopped.
                 if (mcpServer != null)
                 {
@@ -340,10 +336,6 @@ namespace io.github.hatayama.uLoopMCP
                 if (availablePort != port)
                 {
                 }
-                
-                
-                // Restore backed up tools after server restart
-                McpEditorWindow.Instance?.RestoreConnectedTools(toolsBackup);
                 
                 // Clear server-side reconnecting flag on successful restoration
                 // NOTE: Do NOT clear UI display flag here - let it be cleared by timeout or client connection
