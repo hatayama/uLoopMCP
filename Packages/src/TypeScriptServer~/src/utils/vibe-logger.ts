@@ -56,7 +56,7 @@ export class VibeLogger {
     OUTPUT_DIRECTORIES.ROOT,
     OUTPUT_DIRECTORIES.VIBE_LOGS,
   );
-  private static readonly LOG_FILE_PREFIX = 'typescript_vibe';
+  private static readonly LOG_FILE_PREFIX = 'ts_vibe';
   private static readonly MAX_FILE_SIZE_MB = 10;
   private static readonly MAX_MEMORY_LOGS = 1000;
 
