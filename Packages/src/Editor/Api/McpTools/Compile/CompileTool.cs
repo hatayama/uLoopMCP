@@ -51,13 +51,24 @@ namespace io.github.hatayama.uLoopMCP
             CompileResult result = await compileController.TryCompileAsync(forceRecompile);
             
             // Create type-safe response
+            // For indeterminate results (force compile), return null arrays and zero counts
+            if (result.IsIndeterminate)
+            {
+                string message = "Force compilation executed. Error/warning messages are not included in this response due to domain reload timing. Use get-logs tool to retrieve compilation messages after execution.";
+                
+                return new CompileResponse(
+                    success: result.Success,
+                    errorCount: null,
+                    warningCount: null,
+                    errors: null,
+                    warnings: null,
+                    message: message,
+                    isIndeterminate: true
+                );
+            }
+            
             CompileIssue[] errors = result.error.Select(e => new CompileIssue(e.message, e.file, e.line)).ToArray();
             CompileIssue[] warnings = result.warning.Select(w => new CompileIssue(w.message, w.file, w.line)).ToArray();
-            
-            // Add special message for force compile
-            string message = forceRecompile 
-                ? "Force compilation executed. Error/warning messages are not included in this response due to domain reload timing. Use get-logs tool to retrieve compilation messages after execution."
-                : null;
             
             return new CompileResponse(
                 success: result.Success,
@@ -65,7 +76,8 @@ namespace io.github.hatayama.uLoopMCP
                 warningCount: result.warning.Length,
                 errors: errors,
                 warnings: warnings,
-                message: message
+                message: null,
+                isIndeterminate: result.IsIndeterminate
             );
         }
         

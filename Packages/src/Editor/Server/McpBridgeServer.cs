@@ -299,8 +299,9 @@ namespace io.github.hatayama.uLoopMCP
                     }
                     clientsToRemove.Add(client.Key);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    OnError?.Invoke($"Error disconnecting client {client.Key}: {ex.Message}");
                     clientsToRemove.Add(client.Key); // Remove even if disconnect failed
                 }
             }
@@ -479,9 +480,6 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     // Log normal disconnections as info level
                 }
-                else
-                {
-                }
             }
             catch (Exception ex)
             {
@@ -495,8 +493,9 @@ namespace io.github.hatayama.uLoopMCP
                     messageReassembler?.Dispose();
                     bufferManager?.Dispose();
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    OnError?.Invoke($"Error during client disposal: {ex.Message}");
                 }
                 
                 // Remove client from connected clients list
@@ -578,9 +577,9 @@ namespace io.github.hatayama.uLoopMCP
                         clientsToRemove.Add(client.Key);
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // Log the error before removing the client
+                    OnError?.Invoke($"Error writing notification to client {client.Key}: {ex.Message}");
                     clientsToRemove.Add(client.Key);
                 }
             }

@@ -51,9 +51,12 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (_logBuilder == null) return;
 
-            string resultMessage = result.Success ?
-                "Compilation successful! No issues." :
-                "Compilation failed! Please check the errors.";
+            string resultMessage = result.Success switch
+            {
+                true => "Compilation successful! No issues.",
+                false => "Compilation failed! Please check the errors.",
+                null => "Compilation status is indeterminate. Use get-logs tool to check results."
+            };
 
             _logBuilder.AppendLine();
 
