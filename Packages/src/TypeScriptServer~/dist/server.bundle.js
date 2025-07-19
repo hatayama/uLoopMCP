@@ -5690,7 +5690,7 @@ var VibeLogger = class _VibeLogger {
     OUTPUT_DIRECTORIES.ROOT,
     OUTPUT_DIRECTORIES.VIBE_LOGS
   );
-  static LOG_FILE_PREFIX = "typescript_vibe";
+  static LOG_FILE_PREFIX = "ts_vibe";
   static MAX_FILE_SIZE_MB = 10;
   static MAX_MEMORY_LOGS = 1e3;
   static memoryLogs = [];
@@ -8229,7 +8229,7 @@ var package_default = {
     "security:fix": "eslint src --ext .ts --fix",
     "security:only": "eslint src --ext .ts --config .eslintrc.security.json",
     "security:sarif": "eslint src --ext .ts -f @microsoft/eslint-formatter-sarif -o security-results.sarif",
-    "security:sarif-only": "eslint src --ext .ts --config .eslintrc.security.json -f @microsoft/eslint-formatter-sarif -o typescript-security.sarif",
+    "security:sarif-only": "eslint src --ext .ts --config .eslintrc.security.json -f @microsoft/eslint-formatter-sarif -o typescript-security.sarif --max-warnings 0",
     format: "prettier --write src/**/*.ts",
     "format:check": "prettier --check src/**/*.ts",
     "lint:check": "npm run lint && npm run format:check",
