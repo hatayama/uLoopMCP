@@ -101,17 +101,4 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 
-#if ULOOPMCP_DEBUG
-    public record DeveloperToolsData
-    {
-        public readonly bool ShowFoldout;
-        public readonly bool EnableDevelopmentMode;
-
-        public DeveloperToolsData(bool showFoldout, bool enableDevelopmentMode)
-        {
-            ShowFoldout = showFoldout;
-            EnableDevelopmentMode = enableDevelopmentMode;
-        }
-    }
-#endif
 } 

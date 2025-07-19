@@ -294,51 +294,6 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-#if ULOOPMCP_DEBUG
-        public void DrawDeveloperTools(DeveloperToolsData data, Action<bool> foldoutCallback, Action<bool> devModeCallback)
-        {
-            EditorGUILayout.BeginVertical("box");
-            
-            bool newShowFoldout = EditorGUILayout.Foldout(data.ShowFoldout, "Developer Tools", true);
-            if (newShowFoldout != data.ShowFoldout)
-            {
-                foldoutCallback?.Invoke(newShowFoldout);
-            }
-            
-            if (data.ShowFoldout)
-            {
-                EditorGUILayout.Space();
-                
-                // TypeScript Development Mode settings
-                EditorGUILayout.LabelField("TypeScript Server Settings", EditorStyles.boldLabel);
-                
-                EditorGUILayout.BeginHorizontal();
-                bool newEnableDevelopmentMode = EditorGUILayout.Toggle(data.EnableDevelopmentMode, GUILayout.Width(20));
-                if (GUILayout.Button("Enable Development Mode", EditorStyles.label, GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true)))
-                {
-                    newEnableDevelopmentMode = !data.EnableDevelopmentMode;
-                }
-                if (newEnableDevelopmentMode != data.EnableDevelopmentMode)
-                {
-                    devModeCallback?.Invoke(newEnableDevelopmentMode);
-                }
-                EditorGUILayout.EndHorizontal();
-                
-                EditorGUILayout.HelpBox(
-                    data.EnableDevelopmentMode 
-                        ? "Development Mode: Debug tools (mcp-ping, get-unity-commands) will be available in Cursor"
-                        : "Production Mode: Only essential tools will be available in Cursor",
-                    data.EnableDevelopmentMode ? MessageType.Info : MessageType.Warning
-                );
-                
-            }
-            
-            EditorGUILayout.EndVertical();
-            EditorGUILayout.Space();
-        }
-
-
-#endif
 
         /// <summary>
         /// Draw security settings section

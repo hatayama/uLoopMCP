@@ -175,23 +175,6 @@ namespace io.github.hatayama.uLoopMCP
             SaveSettings(newSettings);
         }
 
-        /// <summary>
-        /// Gets the development mode enabled flag.
-        /// </summary>
-        public static bool GetEnableDevelopmentMode()
-        {
-            return GetSettings().enableDevelopmentMode;
-        }
-
-        /// <summary>
-        /// Sets the development mode enabled flag.
-        /// </summary>
-        public static void SetEnableDevelopmentMode(bool enableDevelopmentMode)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { enableDevelopmentMode = enableDevelopmentMode };
-            SaveSettings(newSettings);
-        }
 
         // Security Settings Methods
 

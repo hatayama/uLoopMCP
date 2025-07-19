@@ -18,17 +18,11 @@ namespace io.github.hatayama.uLoopMCP
     {
         public UIState UI { get; private set; }
         public RuntimeState Runtime { get; private set; }
-#if ULOOPMCP_DEBUG
-        public DebugState Debug { get; private set; }
-#endif
 
         public McpEditorModel()
         {
             UI = new UIState();
             Runtime = new RuntimeState();
-#if ULOOPMCP_DEBUG
-            Debug = new DebugState();
-#endif
         }
 
         /// <summary>
@@ -49,16 +43,6 @@ namespace io.github.hatayama.uLoopMCP
             Runtime = updater(Runtime);
         }
 
-#if ULOOPMCP_DEBUG
-        /// <summary>
-        /// Update debug state with new values
-        /// </summary>
-        /// <param name="updater">Function to update debug state</param>
-        public void UpdateDebugState(Func<DebugState, DebugState> updater)
-        {
-            Debug = updater(Debug);
-        }
-#endif
 
         /// <summary>
         /// Load state from persistent settings
@@ -76,11 +60,6 @@ namespace io.github.hatayama.uLoopMCP
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: settings.showSecuritySettings));
 
-#if ULOOPMCP_DEBUG
-            UpdateDebugState(debug => new DebugState(
-                showDeveloperTools: settings.showDeveloperTools,
-                enableDevelopmentMode: settings.enableDevelopmentMode));
-#endif
         }
 
         /// <summary>
@@ -91,10 +70,6 @@ namespace io.github.hatayama.uLoopMCP
             McpEditorSettings.SetCustomPort(UI.CustomPort);
             McpEditorSettings.SetAutoStartServer(UI.AutoStartServer);
 
-#if ULOOPMCP_DEBUG
-            McpEditorSettings.SetShowDeveloperTools(Debug.ShowDeveloperTools);
-            McpEditorSettings.SetEnableDevelopmentMode(Debug.EnableDevelopmentMode);
-#endif
         }
 
         /// <summary>
@@ -113,10 +88,6 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: selectedEditor,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: ui.ShowSecuritySettings));
-
-#if ULOOPMCP_DEBUG
-            // Debug state does not need session state sync for simplified model
-#endif
         }
 
         /// <summary>
@@ -126,10 +97,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             McpSessionManager sessionManager = McpSessionManager.instance;
             sessionManager.SelectedEditorType = UI.SelectedEditorType;
-
-#if ULOOPMCP_DEBUG
-            // Debug state does not need session state sync for simplified model
-#endif
         }
 
         /// <summary>
@@ -337,35 +304,5 @@ namespace io.github.hatayama.uLoopMCP
             McpEditorSettings.SetAllowThirdPartyTools(allow);
         }
 
-
-#if ULOOPMCP_DEBUG
-        /// <summary>
-        /// Update communication log scroll position
-        /// </summary>
-        // DebugState-specific update methods with persistence
-
-        /// <summary>
-        /// Update ShowDeveloperTools setting with persistence
-        /// </summary>
-        public void UpdateShowDeveloperTools(bool show)
-        {
-            UpdateDebugState(debug => new DebugState(
-                showDeveloperTools: show,
-                enableDevelopmentMode: debug.EnableDevelopmentMode));
-            McpEditorSettings.SetShowDeveloperTools(show);
-        }
-
-        /// <summary>
-        /// Update EnableDevelopmentMode setting with persistence
-        /// </summary>
-        public void UpdateEnableDevelopmentMode(bool enable)
-        {
-            UpdateDebugState(debug => new DebugState(
-                showDeveloperTools: debug.ShowDeveloperTools,
-                enableDevelopmentMode: enable));
-            McpEditorSettings.SetEnableDevelopmentMode(enable);
-        }
-
-#endif
     }
 } 

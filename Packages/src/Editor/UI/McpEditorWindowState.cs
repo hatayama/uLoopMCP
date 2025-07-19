@@ -75,23 +75,4 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 
-#if ULOOPMCP_DEBUG
-    /// <summary>
-    /// Debug state data for McpEditorWindow
-    /// Available only in debug builds
-    /// </summary>
-    public record DebugState
-    {
-        public bool ShowDeveloperTools { get; }
-        public bool EnableDevelopmentMode { get; }
-
-        public DebugState(
-            bool showDeveloperTools = false,
-            bool enableDevelopmentMode = false)
-        {
-            ShowDeveloperTools = showDeveloperTools;
-            EnableDevelopmentMode = enableDevelopmentMode;
-        }
-    }
-#endif
 } 

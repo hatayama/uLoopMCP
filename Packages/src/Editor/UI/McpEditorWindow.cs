@@ -230,9 +230,6 @@ namespace io.github.hatayama.uLoopMCP
                 allowMenuCallback: UpdateAllowMenuItemExecution,
                 allowThirdPartyCallback: UpdateAllowThirdPartyTools);
 
-#if ULOOPMCP_DEBUG
-            DrawDeveloperTools();
-#endif
 
             EditorGUILayout.EndScrollView();
         }
@@ -388,9 +385,6 @@ namespace io.github.hatayama.uLoopMCP
             int portToUse = isServerRunning ? McpServerController.ServerPort : _model.UI.CustomPort;
 
             configService.AutoConfigure(portToUse);
-#if ULOOPMCP_DEBUG
-            configService.UpdateDevelopmentSettings(portToUse, _model.Debug.EnableDevelopmentMode, false);
-#endif
             Repaint();
         }
 
@@ -520,44 +514,5 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        // DebugState update helper methods for callback unification
-#if ULOOPMCP_DEBUG
-        private void DrawDeveloperTools()
-        {
-            DeveloperToolsData devToolsData = CreateDeveloperToolsData();
-            _view.DrawDeveloperTools(
-                data: devToolsData,
-                foldoutCallback: UpdateShowDeveloperTools,
-                devModeCallback: UpdateEnableDevelopmentMode);
-        }
-
-        /// <summary>
-        /// Create developer tools data for view rendering
-        /// </summary>
-        private DeveloperToolsData CreateDeveloperToolsData()
-        {
-            return new DeveloperToolsData(
-                _model.Debug.ShowDeveloperTools,
-                _model.Debug.EnableDevelopmentMode
-            );
-        }
-
-        /// <summary>
-        /// Update ShowDeveloperTools setting with persistence
-        /// </summary>
-        private void UpdateShowDeveloperTools(bool show)
-        {
-            _model.UpdateShowDeveloperTools(show);
-        }
-
-        /// <summary>
-        /// Update EnableDevelopmentMode setting with persistence
-        /// </summary>
-        private void UpdateEnableDevelopmentMode(bool enable)
-        {
-            _model.UpdateEnableDevelopmentMode(enable);
-        }
-
-#endif
     }
 }
