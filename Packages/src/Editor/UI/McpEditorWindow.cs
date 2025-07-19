@@ -189,6 +189,9 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnGUI()
         {
+            // Draw debug background if ULOOPMCP_DEBUG is defined
+            _view.DrawDebugBackground(position);
+            
             // Synchronize server port and UI settings
             SyncPortSettings();
 

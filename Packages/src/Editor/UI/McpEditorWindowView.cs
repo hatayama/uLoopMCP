@@ -13,6 +13,19 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class McpEditorWindowView
     {
+        /// <summary>
+        /// Draw debug background if ULOOPMCP_DEBUG is defined
+        /// </summary>
+        public void DrawDebugBackground(Rect windowPosition)
+        {
+#if ULOOPMCP_DEBUG
+            if (Event.current.type == EventType.Repaint)
+            {
+                // Draw background covering entire window
+                EditorGUI.DrawRect(new Rect(0, 0, windowPosition.width, windowPosition.height), new Color(1f, 1f, 0.7f, 0.2f)); // Light yellow background
+            }
+#endif
+        }
         public void DrawServerStatus(ServerStatusData data)
         {
             GUIStyle statusStyle = new GUIStyle(EditorStyles.label)
