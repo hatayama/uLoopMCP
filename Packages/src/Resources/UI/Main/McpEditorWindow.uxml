@@ -1,0 +1,127 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" 
+         xsi="http://www.w3.org/2001/XMLSchema-instance" 
+         engine="UnityEngine.UIElements" 
+         editor="UnityEditor.UIElements" 
+         noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" 
+         editor-extension-mode="True">
+    <Style src="McpEditorWindow.uss" />
+    
+    <!-- Main container with BEM naming -->
+    <ui:VisualElement name="mcp-editor-window" class="mcp-editor-window">
+        
+        <!-- Debug background (shown only in debug mode) -->
+        <ui:VisualElement name="debug-background" class="mcp-editor-window__debug-background" />
+        
+        <!-- Main scroll container -->
+        <ui:ScrollView name="main-scroll" class="mcp-editor-window__scroll-container">
+            
+            <!-- Server Status Section -->
+            <ui:VisualElement name="server-status" class="server-status">
+                <Style src="../Components/ServerStatus.uss" />
+                <ui:Label name="server-status__label" class="server-status__label" text="Status:" />
+                <ui:Label name="server-status__value" class="server-status__value" text="Stopped" />
+            </ui:VisualElement>
+            
+            <!-- Server Controls Section -->
+            <ui:VisualElement name="server-controls" class="server-controls">
+                <Style src="../Components/ServerControls.uss" />
+                
+                <!-- Port Settings -->
+                <ui:VisualElement class="server-controls__port-section">
+                    <ui:Label text="Port:" class="server-controls__port-label" />
+                    <uie:IntegerField name="port-field" class="server-controls__port-field" value="8080" />
+                </ui:VisualElement>
+                
+                <!-- Port Warning -->
+                <ui:VisualElement name="port-warning" class="server-controls__port-warning" style="display: none;">
+                    <ui:Label name="port-warning__message" class="server-controls__port-warning-message" />
+                </ui:VisualElement>
+                
+                <!-- Toggle Server Button -->
+                <ui:Button name="toggle-server-button" class="server-controls__toggle-button" text="Start Server" />
+                
+                <!-- Auto Start Checkbox -->
+                <ui:VisualElement class="server-controls__auto-start">
+                    <ui:Toggle name="auto-start-toggle" class="server-controls__auto-start-toggle" />
+                    <ui:Label text="Auto Start Server" class="server-controls__auto-start-label" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            
+            <!-- Connected Tools Section -->
+            <ui:VisualElement name="connected-tools" class="connected-tools">
+                <Style src="../Components/ConnectedTools.uss" />
+                
+                <ui:Foldout name="connected-tools-foldout" class="connected-tools__foldout" text="Connected Tools">
+                    <ui:VisualElement name="connection-status" class="connected-tools__status">
+                        <!-- Dynamic content will be populated here -->
+                        <ui:Label name="status-message" class="connected-tools__status-message" text="No connected tools found." />
+                        <ui:VisualElement name="client-list" class="connected-tools__client-list" />
+                    </ui:VisualElement>
+                </ui:Foldout>
+            </ui:VisualElement>
+            
+            <!-- Editor Config Section -->
+            <ui:VisualElement name="editor-config" class="editor-config">
+                <Style src="../Components/EditorConfig.uss" />
+                
+                <ui:Foldout name="editor-config-foldout" class="editor-config__foldout" text="LLM Tool Settings">
+                    <ui:VisualElement class="editor-config__content">
+                        <!-- Target Editor Selection -->
+                        <ui:VisualElement class="editor-config__target-section">
+                            <ui:Label text="Target:" class="editor-config__target-label" />
+                            <uie:EnumField name="editor-type-enum" class="editor-config__target-enum" />
+                        </ui:VisualElement>
+                        
+                        <!-- Configuration Error -->
+                        <ui:VisualElement name="config-error" class="editor-config__error" style="display: none;">
+                            <ui:Label name="config-error__message" class="editor-config__error-message" />
+                        </ui:VisualElement>
+                        
+                        <!-- Configure Button -->
+                        <ui:Button name="configure-button" class="editor-config__configure-button" text="Configure Editor" />
+                        
+                        <!-- Open Settings File Button -->
+                        <ui:Button name="open-settings-button" class="editor-config__open-settings-button" text="Open Settings File" />
+                    </ui:VisualElement>
+                </ui:Foldout>
+            </ui:VisualElement>
+            
+            <!-- Security Settings Section -->
+            <ui:VisualElement name="security-settings" class="security-settings">
+                <Style src="../Components/SecuritySettings.uss" />
+                
+                <ui:Foldout name="security-settings-foldout" class="security-settings__foldout" text="Security Settings">
+                    <ui:VisualElement class="security-settings__content">
+                        <!-- Security Warning -->
+                        <ui:VisualElement class="security-settings__warning">
+                            <ui:Label class="security-settings__warning-message" 
+                                     text="These settings control dangerous MCP operations. Only enable if you trust the AI system.&#10;&#10;For safer operation, consider using sandbox environments or containers.&#10;&#10;Changes take effect immediately - no server restart required." />
+                        </ui:VisualElement>
+                        
+                        <!-- Security Options -->
+                        <ui:VisualElement class="security-settings__options">
+                            <!-- Enable Tests Execution -->
+                            <ui:VisualElement class="security-settings__option">
+                                <ui:Toggle name="enable-tests-toggle" class="security-settings__option-toggle" />
+                                <ui:Label text="Allow Tests Execution" class="security-settings__option-label security-settings__option-label--dangerous" />
+                            </ui:VisualElement>
+                            
+                            <!-- Allow Menu Item Execution -->
+                            <ui:VisualElement class="security-settings__option">
+                                <ui:Toggle name="allow-menu-toggle" class="security-settings__option-toggle" />
+                                <ui:Label text="Allow Menu Item Execution" class="security-settings__option-label security-settings__option-label--dangerous" />
+                            </ui:VisualElement>
+                            
+                            <!-- Allow Third Party Tools -->
+                            <ui:VisualElement class="security-settings__option">
+                                <ui:Toggle name="allow-third-party-toggle" class="security-settings__option-toggle" />
+                                <ui:Label text="Allow Third Party Tools" class="security-settings__option-label security-settings__option-label--dangerous" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:Foldout>
+            </ui:VisualElement>
+            
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

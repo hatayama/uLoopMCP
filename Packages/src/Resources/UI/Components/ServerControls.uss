@@ -1,0 +1,70 @@
+/* Server Controls BEM Styles */
+.server-controls {
+    padding: 8px;
+}
+
+.server-controls__port-section {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.server-controls__port-label {
+    min-width: 40px;
+    margin-right: 8px;
+}
+
+.server-controls__port-field {
+    min-width: 80px;
+    flex: 1;
+}
+
+.server-controls__port-field:disabled {
+    opacity: 0.5;
+}
+
+.server-controls__port-warning {
+    background-color: rgba(255, 200, 100, 0.2);
+    border: 1px solid rgba(255, 200, 100, 0.5);
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin: 4px 0;
+}
+
+.server-controls__port-warning-message {
+    color: rgb(255, 200, 100);
+    font-size: 11px;
+    white-space: normal;
+}
+
+.server-controls__toggle-button {
+    height: 32px;
+    font-weight: bold;
+    margin: 8px 0;
+    border-radius: 4px;
+}
+
+.server-controls__toggle-button--start {
+    background-color: rgba(180, 255, 180, 0.3);
+    border-color: rgba(180, 255, 180, 0.6);
+}
+
+.server-controls__toggle-button--stop {
+    background-color: rgba(255, 180, 180, 0.3);
+    border-color: rgba(255, 180, 180, 0.6);
+}
+
+.server-controls__auto-start {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.server-controls__auto-start-toggle {
+    margin-right: 8px;
+}
+
+.server-controls__auto-start-label {
+    flex: 1;
+    cursor: link;
+}

@@ -1,0 +1,24 @@
+/* Server Status BEM Styles */
+.server-status {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.server-status__label {
+    font-weight: bold;
+    min-width: 50px;
+    margin-right: 8px;
+}
+
+.server-status__value {
+    font-weight: bold;
+}
+
+.server-status__value--running {
+    color: rgb(100, 200, 100);
+}
+
+.server-status__value--stopped {
+    color: rgb(200, 100, 100);
+}

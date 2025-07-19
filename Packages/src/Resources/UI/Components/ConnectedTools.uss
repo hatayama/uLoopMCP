@@ -1,0 +1,63 @@
+/* Connected Tools BEM Styles */
+.connected-tools {
+    padding: 8px;
+}
+
+.connected-tools__foldout {
+    margin: 0;
+}
+
+.connected-tools__status {
+    padding: 8px 0;
+}
+
+.connected-tools__status-message {
+    padding: 8px;
+    background-color: rgba(100, 150, 255, 0.2);
+    border: 1px solid rgba(100, 150, 255, 0.4);
+    border-radius: 4px;
+    color: rgb(150, 200, 255);
+}
+
+.connected-tools__status-message--warning {
+    background-color: rgba(255, 200, 100, 0.2);
+    border-color: rgba(255, 200, 100, 0.4);
+    color: rgb(255, 220, 150);
+}
+
+.connected-tools__status-message--info {
+    background-color: rgba(100, 200, 255, 0.2);
+    border-color: rgba(100, 200, 255, 0.4);
+    color: rgb(150, 220, 255);
+}
+
+.connected-tools__client-list {
+    margin-top: 8px;
+}
+
+.connected-tools__client-item {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 4px;
+}
+
+.connected-tools__client-name {
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.connected-tools__client-endpoint {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.7);
+    white-space: normal;
+}
+
+.connected-tools__client-icon::before {
+    content: "🔧 ";
+}
+
+.connected-tools__endpoint-arrow::before {
+    content: "→ ";
+}

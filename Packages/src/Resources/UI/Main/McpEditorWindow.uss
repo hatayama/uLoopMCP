@@ -1,0 +1,94 @@
+/* Main Window BEM Styles */
+.mcp-editor-window {
+    flex: 1;
+    padding: 8px;
+    background-color: rgba(56, 56, 56, 0.1);
+}
+
+.mcp-editor-window__debug-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 180, 0.2);
+    display: none; /* Hidden by default, shown only in debug mode */
+}
+
+.mcp-editor-window__scroll-container {
+    flex: 1;
+}
+
+/* Section spacing */
+.mcp-editor-window .server-status,
+.mcp-editor-window .server-controls,
+.mcp-editor-window .connected-tools,
+.mcp-editor-window .editor-config,
+.mcp-editor-window .security-settings {
+    margin-bottom: 8px;
+}
+
+/* Box styling for sections */
+.server-controls,
+.connected-tools,
+.editor-config,
+.security-settings {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 8px;
+}
+
+/* Common button styles */
+.mcp-editor-window Button {
+    height: 24px;
+    border-radius: 3px;
+    margin: 2px 0;
+}
+
+/* Large button styles */
+.server-controls__toggle-button {
+    height: 32px;
+    font-weight: bold;
+    margin: 6px 0;
+}
+
+/* Button color states */
+.server-controls__toggle-button--start {
+    background-color: rgba(180, 255, 180, 0.3);
+}
+
+.server-controls__toggle-button--stop {
+    background-color: rgba(255, 180, 180, 0.3);
+}
+
+/* Warning button style */
+.editor-config__configure-button--warning {
+    background-color: rgba(255, 230, 100, 0.3);
+}
+
+/* Foldout styles */
+.mcp-editor-window Foldout {
+    margin: 0;
+}
+
+.mcp-editor-window Foldout > Toggle {
+    font-weight: bold;
+    font-size: 12px;
+}
+
+/* Input field styles */
+.mcp-editor-window IntegerField,
+.mcp-editor-window EnumField {
+    min-width: 100px;
+}
+
+/* Label styles */
+.mcp-editor-window Label {
+    -unity-text-align: middle-left;
+}
+
+/* Spacing utilities */
+.mcp-editor-window .unity-base-field {
+    margin: 2px 0;
+}
