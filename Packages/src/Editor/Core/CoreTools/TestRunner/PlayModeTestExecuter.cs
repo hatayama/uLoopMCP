@@ -127,7 +127,6 @@ namespace io.github.hatayama.uLoopMCP
 
         public void RunStarted(ITestAdaptor tests)
         {
-            McpLogger.LogInfo($"Test run started: {tests.Name}");
         }
 
         public void RunFinished(ITestResultAdaptor result)

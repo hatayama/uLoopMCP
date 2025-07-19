@@ -49,7 +49,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void SubscribeToUnityEvents()
         {
-            McpCommunicationLogger.OnLogUpdated += OnLogUpdated;
             EditorApplication.update += OnEditorUpdate;
         }
 
@@ -58,7 +57,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UnsubscribeFromUnityEvents()
         {
-            McpCommunicationLogger.OnLogUpdated -= OnLogUpdated;
             EditorApplication.update -= OnEditorUpdate;
         }
 
@@ -91,13 +89,6 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        /// <summary>
-        /// Handle log update event - trigger UI repaint
-        /// </summary>
-        private void OnLogUpdated()
-        {
-            _window.Repaint();
-        }
 
         /// <summary>
         /// Handle client connection event - force UI repaint for immediate update

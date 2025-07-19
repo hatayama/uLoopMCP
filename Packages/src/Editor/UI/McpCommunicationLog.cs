@@ -180,7 +180,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                McpLogger.LogWarning($"No pending request found for response ID: {id}");
             }
         }
 
@@ -214,27 +213,11 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Restore logs.
             string logsJson = McpSessionManager.instance.CommunicationLogsJson;
-            try
-            {
-                _logs = JsonConvert.DeserializeObject<List<McpCommunicationLogEntry>>(logsJson) ?? new List<McpCommunicationLogEntry>();
-            }
-            catch (Exception ex)
-            {
-                McpLogger.LogWarning($"Failed to deserialize logs: {ex.Message}");
-                _logs = new List<McpCommunicationLogEntry>();
-            }
+            _logs = JsonConvert.DeserializeObject<List<McpCommunicationLogEntry>>(logsJson) ?? new List<McpCommunicationLogEntry>();
 
             // Restore pending requests.
             string pendingJson = McpSessionManager.instance.PendingRequestsJson;
-            try
-            {
-                _pendingRequests = JsonConvert.DeserializeObject<Dictionary<string, PendingRequest>>(pendingJson) ?? new Dictionary<string, PendingRequest>();
-            }
-            catch (Exception ex)
-            {
-                McpLogger.LogWarning($"Failed to deserialize pending requests: {ex.Message}");
-                _pendingRequests = new Dictionary<string, PendingRequest>();
-            }
+            _pendingRequests = JsonConvert.DeserializeObject<Dictionary<string, PendingRequest>>(pendingJson) ?? new Dictionary<string, PendingRequest>();
         }
 
         /// <summary>
@@ -242,33 +225,26 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void SaveToSessionState()
         {
-            try
+            // Create snapshots to avoid collection modification during serialization
+            List<McpCommunicationLogEntry> logsSnapshot;
+            Dictionary<string, PendingRequest> pendingSnapshot;
+            
+            lock (_logs)
             {
-                // Create snapshots to avoid collection modification during serialization
-                List<McpCommunicationLogEntry> logsSnapshot;
-                Dictionary<string, PendingRequest> pendingSnapshot;
-                
-                lock (_logs)
-                {
-                    logsSnapshot = new List<McpCommunicationLogEntry>(_logs);
-                }
-                
-                lock (_pendingRequests)
-                {
-                    pendingSnapshot = new Dictionary<string, PendingRequest>(_pendingRequests);
-                }
-
-                string logsJson = JsonConvert.SerializeObject(logsSnapshot);
-                string pendingJson = JsonConvert.SerializeObject(pendingSnapshot);
-
-                McpSessionManager sessionManager = McpSessionManager.instance;
-                sessionManager.CommunicationLogsJson = logsJson;
-                sessionManager.PendingRequestsJson = pendingJson;
+                logsSnapshot = new List<McpCommunicationLogEntry>(_logs);
             }
-            catch (Exception ex)
+            
+            lock (_pendingRequests)
             {
-                McpLogger.LogError($"Failed to save to SessionState: {ex.Message}");
+                pendingSnapshot = new Dictionary<string, PendingRequest>(_pendingRequests);
             }
+
+            string logsJson = JsonConvert.SerializeObject(logsSnapshot);
+            string pendingJson = JsonConvert.SerializeObject(pendingSnapshot);
+
+            McpSessionManager sessionManager = McpSessionManager.instance;
+            sessionManager.CommunicationLogsJson = logsJson;
+            sessionManager.PendingRequestsJson = pendingJson;
         }
 
         /// <summary>
@@ -276,29 +252,22 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void ClearLogSessionState()
         {
-            try
+            McpSessionManager.instance.ClearCommunicationLogs();
+            
+            lock (_logs)
             {
-                McpSessionManager.instance.ClearCommunicationLogs();
-                
-                lock (_logs)
-                {
-                    _logs?.Clear();
-                }
-                
-                lock (_pendingRequests)
-                {
-                    _pendingRequests?.Clear();
-                }
-
-                // SessionState clear complete (no log output).
-
-                // Notify UI of update.
-                EditorApplication.delayCall += () => OnLogUpdated?.Invoke();
+                _logs?.Clear();
             }
-            catch (Exception ex)
+            
+            lock (_pendingRequests)
             {
-                McpLogger.LogError($"Failed to clear communication log SessionState: {ex.Message}");
+                _pendingRequests?.Clear();
             }
+
+            // SessionState clear complete (no log output).
+
+            // Notify UI of update.
+            EditorApplication.delayCall += () => OnLogUpdated?.Invoke();
         }
 
         /// <summary>

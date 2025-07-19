@@ -216,6 +216,9 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnGUI()
         {
+            // Draw debug background if ULOOPMCP_DEBUG is defined
+            _view.DrawDebugBackground(position);
+            
             // Synchronize server port and UI settings
             SyncPortSettings();
 
@@ -257,9 +260,6 @@ namespace io.github.hatayama.uLoopMCP
                 allowMenuCallback: UpdateAllowMenuItemExecution,
                 allowThirdPartyCallback: UpdateAllowThirdPartyTools);
 
-#if ULOOPMCP_DEBUG
-            DrawDeveloperTools();
-#endif
 
             EditorGUILayout.EndScrollView();
         }
@@ -463,9 +463,6 @@ namespace io.github.hatayama.uLoopMCP
             int portToUse = isServerRunning ? McpServerController.ServerPort : _model.UI.CustomPort;
 
             configService.AutoConfigure(portToUse);
-#if ULOOPMCP_DEBUG
-            configService.UpdateDevelopmentSettings(portToUse, _model.Debug.EnableDevelopmentMode, _model.Debug.EnableMcpLogs);
-#endif
             Repaint();
         }
 
@@ -595,114 +592,5 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        // DebugState update helper methods for callback unification
-#if ULOOPMCP_DEBUG
-        private void DrawDeveloperTools()
-        {
-            DeveloperToolsData devToolsData = CreateDeveloperToolsData();
-            _view.DrawDeveloperTools(
-                data: devToolsData,
-                foldoutCallback: UpdateShowDeveloperTools,
-                devModeCallback: UpdateEnableDevelopmentMode,
-                mcpLogsCallback: UpdateEnableMcpLogs,
-                commLogsCallback: UpdateEnableCommunicationLogs,
-                commLogsFoldoutCallback: UpdateShowCommunicationLogs,
-                showDebugCallback: () =>
-                {
-                    string debugInfo = McpServerController.GetDetailedServerStatus();
-                    McpLogger.LogInfo($"MCP Server Debug Info:\n{debugInfo}");
-                },
-                notifyChangesCallback: () => NotifyCommandChanges(),
-                rebuildCallback: () =>
-                {
-                    // TypeScript rebuild functionality moved to View layer
-                    McpLogger.LogInfo("TypeScript rebuild not implemented in this version");
-                });
-        }
-
-        /// <summary>
-        /// Create developer tools data for view rendering
-        /// </summary>
-        private DeveloperToolsData CreateDeveloperToolsData()
-        {
-            IReadOnlyList<McpCommunicationLogEntry> logs = McpCommunicationLogger.GetAllLogs();
-
-            return new DeveloperToolsData(
-                _model.Debug.ShowDeveloperTools,
-                _model.Debug.EnableMcpLogs,
-                _model.Debug.EnableCommunicationLogs,
-                _model.Debug.EnableDevelopmentMode,
-                _model.Debug.ShowCommunicationLogs,
-                logs,
-                _model.Debug.CommunicationLogScrollPosition,
-                _model.Debug.CommunicationLogHeight,
-                _model.Debug.RequestScrollPositions,
-                _model.Debug.ResponseScrollPositions
-            );
-        }
-
-        /// <summary>
-        /// Notify command changes to TypeScript side
-        /// </summary>
-        private void NotifyCommandChanges()
-        {
-            try
-            {
-                McpLogger.LogDebug("[TRACE] McpEditorWindow.NotifyCommandChanges: About to call TriggerCommandsChangedNotification (MANUAL_BUTTON)");
-                CustomToolManager.NotifyToolChanges();
-                EditorUtility.DisplayDialog("Command Notification",
-                    "Command changes have been notified to Cursor successfully!",
-                    "OK");
-                // Command changes notification sent
-            }
-            catch (Exception ex)
-            {
-                EditorUtility.DisplayDialog("Notification Error",
-                    $"Failed to notify command changes: {ex.Message}",
-                    "OK");
-                McpLogger.LogError($"Failed to notify command changes: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Update ShowDeveloperTools setting with persistence
-        /// </summary>
-        private void UpdateShowDeveloperTools(bool show)
-        {
-            _model.UpdateShowDeveloperTools(show);
-        }
-
-        /// <summary>
-        /// Update EnableDevelopmentMode setting with persistence
-        /// </summary>
-        private void UpdateEnableDevelopmentMode(bool enable)
-        {
-            _model.UpdateEnableDevelopmentMode(enable);
-        }
-
-        /// <summary>
-        /// Update EnableMcpLogs setting with persistence
-        /// </summary>
-        private void UpdateEnableMcpLogs(bool enable)
-        {
-            _model.UpdateEnableMcpLogs(enable);
-        }
-
-        /// <summary>
-        /// Update EnableCommunicationLogs setting with persistence and log clearing
-        /// </summary>
-        private void UpdateEnableCommunicationLogs(bool enable)
-        {
-            _model.UpdateEnableCommunicationLogs(enable);
-        }
-
-        /// <summary>
-        /// Update ShowCommunicationLogs setting (foldout state)
-        /// </summary>
-        private void UpdateShowCommunicationLogs(bool show)
-        {
-            _model.UpdateShowCommunicationLogs(show);
-        }
-#endif
     }
 }

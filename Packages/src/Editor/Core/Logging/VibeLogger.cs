@@ -59,9 +59,9 @@ namespace io.github.hatayama.uLoopMCP
         
         /// <summary>
         /// Log an info level message with structured context
-        /// Only logs when ULOOPMCP_DEBUG symbol is defined
+        /// Only logs when ULOOPENV_KEY_ULOOPMCP_DEBUG symbol is defined
         /// </summary>
-        [Conditional(McpConstants.MCP_DEBUG)]
+        [Conditional(McpConstants.ENV_KEY_ULOOPMCP_DEBUG)]
         public static void LogInfo(string operation, string message, object context = null, 
                                   string correlationId = null, string humanNote = null, string aiTodo = null)
         {
@@ -70,9 +70,9 @@ namespace io.github.hatayama.uLoopMCP
         
         /// <summary>
         /// Log a warning level message with structured context
-        /// Only logs when ULOOPMCP_DEBUG symbol is defined
+        /// Only logs when ULOOPENV_KEY_ULOOPMCP_DEBUG symbol is defined
         /// </summary>
-        [Conditional(McpConstants.MCP_DEBUG)]
+        [Conditional(McpConstants.ENV_KEY_ULOOPMCP_DEBUG)]
         public static void LogWarning(string operation, string message, object context = null, 
                                      string correlationId = null, string humanNote = null, string aiTodo = null)
         {
@@ -81,9 +81,9 @@ namespace io.github.hatayama.uLoopMCP
         
         /// <summary>
         /// Log an error level message with structured context
-        /// Only logs when ULOOPMCP_DEBUG symbol is defined
+        /// Only logs when ULOOPENV_KEY_ULOOPMCP_DEBUG symbol is defined
         /// </summary>
-        [Conditional(McpConstants.MCP_DEBUG)]
+        [Conditional(McpConstants.ENV_KEY_ULOOPMCP_DEBUG)]
         public static void LogError(string operation, string message, object context = null, 
                                    string correlationId = null, string humanNote = null, string aiTodo = null)
         {
@@ -92,9 +92,9 @@ namespace io.github.hatayama.uLoopMCP
         
         /// <summary>
         /// Log a debug level message with structured context
-        /// Only logs when ULOOPMCP_DEBUG symbol is defined
+        /// Only logs when ULOOPENV_KEY_ULOOPMCP_DEBUG symbol is defined
         /// </summary>
-        [Conditional(McpConstants.MCP_DEBUG)]
+        [Conditional(McpConstants.ENV_KEY_ULOOPMCP_DEBUG)]
         public static void LogDebug(string operation, string message, object context = null, 
                                    string correlationId = null, string humanNote = null, string aiTodo = null)
         {
@@ -103,9 +103,9 @@ namespace io.github.hatayama.uLoopMCP
         
         /// <summary>
         /// Log an exception with structured context
-        /// Only logs when ULOOPMCP_DEBUG symbol is defined
+        /// Only logs when ULOOPENV_KEY_ULOOPMCP_DEBUG symbol is defined
         /// </summary>
-        [Conditional(McpConstants.MCP_DEBUG)]
+        [Conditional(McpConstants.ENV_KEY_ULOOPMCP_DEBUG)]
         public static void LogException(string operation, Exception exception, object context = null, 
                                        string correlationId = null, string humanNote = null, string aiTodo = null)
         {
@@ -230,7 +230,7 @@ namespace io.github.hatayama.uLoopMCP
                 Directory.CreateDirectory(LOG_DIRECTORY);
             }
             
-            string fileName = $"{LOG_FILE_PREFIX}_{DateTime.Now:yyyyMMdd}.json";
+            string fileName = $"{LOG_FILE_PREFIX}_{DateTime.UtcNow:yyyyMMdd}.json";
             string filePath = Path.Combine(LOG_DIRECTORY, fileName);
             
             // Check file size and rotate if necessary
@@ -239,7 +239,7 @@ namespace io.github.hatayama.uLoopMCP
                 var fileInfo = new FileInfo(filePath);
                 if (fileInfo.Length > MAX_FILE_SIZE_MB * 1024 * 1024)
                 {
-                    string rotatedFileName = $"{LOG_FILE_PREFIX}_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+                    string rotatedFileName = $"{LOG_FILE_PREFIX}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
                     string rotatedFilePath = Path.Combine(LOG_DIRECTORY, rotatedFileName);
                     File.Move(filePath, rotatedFilePath);
                 }

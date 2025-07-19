@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -9,9 +8,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
-using UnityEditor;
-using Newtonsoft.Json;
 
 
 namespace io.github.hatayama.uLoopMCP
@@ -50,23 +46,6 @@ namespace io.github.hatayama.uLoopMCP
         public ConnectedClient WithClientName(string clientName)
         {
             return new ConnectedClient(Endpoint, Stream, clientName, ConnectedAt);
-        }
-    }
-
-    /// <summary>
-    /// Immutable JSON-RPC notification structure
-    /// </summary>
-    internal class JsonRpcNotification
-    {
-        public readonly string JsonRpc;
-        public readonly string Method;
-        public readonly object Params;
-        
-        public JsonRpcNotification(string jsonRpc, string method, object parameters)
-        {
-            JsonRpc = jsonRpc;
-            Method = method;
-            Params = parameters;
         }
     }
 
@@ -152,9 +131,6 @@ namespace io.github.hatayama.uLoopMCP
                 ConnectedClient updatedClient = targetClient.WithClientName(clientName);
                 bool updateResult = _connectedClients.TryUpdate(clientKey, updatedClient, targetClient);
                 
-                McpLogger.LogInfo($"[UpdateClientName] {clientEndpoint}: '{targetClient.ClientName}' → '{clientName}' (Success: {updateResult})");
-                McpLogger.LogInfo($"[UpdateClientName] ConnectedAt preserved: {updatedClient.ConnectedAt:HH:mm:ss.fff}");
-                
                 // Clear reconnecting flags when client name is successfully set (client is now fully connected)
                 if (updateResult && clientName != McpConstants.UNKNOWN_CLIENT_NAME)
                 {
@@ -167,14 +143,7 @@ namespace io.github.hatayama.uLoopMCP
                     DomainReloadReconnectionManager.Instance.RegisterReconnectedTool(clientName);
                 }
             }
-            else
-            {
-                McpLogger.LogWarning($"[UpdateClientName] Client not found for endpoint: {clientEndpoint}");
-            }
         }
-
-
-
 
         /// <summary>
         /// Checks if the specified port is in use.
@@ -212,13 +181,11 @@ namespace io.github.hatayama.uLoopMCP
                 
                 _serverTask = Task.Run(() => ServerLoop(_cancellationTokenSource.Token));
                 
-                McpLogger.LogInfo($"Unity MCP Server started on port {Port}");
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
             {
                 _isRunning = false;
                 string errorMessage = $"Port {Port} is already in use. Please choose a different port.";
-                McpLogger.LogError(errorMessage);
                 OnError?.Invoke(errorMessage);
                 throw new InvalidOperationException(errorMessage, ex);
             }
@@ -226,7 +193,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 _isRunning = false;
                 string errorMessage = $"Failed to start MCP Server: {ex.Message}";
-                McpLogger.LogError(errorMessage);
                 OnError?.Invoke(errorMessage);
                 throw;
             }
@@ -242,7 +208,6 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            McpLogger.LogInfo("Stopping Unity MCP Server...");
             _isRunning = false;
             
             // Explicitly disconnect all connected clients before stopping the server
@@ -286,7 +251,6 @@ namespace io.github.hatayama.uLoopMCP
             
 
             
-            McpLogger.LogInfo("Unity MCP Server stopped");
         }
 
         /// <summary>
@@ -300,7 +264,6 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            McpLogger.LogInfo($"Disconnecting {_connectedClients.Count} connected clients...");
             
             List<string> clientsToRemove = new List<string>();
             
@@ -317,7 +280,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 catch (Exception ex)
                 {
-                    McpLogger.LogWarning($"Error disconnecting client {client.Key}: {ex.Message}");
+                    OnError?.Invoke($"Error disconnecting client {client.Key}: {ex.Message}");
                     clientsToRemove.Add(client.Key); // Remove even if disconnect failed
                 }
             }
@@ -366,7 +329,6 @@ namespace io.github.hatayama.uLoopMCP
                     // Log and re-throw ThreadAbortException
                     if (!McpSessionManager.instance.IsDomainReloadInProgress)
                     {
-                        McpLogger.LogError($"Unexpected thread abort in server loop: {ex.Message}");
                         OnError?.Invoke($"Unexpected thread abort: {ex.Message}");
                     }
                     throw;
@@ -376,8 +338,7 @@ namespace io.github.hatayama.uLoopMCP
                     if (!cancellationToken.IsCancellationRequested)
                     {
                         string errorMessage = $"Server loop error: {ex.Message}";
-                        McpLogger.LogError(errorMessage);
-                        OnError?.Invoke(errorMessage);
+                                OnError?.Invoke(errorMessage);
                     }
                 }
             }
@@ -392,12 +353,11 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return await Task.Run(() => listener.AcceptTcpClient(), cancellationToken);
             }
-            catch (ThreadAbortException ex)
+            catch (ThreadAbortException)
             {
                 // Log and re-throw ThreadAbortException
                 if (!McpSessionManager.instance.IsDomainReloadInProgress)
                 {
-                    McpLogger.LogError($"Unexpected thread abort in AcceptTcpClient: {ex.Message}");
                 }
                 throw;
             }
@@ -466,7 +426,6 @@ namespace io.github.hatayama.uLoopMCP
                             if (string.IsNullOrWhiteSpace(requestJson)) continue;
                             
                             // JSON-RPC processing and response sending with client context
-                            McpLogger.LogDebug($"[McpBridgeServer] Processing request from {clientEndpoint}: {requestJson}");
                             string responseJson = await JsonRpcProcessor.ProcessRequest(requestJson, clientEndpoint);
                             
                             // Only send response if it's not null (notifications return null)
@@ -489,7 +448,6 @@ namespace io.github.hatayama.uLoopMCP
                         // Validate reassembler state and clear if needed
                         if (!messageReassembler.ValidateState())
                         {
-                            McpLogger.LogWarning($"[HandleClient] Message reassembler state invalid for client {clientEndpoint}, cleared");
                         }
                     }
                 }
@@ -510,16 +468,10 @@ namespace io.github.hatayama.uLoopMCP
                 if (IsNormalDisconnectionException(ex))
                 {
                     // Log normal disconnections as info level
-                    McpLogger.LogInfo($"Client {clientEndpoint} disconnected normally");
-                }
-                else
-                {
-                    McpLogger.LogWarning($"I/O error with client {clientEndpoint}: {ex.Message}");
                 }
             }
             catch (Exception ex)
             {
-                McpLogger.LogError($"Error handling client {clientEndpoint}: {ex.Message}\n{ex.StackTrace}");
                 OnError?.Invoke(ex.Message);
             }
             finally
@@ -532,7 +484,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 catch (Exception ex)
                 {
-                    McpLogger.LogWarning($"Error disposing framing components for client {clientEndpoint}: {ex.Message}");
+                    OnError?.Invoke($"Error during client disposal: {ex.Message}");
                 }
                 
                 // Remove client from connected clients list
@@ -595,8 +547,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 catch (Exception ex)
                 {
-                    // Log the error before removing the client
-                    McpLogger.LogWarning($"Error sending notification to client {client.Key}: {ex.Message}");
+                    OnError?.Invoke($"Error writing notification to client {client.Key}: {ex.Message}");
                     clientsToRemove.Add(client.Key);
                 }
             }

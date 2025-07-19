@@ -77,7 +77,6 @@ namespace io.github.hatayama.uLoopMCP
                 
                 if (!userConfirmed)
                 {
-                    McpLogger.LogInfo($"Server startup cancelled by user. Requested port {actualPort} was in use.");
                     return;
                 }
             }
@@ -88,7 +87,6 @@ namespace io.github.hatayama.uLoopMCP
             // Always stop the existing server (to release the port).
             if (mcpServer != null)
             {
-                McpLogger.LogInfo($"Stopping existing server before starting new one...");
                 StopServer();
                 
                 // Wait a moment to ensure the TCP connection is properly released.
@@ -106,10 +104,8 @@ namespace io.github.hatayama.uLoopMCP
             // Log warning if port was changed
             if (availablePort != actualPort)
             {
-                McpLogger.LogWarning($"Requested port {actualPort} was in use. Server started on port {availablePort} instead.");
             }
             
-            McpLogger.LogInfo($"Unity MCP Server started on port {availablePort}");
         }
 
         /// <summary>
@@ -127,7 +123,6 @@ namespace io.github.hatayama.uLoopMCP
             McpSessionManager sessionManager = McpSessionManager.instance;
             sessionManager.ClearServerSession();
             
-            McpLogger.LogInfo("Unity MCP Server stopped");
         }
 
         /// <summary>
@@ -167,9 +162,6 @@ namespace io.github.hatayama.uLoopMCP
                 sessionManager.IsReconnecting = true; // Set the reconnecting flag.
                 sessionManager.ShowReconnectingUI = true; // Set the UI display flag.
                 sessionManager.ShowPostCompileReconnectingUI = true; // Set the post-compile specific UI flag.
-                
-                // Force-save the communication log as well.
-                McpCommunicationLogger.SaveToSessionState();
                 
                 // Stop the server completely (using Dispose to ensure the TCP connection is released).
                 try
@@ -343,21 +335,17 @@ namespace io.github.hatayama.uLoopMCP
                 // Log warning if port was changed
                 if (availablePort != port)
                 {
-                    McpLogger.LogWarning($"Requested port {port} was in use during restoration. Server restored on port {availablePort} instead.");
                 }
                 
-                McpLogger.LogInfo($"Unity MCP Server restored on port {availablePort}");
                 
                 // Clear server-side reconnecting flag on successful restoration
                 // NOTE: Do NOT clear UI display flag here - let it be cleared by timeout or client connection
                 sessionManager.IsReconnecting = false;
-                McpLogger.LogDebug("[RECONNECTION] Server restored successfully, cleared server reconnecting flag");
                 
                 // Tools changed notification will be sent by OnAfterAssemblyReload
             }
-            catch (System.Exception ex)
+            catch (System.Exception)
             {
-                McpLogger.LogError($"Failed to restore MCP Server on port {port} (attempt {retryCount + 1}): {ex.Message}");
                 
                 // If the maximum number of retries has not been reached, try again.
                 if (retryCount < maxRetries)
@@ -368,7 +356,6 @@ namespace io.github.hatayama.uLoopMCP
                 else
                 {
                     // If it ultimately fails, clear the SessionState.
-                    McpLogger.LogError($"Failed to restore MCP Server on port {port} after {maxRetries + 1} attempts. Clearing session state.");
                     McpSessionManager.instance.ClearServerSession();
                 }
             }
@@ -426,12 +413,9 @@ namespace io.github.hatayama.uLoopMCP
             // Log with stack trace to identify caller
             System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace(true);
             string callerInfo = stackTrace.GetFrame(1)?.GetMethod()?.Name ?? "Unknown";
-            McpLogger.LogDebug($"[TRACE] SendToolsChangedNotification called from: {callerInfo}");
-            McpLogger.LogDebug($"[TRACE] Full stack trace:\n{stackTrace.ToString()}");
             
             if (mcpServer == null)
             {
-                McpLogger.LogDebug("[TRACE] SendToolsChangedNotification skipped: mcpServer is null");
                 return;
             }
             
@@ -452,7 +436,6 @@ namespace io.github.hatayama.uLoopMCP
             string mcpNotificationJson = JsonConvert.SerializeObject(mcpNotification);
             mcpServer.SendNotificationToClients(mcpNotificationJson);
             
-            McpLogger.LogDebug($"[TRACE] SendToolsChangedNotification sent successfully at {System.DateTime.Now:HH:mm:ss.fff}");
         }
 
         /// <summary>
@@ -461,7 +444,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void TriggerToolChangeNotification()
         {
-            McpLogger.LogDebug($"[TRACE] TriggerToolChangeNotification called at {System.DateTime.Now:HH:mm:ss.fff}");
             
             if (IsServerRunning)
             {
@@ -469,7 +451,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                McpLogger.LogDebug("[TRACE] TriggerToolChangeNotification skipped: Server not running");
             }
         }
         
@@ -487,13 +468,11 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static async Task SendToolNotificationAfterCompilation()
         {
-            McpLogger.LogDebug($"[TRACE] SendToolNotificationAfterCompilation started at {System.DateTime.Now:HH:mm:ss.fff}");
             
             // Use frame delay for timing adjustment after domain reload
             // This ensures Unity Editor is in a stable state before sending notifications
             await EditorDelay.DelayFrame(1);
             
-            McpLogger.LogDebug("[TRACE] SendToolNotificationAfterCompilation: About to call TriggerToolsChangedNotification (AFTER_COMPILATION)");
             CustomToolManager.NotifyToolChanges();
         }
         
@@ -538,7 +517,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static async Task StartReconnectionTimeout()
         {
-            McpLogger.LogDebug($"[RECONNECTION] Starting reconnection timeout ({McpConstants.RECONNECTION_TIMEOUT_SECONDS} seconds)");
             
             // Wait for the timeout period (convert seconds to frames at ~60fps)
             int timeoutFrames = McpConstants.RECONNECTION_TIMEOUT_SECONDS * 60;
@@ -549,7 +527,6 @@ namespace io.github.hatayama.uLoopMCP
             bool isStillReconnecting = sessionManager.IsReconnecting;
             if (isStillReconnecting)
             {
-                McpLogger.LogWarning("[RECONNECTION] Timeout reached, clearing reconnecting flag");
                 sessionManager.IsReconnecting = false;
             }
         }
@@ -559,7 +536,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static async Task StartReconnectionUITimeout()
         {
-            McpLogger.LogDebug($"[RECONNECTION UI] Starting UI timeout ({McpConstants.RECONNECTION_TIMEOUT_SECONDS} seconds)");
             
             // Wait for the timeout period (convert seconds to frames at ~60fps)
             int timeoutFrames = McpConstants.RECONNECTION_TIMEOUT_SECONDS * 60;
@@ -570,7 +546,6 @@ namespace io.github.hatayama.uLoopMCP
             bool isStillShowingUI = sessionManager.ShowReconnectingUI;
             if (isStillShowingUI)
             {
-                McpLogger.LogDebug("[RECONNECTION UI] Timeout reached, clearing UI display flag");
                 sessionManager.ClearReconnectingFlags();
             }
         }
@@ -590,11 +565,9 @@ namespace io.github.hatayama.uLoopMCP
                 sessionManager.ClearReconnectingFlags();
                 if (wasReconnecting)
                 {
-                    McpLogger.LogDebug("[RECONNECTION] Client connected, cleared reconnecting flag");
                 }
                 if (wasShowingUI)
                 {
-                    McpLogger.LogDebug("[RECONNECTION UI] Client connected, cleared UI display flag");
                 }
             }
         }

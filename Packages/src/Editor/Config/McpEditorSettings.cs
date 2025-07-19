@@ -155,7 +155,6 @@ namespace io.github.hatayama.uLoopMCP
             SaveSettings(newSettings);
 
             // Synchronize McpLogger settings as well.
-            McpLogger.EnableDebugLog = enableMcpLogs;
         }
 
         /// <summary>
@@ -176,23 +175,6 @@ namespace io.github.hatayama.uLoopMCP
             SaveSettings(newSettings);
         }
 
-        /// <summary>
-        /// Gets the development mode enabled flag.
-        /// </summary>
-        public static bool GetEnableDevelopmentMode()
-        {
-            return GetSettings().enableDevelopmentMode;
-        }
-
-        /// <summary>
-        /// Sets the development mode enabled flag.
-        /// </summary>
-        public static void SetEnableDevelopmentMode(bool enableDevelopmentMode)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { enableDevelopmentMode = enableDevelopmentMode };
-            SaveSettings(newSettings);
-        }
 
         // Security Settings Methods
 
@@ -312,7 +294,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                McpLogger.LogError($"Failed to load MCP Editor settings: {ex.Message}");
                 // Don't suppress this exception - corrupted settings should be reported
                 throw new InvalidOperationException(
                     $"Failed to load MCP Editor settings from: {SettingsFilePath}. Settings file may be corrupted.", ex);

@@ -38,6 +38,9 @@ namespace io.github.hatayama.uLoopMCP
             {
                 { McpConstants.UNITY_TCP_PORT_ENV_KEY, port.ToString() }
                 // MCP_CLIENT_NAME removed - now using clientInfo.name from MCP protocol
+#if ULOOPMCP_DEBUG
+                , { McpConstants.ENV_KEY_MCP_DEBUG, McpConstants.ENV_VALUE_TRUE }
+#endif
             };
 
             return new McpServerConfigData(
@@ -117,6 +120,9 @@ namespace io.github.hatayama.uLoopMCP
             Dictionary<string, string> env = new Dictionary<string, string>
             {
                 { McpConstants.UNITY_TCP_PORT_ENV_KEY, port.ToString() }
+#if ULOOPMCP_DEBUG
+                , { McpConstants.ENV_KEY_MCP_DEBUG, McpConstants.ENV_VALUE_TRUE }
+#endif
             };
             
 

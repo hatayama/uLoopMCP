@@ -27,13 +27,11 @@ namespace io.github.hatayama.uLoopMCP
 
             if (port < ReservedPortThreshold)
             {
-                McpLogger.LogError($"Port {port} is in the reserved range ({MinPort}-{ReservedPortThreshold - 1}){contextSuffix}. Please use a port above {ReservedPortThreshold}.");
                 return false;
             }
             
             if (System.Array.IndexOf(CommonPorts, port) != -1)
             {
-                McpLogger.LogError($"Port {port} is a commonly used system port{contextSuffix}. Please choose a different port (e.g., 7400-7500).");
                 return false;
             }
 

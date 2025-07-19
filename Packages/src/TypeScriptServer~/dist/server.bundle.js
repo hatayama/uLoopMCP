@@ -5690,7 +5690,7 @@ var VibeLogger = class _VibeLogger {
     OUTPUT_DIRECTORIES.ROOT,
     OUTPUT_DIRECTORIES.VIBE_LOGS
   );
-  static LOG_FILE_PREFIX = "typescript_vibe";
+  static LOG_FILE_PREFIX = "ts_vibe";
   static MAX_FILE_SIZE_MB = 10;
   static MAX_MEMORY_LOGS = 1e3;
   static memoryLogs = [];

@@ -45,40 +45,32 @@ namespace io.github.hatayama.uLoopMCP
         {
             DateTime startTime = DateTime.UtcNow;
 
-            try
-            {
-                // Convert JToken to strongly typed Schema
-                TSchema parameters = ConvertToSchema(paramsToken);
+            // Convert JToken to strongly typed Schema
+            TSchema parameters = ConvertToSchema(paramsToken);
 
-                // Create CancellationTokenSource with timeout from parameters
-                using (CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(parameters.TimeoutSeconds)))
+            // Create CancellationTokenSource with timeout from parameters
+            using (CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(parameters.TimeoutSeconds)))
+            {
+                try
                 {
-                    try
+                    // Execute with type-safe parameters and cancellation token
+                    TResponse response = await ExecuteAsync(parameters, cts.Token);
+
+                    DateTime endTime = DateTime.UtcNow;
+
+                    // Set timing information if response inherits from BaseToolResponse
+                    if (response is BaseToolResponse baseResponse)
                     {
-                        // Execute with type-safe parameters and cancellation token
-                        TResponse response = await ExecuteAsync(parameters, cts.Token);
-
-                        DateTime endTime = DateTime.UtcNow;
-
-                        // Set timing information if response inherits from BaseToolResponse
-                        if (response is BaseToolResponse baseResponse)
-                        {
-                            baseResponse.SetTimingInfo(startTime, endTime);
-                        }
-
-                        // Return as BaseToolResponse for IUnityTool interface compatibility
-                        return response;
+                        baseResponse.SetTimingInfo(startTime, endTime);
                     }
-                    catch (OperationCanceledException)
-                    {
-                        throw new TimeoutException($"Tool {ToolName} timed out after {parameters.TimeoutSeconds} seconds");
-                    }
+
+                    // Return as BaseToolResponse for IUnityTool interface compatibility
+                    return response;
                 }
-            }
-            catch (Exception ex)
-            {
-                McpLogger.LogError($"Error executing tool {ToolName}: {ex.Message}");
-                throw;
+                catch (OperationCanceledException)
+                {
+                    throw new TimeoutException($"Tool {ToolName} timed out after {parameters.TimeoutSeconds} seconds");
+                }
             }
         }
 

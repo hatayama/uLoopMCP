@@ -53,22 +53,13 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (continuation == null)
             {
-                McpLogger.LogError("EditorDelayManager.RegisterDelay: continuation is null");
                 return;
             }
 
             if (frames <= 0)
             {
                 // Execute immediately if 0 frames or less
-                try
-                {
-                    continuation.Invoke();
-                }
-                catch (Exception ex)
-                {
-                    McpLogger.LogError($"EditorDelayManager: Immediate continuation failed: {ex.Message}");
-                }
-
+                continuation.Invoke();
                 return;
             }
 

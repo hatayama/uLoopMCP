@@ -18,17 +18,11 @@ namespace io.github.hatayama.uLoopMCP
     {
         public UIState UI { get; private set; }
         public RuntimeState Runtime { get; private set; }
-#if ULOOPMCP_DEBUG
-        public DebugState Debug { get; private set; }
-#endif
 
         public McpEditorModel()
         {
             UI = new UIState();
             Runtime = new RuntimeState();
-#if ULOOPMCP_DEBUG
-            Debug = new DebugState();
-#endif
         }
 
         /// <summary>
@@ -49,16 +43,6 @@ namespace io.github.hatayama.uLoopMCP
             Runtime = updater(Runtime);
         }
 
-#if ULOOPMCP_DEBUG
-        /// <summary>
-        /// Update debug state with new values
-        /// </summary>
-        /// <param name="updater">Function to update debug state</param>
-        public void UpdateDebugState(Func<DebugState, DebugState> updater)
-        {
-            Debug = updater(Debug);
-        }
-#endif
 
         /// <summary>
         /// Load state from persistent settings
@@ -76,21 +60,6 @@ namespace io.github.hatayama.uLoopMCP
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: settings.showSecuritySettings));
 
-#if ULOOPMCP_DEBUG
-            UpdateDebugState(debug => new DebugState(
-                showDeveloperTools: settings.showDeveloperTools,
-                enableMcpLogs: settings.enableMcpLogs,
-                enableCommunicationLogs: settings.enableCommunicationLogs,
-                enableDevelopmentMode: settings.enableDevelopmentMode,
-                showCommunicationLogs: debug.ShowCommunicationLogs,
-                communicationLogScrollPosition: debug.CommunicationLogScrollPosition,
-                communicationLogHeight: debug.CommunicationLogHeight,
-                requestScrollPositions: debug.RequestScrollPositions,
-                responseScrollPositions: debug.ResponseScrollPositions));
-
-            // Synchronize McpLogger settings
-            McpLogger.EnableDebugLog = Debug.EnableMcpLogs;
-#endif
         }
 
         /// <summary>
@@ -101,12 +70,6 @@ namespace io.github.hatayama.uLoopMCP
             McpEditorSettings.SetCustomPort(UI.CustomPort);
             McpEditorSettings.SetAutoStartServer(UI.AutoStartServer);
 
-#if ULOOPMCP_DEBUG
-            McpEditorSettings.SetShowDeveloperTools(Debug.ShowDeveloperTools);
-            McpEditorSettings.SetEnableMcpLogs(Debug.EnableMcpLogs);
-            McpEditorSettings.SetEnableCommunicationLogs(Debug.EnableCommunicationLogs);
-            McpEditorSettings.SetEnableDevelopmentMode(Debug.EnableDevelopmentMode);
-#endif
         }
 
         /// <summary>
@@ -125,21 +88,6 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: selectedEditor,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: ui.ShowSecuritySettings));
-
-#if ULOOPMCP_DEBUG
-            float communicationLogHeight = sessionManager.CommunicationLogHeight;
-
-            UpdateDebugState(debug => new DebugState(
-                showDeveloperTools: debug.ShowDeveloperTools,
-                enableMcpLogs: debug.EnableMcpLogs,
-                enableCommunicationLogs: debug.EnableCommunicationLogs,
-                enableDevelopmentMode: debug.EnableDevelopmentMode,
-                showCommunicationLogs: debug.ShowCommunicationLogs,
-                communicationLogScrollPosition: debug.CommunicationLogScrollPosition,
-                communicationLogHeight: communicationLogHeight,
-                requestScrollPositions: debug.RequestScrollPositions,
-                responseScrollPositions: debug.ResponseScrollPositions));
-#endif
         }
 
         /// <summary>
@@ -149,10 +97,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             McpSessionManager sessionManager = McpSessionManager.instance;
             sessionManager.SelectedEditorType = UI.SelectedEditorType;
-
-#if ULOOPMCP_DEBUG
-            sessionManager.CommunicationLogHeight = Debug.CommunicationLogHeight;
-#endif
         }
 
         /// <summary>
@@ -360,179 +304,5 @@ namespace io.github.hatayama.uLoopMCP
             McpEditorSettings.SetAllowThirdPartyTools(allow);
         }
 
-
-#if ULOOPMCP_DEBUG
-        /// <summary>
-        /// Update communication log scroll position
-        /// </summary>
-        public void UpdateCommunicationLogScrollPosition(Vector2 scrollPosition)
-        {
-            UpdateDebugState(debug => new DebugState(
-                showDeveloperTools: debug.ShowDeveloperTools,
-                enableCommunicationLogs: debug.EnableCommunicationLogs,
-                showCommunicationLogs: debug.ShowCommunicationLogs,
-                enableMcpLogs: debug.EnableMcpLogs,
-                enableDevelopmentMode: debug.EnableDevelopmentMode,
-                communicationLogScrollPosition: scrollPosition,
-                communicationLogHeight: debug.CommunicationLogHeight,
-                requestScrollPositions: debug.RequestScrollPositions,
-                responseScrollPositions: debug.ResponseScrollPositions));
-        }
-
-        /// <summary>
-        /// Update communication log height
-        /// </summary>
-        public void UpdateCommunicationLogHeight(float height)
-        {
-            UpdateDebugState(debug => new DebugState(
-                showDeveloperTools: debug.ShowDeveloperTools,
-                enableCommunicationLogs: debug.EnableCommunicationLogs,
-                showCommunicationLogs: debug.ShowCommunicationLogs,
-                enableMcpLogs: debug.EnableMcpLogs,
-                enableDevelopmentMode: debug.EnableDevelopmentMode,
-                communicationLogScrollPosition: debug.CommunicationLogScrollPosition,
-                communicationLogHeight: height,
-                requestScrollPositions: debug.RequestScrollPositions,
-                responseScrollPositions: debug.ResponseScrollPositions));
-        }
-
-        /// <summary>
-        /// Update request scroll position for specific log ID
-        /// </summary>
-        public void UpdateRequestScrollPosition(string logId, Vector2 scrollPosition)
-        {
-            Dictionary<string, Vector2> newRequestScrollPositions = new(Debug.RequestScrollPositions);
-            newRequestScrollPositions[logId] = scrollPosition;
-
-            UpdateDebugState(debug => new DebugState(
-                showDeveloperTools: debug.ShowDeveloperTools,
-                enableCommunicationLogs: debug.EnableCommunicationLogs,
-                showCommunicationLogs: debug.ShowCommunicationLogs,
-                enableMcpLogs: debug.EnableMcpLogs,
-                enableDevelopmentMode: debug.EnableDevelopmentMode,
-                communicationLogScrollPosition: debug.CommunicationLogScrollPosition,
-                communicationLogHeight: debug.CommunicationLogHeight,
-                requestScrollPositions: newRequestScrollPositions,
-                responseScrollPositions: debug.ResponseScrollPositions));
-        }
-
-        /// <summary>
-        /// Update response scroll position for specific log ID
-        /// </summary>
-        public void UpdateResponseScrollPosition(string logId, Vector2 scrollPosition)
-        {
-            Dictionary<string, Vector2> newResponseScrollPositions = new(Debug.ResponseScrollPositions);
-            newResponseScrollPositions[logId] = scrollPosition;
-
-            UpdateDebugState(debug => new DebugState(
-                showDeveloperTools: debug.ShowDeveloperTools,
-                enableCommunicationLogs: debug.EnableCommunicationLogs,
-                showCommunicationLogs: debug.ShowCommunicationLogs,
-                enableMcpLogs: debug.EnableMcpLogs,
-                enableDevelopmentMode: debug.EnableDevelopmentMode,
-                communicationLogScrollPosition: debug.CommunicationLogScrollPosition,
-                communicationLogHeight: debug.CommunicationLogHeight,
-                requestScrollPositions: debug.RequestScrollPositions,
-                responseScrollPositions: newResponseScrollPositions));
-        }
-
-        // DebugState-specific update methods with persistence
-
-        /// <summary>
-        /// Update ShowDeveloperTools setting with persistence
-        /// </summary>
-        public void UpdateShowDeveloperTools(bool show)
-        {
-            UpdateDebugState(debug => new DebugState(
-                showDeveloperTools: show,
-                enableCommunicationLogs: debug.EnableCommunicationLogs,
-                showCommunicationLogs: debug.ShowCommunicationLogs,
-                enableMcpLogs: debug.EnableMcpLogs,
-                enableDevelopmentMode: debug.EnableDevelopmentMode,
-                communicationLogScrollPosition: debug.CommunicationLogScrollPosition,
-                communicationLogHeight: debug.CommunicationLogHeight,
-                requestScrollPositions: debug.RequestScrollPositions,
-                responseScrollPositions: debug.ResponseScrollPositions));
-            McpEditorSettings.SetShowDeveloperTools(show);
-        }
-
-        /// <summary>
-        /// Update EnableDevelopmentMode setting with persistence
-        /// </summary>
-        public void UpdateEnableDevelopmentMode(bool enable)
-        {
-            UpdateDebugState(debug => new DebugState(
-                showDeveloperTools: debug.ShowDeveloperTools,
-                enableCommunicationLogs: debug.EnableCommunicationLogs,
-                showCommunicationLogs: debug.ShowCommunicationLogs,
-                enableMcpLogs: debug.EnableMcpLogs,
-                enableDevelopmentMode: enable,
-                communicationLogScrollPosition: debug.CommunicationLogScrollPosition,
-                communicationLogHeight: debug.CommunicationLogHeight,
-                requestScrollPositions: debug.RequestScrollPositions,
-                responseScrollPositions: debug.ResponseScrollPositions));
-            McpEditorSettings.SetEnableDevelopmentMode(enable);
-        }
-
-        /// <summary>
-        /// Update EnableMcpLogs setting with persistence
-        /// </summary>
-        public void UpdateEnableMcpLogs(bool enable)
-        {
-            UpdateDebugState(debug => new DebugState(
-                showDeveloperTools: debug.ShowDeveloperTools,
-                enableCommunicationLogs: debug.EnableCommunicationLogs,
-                showCommunicationLogs: debug.ShowCommunicationLogs,
-                enableMcpLogs: enable,
-                enableDevelopmentMode: debug.EnableDevelopmentMode,
-                communicationLogScrollPosition: debug.CommunicationLogScrollPosition,
-                communicationLogHeight: debug.CommunicationLogHeight,
-                requestScrollPositions: debug.RequestScrollPositions,
-                responseScrollPositions: debug.ResponseScrollPositions));
-            McpEditorSettings.SetEnableMcpLogs(enable);
-            
-            // Synchronize McpLogger settings
-            McpLogger.EnableDebugLog = enable;
-        }
-
-        /// <summary>
-        /// Update EnableCommunicationLogs setting with persistence and log clearing
-        /// </summary>
-        public void UpdateEnableCommunicationLogs(bool enable)
-        {
-            UpdateDebugState(debug => new DebugState(
-                showDeveloperTools: debug.ShowDeveloperTools,
-                enableCommunicationLogs: enable,
-                showCommunicationLogs: debug.ShowCommunicationLogs,
-                enableMcpLogs: debug.EnableMcpLogs,
-                enableDevelopmentMode: debug.EnableDevelopmentMode,
-                communicationLogScrollPosition: debug.CommunicationLogScrollPosition,
-                communicationLogHeight: debug.CommunicationLogHeight,
-                requestScrollPositions: debug.RequestScrollPositions,
-                responseScrollPositions: debug.ResponseScrollPositions));
-            McpEditorSettings.SetEnableCommunicationLogs(enable);
-            if (!enable)
-            {
-                McpCommunicationLogger.ClearLogs();
-            }
-        }
-
-        /// <summary>
-        /// Update ShowCommunicationLogs setting (foldout state)
-        /// </summary>
-        public void UpdateShowCommunicationLogs(bool show)
-        {
-            UpdateDebugState(debug => new DebugState(
-                showDeveloperTools: debug.ShowDeveloperTools,
-                enableCommunicationLogs: debug.EnableCommunicationLogs,
-                showCommunicationLogs: show,
-                enableMcpLogs: debug.EnableMcpLogs,
-                enableDevelopmentMode: debug.EnableDevelopmentMode,
-                communicationLogScrollPosition: debug.CommunicationLogScrollPosition,
-                communicationLogHeight: debug.CommunicationLogHeight,
-                requestScrollPositions: debug.RequestScrollPositions,
-                responseScrollPositions: debug.ResponseScrollPositions));
-        }
-#endif
     }
 } 
