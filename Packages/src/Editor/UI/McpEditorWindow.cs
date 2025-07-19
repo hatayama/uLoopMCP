@@ -66,19 +66,6 @@ namespace io.github.hatayama.uLoopMCP
         private void OnEnable()
         {
             _instance = this;
-            
-            // Migrate data from ConnectedLLMToolsStorage if needed
-            Debug.Log($"[hatayama] _connectedTools.Count: {_connectedTools.Count}");
-            if (_connectedTools.Count == 0)
-            {
-                IEnumerable<ConnectedClient> storedTools = ConnectedLLMToolsStorage.instance.GetStoredToolsAsConnectedClients();
-                foreach (ConnectedClient client in storedTools)
-                {
-                    AddConnectedTool(client);
-                }
-                Debug.LogWarning($"[hatayama] Migrated {_connectedTools.Count} tools from ConnectedLLMToolsStorage");
-            }
-            
             InitializeAll();
         }
 
@@ -156,6 +143,34 @@ namespace io.github.hatayama.uLoopMCP
         {
             Debug.LogWarning($"[hatayama] ClearConnectedTools called! Stack trace:\n{System.Environment.StackTrace}");
             _connectedTools.Clear();
+        }
+
+        /// <summary>
+        /// Backup current connected tools for server restart
+        /// </summary>
+        public List<ConnectedLLMToolData> BackupConnectedTools()
+        {
+            List<ConnectedLLMToolData> backup = _connectedTools
+                .Where(tool => tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
+                .ToList();
+            Debug.LogWarning($"[hatayama] Backing up {backup.Count} tools before server restart");
+            return backup;
+        }
+
+        /// <summary>
+        /// Restore connected tools from backup after server restart
+        /// </summary>
+        public void RestoreConnectedTools(List<ConnectedLLMToolData> backup)
+        {
+            if (backup != null && backup.Count > 0)
+            {
+                foreach (ConnectedLLMToolData toolData in backup)
+                {
+                    ConnectedClient restoredClient = new(toolData.Endpoint, null, toolData.Name);
+                    AddConnectedTool(restoredClient);
+                }
+                Debug.LogWarning($"[hatayama] Restored {backup.Count} tools after server restart");
+            }
         }
 
         /// <summary>

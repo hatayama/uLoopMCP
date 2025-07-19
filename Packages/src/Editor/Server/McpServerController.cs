@@ -1,9 +1,7 @@
 using System.Threading.Tasks;
 using UnityEditor;
-using UnityEngine;
 using Newtonsoft.Json;
 using System.Collections.Generic;
-using System.Linq;
 
 
 namespace io.github.hatayama.uLoopMCP
@@ -318,15 +316,7 @@ namespace io.github.hatayama.uLoopMCP
             try
             {
                 // Backup connected tools before stopping the server
-                List<ConnectedLLMToolData> toolsBackup = null;
-                if (McpEditorWindow.Instance != null)
-                {
-                    toolsBackup = McpEditorWindow.Instance.GetConnectedToolsAsClients()
-                        .Where(client => client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME)
-                        .Select(client => new ConnectedLLMToolData(client.ClientName, client.Endpoint, client.ConnectedAt))
-                        .ToList();
-                    Debug.LogWarning($"[hatayama] Backing up {toolsBackup.Count} tools before server restart");
-                }
+                List<ConnectedLLMToolData> toolsBackup = McpEditorWindow.Instance?.BackupConnectedTools();
                 
                 // If there is an existing server instance, ensure it is stopped.
                 if (mcpServer != null)
@@ -353,15 +343,7 @@ namespace io.github.hatayama.uLoopMCP
                 
                 
                 // Restore backed up tools after server restart
-                if (toolsBackup != null && toolsBackup.Count > 0 && McpEditorWindow.Instance != null)
-                {
-                    foreach (ConnectedLLMToolData toolData in toolsBackup)
-                    {
-                        ConnectedClient restoredClient = new(toolData.Endpoint, null, toolData.Name);
-                        McpEditorWindow.Instance.AddConnectedTool(restoredClient);
-                    }
-                    Debug.LogWarning($"[hatayama] Restored {toolsBackup.Count} tools after server restart");
-                }
+                McpEditorWindow.Instance?.RestoreConnectedTools(toolsBackup);
                 
                 // Clear server-side reconnecting flag on successful restoration
                 // NOTE: Do NOT clear UI display flag here - let it be cleared by timeout or client connection

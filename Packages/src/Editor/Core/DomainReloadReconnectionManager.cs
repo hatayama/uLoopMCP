@@ -9,8 +9,7 @@ namespace io.github.hatayama.uLoopMCP
     /// <summary>
     /// Design documentation reference: /CLAUDE.md - Domain reload reconnection management
     /// Related classes:
-    /// - ConnectedLLMToolsStorage: Stores LLM tool data during domain reload
-    /// - McpEditorWindow: UI display control during reconnection
+    /// - McpEditorWindow: UI display control and LLM tool data management with backup/restore mechanism
     /// - McpSessionManager: Domain reload state management
     /// - McpServerController: Server lifecycle management
     /// </summary>
