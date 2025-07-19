@@ -29,7 +29,7 @@ namespace io.github.hatayama.uLoopMCP
         public ConnectedClient(string endpoint, NetworkStream stream, string clientName = McpConstants.UNKNOWN_CLIENT_NAME)
         {
             Endpoint = endpoint;
-            Stream = stream;
+            Stream = stream; // Allow null stream for UI display purposes
             ClientName = clientName;
             ConnectedAt = DateTime.Now;
         }
@@ -38,7 +38,7 @@ namespace io.github.hatayama.uLoopMCP
         private ConnectedClient(string endpoint, NetworkStream stream, string clientName, DateTime connectedAt)
         {
             Endpoint = endpoint;
-            Stream = stream;
+            Stream = stream; // Allow null stream for UI display purposes
             ClientName = clientName;
             ConnectedAt = connectedAt;
         }
@@ -56,6 +56,10 @@ namespace io.github.hatayama.uLoopMCP
     public class McpBridgeServer : IDisposable
     {
         // Note: Domain reload progress is now tracked via McpSessionManager
+        
+        // Events for server lifecycle notifications
+        public static event System.Action OnServerStopping;
+        public static event System.Action OnServerStarted;
         
         // HResult error codes for normal disconnection detection
         private static readonly HashSet<int> NormalDisconnectionHResults = new()
@@ -109,11 +113,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Get list of connected clients
+        /// Get list of connected clients sorted by name
         /// </summary>
         public IReadOnlyCollection<ConnectedClient> GetConnectedClients()
         {
-            return _connectedClients.Values.ToArray();
+            return _connectedClients.Values.OrderBy(client => client.ClientName).ToArray();
         }
 
         /// <summary>
@@ -135,6 +139,9 @@ namespace io.github.hatayama.uLoopMCP
                 if (updateResult && clientName != McpConstants.UNKNOWN_CLIENT_NAME)
                 {
                     McpServerController.ClearReconnectingFlag();
+                    
+                    // Save LLM tool information when Unity connects
+                    McpEditorWindow.Instance?.AddConnectedTool(updatedClient);
                 }
             }
         }
@@ -175,6 +182,9 @@ namespace io.github.hatayama.uLoopMCP
                 
                 _serverTask = Task.Run(() => ServerLoop(_cancellationTokenSource.Token));
                 
+                // Notify that server has started
+                OnServerStarted?.Invoke();
+                
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
             {
@@ -202,6 +212,9 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            // Notify that server is stopping
+            OnServerStopping?.Invoke();
+            
             _isRunning = false;
             
             // Explicitly disconnect all connected clients before stopping the server
@@ -285,6 +298,11 @@ namespace io.github.hatayama.uLoopMCP
                 _connectedClients.TryRemove(clientKey, out _);
             }
             
+            // Only clear LLM tool information if this is not a domain reload
+            if (!McpSessionManager.instance.IsDomainReloadInProgress)
+            {
+                McpEditorWindow.Instance?.ClearConnectedTools();
+            }
         }
 
         /// <summary>
@@ -377,6 +395,9 @@ namespace io.github.hatayama.uLoopMCP
                     {
                         existingClient.Stream?.Close();
                         _connectedClients.TryRemove(clientKey, out _);
+                        
+                        // Delete LLM tool information when Unity disconnects
+                        McpEditorWindow.Instance?.RemoveConnectedTool(existingClient.ClientName);
                     }
                     
                     // Add new client to connected clients for notification broadcasting
@@ -480,6 +501,9 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     string clientKey = GenerateClientKey(clientToRemove.Endpoint);
                     _connectedClients.TryRemove(clientKey, out _);
+                    
+                    // Delete LLM tool information when Unity disconnects
+                    McpEditorWindow.Instance?.RemoveConnectedTool(clientToRemove.ClientName);
                 }
                 
                 
@@ -536,7 +560,11 @@ namespace io.github.hatayama.uLoopMCP
             // Remove disconnected clients
             foreach (string clientKey in clientsToRemove)
             {
-                _connectedClients.TryRemove(clientKey, out _);
+                if (_connectedClients.TryRemove(clientKey, out ConnectedClient removedClient))
+                {
+                    // Delete LLM tool information when Unity disconnects
+                    McpEditorWindow.Instance?.RemoveConnectedTool(removedClient.ClientName);
+                }
             }
         }
 

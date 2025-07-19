@@ -49,14 +49,12 @@ namespace io.github.hatayama.uLoopMCP
         public readonly IReadOnlyCollection<ConnectedClient> Clients;
         public readonly bool ShowFoldout;
         public readonly bool IsServerRunning;
-        public readonly bool ShowReconnectingUI;
 
         public ConnectedToolsData(IReadOnlyCollection<ConnectedClient> clients, bool showFoldout, bool isServerRunning, bool showReconnectingUI)
         {
             Clients = clients;
             ShowFoldout = showFoldout;
             IsServerRunning = isServerRunning;
-            ShowReconnectingUI = showReconnectingUI;
         }
     }
     

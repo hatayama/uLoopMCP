@@ -183,7 +183,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             var logEntry = new VibeLogEntry
             {
-                timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffzzz"),
                 level = level,
                 operation = operation,
                 message = message,
