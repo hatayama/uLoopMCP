@@ -163,9 +163,6 @@ namespace io.github.hatayama.uLoopMCP
                 sessionManager.ShowReconnectingUI = true; // Set the UI display flag.
                 sessionManager.ShowPostCompileReconnectingUI = true; // Set the post-compile specific UI flag.
                 
-                // Force-save the communication log as well.
-                McpCommunicationLogger.SaveToSessionState();
-                
                 // Stop the server completely (using Dispose to ensure the TCP connection is released).
                 try
                 {

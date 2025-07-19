@@ -29,7 +29,6 @@ namespace io.github.hatayama.uLoopMCP
     /// - McpBridgeServer: TCP server that receives JSON-RPC messages from TypeScript
     /// - MainThreadSwitcher: Ensures Unity API calls run on the main thread
     /// - JsonRpcRequest: Request model for JSON-RPC 2.0 protocol
-    /// - McpCommunicationLog: Logs all JSON-RPC communication for debugging
     /// - ClientExecutionContext: Thread-local context for tracking current client
     /// 
     /// Processing flow:
@@ -127,10 +126,8 @@ namespace io.github.hatayama.uLoopMCP
             try
             {
                 await MainThreadSwitcher.SwitchToMainThread();
-                await McpCommunicationLogger.LogRequest(originalJson);
                 BaseToolResponse result = await ExecuteMethod(request.Method, request.Params);
                 string response = CreateSuccessResponse(request.Id, result);
-                _ = McpCommunicationLogger.RecordLogResponse(response);
                 return response;
             }
             catch (JsonSerializationException ex)
