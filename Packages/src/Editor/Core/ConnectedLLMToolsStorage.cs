@@ -42,13 +42,32 @@ namespace io.github.hatayama.uLoopMCP
     }
 
     /// <summary>
-    /// Class that serializes Connected LLM Tools information and stores it using ScriptableSingleton
+    /// Class that serializes Connected LLM Tools information and stores it using SessionState
     /// Saves tool information when Unity connects and deletes it when disconnected
     /// </summary>
-    public class ConnectedLLMToolsStorage : ScriptableSingleton<ConnectedLLMToolsStorage>
+    public class ConnectedLLMToolsStorage
     {
-        [SerializeField]
-        private List<ConnectedLLMToolData> _connectedTools = new();
+        private static ConnectedLLMToolsStorage _instance;
+        private const string SESSION_STATE_KEY = "uLoopMCP.ConnectedLLMTools";
+        
+        private List<ConnectedLLMToolData> _connectedTools;
+
+        public static ConnectedLLMToolsStorage instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = new ConnectedLLMToolsStorage();
+                }
+                return _instance;
+            }
+        }
+
+        private ConnectedLLMToolsStorage()
+        {
+            LoadFromSessionState();
+        }
 
         /// <summary>
         /// Get read-only list of connected tools
@@ -56,11 +75,42 @@ namespace io.github.hatayama.uLoopMCP
         public IReadOnlyList<ConnectedLLMToolData> ConnectedTools => _connectedTools.AsReadOnly();
 
         /// <summary>
+        /// Load connected tools from SessionState
+        /// </summary>
+        private void LoadFromSessionState()
+        {
+            string json = SessionState.GetString(SESSION_STATE_KEY, "[]");
+            try
+            {
+                ConnectedLLMToolData[] toolsArray = JsonUtility.FromJson<ConnectedLLMToolDataArray>(json).tools ?? new ConnectedLLMToolData[0];
+                _connectedTools = new List<ConnectedLLMToolData>(toolsArray);
+            }
+            catch
+            {
+                _connectedTools = new List<ConnectedLLMToolData>();
+            }
+        }
+
+        /// <summary>
+        /// Save connected tools to SessionState
+        /// </summary>
+        private void SaveToSessionState()
+        {
+            ConnectedLLMToolDataArray toolsArray = new ConnectedLLMToolDataArray
+            {
+                tools = _connectedTools.ToArray()
+            };
+            string json = JsonUtility.ToJson(toolsArray);
+            SessionState.SetString(SESSION_STATE_KEY, json);
+        }
+
+        /// <summary>
         /// Delete tool information when Unity disconnects
         /// </summary>
         public void ClearConnectedTools()
         {
             _connectedTools.Clear();
+            SaveToSessionState();
         }
 
         /// <summary>
@@ -69,6 +119,7 @@ namespace io.github.hatayama.uLoopMCP
         public void RemoveTool(string toolName)
         {
             _connectedTools.RemoveAll(tool => tool.Name == toolName);
+            SaveToSessionState();
         }
 
         /// <summary>
@@ -98,7 +149,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // Remove existing tool if present, then add
-            RemoveTool(client.ClientName);
+            _connectedTools.RemoveAll(tool => tool.Name == client.ClientName);
             
             ConnectedLLMToolData toolData = new(
                 client.ClientName, 
@@ -106,6 +157,16 @@ namespace io.github.hatayama.uLoopMCP
                 client.ConnectedAt
             );
             _connectedTools.Add(toolData);
+            SaveToSessionState();
         }
+    }
+
+    /// <summary>
+    /// Helper class for JsonUtility array serialization
+    /// </summary>
+    [Serializable]
+    public class ConnectedLLMToolDataArray
+    {
+        public ConnectedLLMToolData[] tools;
     }
 }

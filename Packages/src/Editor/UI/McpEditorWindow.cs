@@ -26,11 +26,17 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class McpEditorWindow : EditorWindow
     {
+        // Singleton instance for external access
+        private static McpEditorWindow _instance;
+        
         // Configuration services factory
         private McpConfigServiceFactory _configServiceFactory;
 
         // View layer
         private McpEditorWindowView _view;
+        
+        // Connected LLM Tools management (persisted across domain reload)
+        private List<ConnectedLLMToolData> _connectedTools = new();
 
         // Model layer (MVP pattern)
         private McpEditorModel _model;
@@ -45,6 +51,11 @@ namespace io.github.hatayama.uLoopMCP
         private IEnumerable<ConnectedClient> _cachedStoredTools;
         private float _lastStoredToolsUpdateTime;
 
+        /// <summary>
+        /// Get current instance for external access
+        /// </summary>
+        public static McpEditorWindow Instance => _instance;
+
         [MenuItem("Window/uLoopMCP")]
         public static void ShowWindow()
         {
@@ -54,6 +65,33 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnEnable()
         {
+            _instance = this;
+            
+            // Migrate data from ConnectedLLMToolsStorage if needed
+            if (_connectedTools.Count == 0)
+            {
+                IEnumerable<ConnectedClient> storedTools = ConnectedLLMToolsStorage.instance.GetStoredToolsAsConnectedClients();
+                foreach (ConnectedClient client in storedTools)
+                {
+                    AddConnectedTool(client);
+                }
+                Debug.LogWarning($"[hatayama] Migrated {_connectedTools.Count} tools from ConnectedLLMToolsStorage");
+            }
+            
+            InitializeAll();
+        }
+
+        private void OnDestroy()
+        {
+            if (_instance == this)
+            {
+                _instance = null;
+            }
+        }
+
+        
+        private void InitializeAll()
+        {
             InitializeModel();
             InitializeView();
             InitializeConfigurationServices();
@@ -61,26 +99,6 @@ namespace io.github.hatayama.uLoopMCP
             InitializeServerOperations();
             LoadSavedSettings();
             RestoreSessionState();
-            
-            // Start grace period immediately if we have stored tools
-            ConnectedLLMToolsStorage storageInstance = ConnectedLLMToolsStorage.instance;
-            int storedToolCount = storageInstance.ConnectedTools.Count;
-
-            Debug.LogWarning($"[hatayama] storedToolCount: {storedToolCount}");
-            if (storedToolCount > 0)
-            {
-                DomainReloadReconnectionManager.Instance.StartGracePeriod();
-            }
-            else
-            {
-                ConnectedLLMToolsStorage delayedStorageInstance = ConnectedLLMToolsStorage.instance;
-                int delayedStoredToolCount = delayedStorageInstance.ConnectedTools.Count;
-                
-                if (delayedStoredToolCount > 0)
-                {
-                    DomainReloadReconnectionManager.Instance.StartGracePeriod();
-                }
-            }
             
             HandlePostCompileMode();
         }
@@ -99,6 +117,60 @@ namespace io.github.hatayama.uLoopMCP
         private void InitializeView()
         {
             _view = new McpEditorWindowView();
+        }
+
+        /// <summary>
+        /// Add a connected LLM tool
+        /// </summary>
+        public void AddConnectedTool(ConnectedClient client)
+        {
+            if (client.ClientName == McpConstants.UNKNOWN_CLIENT_NAME)
+            {
+                return;
+            }
+
+            // Remove existing tool if present, then add
+            _connectedTools.RemoveAll(tool => tool.Name == client.ClientName);
+            
+            ConnectedLLMToolData toolData = new(
+                client.ClientName, 
+                client.Endpoint, 
+                client.ConnectedAt
+            );
+            _connectedTools.Add(toolData);
+        }
+
+        /// <summary>
+        /// Remove a connected LLM tool
+        /// </summary>
+        public void RemoveConnectedTool(string toolName)
+        {
+            _connectedTools.RemoveAll(tool => tool.Name == toolName);
+        }
+
+        /// <summary>
+        /// Clear all connected LLM tools
+        /// </summary>
+        public void ClearConnectedTools()
+        {
+            _connectedTools.Clear();
+        }
+
+        /// <summary>
+        /// Get connected tools as ConnectedClient objects for UI display, sorted by name
+        /// </summary>
+        public IEnumerable<ConnectedClient> GetConnectedToolsAsClients()
+        {
+            Debug.LogWarning($"[hatayama] GetConnectedToolsAsClients called, _connectedTools.Count: {_connectedTools.Count}");
+            return _connectedTools.OrderBy(tool => tool.Name).Select(tool => ConvertToConnectedClient(tool));
+        }
+
+        /// <summary>
+        /// Convert stored tool data to ConnectedClient for UI display
+        /// </summary>
+        private ConnectedClient ConvertToConnectedClient(ConnectedLLMToolData toolData)
+        {
+            return new ConnectedClient(toolData.Endpoint, null, toolData.Name);
         }
 
         /// <summary>
@@ -331,7 +403,7 @@ namespace io.github.hatayama.uLoopMCP
             
             if (_cachedStoredTools == null || (currentTime - _lastStoredToolsUpdateTime) > cacheDuration)
             {
-                _cachedStoredTools = ConnectedLLMToolsStorage.instance.GetStoredToolsAsConnectedClients();
+                _cachedStoredTools = GetConnectedToolsAsClients();
                 _lastStoredToolsUpdateTime = currentTime;
             }
             
@@ -363,27 +435,19 @@ namespace io.github.hatayama.uLoopMCP
             bool hasNamedClients = connectedClients != null &&
                                    connectedClients.Any(client => client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME);
 
-            // Check if we're in domain reload grace period
-            bool isInGracePeriod = DomainReloadReconnectionManager.Instance.IsInGracePeriod;
-            Debug.LogWarning($"[hatayama] isInGracePeriod: {isInGracePeriod}");
-            
             // Check if we have stored tools available (with caching)
             IEnumerable<ConnectedClient> storedTools = GetCachedStoredTools();
             bool hasStoredTools = storedTools.Any();
 
-
-            // PRIORITY 1: If we have stored tools, always show them (especially during grace period)
-            if (isInGracePeriod)
+            // If we have stored tools but no real connected clients, show stored tools
+            if (hasStoredTools && !hasNamedClients)
             {
                 connectedClients = storedTools.ToList();
                 hasNamedClients = true;
             }
-            
-            Debug.LogWarning($"[hatayama] connectedClients: {storedTools.Count()}");
 
-            // PRIORITY 2: Show reconnecting UI only if no stored tools and no real clients and not in grace period
+            // Show reconnecting UI only if no stored tools and no real clients
             bool showReconnectingUI = !hasStoredTools && 
-                                      !isInGracePeriod && 
                                       (showReconnectingUIFlag || showPostCompileUIFlag) && 
                                       !hasNamedClients;
 
