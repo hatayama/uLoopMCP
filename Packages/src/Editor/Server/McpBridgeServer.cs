@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -9,9 +8,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
-using UnityEditor;
-using Newtonsoft.Json;
 
 
 namespace io.github.hatayama.uLoopMCP
@@ -50,23 +46,6 @@ namespace io.github.hatayama.uLoopMCP
         public ConnectedClient WithClientName(string clientName)
         {
             return new ConnectedClient(Endpoint, Stream, clientName, ConnectedAt);
-        }
-    }
-
-    /// <summary>
-    /// Immutable JSON-RPC notification structure
-    /// </summary>
-    internal class JsonRpcNotification
-    {
-        public readonly string JsonRpc;
-        public readonly string Method;
-        public readonly object Params;
-        
-        public JsonRpcNotification(string jsonRpc, string method, object parameters)
-        {
-            JsonRpc = jsonRpc;
-            Method = method;
-            Params = parameters;
         }
     }
 
@@ -158,13 +137,7 @@ namespace io.github.hatayama.uLoopMCP
                     McpServerController.ClearReconnectingFlag();
                 }
             }
-            else
-            {
-            }
         }
-
-
-
 
         /// <summary>
         /// Checks if the specified port is in use.
@@ -513,30 +486,6 @@ namespace io.github.hatayama.uLoopMCP
                 client.Close();
                 OnClientDisconnected?.Invoke(clientEndpoint);
             }
-        }
-
-        /// <summary>
-        /// Sends a JSON-RPC notification to all connected clients using Content-Length framing.
-        /// </summary>
-        /// <param name="method">The notification method name</param>
-        /// <param name="parameters">The notification parameters (optional)</param>
-        public async Task SendNotificationToClients(string method, object parameters = null)
-        {
-            if (_connectedClients.IsEmpty)
-            {
-                return;
-            }
-
-            // Create JSON-RPC notification
-            JsonRpcNotification notification = new JsonRpcNotification("2.0", method, parameters);
-
-            string notificationJson = JsonConvert.SerializeObject(notification);
-            
-            // Frame the notification with Content-Length header
-            string framedNotification = CreateContentLengthFrame(notificationJson);
-            byte[] notificationData = Encoding.UTF8.GetBytes(framedNotification);
-
-            await SendNotificationData(notificationData);
         }
 
         /// <summary>
