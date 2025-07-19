@@ -16,6 +16,8 @@ namespace io.github.hatayama.uLoopMCP
         private bool _isCompiling = false;
         private List<CompilerMessage> _compileMessages = new();
         private TaskCompletionSource<CompileResult> _currentCompileTask;
+        private bool _isForceCompile = false;
+        private readonly ConsoleLogRetriever _consoleLogRetriever = new();
 
         /// <summary>
         /// Event that occurs when compilation is complete.
@@ -63,6 +65,7 @@ namespace io.github.hatayama.uLoopMCP
             _isCompiling = true;
             _compileMessages.Clear();
             _currentCompileTask = new TaskCompletionSource<CompileResult>();
+            _isForceCompile = forceRecompile;
 
             // Execute asset refresh.
             AssetDatabase.Refresh();
@@ -138,6 +141,22 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>The compilation result.</returns>
         private CompileResult CreateCompileResult()
         {
+            // For force compile, get messages from console instead of assembly events
+            if (_isForceCompile)
+            {
+                List<LogEntryDto> consoleLogs = _consoleLogRetriever.GetAllLogs();
+                _compileMessages.Clear();
+                
+                foreach (LogEntryDto log in consoleLogs)
+                {
+                    CompilerMessage? compilerMessage = ConvertLogEntryToCompilerMessage(log);
+                    if (compilerMessage.HasValue)
+                    {
+                        _compileMessages.Add(compilerMessage.Value);
+                    }
+                }
+            }
+
             int errorCount = _compileMessages.Count(m => m.type == CompilerMessageType.Error);
             int warningCount = _compileMessages.Count(m => m.type == CompilerMessageType.Warning);
 
@@ -153,6 +172,55 @@ namespace io.github.hatayama.uLoopMCP
                 errors: errors,
                 warnings: warnings
             );
+        }
+
+        /// <summary>
+        /// Converts LogEntryDto to CompilerMessage.
+        /// </summary>
+        /// <param name="logEntry">The log entry to convert.</param>
+        /// <returns>The converted compiler message, or null if not a compiler message.</returns>
+        private CompilerMessage? ConvertLogEntryToCompilerMessage(LogEntryDto logEntry)
+        {
+            // Only include messages that appear to be compilation-related
+            if (!IsCompilationRelatedMessage(logEntry.Message))
+            {
+                return null;
+            }
+
+            CompilerMessageType messageType = logEntry.LogType switch
+            {
+                McpLogType.Error => CompilerMessageType.Error,
+                McpLogType.Warning => CompilerMessageType.Warning,
+                _ => CompilerMessageType.Info
+            };
+
+            return new CompilerMessage
+            {
+                message = logEntry.Message,
+                type = messageType,
+                file = "", // Console logs don't always have file info
+                line = 0,
+                column = 0
+            };
+        }
+
+        /// <summary>
+        /// Determines if a log message is compilation-related.
+        /// </summary>
+        /// <param name="message">The message to check.</param>
+        /// <returns>True if the message appears to be compilation-related.</returns>
+        private bool IsCompilationRelatedMessage(string message)
+        {
+            if (string.IsNullOrEmpty(message)) return false;
+
+            // Check for common compilation-related keywords
+            string[] compilationKeywords = {
+                "error CS", "warning CS", "Assets/", "compile", "assembly",
+                "MonoScript", ".cs(", "UnityEngine", "UnityEditor"
+            };
+
+            string lowerMessage = message.ToLower();
+            return compilationKeywords.Any(keyword => lowerMessage.Contains(keyword.ToLower()));
         }
 
         /// <summary>
