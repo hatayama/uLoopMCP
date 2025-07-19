@@ -83,35 +83,14 @@ namespace io.github.hatayama.uLoopMCP
     public record DebugState
     {
         public bool ShowDeveloperTools { get; }
-        public bool EnableCommunicationLogs { get; }
-        public bool ShowCommunicationLogs { get; }
-        public bool EnableMcpLogs { get; }
         public bool EnableDevelopmentMode { get; }
-        public Vector2 CommunicationLogScrollPosition { get; }
-        public float CommunicationLogHeight { get; }
-        public Dictionary<string, Vector2> RequestScrollPositions { get; }
-        public Dictionary<string, Vector2> ResponseScrollPositions { get; }
 
         public DebugState(
             bool showDeveloperTools = false,
-            bool enableCommunicationLogs = false,
-            bool showCommunicationLogs = false,
-            bool enableMcpLogs = false,
-            bool enableDevelopmentMode = false,
-            Vector2 communicationLogScrollPosition = default,
-            float communicationLogHeight = McpUIConstants.DEFAULT_COMMUNICATION_LOG_HEIGHT,
-            Dictionary<string, Vector2> requestScrollPositions = null,
-            Dictionary<string, Vector2> responseScrollPositions = null)
+            bool enableDevelopmentMode = false)
         {
             ShowDeveloperTools = showDeveloperTools;
-            EnableCommunicationLogs = enableCommunicationLogs;
-            ShowCommunicationLogs = showCommunicationLogs;
-            EnableMcpLogs = enableMcpLogs;
             EnableDevelopmentMode = enableDevelopmentMode;
-            CommunicationLogScrollPosition = communicationLogScrollPosition;
-            CommunicationLogHeight = communicationLogHeight;
-            RequestScrollPositions = requestScrollPositions ?? new Dictionary<string, Vector2>();
-            ResponseScrollPositions = responseScrollPositions ?? new Dictionary<string, Vector2>();
         }
     }
 #endif

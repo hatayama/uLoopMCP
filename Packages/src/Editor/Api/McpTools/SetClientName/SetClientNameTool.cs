@@ -39,7 +39,6 @@ namespace io.github.hatayama.uLoopMCP
             var clientContext = JsonRpcProcessor.CurrentClientContext;
             if (clientContext == null)
             {
-                McpLogger.LogWarning($"[SetClientName] No client context available for '{clientName}'");
                 return;
             }
             
@@ -53,8 +52,6 @@ namespace io.github.hatayama.uLoopMCP
                 server.UpdateClientName(targetClient.Endpoint, clientName);
                 return;
             }
-            
-            McpLogger.LogError($"[SetClientName] Could not find client for Endpoint: {clientContext.Endpoint}");
         }
     }
 }

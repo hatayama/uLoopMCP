@@ -80,7 +80,6 @@ namespace io.github.hatayama.uLoopMCP
             catch (Exception ex)
             {
                 stopwatch.Stop();
-                McpLogger.LogError($"Unity Search execution failed: {ex.Message}");
                 return new UnitySearchResponse($"Search failed: {ex.Message}", schema.SearchQuery);
             }
         }
@@ -110,7 +109,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                McpLogger.LogError($"Failed to create search context: {ex.Message}");
                 return null;
             }
         }
@@ -254,7 +252,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                McpLogger.LogError($"Failed to export search results: {ex.Message}");
                 // Fallback to inline response
                 return new UnitySearchResponse(results, results.Length, schema.SearchQuery, 
                                              providersUsed, searchDurationMs);

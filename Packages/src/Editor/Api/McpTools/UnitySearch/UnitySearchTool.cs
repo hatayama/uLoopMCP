@@ -44,12 +44,9 @@ namespace io.github.hatayama.uLoopMCP
                 string resultInfo = response.ResultsSavedToFile 
                     ? $"Results saved to file: {response.ResultsFilePath} ({response.TotalCount} items)"
                     : $"Returned {response.DisplayedCount} of {response.TotalCount} results inline";
-                    
-                McpLogger.LogDebug($"Unity Search completed: '{parameters.SearchQuery}' - {resultInfo} in {response.SearchDurationMs}ms");
             }
             else
             {
-                McpLogger.LogError($"Unity Search failed: '{parameters.SearchQuery}' - {response.ErrorMessage}");
             }
 
             return response;

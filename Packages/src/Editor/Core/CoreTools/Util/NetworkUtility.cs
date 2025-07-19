@@ -55,7 +55,6 @@ namespace io.github.hatayama.uLoopMCP
             catch (SocketException ex)
             {
                 // Other socket errors should be logged with specific information
-                McpLogger.LogError($"[IsPortInUse] Socket error checking port {port}: {ex.SocketErrorCode} - {ex.Message}");
                 return true; // Treat as "in use" to be safe
             }
             finally
@@ -112,7 +111,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (port < 1 || port > 65535)
             {
-                McpLogger.LogError($"[IsValidPort] Invalid port number {port} for {parameterName}. Must be between 1 and 65535.");
                 return false;
             }
             return true;

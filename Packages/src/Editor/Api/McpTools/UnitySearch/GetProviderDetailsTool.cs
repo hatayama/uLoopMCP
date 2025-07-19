@@ -76,8 +76,6 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // Log tool execution for debugging
-            McpLogger.LogDebug($"GetProviderDetails completed: Found {providers.Length} providers" +
-                             $" (filter: {appliedFilter}, sorted: {parameters.SortByPriority})");
 
             return Task.FromResult(new GetProviderDetailsResponse(providers, appliedFilter, parameters.SortByPriority));
         }

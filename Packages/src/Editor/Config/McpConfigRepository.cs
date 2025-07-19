@@ -84,7 +84,6 @@ namespace io.github.hatayama.uLoopMCP
                 // Security: Validate JSON content before deserialization
                 if (string.IsNullOrWhiteSpace(jsonContent) || jsonContent.Length > McpConstants.MAX_JSON_SIZE_BYTES)
                 {
-                    McpLogger.LogError($"Invalid JSON content in config file: {configPath}");
                     return new McpConfig(new Dictionary<string, McpServerConfigData>());
                 }
                 
@@ -137,7 +136,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (JsonException ex)
             {
-                McpLogger.LogError($"Failed to parse JSON config file: {configPath}. Error: {ex.Message}");
                 throw;
             }
         }

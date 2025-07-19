@@ -36,7 +36,6 @@ namespace io.github.hatayama.uLoopMCP
             SharedRegistry.RegisterTool(tool);
             
             // Notify tool changes for manual registration
-            McpLogger.LogDebug("[TRACE] RegisterCustomTool: About to call NotifyToolChanges (CUSTOM_TOOL_REGISTER)");
             NotifyToolChanges();
         }
 
@@ -49,7 +48,6 @@ namespace io.github.hatayama.uLoopMCP
             SharedRegistry.UnregisterTool(toolName);
             
             // Notify tool changes for manual unregistration
-            McpLogger.LogDebug("[TRACE] UnregisterCustomTool: About to call NotifyToolChanges (CUSTOM_TOOL_UNREGISTER)");
             NotifyToolChanges();
         }
 
@@ -103,7 +101,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void NotifyToolChanges()
         {
-            McpLogger.LogDebug($"[TRACE] CustomToolManager.NotifyToolChanges called at {System.DateTime.Now:HH:mm:ss.fff}");
             UnityToolRegistry.TriggerToolsChangedNotification();
         }
     }

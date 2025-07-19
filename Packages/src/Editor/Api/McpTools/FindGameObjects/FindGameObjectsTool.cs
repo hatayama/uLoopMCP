@@ -56,11 +56,9 @@ namespace io.github.hatayama.uLoopMCP
             // Log search results for debugging
             if (foundObjects.Length > parameters.MaxResults)
             {
-                McpLogger.LogWarning($"[FindGameObjectsTool] Found {foundObjects.Length} objects but limited to {parameters.MaxResults}");
             }
             else
             {
-                McpLogger.LogDebug($"[FindGameObjectsTool] Found {foundObjects.Length} objects");
             }
             
             // Check for cancellation before conversion

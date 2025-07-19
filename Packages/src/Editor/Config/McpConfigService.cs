@@ -48,7 +48,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (System.Exception ex)
             {
-                McpLogger.LogError($"Error checking configuration: {ex.Message}");
                 throw;
             }
         }
@@ -85,7 +84,6 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     // Remove existing configuration with different key
                     updatedServers.Remove(existingKey);
-                    McpLogger.LogInfo($"Removed existing uLoopMCP configuration key: {existingKey}, creating new key: {serverKey}");
                 }
             }
 
@@ -102,7 +100,6 @@ namespace io.github.hatayama.uLoopMCP
                 
                 if (needsUpdate)
                 {
-                    McpLogger.LogInfo($"Configuration changed for {serverKey}, updating...");
                 }
             }
 
@@ -115,7 +112,6 @@ namespace io.github.hatayama.uLoopMCP
                 _repository.Save(configPath, updatedConfig);
 
                 string editorName = GetEditorDisplayName(_editorType);
-                McpLogger.LogInfo($"{editorName} configuration updated: {configPath}");
             }
         }
 
@@ -171,7 +167,6 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     // Remove existing configuration with different key
                     updatedServers.Remove(existingKey);
-                    McpLogger.LogInfo($"Removed existing uLoopMCP configuration key: {existingKey}, creating new key: {serverKey}");
                 }
             }
 
@@ -217,13 +212,11 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     // Remove existing configuration with different key
                     updatedServers.Remove(existingKey);
-                    McpLogger.LogInfo($"Removed existing uLoopMCP configuration key: {existingKey}, creating new key: {serverKey}");
                 }
             }
             
             if (!updatedServers.ContainsKey(serverKey))
             {
-                McpLogger.LogError($"Server configuration not found: {serverKey}");
                 return;
             }
 
@@ -265,11 +258,8 @@ namespace io.github.hatayama.uLoopMCP
             _repository.Save(configPath, updatedMcpConfig);
             
             string editorName = GetEditorDisplayName(_editorType);
-            McpLogger.LogInfo($"{editorName} development settings updated - Development mode: {developmentMode}, MCP logs: {enableMcpLogs}");
-            McpLogger.LogInfo($"Server key: {serverKey}, Configuration file: {configPath}");
             
             // Log environment variables for debugging
-            McpLogger.LogInfo($"Environment variables: {string.Join(", ", updatedEnv.Select(kvp => $"{kvp.Key}={kvp.Value}"))}");
         }
 
         /// <summary>
@@ -380,8 +370,6 @@ namespace io.github.hatayama.uLoopMCP
                 throw new System.InvalidOperationException(
                     $"Cannot configure settings for invalid editor type: {_editorType}");
             }
-
-            McpLogger.LogDebug($"Configuration parameters validated for {_editorType}: port={port}");
         }
     }
 } 

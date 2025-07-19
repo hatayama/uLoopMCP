@@ -153,7 +153,6 @@ namespace io.github.hatayama.uLoopMCP
                         }
                         else
                         {
-                            McpLogger.LogError($"[FrameParser] Content-Length value {parsedValue} exceeds maximum allowed size {BufferConfig.MAX_MESSAGE_SIZE}");
                             // Return false but don't set headerLength to -1 in calling method
                             contentLength = -1;
                             return false;
@@ -161,7 +160,6 @@ namespace io.github.hatayama.uLoopMCP
                     }
                     else
                     {
-                        McpLogger.LogError($"[FrameParser] Invalid Content-Length value: '{valueString}'");
                         // Return false but don't set headerLength to -1 in calling method
                         contentLength = -1;
                         return false;
@@ -169,7 +167,6 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
-            McpLogger.LogError("[FrameParser] Content-Length header not found in header section");
             return false;
         }
         

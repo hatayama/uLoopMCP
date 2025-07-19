@@ -180,7 +180,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                McpLogger.LogWarning($"No pending request found for response ID: {id}");
             }
         }
 
@@ -220,7 +219,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                McpLogger.LogWarning($"Failed to deserialize logs: {ex.Message}");
                 _logs = new List<McpCommunicationLogEntry>();
             }
 
@@ -232,7 +230,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                McpLogger.LogWarning($"Failed to deserialize pending requests: {ex.Message}");
                 _pendingRequests = new Dictionary<string, PendingRequest>();
             }
         }
@@ -267,7 +264,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                McpLogger.LogError($"Failed to save to SessionState: {ex.Message}");
             }
         }
 
@@ -297,7 +293,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                McpLogger.LogError($"Failed to clear communication log SessionState: {ex.Message}");
             }
         }
 

@@ -77,7 +77,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                McpLogger.LogError($"Error executing tool {ToolName}: {ex.Message}");
                 throw;
             }
         }

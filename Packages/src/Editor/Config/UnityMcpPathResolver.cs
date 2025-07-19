@@ -295,7 +295,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             // 3. If neither is found, return the local path (with an error log).
-            McpLogger.LogError($"Package base path not found. Checked paths:\n  Local: {localPath}\n  Package Cache: {packageCacheDir}/{McpConstants.PACKAGE_NAME_PATTERN}");
             
             return localPath;
         }

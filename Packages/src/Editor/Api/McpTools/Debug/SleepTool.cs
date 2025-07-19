@@ -21,8 +21,6 @@ namespace io.github.hatayama.uLoopMCP
         
         protected override async Task<SleepResponse> ExecuteAsync(SleepSchema parameters, CancellationToken cancellationToken)
         {
-            McpLogger.LogInfo($"[SleepTool] Starting sleep for {parameters.SleepSeconds} seconds (timeout: {parameters.TimeoutSeconds}s)");
-            
             int actualSleepSeconds = 0;
             
             try
@@ -37,10 +35,7 @@ namespace io.github.hatayama.uLoopMCP
                     await Task.Delay(1000, cancellationToken);
                     
                     actualSleepSeconds = i + 1;
-                    McpLogger.LogInfo($"[SleepTool] Slept {actualSleepSeconds}/{parameters.SleepSeconds} seconds");
                 }
-                
-                McpLogger.LogInfo($"[SleepTool] Successfully completed sleep for {actualSleepSeconds} seconds");
                 
                 return new SleepResponse 
                 { 
@@ -52,15 +47,12 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (OperationCanceledException)
             {
-                McpLogger.LogInfo($"[SleepTool] Operation cancelled after {actualSleepSeconds} seconds (timeout: {parameters.TimeoutSeconds}s)");
-                
                 // Even when cancelled, return a response with the information about what happened
                 // The TimeoutException will be thrown by AbstractUnityTool, but we log the details here
                 throw;
             }
             catch (Exception ex)
             {
-                McpLogger.LogError($"[SleepTool] Unexpected error: {ex.Message}");
                 throw;
             }
         }

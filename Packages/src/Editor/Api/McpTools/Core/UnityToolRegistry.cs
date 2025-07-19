@@ -88,7 +88,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                McpLogger.LogError($"Failed to register _tools with attributes: {ex.Message}");
                 throw;
             }
         }

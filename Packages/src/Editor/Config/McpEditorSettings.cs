@@ -155,7 +155,6 @@ namespace io.github.hatayama.uLoopMCP
             SaveSettings(newSettings);
 
             // Synchronize McpLogger settings as well.
-            McpLogger.EnableDebugLog = enableMcpLogs;
         }
 
         /// <summary>
@@ -312,7 +311,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                McpLogger.LogError($"Failed to load MCP Editor settings: {ex.Message}");
                 // Don't suppress this exception - corrupted settings should be reported
                 throw new InvalidOperationException(
                     $"Failed to load MCP Editor settings from: {SettingsFilePath}. Settings file may be corrupted.", ex);

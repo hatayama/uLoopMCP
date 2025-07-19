@@ -105,28 +105,12 @@ namespace io.github.hatayama.uLoopMCP
     public record DeveloperToolsData
     {
         public readonly bool ShowFoldout;
-        public readonly bool EnableMcpLogs;
-        public readonly bool EnableCommunicationLogs;
         public readonly bool EnableDevelopmentMode;
-        public readonly bool ShowCommunicationLogs;
-        public readonly IReadOnlyList<McpCommunicationLogEntry> Logs;
-        public readonly Vector2 CommunicationLogScrollPosition;
-        public readonly float CommunicationLogHeight;
-        public readonly Dictionary<string, Vector2> RequestScrollPositions;
-        public readonly Dictionary<string, Vector2> ResponseScrollPositions;
 
-        public DeveloperToolsData(bool showFoldout, bool enableMcpLogs, bool enableCommunicationLogs, bool enableDevelopmentMode, bool showCommunicationLogs, IReadOnlyList<McpCommunicationLogEntry> logs, Vector2 communicationLogScrollPosition, float communicationLogHeight, Dictionary<string, Vector2> requestScrollPositions, Dictionary<string, Vector2> responseScrollPositions)
+        public DeveloperToolsData(bool showFoldout, bool enableDevelopmentMode)
         {
             ShowFoldout = showFoldout;
-            EnableMcpLogs = enableMcpLogs;
-            EnableCommunicationLogs = enableCommunicationLogs;
             EnableDevelopmentMode = enableDevelopmentMode;
-            ShowCommunicationLogs = showCommunicationLogs;
-            Logs = logs;
-            CommunicationLogScrollPosition = communicationLogScrollPosition;
-            CommunicationLogHeight = communicationLogHeight;
-            RequestScrollPositions = requestScrollPositions;
-            ResponseScrollPositions = responseScrollPositions;
         }
     }
 #endif
