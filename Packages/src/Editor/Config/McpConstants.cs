@@ -15,8 +15,6 @@ namespace io.github.hatayama.uLoopMCP
     public static class McpConstants
     {
         public const string PROJECT_NAME = "uLoopMCP";
-
-        public const string MCP_DEBUG = "ULOOPMCP_DEBUG";
         
         // JSON configuration keys
         public const string JSON_KEY_MCP_SERVERS = "mcpServers";

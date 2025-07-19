@@ -28,32 +28,28 @@ namespace io.github.hatayama.uLoopMCP
     public class CompileResponse : BaseToolResponse
     {
         /// <summary>
-        /// Whether compilation was successful
+        /// Whether compilation was successful. Null indicates indeterminate status.
         /// </summary>
-        public bool Success { get; set; }
+        public bool? Success { get; set; }
 
         /// <summary>
-        /// Number of compilation errors
+        /// Number of compilation errors. Null when status is indeterminate.
         /// </summary>
-        public int ErrorCount { get; set; }
+        public int? ErrorCount { get; set; }
 
         /// <summary>
-        /// Number of compilation warnings
+        /// Number of compilation warnings. Null when status is indeterminate.
         /// </summary>
-        public int WarningCount { get; set; }
+        public int? WarningCount { get; set; }
+
 
         /// <summary>
-        /// Compilation completion timestamp
-        /// </summary>
-        public string CompletedAt { get; set; }
-
-        /// <summary>
-        /// Compilation errors
+        /// Compilation errors. Null when status is indeterminate.
         /// </summary>
         public CompileIssue[] Errors { get; set; }
 
         /// <summary>
-        /// Compilation warnings
+        /// Compilation warnings. Null when status is indeterminate.
         /// </summary>
         public CompileIssue[] Warnings { get; set; }
 
@@ -63,18 +59,23 @@ namespace io.github.hatayama.uLoopMCP
         public string Message { get; set; }
 
         /// <summary>
+        /// Whether the compilation result is indeterminate (cannot be determined).
+        /// </summary>
+        public bool IsIndeterminate { get; set; }
+
+        /// <summary>
         /// Create a new CompileResponse
         /// </summary>
-        public CompileResponse(bool success, int errorCount, int warningCount, string completedAt, 
-                             CompileIssue[] errors, CompileIssue[] warnings, string message = null)
+        public CompileResponse(bool? success, int? errorCount, int? warningCount, 
+                             CompileIssue[] errors, CompileIssue[] warnings, string message = null, bool isIndeterminate = false)
         {
             Success = success;
             ErrorCount = errorCount;
             WarningCount = warningCount;
-            CompletedAt = completedAt;
-            Errors = errors ?? Array.Empty<CompileIssue>();
-            Warnings = warnings ?? Array.Empty<CompileIssue>();
+            Errors = errors;
+            Warnings = warnings;
             Message = message;
+            IsIndeterminate = isIndeterminate;
         }
 
         /// <summary>
@@ -82,8 +83,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public CompileResponse()
         {
-            Errors = Array.Empty<CompileIssue>();
-            Warnings = Array.Empty<CompileIssue>();
         }
     }
 } 

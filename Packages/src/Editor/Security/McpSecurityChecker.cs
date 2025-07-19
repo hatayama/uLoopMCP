@@ -35,7 +35,6 @@ namespace io.github.hatayama.uLoopMCP
             if (!toolInfo.HasValue)
             {
                 // Unknown tool - default to block for security
-                McpLogger.LogWarning($"Unknown tool '{toolName}' - blocking by default for security. Consider adding security rules.");
                 return false;
             }
 
@@ -124,7 +123,6 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             string reason = GetBlockReason(toolName);
-            McpLogger.LogWarning($"Tool '{toolName}' blocked by security settings: {reason}");
 
             if (throwOnBlock)
             {

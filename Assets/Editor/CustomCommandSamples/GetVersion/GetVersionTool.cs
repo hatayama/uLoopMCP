@@ -17,7 +17,6 @@ namespace Samples
 
         protected override Task<GetVersionResponse> ExecuteAsync(GetVersionSchema parameters, CancellationToken cancellationToken)
         {
-            McpLogger.LogDebug("GetVersion request received");
             
             GetVersionResponse response = new GetVersionResponse
             {
@@ -32,7 +31,6 @@ namespace Samples
                 Version = Application.version
             };
             
-            McpLogger.LogDebug($"GetVersion completed: Unity {Application.unityVersion}");
             
             return Task.FromResult(response);
         }

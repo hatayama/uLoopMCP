@@ -16,6 +16,7 @@ namespace io.github.hatayama.uLoopMCP
         private bool _isCompiling = false;
         private List<CompilerMessage> _compileMessages = new();
         private TaskCompletionSource<CompileResult> _currentCompileTask;
+        private bool _isForceCompile = false;
 
         /// <summary>
         /// Event that occurs when compilation is complete.
@@ -63,6 +64,7 @@ namespace io.github.hatayama.uLoopMCP
             _isCompiling = true;
             _compileMessages.Clear();
             _currentCompileTask = new TaskCompletionSource<CompileResult>();
+            _isForceCompile = forceRecompile;
 
             // Execute asset refresh.
             AssetDatabase.Refresh();
@@ -113,6 +115,9 @@ namespace io.github.hatayama.uLoopMCP
             TaskCompletionSource<CompileResult> task = _currentCompileTask;
             _currentCompileTask = null;
             task?.SetResult(result);
+
+            // Reset force compile flag for future compilations
+            _isForceCompile = false;
         }
 
         /// <summary>
@@ -138,6 +143,22 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>The compilation result.</returns>
         private CompileResult CreateCompileResult()
         {
+            // For force compile, don't include messages in response
+            // User should use get-logs tool after domain reload completes
+            if (_isForceCompile)
+            {
+                return new CompileResult(
+                    success: null, // Success status is indeterminate during force compile
+                    errorCount: 0,
+                    warningCount: 0,
+                    completedAt: DateTime.Now,
+                    messages: new CompilerMessage[0],
+                    errors: new CompilerMessage[0],
+                    warnings: new CompilerMessage[0],
+                    isIndeterminate: true
+                );
+            }
+
             int errorCount = _compileMessages.Count(m => m.type == CompilerMessageType.Error);
             int warningCount = _compileMessages.Count(m => m.type == CompilerMessageType.Warning);
 
@@ -195,9 +216,9 @@ namespace io.github.hatayama.uLoopMCP
     public class CompileResult
     {
         /// <summary>
-        /// Whether the compilation was successful.
+        /// Whether the compilation was successful. Null indicates indeterminate status.
         /// </summary>
-        public bool Success { get; }
+        public bool? Success { get; }
         
         /// <summary>
         /// The number of errors.
@@ -230,6 +251,11 @@ namespace io.github.hatayama.uLoopMCP
         public CompilerMessage[] Warnings { get; }
 
         /// <summary>
+        /// Whether the compilation result is indeterminate (cannot be determined).
+        /// </summary>
+        public bool IsIndeterminate { get; }
+
+        /// <summary>
         /// Alias for error messages (for backward compatibility).
         /// </summary>
         public CompilerMessage[] error => Errors;
@@ -242,14 +268,15 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Initializes the compilation result.
         /// </summary>
-        /// <param name="success">The compilation success flag.</param>
+        /// <param name="success">The compilation success flag. Null indicates indeterminate status.</param>
         /// <param name="errorCount">The number of errors.</param>
         /// <param name="warningCount">The number of warnings.</param>
         /// <param name="completedAt">The completion time.</param>
         /// <param name="messages">All messages.</param>
         /// <param name="errors">The error messages.</param>
         /// <param name="warnings">The warning messages.</param>
-        public CompileResult(bool success, int errorCount, int warningCount, DateTime completedAt, CompilerMessage[] messages, CompilerMessage[] errors, CompilerMessage[] warnings)
+        /// <param name="isIndeterminate">Whether the result is indeterminate.</param>
+        public CompileResult(bool? success, int errorCount, int warningCount, DateTime completedAt, CompilerMessage[] messages, CompilerMessage[] errors, CompilerMessage[] warnings, bool isIndeterminate = false)
         {
             Success = success;
             ErrorCount = errorCount;
@@ -258,6 +285,7 @@ namespace io.github.hatayama.uLoopMCP
             Messages = messages;
             Errors = errors;
             Warnings = warnings;
+            IsIndeterminate = isIndeterminate;
         }
     }
 }

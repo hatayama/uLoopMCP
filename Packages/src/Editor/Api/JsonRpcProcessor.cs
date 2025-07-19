@@ -29,7 +29,6 @@ namespace io.github.hatayama.uLoopMCP
     /// - McpBridgeServer: TCP server that receives JSON-RPC messages from TypeScript
     /// - MainThreadSwitcher: Ensures Unity API calls run on the main thread
     /// - JsonRpcRequest: Request model for JSON-RPC 2.0 protocol
-    /// - McpCommunicationLog: Logs all JSON-RPC communication for debugging
     /// - ClientExecutionContext: Thread-local context for tracking current client
     /// 
     /// Processing flow:
@@ -89,12 +88,10 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (JsonReaderException ex)
             {
-                McpLogger.LogWarning($"JSON parse error (possibly incomplete data): {ex.Message}");
                 return CreateErrorResponse(null, ex);
             }
             catch (Exception ex)
             {
-                McpLogger.LogError($"JSON-RPC processing error: {ex.Message}");
                 return CreateErrorResponse(null, ex);
             }
         }
@@ -129,22 +126,17 @@ namespace io.github.hatayama.uLoopMCP
             try
             {
                 await MainThreadSwitcher.SwitchToMainThread();
-                await McpCommunicationLogger.LogRequest(originalJson);
                 BaseToolResponse result = await ExecuteMethod(request.Method, request.Params);
                 string response = CreateSuccessResponse(request.Id, result);
-                McpLogger.LogDebug($"Method: [{request.Method}], executed in {result.ExecutionTimeMs}ms");
-                _ = McpCommunicationLogger.RecordLogResponse(response);
                 return response;
             }
             catch (JsonSerializationException ex)
             {
-                McpLogger.LogError($"JSON serialization error in method [{request.Method}]: {ex.Message}");
                 UnityEngine.Debug.LogError($"[JsonRpcProcessor] JSON serialization error: {ex.Message}\nStack trace: {ex.StackTrace}");
                 return CreateErrorResponse(request.Id, ex);
             }
             catch (Exception ex)
             {
-                McpLogger.LogError($"Error processing method [{request.Method}]: {ex.Message}");
                 UnityEngine.Debug.LogError($"[JsonRpcProcessor] Error: {ex.Message}\nStack trace: {ex.StackTrace}");
                 return CreateErrorResponse(request.Id, ex);
             }

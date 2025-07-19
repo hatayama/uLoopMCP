@@ -77,69 +77,60 @@ namespace io.github.hatayama.uLoopMCP
                 return new McpConfig(new Dictionary<string, McpServerConfigData>());
             }
 
-            try
-            {
-                string jsonContent = File.ReadAllText(configPath);
-                
-                // Security: Validate JSON content before deserialization
-                if (string.IsNullOrWhiteSpace(jsonContent) || jsonContent.Length > McpConstants.MAX_JSON_SIZE_BYTES)
-                {
-                    McpLogger.LogError($"Invalid JSON content in config file: {configPath}");
-                    return new McpConfig(new Dictionary<string, McpServerConfigData>());
-                }
-                
-                // First, load the existing JSON as a dictionary with safe settings.
-                Dictionary<string, object> rootObject = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonContent, SafeJsonSettings);
-                Dictionary<string, McpServerConfigData> servers = new();
+            string jsonContent = File.ReadAllText(configPath);
             
-            // Check if the mcpServers section exists.
-            if (rootObject != null && rootObject.ContainsKey(McpConstants.JSON_KEY_MCP_SERVERS))
+            // Security: Validate JSON content before deserialization
+            if (string.IsNullOrWhiteSpace(jsonContent) || jsonContent.Length > McpConstants.MAX_JSON_SIZE_BYTES)
             {
-                // Get mcpServers as a dictionary with safe settings.
-                string mcpServersJson = JsonConvert.SerializeObject(rootObject[McpConstants.JSON_KEY_MCP_SERVERS], SafeJsonSettings);
-                Dictionary<string, object> mcpServersObject = JsonConvert.DeserializeObject<Dictionary<string, object>>(mcpServersJson, SafeJsonSettings);
-                
-                if (mcpServersObject != null)
+                return new McpConfig(new Dictionary<string, McpServerConfigData>());
+            }
+            
+            // First, load the existing JSON as a dictionary with safe settings.
+            Dictionary<string, object> rootObject = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonContent, SafeJsonSettings);
+            Dictionary<string, McpServerConfigData> servers = new();
+        
+        // Check if the mcpServers section exists.
+        if (rootObject != null && rootObject.ContainsKey(McpConstants.JSON_KEY_MCP_SERVERS))
+        {
+            // Get mcpServers as a dictionary with safe settings.
+            string mcpServersJson = JsonConvert.SerializeObject(rootObject[McpConstants.JSON_KEY_MCP_SERVERS], SafeJsonSettings);
+            Dictionary<string, object> mcpServersObject = JsonConvert.DeserializeObject<Dictionary<string, object>>(mcpServersJson, SafeJsonSettings);
+            
+            if (mcpServersObject != null)
+            {
+                foreach (KeyValuePair<string, object> serverEntry in mcpServersObject)
                 {
-                    foreach (KeyValuePair<string, object> serverEntry in mcpServersObject)
+                    string serverName = serverEntry.Key;
+                    
+                    // Get each server's settings as a dictionary with safe settings.
+                    string serverConfigJson = JsonConvert.SerializeObject(serverEntry.Value, SafeJsonSettings);
+                    Dictionary<string, object> serverConfigObject = JsonConvert.DeserializeObject<Dictionary<string, object>>(serverConfigJson, SafeJsonSettings);
+                    
+                    if (serverConfigObject != null)
                     {
-                        string serverName = serverEntry.Key;
+                        string command = serverConfigObject.ContainsKey(McpConstants.JSON_KEY_COMMAND) ? serverConfigObject[McpConstants.JSON_KEY_COMMAND]?.ToString() ?? "" : "";
                         
-                        // Get each server's settings as a dictionary with safe settings.
-                        string serverConfigJson = JsonConvert.SerializeObject(serverEntry.Value, SafeJsonSettings);
-                        Dictionary<string, object> serverConfigObject = JsonConvert.DeserializeObject<Dictionary<string, object>>(serverConfigJson, SafeJsonSettings);
-                        
-                        if (serverConfigObject != null)
+                        string[] args = new string[0];
+                        if (serverConfigObject.ContainsKey(McpConstants.JSON_KEY_ARGS))
                         {
-                            string command = serverConfigObject.ContainsKey(McpConstants.JSON_KEY_COMMAND) ? serverConfigObject[McpConstants.JSON_KEY_COMMAND]?.ToString() ?? "" : "";
-                            
-                            string[] args = new string[0];
-                            if (serverConfigObject.ContainsKey(McpConstants.JSON_KEY_ARGS))
-                            {
-                                string argsJson = JsonConvert.SerializeObject(serverConfigObject[McpConstants.JSON_KEY_ARGS], SafeJsonSettings);
-                                args = JsonConvert.DeserializeObject<string[]>(argsJson, SafeJsonSettings) ?? new string[0];
-                            }
-                            
-                            Dictionary<string, string> env = new();
-                            if (serverConfigObject.ContainsKey(McpConstants.JSON_KEY_ENV))
-                            {
-                                string envJson = JsonConvert.SerializeObject(serverConfigObject[McpConstants.JSON_KEY_ENV], SafeJsonSettings);
-                                env = JsonConvert.DeserializeObject<Dictionary<string, string>>(envJson, SafeJsonSettings) ?? new Dictionary<string, string>();
-                            }
-                            
-                            servers[serverName] = new McpServerConfigData(command, args, env);
+                            string argsJson = JsonConvert.SerializeObject(serverConfigObject[McpConstants.JSON_KEY_ARGS], SafeJsonSettings);
+                            args = JsonConvert.DeserializeObject<string[]>(argsJson, SafeJsonSettings) ?? new string[0];
                         }
+                        
+                        Dictionary<string, string> env = new();
+                        if (serverConfigObject.ContainsKey(McpConstants.JSON_KEY_ENV))
+                        {
+                            string envJson = JsonConvert.SerializeObject(serverConfigObject[McpConstants.JSON_KEY_ENV], SafeJsonSettings);
+                            env = JsonConvert.DeserializeObject<Dictionary<string, string>>(envJson, SafeJsonSettings) ?? new Dictionary<string, string>();
+                        }
+                        
+                        servers[serverName] = new McpServerConfigData(command, args, env);
                     }
                 }
             }
-            
-            return new McpConfig(servers);
-            }
-            catch (JsonException ex)
-            {
-                McpLogger.LogError($"Failed to parse JSON config file: {configPath}. Error: {ex.Message}");
-                throw;
-            }
+        }
+        
+        return new McpConfig(servers);
         }
 
         /// <summary>
