@@ -1,10 +1,11 @@
 using UnityEngine;
 using UnityEditor;
 using System.Linq;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 
 #if ULOOPMCP_DEBUG
-using System.Collections.Generic;
 using System;
 #endif
 
@@ -159,19 +160,83 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Restore connected tools from backup after server restart
+        /// First restore all tools immediately, then cleanup disconnected ones after a delay
         /// </summary>
         public void RestoreConnectedTools(List<ConnectedLLMToolData> backup)
         {
-            if (backup != null && backup.Count > 0)
+            if (backup == null || backup.Count == 0)
             {
-                foreach (ConnectedLLMToolData toolData in backup)
-                {
-                    ConnectedClient restoredClient = new(toolData.Endpoint, null, toolData.Name);
-                    AddConnectedTool(restoredClient);
-                }
-                Debug.LogWarning($"[hatayama] Restored {backup.Count} tools after server restart");
+                return;
+            }
+
+            // Immediately restore all tools to prevent "No connected tools found" flash
+            foreach (ConnectedLLMToolData toolData in backup)
+            {
+                ConnectedClient restoredClient = new(toolData.Endpoint, null, toolData.Name);
+                AddConnectedTool(restoredClient);
+            }
+            Debug.LogWarning($"[hatayama] Restored {backup.Count} tools from backup");
+
+            // Schedule cleanup after a short delay to remove actually disconnected tools
+            _ = DelayedCleanupAsync(backup.Count);
+        }
+
+        /// <summary>
+        /// Clean up disconnected tools after a delay
+        /// </summary>
+        private async Task DelayedCleanupAsync(int originalCount)
+        {
+            // Wait 1 second for clients to reconnect
+            await TimerDelay.Wait(2000);
+
+            if (!McpServerController.IsServerRunning)
+            {
+                Debug.LogWarning("[hatayama] Server not running during cleanup, keeping all restored tools");
+                return;
+            }
+
+            // Get actually connected clients
+            IReadOnlyCollection<ConnectedClient> actualConnectedClients = McpServerController.CurrentServer?.GetConnectedClients();
+            if (actualConnectedClients == null)
+            {
+                Debug.LogWarning("[hatayama] No actual connected clients during cleanup");
+                return;
+            }
+
+            // Get list of actually connected client names
+            HashSet<string> actualClientNames = new HashSet<string>(
+                actualConnectedClients
+                    .Where(client => client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME)
+                    .Select(client => client.ClientName)
+            );
+
+            // Remove tools that are no longer connected
+            List<ConnectedLLMToolData> toolsToRemove = _connectedTools
+                .Where(tool => !actualClientNames.Contains(tool.Name))
+                .ToList();
+
+            foreach (ConnectedLLMToolData tool in toolsToRemove)
+            {
+                RemoveConnectedTool(tool.Name);
+            }
+
+            // Force UI update if any tools were removed
+            if (toolsToRemove.Count > 0)
+            {
+                Repaint();
+            }
+
+            int remainingCount = originalCount - toolsToRemove.Count;
+            if (toolsToRemove.Count > 0)
+            {
+                Debug.LogWarning($"[hatayama] Cleaned up {toolsToRemove.Count} disconnected tools, {remainingCount} tools remain connected");
+            }
+            else
+            {
+                Debug.LogWarning($"[hatayama] All {originalCount} restored tools are still connected");
             }
         }
+
 
         /// <summary>
         /// Get connected tools as ConnectedClient objects for UI display, sorted by name
