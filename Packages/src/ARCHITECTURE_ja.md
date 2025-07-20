@@ -109,8 +109,8 @@ sequenceDiagram
 | コンポーネント | 役割 | プロトコル | ポート | 接続タイプ |
 |-----------|------|----------|------|----------------|
 | **LLMツール**（Claude、Cursor、VSCode） | **クライアント** | MCPプロトコル | stdio/各種 | MCPリクエスト送信 |
-| **TypeScriptサーバー** | **サーバー**（MCP用）<br/>**クライアント**（Unity用） | MCP ↔ TCP/JSON-RPC | stdio ↔ 8700-9100 | プロトコル橋渡し |
-| **Unity Editor** | **サーバー** | TCP/JSON-RPC | 8700-9100 | TCP接続受付 |
+| **TypeScriptサーバー** | **サーバー**（MCP用）<br/>**クライアント**（Unity用） | MCP ↔ TCP/JSON-RPC | stdio ↔ UNITY_TCP_PORT環境変数で指定されたポート | プロトコル橋渡し |
+| **Unity Editor** | **サーバー** | TCP/JSON-RPC | UNITY_TCP_PORT環境変数で指定されたポート | TCP接続受付 |
 
 ### 通信フローの詳細
 
@@ -128,7 +128,7 @@ sequenceDiagram
 - **接続**: TypeScriptサーバーがTCPクライアントとして動作
 - **ライフサイクル**: UnityConnectionManagerによる自動再接続管理
 
-#### 重要なアーキテクチャポイント:
+#### 重要なアーキテクチャポイント
 1. **TypeScriptサーバーはプロトコル橋渡しとして機能**: MCPプロトコルをTCP/JSON-RPCに変換
 2. **Unity EditorはTCPサーバーの最終形態**: ツールリクエストを処理してUnity操作を実行
 3. **LLMツールは純粋なMCPクライアント**: 標準MCPプロトコルを通じてツールリクエストを送信
