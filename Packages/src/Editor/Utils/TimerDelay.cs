@@ -31,6 +31,7 @@ namespace io.github.hatayama.uLoopMCP
             timer = new Timer(_ =>
             {
                 timer?.Dispose();
+                timer = null;
                 if (!cancellationToken.IsCancellationRequested)
                 {
                     tcs.SetResult(true);
@@ -47,6 +48,7 @@ namespace io.github.hatayama.uLoopMCP
                 cancellationToken.Register(() =>
                 {
                     timer?.Dispose();
+                    timer = null;
                     tcs.TrySetCanceled();
                 });
             }
@@ -78,6 +80,7 @@ namespace io.github.hatayama.uLoopMCP
             timer = new Timer(_ =>
             {
                 timer?.Dispose();
+                timer = null;
                 if (!cancellationToken.IsCancellationRequested)
                 {
                     EditorApplication.delayCall += () =>
@@ -105,6 +108,7 @@ namespace io.github.hatayama.uLoopMCP
                 cancellationToken.Register(() =>
                 {
                     timer?.Dispose();
+                    timer = null;
                     tcs.TrySetCanceled();
                 });
             }

@@ -132,6 +132,7 @@ namespace io.github.hatayama.uLoopMCP
                 client.ConnectedAt
             );
             _connectedTools.Add(toolData);
+            InvalidateStoredToolsCache();
         }
 
         /// <summary>
@@ -140,6 +141,7 @@ namespace io.github.hatayama.uLoopMCP
         public void RemoveConnectedTool(string toolName)
         {
             _connectedTools.RemoveAll(tool => tool.Name == toolName);
+            InvalidateStoredToolsCache();
         }
 
         /// <summary>
@@ -148,6 +150,7 @@ namespace io.github.hatayama.uLoopMCP
         public void ClearConnectedTools()
         {
             _connectedTools.Clear();
+            InvalidateStoredToolsCache();
         }
 
         /// <summary>

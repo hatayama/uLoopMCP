@@ -21,7 +21,8 @@ namespace io.github.hatayama.uLoopMCP
         // Unity doesn't serialize DateTime directly, so we use a string representation
         public DateTime ConnectedAt 
         { 
-            get => DateTime.Parse(ConnectedAtString);
+            get => string.IsNullOrEmpty(ConnectedAtString) ? DateTime.Now : 
+                   DateTime.TryParse(ConnectedAtString, out DateTime result) ? result : DateTime.Now;
             set => ConnectedAtString = value.ToString("yyyy-MM-ddTHH:mm:ss.fffzzz");
         }
 
