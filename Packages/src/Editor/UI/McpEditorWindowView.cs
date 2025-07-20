@@ -27,7 +27,7 @@ namespace io.github.hatayama.uLoopMCP
         }
         public void DrawServerStatus(ServerStatusData data)
         {
-            GUIStyle statusStyle = new GUIStyle(EditorStyles.label)
+            GUIStyle statusStyle = new (EditorStyles.label)
             {
                 normal = { textColor = data.StatusColor },
                 fontStyle = FontStyle.Bold
@@ -35,7 +35,7 @@ namespace io.github.hatayama.uLoopMCP
             
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Status:", EditorStyles.boldLabel, GUILayout.Width(50f));
-            EditorGUILayout.LabelField($"{data.Status}", statusStyle, GUILayout.ExpandWidth(false));
+            EditorGUILayout.LabelField($"{data.Status}", statusStyle, GUILayout.MaxWidth(50f));
             EditorGUILayout.EndHorizontal();
         }
 
@@ -45,10 +45,25 @@ namespace io.github.hatayama.uLoopMCP
             
             // Port settings
             EditorGUI.BeginDisabledGroup(data.IsServerRunning);
-            int newPort = EditorGUILayout.IntField("Port:", data.CustomPort);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Port:", GUILayout.Width(30f));
+            GUIStyle rightAlignedTextField = new (EditorStyles.textField)
+            {
+                alignment = TextAnchor.MiddleRight,
+                contentOffset = new Vector2(0, 0)
+            };
+            int newPort = EditorGUILayout.IntField(data.CustomPort, rightAlignedTextField, GUILayout.Width(50f));
+            EditorGUILayout.EndHorizontal();
             if (newPort != data.CustomPort)
             {
-                portChangeCallback?.Invoke(newPort);
+                try
+                {
+                    portChangeCallback?.Invoke(newPort);
+                }
+                catch (System.Exception ex)
+                {
+                    UnityEngine.Debug.LogError($"Port change failed: {ex.Message}");
+                }
             }
             EditorGUI.EndDisabledGroup();
             
@@ -87,10 +102,11 @@ namespace io.github.hatayama.uLoopMCP
             // Auto start checkbox
             EditorGUILayout.BeginHorizontal();
             bool newAutoStart = EditorGUILayout.Toggle(data.AutoStartServer, GUILayout.Width(20));
-            if (GUILayout.Button("Auto Start Server", EditorStyles.label, GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true)))
+            if (GUILayout.Button("Auto Start Server", EditorStyles.label, GUILayout.MinWidth(100f), GUILayout.ExpandWidth(true)))
             {
                 newAutoStart = !data.AutoStartServer;
             }
+            
             if (newAutoStart != data.AutoStartServer)
             {
                 autoStartCallback?.Invoke(newAutoStart);
@@ -243,8 +259,6 @@ namespace io.github.hatayama.uLoopMCP
                 EditorGUILayout.HelpBox("Server is not running. Start the server to see connected tools.", MessageType.Warning);
                 return;
             }
-
-            // Debug.LogWarning($"[hatayama] data.Clients.Count: {data.Clients.Count}");
             
             if (data.Clients != null && data.Clients.Count > 0)
             {
@@ -276,7 +290,7 @@ namespace io.github.hatayama.uLoopMCP
             
             EditorGUILayout.BeginHorizontal();
             
-            EditorGUILayout.LabelField(McpUIConstants.CLIENT_ICON + client.ClientName, new GUIStyle(EditorStyles.label) { fontStyle = FontStyle.Bold }, GUILayout.ExpandWidth(true));
+            EditorGUILayout.LabelField(McpUIConstants.CLIENT_ICON + client.ClientName, new GUIStyle(EditorStyles.label) { fontStyle = FontStyle.Bold }, GUILayout.MaxWidth(100f), GUILayout.ExpandWidth(true));
             
             EditorGUILayout.EndHorizontal();
             
@@ -316,19 +330,19 @@ namespace io.github.hatayama.uLoopMCP
                 string configPath = UnityMcpPathResolver.GetConfigPath(editorType);
                 if (System.IO.File.Exists(configPath))
                 {
-                    UnityEditor.EditorUtility.OpenWithDefaultApp(configPath);
+                    EditorUtility.OpenWithDefaultApp(configPath);
                 }
                 else
                 {
-                    UnityEditor.EditorUtility.DisplayDialog(
+                    EditorUtility.DisplayDialog(
                         "Configuration File Not Found",
                         $"Configuration file for {GetEditorDisplayName(editorType)} not found at:\n{configPath}\n\nPlease run 'Configure {GetEditorDisplayName(editorType)}' first to create the configuration file.",
                         "OK");
                 }
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                UnityEditor.EditorUtility.DisplayDialog(
+                EditorUtility.DisplayDialog(
                     "Error Opening Configuration File",
                     $"Failed to open configuration file: {ex.Message}",
                     "OK");

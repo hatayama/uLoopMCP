@@ -60,6 +60,17 @@ namespace io.github.hatayama.uLoopMCP
             // Use saved port if no port specified
             int actualPort = port == -1 ? McpEditorSettings.GetCustomPort() : port;
 
+            // Validate port before proceeding
+            if (!McpPortValidator.ValidatePort(actualPort, "for server startup"))
+            {
+                UnityEditor.EditorUtility.DisplayDialog(
+                    "Invalid Port",
+                    $"Port {actualPort} is not valid for server startup.\n\nPort must be 1024 or higher and not a reserved system port.",
+                    "OK"
+                );
+                return;
+            }
+
             // Find available port starting from the requested port
             int availablePort = FindAvailablePort(actualPort);
 

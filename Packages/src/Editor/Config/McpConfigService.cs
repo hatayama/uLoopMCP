@@ -52,8 +52,6 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>True if update is needed, false if settings are already up to date.</returns>
         public bool IsUpdateNeeded(int port)
         {
-            // Validate configuration parameters before proceeding
-            ValidateConfigurationParameters(port);
             
             string configPath = UnityMcpPathResolver.GetConfigPath(_editorType);
             
@@ -90,8 +88,6 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="port">The port number to use.</param>
         public void AutoConfigure(int port)
         {
-            // Validate configuration parameters before proceeding
-            ValidateConfigurationParameters(port);
             
             string configPath = UnityMcpPathResolver.GetConfigPath(_editorType);
             

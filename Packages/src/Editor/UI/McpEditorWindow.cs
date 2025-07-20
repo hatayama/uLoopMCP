@@ -526,9 +526,17 @@ namespace io.github.hatayama.uLoopMCP
             
             if (!isRunning)
             {
-                // Check if requested port is available
+                // Check if requested port is valid and available
                 int requestedPort = _model.UI.CustomPort;
-                if (NetworkUtility.IsPortInUse(requestedPort))
+                
+                // First check if port is valid
+                if (!McpPortValidator.ValidatePort(requestedPort))
+                {
+                    hasPortWarning = true;
+                    portWarningMessage = $"Port {requestedPort} is invalid. Port must be 1024 or higher and not a reserved system port.";
+                }
+                // Then check if valid port is available
+                else if (NetworkUtility.IsPortInUse(requestedPort))
                 {
                     hasPortWarning = true;
                     portWarningMessage = $"Port {requestedPort} is already in use. Server will automatically find an available port when started.";
