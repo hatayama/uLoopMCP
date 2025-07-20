@@ -18,7 +18,7 @@ graph TB
         MCP[UnityMcpServer<br/>MCPプロトコルサーバー<br/>server.ts]
         UC[UnityClient<br/>TypeScript TCPクライアント<br/>unity-client.ts]
         UCM[UnityConnectionManager<br/>接続オーケストレーター<br/>unity-connection-manager.ts]
-        UD[UnityDiscovery<br/>Unityポートスキャナー<br/>unity-discovery.ts]
+        UD[UnityDiscovery<br/>Unity接続発見<br/>unity-discovery.ts]
     end
     
     subgraph "3. Unity Editor（TCPサーバー）"
@@ -124,7 +124,7 @@ sequenceDiagram
 #### レイヤー2: TypeScriptサーバー ↔ Unity Editor（TCPプロトコル）
 - **プロトコル**: JSON-RPC 2.0を使用したカスタムTCP
 - **トランスポート**: TCPソケット
-- **ポート**: 8700、8800、8900、9000、9100、8600（自動発見）
+- **ポート**: UNITY_TCP_PORT環境変数で指定されたポート（自動発見）
 - **接続**: TypeScriptサーバーがTCPクライアントとして動作
 - **ライフサイクル**: UnityConnectionManagerによる自動再接続管理
 
@@ -132,7 +132,7 @@ sequenceDiagram
 1. **TypeScriptサーバーはプロトコル橋渡しとして機能**: MCPプロトコルをTCP/JSON-RPCに変換
 2. **Unity EditorはTCPサーバーの最終形態**: ツールリクエストを処理してUnity操作を実行
 3. **LLMツールは純粋なMCPクライアント**: 標準MCPプロトコルを通じてツールリクエストを送信
-4. **自動発見**: TypeScriptサーバーがポートスキャンでUnityインスタンスを発見
+4. **自動発見**: TypeScriptサーバーが指定ポートでUnityインスタンスを発見
 
 ### TCP/JSON-RPC通信仕様
 
@@ -448,7 +448,7 @@ classDiagram
 システムは、Unity Editorの頻繁な再起動とドメインリロードを処理する洗練された接続発見・管理システムを実装しています：
 
 - **`UnityClient`**（`unity-client.ts`）: **TypeScript TCPクライアント** - Unity Editorへの接続を確立・維持
-- **`UnityDiscovery`**（`unity-discovery.ts`）: **TypeScriptシングルトン発見サービス** - ポートスキャンで実行中のUnityインスタンスを発見
+- **`UnityDiscovery`**（`unity-discovery.ts`）: **TypeScriptシングルトン発見サービス** - 指定ポートで実行中のUnityインスタンスを発見
 - **`UnityConnectionManager`**（`unity-connection-manager.ts`）: **TypeScript オーケストレーター** - 接続ライフサイクルと状態管理を調整
 - **`SafeTimer`**（`safe-timer.ts`）: **TypeScript ユーティリティ** - 孤立プロセスを防ぐため適切なタイマークリーンアップを確保
 
@@ -480,7 +480,7 @@ sequenceDiagram
     UCM->>UD: 発見開始（1秒ポーリング）
     
     loop 1秒ごと
-        UD->>Unity: ポート確認 [8700, 8800, 8900, 9000, 9100, 8600]
+        UD->>Unity: 指定ポート確認 (UNITY_TCP_PORT)
         Unity-->>UD: ポート8700が応答
     end
     
@@ -503,7 +503,7 @@ sequenceDiagram
 **再接続ポーリングプロセス:**
 1. **検出フェーズ**: `UnityDiscovery`が接続損失を検出
 2. **発見再開**: 1秒間隔での発見プロセス自動再開
-3. **ポートスキャン**: Unityポート（8700、8800、8900、9000、9100、8600）の系統的スキャン
+3. **ポート確認**: UNITY_TCP_PORT環境変数で指定されたポートの確認
 4. **接続確立**: Unityが利用可能になった時の自動再接続
 5. **状態復元**: クライアント状態復元のため`reconnectHandlers`を再実行
 
@@ -525,12 +525,12 @@ sequenceDiagram
     UD->>UD: 発見タイマー再開
     
     loop Unity発見まで毎秒
-        UD->>Unity: ポートスキャン [8700, 8800, 8900, 9000, 9100, 8600]
+        UD->>Unity: 指定ポート確認 (UNITY_TCP_PORT)
         Unity-->>UD: 応答なし（Unity未準備）
     end
     
     Unity->>Unity: Unity Editor開始
-    UD->>Unity: ポートスキャンでUnityを検出
+    UD->>Unity: 指定ポートでUnityを検出
     UD->>UC: 再接続開始
     UC->>Unity: 新しいTCP接続確立
     UC->>UC: reconnectHandlers実行
@@ -848,7 +848,7 @@ sequenceDiagram
     UCM->>UD: 発見開始（1秒ポーリング）
     
     loop Unity発見
-        UD->>Unity: ポートスキャン [8700, 8800, 8900, 9000, 9100, 8600]
+        UD->>Unity: 指定ポート確認 (UNITY_TCP_PORT)
         Unity-->>UD: ポート8700が応答
     end
     
@@ -895,14 +895,14 @@ sequenceDiagram
     UD->>UD: 発見タイマー再開
     
     loop 毎秒
-        UD->>Unity: ポートスキャン [8700, 8800, 8900, 9000, 9100, 8600]
+        UD->>Unity: 指定ポート確認 (UNITY_TCP_PORT)
         Unity-->>UD: 応答なし（Unity未準備）
     end
     
     Note over Unity: Unity Editor再起動
     Unity->>Unity: McpBridgeServer初期化
     
-    UD->>Unity: ポートスキャンでUnity検出
+    UD->>Unity: 指定ポートでUnity検出
     UD->>UC: 再接続開始
     UC->>Unity: 新しいTCP接続確立
     Unity->>MB: 再接続受付
@@ -1036,17 +1036,16 @@ sequenceDiagram
 
 システムは系統的なポート発見アプローチを使用します：
 
-**ポート範囲:** `[8700, 8800, 8900, 9000, 9100, 8600]`
+**ポート設定:** UNITY_TCP_PORT環境変数で指定されたポート
 
 **発見戦略:**
-1. デフォルトポート（8700）で開始
-2. 追加インスタンス用に100ずつ増加
-3. 最終試行として8600にフォールバック
+1. UNITY_TCP_PORT環境変数で指定されたポートを確認
+2. 指定されたポートでUnity接続を試行
 
-**ポート競合解決:**
-- 利用可能性に基づく自動ポート選択
-- 複数Unityインスタンスのサポート
-- 環境変数オーバーライド機能
+**ポート設定:**
+- 環境変数UNITY_TCP_PORT で明示的にポート指定
+- 設定されたポートのみを確認してパフォーマンス向上
+- 無駄なポートスキャンを排除
 
 ### 5.5. セキュリティ検証フロー
 
@@ -1492,7 +1491,7 @@ Unityインスタンス発見のためのシングルトンサービス：
 - **`UnityDiscovery`クラス**:
     - 複数の発見タイマーを防ぐシングルトンパターンを実装
     - Unity Editorインスタンスの1秒間隔ポーリングを提供
-    - ポート [8700, 8800, 8900, 9000, 9100, 8600] をスキャン
+    - UNITY_TCP_PORT環境変数で指定されたポートを確認
     - 接続コールバックと接続断イベントを処理
 
 ### `src/tools/dynamic-unity-command-tool.ts`

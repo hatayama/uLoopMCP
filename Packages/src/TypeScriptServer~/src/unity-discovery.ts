@@ -190,7 +190,7 @@ export class UnityDiscovery {
   }
 
   /**
-   * Discover Unity by checking default port range
+   * Discover Unity by checking specified port
    */
   private async discoverUnityOnPorts(): Promise<void> {
     const correlationId = VibeLogger.generateCorrelationId();
@@ -200,73 +200,66 @@ export class UnityDiscovery {
       throw new Error('UNITY_TCP_PORT environment variable is required but not set');
     }
 
-    const basePort: number = parseInt(unityTcpPort, 10);
-    if (isNaN(basePort) || basePort <= 0 || basePort > 65535) {
+    const port: number = parseInt(unityTcpPort, 10);
+    if (isNaN(port) || port <= 0 || port > 65535) {
       throw new Error(`UNITY_TCP_PORT must be a valid port number (1-65535), got: ${unityTcpPort}`);
     }
-    // Expanded port range for better Unity discovery
-    const portRange = [
-      basePort,
-      basePort + 100,
-      basePort + 200,
-      basePort + 300,
-      basePort + 400,
-      basePort - 100, // Also check lower ports
-    ];
 
     VibeLogger.logInfo(
       'unity_discovery_port_scan_start',
       'Starting Unity port discovery scan',
       {
-        base_port: basePort,
-        port_range: portRange,
-        total_ports: portRange.length,
+        target_port: port,
       },
       correlationId,
-      'Scanning multiple ports to find Unity MCP server.',
+      'Checking specified port for Unity MCP server.',
     );
 
-    for (const port of portRange) {
-      try {
-        if (await this.isUnityAvailable(port)) {
-          VibeLogger.logInfo(
-            'unity_discovery_success',
-            'Unity discovered and connection established',
-            {
-              discovered_port: port,
-              base_port: basePort,
-              port_offset: port - basePort,
-            },
-            correlationId,
-            'Unity MCP server found and connection established successfully.',
-            'Monitor for tools/list_changed notifications after this discovery.',
-          );
+    try {
+      if (await this.isUnityAvailable(port)) {
+        VibeLogger.logInfo(
+          'unity_discovery_success',
+          'Unity discovered and connection established',
+          {
+            discovered_port: port,
+          },
+          correlationId,
+          'Unity MCP server found and connection established successfully.',
+          'Monitor for tools/list_changed notifications after this discovery.',
+        );
 
-          // Update client port - connection management is UnityClient's responsibility
-          this.unityClient.updatePort(port);
+        // Update client port - connection management is UnityClient's responsibility
+        this.unityClient.updatePort(port);
 
-          // Notify discovery callback - let higher-level components handle connection
-          if (this.onDiscoveredCallback) {
-            await this.onDiscoveredCallback(port);
-          }
-          return;
+        // Notify discovery callback - let higher-level components handle connection
+        if (this.onDiscoveredCallback) {
+          await this.onDiscoveredCallback(port);
         }
-      } catch (error) {
-        // Silent polling - expected failures when Unity is not running on this port
-        // Continue checking other ports
+        return;
       }
+    } catch (error) {
+      VibeLogger.logDebug(
+        'unity_discovery_port_check_failed',
+        'Unity availability check failed for specified port',
+        {
+          target_port: port,
+          error_message: error instanceof Error ? error.message : String(error),
+          error_type: error instanceof Error ? error.constructor.name : typeof error,
+        },
+        correlationId,
+        'Expected failure when Unity is not running on this port. Will continue polling.',
+        'This is normal during Unity startup or when Unity is not running.',
+      );
     }
 
     VibeLogger.logWarning(
       'unity_discovery_no_unity_found',
-      'No Unity server found on any port in range',
+      'No Unity server found on specified port',
       {
-        base_port: basePort,
-        ports_checked: portRange,
-        total_attempts: portRange.length,
+        target_port: port,
       },
       correlationId,
-      'Unity MCP server not found on any of the checked ports. Unity may not be running or using a different port.',
+      'Unity MCP server not found on the specified port. Unity may not be running or using a different port.',
       'Check Unity console for MCP server status and verify port configuration.',
     );
   }
