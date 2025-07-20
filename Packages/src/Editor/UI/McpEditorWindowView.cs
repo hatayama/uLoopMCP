@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEditor;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace io.github.hatayama.uLoopMCP
@@ -230,14 +229,12 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 else
                 {
-                    // Debug.LogWarning($"[hatayama] No connected 1");
                     // All clients have invalid names, show as if no clients
                     EditorGUILayout.HelpBox("No connected tools found.", MessageType.Info);
                 }
             }
             else
             {
-                // Debug.LogWarning($"[hatayama] No connected 2");
                 EditorGUILayout.HelpBox("No connected tools found.", MessageType.Info);
             }
         }
