@@ -37,22 +37,22 @@ public class UnitySearchTester : EditorWindow
         // Test buttons
         if (GUILayout.Button("Test Basic Search"))
         {
-            TestBasicSearch();
+            TestBasicSearchAsync().Forget();
         }
         
         if (GUILayout.Button("Test File Extension Filter"))
         {
-            TestFileExtensionFilter();
+            TestFileExtensionFilterAsync().Forget();
         }
         
         if (GUILayout.Button("Test Asset Type Filter"))
         {
-            TestAssetTypeFilter();
+            TestAssetTypeFilterAsync().Forget();
         }
         
         if (GUILayout.Button("Test Empty Query (Should Fail)"))
         {
-            TestEmptyQuery();
+            TestEmptyQueryAsync().Forget();
         }
         
         GUILayout.Space(10);
@@ -64,7 +64,7 @@ public class UnitySearchTester : EditorWindow
         EditorGUILayout.EndScrollView();
     }
     
-    private async void TestBasicSearch()
+    private async Task TestBasicSearchAsync()
     {
         UnitySearchTool tool = new UnitySearchTool();
         UnitySearchSchema schema = new UnitySearchSchema
@@ -74,10 +74,10 @@ public class UnitySearchTester : EditorWindow
             SaveToFile = _saveToFile
         };
         
-        await ExecuteTest(tool, schema, "Basic Search");
+        await ExecuteTestAsync(tool, schema, "Basic Search");
     }
     
-    private async void TestFileExtensionFilter()
+    private async Task TestFileExtensionFilterAsync()
     {
         UnitySearchTool tool = new UnitySearchTool();
         UnitySearchSchema schema = new UnitySearchSchema
@@ -88,10 +88,10 @@ public class UnitySearchTester : EditorWindow
             SaveToFile = _saveToFile
         };
         
-        await ExecuteTest(tool, schema, "File Extension Filter");
+        await ExecuteTestAsync(tool, schema, "File Extension Filter");
     }
     
-    private async void TestAssetTypeFilter()
+    private async Task TestAssetTypeFilterAsync()
     {
         UnitySearchTool tool = new UnitySearchTool();
         UnitySearchSchema schema = new UnitySearchSchema
@@ -102,10 +102,10 @@ public class UnitySearchTester : EditorWindow
             SaveToFile = _saveToFile
         };
         
-        await ExecuteTest(tool, schema, "Asset Type Filter");
+        await ExecuteTestAsync(tool, schema, "Asset Type Filter");
     }
     
-    private async void TestEmptyQuery()
+    private async Task TestEmptyQueryAsync()
     {
         UnitySearchTool tool = new UnitySearchTool();
         UnitySearchSchema schema = new UnitySearchSchema
@@ -114,10 +114,10 @@ public class UnitySearchTester : EditorWindow
             MaxResults = _maxResults
         };
         
-        await ExecuteTest(tool, schema, "Empty Query Test");
+        await ExecuteTestAsync(tool, schema, "Empty Query Test");
     }
     
-    private async Task ExecuteTest(UnitySearchTool tool, UnitySearchSchema schema, string testName)
+    private async Task ExecuteTestAsync(UnitySearchTool tool, UnitySearchSchema schema, string testName)
     {
         try
         {

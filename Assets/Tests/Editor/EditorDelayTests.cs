@@ -72,7 +72,7 @@ namespace io.github.hatayama.uLoopMCP
             int startFrame = EditorDelayManager.CurrentFrameCount;
             
             // Arrange & Act
-            _ = DelayedExecution();
+            DelayedExecution().Forget();
             
             async Task DelayedExecution()
             {
@@ -105,7 +105,7 @@ namespace io.github.hatayama.uLoopMCP
             int startFrame = EditorDelayManager.CurrentFrameCount;
             
             // Arrange & Act
-            _ = DelayedExecution();
+            DelayedExecution().Forget();
             
             async Task DelayedExecution()
             {
@@ -137,9 +137,9 @@ namespace io.github.hatayama.uLoopMCP
             int startFrame = EditorDelayManager.CurrentFrameCount;
             var executionFrames = new List<(string task, int frame)>();
             
-            _ = Task1(); // After 1 frame
-            _ = Task2(); // After 3 frames
-            _ = Task3(); // After 2 frames
+            Task1().Forget(); // After 1 frame
+            Task2().Forget(); // After 3 frames
+            Task3().Forget(); // After 2 frames
             
             async Task Task1()
             {
@@ -228,7 +228,7 @@ namespace io.github.hatayama.uLoopMCP
             // Act & Assert - Cancellation exception should be thrown immediately
             try
             {
-                _ = DelayedTask();
+                DelayedTask().Forget();
                 async Task DelayedTask()
                 {
                     try
@@ -392,8 +392,8 @@ namespace io.github.hatayama.uLoopMCP
             const int delayFrames = 2;
             
             // Act - Start tasks from both main thread and background thread
-            _ = MainThreadDelayTask();
-            _ = Task.Run(BackgroundThreadDelayTask);
+            MainThreadDelayTask().Forget();
+            Task.Run(BackgroundThreadDelayTask).Forget();
             
             async Task MainThreadDelayTask()
             {
@@ -579,8 +579,8 @@ namespace io.github.hatayama.uLoopMCP
             int cancellationThreadId = -1;
             
             // Act - Start tasks from different threads with shared cancellation token
-            _ = MainThreadCancellableTask();
-            _ = Task.Run(BackgroundThreadCancellableTask);
+            MainThreadCancellableTask().Forget();
+            Task.Run(BackgroundThreadCancellableTask).Forget();
             
             async Task MainThreadCancellableTask()
             {

@@ -185,7 +185,7 @@ namespace io.github.hatayama.uLoopMCP
                 _tcpListener.Start();
                 _isRunning = true;
                 
-                _serverTask = Task.Run(() => ServerLoop(_cancellationTokenSource.Token));
+                _serverTask = Task.Run(() => ServerLoopAsync(_cancellationTokenSource.Token));
                 
                 // Notify that server has started
                 OnServerStarted?.Invoke();
@@ -313,7 +313,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// The server's main loop.
         /// </summary>
-        private async Task ServerLoop(CancellationToken cancellationToken)
+        private async Task ServerLoopAsync(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested && _isRunning)
             {
@@ -326,7 +326,7 @@ namespace io.github.hatayama.uLoopMCP
                         OnClientConnected?.Invoke(clientEndpoint);
                         
                         // Execute client handling in a separate task (fire-and-forget).
-                        _ = Task.Run(() => HandleClient(client, cancellationToken));
+                        Task.Run(() => HandleClientAsync(client, cancellationToken)).Forget();
                     }
                 }
                 catch (ObjectDisposedException)
@@ -380,7 +380,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Handles communication with the client using Content-Length framing.
         /// </summary>
-        private async Task HandleClient(TcpClient client, CancellationToken cancellationToken)
+        private async Task HandleClientAsync(TcpClient client, CancellationToken cancellationToken)
         {
             string clientEndpoint = client.Client.RemoteEndPoint?.ToString() ?? McpServerConfig.UNKNOWN_CLIENT_ENDPOINT;
             
@@ -532,13 +532,13 @@ namespace io.github.hatayama.uLoopMCP
             string framedNotification = CreateContentLengthFrame(notificationJson);
             byte[] notificationData = Encoding.UTF8.GetBytes(framedNotification);
             
-            _ = SendNotificationData(notificationData);
+            SendNotificationDataAsync(notificationData).Forget();
         }
 
         /// <summary>
         /// Send notification data to all connected clients
         /// </summary>
-        private async Task SendNotificationData(byte[] notificationData)
+        private async Task SendNotificationDataAsync(byte[] notificationData)
         {
             List<string> clientsToRemove = new List<string>();
             
