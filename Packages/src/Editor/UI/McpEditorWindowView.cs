@@ -45,7 +45,15 @@ namespace io.github.hatayama.uLoopMCP
             
             // Port settings
             EditorGUI.BeginDisabledGroup(data.IsServerRunning);
-            int newPort = EditorGUILayout.IntField("Port:", data.CustomPort);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Port:", GUILayout.Width(30f));
+            GUIStyle rightAlignedTextField = new (EditorStyles.textField)
+            {
+                alignment = TextAnchor.MiddleRight,
+                contentOffset = new Vector2(0, 0)
+            };
+            int newPort = EditorGUILayout.IntField(data.CustomPort, rightAlignedTextField, GUILayout.Width(50f));
+            EditorGUILayout.EndHorizontal();
             if (newPort != data.CustomPort)
             {
                 try
