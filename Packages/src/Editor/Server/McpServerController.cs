@@ -222,7 +222,7 @@ namespace io.github.hatayama.uLoopMCP
 
             if (showReconnectingUI)
             {
-                StartReconnectionUITimeout().Forget();
+                StartReconnectionUITimeoutAsync().Forget();
             }
 
             // Update MCP configurations to match current ULOOPMCP_DEBUG state
@@ -238,7 +238,7 @@ namespace io.github.hatayama.uLoopMCP
             // This ensures schema changes (descriptions, parameters) are communicated to Cursor
             if (IsServerRunning)
             {
-                SendToolNotificationAfterCompilation().Forget();
+                SendToolNotificationAfterCompilationAsync().Forget();
             }
         }
 
@@ -276,7 +276,7 @@ namespace io.github.hatayama.uLoopMCP
                 if (isAfterCompile)
                 {
                     // Wait a short while before restarting immediately (to release TCP port).
-                    _ = RestoreServerAfterCompile(savedPort);
+                    RestoreServerAfterCompileAsync(savedPort).Forget();
                 }
                 else
                 {
@@ -287,7 +287,7 @@ namespace io.github.hatayama.uLoopMCP
                     if (autoStartEnabled)
                     {
                         // Wait for Unity Editor to be ready before auto-starting
-                        _ = RestoreServerOnStartup(savedPort);
+                        RestoreServerOnStartupAsync(savedPort).Forget();
                     }
                     else
                     {
@@ -337,7 +337,7 @@ namespace io.github.hatayama.uLoopMCP
                 if (retryCount < maxRetries)
                 {
                     // Wait for port release before retry
-                    _ = RetryServerRestore(port, retryCount);
+                    RetryServerRestoreAsync(port, retryCount).Forget();
                 }
                 else
                 {
@@ -421,7 +421,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Send tool notification after compilation with frame delay
         /// </summary>
-        private static async Task SendToolNotificationAfterCompilation()
+        private static async Task SendToolNotificationAfterCompilationAsync()
         {
             // Use frame delay for timing adjustment after domain reload
             // This ensures Unity Editor is in a stable state before sending notifications
@@ -434,7 +434,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Restore server after compilation with frame delay
         /// </summary>
-        private static async Task RestoreServerAfterCompile(int port)
+        private static async Task RestoreServerAfterCompileAsync(int port)
         {
             // Wait a short while for timing adjustment (TCP port release)
             await EditorDelay.DelayFrame(1);
@@ -445,7 +445,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Restore server on startup with frame delay
         /// </summary>
-        private static async Task RestoreServerOnStartup(int port)
+        private static async Task RestoreServerOnStartupAsync(int port)
         {
             // Wait for Unity Editor to be ready before auto-starting
             await EditorDelay.DelayFrame(1);
@@ -457,7 +457,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Retry server restore with frame delay
         /// </summary>
-        private static async Task RetryServerRestore(int port, int retryCount)
+        private static async Task RetryServerRestoreAsync(int port, int retryCount)
         {
             // Wait longer for port release before retry
             await EditorDelay.DelayFrame(5);
@@ -469,7 +469,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Start UI display timeout timer for reconnecting message
         /// </summary>
-        private static async Task StartReconnectionUITimeout()
+        private static async Task StartReconnectionUITimeoutAsync()
         {
             // Wait for the timeout period (convert seconds to frames at ~60fps)
             int timeoutFrames = McpConstants.RECONNECTION_TIMEOUT_SECONDS * 60;

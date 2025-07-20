@@ -25,12 +25,12 @@ namespace io.github.hatayama.uLoopMCP
             testFrameStart = Time.frameCount;
             testCounter = 0;
             
-            TestZeroFrameDelay().Forget();
-            TestSingleFrameDelay().Forget();
-            TestMultipleFrameDelay().Forget();
+            TestZeroFrameDelayAsync().Forget();
+            TestSingleFrameDelayAsync().Forget();
+            TestMultipleFrameDelayAsync().Forget();
         }
         
-        private static async Task TestZeroFrameDelay()
+        private static async Task TestZeroFrameDelayAsync()
         {
             int currentFrame = Time.frameCount;
             Debug.Log($"[Test {++testCounter}] Zero Frame Delay - Start (Frame: {currentFrame})");
@@ -41,7 +41,7 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Log($"[Test {testCounter}] Zero Frame Delay - Complete (Frame: {completionFrame}) - Immediate: {currentFrame == completionFrame}");
         }
         
-        private static async Task TestSingleFrameDelay()
+        private static async Task TestSingleFrameDelayAsync()
         {
             int currentFrame = Time.frameCount;
             Debug.Log($"[Test {++testCounter}] Single Frame Delay - Start (Frame: {currentFrame})");
@@ -53,7 +53,7 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Log($"[Test {testCounter}] Single Frame Delay - Complete (Frame: {completionFrame}) - Frames elapsed: {framesDiff}");
         }
         
-        private static async Task TestMultipleFrameDelay()
+        private static async Task TestMultipleFrameDelayAsync()
         {
             const int delayFrames = 5;
             int currentFrame = Time.frameCount;
@@ -77,15 +77,15 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Log($"Test Start Frame: {testFrameStart}");
             
             // Execute tasks with different frame delays concurrently
-            ConcurrentTask("A", 1).Forget();
-            ConcurrentTask("B", 3).Forget();
-            ConcurrentTask("C", 2).Forget();
-            ConcurrentTask("D", 5).Forget();
+            ConcurrentTaskAsync("A", 1).Forget();
+            ConcurrentTaskAsync("B", 3).Forget();
+            ConcurrentTaskAsync("C", 2).Forget();
+            ConcurrentTaskAsync("D", 5).Forget();
             
             Debug.Log("Expected order: A(1) → C(2) → B(3) → D(5)");
         }
         
-        private static async Task ConcurrentTask(string taskName, int frames)
+        private static async Task ConcurrentTaskAsync(string taskName, int frames)
         {
             int startFrame = Time.frameCount;
             Debug.Log($"Task {taskName}: Start (Frame: {startFrame}, Delay: {frames} frames)");
@@ -113,7 +113,7 @@ namespace io.github.hatayama.uLoopMCP
             for (int i = 0; i < taskCount; i++)
             {
                 int taskId = i;
-                StressTask(taskId, () =>
+                StressTaskAsync(taskId, () =>
                 {
                     completedCount++;
                     if (completedCount == taskCount)
@@ -128,7 +128,7 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Log($"All tasks started. Pending Tasks: {EditorDelayManager.PendingTaskCount}");
         }
         
-        private static async Task StressTask(int taskId, Action onComplete)
+        private static async Task StressTaskAsync(int taskId, Action onComplete)
         {
             await EditorDelay.DelayFrame(2); // All tasks execute after 2 frames
             onComplete?.Invoke();
@@ -143,7 +143,7 @@ namespace io.github.hatayama.uLoopMCP
             
             CancellationTokenSource cts = new CancellationTokenSource();
             
-            TestCancellableTask(cts.Token).Forget();
+            TestCancellableTaskAsync(cts.Token).Forget();
             
             // Cancel after 1 second
             EditorApplication.delayCall += () =>
@@ -153,7 +153,7 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
         
-        private static async Task TestCancellableTask(CancellationToken cancellationToken)
+        private static async Task TestCancellableTaskAsync(CancellationToken cancellationToken)
         {
             try
             {
@@ -181,10 +181,10 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Log("Testing EditorDelay integration with McpServerController...");
             Debug.Log("This will simulate the actual usage in server restoration.");
             
-            SimulateServerRestoration().Forget();
+            SimulateServerRestorationAsync().Forget();
         }
         
-        private static async Task SimulateServerRestoration()
+        private static async Task SimulateServerRestorationAsync()
         {
             Debug.Log("Simulation: Starting server restoration sequence...");
             
