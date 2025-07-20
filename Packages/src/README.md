@@ -393,9 +393,9 @@ All tools automatically include the following timing information:
 <img width="335" alt="image" src="https://github.com/user-attachments/assets/25f1f4f9-e3c8-40a5-a2f3-903f9ed5f45b" />
 
 3. IDE Connection Verification
-  - For example, with Cursor, check the Tools & Integrations in the settings page and find uLoopMCP. Click the toggle to enable MCP. If a red circle appears, restart Cursor.  
-<img width="545" alt="image" src="https://github.com/user-attachments/assets/ed54d051-b78a-4bb4-bb2f-7ab23ebc1840" />
+  - For example, with Cursor, check the Tools & Integrations in the settings page and find uLoopMCP. Click the toggle to enable MCP. If a red circle appears, restart Cursor.
 
+<img width="545" height="481" alt="image" src="https://github.com/user-attachments/assets/2497f85d-1964-4667-92fc-a9e33a946206" />
 
 <details>
 <summary>Manual Setup (Usually Unnecessary)</summary>
