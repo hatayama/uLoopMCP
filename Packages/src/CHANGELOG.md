@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.30.1](https://github.com/hatayama/uLoopMCP/compare/v0.30.0...v0.30.1) (2025-07-20)
+
+
+### Bug Fixes
+
+* improve UI responsiveness and port validation behavior ([#235](https://github.com/hatayama/uLoopMCP/issues/235)) ([6e11384](https://github.com/hatayama/uLoopMCP/commit/6e1138446f23660f02110b8a40d7b1c54bc651ca))
+
 ## [0.30.0](https://github.com/hatayama/uLoopMCP/compare/v0.29.4...v0.30.0) (2025-07-20)
 
 
