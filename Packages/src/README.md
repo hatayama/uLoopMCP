@@ -26,7 +26,8 @@ Normally, humans need to handle tasks like compiling Unity, running tests, and c
 3. Options are implemented to minimize context consumption.
 
 # Tool Window
-<img width="350" alt="image" src="https://github.com/user-attachments/assets/5863b58b-7b48-48ae-9a40-c874ddc11488" />
+<img width="350" alt="image" src="https://github.com/user-attachments/assets/b0cd0d46-096a-49a4-adcb-cfd30beece53" />
+
 
  - Manages and monitors server status
  - Provides visibility into LLM tool connection status
@@ -387,7 +388,8 @@ All tools automatically include the following timing information:
 
 ## Usage
 1. Select Window > uLoopMCP. A dedicated window will open, so press the "Start Server" button.  
-<img width="335" alt="image" src="https://github.com/user-attachments/assets/4cfd7f26-7739-442d-bad9-b3f6d113a0d7" />
+<img width="335" alt="image" src="https://github.com/user-attachments/assets/38c67d7b-6bbf-4876-ab40-6bc700842dc4" />
+
 
 2. Next, select the target IDE in the LLM Tool Settings section. Press the yellow "Configure {LLM Tool Name}" button to automatically connect to the IDE.  
 <img width="335" alt="image" src="https://github.com/user-attachments/assets/25f1f4f9-e3c8-40a5-a2f3-903f9ed5f45b" />
