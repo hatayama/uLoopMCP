@@ -37,7 +37,7 @@ graph TB
     UCM --> UC
     UCM --> UD
     UD -.->|Port Discovery<br/>Polling| MB
-    UC <-->|TCP/JSON-RPC<br/>Port 8700+| MB
+    UC <-->|TCP/JSON-RPC<br/>UNITY_TCP_PORT| MB
     UC -->|setClientName| MB
     MB <--> CMD
     CMD <--> API
@@ -124,7 +124,7 @@ sequenceDiagram
 #### Layer 2: TypeScript Server ↔ Unity Editor (TCP Protocol)
 - **Protocol**: Custom TCP with JSON-RPC 2.0
 - **Transport**: TCP Socket
-- **Ports**: 8700, 8800, 8900, 9000, 9100, 8600 (auto-discovery)
+- **Ports**: UNITY_TCP_PORT environment variable specified port (auto-discovery)
 - **Connection**: TypeScript server acts as TCP client
 - **Lifecycle**: Managed by UnityConnectionManager with automatic reconnection
 
@@ -468,11 +468,11 @@ sequenceDiagram
     UCM->>UD: Start discovery (1s polling)
     
     loop Every 1 second
-        UD->>Unity: Check ports [8700, 8800, 8900, 9000, 9100, 8600]
-        Unity-->>UD: Port 8700 responds
+        UD->>Unity: Check specified port (UNITY_TCP_PORT)
+        Unity-->>UD: UNITY_TCP_PORT responds
     end
     
-    UD->>UC: Connect to port 8700
+    UD->>UC: Connect to UNITY_TCP_PORT
     UC->>Unity: TCP connection established
     UC->>Unity: Send setClientName command
     Unity->>Unity: Update UI with client name
@@ -491,7 +491,7 @@ The system implements a robust reconnection mechanism that handles various failu
 **Reconnection Polling Process:**
 1. **Detection Phase**: `UnityDiscovery` detects connection loss
 2. **Restart Discovery**: Automatic restart of discovery process with 1-second intervals
-3. **Port Scanning**: Systematic scanning of Unity ports (8700, 8800, 8900, 9000, 9100, 8600)
+3. **Port Checking**: Verification of UNITY_TCP_PORT environment variable specified port
 4. **Connection Establishment**: Automatic reconnection when Unity becomes available
 5. **State Restoration**: Re-execution of `reconnectHandlers` to restore client state
 
@@ -513,7 +513,7 @@ sequenceDiagram
     UD->>UD: Restart discovery timer
     
     loop Every 1 second until Unity found
-        UD->>Unity: Scan ports [8700, 8800, 8900, 9000, 9100, 8600]
+        UD->>Unity: Check specified port (UNITY_TCP_PORT)
         Unity-->>UD: No response (Unity not ready)
     end
     
@@ -808,8 +808,8 @@ sequenceDiagram
     UCM->>UD: Start discovery (1s polling)
     
     loop Unity Discovery
-        UD->>Unity: Port scan [8700, 8800, 8900, 9000, 9100, 8600]
-        Unity-->>UD: Port 8700 responds
+        UD->>Unity: Check specified port (UNITY_TCP_PORT)
+        Unity-->>UD: UNITY_TCP_PORT responds
     end
     
     UD->>UC: Connect to Unity
@@ -855,7 +855,7 @@ sequenceDiagram
     UD->>UD: Restart discovery timer
     
     loop Every 1 second
-        UD->>Unity: Port scan [8700, 8800, 8900, 9000, 9100, 8600]
+        UD->>Unity: Check specified port (UNITY_TCP_PORT)
         Unity-->>UD: No response (Unity not ready)
     end
     
@@ -996,16 +996,15 @@ The system maintains connection state through multiple layers:
 
 The system uses a systematic port discovery approach:
 
-**Port Range:** `[8700, 8800, 8900, 9000, 9100, 8600]`
+**Port Configuration:** UNITY_TCP_PORT environment variable specified port
 **Discovery Strategy:**
-1. Start with default port (8700)
-2. Increment by 100 for additional instances
-3. Fall back to 8600 as final attempt
+1. Check UNITY_TCP_PORT environment variable specified port
+2. Attempt Unity connection on the specified port
 
-**Port Conflict Resolution:**
-- Automatic port selection based on availability
-- Support for multiple Unity instances
-- Environment variable override capability
+**Port Configuration:**
+- Explicit port specification via UNITY_TCP_PORT environment variable
+- Check only the configured port for improved performance
+- Eliminate unnecessary port scanning
 
 ### 5.5. Security Validation Flow
 
@@ -1126,7 +1125,7 @@ graph TB
     UC --> MH
     UC --> UD
     UD --> UC
-    UC -->|TCP/JSON-RPC<br/>Port 8700+| Bridge
+    UC -->|TCP/JSON-RPC<br/>UNITY_TCP_PORT| Bridge
 ```
 
 ### 7.2. TypeScript Class Relationships
@@ -1421,7 +1420,7 @@ Singleton service for Unity instance discovery:
 - **`UnityDiscovery` class**:
     - Implements singleton pattern to prevent multiple discovery timers
     - Provides 1-second polling for Unity Editor instances
-    - Scans ports [8700, 8800, 8900, 9000, 9100, 8600]
+    - Checks specified port from UNITY_TCP_PORT environment variable
     - Handles connection callbacks and connection loss events
 
 ### `src/tools/dynamic-unity-command-tool.ts`
