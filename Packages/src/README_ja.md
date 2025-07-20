@@ -392,7 +392,8 @@ UnitySearchが提供する検索プロバイダーを取得します
 
 4. IDE接続確認
   - 例えばCursorの場合、設定ページのTools & Integrationsを確認し、uLoopMCPを見つけてください。トグルをクリックしてMCPを有効にします。赤い円が表示される場合は、Cursorを再起動してください。  
-<img width="545" alt="image" src="https://github.com/user-attachments/assets/ed54d051-b78a-4bb4-bb2f-7ab23ebc1840" />
+
+<img width="545" height="481" alt="image" src="https://github.com/user-attachments/assets/2497f85d-1964-4667-92fc-a9e33a946206" />
 
 
 <details>
