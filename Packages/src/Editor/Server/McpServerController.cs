@@ -79,6 +79,9 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     return;
                 }
+                
+                // Automatically update all configured MCP editor settings with new port
+                McpPortChangeUpdater.UpdateAllConfigurationsForPortChange(availablePort, "Server port conflict resolution");
             }
             
             // Validate server configuration before starting
@@ -234,6 +237,9 @@ namespace io.github.hatayama.uLoopMCP
             {
                 _ = StartReconnectionUITimeout();
             }
+            
+            // Update MCP configurations to match current ULOOPMCP_DEBUG state
+            McpDebugStateUpdater.UpdateAllConfigurationsForDebugState();
             
             // Restore server state.
             RestoreServerStateIfNeeded();

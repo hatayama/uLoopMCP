@@ -67,8 +67,9 @@ namespace io.github.hatayama.uLoopMCP
         public readonly bool IsConfigured;
         public readonly bool HasPortMismatch;
         public readonly string ConfigurationError;
+        public readonly bool IsUpdateNeeded;
 
-        public EditorConfigData(McpEditorType selectedEditor, bool showFoldout, bool isServerRunning, int currentPort, bool isConfigured = false, bool hasPortMismatch = false, string configurationError = null)
+        public EditorConfigData(McpEditorType selectedEditor, bool showFoldout, bool isServerRunning, int currentPort, bool isConfigured = false, bool hasPortMismatch = false, string configurationError = null, bool isUpdateNeeded = true)
         {
             SelectedEditor = selectedEditor;
             ShowFoldout = showFoldout;
@@ -77,6 +78,7 @@ namespace io.github.hatayama.uLoopMCP
             IsConfigured = isConfigured;
             HasPortMismatch = hasPortMismatch;
             ConfigurationError = configurationError;
+            IsUpdateNeeded = isUpdateNeeded;
         }
     }
 

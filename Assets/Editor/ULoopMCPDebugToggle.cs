@@ -13,7 +13,6 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class ULoopMCPDebugToggle
     {
-        private const string DEBUG_SYMBOL = "ULOOPMCP_DEBUG";
         private const string MENU_PATH_ENABLE = "uLoopMCP/Tools/Debug Settings/Enable Debug Mode";
         private const string MENU_PATH_DISABLE = "uLoopMCP/Tools/Debug Settings/Disable Debug Mode";
 
@@ -24,7 +23,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             BuildTargetGroup targetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
             string defines = PlayerSettings.GetScriptingDefineSymbolsForGroup(targetGroup);
-            return defines.Split(';').Contains(DEBUG_SYMBOL);
+            return defines.Split(';').Contains(McpConstants.SCRIPTING_DEFINE_ULOOPMCP_DEBUG);
         }
 
         /// <summary>
@@ -44,11 +43,11 @@ namespace io.github.hatayama.uLoopMCP
             
             if (string.IsNullOrEmpty(defines))
             {
-                defines = DEBUG_SYMBOL;
+                defines = McpConstants.SCRIPTING_DEFINE_ULOOPMCP_DEBUG;
             }
             else
             {
-                defines += ";" + DEBUG_SYMBOL;
+                defines += ";" + McpConstants.SCRIPTING_DEFINE_ULOOPMCP_DEBUG;
             }
             
             PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, defines);
@@ -71,7 +70,7 @@ namespace io.github.hatayama.uLoopMCP
             string defines = PlayerSettings.GetScriptingDefineSymbolsForGroup(targetGroup);
             
             string[] defineArray = defines.Split(';');
-            defineArray = defineArray.Where(d => d != DEBUG_SYMBOL).ToArray();
+            defineArray = defineArray.Where(d => d != McpConstants.SCRIPTING_DEFINE_ULOOPMCP_DEBUG).ToArray();
             defines = string.Join(";", defineArray);
             
             PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, defines);

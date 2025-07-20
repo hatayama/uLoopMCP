@@ -201,6 +201,9 @@ namespace io.github.hatayama.uLoopMCP
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: ui.ShowSecuritySettings));
             McpEditorSettings.SetCustomPort(port);
+            
+            // Automatically update all configured MCP editor settings with new port
+            McpPortChangeUpdater.UpdateAllConfigurationsForPortChange(port, "UI port change");
         }
 
         /// <summary>

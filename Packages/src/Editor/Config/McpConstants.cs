@@ -30,6 +30,9 @@ namespace io.github.hatayama.uLoopMCP
         public const string NODE_COMMAND = "node";
         public const string UNITY_TCP_PORT_ENV_KEY = "UNITY_TCP_PORT";
         
+        // Scripting define symbols
+        public const string SCRIPTING_DEFINE_ULOOPMCP_DEBUG = "ULOOPMCP_DEBUG";
+        
         // Environment variable keys for development mode
         public const string ENV_KEY_ULOOPMCP_DEBUG = "ULOOPMCP_DEBUG";
         public const string ENV_KEY_ULOOPMCP_PRODUCTION = "ULOOPMCP_PRODUCTION";
