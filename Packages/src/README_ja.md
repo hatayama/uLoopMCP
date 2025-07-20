@@ -26,7 +26,7 @@ AIによるコーディングを可能な限り長時間自走させる事をコ
 3. コンテキストをなるべく消費しないようにするオプションを実装しています。 
 
 # ツールwindow
-<img width="350" alt="image" src="https://github.com/user-attachments/assets/5863b58b-7b48-48ae-9a40-c874ddc11488" />
+<img width="350" alt="image" src="https://github.com/user-attachments/assets/b0cd0d46-096a-49a4-adcb-cfd30beece53" />
 
  - サーバーの状態を管理・モニターします
  - LLMツールの接続状況を把握できます
@@ -385,7 +385,7 @@ UnitySearchが提供する検索プロバイダーを取得します
 
 ## 使用方法
 1. Window > uLoopMCPを選択します。専用ウィンドウが開くので、「Start Server」ボタンを押してください。  
-<img width="335" alt="image" src="https://github.com/user-attachments/assets/4cfd7f26-7739-442d-bad9-b3f6d113a0d7" />
+<img width="335" alt="image" src="https://github.com/user-attachments/assets/38c67d7b-6bbf-4876-ab40-6bc700842dc4" />
 
 3. 次に、LLM Tool SettingsセクションでターゲットIDEを選択します。黄色い「Configure {LLM Tool名}」ボタンを押してIDEに自動接続してください。  
 <img width="335" alt="image" src="https://github.com/user-attachments/assets/25f1f4f9-e3c8-40a5-a2f3-903f9ed5f45b" />
