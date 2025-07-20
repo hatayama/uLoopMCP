@@ -37,7 +37,7 @@ graph TB
     UCM --> UC
     UCM --> UD
     UD -.->|Port Discovery<br/>Polling| MB
-    UC <-->|TCP/JSON-RPC<br/>Port 8700+| MB
+    UC <-->|TCP/JSON-RPC<br/>UNITY_TCP_PORT| MB
     UC -->|setClientName| MB
     MB <--> CMD
     CMD <--> API
@@ -469,10 +469,10 @@ sequenceDiagram
     
     loop Every 1 second
         UD->>Unity: Check specified port (UNITY_TCP_PORT)
-        Unity-->>UD: Port 8700 responds
+        Unity-->>UD: UNITY_TCP_PORT responds
     end
     
-    UD->>UC: Connect to port 8700
+    UD->>UC: Connect to UNITY_TCP_PORT
     UC->>Unity: TCP connection established
     UC->>Unity: Send setClientName command
     Unity->>Unity: Update UI with client name
@@ -809,7 +809,7 @@ sequenceDiagram
     
     loop Unity Discovery
         UD->>Unity: Check specified port (UNITY_TCP_PORT)
-        Unity-->>UD: Port 8700 responds
+        Unity-->>UD: UNITY_TCP_PORT responds
     end
     
     UD->>UC: Connect to Unity
@@ -1125,7 +1125,7 @@ graph TB
     UC --> MH
     UC --> UD
     UD --> UC
-    UC -->|TCP/JSON-RPC<br/>Port 8700+| Bridge
+    UC -->|TCP/JSON-RPC<br/>UNITY_TCP_PORT| Bridge
 ```
 
 ### 7.2. TypeScript Class Relationships

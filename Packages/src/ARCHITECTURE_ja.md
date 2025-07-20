@@ -481,10 +481,10 @@ sequenceDiagram
     
     loop 1秒ごと
         UD->>Unity: 指定ポート確認 (UNITY_TCP_PORT)
-        Unity-->>UD: ポート8700が応答
+        Unity-->>UD: UNITY_TCP_PORTが応答
     end
     
-    UD->>UC: ポート8700に接続
+    UD->>UC: UNITY_TCP_PORTに接続
     UC->>Unity: TCP接続確立
     UC->>Unity: setClientNameコマンド送信
     Unity->>Unity: クライアント名でUI更新
@@ -849,7 +849,7 @@ sequenceDiagram
     
     loop Unity発見
         UD->>Unity: 指定ポート確認 (UNITY_TCP_PORT)
-        Unity-->>UD: ポート8700が応答
+        Unity-->>UD: UNITY_TCP_PORTが応答
     end
     
     UD->>UC: Unityに接続
@@ -1168,7 +1168,7 @@ graph TB
     UD --> UC
     MH --> CLF
     MH --> DB
-    UC -->|TCP/JSON-RPC<br/>Content-Lengthフレーミング<br/>ポート8700+| Bridge
+    UC -->|TCP/JSON-RPC<br/>Content-Lengthフレーミング<br/>UNITY_TCP_PORT| Bridge
 ```
 
 ### 7.2. TypeScriptクラス関係図
