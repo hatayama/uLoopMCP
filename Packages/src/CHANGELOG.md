@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.29.4](https://github.com/hatayama/uLoopMCP/compare/v0.29.3...v0.29.4) (2025-07-20)
+
+
+### Bug Fixes
+
+* eliminate 'No connected tools found' flash with event-driven architecture ([#229](https://github.com/hatayama/uLoopMCP/issues/229)) ([8fc99f7](https://github.com/hatayama/uLoopMCP/commit/8fc99f73c760bd0d07c665d2b2bb79f60c84869e))
+
 ## [0.29.3](https://github.com/hatayama/uLoopMCP/compare/v0.29.2...v0.29.3) (2025-07-18)
 
 
