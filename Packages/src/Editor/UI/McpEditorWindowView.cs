@@ -157,37 +157,68 @@ namespace io.github.hatayama.uLoopMCP
                 
                 EditorGUILayout.Space();
                 
-                // Determine button text based on configuration status
+                // Determine button text and state based on configuration status
                 string buttonText;
+                bool buttonEnabled = true;
+                
                 if (data.IsConfigured)
                 {
-                    if (data.HasPortMismatch)
+                    if (data.IsUpdateNeeded)
                     {
-                        buttonText = data.IsServerRunning ? 
-                            $"Update {editorName} Settings\n(Port mismatch - Server: {data.CurrentPort})" : 
-                            $"Update {editorName} Settings\n(Port mismatch)";
+                        if (data.HasPortMismatch)
+                        {
+                            buttonText = data.IsServerRunning ? 
+                                $"Update {editorName} Settings\n(Port mismatch - Server: {data.CurrentPort})" : 
+                                $"Update {editorName} Settings\n(Port mismatch)";
+                        }
+                        else
+                        {
+                            buttonText = data.IsServerRunning ? $"Update {editorName} Settings\n(Port {data.CurrentPort})" : $"Update {editorName} Settings";
+                        }
+                        buttonEnabled = true;
                     }
                     else
                     {
-                        buttonText = data.IsServerRunning ? $"Update {editorName} Settings\n(Port {data.CurrentPort})" : $"Update {editorName} Settings";
+                        // Settings are already up to date
+                        buttonText = data.IsServerRunning ? 
+                            $"Settings Already Configured\n(Port {data.CurrentPort})" : 
+                            $"Settings Already Configured\n(Port {data.CurrentPort})";
+                        buttonEnabled = false;
                     }
                 }
                 else
                 {
                     buttonText = $"Settings not found. \nConfigure {editorName}";
+                    buttonEnabled = true;
                 }
                 
-                // Apply warning yellow color for unconfigured state or port mismatch
+                // Apply colors based on button state
                 Color originalColor = GUI.backgroundColor;
-                if (!data.IsConfigured || data.HasPortMismatch)
+                if (!buttonEnabled)
                 {
-                    GUI.backgroundColor = new Color(1f, 0.9f, 0.4f); // Warning yellow
+                    GUI.backgroundColor = new Color(0.8f, 0.8f, 0.8f); // Gray for disabled/up-to-date
+                }
+                else if (!data.IsConfigured)
+                {
+                    GUI.backgroundColor = new Color(1f, 0.9f, 0.4f); // Warning yellow for unconfigured
+                }
+                else if (data.HasPortMismatch)
+                {
+                    GUI.backgroundColor = new Color(1f, 0.9f, 0.4f); // Warning yellow for port mismatch
+                }
+                else if (data.IsUpdateNeeded)
+                {
+                    GUI.backgroundColor = new Color(0.7f, 0.9f, 1f); // Light blue for update needed
                 }
                 
-                if (GUILayout.Button(buttonText, GUILayout.Height(data.IsServerRunning ? 40f : 25f)))
+                EditorGUI.BeginDisabledGroup(!buttonEnabled);
+                // Calculate button height based on text content (2 lines need more height)
+                float buttonHeight = buttonText.Contains('\n') ? 40f : 25f;
+                if (GUILayout.Button(buttonText, GUILayout.Height(buttonHeight)))
                 {
                     configureCallback?.Invoke(editorName);
                 }
+                EditorGUI.EndDisabledGroup();
                 
                 // Restore original color
                 GUI.backgroundColor = originalColor;

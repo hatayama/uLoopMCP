@@ -617,6 +617,7 @@ namespace io.github.hatayama.uLoopMCP
             // Check configuration status
             bool isConfigured = false;
             bool hasPortMismatch = false;
+            bool isUpdateNeeded = true;
             string configurationError = null;
 
             try
@@ -641,13 +642,18 @@ namespace io.github.hatayama.uLoopMCP
                         hasPortMismatch = _model.UI.CustomPort != configuredPort;
                     }
                 }
+
+                // Check if update is needed
+                int portToCheck = isServerRunning ? currentPort : _model.UI.CustomPort;
+                isUpdateNeeded = configService.IsUpdateNeeded(portToCheck);
             }
             catch (System.Exception ex)
             {
                 configurationError = ex.Message;
+                isUpdateNeeded = true; // If error occurs, assume update is needed
             }
 
-            return new EditorConfigData(_model.UI.SelectedEditorType, _model.UI.ShowLLMToolSettings, isServerRunning, currentPort, isConfigured, hasPortMismatch, configurationError);
+            return new EditorConfigData(_model.UI.SelectedEditorType, _model.UI.ShowLLMToolSettings, isServerRunning, currentPort, isConfigured, hasPortMismatch, configurationError, isUpdateNeeded);
         }
 
         /// <summary>

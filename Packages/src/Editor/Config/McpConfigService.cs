@@ -46,6 +46,45 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Checks if update is needed for the editor settings.
+        /// </summary>
+        /// <param name="port">The port number to check.</param>
+        /// <returns>True if update is needed, false if settings are already up to date.</returns>
+        public bool IsUpdateNeeded(int port)
+        {
+            // Validate configuration parameters before proceeding
+            ValidateConfigurationParameters(port);
+            
+            string configPath = UnityMcpPathResolver.GetConfigPath(_editorType);
+            
+            // If configuration file doesn't exist, update is needed
+            if (!_repository.Exists(configPath))
+            {
+                return true;
+            }
+
+            // Load existing settings
+            McpConfig config = _repository.Load(configPath);
+
+            // Check if Unity MCP configuration exists
+            string serverKey = McpServerConfigFactory.CreateUnityMcpServerKey(port, _editorType);
+            if (!config.mcpServers.ContainsKey(serverKey))
+            {
+                return true;
+            }
+
+            // Create expected configuration
+            string serverPath = UnityMcpPathResolver.GetTypeScriptServerPath();
+            McpServerConfigData expectedConfig = McpServerConfigFactory.CreateUnityMcpConfig(port, serverPath, _editorType);
+
+            // Compare with existing configuration
+            McpServerConfigData existingConfig = config.mcpServers[serverKey];
+            bool configsAreEqual = McpServerConfigComparer.AreEqual(existingConfig, expectedConfig);
+
+            return !configsAreEqual;
+        }
+
+        /// <summary>
         /// Auto-configures the editor settings.
         /// </summary>
         /// <param name="port">The port number to use.</param>
