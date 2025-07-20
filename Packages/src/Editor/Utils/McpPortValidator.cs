@@ -25,14 +25,19 @@ namespace io.github.hatayama.uLoopMCP
 
             string contextSuffix = string.IsNullOrEmpty(context) ? "" : $" {context}";
 
-            if (port < ReservedPortThreshold)
+            // Skip warnings for UI changes
+            bool isUIChange = !string.IsNullOrEmpty(context) && context.Contains("UI port change");
+            
+            if (port < ReservedPortThreshold && !isUIChange)
             {
-                return false;
+                UnityEngine.Debug.LogWarning($"Port {port} is below reserved port threshold ({ReservedPortThreshold}), but allowing for development{contextSuffix}");
+                // Allow for development purposes, just log warning
             }
             
-            if (System.Array.IndexOf(CommonPorts, port) != -1)
+            if (System.Array.IndexOf(CommonPorts, port) != -1 && !isUIChange)
             {
-                return false;
+                UnityEngine.Debug.LogWarning($"Port {port} is a common system port, but allowing for development{contextSuffix}");
+                // Allow for development purposes, just log warning
             }
 
             return true;
