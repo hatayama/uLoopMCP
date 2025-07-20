@@ -103,7 +103,7 @@ namespace io.github.hatayama.uLoopMCP
             if (GUILayout.Button(buttonText, GUILayout.Height(30)))
             {
                 // Execute compilation using async/await
-                _ = ExecuteCompileAsync();
+                ExecuteCompileAsync().Forget();
             }
             EditorGUI.EndDisabledGroup();
 

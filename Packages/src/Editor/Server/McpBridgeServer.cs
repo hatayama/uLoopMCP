@@ -326,7 +326,7 @@ namespace io.github.hatayama.uLoopMCP
                         OnClientConnected?.Invoke(clientEndpoint);
                         
                         // Execute client handling in a separate task (fire-and-forget).
-                        _ = Task.Run(() => HandleClient(client, cancellationToken));
+                        Task.Run(() => HandleClient(client, cancellationToken)).Forget();
                     }
                 }
                 catch (ObjectDisposedException)

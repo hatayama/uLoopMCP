@@ -253,7 +253,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // Schedule cleanup after a short delay to remove actually disconnected tools
-            _ = DelayedCleanupAsync();
+            DelayedCleanupAsync().Forget();
         }
 
         /// <summary>

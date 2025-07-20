@@ -222,7 +222,7 @@ namespace io.github.hatayama.uLoopMCP
 
             if (showReconnectingUI)
             {
-                _ = StartReconnectionUITimeout();
+                StartReconnectionUITimeout().Forget();
             }
 
             // Update MCP configurations to match current ULOOPMCP_DEBUG state
@@ -238,7 +238,7 @@ namespace io.github.hatayama.uLoopMCP
             // This ensures schema changes (descriptions, parameters) are communicated to Cursor
             if (IsServerRunning)
             {
-                _ = SendToolNotificationAfterCompilation();
+                SendToolNotificationAfterCompilation().Forget();
             }
         }
 
