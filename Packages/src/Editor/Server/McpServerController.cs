@@ -337,7 +337,6 @@ namespace io.github.hatayama.uLoopMCP
                 {
                 }
                 
-                
                 // Clear server-side reconnecting flag on successful restoration
                 // NOTE: Do NOT clear UI display flag here - let it be cleared by timeout or client connection
                 sessionManager.IsReconnecting = false;

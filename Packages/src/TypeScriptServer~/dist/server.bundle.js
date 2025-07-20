@@ -5806,7 +5806,7 @@ var VibeLogger = class _VibeLogger {
       return;
     }
     const logEntry = {
-      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      timestamp: _VibeLogger.formatTimestamp(),
       level,
       operation,
       message,
@@ -5823,7 +5823,7 @@ var VibeLogger = class _VibeLogger {
     }
     _VibeLogger.saveLogToFile(logEntry).catch((error) => {
       _VibeLogger.writeEmergencyLog({
-        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        timestamp: _VibeLogger.formatTimestamp(),
         level: "EMERGENCY",
         message: "VibeLogger saveLogToFile failed",
         original_error: error instanceof Error ? error.message : String(error),
@@ -6003,7 +6003,7 @@ var VibeLogger = class _VibeLogger {
       }
     } catch (fallbackError) {
       _VibeLogger.writeEmergencyLog({
-        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        timestamp: _VibeLogger.formatTimestamp(),
         level: "EMERGENCY",
         message: "VibeLogger fallback failed",
         original_error: error instanceof Error ? error.message : String(error),
@@ -6073,18 +6073,38 @@ var VibeLogger = class _VibeLogger {
     }
   }
   /**
-   * Format date for file naming
+   * Format timestamp for log entries (local timezone)
+   */
+  static formatTimestamp() {
+    const now = /* @__PURE__ */ new Date();
+    const offset = now.getTimezoneOffset();
+    const offsetHours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0");
+    const offsetMinutes = String(Math.abs(offset) % 60).padStart(2, "0");
+    const offsetSign = offset <= 0 ? "+" : "-";
+    return now.toISOString().replace("Z", `${offsetSign}${offsetHours}:${offsetMinutes}`);
+  }
+  /**
+   * Format date for file naming (local timezone)
    */
   static formatDate() {
     const now = /* @__PURE__ */ new Date();
-    return now.toISOString().slice(0, 10).replace(/-/g, "");
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}${month}${day}`;
   }
   /**
    * Format datetime for file rotation
    */
   static formatDateTime() {
     const now = /* @__PURE__ */ new Date();
-    return now.toISOString().slice(0, 19).replace(/[-:]/g, "").replace("T", "_");
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const seconds = String(now.getSeconds()).padStart(2, "0");
+    return `${year}${month}${day}_${hours}${minutes}${seconds}`;
   }
 };
 

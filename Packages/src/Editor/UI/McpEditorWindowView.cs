@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEditor;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace io.github.hatayama.uLoopMCP
@@ -213,12 +212,10 @@ namespace io.github.hatayama.uLoopMCP
                 EditorGUILayout.HelpBox("Server is not running. Start the server to see connected tools.", MessageType.Warning);
                 return;
             }
+
+            // Debug.LogWarning($"[hatayama] data.Clients.Count: {data.Clients.Count}");
             
-            if (data.ShowReconnectingUI)
-            {
-                EditorGUILayout.HelpBox(McpUIConstants.RECONNECTING_MESSAGE, MessageType.Info);
-            }
-            else if (data.Clients != null && data.Clients.Count > 0)
+            if (data.Clients != null && data.Clients.Count > 0)
             {
                 // Filter out clients with default or unknown names
                 var validClients = data.Clients.Where(client => IsValidClientName(client.ClientName)).ToList();

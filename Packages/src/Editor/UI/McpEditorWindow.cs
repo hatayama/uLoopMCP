@@ -1,10 +1,11 @@
 using UnityEngine;
 using UnityEditor;
 using System.Linq;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 
 #if ULOOPMCP_DEBUG
-using System.Collections.Generic;
 using System;
 #endif
 
@@ -26,11 +27,17 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class McpEditorWindow : EditorWindow
     {
+        // Singleton instance for external access
+        private static McpEditorWindow _instance;
+        
         // Configuration services factory
         private McpConfigServiceFactory _configServiceFactory;
 
         // View layer
         private McpEditorWindowView _view;
+        
+        // Connected LLM Tools management (persisted across domain reload)
+        private List<ConnectedLLMToolData> _connectedTools = new();
 
         // Model layer (MVP pattern)
         private McpEditorModel _model;
@@ -40,6 +47,18 @@ namespace io.github.hatayama.uLoopMCP
 
         // Server operations handler (MVP pattern helper)
         private McpServerOperations _serverOperations;
+        
+        // Cache for stored tools to avoid repeated calls
+        private IEnumerable<ConnectedClient> _cachedStoredTools;
+        private float _lastStoredToolsUpdateTime;
+
+        /// <summary>
+        /// Get current instance for external access
+        /// </summary>
+        public static McpEditorWindow Instance => _instance;
+        
+        // Backup storage for server restart
+        private List<ConnectedLLMToolData> _toolsBackup;
 
         [MenuItem("Window/uLoopMCP")]
         public static void ShowWindow()
@@ -50,6 +69,23 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnEnable()
         {
+            _instance = this;
+            InitializeAll();
+            SubscribeToServerEvents();
+        }
+
+        private void OnDestroy()
+        {
+            UnsubscribeFromServerEvents();
+            if (_instance == this)
+            {
+                _instance = null;
+            }
+        }
+
+        
+        private void InitializeAll()
+        {
             InitializeModel();
             InitializeView();
             InitializeConfigurationServices();
@@ -57,6 +93,7 @@ namespace io.github.hatayama.uLoopMCP
             InitializeServerOperations();
             LoadSavedSettings();
             RestoreSessionState();
+            
             HandlePostCompileMode();
         }
 
@@ -74,6 +111,211 @@ namespace io.github.hatayama.uLoopMCP
         private void InitializeView()
         {
             _view = new McpEditorWindowView();
+        }
+
+        /// <summary>
+        /// Add a connected LLM tool
+        /// </summary>
+        public void AddConnectedTool(ConnectedClient client)
+        {
+            if (client.ClientName == McpConstants.UNKNOWN_CLIENT_NAME)
+            {
+                return;
+            }
+
+            // Remove existing tool if present, then add
+            _connectedTools.RemoveAll(tool => tool.Name == client.ClientName);
+            
+            ConnectedLLMToolData toolData = new(
+                client.ClientName, 
+                client.Endpoint, 
+                client.ConnectedAt
+            );
+            _connectedTools.Add(toolData);
+            InvalidateStoredToolsCache();
+        }
+
+        /// <summary>
+        /// Remove a connected LLM tool
+        /// </summary>
+        public void RemoveConnectedTool(string toolName)
+        {
+            _connectedTools.RemoveAll(tool => tool.Name == toolName);
+            InvalidateStoredToolsCache();
+        }
+
+        /// <summary>
+        /// Clear all connected LLM tools
+        /// </summary>
+        public void ClearConnectedTools()
+        {
+            _connectedTools.Clear();
+            InvalidateStoredToolsCache();
+        }
+
+        /// <summary>
+        /// Subscribe to server lifecycle events
+        /// </summary>
+        private void SubscribeToServerEvents()
+        {
+            McpBridgeServer.OnServerStopping += OnServerStopping;
+            McpBridgeServer.OnServerStarted += OnServerStarted;
+            McpBridgeServer.OnToolConnected += OnToolConnected;
+            McpBridgeServer.OnToolDisconnected += OnToolDisconnected;
+            McpBridgeServer.OnAllToolsCleared += OnAllToolsCleared;
+        }
+        
+        /// <summary>
+        /// Unsubscribe from server lifecycle events
+        /// </summary>
+        private void UnsubscribeFromServerEvents()
+        {
+            McpBridgeServer.OnServerStopping -= OnServerStopping;
+            McpBridgeServer.OnServerStarted -= OnServerStarted;
+            McpBridgeServer.OnToolConnected -= OnToolConnected;
+            McpBridgeServer.OnToolDisconnected -= OnToolDisconnected;
+            McpBridgeServer.OnAllToolsCleared -= OnAllToolsCleared;
+        }
+        
+        /// <summary>
+        /// Handle server stopping event - backup connected tools
+        /// </summary>
+        private void OnServerStopping()
+        {
+            _toolsBackup = _connectedTools
+                .Where(tool => tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
+                .ToList();
+        }
+        
+        /// <summary>
+        /// Handle server started event - restore connected tools
+        /// </summary>
+        private void OnServerStarted()
+        {
+            if (_toolsBackup != null && _toolsBackup.Count > 0)
+            {
+                RestoreConnectedTools(_toolsBackup);
+                _toolsBackup = null;
+            }
+        }
+        
+        /// <summary>
+        /// Handle tool connected event - add tool to connected list
+        /// </summary>
+        private void OnToolConnected(ConnectedClient client)
+        {
+            AddConnectedTool(client);
+        }
+        
+        /// <summary>
+        /// Handle tool disconnected event - remove tool from connected list
+        /// </summary>
+        private void OnToolDisconnected(string toolName)
+        {
+            RemoveConnectedTool(toolName);
+        }
+        
+        /// <summary>
+        /// Handle all tools cleared event - clear all connected tools
+        /// </summary>
+        private void OnAllToolsCleared()
+        {
+            ClearConnectedTools();
+        }
+        
+        /// <summary>
+        /// Backup current connected tools for server restart (legacy method for compatibility)
+        /// </summary>
+        public List<ConnectedLLMToolData> BackupConnectedTools()
+        {
+            List<ConnectedLLMToolData> backup = _connectedTools
+                .Where(tool => tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
+                .ToList();
+            return backup;
+        }
+
+        /// <summary>
+        /// Restore connected tools from backup after server restart
+        /// First restore all tools immediately, then cleanup disconnected ones after a delay
+        /// </summary>
+        public void RestoreConnectedTools(List<ConnectedLLMToolData> backup)
+        {
+            if (backup == null || backup.Count == 0)
+            {
+                return;
+            }
+
+            // Immediately restore all tools to prevent "No connected tools found" flash
+            foreach (ConnectedLLMToolData toolData in backup)
+            {
+                ConnectedClient restoredClient = new(toolData.Endpoint, null, toolData.Name);
+                AddConnectedTool(restoredClient);
+            }
+
+            // Schedule cleanup after a short delay to remove actually disconnected tools
+            _ = DelayedCleanupAsync();
+        }
+
+        /// <summary>
+        /// Clean up disconnected tools after a delay
+        /// </summary>
+        private async Task DelayedCleanupAsync()
+        {
+            // Wait 1 second for clients to reconnect
+            await TimerDelay.Wait(2000);
+
+            if (!McpServerController.IsServerRunning)
+            {
+                return;
+            }
+
+            // Get actually connected clients
+            IReadOnlyCollection<ConnectedClient> actualConnectedClients = McpServerController.CurrentServer?.GetConnectedClients();
+            if (actualConnectedClients == null)
+            {
+                return;
+            }
+
+            // Get list of actually connected client names
+            HashSet<string> actualClientNames = new HashSet<string>(
+                actualConnectedClients
+                    .Where(client => client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME)
+                    .Select(client => client.ClientName)
+            );
+
+            // Remove tools that are no longer connected
+            List<ConnectedLLMToolData> toolsToRemove = _connectedTools
+                .Where(tool => !actualClientNames.Contains(tool.Name))
+                .ToList();
+
+            foreach (ConnectedLLMToolData tool in toolsToRemove)
+            {
+                RemoveConnectedTool(tool.Name);
+            }
+
+            // Force UI update if any tools were removed
+            if (toolsToRemove.Count > 0)
+            {
+                Repaint();
+            }
+
+        }
+
+
+        /// <summary>
+        /// Get connected tools as ConnectedClient objects for UI display, sorted by name
+        /// </summary>
+        public IEnumerable<ConnectedClient> GetConnectedToolsAsClients()
+        {
+            return _connectedTools.OrderBy(tool => tool.Name).Select(tool => ConvertToConnectedClient(tool));
+        }
+
+        /// <summary>
+        /// Convert stored tool data to ConnectedClient for UI display
+        /// </summary>
+        private ConnectedClient ConvertToConnectedClient(ConnectedLLMToolData toolData)
+        {
+            return new ConnectedClient(toolData.Endpoint, null, toolData.Name);
         }
 
         /// <summary>
@@ -130,6 +372,8 @@ namespace io.github.hatayama.uLoopMCP
 
             // Check if after compilation
             bool isAfterCompile = McpSessionManager.instance.IsAfterCompile;
+
+            // Grace period is already started in OnEnable() if needed
 
             // Determine if server should be started automatically
             bool shouldStartAutomatically = isAfterCompile || _model.UI.AutoStartServer;
@@ -295,12 +539,37 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Get stored tools with caching to avoid repeated calls
+        /// </summary>
+        private IEnumerable<ConnectedClient> GetCachedStoredTools()
+        {
+            const float cacheDuration = 0.1f; // 100ms cache
+            float currentTime = Time.realtimeSinceStartup;
+            
+            if (_cachedStoredTools == null || (currentTime - _lastStoredToolsUpdateTime) > cacheDuration)
+            {
+                _cachedStoredTools = GetConnectedToolsAsClients();
+                _lastStoredToolsUpdateTime = currentTime;
+            }
+            
+            return _cachedStoredTools;
+        }
+
+        /// <summary>
+        /// Invalidate cached stored tools (call when tools change)
+        /// </summary>
+        private void InvalidateStoredToolsCache()
+        {
+            _cachedStoredTools = null;
+        }
+
+        /// <summary>
         /// Create connected tools data for view rendering
         /// </summary>
         private ConnectedToolsData CreateConnectedToolsData()
         {
             bool isServerRunning = McpServerController.IsServerRunning;
-            var connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
+            IReadOnlyCollection<ConnectedClient> connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
 
             // Check reconnecting UI flags from McpSessionManager
             bool showReconnectingUIFlag = McpSessionManager.instance.ShowReconnectingUI;
@@ -310,8 +579,23 @@ namespace io.github.hatayama.uLoopMCP
             bool hasNamedClients = connectedClients != null &&
                                    connectedClients.Any(client => client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME);
 
-            // Show reconnecting if either flag is true and no named clients are connected
-            bool showReconnectingUI = (showReconnectingUIFlag || showPostCompileUIFlag) && !hasNamedClients;
+            // Check if we have stored tools available (with caching)
+            IEnumerable<ConnectedClient> storedTools = GetCachedStoredTools();
+            bool hasStoredTools = storedTools.Any();
+            
+
+            // If we have stored tools, show them (prioritize stored tools over server clients)
+            if (hasStoredTools)
+            {
+                connectedClients = storedTools.ToList();
+                hasNamedClients = true;
+            }
+
+            // Show reconnecting UI only if no stored tools and no real clients
+            bool showReconnectingUI = !hasStoredTools && 
+                                      (showReconnectingUIFlag || showPostCompileUIFlag) && 
+                                      !hasNamedClients;
+
 
             // Clear post-compile flag when named clients are connected
             if (hasNamedClients && showPostCompileUIFlag)
