@@ -157,6 +157,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             McpBridgeServer.OnServerStopping += OnServerStopping;
             McpBridgeServer.OnServerStarted += OnServerStarted;
+            McpBridgeServer.OnToolConnected += OnToolConnected;
+            McpBridgeServer.OnToolDisconnected += OnToolDisconnected;
+            McpBridgeServer.OnAllToolsCleared += OnAllToolsCleared;
         }
         
         /// <summary>
@@ -166,6 +169,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             McpBridgeServer.OnServerStopping -= OnServerStopping;
             McpBridgeServer.OnServerStarted -= OnServerStarted;
+            McpBridgeServer.OnToolConnected -= OnToolConnected;
+            McpBridgeServer.OnToolDisconnected -= OnToolDisconnected;
+            McpBridgeServer.OnAllToolsCleared -= OnAllToolsCleared;
         }
         
         /// <summary>
@@ -188,6 +194,30 @@ namespace io.github.hatayama.uLoopMCP
                 RestoreConnectedTools(_toolsBackup);
                 _toolsBackup = null;
             }
+        }
+        
+        /// <summary>
+        /// Handle tool connected event - add tool to connected list
+        /// </summary>
+        private void OnToolConnected(ConnectedClient client)
+        {
+            AddConnectedTool(client);
+        }
+        
+        /// <summary>
+        /// Handle tool disconnected event - remove tool from connected list
+        /// </summary>
+        private void OnToolDisconnected(string toolName)
+        {
+            RemoveConnectedTool(toolName);
+        }
+        
+        /// <summary>
+        /// Handle all tools cleared event - clear all connected tools
+        /// </summary>
+        private void OnAllToolsCleared()
+        {
+            ClearConnectedTools();
         }
         
         /// <summary>

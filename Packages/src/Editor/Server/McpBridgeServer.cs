@@ -61,6 +61,11 @@ namespace io.github.hatayama.uLoopMCP
         public static event System.Action OnServerStopping;
         public static event System.Action OnServerStarted;
         
+        // Events for individual tool management
+        public static event System.Action<ConnectedClient> OnToolConnected;
+        public static event System.Action<string> OnToolDisconnected;
+        public static event System.Action OnAllToolsCleared;
+        
         // HResult error codes for normal disconnection detection
         private static readonly HashSet<int> NormalDisconnectionHResults = new()
         {
@@ -140,8 +145,8 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     McpServerController.ClearReconnectingFlag();
                     
-                    // Save LLM tool information when Unity connects
-                    McpEditorWindow.Instance?.AddConnectedTool(updatedClient);
+                    // Notify tool connected
+                    OnToolConnected?.Invoke(updatedClient);
                 }
             }
         }
@@ -298,10 +303,10 @@ namespace io.github.hatayama.uLoopMCP
                 _connectedClients.TryRemove(clientKey, out _);
             }
             
-            // Only clear LLM tool information if this is not a domain reload
+            // Notify all tools cleared if not during domain reload
             if (!McpSessionManager.instance.IsDomainReloadInProgress)
             {
-                McpEditorWindow.Instance?.ClearConnectedTools();
+                OnAllToolsCleared?.Invoke();
             }
         }
 
@@ -396,8 +401,8 @@ namespace io.github.hatayama.uLoopMCP
                         existingClient.Stream?.Close();
                         _connectedClients.TryRemove(clientKey, out _);
                         
-                        // Delete LLM tool information when Unity disconnects
-                        McpEditorWindow.Instance?.RemoveConnectedTool(existingClient.ClientName);
+                        // Notify tool disconnected
+                        OnToolDisconnected?.Invoke(existingClient.ClientName);
                     }
                     
                     // Add new client to connected clients for notification broadcasting
@@ -502,8 +507,8 @@ namespace io.github.hatayama.uLoopMCP
                     string clientKey = GenerateClientKey(clientToRemove.Endpoint);
                     _connectedClients.TryRemove(clientKey, out _);
                     
-                    // Delete LLM tool information when Unity disconnects
-                    McpEditorWindow.Instance?.RemoveConnectedTool(clientToRemove.ClientName);
+                    // Notify tool disconnected
+                    OnToolDisconnected?.Invoke(clientToRemove.ClientName);
                 }
                 
                 
@@ -562,8 +567,8 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (_connectedClients.TryRemove(clientKey, out ConnectedClient removedClient))
                 {
-                    // Delete LLM tool information when Unity disconnects
-                    McpEditorWindow.Instance?.RemoveConnectedTool(removedClient.ClientName);
+                    // Notify tool disconnected
+                    OnToolDisconnected?.Invoke(removedClient.ClientName);
                 }
             }
         }
