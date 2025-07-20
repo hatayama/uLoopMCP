@@ -37,22 +37,22 @@ public class UnitySearchTester : EditorWindow
         // Test buttons
         if (GUILayout.Button("Test Basic Search"))
         {
-            TestBasicSearch();
+            TestBasicSearch().Forget();
         }
         
         if (GUILayout.Button("Test File Extension Filter"))
         {
-            TestFileExtensionFilter();
+            TestFileExtensionFilter().Forget();
         }
         
         if (GUILayout.Button("Test Asset Type Filter"))
         {
-            TestAssetTypeFilter();
+            TestAssetTypeFilter().Forget();
         }
         
         if (GUILayout.Button("Test Empty Query (Should Fail)"))
         {
-            TestEmptyQuery();
+            TestEmptyQuery().Forget();
         }
         
         GUILayout.Space(10);
@@ -64,7 +64,7 @@ public class UnitySearchTester : EditorWindow
         EditorGUILayout.EndScrollView();
     }
     
-    private async void TestBasicSearch()
+    private async Task TestBasicSearch()
     {
         UnitySearchTool tool = new UnitySearchTool();
         UnitySearchSchema schema = new UnitySearchSchema
@@ -77,7 +77,7 @@ public class UnitySearchTester : EditorWindow
         await ExecuteTest(tool, schema, "Basic Search");
     }
     
-    private async void TestFileExtensionFilter()
+    private async Task TestFileExtensionFilter()
     {
         UnitySearchTool tool = new UnitySearchTool();
         UnitySearchSchema schema = new UnitySearchSchema
@@ -91,7 +91,7 @@ public class UnitySearchTester : EditorWindow
         await ExecuteTest(tool, schema, "File Extension Filter");
     }
     
-    private async void TestAssetTypeFilter()
+    private async Task TestAssetTypeFilter()
     {
         UnitySearchTool tool = new UnitySearchTool();
         UnitySearchSchema schema = new UnitySearchSchema
@@ -105,7 +105,7 @@ public class UnitySearchTester : EditorWindow
         await ExecuteTest(tool, schema, "Asset Type Filter");
     }
     
-    private async void TestEmptyQuery()
+    private async Task TestEmptyQuery()
     {
         UnitySearchTool tool = new UnitySearchTool();
         UnitySearchSchema schema = new UnitySearchSchema
