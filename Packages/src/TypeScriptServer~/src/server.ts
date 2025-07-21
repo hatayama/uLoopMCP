@@ -9,7 +9,6 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { UnityClient } from './unity-client.js';
 import { VibeLogger } from './utils/vibe-logger.js';
-import { UnityDiscovery } from './unity-discovery.js';
 import { UnityConnectionManager } from './unity-connection-manager.js';
 import { UnityToolManager } from './unity-tool-manager.js';
 import { McpClientCompatibility } from './mcp-client-compatibility.js';
@@ -42,7 +41,6 @@ class UnityMcpServer {
   private unityClient: UnityClient;
   private readonly isDevelopment: boolean;
   private isInitialized: boolean = false;
-  private unityDiscovery: UnityDiscovery;
   private connectionManager: UnityConnectionManager;
   private toolManager: UnityToolManager;
   private clientCompatibility: McpClientCompatibility;
@@ -72,7 +70,6 @@ class UnityMcpServer {
 
     // Initialize Unity connection manager
     this.connectionManager = new UnityConnectionManager(this.unityClient);
-    this.unityDiscovery = this.connectionManager.getUnityDiscovery();
 
     // Initialize Unity tool manager
     this.toolManager = new UnityToolManager(this.unityClient);
@@ -198,8 +195,8 @@ class UnityMcpServer {
                 undefined,
                 'Unity connection could not be established - check Unity MCP bridge',
               );
-              // Start Unity discovery to retry connection (singleton pattern prevents duplicates)
-              this.unityDiscovery.start();
+              // Event-driven architecture will automatically retry connection via push notifications
+              // No manual discovery start needed
             });
         }
       }

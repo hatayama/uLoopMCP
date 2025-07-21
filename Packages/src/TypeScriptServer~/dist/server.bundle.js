@@ -5474,7 +5474,7 @@ var StdioServerTransport = class {
 };
 
 // src/unity-client.ts
-import * as net from "net";
+import * as net2 from "net";
 
 // src/constants.ts
 var MCP_PROTOCOL_VERSION = "2024-11-05";
@@ -5513,12 +5513,6 @@ var ERROR_MESSAGES = {
   CONNECTION_FAILED: "Unity connection failed",
   TIMEOUT: "timeout",
   INVALID_RESPONSE: "Invalid response from Unity"
-};
-var POLLING = {
-  INTERVAL_MS: 1e3,
-  // Reduced from 3000ms to 1000ms for better responsiveness
-  BUFFER_SECONDS: 15
-  // Increased for safer Unity startup timing
 };
 var LIST_CHANGED_UNSUPPORTED_CLIENTS = [
   "claude",
@@ -6812,6 +6806,324 @@ var MessageHandler = class {
   }
 };
 
+// src/typescript-notification-server.ts
+import * as net from "net";
+var TypeScriptNotificationServer = class {
+  server = null;
+  port = 0;
+  isRunning = false;
+  correlationId;
+  // Event callbacks
+  onServerStartedCallback;
+  onServerStoppedCallback;
+  onConnectionEstablishedCallback;
+  constructor() {
+    this.correlationId = VibeLogger.generateCorrelationId();
+    VibeLogger.logInfo(
+      "notification_server_init",
+      "Initializing TypeScript Notification Server",
+      {},
+      this.correlationId,
+      "Setting up TCP server for Unity push notifications"
+    );
+  }
+  /**
+   * Find an available random port in the specified range
+   */
+  async findAvailablePort(startPort = 3e3, endPort = 9e3) {
+    const correlationId = VibeLogger.generateCorrelationId();
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const port = Math.floor(Math.random() * (endPort - startPort + 1)) + startPort;
+      if (await this.isPortAvailable(port)) {
+        VibeLogger.logInfo(
+          "notification_server_port_found",
+          "Found available port for notification server",
+          { port, attempt },
+          correlationId,
+          "Random port selection successful"
+        );
+        return port;
+      }
+    }
+    throw new Error("Could not find available port for TypeScript Notification Server");
+  }
+  /**
+   * Check if a port is available
+   */
+  async isPortAvailable(port) {
+    return new Promise((resolve2) => {
+      const testServer = net.createServer();
+      testServer.listen(port, () => {
+        testServer.close(() => {
+          resolve2(true);
+        });
+      });
+      testServer.on("error", () => {
+        resolve2(false);
+      });
+    });
+  }
+  /**
+   * Start the notification server
+   */
+  async start() {
+    if (this.isRunning) {
+      return;
+    }
+    try {
+      this.port = await this.findAvailablePort();
+      this.server = net.createServer((socket) => {
+        this.handleUnityConnection(socket);
+      });
+      await new Promise((resolve2, reject) => {
+        this.server.listen(this.port, () => {
+          this.isRunning = true;
+          VibeLogger.logInfo(
+            "notification_server_started",
+            "TypeScript Notification Server started successfully",
+            {
+              port: this.port,
+              listening: true
+            },
+            this.correlationId,
+            "Server ready to receive Unity notifications"
+          );
+          resolve2();
+        });
+        this.server.on("error", (error) => {
+          VibeLogger.logError(
+            "notification_server_start_error",
+            "Failed to start TypeScript Notification Server",
+            {
+              port: this.port,
+              error_message: error.message
+            },
+            this.correlationId,
+            "Server startup failed"
+          );
+          reject(error);
+        });
+      });
+    } catch (error) {
+      VibeLogger.logError(
+        "notification_server_start_exception",
+        "Exception during notification server startup",
+        {
+          error_message: error instanceof Error ? error.message : String(error)
+        },
+        this.correlationId
+      );
+      throw error;
+    }
+  }
+  /**
+   * Handle incoming Unity connection
+   */
+  handleUnityConnection(socket) {
+    const connectionId = VibeLogger.generateCorrelationId();
+    const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
+    VibeLogger.logInfo(
+      "notification_server_unity_connected",
+      "Unity connected to notification server",
+      {
+        remote_address: remoteAddress,
+        local_port: this.port
+      },
+      connectionId,
+      "Unity established reverse connection for notifications"
+    );
+    if (this.onConnectionEstablishedCallback) {
+      this.onConnectionEstablishedCallback();
+    }
+    socket.on("data", (data) => {
+      this.handleUnityNotification(data, connectionId);
+    });
+    socket.on("close", () => {
+      VibeLogger.logInfo(
+        "notification_server_unity_disconnected",
+        "Unity disconnected from notification server",
+        {
+          remote_address: remoteAddress
+        },
+        connectionId,
+        "Unity closed notification connection"
+      );
+    });
+    socket.on("error", (error) => {
+      VibeLogger.logError(
+        "notification_server_connection_error",
+        "Error in Unity notification connection",
+        {
+          remote_address: remoteAddress,
+          error_message: error.message
+        },
+        connectionId
+      );
+    });
+  }
+  /**
+   * Handle incoming notification from Unity
+   */
+  handleUnityNotification(data, connectionId) {
+    try {
+      const notificationText = data.toString("utf8");
+      const notification = JSON.parse(notificationText);
+      VibeLogger.logInfo(
+        "notification_server_received",
+        "Received notification from Unity",
+        {
+          notification_type: notification.type,
+          reason: notification.reason,
+          data_size: data.length
+        },
+        connectionId,
+        "Processing Unity notification"
+      );
+      switch (notification.type) {
+        case "server_started":
+          this.handleServerStartedNotification(notification, connectionId);
+          break;
+        case "server_stopped":
+          this.handleServerStoppedNotification(notification, connectionId);
+          break;
+        default:
+          VibeLogger.logWarning(
+            "notification_server_unknown_type",
+            "Received unknown notification type from Unity",
+            {
+              notification_type: notification.type,
+              full_notification: notification
+            },
+            connectionId,
+            "Unknown notification type - may need to update handler"
+          );
+      }
+    } catch (error) {
+      VibeLogger.logError(
+        "notification_server_parse_error",
+        "Failed to parse Unity notification",
+        {
+          raw_data: data.toString("utf8"),
+          error_message: error instanceof Error ? error.message : String(error)
+        },
+        connectionId
+      );
+    }
+  }
+  /**
+   * Handle server_started notification
+   */
+  handleServerStartedNotification(notification, connectionId) {
+    VibeLogger.logInfo(
+      "notification_server_started_received",
+      "Unity server started notification received",
+      {
+        reason: notification.reason,
+        server_port: notification.server_port,
+        timestamp: notification.timestamp
+      },
+      connectionId,
+      "Unity MCP server is now available for connections"
+    );
+    if (this.onServerStartedCallback) {
+      this.onServerStartedCallback();
+    }
+  }
+  /**
+   * Handle server_stopped notification
+   */
+  handleServerStoppedNotification(notification, connectionId) {
+    const reason = notification.reason || "unknown";
+    VibeLogger.logInfo(
+      "notification_server_stopped_received",
+      "Unity server stopped notification received",
+      {
+        reason,
+        timestamp: notification.timestamp
+      },
+      connectionId,
+      "Unity MCP server has been stopped"
+    );
+    if (this.onServerStoppedCallback) {
+      this.onServerStoppedCallback(reason);
+    }
+  }
+  /**
+   * Stop the notification server
+   */
+  async stop() {
+    if (!this.isRunning || !this.server) {
+      return;
+    }
+    return new Promise((resolve2) => {
+      this.server.close(() => {
+        this.isRunning = false;
+        this.server = null;
+        VibeLogger.logInfo(
+          "notification_server_stopped",
+          "TypeScript Notification Server stopped",
+          {
+            port: this.port
+          },
+          this.correlationId,
+          "Notification server shutdown complete"
+        );
+        resolve2();
+      });
+    });
+  }
+  /**
+   * Get the current port number
+   */
+  getPort() {
+    return this.port;
+  }
+  /**
+   * Check if server is running
+   */
+  isServerRunning() {
+    return this.isRunning;
+  }
+  /**
+   * Set callback for server started notifications
+   */
+  setOnServerStartedCallback(callback) {
+    this.onServerStartedCallback = callback;
+  }
+  /**
+   * Set callback for server stopped notifications
+   */
+  setOnServerStoppedCallback(callback) {
+    this.onServerStoppedCallback = callback;
+  }
+  /**
+   * Backward compatibility aliases
+   */
+  onServerStarted(callback) {
+    this.setOnServerStartedCallback(callback);
+  }
+  onServerStopped(callback) {
+    this.setOnServerStoppedCallback(callback);
+  }
+  /**
+   * Set callback for connection established
+   */
+  onConnectionEstablished(callback) {
+    this.onConnectionEstablishedCallback = callback;
+  }
+  /**
+   * Get debugging information
+   */
+  getDebugInfo() {
+    return {
+      port: this.port,
+      isRunning: this.isRunning,
+      hasServer: this.server !== null,
+      correlationId: this.correlationId
+    };
+  }
+};
+
 // src/unity-client.ts
 var UnityClient = class _UnityClient {
   static MAX_COUNTER = 9999;
@@ -6824,8 +7136,8 @@ var UnityClient = class _UnityClient {
   reconnectHandlers = /* @__PURE__ */ new Set();
   connectionManager = new ConnectionManager();
   messageHandler = new MessageHandler();
-  unityDiscovery = null;
-  // Reference to UnityDiscovery for connection loss handling
+  notificationServer = null;
+  // Notification server for push notifications
   requestIdCounter = 0;
   // Will be incremented to 1 on first use
   processId = process.pid;
@@ -6841,6 +7153,19 @@ var UnityClient = class _UnityClient {
       throw new Error(`UNITY_TCP_PORT must be a valid port number (1-65535), got: ${unityTcpPort}`);
     }
     this.port = parsedPort;
+    void this.initializeNotificationServer();
+  }
+  /**
+   * Initialize TypeScript notification server
+   * This server receives push notifications from Unity
+   */
+  async initializeNotificationServer() {
+    try {
+      this.notificationServer = new TypeScriptNotificationServer();
+      await this.notificationServer.start();
+    } catch (error) {
+      console.error("Failed to initialize notification server:", error);
+    }
   }
   /**
    * Get the singleton instance of UnityClient
@@ -6866,12 +7191,6 @@ var UnityClient = class _UnityClient {
    */
   updatePort(newPort) {
     this.port = newPort;
-  }
-  /**
-   * Set Unity Discovery reference for connection loss handling
-   */
-  setUnityDiscovery(unityDiscovery) {
-    this.unityDiscovery = unityDiscovery;
   }
   get connected() {
     return this._connected && this.socket !== null && !this.socket.destroyed;
@@ -6949,7 +7268,7 @@ var UnityClient = class _UnityClient {
       return;
     }
     return new Promise((resolve2, reject) => {
-      this.socket = new net.Socket();
+      this.socket = new net2.Socket();
       this.socket.connect(this.port, this.host, () => {
         this._connected = true;
         this.reconnectHandlers.forEach((handler) => {
@@ -6957,6 +7276,9 @@ var UnityClient = class _UnityClient {
             handler();
           } catch (error) {
           }
+        });
+        this.sendNotificationEndpoint().catch((error) => {
+          console.warn("Failed to send notification endpoint to Unity:", error);
         });
         resolve2();
       });
@@ -7168,13 +7490,11 @@ var UnityClient = class _UnityClient {
     this._connected = false;
   }
   /**
-   * Handle connection loss by delegating to UnityDiscovery
+   * Handle connection loss (event-driven)
+   * No longer delegates to polling-based discovery
    */
   handleConnectionLoss() {
     this.connectionManager.triggerConnectionLost();
-    if (this.unityDiscovery) {
-      this.unityDiscovery.handleConnectionLost();
-    }
   }
   /**
    * Set callback for when connection is restored
@@ -7182,400 +7502,273 @@ var UnityClient = class _UnityClient {
   setReconnectedCallback(callback) {
     this.connectionManager.setReconnectedCallback(callback);
   }
-};
-
-// src/unity-discovery.ts
-import * as net2 from "net";
-var UnityDiscovery = class _UnityDiscovery {
-  discoveryInterval = null;
-  unityClient;
-  onDiscoveredCallback = null;
-  onConnectionLostCallback = null;
-  isDiscovering = false;
-  isDevelopment = false;
-  // Singleton pattern to prevent multiple instances
-  static instance = null;
-  static activeTimerCount = 0;
-  // Track active timers for debugging
-  constructor(unityClient) {
-    this.unityClient = unityClient;
-    this.isDevelopment = process.env.NODE_ENV === "development";
-  }
   /**
-   * Get singleton instance of UnityDiscovery
+   * Send notification endpoint to Unity for reverse communication
+   * This enables Unity to send push notifications to TypeScript
    */
-  static getInstance(unityClient) {
-    if (!_UnityDiscovery.instance) {
-      _UnityDiscovery.instance = new _UnityDiscovery(unityClient);
-    }
-    return _UnityDiscovery.instance;
-  }
-  /**
-   * Set callback for when Unity is discovered
-   */
-  setOnDiscoveredCallback(callback) {
-    this.onDiscoveredCallback = callback;
-  }
-  /**
-   * Set callback for when connection is lost
-   */
-  setOnConnectionLostCallback(callback) {
-    this.onConnectionLostCallback = callback;
-  }
-  /**
-   * Start Unity discovery polling with unified connection management
-   */
-  start() {
-    if (this.discoveryInterval) {
+  async sendNotificationEndpoint() {
+    if (!this.notificationServer || !this.notificationServer.isServerRunning()) {
+      console.warn("Notification server is not running, cannot send endpoint to Unity");
       return;
     }
-    if (this.isDiscovering) {
+    if (!this.connected) {
+      console.warn("Not connected to Unity, cannot send notification endpoint");
       return;
     }
-    void this.unifiedDiscoveryAndConnectionCheck();
-    this.discoveryInterval = setInterval(() => {
-      void this.unifiedDiscoveryAndConnectionCheck();
-    }, POLLING.INTERVAL_MS);
-    _UnityDiscovery.activeTimerCount++;
-  }
-  /**
-   * Stop Unity discovery polling
-   */
-  stop() {
-    if (this.discoveryInterval) {
-      clearInterval(this.discoveryInterval);
-      this.discoveryInterval = null;
-      this.isDiscovering = false;
-      _UnityDiscovery.activeTimerCount = Math.max(0, _UnityDiscovery.activeTimerCount - 1);
-    }
-  }
-  /**
-   * Unified discovery and connection checking
-   * Handles both Unity discovery and connection health monitoring
-   */
-  async unifiedDiscoveryAndConnectionCheck() {
-    const correlationId = VibeLogger.generateCorrelationId();
-    if (this.isDiscovering) {
-      VibeLogger.logDebug(
-        "unity_discovery_skip_in_progress",
-        "Discovery already in progress - skipping",
-        { is_discovering: true },
-        correlationId
-      );
-      return;
-    }
-    this.isDiscovering = true;
-    VibeLogger.logInfo(
-      "unity_discovery_cycle_start",
-      "Starting unified discovery and connection check cycle",
-      {
-        unity_connected: this.unityClient.connected,
-        polling_interval_ms: POLLING.INTERVAL_MS,
-        active_timer_count: _UnityDiscovery.activeTimerCount
-      },
-      correlationId,
-      "This cycle checks connection health and attempts Unity discovery if needed."
-    );
     try {
-      if (this.unityClient.connected) {
-        const isConnectionHealthy = await this.checkConnectionHealth();
-        if (isConnectionHealthy) {
-          VibeLogger.logInfo(
-            "unity_discovery_connection_healthy",
-            "Connection is healthy - stopping discovery",
-            { connection_healthy: true },
-            correlationId
-          );
-          this.stop();
-          return;
-        } else {
-          VibeLogger.logWarning(
-            "unity_discovery_connection_unhealthy",
-            "Connection appears unhealthy - continuing discovery without assuming loss",
-            { connection_healthy: false },
-            correlationId,
-            "Connection health check failed. Will continue discovery but not assume complete loss.",
-            "Connection may recover on next cycle. Monitor for persistent issues."
-          );
+      const port = this.notificationServer.getPort();
+      const clientId = `ts-mcp-${this.processId}-${this.randomSeed}`;
+      const request = {
+        jsonrpc: JSONRPC.VERSION,
+        id: this.generateId(),
+        method: "set-notification-endpoint",
+        params: {
+          Host: this.host,
+          Port: port,
+          ClientId: clientId
         }
+      };
+      const response = await this.sendRequest(request, 5e3);
+      if (response.error) {
+        throw new Error(`Unity error: ${response.error.message}`);
       }
-      await this.discoverUnityOnPorts();
-    } finally {
-      VibeLogger.logDebug(
-        "unity_discovery_cycle_end",
-        "Discovery cycle completed",
-        { is_discovering: false },
-        correlationId
-      );
-      this.isDiscovering = false;
-    }
-  }
-  /**
-   * Check if the current connection is healthy with timeout protection
-   */
-  async checkConnectionHealth() {
-    try {
-      const healthCheck = await Promise.race([
-        this.unityClient.testConnection(),
-        new Promise(
-          (_, reject) => setTimeout(() => reject(new Error("Connection health check timeout")), 1e3)
-        )
-      ]);
-      return healthCheck;
+      console.log("Successfully registered notification endpoint with Unity:", response.result);
     } catch (error) {
-      return false;
+      console.error("Failed to send notification endpoint to Unity:", error);
+      throw error;
     }
   }
   /**
-   * Discover Unity by checking specified port
+   * Get notification server instance
+   * Used for testing and external access
    */
-  async discoverUnityOnPorts() {
-    const correlationId = VibeLogger.generateCorrelationId();
-    const unityTcpPort = process.env.UNITY_TCP_PORT;
-    if (!unityTcpPort) {
-      throw new Error("UNITY_TCP_PORT environment variable is required but not set");
-    }
-    const port = parseInt(unityTcpPort, 10);
-    if (isNaN(port) || port <= 0 || port > 65535) {
-      throw new Error(`UNITY_TCP_PORT must be a valid port number (1-65535), got: ${unityTcpPort}`);
-    }
-    VibeLogger.logInfo(
-      "unity_discovery_port_scan_start",
-      "Starting Unity port discovery scan",
-      {
-        target_port: port
-      },
-      correlationId,
-      "Checking specified port for Unity MCP server."
-    );
-    try {
-      if (await this.isUnityAvailable(port)) {
-        VibeLogger.logInfo(
-          "unity_discovery_success",
-          "Unity discovered and connection established",
-          {
-            discovered_port: port
-          },
-          correlationId,
-          "Unity MCP server found and connection established successfully.",
-          "Monitor for tools/list_changed notifications after this discovery."
-        );
-        this.unityClient.updatePort(port);
-        if (this.onDiscoveredCallback) {
-          await this.onDiscoveredCallback(port);
-        }
-        return;
-      }
-    } catch (error) {
-      VibeLogger.logDebug(
-        "unity_discovery_port_check_failed",
-        "Unity availability check failed for specified port",
-        {
-          target_port: port,
-          error_message: error instanceof Error ? error.message : String(error),
-          error_type: error instanceof Error ? error.constructor.name : typeof error
-        },
-        correlationId,
-        "Expected failure when Unity is not running on this port. Will continue polling.",
-        "This is normal during Unity startup or when Unity is not running."
-      );
-    }
-    VibeLogger.logWarning(
-      "unity_discovery_no_unity_found",
-      "No Unity server found on specified port",
-      {
-        target_port: port
-      },
-      correlationId,
-      "Unity MCP server not found on the specified port. Unity may not be running or using a different port.",
-      "Check Unity console for MCP server status and verify port configuration."
-    );
-  }
-  /**
-   * Force immediate Unity discovery for connection recovery
-   */
-  async forceDiscovery() {
-    if (this.unityClient.connected) {
-      return true;
-    }
-    await this.unifiedDiscoveryAndConnectionCheck();
-    return this.unityClient.connected;
-  }
-  /**
-   * Handle connection lost event (called by UnityClient)
-   */
-  handleConnectionLost() {
-    if (!this.discoveryInterval) {
-      this.start();
-    }
-    if (this.onConnectionLostCallback) {
-      this.onConnectionLostCallback();
-    }
-  }
-  /**
-   * Check if Unity is available on specific port
-   */
-  async isUnityAvailable(port) {
-    return new Promise((resolve2) => {
-      const socket = new net2.Socket();
-      const timeout = 500;
-      const timer = setTimeout(() => {
-        socket.destroy();
-        resolve2(false);
-      }, timeout);
-      socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
-        clearTimeout(timer);
-        socket.destroy();
-        resolve2(true);
-      });
-      socket.on("error", () => {
-        clearTimeout(timer);
-        resolve2(false);
-      });
-    });
-  }
-  /**
-   * Log current timer status for debugging (development mode only)
-   */
-  logTimerStatus() {
-    if (!this.isDevelopment) {
-      return;
-    }
-    if (_UnityDiscovery.activeTimerCount > 1) {
-    }
-  }
-  /**
-   * Get debugging information about current timer state
-   */
-  getDebugInfo() {
-    return {
-      isTimerActive: this.discoveryInterval !== null,
-      isDiscovering: this.isDiscovering,
-      activeTimerCount: _UnityDiscovery.activeTimerCount,
-      isConnected: this.unityClient.connected,
-      intervalMs: POLLING.INTERVAL_MS,
-      hasSingleton: _UnityDiscovery.instance !== null
-    };
+  getNotificationServer() {
+    return this.notificationServer;
   }
 };
 
 // src/unity-connection-manager.ts
 var UnityConnectionManager = class {
   unityClient;
-  unityDiscovery;
-  isDevelopment;
+  isConnected = false;
+  onConnectedCallback = null;
+  onDisconnectedCallback = null;
+  correlationId;
   isInitialized = false;
-  isReconnecting = false;
   constructor(unityClient) {
     this.unityClient = unityClient;
-    this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
-    this.unityDiscovery = UnityDiscovery.getInstance(this.unityClient);
-    this.unityClient.setUnityDiscovery(this.unityDiscovery);
+    this.correlationId = VibeLogger.generateCorrelationId();
+    VibeLogger.logInfo(
+      "connection_manager_init",
+      "Unity Connection Manager initialized with event-driven architecture",
+      {
+        polling_eliminated: true,
+        event_driven: true
+      },
+      this.correlationId,
+      "Replaced polling-based discovery with push notification system"
+    );
   }
   /**
-   * Get Unity discovery instance
-   */
-  getUnityDiscovery() {
-    return this.unityDiscovery;
-  }
-  /**
-   * Wait for Unity connection with timeout
-   */
-  async waitForUnityConnectionWithTimeout(timeoutMs) {
-    return new Promise((resolve2, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error(`Unity connection timeout after ${timeoutMs}ms`));
-      }, timeoutMs);
-      const checkConnection = () => {
-        if (this.unityClient.connected) {
-          clearTimeout(timeout);
-          resolve2();
-          return;
-        }
-        if (this.isInitialized) {
-          const connectionInterval = setInterval(() => {
-            if (this.unityClient.connected) {
-              clearTimeout(timeout);
-              clearInterval(connectionInterval);
-              resolve2();
-            }
-          }, 100);
-          return;
-        }
-        this.initialize(() => {
-          return new Promise((resolveCallback) => {
-            clearTimeout(timeout);
-            resolve2();
-            resolveCallback();
-          });
-        });
-      };
-      void checkConnection();
-    });
-  }
-  /**
-   * Handle Unity discovery and establish connection
-   */
-  async handleUnityDiscovered(onConnectionEstablished) {
-    try {
-      await this.unityClient.ensureConnected();
-      if (this.isDevelopment) {
-      }
-      if (onConnectionEstablished) {
-        await onConnectionEstablished();
-      }
-      this.unityDiscovery.stop();
-    } catch (error) {
-    }
-  }
-  /**
-   * Initialize connection manager
+   * Initialize event-driven connection manager with TypeScript notification server callbacks
    */
   initialize(onConnectionEstablished) {
     if (this.isInitialized) {
       return;
     }
     this.isInitialized = true;
-    this.unityDiscovery.setOnDiscoveredCallback(() => {
-      void this.handleUnityDiscovered(onConnectionEstablished);
+    this.onConnectedCallback = onConnectionEstablished || null;
+    this.setupNotificationServerCallbacks();
+    VibeLogger.logInfo(
+      "connection_manager_initialized",
+      "Event-driven Unity Connection Manager initialized",
+      {
+        polling_eliminated: true,
+        push_notifications: true,
+        zero_cpu_when_stopped: true
+      },
+      this.correlationId,
+      "Manager now uses push notifications instead of polling"
+    );
+  }
+  /**
+   * Setup TypeScript notification server callbacks for event-driven architecture
+   */
+  setupNotificationServerCallbacks() {
+    const notificationServer = this.unityClient.getNotificationServer();
+    if (!notificationServer) {
+      VibeLogger.logWarning(
+        "notification_server_unavailable",
+        "TypeScript notification server not available",
+        {},
+        this.correlationId,
+        "Cannot setup event-driven callbacks - falling back to manual connection"
+      );
+      return;
+    }
+    notificationServer.setOnServerStartedCallback(() => {
+      void this.handleUnityServerStarted();
     });
-    this.unityDiscovery.setOnConnectionLostCallback(() => {
-      if (this.isDevelopment) {
+    notificationServer.setOnServerStoppedCallback((reason) => {
+      this.handleUnityServerStopped(reason);
+    });
+    VibeLogger.logInfo(
+      "notification_callbacks_setup",
+      "Event-driven notification callbacks established",
+      {
+        server_start_callback: true,
+        server_stop_callback: true
+      },
+      this.correlationId,
+      "Connection manager now responds to Unity server lifecycle events"
+    );
+  }
+  /**
+   * Wait for Unity connection with timeout (event-driven)
+   * No polling - waits for server started notifications
+   */
+  async waitForUnityConnectionWithTimeout(timeoutMs) {
+    return new Promise((resolve2, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error(`Unity connection timeout after ${timeoutMs}ms`));
+      }, timeoutMs);
+      if (this.unityClient.connected) {
+        clearTimeout(timeout);
+        resolve2();
+        return;
       }
+      if (!this.isInitialized) {
+        this.initialize(() => {
+          clearTimeout(timeout);
+          return Promise.resolve();
+        });
+      }
+      const originalCallback = this.onConnectedCallback;
+      this.onConnectedCallback = async () => {
+        clearTimeout(timeout);
+        this.onConnectedCallback = originalCallback;
+        if (originalCallback) {
+          await originalCallback();
+        }
+        resolve2();
+      };
+      VibeLogger.logInfo(
+        "connection_wait_started",
+        "Waiting for Unity server started notification",
+        { timeout_ms: timeoutMs },
+        this.correlationId,
+        "Event-driven wait - no polling involved"
+      );
     });
-    this.unityDiscovery.start();
-    if (this.isDevelopment) {
+  }
+  /**
+   * Handle Unity server started notification (replaces discovery)
+   * Called when TypeScript notification server receives server_started from Unity
+   */
+  async handleUnityServerStarted() {
+    try {
+      VibeLogger.logInfo(
+        "unity_server_started_received",
+        "Received Unity server started notification - establishing connection",
+        {},
+        this.correlationId,
+        "Event-driven connection establishment triggered by push notification"
+      );
+      await this.unityClient.ensureConnected();
+      this.isConnected = true;
+      if (this.onConnectedCallback) {
+        await this.onConnectedCallback();
+      }
+      VibeLogger.logInfo(
+        "unity_connection_established",
+        "Unity connection established via push notification",
+        {
+          connected: this.isConnected,
+          method: "push_notification"
+        },
+        this.correlationId,
+        "Zero-latency connection establishment completed"
+      );
+    } catch (error) {
+      VibeLogger.logError(
+        "unity_connection_failed",
+        "Failed to establish Unity connection after server started notification",
+        {
+          error_message: error instanceof Error ? error.message : String(error)
+        },
+        this.correlationId,
+        "Connection establishment failed despite server started notification"
+      );
     }
   }
   /**
-   * Setup reconnection callback
+   * Handle Unity server stopped notification
+   * Called when TypeScript notification server receives server_stopped from Unity
+   */
+  handleUnityServerStopped(reason) {
+    VibeLogger.logInfo(
+      "unity_server_stopped_received",
+      "Received Unity server stopped notification",
+      {
+        reason,
+        was_connected: this.isConnected
+      },
+      this.correlationId,
+      "Event-driven disconnection triggered by push notification"
+    );
+    this.isConnected = false;
+    if (this.onDisconnectedCallback) {
+      this.onDisconnectedCallback();
+    }
+  }
+  /**
+   * Set callback for when Unity connection is established
+   */
+  setOnConnectedCallback(callback) {
+    this.onConnectedCallback = callback;
+  }
+  /**
+   * Set callback for when Unity connection is lost
+   */
+  setOnDisconnectedCallback(callback) {
+    this.onDisconnectedCallback = callback;
+  }
+  /**
+   * Setup reconnection callback (event-driven)
+   * Uses push notifications instead of polling for reconnection
    */
   setupReconnectionCallback(callback) {
     this.unityClient.setReconnectedCallback(() => {
-      if (this.isReconnecting) {
-        if (this.isDevelopment) {
-        }
-        return;
-      }
-      this.isReconnecting = true;
-      void this.unityDiscovery.forceDiscovery().then(() => {
-        return callback();
-      }).finally(() => {
-        this.isReconnecting = false;
-      });
+      VibeLogger.logInfo(
+        "unity_reconnection_detected",
+        "Unity reconnection detected - event-driven recovery",
+        {},
+        this.correlationId,
+        "No polling required - push notifications will handle state updates"
+      );
+      void callback();
     });
   }
   /**
    * Check if Unity is connected
    */
-  isConnected() {
-    return this.unityClient.connected;
+  isUnityConnected() {
+    return this.isConnected && this.unityClient.connected;
   }
   /**
-   * Disconnect from Unity
+   * Disconnect from Unity (event-driven cleanup)
    */
   disconnect() {
-    this.unityDiscovery.stop();
+    VibeLogger.logInfo(
+      "connection_manager_disconnect",
+      "Disconnecting Unity connection manager",
+      {
+        was_connected: this.isConnected
+      },
+      this.correlationId,
+      "Clean disconnection - no timers to stop"
+    );
+    this.isConnected = false;
     this.unityClient.disconnect();
   }
 };
@@ -8313,7 +8506,6 @@ var UnityMcpServer = class {
   unityClient;
   isDevelopment;
   isInitialized = false;
-  unityDiscovery;
   connectionManager;
   toolManager;
   clientCompatibility;
@@ -8336,7 +8528,6 @@ var UnityMcpServer = class {
     );
     this.unityClient = UnityClient.getInstance();
     this.connectionManager = new UnityConnectionManager(this.unityClient);
-    this.unityDiscovery = this.connectionManager.getUnityDiscovery();
     this.toolManager = new UnityToolManager(this.unityClient);
     this.clientCompatibility = new McpClientCompatibility(this.unityClient);
     this.eventHandler = new UnityEventHandler(
@@ -8430,7 +8621,6 @@ var UnityMcpServer = class {
               void 0,
               "Unity connection could not be established - check Unity MCP bridge"
             );
-            this.unityDiscovery.start();
           });
         }
       }

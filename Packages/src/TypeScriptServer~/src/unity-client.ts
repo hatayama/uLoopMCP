@@ -10,13 +10,7 @@ import {
 import { safeSetTimeout } from './utils/safe-timer.js';
 import { ConnectionManager } from './connection-manager.js';
 import { MessageHandler } from './message-handler.js';
-
-/**
- * Unity client interface for external dependencies
- */
-interface UnityDiscovery {
-  handleConnectionLost(): void;
-}
+import { TypeScriptNotificationServer } from './typescript-notification-server.js';
 
 /**
  * TCP/IP client for communication with Unity
@@ -42,7 +36,7 @@ export class UnityClient {
   private reconnectHandlers: Set<() => void> = new Set();
   private connectionManager: ConnectionManager = new ConnectionManager();
   private messageHandler: MessageHandler = new MessageHandler();
-  private unityDiscovery: UnityDiscovery | null = null; // Reference to UnityDiscovery for connection loss handling
+  private notificationServer: TypeScriptNotificationServer | null = null; // Notification server for push notifications
   private requestIdCounter: number = 0; // Will be incremented to 1 on first use
   private readonly processId: number = process.pid;
   private readonly randomSeed: number = Math.floor(Math.random() * 1000);
@@ -61,6 +55,23 @@ export class UnityClient {
     }
 
     this.port = parsedPort;
+
+    // Initialize notification server for push notifications
+    void this.initializeNotificationServer();
+  }
+
+  /**
+   * Initialize TypeScript notification server
+   * This server receives push notifications from Unity
+   */
+  private async initializeNotificationServer(): Promise<void> {
+    try {
+      this.notificationServer = new TypeScriptNotificationServer();
+      await this.notificationServer.start();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to initialize notification server:', error);
+    }
   }
 
   /**
@@ -89,13 +100,6 @@ export class UnityClient {
    */
   updatePort(newPort: number): void {
     this.port = newPort;
-  }
-
-  /**
-   * Set Unity Discovery reference for connection loss handling
-   */
-  setUnityDiscovery(unityDiscovery: UnityDiscovery): void {
-    this.unityDiscovery = unityDiscovery;
   }
 
   get connected(): boolean {
@@ -210,6 +214,12 @@ export class UnityClient {
           } catch (error) {
             // Error in reconnect handler
           }
+        });
+
+        // Send notification endpoint to Unity after connection
+        this.sendNotificationEndpoint().catch((error) => {
+          // eslint-disable-next-line no-console
+          console.warn('Failed to send notification endpoint to Unity:', error);
         });
 
         resolve();
@@ -512,16 +522,15 @@ export class UnityClient {
   }
 
   /**
-   * Handle connection loss by delegating to UnityDiscovery
+   * Handle connection loss (event-driven)
+   * No longer delegates to polling-based discovery
    */
   private handleConnectionLoss(): void {
     // Trigger ConnectionManager callback for backward compatibility
     this.connectionManager.triggerConnectionLost();
 
-    // Delegate to UnityDiscovery for unified connection management
-    if (this.unityDiscovery) {
-      this.unityDiscovery.handleConnectionLost();
-    }
+    // Event-driven architecture handles reconnection via push notifications
+    // No manual discovery restart needed
   }
 
   /**
@@ -529,5 +538,60 @@ export class UnityClient {
    */
   setReconnectedCallback(callback: () => void): void {
     this.connectionManager.setReconnectedCallback(callback);
+  }
+
+  /**
+   * Send notification endpoint to Unity for reverse communication
+   * This enables Unity to send push notifications to TypeScript
+   */
+  private async sendNotificationEndpoint(): Promise<void> {
+    if (!this.notificationServer || !this.notificationServer.isServerRunning()) {
+      // eslint-disable-next-line no-console
+      console.warn('Notification server is not running, cannot send endpoint to Unity');
+      return;
+    }
+
+    if (!this.connected) {
+      // eslint-disable-next-line no-console
+      console.warn('Not connected to Unity, cannot send notification endpoint');
+      return;
+    }
+
+    try {
+      const port = this.notificationServer.getPort();
+      const clientId = `ts-mcp-${this.processId}-${this.randomSeed}`;
+
+      const request = {
+        jsonrpc: JSONRPC.VERSION,
+        id: this.generateId(),
+        method: 'set-notification-endpoint',
+        params: {
+          Host: this.host,
+          Port: port,
+          ClientId: clientId,
+        },
+      };
+
+      const response = await this.sendRequest(request, 5000); // 5 second timeout
+
+      if (response.error) {
+        throw new Error(`Unity error: ${response.error.message}`);
+      }
+
+      // eslint-disable-next-line no-console
+      console.log('Successfully registered notification endpoint with Unity:', response.result);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to send notification endpoint to Unity:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get notification server instance
+   * Used for testing and external access
+   */
+  getNotificationServer(): TypeScriptNotificationServer | null {
+    return this.notificationServer;
   }
 }
