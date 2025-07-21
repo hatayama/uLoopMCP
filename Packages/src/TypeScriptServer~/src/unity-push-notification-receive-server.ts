@@ -21,6 +21,8 @@ export interface PushNotification {
     reason?: DisconnectReason;
     endpoint?: string;
     clientInfo?: ClientInfo;
+    toolsInfo?: ToolsInfo;
+    sequence?: number;
   };
 }
 
@@ -33,6 +35,12 @@ export interface ClientInfo {
   unityVersion?: string;
   projectPath?: string;
   sessionId?: string;
+}
+
+export interface ToolsInfo {
+  toolCount: number;
+  changedTools: string[];
+  changeType: 'TOOLS_ADDED' | 'TOOLS_REMOVED' | 'TOOLS_MODIFIED';
 }
 
 export interface ServerEndpoint {
