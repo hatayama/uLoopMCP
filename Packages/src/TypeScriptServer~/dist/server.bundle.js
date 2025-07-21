@@ -8221,6 +8221,187 @@ var UnityEventHandler = class {
   }
 };
 
+// src/unity-push-notification-receive-server.ts
+import * as net3 from "net";
+import { EventEmitter } from "events";
+var UnityPushNotificationReceiveServer = class extends EventEmitter {
+  server = null;
+  connectedUnityClients = /* @__PURE__ */ new Map();
+  port = 0;
+  isRunning = false;
+  constructor() {
+    super();
+  }
+  async start() {
+    if (this.isRunning) {
+      return this.port;
+    }
+    return new Promise((resolve2, reject) => {
+      this.server = net3.createServer((socket) => {
+        this.handleUnityConnection(socket);
+      });
+      this.server.on("error", (error) => {
+        reject(error);
+      });
+      this.server.listen(0, "localhost", () => {
+        if (!this.server) return;
+        const address = this.server.address();
+        if (typeof address === "object" && address !== null) {
+          this.port = address.port;
+          this.isRunning = true;
+          resolve2(this.port);
+        } else {
+          reject(new Error("Failed to get server address"));
+        }
+      });
+    });
+  }
+  async stop() {
+    if (!this.isRunning || !this.server) {
+      return;
+    }
+    return new Promise((resolve2) => {
+      this.connectedUnityClients.clear();
+      this.server.close(() => {
+        this.isRunning = false;
+        this.port = 0;
+        resolve2();
+      });
+    });
+  }
+  getEndpoint() {
+    if (!this.isRunning) {
+      throw new Error("Server is not running");
+    }
+    return {
+      host: "localhost",
+      port: this.port,
+      protocol: "tcp"
+    };
+  }
+  isServerRunning() {
+    return this.isRunning;
+  }
+  getConnectedClientsCount() {
+    return this.connectedUnityClients.size;
+  }
+  handleUnityConnection(socket) {
+    const clientId = this.generateClientId();
+    const connection = {
+      socket,
+      clientId,
+      connectedAt: /* @__PURE__ */ new Date()
+    };
+    this.connectedUnityClients.set(clientId, connection);
+    socket.setEncoding("utf8");
+    socket.setTimeout(3e4);
+    socket.on("data", (data) => {
+      this.handleIncomingData(clientId, data.toString());
+    });
+    socket.on("close", () => {
+      this.handleDisconnection(clientId, { type: "USER_DISCONNECT", message: "Socket closed by client" });
+    });
+    socket.on("error", (error) => {
+      console.error(`Unity client ${clientId} error:`, error);
+      this.handleDisconnection(clientId, { type: "USER_DISCONNECT", message: `Socket error: ${error.message}` });
+    });
+    socket.on("timeout", () => {
+      console.warn(`Unity client ${clientId} timed out`);
+      socket.destroy();
+    });
+    this.emit("unity_connected", { clientId, endpoint: this.getEndpoint() });
+  }
+  handleIncomingData(clientId, data) {
+    const connection = this.connectedUnityClients.get(clientId);
+    if (!connection) {
+      return;
+    }
+    const lines = data.split("\n");
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      this.processMessage(clientId, line.trim());
+    }
+  }
+  processMessage(clientId, message) {
+    let notification;
+    try {
+      notification = JSON.parse(message);
+    } catch (error) {
+      console.error(`Failed to parse push notification from ${clientId}:`, error);
+      return;
+    }
+    this.handlePushNotification(clientId, notification);
+  }
+  handlePushNotification(clientId, notification) {
+    const connection = this.connectedUnityClients.get(clientId);
+    if (!connection) {
+      return;
+    }
+    switch (notification.type) {
+      case "CONNECTION_ESTABLISHED":
+        this.handleConnectionEstablished(clientId, notification);
+        break;
+      case "DOMAIN_RELOAD":
+        this.handleDomainReload(clientId, notification);
+        break;
+      case "DOMAIN_RELOAD_RECOVERED":
+        this.handleDomainReloadRecovered(clientId, notification);
+        break;
+      case "USER_DISCONNECT":
+      case "UNITY_SHUTDOWN":
+        this.handleDisconnectNotification(clientId, notification);
+        break;
+      case "TOOLS_CHANGED":
+        this.handleToolsChanged(clientId, notification);
+        break;
+      default:
+        console.warn(`Unknown notification type: ${notification.type}`);
+    }
+    this.emit("push_notification", { clientId, notification });
+  }
+  handleConnectionEstablished(clientId, notification) {
+    const connection = this.connectedUnityClients.get(clientId);
+    if (connection) {
+      connection.lastPingAt = /* @__PURE__ */ new Date();
+    }
+    this.emit("connection_established", { clientId, notification });
+  }
+  handleDomainReload(clientId, notification) {
+    this.emit("domain_reload_start", { clientId, notification });
+  }
+  handleDomainReloadRecovered(clientId, notification) {
+    const connection = this.connectedUnityClients.get(clientId);
+    if (connection) {
+      connection.lastPingAt = /* @__PURE__ */ new Date();
+    }
+    this.emit("domain_reload_recovered", { clientId, notification });
+  }
+  handleDisconnectNotification(clientId, notification) {
+    const reason = notification.payload?.reason || {
+      type: "USER_DISCONNECT",
+      message: "Unknown disconnect reason"
+    };
+    this.handleDisconnection(clientId, reason);
+  }
+  handleToolsChanged(clientId, notification) {
+    this.emit("tools_changed", { clientId, notification });
+  }
+  handleDisconnection(clientId, reason) {
+    const connection = this.connectedUnityClients.get(clientId);
+    if (!connection) {
+      return;
+    }
+    this.connectedUnityClients.delete(clientId);
+    if (!connection.socket.destroyed) {
+      connection.socket.destroy();
+    }
+    this.emit("unity_disconnected", { clientId, reason });
+  }
+  generateClientId() {
+    return `unity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+};
+
 // package.json
 var package_default = {
   name: "uloopmcp-server",
@@ -8318,6 +8499,7 @@ var UnityMcpServer = class {
   toolManager;
   clientCompatibility;
   eventHandler;
+  pushNotificationServer;
   constructor() {
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
     VibeLogger.logInfo("mcp_server_starting", "Unity MCP Server Starting");
@@ -8344,6 +8526,8 @@ var UnityMcpServer = class {
       this.unityClient,
       this.connectionManager
     );
+    this.pushNotificationServer = new UnityPushNotificationReceiveServer();
+    this.setupPushNotificationHandlers();
     this.connectionManager.setupReconnectionCallback(async () => {
       await this.toolManager.refreshDynamicToolsSafe(() => {
         this.eventHandler.sendToolsChangedNotification();
@@ -8479,10 +8663,86 @@ var UnityMcpServer = class {
       }
     });
   }
+  setupPushNotificationHandlers() {
+    this.pushNotificationServer.on("unity_connected", (event) => {
+      VibeLogger.logInfo(
+        "unity_push_client_connected",
+        "Unity Push client connected",
+        { clientId: event.clientId, endpoint: event.endpoint },
+        void 0,
+        "Unity successfully connected to push notification server"
+      );
+    });
+    this.pushNotificationServer.on("unity_disconnected", (event) => {
+      VibeLogger.logInfo(
+        "unity_push_client_disconnected",
+        "Unity Push client disconnected",
+        { clientId: event.clientId, reason: event.reason },
+        void 0,
+        "Unity disconnected from push notification server"
+      );
+    });
+    this.pushNotificationServer.on("connection_established", (event) => {
+      VibeLogger.logInfo(
+        "push_connection_established",
+        "Push connection established",
+        { clientId: event.clientId, notification: event.notification }
+      );
+    });
+    this.pushNotificationServer.on("domain_reload_start", (event) => {
+      VibeLogger.logInfo(
+        "push_domain_reload_start",
+        "Unity domain reload started",
+        { clientId: event.clientId, notification: event.notification },
+        void 0,
+        "Unity is performing domain reload - connection may be temporarily lost"
+      );
+    });
+    this.pushNotificationServer.on("domain_reload_recovered", (event) => {
+      VibeLogger.logInfo(
+        "push_domain_reload_recovered",
+        "Unity domain reload recovered",
+        { clientId: event.clientId, notification: event.notification },
+        void 0,
+        "Unity has recovered from domain reload"
+      );
+      this.toolManager.refreshDynamicToolsSafe(() => {
+        this.eventHandler.sendToolsChangedNotification();
+      });
+    });
+    this.pushNotificationServer.on("tools_changed", (event) => {
+      VibeLogger.logInfo(
+        "push_tools_changed",
+        "Unity tools changed notification received",
+        { clientId: event.clientId, notification: event.notification }
+      );
+      this.toolManager.refreshDynamicToolsSafe(() => {
+        this.eventHandler.sendToolsChangedNotification();
+      });
+    });
+  }
   /**
    * Start the server
    */
   async start() {
+    try {
+      const pushServerPort = await this.pushNotificationServer.start();
+      VibeLogger.logInfo(
+        "push_server_started",
+        "Push notification receive server started",
+        { port: pushServerPort },
+        void 0,
+        "TypeScript Push notification server is ready to receive Unity connections"
+      );
+    } catch (error) {
+      VibeLogger.logError(
+        "push_server_start_failed",
+        "Failed to start push notification receive server",
+        { error: error instanceof Error ? error.message : String(error) },
+        void 0,
+        "Push notification system will not be available"
+      );
+    }
     this.eventHandler.setupUnityEventListener(async () => {
       await this.toolManager.refreshDynamicToolsSafe(() => {
         this.eventHandler.sendToolsChangedNotification();

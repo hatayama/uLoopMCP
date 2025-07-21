@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
+    [FilePath("UserSettings/uLoopMCP/SessionData.asset", FilePathAttribute.Location.ProjectFolder)]
     public sealed class McpSessionManager : ScriptableSingleton<McpSessionManager>
     {
         [SerializeField] private bool _isServerRunning;
@@ -21,6 +23,11 @@ namespace io.github.hatayama.uLoopMCP
         [SerializeField] private bool _compileWindowHasData;
         [SerializeField] private List<string> _pendingCompileRequestIds = new();
         [SerializeField] private List<CompileRequestData> _compileRequests = new();
+        
+        // Push通知サーバー関連の新機能
+        [SerializeField] private string _pushServerEndpoint;
+        [SerializeField] private bool _isPushServerConnected;
+        [SerializeField] private long _lastConnectionTimeTicks;
 
         [System.Serializable]
         public class CompileRequestData
@@ -194,6 +201,50 @@ namespace io.github.hatayama.uLoopMCP
         public void RemovePendingCompileRequest(string requestId)
         {
             _pendingCompileRequestIds.Remove(requestId);
+        }
+
+        // Push通知サーバー情報管理
+        public void SetPushServerEndpoint(string endpoint)
+        {
+            _pushServerEndpoint = endpoint;
+            Save(true);
+        }
+
+        public string GetPushServerEndpoint()
+        {
+            return _pushServerEndpoint;
+        }
+
+        public void ClearPushServerEndpoint()
+        {
+            _pushServerEndpoint = null;
+            Save(true);
+        }
+
+        public void SetPushServerConnected(bool connected)
+        {
+            _isPushServerConnected = connected;
+            if (connected)
+            {
+                _lastConnectionTimeTicks = DateTime.Now.Ticks;
+            }
+            Save(true);
+        }
+
+        public bool IsPushServerConnected()
+        {
+            return _isPushServerConnected;
+        }
+
+        public DateTime GetLastConnectionTime()
+        {
+            return new DateTime(_lastConnectionTimeTicks);
+        }
+
+        public void UpdateLastConnectionTime()
+        {
+            _lastConnectionTimeTicks = DateTime.Now.Ticks;
+            Save(true);
         }
     }
 }
