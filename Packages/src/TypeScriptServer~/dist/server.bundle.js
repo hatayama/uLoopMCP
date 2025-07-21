@@ -5517,8 +5517,10 @@ var ERROR_MESSAGES = {
 var POLLING = {
   INTERVAL_MS: 1e3,
   // Reduced from 3000ms to 1000ms for better responsiveness
-  BUFFER_SECONDS: 15
+  BUFFER_SECONDS: 15,
   // Increased for safer Unity startup timing
+  ENABLED: false
+  // Disabled in favor of Push notification system
 };
 var LIST_CHANGED_UNSUPPORTED_CLIENTS = [
   "claude",
@@ -7536,6 +7538,30 @@ var UnityConnectionManager = class {
       return;
     }
     this.isInitialized = true;
+    if (!POLLING.ENABLED) {
+      VibeLogger.logInfo(
+        "polling_disabled",
+        "Unity polling disabled - Push notification system active",
+        { polling_enabled: POLLING.ENABLED },
+        void 0,
+        "Legacy polling system disabled in favor of Push notifications"
+      );
+      this.unityDiscovery.setOnDiscoveredCallback(() => {
+        void this.handleUnityDiscovered(onConnectionEstablished);
+      });
+      this.unityDiscovery.setOnConnectionLostCallback(() => {
+        if (this.isDevelopment) {
+        }
+      });
+      return;
+    }
+    VibeLogger.logWarning(
+      "polling_fallback_active",
+      "Using legacy polling mode as fallback",
+      { polling_enabled: POLLING.ENABLED },
+      void 0,
+      "Push notification system may not be available - using polling fallback"
+    );
     this.unityDiscovery.setOnDiscoveredCallback(() => {
       void this.handleUnityDiscovered(onConnectionEstablished);
     });

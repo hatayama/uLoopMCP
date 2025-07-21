@@ -1,6 +1,7 @@
 import { UnityClient } from './unity-client.js';
 import { UnityDiscovery } from './unity-discovery.js';
-import { ENVIRONMENT } from './constants.js';
+import { ENVIRONMENT, POLLING } from './constants.js';
+import { VibeLogger } from './utils/vibe-logger.js';
 
 /**
  * Unity Connection Manager - Manages Unity connection and discovery functionality
@@ -123,6 +124,39 @@ export class UnityConnectionManager {
 
     this.isInitialized = true;
 
+    // Check if polling is disabled
+    if (!POLLING.ENABLED) {
+      VibeLogger.logInfo(
+        'polling_disabled',
+        'Unity polling disabled - Push notification system active',
+        { polling_enabled: POLLING.ENABLED },
+        undefined,
+        'Legacy polling system disabled in favor of Push notifications'
+      );
+      
+      // Still set up callbacks for potential fallback, but don't start discovery
+      this.unityDiscovery.setOnDiscoveredCallback(() => {
+        void this.handleUnityDiscovered(onConnectionEstablished);
+      });
+
+      this.unityDiscovery.setOnConnectionLostCallback(() => {
+        if (this.isDevelopment) {
+          // Connection lost detected - ready for reconnection
+        }
+      });
+      
+      return;
+    }
+
+    // Legacy polling mode (fallback)
+    VibeLogger.logWarning(
+      'polling_fallback_active',
+      'Using legacy polling mode as fallback',
+      { polling_enabled: POLLING.ENABLED },
+      undefined,
+      'Push notification system may not be available - using polling fallback'
+    );
+
     // Setup discovery callback
     this.unityDiscovery.setOnDiscoveredCallback(() => {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -140,7 +174,7 @@ export class UnityConnectionManager {
     this.unityDiscovery.start();
 
     if (this.isDevelopment) {
-      // Connection manager initialized
+      // Connection manager initialized with polling
     }
   }
 

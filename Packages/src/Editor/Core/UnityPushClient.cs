@@ -100,26 +100,41 @@ namespace io.github.hatayama.uLoopMCP
 
             tcpClient = new TcpClient();
             
-            var connectTask = tcpClient.ConnectAsync(host, port);
-            var timeoutTask = Task.Delay(5000, cancellationTokenSource.Token);
-            
-            var completedTask = await Task.WhenAny(connectTask, timeoutTask);
-            
-            if (completedTask == timeoutTask || !tcpClient.Connected)
+            try
             {
-                Debug.LogWarning($"[uLoopMCP] Connection timeout or failed: {host}:{port}");
+                var connectTask = tcpClient.ConnectAsync(host, port);
+                var timeoutTask = Task.Delay(ConnectionTimeouts.CONNECTION_TIMEOUT_MS, cancellationTokenSource.Token);
+                
+                var completedTask = await Task.WhenAny(connectTask, timeoutTask);
+                
+                if (completedTask == timeoutTask || !tcpClient.Connected)
+                {
+                    Debug.LogWarning($"[uLoopMCP] Connection timeout or failed: {host}:{port}");
+                    return false;
+                }
+
+                stream = tcpClient.GetStream();
+                currentEndpoint = $"{host}:{port}";
+                isConnected = true;
+                
+                PersistEndpoint(currentEndpoint);
+                OnConnected?.Invoke(currentEndpoint);
+                
+                Debug.Log($"[uLoopMCP] Connected to TypeScript Push Server: {currentEndpoint}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[uLoopMCP] Connection failed: {ex.Message}");
+                
+                bool handled = await PushNotificationErrorHandler.HandleConnectionFailureAsync(this, ex);
+                if (!handled)
+                {
+                    OnError?.Invoke(ex);
+                }
+                
                 return false;
             }
-
-            stream = tcpClient.GetStream();
-            currentEndpoint = $"{host}:{port}";
-            isConnected = true;
-            
-            PersistEndpoint(currentEndpoint);
-            OnConnected?.Invoke(currentEndpoint);
-            
-            Debug.Log($"[uLoopMCP] Connected to TypeScript Push Server: {currentEndpoint}");
-            return true;
         }
 
         private async Task<bool> DiscoverNewEndpointAsync()
@@ -152,11 +167,35 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            string json = JsonUtility.ToJson(notification);
-            byte[] data = Encoding.UTF8.GetBytes(json + "\n");
+            try
+            {
+                string json = JsonUtility.ToJson(notification);
+                byte[] data = Encoding.UTF8.GetBytes(json + "\n");
 
-            await stream.WriteAsync(data, 0, data.Length, cancellationTokenSource.Token);
-            await stream.FlushAsync(cancellationTokenSource.Token);
+                var writeTask = stream.WriteAsync(data, 0, data.Length, cancellationTokenSource.Token);
+                var timeoutTask = Task.Delay(ConnectionTimeouts.PUSH_NOTIFICATION_TIMEOUT_MS, cancellationTokenSource.Token);
+                
+                var completedTask = await Task.WhenAny(writeTask, timeoutTask);
+                
+                if (completedTask == timeoutTask)
+                {
+                    Debug.LogWarning("[uLoopMCP] Push notification send timeout");
+                    return;
+                }
+
+                await stream.FlushAsync(cancellationTokenSource.Token);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[uLoopMCP] Failed to send push notification: {ex.Message}");
+                OnError?.Invoke(ex);
+                
+                if (!IsConnected)
+                {
+                    Debug.Log("[uLoopMCP] Connection lost during push notification send - triggering reconnection");
+                    OnDisconnected?.Invoke(currentEndpoint);
+                }
+            }
         }
 
         public async Task SendDisconnectNotificationAsync(DisconnectReason reason)

@@ -5,7 +5,9 @@ import {
   TIMEOUTS,
   ERROR_MESSAGES,
   DEFAULT_CLIENT_NAME,
+  POLLING,
 } from './constants.js';
+import { VibeLogger } from './utils/vibe-logger.js';
 // Debug logging removed
 import { safeSetTimeout } from './utils/safe-timer.js';
 import { ConnectionManager } from './connection-manager.js';
