@@ -86,17 +86,17 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
 
-            return await ConnectAsync(host, port);
+            return await ConnectAsync(host, port, isDiscovery: false);
         }
 
-        private async Task<bool> ConnectAsync(string host, int port)
+        private async Task<bool> ConnectAsync(string host, int port, bool isDiscovery = false)
         {
             if (isDisposed)
             {
                 return false;
             }
 
-            await DisconnectAsync();
+            await DisconnectAsync(isDiscovery);
 
             tcpClient = new TcpClient();
             
@@ -109,7 +109,11 @@ namespace io.github.hatayama.uLoopMCP
                 
                 if (completedTask == timeoutTask || !tcpClient.Connected)
                 {
-                    Debug.LogWarning($"[uLoopMCP] Connection timeout or failed: {host}:{port}");
+                    // Only log timeout for non-discovery attempts
+                    if (!isDiscovery)
+                    {
+                        Debug.LogWarning($"[uLoopMCP] Connection timeout or failed: {host}:{port}");
+                    }
                     return false;
                 }
 
@@ -125,12 +129,16 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[uLoopMCP] Connection failed: {ex.Message}");
-                
-                bool handled = await PushNotificationErrorHandler.HandleConnectionFailureAsync(this, ex);
-                if (!handled)
+                // Only log errors for non-discovery attempts
+                if (!isDiscovery)
                 {
-                    OnError?.Invoke(ex);
+                    Debug.LogError($"[uLoopMCP] Connection failed: {ex.Message}");
+                    
+                    bool handled = await PushNotificationErrorHandler.HandleConnectionFailureAsync(this, ex);
+                    if (!handled)
+                    {
+                        OnError?.Invoke(ex);
+                    }
                 }
                 
                 return false;
@@ -139,6 +147,8 @@ namespace io.github.hatayama.uLoopMCP
 
         private async Task<bool> DiscoverNewEndpointAsync()
         {
+            Debug.Log("[uLoopMCP] Starting TypeScript Push Server discovery...");
+            
             for (int port = 20000; port <= 21000; port++)
             {
                 if (cancellationTokenSource.Token.IsCancellationRequested)
@@ -146,7 +156,7 @@ namespace io.github.hatayama.uLoopMCP
                     return false;
                 }
 
-                bool success = await ConnectAsync("localhost", port);
+                bool success = await ConnectAsync("localhost", port, isDiscovery: true);
                 if (success)
                 {
                     return true;
@@ -213,9 +223,9 @@ namespace io.github.hatayama.uLoopMCP
             await SendPushNotificationAsync(notification);
         }
 
-        public async Task DisconnectAsync()
+        public async Task DisconnectAsync(bool isDiscovery = false)
         {
-            if (isConnected && !isDisposed)
+            if (isConnected && !isDisposed && !isDiscovery)
             {
                 await SendDisconnectNotificationAsync(new DisconnectReason
                 {
@@ -239,7 +249,11 @@ namespace io.github.hatayama.uLoopMCP
             string endpoint = currentEndpoint;
             currentEndpoint = null;
             
-            OnDisconnected?.Invoke(endpoint);
+            // Only trigger disconnect callback for actual disconnections, not discovery attempts
+            if (!isDiscovery)
+            {
+                OnDisconnected?.Invoke(endpoint);
+            }
         }
 
         public void PersistEndpoint(string endpoint)

@@ -124,7 +124,11 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void OnPushClientDisconnected(string endpoint)
         {
-            Debug.Log($"[uLoopMCP] Push client disconnected from: {endpoint}");
+            // Only log disconnection if we were actually connected (not during discovery)
+            if (!string.IsNullOrEmpty(endpoint))
+            {
+                Debug.Log($"[uLoopMCP] Push client disconnected from: {endpoint}");
+            }
             
             McpSessionManager sessionManager = McpSessionManager.instance;
             sessionManager.SetPushServerConnected(false);
