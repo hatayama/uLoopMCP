@@ -7588,7 +7588,10 @@ var UnityConnectionManager = class {
     this.unityClient = unityClient;
     this.enableConnectionDebugLog = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
     this.unityDiscovery = UnityDiscovery.getInstance(this.unityClient);
-    this.fallbackHandler = new UnityConnectionFallbackHandler(this.unityClient, this.unityDiscovery);
+    this.fallbackHandler = new UnityConnectionFallbackHandler(
+      this.unityClient,
+      this.unityDiscovery
+    );
     this.unityClient.setUnityDiscovery(this.unityDiscovery);
   }
   /**
@@ -7644,8 +7647,6 @@ var UnityConnectionManager = class {
       if (this.enableConnectionDebugLog) {
       }
     });
-    if (this.isDevelopment) {
-    }
   }
   /**
    * Setup reconnection callback
@@ -8966,11 +8967,22 @@ var UnityPushNotificationManager = class {
    * Setup push notification event handlers
    */
   setupPushNotificationHandlers() {
-    this.pushNotificationServer.on("unity_connected", this.handleUnityPushClientConnected.bind(this));
-    this.pushNotificationServer.on("unity_disconnected", this.handleUnityPushClientDisconnected.bind(this));
-    this.pushNotificationServer.on("connection_established", this.handleConnectionEstablished.bind(this));
+    this.pushNotificationServer.on(
+      "unity_connected",
+      this.handleUnityPushClientConnected.bind(this)
+    );
+    this.pushNotificationServer.on(
+      "unity_disconnected",
+      this.handleUnityPushClientDisconnected.bind(this)
+    );
+    this.pushNotificationServer.on("connection_established", (event) => {
+      void this.handleConnectionEstablished(event);
+    });
     this.pushNotificationServer.on("domain_reload_start", this.handleDomainReloadStart.bind(this));
-    this.pushNotificationServer.on("domain_reload_recovered", this.handleDomainReloadRecovered.bind(this));
+    this.pushNotificationServer.on(
+      "domain_reload_recovered",
+      this.handleDomainReloadRecovered.bind(this)
+    );
     this.pushNotificationServer.on("tools_changed", this.handleToolsChanged.bind(this));
   }
   /**
@@ -9025,7 +9037,7 @@ var UnityPushNotificationManager = class {
   async synchronizeUnityConnectionState(clientId) {
     try {
       await this.unityClient.ensureConnected();
-      this.connectionManager.handleUnityDiscovered();
+      await this.connectionManager.handleUnityDiscovered();
       VibeLogger.logInfo(
         "push_unity_connection_synced",
         "Unity connection state synchronized with push notification",
@@ -9304,7 +9316,6 @@ var UnityMcpServer = class {
   server;
   unityClient;
   enableDevelopmentLogging;
-  isInitialized = false;
   unityDiscovery;
   connectionManager;
   toolManager;
