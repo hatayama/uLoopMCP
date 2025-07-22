@@ -339,7 +339,7 @@ namespace io.github.hatayama.uLoopMCP
         // 複数エンドポイント管理の新機能
         public void SetPushServerEndpoint(string clientName, int clientPort, string pushReceiveServerEndpoint)
         {
-            string clientEndpoint = $"127.0.0.1{CLIENT_ENDPOINT_SEPARATOR}{clientPort}"; // Default assumption
+            string clientEndpoint = BuildClientEndpoint(clientName, clientPort);
             
             EnsureEndpointsListInitialized();
             UpdateOrAddEndpoint(clientName, clientEndpoint, pushReceiveServerEndpoint);
@@ -384,10 +384,28 @@ namespace io.github.hatayama.uLoopMCP
             return null;
         }
         
+        /// <summary>
+        /// Builds client endpoint string from client name and port number
+        /// </summary>
+        /// <param name="clientName">Client name (unused but kept for future extensibility)</param>
+        /// <param name="clientPort">Client port number</param>
+        /// <returns>Constructed client endpoint string</returns>
+        private string BuildClientEndpoint(string clientName, int clientPort)
+        {
+            return $"127.0.0.1{CLIENT_ENDPOINT_SEPARATOR}{clientPort}";
+        }
+        
+        /// <summary>
+        /// Updates backward compatibility endpoint field
+        /// Sets to null if list is empty, otherwise sets to first endpoint's push server endpoint
+        /// </summary>
         private void UpdateBackwardCompatibilityEndpoint()
         {
-            // 後方互換性: 最初のエンドポイントを古いフィールドにも保存
-            if (_pushServerEndpoints.Count > 0)
+            if (_pushServerEndpoints == null || _pushServerEndpoints.Count == 0)
+            {
+                _pushServerEndpoint = null;
+            }
+            else
             {
                 _pushServerEndpoint = _pushServerEndpoints[0].pushReceiveServerEndpoint;
             }
@@ -395,7 +413,7 @@ namespace io.github.hatayama.uLoopMCP
         
         public string GetPushServerEndpoint(string clientName, int clientPort)
         {
-            string clientEndpoint = $"127.0.0.1{CLIENT_ENDPOINT_SEPARATOR}{clientPort}"; // Default assumption
+            string clientEndpoint = BuildClientEndpoint(clientName, clientPort);
             
             if (_pushServerEndpoints == null)
             {
@@ -422,7 +440,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (_pushServerEndpoints == null) return;
             
-            string clientEndpoint = $"127.0.0.1{CLIENT_ENDPOINT_SEPARATOR}{clientPort}"; // Default assumption
+            string clientEndpoint = BuildClientEndpoint(clientName, clientPort);
             
             for (int i = _pushServerEndpoints.Count - 1; i >= 0; i--)
             {
@@ -433,16 +451,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
-            // 後方互換性: 残りのエンドポイントがあれば最初のものを設定
-            if (_pushServerEndpoints.Count > 0)
-            {
-                _pushServerEndpoint = _pushServerEndpoints[0].pushReceiveServerEndpoint;
-            }
-            else
-            {
-                _pushServerEndpoint = null;
-            }
-            
+            UpdateBackwardCompatibilityEndpoint();
             Save(true);
         }
         
@@ -459,15 +468,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
-            // 後方互換性: 残りのエンドポイントがあれば最初のものを設定
-            if (_pushServerEndpoints.Count > 0)
-            {
-                _pushServerEndpoint = _pushServerEndpoints[0].pushReceiveServerEndpoint;
-            }
-            else
-            {
-                _pushServerEndpoint = null;
-            }
+            UpdateBackwardCompatibilityEndpoint();
             
             Save(true);
         }
@@ -500,11 +501,7 @@ namespace io.github.hatayama.uLoopMCP
                 _pushServerEndpoints.Add(new("Unknown", clientEndpoint, pushReceiveServerEndpoint));
             }
             
-            // 後方互換性: 最初のエンドポイントを古いフィールドにも保存
-            if (_pushServerEndpoints.Count > 0)
-            {
-                _pushServerEndpoint = _pushServerEndpoints[0].pushReceiveServerEndpoint;
-            }
+            UpdateBackwardCompatibilityEndpoint();
             
             Save(true);
         }
