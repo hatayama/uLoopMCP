@@ -5518,7 +5518,8 @@ var LIST_CHANGED_UNSUPPORTED_CLIENTS = [
   "claude",
   "claude-code",
   "gemini",
-  "codeium"
+  "codeium",
+  "windsurf"
 ];
 var OUTPUT_DIRECTORIES = {
   ROOT: "uLoopMCPOutputs",
@@ -7676,8 +7677,8 @@ var UnityConnectionManager = class {
       void 0,
       "Push notification system active - no legacy polling"
     );
-    this.unityDiscovery.setOnDiscoveredCallback(() => {
-      void this.handleUnityDiscovered(onConnectionEstablished);
+    this.unityDiscovery.setOnDiscoveredCallback(async (_port) => {
+      await this.handleUnityDiscovered(onConnectionEstablished);
     });
     this.unityDiscovery.setOnConnectionLostCallback(() => {
       if (this.enableConnectionDebugLog) {
@@ -8243,69 +8244,23 @@ var UnityToolManager = class {
 };
 
 // src/mcp-client-compatibility.ts
-var McpClientCompatibility = class _McpClientCompatibility {
-  static CLIENT_CONFIGS = [
-    {
-      name: "claude",
-      supportsListChanged: false,
-      initializationDelay: 0,
-      toolListStrategy: "on-request"
-    },
-    {
-      name: "cursor",
-      supportsListChanged: true,
-      initializationDelay: 0,
-      toolListStrategy: "notification"
-    },
-    {
-      name: "Visual Studio Code",
-      supportsListChanged: true,
-      initializationDelay: 50,
-      toolListStrategy: "notification"
-    },
-    {
-      name: "gemini",
-      supportsListChanged: false,
-      initializationDelay: 0,
-      toolListStrategy: "on-request"
-    },
-    {
-      name: "windsurf",
-      supportsListChanged: true,
-      initializationDelay: 0,
-      toolListStrategy: "on-request"
-    },
-    {
-      name: "mcp-inspector",
-      supportsListChanged: true,
-      initializationDelay: 0,
-      toolListStrategy: "notification"
-    }
-  ];
+var McpClientCompatibility = class {
   unityClient;
   clientName = DEFAULT_CLIENT_NAME;
-  currentClientConfig = null;
   constructor(unityClient) {
     this.unityClient = unityClient;
   }
   /**
-   * Set client name and load client configuration
+   * Set client name
    */
   setClientName(clientName) {
     this.clientName = clientName;
-    this.currentClientConfig = this.findClientConfig(clientName);
     VibeLogger.logInfo(
-      "mcp_client_config_loaded",
-      `Client configuration loaded for ${clientName}`,
-      {
-        client_name: clientName,
-        config: this.currentClientConfig,
-        supports_list_changed: this.currentClientConfig?.supportsListChanged ?? false,
-        tool_list_strategy: this.currentClientConfig?.toolListStrategy ?? "on-request"
-      },
+      "mcp_client_name_set",
+      `MCP client name set: ${clientName}`,
+      { client_name: clientName },
       void 0,
-      "Client-specific configuration loaded for MCP client",
-      "Monitor this to ensure client configurations are working correctly"
+      "Client name set for MCP session"
     );
   }
   /**
@@ -8358,91 +8313,16 @@ var McpClientCompatibility = class _McpClientCompatibility {
     return !this.isListChangedUnsupported(clientName);
   }
   /**
-   * Get client configuration
+   * Log compatibility information for debugging
    */
-  getClientConfig() {
-    return this.currentClientConfig;
-  }
-  /**
-   * Get tool list strategy for current client
-   */
-  getToolListStrategy() {
-    return this.currentClientConfig?.toolListStrategy || "on-request";
-  }
-  /**
-   * Get initialization delay for current client
-   */
-  getInitializationDelay() {
-    return this.currentClientConfig?.initializationDelay || 0;
-  }
-  /**
-   * Find client configuration by name with fallback for unknown clients
-   */
-  findClientConfig(clientName) {
-    const normalizedClientName = clientName.toLowerCase();
-    const foundConfig = _McpClientCompatibility.CLIENT_CONFIGS.find(
-      (config) => normalizedClientName.includes(config.name.toLowerCase())
-    );
-    if (!foundConfig) {
-      VibeLogger.logInfo(
-        "mcp_unknown_client_detected",
-        `Unknown MCP client detected: ${clientName}`,
-        {
-          client_name: clientName,
-          normalized_name: normalizedClientName,
-          available_configs: _McpClientCompatibility.CLIENT_CONFIGS.map((c) => c.name)
-        },
-        void 0,
-        "Unknown client will use conservative fallback configuration",
-        "Consider adding specific configuration for this client if it becomes commonly used"
-      );
-      return {
-        name: clientName,
-        supportsListChanged: false,
-        // Conservative: assume no list_changed support
-        initializationDelay: 0,
-        toolListStrategy: "on-request"
-      };
-    }
-    return foundConfig;
-  }
-  /**
-   * Check if client supports list_changed based on configuration
-   */
-  isListChangedSupportedByConfig(clientName) {
-    const config = this.findClientConfig(clientName);
-    return config?.supportsListChanged ?? false;
-  }
-  /**
-   * Log fallback to list_changed unsupported mode (for debugging)
-   */
-  logListChangedFallback() {
-    if (this.currentClientConfig) {
-      VibeLogger.logInfo(
-        "mcp_client_list_changed_fallback",
-        `Client ${this.clientName} fell back to list_changed unsupported mode`,
-        {
-          client_name: this.clientName,
-          original_config: this.currentClientConfig
-        },
-        void 0,
-        "Client communication failed, falling back to unsupported mode"
-      );
-    }
-  }
-  /**
-   * Log client compatibility information
-   */
-  logClientCompatibility(clientName) {
+  logClientCompatibilityInfo(clientName) {
     const isSupported = this.isListChangedSupported(clientName);
-    const config = this.getClientConfig();
     VibeLogger.logInfo(
       "mcp_client_compatibility_info",
       `Client compatibility information for ${clientName}`,
       {
         client_name: clientName,
         list_changed_supported: isSupported,
-        config,
         initialization_strategy: isSupported ? "asynchronous" : "synchronous"
       },
       void 0,
@@ -8780,7 +8660,7 @@ var ClientInitializationHandler = class {
     );
     if (this.clientInfo.name) {
       this.clientCompatibility.setClientName(this.clientInfo.name);
-      this.clientCompatibility.logClientCompatibility(this.clientInfo.name);
+      this.clientCompatibility.logClientCompatibilityInfo(this.clientInfo.name);
     }
     if (!this.isInitialized) {
       this.isInitialized = true;
@@ -8895,7 +8775,7 @@ var ClientInitializationHandler = class {
       VibeLogger.logInfo(
         "mcp_async_init_success",
         "Asynchronous initialization completed successfully",
-        { client_name: this.clientInfo.name },
+        { client_name: this.clientInfo?.name },
         void 0,
         "Unity connection established successfully for list_changed supported client"
       );
@@ -8907,7 +8787,7 @@ var ClientInitializationHandler = class {
         "mcp_unity_connection_init_failed",
         "Unity connection initialization failed",
         {
-          client_name: this.clientInfo.name,
+          client_name: this.clientInfo?.name,
           error_message: error instanceof Error ? error.message : String(error)
         },
         void 0,

@@ -117,9 +117,8 @@ describe('Push Notification System Integration Tests', () => {
         payload: {
           endpoint: `localhost:${serverPort}`,
           clientInfo: {
-            unityVersion: '2023.3.0f1',
-            projectPath: '/test/project',
-            sessionId: 'test_session_123',
+            name: 'test-client',
+            version: '1.0.0',
           },
         },
       };
@@ -178,9 +177,8 @@ describe('Push Notification System Integration Tests', () => {
         timestamp: new Date().toISOString(),
         payload: {
           clientInfo: {
-            unityVersion: '2023.3.0f1',
-            projectPath: '/test/project',
-            sessionId: 'test_session_123',
+            name: 'test-client',
+            version: '1.0.0',
           },
         },
       };

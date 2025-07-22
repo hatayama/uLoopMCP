@@ -34,6 +34,27 @@ jobs:
         npm ci
         echo "Dependencies installed successfully"
         
+    - name: Type Check TypeScript Server
+      working-directory: Packages/src/TypeScriptServer~
+      run: |
+        echo "Running TypeScript type check..."
+        npx tsc --noEmit
+        echo "Type check passed successfully"
+        
+    - name: Lint TypeScript Server
+      working-directory: Packages/src/TypeScriptServer~
+      run: |
+        echo "Running ESLint..."
+        npm run lint
+        echo "Linting passed successfully"
+        
+    - name: Test TypeScript Server
+      working-directory: Packages/src/TypeScriptServer~
+      run: |
+        echo "Running tests (informational only)..."
+        npm test || echo "Tests failed but continuing build (tests are still in development)"
+        echo "Test execution completed"
+        
     - name: Build TypeScript Server
       working-directory: Packages/src/TypeScriptServer~
       env:

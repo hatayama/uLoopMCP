@@ -36,16 +36,16 @@ import packageJson from '../package.json' assert { type: 'json' };
  * - @modelcontextprotocol/sdk/server: The core MCP server implementation
  */
 class UnityMcpServer {
-  private server: Server;
-  private unityClient: UnityClient;
-  private readonly enableDevelopmentLogging: boolean;
-  private unityDiscovery: UnityDiscovery;
-  private connectionManager: UnityConnectionManager;
-  private toolManager: UnityToolManager;
-  private clientCompatibility: McpClientCompatibility;
-  private eventHandler: UnityEventHandler;
-  private pushNotificationManager: UnityPushNotificationManager;
-  private initializationHandler: ClientInitializationHandler;
+  private server!: Server;
+  private unityClient!: UnityClient;
+  private enableDevelopmentLogging!: boolean;
+  private unityDiscovery!: UnityDiscovery;
+  private connectionManager!: UnityConnectionManager;
+  private toolManager!: UnityToolManager;
+  private clientCompatibility!: McpClientCompatibility;
+  private eventHandler!: UnityEventHandler;
+  private pushNotificationManager!: UnityPushNotificationManager;
+  private initializationHandler!: ClientInitializationHandler;
 
   constructor() {
     this.initializeEnvironment();

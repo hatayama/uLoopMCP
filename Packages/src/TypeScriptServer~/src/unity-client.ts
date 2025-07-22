@@ -48,7 +48,7 @@ export class UnityClient {
   private readonly randomSeed: number = Math.floor(Math.random() * 1000);
   private storedClientName: string | null = null;
   private pushNotificationEndpoint: string | null = null;
-  private clientId: string;
+  private clientId!: string;
 
   private constructor() {
     const unityTcpPort: string | undefined = process.env.UNITY_TCP_PORT;

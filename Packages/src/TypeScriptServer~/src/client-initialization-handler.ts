@@ -59,7 +59,7 @@ export class ClientInitializationHandler {
 
     if (this.clientInfo.name) {
       this.clientCompatibility.setClientName(this.clientInfo.name);
-      this.clientCompatibility.logClientCompatibility(this.clientInfo.name);
+      this.clientCompatibility.logClientCompatibilityInfo(this.clientInfo.name);
     }
 
     if (!this.isInitialized) {
@@ -197,7 +197,7 @@ export class ClientInitializationHandler {
         VibeLogger.logInfo(
           'mcp_async_init_success',
           'Asynchronous initialization completed successfully',
-          { client_name: this.clientInfo.name },
+          { client_name: this.clientInfo?.name },
           undefined,
           'Unity connection established successfully for list_changed supported client',
         );
@@ -211,7 +211,7 @@ export class ClientInitializationHandler {
           'mcp_unity_connection_init_failed',
           'Unity connection initialization failed',
           {
-            client_name: this.clientInfo.name,
+            client_name: this.clientInfo?.name,
             error_message: error instanceof Error ? error.message : String(error),
           },
           undefined,

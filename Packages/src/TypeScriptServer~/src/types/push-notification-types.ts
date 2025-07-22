@@ -34,6 +34,11 @@ export interface DisconnectReason {
   message: string;
 }
 
+export interface ClientInfo {
+  name: string;
+  version: string;
+}
+
 export interface UnityEditorInfo {
   unityVersion?: string;
   projectPath?: string;
@@ -106,7 +111,8 @@ export function validatePushNotification(notification: unknown): notification is
   }
 
   const validTypes = Object.values(PushNotificationConstants.TYPES);
-  if (!validTypes.includes((notification as { type?: string }).type)) {
+  const notificationType = (notification as { type?: string }).type;
+  if (!notificationType || !validTypes.includes(notificationType as PushNotificationType)) {
     return false;
   }
 

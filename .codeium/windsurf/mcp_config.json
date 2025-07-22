@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "uLoopMCP": {
+      "command": "node",
+      "args": [
+        "/Users/a12115/work/oss/uLoopMCP/Packages/src/TypeScriptServer~/dist/server.bundle.js"
+      ],
+      "env": {
+        "UNITY_TCP_PORT": "8700",
+        "MCP_DEBUG": "true"
+      }
+    }
+  }
+}

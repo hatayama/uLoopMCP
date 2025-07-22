@@ -110,8 +110,8 @@ export class UnityConnectionManager {
     );
 
     // Setup discovery callbacks for push notification system
-    this.unityDiscovery.setOnDiscoveredCallback(() => {
-      void this.handleUnityDiscovered(onConnectionEstablished);
+    this.unityDiscovery.setOnDiscoveredCallback(async (_port: number) => {
+      await this.handleUnityDiscovered(onConnectionEstablished);
     });
 
     this.unityDiscovery.setOnConnectionLostCallback(() => {

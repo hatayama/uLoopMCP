@@ -132,6 +132,7 @@ export const LIST_CHANGED_UNSUPPORTED_CLIENTS = [
   'claude-code',
   'gemini',
   'codeium',
+  'windsurf',
 ] as const;
 
 // File output directories
