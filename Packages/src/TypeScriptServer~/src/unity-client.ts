@@ -6,8 +6,8 @@ import {
   ERROR_MESSAGES,
   DEFAULT_CLIENT_NAME,
 } from './constants.js';
-// Debug logging removed
 import { safeSetTimeout } from './utils/safe-timer.js';
+import { VibeLogger } from './utils/vibe-logger.js';
 import { ConnectionManager } from './connection-manager.js';
 import { MessageHandler } from './message-handler.js';
 
@@ -252,9 +252,18 @@ export class UnityClient {
    * Set push notification endpoint for inclusion in setClientName request
    */
   setPushNotificationEndpoint(endpoint: string): void {
-    console.log(`[uLoopMCP] [DEBUG] setPushNotificationEndpoint: Setting endpoint from '${this.pushNotificationEndpoint}' to '${endpoint}'`);
+    VibeLogger.logDebug(
+      'unity_client_set_push_endpoint',
+      'Setting push notification endpoint',
+      {
+        previousEndpoint: this.pushNotificationEndpoint,
+        newEndpoint: endpoint,
+      },
+      undefined,
+      'Push notification endpoint configuration for Unity client',
+      'Track endpoint changes for debugging push notification setup',
+    );
     this.pushNotificationEndpoint = endpoint;
-    console.log(`[uLoopMCP] [DEBUG] setPushNotificationEndpoint: Endpoint set successfully to '${this.pushNotificationEndpoint}'`);
   }
 
   /**
@@ -283,9 +292,19 @@ export class UnityClient {
     // Use provided client name or fallback to environment detection
     const finalClientName = clientName || this.detectClientName();
 
-    // DEBUG: Log push notification endpoint state
-    console.log(`[uLoopMCP] [DEBUG] setClientName: pushNotificationEndpoint = '${this.pushNotificationEndpoint}' (type: ${typeof this.pushNotificationEndpoint})`);
-    console.log(`[uLoopMCP] [DEBUG] setClientName: Will send ClientName='${finalClientName}', ClientPort=${this.port}, PushNotificationEndpoint='${this.pushNotificationEndpoint || ''}'`);
+    VibeLogger.logDebug(
+      'unity_client_set_client_name',
+      'Sending setClientName request to Unity',
+      {
+        finalClientName,
+        clientPort: this.port,
+        pushNotificationEndpoint: this.pushNotificationEndpoint,
+        endpointType: typeof this.pushNotificationEndpoint,
+      },
+      undefined,
+      'Client name registration with push notification endpoint',
+      'Track setClientName requests for debugging client identification',
+    );
 
     const request = {
       jsonrpc: JSONRPC.VERSION,

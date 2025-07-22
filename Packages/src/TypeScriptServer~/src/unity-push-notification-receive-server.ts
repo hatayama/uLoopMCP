@@ -126,6 +126,7 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
     return new Promise((resolve) => {
       this.connectedUnityClients.clear();
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       this.server!.close(() => {
         this.isRunning = false;
         this.port = 0;

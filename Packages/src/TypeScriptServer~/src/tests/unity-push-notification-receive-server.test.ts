@@ -3,6 +3,10 @@
  * 設計書参照: /.kiro/specs/unity-push-notification-system/design.md
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import * as net from 'net';
 

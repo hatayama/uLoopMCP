@@ -3,6 +3,13 @@
  * 設計書参照: /.kiro/specs/unity-push-notification-system/design.md
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/require-await */
+/* eslint-disable security/detect-object-injection */
+
 import { describe, it, expect, beforeAll, afterAll, beforeEach, jest } from '@jest/globals';
 import * as net from 'net';
 
@@ -223,8 +230,10 @@ describe('Push Notification System Integration Tests', () => {
       });
       await new Promise((resolve) => setTimeout(resolve, 100));
 
+      // eslint-disable-next-line no-console
       const originalConsoleError = console.error;
       const errorMessages: string[] = [];
+      // eslint-disable-next-line no-console
       console.error = (...args: unknown[]): void => {
         errorMessages.push(args.join(' '));
       };
@@ -240,6 +249,7 @@ describe('Push Notification System Integration Tests', () => {
           true,
         );
       } finally {
+        // eslint-disable-next-line no-console
         console.error = originalConsoleError;
         unityClient.destroy();
       }
