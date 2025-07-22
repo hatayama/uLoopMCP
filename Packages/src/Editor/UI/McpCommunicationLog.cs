@@ -53,7 +53,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         static McpCommunicationLogger()
         {
-            LoadFromSessionState();
+            // LoadFromSessionState();
         }
 
         /// <summary>

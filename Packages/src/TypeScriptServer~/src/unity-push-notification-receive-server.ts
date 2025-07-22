@@ -101,7 +101,7 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
         reject(error);
       });
 
-      this.server.listen(0, 'localhost', () => {
+      this.server.listen(0, '127.0.0.1', () => {
         if (!this.server) {
           return;
         }
@@ -152,6 +152,10 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
 
   public getConnectedClientsCount(): number {
     return this.connectedUnityClients.size;
+  }
+
+  public getCurrentPort(): number | null {
+    return this.isRunning ? this.port : null;
   }
 
   private handleUnityConnection(socket: net.Socket): void {

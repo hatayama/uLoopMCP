@@ -6825,6 +6825,7 @@ var UnityClient = class _UnityClient {
   processId = process.pid;
   randomSeed = Math.floor(Math.random() * 1e3);
   storedClientName = null;
+  pushNotificationEndpoint = null;
   constructor() {
     const unityTcpPort = process.env.UNITY_TCP_PORT;
     if (!unityTcpPort) {
@@ -6976,6 +6977,14 @@ var UnityClient = class _UnityClient {
     });
   }
   /**
+   * Set push notification endpoint for inclusion in setClientName request
+   */
+  setPushNotificationEndpoint(endpoint) {
+    console.log(`[uLoopMCP] [DEBUG] setPushNotificationEndpoint: Setting endpoint from '${this.pushNotificationEndpoint}' to '${endpoint}'`);
+    this.pushNotificationEndpoint = endpoint;
+    console.log(`[uLoopMCP] [DEBUG] setPushNotificationEndpoint: Endpoint set successfully to '${this.pushNotificationEndpoint}'`);
+  }
+  /**
    * Detect client name from stored value, environment variables, or default
    */
   detectClientName() {
@@ -6995,12 +7004,17 @@ var UnityClient = class _UnityClient {
       this.storedClientName = clientName;
     }
     const finalClientName = clientName || this.detectClientName();
+    console.log(`[uLoopMCP] [DEBUG] setClientName: pushNotificationEndpoint = '${this.pushNotificationEndpoint}' (type: ${typeof this.pushNotificationEndpoint})`);
+    console.log(`[uLoopMCP] [DEBUG] setClientName: Will send ClientName='${finalClientName}', ClientPort=${this.port}, PushNotificationEndpoint='${this.pushNotificationEndpoint || ""}'`);
     const request = {
       jsonrpc: JSONRPC.VERSION,
       id: this.generateId(),
       method: "set-client-name",
       params: {
-        ClientName: finalClientName
+        ClientName: finalClientName,
+        ClientPort: this.port,
+        // TypeScriptサーバーのポート番号を送信
+        PushNotificationEndpoint: this.pushNotificationEndpoint || ""
       }
     };
     try {
@@ -8741,6 +8755,15 @@ var ClientInitializationHandler = class {
   handleUnityConnection() {
     this.isUnityConnected = true;
     this.notifyToolsAvailable();
+    this.unityClient.setClientName().catch((error) => {
+      VibeLogger.logError(
+        "unity_setclientname_failed",
+        "Failed to send client name to Unity",
+        { error: error instanceof Error ? error.message : String(error) },
+        void 0,
+        "Push notification endpoint may not be available to Unity"
+      );
+    });
   }
   /**
    * Handle Unity disconnection
@@ -8964,6 +8987,13 @@ var UnityPushNotificationManager = class {
     await this.pushNotificationServer.stop();
   }
   /**
+   * Get current push notification endpoint
+   */
+  getCurrentEndpoint() {
+    const currentPort = this.pushNotificationServer.getCurrentPort();
+    return currentPort ? `localhost:${currentPort}` : null;
+  }
+  /**
    * Setup push notification event handlers
    */
   setupPushNotificationHandlers() {
@@ -9129,7 +9159,7 @@ var UnityPushNotificationReceiveServer = class extends EventEmitter {
       this.server.on("error", (error) => {
         reject(error);
       });
-      this.server.listen(0, "localhost", () => {
+      this.server.listen(0, "127.0.0.1", () => {
         if (!this.server) {
           return;
         }
@@ -9172,6 +9202,9 @@ var UnityPushNotificationReceiveServer = class extends EventEmitter {
   }
   getConnectedClientsCount() {
     return this.connectedUnityClients.size;
+  }
+  getCurrentPort() {
+    return this.isRunning ? this.port : null;
   }
   handleUnityConnection(socket) {
     const clientId = this.generateClientId();
@@ -9396,6 +9429,17 @@ var UnityMcpServer = class {
     );
     this.toolManager.setClientInitializationHandler(this.initializationHandler);
     this.connectionManager.setupReconnectionCallback(async () => {
+      const pushEndpoint = this.pushNotificationManager.getCurrentEndpoint();
+      if (pushEndpoint) {
+        this.unityClient.setPushNotificationEndpoint(pushEndpoint);
+        VibeLogger.logInfo(
+          "push_endpoint_restored_on_reconnection",
+          "Push notification endpoint restored on Unity reconnection",
+          { endpoint: pushEndpoint },
+          void 0,
+          "Push endpoint restored to prevent empty string transmission during setClientName"
+        );
+      }
       await this.refreshToolsAndNotifyClients();
     });
   }
@@ -9527,7 +9571,16 @@ var UnityMcpServer = class {
    */
   async start() {
     try {
-      await this.pushNotificationManager.startPushNotificationServer();
+      const pushServerPort = await this.pushNotificationManager.startPushNotificationServer();
+      const pushEndpoint = `localhost:${pushServerPort}`;
+      this.unityClient.setPushNotificationEndpoint(pushEndpoint);
+      VibeLogger.logInfo(
+        "push_endpoint_configured",
+        "Push notification endpoint configured for Unity client",
+        { endpoint: pushEndpoint },
+        void 0,
+        "Unity client will include this endpoint in setClientName requests"
+      );
     } catch (error) {
       VibeLogger.logError(
         "push_server_start_failed",

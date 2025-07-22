@@ -137,8 +137,22 @@ class UnityMcpServer {
     // Set up cross-dependencies
     this.toolManager.setClientInitializationHandler(this.initializationHandler);
 
-    // Setup reconnection callback for tool refresh
+    // Setup reconnection callback for tool refresh and push endpoint restoration
     this.connectionManager.setupReconnectionCallback(async () => {
+      // Restore push notification endpoint on reconnection
+      const pushEndpoint = this.pushNotificationManager.getCurrentEndpoint();
+      if (pushEndpoint) {
+        this.unityClient.setPushNotificationEndpoint(pushEndpoint);
+
+        VibeLogger.logInfo(
+          'push_endpoint_restored_on_reconnection',
+          'Push notification endpoint restored on Unity reconnection',
+          { endpoint: pushEndpoint },
+          undefined,
+          'Push endpoint restored to prevent empty string transmission during setClientName',
+        );
+      }
+
       await this.refreshToolsAndNotifyClients();
     });
   }
@@ -296,7 +310,19 @@ class UnityMcpServer {
   async start(): Promise<void> {
     // Start Push notification receive server first
     try {
-      await this.pushNotificationManager.startPushNotificationServer();
+      const pushServerPort = await this.pushNotificationManager.startPushNotificationServer();
+
+      // Set push notification endpoint for Unity client
+      const pushEndpoint = `localhost:${pushServerPort}`;
+      this.unityClient.setPushNotificationEndpoint(pushEndpoint);
+
+      VibeLogger.logInfo(
+        'push_endpoint_configured',
+        'Push notification endpoint configured for Unity client',
+        { endpoint: pushEndpoint },
+        undefined,
+        'Unity client will include this endpoint in setClientName requests',
+      );
     } catch (error) {
       VibeLogger.logError(
         'push_server_start_failed',

@@ -47,6 +47,8 @@ export class UnityClient {
   private readonly processId: number = process.pid;
   private readonly randomSeed: number = Math.floor(Math.random() * 1000);
   private storedClientName: string | null = null;
+  private pushNotificationEndpoint: string | null = null;
+  private clientId: string;
 
   private constructor() {
     const unityTcpPort: string | undefined = process.env.UNITY_TCP_PORT;
@@ -247,6 +249,15 @@ export class UnityClient {
   }
 
   /**
+   * Set push notification endpoint for inclusion in setClientName request
+   */
+  setPushNotificationEndpoint(endpoint: string): void {
+    console.log(`[uLoopMCP] [DEBUG] setPushNotificationEndpoint: Setting endpoint from '${this.pushNotificationEndpoint}' to '${endpoint}'`);
+    this.pushNotificationEndpoint = endpoint;
+    console.log(`[uLoopMCP] [DEBUG] setPushNotificationEndpoint: Endpoint set successfully to '${this.pushNotificationEndpoint}'`);
+  }
+
+  /**
    * Detect client name from stored value, environment variables, or default
    */
   private detectClientName(): string {
@@ -272,12 +283,18 @@ export class UnityClient {
     // Use provided client name or fallback to environment detection
     const finalClientName = clientName || this.detectClientName();
 
+    // DEBUG: Log push notification endpoint state
+    console.log(`[uLoopMCP] [DEBUG] setClientName: pushNotificationEndpoint = '${this.pushNotificationEndpoint}' (type: ${typeof this.pushNotificationEndpoint})`);
+    console.log(`[uLoopMCP] [DEBUG] setClientName: Will send ClientName='${finalClientName}', ClientPort=${this.port}, PushNotificationEndpoint='${this.pushNotificationEndpoint || ''}'`);
+
     const request = {
       jsonrpc: JSONRPC.VERSION,
       id: this.generateId(),
       method: 'set-client-name',
       params: {
         ClientName: finalClientName,
+        ClientPort: this.port, // TypeScriptサーバーのポート番号を送信
+        PushNotificationEndpoint: this.pushNotificationEndpoint || '',
       },
     };
 

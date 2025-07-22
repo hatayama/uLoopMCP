@@ -76,6 +76,14 @@ export class UnityPushNotificationManager {
   }
 
   /**
+   * Get current push notification endpoint
+   */
+  getCurrentEndpoint(): string | null {
+    const currentPort = this.pushNotificationServer.getCurrentPort();
+    return currentPort ? `localhost:${currentPort}` : null;
+  }
+
+  /**
    * Setup push notification event handlers
    */
   private setupPushNotificationHandlers(): void {

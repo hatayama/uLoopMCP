@@ -74,6 +74,17 @@ export class ClientInitializationHandler {
   handleUnityConnection(): void {
     this.isUnityConnected = true;
     this.notifyToolsAvailable();
+
+    // Send client name and push notification endpoint to Unity
+    this.unityClient.setClientName().catch((error) => {
+      VibeLogger.logError(
+        'unity_setclientname_failed',
+        'Failed to send client name to Unity',
+        { error: error instanceof Error ? error.message : String(error) },
+        undefined,
+        'Push notification endpoint may not be available to Unity',
+      );
+    });
   }
 
   /**
