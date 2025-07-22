@@ -48,28 +48,21 @@ namespace io.github.hatayama.uLoopMCP
                 throw new ObjectDisposedException(nameof(UnityPushClient));
             }
 
-            Debug.Log("[uLoopMCP] [DEBUG] Starting push server discovery process");
             string persistedEndpoint = LoadPersistedEndpoint();
-            Debug.Log($"[uLoopMCP] [DEBUG] Persisted endpoint loaded: '{persistedEndpoint}' (IsNullOrEmpty: {string.IsNullOrEmpty(persistedEndpoint)})");
             
             if (!string.IsNullOrEmpty(persistedEndpoint))
             {
-                Debug.Log($"[uLoopMCP] [DEBUG] Attempting to connect to persisted endpoint: {persistedEndpoint}");
                 bool success = await ConnectToEndpointAsync(persistedEndpoint);
-                Debug.Log($"[uLoopMCP] [DEBUG] Persisted endpoint connection result: {success}");
                 if (success)
                 {
-                    Debug.Log("[uLoopMCP] [DEBUG] Successfully connected using persisted endpoint");
                     return true;
                 }
                 
                 Debug.LogWarning($"[uLoopMCP] Failed to connect to persisted endpoint: {persistedEndpoint}");
-                Debug.Log("[uLoopMCP] [DEBUG] Clearing invalid persisted endpoint");
                 ClearPersistedEndpoint();
             }
 
             // 設計書通り: 保存されたエンドポイントがない場合は接続を試行しない
-            Debug.Log("[uLoopMCP] [DEBUG] No valid persisted endpoint found. Waiting for TypeScript server to provide endpoint.");
             Debug.LogWarning("[uLoopMCP] No persisted endpoint found. Waiting for TypeScript server to provide endpoint.");
             return false;
         }
@@ -240,15 +233,11 @@ namespace io.github.hatayama.uLoopMCP
 
         public string LoadPersistedEndpoint()
         {
-            Debug.Log($"[uLoopMCP] [DEBUG] LoadPersistedEndpoint: McpSessionManager.instance != null: {McpSessionManager.instance != null}");
             if (McpSessionManager.instance != null)
             {
-                string endpoint = McpSessionManager.instance.GetPushServerEndpoint();
-                Debug.Log($"[uLoopMCP] [DEBUG] LoadPersistedEndpoint: Retrieved endpoint from McpSessionManager: '{endpoint}'");
-                return endpoint;
+                return McpSessionManager.instance.GetPushServerEndpoint();
             }
             
-            Debug.Log("[uLoopMCP] [DEBUG] LoadPersistedEndpoint: McpSessionManager.instance is null, returning null");
             return null;
         }
 

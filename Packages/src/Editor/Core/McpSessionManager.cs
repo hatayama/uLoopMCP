@@ -274,37 +274,26 @@ namespace io.github.hatayama.uLoopMCP
         // Push通知サーバー情報管理
         public void SetPushServerEndpoint(string endpoint)
         {
-            Debug.Log($"[uLoopMCP] [DEBUG] McpSessionManager.SetPushServerEndpoint(): Setting endpoint to '{endpoint}' (Previous: '{_pushServerEndpoint}')");
             _pushServerEndpoint = endpoint;
-            
-            // 保存実行
             Save(true);
-            
-            // フィールド値の再確認
-            Debug.Log($"[uLoopMCP] [DEBUG] SetPushServerEndpoint(): Field value after save: '{_pushServerEndpoint}' (Expected: '{endpoint}')");
-            Debug.Log("[uLoopMCP] [DEBUG] McpSessionManager.SetPushServerEndpoint(): Save operation completed");
         }
 
         public string GetPushServerEndpoint()
         {
-            Debug.Log($"[uLoopMCP] [DEBUG] McpSessionManager.GetPushServerEndpoint(): Returning '{_pushServerEndpoint}' (IsNullOrEmpty: {string.IsNullOrEmpty(_pushServerEndpoint)})");
             return _pushServerEndpoint;
         }
 
         public void ClearPushServerEndpoint()
         {
-            Debug.Log($"[uLoopMCP] [DEBUG] ClearPushServerEndpoint(): Clearing {_pushServerEndpoints?.Count ?? 0} endpoints");
             _pushServerEndpoint = null;
             _pushServerEndpoints?.Clear();
             Save(true);
-            Debug.Log("[uLoopMCP] [DEBUG] ClearPushServerEndpoint(): All endpoints cleared and saved");
         }
 
         // 複数エンドポイント管理の新機能
         public void SetPushServerEndpoint(string clientName, int clientPort, string endpoint)
         {
             string uniqueKey = $"{clientName}:{clientPort}";
-            Debug.Log($"[uLoopMCP] [DEBUG] McpSessionManager.SetPushServerEndpoint(): Setting endpoint for client '{uniqueKey}' to '{endpoint}'");
             
             if (_pushServerEndpoints == null)
             {
@@ -324,12 +313,10 @@ namespace io.github.hatayama.uLoopMCP
             
             if (existingPair != null)
             {
-                Debug.Log($"[uLoopMCP] [DEBUG] SetPushServerEndpoint(): Updating existing endpoint for '{uniqueKey}' from '{existingPair.endpoint}' to '{endpoint}'");
                 existingPair.endpoint = endpoint;
             }
             else
             {
-                Debug.Log($"[uLoopMCP] [DEBUG] SetPushServerEndpoint(): Adding new endpoint for '{uniqueKey}': '{endpoint}'");
                 _pushServerEndpoints.Add(new(clientName, clientPort, endpoint));
             }
             
@@ -340,7 +327,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             Save(true);
-            Debug.Log($"[uLoopMCP] [DEBUG] SetPushServerEndpoint(): Client '{uniqueKey}' endpoint saved successfully");
         }
         
         public string GetPushServerEndpoint(string clientName, int clientPort)
@@ -349,7 +335,6 @@ namespace io.github.hatayama.uLoopMCP
             
             if (_pushServerEndpoints == null)
             {
-                Debug.Log($"[uLoopMCP] [DEBUG] McpSessionManager.GetPushServerEndpoint(): No endpoints stored for client '{uniqueKey}', returning legacy endpoint '{_pushServerEndpoint}'");
                 return _pushServerEndpoint;
             }
             
@@ -357,12 +342,10 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (pair.GetUniqueKey() == uniqueKey)
                 {
-                    Debug.Log($"[uLoopMCP] [DEBUG] McpSessionManager.GetPushServerEndpoint(): Found endpoint for client '{uniqueKey}': '{pair.endpoint}'");
                     return pair.endpoint;
                 }
             }
             
-            Debug.Log($"[uLoopMCP] [DEBUG] McpSessionManager.GetPushServerEndpoint(): No endpoint found for client '{uniqueKey}', returning legacy endpoint '{_pushServerEndpoint}'");
             return _pushServerEndpoint; // フォールバック: 後方互換性
         }
         
@@ -381,7 +364,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (_pushServerEndpoints[i].GetUniqueKey() == uniqueKey)
                 {
-                    Debug.Log($"[uLoopMCP] [DEBUG] RemovePushServerEndpoint(): Removing endpoint for client '{uniqueKey}': '{_pushServerEndpoints[i].endpoint}'");
                     _pushServerEndpoints.RemoveAt(i);
                     break;
                 }
@@ -408,7 +390,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (_pushServerEndpoints[i].clientName == clientEndpoint) // clientNameフィールドにclientEndpoint（127.0.0.1:58194）が保存されてる
                 {
-                    Debug.Log($"[uLoopMCP] [DEBUG] RemovePushServerEndpoint(): Removing endpoint for client '{clientEndpoint}': '{_pushServerEndpoints[i].endpoint}'");
                     _pushServerEndpoints.RemoveAt(i);
                     break;
                 }
@@ -430,8 +411,6 @@ namespace io.github.hatayama.uLoopMCP
         // クライアントエンドポイント（文字列）をキーとする新しいメソッド
         public void SetPushServerEndpoint(string clientEndpoint, string endpoint)
         {
-            Debug.Log($"[uLoopMCP] [DEBUG] McpSessionManager.SetPushServerEndpoint(): Setting endpoint for client '{clientEndpoint}' to '{endpoint}'");
-            
             if (_pushServerEndpoints == null)
             {
                 _pushServerEndpoints = new();
@@ -450,12 +429,10 @@ namespace io.github.hatayama.uLoopMCP
             
             if (existingPair != null)
             {
-                Debug.Log($"[uLoopMCP] [DEBUG] SetPushServerEndpoint(): Updating existing endpoint for '{clientEndpoint}' from '{existingPair.endpoint}' to '{endpoint}'");
                 existingPair.endpoint = endpoint;
             }
             else
             {
-                Debug.Log($"[uLoopMCP] [DEBUG] SetPushServerEndpoint(): Adding new endpoint for '{clientEndpoint}': '{endpoint}'");
                 _pushServerEndpoints.Add(new(clientEndpoint, 0, endpoint)); // clientPortは使わないので0
             }
             
@@ -466,14 +443,12 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             Save(true);
-            Debug.Log($"[uLoopMCP] [DEBUG] SetPushServerEndpoint(): Client '{clientEndpoint}' endpoint saved successfully");
         }
         
         public string GetPushServerEndpoint(string clientEndpoint)
         {
             if (_pushServerEndpoints == null)
             {
-                Debug.Log($"[uLoopMCP] [DEBUG] McpSessionManager.GetPushServerEndpoint(): No endpoints stored for client '{clientEndpoint}', returning legacy endpoint '{_pushServerEndpoint}'");
                 return _pushServerEndpoint;
             }
             
@@ -481,12 +456,10 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (pair.clientName == clientEndpoint) // clientNameフィールドにclientEndpoint（127.0.0.1:57857）が保存されてる
                 {
-                    Debug.Log($"[uLoopMCP] [DEBUG] McpSessionManager.GetPushServerEndpoint(): Found endpoint for client '{clientEndpoint}': '{pair.endpoint}'");
                     return pair.endpoint;
                 }
             }
             
-            Debug.Log($"[uLoopMCP] [DEBUG] McpSessionManager.GetPushServerEndpoint(): No endpoint found for client '{clientEndpoint}', returning legacy endpoint '{_pushServerEndpoint}'");
             return _pushServerEndpoint; // フォールバック: 後方互換性
         }
 

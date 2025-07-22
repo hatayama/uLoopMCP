@@ -25,15 +25,11 @@ namespace io.github.hatayama.uLoopMCP
             // Get actual client endpoint from connection context
             string clientEndpoint = JsonRpcProcessor.CurrentClientContext?.Endpoint ?? "unknown";
             
-            // DEBUG: Log all setClientName calls with detailed info
-            UnityEngine.Debug.Log($"[uLoopMCP] [DEBUG] SetClientName CALLED: ClientName='{clientName}', ClientPort={clientPort}, ClientEndpoint='{clientEndpoint}', PushEndpoint='{pushEndpoint}' (Length: {pushEndpoint?.Length ?? -1}, IsNullOrEmpty: {string.IsNullOrEmpty(pushEndpoint)})");
-            
             UpdateClientNameInServer(clientName);
             
             // Save push notification endpoint if provided
             if (!string.IsNullOrEmpty(pushEndpoint))
             {
-                UnityEngine.Debug.Log($"[uLoopMCP] [DEBUG] SetClientName: Saving push notification endpoint for client '{clientEndpoint}': {pushEndpoint}");
                 McpSessionManager sessionManager = McpSessionManager.GetSafeInstance();
                 if (sessionManager != null)
                 {
@@ -41,21 +37,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 else
                 {
-                    UnityEngine.Debug.LogError("[uLoopMCP] [ERROR] Failed to access McpSessionManager instance safely");
-                }
-            }
-            else
-            {
-                // Check if we already have a valid endpoint saved for this client
-                McpSessionManager sessionManager = McpSessionManager.GetSafeInstance();
-                string existingEndpoint = sessionManager?.GetPushServerEndpoint(clientEndpoint);
-                if (!string.IsNullOrEmpty(existingEndpoint))
-                {
-                    UnityEngine.Debug.LogWarning($"[uLoopMCP] [WARNING] SetClientName: Empty/null push notification endpoint received for client '{clientEndpoint}' - NOT overwriting existing endpoint '{existingEndpoint}'");
-                }
-                else
-                {
-                    UnityEngine.Debug.LogWarning($"[uLoopMCP] [WARNING] SetClientName: Empty/null push notification endpoint received for client '{clientEndpoint}' and no existing endpoint found");
+                    UnityEngine.Debug.LogError("[uLoopMCP] Failed to access McpSessionManager instance safely");
                 }
             }
             

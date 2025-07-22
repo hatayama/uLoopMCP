@@ -45,32 +45,24 @@ namespace io.github.hatayama.uLoopMCP
 
         public static async Task InitializePushClientAsync()
         {
-            Debug.Log($"[uLoopMCP] [DEBUG] InitializePushClientAsync: Starting initialization. isInitialized: {isInitialized}");
             if (isInitialized) 
             {
-                Debug.Log("[uLoopMCP] [DEBUG] InitializePushClientAsync: Already initialized, returning");
                 return;
             }
 
             isInitialized = true;
-            Debug.Log("[uLoopMCP] [DEBUG] InitializePushClientAsync: Set isInitialized to true, disposing old client");
-
             await DisposePushClientAsync();
 
-            Debug.Log("[uLoopMCP] [DEBUG] InitializePushClientAsync: Creating new UnityPushClient and setting up event handlers");
             pushClient = new UnityPushClient();
             pushClient.OnConnected += OnPushClientConnected;
             pushClient.OnDisconnected += OnPushClientDisconnected;
 
-            Debug.Log("[uLoopMCP] [DEBUG] InitializePushClientAsync: Starting auto connect process");
             await AutoConnectToPushServerAsync();
         }
 
         private static async Task AutoConnectToPushServerAsync()
         {
-            Debug.Log("[uLoopMCP] [DEBUG] AutoConnectToPushServerAsync: Starting auto connect process");
             McpSessionManager sessionManager = McpSessionManager.GetSafeInstance();
-            Debug.Log($"[uLoopMCP] [DEBUG] AutoConnectToPushServerAsync: McpSessionManager.GetSafeInstance() != null: {sessionManager != null}");
             
             // Retry logic for ScriptableSingleton initialization after domain reload
             List<McpSessionManager.ClientEndpointPair> allEndpoints = null;
@@ -81,7 +73,6 @@ namespace io.github.hatayama.uLoopMCP
             while (retryCount < maxRetries)
             {
                 allEndpoints = sessionManager?.GetAllPushServerEndpoints();
-                Debug.Log($"[uLoopMCP] [DEBUG] AutoConnectToPushServerAsync: Retrieved endpoints (attempt {retryCount + 1}/{maxRetries}): {allEndpoints?.Count ?? 0} endpoints found");
                 
                 if (allEndpoints != null && allEndpoints.Count > 0)
                 {
@@ -91,31 +82,22 @@ namespace io.github.hatayama.uLoopMCP
                 retryCount++;
                 if (retryCount < maxRetries)
                 {
-                    Debug.Log($"[uLoopMCP] [DEBUG] AutoConnectToPushServerAsync: No endpoints found, waiting {retryDelayMs}ms before retry {retryCount + 1}/{maxRetries}");
                     await Task.Delay(retryDelayMs);
                 }
             }
             
             if (allEndpoints != null && allEndpoints.Count > 0)
             {
-                Debug.Log($"[uLoopMCP] [DEBUG] AutoConnectToPushServerAsync: Found {allEndpoints.Count} persisted endpoints, attempting connections");
-                
-                bool anySuccess = false;
                 // Try each endpoint until one succeeds
                 foreach (McpSessionManager.ClientEndpointPair pair in allEndpoints)
                 {
-                    Debug.Log($"[uLoopMCP] Attempting to connect to endpoint '{pair.endpoint}' for client '{pair.clientName}'");
-                    
                     bool success = await pushClient.ConnectToEndpointAsync(pair.endpoint);
-                    Debug.Log($"[uLoopMCP] [DEBUG] AutoConnectToPushServerAsync: Connection attempt to '{pair.endpoint}' result: {success}");
                     
                     if (success)
                     {
                         Debug.Log($"[uLoopMCP] Successfully connected to Push Server using endpoint '{pair.endpoint}' for client '{pair.clientName}'");
-                        anySuccess = true;
                         sessionManager.SetPushServerConnected(true);
                         await SendConnectionEstablishedNotificationAsync();
-                        Debug.Log("[uLoopMCP] [DEBUG] AutoConnectToPushServerAsync: Auto connect completed successfully");
                         return;
                     }
                     else
@@ -123,32 +105,19 @@ namespace io.github.hatayama.uLoopMCP
                         Debug.LogWarning($"[uLoopMCP] Failed to connect to endpoint '{pair.endpoint}' for client '{pair.clientName}', trying next endpoint");
                     }
                 }
-                
-                if (!anySuccess)
-                {
-                    Debug.Log("[uLoopMCP] [DEBUG] AutoConnectToPushServerAsync: Failed to connect to all persisted endpoints");
-                }
             }
-            else
-            {
-                Debug.Log("[uLoopMCP] [DEBUG] AutoConnectToPushServerAsync: No persisted endpoints found after retries");
-            }
-
-            Debug.Log("[uLoopMCP] [DEBUG] AutoConnectToPushServerAsync: Starting push server discovery");
+            
             await StartPushServerDiscoveryAsync();
         }
 
         private static async Task StartPushServerDiscoveryAsync()
         {
-            Debug.Log("[uLoopMCP] [DEBUG] StartPushServerDiscoveryAsync: Starting TypeScript Push Server discovery");
             Debug.Log("[uLoopMCP] Starting TypeScript Push Server discovery");
             
             bool success = await pushClient.DiscoverAndConnectAsync();
-            Debug.Log($"[uLoopMCP] [DEBUG] StartPushServerDiscoveryAsync: Discovery result: {success}");
             
             if (success)
             {
-                Debug.Log("[uLoopMCP] [DEBUG] StartPushServerDiscoveryAsync: Discovery successful, setting session state");
                 McpSessionManager sessionManager = McpSessionManager.GetSafeInstance();
                 sessionManager?.SetPushServerConnected(true);
                 await SendConnectionEstablishedNotificationAsync();
@@ -156,7 +125,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                Debug.Log("[uLoopMCP] [DEBUG] StartPushServerDiscoveryAsync: Discovery failed - this triggers fallback or waiting mode");
                 Debug.LogWarning("[uLoopMCP] Failed to discover TypeScript Push Server");
             }
         }
@@ -252,29 +220,21 @@ namespace io.github.hatayama.uLoopMCP
 
         private static async void OnAfterAssemblyReload()
         {
-            Debug.Log("[uLoopMCP] [DEBUG] OnAfterAssemblyReload: Domain reload completed - starting recovery process");
+            Debug.Log("[uLoopMCP] Domain reload completed - starting recovery process");
             
             // Clear all persisted endpoints since they're all invalid after domain reload
             McpSessionManager sessionManager = McpSessionManager.GetSafeInstance();
             if (sessionManager != null)
             {
                 sessionManager.ClearPushServerEndpoint();
-                Debug.Log("[uLoopMCP] [DEBUG] OnAfterAssemblyReload: Cleared all persisted endpoints (all invalid after domain reload)");
             }
             
             isInitialized = false;
-            Debug.Log("[uLoopMCP] [DEBUG] OnAfterAssemblyReload: isInitialized reset to false, starting push client initialization");
             await InitializePushClientAsync();
             
-            Debug.Log($"[uLoopMCP] [DEBUG] OnAfterAssemblyReload: Push client initialization completed. IsConnected: {pushClient?.IsConnected == true}");
             if (pushClient?.IsConnected == true)
             {
-                Debug.Log("[uLoopMCP] [DEBUG] OnAfterAssemblyReload: Sending domain reload recovered notification");
                 await SendPushNotificationAsync(PushNotificationSerializer.CreateDomainReloadRecoveredNotification());
-            }
-            else
-            {
-                Debug.Log("[uLoopMCP] [DEBUG] OnAfterAssemblyReload: Push client not connected, skipping recovery notification");
             }
         }
 
