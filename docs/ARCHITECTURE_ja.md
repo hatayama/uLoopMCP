@@ -4,8 +4,8 @@ Unity EditorとMCP（Model Context Protocol）対応LLMツール間を橋渡し�
 
 ## ドキュメント構成
 
-- **[Unity側アーキテクチャ詳細](../../docs/ARCHITECTURE_UNITY_ja.md)** - Unity Editor側（C#）の実装詳細
-- **[TypeScript側アーキテクチャ詳細](../../docs/ARCHITECTURE_TYPESCRIPT_ja.md)** - TypeScriptサーバー側の実装詳細
+- **[Unity側アーキテクチャ詳細](ARCHITECTURE_UNITY_ja.md)** - Unity Editor側（C#）の実装詳細
+- **[TypeScript側アーキテクチャ詳細](ARCHITECTURE_TYPESCRIPT_ja.md)** - TypeScriptサーバー側の実装詳細
 
 ## システム全体概要
 
@@ -159,5 +159,5 @@ graph TB
 
 詳細な実装については、各アーキテクチャドキュメントを参照してください：
 
-- **[Unity側アーキテクチャ詳細](../../docs/ARCHITECTURE_UNITY_ja.md)** - C#実装、ツールパターン、セキュリティアーキテクチャ
-- **[TypeScript側アーキテクチャ詳細](../../docs/ARCHITECTURE_TYPESCRIPT_ja.md)** - Node.js実装、MCP対応、動的ツール管理
+- **[Unity側アーキテクチャ詳細](ARCHITECTURE_UNITY_ja.md)** - C#実装、ツールパターン、セキュリティアーキテクチャ
+- **[TypeScript側アーキテクチャ詳細](ARCHITECTURE_TYPESCRIPT_ja.md)** - Node.js実装、MCP対応、動的ツール管理
