@@ -262,9 +262,9 @@ export class UnityToolManager {
   }
 
   /**
-   * Get all tools as array
+   * Convert dynamic tools map to Tool array
    */
-  getAllTools(): Tool[] {
+  private convertDynamicToolsToArray(): Tool[] {
     const tools: Tool[] = [];
     for (const [toolName, dynamicTool] of this.dynamicTools) {
       tools.push({
@@ -274,6 +274,13 @@ export class UnityToolManager {
       });
     }
     return tools;
+  }
+
+  /**
+   * Get all tools as array
+   */
+  getAllTools(): Tool[] {
+    return this.convertDynamicToolsToArray();
   }
 
   /**
@@ -303,16 +310,7 @@ export class UnityToolManager {
     this.createDynamicToolsFromTools(toolDetails);
 
     // Convert dynamic tools to Tool array
-    const tools: Tool[] = [];
-    for (const [toolName, dynamicTool] of this.dynamicTools) {
-      tools.push({
-        name: toolName,
-        description: dynamicTool.description,
-        inputSchema: this.convertToMcpSchema(dynamicTool.inputSchema),
-      });
-    }
-
-    return tools;
+    return this.convertDynamicToolsToArray();
   }
 
   /**

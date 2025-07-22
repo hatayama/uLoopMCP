@@ -57,7 +57,7 @@ export class PushNotificationErrorHandler {
       'Unity connection could not be established - check Unity MCP bridge',
     );
 
-    this.logErrorStatistics(error, context);
+    PushNotificationErrorHandler.logErrorStatistics(error, context);
   }
 
   public static handlePushNotificationError(error: Error, context: ErrorContext): void {
@@ -75,10 +75,10 @@ export class PushNotificationErrorHandler {
       'Push notification could not be processed - check message format',
     );
 
-    if (this.isJsonParseError(error)) {
-      this.handleJsonParseError(error, context);
-    } else if (this.isSocketError(error)) {
-      this.handleSocketError(error, context);
+    if (PushNotificationErrorHandler.isJsonParseError(error)) {
+      PushNotificationErrorHandler.handleJsonParseError(error, context);
+    } else if (PushNotificationErrorHandler.isSocketError(error)) {
+      PushNotificationErrorHandler.handleSocketError(error, context);
     }
   }
 
@@ -96,8 +96,8 @@ export class PushNotificationErrorHandler {
       'Push notification server encountered an error',
     );
 
-    if (this.isPortConflictError(error)) {
-      this.handlePortConflictError(error, context);
+    if (PushNotificationErrorHandler.isPortConflictError(error)) {
+      PushNotificationErrorHandler.handlePortConflictError(error, context);
     }
   }
 
@@ -132,7 +132,7 @@ export class PushNotificationErrorHandler {
           `Will retry after ${delay}ms delay`,
         );
 
-        await this.delay(delay);
+        await PushNotificationErrorHandler.delay(delay);
         delay = Math.min(delay * options.backoffMultiplier, options.maxDelay);
       }
     }

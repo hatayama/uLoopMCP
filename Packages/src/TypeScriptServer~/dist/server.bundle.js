@@ -6826,6 +6826,7 @@ var UnityClient = class _UnityClient {
   randomSeed = Math.floor(Math.random() * 1e3);
   storedClientName = null;
   pushNotificationEndpoint = null;
+  clientId;
   constructor() {
     const unityTcpPort = process.env.UNITY_TCP_PORT;
     if (!unityTcpPort) {
@@ -6980,9 +6981,18 @@ var UnityClient = class _UnityClient {
    * Set push notification endpoint for inclusion in setClientName request
    */
   setPushNotificationEndpoint(endpoint) {
-    console.log(`[uLoopMCP] [DEBUG] setPushNotificationEndpoint: Setting endpoint from '${this.pushNotificationEndpoint}' to '${endpoint}'`);
+    VibeLogger.logDebug(
+      "unity_client_set_push_endpoint",
+      "Setting push notification endpoint",
+      {
+        previousEndpoint: this.pushNotificationEndpoint,
+        newEndpoint: endpoint
+      },
+      void 0,
+      "Push notification endpoint configuration for Unity client",
+      "Track endpoint changes for debugging push notification setup"
+    );
     this.pushNotificationEndpoint = endpoint;
-    console.log(`[uLoopMCP] [DEBUG] setPushNotificationEndpoint: Endpoint set successfully to '${this.pushNotificationEndpoint}'`);
   }
   /**
    * Detect client name from stored value, environment variables, or default
@@ -7004,8 +7014,19 @@ var UnityClient = class _UnityClient {
       this.storedClientName = clientName;
     }
     const finalClientName = clientName || this.detectClientName();
-    console.log(`[uLoopMCP] [DEBUG] setClientName: pushNotificationEndpoint = '${this.pushNotificationEndpoint}' (type: ${typeof this.pushNotificationEndpoint})`);
-    console.log(`[uLoopMCP] [DEBUG] setClientName: Will send ClientName='${finalClientName}', ClientPort=${this.port}, PushNotificationEndpoint='${this.pushNotificationEndpoint || ""}'`);
+    VibeLogger.logDebug(
+      "unity_client_set_client_name",
+      "Sending setClientName request to Unity",
+      {
+        finalClientName,
+        clientPort: this.port,
+        pushNotificationEndpoint: this.pushNotificationEndpoint,
+        endpointType: typeof this.pushNotificationEndpoint
+      },
+      void 0,
+      "Client name registration with push notification endpoint",
+      "Track setClientName requests for debugging client identification"
+    );
     const request = {
       jsonrpc: JSONRPC.VERSION,
       id: this.generateId(),
@@ -7488,6 +7509,7 @@ var UnityConnectionFallbackHandler = class {
         return;
       }
       const timeout = setTimeout(() => {
+        clearInterval(connectionCheckInterval);
         reject(new Error(`Unity connection timeout after ${timeoutMs}ms`));
       }, timeoutMs);
       VibeLogger.logInfo(
@@ -8057,9 +8079,9 @@ var UnityToolManager = class {
     return this.dynamicTools.get(toolName);
   }
   /**
-   * Get all tools as array
+   * Convert dynamic tools map to Tool array
    */
-  getAllTools() {
+  convertDynamicToolsToArray() {
     const tools = [];
     for (const [toolName, dynamicTool] of this.dynamicTools) {
       tools.push({
@@ -8069,6 +8091,12 @@ var UnityToolManager = class {
       });
     }
     return tools;
+  }
+  /**
+   * Get all tools as array
+   */
+  getAllTools() {
+    return this.convertDynamicToolsToArray();
   }
   /**
    * Get tools count
@@ -8091,15 +8119,7 @@ var UnityToolManager = class {
       return [];
     }
     this.createDynamicToolsFromTools(toolDetails);
-    const tools = [];
-    for (const [toolName, dynamicTool] of this.dynamicTools) {
-      tools.push({
-        name: toolName,
-        description: dynamicTool.description,
-        inputSchema: this.convertToMcpSchema(dynamicTool.inputSchema)
-      });
-    }
-    return tools;
+    return this.convertDynamicToolsToArray();
   }
   /**
    * Update tool cache and detect changes
@@ -8226,21 +8246,39 @@ var UnityToolManager = class {
 var McpClientCompatibility = class _McpClientCompatibility {
   static CLIENT_CONFIGS = [
     {
-      name: "Claude Code",
+      name: "claude",
       supportsListChanged: false,
       initializationDelay: 0,
       toolListStrategy: "on-request"
     },
     {
-      name: "Cursor",
+      name: "cursor",
       supportsListChanged: true,
-      initializationDelay: 100,
+      initializationDelay: 0,
       toolListStrategy: "notification"
     },
     {
-      name: "VSCode",
+      name: "Visual Studio Code",
       supportsListChanged: true,
       initializationDelay: 50,
+      toolListStrategy: "notification"
+    },
+    {
+      name: "gemini",
+      supportsListChanged: false,
+      initializationDelay: 0,
+      toolListStrategy: "on-request"
+    },
+    {
+      name: "windsurf",
+      supportsListChanged: true,
+      initializationDelay: 0,
+      toolListStrategy: "on-request"
+    },
+    {
+      name: "mcp-inspector",
+      supportsListChanged: true,
+      initializationDelay: 0,
       toolListStrategy: "notification"
     }
   ];
@@ -8345,7 +8383,7 @@ var McpClientCompatibility = class _McpClientCompatibility {
     const foundConfig = _McpClientCompatibility.CLIENT_CONFIGS.find(
       (config) => normalizedClientName.includes(config.name.toLowerCase())
     );
-    if (!foundConfig && clientName !== "Unknown") {
+    if (!foundConfig) {
       VibeLogger.logInfo(
         "mcp_unknown_client_detected",
         `Unknown MCP client detected: ${clientName}`,
@@ -8376,9 +8414,9 @@ var McpClientCompatibility = class _McpClientCompatibility {
     return config?.supportsListChanged ?? false;
   }
   /**
-   * Mark client as list_changed unsupported (for fallback scenarios)
+   * Log fallback to list_changed unsupported mode (for debugging)
    */
-  markListChangedUnsupported() {
+  logListChangedFallback() {
     if (this.currentClientConfig) {
       VibeLogger.logInfo(
         "mcp_client_list_changed_fallback",
@@ -8710,11 +8748,12 @@ var package_default = {
 
 // src/client-initialization-handler.ts
 var ClientInitializationHandler = class {
-  constructor(unityClient, toolManager, clientCompatibility, connectionManager) {
+  constructor(unityClient, toolManager, clientCompatibility, connectionManager, unityEventHandler) {
     this.unityClient = unityClient;
     this.toolManager = toolManager;
     this.clientCompatibility = clientCompatibility;
     this.connectionManager = connectionManager;
+    this.unityEventHandler = unityEventHandler;
   }
   clientInfo = null;
   isUnityConnected = false;
@@ -8840,6 +8879,16 @@ var ClientInitializationHandler = class {
     if (!this.clientInfo) {
       return this.buildInitializeResponse();
     }
+    if (this.unityClient.connected) {
+      VibeLogger.logInfo(
+        "mcp_unity_already_connected",
+        "Unity is already connected at initialization start",
+        { client_name: this.clientInfo.name },
+        void 0,
+        "Sending immediate connection notification"
+      );
+      this.handleUnityConnection();
+    }
     void this.clientCompatibility.initializeClient(this.clientInfo.name);
     this.toolManager.setClientName(this.clientInfo.name);
     void this.toolManager.initializeDynamicTools().then(() => {
@@ -8850,7 +8899,9 @@ var ClientInitializationHandler = class {
         void 0,
         "Unity connection established successfully for list_changed supported client"
       );
-      this.handleUnityConnection();
+      if (!this.isUnityConnected) {
+        this.handleUnityConnection();
+      }
     }).catch((error) => {
       VibeLogger.logError(
         "mcp_unity_connection_init_failed",
@@ -8888,6 +8939,7 @@ var ClientInitializationHandler = class {
         void 0,
         "Tools available notification sent to list_changed supported client"
       );
+      this.unityEventHandler.sendToolsChangedNotification();
     }
   }
   /**
@@ -9179,6 +9231,11 @@ var UnityPushNotificationReceiveServer = class extends EventEmitter {
       return;
     }
     return new Promise((resolve2) => {
+      for (const connection of this.connectedUnityClients.values()) {
+        if (!connection.socket.destroyed) {
+          connection.socket.destroy();
+        }
+      }
       this.connectedUnityClients.clear();
       this.server.close(() => {
         this.isRunning = false;
@@ -9425,7 +9482,8 @@ var UnityMcpServer = class {
       this.unityClient,
       this.toolManager,
       this.clientCompatibility,
-      this.connectionManager
+      this.connectionManager,
+      this.eventHandler
     );
     this.toolManager.setClientInitializationHandler(this.initializationHandler);
     this.connectionManager.setupReconnectionCallback(async () => {

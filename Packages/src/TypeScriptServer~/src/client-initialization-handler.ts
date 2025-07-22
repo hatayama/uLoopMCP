@@ -3,6 +3,7 @@ import { UnityClient } from './unity-client.js';
 import { UnityToolManager } from './unity-tool-manager.js';
 import { McpClientCompatibility } from './mcp-client-compatibility.js';
 import { UnityConnectionManager } from './unity-connection-manager.js';
+import { UnityEventHandler } from './unity-event-handler.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 import {
   MCP_PROTOCOL_VERSION,
@@ -22,7 +23,7 @@ import packageJson from '../package.json' assert { type: 'json' };
  * - UnityConnectionManager: Manages Unity connection state
  */
 export class ClientInitializationHandler {
-  private clientInfo: ClientInfo | null = null;
+  private clientInfo: LLMToolInfo | null = null;
   private isUnityConnected: boolean = false;
   private isInitialized: boolean = false;
 
@@ -31,6 +32,7 @@ export class ClientInitializationHandler {
     private toolManager: UnityToolManager,
     private clientCompatibility: McpClientCompatibility,
     private connectionManager: UnityConnectionManager,
+    private unityEventHandler: UnityEventHandler,
   ) {}
 
   /**
@@ -97,7 +99,7 @@ export class ClientInitializationHandler {
   /**
    * Get current client information
    */
-  getClientInfo(): ClientInfo | null {
+  getClientInfo(): LLMToolInfo | null {
     return this.clientInfo;
   }
 
@@ -174,6 +176,18 @@ export class ClientInitializationHandler {
       return this.buildInitializeResponse();
     }
 
+    // Check if Unity is already connected before starting async initialization
+    if (this.unityClient.connected) {
+      VibeLogger.logInfo(
+        'mcp_unity_already_connected',
+        'Unity is already connected at initialization start',
+        { client_name: this.clientInfo.name },
+        undefined,
+        'Sending immediate connection notification',
+      );
+      this.handleUnityConnection();
+    }
+
     // Start Unity connection initialization in background
     void this.clientCompatibility.initializeClient(this.clientInfo.name);
     this.toolManager.setClientName(this.clientInfo.name);
@@ -187,8 +201,10 @@ export class ClientInitializationHandler {
           undefined,
           'Unity connection established successfully for list_changed supported client',
         );
-        // Unity connection will trigger list_changed notification
-        this.handleUnityConnection();
+        // Unity connection will trigger list_changed notification (if not already handled above)
+        if (!this.isUnityConnected) {
+          this.handleUnityConnection();
+        }
       })
       .catch((error) => {
         VibeLogger.logError(
@@ -232,14 +248,14 @@ export class ClientInitializationHandler {
         undefined,
         'Tools available notification sent to list_changed supported client',
       );
-      // Note: Actual notification sending is handled by UnityEventHandler
+      this.unityEventHandler.sendToolsChangedNotification();
     }
   }
 
   /**
    * Extract client information from initialize request
    */
-  private extractClientInfo(request: InitializeRequest): ClientInfo {
+  private extractClientInfo(request: InitializeRequest): LLMToolInfo {
     const clientInfo = request.params?.clientInfo;
     const clientName = clientInfo?.name || 'Unknown';
 
@@ -302,7 +318,7 @@ export class ClientInitializationHandler {
   }
 }
 
-export interface ClientInfo {
+export interface LLMToolInfo {
   name: string;
   version: string;
 }

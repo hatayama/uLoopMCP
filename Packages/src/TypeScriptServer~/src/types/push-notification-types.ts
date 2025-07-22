@@ -34,7 +34,7 @@ export interface DisconnectReason {
   message: string;
 }
 
-export interface ClientInfo {
+export interface UnityEditorInfo {
   unityVersion?: string;
   projectPath?: string;
   sessionId?: string;

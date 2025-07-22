@@ -132,6 +132,7 @@ class UnityMcpServer {
       this.toolManager,
       this.clientCompatibility,
       this.connectionManager,
+      this.eventHandler,
     );
 
     // Set up cross-dependencies

@@ -42,6 +42,7 @@ export class UnityConnectionFallbackHandler {
       }
 
       const timeout = setTimeout(() => {
+        clearInterval(connectionCheckInterval);
         reject(new Error(`Unity connection timeout after ${timeoutMs}ms`));
       }, timeoutMs);
 

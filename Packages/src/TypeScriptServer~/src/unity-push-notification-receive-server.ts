@@ -13,6 +13,7 @@
 import * as net from 'net';
 import { EventEmitter } from 'events';
 import { VibeLogger } from './utils/vibe-logger.js';
+import { ClientInfo } from './types/push-notification-types.js';
 
 export interface PushNotification {
   type:
@@ -35,12 +36,6 @@ export interface PushNotification {
 export interface DisconnectReason {
   type: 'USER_DISCONNECT' | 'UNITY_SHUTDOWN' | 'DOMAIN_RELOAD';
   message: string;
-}
-
-export interface ClientInfo {
-  unityVersion?: string;
-  projectPath?: string;
-  sessionId?: string;
 }
 
 export interface ToolsInfo {
@@ -124,6 +119,14 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
     }
 
     return new Promise((resolve) => {
+      // Close all client sockets before clearing the map
+      for (const connection of this.connectedUnityClients.values()) {
+        if (!connection.socket.destroyed) {
+          connection.socket.destroy();
+        }
+      }
+
+      // Clear the connections map after closing all sockets
       this.connectedUnityClients.clear();
 
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

@@ -34,21 +34,39 @@ export interface ClientConfig {
 export class McpClientCompatibility {
   private static readonly CLIENT_CONFIGS: ClientConfig[] = [
     {
-      name: 'Claude Code',
+      name: 'claude',
       supportsListChanged: false,
       initializationDelay: 0,
       toolListStrategy: 'on-request',
     },
     {
-      name: 'Cursor',
+      name: 'cursor',
       supportsListChanged: true,
-      initializationDelay: 100,
+      initializationDelay: 0,
       toolListStrategy: 'notification',
     },
     {
-      name: 'VSCode',
+      name: 'Visual Studio Code',
       supportsListChanged: true,
       initializationDelay: 50,
+      toolListStrategy: 'notification',
+    },
+    {
+      name: 'gemini',
+      supportsListChanged: false,
+      initializationDelay: 0,
+      toolListStrategy: 'on-request',
+    },
+    {
+      name: 'windsurf',
+      supportsListChanged: true,
+      initializationDelay: 0,
+      toolListStrategy: 'on-request',
+    },
+    {
+      name: 'mcp-inspector',
+      supportsListChanged: true,
+      initializationDelay: 0,
       toolListStrategy: 'notification',
     },
   ];
@@ -176,12 +194,15 @@ export class McpClientCompatibility {
    */
   private findClientConfig(clientName: string): ClientConfig | null {
     const normalizedClientName = clientName.toLowerCase();
+
+    // Use partial matching for flexibility with client name variations
     const foundConfig = McpClientCompatibility.CLIENT_CONFIGS.find((config) =>
       normalizedClientName.includes(config.name.toLowerCase()),
     );
 
-    if (!foundConfig && clientName !== 'Unknown') {
-      // Unknown client detected - apply conservative fallback
+    if (!foundConfig) {
+      // Unknown client detected - apply conservative fallback configuration
+      // Note: This includes the case where clientName is 'Unknown' (used as fallback value)
       VibeLogger.logInfo(
         'mcp_unknown_client_detected',
         `Unknown MCP client detected: ${clientName}`,
@@ -216,11 +237,11 @@ export class McpClientCompatibility {
   }
 
   /**
-   * Mark client as list_changed unsupported (for fallback scenarios)
+   * Log fallback to list_changed unsupported mode (for debugging)
    */
-  markListChangedUnsupported(): void {
+  logListChangedFallback(): void {
     if (this.currentClientConfig) {
-      // Note: This doesn't modify the static configuration, just logs the fallback
+      // Log fallback to list_changed unsupported mode for debugging
       VibeLogger.logInfo(
         'mcp_client_list_changed_fallback',
         `Client ${this.clientName} fell back to list_changed unsupported mode`,
