@@ -5514,13 +5514,6 @@ var ERROR_MESSAGES = {
   TIMEOUT: "timeout",
   INVALID_RESPONSE: "Invalid response from Unity"
 };
-var LIST_CHANGED_UNSUPPORTED_CLIENTS = [
-  "claude",
-  "claude-code",
-  "gemini",
-  "codeium",
-  "windsurf"
-];
 var OUTPUT_DIRECTORIES = {
   ROOT: "uLoopMCPOutputs",
   VIBE_LOGS: "VibeLogs"
@@ -7648,6 +7641,36 @@ var UnityConnectionManager = class {
     });
   }
   /**
+   * Wait for Unity connection and tools availability by polling
+   * More reliable than timeout-based waiting
+   */
+  async waitForUnityConnectionAndTools(toolManager, maxWaitMs = 1e4) {
+    const startTime = Date.now();
+    const pollInterval = 100;
+    if (!this.connectionManagerInitialized) {
+      this.initialize(() => Promise.resolve());
+    }
+    return new Promise((resolve2, reject) => {
+      const checkToolsAvailable = async () => {
+        if (this.unityClient.connected) {
+          try {
+            await toolManager.getToolsFromUnity();
+            resolve2();
+            return;
+          } catch (error) {
+          }
+        }
+        const elapsed = Date.now() - startTime;
+        if (elapsed >= maxWaitMs) {
+          reject(new Error(`Unity connection and tools timeout after ${maxWaitMs}ms`));
+          return;
+        }
+        setTimeout(checkToolsAvailable, pollInterval);
+      };
+      checkToolsAvailable();
+    });
+  }
+  /**
    * Handle Unity discovery and establish connection
    */
   async handleUnityDiscovered(onConnectionEstablished) {
@@ -8270,18 +8293,6 @@ var McpClientCompatibility = class {
     return this.clientName;
   }
   /**
-   * Check if client doesn't support list_changed notifications
-   */
-  isListChangedUnsupported(clientName) {
-    if (!clientName) {
-      return false;
-    }
-    const normalizedName = clientName.toLowerCase();
-    return LIST_CHANGED_UNSUPPORTED_CLIENTS.some(
-      (unsupported) => normalizedName.includes(unsupported)
-    );
-  }
-  /**
    * Handle client name initialization and setup
    */
   async handleClientNameInitialization() {
@@ -8305,32 +8316,6 @@ var McpClientCompatibility = class {
   async initializeClient(clientName) {
     this.setClientName(clientName);
     await this.handleClientNameInitialization();
-  }
-  /**
-   * Check if client supports list_changed notifications
-   */
-  isListChangedSupported(clientName) {
-    return !this.isListChangedUnsupported(clientName);
-  }
-  /**
-   * Log compatibility information for debugging
-   */
-  logClientCompatibilityInfo(clientName) {
-    const isSupported = this.isListChangedSupported(clientName);
-    VibeLogger.logInfo(
-      "mcp_client_compatibility_info",
-      `Client compatibility information for ${clientName}`,
-      {
-        client_name: clientName,
-        list_changed_supported: isSupported,
-        initialization_strategy: isSupported ? "asynchronous" : "synchronous"
-      },
-      void 0,
-      `${clientName} will use ${isSupported ? "asynchronous" : "synchronous"} initialization`
-    );
-    if (!isSupported) {
-    } else {
-    }
   }
 };
 
@@ -8649,10 +8634,7 @@ var ClientInitializationHandler = class {
       {
         client_name: this.clientInfo.name,
         client_version: this.clientInfo.version,
-        client_info: request.params?.clientInfo,
-        is_list_changed_unsupported: this.clientCompatibility.isListChangedUnsupported(
-          this.clientInfo.name
-        )
+        client_info: request.params?.clientInfo
       },
       void 0,
       "This logs the client name received during MCP initialize request",
@@ -8660,7 +8642,6 @@ var ClientInitializationHandler = class {
     );
     if (this.clientInfo.name) {
       this.clientCompatibility.setClientName(this.clientInfo.name);
-      this.clientCompatibility.logClientCompatibilityInfo(this.clientInfo.name);
     }
     if (!this.isInitialized) {
       this.isInitialized = true;
@@ -8673,7 +8654,6 @@ var ClientInitializationHandler = class {
    */
   handleUnityConnection() {
     this.isUnityConnected = true;
-    this.notifyToolsAvailable();
     this.unityClient.setClientName().catch((error) => {
       VibeLogger.logError(
         "unity_setclientname_failed",
@@ -8703,20 +8683,18 @@ var ClientInitializationHandler = class {
     return this.isUnityConnected;
   }
   /**
-   * Perform initialization based on client type
+   * Perform synchronous initialization for all clients
+   * All clients now use synchronous initialization for consistency and reliability
    */
   async performInitialization() {
     if (!this.clientInfo) {
       return this.buildInitializeResponse();
     }
-    if (this.clientCompatibility.isListChangedUnsupported(this.clientInfo.name)) {
-      return await this.performSynchronousInitialization();
-    } else {
-      return this.performAsynchronousInitialization();
-    }
+    return await this.performSynchronousInitialization();
   }
   /**
-   * Synchronous initialization for list_changed unsupported clients (Claude Code)
+   * Synchronous initialization for all clients
+   * Waits for Unity connection and returns tools directly in initialize response
    */
   async performSynchronousInitialization() {
     if (!this.clientInfo) {
@@ -8735,91 +8713,21 @@ var ClientInitializationHandler = class {
           tools_count: tools.length
         },
         void 0,
-        "Claude Code synchronous initialization completed with Unity tools"
+        "Synchronous initialization completed with Unity tools"
       );
       return this.buildInitializeResponseWithTools(tools);
     } catch (error) {
       VibeLogger.logError(
         "mcp_unity_connection_timeout",
-        "Unity connection timeout during synchronous initialization",
+        "Unity connection and tools timeout during synchronous initialization",
         {
           client_name: this.clientInfo.name,
           error_message: error instanceof Error ? error.message : String(error)
         },
         void 0,
-        "Unity connection timed out - check Unity MCP bridge status"
+        "Unity connection or tools retrieval timed out - check Unity MCP bridge status"
       );
       return this.buildInitializeResponse();
-    }
-  }
-  /**
-   * Asynchronous initialization for list_changed supported clients (Cursor, VSCode)
-   */
-  performAsynchronousInitialization() {
-    if (!this.clientInfo) {
-      return this.buildInitializeResponse();
-    }
-    if (this.unityClient.connected) {
-      VibeLogger.logInfo(
-        "mcp_unity_already_connected",
-        "Unity is already connected at initialization start",
-        { client_name: this.clientInfo.name },
-        void 0,
-        "Sending immediate connection notification"
-      );
-      this.handleUnityConnection();
-    }
-    void this.clientCompatibility.initializeClient(this.clientInfo.name);
-    this.toolManager.setClientName(this.clientInfo.name);
-    void this.toolManager.initializeDynamicTools().then(() => {
-      VibeLogger.logInfo(
-        "mcp_async_init_success",
-        "Asynchronous initialization completed successfully",
-        { client_name: this.clientInfo?.name },
-        void 0,
-        "Unity connection established successfully for list_changed supported client"
-      );
-      if (!this.isUnityConnected) {
-        this.handleUnityConnection();
-      }
-    }).catch((error) => {
-      VibeLogger.logError(
-        "mcp_unity_connection_init_failed",
-        "Unity connection initialization failed",
-        {
-          client_name: this.clientInfo?.name,
-          error_message: error instanceof Error ? error.message : String(error)
-        },
-        void 0,
-        "Unity connection could not be established - check Unity MCP bridge"
-      );
-    });
-    return this.buildInitializeResponse();
-  }
-  /**
-   * Notify tools available based on client capabilities
-   */
-  notifyToolsAvailable() {
-    if (!this.clientInfo) {
-      return;
-    }
-    if (this.clientCompatibility.isListChangedUnsupported(this.clientInfo.name)) {
-      VibeLogger.logInfo(
-        "mcp_tools_available_wait",
-        `Client ${this.clientInfo.name} does not support list_changed, waiting for next tools/list request`,
-        { client_name: this.clientInfo.name },
-        void 0,
-        "Tools will be available on next tools/list request for this client"
-      );
-    } else {
-      VibeLogger.logInfo(
-        "mcp_tools_available_notify",
-        `Sending list_changed notification to ${this.clientInfo.name}`,
-        { client_name: this.clientInfo.name },
-        void 0,
-        "Tools available notification sent to list_changed supported client"
-      );
-      this.unityEventHandler.sendToolsChangedNotification();
     }
   }
   /**

@@ -1,6 +1,6 @@
 import { UnityClient } from './unity-client.js';
 // Debug logging removed
-import { LIST_CHANGED_UNSUPPORTED_CLIENTS, DEFAULT_CLIENT_NAME } from './constants.js';
+import { DEFAULT_CLIENT_NAME } from './constants.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 
 /**
@@ -53,19 +53,6 @@ export class McpClientCompatibility {
     return this.clientName;
   }
 
-  /**
-   * Check if client doesn't support list_changed notifications
-   */
-  isListChangedUnsupported(clientName: string): boolean {
-    if (!clientName) {
-      return false;
-    }
-
-    const normalizedName = clientName.toLowerCase();
-    return LIST_CHANGED_UNSUPPORTED_CLIENTS.some((unsupported) =>
-      normalizedName.includes(unsupported),
-    );
-  }
 
   /**
    * Handle client name initialization and setup
@@ -106,35 +93,4 @@ export class McpClientCompatibility {
     await this.handleClientNameInitialization();
   }
 
-  /**
-   * Check if client supports list_changed notifications
-   */
-  isListChangedSupported(clientName: string): boolean {
-    return !this.isListChangedUnsupported(clientName);
-  }
-
-  /**
-   * Log compatibility information for debugging
-   */
-  logClientCompatibilityInfo(clientName: string): void {
-    const isSupported = this.isListChangedSupported(clientName);
-
-    VibeLogger.logInfo(
-      'mcp_client_compatibility_info',
-      `Client compatibility information for ${clientName}`,
-      {
-        client_name: clientName,
-        list_changed_supported: isSupported,
-        initialization_strategy: isSupported ? 'asynchronous' : 'synchronous',
-      },
-      undefined,
-      `${clientName} will use ${isSupported ? 'asynchronous' : 'synchronous'} initialization`,
-    );
-
-    if (!isSupported) {
-      // Client will use synchronous initialization
-    } else {
-      // Client will use asynchronous initialization
-    }
-  }
 }

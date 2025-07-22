@@ -126,14 +126,6 @@ export const LOG_MESSAGES = {
   CONNECTION_RECOVERY_POLLING: 'Starting connection recovery polling',
 } as const;
 
-// List of clients that don't support list_changed notifications
-export const LIST_CHANGED_UNSUPPORTED_CLIENTS = [
-  'claude',
-  'claude-code',
-  'gemini',
-  'codeium',
-  'windsurf',
-] as const;
 
 // File output directories
 export const OUTPUT_DIRECTORIES = {

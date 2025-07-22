@@ -65,6 +65,45 @@ export class UnityConnectionManager {
   }
 
   /**
+   * Wait for Unity connection and tools availability by polling
+   * More reliable than timeout-based waiting
+   */
+  async waitForUnityConnectionAndTools(toolManager: any, maxWaitMs: number = 10000): Promise<void> {
+    const startTime = Date.now();
+    const pollInterval = 100; // Poll every 100ms
+
+    // Initialize connection manager if not already done
+    if (!this.connectionManagerInitialized) {
+      this.initialize(() => Promise.resolve());
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      const checkToolsAvailable = async () => {
+        if (this.unityClient.connected) {
+          try {
+            // Try to get tools to verify Unity is ready
+            await toolManager.getToolsFromUnity();
+            resolve();
+            return;
+          } catch (error) {
+            // Tools not ready yet, continue polling
+          }
+        }
+
+        const elapsed = Date.now() - startTime;
+        if (elapsed >= maxWaitMs) {
+          reject(new Error(`Unity connection and tools timeout after ${maxWaitMs}ms`));
+          return;
+        }
+
+        setTimeout(checkToolsAvailable, pollInterval);
+      };
+
+      checkToolsAvailable();
+    });
+  }
+
+  /**
    * Handle Unity discovery and establish connection
    */
   async handleUnityDiscovered(onConnectionEstablished?: () => Promise<void>): Promise<void> {
