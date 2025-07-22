@@ -8,6 +8,9 @@ namespace io.github.hatayama.uLoopMCP
     [FilePath("UserSettings/uLoopMCP/SessionData.yaml", FilePathAttribute.Location.ProjectFolder)]
     public sealed class McpSessionManager : ScriptableSingleton<McpSessionManager>
     {
+        // Client endpoint configuration constants
+        private const string CLIENT_ENDPOINT_SEPARATOR = ":";
+        private const int DEFAULT_CLIENT_PORT = 0;
         [SerializeField] private bool _isServerRunning;
         [SerializeField] private int _serverPort;
         [SerializeField] private bool _isAfterCompile;
@@ -54,7 +57,7 @@ namespace io.github.hatayama.uLoopMCP
             // ユニークキーを生成
             public string GetUniqueKey()
             {
-                return $"{clientName}:{clientPort}";
+                return $"{clientName}{CLIENT_ENDPOINT_SEPARATOR}{clientPort}";
             }
         }
 
@@ -109,26 +112,42 @@ namespace io.github.hatayama.uLoopMCP
         // UI related
         public McpEditorType SelectedEditorType
         {
-            get => _selectedEditorType == 0 ? McpEditorType.Cursor : (McpEditorType)_selectedEditorType;
+            get 
+            {
+                bool isDefaultValue = _selectedEditorType == 0;
+                return isDefaultValue ? McpEditorType.Cursor : (McpEditorType)_selectedEditorType;
+            }
             set => _selectedEditorType = (int)value;
         }
 
         public float CommunicationLogHeight
         {
-            get => _communicationLogHeight == 0 ? McpUIConstants.DEFAULT_COMMUNICATION_LOG_HEIGHT : _communicationLogHeight;
+            get 
+            {
+                bool useDefaultHeight = _communicationLogHeight == 0;
+                return useDefaultHeight ? McpUIConstants.DEFAULT_COMMUNICATION_LOG_HEIGHT : _communicationLogHeight;
+            }
             set => _communicationLogHeight = value;
         }
 
         // Communication Log related
         public string CommunicationLogsJson
         {
-            get => string.IsNullOrEmpty(_communicationLogsJson) ? "[]" : _communicationLogsJson;
+            get 
+            {
+                bool isEmptyJson = string.IsNullOrEmpty(_communicationLogsJson);
+                return isEmptyJson ? "[]" : _communicationLogsJson;
+            }
             set => _communicationLogsJson = value;
         }
 
         public string PendingRequestsJson
         {
-            get => string.IsNullOrEmpty(_pendingRequestsJson) ? "{}" : _pendingRequestsJson;
+            get 
+            {
+                bool isEmptyJson = string.IsNullOrEmpty(_pendingRequestsJson);
+                return isEmptyJson ? "{}" : _pendingRequestsJson;
+            }
             set => _pendingRequestsJson = value;
         }
 
@@ -202,15 +221,15 @@ namespace io.github.hatayama.uLoopMCP
         public void SetCompileRequestJson(string requestId, string json)
         {
             if (_compileRequests == null) _compileRequests = new List<CompileRequestData>();
+            
             CompileRequestData existingRequest = _compileRequests.Find(r => r.requestId == requestId);
             if (existingRequest != null)
             {
                 existingRequest.json = json;
+                return;
             }
-            else
-            {
-                _compileRequests.Add(new CompileRequestData { requestId = requestId, json = json });
-            }
+            
+            _compileRequests.Add(new CompileRequestData { requestId = requestId, json = json });
         }
 
         public void ClearAllCompileRequests()
@@ -293,23 +312,26 @@ namespace io.github.hatayama.uLoopMCP
         // 複数エンドポイント管理の新機能
         public void SetPushServerEndpoint(string clientName, int clientPort, string endpoint)
         {
-            string uniqueKey = $"{clientName}:{clientPort}";
+            string uniqueKey = $"{clientName}{CLIENT_ENDPOINT_SEPARATOR}{clientPort}";
             
+            EnsureEndpointsListInitialized();
+            UpdateOrAddEndpoint(uniqueKey, clientName, clientPort, endpoint);
+            UpdateBackwardCompatibilityEndpoint();
+            
+            Save(true);
+        }
+        
+        private void EnsureEndpointsListInitialized()
+        {
             if (_pushServerEndpoints == null)
             {
                 _pushServerEndpoints = new();
             }
-            
-            // 既存のクライアントエンドポイントを検索（ユニークキーで）
-            ClientEndpointPair existingPair = null;
-            foreach (ClientEndpointPair pair in _pushServerEndpoints)
-            {
-                if (pair.GetUniqueKey() == uniqueKey)
-                {
-                    existingPair = pair;
-                    break;
-                }
-            }
+        }
+        
+        private void UpdateOrAddEndpoint(string uniqueKey, string clientName, int clientPort, string endpoint)
+        {
+            ClientEndpointPair existingPair = FindEndpointPair(uniqueKey);
             
             if (existingPair != null)
             {
@@ -319,19 +341,32 @@ namespace io.github.hatayama.uLoopMCP
             {
                 _pushServerEndpoints.Add(new(clientName, clientPort, endpoint));
             }
-            
+        }
+        
+        private ClientEndpointPair FindEndpointPair(string uniqueKey)
+        {
+            foreach (ClientEndpointPair pair in _pushServerEndpoints)
+            {
+                if (pair.GetUniqueKey() == uniqueKey)
+                {
+                    return pair;
+                }
+            }
+            return null;
+        }
+        
+        private void UpdateBackwardCompatibilityEndpoint()
+        {
             // 後方互換性: 最初のエンドポイントを古いフィールドにも保存
             if (_pushServerEndpoints.Count > 0)
             {
                 _pushServerEndpoint = _pushServerEndpoints[0].endpoint;
             }
-            
-            Save(true);
         }
         
         public string GetPushServerEndpoint(string clientName, int clientPort)
         {
-            string uniqueKey = $"{clientName}:{clientPort}";
+            string uniqueKey = $"{clientName}{CLIENT_ENDPOINT_SEPARATOR}{clientPort}";
             
             if (_pushServerEndpoints == null)
             {
@@ -358,7 +393,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (_pushServerEndpoints == null) return;
             
-            string uniqueKey = $"{clientName}:{clientPort}";
+            string uniqueKey = $"{clientName}{CLIENT_ENDPOINT_SEPARATOR}{clientPort}";
             
             for (int i = _pushServerEndpoints.Count - 1; i >= 0; i--)
             {
@@ -433,7 +468,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                _pushServerEndpoints.Add(new(clientEndpoint, 0, endpoint)); // clientPortは使わないので0
+                _pushServerEndpoints.Add(new(clientEndpoint, DEFAULT_CLIENT_PORT, endpoint)); // clientPortは使わないのでデフォルト値
             }
             
             // 後方互換性: 最初のエンドポイントを古いフィールドにも保存

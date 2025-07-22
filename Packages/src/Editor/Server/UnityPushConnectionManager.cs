@@ -21,6 +21,15 @@ namespace io.github.hatayama.uLoopMCP
     [InitializeOnLoad]
     public static class UnityPushConnectionManager
     {
+        // Connection retry configuration
+        private const int MAX_ENDPOINT_RETRY_COUNT = 5;
+        private const int ENDPOINT_RETRY_DELAY_MS = 500;
+        
+        // Timing constants for various operations
+        private const int RECONNECTION_DELAY_MS = 3000;
+        private const int DOMAIN_RELOAD_DELAY_MS = 500;
+        private const int SHUTDOWN_DELAY_MS = 500;
+        
         private static UnityPushClient pushClient;
         private static bool isInitialized = false;
         private static bool isReconnecting = false;
@@ -64,13 +73,22 @@ namespace io.github.hatayama.uLoopMCP
         {
             McpSessionManager sessionManager = McpSessionManager.GetSafeInstance();
             
-            // Retry logic for ScriptableSingleton initialization after domain reload
+            List<McpSessionManager.ClientEndpointPair> allEndpoints = await GetValidEndpointsWithRetry(sessionManager);
+            
+            if (await TryConnectToStoredEndpoints(allEndpoints, sessionManager))
+            {
+                return; // Successfully connected
+            }
+            
+            await StartPushServerDiscoveryAsync();
+        }
+        
+        private static async Task<List<McpSessionManager.ClientEndpointPair>> GetValidEndpointsWithRetry(McpSessionManager sessionManager)
+        {
             List<McpSessionManager.ClientEndpointPair> allEndpoints = null;
             int retryCount = 0;
-            const int maxRetries = 5;
-            const int retryDelayMs = 500;
             
-            while (retryCount < maxRetries)
+            while (retryCount < MAX_ENDPOINT_RETRY_COUNT)
             {
                 allEndpoints = sessionManager?.GetAllPushServerEndpoints();
                 
@@ -80,34 +98,37 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 
                 retryCount++;
-                if (retryCount < maxRetries)
+                if (retryCount < MAX_ENDPOINT_RETRY_COUNT)
                 {
-                    await Task.Delay(retryDelayMs);
+                    await Task.Delay(ENDPOINT_RETRY_DELAY_MS);
                 }
             }
             
-            if (allEndpoints != null && allEndpoints.Count > 0)
+            return allEndpoints;
+        }
+        
+        private static async Task<bool> TryConnectToStoredEndpoints(List<McpSessionManager.ClientEndpointPair> endpoints, McpSessionManager sessionManager)
+        {
+            if (endpoints == null || endpoints.Count == 0)
+                return false;
+            
+            // Try each endpoint until one succeeds
+            foreach (McpSessionManager.ClientEndpointPair pair in endpoints)
             {
-                // Try each endpoint until one succeeds
-                foreach (McpSessionManager.ClientEndpointPair pair in allEndpoints)
+                bool success = await pushClient.ConnectToEndpointAsync(pair.endpoint);
+                
+                if (success)
                 {
-                    bool success = await pushClient.ConnectToEndpointAsync(pair.endpoint);
-                    
-                    if (success)
-                    {
-                        Debug.Log($"[uLoopMCP] Successfully connected to Push Server using endpoint '{pair.endpoint}' for client '{pair.clientName}'");
-                        sessionManager.SetPushServerConnected(true);
-                        await SendConnectionEstablishedNotificationAsync();
-                        return;
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"[uLoopMCP] Failed to connect to endpoint '{pair.endpoint}' for client '{pair.clientName}', trying next endpoint");
-                    }
+                    Debug.Log($"[uLoopMCP] Successfully connected to Push Server using endpoint '{pair.endpoint}' for client '{pair.clientName}'");
+                    sessionManager.SetPushServerConnected(true);
+                    await SendConnectionEstablishedNotificationAsync();
+                    return true;
                 }
+                
+                Debug.LogWarning($"[uLoopMCP] Failed to connect to endpoint '{pair.endpoint}' for client '{pair.clientName}', trying next endpoint");
             }
             
-            await StartPushServerDiscoveryAsync();
+            return false;
         }
 
         private static async Task StartPushServerDiscoveryAsync()
@@ -133,8 +154,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (pushClient?.IsConnected != true) return;
 
+            string unityServerEndpoint = $"localhost:{McpServerController.ServerPort}";
             PushNotification notification = PushNotificationSerializer.CreateConnectionEstablishedNotification(
-                $"localhost:{McpServerController.ServerPort}"
+                unityServerEndpoint
             );
 
             await pushClient.SendPushNotificationAsync(notification);
@@ -179,7 +201,7 @@ namespace io.github.hatayama.uLoopMCP
             
             Debug.Log("[uLoopMCP] Starting reconnection process");
             
-            await Task.Delay(3000);
+            await Task.Delay(RECONNECTION_DELAY_MS);
             
             if (pushClient != null && !pushClient.IsConnected)
             {
@@ -215,7 +237,7 @@ namespace io.github.hatayama.uLoopMCP
             
             await SendPushNotificationAsync(PushNotificationSerializer.CreateDomainReloadNotification());
             
-            await Task.Delay(500);
+            await Task.Delay(DOMAIN_RELOAD_DELAY_MS);
         }
 
         private static async void OnAfterAssemblyReload()
@@ -247,7 +269,7 @@ namespace io.github.hatayama.uLoopMCP
                 "Unity Editor is shutting down"
             );
             
-            await Task.Delay(500);
+            await Task.Delay(SHUTDOWN_DELAY_MS);
             await DisposePushClientAsync();
         }
 
