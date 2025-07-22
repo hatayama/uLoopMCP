@@ -24,19 +24,22 @@ export class UnityConnectionManager {
   private unityClient: UnityClient;
   private unityDiscovery: UnityDiscovery;
   private fallbackHandler: UnityConnectionFallbackHandler;
-  private readonly isDevelopment: boolean;
-  private isInitialized: boolean = false;
-  private isReconnecting: boolean = false;
+  private readonly enableConnectionDebugLog: boolean;
+  private connectionManagerInitialized: boolean = false;
+  private reconnectionInProgress: boolean = false;
 
   constructor(unityClient: UnityClient) {
     this.unityClient = unityClient;
-    this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+    this.enableConnectionDebugLog = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
 
     // Initialize Unity discovery service (singleton pattern prevents duplicates)
     this.unityDiscovery = UnityDiscovery.getInstance(this.unityClient);
 
     // Initialize fallback handler for connection monitoring
-    this.fallbackHandler = new UnityConnectionFallbackHandler(this.unityClient, this.unityDiscovery);
+    this.fallbackHandler = new UnityConnectionFallbackHandler(
+      this.unityClient,
+      this.unityDiscovery,
+    );
 
     // Set UnityDiscovery reference in UnityClient for unified connection management
     this.unityClient.setUnityDiscovery(this.unityDiscovery);
@@ -55,7 +58,7 @@ export class UnityConnectionManager {
   async waitForUnityConnectionWithTimeout(timeoutMs: number): Promise<void> {
     return this.fallbackHandler.waitForConnectionWithFallback(timeoutMs, () => {
       // Initialize connection manager if not already done
-      if (!this.isInitialized) {
+      if (!this.connectionManagerInitialized) {
         this.initialize(() => Promise.resolve());
       }
     });
@@ -70,7 +73,7 @@ export class UnityConnectionManager {
       // Even though discovery confirmed TCP connectivity, we need to ensure the connection state is updated
       await this.unityClient.ensureConnected();
 
-      if (this.isDevelopment) {
+      if (this.enableConnectionDebugLog) {
         // Unity discovered - connection state updated
       }
 
@@ -92,11 +95,11 @@ export class UnityConnectionManager {
    * Initialize connection manager with push notification system
    */
   initialize(onConnectionEstablished?: () => Promise<void>): void {
-    if (this.isInitialized) {
+    if (this.connectionManagerInitialized) {
       return;
     }
 
-    this.isInitialized = true;
+    this.connectionManagerInitialized = true;
 
     VibeLogger.logInfo(
       'push_notification_system_active',
@@ -112,14 +115,10 @@ export class UnityConnectionManager {
     });
 
     this.unityDiscovery.setOnConnectionLostCallback(() => {
-      if (this.isDevelopment) {
+      if (this.enableConnectionDebugLog) {
         // Connection lost detected - ready for reconnection
       }
     });
-
-    if (this.isDevelopment) {
-      // Connection manager initialized with push notification system
-    }
   }
 
   /**
@@ -128,14 +127,14 @@ export class UnityConnectionManager {
   setupReconnectionCallback(callback: () => Promise<void>): void {
     this.unityClient.setReconnectedCallback(() => {
       // Prevent duplicate reconnection handling
-      if (this.isReconnecting) {
-        if (this.isDevelopment) {
+      if (this.reconnectionInProgress) {
+        if (this.enableConnectionDebugLog) {
           // Reconnection already in progress, skipping duplicate callback
         }
         return;
       }
 
-      this.isReconnecting = true;
+      this.reconnectionInProgress = true;
 
       // Force Unity discovery for faster reconnection
       void this.unityDiscovery
@@ -144,7 +143,7 @@ export class UnityConnectionManager {
           return callback();
         })
         .finally(() => {
-          this.isReconnecting = false;
+          this.reconnectionInProgress = false;
         });
     });
   }

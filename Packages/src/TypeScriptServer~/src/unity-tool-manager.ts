@@ -30,7 +30,7 @@ type UnityParameterSchema = { [key: string]: unknown };
  */
 export class UnityToolManager {
   private unityClient: UnityClient;
-  private readonly isDevelopment: boolean;
+  private readonly includeDevelopmentOnlyTools: boolean;
   private readonly dynamicTools: Map<string, DynamicUnityCommandTool> = new Map();
   private isRefreshing: boolean = false;
   private clientName: string = '';
@@ -43,7 +43,7 @@ export class UnityToolManager {
 
   constructor(unityClient: UnityClient) {
     this.unityClient = unityClient;
-    this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+    this.includeDevelopmentOnlyTools = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
   }
 
   /**
@@ -158,7 +158,7 @@ export class UnityToolManager {
   private async fetchToolDetailsFromUnity(): Promise<unknown[] | null> {
     // Get detailed tool information including schemas
     // Include development-only tools if in development mode
-    const params = { IncludeDevelopmentOnly: this.isDevelopment };
+    const params = { IncludeDevelopmentOnly: this.includeDevelopmentOnlyTools };
 
     // Requesting tool details from Unity with params
 
@@ -194,7 +194,7 @@ export class UnityToolManager {
         (toolInfo as { displayDevelopmentOnly?: boolean }).displayDevelopmentOnly || false;
 
       // Skip development-only tools in production mode
-      if (displayDevelopmentOnly && !this.isDevelopment) {
+      if (displayDevelopmentOnly && !this.includeDevelopmentOnlyTools) {
         continue;
       }
 
@@ -229,7 +229,7 @@ export class UnityToolManager {
    */
   async refreshDynamicToolsSafe(sendNotification?: () => void): Promise<void> {
     if (this.isRefreshing) {
-      if (this.isDevelopment) {
+      if (this.includeDevelopmentOnlyTools) {
         // refreshDynamicToolsSafe skipped: already in progress
       }
       return;
@@ -237,7 +237,7 @@ export class UnityToolManager {
 
     this.isRefreshing = true;
     try {
-      if (this.isDevelopment) {
+      if (this.includeDevelopmentOnlyTools) {
         // refreshDynamicToolsSafe called
       }
 

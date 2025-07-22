@@ -113,7 +113,6 @@ export const ERROR_MESSAGES = {
   INVALID_RESPONSE: 'Invalid response from Unity',
 } as const;
 
-
 // Test timeouts (milliseconds)
 export const TEST_TIMEOUTS = {
   INTEGRATION_TEST_MS: 2000,

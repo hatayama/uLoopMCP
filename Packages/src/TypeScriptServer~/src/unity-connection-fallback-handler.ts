@@ -30,7 +30,10 @@ export class UnityConnectionFallbackHandler {
    * Wait for Unity connection using fallback polling strategy
    * Used when push notification system is not available or fails
    */
-  async waitForConnectionWithFallback(timeoutMs: number, onInitializeRequired: () => void): Promise<void> {
+  async waitForConnectionWithFallback(
+    timeoutMs: number,
+    onInitializeRequired: () => void,
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       // Check if already connected
       if (this.unityClient.connected) {
@@ -54,7 +57,7 @@ export class UnityConnectionFallbackHandler {
       let fallbackCheckCount = 0;
       const connectionCheckInterval = setInterval(() => {
         fallbackCheckCount++;
-        
+
         if (this.unityClient.connected) {
           clearTimeout(timeout);
           clearInterval(connectionCheckInterval);
@@ -85,9 +88,9 @@ export class UnityConnectionFallbackHandler {
       VibeLogger.logInfo(
         'unity_connection_established_immediate',
         'Unity connection established immediately (push notification)',
-        { 
+        {
           timeout_ms: timeoutMs,
-          check_count: fallbackCheckCount
+          check_count: fallbackCheckCount,
         },
         undefined,
         'Unity connection confirmed via push notification system',
@@ -97,10 +100,10 @@ export class UnityConnectionFallbackHandler {
       VibeLogger.logWarning(
         'unity_connection_established_fallback',
         'Unity connection established via fallback polling',
-        { 
+        {
           timeout_ms: timeoutMs,
           check_count: fallbackCheckCount,
-          elapsed_approx_ms: fallbackCheckCount * 250
+          elapsed_approx_ms: fallbackCheckCount * 250,
         },
         undefined,
         'Push notification may have failed - connection detected via fallback',
@@ -117,10 +120,10 @@ export class UnityConnectionFallbackHandler {
       VibeLogger.logInfo(
         'unity_connection_fallback_waiting',
         'Still waiting for Unity connection (fallback polling)',
-        { 
+        {
           timeout_ms: timeoutMs,
           check_count: fallbackCheckCount,
-          elapsed_approx_ms: fallbackCheckCount * 250
+          elapsed_approx_ms: fallbackCheckCount * 250,
         },
         undefined,
         'Fallback polling active - waiting for Unity connection',
@@ -134,7 +137,7 @@ export class UnityConnectionFallbackHandler {
   private async attemptForceDiscovery(timeoutMs: number): Promise<void> {
     try {
       await this.unityDiscovery.forceDiscovery();
-      
+
       VibeLogger.logInfo(
         'unity_discovery_fallback_attempted',
         'Force discovery attempted as fallback',
@@ -146,9 +149,9 @@ export class UnityConnectionFallbackHandler {
       VibeLogger.logInfo(
         'unity_discovery_fallback_failed',
         'Unity discovery fallback failed, relying on push notification',
-        { 
+        {
           timeout_ms: timeoutMs,
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         },
         undefined,
         'Waiting for push notification connection',

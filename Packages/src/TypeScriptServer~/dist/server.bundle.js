@@ -7581,12 +7581,12 @@ var UnityConnectionManager = class {
   unityClient;
   unityDiscovery;
   fallbackHandler;
-  isDevelopment;
-  isInitialized = false;
-  isReconnecting = false;
+  enableConnectionDebugLog;
+  connectionManagerInitialized = false;
+  reconnectionInProgress = false;
   constructor(unityClient) {
     this.unityClient = unityClient;
-    this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+    this.enableConnectionDebugLog = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
     this.unityDiscovery = UnityDiscovery.getInstance(this.unityClient);
     this.fallbackHandler = new UnityConnectionFallbackHandler(this.unityClient, this.unityDiscovery);
     this.unityClient.setUnityDiscovery(this.unityDiscovery);
@@ -7602,7 +7602,7 @@ var UnityConnectionManager = class {
    */
   async waitForUnityConnectionWithTimeout(timeoutMs) {
     return this.fallbackHandler.waitForConnectionWithFallback(timeoutMs, () => {
-      if (!this.isInitialized) {
+      if (!this.connectionManagerInitialized) {
         this.initialize(() => Promise.resolve());
       }
     });
@@ -7613,7 +7613,7 @@ var UnityConnectionManager = class {
   async handleUnityDiscovered(onConnectionEstablished) {
     try {
       await this.unityClient.ensureConnected();
-      if (this.isDevelopment) {
+      if (this.enableConnectionDebugLog) {
       }
       if (onConnectionEstablished) {
         await onConnectionEstablished();
@@ -7626,10 +7626,10 @@ var UnityConnectionManager = class {
    * Initialize connection manager with push notification system
    */
   initialize(onConnectionEstablished) {
-    if (this.isInitialized) {
+    if (this.connectionManagerInitialized) {
       return;
     }
-    this.isInitialized = true;
+    this.connectionManagerInitialized = true;
     VibeLogger.logInfo(
       "push_notification_system_active",
       "Unity connection manager initialized with push notification system",
@@ -7641,7 +7641,7 @@ var UnityConnectionManager = class {
       void this.handleUnityDiscovered(onConnectionEstablished);
     });
     this.unityDiscovery.setOnConnectionLostCallback(() => {
-      if (this.isDevelopment) {
+      if (this.enableConnectionDebugLog) {
       }
     });
     if (this.isDevelopment) {
@@ -7652,16 +7652,16 @@ var UnityConnectionManager = class {
    */
   setupReconnectionCallback(callback) {
     this.unityClient.setReconnectedCallback(() => {
-      if (this.isReconnecting) {
-        if (this.isDevelopment) {
+      if (this.reconnectionInProgress) {
+        if (this.enableConnectionDebugLog) {
         }
         return;
       }
-      this.isReconnecting = true;
+      this.reconnectionInProgress = true;
       void this.unityDiscovery.forceDiscovery().then(() => {
         return callback();
       }).finally(() => {
-        this.isReconnecting = false;
+        this.reconnectionInProgress = false;
       });
     });
   }
@@ -7867,7 +7867,7 @@ var DynamicUnityCommandTool = class extends BaseTool {
 import { createHash } from "crypto";
 var UnityToolManager = class {
   unityClient;
-  isDevelopment;
+  includeDevelopmentOnlyTools;
   dynamicTools = /* @__PURE__ */ new Map();
   isRefreshing = false;
   clientName = "";
@@ -7876,7 +7876,7 @@ var UnityToolManager = class {
   clientInitializationHandler;
   constructor(unityClient) {
     this.unityClient = unityClient;
-    this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+    this.includeDevelopmentOnlyTools = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
   }
   /**
    * Set client name for Unity communication
@@ -7968,7 +7968,7 @@ var UnityToolManager = class {
    * Fetch tool details from Unity
    */
   async fetchToolDetailsFromUnity() {
-    const params = { IncludeDevelopmentOnly: this.isDevelopment };
+    const params = { IncludeDevelopmentOnly: this.includeDevelopmentOnlyTools };
     const toolDetailsResponse = await this.unityClient.executeTool("get-tool-details", params);
     const toolDetails = toolDetailsResponse?.Tools || toolDetailsResponse;
     if (!Array.isArray(toolDetails)) {
@@ -7987,7 +7987,7 @@ var UnityToolManager = class {
       const description = toolInfo.description || `Execute Unity tool: ${toolName}`;
       const parameterSchema = toolInfo.parameterSchema;
       const displayDevelopmentOnly = toolInfo.displayDevelopmentOnly || false;
-      if (displayDevelopmentOnly && !this.isDevelopment) {
+      if (displayDevelopmentOnly && !this.includeDevelopmentOnlyTools) {
         continue;
       }
       const finalToolName = toolName;
@@ -8016,13 +8016,13 @@ var UnityToolManager = class {
    */
   async refreshDynamicToolsSafe(sendNotification) {
     if (this.isRefreshing) {
-      if (this.isDevelopment) {
+      if (this.includeDevelopmentOnlyTools) {
       }
       return;
     }
     this.isRefreshing = true;
     try {
-      if (this.isDevelopment) {
+      if (this.includeDevelopmentOnlyTools) {
       }
       await this.refreshDynamicTools(sendNotification);
     } finally {
@@ -9303,7 +9303,7 @@ var UnityPushNotificationReceiveServer = class extends EventEmitter {
 var UnityMcpServer = class {
   server;
   unityClient;
-  isDevelopment;
+  enableDevelopmentLogging;
   isInitialized = false;
   unityDiscovery;
   connectionManager;
@@ -9324,7 +9324,7 @@ var UnityMcpServer = class {
    * Initialize environment configuration
    */
   initializeEnvironment() {
-    this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+    this.enableDevelopmentLogging = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
     VibeLogger.logInfo("mcp_server_starting", "Unity MCP Server Starting");
   }
   /**
@@ -9541,7 +9541,7 @@ var UnityMcpServer = class {
       } else {
       }
     });
-    if (this.isDevelopment) {
+    if (this.enableDevelopmentLogging) {
     }
     const transport = new StdioServerTransport();
     await this.server.connect(transport);

@@ -38,8 +38,7 @@ import packageJson from '../package.json' assert { type: 'json' };
 class UnityMcpServer {
   private server: Server;
   private unityClient: UnityClient;
-  private readonly isDevelopment: boolean;
-  private isInitialized: boolean = false;
+  private readonly enableDevelopmentLogging: boolean;
   private unityDiscovery: UnityDiscovery;
   private connectionManager: UnityConnectionManager;
   private toolManager: UnityToolManager;
@@ -61,7 +60,7 @@ class UnityMcpServer {
    * Initialize environment configuration
    */
   private initializeEnvironment(): void {
-    this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+    this.enableDevelopmentLogging = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
     VibeLogger.logInfo('mcp_server_starting', 'Unity MCP Server Starting');
   }
 
@@ -113,7 +112,7 @@ class UnityMcpServer {
    */
   private initializePushNotificationSystem(): void {
     const pushNotificationServer = new UnityPushNotificationReceiveServer();
-    
+
     this.pushNotificationManager = new UnityPushNotificationManager(
       pushNotificationServer,
       this.unityClient,
@@ -334,7 +333,7 @@ class UnityMcpServer {
       }
     });
 
-    if (this.isDevelopment) {
+    if (this.enableDevelopmentLogging) {
       // Server starting with unified discovery service
     }
 

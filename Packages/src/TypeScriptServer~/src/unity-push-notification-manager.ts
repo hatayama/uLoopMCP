@@ -56,7 +56,7 @@ export class UnityPushNotificationManager {
    */
   async startPushNotificationServer(): Promise<number> {
     const pushServerPort = await this.pushNotificationServer.start();
-    
+
     VibeLogger.logInfo(
       'push_server_started',
       'Push notification receive server started',
@@ -79,11 +79,22 @@ export class UnityPushNotificationManager {
    * Setup push notification event handlers
    */
   private setupPushNotificationHandlers(): void {
-    this.pushNotificationServer.on('unity_connected', this.handleUnityPushClientConnected.bind(this));
-    this.pushNotificationServer.on('unity_disconnected', this.handleUnityPushClientDisconnected.bind(this));
-    this.pushNotificationServer.on('connection_established', this.handleConnectionEstablished.bind(this));
+    this.pushNotificationServer.on(
+      'unity_connected',
+      this.handleUnityPushClientConnected.bind(this),
+    );
+    this.pushNotificationServer.on(
+      'unity_disconnected',
+      this.handleUnityPushClientDisconnected.bind(this),
+    );
+    this.pushNotificationServer.on('connection_established', (event: PushNotificationEvent) => {
+      void this.handleConnectionEstablished(event);
+    });
     this.pushNotificationServer.on('domain_reload_start', this.handleDomainReloadStart.bind(this));
-    this.pushNotificationServer.on('domain_reload_recovered', this.handleDomainReloadRecovered.bind(this));
+    this.pushNotificationServer.on(
+      'domain_reload_recovered',
+      this.handleDomainReloadRecovered.bind(this),
+    );
     this.pushNotificationServer.on('tools_changed', this.handleToolsChanged.bind(this));
   }
 
@@ -114,7 +125,7 @@ export class UnityPushNotificationManager {
 
     // Synchronize Unity client disconnection state
     this.unityClient.disconnect();
-    
+
     VibeLogger.logInfo(
       'push_unity_disconnection_synced',
       'Unity disconnection state synchronized',
@@ -146,9 +157,9 @@ export class UnityPushNotificationManager {
   private async synchronizeUnityConnectionState(clientId: string): Promise<void> {
     try {
       await this.unityClient.ensureConnected();
-      
+
       // Notify connection manager about Unity connection
-      this.connectionManager.handleUnityDiscovered();
+      await this.connectionManager.handleUnityDiscovered();
 
       VibeLogger.logInfo(
         'push_unity_connection_synced',
