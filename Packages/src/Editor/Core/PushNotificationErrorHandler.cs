@@ -23,10 +23,6 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const int MAX_RETRY_ATTEMPTS = 3;
         private const int RETRY_DELAY_MS = 2000;
-        private const int CONNECTION_TIMEOUT_MS = 5000;
-        private const int PUSH_NOTIFICATION_TIMEOUT_MS = 2000;
-        private const int DISCOVERY_TIMEOUT_MS = 10000;
-        private const int RECONNECTION_DELAY_MS = 3000;
 
         public static async Task<bool> HandleConnectionFailureAsync(UnityPushClient pushClient, Exception error)
         {
@@ -40,11 +36,6 @@ namespace io.github.hatayama.uLoopMCP
             if (IsNetworkError(error))
             {
                 return await HandleNetworkErrorAsync(pushClient);
-            }
-
-            if (IsPortConflictError(error))
-            {
-                return await HandlePortConflictAsync(pushClient);
             }
 
             return false;
@@ -78,11 +69,12 @@ namespace io.github.hatayama.uLoopMCP
 
         private static async Task<bool> HandleTimeoutErrorAsync(UnityPushClient pushClient)
         {
-            Debug.LogWarning("[uLoopMCP] Connection timeout - attempting retry with increased timeout");
+            Debug.LogWarning("[uLoopMCP] Connection timeout - attempting retry with exponential backoff");
 
             for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++)
             {
-                await Task.Delay(RETRY_DELAY_MS * attempt);
+                int delay = Math.Min(RETRY_DELAY_MS * (int)Math.Pow(2, attempt - 1), 30000); // Cap at 30s
+                await Task.Delay(delay);
 
                 bool success = await pushClient.DiscoverAndConnectAsync();
                 if (success)
@@ -91,7 +83,7 @@ namespace io.github.hatayama.uLoopMCP
                     return true;
                 }
 
-                Debug.LogWarning($"[uLoopMCP] Retry attempt {attempt} failed");
+                Debug.LogWarning($"[uLoopMCP] Retry attempt {attempt} failed, waited {delay}ms");
             }
 
             Debug.LogError("[uLoopMCP] All retry attempts failed for timeout error");
@@ -100,59 +92,14 @@ namespace io.github.hatayama.uLoopMCP
 
         private static async Task<bool> HandleNetworkErrorAsync(UnityPushClient pushClient)
         {
-            Debug.LogWarning("[uLoopMCP] Network error detected - checking network connectivity");
-
-            if (!await IsNetworkAvailableAsync())
-            {
-                Debug.LogError("[uLoopMCP] Network is not available");
-                return false;
-            }
-
-            Debug.Log("[uLoopMCP] Network is available - attempting reconnection");
+            Debug.LogWarning("[uLoopMCP] Network error detected - attempting reconnection");
             return await pushClient.DiscoverAndConnectAsync();
         }
 
-        private static async Task<bool> HandlePortConflictAsync(UnityPushClient pushClient)
-        {
-            Debug.LogWarning("[uLoopMCP] Port conflict detected - searching for alternative port");
-
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            string currentEndpoint = sessionManager?.GetPushServerEndpoint();
-            
-            if (string.IsNullOrEmpty(currentEndpoint))
-            {
-                return false;
-            }
-
-            string[] parts = currentEndpoint.Split(':');
-            if (parts.Length != 2 || !int.TryParse(parts[1], out int currentPort))
-            {
-                return false;
-            }
-
-            int alternativePort = FindAlternativePort(currentPort);
-            if (alternativePort == -1)
-            {
-                Debug.LogError("[uLoopMCP] No alternative port found");
-                return false;
-            }
-
-            string alternativeEndpoint = $"{parts[0]}:{alternativePort}";
-            bool success = await pushClient.ConnectToEndpointAsync(alternativeEndpoint);
-
-            if (success)
-            {
-                sessionManager?.SetPushServerEndpoint(alternativeEndpoint);
-                Debug.Log($"[uLoopMCP] Successfully connected to alternative port: {alternativePort}");
-                return true;
-            }
-
-            return false;
-        }
 
         private static async Task AttemptReconnectionAfterCrashAsync(UnityPushClient pushClient)
         {
-            await Task.Delay(RECONNECTION_DELAY_MS);
+            await Task.Delay(ConnectionTimeouts.RECONNECTION_DELAY_MS);
 
             Debug.Log("[uLoopMCP] Attempting reconnection after Unity Editor crash");
 
@@ -165,7 +112,8 @@ namespace io.github.hatayama.uLoopMCP
                     return;
                 }
 
-                await Task.Delay(RETRY_DELAY_MS * attempt);
+                int delay = Math.Min(RETRY_DELAY_MS * (int)Math.Pow(2, attempt - 1), 30000); // Cap at 30s
+                await Task.Delay(delay);
             }
 
             Debug.LogWarning("[uLoopMCP] Failed to reconnect after Unity Editor crash");
@@ -186,63 +134,8 @@ namespace io.github.hatayama.uLoopMCP
                    (error.Message?.Contains("connection refused") == true);
         }
 
-        private static bool IsPortConflictError(Exception error)
-        {
-            return (error.Message?.Contains("port") == true && error.Message?.Contains("use") == true) ||
-                   (error.Message?.Contains("address already in use") == true);
-        }
 
-        private static async Task<bool> IsNetworkAvailableAsync()
-        {
-            try
-            {
-                using (System.Net.NetworkInformation.Ping ping = new System.Net.NetworkInformation.Ping())
-                {
-                    PingReply reply = await ping.SendPingAsync("127.0.0.1", 1000);
-                    return reply.Status == IPStatus.Success;
-                }
-            }
-            catch
-            {
-                return false;
-            }
-        }
 
-        private static int FindAlternativePort(int currentPort)
-        {
-            for (int port = currentPort + 1; port <= currentPort + 100; port++)
-            {
-                if (IsPortAvailable(port))
-                {
-                    return port;
-                }
-            }
-
-            return -1;
-        }
-
-        private static bool IsPortAvailable(int port)
-        {
-            try
-            {
-                IPGlobalProperties ipGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
-                IPEndPoint[] tcpEndPoints = ipGlobalProperties.GetActiveTcpListeners();
-
-                foreach (IPEndPoint endPoint in tcpEndPoints)
-                {
-                    if (endPoint.Port == port)
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
 
         public static void LogConnectionStatistics(UnityPushClient pushClient)
         {

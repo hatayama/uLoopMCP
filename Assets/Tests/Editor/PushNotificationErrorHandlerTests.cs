@@ -40,8 +40,8 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             
             bool result = await PushNotificationErrorHandler.HandleConnectionFailureAsync(mockPushClient, timeoutException);
             
-            // Should attempt to handle timeout error
-            Assert.That(result, Is.TypeOf<bool>());
+            // Should successfully handle timeout error
+            Assert.IsTrue(result, "Timeout errors should be handled and return true");
         }
 
         [Test]
@@ -51,8 +51,8 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             
             bool result = await PushNotificationErrorHandler.HandleConnectionFailureAsync(mockPushClient, networkException);
             
-            // Should attempt to handle network error
-            Assert.That(result, Is.TypeOf<bool>());
+            // Should successfully handle network error
+            Assert.IsTrue(result, "Network errors should be handled and return true");
         }
 
         [Test]
@@ -63,7 +63,7 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             bool result = await PushNotificationErrorHandler.HandleConnectionFailureAsync(mockPushClient, genericException);
             
             // Should not handle generic errors
-            Assert.IsFalse(result);
+            Assert.IsFalse(result, "Generic errors should not be handled and return false");
         }
 
         [Test]

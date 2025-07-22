@@ -105,6 +105,9 @@ namespace io.github.hatayama.uLoopMCP
             mcpServer = new McpBridgeServer();
             mcpServer.StartServer(availablePort);
 
+            // Start new push notification session
+            PushNotificationSerializer.StartNewSession();
+
             // Save the state to SessionState.
             McpSessionManager sessionManager = McpSessionManager.instance;
             sessionManager.IsServerRunning = true;
@@ -121,6 +124,9 @@ namespace io.github.hatayama.uLoopMCP
                 mcpServer.Dispose();
                 mcpServer = null;
             }
+
+            // End push notification session
+            PushNotificationSerializer.EndSession();
 
             // Delete the state from SessionState.
             McpSessionManager sessionManager = McpSessionManager.instance;

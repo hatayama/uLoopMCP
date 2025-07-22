@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 
@@ -43,21 +44,39 @@ namespace io.github.hatayama.uLoopMCP
         [System.Serializable]
         public class ClientEndpointPair
         {
-            public string clientName;
-            public int clientPort;
-            public string endpoint;
+            public string clientName;                    // Actual client name ("Claude Code", "Cursor")
+            public string clientEndpoint;                // Client TCP endpoint ("127.0.0.1:58194")
+            public string pushReceiveServerEndpoint;     // Push notification receive server endpoint ("localhost:12345")
             
-            public ClientEndpointPair(string clientName, int clientPort, string endpoint)
+            public ClientEndpointPair(string clientName, string clientEndpoint, string pushReceiveServerEndpoint)
             {
                 this.clientName = clientName;
-                this.clientPort = clientPort;
-                this.endpoint = endpoint;
+                this.clientEndpoint = clientEndpoint;
+                this.pushReceiveServerEndpoint = pushReceiveServerEndpoint;
             }
             
-            // ユニークキーを生成
+            // For backward compatibility - constructor with clientIdentifier (can be either name or endpoint)
+            public ClientEndpointPair(string clientIdentifier, int clientPort, string endpoint)
+            {
+                // If clientIdentifier contains ":" it's an endpoint, otherwise it's a name
+                if (clientIdentifier.Contains(CLIENT_ENDPOINT_SEPARATOR))
+                {
+                    this.clientEndpoint = clientIdentifier;
+                    this.clientName = "Unknown";
+                }
+                else
+                {
+                    this.clientName = clientIdentifier;
+                    this.clientEndpoint = $"127.0.0.1{CLIENT_ENDPOINT_SEPARATOR}{clientPort}"; // Construct from port
+                }
+                this.pushReceiveServerEndpoint = endpoint;
+            }
+            
+            
+            // ユニークキーを生成（clientEndpointを使用）
             public string GetUniqueKey()
             {
-                return $"{clientName}{CLIENT_ENDPOINT_SEPARATOR}{clientPort}";
+                return clientEndpoint;
             }
         }
 
@@ -258,8 +277,17 @@ namespace io.github.hatayama.uLoopMCP
         private static McpSessionManager _safeInstance;
         private static bool _instanceRequested = false;
         
-        // Safe instance access method to avoid constructor conflicts
-        public static McpSessionManager GetSafeInstance()
+        // Safe instance access method to avoid constructor conflicts - async version
+        public static async Task<McpSessionManager> GetSafeInstanceAsync()
+        {
+            // MainThreadに切り替え
+            await MainThreadSwitcher.SwitchToMainThread();
+            
+            return GetSafeInstanceInternal();
+        }
+        
+        // Internal implementation - must be called on main thread
+        private static McpSessionManager GetSafeInstanceInternal()
         {
             if (_safeInstance != null)
             {
@@ -271,7 +299,6 @@ namespace io.github.hatayama.uLoopMCP
                 Debug.LogWarning("[uLoopMCP] [WARNING] McpSessionManager instance already being constructed, returning null to avoid conflict");
                 return null;
             }
-            
             
             try
             {
@@ -310,12 +337,12 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         // 複数エンドポイント管理の新機能
-        public void SetPushServerEndpoint(string clientName, int clientPort, string endpoint)
+        public void SetPushServerEndpoint(string clientName, int clientPort, string pushReceiveServerEndpoint)
         {
-            string uniqueKey = $"{clientName}{CLIENT_ENDPOINT_SEPARATOR}{clientPort}";
+            string clientEndpoint = $"127.0.0.1{CLIENT_ENDPOINT_SEPARATOR}{clientPort}"; // Default assumption
             
             EnsureEndpointsListInitialized();
-            UpdateOrAddEndpoint(uniqueKey, clientName, clientPort, endpoint);
+            UpdateOrAddEndpoint(clientName, clientEndpoint, pushReceiveServerEndpoint);
             UpdateBackwardCompatibilityEndpoint();
             
             Save(true);
@@ -329,17 +356,19 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
         
-        private void UpdateOrAddEndpoint(string uniqueKey, string clientName, int clientPort, string endpoint)
+        private void UpdateOrAddEndpoint(string clientName, string clientEndpoint, string pushReceiveServerEndpoint)
         {
+            string uniqueKey = clientEndpoint;
             ClientEndpointPair existingPair = FindEndpointPair(uniqueKey);
             
             if (existingPair != null)
             {
-                existingPair.endpoint = endpoint;
+                existingPair.pushReceiveServerEndpoint = pushReceiveServerEndpoint;
+                existingPair.clientName = clientName; // Update client name if provided
             }
             else
             {
-                _pushServerEndpoints.Add(new(clientName, clientPort, endpoint));
+                _pushServerEndpoints.Add(new(clientName, clientEndpoint, pushReceiveServerEndpoint));
             }
         }
         
@@ -360,13 +389,13 @@ namespace io.github.hatayama.uLoopMCP
             // 後方互換性: 最初のエンドポイントを古いフィールドにも保存
             if (_pushServerEndpoints.Count > 0)
             {
-                _pushServerEndpoint = _pushServerEndpoints[0].endpoint;
+                _pushServerEndpoint = _pushServerEndpoints[0].pushReceiveServerEndpoint;
             }
         }
         
         public string GetPushServerEndpoint(string clientName, int clientPort)
         {
-            string uniqueKey = $"{clientName}{CLIENT_ENDPOINT_SEPARATOR}{clientPort}";
+            string clientEndpoint = $"127.0.0.1{CLIENT_ENDPOINT_SEPARATOR}{clientPort}"; // Default assumption
             
             if (_pushServerEndpoints == null)
             {
@@ -375,9 +404,9 @@ namespace io.github.hatayama.uLoopMCP
             
             foreach (ClientEndpointPair pair in _pushServerEndpoints)
             {
-                if (pair.GetUniqueKey() == uniqueKey)
+                if (pair.GetUniqueKey() == clientEndpoint)
                 {
-                    return pair.endpoint;
+                    return pair.pushReceiveServerEndpoint;
                 }
             }
             
@@ -393,11 +422,11 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (_pushServerEndpoints == null) return;
             
-            string uniqueKey = $"{clientName}{CLIENT_ENDPOINT_SEPARATOR}{clientPort}";
+            string clientEndpoint = $"127.0.0.1{CLIENT_ENDPOINT_SEPARATOR}{clientPort}"; // Default assumption
             
             for (int i = _pushServerEndpoints.Count - 1; i >= 0; i--)
             {
-                if (_pushServerEndpoints[i].GetUniqueKey() == uniqueKey)
+                if (_pushServerEndpoints[i].GetUniqueKey() == clientEndpoint)
                 {
                     _pushServerEndpoints.RemoveAt(i);
                     break;
@@ -407,7 +436,7 @@ namespace io.github.hatayama.uLoopMCP
             // 後方互換性: 残りのエンドポイントがあれば最初のものを設定
             if (_pushServerEndpoints.Count > 0)
             {
-                _pushServerEndpoint = _pushServerEndpoints[0].endpoint;
+                _pushServerEndpoint = _pushServerEndpoints[0].pushReceiveServerEndpoint;
             }
             else
             {
@@ -423,7 +452,7 @@ namespace io.github.hatayama.uLoopMCP
             
             for (int i = _pushServerEndpoints.Count - 1; i >= 0; i--)
             {
-                if (_pushServerEndpoints[i].clientName == clientEndpoint) // clientNameフィールドにclientEndpoint（127.0.0.1:58194）が保存されてる
+                if (_pushServerEndpoints[i].clientEndpoint == clientEndpoint) // clientEndpointフィールドを使用
                 {
                     _pushServerEndpoints.RemoveAt(i);
                     break;
@@ -433,7 +462,7 @@ namespace io.github.hatayama.uLoopMCP
             // 後方互換性: 残りのエンドポイントがあれば最初のものを設定
             if (_pushServerEndpoints.Count > 0)
             {
-                _pushServerEndpoint = _pushServerEndpoints[0].endpoint;
+                _pushServerEndpoint = _pushServerEndpoints[0].pushReceiveServerEndpoint;
             }
             else
             {
@@ -444,7 +473,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         // クライアントエンドポイント（文字列）をキーとする新しいメソッド
-        public void SetPushServerEndpoint(string clientEndpoint, string endpoint)
+        public void SetPushServerEndpoint(string clientEndpoint, string pushReceiveServerEndpoint)
         {
             if (_pushServerEndpoints == null)
             {
@@ -455,7 +484,7 @@ namespace io.github.hatayama.uLoopMCP
             ClientEndpointPair existingPair = null;
             foreach (ClientEndpointPair pair in _pushServerEndpoints)
             {
-                if (pair.clientName == clientEndpoint) // clientNameフィールドにclientEndpoint（127.0.0.1:57857）を保存
+                if (pair.clientEndpoint == clientEndpoint) // clientEndpointフィールドを使用
                 {
                     existingPair = pair;
                     break;
@@ -464,17 +493,17 @@ namespace io.github.hatayama.uLoopMCP
             
             if (existingPair != null)
             {
-                existingPair.endpoint = endpoint;
+                existingPair.pushReceiveServerEndpoint = pushReceiveServerEndpoint;
             }
             else
             {
-                _pushServerEndpoints.Add(new(clientEndpoint, DEFAULT_CLIENT_PORT, endpoint)); // clientPortは使わないのでデフォルト値
+                _pushServerEndpoints.Add(new("Unknown", clientEndpoint, pushReceiveServerEndpoint));
             }
             
             // 後方互換性: 最初のエンドポイントを古いフィールドにも保存
             if (_pushServerEndpoints.Count > 0)
             {
-                _pushServerEndpoint = _pushServerEndpoints[0].endpoint;
+                _pushServerEndpoint = _pushServerEndpoints[0].pushReceiveServerEndpoint;
             }
             
             Save(true);
@@ -489,9 +518,9 @@ namespace io.github.hatayama.uLoopMCP
             
             foreach (ClientEndpointPair pair in _pushServerEndpoints)
             {
-                if (pair.clientName == clientEndpoint) // clientNameフィールドにclientEndpoint（127.0.0.1:57857）が保存されてる
+                if (pair.clientEndpoint == clientEndpoint) // clientEndpointフィールドを使用
                 {
-                    return pair.endpoint;
+                    return pair.pushReceiveServerEndpoint;
                 }
             }
             

@@ -19,7 +19,7 @@ using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    public class UnityPushClient : IDisposable
+    public class UnityPushClient : IDisposable, IAsyncDisposable
     {
         private TcpClient tcpClient;
         private NetworkStream stream;
@@ -109,9 +109,17 @@ namespace io.github.hatayama.uLoopMCP
                 
                 var completedTask = await Task.WhenAny(connectTask, timeoutTask);
                 
-                if (completedTask == timeoutTask || !tcpClient.Connected)
+                if (completedTask == timeoutTask)
                 {
-                    Debug.LogWarning($"[uLoopMCP] Connection timeout or failed: {host}:{port}");
+                    Debug.LogWarning($"[uLoopMCP] Connection timeout: {host}:{port}");
+                    return false;
+                }
+                
+                await connectTask; // Ensure the task completed and check for exceptions
+                
+                if (!tcpClient.Connected)
+                {
+                    Debug.LogWarning($"[uLoopMCP] Connection failed: {host}:{port}");
                     return false;
                 }
 
@@ -249,7 +257,7 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
             if (isDisposed)
             {
@@ -260,8 +268,14 @@ namespace io.github.hatayama.uLoopMCP
             
             cancellationTokenSource?.Cancel();
             
-            var disconnectTask = DisconnectAsync();
-            disconnectTask.Wait(1000);
+            try
+            {
+                await DisconnectAsync().ConfigureAwait(false);
+            }
+            catch
+            {
+                // Ignore exceptions during disposal
+            }
             
             cancellationTokenSource?.Dispose();
             cancellationTokenSource = null;
@@ -269,6 +283,12 @@ namespace io.github.hatayama.uLoopMCP
             OnConnected = null;
             OnDisconnected = null;
             OnError = null;
+        }
+
+        public void Dispose()
+        {
+            // For synchronous disposal, use fire-and-forget pattern
+            _ = DisposeAsync();
         }
     }
 

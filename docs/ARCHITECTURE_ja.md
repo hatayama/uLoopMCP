@@ -41,7 +41,7 @@ graph TB
     MCP <--> UC
     UCM --> UC
     UCM --> UD
-    UD -.->|ポート発見<br/>ポーリング| MB
+    UD -.-> MB
     UC <-->|TCP/JSON-RPC<br/>ポート 8700+| MB
     UC -->|setClientName| MB
     MB <--> CMD

@@ -16,7 +16,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         public override string ToolName => "set-client-name";
 
-        protected override Task<SetClientNameResponse> ExecuteAsync(SetClientNameSchema parameters, CancellationToken cancellationToken)
+        protected override async Task<SetClientNameResponse> ExecuteAsync(SetClientNameSchema parameters, CancellationToken cancellationToken)
         {
             string clientName = parameters.ClientName;
             int clientPort = parameters.ClientPort;
@@ -30,10 +30,11 @@ namespace io.github.hatayama.uLoopMCP
             // Save push notification endpoint if provided
             if (!string.IsNullOrEmpty(pushEndpoint))
             {
-                McpSessionManager sessionManager = McpSessionManager.GetSafeInstance();
+                McpSessionManager sessionManager = await McpSessionManager.GetSafeInstanceAsync();
                 if (sessionManager != null)
                 {
-                    sessionManager.SetPushServerEndpoint(clientEndpoint, pushEndpoint);
+                    // Use new method signature: SetPushServerEndpoint(clientName, clientPort, pushReceiveServerEndpoint)
+                    sessionManager.SetPushServerEndpoint(clientName, clientPort, pushEndpoint);
                 }
                 else
                 {
@@ -43,7 +44,7 @@ namespace io.github.hatayama.uLoopMCP
             
             string message = string.Format(McpConstants.CLIENT_SUCCESS_MESSAGE_TEMPLATE, clientName);
             SetClientNameResponse response = new SetClientNameResponse(message, clientName, pushEndpoint);
-            return Task.FromResult(response);
+            return response;
         }
         
         private void UpdateClientNameInServer(string clientName)

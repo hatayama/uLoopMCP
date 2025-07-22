@@ -71,7 +71,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static async Task AutoConnectToPushServerAsync()
         {
-            McpSessionManager sessionManager = McpSessionManager.GetSafeInstance();
+            McpSessionManager sessionManager = await McpSessionManager.GetSafeInstanceAsync();
             
             List<McpSessionManager.ClientEndpointPair> allEndpoints = await GetValidEndpointsWithRetry(sessionManager);
             
@@ -115,17 +115,17 @@ namespace io.github.hatayama.uLoopMCP
             // Try each endpoint until one succeeds
             foreach (McpSessionManager.ClientEndpointPair pair in endpoints)
             {
-                bool success = await pushClient.ConnectToEndpointAsync(pair.endpoint);
+                bool success = await pushClient.ConnectToEndpointAsync(pair.pushReceiveServerEndpoint);
                 
                 if (success)
                 {
-                    Debug.Log($"[uLoopMCP] Successfully connected to Push Server using endpoint '{pair.endpoint}' for client '{pair.clientName}'");
+                    Debug.Log($"[uLoopMCP] Successfully connected to Push Server using endpoint '{pair.pushReceiveServerEndpoint}' for client '{pair.clientName}' ({pair.clientEndpoint})");
                     sessionManager.SetPushServerConnected(true);
                     await SendConnectionEstablishedNotificationAsync();
                     return true;
                 }
                 
-                Debug.LogWarning($"[uLoopMCP] Failed to connect to endpoint '{pair.endpoint}' for client '{pair.clientName}', trying next endpoint");
+                Debug.LogWarning($"[uLoopMCP] Failed to connect to endpoint '{pair.pushReceiveServerEndpoint}' for client '{pair.clientName}' ({pair.clientEndpoint}), trying next endpoint");
             }
             
             return false;
@@ -139,7 +139,7 @@ namespace io.github.hatayama.uLoopMCP
             
             if (success)
             {
-                McpSessionManager sessionManager = McpSessionManager.GetSafeInstance();
+                McpSessionManager sessionManager = await McpSessionManager.GetSafeInstanceAsync();
                 sessionManager?.SetPushServerConnected(true);
                 await SendConnectionEstablishedNotificationAsync();
                 Debug.Log("[uLoopMCP] Successfully connected to TypeScript Push Server");
@@ -162,11 +162,11 @@ namespace io.github.hatayama.uLoopMCP
             await pushClient.SendPushNotificationAsync(notification);
         }
 
-        private static void OnPushClientConnected(string endpoint)
+        private static async void OnPushClientConnected(string endpoint)
         {
             Debug.Log($"[uLoopMCP] Push client connected to: {endpoint}");
             
-            McpSessionManager sessionManager = McpSessionManager.GetSafeInstance();
+            McpSessionManager sessionManager = await McpSessionManager.GetSafeInstanceAsync();
             if (sessionManager != null)
             {
                 sessionManager.SetPushServerConnected(true);
@@ -176,7 +176,7 @@ namespace io.github.hatayama.uLoopMCP
             isReconnecting = false;
         }
 
-        private static void OnPushClientDisconnected(string endpoint)
+        private static async void OnPushClientDisconnected(string endpoint)
         {
             // Only log disconnection if we were actually connected (not during discovery)
             if (!string.IsNullOrEmpty(endpoint))
@@ -184,7 +184,7 @@ namespace io.github.hatayama.uLoopMCP
                 Debug.Log($"[uLoopMCP] Push client disconnected from: {endpoint}");
             }
             
-            McpSessionManager sessionManager = McpSessionManager.GetSafeInstance();
+            McpSessionManager sessionManager = await McpSessionManager.GetSafeInstanceAsync();
             sessionManager?.SetPushServerConnected(false);
             
             if (!isReconnecting && !EditorApplication.isCompiling)
@@ -245,7 +245,7 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Log("[uLoopMCP] Domain reload completed - starting recovery process");
             
             // Clear all persisted endpoints since they're all invalid after domain reload
-            McpSessionManager sessionManager = McpSessionManager.GetSafeInstance();
+            McpSessionManager sessionManager = await McpSessionManager.GetSafeInstanceAsync();
             if (sessionManager != null)
             {
                 sessionManager.ClearPushServerEndpoint();
@@ -277,8 +277,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (pushClient != null)
             {
-                await pushClient.DisconnectAsync();
-                pushClient.Dispose();
+                await pushClient.DisposeAsync();
                 pushClient = null;
             }
         }

@@ -13,6 +13,18 @@ namespace io.github.hatayama.uLoopMCP
 {
     public static class PushNotificationSerializer
     {
+        private static string _unitySessionId;
+
+        public static void StartNewSession()
+        {
+            _unitySessionId = Guid.NewGuid().ToString();
+        }
+
+        public static void EndSession()
+        {
+            _unitySessionId = null;
+        }
+
         public static string SerializePushNotification(PushNotification notification)
         {
             return JsonUtility.ToJson(notification);
@@ -118,7 +130,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 unityVersion = Application.unityVersion,
                 projectPath = Application.dataPath,
-                sessionId = Guid.NewGuid().ToString()
+                sessionId = _unitySessionId ?? "no-session"
             };
         }
 
