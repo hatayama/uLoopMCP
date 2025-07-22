@@ -7455,10 +7455,132 @@ var UnityDiscovery = class _UnityDiscovery {
   }
 };
 
+// src/unity-connection-fallback-handler.ts
+var UnityConnectionFallbackHandler = class {
+  unityClient;
+  unityDiscovery;
+  constructor(unityClient, unityDiscovery) {
+    this.unityClient = unityClient;
+    this.unityDiscovery = unityDiscovery;
+  }
+  /**
+   * Wait for Unity connection using fallback polling strategy
+   * Used when push notification system is not available or fails
+   */
+  async waitForConnectionWithFallback(timeoutMs, onInitializeRequired) {
+    return new Promise((resolve2, reject) => {
+      if (this.unityClient.connected) {
+        resolve2();
+        return;
+      }
+      const timeout = setTimeout(() => {
+        reject(new Error(`Unity connection timeout after ${timeoutMs}ms`));
+      }, timeoutMs);
+      VibeLogger.logInfo(
+        "unity_connection_wait_fallback_mode",
+        "Waiting for Unity connection using fallback polling",
+        { timeout_ms: timeoutMs, current_connected: this.unityClient.connected },
+        void 0,
+        "Push notification system fallback - monitoring connection state"
+      );
+      let fallbackCheckCount = 0;
+      const connectionCheckInterval = setInterval(() => {
+        fallbackCheckCount++;
+        if (this.unityClient.connected) {
+          clearTimeout(timeout);
+          clearInterval(connectionCheckInterval);
+          this.logConnectionSuccess(timeoutMs, fallbackCheckCount);
+          resolve2();
+        } else {
+          this.logFallbackProgress(timeoutMs, fallbackCheckCount);
+        }
+      }, 250);
+      onInitializeRequired();
+      setTimeout(() => {
+        void this.attemptForceDiscovery(timeoutMs);
+      }, 100);
+    });
+  }
+  /**
+   * Log connection success with fallback analysis
+   */
+  logConnectionSuccess(timeoutMs, fallbackCheckCount) {
+    if (fallbackCheckCount === 1) {
+      VibeLogger.logInfo(
+        "unity_connection_established_immediate",
+        "Unity connection established immediately (push notification)",
+        {
+          timeout_ms: timeoutMs,
+          check_count: fallbackCheckCount
+        },
+        void 0,
+        "Unity connection confirmed via push notification system"
+      );
+    } else {
+      VibeLogger.logWarning(
+        "unity_connection_established_fallback",
+        "Unity connection established via fallback polling",
+        {
+          timeout_ms: timeoutMs,
+          check_count: fallbackCheckCount,
+          elapsed_approx_ms: fallbackCheckCount * 250
+        },
+        void 0,
+        "Push notification may have failed - connection detected via fallback"
+      );
+    }
+  }
+  /**
+   * Log fallback progress periodically
+   */
+  logFallbackProgress(timeoutMs, fallbackCheckCount) {
+    if (fallbackCheckCount % 4 === 0) {
+      VibeLogger.logInfo(
+        "unity_connection_fallback_waiting",
+        "Still waiting for Unity connection (fallback polling)",
+        {
+          timeout_ms: timeoutMs,
+          check_count: fallbackCheckCount,
+          elapsed_approx_ms: fallbackCheckCount * 250
+        },
+        void 0,
+        "Fallback polling active - waiting for Unity connection"
+      );
+    }
+  }
+  /**
+   * Attempt force discovery as last resort
+   */
+  async attemptForceDiscovery(timeoutMs) {
+    try {
+      await this.unityDiscovery.forceDiscovery();
+      VibeLogger.logInfo(
+        "unity_discovery_fallback_attempted",
+        "Force discovery attempted as fallback",
+        { timeout_ms: timeoutMs },
+        void 0,
+        "Fallback force discovery completed"
+      );
+    } catch (error) {
+      VibeLogger.logInfo(
+        "unity_discovery_fallback_failed",
+        "Unity discovery fallback failed, relying on push notification",
+        {
+          timeout_ms: timeoutMs,
+          error: error instanceof Error ? error.message : String(error)
+        },
+        void 0,
+        "Waiting for push notification connection"
+      );
+    }
+  }
+};
+
 // src/unity-connection-manager.ts
 var UnityConnectionManager = class {
   unityClient;
   unityDiscovery;
+  fallbackHandler;
   isDevelopment;
   isInitialized = false;
   isReconnecting = false;
@@ -7466,6 +7588,7 @@ var UnityConnectionManager = class {
     this.unityClient = unityClient;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
     this.unityDiscovery = UnityDiscovery.getInstance(this.unityClient);
+    this.fallbackHandler = new UnityConnectionFallbackHandler(this.unityClient, this.unityDiscovery);
     this.unityClient.setUnityDiscovery(this.unityDiscovery);
   }
   /**
@@ -7478,82 +7601,10 @@ var UnityConnectionManager = class {
    * Wait for Unity connection with timeout using push notification system
    */
   async waitForUnityConnectionWithTimeout(timeoutMs) {
-    return new Promise((resolve2, reject) => {
-      if (this.unityClient.connected) {
-        resolve2();
-        return;
-      }
-      const timeout = setTimeout(() => {
-        reject(new Error(`Unity connection timeout after ${timeoutMs}ms`));
-      }, timeoutMs);
-      VibeLogger.logInfo(
-        "unity_connection_wait_push_mode",
-        "Waiting for Unity connection in push notification mode",
-        { timeout_ms: timeoutMs, current_connected: this.unityClient.connected },
-        void 0,
-        "Push notification system - waiting for Unity connection to establish"
-      );
-      let fallbackCheckCount = 0;
-      const connectionCheckInterval = setInterval(() => {
-        fallbackCheckCount++;
-        if (this.unityClient.connected) {
-          clearTimeout(timeout);
-          clearInterval(connectionCheckInterval);
-          if (fallbackCheckCount === 1) {
-            VibeLogger.logInfo(
-              "unity_connection_established_immediate",
-              "Unity connection established immediately (push notification)",
-              {
-                timeout_ms: timeoutMs,
-                check_count: fallbackCheckCount
-              },
-              void 0,
-              "Unity connection confirmed via push notification system"
-            );
-          } else {
-            VibeLogger.logWarning(
-              "unity_connection_established_fallback",
-              "Unity connection established via fallback polling",
-              {
-                timeout_ms: timeoutMs,
-                check_count: fallbackCheckCount,
-                elapsed_approx_ms: fallbackCheckCount * 250
-              },
-              void 0,
-              "Push notification may have failed - connection detected via fallback"
-            );
-          }
-          resolve2();
-        } else if (fallbackCheckCount % 4 === 0) {
-          VibeLogger.logInfo(
-            "unity_connection_fallback_waiting",
-            "Still waiting for Unity connection (fallback polling)",
-            {
-              timeout_ms: timeoutMs,
-              check_count: fallbackCheckCount,
-              elapsed_approx_ms: fallbackCheckCount * 250
-            },
-            void 0,
-            "Fallback polling active - waiting for Unity connection"
-          );
-        }
-      }, 250);
+    return this.fallbackHandler.waitForConnectionWithFallback(timeoutMs, () => {
       if (!this.isInitialized) {
-        this.initialize(() => {
-          return Promise.resolve();
-        });
+        this.initialize(() => Promise.resolve());
       }
-      setTimeout(() => {
-        void this.unityDiscovery.forceDiscovery().catch(() => {
-          VibeLogger.logInfo(
-            "unity_discovery_fallback_failed",
-            "Unity discovery fallback failed, relying on push notification",
-            { timeout_ms: timeoutMs },
-            void 0,
-            "Waiting for push notification connection"
-          );
-        });
-      }, 100);
     });
   }
   /**
