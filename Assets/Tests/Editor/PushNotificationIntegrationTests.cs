@@ -194,18 +194,14 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public async Task DiscoveryPortRange_IsAppropriate()
+        public async Task DiscoverAndConnect_OnlyUsesPersistedEndpoint()
         {
-            // Test that discovery uses appropriate port range
-            // This test doesn't actually connect but validates the range logic
-            
-            // Discovery should scan ports 20000-21000 (1000 ports)
-            // This is reasonable for avoiding conflicts with system ports
-            // and provides sufficient range for discovery
+            // Per design spec: no port discovery, only uses persisted endpoint
+            // This test validates that no port scanning occurs
             
             bool result = await pushClient.DiscoverAndConnectAsync();
             
-            // Without a server running, this should fail but not crash
+            // Without a persisted endpoint, this should fail immediately without port scanning
             Assert.IsFalse(result);
             Assert.IsFalse(pushClient.IsConnected);
         }

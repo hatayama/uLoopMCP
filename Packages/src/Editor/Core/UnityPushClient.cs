@@ -62,7 +62,9 @@ namespace io.github.hatayama.uLoopMCP
                 ClearPersistedEndpoint();
             }
 
-            return await DiscoverNewEndpointAsync();
+            // 設計書通り: 保存されたエンドポイントがない場合は接続を試行しない
+            Debug.Log("[uLoopMCP] No persisted endpoint found. Waiting for TypeScript server to provide endpoint.");
+            return false;
         }
 
         public async Task<bool> ConnectToEndpointAsync(string endpoint)
@@ -86,17 +88,17 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
 
-            return await ConnectAsync(host, port, isDiscovery: false);
+            return await ConnectAsync(host, port);
         }
 
-        private async Task<bool> ConnectAsync(string host, int port, bool isDiscovery = false)
+        private async Task<bool> ConnectAsync(string host, int port)
         {
             if (isDisposed)
             {
                 return false;
             }
 
-            await DisconnectAsync(isDiscovery);
+            await DisconnectAsync();
 
             tcpClient = new TcpClient();
             
@@ -109,11 +111,7 @@ namespace io.github.hatayama.uLoopMCP
                 
                 if (completedTask == timeoutTask || !tcpClient.Connected)
                 {
-                    // Only log timeout for non-discovery attempts
-                    if (!isDiscovery)
-                    {
-                        Debug.LogWarning($"[uLoopMCP] Connection timeout or failed: {host}:{port}");
-                    }
+                    Debug.LogWarning($"[uLoopMCP] Connection timeout or failed: {host}:{port}");
                     return false;
                 }
 
@@ -129,45 +127,18 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                // Only log errors for non-discovery attempts
-                if (!isDiscovery)
+                Debug.LogError($"[uLoopMCP] Connection failed: {ex.Message}");
+                
+                bool handled = await PushNotificationErrorHandler.HandleConnectionFailureAsync(this, ex);
+                if (!handled)
                 {
-                    Debug.LogError($"[uLoopMCP] Connection failed: {ex.Message}");
-                    
-                    bool handled = await PushNotificationErrorHandler.HandleConnectionFailureAsync(this, ex);
-                    if (!handled)
-                    {
-                        OnError?.Invoke(ex);
-                    }
+                    OnError?.Invoke(ex);
                 }
                 
                 return false;
             }
         }
 
-        private async Task<bool> DiscoverNewEndpointAsync()
-        {
-            Debug.Log("[uLoopMCP] Starting TypeScript Push Server discovery...");
-            
-            for (int port = 20000; port <= 21000; port++)
-            {
-                if (cancellationTokenSource.Token.IsCancellationRequested)
-                {
-                    return false;
-                }
-
-                bool success = await ConnectAsync("localhost", port, isDiscovery: true);
-                if (success)
-                {
-                    return true;
-                }
-
-                await Task.Delay(10, cancellationTokenSource.Token);
-            }
-
-            Debug.LogWarning("[uLoopMCP] Failed to discover TypeScript Push Server");
-            return false;
-        }
 
         public async Task SendPushNotificationAsync(PushNotification notification)
         {
@@ -223,9 +194,9 @@ namespace io.github.hatayama.uLoopMCP
             await SendPushNotificationAsync(notification);
         }
 
-        public async Task DisconnectAsync(bool isDiscovery = false)
+        public async Task DisconnectAsync()
         {
-            if (isConnected && !isDisposed && !isDiscovery)
+            if (isConnected && !isDisposed)
             {
                 await SendDisconnectNotificationAsync(new DisconnectReason
                 {
@@ -249,11 +220,7 @@ namespace io.github.hatayama.uLoopMCP
             string endpoint = currentEndpoint;
             currentEndpoint = null;
             
-            // Only trigger disconnect callback for actual disconnections, not discovery attempts
-            if (!isDiscovery)
-            {
-                OnDisconnected?.Invoke(endpoint);
-            }
+            OnDisconnected?.Invoke(endpoint);
         }
 
         public void PersistEndpoint(string endpoint)

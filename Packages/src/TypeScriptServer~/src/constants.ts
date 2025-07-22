@@ -113,12 +113,6 @@ export const ERROR_MESSAGES = {
   INVALID_RESPONSE: 'Invalid response from Unity',
 } as const;
 
-// Polling configuration
-export const POLLING = {
-  INTERVAL_MS: 1000, // Reduced from 3000ms to 1000ms for better responsiveness
-  BUFFER_SECONDS: 15, // Increased for safer Unity startup timing
-  ENABLED: false, // Disabled in favor of Push notification system
-} as const;
 
 // Test timeouts (milliseconds)
 export const TEST_TIMEOUTS = {

@@ -1,5 +1,5 @@
 import * as net from 'net';
-import { UNITY_CONNECTION, POLLING } from './constants.js';
+import { UNITY_CONNECTION } from './constants.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 import { UnityClient } from './unity-client.js';
 
@@ -72,9 +72,10 @@ export class UnityDiscovery {
     void this.unifiedDiscoveryAndConnectionCheck();
 
     // Set up periodic unified discovery and connection checking
+    const DISCOVERY_INTERVAL_MS = 1000; // 1 second discovery interval
     this.discoveryInterval = setInterval(() => {
       void this.unifiedDiscoveryAndConnectionCheck();
-    }, POLLING.INTERVAL_MS);
+    }, DISCOVERY_INTERVAL_MS);
 
     // Track active timer count for debugging
     UnityDiscovery.activeTimerCount++;
@@ -118,7 +119,7 @@ export class UnityDiscovery {
       'Starting unified discovery and connection check cycle',
       {
         unity_connected: this.unityClient.connected,
-        polling_interval_ms: POLLING.INTERVAL_MS,
+        discovery_interval_ms: 1000,
         active_timer_count: UnityDiscovery.activeTimerCount,
       },
       correlationId,
@@ -342,7 +343,7 @@ export class UnityDiscovery {
       isDiscovering: this.isDiscovering,
       activeTimerCount: UnityDiscovery.activeTimerCount,
       isConnected: this.unityClient.connected,
-      intervalMs: POLLING.INTERVAL_MS,
+      intervalMs: 1000, // Discovery interval in ms
       hasSingleton: UnityDiscovery.instance !== null,
     };
   }

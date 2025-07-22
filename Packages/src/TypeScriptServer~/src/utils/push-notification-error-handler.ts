@@ -2,7 +2,7 @@
  * TypeScript Push通知エラーハンドリング
  * 設計書参照: /.kiro/specs/unity-push-notification-system/design.md
  * 関連クラス: UnityPushNotificationReceiveServer.ts, UnityClient.ts
- * 
+ *
  * 責任:
  * - Unity接続失敗時の処理
  * - Push通知受信エラー処理
@@ -10,7 +10,6 @@
  * - 復旧メカニズム
  */
 
-import * as net from 'net';
 import { VibeLogger } from './vibe-logger.js';
 
 export interface ErrorContext {
@@ -28,12 +27,18 @@ export interface RetryOptions {
   backoffMultiplier: number;
 }
 
+interface SocketError extends Error {
+  code?: string;
+  errno?: string;
+  syscall?: string;
+}
+
 export class PushNotificationErrorHandler {
   private static readonly DEFAULT_RETRY_OPTIONS: RetryOptions = {
     maxAttempts: 3,
     baseDelay: 1000,
     maxDelay: 10000,
-    backoffMultiplier: 2
+    backoffMultiplier: 2,
   };
 
   public static handleUnityConnectionFailure(error: Error, context: ErrorContext): void {
@@ -46,10 +51,10 @@ export class PushNotificationErrorHandler {
         endpoint: context.endpoint,
         error_message: error.message,
         error_type: error.constructor.name,
-        timestamp: context.timestamp.toISOString()
+        timestamp: context.timestamp.toISOString(),
       },
       undefined,
-      'Unity connection could not be established - check Unity MCP bridge'
+      'Unity connection could not be established - check Unity MCP bridge',
     );
 
     this.logErrorStatistics(error, context);
@@ -64,10 +69,10 @@ export class PushNotificationErrorHandler {
         clientId: context.clientId,
         error_message: error.message,
         error_type: error.constructor.name,
-        timestamp: context.timestamp.toISOString()
+        timestamp: context.timestamp.toISOString(),
       },
       undefined,
-      'Push notification could not be processed - check message format'
+      'Push notification could not be processed - check message format',
     );
 
     if (this.isJsonParseError(error)) {
@@ -85,10 +90,10 @@ export class PushNotificationErrorHandler {
         operation: context.operation,
         error_message: error.message,
         error_type: error.constructor.name,
-        timestamp: context.timestamp.toISOString()
+        timestamp: context.timestamp.toISOString(),
       },
       undefined,
-      'Push notification server encountered an error'
+      'Push notification server encountered an error',
     );
 
     if (this.isPortConflictError(error)) {
@@ -99,7 +104,7 @@ export class PushNotificationErrorHandler {
   public static async retryWithBackoff<T>(
     operation: () => Promise<T>,
     context: ErrorContext,
-    options: RetryOptions = PushNotificationErrorHandler.DEFAULT_RETRY_OPTIONS
+    options: RetryOptions = PushNotificationErrorHandler.DEFAULT_RETRY_OPTIONS,
   ): Promise<T> {
     let lastError: Error | null = null;
     let delay = options.baseDelay;
@@ -109,7 +114,7 @@ export class PushNotificationErrorHandler {
         return await operation();
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        
+
         if (attempt === options.maxAttempts) {
           break;
         }
@@ -121,10 +126,10 @@ export class PushNotificationErrorHandler {
             operation: context.operation,
             attempt,
             delay,
-            error_message: lastError.message
+            error_message: lastError.message,
           },
           undefined,
-          `Will retry after ${delay}ms delay`
+          `Will retry after ${delay}ms delay`,
         );
 
         await this.delay(delay);
@@ -138,10 +143,10 @@ export class PushNotificationErrorHandler {
       {
         operation: context.operation,
         attempts: options.maxAttempts,
-        final_error: lastError?.message || 'Unknown error'
+        final_error: lastError?.message || 'Unknown error',
       },
       undefined,
-      'Operation failed after all retry attempts'
+      'Operation failed after all retry attempts',
     );
 
     throw lastError;
@@ -151,14 +156,14 @@ export class PushNotificationErrorHandler {
     operation: string,
     error: Error | string,
     clientId?: string,
-    endpoint?: string
+    endpoint?: string,
   ): ErrorContext {
     return {
       operation,
       clientId,
       endpoint,
       error,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   }
 
@@ -169,16 +174,16 @@ export class PushNotificationErrorHandler {
       {
         operation: context.operation,
         clientId: context.clientId,
-        error_message: error.message
+        error_message: error.message,
       },
       undefined,
-      'Unity sent malformed JSON - connection may be unstable'
+      'Unity sent malformed JSON - connection may be unstable',
     );
   }
 
   private static handleSocketError(error: Error, context: ErrorContext): void {
-    const socketError = error as any;
-    
+    const socketError = error as SocketError;
+
     VibeLogger.logWarning(
       'socket_error',
       'Socket connection error',
@@ -187,10 +192,10 @@ export class PushNotificationErrorHandler {
         clientId: context.clientId,
         error_code: socketError.code,
         error_errno: socketError.errno,
-        error_syscall: socketError.syscall
+        error_syscall: socketError.syscall,
       },
       undefined,
-      'Socket connection issue detected - may require reconnection'
+      'Socket connection issue detected - may require reconnection',
     );
   }
 
@@ -200,31 +205,34 @@ export class PushNotificationErrorHandler {
       'Port conflict detected',
       {
         operation: context.operation,
-        error_message: error.message
+        error_message: error.message,
       },
       undefined,
-      'Push notification server port is already in use'
+      'Push notification server port is already in use',
     );
   }
 
   private static isJsonParseError(error: Error): boolean {
-    return error instanceof SyntaxError && 
-           error.message.includes('JSON');
+    return error instanceof SyntaxError && error.message.includes('JSON');
   }
 
   private static isSocketError(error: Error): boolean {
-    const socketError = error as any;
-    return socketError.code !== undefined || 
-           socketError.errno !== undefined || 
-           error.message.includes('socket') ||
-           error.message.includes('ECONNRESET') ||
-           error.message.includes('ECONNREFUSED');
+    const socketError = error as SocketError;
+    return (
+      socketError.code !== undefined ||
+      socketError.errno !== undefined ||
+      error.message.includes('socket') ||
+      error.message.includes('ECONNRESET') ||
+      error.message.includes('ECONNREFUSED')
+    );
   }
 
   private static isPortConflictError(error: Error): boolean {
-    return error.message.includes('EADDRINUSE') ||
-           error.message.includes('address already in use') ||
-           error.message.includes('port') && error.message.includes('use');
+    return (
+      error.message.includes('EADDRINUSE') ||
+      error.message.includes('address already in use') ||
+      (error.message.includes('port') && error.message.includes('use'))
+    );
   }
 
   private static logErrorStatistics(error: Error, context: ErrorContext): void {
@@ -235,7 +243,7 @@ export class PushNotificationErrorHandler {
       is_connection_refused: error.message.includes('ECONNREFUSED'),
       is_network_unreachable: error.message.includes('ENETUNREACH'),
       client_id: context.clientId,
-      endpoint: context.endpoint
+      endpoint: context.endpoint,
     };
 
     VibeLogger.logInfo(
@@ -243,12 +251,12 @@ export class PushNotificationErrorHandler {
       'Error classification and statistics',
       errorStats,
       undefined,
-      'Analyze error patterns for debugging'
+      'Analyze error patterns for debugging',
     );
   }
 
   private static delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 
@@ -257,7 +265,7 @@ export const ConnectionTimeouts = {
   PUSH_NOTIFICATION_TIMEOUT_MS: 2000,
   DISCOVERY_TIMEOUT_MS: 10000,
   RECONNECTION_DELAY_MS: 3000,
-  SERVER_START_TIMEOUT_MS: 10000
+  SERVER_START_TIMEOUT_MS: 10000,
 } as const;
 
 export const RetryDefaults = {
@@ -265,18 +273,18 @@ export const RetryDefaults = {
     maxAttempts: 5,
     baseDelay: 2000,
     maxDelay: 15000,
-    backoffMultiplier: 1.5
+    backoffMultiplier: 1.5,
   },
   PUSH_NOTIFICATION: {
     maxAttempts: 3,
     baseDelay: 1000,
     maxDelay: 5000,
-    backoffMultiplier: 2
+    backoffMultiplier: 2,
   },
   SERVER_START: {
     maxAttempts: 3,
     baseDelay: 5000,
     maxDelay: 15000,
-    backoffMultiplier: 2
-  }
+    backoffMultiplier: 2,
+  },
 } as const;

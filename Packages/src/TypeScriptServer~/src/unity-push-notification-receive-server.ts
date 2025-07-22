@@ -2,7 +2,7 @@
  * TypeScript Push通知受信サーバー
  * 設計書参照: /.kiro/specs/unity-push-notification-system/design.md
  * 関連クラス: UnityPushClient.cs, McpSessionManager.cs
- * 
+ *
  * 責任:
  * - Unity Editorからのpush通知を受信
  * - ランダムポートでTCPサーバーを起動
@@ -12,10 +12,16 @@
 
 import * as net from 'net';
 import { EventEmitter } from 'events';
+import { VibeLogger } from './utils/vibe-logger.js';
 
 export interface PushNotification {
-  type: 'CONNECTION_ESTABLISHED' | 'DOMAIN_RELOAD' | 'DOMAIN_RELOAD_RECOVERED' | 
-        'USER_DISCONNECT' | 'UNITY_SHUTDOWN' | 'TOOLS_CHANGED';
+  type:
+    | 'CONNECTION_ESTABLISHED'
+    | 'DOMAIN_RELOAD'
+    | 'DOMAIN_RELOAD_RECOVERED'
+    | 'USER_DISCONNECT'
+    | 'UNITY_SHUTDOWN'
+    | 'TOOLS_CHANGED';
   timestamp: string;
   payload?: {
     reason?: DisconnectReason;
@@ -56,6 +62,21 @@ export interface UnityConnection {
   lastPingAt?: Date;
 }
 
+export interface UnityConnectedEvent {
+  clientId: string;
+  endpoint: ServerEndpoint;
+}
+
+export interface UnityDisconnectedEvent {
+  clientId: string;
+  reason: DisconnectReason;
+}
+
+export interface PushNotificationEvent {
+  clientId: string;
+  notification: PushNotification;
+}
+
 export class UnityPushNotificationReceiveServer extends EventEmitter {
   private server: net.Server | null = null;
   private connectedUnityClients: Map<string, UnityConnection> = new Map();
@@ -81,8 +102,10 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
       });
 
       this.server.listen(0, 'localhost', () => {
-        if (!this.server) return;
-        
+        if (!this.server) {
+          return;
+        }
+
         const address = this.server.address();
         if (typeof address === 'object' && address !== null) {
           this.port = address.port;
@@ -102,7 +125,7 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
 
     return new Promise((resolve) => {
       this.connectedUnityClients.clear();
-      
+
       this.server!.close(() => {
         this.isRunning = false;
         this.port = 0;
@@ -119,7 +142,7 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
     return {
       host: 'localhost',
       port: this.port,
-      protocol: 'tcp'
+      protocol: 'tcp',
     };
   }
 
@@ -136,7 +159,7 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
     const connection: UnityConnection = {
       socket,
       clientId,
-      connectedAt: new Date()
+      connectedAt: new Date(),
     };
 
     this.connectedUnityClients.set(clientId, connection);
@@ -149,16 +172,27 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
     });
 
     socket.on('close', () => {
-      this.handleDisconnection(clientId, { type: 'USER_DISCONNECT', message: 'Socket closed by client' });
+      this.handleDisconnection(clientId, {
+        type: 'USER_DISCONNECT',
+        message: 'Socket closed by client',
+      });
     });
 
     socket.on('error', (error) => {
-      console.error(`Unity client ${clientId} error:`, error);
-      this.handleDisconnection(clientId, { type: 'USER_DISCONNECT', message: `Socket error: ${error.message}` });
+      VibeLogger.logError('unity_client_error', `Unity client ${clientId} error`, {
+        clientId,
+        error: error.message,
+      });
+      this.handleDisconnection(clientId, {
+        type: 'USER_DISCONNECT',
+        message: `Socket error: ${error.message}`,
+      });
     });
 
     socket.on('timeout', () => {
-      console.warn(`Unity client ${clientId} timed out`);
+      VibeLogger.logWarning('unity_client_timeout', `Unity client ${clientId} timed out`, {
+        clientId,
+      });
       socket.destroy();
     });
 
@@ -172,21 +206,27 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
     }
 
     const lines = data.split('\n');
-    
+
     for (const line of lines) {
-      if (!line.trim()) continue;
-      
+      if (!line.trim()) {
+        continue;
+      }
+
       this.processMessage(clientId, line.trim());
     }
   }
 
   private processMessage(clientId: string, message: string): void {
     let notification: PushNotification;
-    
+
     try {
       notification = JSON.parse(message) as PushNotification;
     } catch (error) {
-      console.error(`Failed to parse push notification from ${clientId}:`, error);
+      VibeLogger.logError(
+        'push_notification_parse_error',
+        `Failed to parse push notification from ${clientId}`,
+        { clientId, error: error instanceof Error ? error.message : String(error) },
+      );
       return;
     }
 
@@ -217,7 +257,11 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
         this.handleToolsChanged(clientId, notification);
         break;
       default:
-        console.warn(`Unknown notification type: ${notification.type}`);
+        VibeLogger.logWarning(
+          'unknown_notification_type',
+          `Unknown notification type: ${String(notification.type)}`,
+          { clientId, notificationType: notification.type },
+        );
     }
 
     this.emit('push_notification', { clientId, notification });
@@ -228,7 +272,7 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
     if (connection) {
       connection.lastPingAt = new Date();
     }
-    
+
     this.emit('connection_established', { clientId, notification });
   }
 
@@ -241,16 +285,16 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
     if (connection) {
       connection.lastPingAt = new Date();
     }
-    
+
     this.emit('domain_reload_recovered', { clientId, notification });
   }
 
   private handleDisconnectNotification(clientId: string, notification: PushNotification): void {
-    const reason = notification.payload?.reason || { 
-      type: 'USER_DISCONNECT', 
-      message: 'Unknown disconnect reason' 
+    const reason = notification.payload?.reason || {
+      type: 'USER_DISCONNECT',
+      message: 'Unknown disconnect reason',
     };
-    
+
     this.handleDisconnection(clientId, reason);
   }
 
@@ -265,7 +309,7 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
     }
 
     this.connectedUnityClients.delete(clientId);
-    
+
     if (!connection.socket.destroyed) {
       connection.socket.destroy();
     }

@@ -14,19 +14,21 @@ graph TB
         VSCode[VSCode<br/>MCP Client]
     end
     
-    subgraph "2. TypeScript Server (MCP Server + Unity TCP Client)"
+    subgraph "2. TypeScript Server (MCP Server + Unity TCP Client + Push Notification Receiver)"
         MCP[UnityMcpServer<br/>MCP Protocol Server<br/>server.ts]
         UC[UnityClient<br/>TypeScript TCP Client<br/>unity-client.ts]
         UCM[UnityConnectionManager<br/>Connection Orchestrator<br/>unity-connection-manager.ts]
-        UD[UnityDiscovery<br/>Unity Port Scanner<br/>unity-discovery.ts]
+        UD[UnityDiscovery<br/>Unity Connection Discovery<br/>unity-discovery.ts]
+        PNS[UnityPushNotificationReceiveServer<br/>TCP Push Server<br/>unity-push-notification-receive-server.ts]
     end
     
-    subgraph "3. Unity Editor (TCP Server)"
+    subgraph "3. Unity Editor (TCP Server + Push Notification Client)"
         MB[McpBridgeServer<br/>TCP Server<br/>McpBridgeServer.cs]
         CMD[Tool System<br/>UnityApiHandler.cs]
         UI[McpEditorWindow<br/>GUI<br/>McpEditorWindow.cs]
         API[Unity APIs]
         SM[McpSessionManager<br/>McpSessionManager.cs]
+        PC[UnityPushClient<br/>Push Notification Client<br/>UnityPushClient.cs]
     end
     
     Claude -.->|MCP Protocol<br/>stdio/TCP| MCP
@@ -34,24 +36,31 @@ graph TB
     VSCode -.->|MCP Protocol<br/>stdio/TCP| MCP
     
     MCP <--> UC
+    MCP --> PNS
     UCM --> UC
     UCM --> UD
-    UD -.->|Port Discovery<br/>Polling| MB
+    UD -.->|Connection Discovery<br/>Environment Variable Port| MB
     UC <-->|TCP/JSON-RPC<br/>UNITY_TCP_PORT| MB
-    UC -->|setClientName| MB
+    UC -->|sendPushNotificationEndpoint| MB
+    MB -->|ReceiveEndpointFromTypeScript| PC
+    PC <-->|TCP Push Notifications<br/>Random Port| PNS
+    PNS -->|Real-time Events| MCP
     MB <--> CMD
     CMD <--> API
     UI --> MB
     UI --> CMD
     MB --> SM
+    PC --> SM
     
     classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef server fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     classDef bridge fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef push fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     
     class Claude,Cursor,VSCode client
     class MCP,MB server
     class UC,UD,UCM bridge
+    class PNS,PC push
 ```
 
 ### Client-Server Relationship Breakdown
@@ -60,20 +69,20 @@ graph TB
 graph LR
     subgraph "Communication Layers"
         LLM[LLM Tools<br/>CLIENT]
-        TS[TypeScript Server<br/>SERVER for MCP<br/>CLIENT for Unity]
-        Unity[Unity Editor<br/>SERVER for TCP]
+        TS[TypeScript Server<br/>SERVER for MCP<br/>CLIENT for Unity Bridge<br/>SERVER for Push Notifications]
+        Unity[Unity Editor<br/>SERVER for TCP Bridge<br/>CLIENT for Push Notifications]
     end
     
     LLM -->|"MCP Protocol<br/>stdio/TCP<br/>Port: Various"| TS
-    TS -->|"TCP/JSON-RPC<br/>Port: 8700-9100"| Unity
+    TS -->|"TCP/JSON-RPC<br/>Port: UNITY_TCP_PORT"| Unity
+    Unity -->|"TCP Push Notifications<br/>Port: Random"| TS
     
     classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef server fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     classDef hybrid fill:#fff3e0,stroke:#e65100,stroke-width:2px
     
     class LLM client
-    class Unity server
-    class TS hybrid
+    class Unity,TS hybrid
 ```
 
 ### Protocol and Communication Details
@@ -83,13 +92,28 @@ sequenceDiagram
     participant LLM as LLM Tool<br/>(CLIENT)
     participant TS as TypeScript Server<br/>(MCP SERVER)
     participant UC as UnityClient<br/>(TypeScript TCP CLIENT)<br/>unity-client.ts
+    participant PNS as PushNotificationReceiveServer<br/>(TypeScript TCP SERVER)<br/>unity-push-notification-receive-server.ts
     participant Unity as Unity Editor<br/>(TCP SERVER)<br/>McpBridgeServer.cs
+    participant PC as UnityPushClient<br/>(Unity TCP CLIENT)<br/>UnityPushClient.cs
     
-    Note over LLM, Unity: 1. MCP Protocol Layer (stdio/TCP)
+    Note over LLM, PC: 1. System Initialization
     LLM->>TS: MCP initialize request
+    TS->>TS: Start Push Notification Server
+    PNS->>PNS: Start on random port
+    TS->>UC: Initialize Unity Bridge connection
+    UC->>Unity: Connect to UNITY_TCP_PORT
+    UC->>Unity: Send Push Server endpoint info
+    Unity->>PC: Receive endpoint from TypeScript
+    PC->>PNS: Connect to Push Server
     TS->>LLM: MCP initialize response
     
-    Note over LLM, Unity: 2. TCP Protocol Layer (JSON-RPC)
+    Note over LLM, PC: 2. Real-time Push Notifications
+    Unity->>PC: Send push notification (DOMAIN_RELOAD/TOOLS_CHANGED/etc)
+    PC->>PNS: TCP Push message
+    PNS->>TS: Process notification event
+    TS->>LLM: MCP tools/list_changed notification
+    
+    Note over LLM, PC: 3. Tool Execution (Request-Response)
     LLM->>TS: MCP tools/call request
     TS->>UC: Parse and forward
     UC->>Unity: TCP JSON-RPC request
@@ -97,11 +121,13 @@ sequenceDiagram
     UC->>TS: Parse and forward
     TS->>LLM: MCP tools/call response
     
-    Note over LLM, Unity: Client-Server Roles:
-    Note over LLM: CLIENT: Initiates requests
-    Note over TS: SERVER: Serves MCP protocol
-    Note over UC: TypeScript TCP CLIENT: Connects to Unity
-    Note over Unity: SERVER: Accepts TCP connections
+    Note over LLM, PC: Communication Patterns:
+    Note over LLM: CLIENT: Initiates MCP requests
+    Note over TS: SERVER: Serves MCP + Push notifications
+    Note over UC: CLIENT: Connects to Unity Bridge
+    Note over Unity: SERVER: Accepts Bridge connections
+    Note over PC: CLIENT: Connects to Push server
+    Note over PNS: SERVER: Receives Push notifications
 ```
 
 ### Communication Protocol Summary
@@ -109,8 +135,9 @@ sequenceDiagram
 | Component | Role | Protocol | Port | Connection Type |
 |-----------|------|----------|------|----------------|
 | **LLM Tools** (Claude, Cursor, VSCode) | **CLIENT** | MCP Protocol | stdio/Various | Initiates MCP requests |
-| **TypeScript Server** | **SERVER** (for MCP)<br/>**CLIENT** (for Unity) | MCP ↔ TCP/JSON-RPC | stdio ↔ 8700-9100 | Bridge between protocols |
-| **Unity Editor** | **SERVER** | TCP/JSON-RPC | 8700-9100 | Accepts TCP connections |
+| **TypeScript Server** | **SERVER** (for MCP & Push)<br/>**CLIENT** (for Unity Bridge) | MCP ↔ TCP/JSON-RPC<br/>+ TCP Push Server | stdio ↔ UNITY_TCP_PORT<br/>+ Random Push Port | Bridge + Push notification hub |
+| **Unity Editor Bridge** | **SERVER** | TCP/JSON-RPC | UNITY_TCP_PORT | Accepts Bridge connections |
+| **Unity Push Client** | **CLIENT** | TCP Push Notifications | Random Port | Sends real-time notifications |
 
 ### Communication Flow Details
 
@@ -120,19 +147,28 @@ sequenceDiagram
 - **Data Format**: JSON-RPC 2.0 with MCP extensions
 - **Connection**: LLM tools act as MCP clients
 - **Lifecycle**: Managed by LLM tool (Claude, Cursor, VSCode)
+- **Push Notifications**: TypeScript server sends `tools/list_changed` notifications
 
-#### Layer 2: TypeScript Server ↔ Unity Editor (TCP Protocol)
-- **Protocol**: Custom TCP with JSON-RPC 2.0
-- **Transport**: TCP Socket
-- **Ports**: UNITY_TCP_PORT environment variable specified port (auto-discovery)
-- **Connection**: TypeScript server acts as TCP client
-- **Lifecycle**: Managed by UnityConnectionManager with automatic reconnection
+#### Layer 2: TypeScript Server ↔ Unity Editor (Dual TCP Protocol)
+- **Bridge Protocol**: Custom TCP with JSON-RPC 2.0 (Request-Response)
+- **Push Protocol**: Custom TCP with JSON messages (Real-time notifications)
+- **Transport**: Dual TCP Sockets
+- **Ports**: UNITY_TCP_PORT (Bridge) + Random Port (Push notifications)
+- **Connection**: TypeScript server acts as TCP client (Bridge) + TCP server (Push)
+- **Lifecycle**: Managed by UnityConnectionManager with automatic reconnection + Push server lifecycle
+
+#### Layer 3: Unity Editor ↔ TypeScript Server (Push Notifications)
+- **Protocol**: Custom TCP with JSON notification messages
+- **Transport**: TCP Socket from Unity to TypeScript
+- **Connection**: Unity acts as TCP client for push notifications
+- **Lifecycle**: Managed by UnityPushClient with endpoint persistence
 
 #### Key Architectural Points:
-1. **TypeScript Server serves as a Protocol Bridge**: Converts MCP protocol to TCP/JSON-RPC
-2. **Unity Editor is the final TCP Server**: Processes tool requests and executes Unity operations
-3. **LLM Tools are pure MCP Clients**: Send tool requests through standard MCP protocol
-4. **Automatic Discovery**: TypeScript server discovers Unity instances through port scanning
+1. **TypeScript Server serves as a Protocol Bridge + Push Hub**: Converts MCP protocol to TCP/JSON-RPC and manages real-time notifications
+2. **Unity Editor is the Bridge Server + Push Client**: Processes tool requests and sends real-time notifications
+3. **LLM Tools are pure MCP Clients**: Receive both responses and push notifications through standard MCP protocol
+4. **Dual Connection Architecture**: Separate channels for request-response (Bridge) and real-time notifications (Push)
+5. **Endpoint Discovery**: TypeScript server provides push server endpoint to Unity via bridge connection
 
 ### TCP/JSON-RPC Communication Specification
 
@@ -196,62 +232,108 @@ Content-Length: 120
 
 #### Connection Lifecycle
 
-1. **Initial Connection**
-   - TypeScript UnityClient connects to Unity McpBridgeServer
-   - TCP socket established on localhost:8700
-   - Connection test with ping command
+1. **System Initialization**
+   - LLM Tool sends MCP initialize request to TypeScript Server
+   - TypeScript Server starts Push Notification Receive Server on random port
+   - TypeScript UnityClient connects to Unity McpBridgeServer on UNITY_TCP_PORT
 
-2. **Client Registration**
-   - `set-client-name` command sent immediately after connection
+2. **Push Notification Setup**
+   - TypeScript sends push server endpoint info to Unity via bridge connection
+   - Unity receives endpoint via `sendPushNotificationEndpoint` command
+   - Unity UnityPushClient connects to TypeScript Push Notification Server
+   - Push notification channel established for real-time communication
+
+3. **Client Registration**
+   - `set-client-name` command sent via bridge connection
    - Client identity stored in Unity session manager
    - UI updated to show connected client
+   - `CONNECTION_ESTABLISHED` push notification sent to TypeScript
 
-3. **Command Processing**
-   - JSON-RPC requests processed through UnityApiHandler
-   - Security validation via McpSecurityChecker
+4. **Dual-Channel Communication**
+   - **Bridge Channel**: JSON-RPC requests processed through UnityApiHandler
+   - **Push Channel**: Real-time notifications sent through UnityPushClient
+   - Security validation via McpSecurityChecker for bridge commands
    - Tool execution through UnityCommandRegistry
 
-4. **Connection Monitoring**
-   - Automatic reconnection on connection loss
+5. **Connection Monitoring & Recovery**
+   - Automatic reconnection on bridge connection loss
+   - Push notification endpoint persistence across domain reloads
    - Periodic health checks via ping commands
    - SafeTimer cleanup on process termination
+   - `DOMAIN_RELOAD` and `DOMAIN_RELOAD_RECOVERED` notifications for state tracking
 
 #### Push Notifications
 
-Unity can send real-time push notifications to all connected TypeScript clients when tools or system state changes occur:
+Unity sends real-time push notifications via dedicated TCP connection to TypeScript Push Notification Receive Server:
 
-**Notification Format:**
+**Push Notification Architecture:**
+1. **TypeScript Push Server**: `UnityPushNotificationReceiveServer` runs on random port
+2. **Unity Push Client**: `UnityPushClient` connects to TypeScript push server
+3. **Endpoint Exchange**: Unity receives push server endpoint via bridge connection
+4. **Real-time Communication**: Separate TCP channel for instant notifications
+
+**Notification Message Format:**
 ```json
 {
-  "jsonrpc": "2.0",
-  "method": "notifications/tools/list_changed",
-  "params": {
-    "timestamp": "2025-07-16T12:34:56.789Z",
-    "message": "Unity tools have been updated"
+  "type": "CONNECTION_ESTABLISHED",
+  "timestamp": "2025-07-22T12:34:56.789Z",
+  "payload": {
+    "clientId": "unity_12345",
+    "connectionTime": "2025-07-22T12:34:56.789Z"
   }
 }
 ```
 
-**Notification Triggers:**
-- Assembly reloads/recompilation
-- Custom tool registration
-- Manual tool change notifications via `TriggerToolChangeNotification()`
+**Notification Types:**
+- **CONNECTION_ESTABLISHED**: Unity connects to push server
+- **DOMAIN_RELOAD**: Unity domain reload started
+- **DOMAIN_RELOAD_RECOVERED**: Unity recovered from domain reload
+- **TOOLS_CHANGED**: Unity tools list changed
+- **USER_DISCONNECT**: Unity disconnected from push server
+- **UNITY_SHUTDOWN**: Unity Editor shutting down
 
-**Broadcast Mechanism:**
-- Sent to all connected clients simultaneously
-- Uses same TCP/JSON-RPC communication channel
-- Message terminated with newline character (`\n`)
+**Push Notification Triggers:**
+- Assembly reloads/recompilation → `DOMAIN_RELOAD` / `DOMAIN_RELOAD_RECOVERED`
+- Custom tool registration → `TOOLS_CHANGED`
+- Manual tool change notifications → `TOOLS_CHANGED`
+- Connection events → `CONNECTION_ESTABLISHED` / `USER_DISCONNECT`
+- Unity shutdown → `UNITY_SHUTDOWN`
 
-**TypeScript Client Reception:**
+**Real-time Communication Flow:**
+1. Unity → UnityPushClient → TCP message → TypeScript Push Server
+2. TypeScript Push Server → UnityMcpServer → MCP `tools/list_changed` notification
+3. MCP Server → LLM Client via stdio
+
+**TypeScript Push Server Reception:**
 ```typescript
-// TypeScript clients receive notifications via:
-socket.on('data', (buffer: Buffer) => {
-  const message = buffer.toString('utf8');
-  if (message.includes('"method":"notifications/tools/list_changed"')) {
-    // Handle tool list update
-    this.refreshToolList();
+// TypeScript Push Server processes notifications:
+private handlePushNotification(clientId: string, notification: PushNotification): void {
+  switch (notification.type) {
+    case 'TOOLS_CHANGED':
+      this.emit('tools_changed', { clientId, notification });
+      break;
+    case 'DOMAIN_RELOAD_RECOVERED':
+      this.emit('domain_reload_recovered', { clientId, notification });
+      break;
   }
-});
+}
+```
+
+**Unity Push Client Implementation:**
+```csharp
+// Unity sends push notifications:
+public async Task SendPushNotification(PushNotificationType type, object payload = null)
+{
+  var notification = new PushNotification
+  {
+    Type = type,
+    Timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+    Payload = payload
+  };
+  
+  string message = JsonConvert.SerializeObject(notification);
+  await WriteAsync(message + "\n");
+}
 ```
 
 #### Error Handling
@@ -669,6 +751,7 @@ This is the heart of the command processing logic.
 ### `/Core`
 Contains core infrastructure components for session and state management.
 - **`McpSessionManager.cs`**: Singleton session manager implemented as `ScriptableSingleton` that maintains client connection state, session metadata, and survives domain reloads. Provides centralized client identification and connection tracking.
+- **`UnityPushClient.cs`**: Push notification TCP client implemented as `ScriptableSingleton` that manages real-time communication with TypeScript Push Notification Receive Server. Handles domain reload persistence, endpoint management, and automatic reconnection for push notifications.
 
 ### `/UI`
 Contains the code for the user-facing Editor Window, implemented using the **MVP (Model-View-Presenter) + Helper Pattern**.
@@ -1067,14 +1150,16 @@ sequenceDiagram
 
 ## 6. TypeScript Server Overview
 
-The TypeScript server located in `Packages/src/TypeScriptServer~` acts as the intermediary between MCP-compatible clients (like Cursor, Claude, or VSCode) and the Unity Editor. It runs as a Node.js process, communicates with clients via standard I/O (stdio) using the Model Context Protocol (MCP), and relays tool requests to the Unity Editor via TCP socket connections.
+The TypeScript server located in `Packages/src/TypeScriptServer~` acts as the intermediary between MCP-compatible clients (like Cursor, Claude, or VSCode) and the Unity Editor. It runs as a Node.js process, communicates with clients via standard I/O (stdio) using the Model Context Protocol (MCP), and manages dual TCP connections with Unity Editor for both request-response and real-time notifications.
 
 ### Primary Responsibilities
 1. **MCP Server Implementation**: Implements the MCP server specification using `@modelcontextprotocol/sdk` to handle requests from clients (e.g., `tools/list`, `tools/call`)
 2. **Dynamic Tool Management**: Fetches available tools from Unity Editor and dynamically creates corresponding "tools" to expose to MCP clients
-3. **Unity Communication**: Manages persistent TCP connections to the `McpBridgeServer` running inside Unity Editor
-4. **Tool Forwarding**: Translates `tools/call` requests from MCP clients into JSON-RPC requests and sends them to Unity server for execution
-5. **Notification Handling**: Listens for `notifications/tools/list_changed` events from Unity to automatically refresh toolset when tools are added or removed
+3. **Unity Bridge Communication**: Manages persistent TCP connections to the `McpBridgeServer` running inside Unity Editor for request-response operations
+4. **Push Notification Server**: Operates TCP server to receive real-time notifications from Unity Editor via dedicated push channel
+5. **Tool Forwarding**: Translates `tools/call` requests from MCP clients into JSON-RPC requests and sends them to Unity server for execution
+6. **Real-time Notification Processing**: Receives push notifications from Unity (domain reloads, tools changes, etc.) and forwards them as MCP `tools/list_changed` notifications to clients
+7. **Endpoint Management**: Provides push notification server endpoint information to Unity via bridge connection for establishing push channel
 
 ## 7. TypeScript Server Architecture Diagrams
 
@@ -1095,15 +1180,17 @@ graph TB
         UTM[UnityToolManager<br/>Dynamic Tool Management<br/>unity-tool-manager.ts]
         MCC[McpClientCompatibility<br/>Client-Specific Behavior<br/>mcp-client-compatibility.ts]
         UEH[UnityEventHandler<br/>Event Processing<br/>unity-event-handler.ts]
-        UC[UnityClient<br/>TCP Communication<br/>unity-client.ts]
+        UC[UnityClient<br/>TCP Bridge Communication<br/>unity-client.ts]
         UD[UnityDiscovery<br/>Unity Instance Discovery<br/>unity-discovery.ts]
         CM[ConnectionManager<br/>Connection State<br/>connection-manager.ts]
         MH[MessageHandler<br/>JSON-RPC Processing<br/>message-handler.ts]
+        PNS[UnityPushNotificationReceiveServer<br/>Push Notification TCP Server<br/>unity-push-notification-receive-server.ts]
         Tools[DynamicUnityCommandTool<br/>Tool Instances<br/>dynamic-unity-command-tool.ts]
     end
     
     subgraph "Unity Editor"
         Bridge[McpBridgeServer<br/>TCP Server<br/>McpBridgeServer.cs]
+        PushClient[UnityPushClient<br/>Push Notification Client<br/>UnityPushClient.cs]
     end
     
     Claude -.->|MCP Protocol<br/>stdio| MCP
@@ -1115,6 +1202,7 @@ graph TB
     MCP --> UTM
     MCP --> MCC
     MCP --> UEH
+    MCP --> PNS
     UCM --> UC
     UCM --> UD
     UTM --> UC
@@ -1126,6 +1214,9 @@ graph TB
     UC --> UD
     UD --> UC
     UC -->|TCP/JSON-RPC<br/>UNITY_TCP_PORT| Bridge
+    PushClient -->|TCP Push Notifications<br/>Random Port| PNS
+    PNS -->|Real-time Events| MCP
+    Bridge -->|Endpoint Info| PushClient
 ```
 
 ### 7.2. TypeScript Class Relationships
@@ -1139,11 +1230,13 @@ classDiagram
         -toolManager: UnityToolManager
         -clientCompatibility: McpClientCompatibility
         -eventHandler: UnityEventHandler
+        -pushNotificationServer: UnityPushNotificationReceiveServer
         +start()
         +setupHandlers()
         +handleInitialize()
         +handleListTools()
         +handleCallTool()
+        +setupPushNotificationHandlers()
     }
 
     class UnityConnectionManager {
@@ -1269,6 +1362,21 @@ classDiagram
         -generateInputSchema()
     }
 
+    class UnityPushNotificationReceiveServer {
+        -server: net.Server
+        -connectedUnityClients: Map
+        -port: number
+        -isRunning: boolean
+        +start()
+        +stop()
+        +getEndpoint()
+        +isServerRunning()
+        +getConnectedClientsCount()
+        -handleUnityConnection()
+        -handlePushNotification()
+        -handleDisconnection()
+    }
+
     class ToolContext {
         +unityClient: UnityClient
         +clientName: string
@@ -1280,6 +1388,7 @@ classDiagram
     UnityMcpServer "1" --> "1" McpClientCompatibility : handles
     UnityMcpServer "1" --> "1" UnityEventHandler : processes
     UnityMcpServer "1" --> "1" UnityClient : communicates
+    UnityMcpServer "1" --> "1" UnityPushNotificationReceiveServer : manages
     UnityConnectionManager "1" --> "1" UnityClient : controls
     UnityConnectionManager "1" --> "1" UnityDiscovery : uses
     UnityToolManager "1" --> "1" UnityClient : executes
@@ -1296,7 +1405,47 @@ classDiagram
     ToolContext --> UnityClient : references
 ```
 
-### 7.3. TypeScript Tool Execution Sequence
+### 7.3. Push Notification System Sequence
+
+```mermaid
+sequenceDiagram
+    participant MCP as MCP Client<br/>(Claude/Cursor)
+    participant US as UnityMcpServer<br/>server.ts
+    participant PNS as UnityPushNotificationReceiveServer<br/>unity-push-notification-receive-server.ts
+    participant UC as UnityClient<br/>unity-client.ts
+    participant Unity as Unity Editor<br/>McpBridgeServer.cs
+    participant PC as UnityPushClient<br/>UnityPushClient.cs
+    
+    Note over MCP, PC: 1. System Initialization & Push Setup
+    MCP->>US: initialize request
+    US->>PNS: start() - Start push server on random port
+    US->>UC: Initialize bridge connection
+    UC->>Unity: Connect to UNITY_TCP_PORT
+    UC->>Unity: sendPushNotificationEndpoint(endpoint)
+    Unity->>PC: ReceiveEndpointFromTypeScript(endpoint)
+    PC->>PNS: Connect to push server
+    PNS->>US: emit('unity_connected')
+    US->>MCP: initialize response
+    
+    Note over MCP, PC: 2. Real-time Push Notifications
+    Unity->>PC: SendPushNotification(TOOLS_CHANGED)
+    PC->>PNS: TCP push message
+    PNS->>US: emit('tools_changed')
+    US->>US: refreshDynamicToolsSafe()
+    US->>MCP: tools/list_changed notification
+    
+    Note over MCP, PC: 3. Domain Reload Handling
+    Unity->>PC: SendPushNotification(DOMAIN_RELOAD)
+    PC->>PNS: TCP push message
+    PNS->>US: emit('domain_reload_start')
+    Unity->>PC: SendPushNotification(DOMAIN_RELOAD_RECOVERED)
+    PC->>PNS: TCP push message
+    PNS->>US: emit('domain_reload_recovered')
+    US->>US: refreshDynamicToolsSafe()
+    US->>MCP: tools/list_changed notification
+```
+
+### 7.4. TypeScript Tool Execution Sequence
 
 ```mermaid
 sequenceDiagram

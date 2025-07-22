@@ -1,6 +1,6 @@
 import { UnityClient } from './unity-client.js';
 import { UnityDiscovery } from './unity-discovery.js';
-import { ENVIRONMENT, POLLING } from './constants.js';
+import { ENVIRONMENT } from './constants.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 
 /**
@@ -45,45 +45,101 @@ export class UnityConnectionManager {
   }
 
   /**
-   * Wait for Unity connection with timeout
+   * Wait for Unity connection with timeout using push notification system
    */
   async waitForUnityConnectionWithTimeout(timeoutMs: number): Promise<void> {
     return new Promise((resolve, reject) => {
+      // Check if already connected
+      if (this.unityClient.connected) {
+        resolve();
+        return;
+      }
+
       const timeout = setTimeout(() => {
         reject(new Error(`Unity connection timeout after ${timeoutMs}ms`));
       }, timeoutMs);
 
-      const checkConnection = (): void => {
+      VibeLogger.logInfo(
+        'unity_connection_wait_push_mode',
+        'Waiting for Unity connection in push notification mode',
+        { timeout_ms: timeoutMs, current_connected: this.unityClient.connected },
+        undefined,
+        'Push notification system - waiting for Unity connection to establish',
+      );
+
+      // Set up fallback connection monitoring for sync initialization
+      let fallbackCheckCount = 0;
+      const connectionCheckInterval = setInterval(() => {
+        fallbackCheckCount++;
+        
         if (this.unityClient.connected) {
           clearTimeout(timeout);
+          clearInterval(connectionCheckInterval);
+
+          if (fallbackCheckCount === 1) {
+            // Connection was immediately available - likely from push notification
+            VibeLogger.logInfo(
+              'unity_connection_established_immediate',
+              'Unity connection established immediately (push notification)',
+              { 
+                timeout_ms: timeoutMs,
+                check_count: fallbackCheckCount
+              },
+              undefined,
+              'Unity connection confirmed via push notification system',
+            );
+          } else {
+            // Connection was detected via fallback polling
+            VibeLogger.logWarning(
+              'unity_connection_established_fallback',
+              'Unity connection established via fallback polling',
+              { 
+                timeout_ms: timeoutMs,
+                check_count: fallbackCheckCount,
+                elapsed_approx_ms: fallbackCheckCount * 250
+              },
+              undefined,
+              'Push notification may have failed - connection detected via fallback',
+            );
+          }
+
           resolve();
-          return;
+        } else if (fallbackCheckCount % 4 === 0) {
+          // Log every 1 second (4 * 250ms) that we're still waiting
+          VibeLogger.logInfo(
+            'unity_connection_fallback_waiting',
+            'Still waiting for Unity connection (fallback polling)',
+            { 
+              timeout_ms: timeoutMs,
+              check_count: fallbackCheckCount,
+              elapsed_approx_ms: fallbackCheckCount * 250
+            },
+            undefined,
+            'Fallback polling active - waiting for Unity connection',
+          );
         }
+      }, 250); // Fallback check every 250ms
 
-        // If connection manager is already initialized, just wait for existing discovery
-        if (this.isInitialized) {
-          // Connection manager is already running, just wait for connection
-          const connectionInterval = setInterval(() => {
-            if (this.unityClient.connected) {
-              clearTimeout(timeout);
-              clearInterval(connectionInterval);
-              resolve();
-            }
-          }, 100);
-          return;
-        }
-
-        // Fallback: Initialize connection manager if not already done
+      // Initialize connection manager if not already done
+      if (!this.isInitialized) {
         this.initialize(() => {
-          return new Promise<void>((resolveCallback) => {
-            clearTimeout(timeout);
-            resolve();
-            resolveCallback();
-          });
+          return Promise.resolve();
         });
-      };
+      }
 
-      void checkConnection();
+      // Try force discovery as fallback, but don't wait for it
+      setTimeout(() => {
+        void this.unityDiscovery.forceDiscovery().catch(() => {
+          // Discovery failed - connection may come via push notification instead
+          VibeLogger.logInfo(
+            'unity_discovery_fallback_failed',
+            'Unity discovery fallback failed, relying on push notification',
+            { timeout_ms: timeoutMs },
+            undefined,
+            'Waiting for push notification connection',
+          );
+        });
+      }, 100);
     });
   }
 
@@ -115,7 +171,7 @@ export class UnityConnectionManager {
   }
 
   /**
-   * Initialize connection manager
+   * Initialize connection manager with push notification system
    */
   initialize(onConnectionEstablished?: () => Promise<void>): void {
     if (this.isInitialized) {
@@ -124,57 +180,27 @@ export class UnityConnectionManager {
 
     this.isInitialized = true;
 
-    // Check if polling is disabled
-    if (!POLLING.ENABLED) {
-      VibeLogger.logInfo(
-        'polling_disabled',
-        'Unity polling disabled - Push notification system active',
-        { polling_enabled: POLLING.ENABLED },
-        undefined,
-        'Legacy polling system disabled in favor of Push notifications'
-      );
-      
-      // Still set up callbacks for potential fallback, but don't start discovery
-      this.unityDiscovery.setOnDiscoveredCallback(() => {
-        void this.handleUnityDiscovered(onConnectionEstablished);
-      });
-
-      this.unityDiscovery.setOnConnectionLostCallback(() => {
-        if (this.isDevelopment) {
-          // Connection lost detected - ready for reconnection
-        }
-      });
-      
-      return;
-    }
-
-    // Legacy polling mode (fallback)
-    VibeLogger.logWarning(
-      'polling_fallback_active',
-      'Using legacy polling mode as fallback',
-      { polling_enabled: POLLING.ENABLED },
+    VibeLogger.logInfo(
+      'push_notification_system_active',
+      'Unity connection manager initialized with push notification system',
+      {},
       undefined,
-      'Push notification system may not be available - using polling fallback'
+      'Push notification system active - no legacy polling',
     );
 
-    // Setup discovery callback
+    // Setup discovery callbacks for push notification system
     this.unityDiscovery.setOnDiscoveredCallback(() => {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       void this.handleUnityDiscovered(onConnectionEstablished);
     });
 
-    // Setup connection lost callback for connection recovery
     this.unityDiscovery.setOnConnectionLostCallback(() => {
       if (this.isDevelopment) {
         // Connection lost detected - ready for reconnection
       }
     });
 
-    // Start Unity discovery immediately
-    this.unityDiscovery.start();
-
     if (this.isDevelopment) {
-      // Connection manager initialized with polling
+      // Connection manager initialized with push notification system
     }
   }
 

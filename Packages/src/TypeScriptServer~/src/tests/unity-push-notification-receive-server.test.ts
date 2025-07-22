@@ -12,11 +12,17 @@ jest.mock('../utils/vibe-logger.js', () => ({
     logInfo: jest.fn(),
     logError: jest.fn(),
     logWarn: jest.fn(),
-    logWarning: jest.fn()
-  }
+    logWarning: jest.fn(),
+  },
 }));
 
-import { UnityPushNotificationReceiveServer, PushNotification } from '../unity-push-notification-receive-server.js';
+import {
+  UnityPushNotificationReceiveServer,
+  PushNotification,
+  UnityConnectedEvent,
+  UnityDisconnectedEvent,
+  PushNotificationEvent,
+} from '../unity-push-notification-receive-server.js';
 
 describe('UnityPushNotificationReceiveServer', () => {
   let server: UnityPushNotificationReceiveServer;
@@ -34,7 +40,7 @@ describe('UnityPushNotificationReceiveServer', () => {
   describe('Server Lifecycle', () => {
     it('should start server on random port', async () => {
       const port = await server.start();
-      
+
       expect(port).toBeGreaterThan(0);
       expect(port).toBeLessThan(65536);
       expect(server.isServerRunning()).toBe(true);
@@ -43,21 +49,21 @@ describe('UnityPushNotificationReceiveServer', () => {
     it('should return same port if already running', async () => {
       const port1 = await server.start();
       const port2 = await server.start();
-      
+
       expect(port1).toBe(port2);
     });
 
     it('should stop server gracefully', async () => {
       await server.start();
       await server.stop();
-      
+
       expect(server.isServerRunning()).toBe(false);
     });
 
     it('should provide server endpoint', async () => {
       const port = await server.start();
       const endpoint = server.getEndpoint();
-      
+
       expect(endpoint.host).toBe('localhost');
       expect(endpoint.port).toBe(port);
       expect(endpoint.protocol).toBe('tcp');
@@ -78,7 +84,7 @@ describe('UnityPushNotificationReceiveServer', () => {
 
     it('should handle Unity connection', async () => {
       const port = await server.start();
-      let connectionEvent: any = null;
+      let connectionEvent: UnityConnectedEvent | null = null;
 
       server.on('unity_connected', (event) => {
         connectionEvent = event;
@@ -91,10 +97,10 @@ describe('UnityPushNotificationReceiveServer', () => {
       });
 
       // Wait for connection event
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(connectionEvent).not.toBeNull();
-      expect(connectionEvent.clientId).toBeDefined();
+      expect(connectionEvent!.clientId).toBeDefined();
       expect(server.getConnectedClientsCount()).toBe(1);
 
       client.destroy();
@@ -102,7 +108,7 @@ describe('UnityPushNotificationReceiveServer', () => {
 
     it('should handle client disconnection', async () => {
       const port = await server.start();
-      let disconnectionEvent: any = null;
+      let disconnectionEvent: UnityDisconnectedEvent | null = null;
 
       server.on('unity_disconnected', (event) => {
         disconnectionEvent = event;
@@ -114,12 +120,12 @@ describe('UnityPushNotificationReceiveServer', () => {
         client.connect(port, 'localhost', resolve);
       });
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       client.destroy();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(disconnectionEvent).not.toBeNull();
-      expect(disconnectionEvent.clientId).toBeDefined();
+      expect(disconnectionEvent!.clientId).toBeDefined();
       expect(server.getConnectedClientsCount()).toBe(0);
     });
   });
@@ -127,7 +133,7 @@ describe('UnityPushNotificationReceiveServer', () => {
   describe('Push Notification Processing', () => {
     it('should process CONNECTION_ESTABLISHED notification', async () => {
       const port = await server.start();
-      let notificationEvent: any = null;
+      let notificationEvent: PushNotificationEvent | null = null;
 
       server.on('connection_established', (event) => {
         notificationEvent = event;
@@ -138,28 +144,28 @@ describe('UnityPushNotificationReceiveServer', () => {
         client.connect(port, 'localhost', resolve);
       });
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       const notification: PushNotification = {
         type: 'CONNECTION_ESTABLISHED',
         timestamp: new Date().toISOString(),
         payload: {
-          endpoint: 'localhost:8700'
-        }
+          endpoint: 'localhost:8700',
+        },
       };
 
       client.write(JSON.stringify(notification) + '\n');
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(notificationEvent).not.toBeNull();
-      expect(notificationEvent.notification.type).toBe('CONNECTION_ESTABLISHED');
+      expect(notificationEvent!.notification.type).toBe('CONNECTION_ESTABLISHED');
 
       client.destroy();
     });
 
     it('should process DOMAIN_RELOAD notification', async () => {
       const port = await server.start();
-      let notificationEvent: any = null;
+      let notificationEvent: PushNotificationEvent | null = null;
 
       server.on('domain_reload_start', (event) => {
         notificationEvent = event;
@@ -170,7 +176,7 @@ describe('UnityPushNotificationReceiveServer', () => {
         client.connect(port, 'localhost', resolve);
       });
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       const notification: PushNotification = {
         type: 'DOMAIN_RELOAD',
@@ -178,16 +184,16 @@ describe('UnityPushNotificationReceiveServer', () => {
         payload: {
           reason: {
             type: 'DOMAIN_RELOAD',
-            message: 'Unity domain reload initiated'
-          }
-        }
+            message: 'Unity domain reload initiated',
+          },
+        },
       };
 
       client.write(JSON.stringify(notification) + '\n');
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(notificationEvent).not.toBeNull();
-      expect(notificationEvent.notification.type).toBe('DOMAIN_RELOAD');
+      expect(notificationEvent!.notification.type).toBe('DOMAIN_RELOAD');
 
       client.destroy();
     });
@@ -200,11 +206,11 @@ describe('UnityPushNotificationReceiveServer', () => {
         client.connect(port, 'localhost', resolve);
       });
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Send malformed JSON
       client.write('{ invalid json }\n');
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Server should still be running
       expect(server.isServerRunning()).toBe(true);
@@ -225,20 +231,20 @@ describe('UnityPushNotificationReceiveServer', () => {
         client.connect(port, 'localhost', resolve);
       });
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       const notification1: PushNotification = {
         type: 'CONNECTION_ESTABLISHED',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
 
       const notification2: PushNotification = {
         type: 'TOOLS_CHANGED',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
 
       client.write(JSON.stringify(notification1) + '\n' + JSON.stringify(notification2) + '\n');
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       expect(notifications.length).toBe(2);
 
@@ -274,12 +280,12 @@ describe('UnityPushNotificationReceiveServer', () => {
         clients.push(client);
       }
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(server.getConnectedClientsCount()).toBe(5);
 
       // Cleanup
-      clients.forEach(client => client.destroy());
+      clients.forEach((client) => client.destroy());
     });
   });
 });

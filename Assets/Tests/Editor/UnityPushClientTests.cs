@@ -131,10 +131,10 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test]
-        public async Task DiscoverAndConnectAsync_WithoutTypeScriptServer_EventuallyReturnsFalse()
+        public async Task DiscoverAndConnectAsync_WithoutPersistedEndpoint_ReturnsFalseImmediately()
         {
-            // This test will attempt discovery but should fail since no server is running
-            // It should complete within reasonable time due to port range limitation
+            // As per design spec: no port discovery, only use persisted endpoint
+            // Should return false immediately if no persisted endpoint exists
             var startTime = DateTime.Now;
             
             bool result = await pushClient.DiscoverAndConnectAsync();
@@ -143,8 +143,8 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             
             Assert.IsFalse(result);
             Assert.IsFalse(pushClient.IsConnected);
-            // Should not take more than a few seconds for port scanning
-            Assert.Less(elapsed.TotalSeconds, 30);
+            // Should complete immediately since no port scanning occurs
+            Assert.Less(elapsed.TotalSeconds, 1);
         }
 
         [Test]

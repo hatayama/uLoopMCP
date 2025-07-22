@@ -2,6 +2,8 @@ import { UnityClient } from './unity-client.js';
 import { DynamicUnityCommandTool } from './tools/dynamic-unity-command-tool.js';
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { ENVIRONMENT } from './constants.js';
+import { VibeLogger } from './utils/vibe-logger.js';
+import { createHash } from 'crypto';
 
 // Import UnityParameterSchema type from the tool file
 type UnityParameterSchema = { [key: string]: unknown };
@@ -9,15 +11,19 @@ type UnityParameterSchema = { [key: string]: unknown };
 /**
  * Unity Tool Manager - Manages dynamic tool generation and management
  *
- * Design document reference: Packages/src/TypeScriptServer~/ARCHITECTURE.md
+ * Design document reference: .kiro/specs/mcp-tool-recognition-fix/design.md
  *
  * Related classes:
  * - UnityClient: Manages communication with Unity Editor
  * - DynamicUnityCommandTool: Implementation of dynamic tools
  * - UnityMcpServer: Main server class that uses this manager
+ * - ClientInitializationHandler: Uses this for tool availability management
  *
  * Key features:
+ * - Unity connection state-aware tool list management
  * - Dynamic tool generation from Unity tools
+ * - Tool list change detection and caching
+ * - Performance-optimized tool retrieval
  * - Tool refresh management
  * - Tool details fetching and parsing
  * - Development mode support
@@ -28,6 +34,12 @@ export class UnityToolManager {
   private readonly dynamicTools: Map<string, DynamicUnityCommandTool> = new Map();
   private isRefreshing: boolean = false;
   private clientName: string = '';
+  private cachedToolList: Tool[] = [];
+  private lastToolListHash: string = '';
+  private clientInitializationHandler?: {
+    handleUnityConnection(): void;
+    handleUnityDisconnection(): void;
+  };
 
   constructor(unityClient: UnityClient) {
     this.unityClient = unityClient;
@@ -42,6 +54,16 @@ export class UnityToolManager {
   }
 
   /**
+   * Set client initialization handler for Unity connection events
+   */
+  setClientInitializationHandler(handler: {
+    handleUnityConnection(): void;
+    handleUnityDisconnection(): void;
+  }): void {
+    this.clientInitializationHandler = handler;
+  }
+
+  /**
    * Get dynamic tools map
    */
   getDynamicTools(): Map<string, DynamicUnityCommandTool> {
@@ -49,37 +71,64 @@ export class UnityToolManager {
   }
 
   /**
-   * Get tools from Unity
+   * Get available tools based on Unity connection state
    */
-  async getToolsFromUnity(): Promise<Tool[]> {
-    if (!this.unityClient.connected) {
-      return [];
+  async getAvailableTools(): Promise<Tool[]> {
+    if (!this.isUnityConnected()) {
+      VibeLogger.logInfo(
+        'mcp_tools_unavailable_no_unity',
+        'Tools unavailable - Unity not connected',
+        {
+          client_name: this.clientName,
+          unity_connected: false,
+          cached_tools_count: this.cachedToolList.length,
+        },
+        undefined,
+        'Unity not connected, returning empty tool list',
+      );
+      return []; // Unity not connected - return empty list
     }
 
     try {
-      const toolDetails = await this.fetchToolDetailsFromUnity();
+      const tools = await this.fetchUnityTools();
+      this.updateToolCache(tools);
 
-      if (!toolDetails) {
-        return [];
-      }
-
-      this.createDynamicToolsFromTools(toolDetails);
-
-      // Convert dynamic tools to Tool array
-      const tools: Tool[] = [];
-      for (const [toolName, dynamicTool] of this.dynamicTools) {
-        tools.push({
-          name: toolName,
-          description: dynamicTool.description,
-          inputSchema: this.convertToMcpSchema(dynamicTool.inputSchema),
-        });
-      }
+      VibeLogger.logInfo(
+        'mcp_tools_available',
+        'Tools available from Unity',
+        {
+          client_name: this.clientName,
+          tools_count: tools.length,
+          unity_connected: true,
+        },
+        undefined,
+        'Unity tools successfully retrieved and cached',
+      );
 
       return tools;
     } catch (error) {
-      // Failed to get tools from Unity
-      return [];
+      VibeLogger.logError(
+        'mcp_tools_fetch_error',
+        'Failed to fetch tools from Unity',
+        {
+          client_name: this.clientName,
+          error_message: error instanceof Error ? error.message : String(error),
+          unity_connected: this.isUnityConnected(),
+        },
+        undefined,
+        'Unity tool fetch failed, returning cached tools or empty list',
+      );
+
+      // Return cached tools on error, or empty list if no cache
+      return this.cachedToolList.length > 0 ? this.cachedToolList : [];
     }
+  }
+
+  /**
+   * Get tools from Unity (original method for backward compatibility)
+   */
+  async getToolsFromUnity(): Promise<Tool[]> {
+    return await this.getAvailableTools();
   }
 
   /**
@@ -232,6 +281,155 @@ export class UnityToolManager {
    */
   getToolsCount(): number {
     return this.dynamicTools.size;
+  }
+
+  /**
+   * Check if Unity is connected
+   */
+  private isUnityConnected(): boolean {
+    return this.unityClient.connected;
+  }
+
+  /**
+   * Fetch tools from Unity with error handling
+   */
+  private async fetchUnityTools(): Promise<Tool[]> {
+    const toolDetails = await this.fetchToolDetailsFromUnity();
+
+    if (!toolDetails) {
+      return [];
+    }
+
+    this.createDynamicToolsFromTools(toolDetails);
+
+    // Convert dynamic tools to Tool array
+    const tools: Tool[] = [];
+    for (const [toolName, dynamicTool] of this.dynamicTools) {
+      tools.push({
+        name: toolName,
+        description: dynamicTool.description,
+        inputSchema: this.convertToMcpSchema(dynamicTool.inputSchema),
+      });
+    }
+
+    return tools;
+  }
+
+  /**
+   * Update tool cache and detect changes
+   */
+  private updateToolCache(tools: Tool[]): void {
+    this.cachedToolList = [...tools]; // Create a copy
+    this.lastToolListHash = this.calculateToolListHash(tools);
+  }
+
+  /**
+   * Check if tool list has changed since last update
+   */
+  hasToolListChanged(): boolean {
+    if (!this.isUnityConnected()) {
+      return false; // No change if Unity is not connected
+    }
+
+    try {
+      // Get current tools without updating cache
+      const currentTools = this.getAllTools();
+      const currentHash = this.calculateToolListHash(currentTools);
+      const hasChanged = currentHash !== this.lastToolListHash;
+
+      if (hasChanged) {
+        VibeLogger.logInfo(
+          'mcp_tools_list_changed',
+          'Tool list change detected',
+          {
+            client_name: this.clientName,
+            previous_hash: this.lastToolListHash,
+            current_hash: currentHash,
+            tools_count: currentTools.length,
+          },
+          undefined,
+          'Unity tool list has changed since last update',
+        );
+      }
+
+      return hasChanged;
+    } catch (error) {
+      VibeLogger.logError(
+        'mcp_tools_change_detection_error',
+        'Error during tool list change detection',
+        {
+          client_name: this.clientName,
+          error_message: error instanceof Error ? error.message : String(error),
+        },
+        undefined,
+        'Tool change detection failed',
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Handle Unity connection established
+   */
+  async onUnityConnected(): Promise<void> {
+    try {
+      VibeLogger.logInfo(
+        'mcp_unity_connected_tools_refresh',
+        'Unity connected - refreshing tools',
+        { client_name: this.clientName },
+        undefined,
+        'Unity connection established, refreshing tool list',
+      );
+
+      const tools = await this.fetchUnityTools();
+      this.updateToolCache(tools);
+
+      // Notify ClientInitializationHandler if available
+      if (this.clientInitializationHandler) {
+        this.clientInitializationHandler.handleUnityConnection();
+      }
+    } catch (error) {
+      VibeLogger.logError(
+        'mcp_unity_connected_tools_refresh_error',
+        'Error refreshing tools after Unity connection',
+        {
+          client_name: this.clientName,
+          error_message: error instanceof Error ? error.message : String(error),
+        },
+        undefined,
+        'Failed to refresh tools after Unity connection',
+      );
+    }
+  }
+
+  /**
+   * Handle Unity disconnection
+   */
+  onUnityDisconnected(): void {
+    VibeLogger.logInfo(
+      'mcp_unity_disconnected_tools_clear',
+      'Unity disconnected - clearing tools',
+      { client_name: this.clientName, cached_tools_count: this.cachedToolList.length },
+      undefined,
+      'Unity disconnected, clearing tool cache',
+    );
+
+    this.cachedToolList = [];
+    this.lastToolListHash = '';
+    this.dynamicTools.clear();
+
+    // Notify ClientInitializationHandler if available
+    if (this.clientInitializationHandler) {
+      this.clientInitializationHandler.handleUnityDisconnection();
+    }
+  }
+
+  /**
+   * Calculate hash for tool list to detect changes
+   */
+  private calculateToolListHash(tools: Tool[]): string {
+    const toolNames = tools.map((tool) => tool.name).sort();
+    return createHash('md5').update(JSON.stringify(toolNames)).digest('hex');
   }
 
   /**

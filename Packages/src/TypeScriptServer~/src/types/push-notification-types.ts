@@ -2,22 +2,19 @@
  * Push通知メッセージ形式定義
  * 設計書参照: /.kiro/specs/unity-push-notification-system/design.md
  * 関連クラス: UnityPushClient.cs, UnityPushNotificationReceiveServer.ts
- * 
+ *
  * JSON-RPC 2.0準拠のメッセージフォーマット定義
  */
 
-export type PushNotificationType = 
+export type PushNotificationType =
   | 'CONNECTION_ESTABLISHED'
-  | 'DOMAIN_RELOAD' 
+  | 'DOMAIN_RELOAD'
   | 'DOMAIN_RELOAD_RECOVERED'
   | 'USER_DISCONNECT'
   | 'UNITY_SHUTDOWN'
   | 'TOOLS_CHANGED';
 
-export type DisconnectReasonType = 
-  | 'USER_DISCONNECT'
-  | 'UNITY_SHUTDOWN'
-  | 'DOMAIN_RELOAD';
+export type DisconnectReasonType = 'USER_DISCONNECT' | 'UNITY_SHUTDOWN' | 'DOMAIN_RELOAD';
 
 export interface PushNotification {
   type: PushNotificationType;
@@ -56,7 +53,7 @@ export interface ServerEndpoint {
 }
 
 export interface UnityConnection {
-  socket: any; // net.Socket in Node.js
+  socket: unknown; // net.Socket in Node.js
   clientId: string;
   connectedAt: Date;
   lastPingAt?: Date;
@@ -85,7 +82,7 @@ export const PushNotificationConstants = {
   PROTOCOL_VERSION: '2.0',
   METHODS: {
     PUSH_NOTIFICATION: 'notifications/push',
-    TOOLS_LIST_CHANGED: 'notifications/tools/list_changed'
+    TOOLS_LIST_CHANGED: 'notifications/tools/list_changed',
   },
   TYPES: {
     CONNECTION_ESTABLISHED: 'CONNECTION_ESTABLISHED' as const,
@@ -93,27 +90,30 @@ export const PushNotificationConstants = {
     DOMAIN_RELOAD_RECOVERED: 'DOMAIN_RELOAD_RECOVERED' as const,
     USER_DISCONNECT: 'USER_DISCONNECT' as const,
     UNITY_SHUTDOWN: 'UNITY_SHUTDOWN' as const,
-    TOOLS_CHANGED: 'TOOLS_CHANGED' as const
+    TOOLS_CHANGED: 'TOOLS_CHANGED' as const,
   },
   DISCONNECT_REASONS: {
     USER_DISCONNECT: 'USER_DISCONNECT' as const,
     UNITY_SHUTDOWN: 'UNITY_SHUTDOWN' as const,
-    DOMAIN_RELOAD: 'DOMAIN_RELOAD' as const
-  }
+    DOMAIN_RELOAD: 'DOMAIN_RELOAD' as const,
+  },
 } as const;
 
 // Push通知メッセージのバリデーション
-export function validatePushNotification(notification: any): notification is PushNotification {
+export function validatePushNotification(notification: unknown): notification is PushNotification {
   if (!notification || typeof notification !== 'object') {
     return false;
   }
 
   const validTypes = Object.values(PushNotificationConstants.TYPES);
-  if (!validTypes.includes(notification.type)) {
+  if (!validTypes.includes((notification as { type?: string }).type)) {
     return false;
   }
 
-  if (!notification.timestamp || typeof notification.timestamp !== 'string') {
+  if (
+    !(notification as { timestamp?: string }).timestamp ||
+    typeof (notification as { timestamp?: string }).timestamp !== 'string'
+  ) {
     return false;
   }
 
@@ -123,34 +123,34 @@ export function validatePushNotification(notification: any): notification is Pus
 // Push通知メッセージの作成ヘルパー
 export function createPushNotification(
   type: PushNotificationType,
-  payload?: NotificationPayload
+  payload?: NotificationPayload,
 ): PushNotification {
   return {
     type,
     timestamp: new Date().toISOString(),
-    payload
+    payload,
   };
 }
 
 // JSON-RPC通知メッセージの作成
 export function createJsonRpcNotification(
   method: string,
-  params: PushNotification
+  params: PushNotification,
 ): JsonRpcNotification {
   return {
     jsonrpc: PushNotificationConstants.PROTOCOL_VERSION,
     method,
-    params
+    params,
   };
 }
 
 // 切断理由メッセージの作成
 export function createDisconnectReason(
   type: DisconnectReasonType,
-  message: string
+  message: string,
 ): DisconnectReason {
   return {
     type,
-    message
+    message,
   };
 }

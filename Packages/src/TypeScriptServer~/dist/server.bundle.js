@@ -5514,14 +5514,6 @@ var ERROR_MESSAGES = {
   TIMEOUT: "timeout",
   INVALID_RESPONSE: "Invalid response from Unity"
 };
-var POLLING = {
-  INTERVAL_MS: 1e3,
-  // Reduced from 3000ms to 1000ms for better responsiveness
-  BUFFER_SECONDS: 15,
-  // Increased for safer Unity startup timing
-  ENABLED: false
-  // Disabled in favor of Push notification system
-};
 var LIST_CHANGED_UNSUPPORTED_CLIENTS = [
   "claude",
   "claude-code",
@@ -7235,9 +7227,10 @@ var UnityDiscovery = class _UnityDiscovery {
       return;
     }
     void this.unifiedDiscoveryAndConnectionCheck();
+    const DISCOVERY_INTERVAL_MS = 1e3;
     this.discoveryInterval = setInterval(() => {
       void this.unifiedDiscoveryAndConnectionCheck();
-    }, POLLING.INTERVAL_MS);
+    }, DISCOVERY_INTERVAL_MS);
     _UnityDiscovery.activeTimerCount++;
   }
   /**
@@ -7272,7 +7265,7 @@ var UnityDiscovery = class _UnityDiscovery {
       "Starting unified discovery and connection check cycle",
       {
         unity_connected: this.unityClient.connected,
-        polling_interval_ms: POLLING.INTERVAL_MS,
+        discovery_interval_ms: 1e3,
         active_timer_count: _UnityDiscovery.activeTimerCount
       },
       correlationId,
@@ -7455,7 +7448,8 @@ var UnityDiscovery = class _UnityDiscovery {
       isDiscovering: this.isDiscovering,
       activeTimerCount: _UnityDiscovery.activeTimerCount,
       isConnected: this.unityClient.connected,
-      intervalMs: POLLING.INTERVAL_MS,
+      intervalMs: 1e3,
+      // Discovery interval in ms
       hasSingleton: _UnityDiscovery.instance !== null
     };
   }
@@ -7481,38 +7475,85 @@ var UnityConnectionManager = class {
     return this.unityDiscovery;
   }
   /**
-   * Wait for Unity connection with timeout
+   * Wait for Unity connection with timeout using push notification system
    */
   async waitForUnityConnectionWithTimeout(timeoutMs) {
     return new Promise((resolve2, reject) => {
+      if (this.unityClient.connected) {
+        resolve2();
+        return;
+      }
       const timeout = setTimeout(() => {
         reject(new Error(`Unity connection timeout after ${timeoutMs}ms`));
       }, timeoutMs);
-      const checkConnection = () => {
+      VibeLogger.logInfo(
+        "unity_connection_wait_push_mode",
+        "Waiting for Unity connection in push notification mode",
+        { timeout_ms: timeoutMs, current_connected: this.unityClient.connected },
+        void 0,
+        "Push notification system - waiting for Unity connection to establish"
+      );
+      let fallbackCheckCount = 0;
+      const connectionCheckInterval = setInterval(() => {
+        fallbackCheckCount++;
         if (this.unityClient.connected) {
           clearTimeout(timeout);
+          clearInterval(connectionCheckInterval);
+          if (fallbackCheckCount === 1) {
+            VibeLogger.logInfo(
+              "unity_connection_established_immediate",
+              "Unity connection established immediately (push notification)",
+              {
+                timeout_ms: timeoutMs,
+                check_count: fallbackCheckCount
+              },
+              void 0,
+              "Unity connection confirmed via push notification system"
+            );
+          } else {
+            VibeLogger.logWarning(
+              "unity_connection_established_fallback",
+              "Unity connection established via fallback polling",
+              {
+                timeout_ms: timeoutMs,
+                check_count: fallbackCheckCount,
+                elapsed_approx_ms: fallbackCheckCount * 250
+              },
+              void 0,
+              "Push notification may have failed - connection detected via fallback"
+            );
+          }
           resolve2();
-          return;
+        } else if (fallbackCheckCount % 4 === 0) {
+          VibeLogger.logInfo(
+            "unity_connection_fallback_waiting",
+            "Still waiting for Unity connection (fallback polling)",
+            {
+              timeout_ms: timeoutMs,
+              check_count: fallbackCheckCount,
+              elapsed_approx_ms: fallbackCheckCount * 250
+            },
+            void 0,
+            "Fallback polling active - waiting for Unity connection"
+          );
         }
-        if (this.isInitialized) {
-          const connectionInterval = setInterval(() => {
-            if (this.unityClient.connected) {
-              clearTimeout(timeout);
-              clearInterval(connectionInterval);
-              resolve2();
-            }
-          }, 100);
-          return;
-        }
+      }, 250);
+      if (!this.isInitialized) {
         this.initialize(() => {
-          return new Promise((resolveCallback) => {
-            clearTimeout(timeout);
-            resolve2();
-            resolveCallback();
-          });
+          return Promise.resolve();
         });
-      };
-      void checkConnection();
+      }
+      setTimeout(() => {
+        void this.unityDiscovery.forceDiscovery().catch(() => {
+          VibeLogger.logInfo(
+            "unity_discovery_fallback_failed",
+            "Unity discovery fallback failed, relying on push notification",
+            { timeout_ms: timeoutMs },
+            void 0,
+            "Waiting for push notification connection"
+          );
+        });
+      }, 100);
     });
   }
   /**
@@ -7531,36 +7572,19 @@ var UnityConnectionManager = class {
     }
   }
   /**
-   * Initialize connection manager
+   * Initialize connection manager with push notification system
    */
   initialize(onConnectionEstablished) {
     if (this.isInitialized) {
       return;
     }
     this.isInitialized = true;
-    if (!POLLING.ENABLED) {
-      VibeLogger.logInfo(
-        "polling_disabled",
-        "Unity polling disabled - Push notification system active",
-        { polling_enabled: POLLING.ENABLED },
-        void 0,
-        "Legacy polling system disabled in favor of Push notifications"
-      );
-      this.unityDiscovery.setOnDiscoveredCallback(() => {
-        void this.handleUnityDiscovered(onConnectionEstablished);
-      });
-      this.unityDiscovery.setOnConnectionLostCallback(() => {
-        if (this.isDevelopment) {
-        }
-      });
-      return;
-    }
-    VibeLogger.logWarning(
-      "polling_fallback_active",
-      "Using legacy polling mode as fallback",
-      { polling_enabled: POLLING.ENABLED },
+    VibeLogger.logInfo(
+      "push_notification_system_active",
+      "Unity connection manager initialized with push notification system",
+      {},
       void 0,
-      "Push notification system may not be available - using polling fallback"
+      "Push notification system active - no legacy polling"
     );
     this.unityDiscovery.setOnDiscoveredCallback(() => {
       void this.handleUnityDiscovered(onConnectionEstablished);
@@ -7569,7 +7593,6 @@ var UnityConnectionManager = class {
       if (this.isDevelopment) {
       }
     });
-    this.unityDiscovery.start();
     if (this.isDevelopment) {
     }
   }
@@ -7790,12 +7813,16 @@ var DynamicUnityCommandTool = class extends BaseTool {
 };
 
 // src/unity-tool-manager.ts
+import { createHash } from "crypto";
 var UnityToolManager = class {
   unityClient;
   isDevelopment;
   dynamicTools = /* @__PURE__ */ new Map();
   isRefreshing = false;
   clientName = "";
+  cachedToolList = [];
+  lastToolListHash = "";
+  clientInitializationHandler;
   constructor(unityClient) {
     this.unityClient = unityClient;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
@@ -7807,36 +7834,70 @@ var UnityToolManager = class {
     this.clientName = clientName;
   }
   /**
+   * Set client initialization handler for Unity connection events
+   */
+  setClientInitializationHandler(handler) {
+    this.clientInitializationHandler = handler;
+  }
+  /**
    * Get dynamic tools map
    */
   getDynamicTools() {
     return this.dynamicTools;
   }
   /**
-   * Get tools from Unity
+   * Get available tools based on Unity connection state
    */
-  async getToolsFromUnity() {
-    if (!this.unityClient.connected) {
+  async getAvailableTools() {
+    if (!this.isUnityConnected()) {
+      VibeLogger.logInfo(
+        "mcp_tools_unavailable_no_unity",
+        "Tools unavailable - Unity not connected",
+        {
+          client_name: this.clientName,
+          unity_connected: false,
+          cached_tools_count: this.cachedToolList.length
+        },
+        void 0,
+        "Unity not connected, returning empty tool list"
+      );
       return [];
     }
     try {
-      const toolDetails = await this.fetchToolDetailsFromUnity();
-      if (!toolDetails) {
-        return [];
-      }
-      this.createDynamicToolsFromTools(toolDetails);
-      const tools = [];
-      for (const [toolName, dynamicTool] of this.dynamicTools) {
-        tools.push({
-          name: toolName,
-          description: dynamicTool.description,
-          inputSchema: this.convertToMcpSchema(dynamicTool.inputSchema)
-        });
-      }
+      const tools = await this.fetchUnityTools();
+      this.updateToolCache(tools);
+      VibeLogger.logInfo(
+        "mcp_tools_available",
+        "Tools available from Unity",
+        {
+          client_name: this.clientName,
+          tools_count: tools.length,
+          unity_connected: true
+        },
+        void 0,
+        "Unity tools successfully retrieved and cached"
+      );
       return tools;
     } catch (error) {
-      return [];
+      VibeLogger.logError(
+        "mcp_tools_fetch_error",
+        "Failed to fetch tools from Unity",
+        {
+          client_name: this.clientName,
+          error_message: error instanceof Error ? error.message : String(error),
+          unity_connected: this.isUnityConnected()
+        },
+        void 0,
+        "Unity tool fetch failed, returning cached tools or empty list"
+      );
+      return this.cachedToolList.length > 0 ? this.cachedToolList : [];
     }
+  }
+  /**
+   * Get tools from Unity (original method for backward compatibility)
+   */
+  async getToolsFromUnity() {
+    return await this.getAvailableTools();
   }
   /**
    * Initialize dynamic Unity tools
@@ -7950,6 +8011,133 @@ var UnityToolManager = class {
     return this.dynamicTools.size;
   }
   /**
+   * Check if Unity is connected
+   */
+  isUnityConnected() {
+    return this.unityClient.connected;
+  }
+  /**
+   * Fetch tools from Unity with error handling
+   */
+  async fetchUnityTools() {
+    const toolDetails = await this.fetchToolDetailsFromUnity();
+    if (!toolDetails) {
+      return [];
+    }
+    this.createDynamicToolsFromTools(toolDetails);
+    const tools = [];
+    for (const [toolName, dynamicTool] of this.dynamicTools) {
+      tools.push({
+        name: toolName,
+        description: dynamicTool.description,
+        inputSchema: this.convertToMcpSchema(dynamicTool.inputSchema)
+      });
+    }
+    return tools;
+  }
+  /**
+   * Update tool cache and detect changes
+   */
+  updateToolCache(tools) {
+    this.cachedToolList = [...tools];
+    this.lastToolListHash = this.calculateToolListHash(tools);
+  }
+  /**
+   * Check if tool list has changed since last update
+   */
+  hasToolListChanged() {
+    if (!this.isUnityConnected()) {
+      return false;
+    }
+    try {
+      const currentTools = this.getAllTools();
+      const currentHash = this.calculateToolListHash(currentTools);
+      const hasChanged = currentHash !== this.lastToolListHash;
+      if (hasChanged) {
+        VibeLogger.logInfo(
+          "mcp_tools_list_changed",
+          "Tool list change detected",
+          {
+            client_name: this.clientName,
+            previous_hash: this.lastToolListHash,
+            current_hash: currentHash,
+            tools_count: currentTools.length
+          },
+          void 0,
+          "Unity tool list has changed since last update"
+        );
+      }
+      return hasChanged;
+    } catch (error) {
+      VibeLogger.logError(
+        "mcp_tools_change_detection_error",
+        "Error during tool list change detection",
+        {
+          client_name: this.clientName,
+          error_message: error instanceof Error ? error.message : String(error)
+        },
+        void 0,
+        "Tool change detection failed"
+      );
+      return false;
+    }
+  }
+  /**
+   * Handle Unity connection established
+   */
+  async onUnityConnected() {
+    try {
+      VibeLogger.logInfo(
+        "mcp_unity_connected_tools_refresh",
+        "Unity connected - refreshing tools",
+        { client_name: this.clientName },
+        void 0,
+        "Unity connection established, refreshing tool list"
+      );
+      const tools = await this.fetchUnityTools();
+      this.updateToolCache(tools);
+      if (this.clientInitializationHandler) {
+        this.clientInitializationHandler.handleUnityConnection();
+      }
+    } catch (error) {
+      VibeLogger.logError(
+        "mcp_unity_connected_tools_refresh_error",
+        "Error refreshing tools after Unity connection",
+        {
+          client_name: this.clientName,
+          error_message: error instanceof Error ? error.message : String(error)
+        },
+        void 0,
+        "Failed to refresh tools after Unity connection"
+      );
+    }
+  }
+  /**
+   * Handle Unity disconnection
+   */
+  onUnityDisconnected() {
+    VibeLogger.logInfo(
+      "mcp_unity_disconnected_tools_clear",
+      "Unity disconnected - clearing tools",
+      { client_name: this.clientName, cached_tools_count: this.cachedToolList.length },
+      void 0,
+      "Unity disconnected, clearing tool cache"
+    );
+    this.cachedToolList = [];
+    this.lastToolListHash = "";
+    this.dynamicTools.clear();
+    if (this.clientInitializationHandler) {
+      this.clientInitializationHandler.handleUnityDisconnection();
+    }
+  }
+  /**
+   * Calculate hash for tool list to detect changes
+   */
+  calculateToolListHash(tools) {
+    const toolNames = tools.map((tool) => tool.name).sort();
+    return createHash("md5").update(JSON.stringify(toolNames)).digest("hex");
+  }
+  /**
    * Convert input schema to MCP-compatible format safely
    */
   convertToMcpSchema(inputSchema) {
@@ -7969,17 +8157,52 @@ var UnityToolManager = class {
 };
 
 // src/mcp-client-compatibility.ts
-var McpClientCompatibility = class {
+var McpClientCompatibility = class _McpClientCompatibility {
+  static CLIENT_CONFIGS = [
+    {
+      name: "Claude Code",
+      supportsListChanged: false,
+      initializationDelay: 0,
+      toolListStrategy: "on-request"
+    },
+    {
+      name: "Cursor",
+      supportsListChanged: true,
+      initializationDelay: 100,
+      toolListStrategy: "notification"
+    },
+    {
+      name: "VSCode",
+      supportsListChanged: true,
+      initializationDelay: 50,
+      toolListStrategy: "notification"
+    }
+  ];
   unityClient;
   clientName = DEFAULT_CLIENT_NAME;
+  currentClientConfig = null;
   constructor(unityClient) {
     this.unityClient = unityClient;
   }
   /**
-   * Set client name
+   * Set client name and load client configuration
    */
   setClientName(clientName) {
     this.clientName = clientName;
+    this.currentClientConfig = this.findClientConfig(clientName);
+    VibeLogger.logInfo(
+      "mcp_client_config_loaded",
+      `Client configuration loaded for ${clientName}`,
+      {
+        client_name: clientName,
+        config: this.currentClientConfig,
+        supports_list_changed: this.currentClientConfig?.supportsListChanged ?? false,
+        tool_list_strategy: this.currentClientConfig?.toolListStrategy ?? "on-request"
+      },
+      void 0,
+      "Client-specific configuration loaded for MCP client",
+      "Monitor this to ensure client configurations are working correctly"
+    );
   }
   /**
    * Get client name
@@ -8031,10 +8254,96 @@ var McpClientCompatibility = class {
     return !this.isListChangedUnsupported(clientName);
   }
   /**
+   * Get client configuration
+   */
+  getClientConfig() {
+    return this.currentClientConfig;
+  }
+  /**
+   * Get tool list strategy for current client
+   */
+  getToolListStrategy() {
+    return this.currentClientConfig?.toolListStrategy || "on-request";
+  }
+  /**
+   * Get initialization delay for current client
+   */
+  getInitializationDelay() {
+    return this.currentClientConfig?.initializationDelay || 0;
+  }
+  /**
+   * Find client configuration by name with fallback for unknown clients
+   */
+  findClientConfig(clientName) {
+    const normalizedClientName = clientName.toLowerCase();
+    const foundConfig = _McpClientCompatibility.CLIENT_CONFIGS.find(
+      (config) => normalizedClientName.includes(config.name.toLowerCase())
+    );
+    if (!foundConfig && clientName !== "Unknown") {
+      VibeLogger.logInfo(
+        "mcp_unknown_client_detected",
+        `Unknown MCP client detected: ${clientName}`,
+        {
+          client_name: clientName,
+          normalized_name: normalizedClientName,
+          available_configs: _McpClientCompatibility.CLIENT_CONFIGS.map((c) => c.name)
+        },
+        void 0,
+        "Unknown client will use conservative fallback configuration",
+        "Consider adding specific configuration for this client if it becomes commonly used"
+      );
+      return {
+        name: clientName,
+        supportsListChanged: false,
+        // Conservative: assume no list_changed support
+        initializationDelay: 0,
+        toolListStrategy: "on-request"
+      };
+    }
+    return foundConfig;
+  }
+  /**
+   * Check if client supports list_changed based on configuration
+   */
+  isListChangedSupportedByConfig(clientName) {
+    const config = this.findClientConfig(clientName);
+    return config?.supportsListChanged ?? false;
+  }
+  /**
+   * Mark client as list_changed unsupported (for fallback scenarios)
+   */
+  markListChangedUnsupported() {
+    if (this.currentClientConfig) {
+      VibeLogger.logInfo(
+        "mcp_client_list_changed_fallback",
+        `Client ${this.clientName} fell back to list_changed unsupported mode`,
+        {
+          client_name: this.clientName,
+          original_config: this.currentClientConfig
+        },
+        void 0,
+        "Client communication failed, falling back to unsupported mode"
+      );
+    }
+  }
+  /**
    * Log client compatibility information
    */
   logClientCompatibility(clientName) {
     const isSupported = this.isListChangedSupported(clientName);
+    const config = this.getClientConfig();
+    VibeLogger.logInfo(
+      "mcp_client_compatibility_info",
+      `Client compatibility information for ${clientName}`,
+      {
+        client_name: clientName,
+        list_changed_supported: isSupported,
+        config,
+        initialization_strategy: isSupported ? "asynchronous" : "synchronous"
+      },
+      void 0,
+      `${clientName} will use ${isSupported ? "asynchronous" : "synchronous"} initialization`
+    );
     if (!isSupported) {
     } else {
     }
@@ -8247,187 +8556,6 @@ var UnityEventHandler = class {
   }
 };
 
-// src/unity-push-notification-receive-server.ts
-import * as net3 from "net";
-import { EventEmitter } from "events";
-var UnityPushNotificationReceiveServer = class extends EventEmitter {
-  server = null;
-  connectedUnityClients = /* @__PURE__ */ new Map();
-  port = 0;
-  isRunning = false;
-  constructor() {
-    super();
-  }
-  async start() {
-    if (this.isRunning) {
-      return this.port;
-    }
-    return new Promise((resolve2, reject) => {
-      this.server = net3.createServer((socket) => {
-        this.handleUnityConnection(socket);
-      });
-      this.server.on("error", (error) => {
-        reject(error);
-      });
-      this.server.listen(0, "localhost", () => {
-        if (!this.server) return;
-        const address = this.server.address();
-        if (typeof address === "object" && address !== null) {
-          this.port = address.port;
-          this.isRunning = true;
-          resolve2(this.port);
-        } else {
-          reject(new Error("Failed to get server address"));
-        }
-      });
-    });
-  }
-  async stop() {
-    if (!this.isRunning || !this.server) {
-      return;
-    }
-    return new Promise((resolve2) => {
-      this.connectedUnityClients.clear();
-      this.server.close(() => {
-        this.isRunning = false;
-        this.port = 0;
-        resolve2();
-      });
-    });
-  }
-  getEndpoint() {
-    if (!this.isRunning) {
-      throw new Error("Server is not running");
-    }
-    return {
-      host: "localhost",
-      port: this.port,
-      protocol: "tcp"
-    };
-  }
-  isServerRunning() {
-    return this.isRunning;
-  }
-  getConnectedClientsCount() {
-    return this.connectedUnityClients.size;
-  }
-  handleUnityConnection(socket) {
-    const clientId = this.generateClientId();
-    const connection = {
-      socket,
-      clientId,
-      connectedAt: /* @__PURE__ */ new Date()
-    };
-    this.connectedUnityClients.set(clientId, connection);
-    socket.setEncoding("utf8");
-    socket.setTimeout(3e4);
-    socket.on("data", (data) => {
-      this.handleIncomingData(clientId, data.toString());
-    });
-    socket.on("close", () => {
-      this.handleDisconnection(clientId, { type: "USER_DISCONNECT", message: "Socket closed by client" });
-    });
-    socket.on("error", (error) => {
-      console.error(`Unity client ${clientId} error:`, error);
-      this.handleDisconnection(clientId, { type: "USER_DISCONNECT", message: `Socket error: ${error.message}` });
-    });
-    socket.on("timeout", () => {
-      console.warn(`Unity client ${clientId} timed out`);
-      socket.destroy();
-    });
-    this.emit("unity_connected", { clientId, endpoint: this.getEndpoint() });
-  }
-  handleIncomingData(clientId, data) {
-    const connection = this.connectedUnityClients.get(clientId);
-    if (!connection) {
-      return;
-    }
-    const lines = data.split("\n");
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      this.processMessage(clientId, line.trim());
-    }
-  }
-  processMessage(clientId, message) {
-    let notification;
-    try {
-      notification = JSON.parse(message);
-    } catch (error) {
-      console.error(`Failed to parse push notification from ${clientId}:`, error);
-      return;
-    }
-    this.handlePushNotification(clientId, notification);
-  }
-  handlePushNotification(clientId, notification) {
-    const connection = this.connectedUnityClients.get(clientId);
-    if (!connection) {
-      return;
-    }
-    switch (notification.type) {
-      case "CONNECTION_ESTABLISHED":
-        this.handleConnectionEstablished(clientId, notification);
-        break;
-      case "DOMAIN_RELOAD":
-        this.handleDomainReload(clientId, notification);
-        break;
-      case "DOMAIN_RELOAD_RECOVERED":
-        this.handleDomainReloadRecovered(clientId, notification);
-        break;
-      case "USER_DISCONNECT":
-      case "UNITY_SHUTDOWN":
-        this.handleDisconnectNotification(clientId, notification);
-        break;
-      case "TOOLS_CHANGED":
-        this.handleToolsChanged(clientId, notification);
-        break;
-      default:
-        console.warn(`Unknown notification type: ${notification.type}`);
-    }
-    this.emit("push_notification", { clientId, notification });
-  }
-  handleConnectionEstablished(clientId, notification) {
-    const connection = this.connectedUnityClients.get(clientId);
-    if (connection) {
-      connection.lastPingAt = /* @__PURE__ */ new Date();
-    }
-    this.emit("connection_established", { clientId, notification });
-  }
-  handleDomainReload(clientId, notification) {
-    this.emit("domain_reload_start", { clientId, notification });
-  }
-  handleDomainReloadRecovered(clientId, notification) {
-    const connection = this.connectedUnityClients.get(clientId);
-    if (connection) {
-      connection.lastPingAt = /* @__PURE__ */ new Date();
-    }
-    this.emit("domain_reload_recovered", { clientId, notification });
-  }
-  handleDisconnectNotification(clientId, notification) {
-    const reason = notification.payload?.reason || {
-      type: "USER_DISCONNECT",
-      message: "Unknown disconnect reason"
-    };
-    this.handleDisconnection(clientId, reason);
-  }
-  handleToolsChanged(clientId, notification) {
-    this.emit("tools_changed", { clientId, notification });
-  }
-  handleDisconnection(clientId, reason) {
-    const connection = this.connectedUnityClients.get(clientId);
-    if (!connection) {
-      return;
-    }
-    this.connectedUnityClients.delete(clientId);
-    if (!connection.socket.destroyed) {
-      connection.socket.destroy();
-    }
-    this.emit("unity_disconnected", { clientId, reason });
-  }
-  generateClientId() {
-    return `unity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-};
-
 // package.json
 var package_default = {
   name: "uloopmcp-server",
@@ -8514,6 +8642,444 @@ var package_default = {
   }
 };
 
+// src/client-initialization-handler.ts
+var ClientInitializationHandler = class {
+  constructor(unityClient, toolManager, clientCompatibility, connectionManager) {
+    this.unityClient = unityClient;
+    this.toolManager = toolManager;
+    this.clientCompatibility = clientCompatibility;
+    this.connectionManager = connectionManager;
+  }
+  clientInfo = null;
+  isUnityConnected = false;
+  isInitialized = false;
+  /**
+   * Handle MCP initialize request and extract client information
+   */
+  async handleInitialize(request) {
+    this.clientInfo = this.extractClientInfo(request);
+    VibeLogger.logInfo(
+      "mcp_client_name_received",
+      `MCP client name received: ${this.clientInfo.name}`,
+      {
+        client_name: this.clientInfo.name,
+        client_version: this.clientInfo.version,
+        client_info: request.params?.clientInfo,
+        is_list_changed_unsupported: this.clientCompatibility.isListChangedUnsupported(
+          this.clientInfo.name
+        )
+      },
+      void 0,
+      "This logs the client name received during MCP initialize request",
+      "Analyze this to ensure claude-code is properly detected"
+    );
+    if (this.clientInfo.name) {
+      this.clientCompatibility.setClientName(this.clientInfo.name);
+      this.clientCompatibility.logClientCompatibility(this.clientInfo.name);
+    }
+    if (!this.isInitialized) {
+      this.isInitialized = true;
+      return await this.performInitialization();
+    }
+    return this.buildInitializeResponse();
+  }
+  /**
+   * Handle Unity connection establishment
+   */
+  handleUnityConnection() {
+    this.isUnityConnected = true;
+    this.notifyToolsAvailable();
+  }
+  /**
+   * Handle Unity disconnection
+   */
+  handleUnityDisconnection() {
+    this.isUnityConnected = false;
+  }
+  /**
+   * Get current client information
+   */
+  getClientInfo() {
+    return this.clientInfo;
+  }
+  /**
+   * Check if Unity is connected
+   */
+  isUnityConnectionEstablished() {
+    return this.isUnityConnected;
+  }
+  /**
+   * Perform initialization based on client type
+   */
+  async performInitialization() {
+    if (!this.clientInfo) {
+      return this.buildInitializeResponse();
+    }
+    if (this.clientCompatibility.isListChangedUnsupported(this.clientInfo.name)) {
+      return await this.performSynchronousInitialization();
+    } else {
+      return this.performAsynchronousInitialization();
+    }
+  }
+  /**
+   * Synchronous initialization for list_changed unsupported clients (Claude Code)
+   */
+  async performSynchronousInitialization() {
+    if (!this.clientInfo) {
+      return this.buildInitializeResponse();
+    }
+    try {
+      await this.clientCompatibility.initializeClient(this.clientInfo.name);
+      this.toolManager.setClientName(this.clientInfo.name);
+      await this.connectionManager.waitForUnityConnectionWithTimeout(1e4);
+      const tools = await this.toolManager.getToolsFromUnity();
+      VibeLogger.logInfo(
+        "mcp_sync_init_success",
+        "Synchronous initialization completed successfully",
+        {
+          client_name: this.clientInfo.name,
+          tools_count: tools.length
+        },
+        void 0,
+        "Claude Code synchronous initialization completed with Unity tools"
+      );
+      return this.buildInitializeResponseWithTools(tools);
+    } catch (error) {
+      VibeLogger.logError(
+        "mcp_unity_connection_timeout",
+        "Unity connection timeout during synchronous initialization",
+        {
+          client_name: this.clientInfo.name,
+          error_message: error instanceof Error ? error.message : String(error)
+        },
+        void 0,
+        "Unity connection timed out - check Unity MCP bridge status"
+      );
+      return this.buildInitializeResponse();
+    }
+  }
+  /**
+   * Asynchronous initialization for list_changed supported clients (Cursor, VSCode)
+   */
+  performAsynchronousInitialization() {
+    if (!this.clientInfo) {
+      return this.buildInitializeResponse();
+    }
+    void this.clientCompatibility.initializeClient(this.clientInfo.name);
+    this.toolManager.setClientName(this.clientInfo.name);
+    void this.toolManager.initializeDynamicTools().then(() => {
+      VibeLogger.logInfo(
+        "mcp_async_init_success",
+        "Asynchronous initialization completed successfully",
+        { client_name: this.clientInfo.name },
+        void 0,
+        "Unity connection established successfully for list_changed supported client"
+      );
+      this.handleUnityConnection();
+    }).catch((error) => {
+      VibeLogger.logError(
+        "mcp_unity_connection_init_failed",
+        "Unity connection initialization failed",
+        {
+          client_name: this.clientInfo.name,
+          error_message: error instanceof Error ? error.message : String(error)
+        },
+        void 0,
+        "Unity connection could not be established - check Unity MCP bridge"
+      );
+    });
+    return this.buildInitializeResponse();
+  }
+  /**
+   * Notify tools available based on client capabilities
+   */
+  notifyToolsAvailable() {
+    if (!this.clientInfo) {
+      return;
+    }
+    if (this.clientCompatibility.isListChangedUnsupported(this.clientInfo.name)) {
+      VibeLogger.logInfo(
+        "mcp_tools_available_wait",
+        `Client ${this.clientInfo.name} does not support list_changed, waiting for next tools/list request`,
+        { client_name: this.clientInfo.name },
+        void 0,
+        "Tools will be available on next tools/list request for this client"
+      );
+    } else {
+      VibeLogger.logInfo(
+        "mcp_tools_available_notify",
+        `Sending list_changed notification to ${this.clientInfo.name}`,
+        { client_name: this.clientInfo.name },
+        void 0,
+        "Tools available notification sent to list_changed supported client"
+      );
+    }
+  }
+  /**
+   * Extract client information from initialize request
+   */
+  extractClientInfo(request) {
+    const clientInfo = request.params?.clientInfo;
+    const clientName = clientInfo?.name || "Unknown";
+    VibeLogger.logInfo(
+      "mcp_client_detection",
+      "Client detection from initialize request",
+      {
+        raw_client_info: clientInfo,
+        detected_name: clientName,
+        detected_version: clientInfo?.version || "0.0.0",
+        has_client_info: !!clientInfo
+      },
+      void 0,
+      "Raw client information extracted from MCP initialize request",
+      "Check this if client detection is not working correctly"
+    );
+    return {
+      name: clientName,
+      version: clientInfo?.version || "0.0.0"
+    };
+  }
+  /**
+   * Build standard initialize response
+   */
+  buildInitializeResponse() {
+    return {
+      protocolVersion: MCP_PROTOCOL_VERSION,
+      capabilities: {
+        tools: {
+          listChanged: TOOLS_LIST_CHANGED_CAPABILITY
+        }
+      },
+      serverInfo: {
+        name: MCP_SERVER_NAME,
+        version: package_default.version
+      }
+    };
+  }
+  /**
+   * Build initialize response with tools (for synchronous initialization)
+   */
+  buildInitializeResponseWithTools(tools) {
+    return {
+      protocolVersion: MCP_PROTOCOL_VERSION,
+      capabilities: {
+        tools: {
+          listChanged: TOOLS_LIST_CHANGED_CAPABILITY
+        }
+      },
+      serverInfo: {
+        name: MCP_SERVER_NAME,
+        version: package_default.version
+      },
+      tools
+    };
+  }
+};
+
+// src/unity-push-notification-receive-server.ts
+import * as net3 from "net";
+import { EventEmitter } from "events";
+var UnityPushNotificationReceiveServer = class extends EventEmitter {
+  server = null;
+  connectedUnityClients = /* @__PURE__ */ new Map();
+  port = 0;
+  isRunning = false;
+  constructor() {
+    super();
+  }
+  async start() {
+    if (this.isRunning) {
+      return this.port;
+    }
+    return new Promise((resolve2, reject) => {
+      this.server = net3.createServer((socket) => {
+        this.handleUnityConnection(socket);
+      });
+      this.server.on("error", (error) => {
+        reject(error);
+      });
+      this.server.listen(0, "localhost", () => {
+        if (!this.server) {
+          return;
+        }
+        const address = this.server.address();
+        if (typeof address === "object" && address !== null) {
+          this.port = address.port;
+          this.isRunning = true;
+          resolve2(this.port);
+        } else {
+          reject(new Error("Failed to get server address"));
+        }
+      });
+    });
+  }
+  async stop() {
+    if (!this.isRunning || !this.server) {
+      return;
+    }
+    return new Promise((resolve2) => {
+      this.connectedUnityClients.clear();
+      this.server.close(() => {
+        this.isRunning = false;
+        this.port = 0;
+        resolve2();
+      });
+    });
+  }
+  getEndpoint() {
+    if (!this.isRunning) {
+      throw new Error("Server is not running");
+    }
+    return {
+      host: "localhost",
+      port: this.port,
+      protocol: "tcp"
+    };
+  }
+  isServerRunning() {
+    return this.isRunning;
+  }
+  getConnectedClientsCount() {
+    return this.connectedUnityClients.size;
+  }
+  handleUnityConnection(socket) {
+    const clientId = this.generateClientId();
+    const connection = {
+      socket,
+      clientId,
+      connectedAt: /* @__PURE__ */ new Date()
+    };
+    this.connectedUnityClients.set(clientId, connection);
+    socket.setEncoding("utf8");
+    socket.setTimeout(3e4);
+    socket.on("data", (data) => {
+      this.handleIncomingData(clientId, data.toString());
+    });
+    socket.on("close", () => {
+      this.handleDisconnection(clientId, {
+        type: "USER_DISCONNECT",
+        message: "Socket closed by client"
+      });
+    });
+    socket.on("error", (error) => {
+      VibeLogger.logError("unity_client_error", `Unity client ${clientId} error`, {
+        clientId,
+        error: error.message
+      });
+      this.handleDisconnection(clientId, {
+        type: "USER_DISCONNECT",
+        message: `Socket error: ${error.message}`
+      });
+    });
+    socket.on("timeout", () => {
+      VibeLogger.logWarning("unity_client_timeout", `Unity client ${clientId} timed out`, {
+        clientId
+      });
+      socket.destroy();
+    });
+    this.emit("unity_connected", { clientId, endpoint: this.getEndpoint() });
+  }
+  handleIncomingData(clientId, data) {
+    const connection = this.connectedUnityClients.get(clientId);
+    if (!connection) {
+      return;
+    }
+    const lines = data.split("\n");
+    for (const line of lines) {
+      if (!line.trim()) {
+        continue;
+      }
+      this.processMessage(clientId, line.trim());
+    }
+  }
+  processMessage(clientId, message) {
+    let notification;
+    try {
+      notification = JSON.parse(message);
+    } catch (error) {
+      VibeLogger.logError(
+        "push_notification_parse_error",
+        `Failed to parse push notification from ${clientId}`,
+        { clientId, error: error instanceof Error ? error.message : String(error) }
+      );
+      return;
+    }
+    this.handlePushNotification(clientId, notification);
+  }
+  handlePushNotification(clientId, notification) {
+    const connection = this.connectedUnityClients.get(clientId);
+    if (!connection) {
+      return;
+    }
+    switch (notification.type) {
+      case "CONNECTION_ESTABLISHED":
+        this.handleConnectionEstablished(clientId, notification);
+        break;
+      case "DOMAIN_RELOAD":
+        this.handleDomainReload(clientId, notification);
+        break;
+      case "DOMAIN_RELOAD_RECOVERED":
+        this.handleDomainReloadRecovered(clientId, notification);
+        break;
+      case "USER_DISCONNECT":
+      case "UNITY_SHUTDOWN":
+        this.handleDisconnectNotification(clientId, notification);
+        break;
+      case "TOOLS_CHANGED":
+        this.handleToolsChanged(clientId, notification);
+        break;
+      default:
+        VibeLogger.logWarning(
+          "unknown_notification_type",
+          `Unknown notification type: ${String(notification.type)}`,
+          { clientId, notificationType: notification.type }
+        );
+    }
+    this.emit("push_notification", { clientId, notification });
+  }
+  handleConnectionEstablished(clientId, notification) {
+    const connection = this.connectedUnityClients.get(clientId);
+    if (connection) {
+      connection.lastPingAt = /* @__PURE__ */ new Date();
+    }
+    this.emit("connection_established", { clientId, notification });
+  }
+  handleDomainReload(clientId, notification) {
+    this.emit("domain_reload_start", { clientId, notification });
+  }
+  handleDomainReloadRecovered(clientId, notification) {
+    const connection = this.connectedUnityClients.get(clientId);
+    if (connection) {
+      connection.lastPingAt = /* @__PURE__ */ new Date();
+    }
+    this.emit("domain_reload_recovered", { clientId, notification });
+  }
+  handleDisconnectNotification(clientId, notification) {
+    const reason = notification.payload?.reason || {
+      type: "USER_DISCONNECT",
+      message: "Unknown disconnect reason"
+    };
+    this.handleDisconnection(clientId, reason);
+  }
+  handleToolsChanged(clientId, notification) {
+    this.emit("tools_changed", { clientId, notification });
+  }
+  handleDisconnection(clientId, reason) {
+    const connection = this.connectedUnityClients.get(clientId);
+    if (!connection) {
+      return;
+    }
+    this.connectedUnityClients.delete(clientId);
+    if (!connection.socket.destroyed) {
+      connection.socket.destroy();
+    }
+    this.emit("unity_disconnected", { clientId, reason });
+  }
+  generateClientId() {
+    return `unity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+};
+
 // src/server.ts
 var UnityMcpServer = class {
   server;
@@ -8526,6 +9092,7 @@ var UnityMcpServer = class {
   clientCompatibility;
   eventHandler;
   pushNotificationServer;
+  initializationHandler;
   constructor() {
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
     VibeLogger.logInfo("mcp_server_starting", "Unity MCP Server Starting");
@@ -8554,6 +9121,13 @@ var UnityMcpServer = class {
     );
     this.pushNotificationServer = new UnityPushNotificationReceiveServer();
     this.setupPushNotificationHandlers();
+    this.initializationHandler = new ClientInitializationHandler(
+      this.unityClient,
+      this.toolManager,
+      this.clientCompatibility,
+      this.connectionManager
+    );
+    this.toolManager.setClientInitializationHandler(this.initializationHandler);
     this.connectionManager.setupReconnectionCallback(async () => {
       await this.toolManager.refreshDynamicToolsSafe(() => {
         this.eventHandler.sendToolsChangedNotification();
@@ -8564,112 +9138,80 @@ var UnityMcpServer = class {
   }
   setupHandlers() {
     this.server.setRequestHandler(InitializeRequestSchema, async (request) => {
-      const clientInfo = request.params?.clientInfo;
-      const clientName = clientInfo?.name || "";
+      return await this.initializationHandler.handleInitialize(request);
+    });
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      const tools = await this.toolManager.getAvailableTools();
+      const clientInfo = this.initializationHandler.getClientInfo();
       VibeLogger.logInfo(
-        "mcp_client_name_received",
-        `MCP client name received: ${clientName}`,
+        "mcp_tools_list_requested",
+        `Tools list requested by ${clientInfo?.name || "Unknown"}`,
         {
-          client_name: clientName,
-          client_info: clientInfo,
-          is_list_changed_unsupported: this.clientCompatibility.isListChangedUnsupported(clientName)
+          client_name: clientInfo?.name || "Unknown",
+          tools_count: tools.length,
+          unity_connected: this.unityClient.connected
         },
         void 0,
-        "This logs the client name received during MCP initialize request",
-        "Analyze this to ensure claude-code is properly detected"
+        "MCP tools/list request processed with Unity connection state check"
       );
-      if (clientName) {
-        this.clientCompatibility.setClientName(clientName);
-        this.clientCompatibility.logClientCompatibility(clientName);
-      }
-      if (!this.isInitialized) {
-        this.isInitialized = true;
-        if (this.clientCompatibility.isListChangedUnsupported(clientName)) {
-          try {
-            await this.clientCompatibility.initializeClient(clientName);
-            this.toolManager.setClientName(clientName);
-            await this.connectionManager.waitForUnityConnectionWithTimeout(1e4);
-            const tools = await this.toolManager.getToolsFromUnity();
-            return {
-              protocolVersion: MCP_PROTOCOL_VERSION,
-              capabilities: {
-                tools: {
-                  listChanged: TOOLS_LIST_CHANGED_CAPABILITY
-                }
-              },
-              serverInfo: {
-                name: MCP_SERVER_NAME,
-                version: package_default.version
-              },
-              tools
-            };
-          } catch (error) {
-            VibeLogger.logError(
-              "mcp_unity_connection_timeout",
-              "Unity connection timeout",
-              {
-                client_name: clientName,
-                error_message: error instanceof Error ? error.message : String(error)
-              },
-              void 0,
-              "Unity connection timed out - check Unity MCP bridge status"
-            );
-            return {
-              protocolVersion: MCP_PROTOCOL_VERSION,
-              capabilities: {
-                tools: {
-                  listChanged: TOOLS_LIST_CHANGED_CAPABILITY
-                }
-              },
-              serverInfo: {
-                name: MCP_SERVER_NAME,
-                version: package_default.version
-              },
-              tools: []
-            };
-          }
-        } else {
-          void this.clientCompatibility.initializeClient(clientName);
-          this.toolManager.setClientName(clientName);
-          void this.toolManager.initializeDynamicTools().then(() => {
-          }).catch((error) => {
-            VibeLogger.logError(
-              "mcp_unity_connection_init_failed",
-              "Unity connection initialization failed",
-              { error_message: error instanceof Error ? error.message : String(error) },
-              void 0,
-              "Unity connection could not be established - check Unity MCP bridge"
-            );
-            this.unityDiscovery.start();
-          });
-        }
-      }
-      return {
-        protocolVersion: MCP_PROTOCOL_VERSION,
-        capabilities: {
-          tools: {
-            listChanged: TOOLS_LIST_CHANGED_CAPABILITY
-          }
-        },
-        serverInfo: {
-          name: MCP_SERVER_NAME,
-          version: package_default.version
-        }
-      };
-    });
-    this.server.setRequestHandler(ListToolsRequestSchema, () => {
-      const tools = this.toolManager.getAllTools();
       return { tools };
     });
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
+      const clientInfo = this.initializationHandler.getClientInfo();
+      VibeLogger.logInfo(
+        "mcp_tool_execution_requested",
+        `Tool execution requested: ${name}`,
+        {
+          client_name: clientInfo?.name || "Unknown",
+          tool_name: name,
+          unity_connected: this.unityClient.connected,
+          has_args: !!args
+        },
+        void 0,
+        "MCP tool execution request received"
+      );
       try {
+        if (!this.unityClient.connected) {
+          const errorMessage = `Tool ${name} cannot be executed: Unity Editor is not connected. Please ensure Unity Editor is running and the uLoopMCP plugin is active.`;
+          VibeLogger.logError(
+            "mcp_tool_execution_no_unity",
+            "Tool execution failed - Unity not connected",
+            {
+              client_name: clientInfo?.name || "Unknown",
+              tool_name: name,
+              unity_connected: false
+            },
+            void 0,
+            "Unity connection required for tool execution"
+          );
+          return {
+            content: [
+              {
+                type: "text",
+                text: errorMessage
+              }
+            ],
+            isError: true
+          };
+        }
         if (this.toolManager.hasTool(name)) {
           const dynamicTool = this.toolManager.getTool(name);
           if (!dynamicTool) {
             throw new Error(`Tool ${name} is not available`);
           }
           const result = await dynamicTool.execute(args ?? {});
+          VibeLogger.logInfo(
+            "mcp_tool_execution_success",
+            `Tool execution completed: ${name}`,
+            {
+              client_name: clientInfo?.name || "Unknown",
+              tool_name: name,
+              is_error: result.isError
+            },
+            void 0,
+            "MCP tool execution completed"
+          );
           return {
             content: result.content,
             isError: result.isError
@@ -8677,11 +9219,24 @@ var UnityMcpServer = class {
         }
         throw new Error(`Unknown tool: ${name}`);
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        VibeLogger.logError(
+          "mcp_tool_execution_error",
+          `Tool execution error: ${name}`,
+          {
+            client_name: clientInfo?.name || "Unknown",
+            tool_name: name,
+            error_message: errorMessage,
+            unity_connected: this.unityClient.connected
+          },
+          void 0,
+          "MCP tool execution failed with error"
+        );
         return {
           content: [
             {
               type: "text",
-              text: `Error executing ${name}: ${error instanceof Error ? error.message : "Unknown error"}`
+              text: `Error executing ${name}: ${errorMessage}`
             }
           ],
           isError: true
@@ -8707,13 +9262,52 @@ var UnityMcpServer = class {
         void 0,
         "Unity disconnected from push notification server"
       );
-    });
-    this.pushNotificationServer.on("connection_established", (event) => {
+      this.unityClient.disconnect();
       VibeLogger.logInfo(
-        "push_connection_established",
-        "Push connection established",
-        { clientId: event.clientId, notification: event.notification }
+        "push_unity_disconnection_synced",
+        "Unity disconnection state synchronized",
+        {
+          clientId: event.clientId,
+          reason: event.reason,
+          unity_connected: this.unityClient.connected
+        },
+        void 0,
+        "Unity disconnection state updated via push notification"
       );
+    });
+    this.pushNotificationServer.on("connection_established", async (event) => {
+      VibeLogger.logInfo("push_connection_established", "Push connection established", {
+        clientId: event.clientId,
+        notification: event.notification
+      });
+      try {
+        await this.unityClient.ensureConnected();
+        this.connectionManager.handleUnityDiscovered();
+        VibeLogger.logInfo(
+          "push_unity_connection_synced",
+          "Unity connection state synchronized with push notification",
+          {
+            clientId: event.clientId,
+            unity_connected: this.unityClient.connected
+          },
+          void 0,
+          "Unity connection state updated via push notification"
+        );
+        await this.toolManager.refreshDynamicToolsSafe(() => {
+          this.eventHandler.sendToolsChangedNotification();
+        });
+      } catch (error) {
+        VibeLogger.logError(
+          "push_unity_connection_sync_failed",
+          "Failed to synchronize Unity connection state",
+          {
+            clientId: event.clientId,
+            error: error instanceof Error ? error.message : String(error)
+          },
+          void 0,
+          "Unity connection synchronization failed"
+        );
+      }
     });
     this.pushNotificationServer.on("domain_reload_start", (event) => {
       VibeLogger.logInfo(
@@ -8732,17 +9326,16 @@ var UnityMcpServer = class {
         void 0,
         "Unity has recovered from domain reload"
       );
-      this.toolManager.refreshDynamicToolsSafe(() => {
+      void this.toolManager.refreshDynamicToolsSafe(() => {
         this.eventHandler.sendToolsChangedNotification();
       });
     });
     this.pushNotificationServer.on("tools_changed", (event) => {
-      VibeLogger.logInfo(
-        "push_tools_changed",
-        "Unity tools changed notification received",
-        { clientId: event.clientId, notification: event.notification }
-      );
-      this.toolManager.refreshDynamicToolsSafe(() => {
+      VibeLogger.logInfo("push_tools_changed", "Unity tools changed notification received", {
+        clientId: event.clientId,
+        notification: event.notification
+      });
+      void this.toolManager.refreshDynamicToolsSafe(() => {
         this.eventHandler.sendToolsChangedNotification();
       });
     });
@@ -8775,6 +9368,7 @@ var UnityMcpServer = class {
       });
     });
     this.connectionManager.initialize(async () => {
+      this.initializationHandler.handleUnityConnection();
       const clientName = this.clientCompatibility.getClientName();
       if (clientName) {
         this.toolManager.setClientName(clientName);
