@@ -15,13 +15,9 @@ import { UnityToolManager } from './unity-tool-manager.js';
 import { McpClientCompatibility } from './mcp-client-compatibility.js';
 import { UnityEventHandler } from './unity-event-handler.js';
 import { ClientInitializationHandler } from './client-initialization-handler.js';
+import { UnityPushNotificationManager } from './unity-push-notification-manager.js';
 import { ToolResponse } from './types/tool-types.js';
-import {
-  UnityPushNotificationReceiveServer,
-  UnityConnectedEvent,
-  UnityDisconnectedEvent,
-  PushNotificationEvent,
-} from './unity-push-notification-receive-server.js';
+import { UnityPushNotificationReceiveServer } from './unity-push-notification-receive-server.js';
 import { ENVIRONMENT, MCP_SERVER_NAME, TOOLS_LIST_CHANGED_CAPABILITY } from './constants.js';
 import packageJson from '../package.json' assert { type: 'json' };
 
@@ -49,15 +45,30 @@ class UnityMcpServer {
   private toolManager: UnityToolManager;
   private clientCompatibility: McpClientCompatibility;
   private eventHandler: UnityEventHandler;
-  private pushNotificationServer: UnityPushNotificationReceiveServer;
+  private pushNotificationManager: UnityPushNotificationManager;
   private initializationHandler: ClientInitializationHandler;
 
   constructor() {
-    // Simple environment variable check
+    this.initializeEnvironment();
+    this.initializeMcpServer();
+    this.initializeUnityComponents();
+    this.initializePushNotificationSystem();
+    this.initializeCrossDependencies();
+    this.setupAllHandlers();
+  }
+
+  /**
+   * Initialize environment configuration
+   */
+  private initializeEnvironment(): void {
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
-
     VibeLogger.logInfo('mcp_server_starting', 'Unity MCP Server Starting');
+  }
 
+  /**
+   * Initialize core MCP server
+   */
+  private initializeMcpServer(): void {
     this.server = new Server(
       {
         name: MCP_SERVER_NAME,
@@ -71,7 +82,12 @@ class UnityMcpServer {
         },
       },
     );
+  }
 
+  /**
+   * Initialize Unity-related components
+   */
+  private initializeUnityComponents(): void {
     this.unityClient = UnityClient.getInstance();
 
     // Initialize Unity connection manager
@@ -90,11 +106,27 @@ class UnityMcpServer {
       this.unityClient,
       this.connectionManager,
     );
+  }
 
-    // Initialize Push notification receive server
-    this.pushNotificationServer = new UnityPushNotificationReceiveServer();
-    this.setupPushNotificationHandlers();
+  /**
+   * Initialize push notification system
+   */
+  private initializePushNotificationSystem(): void {
+    const pushNotificationServer = new UnityPushNotificationReceiveServer();
+    
+    this.pushNotificationManager = new UnityPushNotificationManager(
+      pushNotificationServer,
+      this.unityClient,
+      this.connectionManager,
+      this.toolManager,
+      this.eventHandler,
+    );
+  }
 
+  /**
+   * Initialize cross-component dependencies and callbacks
+   */
+  private initializeCrossDependencies(): void {
     // Initialize Client initialization handler
     this.initializationHandler = new ClientInitializationHandler(
       this.unityClient,
@@ -108,11 +140,14 @@ class UnityMcpServer {
 
     // Setup reconnection callback for tool refresh
     this.connectionManager.setupReconnectionCallback(async () => {
-      await this.toolManager.refreshDynamicToolsSafe(() => {
-        this.eventHandler.sendToolsChangedNotification();
-      });
+      await this.refreshToolsAndNotifyClients();
     });
+  }
 
+  /**
+   * Setup all event handlers and signal handlers
+   */
+  private setupAllHandlers(): void {
     this.setupHandlers();
     this.eventHandler.setupSignalHandlers();
   }
@@ -247,117 +282,12 @@ class UnityMcpServer {
     });
   }
 
-  private setupPushNotificationHandlers(): void {
-    this.pushNotificationServer.on('unity_connected', (event: UnityConnectedEvent) => {
-      VibeLogger.logInfo(
-        'unity_push_client_connected',
-        'Unity Push client connected',
-        { clientId: event.clientId, endpoint: event.endpoint },
-        undefined,
-        'Unity successfully connected to push notification server',
-      );
-    });
-
-    this.pushNotificationServer.on('unity_disconnected', (event: UnityDisconnectedEvent) => {
-      VibeLogger.logInfo(
-        'unity_push_client_disconnected',
-        'Unity Push client disconnected',
-        { clientId: event.clientId, reason: event.reason },
-        undefined,
-        'Unity disconnected from push notification server',
-      );
-
-      // Synchronize Unity client disconnection state
-      this.unityClient.disconnect();
-      
-      VibeLogger.logInfo(
-        'push_unity_disconnection_synced',
-        'Unity disconnection state synchronized',
-        {
-          clientId: event.clientId,
-          reason: event.reason,
-          unity_connected: this.unityClient.connected,
-        },
-        undefined,
-        'Unity disconnection state updated via push notification',
-      );
-    });
-
-    this.pushNotificationServer.on('connection_established', async (event: PushNotificationEvent) => {
-      VibeLogger.logInfo('push_connection_established', 'Push connection established', {
-        clientId: event.clientId,
-        notification: event.notification,
-      });
-
-      // Ensure Unity client connection state is synchronized with push notification
-      try {
-        await this.unityClient.ensureConnected();
-        
-        // Notify connection manager about Unity connection
-        this.connectionManager.handleUnityDiscovered();
-
-        VibeLogger.logInfo(
-          'push_unity_connection_synced',
-          'Unity connection state synchronized with push notification',
-          {
-            clientId: event.clientId,
-            unity_connected: this.unityClient.connected,
-          },
-          undefined,
-          'Unity connection state updated via push notification',
-        );
-
-        // Refresh tools and notify clients about availability
-        await this.toolManager.refreshDynamicToolsSafe(() => {
-          this.eventHandler.sendToolsChangedNotification();
-        });
-      } catch (error) {
-        VibeLogger.logError(
-          'push_unity_connection_sync_failed',
-          'Failed to synchronize Unity connection state',
-          {
-            clientId: event.clientId,
-            error: error instanceof Error ? error.message : String(error),
-          },
-          undefined,
-          'Unity connection synchronization failed',
-        );
-      }
-    });
-
-    this.pushNotificationServer.on('domain_reload_start', (event: PushNotificationEvent) => {
-      VibeLogger.logInfo(
-        'push_domain_reload_start',
-        'Unity domain reload started',
-        { clientId: event.clientId, notification: event.notification },
-        undefined,
-        'Unity is performing domain reload - connection may be temporarily lost',
-      );
-    });
-
-    this.pushNotificationServer.on('domain_reload_recovered', (event: PushNotificationEvent) => {
-      VibeLogger.logInfo(
-        'push_domain_reload_recovered',
-        'Unity domain reload recovered',
-        { clientId: event.clientId, notification: event.notification },
-        undefined,
-        'Unity has recovered from domain reload',
-      );
-
-      void this.toolManager.refreshDynamicToolsSafe(() => {
-        this.eventHandler.sendToolsChangedNotification();
-      });
-    });
-
-    this.pushNotificationServer.on('tools_changed', (event: PushNotificationEvent) => {
-      VibeLogger.logInfo('push_tools_changed', 'Unity tools changed notification received', {
-        clientId: event.clientId,
-        notification: event.notification,
-      });
-
-      void this.toolManager.refreshDynamicToolsSafe(() => {
-        this.eventHandler.sendToolsChangedNotification();
-      });
+  /**
+   * Refresh dynamic tools and notify MCP clients
+   */
+  private async refreshToolsAndNotifyClients(): Promise<void> {
+    await this.toolManager.refreshDynamicToolsSafe(() => {
+      this.eventHandler.sendToolsChangedNotification();
     });
   }
 
@@ -367,14 +297,7 @@ class UnityMcpServer {
   async start(): Promise<void> {
     // Start Push notification receive server first
     try {
-      const pushServerPort = await this.pushNotificationServer.start();
-      VibeLogger.logInfo(
-        'push_server_started',
-        'Push notification receive server started',
-        { port: pushServerPort },
-        undefined,
-        'TypeScript Push notification server is ready to receive Unity connections',
-      );
+      await this.pushNotificationManager.startPushNotificationServer();
     } catch (error) {
       VibeLogger.logError(
         'push_server_start_failed',
