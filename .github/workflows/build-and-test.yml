@@ -50,9 +50,10 @@ jobs:
         
     - name: Test TypeScript Server
       working-directory: Packages/src/TypeScriptServer~
+      continue-on-error: true
       run: |
         echo "Running tests (informational only)..."
-        npm test || echo "Tests failed but continuing build (tests are still in development)"
+        npm test
         echo "Test execution completed"
         
     - name: Build TypeScript Server

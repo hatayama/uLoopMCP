@@ -9367,18 +9367,28 @@ var UnityMcpServer = class {
     );
     this.toolManager.setClientInitializationHandler(this.initializationHandler);
     this.connectionManager.setupReconnectionCallback(async () => {
-      const pushEndpoint = this.pushNotificationManager.getCurrentEndpoint();
-      if (pushEndpoint) {
-        this.unityClient.setPushNotificationEndpoint(pushEndpoint);
-        VibeLogger.logInfo(
-          "push_endpoint_restored_on_reconnection",
-          "Push notification endpoint restored on Unity reconnection",
-          { endpoint: pushEndpoint },
+      try {
+        const pushEndpoint = this.pushNotificationManager.getCurrentEndpoint();
+        if (pushEndpoint) {
+          this.unityClient.setPushNotificationEndpoint(pushEndpoint);
+          VibeLogger.logInfo(
+            "push_endpoint_restored_on_reconnection",
+            "Push notification endpoint restored on Unity reconnection",
+            { endpoint: pushEndpoint },
+            void 0,
+            "Push endpoint restored to prevent empty string transmission during setClientName"
+          );
+        }
+        await this.refreshToolsAndNotifyClients();
+      } catch (error) {
+        VibeLogger.logError(
+          "push_endpoint_restoration_failed",
+          "Error restoring push endpoint or refreshing tools on reconnection",
+          { error: error instanceof Error ? error.message : String(error) },
           void 0,
-          "Push endpoint restored to prevent empty string transmission during setClientName"
+          "Push endpoint restoration or tool refresh failed during Unity reconnection"
         );
       }
-      await this.refreshToolsAndNotifyClients();
     });
   }
   /**

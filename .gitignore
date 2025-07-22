@@ -162,5 +162,11 @@ eslint-results.xml
 # uMPC
 TestResults**
 
+# Debug and test files
+debug_*.js
+test-*.js
+quick-*.sh
+*debug*.js
+*test*.sh
 
 requirements/
