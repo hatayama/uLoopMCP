@@ -133,7 +133,7 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public async Task MultipleNotificationTypes_SerializeCorrectly()
+        public void MultipleNotificationTypes_SerializeCorrectly()
         {
             var notifications = new List<PushNotification>
             {
@@ -160,7 +160,7 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public async Task ErrorHandlerStaticMethods_WorkCorrectly()
+        public void ErrorHandlerStaticMethods_WorkCorrectly()
         {
             var timeoutException = new TimeoutException("Connection timeout");
             var networkException = new System.Net.Sockets.SocketException();
@@ -219,7 +219,7 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public async Task SendNotification_WhenNotConnected_LogsWarning()
+        public void SendNotification_WhenNotConnected_LogsWarning()
         {
             var notification = new PushNotification
             {
