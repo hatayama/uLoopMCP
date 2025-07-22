@@ -1,11 +1,11 @@
 # uLoopMCP Architecture Overview
 
-Unity Editor and MCP (Model Context Protocol) compatible LLM tools bridging system architecture overview.
+A comprehensive system that bridges Unity Editor with MCP (Model Context Protocol) compatible LLM tools.
 
 ## Documentation Structure
 
-- **[Unity-Side Architecture Details](../../docs/ARCHITECTURE_UNITY.md)** - Unity Editor side (C#) implementation details
-- **[TypeScript-Side Architecture Details](../../docs/ARCHITECTURE_TYPESCRIPT.md)** - TypeScript server side implementation details
+- **[Unity-Side Architecture Details](ARCHITECTURE_UNITY.md)** - Unity Editor side (C#) implementation details
+- **[TypeScript-Side Architecture Details](ARCHITECTURE_TYPESCRIPT.md)** - TypeScript server side implementation details
 
 ## System Overview
 
@@ -71,6 +71,27 @@ graph TB
 | **Push Notification Server** (TypeScript) | **Server** (for Push notifications) | TCP/JSON | Random port | Unity notification receiving |
 | **Unity Editor** | **Server** | TCP/JSON-RPC | UNITY_TCP_PORT | TCP connection acceptance |
 | **UnityPushClient** (Unity) | **Client** (for Push notifications) | TCP/JSON | Push server port | Event notification sending |
+
+## Protocol Layer Details
+
+### Layer 1: LLM Tools ↔ TypeScript Server (MCP Protocol)
+- **Protocol**: Model Context Protocol (MCP)
+- **Transport**: stdio or TCP
+- **Data Format**: JSON-RPC 2.0 with MCP extensions
+- **Connection**: LLM tools operate as MCP clients
+
+### Layer 2: TypeScript Server ↔ Unity Editor (TCP Protocol)
+- **Protocol**: Custom TCP using JSON-RPC 2.0
+- **Transport**: TCP socket
+- **Port**: Port specified by UNITY_TCP_PORT environment variable (auto-discovery)
+- **Connection**: TypeScript server operates as TCP client
+
+### Layer 3: Unity Editor ↔ Push Notification Server (Push Notifications)
+- **Protocol**: Custom JSON (Push notification specific)
+- **Transport**: TCP socket
+- **Port**: Push notification server listens on random port
+- **Connection**: UnityPushClient operates as TCP client
+- **Notification Types**: Domain reload, tool changes, connection establishment, disconnection
 
 ## Unity Disconnection Patterns and Push Notifications
 
@@ -138,5 +159,5 @@ graph TB
 
 For detailed implementation information, please refer to each architecture document:
 
-- **[Unity-Side Architecture Details](../../docs/ARCHITECTURE_UNITY.md)** - C# implementation, Tool Pattern, Security Architecture
-- **[TypeScript-Side Architecture Details](../../docs/ARCHITECTURE_TYPESCRIPT.md)** - Node.js implementation, MCP support, Dynamic Tool Management
+- **[Unity-Side Architecture Details](ARCHITECTURE_UNITY.md)** - C# implementation, Tool Pattern, Security Architecture
+- **[TypeScript-Side Architecture Details](ARCHITECTURE_TYPESCRIPT.md)** - Node.js implementation, MCP support, Dynamic Tool Management
