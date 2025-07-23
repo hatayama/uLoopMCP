@@ -19,6 +19,11 @@ namespace io.github.hatayama.uLoopMCP
         private static McpBridgeServer mcpServer;
 
         /// <summary>
+        /// Event fired when the server instance changes (created or destroyed)
+        /// </summary>
+        public static event System.Action<McpBridgeServer> OnServerInstanceChanged;
+
+        /// <summary>
         /// The current MCP server instance.
         /// </summary>
         public static McpBridgeServer CurrentServer => mcpServer;
@@ -103,6 +108,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             mcpServer = new McpBridgeServer();
+            OnServerInstanceChanged?.Invoke(mcpServer);
             mcpServer.StartServer(availablePort);
 
             // Start new push notification session
@@ -123,6 +129,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 mcpServer.Dispose();
                 mcpServer = null;
+                OnServerInstanceChanged?.Invoke(null);
             }
 
             // End push notification session
@@ -184,6 +191,7 @@ namespace io.github.hatayama.uLoopMCP
 
                     mcpServer.Dispose();
                     mcpServer = null;
+                    OnServerInstanceChanged?.Invoke(null);
 
                     VibeLogger.LogInfo(
                         "domain_reload_server_stopped",
@@ -330,12 +338,14 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     mcpServer.Dispose();
                     mcpServer = null;
+                    OnServerInstanceChanged?.Invoke(null);
                 }
 
                 // Find available port starting from the requested port
                 int availablePort = FindAvailablePort(port);
 
                 mcpServer = new McpBridgeServer();
+                OnServerInstanceChanged?.Invoke(mcpServer);
                 mcpServer.StartServer(availablePort);
 
                 // Update session manager with the actual port used

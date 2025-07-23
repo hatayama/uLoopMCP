@@ -211,9 +211,8 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static void LoadFromSessionState()
         {
-            // Restore logs.
-            string logsJson = McpSessionManager.instance.CommunicationLogsJson;
-            _logs = JsonConvert.DeserializeObject<List<McpCommunicationLogEntry>>(logsJson) ?? new List<McpCommunicationLogEntry>();
+            // Initialize empty logs (communication logs feature has been removed)
+            _logs = new List<McpCommunicationLogEntry>();
 
             // Restore pending requests.
             string pendingJson = McpSessionManager.instance.PendingRequestsJson;
@@ -243,7 +242,6 @@ namespace io.github.hatayama.uLoopMCP
             string pendingJson = JsonConvert.SerializeObject(pendingSnapshot);
 
             McpSessionManager sessionManager = McpSessionManager.instance;
-            sessionManager.CommunicationLogsJson = logsJson;
             sessionManager.PendingRequestsJson = pendingJson;
         }
 
@@ -252,7 +250,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void ClearLogSessionState()
         {
-            McpSessionManager.instance.ClearCommunicationLogs();
+            McpSessionManager.instance.ClearPendingRequests();
             
             lock (_logs)
             {

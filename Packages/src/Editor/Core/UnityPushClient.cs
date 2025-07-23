@@ -11,6 +11,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -127,7 +128,7 @@ namespace io.github.hatayama.uLoopMCP
                 currentEndpoint = $"{host}:{port}";
                 isConnected = true;
                 
-                PersistEndpoint(currentEndpoint);
+                // PersistEndpoint(currentEndpoint); // Disabled: SetClientNameTool handles endpoint persistence
                 OnConnected?.Invoke(currentEndpoint);
                 
                 Debug.Log($"[uLoopMCP] Connected to TypeScript Push Server: {currentEndpoint}");
@@ -235,7 +236,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (McpSessionManager.instance != null)
             {
-                McpSessionManager.instance.SetPushServerEndpoint(endpoint);
+                McpSessionManager.instance.SetPushServerEndpoint(endpoint, "Unknown");
             }
         }
 
@@ -243,7 +244,8 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (McpSessionManager.instance != null)
             {
-                return McpSessionManager.instance.GetPushServerEndpoint();
+                List<McpSessionManager.ClientEndpointPair> endpoints = McpSessionManager.instance.GetAllPushServerEndpoints();
+                return endpoints.Count > 0 ? endpoints[0].pushReceiveServerEndpoint : null;
             }
             
             return null;

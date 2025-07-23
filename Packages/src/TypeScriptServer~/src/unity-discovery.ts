@@ -217,16 +217,33 @@ export class UnityDiscovery {
     );
 
     try {
+      VibeLogger.logDebug(
+        'unity_discovery_port_check',
+        'Checking Unity availability on port',
+        {
+          target_port: port,
+          unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+          process_id: process.pid,
+        },
+        correlationId,
+        'Attempting to connect to Unity MCP server on specified port',
+        'If successful, Unity should accept connection and register client',
+      );
+
       if (await this.isUnityAvailable(port)) {
         VibeLogger.logInfo(
           'unity_discovery_success',
           'Unity discovered and connection established',
           {
             discovered_port: port,
+            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+            unity_host: UNITY_CONNECTION.DEFAULT_HOST,
+            process_id: process.pid,
+            discovery_method: 'port_scan',
           },
           correlationId,
           'Unity MCP server found and connection established successfully.',
-          'Monitor for tools/list_changed notifications after this discovery.',
+          'Monitor for tools/list_changed notifications after this discovery. Check Unity logs for client registration.',
         );
 
         // Update client port - connection management is UnityClient's responsibility
@@ -301,19 +318,59 @@ export class UnityDiscovery {
     return new Promise((resolve) => {
       const socket = new net.Socket();
       const timeout = 500; // Shorter timeout for faster discovery
+      const correlationId = VibeLogger.generateCorrelationId();
 
       const timer = setTimeout(() => {
+        VibeLogger.logDebug(
+          'unity_availability_check_timeout',
+          'Unity availability check timed out',
+          {
+            target_port: port,
+            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+            timeout_ms: timeout,
+            process_id: process.pid,
+          },
+          correlationId,
+          'Unity availability check timeout - Unity may not be running on this port',
+        );
         socket.destroy();
         resolve(false);
       }, timeout);
 
       socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
+        VibeLogger.logDebug(
+          'unity_availability_check_success',
+          'Unity availability check successful',
+          {
+            target_port: port,
+            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+            socket_local_address: socket.localAddress,
+            socket_local_port: socket.localPort,
+            process_id: process.pid,
+          },
+          correlationId,
+          'Unity MCP server is available and accepting connections',
+          'Unity should show incoming connection in its logs',
+        );
         clearTimeout(timer);
         socket.destroy();
         resolve(true);
       });
 
-      socket.on('error', () => {
+      socket.on('error', (error) => {
+        VibeLogger.logDebug(
+          'unity_availability_check_error',
+          'Unity availability check failed',
+          {
+            target_port: port,
+            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+            error_message: error.message,
+            error_code: (error as NodeJS.ErrnoException).code,
+            process_id: process.pid,
+          },
+          correlationId,
+          'Unity availability check failed - expected when Unity is not running',
+        );
         clearTimeout(timer);
         resolve(false);
       });

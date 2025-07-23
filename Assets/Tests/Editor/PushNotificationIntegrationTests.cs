@@ -241,14 +241,14 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             {
                 // Set some state
                 string testEndpoint = "localhost:8080";
-                McpSessionManager.instance.SetPushServerEndpoint(testEndpoint);
+                McpSessionManager.instance.SetPushServerEndpoint(testEndpoint, "Unknown");
                 McpSessionManager.instance.SetPushServerConnected(true);
                 
                 // Simulate domain reload crash detection
                 await PushNotificationErrorHandler.HandleUnityEditorCrashDetectionAsync(pushClient);
                 
                 // State should be cleared
-                Assert.IsNull(McpSessionManager.instance.GetPushServerEndpoint());
+                Assert.IsNull(McpSessionManager.instance.GetPushServerEndpoint(testEndpoint));
                 Assert.IsFalse(McpSessionManager.instance.IsPushServerConnected());
             }
         }

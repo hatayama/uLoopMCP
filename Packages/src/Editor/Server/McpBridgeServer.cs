@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEngine;
 
 
 namespace io.github.hatayama.uLoopMCP
@@ -513,6 +514,9 @@ namespace io.github.hatayama.uLoopMCP
                 
                 
                 client.Close();
+                
+                Debug.Log($"[uLoopMCP] McpBridgeServer: Client disconnected - {clientEndpoint}");
+                Debug.Log($"[uLoopMCP] McpBridgeServer instance: {this.GetHashCode()}, OnClientDisconnected subscribers: {OnClientDisconnected?.GetInvocationList().Length ?? 0}");
                 OnClientDisconnected?.Invoke(clientEndpoint);
             }
         }

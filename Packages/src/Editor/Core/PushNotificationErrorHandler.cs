@@ -12,6 +12,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Threading.Tasks;
@@ -146,11 +147,12 @@ namespace io.github.hatayama.uLoopMCP
 
             DateTime lastConnectionTime = sessionManager.GetLastConnectionTime();
             bool isConnected = sessionManager.IsPushServerConnected();
-            string endpoint = sessionManager.GetPushServerEndpoint();
+            List<McpSessionManager.ClientEndpointPair> endpoints = sessionManager.GetAllPushServerEndpoints();
+            string endpointInfo = endpoints.Count > 0 ? $"{endpoints.Count} endpoints" : "No endpoints";
 
             Debug.Log($"[uLoopMCP] Connection Statistics:");
             Debug.Log($"  - Connected: {isConnected}");
-            Debug.Log($"  - Endpoint: {endpoint ?? "None"}");
+            Debug.Log($"  - Endpoints: {endpointInfo}");
             Debug.Log($"  - Last Connection: {lastConnectionTime}");
             Debug.Log($"  - Connection Age: {DateTime.Now - lastConnectionTime}");
         }

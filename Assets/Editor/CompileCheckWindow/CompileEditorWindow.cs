@@ -30,13 +30,8 @@ namespace io.github.hatayama.uLoopMCP
                 _compileController = new CompileController();
                 _logDisplay = new CompileLogDisplay();
 
-                // Restore persisted logs from McpSessionManager
-                bool hasPersistedData = McpSessionManager.instance.CompileWindowHasData;
-                if (hasPersistedData)
-                {
-                    string persistentLogText = McpSessionManager.instance.CompileWindowLogText;
-                    _logDisplay.RestoreFromText(persistentLogText);
-                }
+                // Initialize empty log display (compile window persistence has been removed)
+                _logDisplay.Clear();
 
                 // Subscribe to events
                 _compileController.OnCompileStarted += _logDisplay.AppendStartMessage;
@@ -138,9 +133,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             _logDisplay.AppendCompletionMessage(result);
 
-            // Persist log to McpSessionManager
-            McpSessionManager.instance.CompileWindowLogText = _logDisplay.LogText;
-            McpSessionManager.instance.CompileWindowHasData = true;
+            // Note: Log persistence has been removed
 
             Repaint();
         }
@@ -169,8 +162,7 @@ namespace io.github.hatayama.uLoopMCP
             _logDisplay.Clear();
             _compileController.ClearMessages();
 
-            // Also clear McpSessionManager data
-            McpSessionManager.instance.ClearCompileWindowData();
+            // Note: Compile window data is no longer persisted
 
             Repaint();
         }

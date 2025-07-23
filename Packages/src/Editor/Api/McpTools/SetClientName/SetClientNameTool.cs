@@ -22,10 +22,17 @@ namespace io.github.hatayama.uLoopMCP
             int clientPort = parameters.ClientPort;
             string pushEndpoint = parameters.PushNotificationEndpoint;
             
-            // Get actual client endpoint from connection context
-            string clientEndpoint = JsonRpcProcessor.CurrentClientContext?.Endpoint ?? "unknown";
+            // Use MCP connection endpoint for client identification (not Push notification endpoint)
+            string jsonRpcEndpoint = JsonRpcProcessor.CurrentClientContext?.Endpoint ?? "unknown";
+            string actualEndpoint = GetActualClientEndpoint();
+            string clientEndpoint = actualEndpoint;  // Use actual MCP connection endpoint
+            
+            UnityEngine.Debug.Log($"[uLoopMCP] SetClientName endpoint comparison - JsonRpc: {jsonRpcEndpoint}, Actual: {actualEndpoint}");
             
             UpdateClientNameInServer(clientName);
+            
+            // Debug log for push endpoint registration
+            UnityEngine.Debug.Log($"[uLoopMCP] SetClientName - clientName: {clientName}, clientPort: {clientPort}, pushEndpoint: '{pushEndpoint}', clientEndpoint: {clientEndpoint}");
             
             // Save push notification endpoint if provided
             if (!string.IsNullOrEmpty(pushEndpoint))
@@ -33,13 +40,19 @@ namespace io.github.hatayama.uLoopMCP
                 McpSessionManager sessionManager = await McpSessionManager.GetSafeInstanceAsync();
                 if (sessionManager != null)
                 {
-                    // Use new method signature: SetPushServerEndpoint(clientName, clientPort, pushReceiveServerEndpoint)
-                    sessionManager.SetPushServerEndpoint(clientName, clientPort, pushEndpoint);
+                    UnityEngine.Debug.Log($"[uLoopMCP] Registering push endpoint - clientName: {clientName}, clientEndpoint: {clientEndpoint}, pushEndpoint: {pushEndpoint}");
+                    // Use actual client endpoint and client name to avoid overwriting
+                    sessionManager.SetPushServerEndpoint(clientEndpoint, pushEndpoint, clientName);
+                    UnityEngine.Debug.Log($"[uLoopMCP] Push endpoint registered successfully");
                 }
                 else
                 {
                     UnityEngine.Debug.LogError("[uLoopMCP] Failed to access McpSessionManager instance safely");
                 }
+            }
+            else
+            {
+                UnityEngine.Debug.LogWarning($"[uLoopMCP] Push endpoint is empty for client: {clientName}");
             }
             
             string message = string.Format(McpConstants.CLIENT_SUCCESS_MESSAGE_TEMPLATE, clientName);
@@ -72,6 +85,28 @@ namespace io.github.hatayama.uLoopMCP
                 server.UpdateClientName(targetClient.Endpoint, clientName);
                 return;
             }
+        }
+
+        /// <summary>
+        /// Get the actual client endpoint from connected clients (consistent with McpBridgeServer)
+        /// </summary>
+        private string GetActualClientEndpoint()
+        {
+            McpBridgeServer server = McpServerController.CurrentServer;
+            if (server == null) return "unknown";
+            
+            var connectedClients = server.GetConnectedClients();
+            if (connectedClients.Count == 0) return "unknown";
+            
+            // Get current client context
+            var clientContext = JsonRpcProcessor.CurrentClientContext;
+            if (clientContext == null) return "unknown";
+            
+            // Find client by JsonRpcProcessor endpoint and return the actual ConnectedClient endpoint
+            ConnectedClient targetClient = connectedClients
+                .FirstOrDefault(c => c.Endpoint == clientContext.Endpoint);
+            
+            return targetClient?.Endpoint ?? "unknown";
         }
     }
 }

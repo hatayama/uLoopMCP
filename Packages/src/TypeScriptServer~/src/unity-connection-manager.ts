@@ -68,7 +68,10 @@ export class UnityConnectionManager {
    * Wait for Unity connection and tools availability by polling
    * More reliable than timeout-based waiting
    */
-  async waitForUnityConnectionAndTools(toolManager: any, maxWaitMs: number = 10000): Promise<void> {
+  async waitForUnityConnectionAndTools(
+    toolManager: { getToolsFromUnity(): Promise<unknown> },
+    maxWaitMs: number = 10000,
+  ): Promise<void> {
     const startTime = Date.now();
     const pollInterval = 100; // Poll every 100ms
 
@@ -78,7 +81,7 @@ export class UnityConnectionManager {
     }
 
     return new Promise<void>((resolve, reject) => {
-      const checkToolsAvailable = async () => {
+      const checkToolsAvailable = async (): Promise<void> => {
         if (this.unityClient.connected) {
           try {
             // Try to get tools to verify Unity is ready
@@ -96,10 +99,12 @@ export class UnityConnectionManager {
           return;
         }
 
-        setTimeout(checkToolsAvailable, pollInterval);
+        setTimeout(() => {
+          void checkToolsAvailable();
+        }, pollInterval);
       };
 
-      checkToolsAvailable();
+      void checkToolsAvailable();
     });
   }
 
@@ -112,11 +117,18 @@ export class UnityConnectionManager {
       // Even though discovery confirmed TCP connectivity, we need to ensure the connection state is updated
       await this.unityClient.ensureConnected();
 
-      if (this.enableConnectionDebugLog) {
-        // Unity discovered - connection state updated
-      }
-
-      // Unity connection established via discovery
+      VibeLogger.logInfo(
+        'unity_connection_established_via_discovery',
+        'Unity connection established through discovery process',
+        {
+          connection_method: 'discovery',
+          unity_connected: this.unityClient.connected,
+          process_id: process.pid,
+        },
+        undefined,
+        'Unity connection confirmed after successful discovery - ready for tool operations',
+        'Monitor for setClientName and tool initialization after this point',
+      );
 
       // Execute callback if provided
       if (onConnectionEstablished) {
@@ -126,7 +138,16 @@ export class UnityConnectionManager {
       // Stop discovery after successful connection
       this.unityDiscovery.stop();
     } catch (error) {
-      // Failed to handle Unity discovery
+      VibeLogger.logError(
+        'unity_connection_discovery_failed',
+        'Failed to handle Unity discovery',
+        {
+          error_message: error instanceof Error ? error.message : String(error),
+          process_id: process.pid,
+        },
+        undefined,
+        'Unity connection could not be established despite successful discovery',
+      );
     }
   }
 

@@ -330,9 +330,15 @@ class UnityMcpServer {
       VibeLogger.logInfo(
         'push_endpoint_configured',
         'Push notification endpoint configured for Unity client',
-        { endpoint: pushEndpoint },
+        {
+          endpoint: pushEndpoint,
+          push_server_port: pushServerPort,
+          push_server_host: 'localhost',
+          process_id: process.pid,
+        },
         undefined,
-        'Unity client will include this endpoint in setClientName requests',
+        'Unity client will include this endpoint in setClientName requests for push notifications',
+        'Unity should connect to this endpoint to send push notifications back to TypeScript',
       );
     } catch (error) {
       VibeLogger.logError(
@@ -376,7 +382,34 @@ class UnityMcpServer {
 
     // Connect to MCP transport first - wait for client name before connecting to Unity
     const transport = new StdioServerTransport();
+
+    VibeLogger.logInfo(
+      'mcp_server_transport_connecting',
+      'MCP server connecting to STDIO transport',
+      {
+        transport_type: 'StdioServerTransport',
+        process_id: process.pid,
+        process_argv: process.argv,
+        env_unity_tcp_port: process.env.UNITY_TCP_PORT,
+      },
+      undefined,
+      'MCP server connecting to STDIO - this enables communication with MCP clients',
+      'Track this process ID against client-side MCP connection logs',
+    );
+
     await this.server.connect(transport);
+
+    VibeLogger.logInfo(
+      'mcp_server_transport_connected',
+      'MCP server successfully connected to STDIO transport',
+      {
+        transport_type: 'StdioServerTransport',
+        process_id: process.pid,
+      },
+      undefined,
+      'MCP server ready to receive requests from MCP clients',
+      'MCP clients can now send requests to this server process',
+    );
   }
 }
 

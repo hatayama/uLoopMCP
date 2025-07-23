@@ -19,6 +19,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         private readonly McpEditorModel _model;
         private readonly McpEditorWindow _window;
+        private McpBridgeServer _currentSubscribedServer;
 
         public McpEditorWindowEventHandler(McpEditorModel model, McpEditorWindow window)
         {
@@ -33,6 +34,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             SubscribeToUnityEvents();
             SubscribeToServerEvents();
+            
+            // Subscribe to server instance changes
+            McpServerController.OnServerInstanceChanged += OnServerInstanceChanged;
         }
 
         /// <summary>
@@ -42,6 +46,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             UnsubscribeFromUnityEvents();
             UnsubscribeFromServerEvents();
+            
+            // Unsubscribe from server instance changes
+            McpServerController.OnServerInstanceChanged -= OnServerInstanceChanged;
         }
 
         /// <summary>
@@ -73,6 +80,13 @@ namespace io.github.hatayama.uLoopMCP
             {
                 currentServer.OnClientConnected += OnClientConnected;
                 currentServer.OnClientDisconnected += OnClientDisconnected;
+                _currentSubscribedServer = currentServer;
+                UnityEngine.Debug.Log($"[uLoopMCP] Successfully subscribed to OnClientDisconnected event on server instance: {currentServer.GetHashCode()}");
+            }
+            else
+            {
+                _currentSubscribedServer = null;
+                UnityEngine.Debug.LogWarning("[uLoopMCP] Cannot subscribe to events: CurrentServer is null");
             }
         }
 
@@ -81,11 +95,12 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UnsubscribeFromServerEvents()
         {
-            McpBridgeServer currentServer = McpServerController.CurrentServer;
-            if (currentServer != null)
+            // Unsubscribe from the server we actually subscribed to
+            if (_currentSubscribedServer != null)
             {
-                currentServer.OnClientConnected -= OnClientConnected;
-                currentServer.OnClientDisconnected -= OnClientDisconnected;
+                _currentSubscribedServer.OnClientConnected -= OnClientConnected;
+                _currentSubscribedServer.OnClientDisconnected -= OnClientDisconnected;
+                UnityEngine.Debug.Log($"[uLoopMCP] Unsubscribed from server instance: {_currentSubscribedServer.GetHashCode()}");
             }
         }
 
@@ -117,13 +132,40 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void OnClientDisconnected(string clientEndpoint)
         {
+            UnityEngine.Debug.Log($"[uLoopMCP] McpEditorWindowEventHandler.OnClientDisconnected called: {clientEndpoint}");
+            
             // Enhanced logging for debugging client disconnection issues
-            // Count check for debugging purposes only
+            UnityEngine.Debug.Log($"[uLoopMCP] Client disconnected: {clientEndpoint}");
             
-            
+            // Remove push notification endpoint for disconnected client (on main thread)
+            EditorApplication.delayCall += () =>
+            {
+                McpSessionManager sessionManager = McpSessionManager.instance;
+                if (sessionManager != null)
+                {
+                    UnityEngine.Debug.Log($"[uLoopMCP] Attempting to remove push server endpoint for: {clientEndpoint}");
+                    sessionManager.RemovePushServerEndpoint(clientEndpoint);
+                    UnityEngine.Debug.Log($"[uLoopMCP] Removed push server endpoint for: {clientEndpoint}");
+                }
+                else
+                {
+                    UnityEngine.Debug.LogError($"[uLoopMCP] McpSessionManager instance is null, cannot remove endpoint: {clientEndpoint}");
+                }
+            };
             
             // Mark that repaint is needed since events are called from background thread
             _model.RequestRepaint();
+        }
+
+        /// <summary>
+        /// Handle server instance change event - resubscribe to new server events
+        /// </summary>
+        private void OnServerInstanceChanged(McpBridgeServer newServer)
+        {
+            UnityEngine.Debug.Log($"[uLoopMCP] Server instance changed to: {newServer?.GetHashCode() ?? 0}");
+            
+            // Resubscribe to events on the new server
+            SubscribeToServerEvents();
         }
 
         /// <summary>
@@ -155,8 +197,11 @@ namespace io.github.hatayama.uLoopMCP
         private void CheckServerStateChanges()
         {
             (bool isRunning, int port, bool _) = McpServerController.GetServerStatus();
-            var connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
+            McpBridgeServer currentServer = McpServerController.CurrentServer;
+            var connectedClients = currentServer?.GetConnectedClients();
             int connectedCount = connectedClients?.Count ?? 0;
+            
+            // Server instance change is now handled by OnServerInstanceChanged event
 
             // Generate hash of client information to detect changes in client names
             string clientsInfoHash = GenerateClientsInfoHash(connectedClients);

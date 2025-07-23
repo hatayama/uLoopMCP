@@ -53,44 +53,16 @@ export class McpClientCompatibility {
     return this.clientName;
   }
 
-
-  /**
-   * Handle client name initialization and setup
-   */
-  async handleClientNameInitialization(): Promise<void> {
-    // Client name handling:
-    // 1. Primary: clientInfo.name from MCP protocol initialize request
-    // 2. Fallback: MCP_CLIENT_NAME environment variable (for backward compatibility)
-    // 3. Default: Empty string (Unity will show "No Client" in UI)
-    // Note: MCP_CLIENT_NAME is deprecated but kept for compatibility with older setups
-    if (!this.clientName) {
-      const fallbackName = process.env.MCP_CLIENT_NAME;
-      if (fallbackName) {
-        this.clientName = fallbackName;
-        await this.unityClient.setClientName(fallbackName);
-        // Fallback client name set to Unity
-      } else {
-        // No client name set, waiting for initialize request
-      }
-    } else {
-      // Send the already set client name to Unity
-      await this.unityClient.setClientName(this.clientName);
-      // Client name already set, sending to Unity
-    }
-
-    // Register reconnect handler to re-send client name after reconnection
-    this.unityClient.onReconnect(() => {
-      // Reconnected - resending client name
-      void this.unityClient.setClientName(this.clientName);
-    });
-  }
-
   /**
    * Initialize client with name
+   * Only sends setClientName once during initialization - no automatic reconnect handling
    */
   async initializeClient(clientName: string): Promise<void> {
     this.setClientName(clientName);
-    await this.handleClientNameInitialization();
-  }
 
+    // Send client name to Unity once during initialization
+    // Note: Real reconnection handling should be managed at the application level,
+    // not automatically on every connection establishment
+    await this.unityClient.setClientName(this.clientName);
+  }
 }

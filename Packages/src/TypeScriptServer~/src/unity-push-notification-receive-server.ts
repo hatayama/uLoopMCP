@@ -105,6 +105,23 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
         if (typeof address === 'object' && address !== null) {
           this.port = address.port;
           this.isRunning = true;
+
+          // Log push notification server startup with endpoint information
+          VibeLogger.logInfo(
+            'push_notification_server_started',
+            'Push notification receive server started',
+            {
+              server_endpoint: `127.0.0.1:${this.port}`,
+              host: '127.0.0.1',
+              port: this.port,
+              server_address: address,
+              process_id: process.pid,
+            },
+            undefined,
+            'Push notification server endpoint - Unity will connect to this for sending notifications',
+            'Track this server endpoint against Unity side push client connection logs',
+          );
+
           resolve(this.port);
         } else {
           reject(new Error('Failed to get server address'));
@@ -171,6 +188,25 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
     };
 
     this.connectedUnityClients.set(clientId, connection);
+
+    // Log Unity push client connection with endpoint information
+    VibeLogger.logInfo(
+      'unity_push_client_connected',
+      'Unity push client connected to notification receive server',
+      {
+        client_id: clientId,
+        server_endpoint: `127.0.0.1:${this.port}`,
+        client_remote_address: socket.remoteAddress,
+        client_remote_port: socket.remotePort,
+        client_local_address: socket.localAddress,
+        client_local_port: socket.localPort,
+        connected_at: connection.connectedAt.toISOString(),
+        process_id: process.pid,
+      },
+      undefined,
+      'Unity push client connected - this is the endpoint Unity uses for push notifications',
+      'Compare this endpoint with Unity side UnityPushClient connection logs',
+    );
 
     socket.setEncoding('utf8');
     socket.setTimeout(30000); // 30秒タイムアウト
@@ -315,6 +351,26 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
     if (!connection) {
       return;
     }
+
+    // Log Unity push client disconnection with endpoint information
+    VibeLogger.logInfo(
+      'unity_push_client_disconnected',
+      'Unity push client disconnected from notification receive server',
+      {
+        client_id: clientId,
+        server_endpoint: `127.0.0.1:${this.port}`,
+        client_remote_address: connection.socket.remoteAddress,
+        client_remote_port: connection.socket.remotePort,
+        client_local_address: connection.socket.localAddress,
+        client_local_port: connection.socket.localPort,
+        connected_at: connection.connectedAt.toISOString(),
+        disconnect_reason: reason,
+        process_id: process.pid,
+      },
+      undefined,
+      'Unity push client disconnected - compare this endpoint with Unity side logs',
+      'Check if Unity side detected this same endpoint during disconnect',
+    );
 
     this.connectedUnityClients.delete(clientId);
 

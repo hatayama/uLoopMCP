@@ -72,16 +72,24 @@ export class ClientInitializationHandler {
   handleUnityConnection(): void {
     this.isUnityConnected = true;
 
-    // Send client name and push notification endpoint to Unity
-    this.unityClient.setClientName().catch((error) => {
-      VibeLogger.logError(
-        'unity_setclientname_failed',
-        'Failed to send client name to Unity',
-        { error: error instanceof Error ? error.message : String(error) },
-        undefined,
-        'Push notification endpoint may not be available to Unity',
-      );
-    });
+    // Send client name to Unity after connection is established
+    if (this.clientInfo?.name) {
+      // Use clientCompatibility to send the client name
+      this.unityClient.setClientName(this.clientInfo.name).catch(error => {
+        // Log error but don't block initialization
+      });
+    }
+
+    VibeLogger.logInfo(
+      'unity_connection_established_handler',
+      'Unity connection established - sending client name',
+      {
+        isUnityConnected: this.isUnityConnected,
+        clientName: this.clientInfo?.name,
+      },
+      undefined,
+      'Unity connection ready - setClientName will be sent now',
+    );
   }
 
   /**
@@ -130,10 +138,10 @@ export class ClientInitializationHandler {
     try {
       await this.clientCompatibility.initializeClient(this.clientInfo.name);
       this.toolManager.setClientName(this.clientInfo.name);
-      
+
       // Wait for Unity connection first
       await this.connectionManager.waitForUnityConnectionWithTimeout(10000);
-      
+
       // Now get tools after connection is established
       const tools = await this.toolManager.getToolsFromUnity();
 
@@ -163,8 +171,6 @@ export class ClientInitializationHandler {
       return this.buildInitializeResponse();
     }
   }
-
-
 
   /**
    * Extract client information from initialize request

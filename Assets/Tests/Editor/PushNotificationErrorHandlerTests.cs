@@ -73,13 +73,13 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             if (McpSessionManager.instance != null)
             {
                 // Set some endpoint data first
-                McpSessionManager.instance.SetPushServerEndpoint("localhost:8080");
+                McpSessionManager.instance.SetPushServerEndpoint("localhost:8080", "Unknown");
                 McpSessionManager.instance.SetPushServerConnected(true);
                 
                 await PushNotificationErrorHandler.HandleUnityEditorCrashDetectionAsync(mockPushClient);
                 
                 // Should clear endpoint data
-                Assert.IsNull(McpSessionManager.instance.GetPushServerEndpoint());
+                Assert.IsNull(McpSessionManager.instance.GetPushServerEndpoint("localhost:8080"));
                 Assert.IsFalse(McpSessionManager.instance.IsPushServerConnected());
             }
         }
@@ -91,13 +91,13 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             if (McpSessionManager.instance != null)
             {
                 // Set some endpoint data first
-                McpSessionManager.instance.SetPushServerEndpoint("localhost:8080");
+                McpSessionManager.instance.SetPushServerEndpoint("localhost:8080", "Unknown");
                 McpSessionManager.instance.SetPushServerConnected(true);
                 
                 PushNotificationErrorHandler.HandleTypeScriptServerCrash();
                 
                 // Should clear endpoint data
-                Assert.IsNull(McpSessionManager.instance.GetPushServerEndpoint());
+                Assert.IsNull(McpSessionManager.instance.GetPushServerEndpoint("localhost:8080"));
                 Assert.IsFalse(McpSessionManager.instance.IsPushServerConnected());
             }
         }

@@ -123,16 +123,22 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // Remove existing tool if present, then add
-            _connectedTools.RemoveAll(tool => tool.Name == client.ClientName);
-            
-            ConnectedLLMToolData toolData = new(
-                client.ClientName, 
-                client.Endpoint, 
-                client.ConnectedAt
+            // Check if this specific endpoint is already registered
+            bool alreadyExists = _connectedTools.Any(tool => 
+                tool.Name == client.ClientName && 
+                tool.Endpoint == client.Endpoint
             );
-            _connectedTools.Add(toolData);
-            InvalidateStoredToolsCache();
+
+            if (!alreadyExists)
+            {
+                ConnectedLLMToolData toolData = new(
+                    client.ClientName, 
+                    client.Endpoint, 
+                    client.ConnectedAt
+                );
+                _connectedTools.Add(toolData);
+                InvalidateStoredToolsCache();
+            }
         }
 
         /// <summary>

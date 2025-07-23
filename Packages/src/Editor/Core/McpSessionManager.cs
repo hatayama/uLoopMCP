@@ -21,15 +21,11 @@ namespace io.github.hatayama.uLoopMCP
         [SerializeField] private bool _showPostCompileReconnectingUI;
         [SerializeField] private int _selectedEditorType;
         [SerializeField] private float _communicationLogHeight;
-        [SerializeField] private string _communicationLogsJson;
         [SerializeField] private string _pendingRequestsJson;
-        [SerializeField] private string _compileWindowLogText;
-        [SerializeField] private bool _compileWindowHasData;
         [SerializeField] private List<string> _pendingCompileRequestIds;
         [SerializeField] private List<CompileRequestData> _compileRequests;
         
         // Push通知サーバー関連の新機能
-        [SerializeField] private string _pushServerEndpoint; // 後方互換性のため保持
         [SerializeField] private bool _isPushServerConnected;
         [SerializeField] private long _lastConnectionTimeTicks;
         [SerializeField] private List<ClientEndpointPair> _pushServerEndpoints; // 複数エンドポイント管理
@@ -149,17 +145,7 @@ namespace io.github.hatayama.uLoopMCP
             set => _communicationLogHeight = value;
         }
 
-        // Communication Log related
-        public string CommunicationLogsJson
-        {
-            get 
-            {
-                bool isEmptyJson = string.IsNullOrEmpty(_communicationLogsJson);
-                return isEmptyJson ? "[]" : _communicationLogsJson;
-            }
-            set => _communicationLogsJson = value;
-        }
-
+        // Pending requests JSON data
         public string PendingRequestsJson
         {
             get 
@@ -168,19 +154,6 @@ namespace io.github.hatayama.uLoopMCP
                 return isEmptyJson ? "{}" : _pendingRequestsJson;
             }
             set => _pendingRequestsJson = value;
-        }
-
-        // CompileWindow related
-        public string CompileWindowLogText
-        {
-            get => _compileWindowLogText ?? "";
-            set => _compileWindowLogText = value;
-        }
-
-        public bool CompileWindowHasData
-        {
-            get => _compileWindowHasData;
-            set => _compileWindowHasData = value;
         }
 
         // CompileSessionState related properties
@@ -218,16 +191,9 @@ namespace io.github.hatayama.uLoopMCP
             _isDomainReloadInProgress = false;
         }
 
-        public void ClearCommunicationLogs()
+        public void ClearPendingRequests()
         {
-            _communicationLogsJson = "[]";
             _pendingRequestsJson = "{}";
-        }
-
-        public void ClearCompileWindowData()
-        {
-            _compileWindowLogText = "";
-            _compileWindowHasData = false;
         }
 
         public string GetCompileRequestJson(string requestId)
@@ -318,21 +284,38 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         // Push通知サーバー情報管理
-        public void SetPushServerEndpoint(string endpoint)
-        {
-            _pushServerEndpoint = endpoint;
-            Save(true);
-        }
-
-        public string GetPushServerEndpoint()
-        {
-            return _pushServerEndpoint;
-        }
-
         public void ClearPushServerEndpoint()
         {
-            _pushServerEndpoint = null;
             _pushServerEndpoints?.Clear();
+            Save(true);
+        }
+        
+        public void CleanupInvalidPushServerEndpoints()
+        {
+            if (_pushServerEndpoints == null) return;
+            
+            // Remove entries with invalid endpoints or unknown push endpoints
+            for (int i = _pushServerEndpoints.Count - 1; i >= 0; i--)
+            {
+                ClientEndpointPair pair = _pushServerEndpoints[i];
+                
+                // Remove if pushReceiveServerEndpoint is "Unknown" or empty
+                if (string.IsNullOrEmpty(pair.pushReceiveServerEndpoint) || 
+                    pair.pushReceiveServerEndpoint == "Unknown")
+                {
+                    UnityEngine.Debug.Log($"[uLoopMCP] Removing invalid endpoint entry: {pair.clientName} - {pair.clientEndpoint}");
+                    _pushServerEndpoints.RemoveAt(i);
+                    continue;
+                }
+                
+                // Remove if clientEndpoint format is invalid (should start with 127.0.0.1:)
+                if (!pair.clientEndpoint.StartsWith("127.0.0.1:"))
+                {
+                    UnityEngine.Debug.Log($"[uLoopMCP] Removing invalid client endpoint format: {pair.clientName} - {pair.clientEndpoint}");
+                    _pushServerEndpoints.RemoveAt(i);
+                }
+            }
+            
             Save(true);
         }
 
@@ -343,7 +326,6 @@ namespace io.github.hatayama.uLoopMCP
             
             EnsureEndpointsListInitialized();
             UpdateOrAddEndpoint(clientName, clientEndpoint, pushReceiveServerEndpoint);
-            UpdateBackwardCompatibilityEndpoint();
             
             Save(true);
         }
@@ -395,21 +377,6 @@ namespace io.github.hatayama.uLoopMCP
             return $"127.0.0.1{CLIENT_ENDPOINT_SEPARATOR}{clientPort}";
         }
         
-        /// <summary>
-        /// Updates backward compatibility endpoint field
-        /// Sets to null if list is empty, otherwise sets to first endpoint's push server endpoint
-        /// </summary>
-        private void UpdateBackwardCompatibilityEndpoint()
-        {
-            if (_pushServerEndpoints == null || _pushServerEndpoints.Count == 0)
-            {
-                _pushServerEndpoint = null;
-            }
-            else
-            {
-                _pushServerEndpoint = _pushServerEndpoints[0].pushReceiveServerEndpoint;
-            }
-        }
         
         public string GetPushServerEndpoint(string clientName, int clientPort)
         {
@@ -417,7 +384,7 @@ namespace io.github.hatayama.uLoopMCP
             
             if (_pushServerEndpoints == null)
             {
-                return _pushServerEndpoint;
+                return null;
             }
             
             foreach (ClientEndpointPair pair in _pushServerEndpoints)
@@ -428,7 +395,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
-            return _pushServerEndpoint; // フォールバック: 後方互換性
+            return null;
         }
         
         public List<ClientEndpointPair> GetAllPushServerEndpoints()
@@ -451,57 +418,66 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
-            UpdateBackwardCompatibilityEndpoint();
             Save(true);
         }
         
         public void RemovePushServerEndpoint(string clientEndpoint)
         {
-            if (_pushServerEndpoints == null) return;
+            UnityEngine.Debug.Log($"[uLoopMCP] RemovePushServerEndpoint called with: {clientEndpoint}");
+            
+            if (_pushServerEndpoints == null) 
+            {
+                UnityEngine.Debug.Log($"[uLoopMCP] _pushServerEndpoints is null, nothing to remove");
+                return;
+            }
+            
+            UnityEngine.Debug.Log($"[uLoopMCP] Current endpoint count: {_pushServerEndpoints.Count}");
             
             for (int i = _pushServerEndpoints.Count - 1; i >= 0; i--)
             {
-                if (_pushServerEndpoints[i].clientEndpoint == clientEndpoint) // clientEndpointフィールドを使用
+                UnityEngine.Debug.Log($"[uLoopMCP] Checking endpoint {i}: {_pushServerEndpoints[i].clientEndpoint}");
+                if (_pushServerEndpoints[i].clientEndpoint == clientEndpoint)
                 {
+                    UnityEngine.Debug.Log($"[uLoopMCP] Found matching endpoint, removing: {_pushServerEndpoints[i].clientName}");
                     _pushServerEndpoints.RemoveAt(i);
                     break;
                 }
             }
             
-            UpdateBackwardCompatibilityEndpoint();
-            
+            UnityEngine.Debug.Log($"[uLoopMCP] Endpoint count after removal: {_pushServerEndpoints.Count}");
             Save(true);
         }
 
         // クライアントエンドポイント（文字列）をキーとする新しいメソッド
-        public void SetPushServerEndpoint(string clientEndpoint, string pushReceiveServerEndpoint)
+        public void SetPushServerEndpoint(string clientEndpoint, string pushReceiveServerEndpoint, string clientName = "Unknown")
         {
             if (_pushServerEndpoints == null)
             {
                 _pushServerEndpoints = new();
             }
             
+            // Note: Allow multiple instances of the same client name (e.g., multiple Claude Code windows)
+            
             // 既存のクライアントエンドポイントを検索
-            ClientEndpointPair existingPair = null;
+            ClientEndpointPair currentPair = null;
             foreach (ClientEndpointPair pair in _pushServerEndpoints)
             {
                 if (pair.clientEndpoint == clientEndpoint) // clientEndpointフィールドを使用
                 {
-                    existingPair = pair;
+                    currentPair = pair;
                     break;
                 }
             }
             
-            if (existingPair != null)
+            if (currentPair != null)
             {
-                existingPair.pushReceiveServerEndpoint = pushReceiveServerEndpoint;
+                currentPair.pushReceiveServerEndpoint = pushReceiveServerEndpoint;
+                currentPair.clientName = clientName; // Update client name if provided
             }
             else
             {
-                _pushServerEndpoints.Add(new("Unknown", clientEndpoint, pushReceiveServerEndpoint));
+                _pushServerEndpoints.Add(new(clientName, clientEndpoint, pushReceiveServerEndpoint));
             }
-            
-            UpdateBackwardCompatibilityEndpoint();
             
             Save(true);
         }
@@ -510,7 +486,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (_pushServerEndpoints == null)
             {
-                return _pushServerEndpoint;
+                return null;
             }
             
             foreach (ClientEndpointPair pair in _pushServerEndpoints)
@@ -521,7 +497,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
-            return _pushServerEndpoint; // フォールバック: 後方互換性
+            return null;
         }
 
         public void SetPushServerConnected(bool connected)

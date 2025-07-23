@@ -6942,6 +6942,23 @@ var UnityClient = class _UnityClient {
       this.socket = new net.Socket();
       this.socket.connect(this.port, this.host, () => {
         this._connected = true;
+        VibeLogger.logInfo(
+          "mcp_connection_established",
+          "MCP connection to Unity established",
+          {
+            unity_endpoint: `${this.host}:${this.port}`,
+            host: this.host,
+            port: this.port,
+            socket_local_address: this.socket?.localAddress,
+            socket_local_port: this.socket?.localPort,
+            socket_remote_address: this.socket?.remoteAddress,
+            socket_remote_port: this.socket?.remotePort,
+            process_id: this.processId
+          },
+          void 0,
+          "MCP connection established - Unity endpoint and socket details tracked",
+          "Track this endpoint against Unity side disconnect detection logs"
+        );
         this.reconnectHandlers.forEach((handler) => {
           try {
             handler();
@@ -6959,10 +6976,44 @@ var UnityClient = class _UnityClient {
         }
       });
       this.socket.on("close", () => {
+        VibeLogger.logInfo(
+          "mcp_connection_closed",
+          "MCP connection to Unity closed",
+          {
+            unity_endpoint: `${this.host}:${this.port}`,
+            host: this.host,
+            port: this.port,
+            socket_local_address: this.socket?.localAddress,
+            socket_local_port: this.socket?.localPort,
+            socket_remote_address: this.socket?.remoteAddress,
+            socket_remote_port: this.socket?.remotePort,
+            process_id: this.processId
+          },
+          void 0,
+          "MCP connection closed - compare this endpoint with Unity side logs",
+          "Check if Unity detected this same endpoint during disconnect"
+        );
         this._connected = false;
         this.handleConnectionLoss();
       });
       this.socket.on("end", () => {
+        VibeLogger.logInfo(
+          "mcp_connection_ended",
+          "MCP connection to Unity ended gracefully",
+          {
+            unity_endpoint: `${this.host}:${this.port}`,
+            host: this.host,
+            port: this.port,
+            socket_local_address: this.socket?.localAddress,
+            socket_local_port: this.socket?.localPort,
+            socket_remote_address: this.socket?.remoteAddress,
+            socket_remote_port: this.socket?.remotePort,
+            process_id: this.processId
+          },
+          void 0,
+          "MCP connection ended gracefully - compare this endpoint with Unity side logs",
+          "Verify Unity detected this same endpoint during graceful disconnect"
+        );
         this._connected = false;
         this.handleConnectionLoss();
       });
@@ -6992,6 +7043,18 @@ var UnityClient = class _UnityClient {
    * Detect client name from stored value, environment variables, or default
    */
   detectClientName() {
+    VibeLogger.logDebug(
+      "unity_client_detect_client_name",
+      "Detecting client name",
+      {
+        storedClientName: this.storedClientName,
+        envClientName: process.env.MCP_CLIENT_NAME,
+        defaultClientName: DEFAULT_CLIENT_NAME
+      },
+      void 0,
+      "Client name detection process",
+      "Debug empty client name issue - check stored vs env vs default"
+    );
     if (this.storedClientName) {
       return this.storedClientName;
     }
@@ -7004,22 +7067,41 @@ var UnityClient = class _UnityClient {
     if (!this.connected) {
       return;
     }
+    VibeLogger.logDebug(
+      "unity_client_set_client_name_debug",
+      "setClientName called with parameters",
+      {
+        providedClientName: clientName,
+        clientNameType: typeof clientName,
+        clientNameLength: clientName?.length,
+        storedClientName: this.storedClientName
+      },
+      void 0,
+      "Debug setClientName parameter analysis",
+      "Identify why empty client name is being sent"
+    );
     if (clientName) {
       this.storedClientName = clientName;
     }
-    const finalClientName = clientName || this.detectClientName();
-    VibeLogger.logDebug(
+    const finalClientName = clientName || this.storedClientName || this.detectClientName();
+    VibeLogger.logInfo(
       "unity_client_set_client_name",
       "Sending setClientName request to Unity",
       {
         finalClientName,
+        unity_endpoint: `${this.host}:${this.port}`,
         clientPort: this.port,
         pushNotificationEndpoint: this.pushNotificationEndpoint,
-        endpointType: typeof this.pushNotificationEndpoint
+        endpointType: typeof this.pushNotificationEndpoint,
+        socket_local_address: this.socket?.localAddress,
+        socket_local_port: this.socket?.localPort,
+        socket_remote_address: this.socket?.remoteAddress,
+        socket_remote_port: this.socket?.remotePort,
+        process_id: this.processId
       },
       void 0,
-      "Client name registration with push notification endpoint",
-      "Track setClientName requests for debugging client identification"
+      "Client name registration with push notification endpoint - full endpoint tracking",
+      "Unity should register this client with these exact endpoint details"
     );
     const request = {
       jsonrpc: JSONRPC.VERSION,
@@ -7035,8 +7117,38 @@ var UnityClient = class _UnityClient {
     try {
       const response = await this.sendRequest(request);
       if (response.error) {
+        VibeLogger.logError(
+          "unity_client_set_client_name_failed",
+          "Failed to send setClientName to Unity",
+          {
+            finalClientName,
+            error: response.error
+          },
+          void 0,
+          "setClientName request failed - flag not set, allows retry"
+        );
+      } else {
+        VibeLogger.logInfo(
+          "unity_client_set_client_name_success",
+          "setClientName request sent successfully",
+          {
+            finalClientName
+          },
+          void 0,
+          "Client name sent successfully"
+        );
       }
     } catch (error) {
+      VibeLogger.logError(
+        "unity_client_set_client_name_error",
+        "Error sending setClientName to Unity",
+        {
+          finalClientName,
+          error: error instanceof Error ? error.message : String(error)
+        },
+        void 0,
+        "setClientName request error - flag not set, allows retry"
+      );
     }
   }
   /**
@@ -7102,7 +7214,6 @@ var UnityClient = class _UnityClient {
     if (!this.connected) {
       throw new Error("Not connected to Unity. Please wait for connection to be established.");
     }
-    await this.setClientName();
     const request = {
       jsonrpc: JSONRPC.VERSION,
       id: this.generateId(),
@@ -7180,6 +7291,25 @@ var UnityClient = class _UnityClient {
    * that prevent Node.js from exiting gracefully.
    */
   disconnect() {
+    if (this.socket && !this.socket.destroyed) {
+      VibeLogger.logInfo(
+        "mcp_connection_disconnect_initiated",
+        "Initiating MCP connection disconnect",
+        {
+          unity_endpoint: `${this.host}:${this.port}`,
+          host: this.host,
+          port: this.port,
+          socket_local_address: this.socket?.localAddress,
+          socket_local_port: this.socket?.localPort,
+          socket_remote_address: this.socket?.remoteAddress,
+          socket_remote_port: this.socket?.remotePort,
+          process_id: this.processId
+        },
+        void 0,
+        "Manual disconnect initiated - Unity should detect this endpoint going offline",
+        "Compare this endpoint with Unity side disconnect detection logs"
+      );
+    }
     this.connectionManager.stopPolling();
     this.messageHandler.clearPendingRequests("Connection closed");
     this.messageHandler.clearBuffer();
@@ -7373,16 +7503,32 @@ var UnityDiscovery = class _UnityDiscovery {
       "Checking specified port for Unity MCP server."
     );
     try {
+      VibeLogger.logDebug(
+        "unity_discovery_port_check",
+        "Checking Unity availability on port",
+        {
+          target_port: port,
+          unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+          process_id: process.pid
+        },
+        correlationId,
+        "Attempting to connect to Unity MCP server on specified port",
+        "If successful, Unity should accept connection and register client"
+      );
       if (await this.isUnityAvailable(port)) {
         VibeLogger.logInfo(
           "unity_discovery_success",
           "Unity discovered and connection established",
           {
-            discovered_port: port
+            discovered_port: port,
+            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+            unity_host: UNITY_CONNECTION.DEFAULT_HOST,
+            process_id: process.pid,
+            discovery_method: "port_scan"
           },
           correlationId,
           "Unity MCP server found and connection established successfully.",
-          "Monitor for tools/list_changed notifications after this discovery."
+          "Monitor for tools/list_changed notifications after this discovery. Check Unity logs for client registration."
         );
         this.unityClient.updatePort(port);
         if (this.onDiscoveredCallback) {
@@ -7443,16 +7589,56 @@ var UnityDiscovery = class _UnityDiscovery {
     return new Promise((resolve2) => {
       const socket = new net2.Socket();
       const timeout = 500;
+      const correlationId = VibeLogger.generateCorrelationId();
       const timer = setTimeout(() => {
+        VibeLogger.logDebug(
+          "unity_availability_check_timeout",
+          "Unity availability check timed out",
+          {
+            target_port: port,
+            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+            timeout_ms: timeout,
+            process_id: process.pid
+          },
+          correlationId,
+          "Unity availability check timeout - Unity may not be running on this port"
+        );
         socket.destroy();
         resolve2(false);
       }, timeout);
       socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
+        VibeLogger.logDebug(
+          "unity_availability_check_success",
+          "Unity availability check successful",
+          {
+            target_port: port,
+            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+            socket_local_address: socket.localAddress,
+            socket_local_port: socket.localPort,
+            process_id: process.pid
+          },
+          correlationId,
+          "Unity MCP server is available and accepting connections",
+          "Unity should show incoming connection in its logs"
+        );
         clearTimeout(timer);
         socket.destroy();
         resolve2(true);
       });
-      socket.on("error", () => {
+      socket.on("error", (error) => {
+        VibeLogger.logDebug(
+          "unity_availability_check_error",
+          "Unity availability check failed",
+          {
+            target_port: port,
+            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+            error_message: error.message,
+            error_code: error.code,
+            process_id: process.pid
+          },
+          correlationId,
+          "Unity availability check failed - expected when Unity is not running"
+        );
         clearTimeout(timer);
         resolve2(false);
       });
@@ -7665,9 +7851,11 @@ var UnityConnectionManager = class {
           reject(new Error(`Unity connection and tools timeout after ${maxWaitMs}ms`));
           return;
         }
-        setTimeout(checkToolsAvailable, pollInterval);
+        setTimeout(() => {
+          void checkToolsAvailable();
+        }, pollInterval);
       };
-      checkToolsAvailable();
+      void checkToolsAvailable();
     });
   }
   /**
@@ -7676,13 +7864,33 @@ var UnityConnectionManager = class {
   async handleUnityDiscovered(onConnectionEstablished) {
     try {
       await this.unityClient.ensureConnected();
-      if (this.enableConnectionDebugLog) {
-      }
+      VibeLogger.logInfo(
+        "unity_connection_established_via_discovery",
+        "Unity connection established through discovery process",
+        {
+          connection_method: "discovery",
+          unity_connected: this.unityClient.connected,
+          process_id: process.pid
+        },
+        void 0,
+        "Unity connection confirmed after successful discovery - ready for tool operations",
+        "Monitor for setClientName and tool initialization after this point"
+      );
       if (onConnectionEstablished) {
         await onConnectionEstablished();
       }
       this.unityDiscovery.stop();
     } catch (error) {
+      VibeLogger.logError(
+        "unity_connection_discovery_failed",
+        "Failed to handle Unity discovery",
+        {
+          error_message: error instanceof Error ? error.message : String(error),
+          process_id: process.pid
+        },
+        void 0,
+        "Unity connection could not be established despite successful discovery"
+      );
     }
   }
   /**
@@ -8293,29 +8501,12 @@ var McpClientCompatibility = class {
     return this.clientName;
   }
   /**
-   * Handle client name initialization and setup
-   */
-  async handleClientNameInitialization() {
-    if (!this.clientName) {
-      const fallbackName = process.env.MCP_CLIENT_NAME;
-      if (fallbackName) {
-        this.clientName = fallbackName;
-        await this.unityClient.setClientName(fallbackName);
-      } else {
-      }
-    } else {
-      await this.unityClient.setClientName(this.clientName);
-    }
-    this.unityClient.onReconnect(() => {
-      void this.unityClient.setClientName(this.clientName);
-    });
-  }
-  /**
    * Initialize client with name
+   * Only sends setClientName once during initialization - no automatic reconnect handling
    */
   async initializeClient(clientName) {
     this.setClientName(clientName);
-    await this.handleClientNameInitialization();
+    await this.unityClient.setClientName(this.clientName);
   }
 };
 
@@ -8654,15 +8845,20 @@ var ClientInitializationHandler = class {
    */
   handleUnityConnection() {
     this.isUnityConnected = true;
-    this.unityClient.setClientName().catch((error) => {
-      VibeLogger.logError(
-        "unity_setclientname_failed",
-        "Failed to send client name to Unity",
-        { error: error instanceof Error ? error.message : String(error) },
-        void 0,
-        "Push notification endpoint may not be available to Unity"
-      );
-    });
+    if (this.clientInfo?.name) {
+      this.unityClient.setClientName(this.clientInfo.name).catch((error) => {
+      });
+    }
+    VibeLogger.logInfo(
+      "unity_connection_established_handler",
+      "Unity connection established - sending client name",
+      {
+        isUnityConnected: this.isUnityConnected,
+        clientName: this.clientInfo?.name
+      },
+      void 0,
+      "Unity connection ready - setClientName will be sent now"
+    );
   }
   /**
    * Handle Unity disconnection
@@ -9007,6 +9203,20 @@ var UnityPushNotificationReceiveServer = class extends EventEmitter {
         if (typeof address === "object" && address !== null) {
           this.port = address.port;
           this.isRunning = true;
+          VibeLogger.logInfo(
+            "push_notification_server_started",
+            "Push notification receive server started",
+            {
+              server_endpoint: `127.0.0.1:${this.port}`,
+              host: "127.0.0.1",
+              port: this.port,
+              server_address: address,
+              process_id: process.pid
+            },
+            void 0,
+            "Push notification server endpoint - Unity will connect to this for sending notifications",
+            "Track this server endpoint against Unity side push client connection logs"
+          );
           resolve2(this.port);
         } else {
           reject(new Error("Failed to get server address"));
@@ -9059,6 +9269,23 @@ var UnityPushNotificationReceiveServer = class extends EventEmitter {
       connectedAt: /* @__PURE__ */ new Date()
     };
     this.connectedUnityClients.set(clientId, connection);
+    VibeLogger.logInfo(
+      "unity_push_client_connected",
+      "Unity push client connected to notification receive server",
+      {
+        client_id: clientId,
+        server_endpoint: `127.0.0.1:${this.port}`,
+        client_remote_address: socket.remoteAddress,
+        client_remote_port: socket.remotePort,
+        client_local_address: socket.localAddress,
+        client_local_port: socket.localPort,
+        connected_at: connection.connectedAt.toISOString(),
+        process_id: process.pid
+      },
+      void 0,
+      "Unity push client connected - this is the endpoint Unity uses for push notifications",
+      "Compare this endpoint with Unity side UnityPushClient connection logs"
+    );
     socket.setEncoding("utf8");
     socket.setTimeout(3e4);
     socket.on("data", (data) => {
@@ -9178,6 +9405,24 @@ var UnityPushNotificationReceiveServer = class extends EventEmitter {
     if (!connection) {
       return;
     }
+    VibeLogger.logInfo(
+      "unity_push_client_disconnected",
+      "Unity push client disconnected from notification receive server",
+      {
+        client_id: clientId,
+        server_endpoint: `127.0.0.1:${this.port}`,
+        client_remote_address: connection.socket.remoteAddress,
+        client_remote_port: connection.socket.remotePort,
+        client_local_address: connection.socket.localAddress,
+        client_local_port: connection.socket.localPort,
+        connected_at: connection.connectedAt.toISOString(),
+        disconnect_reason: reason,
+        process_id: process.pid
+      },
+      void 0,
+      "Unity push client disconnected - compare this endpoint with Unity side logs",
+      "Check if Unity side detected this same endpoint during disconnect"
+    );
     this.connectedUnityClients.delete(clientId);
     if (!connection.socket.destroyed) {
       connection.socket.destroy();
@@ -9433,9 +9678,15 @@ var UnityMcpServer = class {
       VibeLogger.logInfo(
         "push_endpoint_configured",
         "Push notification endpoint configured for Unity client",
-        { endpoint: pushEndpoint },
+        {
+          endpoint: pushEndpoint,
+          push_server_port: pushServerPort,
+          push_server_host: "localhost",
+          process_id: process.pid
+        },
         void 0,
-        "Unity client will include this endpoint in setClientName requests"
+        "Unity client will include this endpoint in setClientName requests for push notifications",
+        "Unity should connect to this endpoint to send push notifications back to TypeScript"
       );
     } catch (error) {
       VibeLogger.logError(
@@ -9464,7 +9715,31 @@ var UnityMcpServer = class {
     if (this.enableDevelopmentLogging) {
     }
     const transport = new StdioServerTransport();
+    VibeLogger.logInfo(
+      "mcp_server_transport_connecting",
+      "MCP server connecting to STDIO transport",
+      {
+        transport_type: "StdioServerTransport",
+        process_id: process.pid,
+        process_argv: process.argv,
+        env_unity_tcp_port: process.env.UNITY_TCP_PORT
+      },
+      void 0,
+      "MCP server connecting to STDIO - this enables communication with MCP clients",
+      "Track this process ID against client-side MCP connection logs"
+    );
     await this.server.connect(transport);
+    VibeLogger.logInfo(
+      "mcp_server_transport_connected",
+      "MCP server successfully connected to STDIO transport",
+      {
+        transport_type: "StdioServerTransport",
+        process_id: process.pid
+      },
+      void 0,
+      "MCP server ready to receive requests from MCP clients",
+      "MCP clients can now send requests to this server process"
+    );
   }
 };
 var server = new UnityMcpServer();
