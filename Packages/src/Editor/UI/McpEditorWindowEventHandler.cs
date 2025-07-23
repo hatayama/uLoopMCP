@@ -128,33 +128,16 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Handle client disconnection event - force UI repaint for immediate update
+        /// Handle client disconnection event using ClientDisconnectionUseCase pattern
         /// </summary>
         private void OnClientDisconnected(string clientEndpoint)
         {
-            UnityEngine.Debug.Log($"[uLoopMCP] McpEditorWindowEventHandler.OnClientDisconnected called: {clientEndpoint}");
-            
-            // Enhanced logging for debugging client disconnection issues
-            UnityEngine.Debug.Log($"[uLoopMCP] Client disconnected: {clientEndpoint}");
-            
-            // Remove push notification endpoint for disconnected client (on main thread)
-            EditorApplication.delayCall += () =>
-            {
-                McpSessionManager sessionManager = McpSessionManager.instance;
-                if (sessionManager != null)
-                {
-                    UnityEngine.Debug.Log($"[uLoopMCP] Attempting to remove push server endpoint for: {clientEndpoint}");
-                    sessionManager.RemovePushServerEndpoint(clientEndpoint);
-                    UnityEngine.Debug.Log($"[uLoopMCP] Removed push server endpoint for: {clientEndpoint}");
-                }
-                else
-                {
-                    UnityEngine.Debug.LogError($"[uLoopMCP] McpSessionManager instance is null, cannot remove endpoint: {clientEndpoint}");
-                }
-            };
-            
-            // Mark that repaint is needed since events are called from background thread
-            _model.RequestRepaint();
+            // Execute disconnection handling using UseCase pattern on main thread
+            // This ensures proper temporal cohesion and error handling
+            ClientDisconnectionUseCase.ExecuteOnMainThread(
+                clientEndpoint, 
+                () => _model.RequestRepaint() // UI repaint callback
+            );
         }
 
         /// <summary>
