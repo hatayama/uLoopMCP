@@ -65,7 +65,6 @@ namespace io.github.hatayama.uLoopMCP
         // Events for individual tool management
         public static event System.Action<ConnectedClient> OnToolConnected;
         public static event System.Action<string> OnToolDisconnected;
-        public static event System.Action OnAllToolsCleared;
         
         // HResult error codes for normal disconnection detection
         private static readonly HashSet<int> NormalDisconnectionHResults = new()
@@ -182,7 +181,8 @@ namespace io.github.hatayama.uLoopMCP
             
             try
             {
-                _tcpListener = new TcpListener(IPAddress.Loopback, Port);
+                Debug.Log($"[uLoopMCP] Starting TcpListener on 127.0.0.1:{Port} (modified version)");
+                _tcpListener = new TcpListener(IPAddress.Parse("127.0.0.1"), Port);
                 _tcpListener.Start();
                 _isRunning = true;
                 
@@ -303,12 +303,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 _connectedClients.TryRemove(clientKey, out _);
             }
-            
-            // Notify all tools cleared if not during domain reload
-            if (!McpSessionManager.instance.IsDomainReloadInProgress)
-            {
-                OnAllToolsCleared?.Invoke();
-            }
         }
 
         /// <summary>
@@ -324,6 +318,9 @@ namespace io.github.hatayama.uLoopMCP
                     if (client != null)
                     {
                         string clientEndpoint = client.Client.RemoteEndPoint?.ToString() ?? McpServerConfig.UNKNOWN_CLIENT_ENDPOINT;
+                        var localEndpoint = client.Client.LocalEndPoint?.ToString() ?? "unknown";
+                        var remoteEndpoint = client.Client.RemoteEndPoint?.ToString() ?? "unknown";
+                        Debug.LogWarning($"[hatayama] connected! local: {localEndpoint}, remote: {remoteEndpoint}, clientEndpoint: {clientEndpoint}, server_instance: {this.GetHashCode()}");
                         OnClientConnected?.Invoke(clientEndpoint);
                         
                         // Execute client handling in a separate task (fire-and-forget).
@@ -384,6 +381,9 @@ namespace io.github.hatayama.uLoopMCP
         private async Task HandleClientAsync(TcpClient client, CancellationToken cancellationToken)
         {
             string clientEndpoint = client.Client.RemoteEndPoint?.ToString() ?? McpServerConfig.UNKNOWN_CLIENT_ENDPOINT;
+            var localEndpoint = client.Client.LocalEndPoint?.ToString() ?? "unknown";
+            
+            Debug.LogWarning($"[hatayama] HandleClientAsync STARTED: local={localEndpoint}, remote={clientEndpoint}, connected={client.Connected}, available={client.Available}");
             
             // Initialize new components for Content-Length framing
             DynamicBufferManager bufferManager = null;
@@ -476,6 +476,7 @@ namespace io.github.hatayama.uLoopMCP
             catch (IOException ex)
             {
                 // I/O errors are usually normal disconnections - only log as info instead of warning
+                Debug.LogWarning($"[hatayama] HandleClientAsync IOException: {clientEndpoint}, error={ex.Message}");
                 if (IsNormalDisconnectionException(ex))
                 {
                     // Log normal disconnections as info level
@@ -483,6 +484,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
+                Debug.LogWarning($"[hatayama] HandleClientAsync Exception: {clientEndpoint}, error={ex.Message}");
                 OnError?.Invoke(ex.Message);
             }
             finally

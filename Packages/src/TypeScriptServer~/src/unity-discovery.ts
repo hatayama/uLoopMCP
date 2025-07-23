@@ -1,4 +1,3 @@
-import * as net from 'net';
 import { UNITY_CONNECTION } from './constants.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 import { UnityClient } from './unity-client.js';
@@ -99,7 +98,7 @@ export class UnityDiscovery {
    * Unified discovery and connection checking using ConnectionRecoveryUseCase pattern
    * Handles both Unity discovery and connection health monitoring
    */
-  private async unifiedDiscoveryAndConnectionCheck(): Promise<void> {
+  private unifiedDiscoveryAndConnectionCheck(): void {
     const correlationId = VibeLogger.generateCorrelationId();
 
     if (this.isDiscovering) {
@@ -127,38 +126,64 @@ export class UnityDiscovery {
     );
 
     try {
+      // TEMPORARY: Disable ConnectionRecoveryUseCase to test for double connection issue
+      VibeLogger.logInfo(
+        'unity_discovery_recovery_disabled',
+        'ConnectionRecoveryUseCase temporarily disabled for testing',
+        { unity_connected: this.unityClient.connected },
+        correlationId,
+        'Testing if ConnectionRecoveryUseCase causes duplicate connections',
+      );
+
+      /*
       // Import UseCase dynamically to avoid circular dependencies
-      const { ConnectionRecoveryUseCase } = await import('./usecases/connection-recovery-use-case.js');
-      
+      const { ConnectionRecoveryUseCase, ConnectionRecoveryReason } = await import(
+        './usecases/connection-recovery-use-case.js'
+      );
+
       // Create UseCase instance (single-use pattern)
-      const useCase = new ConnectionRecoveryUseCase(this.unityClient, this.onDiscoveredCallback || undefined);
-      
+      const useCase = new ConnectionRecoveryUseCase(
+        this.unityClient,
+        this.onDiscoveredCallback || undefined,
+      );
+      */
+
+      // TEMPORARY: Skip ConnectionRecoveryUseCase execution to test double connection issue
+      VibeLogger.logInfo(
+        'unity_discovery_recovery_execution_skipped',
+        'ConnectionRecoveryUseCase execution skipped for testing',
+        {},
+        correlationId,
+      );
+
+      /*
       // Execute all recovery steps with temporal cohesion
       const result = await useCase.execute();
-      
+
       // UseCase instance is automatically discarded after this point
-      
-      if (result.isSuccess && result.reason === 'already_healthy') {
+
+      if (result.isSuccess && result.reason === ConnectionRecoveryReason.AlreadyHealthy) {
         // Connection was healthy - stop discovery
         this.stop();
         return;
       }
-      
-      if (result.isSuccess && result.reason === 'success') {
+
+      if (result.isSuccess && result.reason === ConnectionRecoveryReason.Success) {
         // Recovery succeeded - continue with normal operation
         return;
       }
-      
+
       // Recovery failed or Unity not found - continue polling
+      */
       VibeLogger.logDebug(
         'unity_discovery_recovery_incomplete',
-        'Connection recovery incomplete - continuing discovery polling',
+        'Connection recovery incomplete - continuing discovery polling (DISABLED)',
         {
-          recovery_reason: result.reason,
+          recovery_reason: 'DISABLED_FOR_TESTING',
           will_retry: true,
         },
         correlationId,
-        'Recovery UseCase completed but connection not established - will retry on next cycle',
+        'Recovery UseCase disabled for testing - discovery cycle will complete without recovery',
       );
     } finally {
       VibeLogger.logDebug(
@@ -230,7 +255,8 @@ export class UnityDiscovery {
         'If successful, Unity should accept connection and register client',
       );
 
-      if (await this.isUnityAvailable(port)) {
+      // Check connection status without creating additional TCP connections
+      if (this.unityClient.connected) {
         VibeLogger.logInfo(
           'unity_discovery_success',
           'Unity discovered and connection established',
@@ -285,13 +311,13 @@ export class UnityDiscovery {
   /**
    * Force immediate Unity discovery for connection recovery
    */
-  async forceDiscovery(): Promise<boolean> {
+  forceDiscovery(): boolean {
     if (this.unityClient.connected) {
       return true;
     }
 
     // Use the unified discovery method
-    await this.unifiedDiscoveryAndConnectionCheck();
+    this.unifiedDiscoveryAndConnectionCheck();
 
     return this.unityClient.connected;
   }
@@ -309,72 +335,6 @@ export class UnityDiscovery {
     if (this.onConnectionLostCallback) {
       this.onConnectionLostCallback();
     }
-  }
-
-  /**
-   * Check if Unity is available on specific port
-   */
-  private async isUnityAvailable(port: number): Promise<boolean> {
-    return new Promise((resolve) => {
-      const socket = new net.Socket();
-      const timeout = 500; // Shorter timeout for faster discovery
-      const correlationId = VibeLogger.generateCorrelationId();
-
-      const timer = setTimeout(() => {
-        VibeLogger.logDebug(
-          'unity_availability_check_timeout',
-          'Unity availability check timed out',
-          {
-            target_port: port,
-            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
-            timeout_ms: timeout,
-            process_id: process.pid,
-          },
-          correlationId,
-          'Unity availability check timeout - Unity may not be running on this port',
-        );
-        socket.destroy();
-        resolve(false);
-      }, timeout);
-
-      socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
-        VibeLogger.logDebug(
-          'unity_availability_check_success',
-          'Unity availability check successful',
-          {
-            target_port: port,
-            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
-            socket_local_address: socket.localAddress,
-            socket_local_port: socket.localPort,
-            process_id: process.pid,
-          },
-          correlationId,
-          'Unity MCP server is available and accepting connections',
-          'Unity should show incoming connection in its logs',
-        );
-        clearTimeout(timer);
-        socket.destroy();
-        resolve(true);
-      });
-
-      socket.on('error', (error) => {
-        VibeLogger.logDebug(
-          'unity_availability_check_error',
-          'Unity availability check failed',
-          {
-            target_port: port,
-            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
-            error_message: error.message,
-            error_code: (error as NodeJS.ErrnoException).code,
-            process_id: process.pid,
-          },
-          correlationId,
-          'Unity availability check failed - expected when Unity is not running',
-        );
-        clearTimeout(timer);
-        resolve(false);
-      });
-    });
   }
 
   /**

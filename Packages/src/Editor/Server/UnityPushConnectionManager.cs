@@ -12,6 +12,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
@@ -107,25 +108,62 @@ namespace io.github.hatayama.uLoopMCP
             return allEndpoints;
         }
         
+        private static readonly HashSet<string> _failedEndpoints = new HashSet<string>();
+
         private static async Task<bool> TryConnectToStoredEndpoints(List<McpSessionManager.ClientEndpointPair> endpoints, McpSessionManager sessionManager)
         {
             if (endpoints == null || endpoints.Count == 0)
                 return false;
             
+            // Create a copy to avoid collection modified exceptions
+            var endpointsCopy = endpoints.ToList();
+            var hasInvalidEndpoints = false;
+            
             // Try each endpoint until one succeeds
-            foreach (McpSessionManager.ClientEndpointPair pair in endpoints)
+            foreach (var pair in endpointsCopy)
             {
-                bool success = await pushClient.ConnectToEndpointAsync(pair.pushReceiveServerEndpoint);
-                
-                if (success)
+                // Skip if endpoint is invalid or has failed too many times
+                if (string.IsNullOrEmpty(pair.pushReceiveServerEndpoint) || 
+                    pair.pushReceiveServerEndpoint.Contains(":0") ||
+                    _failedEndpoints.Contains(pair.pushReceiveServerEndpoint))
                 {
-                    Debug.Log($"[uLoopMCP] Successfully connected to Push Server using endpoint '{pair.pushReceiveServerEndpoint}' for client '{pair.clientName}' ({pair.clientEndpoint})");
-                    sessionManager.SetPushServerConnected(true);
-                    await SendConnectionEstablishedNotificationAsync();
-                    return true;
+                    hasInvalidEndpoints = true;
+                    continue;
                 }
                 
-                Debug.LogWarning($"[uLoopMCP] Failed to connect to endpoint '{pair.pushReceiveServerEndpoint}' for client '{pair.clientName}' ({pair.clientEndpoint}), trying next endpoint");
+                try
+                {
+                    bool success = await pushClient.ConnectToEndpointAsync(pair.pushReceiveServerEndpoint);
+                    
+                    if (success)
+                    {
+                        Debug.Log($"[uLoopMCP] Successfully connected to Push Server using endpoint '{pair.pushReceiveServerEndpoint}' for client '{pair.clientName}'");
+                        sessionManager.SetPushServerConnected(true);
+                        _failedEndpoints.Remove(pair.pushReceiveServerEndpoint); // Clear from failed list
+                        await SendConnectionEstablishedNotificationAsync();
+                        return true;
+                    }
+                    else
+                    {
+                        _failedEndpoints.Add(pair.pushReceiveServerEndpoint);
+                        Debug.LogWarning($"[uLoopMCP] Failed to connect to endpoint '{pair.pushReceiveServerEndpoint}' for client '{pair.clientName}'");
+                        // Remove failed endpoint from SessionData.yaml
+                        sessionManager.RemovePushServerEndpoint(pair.clientEndpoint);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _failedEndpoints.Add(pair.pushReceiveServerEndpoint);
+                    Debug.LogWarning($"[uLoopMCP] Exception connecting to endpoint '{pair.pushReceiveServerEndpoint}': {ex.Message}");
+                    // Remove failed endpoint from SessionData.yaml
+                    sessionManager.RemovePushServerEndpoint(pair.clientEndpoint);
+                }
+            }
+            
+            // Clear invalid endpoints if all failed
+            if (hasInvalidEndpoints)
+            {
+                sessionManager.ClearInvalidPushEndpoints();
             }
             
             return false;
@@ -154,7 +192,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (pushClient?.IsConnected != true) return;
 
-            string unityServerEndpoint = $"localhost:{McpServerController.ServerPort}";
+            string unityServerEndpoint = $"127.0.0.1:{McpServerController.ServerPort}";
             PushNotification notification = PushNotificationSerializer.CreateConnectionEstablishedNotification(
                 unityServerEndpoint
             );
@@ -242,22 +280,12 @@ namespace io.github.hatayama.uLoopMCP
 
         private static async void OnAfterAssemblyReload()
         {
-            Debug.Log("[uLoopMCP] Domain reload completed - starting recovery process");
+            Debug.Log("[uLoopMCP] Domain reload completed - delegating to SessionRecoveryUseCase");
             
-            // Clear all persisted endpoints since they're all invalid after domain reload
-            McpSessionManager sessionManager = await McpSessionManager.GetSafeInstanceAsync();
-            if (sessionManager != null)
-            {
-                sessionManager.ClearPushServerEndpoint();
-            }
-            
+            // Domain reload recovery is now handled by SessionRecoveryUseCase
+            // Only handle basic push client initialization here
             isInitialized = false;
             await InitializePushClientAsync();
-            
-            if (pushClient?.IsConnected == true)
-            {
-                await SendPushNotificationAsync(PushNotificationSerializer.CreateDomainReloadRecoveredNotification());
-            }
         }
 
         private static async void OnEditorQuitting()
@@ -284,6 +312,9 @@ namespace io.github.hatayama.uLoopMCP
 
         public static async Task RestartPushClientAsync()
         {
+            // 失敗したエンドポイントのリストをクリア（domain reload後の再起動時）
+            _failedEndpoints.Clear();
+            
             await DisposePushClientAsync();
             await InitializePushClientAsync();
         }

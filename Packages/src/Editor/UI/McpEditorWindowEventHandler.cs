@@ -132,6 +132,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void OnClientDisconnected(string clientEndpoint)
         {
+            Debug.LogWarning($"[hatayama] Disconnected {clientEndpoint}");
             // Execute disconnection handling using UseCase pattern on main thread
             // This ensures proper temporal cohesion and error handling
             ClientDisconnectionUseCase.ExecuteOnMainThread(

@@ -1,9 +1,1498 @@
 #!/usr/bin/env node
 var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
+
+// src/constants.ts
+var MCP_PROTOCOL_VERSION, MCP_SERVER_NAME, TOOLS_LIST_CHANGED_CAPABILITY, NOTIFICATION_METHODS, UNITY_CONNECTION, JSONRPC, PARAMETER_SCHEMA, TIMEOUTS, DEFAULT_CLIENT_NAME, ENVIRONMENT, ERROR_MESSAGES, OUTPUT_DIRECTORIES;
+var init_constants = __esm({
+  "src/constants.ts"() {
+    "use strict";
+    MCP_PROTOCOL_VERSION = "2024-11-05";
+    MCP_SERVER_NAME = "uloopmcp-server";
+    TOOLS_LIST_CHANGED_CAPABILITY = true;
+    NOTIFICATION_METHODS = {
+      TOOLS_LIST_CHANGED: "notifications/tools/list_changed"
+    };
+    UNITY_CONNECTION = {
+      DEFAULT_PORT: "8700",
+      DEFAULT_HOST: "127.0.0.1",
+      CONNECTION_TEST_MESSAGE: "connection_test"
+    };
+    JSONRPC = {
+      VERSION: "2.0"
+    };
+    PARAMETER_SCHEMA = {
+      TYPE_PROPERTY: "Type",
+      DESCRIPTION_PROPERTY: "Description",
+      DEFAULT_VALUE_PROPERTY: "DefaultValue",
+      ENUM_PROPERTY: "Enum",
+      PROPERTIES_PROPERTY: "Properties",
+      REQUIRED_PROPERTY: "Required"
+    };
+    TIMEOUTS = {
+      NETWORK: 12e4
+      // 2分 - ネットワークレベルのタイムアウト（Unity側のタイムアウトより長く設定）
+    };
+    DEFAULT_CLIENT_NAME = "";
+    ENVIRONMENT = {
+      NODE_ENV_DEVELOPMENT: "development",
+      NODE_ENV_PRODUCTION: "production"
+    };
+    ERROR_MESSAGES = {
+      NOT_CONNECTED: "Unity MCP Bridge is not connected",
+      CONNECTION_FAILED: "Unity connection failed",
+      TIMEOUT: "timeout",
+      INVALID_RESPONSE: "Invalid response from Unity"
+    };
+    OUTPUT_DIRECTORIES = {
+      ROOT: "uLoopMCPOutputs",
+      VIBE_LOGS: "VibeLogs"
+    };
+  }
+});
+
+// node_modules/uuid/dist/esm/stringify.js
+function unsafeStringify(arr, offset = 0) {
+  return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
+}
+var byteToHex;
+var init_stringify = __esm({
+  "node_modules/uuid/dist/esm/stringify.js"() {
+    byteToHex = [];
+    for (let i = 0; i < 256; ++i) {
+      byteToHex.push((i + 256).toString(16).slice(1));
+    }
+  }
+});
+
+// node_modules/uuid/dist/esm/rng.js
+import { randomFillSync } from "crypto";
+function rng() {
+  if (poolPtr > rnds8Pool.length - 16) {
+    randomFillSync(rnds8Pool);
+    poolPtr = 0;
+  }
+  return rnds8Pool.slice(poolPtr, poolPtr += 16);
+}
+var rnds8Pool, poolPtr;
+var init_rng = __esm({
+  "node_modules/uuid/dist/esm/rng.js"() {
+    rnds8Pool = new Uint8Array(256);
+    poolPtr = rnds8Pool.length;
+  }
+});
+
+// node_modules/uuid/dist/esm/native.js
+import { randomUUID } from "crypto";
+var native_default;
+var init_native = __esm({
+  "node_modules/uuid/dist/esm/native.js"() {
+    native_default = { randomUUID };
+  }
+});
+
+// node_modules/uuid/dist/esm/v4.js
+function v4(options, buf, offset) {
+  if (native_default.randomUUID && !buf && !options) {
+    return native_default.randomUUID();
+  }
+  options = options || {};
+  const rnds = options.random ?? options.rng?.() ?? rng();
+  if (rnds.length < 16) {
+    throw new Error("Random bytes length must be >= 16");
+  }
+  rnds[6] = rnds[6] & 15 | 64;
+  rnds[8] = rnds[8] & 63 | 128;
+  if (buf) {
+    offset = offset || 0;
+    if (offset < 0 || offset + 16 > buf.length) {
+      throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+    }
+    for (let i = 0; i < 16; ++i) {
+      buf[offset + i] = rnds[i];
+    }
+    return buf;
+  }
+  return unsafeStringify(rnds);
+}
+var v4_default;
+var init_v4 = __esm({
+  "node_modules/uuid/dist/esm/v4.js"() {
+    init_native();
+    init_rng();
+    init_stringify();
+    v4_default = v4;
+  }
+});
+
+// node_modules/uuid/dist/esm/index.js
+var init_esm = __esm({
+  "node_modules/uuid/dist/esm/index.js"() {
+    init_v4();
+  }
+});
+
+// src/utils/vibe-logger.ts
+import * as fs from "fs";
+import * as path from "path";
+import { fileURLToPath } from "url";
+var VibeLogger;
+var init_vibe_logger = __esm({
+  "src/utils/vibe-logger.ts"() {
+    "use strict";
+    init_esm();
+    init_constants();
+    VibeLogger = class _VibeLogger {
+      // Navigate from TypeScriptServer~ to project root: ../../../
+      static PROJECT_ROOT = path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "../../../.."
+      );
+      static LOG_DIRECTORY = path.join(
+        _VibeLogger.PROJECT_ROOT,
+        OUTPUT_DIRECTORIES.ROOT,
+        OUTPUT_DIRECTORIES.VIBE_LOGS
+      );
+      static LOG_FILE_PREFIX = "ts_vibe";
+      static MAX_FILE_SIZE_MB = 10;
+      static MAX_MEMORY_LOGS = 1e3;
+      static memoryLogs = [];
+      static isDebugEnabled = process.env.MCP_DEBUG === "true";
+      /**
+       * Log an info level message with structured context
+       */
+      static logInfo(operation, message, context, correlationId, humanNote, aiTodo) {
+        _VibeLogger.log("INFO", operation, message, context, correlationId, humanNote, aiTodo);
+      }
+      /**
+       * Log a warning level message with structured context
+       */
+      static logWarning(operation, message, context, correlationId, humanNote, aiTodo) {
+        _VibeLogger.log("WARNING", operation, message, context, correlationId, humanNote, aiTodo);
+      }
+      /**
+       * Log an error level message with structured context
+       */
+      static logError(operation, message, context, correlationId, humanNote, aiTodo) {
+        _VibeLogger.log("ERROR", operation, message, context, correlationId, humanNote, aiTodo);
+      }
+      /**
+       * Log a debug level message with structured context
+       */
+      static logDebug(operation, message, context, correlationId, humanNote, aiTodo) {
+        _VibeLogger.log("DEBUG", operation, message, context, correlationId, humanNote, aiTodo);
+      }
+      /**
+       * Log an exception with structured context
+       */
+      static logException(operation, error, context, correlationId, humanNote, aiTodo) {
+        const exceptionContext = {
+          original_context: context,
+          exception: {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+            cause: error.cause
+          }
+        };
+        _VibeLogger.log(
+          "ERROR",
+          operation,
+          `Exception occurred: ${error.message}`,
+          exceptionContext,
+          correlationId,
+          humanNote,
+          aiTodo
+        );
+      }
+      /**
+       * Generate a new correlation ID for tracking related operations
+       */
+      static generateCorrelationId() {
+        const timestamp = (/* @__PURE__ */ new Date()).toISOString().slice(11, 19).replace(/:/g, "");
+        return `ts_${v4_default().slice(0, 8)}_${timestamp}`;
+      }
+      /**
+       * Get logs for AI analysis (formatted for Claude Code)
+       * Output directory: {project_root}/uLoopMCPOutputs/VibeLogs/
+       */
+      static getLogsForAi(operation, correlationId, maxCount = 100) {
+        let filteredLogs = [..._VibeLogger.memoryLogs];
+        if (operation) {
+          filteredLogs = filteredLogs.filter((log) => log.operation.includes(operation));
+        }
+        if (correlationId) {
+          filteredLogs = filteredLogs.filter((log) => log.correlation_id === correlationId);
+        }
+        if (filteredLogs.length > maxCount) {
+          filteredLogs = filteredLogs.slice(-maxCount);
+        }
+        return JSON.stringify(filteredLogs, null, 2);
+      }
+      /**
+       * Clear all memory logs
+       */
+      static clearMemoryLogs() {
+        _VibeLogger.memoryLogs = [];
+      }
+      /**
+       * Write emergency log entry (for when main logging fails)
+       * Static method to avoid circular dependency
+       */
+      static writeEmergencyLog(emergencyEntry) {
+        try {
+          const basePath = process.cwd();
+          const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
+          if (!_VibeLogger.validateWithin(basePath, sanitizedRoot)) {
+            return;
+          }
+          const emergencyLogDir = path.resolve(sanitizedRoot, "EmergencyLogs");
+          if (!_VibeLogger.validateWithin(sanitizedRoot, emergencyLogDir)) {
+            return;
+          }
+          fs.mkdirSync(emergencyLogDir, { recursive: true });
+          const emergencyLogPath = path.resolve(emergencyLogDir, "vibe-logger-emergency.log");
+          if (!_VibeLogger.validateWithin(emergencyLogDir, emergencyLogPath)) {
+            return;
+          }
+          const emergencyLog = JSON.stringify(emergencyEntry) + "\n";
+          fs.appendFileSync(emergencyLogPath, emergencyLog);
+        } catch (error) {
+        }
+      }
+      /**
+       * Core logging method
+       * Only logs when MCP_DEBUG environment variable is set to 'true'
+       */
+      static log(level, operation, message, context, correlationId, humanNote, aiTodo) {
+        if (!_VibeLogger.isDebugEnabled) {
+          return;
+        }
+        const logEntry = {
+          timestamp: _VibeLogger.formatTimestamp(),
+          level,
+          operation,
+          message,
+          context: _VibeLogger.sanitizeContext(context),
+          correlation_id: correlationId || _VibeLogger.generateCorrelationId(),
+          source: "TypeScript",
+          human_note: humanNote,
+          ai_todo: aiTodo,
+          environment: _VibeLogger.getEnvironmentInfo()
+        };
+        _VibeLogger.memoryLogs.push(logEntry);
+        if (_VibeLogger.memoryLogs.length > _VibeLogger.MAX_MEMORY_LOGS) {
+          _VibeLogger.memoryLogs.shift();
+        }
+        _VibeLogger.saveLogToFile(logEntry).catch((error) => {
+          _VibeLogger.writeEmergencyLog({
+            timestamp: _VibeLogger.formatTimestamp(),
+            level: "EMERGENCY",
+            message: "VibeLogger saveLogToFile failed",
+            original_error: error instanceof Error ? error.message : String(error),
+            original_log_entry: logEntry
+          });
+        });
+      }
+      /**
+       * Validate file name to prevent dangerous characters
+       */
+      static validateFileName(fileName) {
+        const safeFileNameRegex = /^[a-zA-Z0-9._-]+$/;
+        return safeFileNameRegex.test(fileName) && !fileName.includes("..");
+      }
+      /**
+       * Validate file path to prevent directory traversal attacks
+       */
+      static validateFilePath(filePath) {
+        const normalizedPath = path.normalize(filePath);
+        const logDirectory = path.normalize(_VibeLogger.LOG_DIRECTORY);
+        return normalizedPath.startsWith(logDirectory + path.sep) || normalizedPath === logDirectory;
+      }
+      /**
+       * Validate that target path is within base directory
+       */
+      static validateWithin(base, target) {
+        const resolvedBase = path.resolve(base);
+        const resolvedTarget = path.resolve(target);
+        return resolvedTarget.startsWith(resolvedBase);
+      }
+      /**
+       * Safe wrapper for fs.existsSync with path validation
+       */
+      static safeExistsSync(filePath) {
+        try {
+          const absolutePath = path.resolve(filePath);
+          const expectedDir = path.resolve(_VibeLogger.LOG_DIRECTORY);
+          if (!_VibeLogger.validateWithin(expectedDir, absolutePath)) {
+            return false;
+          }
+          return fs.existsSync(absolutePath);
+        } catch (error) {
+          return false;
+        }
+      }
+      /**
+       * Prepare and validate log directory and file path
+       */
+      static prepareLogFilePath() {
+        const logDirectory = path.normalize(_VibeLogger.LOG_DIRECTORY);
+        if (!_VibeLogger.validateFilePath(logDirectory)) {
+          throw new Error("Invalid log directory path");
+        }
+        if (!_VibeLogger.safeExistsSync(logDirectory)) {
+          const absoluteLogDir = path.resolve(logDirectory);
+          const expectedBaseDir = path.resolve(_VibeLogger.PROJECT_ROOT);
+          if (!_VibeLogger.validateWithin(expectedBaseDir, absoluteLogDir)) {
+            throw new Error("Log directory path escapes project root");
+          }
+          fs.mkdirSync(absoluteLogDir, { recursive: true });
+        }
+        const fileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDate()}.json`;
+        if (!_VibeLogger.validateFileName(fileName)) {
+          throw new Error("Invalid file name detected");
+        }
+        const filePath = path.resolve(logDirectory, fileName);
+        if (!_VibeLogger.validateWithin(logDirectory, filePath)) {
+          throw new Error("Resolved file path escapes the log directory");
+        }
+        if (!_VibeLogger.validateFilePath(filePath)) {
+          throw new Error("Invalid file path detected");
+        }
+        return filePath;
+      }
+      /**
+       * Rotate log file if it exceeds maximum size
+       */
+      static rotateLogFileIfNeeded(filePath) {
+        if (!_VibeLogger.safeExistsSync(filePath)) {
+          return;
+        }
+        const absoluteFilePath = path.resolve(filePath);
+        const stats = fs.statSync(absoluteFilePath);
+        if (stats.size <= _VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
+          return;
+        }
+        const logDirectory = path.dirname(filePath);
+        const rotatedFileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDateTime()}.json`;
+        if (!_VibeLogger.validateFileName(rotatedFileName)) {
+          throw new Error("Invalid rotated file name detected");
+        }
+        const rotatedFilePath = path.resolve(logDirectory, rotatedFileName);
+        if (!_VibeLogger.validateWithin(logDirectory, rotatedFilePath)) {
+          throw new Error("Rotated file path escapes the allowed directory");
+        }
+        const sanitizedFilePath = path.resolve(logDirectory, path.basename(filePath));
+        if (!_VibeLogger.validateWithin(logDirectory, sanitizedFilePath)) {
+          throw new Error("Original file path escapes the allowed directory");
+        }
+        fs.renameSync(sanitizedFilePath, rotatedFilePath);
+      }
+      /**
+       * Write log to file with retry mechanism for concurrent access
+       */
+      static async writeLogWithRetry(filePath, jsonLog) {
+        const maxRetries = 3;
+        const baseDelayMs = 50;
+        const absoluteFilePath = path.resolve(filePath);
+        const expectedLogDir = path.resolve(_VibeLogger.LOG_DIRECTORY);
+        if (!_VibeLogger.validateWithin(expectedLogDir, absoluteFilePath)) {
+          throw new Error("File path escapes log directory");
+        }
+        for (let retry = 0; retry < maxRetries; retry++) {
+          try {
+            const fileHandle = await fs.promises.open(absoluteFilePath, "a");
+            try {
+              await fileHandle.writeFile(jsonLog, { encoding: "utf8" });
+            } finally {
+              await fileHandle.close();
+            }
+            return;
+          } catch (error) {
+            if (_VibeLogger.isFileSharingViolation(error) && retry < maxRetries - 1) {
+              const delayMs = baseDelayMs * Math.pow(2, retry);
+              await _VibeLogger.sleep(delayMs);
+            } else {
+              throw error;
+            }
+          }
+        }
+      }
+      /**
+       * Save log entry to file with retry mechanism for concurrent access
+       */
+      static async saveLogToFile(logEntry) {
+        try {
+          const filePath = _VibeLogger.prepareLogFilePath();
+          _VibeLogger.rotateLogFileIfNeeded(filePath);
+          const jsonLog = JSON.stringify(logEntry) + "\n";
+          await _VibeLogger.writeLogWithRetry(filePath, jsonLog);
+        } catch (error) {
+          await _VibeLogger.tryFallbackLogging(logEntry, error);
+        }
+      }
+      /**
+       * Try fallback logging when main logging fails
+       */
+      static async tryFallbackLogging(logEntry, error) {
+        try {
+          const basePath = process.cwd();
+          const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
+          if (!_VibeLogger.validateWithin(basePath, sanitizedRoot)) {
+            throw new Error("Invalid OUTPUT_DIRECTORIES.ROOT path");
+          }
+          const safeLogDir = path.resolve(sanitizedRoot, "FallbackLogs");
+          if (!_VibeLogger.validateWithin(sanitizedRoot, safeLogDir)) {
+            throw new Error("Fallback log directory path traversal detected");
+          }
+          fs.mkdirSync(safeLogDir, { recursive: true });
+          const safeDate = _VibeLogger.formatDateTime().split(" ")[0].replace(/[^0-9-]/g, "");
+          const safeFilename = `${_VibeLogger.LOG_FILE_PREFIX}_fallback_${safeDate}.json`;
+          const safeFallbackPath = path.resolve(safeLogDir, safeFilename);
+          if (!_VibeLogger.validateWithin(safeLogDir, safeFallbackPath)) {
+            throw new Error("Invalid fallback log file path");
+          }
+          const fallbackEntry = {
+            ...logEntry,
+            fallback_reason: error instanceof Error ? error.message : String(error),
+            original_timestamp: logEntry.timestamp
+          };
+          const jsonLog = JSON.stringify(fallbackEntry) + "\n";
+          const fileHandle = await fs.promises.open(safeFallbackPath, "a");
+          try {
+            await fileHandle.writeFile(jsonLog, { encoding: "utf8" });
+          } finally {
+            await fileHandle.close();
+          }
+        } catch (fallbackError) {
+          _VibeLogger.writeEmergencyLog({
+            timestamp: _VibeLogger.formatTimestamp(),
+            level: "EMERGENCY",
+            message: "VibeLogger fallback failed",
+            original_error: error instanceof Error ? error.message : String(error),
+            fallback_error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+            original_log_entry: logEntry
+          });
+        }
+      }
+      /**
+       * Check if error is a file sharing violation
+       */
+      static isFileSharingViolation(error) {
+        if (!error) {
+          return false;
+        }
+        const sharingViolationCodes = [
+          "EBUSY",
+          // Resource busy or locked
+          "EACCES",
+          // Permission denied (can indicate file in use)
+          "EPERM",
+          // Operation not permitted
+          "EMFILE",
+          // Too many open files
+          "ENFILE"
+          // File table overflow
+        ];
+        return error && typeof error === "object" && "code" in error && typeof error.code === "string" && sharingViolationCodes.includes(error.code);
+      }
+      /**
+       * Asynchronous sleep function for retry delays
+       */
+      static async sleep(ms) {
+        return new Promise((resolve2) => setTimeout(resolve2, ms));
+      }
+      /**
+       * Get current environment information
+       */
+      static getEnvironmentInfo() {
+        const memUsage = process.memoryUsage();
+        return {
+          node_version: process.version,
+          platform: process.platform,
+          process_id: process.pid,
+          memory_usage: {
+            rss: memUsage.rss,
+            heapTotal: memUsage.heapTotal,
+            heapUsed: memUsage.heapUsed
+          }
+        };
+      }
+      /**
+       * Sanitize context to prevent circular references
+       */
+      static sanitizeContext(context) {
+        if (!context) {
+          return void 0;
+        }
+        try {
+          return JSON.parse(JSON.stringify(context));
+        } catch (error) {
+          return {
+            error: "Failed to serialize context",
+            original_type: typeof context,
+            circular_reference: true
+          };
+        }
+      }
+      /**
+       * Format timestamp for log entries (local timezone)
+       */
+      static formatTimestamp() {
+        const now = /* @__PURE__ */ new Date();
+        const offset = now.getTimezoneOffset();
+        const offsetHours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0");
+        const offsetMinutes = String(Math.abs(offset) % 60).padStart(2, "0");
+        const offsetSign = offset <= 0 ? "+" : "-";
+        return now.toISOString().replace("Z", `${offsetSign}${offsetHours}:${offsetMinutes}`);
+      }
+      /**
+       * Format date for file naming (local timezone)
+       */
+      static formatDate() {
+        const now = /* @__PURE__ */ new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        return `${year}${month}${day}`;
+      }
+      /**
+       * Format datetime for file rotation
+       */
+      static formatDateTime() {
+        const now = /* @__PURE__ */ new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        const hours = String(now.getHours()).padStart(2, "0");
+        const minutes = String(now.getMinutes()).padStart(2, "0");
+        const seconds = String(now.getSeconds()).padStart(2, "0");
+        return `${year}${month}${day}_${hours}${minutes}${seconds}`;
+      }
+    };
+  }
+});
+
+// src/tools/base-tool.ts
+var BaseTool;
+var init_base_tool = __esm({
+  "src/tools/base-tool.ts"() {
+    "use strict";
+    BaseTool = class {
+      context;
+      constructor(context) {
+        this.context = context;
+      }
+      /**
+       * Main method for tool execution
+       */
+      async handle(args) {
+        try {
+          const validatedArgs = this.validateArgs(args);
+          const result = await this.execute(validatedArgs);
+          return this.formatResponse(result);
+        } catch (error) {
+          return this.formatErrorResponse(error);
+        }
+      }
+      /**
+       * Format success response (can be overridden in subclass)
+       */
+      formatResponse(result) {
+        if (typeof result === "object" && result !== null && "content" in result) {
+          return result;
+        }
+        return {
+          content: [
+            {
+              type: "text",
+              text: typeof result === "string" ? result : JSON.stringify(result, null, 2)
+            }
+          ]
+        };
+      }
+      /**
+       * Format error response
+       */
+      formatErrorResponse(error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error in ${this.name}: ${errorMessage}`
+            }
+          ]
+        };
+      }
+    };
+  }
+});
+
+// src/tools/dynamic-unity-command-tool.ts
+var DynamicUnityCommandTool;
+var init_dynamic_unity_command_tool = __esm({
+  "src/tools/dynamic-unity-command-tool.ts"() {
+    "use strict";
+    init_base_tool();
+    init_constants();
+    DynamicUnityCommandTool = class extends BaseTool {
+      name;
+      description;
+      inputSchema;
+      toolName;
+      constructor(context, toolName, description, parameterSchema) {
+        super(context);
+        this.toolName = toolName;
+        this.name = toolName;
+        this.description = description;
+        this.inputSchema = this.generateInputSchema(parameterSchema);
+      }
+      generateInputSchema(parameterSchema) {
+        if (this.hasNoParameters(parameterSchema)) {
+          return {
+            type: "object",
+            properties: {},
+            additionalProperties: false
+          };
+        }
+        const properties = {};
+        const required = [];
+        if (!parameterSchema) {
+          throw new Error("Parameter schema is undefined");
+        }
+        const propertiesObj = parameterSchema[PARAMETER_SCHEMA.PROPERTIES_PROPERTY];
+        for (const [propName, propInfo] of Object.entries(propertiesObj)) {
+          const info = propInfo;
+          const property = {
+            type: this.convertType(String(info[PARAMETER_SCHEMA.TYPE_PROPERTY] || "string")),
+            description: String(
+              info[PARAMETER_SCHEMA.DESCRIPTION_PROPERTY] || `Parameter: ${propName}`
+            )
+          };
+          const defaultValue = info[PARAMETER_SCHEMA.DEFAULT_VALUE_PROPERTY];
+          if (defaultValue !== void 0 && defaultValue !== null) {
+            property.default = defaultValue;
+          }
+          const enumValues = info[PARAMETER_SCHEMA.ENUM_PROPERTY];
+          if (enumValues && Array.isArray(enumValues) && enumValues.length > 0) {
+            property.enum = enumValues;
+          }
+          if (info[PARAMETER_SCHEMA.TYPE_PROPERTY] === "array" && defaultValue && Array.isArray(defaultValue)) {
+            property.items = {
+              type: "string"
+            };
+            property.default = defaultValue;
+          }
+          Object.defineProperty(properties, propName, {
+            value: property,
+            writable: true,
+            enumerable: true,
+            configurable: true
+          });
+        }
+        if (!parameterSchema) {
+          throw new Error("Parameter schema is undefined");
+        }
+        const requiredParams = parameterSchema[PARAMETER_SCHEMA.REQUIRED_PROPERTY];
+        if (requiredParams && Array.isArray(requiredParams)) {
+          required.push(...requiredParams);
+        }
+        const schema = {
+          type: "object",
+          properties,
+          required: required.length > 0 ? required : void 0
+        };
+        return schema;
+      }
+      convertType(unityType) {
+        switch (unityType?.toLowerCase()) {
+          case "string":
+            return "string";
+          case "number":
+          case "int":
+          case "float":
+          case "double":
+            return "number";
+          case "boolean":
+          case "bool":
+            return "boolean";
+          case "array":
+            return "array";
+          default:
+            return "string";
+        }
+      }
+      hasNoParameters(parameterSchema) {
+        if (!parameterSchema) {
+          return true;
+        }
+        const properties = parameterSchema[PARAMETER_SCHEMA.PROPERTIES_PROPERTY];
+        if (!properties || typeof properties !== "object") {
+          return true;
+        }
+        return Object.keys(properties).length === 0;
+      }
+      validateArgs(args) {
+        if (!this.inputSchema.properties || Object.keys(this.inputSchema.properties).length === 0) {
+          return {};
+        }
+        return args || {};
+      }
+      async execute(args) {
+        try {
+          const actualArgs = this.validateArgs(args);
+          const result = await this.context.unityClient.executeTool(this.toolName, actualArgs);
+          return {
+            content: [
+              {
+                type: "text",
+                text: typeof result === "string" ? result : JSON.stringify(result, null, 2)
+              }
+            ]
+          };
+        } catch (error) {
+          return this.formatErrorResponse(error);
+        }
+      }
+      formatErrorResponse(error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to execute tool '${this.toolName}': ${errorMessage}`
+            }
+          ]
+        };
+      }
+    };
+  }
+});
+
+// src/usecases/tool-refresh-use-case.ts
+var tool_refresh_use_case_exports = {};
+__export(tool_refresh_use_case_exports, {
+  ToolRefreshReason: () => ToolRefreshReason,
+  ToolRefreshResult: () => ToolRefreshResult,
+  ToolRefreshUseCase: () => ToolRefreshUseCase
+});
+var ToolRefreshUseCase, ToolRefreshResult, ToolRefreshReason;
+var init_tool_refresh_use_case = __esm({
+  "src/usecases/tool-refresh-use-case.ts"() {
+    "use strict";
+    init_dynamic_unity_command_tool();
+    init_vibe_logger();
+    ToolRefreshUseCase = class {
+      constructor(unityClient, includeDevelopmentOnlyTools, sendNotificationCallback) {
+        this.unityClient = unityClient;
+        this.includeDevelopmentOnlyTools = includeDevelopmentOnlyTools;
+        this.sendNotificationCallback = sendNotificationCallback;
+        this.correlationId = VibeLogger.generateCorrelationId();
+      }
+      correlationId;
+      /**
+       * Execute complete tool refresh process
+       * This method contains all refresh steps in temporal order
+       * Should be called only once per instance
+       */
+      async execute() {
+        VibeLogger.logInfo(
+          "tool_refresh_usecase_start",
+          "Starting Unity tool refresh process",
+          {
+            include_development_tools: this.includeDevelopmentOnlyTools,
+            has_notification_callback: !!this.sendNotificationCallback,
+            unity_connected: this.unityClient.connected
+          },
+          this.correlationId,
+          "UseCase pattern: Single-use tool refresh with temporal cohesion",
+          "Track this correlation ID for complete refresh flow"
+        );
+        try {
+          if (!this.checkRefreshPreconditions()) {
+            return ToolRefreshResult.AlreadyInProgress();
+          }
+          this.ensureUnityConnection();
+          const toolDetails = await this.fetchToolDetailsFromUnity();
+          if (!toolDetails) {
+            return ToolRefreshResult.FetchFailed();
+          }
+          const createdTools = this.createDynamicToolsFromDetails(toolDetails);
+          this.updateToolCache(createdTools);
+          this.sendMCPNotificationIfProvided();
+          VibeLogger.logInfo(
+            "tool_refresh_usecase_success",
+            "Unity tool refresh completed successfully",
+            {
+              tools_created: createdTools.size,
+              include_development_tools: this.includeDevelopmentOnlyTools,
+              notification_sent: !!this.sendNotificationCallback
+            },
+            this.correlationId,
+            "UseCase completed - tools refreshed and clients notified"
+          );
+          return ToolRefreshResult.Success(createdTools.size);
+        } catch (error) {
+          VibeLogger.logError(
+            "tool_refresh_usecase_failure",
+            "Unity tool refresh failed with error",
+            {
+              error_message: error instanceof Error ? error.message : String(error),
+              error_type: error instanceof Error ? error.constructor.name : typeof error,
+              include_development_tools: this.includeDevelopmentOnlyTools
+            },
+            this.correlationId,
+            "UseCase failed - tool refresh aborted with error"
+          );
+          return ToolRefreshResult.Error(error instanceof Error ? error.message : String(error));
+        }
+      }
+      /**
+       * Step 1: Check refresh preconditions (duplicate execution prevention)
+       */
+      checkRefreshPreconditions() {
+        VibeLogger.logDebug(
+          "tool_refresh_step_1",
+          "Checking refresh preconditions",
+          {
+            include_development_tools: this.includeDevelopmentOnlyTools
+          },
+          this.correlationId,
+          "Step 1: Precondition check for duplicate prevention"
+        );
+        VibeLogger.logDebug(
+          "tool_refresh_step_1_complete",
+          "Refresh preconditions satisfied",
+          {},
+          this.correlationId,
+          "Step 1 complete: Ready to proceed with refresh"
+        );
+        return true;
+      }
+      /**
+       * Step 2: Ensure Unity connection is established
+       */
+      ensureUnityConnection() {
+        VibeLogger.logDebug(
+          "tool_refresh_step_2",
+          "Ensuring Unity connection",
+          {
+            unity_connected: this.unityClient.connected
+          },
+          this.correlationId,
+          "Step 2: Unity connection prerequisite check"
+        );
+        if (!this.unityClient.connected) {
+          throw new Error(
+            "Unity connection not established. ClientInitializationUseCase must be executed first."
+          );
+        }
+        VibeLogger.logDebug(
+          "tool_refresh_step_2_complete",
+          "Unity connection established",
+          {
+            unity_connected: this.unityClient.connected
+          },
+          this.correlationId,
+          "Step 2 complete: Unity connection ready for tool fetch"
+        );
+      }
+      /**
+       * Step 3: Fetch tool details from Unity
+       */
+      async fetchToolDetailsFromUnity() {
+        VibeLogger.logDebug(
+          "tool_refresh_step_3",
+          "Fetching tool details from Unity",
+          {
+            include_development_tools: this.includeDevelopmentOnlyTools
+          },
+          this.correlationId,
+          "Step 3: Tool details retrieval from Unity"
+        );
+        try {
+          const params = { IncludeDevelopmentOnly: this.includeDevelopmentOnlyTools };
+          VibeLogger.logDebug(
+            "tool_refresh_requesting_details",
+            "Requesting tool details from Unity",
+            { params },
+            this.correlationId,
+            "Executing get-tool-details Unity command"
+          );
+          const toolDetailsResponse = await this.unityClient.executeTool("get-tool-details", params);
+          VibeLogger.logDebug(
+            "tool_refresh_received_details",
+            "Received tool details response from Unity",
+            {
+              response_type: typeof toolDetailsResponse,
+              has_tools_property: !!toolDetailsResponse?.Tools
+            },
+            this.correlationId,
+            "Processing Unity tool details response"
+          );
+          const toolDetails = toolDetailsResponse?.Tools || toolDetailsResponse;
+          if (!Array.isArray(toolDetails)) {
+            VibeLogger.logWarning(
+              "tool_refresh_step_3_invalid_response",
+              "Invalid tool details response from Unity",
+              {
+                response_type: typeof toolDetails,
+                is_array: Array.isArray(toolDetails)
+              },
+              this.correlationId,
+              "Step 3 warning: Tool details response is not an array"
+            );
+            return null;
+          }
+          VibeLogger.logDebug(
+            "tool_refresh_step_3_complete",
+            "Tool details fetched successfully",
+            {
+              tools_count: toolDetails.length,
+              include_development_tools: this.includeDevelopmentOnlyTools
+            },
+            this.correlationId,
+            "Step 3 complete: Tool details ready for processing"
+          );
+          return toolDetails;
+        } catch (error) {
+          VibeLogger.logError(
+            "tool_refresh_step_3_error",
+            "Failed to fetch tool details from Unity",
+            {
+              error_message: error instanceof Error ? error.message : String(error),
+              include_development_tools: this.includeDevelopmentOnlyTools
+            },
+            this.correlationId,
+            "Step 3 error: Tool details fetch failed"
+          );
+          return null;
+        }
+      }
+      /**
+       * Step 4: Create dynamic tools from Unity tool details
+       */
+      createDynamicToolsFromDetails(toolDetails) {
+        VibeLogger.logDebug(
+          "tool_refresh_step_4",
+          "Creating dynamic tools from details",
+          {
+            tool_details_count: toolDetails.length,
+            include_development_tools: this.includeDevelopmentOnlyTools
+          },
+          this.correlationId,
+          "Step 4: Dynamic tool creation process"
+        );
+        const dynamicTools = /* @__PURE__ */ new Map();
+        const toolContext = { unityClient: this.unityClient };
+        let skippedCount = 0;
+        let createdCount = 0;
+        for (const rawToolInfo of toolDetails) {
+          const toolInfo = rawToolInfo;
+          const toolName = toolInfo.name;
+          const description = toolInfo.description || `Execute Unity tool: ${toolName}`;
+          const parameterSchema = toolInfo.parameterSchema;
+          const displayDevelopmentOnly = toolInfo.displayDevelopmentOnly || false;
+          if (displayDevelopmentOnly && !this.includeDevelopmentOnlyTools) {
+            skippedCount++;
+            continue;
+          }
+          const dynamicTool = new DynamicUnityCommandTool(
+            toolContext,
+            toolName,
+            description,
+            parameterSchema
+            // Unity parameter schema
+          );
+          dynamicTools.set(toolName, dynamicTool);
+          createdCount++;
+        }
+        VibeLogger.logDebug(
+          "tool_refresh_step_4_complete",
+          "Dynamic tools created successfully",
+          {
+            tools_created: createdCount,
+            tools_skipped: skippedCount,
+            total_processed: toolDetails.length,
+            include_development_tools: this.includeDevelopmentOnlyTools
+          },
+          this.correlationId,
+          "Step 4 complete: Dynamic tools ready for cache update"
+        );
+        return dynamicTools;
+      }
+      /**
+       * Step 5: Update tool cache (this would be handled by the calling ToolManager)
+       */
+      updateToolCache(dynamicTools) {
+        VibeLogger.logDebug(
+          "tool_refresh_step_5",
+          "Updating tool cache",
+          {
+            tools_count: dynamicTools.size
+          },
+          this.correlationId,
+          "Step 5: Tool cache update (handled by caller)"
+        );
+        VibeLogger.logDebug(
+          "tool_refresh_step_5_complete",
+          "Tool cache update prepared",
+          {
+            tools_ready: dynamicTools.size
+          },
+          this.correlationId,
+          "Step 5 complete: Tools ready for cache integration"
+        );
+      }
+      /**
+       * Step 6: Send MCP notification if callback provided
+       */
+      sendMCPNotificationIfProvided() {
+        if (!this.sendNotificationCallback) {
+          VibeLogger.logDebug(
+            "tool_refresh_step_6_skipped",
+            "No notification callback provided - skipping",
+            {},
+            this.correlationId,
+            "Step 6 skipped: No MCP notification to send"
+          );
+          return;
+        }
+        VibeLogger.logDebug(
+          "tool_refresh_step_6",
+          "Sending MCP tools changed notification",
+          {},
+          this.correlationId,
+          "Step 6: MCP client notification"
+        );
+        try {
+          this.sendNotificationCallback();
+          VibeLogger.logDebug(
+            "tool_refresh_step_6_complete",
+            "MCP notification sent successfully",
+            {},
+            this.correlationId,
+            "Step 6 complete: MCP clients notified of tool changes"
+          );
+        } catch (error) {
+          VibeLogger.logError(
+            "tool_refresh_step_6_error",
+            "Failed to send MCP notification",
+            {
+              error_message: error instanceof Error ? error.message : String(error)
+            },
+            this.correlationId,
+            "Step 6 error: MCP notification failed but refresh continues"
+          );
+        }
+      }
+      // Step 7 (finally block handling) is managed by the UseCase execution flow
+    };
+    ToolRefreshResult = class _ToolRefreshResult {
+      isSuccess;
+      errorMessage;
+      toolsCount;
+      reason;
+      constructor(isSuccess, reason, errorMessage, toolsCount) {
+        this.isSuccess = isSuccess;
+        this.reason = reason;
+        this.errorMessage = errorMessage;
+        this.toolsCount = toolsCount;
+      }
+      static Success(toolsCount) {
+        return new _ToolRefreshResult(true, "success" /* Success */, void 0, toolsCount);
+      }
+      static AlreadyInProgress() {
+        return new _ToolRefreshResult(false, "already_in_progress" /* AlreadyInProgress */);
+      }
+      static FetchFailed() {
+        return new _ToolRefreshResult(false, "fetch_failed" /* FetchFailed */);
+      }
+      static Error(errorMessage) {
+        return new _ToolRefreshResult(false, "error" /* Error */, errorMessage);
+      }
+    };
+    ToolRefreshReason = /* @__PURE__ */ ((ToolRefreshReason2) => {
+      ToolRefreshReason2["Success"] = "success";
+      ToolRefreshReason2["AlreadyInProgress"] = "already_in_progress";
+      ToolRefreshReason2["FetchFailed"] = "fetch_failed";
+      ToolRefreshReason2["Error"] = "error";
+      return ToolRefreshReason2;
+    })(ToolRefreshReason || {});
+  }
+});
+
+// src/usecases/connection-recovery-use-case.ts
+var connection_recovery_use_case_exports = {};
+__export(connection_recovery_use_case_exports, {
+  ConnectionRecoveryReason: () => ConnectionRecoveryReason,
+  ConnectionRecoveryResult: () => ConnectionRecoveryResult,
+  ConnectionRecoveryUseCase: () => ConnectionRecoveryUseCase
+});
+var ConnectionRecoveryUseCase, ConnectionRecoveryResult, ConnectionRecoveryReason;
+var init_connection_recovery_use_case = __esm({
+  "src/usecases/connection-recovery-use-case.ts"() {
+    "use strict";
+    init_vibe_logger();
+    init_constants();
+    ConnectionRecoveryUseCase = class {
+      constructor(unityClient, onDiscoveredCallback) {
+        this.unityClient = unityClient;
+        this.onDiscoveredCallback = onDiscoveredCallback;
+        this.correlationId = VibeLogger.generateCorrelationId();
+      }
+      correlationId;
+      /**
+       * Execute complete connection recovery process
+       * This method contains all recovery steps in temporal order
+       * Should be called only once per instance
+       */
+      async execute() {
+        VibeLogger.logInfo(
+          "connection_recovery_usecase_start",
+          "Starting connection recovery process",
+          {
+            unity_connected: this.unityClient.connected,
+            process_id: process.pid
+          },
+          this.correlationId,
+          "UseCase pattern: Single-use connection recovery with temporal cohesion",
+          "Track this correlation ID for complete recovery flow"
+        );
+        try {
+          if (!this.checkRecoveryPreconditions()) {
+            return ConnectionRecoveryResult.AlreadyInProgress();
+          }
+          const healthCheckResult = await this.performConnectionHealthCheck();
+          if (healthCheckResult.isHealthy) {
+            VibeLogger.logInfo(
+              "connection_recovery_usecase_success_no_action",
+              "Connection is healthy - no recovery needed",
+              { connection_healthy: true },
+              this.correlationId,
+              "UseCase completed - connection was already healthy"
+            );
+            return ConnectionRecoveryResult.AlreadyHealthy();
+          }
+          const discoveryResult = await this.attemptUnityDiscovery();
+          if (!discoveryResult.found) {
+            VibeLogger.logWarning(
+              "connection_recovery_usecase_no_unity_found",
+              "Unity server not found during recovery",
+              {
+                target_port: discoveryResult.port
+              },
+              this.correlationId,
+              "UseCase completed - Unity not available for recovery"
+            );
+            return ConnectionRecoveryResult.UnityNotFound();
+          }
+          this.updateClientConnectionSettings(discoveryResult.port);
+          await this.executeDiscoveryCallback(discoveryResult.port);
+          VibeLogger.logInfo(
+            "connection_recovery_usecase_success",
+            "Connection recovery completed successfully",
+            {
+              recovered_port: discoveryResult.port,
+              unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${discoveryResult.port}`
+            },
+            this.correlationId,
+            "UseCase completed - connection recovered successfully"
+          );
+          return ConnectionRecoveryResult.Success(discoveryResult.port);
+        } catch (error) {
+          VibeLogger.logError(
+            "connection_recovery_usecase_failure",
+            "Connection recovery failed with error",
+            {
+              error_message: error instanceof Error ? error.message : String(error),
+              error_type: error instanceof Error ? error.constructor.name : typeof error
+            },
+            this.correlationId,
+            "UseCase failed - connection recovery aborted with error"
+          );
+          return ConnectionRecoveryResult.Error(error instanceof Error ? error.message : String(error));
+        }
+      }
+      /**
+       * Step 1: Check recovery preconditions
+       */
+      checkRecoveryPreconditions() {
+        VibeLogger.logDebug(
+          "connection_recovery_step_1",
+          "Checking recovery preconditions",
+          {
+            unity_connected: this.unityClient.connected
+          },
+          this.correlationId,
+          "Step 1: Recovery precondition check"
+        );
+        VibeLogger.logDebug(
+          "connection_recovery_step_1_complete",
+          "Recovery preconditions satisfied",
+          {},
+          this.correlationId,
+          "Step 1 complete: Ready to proceed with recovery"
+        );
+        return true;
+      }
+      /**
+       * Step 2: Perform connection health check if connected
+       */
+      async performConnectionHealthCheck() {
+        VibeLogger.logDebug(
+          "connection_recovery_step_2",
+          "Performing connection health check",
+          {
+            unity_connected: this.unityClient.connected
+          },
+          this.correlationId,
+          "Step 2: Connection health assessment"
+        );
+        if (!this.unityClient.connected) {
+          VibeLogger.logDebug(
+            "connection_recovery_step_2_not_connected",
+            "Client not connected - health check skipped",
+            { unity_connected: false },
+            this.correlationId,
+            "Step 2: No connection to check - proceeding to discovery"
+          );
+          return { isHealthy: false, reason: "not_connected" };
+        }
+        try {
+          const healthCheck = await Promise.race([
+            this.unityClient.testConnection(),
+            new Promise(
+              (_, reject) => setTimeout(() => reject(new Error("Connection health check timeout")), 1e3)
+            )
+          ]);
+          if (healthCheck) {
+            VibeLogger.logInfo(
+              "connection_recovery_step_2_healthy",
+              "Connection is healthy - recovery not needed",
+              { connection_healthy: true },
+              this.correlationId,
+              "Step 2 complete: Connection is healthy"
+            );
+            return { isHealthy: true, reason: "healthy" };
+          } else {
+            VibeLogger.logWarning(
+              "connection_recovery_step_2_unhealthy",
+              "Connection appears unhealthy - proceeding with recovery",
+              { connection_healthy: false },
+              this.correlationId,
+              "Step 2 complete: Connection needs recovery"
+            );
+            return { isHealthy: false, reason: "unhealthy" };
+          }
+        } catch (error) {
+          VibeLogger.logWarning(
+            "connection_recovery_step_2_error",
+            "Health check failed - proceeding with recovery",
+            {
+              error_message: error instanceof Error ? error.message : String(error)
+            },
+            this.correlationId,
+            "Step 2 complete: Health check error - recovery needed"
+          );
+          return { isHealthy: false, reason: "error" };
+        }
+      }
+      /**
+       * Step 3: Attempt Unity discovery
+       */
+      async attemptUnityDiscovery() {
+        VibeLogger.logDebug(
+          "connection_recovery_step_3",
+          "Attempting Unity discovery",
+          {},
+          this.correlationId,
+          "Step 3: Unity server discovery process"
+        );
+        const unityTcpPort = process.env.UNITY_TCP_PORT;
+        if (!unityTcpPort) {
+          throw new Error("UNITY_TCP_PORT environment variable is required but not set");
+        }
+        const port = parseInt(unityTcpPort, 10);
+        if (isNaN(port) || port <= 0 || port > 65535) {
+          throw new Error(`UNITY_TCP_PORT must be a valid port number (1-65535), got: ${unityTcpPort}`);
+        }
+        VibeLogger.logInfo(
+          "connection_recovery_port_check",
+          "Checking Unity availability on port",
+          {
+            target_port: port,
+            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`
+          },
+          this.correlationId,
+          "Step 3: Attempting to connect to Unity MCP server"
+        );
+        try {
+          if (!this.unityClient.connected) {
+            VibeLogger.logInfo(
+              "connection_recovery_establishing_connection",
+              "Establishing Unity connection after successful discovery",
+              {
+                discovered_port: port,
+                unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`
+              },
+              this.correlationId,
+              "Calling unityClient.connect() after successful discovery"
+            );
+            try {
+              await this.unityClient.connect("ConnectionRecoveryUseCase");
+              VibeLogger.logInfo(
+                "connection_recovery_connection_established",
+                "Unity connection established successfully",
+                {
+                  unity_connected: this.unityClient.connected,
+                  unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`
+                },
+                this.correlationId,
+                "Connection established - unityClient.connected should now be true"
+              );
+            } catch (error) {
+              VibeLogger.logError(
+                "connection_recovery_connection_failed",
+                "Failed to establish Unity connection despite successful discovery",
+                {
+                  error_message: error instanceof Error ? error.message : JSON.stringify(error),
+                  unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`
+                },
+                this.correlationId,
+                "Connection failed - falling back to discovery-only mode"
+              );
+            }
+          }
+          return { found: true, port };
+        } catch (error) {
+          VibeLogger.logDebug(
+            "connection_recovery_step_3_error",
+            "Unity availability check failed",
+            {
+              target_port: port,
+              error_message: error instanceof Error ? error.message : String(error)
+            },
+            this.correlationId,
+            "Step 3: Unity availability check error - expected when Unity not running"
+          );
+          return { found: false, port };
+        }
+      }
+      /**
+       * Step 4: Update client connection settings
+       */
+      updateClientConnectionSettings(port) {
+        VibeLogger.logDebug(
+          "connection_recovery_step_4",
+          "Updating client connection settings",
+          {
+            new_port: port,
+            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`
+          },
+          this.correlationId,
+          "Step 4: Client configuration update"
+        );
+        this.unityClient.updatePort(port);
+        VibeLogger.logDebug(
+          "connection_recovery_step_4_complete",
+          "Client connection settings updated",
+          {
+            updated_port: port
+          },
+          this.correlationId,
+          "Step 4 complete: Client configured for Unity connection"
+        );
+      }
+      /**
+       * Step 5: Execute discovery callback if provided
+       */
+      async executeDiscoveryCallback(port) {
+        if (!this.onDiscoveredCallback) {
+          VibeLogger.logDebug(
+            "connection_recovery_step_5_skipped",
+            "No discovery callback provided - skipping",
+            { port },
+            this.correlationId,
+            "Step 5 skipped: No callback to execute"
+          );
+          return;
+        }
+        VibeLogger.logDebug(
+          "connection_recovery_step_5",
+          "Executing discovery callback",
+          { port },
+          this.correlationId,
+          "Step 5: Discovery callback execution"
+        );
+        try {
+          await this.onDiscoveredCallback(port);
+          VibeLogger.logDebug(
+            "connection_recovery_step_5_complete",
+            "Discovery callback executed successfully",
+            { port },
+            this.correlationId,
+            "Step 5 complete: Discovery callback finished"
+          );
+        } catch (error) {
+          VibeLogger.logError(
+            "connection_recovery_step_5_error",
+            "Discovery callback execution failed",
+            {
+              port,
+              error_message: error instanceof Error ? error.message : String(error)
+            },
+            this.correlationId,
+            "Step 5 error: Discovery callback failed but recovery continues"
+          );
+        }
+      }
+    };
+    ConnectionRecoveryResult = class _ConnectionRecoveryResult {
+      isSuccess;
+      errorMessage;
+      port;
+      reason;
+      constructor(isSuccess, reason, errorMessage, port) {
+        this.isSuccess = isSuccess;
+        this.reason = reason;
+        this.errorMessage = errorMessage;
+        this.port = port;
+      }
+      static Success(port) {
+        return new _ConnectionRecoveryResult(true, "success" /* Success */, void 0, port);
+      }
+      static AlreadyHealthy() {
+        return new _ConnectionRecoveryResult(true, "already_healthy" /* AlreadyHealthy */);
+      }
+      static AlreadyInProgress() {
+        return new _ConnectionRecoveryResult(false, "already_in_progress" /* AlreadyInProgress */);
+      }
+      static UnityNotFound() {
+        return new _ConnectionRecoveryResult(false, "unity_not_found" /* UnityNotFound */);
+      }
+      static Error(errorMessage) {
+        return new _ConnectionRecoveryResult(false, "error" /* Error */, errorMessage);
+      }
+    };
+    ConnectionRecoveryReason = /* @__PURE__ */ ((ConnectionRecoveryReason2) => {
+      ConnectionRecoveryReason2["Success"] = "success";
+      ConnectionRecoveryReason2["AlreadyHealthy"] = "already_healthy";
+      ConnectionRecoveryReason2["AlreadyInProgress"] = "already_in_progress";
+      ConnectionRecoveryReason2["UnityNotFound"] = "unity_not_found";
+      ConnectionRecoveryReason2["Error"] = "error";
+      return ConnectionRecoveryReason2;
+    })(ConnectionRecoveryReason || {});
+  }
+});
 
 // node_modules/zod/dist/esm/v3/external.js
 var external_exports = {};
@@ -5474,50 +6963,8 @@ var StdioServerTransport = class {
 };
 
 // src/unity-client.ts
+init_constants();
 import * as net from "net";
-
-// src/constants.ts
-var MCP_PROTOCOL_VERSION = "2024-11-05";
-var MCP_SERVER_NAME = "uloopmcp-server";
-var TOOLS_LIST_CHANGED_CAPABILITY = true;
-var NOTIFICATION_METHODS = {
-  TOOLS_LIST_CHANGED: "notifications/tools/list_changed"
-};
-var UNITY_CONNECTION = {
-  DEFAULT_PORT: "8700",
-  DEFAULT_HOST: "localhost",
-  CONNECTION_TEST_MESSAGE: "connection_test"
-};
-var JSONRPC = {
-  VERSION: "2.0"
-};
-var PARAMETER_SCHEMA = {
-  TYPE_PROPERTY: "Type",
-  DESCRIPTION_PROPERTY: "Description",
-  DEFAULT_VALUE_PROPERTY: "DefaultValue",
-  ENUM_PROPERTY: "Enum",
-  PROPERTIES_PROPERTY: "Properties",
-  REQUIRED_PROPERTY: "Required"
-};
-var TIMEOUTS = {
-  NETWORK: 12e4
-  // 2分 - ネットワークレベルのタイムアウト（Unity側のタイムアウトより長く設定）
-};
-var DEFAULT_CLIENT_NAME = "";
-var ENVIRONMENT = {
-  NODE_ENV_DEVELOPMENT: "development",
-  NODE_ENV_PRODUCTION: "production"
-};
-var ERROR_MESSAGES = {
-  NOT_CONNECTED: "Unity MCP Bridge is not connected",
-  CONNECTION_FAILED: "Unity connection failed",
-  TIMEOUT: "timeout",
-  INVALID_RESPONSE: "Invalid response from Unity"
-};
-var OUTPUT_DIRECTORIES = {
-  ROOT: "uLoopMCPOutputs",
-  VIBE_LOGS: "VibeLogs"
-};
 
 // src/utils/safe-timer.ts
 var SafeTimer = class _SafeTimer {
@@ -5610,493 +7057,11 @@ function safeSetTimeout(callback, delay) {
   return new SafeTimer(callback, delay, false);
 }
 
-// src/utils/vibe-logger.ts
-import * as fs from "fs";
-import * as path from "path";
-import { fileURLToPath } from "url";
-
-// node_modules/uuid/dist/esm/stringify.js
-var byteToHex = [];
-for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 256).toString(16).slice(1));
-}
-function unsafeStringify(arr, offset = 0) {
-  return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
-}
-
-// node_modules/uuid/dist/esm/rng.js
-import { randomFillSync } from "crypto";
-var rnds8Pool = new Uint8Array(256);
-var poolPtr = rnds8Pool.length;
-function rng() {
-  if (poolPtr > rnds8Pool.length - 16) {
-    randomFillSync(rnds8Pool);
-    poolPtr = 0;
-  }
-  return rnds8Pool.slice(poolPtr, poolPtr += 16);
-}
-
-// node_modules/uuid/dist/esm/native.js
-import { randomUUID } from "crypto";
-var native_default = { randomUUID };
-
-// node_modules/uuid/dist/esm/v4.js
-function v4(options, buf, offset) {
-  if (native_default.randomUUID && !buf && !options) {
-    return native_default.randomUUID();
-  }
-  options = options || {};
-  const rnds = options.random ?? options.rng?.() ?? rng();
-  if (rnds.length < 16) {
-    throw new Error("Random bytes length must be >= 16");
-  }
-  rnds[6] = rnds[6] & 15 | 64;
-  rnds[8] = rnds[8] & 63 | 128;
-  if (buf) {
-    offset = offset || 0;
-    if (offset < 0 || offset + 16 > buf.length) {
-      throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
-    }
-    for (let i = 0; i < 16; ++i) {
-      buf[offset + i] = rnds[i];
-    }
-    return buf;
-  }
-  return unsafeStringify(rnds);
-}
-var v4_default = v4;
-
-// src/utils/vibe-logger.ts
-var VibeLogger = class _VibeLogger {
-  // Navigate from TypeScriptServer~ to project root: ../../../
-  static PROJECT_ROOT = path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    "../../../.."
-  );
-  static LOG_DIRECTORY = path.join(
-    _VibeLogger.PROJECT_ROOT,
-    OUTPUT_DIRECTORIES.ROOT,
-    OUTPUT_DIRECTORIES.VIBE_LOGS
-  );
-  static LOG_FILE_PREFIX = "ts_vibe";
-  static MAX_FILE_SIZE_MB = 10;
-  static MAX_MEMORY_LOGS = 1e3;
-  static memoryLogs = [];
-  static isDebugEnabled = process.env.MCP_DEBUG === "true";
-  /**
-   * Log an info level message with structured context
-   */
-  static logInfo(operation, message, context, correlationId, humanNote, aiTodo) {
-    _VibeLogger.log("INFO", operation, message, context, correlationId, humanNote, aiTodo);
-  }
-  /**
-   * Log a warning level message with structured context
-   */
-  static logWarning(operation, message, context, correlationId, humanNote, aiTodo) {
-    _VibeLogger.log("WARNING", operation, message, context, correlationId, humanNote, aiTodo);
-  }
-  /**
-   * Log an error level message with structured context
-   */
-  static logError(operation, message, context, correlationId, humanNote, aiTodo) {
-    _VibeLogger.log("ERROR", operation, message, context, correlationId, humanNote, aiTodo);
-  }
-  /**
-   * Log a debug level message with structured context
-   */
-  static logDebug(operation, message, context, correlationId, humanNote, aiTodo) {
-    _VibeLogger.log("DEBUG", operation, message, context, correlationId, humanNote, aiTodo);
-  }
-  /**
-   * Log an exception with structured context
-   */
-  static logException(operation, error, context, correlationId, humanNote, aiTodo) {
-    const exceptionContext = {
-      original_context: context,
-      exception: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        cause: error.cause
-      }
-    };
-    _VibeLogger.log(
-      "ERROR",
-      operation,
-      `Exception occurred: ${error.message}`,
-      exceptionContext,
-      correlationId,
-      humanNote,
-      aiTodo
-    );
-  }
-  /**
-   * Generate a new correlation ID for tracking related operations
-   */
-  static generateCorrelationId() {
-    const timestamp = (/* @__PURE__ */ new Date()).toISOString().slice(11, 19).replace(/:/g, "");
-    return `ts_${v4_default().slice(0, 8)}_${timestamp}`;
-  }
-  /**
-   * Get logs for AI analysis (formatted for Claude Code)
-   * Output directory: {project_root}/uLoopMCPOutputs/VibeLogs/
-   */
-  static getLogsForAi(operation, correlationId, maxCount = 100) {
-    let filteredLogs = [..._VibeLogger.memoryLogs];
-    if (operation) {
-      filteredLogs = filteredLogs.filter((log) => log.operation.includes(operation));
-    }
-    if (correlationId) {
-      filteredLogs = filteredLogs.filter((log) => log.correlation_id === correlationId);
-    }
-    if (filteredLogs.length > maxCount) {
-      filteredLogs = filteredLogs.slice(-maxCount);
-    }
-    return JSON.stringify(filteredLogs, null, 2);
-  }
-  /**
-   * Clear all memory logs
-   */
-  static clearMemoryLogs() {
-    _VibeLogger.memoryLogs = [];
-  }
-  /**
-   * Write emergency log entry (for when main logging fails)
-   * Static method to avoid circular dependency
-   */
-  static writeEmergencyLog(emergencyEntry) {
-    try {
-      const basePath = process.cwd();
-      const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
-      if (!_VibeLogger.validateWithin(basePath, sanitizedRoot)) {
-        return;
-      }
-      const emergencyLogDir = path.resolve(sanitizedRoot, "EmergencyLogs");
-      if (!_VibeLogger.validateWithin(sanitizedRoot, emergencyLogDir)) {
-        return;
-      }
-      fs.mkdirSync(emergencyLogDir, { recursive: true });
-      const emergencyLogPath = path.resolve(emergencyLogDir, "vibe-logger-emergency.log");
-      if (!_VibeLogger.validateWithin(emergencyLogDir, emergencyLogPath)) {
-        return;
-      }
-      const emergencyLog = JSON.stringify(emergencyEntry) + "\n";
-      fs.appendFileSync(emergencyLogPath, emergencyLog);
-    } catch (error) {
-    }
-  }
-  /**
-   * Core logging method
-   * Only logs when MCP_DEBUG environment variable is set to 'true'
-   */
-  static log(level, operation, message, context, correlationId, humanNote, aiTodo) {
-    if (!_VibeLogger.isDebugEnabled) {
-      return;
-    }
-    const logEntry = {
-      timestamp: _VibeLogger.formatTimestamp(),
-      level,
-      operation,
-      message,
-      context: _VibeLogger.sanitizeContext(context),
-      correlation_id: correlationId || _VibeLogger.generateCorrelationId(),
-      source: "TypeScript",
-      human_note: humanNote,
-      ai_todo: aiTodo,
-      environment: _VibeLogger.getEnvironmentInfo()
-    };
-    _VibeLogger.memoryLogs.push(logEntry);
-    if (_VibeLogger.memoryLogs.length > _VibeLogger.MAX_MEMORY_LOGS) {
-      _VibeLogger.memoryLogs.shift();
-    }
-    _VibeLogger.saveLogToFile(logEntry).catch((error) => {
-      _VibeLogger.writeEmergencyLog({
-        timestamp: _VibeLogger.formatTimestamp(),
-        level: "EMERGENCY",
-        message: "VibeLogger saveLogToFile failed",
-        original_error: error instanceof Error ? error.message : String(error),
-        original_log_entry: logEntry
-      });
-    });
-  }
-  /**
-   * Validate file name to prevent dangerous characters
-   */
-  static validateFileName(fileName) {
-    const safeFileNameRegex = /^[a-zA-Z0-9._-]+$/;
-    return safeFileNameRegex.test(fileName) && !fileName.includes("..");
-  }
-  /**
-   * Validate file path to prevent directory traversal attacks
-   */
-  static validateFilePath(filePath) {
-    const normalizedPath = path.normalize(filePath);
-    const logDirectory = path.normalize(_VibeLogger.LOG_DIRECTORY);
-    return normalizedPath.startsWith(logDirectory + path.sep) || normalizedPath === logDirectory;
-  }
-  /**
-   * Validate that target path is within base directory
-   */
-  static validateWithin(base, target) {
-    const resolvedBase = path.resolve(base);
-    const resolvedTarget = path.resolve(target);
-    return resolvedTarget.startsWith(resolvedBase);
-  }
-  /**
-   * Safe wrapper for fs.existsSync with path validation
-   */
-  static safeExistsSync(filePath) {
-    try {
-      const absolutePath = path.resolve(filePath);
-      const expectedDir = path.resolve(_VibeLogger.LOG_DIRECTORY);
-      if (!_VibeLogger.validateWithin(expectedDir, absolutePath)) {
-        return false;
-      }
-      return fs.existsSync(absolutePath);
-    } catch (error) {
-      return false;
-    }
-  }
-  /**
-   * Prepare and validate log directory and file path
-   */
-  static prepareLogFilePath() {
-    const logDirectory = path.normalize(_VibeLogger.LOG_DIRECTORY);
-    if (!_VibeLogger.validateFilePath(logDirectory)) {
-      throw new Error("Invalid log directory path");
-    }
-    if (!_VibeLogger.safeExistsSync(logDirectory)) {
-      const absoluteLogDir = path.resolve(logDirectory);
-      const expectedBaseDir = path.resolve(_VibeLogger.PROJECT_ROOT);
-      if (!_VibeLogger.validateWithin(expectedBaseDir, absoluteLogDir)) {
-        throw new Error("Log directory path escapes project root");
-      }
-      fs.mkdirSync(absoluteLogDir, { recursive: true });
-    }
-    const fileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDate()}.json`;
-    if (!_VibeLogger.validateFileName(fileName)) {
-      throw new Error("Invalid file name detected");
-    }
-    const filePath = path.resolve(logDirectory, fileName);
-    if (!_VibeLogger.validateWithin(logDirectory, filePath)) {
-      throw new Error("Resolved file path escapes the log directory");
-    }
-    if (!_VibeLogger.validateFilePath(filePath)) {
-      throw new Error("Invalid file path detected");
-    }
-    return filePath;
-  }
-  /**
-   * Rotate log file if it exceeds maximum size
-   */
-  static rotateLogFileIfNeeded(filePath) {
-    if (!_VibeLogger.safeExistsSync(filePath)) {
-      return;
-    }
-    const absoluteFilePath = path.resolve(filePath);
-    const stats = fs.statSync(absoluteFilePath);
-    if (stats.size <= _VibeLogger.MAX_FILE_SIZE_MB * 1024 * 1024) {
-      return;
-    }
-    const logDirectory = path.dirname(filePath);
-    const rotatedFileName = `${_VibeLogger.LOG_FILE_PREFIX}_${_VibeLogger.formatDateTime()}.json`;
-    if (!_VibeLogger.validateFileName(rotatedFileName)) {
-      throw new Error("Invalid rotated file name detected");
-    }
-    const rotatedFilePath = path.resolve(logDirectory, rotatedFileName);
-    if (!_VibeLogger.validateWithin(logDirectory, rotatedFilePath)) {
-      throw new Error("Rotated file path escapes the allowed directory");
-    }
-    const sanitizedFilePath = path.resolve(logDirectory, path.basename(filePath));
-    if (!_VibeLogger.validateWithin(logDirectory, sanitizedFilePath)) {
-      throw new Error("Original file path escapes the allowed directory");
-    }
-    fs.renameSync(sanitizedFilePath, rotatedFilePath);
-  }
-  /**
-   * Write log to file with retry mechanism for concurrent access
-   */
-  static async writeLogWithRetry(filePath, jsonLog) {
-    const maxRetries = 3;
-    const baseDelayMs = 50;
-    const absoluteFilePath = path.resolve(filePath);
-    const expectedLogDir = path.resolve(_VibeLogger.LOG_DIRECTORY);
-    if (!_VibeLogger.validateWithin(expectedLogDir, absoluteFilePath)) {
-      throw new Error("File path escapes log directory");
-    }
-    for (let retry = 0; retry < maxRetries; retry++) {
-      try {
-        const fileHandle = await fs.promises.open(absoluteFilePath, "a");
-        try {
-          await fileHandle.writeFile(jsonLog, { encoding: "utf8" });
-        } finally {
-          await fileHandle.close();
-        }
-        return;
-      } catch (error) {
-        if (_VibeLogger.isFileSharingViolation(error) && retry < maxRetries - 1) {
-          const delayMs = baseDelayMs * Math.pow(2, retry);
-          await _VibeLogger.sleep(delayMs);
-        } else {
-          throw error;
-        }
-      }
-    }
-  }
-  /**
-   * Save log entry to file with retry mechanism for concurrent access
-   */
-  static async saveLogToFile(logEntry) {
-    try {
-      const filePath = _VibeLogger.prepareLogFilePath();
-      _VibeLogger.rotateLogFileIfNeeded(filePath);
-      const jsonLog = JSON.stringify(logEntry) + "\n";
-      await _VibeLogger.writeLogWithRetry(filePath, jsonLog);
-    } catch (error) {
-      await _VibeLogger.tryFallbackLogging(logEntry, error);
-    }
-  }
-  /**
-   * Try fallback logging when main logging fails
-   */
-  static async tryFallbackLogging(logEntry, error) {
-    try {
-      const basePath = process.cwd();
-      const sanitizedRoot = path.resolve(basePath, OUTPUT_DIRECTORIES.ROOT);
-      if (!_VibeLogger.validateWithin(basePath, sanitizedRoot)) {
-        throw new Error("Invalid OUTPUT_DIRECTORIES.ROOT path");
-      }
-      const safeLogDir = path.resolve(sanitizedRoot, "FallbackLogs");
-      if (!_VibeLogger.validateWithin(sanitizedRoot, safeLogDir)) {
-        throw new Error("Fallback log directory path traversal detected");
-      }
-      fs.mkdirSync(safeLogDir, { recursive: true });
-      const safeDate = _VibeLogger.formatDateTime().split(" ")[0].replace(/[^0-9-]/g, "");
-      const safeFilename = `${_VibeLogger.LOG_FILE_PREFIX}_fallback_${safeDate}.json`;
-      const safeFallbackPath = path.resolve(safeLogDir, safeFilename);
-      if (!_VibeLogger.validateWithin(safeLogDir, safeFallbackPath)) {
-        throw new Error("Invalid fallback log file path");
-      }
-      const fallbackEntry = {
-        ...logEntry,
-        fallback_reason: error instanceof Error ? error.message : String(error),
-        original_timestamp: logEntry.timestamp
-      };
-      const jsonLog = JSON.stringify(fallbackEntry) + "\n";
-      const fileHandle = await fs.promises.open(safeFallbackPath, "a");
-      try {
-        await fileHandle.writeFile(jsonLog, { encoding: "utf8" });
-      } finally {
-        await fileHandle.close();
-      }
-    } catch (fallbackError) {
-      _VibeLogger.writeEmergencyLog({
-        timestamp: _VibeLogger.formatTimestamp(),
-        level: "EMERGENCY",
-        message: "VibeLogger fallback failed",
-        original_error: error instanceof Error ? error.message : String(error),
-        fallback_error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-        original_log_entry: logEntry
-      });
-    }
-  }
-  /**
-   * Check if error is a file sharing violation
-   */
-  static isFileSharingViolation(error) {
-    if (!error) {
-      return false;
-    }
-    const sharingViolationCodes = [
-      "EBUSY",
-      // Resource busy or locked
-      "EACCES",
-      // Permission denied (can indicate file in use)
-      "EPERM",
-      // Operation not permitted
-      "EMFILE",
-      // Too many open files
-      "ENFILE"
-      // File table overflow
-    ];
-    return error && typeof error === "object" && "code" in error && typeof error.code === "string" && sharingViolationCodes.includes(error.code);
-  }
-  /**
-   * Asynchronous sleep function for retry delays
-   */
-  static async sleep(ms) {
-    return new Promise((resolve2) => setTimeout(resolve2, ms));
-  }
-  /**
-   * Get current environment information
-   */
-  static getEnvironmentInfo() {
-    const memUsage = process.memoryUsage();
-    return {
-      node_version: process.version,
-      platform: process.platform,
-      process_id: process.pid,
-      memory_usage: {
-        rss: memUsage.rss,
-        heapTotal: memUsage.heapTotal,
-        heapUsed: memUsage.heapUsed
-      }
-    };
-  }
-  /**
-   * Sanitize context to prevent circular references
-   */
-  static sanitizeContext(context) {
-    if (!context) {
-      return void 0;
-    }
-    try {
-      return JSON.parse(JSON.stringify(context));
-    } catch (error) {
-      return {
-        error: "Failed to serialize context",
-        original_type: typeof context,
-        circular_reference: true
-      };
-    }
-  }
-  /**
-   * Format timestamp for log entries (local timezone)
-   */
-  static formatTimestamp() {
-    const now = /* @__PURE__ */ new Date();
-    const offset = now.getTimezoneOffset();
-    const offsetHours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0");
-    const offsetMinutes = String(Math.abs(offset) % 60).padStart(2, "0");
-    const offsetSign = offset <= 0 ? "+" : "-";
-    return now.toISOString().replace("Z", `${offsetSign}${offsetHours}:${offsetMinutes}`);
-  }
-  /**
-   * Format date for file naming (local timezone)
-   */
-  static formatDate() {
-    const now = /* @__PURE__ */ new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${year}${month}${day}`;
-  }
-  /**
-   * Format datetime for file rotation
-   */
-  static formatDateTime() {
-    const now = /* @__PURE__ */ new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-    const seconds = String(now.getSeconds()).padStart(2, "0");
-    return `${year}${month}${day}_${hours}${minutes}${seconds}`;
-  }
-};
+// src/unity-client.ts
+init_vibe_logger();
 
 // src/connection-manager.ts
+init_vibe_logger();
 var ConnectionManager = class {
   onReconnectedCallback = null;
   onConnectionLostCallback = null;
@@ -6158,7 +7123,11 @@ var ConnectionManager = class {
   }
 };
 
+// src/message-handler.ts
+init_constants();
+
 // src/utils/content-length-framer.ts
+init_vibe_logger();
 var ContentLengthFramer = class _ContentLengthFramer {
   static CONTENT_LENGTH_HEADER = "Content-Length:";
   static HEADER_SEPARATOR = "\r\n\r\n";
@@ -6635,6 +7604,7 @@ var DynamicBuffer = class _DynamicBuffer {
 };
 
 // src/message-handler.ts
+init_vibe_logger();
 var JsonRpcErrorTypes = {
   SECURITY_BLOCKED: "security_blocked",
   INTERNAL_ERROR: "internal_error"
@@ -6820,7 +7790,12 @@ var UnityClient = class _UnityClient {
   randomSeed = Math.floor(Math.random() * 1e3);
   storedClientName = null;
   pushNotificationEndpoint = null;
+  connectionPromise = null;
+  // Promise-based mutex for concurrent ensureConnected calls
   clientId;
+  // DEBUG: Connection attempt counter to track double connection issue
+  static connectAttemptCounter = 0;
+  static successfulConnectionCounter = 0;
   constructor() {
     const unityTcpPort = process.env.UNITY_TCP_PORT;
     if (!unityTcpPort) {
@@ -6915,36 +7890,52 @@ var UnityClient = class _UnityClient {
     }
   }
   /**
-   * Ensure connection to Unity (singleton-safe reconnection)
-   * Properly manages single connection instance
+   * @deprecated Use ClientInitializationUseCase for proper connection management
+   * This method now only checks connection state without creating new connections
    */
-  async ensureConnected() {
-    if (this._connected && this.socket && !this.socket.destroyed) {
-      try {
-        if (await this.testConnection()) {
-          return;
-        }
-      } catch (error) {
-      }
+  ensureConnected() {
+    if (!this._connected) {
+      throw new Error(
+        "Unity client not connected. Use ClientInitializationUseCase to establish connection first."
+      );
     }
-    this.disconnect();
-    await this.connect();
   }
   /**
    * Connect to Unity
    * Creates a new socket connection (should only be called after disconnect)
    */
-  async connect() {
+  async connect(connectionSource = "unknown") {
+    _UnityClient.connectAttemptCounter++;
+    const stackTrace = new Error().stack || "no stack trace available";
+    VibeLogger.logInfo(
+      "unity_client_connect_start",
+      `Unity client connect() called - ATTEMPT #${_UnityClient.connectAttemptCounter} - attempting to connect to ${this.host}:${this.port}`,
+      {
+        host: this.host,
+        port: this.port,
+        currently_connected: this._connected,
+        socket_destroyed: this.socket?.destroyed ?? "no_socket",
+        connection_source: connectionSource,
+        call_stack: stackTrace,
+        attempt_number: _UnityClient.connectAttemptCounter,
+        successful_connections: _UnityClient.successfulConnectionCounter
+      }
+    );
     if (this._connected && this.socket && !this.socket.destroyed) {
+      VibeLogger.logInfo(
+        "unity_client_connect_skip",
+        "Already connected, skipping connection attempt"
+      );
       return;
     }
     return new Promise((resolve2, reject) => {
       this.socket = new net.Socket();
       this.socket.connect(this.port, this.host, () => {
         this._connected = true;
+        _UnityClient.successfulConnectionCounter++;
         VibeLogger.logInfo(
           "mcp_connection_established",
-          "MCP connection to Unity established",
+          `MCP connection to Unity established - SUCCESS #${_UnityClient.successfulConnectionCounter}`,
           {
             unity_endpoint: `${this.host}:${this.port}`,
             host: this.host,
@@ -6953,7 +7944,9 @@ var UnityClient = class _UnityClient {
             socket_local_port: this.socket?.localPort,
             socket_remote_address: this.socket?.remoteAddress,
             socket_remote_port: this.socket?.remotePort,
-            process_id: this.processId
+            process_id: this.processId,
+            attempt_number: _UnityClient.connectAttemptCounter,
+            successful_connections: _UnityClient.successfulConnectionCounter
           },
           void 0,
           "MCP connection established - Unity endpoint and socket details tracked",
@@ -7177,7 +8170,11 @@ var UnityClient = class _UnityClient {
    * Get available tools from Unity
    */
   async getAvailableTools() {
-    await this.ensureConnected();
+    if (!this._connected) {
+      throw new Error(
+        "Unity client not connected. Use ClientInitializationUseCase to establish connection first."
+      );
+    }
     const request = {
       jsonrpc: JSONRPC.VERSION,
       id: this.generateId(),
@@ -7194,7 +8191,11 @@ var UnityClient = class _UnityClient {
    * Get tool details from Unity
    */
   async getToolDetails(includeDevelopmentOnly = false) {
-    await this.ensureConnected();
+    if (!this._connected) {
+      throw new Error(
+        "Unity client not connected. Use ClientInitializationUseCase to establish connection first."
+      );
+    }
     const request = {
       jsonrpc: JSONRPC.VERSION,
       id: this.generateId(),
@@ -7321,13 +8322,18 @@ var UnityClient = class _UnityClient {
     this._connected = false;
   }
   /**
-   * Handle connection loss by delegating to UnityDiscovery
+   * Handle connection loss by starting UnityDiscovery polling only when needed
    */
   handleConnectionLoss() {
-    this.connectionManager.triggerConnectionLost();
-    if (this.unityDiscovery) {
-      this.unityDiscovery.handleConnectionLost();
-    }
+    VibeLogger.logInfo(
+      "unity_discovery_disabled_for_testing",
+      "UnityDiscovery handleConnectionLost() disabled for testing",
+      {
+        process_id: this.processId
+      },
+      void 0,
+      "Testing if UnityDiscovery causes duplicate connections on connection loss"
+    );
   }
   /**
    * Set callback for when connection is restored
@@ -7337,8 +8343,12 @@ var UnityClient = class _UnityClient {
   }
 };
 
+// src/server.ts
+init_vibe_logger();
+
 // src/unity-discovery.ts
-import * as net2 from "net";
+init_constants();
+init_vibe_logger();
 var UnityDiscovery = class _UnityDiscovery {
   discoveryInterval = null;
   unityClient;
@@ -7404,10 +8414,10 @@ var UnityDiscovery = class _UnityDiscovery {
     }
   }
   /**
-   * Unified discovery and connection checking
+   * Unified discovery and connection checking using ConnectionRecoveryUseCase pattern
    * Handles both Unity discovery and connection health monitoring
    */
-  async unifiedDiscoveryAndConnectionCheck() {
+  unifiedDiscoveryAndConnectionCheck() {
     const correlationId = VibeLogger.generateCorrelationId();
     if (this.isDiscovering) {
       VibeLogger.logDebug(
@@ -7421,39 +8431,39 @@ var UnityDiscovery = class _UnityDiscovery {
     this.isDiscovering = true;
     VibeLogger.logInfo(
       "unity_discovery_cycle_start",
-      "Starting unified discovery and connection check cycle",
+      "Starting unified discovery and connection check cycle using UseCase pattern",
       {
         unity_connected: this.unityClient.connected,
         discovery_interval_ms: 1e3,
         active_timer_count: _UnityDiscovery.activeTimerCount
       },
       correlationId,
-      "This cycle checks connection health and attempts Unity discovery if needed."
+      "Using ConnectionRecoveryUseCase for temporal cohesion in connection recovery."
     );
     try {
-      if (this.unityClient.connected) {
-        const isConnectionHealthy = await this.checkConnectionHealth();
-        if (isConnectionHealthy) {
-          VibeLogger.logInfo(
-            "unity_discovery_connection_healthy",
-            "Connection is healthy - stopping discovery",
-            { connection_healthy: true },
-            correlationId
-          );
-          this.stop();
-          return;
-        } else {
-          VibeLogger.logWarning(
-            "unity_discovery_connection_unhealthy",
-            "Connection appears unhealthy - continuing discovery without assuming loss",
-            { connection_healthy: false },
-            correlationId,
-            "Connection health check failed. Will continue discovery but not assume complete loss.",
-            "Connection may recover on next cycle. Monitor for persistent issues."
-          );
-        }
-      }
-      await this.discoverUnityOnPorts();
+      VibeLogger.logInfo(
+        "unity_discovery_recovery_disabled",
+        "ConnectionRecoveryUseCase temporarily disabled for testing",
+        { unity_connected: this.unityClient.connected },
+        correlationId,
+        "Testing if ConnectionRecoveryUseCase causes duplicate connections"
+      );
+      VibeLogger.logInfo(
+        "unity_discovery_recovery_execution_skipped",
+        "ConnectionRecoveryUseCase execution skipped for testing",
+        {},
+        correlationId
+      );
+      VibeLogger.logDebug(
+        "unity_discovery_recovery_incomplete",
+        "Connection recovery incomplete - continuing discovery polling (DISABLED)",
+        {
+          recovery_reason: "DISABLED_FOR_TESTING",
+          will_retry: true
+        },
+        correlationId,
+        "Recovery UseCase disabled for testing - discovery cycle will complete without recovery"
+      );
     } finally {
       VibeLogger.logDebug(
         "unity_discovery_cycle_end",
@@ -7515,7 +8525,7 @@ var UnityDiscovery = class _UnityDiscovery {
         "Attempting to connect to Unity MCP server on specified port",
         "If successful, Unity should accept connection and register client"
       );
-      if (await this.isUnityAvailable(port)) {
+      if (this.unityClient.connected) {
         VibeLogger.logInfo(
           "unity_discovery_success",
           "Unity discovered and connection established",
@@ -7564,11 +8574,11 @@ var UnityDiscovery = class _UnityDiscovery {
   /**
    * Force immediate Unity discovery for connection recovery
    */
-  async forceDiscovery() {
+  forceDiscovery() {
     if (this.unityClient.connected) {
       return true;
     }
-    await this.unifiedDiscoveryAndConnectionCheck();
+    this.unifiedDiscoveryAndConnectionCheck();
     return this.unityClient.connected;
   }
   /**
@@ -7581,68 +8591,6 @@ var UnityDiscovery = class _UnityDiscovery {
     if (this.onConnectionLostCallback) {
       this.onConnectionLostCallback();
     }
-  }
-  /**
-   * Check if Unity is available on specific port
-   */
-  async isUnityAvailable(port) {
-    return new Promise((resolve2) => {
-      const socket = new net2.Socket();
-      const timeout = 500;
-      const correlationId = VibeLogger.generateCorrelationId();
-      const timer = setTimeout(() => {
-        VibeLogger.logDebug(
-          "unity_availability_check_timeout",
-          "Unity availability check timed out",
-          {
-            target_port: port,
-            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
-            timeout_ms: timeout,
-            process_id: process.pid
-          },
-          correlationId,
-          "Unity availability check timeout - Unity may not be running on this port"
-        );
-        socket.destroy();
-        resolve2(false);
-      }, timeout);
-      socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
-        VibeLogger.logDebug(
-          "unity_availability_check_success",
-          "Unity availability check successful",
-          {
-            target_port: port,
-            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
-            socket_local_address: socket.localAddress,
-            socket_local_port: socket.localPort,
-            process_id: process.pid
-          },
-          correlationId,
-          "Unity MCP server is available and accepting connections",
-          "Unity should show incoming connection in its logs"
-        );
-        clearTimeout(timer);
-        socket.destroy();
-        resolve2(true);
-      });
-      socket.on("error", (error) => {
-        VibeLogger.logDebug(
-          "unity_availability_check_error",
-          "Unity availability check failed",
-          {
-            target_port: port,
-            unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
-            error_message: error.message,
-            error_code: error.code,
-            process_id: process.pid
-          },
-          correlationId,
-          "Unity availability check failed - expected when Unity is not running"
-        );
-        clearTimeout(timer);
-        resolve2(false);
-      });
-    });
   }
   /**
    * Log current timer status for debugging (development mode only)
@@ -7671,6 +8619,7 @@ var UnityDiscovery = class _UnityDiscovery {
 };
 
 // src/unity-connection-fallback-handler.ts
+init_vibe_logger();
 var UnityConnectionFallbackHandler = class {
   unityClient;
   unityDiscovery;
@@ -7767,9 +8716,9 @@ var UnityConnectionFallbackHandler = class {
   /**
    * Attempt force discovery as last resort
    */
-  async attemptForceDiscovery(timeoutMs) {
+  attemptForceDiscovery(timeoutMs) {
     try {
-      await this.unityDiscovery.forceDiscovery();
+      this.unityDiscovery.forceDiscovery();
       VibeLogger.logInfo(
         "unity_discovery_fallback_attempted",
         "Force discovery attempted as fallback",
@@ -7793,6 +8742,8 @@ var UnityConnectionFallbackHandler = class {
 };
 
 // src/unity-connection-manager.ts
+init_constants();
+init_vibe_logger();
 var UnityConnectionManager = class {
   unityClient;
   unityDiscovery;
@@ -7863,7 +8814,19 @@ var UnityConnectionManager = class {
    */
   async handleUnityDiscovered(onConnectionEstablished) {
     try {
-      await this.unityClient.ensureConnected();
+      if (!this.unityClient.connected) {
+        VibeLogger.logDebug(
+          "unity_connection_not_ready",
+          "Unity discovered but connection not established yet - skipping callback",
+          {
+            unity_connected: this.unityClient.connected,
+            process_id: process.pid
+          },
+          void 0,
+          "Race condition avoided - ClientInitializationUseCase will handle the connection"
+        );
+        return;
+      }
       VibeLogger.logInfo(
         "unity_connection_established_via_discovery",
         "Unity connection established through discovery process",
@@ -7895,6 +8858,7 @@ var UnityConnectionManager = class {
   }
   /**
    * Initialize connection manager with push notification system
+   * NOTE: Does not start UnityDiscovery polling - that should be started only after ClientInitializationUseCase completion
    */
   initialize(onConnectionEstablished) {
     if (this.connectionManagerInitialized) {
@@ -7906,7 +8870,7 @@ var UnityConnectionManager = class {
       "Unity connection manager initialized with push notification system",
       {},
       void 0,
-      "Push notification system active - no legacy polling"
+      "Push notification system active - UnityDiscovery will be started after first client initialization"
     );
     this.unityDiscovery.setOnDiscoveredCallback(async (_port) => {
       await this.handleUnityDiscovered(onConnectionEstablished);
@@ -7915,6 +8879,28 @@ var UnityConnectionManager = class {
       if (this.enableConnectionDebugLog) {
       }
     });
+  }
+  /**
+   * Start Unity discovery polling - should be called after ClientInitializationUseCase completion
+   */
+  startDiscoveryPolling() {
+    if (!this.connectionManagerInitialized) {
+      VibeLogger.logWarning(
+        "unity_discovery_start_without_init",
+        "Attempted to start Unity discovery before connection manager initialization",
+        {},
+        void 0,
+        "Call initialize() first before starting discovery"
+      );
+      return;
+    }
+    VibeLogger.logInfo(
+      "unity_discovery_polling_start",
+      "Starting Unity discovery polling after client initialization completion",
+      {},
+      void 0,
+      "Discovery will only run when needed for reconnection"
+    );
   }
   /**
    * Setup reconnection callback
@@ -7927,9 +8913,8 @@ var UnityConnectionManager = class {
         return;
       }
       this.reconnectionInProgress = true;
-      void this.unityDiscovery.forceDiscovery().then(() => {
-        return callback();
-      }).finally(() => {
+      this.unityDiscovery.forceDiscovery();
+      void callback().finally(() => {
         this.reconnectionInProgress = false;
       });
     });
@@ -7949,190 +8934,10 @@ var UnityConnectionManager = class {
   }
 };
 
-// src/tools/base-tool.ts
-var BaseTool = class {
-  context;
-  constructor(context) {
-    this.context = context;
-  }
-  /**
-   * Main method for tool execution
-   */
-  async handle(args) {
-    try {
-      const validatedArgs = this.validateArgs(args);
-      const result = await this.execute(validatedArgs);
-      return this.formatResponse(result);
-    } catch (error) {
-      return this.formatErrorResponse(error);
-    }
-  }
-  /**
-   * Format success response (can be overridden in subclass)
-   */
-  formatResponse(result) {
-    if (typeof result === "object" && result !== null && "content" in result) {
-      return result;
-    }
-    return {
-      content: [
-        {
-          type: "text",
-          text: typeof result === "string" ? result : JSON.stringify(result, null, 2)
-        }
-      ]
-    };
-  }
-  /**
-   * Format error response
-   */
-  formatErrorResponse(error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Error in ${this.name}: ${errorMessage}`
-        }
-      ]
-    };
-  }
-};
-
-// src/tools/dynamic-unity-command-tool.ts
-var DynamicUnityCommandTool = class extends BaseTool {
-  name;
-  description;
-  inputSchema;
-  toolName;
-  constructor(context, toolName, description, parameterSchema) {
-    super(context);
-    this.toolName = toolName;
-    this.name = toolName;
-    this.description = description;
-    this.inputSchema = this.generateInputSchema(parameterSchema);
-  }
-  generateInputSchema(parameterSchema) {
-    if (this.hasNoParameters(parameterSchema)) {
-      return {
-        type: "object",
-        properties: {},
-        additionalProperties: false
-      };
-    }
-    const properties = {};
-    const required = [];
-    if (!parameterSchema) {
-      throw new Error("Parameter schema is undefined");
-    }
-    const propertiesObj = parameterSchema[PARAMETER_SCHEMA.PROPERTIES_PROPERTY];
-    for (const [propName, propInfo] of Object.entries(propertiesObj)) {
-      const info = propInfo;
-      const property = {
-        type: this.convertType(String(info[PARAMETER_SCHEMA.TYPE_PROPERTY] || "string")),
-        description: String(
-          info[PARAMETER_SCHEMA.DESCRIPTION_PROPERTY] || `Parameter: ${propName}`
-        )
-      };
-      const defaultValue = info[PARAMETER_SCHEMA.DEFAULT_VALUE_PROPERTY];
-      if (defaultValue !== void 0 && defaultValue !== null) {
-        property.default = defaultValue;
-      }
-      const enumValues = info[PARAMETER_SCHEMA.ENUM_PROPERTY];
-      if (enumValues && Array.isArray(enumValues) && enumValues.length > 0) {
-        property.enum = enumValues;
-      }
-      if (info[PARAMETER_SCHEMA.TYPE_PROPERTY] === "array" && defaultValue && Array.isArray(defaultValue)) {
-        property.items = {
-          type: "string"
-        };
-        property.default = defaultValue;
-      }
-      Object.defineProperty(properties, propName, {
-        value: property,
-        writable: true,
-        enumerable: true,
-        configurable: true
-      });
-    }
-    if (!parameterSchema) {
-      throw new Error("Parameter schema is undefined");
-    }
-    const requiredParams = parameterSchema[PARAMETER_SCHEMA.REQUIRED_PROPERTY];
-    if (requiredParams && Array.isArray(requiredParams)) {
-      required.push(...requiredParams);
-    }
-    const schema = {
-      type: "object",
-      properties,
-      required: required.length > 0 ? required : void 0
-    };
-    return schema;
-  }
-  convertType(unityType) {
-    switch (unityType?.toLowerCase()) {
-      case "string":
-        return "string";
-      case "number":
-      case "int":
-      case "float":
-      case "double":
-        return "number";
-      case "boolean":
-      case "bool":
-        return "boolean";
-      case "array":
-        return "array";
-      default:
-        return "string";
-    }
-  }
-  hasNoParameters(parameterSchema) {
-    if (!parameterSchema) {
-      return true;
-    }
-    const properties = parameterSchema[PARAMETER_SCHEMA.PROPERTIES_PROPERTY];
-    if (!properties || typeof properties !== "object") {
-      return true;
-    }
-    return Object.keys(properties).length === 0;
-  }
-  validateArgs(args) {
-    if (!this.inputSchema.properties || Object.keys(this.inputSchema.properties).length === 0) {
-      return {};
-    }
-    return args || {};
-  }
-  async execute(args) {
-    try {
-      const actualArgs = this.validateArgs(args);
-      const result = await this.context.unityClient.executeTool(this.toolName, actualArgs);
-      return {
-        content: [
-          {
-            type: "text",
-            text: typeof result === "string" ? result : JSON.stringify(result, null, 2)
-          }
-        ]
-      };
-    } catch (error) {
-      return this.formatErrorResponse(error);
-    }
-  }
-  formatErrorResponse(error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Failed to execute tool '${this.toolName}': ${errorMessage}`
-        }
-      ]
-    };
-  }
-};
-
 // src/unity-tool-manager.ts
+init_dynamic_unity_command_tool();
+init_constants();
+init_vibe_logger();
 import { createHash } from "crypto";
 var UnityToolManager = class {
   unityClient;
@@ -8224,7 +9029,11 @@ var UnityToolManager = class {
    */
   async initializeDynamicTools() {
     try {
-      await this.unityClient.ensureConnected();
+      if (!this.unityClient.connected) {
+        throw new Error(
+          "Unity connection not established. ClientInitializationUseCase must be executed first."
+        );
+      }
       const toolDetails = await this.fetchToolDetailsFromUnity();
       if (!toolDetails) {
         return;
@@ -8281,7 +9090,8 @@ var UnityToolManager = class {
     }
   }
   /**
-   * Safe version of refreshDynamicTools that prevents duplicate execution
+   * Safe version of refreshDynamicTools using ToolRefreshUseCase pattern
+   * Prevents duplicate execution and provides temporal cohesion
    */
   async refreshDynamicToolsSafe(sendNotification) {
     if (this.isRefreshing) {
@@ -8293,7 +9103,18 @@ var UnityToolManager = class {
     try {
       if (this.includeDevelopmentOnlyTools) {
       }
-      await this.refreshDynamicTools(sendNotification);
+      const { ToolRefreshUseCase: ToolRefreshUseCase2, ToolRefreshReason: ToolRefreshReason2 } = await Promise.resolve().then(() => (init_tool_refresh_use_case(), tool_refresh_use_case_exports));
+      const useCase = new ToolRefreshUseCase2(
+        this.unityClient,
+        this.includeDevelopmentOnlyTools,
+        sendNotification
+      );
+      const result = await useCase.execute();
+      if (result.isSuccess && result.reason === ToolRefreshReason2.Success) {
+        await this.refreshDynamicTools(void 0);
+      }
+      if (!result.isSuccess) {
+      }
     } finally {
       this.isRefreshing = false;
     }
@@ -8475,6 +9296,8 @@ var UnityToolManager = class {
 };
 
 // src/mcp-client-compatibility.ts
+init_constants();
+init_vibe_logger();
 var McpClientCompatibility = class {
   clientName = DEFAULT_CLIENT_NAME;
   constructor() {
@@ -8501,6 +9324,8 @@ var McpClientCompatibility = class {
 };
 
 // src/unity-event-handler.ts
+init_constants();
+init_vibe_logger();
 var UnityEventHandler = class {
   server;
   unityClient;
@@ -8706,6 +9531,125 @@ var UnityEventHandler = class {
   }
 };
 
+// src/usecases/client-initialization-use-case.ts
+init_vibe_logger();
+
+// src/utils/unity-connection-util.ts
+init_constants();
+init_vibe_logger();
+var UnityConnectionUtil = class {
+  /**
+   * Establish Unity connection with detailed logging
+   */
+  static async establishUnityConnection(unityClient, port, correlationId, context = "utility") {
+    if (unityClient.connected) {
+      VibeLogger.logInfo(
+        "unity_connection_already_established",
+        "Unity client already connected",
+        {
+          unity_connected: true,
+          unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+          context
+        },
+        correlationId,
+        "Connection already established"
+      );
+      return true;
+    }
+    VibeLogger.logInfo(
+      "unity_connection_establishing",
+      "Establishing Unity connection",
+      {
+        unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+        context
+      },
+      correlationId,
+      "Calling unityClient.connect()"
+    );
+    try {
+      await unityClient.connect("ClientInitializationUseCase");
+      VibeLogger.logInfo(
+        "unity_connection_established",
+        "Unity connection established successfully",
+        {
+          unity_connected: unityClient.connected,
+          unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+          context
+        },
+        correlationId,
+        "Connection established - unityClient.connected should now be true"
+      );
+      return unityClient.connected;
+    } catch (error) {
+      VibeLogger.logError(
+        "unity_connection_failed",
+        "Failed to establish Unity connection",
+        {
+          error_message: error instanceof Error ? error.message : JSON.stringify(error),
+          unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+          context
+        },
+        correlationId,
+        "Connection failed"
+      );
+      return false;
+    }
+  }
+  /**
+   * Discover and connect to Unity in one operation
+   * This is the main utility for initial connections
+   */
+  static async discoverAndConnect(unityClient, port, correlationId, context = "discover_and_connect") {
+    VibeLogger.logInfo(
+      "unity_discover_and_connect_start",
+      "Starting Unity discovery and connection",
+      {
+        target_port: port,
+        unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+        context
+      },
+      correlationId,
+      "Single operation: discover + connect"
+    );
+    const connected = await this.establishUnityConnection(
+      unityClient,
+      port,
+      correlationId,
+      context
+    );
+    if (connected) {
+      VibeLogger.logInfo(
+        "unity_discover_and_connect_success",
+        "Unity discovery and connection completed successfully",
+        {
+          connected_port: port,
+          unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+          context
+        },
+        correlationId,
+        "Single operation completed successfully"
+      );
+      return { success: true, port };
+    } else {
+      VibeLogger.logError(
+        "unity_discover_and_connect_failed",
+        "Unity connection failed - server not available or connection refused",
+        {
+          target_port: port,
+          unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+          context
+        },
+        correlationId,
+        "Direct connection approach failed - Unity server may not be running"
+      );
+      return { success: false };
+    }
+  }
+};
+
+// src/usecases/client-initialization-use-case.ts
+init_constants();
+
 // package.json
 var package_default = {
   name: "uloopmcp-server",
@@ -8792,7 +9736,7 @@ var package_default = {
   }
 };
 
-// src/client-initialization-use-case.ts
+// src/usecases/client-initialization-use-case.ts
 var ClientInitializationUseCase = class {
   constructor(unityClient, toolManager, connectionManager, pushNotificationManager, clientInfo) {
     this.unityClient = unityClient;
@@ -8822,13 +9766,98 @@ var ClientInitializationUseCase = class {
       "Track this correlation ID for complete initialization flow"
     );
     try {
-      await this.waitForUnityConnection();
+      VibeLogger.logInfo(
+        "client_initialization_entering_step_1",
+        "ENTERING STEP 1: Discover and connect to Unity",
+        { client_name: this.clientInfo.name },
+        this.correlationId
+      );
+      await this.discoverAndConnectToUnity();
+      VibeLogger.logInfo(
+        "client_initialization_step_1_success",
+        "STEP 1 COMPLETED: Unity connection established",
+        { client_name: this.clientInfo.name },
+        this.correlationId
+      );
+      VibeLogger.logInfo(
+        "client_initialization_entering_step_2",
+        "ENTERING STEP 2: Register client with Unity",
+        { client_name: this.clientInfo.name },
+        this.correlationId
+      );
       await this.registerClientWithUnity();
+      VibeLogger.logInfo(
+        "client_initialization_step_2_success",
+        "STEP 2 COMPLETED: Client registered with Unity",
+        { client_name: this.clientInfo.name },
+        this.correlationId
+      );
+      VibeLogger.logInfo(
+        "client_initialization_entering_step_3",
+        "ENTERING STEP 3: Configure push notification endpoint",
+        { client_name: this.clientInfo.name },
+        this.correlationId
+      );
       this.configurePushNotificationEndpoint();
+      VibeLogger.logInfo(
+        "client_initialization_step_3_success",
+        "STEP 3 COMPLETED: Push notification configured",
+        { client_name: this.clientInfo.name },
+        this.correlationId
+      );
+      VibeLogger.logInfo(
+        "client_initialization_entering_step_4",
+        "ENTERING STEP 4: Initialize tool manager",
+        { client_name: this.clientInfo.name },
+        this.correlationId
+      );
       this.initializeToolManager();
+      VibeLogger.logInfo(
+        "client_initialization_step_4_success",
+        "STEP 4 COMPLETED: Tool manager initialized",
+        { client_name: this.clientInfo.name },
+        this.correlationId
+      );
+      VibeLogger.logInfo(
+        "client_initialization_entering_step_5",
+        "ENTERING STEP 5: Retrieve Unity tools",
+        { client_name: this.clientInfo.name },
+        this.correlationId
+      );
       const tools = await this.retrieveUnityTools();
+      VibeLogger.logInfo(
+        "client_initialization_step_5_success",
+        "STEP 5 COMPLETED: Unity tools retrieved",
+        { client_name: this.clientInfo.name, tools_count: tools.length },
+        this.correlationId
+      );
+      VibeLogger.logInfo(
+        "client_initialization_entering_step_6",
+        "ENTERING STEP 6: Build final response",
+        { client_name: this.clientInfo.name },
+        this.correlationId
+      );
       const result = this.buildInitializeResponseWithTools(tools);
+      VibeLogger.logInfo(
+        "client_initialization_step_6_success",
+        "STEP 6 COMPLETED: Final response built",
+        { client_name: this.clientInfo.name },
+        this.correlationId
+      );
       const executionTime = Date.now() - startTime;
+      VibeLogger.logInfo(
+        "client_initialization_entering_step_7",
+        "ENTERING STEP 7: Start Unity discovery polling",
+        { client_name: this.clientInfo.name },
+        this.correlationId
+      );
+      this.connectionManager.startDiscoveryPolling();
+      VibeLogger.logInfo(
+        "client_initialization_step_7_success",
+        "STEP 7 COMPLETED: Unity discovery polling started",
+        { client_name: this.clientInfo.name },
+        this.correlationId
+      );
       VibeLogger.logInfo(
         "client_initialization_usecase_success",
         `Client initialization completed successfully for ${this.clientInfo.name}`,
@@ -8843,39 +9872,96 @@ var ClientInitializationUseCase = class {
       return result;
     } catch (error) {
       const executionTime = Date.now() - startTime;
+      const isUnityConnectionTimeout = error instanceof Error && error.message.includes("timeout");
       VibeLogger.logError(
         "client_initialization_usecase_failure",
         `Client initialization failed for ${this.clientInfo.name}`,
         {
           client_name: this.clientInfo.name,
           error_message: error instanceof Error ? error.message : JSON.stringify(error),
-          execution_time_ms: executionTime
+          execution_time_ms: executionTime,
+          is_unity_connection_issue: isUnityConnectionTimeout,
+          troubleshooting_hint: isUnityConnectionTimeout ? "Unity MCP Server is likely stopped or not running. Please check Unity Editor and start the server." : "Unknown initialization error"
         },
         this.correlationId,
-        "UseCase failed - returning minimal response"
+        isUnityConnectionTimeout ? "UseCase failed - Unity Server appears to be stopped. Check Unity Editor MCP Server status." : "UseCase failed - returning minimal response"
       );
       return this.buildInitializeResponse();
     }
   }
   /**
-   * Step 1: Wait for Unity connection establishment
+   * Step 1: Discover and connect to Unity directly (no circular dependencies)
    */
-  async waitForUnityConnection() {
+  async discoverAndConnectToUnity() {
     VibeLogger.logDebug(
       "client_initialization_step_1",
-      "Waiting for Unity connection",
-      { client_name: this.clientInfo.name },
+      "Discovering and connecting to Unity directly",
+      {
+        client_name: this.clientInfo.name,
+        target_port: 8700
+      },
       this.correlationId,
-      "Step 1: Unity connection prerequisite"
+      "Step 1: Direct Unity discovery and connection (no circular dependencies)"
     );
-    await this.connectionManager.waitForUnityConnectionWithTimeout(1e4);
-    VibeLogger.logDebug(
-      "client_initialization_step_1_complete",
-      "Unity connection established",
-      { client_name: this.clientInfo.name },
-      this.correlationId,
-      "Step 1 complete: Ready for client registration"
-    );
+    try {
+      const unityTcpPort = process.env.UNITY_TCP_PORT;
+      if (!unityTcpPort) {
+        throw new Error("UNITY_TCP_PORT environment variable is required but not set");
+      }
+      const port = parseInt(unityTcpPort, 10);
+      if (isNaN(port) || port <= 0 || port > 65535) {
+        throw new Error(
+          `UNITY_TCP_PORT must be a valid port number (1-65535), got: ${unityTcpPort}`
+        );
+      }
+      VibeLogger.logInfo(
+        "client_initialization_step_1_discover_and_connect",
+        "STEP 1.1: Using utility to discover and connect to Unity",
+        {
+          client_name: this.clientInfo.name,
+          target_port: port
+        },
+        this.correlationId
+      );
+      const result = await UnityConnectionUtil.discoverAndConnect(
+        this.unityClient,
+        port,
+        this.correlationId,
+        "client_initialization"
+      );
+      if (!result.success) {
+        throw new Error("Unity server not found or connection failed");
+      }
+      VibeLogger.logInfo(
+        "client_initialization_step_1_connection_success",
+        "STEP 1.2: Unity connection established successfully",
+        {
+          client_name: this.clientInfo.name,
+          connected_port: result.port,
+          unity_connected: this.unityClient.connected
+        },
+        this.correlationId
+      );
+      VibeLogger.logDebug(
+        "client_initialization_step_1_complete",
+        "Unity connection established",
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+        "Step 1 complete: Ready for client registration"
+      );
+    } catch (error) {
+      VibeLogger.logError(
+        "client_initialization_step_1_failed",
+        "Unity connection failed - server appears to be stopped",
+        {
+          client_name: this.clientInfo.name,
+          error_message: error instanceof Error ? error.message : JSON.stringify(error)
+        },
+        this.correlationId,
+        "Unity MCP Server is not running. Please start Unity Editor and run the MCP server."
+      );
+      throw error;
+    }
   }
   /**
    * Step 2: Register client with Unity (SINGLE setClientName call)
@@ -9013,6 +10099,8 @@ var ClientInitializationUseCase = class {
 };
 
 // src/client-initialization-handler.ts
+init_vibe_logger();
+init_constants();
 var ClientInitializationHandler = class {
   constructor(unityClient, toolManager, clientCompatibility, connectionManager, unityEventHandler, pushNotificationManager) {
     this.unityClient = unityClient;
@@ -9165,6 +10253,7 @@ var ClientInitializationHandler = class {
 };
 
 // src/unity-push-notification-manager.ts
+init_vibe_logger();
 var UnityPushNotificationManager = class {
   pushNotificationServer;
   unityClient;
@@ -9204,7 +10293,7 @@ var UnityPushNotificationManager = class {
    */
   getCurrentEndpoint() {
     const currentPort = this.pushNotificationServer.getCurrentPort();
-    return currentPort ? `localhost:${currentPort}` : null;
+    return currentPort ? `127.0.0.1:${currentPort}` : null;
   }
   /**
    * Setup push notification event handlers
@@ -9222,10 +10311,9 @@ var UnityPushNotificationManager = class {
       void this.handleConnectionEstablished(event);
     });
     this.pushNotificationServer.on("domain_reload_start", this.handleDomainReloadStart.bind(this));
-    this.pushNotificationServer.on(
-      "domain_reload_recovered",
-      this.handleDomainReloadRecovered.bind(this)
-    );
+    this.pushNotificationServer.on("domain_reload_recovered", (event) => {
+      void this.handleDomainReloadRecovered(event);
+    });
     this.pushNotificationServer.on("tools_changed", this.handleToolsChanged.bind(this));
   }
   /**
@@ -9279,7 +10367,11 @@ var UnityPushNotificationManager = class {
    */
   async synchronizeUnityConnectionState(clientId) {
     try {
-      await this.unityClient.ensureConnected();
+      if (!this.unityClient.connected) {
+        throw new Error(
+          "Unity connection not established. ClientInitializationUseCase must be executed first."
+        );
+      }
       await this.connectionManager.handleUnityDiscovered();
       VibeLogger.logInfo(
         "push_unity_connection_synced",
@@ -9318,9 +10410,9 @@ var UnityPushNotificationManager = class {
     );
   }
   /**
-   * Handle domain reload recovery with tool refresh
+   * Handle domain reload recovery with Unity reconnection and tool refresh
    */
-  handleDomainReloadRecovered(event) {
+  async handleDomainReloadRecovered(event) {
     VibeLogger.logInfo(
       "push_domain_reload_recovered",
       "Unity domain reload recovered",
@@ -9328,7 +10420,59 @@ var UnityPushNotificationManager = class {
       void 0,
       "Unity has recovered from domain reload"
     );
-    void this.refreshToolsAndNotifyClients();
+    try {
+      if (!this.unityClient.connected) {
+        VibeLogger.logInfo(
+          "push_domain_reload_reconnecting",
+          "Attempting to reconnect to Unity after domain reload",
+          {
+            clientId: event.clientId,
+            unity_connected: false
+          },
+          void 0,
+          "Unity connection lost during domain reload - initiating reconnection"
+        );
+        const { ConnectionRecoveryUseCase: ConnectionRecoveryUseCase2 } = await Promise.resolve().then(() => (init_connection_recovery_use_case(), connection_recovery_use_case_exports));
+        const recoveryUseCase = new ConnectionRecoveryUseCase2(this.unityClient);
+        const result = await recoveryUseCase.execute();
+        if (result.isSuccess) {
+          VibeLogger.logInfo(
+            "push_domain_reload_reconnected",
+            "Successfully reconnected to Unity after domain reload",
+            {
+              clientId: event.clientId,
+              connected_port: result.port
+            },
+            void 0,
+            "Unity connection restored - proceeding with tool refresh"
+          );
+        } else {
+          VibeLogger.logError(
+            "push_domain_reload_reconnect_failed",
+            "Failed to reconnect to Unity after domain reload",
+            {
+              clientId: event.clientId,
+              error_message: result.errorMessage || "Unknown error"
+            },
+            void 0,
+            "Unity reconnection failed - tools may not be available"
+          );
+          return;
+        }
+      }
+      await this.refreshToolsAndNotifyClients();
+    } catch (error) {
+      VibeLogger.logError(
+        "push_domain_reload_recovery_failed",
+        "Failed to recover from domain reload",
+        {
+          clientId: event.clientId,
+          error: error instanceof Error ? error.message : String(error)
+        },
+        void 0,
+        "Domain reload recovery process failed"
+      );
+    }
   }
   /**
    * Handle tools changed notification with refresh
@@ -9351,7 +10495,8 @@ var UnityPushNotificationManager = class {
 };
 
 // src/unity-push-notification-receive-server.ts
-import * as net3 from "net";
+init_vibe_logger();
+import * as net2 from "net";
 import { EventEmitter } from "events";
 var UnityPushNotificationReceiveServer = class extends EventEmitter {
   server = null;
@@ -9366,7 +10511,7 @@ var UnityPushNotificationReceiveServer = class extends EventEmitter {
       return this.port;
     }
     return new Promise((resolve2, reject) => {
-      this.server = net3.createServer((socket) => {
+      this.server = net2.createServer((socket) => {
         this.handleUnityConnection(socket);
       });
       this.server.on("error", (error) => {
@@ -9424,7 +10569,7 @@ var UnityPushNotificationReceiveServer = class extends EventEmitter {
       throw new Error("Server is not running");
     }
     return {
-      host: "localhost",
+      host: "127.0.0.1",
       port: this.port,
       protocol: "tcp"
     };
@@ -9612,6 +10757,7 @@ var UnityPushNotificationReceiveServer = class extends EventEmitter {
 };
 
 // src/server.ts
+init_constants();
 var UnityMcpServer = class {
   server;
   unityClient;
@@ -9851,7 +10997,7 @@ var UnityMcpServer = class {
   async start() {
     try {
       const pushServerPort = await this.pushNotificationManager.startPushNotificationServer();
-      const pushEndpoint = `localhost:${pushServerPort}`;
+      const pushEndpoint = `127.0.0.1:${pushServerPort}`;
       this.unityClient.setPushNotificationEndpoint(pushEndpoint);
       VibeLogger.logInfo(
         "push_endpoint_configured",
@@ -9859,7 +11005,7 @@ var UnityMcpServer = class {
         {
           endpoint: pushEndpoint,
           push_server_port: pushServerPort,
-          push_server_host: "localhost",
+          push_server_host: "127.0.0.1",
           process_id: process.pid
         },
         void 0,

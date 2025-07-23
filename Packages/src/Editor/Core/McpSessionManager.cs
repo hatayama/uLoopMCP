@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
@@ -398,27 +399,55 @@ namespace io.github.hatayama.uLoopMCP
             return null;
         }
         
+        private readonly object _endpointsLock = new object();
+        
         public List<ClientEndpointPair> GetAllPushServerEndpoints()
         {
-            return _pushServerEndpoints ?? new();
+            lock (_endpointsLock)
+            {
+                return _pushServerEndpoints?.ToList() ?? new();
+            }
         }
         
         public void RemovePushServerEndpoint(string clientName, int clientPort)
         {
-            if (_pushServerEndpoints == null) return;
-            
-            string clientEndpoint = BuildClientEndpoint(clientName, clientPort);
-            
-            for (int i = _pushServerEndpoints.Count - 1; i >= 0; i--)
+            lock (_endpointsLock)
             {
-                if (_pushServerEndpoints[i].GetUniqueKey() == clientEndpoint)
+                if (_pushServerEndpoints == null) return;
+                
+                string clientEndpoint = BuildClientEndpoint(clientName, clientPort);
+                
+                for (int i = _pushServerEndpoints.Count - 1; i >= 0; i--)
                 {
-                    _pushServerEndpoints.RemoveAt(i);
-                    break;
+                    if (_pushServerEndpoints[i].GetUniqueKey() == clientEndpoint)
+                    {
+                        _pushServerEndpoints.RemoveAt(i);
+                        break;
+                    }
+                }
+                
+                Save(true);
+            }
+        }
+        
+        // 無効なエンドポイントをクリアする新メソッド
+        public void ClearInvalidPushEndpoints()
+        {
+            lock (_endpointsLock)
+            {
+                if (_pushServerEndpoints != null)
+                {
+                    int removedCount = _pushServerEndpoints.RemoveAll(pair => 
+                        string.IsNullOrEmpty(pair.pushReceiveServerEndpoint) || 
+                        pair.pushReceiveServerEndpoint.Contains(":0"));
+                    
+                    if (removedCount > 0)
+                    {
+                        Debug.Log($"[uLoopMCP] Cleared {removedCount} invalid push endpoints");
+                        Save(true);
+                    }
                 }
             }
-            
-            Save(true);
         }
         
         public void RemovePushServerEndpoint(string clientEndpoint)
@@ -457,6 +486,9 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             // Note: Allow multiple instances of the same client name (e.g., multiple Claude Code windows)
+            
+            // 古い無効なエンドポイントを自動クリア
+            ClearInvalidPushEndpoints();
             
             // 既存のクライアントエンドポイントを検索
             ClientEndpointPair currentPair = null;
@@ -513,6 +545,15 @@ namespace io.github.hatayama.uLoopMCP
         public bool IsPushServerConnected()
         {
             return _isPushServerConnected;
+        }
+        
+        public List<ClientEndpointPair> GetPushServerEndpoints()
+        {
+            if (_pushServerEndpoints == null)
+            {
+                return new List<ClientEndpointPair>();
+            }
+            return new List<ClientEndpointPair>(_pushServerEndpoints);
         }
 
         public DateTime GetLastConnectionTime()

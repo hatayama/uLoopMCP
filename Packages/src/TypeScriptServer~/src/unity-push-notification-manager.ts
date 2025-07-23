@@ -80,7 +80,7 @@ export class UnityPushNotificationManager {
    */
   getCurrentEndpoint(): string | null {
     const currentPort = this.pushNotificationServer.getCurrentPort();
-    return currentPort ? `localhost:${currentPort}` : null;
+    return currentPort ? `127.0.0.1:${currentPort}` : null;
   }
 
   /**
@@ -99,10 +99,9 @@ export class UnityPushNotificationManager {
       void this.handleConnectionEstablished(event);
     });
     this.pushNotificationServer.on('domain_reload_start', this.handleDomainReloadStart.bind(this));
-    this.pushNotificationServer.on(
-      'domain_reload_recovered',
-      this.handleDomainReloadRecovered.bind(this),
-    );
+    this.pushNotificationServer.on('domain_reload_recovered', (event: PushNotificationEvent) => {
+      void this.handleDomainReloadRecovered(event);
+    });
     this.pushNotificationServer.on('tools_changed', this.handleToolsChanged.bind(this));
   }
 
@@ -164,7 +163,12 @@ export class UnityPushNotificationManager {
    */
   private async synchronizeUnityConnectionState(clientId: string): Promise<void> {
     try {
-      await this.unityClient.ensureConnected();
+      // Connection should already be established by ClientInitializationUseCase
+      if (!this.unityClient.connected) {
+        throw new Error(
+          'Unity connection not established. ClientInitializationUseCase must be executed first.',
+        );
+      }
 
       // Notify connection manager about Unity connection
       await this.connectionManager.handleUnityDiscovered();
@@ -210,9 +214,9 @@ export class UnityPushNotificationManager {
   }
 
   /**
-   * Handle domain reload recovery with tool refresh
+   * Handle domain reload recovery with Unity reconnection and tool refresh
    */
-  private handleDomainReloadRecovered(event: PushNotificationEvent): void {
+  private async handleDomainReloadRecovered(event: PushNotificationEvent): Promise<void> {
     VibeLogger.logInfo(
       'push_domain_reload_recovered',
       'Unity domain reload recovered',
@@ -221,7 +225,68 @@ export class UnityPushNotificationManager {
       'Unity has recovered from domain reload',
     );
 
-    void this.refreshToolsAndNotifyClients();
+    try {
+      // Check if Unity connection is lost
+      if (!this.unityClient.connected) {
+        VibeLogger.logInfo(
+          'push_domain_reload_reconnecting',
+          'Attempting to reconnect to Unity after domain reload',
+          {
+            clientId: event.clientId,
+            unity_connected: false,
+          },
+          undefined,
+          'Unity connection lost during domain reload - initiating reconnection',
+        );
+
+        // Use ConnectionRecoveryUseCase to re-establish connection
+        const { ConnectionRecoveryUseCase } = await import(
+          './usecases/connection-recovery-use-case.js'
+        );
+        const recoveryUseCase = new ConnectionRecoveryUseCase(this.unityClient);
+
+        const result = await recoveryUseCase.execute();
+
+        if (result.isSuccess) {
+          VibeLogger.logInfo(
+            'push_domain_reload_reconnected',
+            'Successfully reconnected to Unity after domain reload',
+            {
+              clientId: event.clientId,
+              connected_port: result.port,
+            },
+            undefined,
+            'Unity connection restored - proceeding with tool refresh',
+          );
+        } else {
+          VibeLogger.logError(
+            'push_domain_reload_reconnect_failed',
+            'Failed to reconnect to Unity after domain reload',
+            {
+              clientId: event.clientId,
+              error_message: result.errorMessage || 'Unknown error',
+            },
+            undefined,
+            'Unity reconnection failed - tools may not be available',
+          );
+          return; // Don't refresh tools if connection failed
+        }
+      }
+
+      // Refresh tools after ensuring connection
+      await this.refreshToolsAndNotifyClients();
+    } catch (error) {
+      VibeLogger.logError(
+        'push_domain_reload_recovery_failed',
+        'Failed to recover from domain reload',
+        {
+          clientId: event.clientId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        undefined,
+        'Domain reload recovery process failed',
+      );
+    }
   }
 
   /**

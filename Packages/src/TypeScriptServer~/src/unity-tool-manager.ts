@@ -136,7 +136,12 @@ export class UnityToolManager {
    */
   async initializeDynamicTools(): Promise<void> {
     try {
-      await this.unityClient.ensureConnected();
+      // Connection should already be established by ClientInitializationUseCase
+      if (!this.unityClient.connected) {
+        throw new Error(
+          'Unity connection not established. ClientInitializationUseCase must be executed first.',
+        );
+      }
 
       const toolDetails = await this.fetchToolDetailsFromUnity();
       if (!toolDetails) {
@@ -243,27 +248,29 @@ export class UnityToolManager {
       }
 
       // Import UseCase dynamically to avoid circular dependencies
-      const { ToolRefreshUseCase } = await import('./usecases/tool-refresh-use-case.js');
-      
+      const { ToolRefreshUseCase, ToolRefreshReason } = await import(
+        './usecases/tool-refresh-use-case.js'
+      );
+
       // Create UseCase instance (single-use pattern)
       const useCase = new ToolRefreshUseCase(
         this.unityClient,
         this.includeDevelopmentOnlyTools,
         sendNotification,
       );
-      
+
       // Execute all refresh steps with temporal cohesion
       const result = await useCase.execute();
-      
+
       // UseCase instance is automatically discarded after this point
-      
+
       // Handle the result by updating the tool cache if successful
-      if (result.isSuccess && result.reason === 'success') {
+      if (result.isSuccess && result.reason === ToolRefreshReason.Success) {
         // The UseCase has already handled tool creation, notification, etc.
         // We just need to re-run the full refresh to update our cache
         await this.refreshDynamicTools(undefined); // Don't send notification again
       }
-      
+
       // Log result for debugging
       if (!result.isSuccess) {
         // Tool refresh UseCase failed but error already logged

@@ -7,7 +7,7 @@ interface UnityParameterInfo {
   [key: string]: unknown;
 }
 
-interface UnityParameterSchema {
+export interface UnityParameterSchema {
   [key: string]: unknown;
 }
 

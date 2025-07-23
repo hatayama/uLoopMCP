@@ -120,9 +120,7 @@ export class ConnectionRecoveryUseCase {
         'UseCase failed - connection recovery aborted with error',
       );
 
-      return ConnectionRecoveryResult.Error(
-        error instanceof Error ? error.message : String(error),
-      );
+      return ConnectionRecoveryResult.Error(error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -257,34 +255,49 @@ export class ConnectionRecoveryUseCase {
     );
 
     try {
-      const isAvailable = await this.isUnityAvailable(port);
+      // Direct connection approach - no separate availability check needed
+      // This avoids creating additional TCP connections that could cause issues
 
-      if (isAvailable) {
+      // Establish actual Unity connection after successful discovery
+      if (!this.unityClient.connected) {
         VibeLogger.logInfo(
-          'connection_recovery_step_3_success',
-          'Unity discovered and available',
+          'connection_recovery_establishing_connection',
+          'Establishing Unity connection after successful discovery',
           {
             discovered_port: port,
             unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
           },
           this.correlationId,
-          'Step 3 complete: Unity server found and accessible',
+          'Calling unityClient.connect() after successful discovery',
         );
 
-        return { found: true, port };
-      } else {
-        VibeLogger.logWarning(
-          'connection_recovery_step_3_not_found',
-          'Unity not available on specified port',
-          {
-            target_port: port,
-          },
-          this.correlationId,
-          'Step 3 complete: Unity server not found',
-        );
-
-        return { found: false, port };
+        try {
+          await this.unityClient.connect('ConnectionRecoveryUseCase');
+          VibeLogger.logInfo(
+            'connection_recovery_connection_established',
+            'Unity connection established successfully',
+            {
+              unity_connected: this.unityClient.connected,
+              unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+            },
+            this.correlationId,
+            'Connection established - unityClient.connected should now be true',
+          );
+        } catch (error) {
+          VibeLogger.logError(
+            'connection_recovery_connection_failed',
+            'Failed to establish Unity connection despite successful discovery',
+            {
+              error_message: error instanceof Error ? error.message : JSON.stringify(error),
+              unity_endpoint: `${UNITY_CONNECTION.DEFAULT_HOST}:${port}`,
+            },
+            this.correlationId,
+            'Connection failed - falling back to discovery-only mode',
+          );
+        }
       }
+
+      return { found: true, port };
     } catch (error) {
       VibeLogger.logDebug(
         'connection_recovery_step_3_error',
@@ -377,21 +390,6 @@ export class ConnectionRecoveryUseCase {
       // Don't throw - callback failure shouldn't fail the entire recovery
     }
   }
-
-  /**
-   * Check if Unity is available on specified port
-   * This is a simplified version that would need to be implemented based on the original logic
-   */
-  private async isUnityAvailable(port: number): Promise<boolean> {
-    try {
-      // Create a temporary connection to test availability
-      // This should use the same logic as the original discoverUnityOnPorts method
-      await this.unityClient.ensureConnected();
-      return this.unityClient.connected;
-    } catch (error) {
-      return false;
-    }
-  }
 }
 
 /**
@@ -445,11 +443,7 @@ export class ConnectionRecoveryResult {
   }
 
   static Error(errorMessage: string): ConnectionRecoveryResult {
-    return new ConnectionRecoveryResult(
-      false,
-      ConnectionRecoveryReason.Error,
-      errorMessage,
-    );
+    return new ConnectionRecoveryResult(false, ConnectionRecoveryReason.Error, errorMessage);
   }
 }
 

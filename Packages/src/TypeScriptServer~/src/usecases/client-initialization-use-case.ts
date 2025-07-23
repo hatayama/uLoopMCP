@@ -4,6 +4,7 @@ import { UnityToolManager } from '../unity-tool-manager.js';
 import { UnityConnectionManager } from '../unity-connection-manager.js';
 import { UnityPushNotificationManager } from '../unity-push-notification-manager.js';
 import { VibeLogger } from '../utils/vibe-logger.js';
+import { UnityConnectionUtil } from '../utils/unity-connection-util.js';
 import {
   MCP_PROTOCOL_VERSION,
   MCP_SERVER_NAME,
@@ -67,25 +68,112 @@ export class ClientInitializationUseCase {
     );
 
     try {
-      // Step 1: Wait for Unity connection
-      await this.waitForUnityConnection();
+      // Step 1: Discover and connect to Unity directly
+      VibeLogger.logInfo(
+        'client_initialization_entering_step_1',
+        'ENTERING STEP 1: Discover and connect to Unity',
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+      );
+      await this.discoverAndConnectToUnity();
+      VibeLogger.logInfo(
+        'client_initialization_step_1_success',
+        'STEP 1 COMPLETED: Unity connection established',
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+      );
 
       // Step 2: Register client with Unity (single setClientName call)
+      VibeLogger.logInfo(
+        'client_initialization_entering_step_2',
+        'ENTERING STEP 2: Register client with Unity',
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+      );
       await this.registerClientWithUnity();
+      VibeLogger.logInfo(
+        'client_initialization_step_2_success',
+        'STEP 2 COMPLETED: Client registered with Unity',
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+      );
 
       // Step 3: Configure push notification endpoint
+      VibeLogger.logInfo(
+        'client_initialization_entering_step_3',
+        'ENTERING STEP 3: Configure push notification endpoint',
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+      );
       this.configurePushNotificationEndpoint();
+      VibeLogger.logInfo(
+        'client_initialization_step_3_success',
+        'STEP 3 COMPLETED: Push notification configured',
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+      );
 
       // Step 4: Initialize tool manager with client name
+      VibeLogger.logInfo(
+        'client_initialization_entering_step_4',
+        'ENTERING STEP 4: Initialize tool manager',
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+      );
       this.initializeToolManager();
+      VibeLogger.logInfo(
+        'client_initialization_step_4_success',
+        'STEP 4 COMPLETED: Tool manager initialized',
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+      );
 
       // Step 5: Retrieve Unity tools
+      VibeLogger.logInfo(
+        'client_initialization_entering_step_5',
+        'ENTERING STEP 5: Retrieve Unity tools',
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+      );
       const tools = await this.retrieveUnityTools();
+      VibeLogger.logInfo(
+        'client_initialization_step_5_success',
+        'STEP 5 COMPLETED: Unity tools retrieved',
+        { client_name: this.clientInfo.name, tools_count: tools.length },
+        this.correlationId,
+      );
 
       // Step 6: Build and return final response
+      VibeLogger.logInfo(
+        'client_initialization_entering_step_6',
+        'ENTERING STEP 6: Build final response',
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+      );
       const result = this.buildInitializeResponseWithTools(tools);
+      VibeLogger.logInfo(
+        'client_initialization_step_6_success',
+        'STEP 6 COMPLETED: Final response built',
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+      );
 
       const executionTime = Date.now() - startTime;
+
+      // Step 7: Start Unity discovery polling after successful initialization
+      VibeLogger.logInfo(
+        'client_initialization_entering_step_7',
+        'ENTERING STEP 7: Start Unity discovery polling',
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+      );
+      this.connectionManager.startDiscoveryPolling();
+      VibeLogger.logInfo(
+        'client_initialization_step_7_success',
+        'STEP 7 COMPLETED: Unity discovery polling started',
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+      );
 
       VibeLogger.logInfo(
         'client_initialization_usecase_success',
@@ -128,22 +216,66 @@ export class ClientInitializationUseCase {
   }
 
   /**
-   * Step 1: Wait for Unity connection establishment
+   * Step 1: Discover and connect to Unity directly (no circular dependencies)
    */
-  private async waitForUnityConnection(): Promise<void> {
+  private async discoverAndConnectToUnity(): Promise<void> {
     VibeLogger.logDebug(
       'client_initialization_step_1',
-      'Waiting for Unity connection',
+      'Discovering and connecting to Unity directly',
       {
         client_name: this.clientInfo.name,
-        timeout_ms: 10000,
+        target_port: 8700,
       },
       this.correlationId,
-      'Step 1: Unity connection prerequisite - checking if Unity MCP Server is running',
+      'Step 1: Direct Unity discovery and connection (no circular dependencies)',
     );
 
     try {
-      await this.connectionManager.waitForUnityConnectionWithTimeout(10000);
+      // Get Unity TCP port from environment
+      const unityTcpPort = process.env.UNITY_TCP_PORT;
+      if (!unityTcpPort) {
+        throw new Error('UNITY_TCP_PORT environment variable is required but not set');
+      }
+
+      const port = parseInt(unityTcpPort, 10);
+      if (isNaN(port) || port <= 0 || port > 65535) {
+        throw new Error(
+          `UNITY_TCP_PORT must be a valid port number (1-65535), got: ${unityTcpPort}`,
+        );
+      }
+
+      VibeLogger.logInfo(
+        'client_initialization_step_1_discover_and_connect',
+        'STEP 1.1: Using utility to discover and connect to Unity',
+        {
+          client_name: this.clientInfo.name,
+          target_port: port,
+        },
+        this.correlationId,
+      );
+
+      // Use utility function for clean discovery and connection
+      const result = await UnityConnectionUtil.discoverAndConnect(
+        this.unityClient,
+        port,
+        this.correlationId,
+        'client_initialization',
+      );
+
+      if (!result.success) {
+        throw new Error('Unity server not found or connection failed');
+      }
+
+      VibeLogger.logInfo(
+        'client_initialization_step_1_connection_success',
+        'STEP 1.2: Unity connection established successfully',
+        {
+          client_name: this.clientInfo.name,
+          connected_port: result.port,
+          unity_connected: this.unityClient.connected,
+        },
+        this.correlationId,
+      );
 
       VibeLogger.logDebug(
         'client_initialization_step_1_complete',
@@ -159,7 +291,6 @@ export class ClientInitializationUseCase {
         {
           client_name: this.clientInfo.name,
           error_message: error instanceof Error ? error.message : JSON.stringify(error),
-          timeout_ms: 10000,
         },
         this.correlationId,
         'Unity MCP Server is not running. Please start Unity Editor and run the MCP server.',

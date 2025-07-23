@@ -135,9 +135,9 @@ export class UnityConnectionFallbackHandler {
   /**
    * Attempt force discovery as last resort
    */
-  private async attemptForceDiscovery(timeoutMs: number): Promise<void> {
+  private attemptForceDiscovery(timeoutMs: number): void {
     try {
-      await this.unityDiscovery.forceDiscovery();
+      this.unityDiscovery.forceDiscovery();
 
       VibeLogger.logInfo(
         'unity_discovery_fallback_attempted',

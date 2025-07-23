@@ -182,6 +182,7 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Step 3: Remove push server endpoint from session data
+        /// Skip mock endpoints created by SessionRecovery to preserve restored client information
         /// </summary>
         private void RemovePushServerEndpoint(McpSessionManager sessionManager)
         {
@@ -192,6 +193,32 @@ namespace io.github.hatayama.uLoopMCP
                 correlationId,
                 "Step 3: Session data cleanup"
             );
+
+            // Check if this is a mock endpoint created by SessionRecovery - if so, skip removal
+            if (IsMockEndpoint(clientEndpoint))
+            {
+                VibeLogger.LogInfo(
+                    "client_disconnection_skip_mock_endpoint",
+                    "Skipping removal of mock endpoint to preserve session recovery data",
+                    new 
+                    { 
+                        client_endpoint = clientEndpoint,
+                        is_mock_endpoint = true,
+                        skip_reason = "preserve_session_recovery_data"
+                    },
+                    correlationId,
+                    "Mock endpoints from SessionRecovery are preserved to maintain UI consistency"
+                );
+
+                VibeLogger.LogDebug(
+                    "client_disconnection_step_3_complete",
+                    "Mock endpoint preserved - no removal needed",
+                    new { client_endpoint = clientEndpoint },
+                    correlationId,
+                    "Step 3 complete: Mock endpoint preserved for UI display"
+                );
+                return;
+            }
 
             Debug.Log($"[uLoopMCP] Attempting to remove push server endpoint for: {clientEndpoint}");
 
@@ -207,6 +234,15 @@ namespace io.github.hatayama.uLoopMCP
                 correlationId,
                 "Step 3 complete: Client endpoint removed from session data"
             );
+        }
+
+        /// <summary>
+        /// Check if an endpoint is a mock endpoint created by SessionRecovery
+        /// Mock endpoints contain "unknown_port_" pattern
+        /// </summary>
+        private bool IsMockEndpoint(string endpoint)
+        {
+            return !string.IsNullOrEmpty(endpoint) && endpoint.Contains("unknown_port_");
         }
 
         /// <summary>

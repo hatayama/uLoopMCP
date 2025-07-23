@@ -101,26 +101,39 @@ namespace io.github.hatayama.uLoopMCP
 
             await DisconnectAsync();
 
-            tcpClient = new TcpClient();
+            // Null参照を防ぐため、必ずtcpClientを初期化
+            try
+            {
+                tcpClient = new TcpClient();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[uLoopMCP] Failed to create TcpClient: {ex.Message}");
+                return false;
+            }
+
+            Debug.LogWarning($"[hatayama] UnityPushClient ConnectAsync attempting: host={host}, port={port}, currentEndpoint={currentEndpoint}");
             
             try
             {
-                var connectTask = tcpClient.ConnectAsync(host, port);
-                var timeoutTask = Task.Delay(ConnectionTimeouts.CONNECTION_TIMEOUT_MS, cancellationTokenSource.Token);
-                
-                var completedTask = await Task.WhenAny(connectTask, timeoutTask);
+                Task connectTask = tcpClient.ConnectAsync(host, port);
+                Task timeoutTask = Task.Delay(ConnectionTimeouts.CONNECTION_TIMEOUT_MS, cancellationTokenSource.Token);
+                Task completedTask = await Task.WhenAny(connectTask, timeoutTask);
                 
                 if (completedTask == timeoutTask)
                 {
                     Debug.LogWarning($"[uLoopMCP] Connection timeout: {host}:{port}");
+                    // タイムアウト時もクリーンアップ
+                    CleanupConnection();
                     return false;
                 }
                 
                 await connectTask; // Ensure the task completed and check for exceptions
                 
-                if (!tcpClient.Connected)
+                if (tcpClient == null || !tcpClient.Connected)
                 {
                     Debug.LogWarning($"[uLoopMCP] Connection failed: {host}:{port}");
+                    CleanupConnection();
                     return false;
                 }
 
@@ -131,12 +144,17 @@ namespace io.github.hatayama.uLoopMCP
                 // PersistEndpoint(currentEndpoint); // Disabled: SetClientNameTool handles endpoint persistence
                 OnConnected?.Invoke(currentEndpoint);
                 
-                Debug.Log($"[uLoopMCP] Connected to TypeScript Push Server: {currentEndpoint}");
+                var localEndpoint = tcpClient.Client?.LocalEndPoint?.ToString() ?? "unknown";
+                var remoteEndpoint = tcpClient.Client?.RemoteEndPoint?.ToString() ?? "unknown";
+                Debug.LogWarning($"[hatayama] UnityPushClient connected! local={localEndpoint}, remote={remoteEndpoint}, currentEndpoint={currentEndpoint}");
                 return true;
             }
             catch (Exception ex)
             {
                 Debug.LogError($"[uLoopMCP] Connection failed: {ex.Message}");
+                
+                // エラー時も確実にクリーンアップ
+                CleanupConnection();
                 
                 bool handled = await PushNotificationErrorHandler.HandleConnectionFailureAsync(this, ex);
                 if (!handled)
@@ -203,6 +221,22 @@ namespace io.github.hatayama.uLoopMCP
             await SendPushNotificationAsync(notification);
         }
 
+        // 接続のクリーンアップ処理を共通化
+        private void CleanupConnection()
+        {
+            isConnected = false;
+            
+            stream?.Close();
+            stream?.Dispose();
+            stream = null;
+            
+            tcpClient?.Close();
+            tcpClient?.Dispose();
+            tcpClient = null;
+
+            currentEndpoint = null;
+        }
+
         public async Task DisconnectAsync()
         {
             if (isConnected && !isDisposed)
@@ -216,18 +250,8 @@ namespace io.github.hatayama.uLoopMCP
                 await Task.Delay(100);
             }
 
-            isConnected = false;
-            
-            stream?.Close();
-            stream?.Dispose();
-            stream = null;
-            
-            tcpClient?.Close();
-            tcpClient?.Dispose();
-            tcpClient = null;
-
             string endpoint = currentEndpoint;
-            currentEndpoint = null;
+            CleanupConnection();
             
             OnDisconnected?.Invoke(endpoint);
         }
@@ -245,7 +269,18 @@ namespace io.github.hatayama.uLoopMCP
             if (McpSessionManager.instance != null)
             {
                 List<McpSessionManager.ClientEndpointPair> endpoints = McpSessionManager.instance.GetAllPushServerEndpoints();
-                return endpoints.Count > 0 ? endpoints[0].pushReceiveServerEndpoint : null;
+                
+                // 最新の有効なエンドポイントを優先的に取得
+                // claude-codeなど、新しい接続のエンドポイントを使用
+                foreach (McpSessionManager.ClientEndpointPair endpoint in endpoints)
+                {
+                    // 無効なエンドポイント（ポート0や空文字）はスキップ
+                    if (!string.IsNullOrEmpty(endpoint.pushReceiveServerEndpoint) && 
+                        !endpoint.pushReceiveServerEndpoint.Contains(":0"))
+                    {
+                        return endpoint.pushReceiveServerEndpoint;
+                    }
+                }
             }
             
             return null;

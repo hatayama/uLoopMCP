@@ -37,7 +37,8 @@ namespace io.github.hatayama.uLoopMCP
         private McpEditorWindowView _view;
         
         // Connected LLM Tools management (persisted across domain reload)
-        private List<ConnectedLLMToolData> _connectedTools = new();
+        // DEPRECATED: UI now reads directly from SessionData.yaml
+        // private List<ConnectedLLMToolData> _connectedTools = new();
 
         // Model layer (MVP pattern)
         private McpEditorModel _model;
@@ -49,8 +50,9 @@ namespace io.github.hatayama.uLoopMCP
         private McpServerOperations _serverOperations;
         
         // Cache for stored tools to avoid repeated calls
-        private IEnumerable<ConnectedClient> _cachedStoredTools;
-        private float _lastStoredToolsUpdateTime;
+        // TEMPORARILY COMMENTED OUT: Caching mechanism that might interfere with SessionRecovery
+        // private IEnumerable<ConnectedClient> _cachedStoredTools;
+        // private float _lastStoredToolsUpdateTime;
 
         /// <summary>
         /// Get current instance for external access
@@ -58,7 +60,8 @@ namespace io.github.hatayama.uLoopMCP
         public static McpEditorWindow Instance => _instance;
         
         // Backup storage for server restart
-        private List<ConnectedLLMToolData> _toolsBackup;
+        // DEPRECATED: UI now reads directly from SessionData.yaml
+        // private List<ConnectedLLMToolData> _toolsBackup;
 
         [MenuItem("Window/uLoopMCP")]
         public static void ShowWindow()
@@ -115,57 +118,32 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Add a connected LLM tool
+        /// DEPRECATED: UI now reads directly from SessionData.yaml
         /// </summary>
         public void AddConnectedTool(ConnectedClient client)
         {
-            if (client.ClientName == McpConstants.UNKNOWN_CLIENT_NAME)
-            {
-                return;
-            }
-
-            UnityEngine.Debug.Log($"[uLoopMCP] AddConnectedTool called: {client.ClientName} ({client.Endpoint})");
-            UnityEngine.Debug.Log($"[uLoopMCP] Current connected tools: {string.Join(", ", _connectedTools.Select(t => $"{t.Name}({t.Endpoint})"))}");
-
-            // Check if this specific endpoint is already registered
-            bool alreadyExists = _connectedTools.Any(tool => 
-                tool.Name == client.ClientName && 
-                tool.Endpoint == client.Endpoint
-            );
-
-            if (!alreadyExists)
-            {
-                ConnectedLLMToolData toolData = new(
-                    client.ClientName, 
-                    client.Endpoint, 
-                    client.ConnectedAt
-                );
-                _connectedTools.Add(toolData);
-                InvalidateStoredToolsCache();
-                
-                UnityEngine.Debug.Log($"[uLoopMCP] Added new connected tool: {client.ClientName} ({client.Endpoint}). Total tools: {_connectedTools.Count}");
-            }
-            else
-            {
-                UnityEngine.Debug.Log($"[uLoopMCP] Tool already exists, skipping: {client.ClientName} ({client.Endpoint})");
-            }
+            // No longer used - UI reads directly from SessionData.yaml
+            return;
+            // Implementation removed - method body commented out
         }
 
         /// <summary>
         /// Remove a connected LLM tool
+        /// DEPRECATED: UI now reads directly from SessionData.yaml
         /// </summary>
         public void RemoveConnectedTool(string toolName)
         {
-            _connectedTools.RemoveAll(tool => tool.Name == toolName);
-            InvalidateStoredToolsCache();
+            // No longer used - UI reads directly from SessionData.yaml
+            // Removal is handled by ClientDisconnectionUseCase updating SessionData.yaml
         }
 
         /// <summary>
         /// Clear all connected LLM tools
+        /// DEPRECATED: UI now reads directly from SessionData.yaml
         /// </summary>
         public void ClearConnectedTools()
         {
-            _connectedTools.Clear();
-            InvalidateStoredToolsCache();
+            // No longer used - UI reads directly from SessionData.yaml
         }
 
         /// <summary>
@@ -177,7 +155,6 @@ namespace io.github.hatayama.uLoopMCP
             McpBridgeServer.OnServerStarted += OnServerStarted;
             McpBridgeServer.OnToolConnected += OnToolConnected;
             McpBridgeServer.OnToolDisconnected += OnToolDisconnected;
-            McpBridgeServer.OnAllToolsCleared += OnAllToolsCleared;
         }
         
         /// <summary>
@@ -189,17 +166,16 @@ namespace io.github.hatayama.uLoopMCP
             McpBridgeServer.OnServerStarted -= OnServerStarted;
             McpBridgeServer.OnToolConnected -= OnToolConnected;
             McpBridgeServer.OnToolDisconnected -= OnToolDisconnected;
-            McpBridgeServer.OnAllToolsCleared -= OnAllToolsCleared;
         }
         
         /// <summary>
-        /// Handle server stopping event - backup connected tools
+        /// Handle server stopping event - backup and clear connected tools
         /// </summary>
         private void OnServerStopping()
         {
-            _toolsBackup = _connectedTools
-                .Where(tool => tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
-                .ToList();
+            // No longer needed - data is persisted in SessionData.yaml
+            // Just request a repaint to update the UI
+            Repaint();
         }
         
         /// <summary>
@@ -207,11 +183,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void OnServerStarted()
         {
-            if (_toolsBackup != null && _toolsBackup.Count > 0)
-            {
-                RestoreConnectedTools(_toolsBackup);
-                _toolsBackup = null;
-            }
+            // No longer needed - UI reads directly from SessionData.yaml
+            // Just request a repaint to update the UI
+            Repaint();
         }
         
         /// <summary>
@@ -219,7 +193,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void OnToolConnected(ConnectedClient client)
         {
-            AddConnectedTool(client);
+            // No longer needed - UI reads directly from SessionData.yaml
+            // Just request a repaint to update the UI
+            Repaint();
         }
         
         /// <summary>
@@ -227,102 +203,77 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void OnToolDisconnected(string toolName)
         {
-            RemoveConnectedTool(toolName);
+            // No longer needed - UI reads directly from SessionData.yaml
+            // Just request a repaint to update the UI
+            Repaint();
         }
         
-        /// <summary>
-        /// Handle all tools cleared event - clear all connected tools
-        /// </summary>
-        private void OnAllToolsCleared()
-        {
-            ClearConnectedTools();
-        }
         
         /// <summary>
         /// Backup current connected tools for server restart (legacy method for compatibility)
+        /// DEPRECATED: UI now reads directly from SessionData.yaml
         /// </summary>
         public List<ConnectedLLMToolData> BackupConnectedTools()
         {
-            List<ConnectedLLMToolData> backup = _connectedTools
-                .Where(tool => tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
-                .ToList();
-            return backup;
+            // No longer needed - data is persisted in SessionData.yaml
+            return new List<ConnectedLLMToolData>();
         }
 
         /// <summary>
         /// Restore connected tools from backup after server restart
-        /// First restore all tools immediately, then cleanup disconnected ones after a delay
+        /// DEPRECATED: UI now reads directly from SessionData.yaml
         /// </summary>
         public void RestoreConnectedTools(List<ConnectedLLMToolData> backup)
         {
-            if (backup == null || backup.Count == 0)
-            {
-                return;
-            }
-
-            // Immediately restore all tools to prevent "No connected tools found" flash
-            foreach (ConnectedLLMToolData toolData in backup)
-            {
-                ConnectedClient restoredClient = new(toolData.Endpoint, null, toolData.Name);
-                AddConnectedTool(restoredClient);
-            }
-
-            // Schedule cleanup after a short delay to remove actually disconnected tools
-            DelayedCleanupAsync().Forget();
+            // No longer needed - UI reads directly from SessionData.yaml
+            Repaint();
         }
 
         /// <summary>
         /// Clean up disconnected tools after a delay
+        /// DEPRECATED: UI now reads directly from SessionData.yaml
         /// </summary>
         private async Task DelayedCleanupAsync()
         {
-            // Wait 1 second for clients to reconnect
-            await TimerDelay.Wait(2000);
-
-            if (!McpServerController.IsServerRunning)
-            {
-                return;
-            }
-
-            // Get actually connected clients
-            IReadOnlyCollection<ConnectedClient> actualConnectedClients = McpServerController.CurrentServer?.GetConnectedClients();
-            if (actualConnectedClients == null)
-            {
-                return;
-            }
-
-            // Get list of actually connected client names
-            HashSet<string> actualClientNames = new HashSet<string>(
-                actualConnectedClients
-                    .Where(client => client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME)
-                    .Select(client => client.ClientName)
-            );
-
-            // Remove tools that are no longer connected
-            List<ConnectedLLMToolData> toolsToRemove = _connectedTools
-                .Where(tool => !actualClientNames.Contains(tool.Name))
-                .ToList();
-
-            foreach (ConnectedLLMToolData tool in toolsToRemove)
-            {
-                RemoveConnectedTool(tool.Name);
-            }
-
-            // Force UI update if any tools were removed
-            if (toolsToRemove.Count > 0)
-            {
-                Repaint();
-            }
+            // No longer needed - UI reads directly from SessionData.yaml
+            await Task.CompletedTask;
+            return;
+            // Implementation removed - method body commented out
 
         }
 
+        /// <summary>
+        /// Check if an endpoint is a mock endpoint created by SessionRecovery
+        /// Mock endpoints contain "unknown_port_" pattern
+        /// </summary>
+        private bool IsMockEndpoint(string endpoint)
+        {
+            return !string.IsNullOrEmpty(endpoint) && endpoint.Contains("unknown_port_");
+        }
 
         /// <summary>
         /// Get connected tools as ConnectedClient objects for UI display, sorted by name
+        /// Always reads from SessionData.yaml to ensure UI is synchronized with actual state
         /// </summary>
         public IEnumerable<ConnectedClient> GetConnectedToolsAsClients()
         {
-            return _connectedTools.OrderBy(tool => tool.Name).Select(tool => ConvertToConnectedClient(tool));
+            // Read directly from SessionData.yaml instead of using _connectedTools
+            McpSessionManager sessionManager = McpSessionManager.instance;
+            if (sessionManager == null)
+            {
+                return Enumerable.Empty<ConnectedClient>();
+            }
+            
+            List<McpSessionManager.ClientEndpointPair> endpoints = sessionManager.GetPushServerEndpoints();
+            if (endpoints == null || endpoints.Count == 0)
+            {
+                return Enumerable.Empty<ConnectedClient>();
+            }
+            
+            // Convert endpoints to ConnectedClient objects and sort by name
+            return endpoints
+                .Select(endpoint => new ConnectedClient(endpoint.clientEndpoint, null, endpoint.clientName))
+                .OrderBy(client => client.ClientName);
         }
 
         /// <summary>
@@ -367,11 +318,40 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Restore session state from Unity SessionState
+        /// Restore session state from Unity SessionState and recover UI tools from yaml
         /// </summary>
         private void RestoreSessionState()
         {
             _model.LoadFromSessionState();
+            
+            // Recover UI tools from stored session data using SessionRecoveryUseCase
+            RecoverUIToolsFromSession();
+        }
+
+        /// <summary>
+        /// Recover UI tools from stored session data using UseCase pattern
+        /// </summary>
+        private void RecoverUIToolsFromSession()
+        {
+            // No longer needed - UI reads directly from SessionData.yaml
+            // SessionRecoveryUseCase is still executed for other recovery tasks
+            
+            // Create UseCase instance (single-use pattern)
+            SessionRecoveryUseCase useCase = new(recoveredTools =>
+            {
+                // No need to update _connectedTools - UI reads from SessionData.yaml
+                // Just request repaint to show recovered tools immediately
+                Repaint();
+            });
+            
+            // Execute recovery process with temporal cohesion
+            SessionRecoveryResult result = useCase.Execute();
+            
+            // Log result for debugging (result details already logged by UseCase)
+            if (result.IsSuccess && result.RecoveredToolsCount > 0)
+            {
+                Debug.Log($"[uLoopMCP] Session recovery completed: {result.RecoveredToolsCount} tools recovered");
+            }
         }
 
         /// <summary>
@@ -563,9 +543,15 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Get stored tools with caching to avoid repeated calls
+        /// TEMPORARILY MODIFIED: Direct call instead of caching during debugging
         /// </summary>
         private IEnumerable<ConnectedClient> GetCachedStoredTools()
         {
+            // Direct call instead of caching during debugging
+            return GetConnectedToolsAsClients();
+            
+            // COMMENTED OUT: Original caching logic that might interfere with SessionRecovery
+            /*
             const float cacheDuration = 0.1f; // 100ms cache
             float currentTime = Time.realtimeSinceStartup;
             
@@ -576,14 +562,17 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             return _cachedStoredTools;
+            */
         }
 
         /// <summary>
         /// Invalidate cached stored tools (call when tools change)
+        /// TEMPORARILY MODIFIED: No-op during debugging
         /// </summary>
         private void InvalidateStoredToolsCache()
         {
-            _cachedStoredTools = null;
+            // No-op during debugging, direct calls don't need cache invalidation
+            // _cachedStoredTools = null;
         }
 
         /// <summary>

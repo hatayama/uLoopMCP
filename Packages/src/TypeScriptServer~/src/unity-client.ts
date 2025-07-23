@@ -48,7 +48,12 @@ export class UnityClient {
   private readonly randomSeed: number = Math.floor(Math.random() * 1000);
   private storedClientName: string | null = null;
   private pushNotificationEndpoint: string | null = null;
+  private connectionPromise: Promise<void> | null = null; // Promise-based mutex for concurrent ensureConnected calls
   private clientId!: string;
+
+  // DEBUG: Connection attempt counter to track double connection issue
+  private static connectAttemptCounter: number = 0;
+  private static successfulConnectionCounter: number = 0;
 
   private constructor() {
     const unityTcpPort: string | undefined = process.env.UNITY_TCP_PORT;
@@ -167,36 +172,48 @@ export class UnityClient {
   }
 
   /**
-   * Ensure connection to Unity (singleton-safe reconnection)
-   * Properly manages single connection instance
+   * @deprecated Use ClientInitializationUseCase for proper connection management
+   * This method now only checks connection state without creating new connections
    */
-  async ensureConnected(): Promise<void> {
-    // If already connected and healthy, return immediately
-    if (this._connected && this.socket && !this.socket.destroyed) {
-      try {
-        // Quick health check - if it passes, we're good
-        if (await this.testConnection()) {
-          return;
-        }
-      } catch (error) {
-        // Health check failed - need to reconnect
-      }
+  ensureConnected(): void {
+    if (!this._connected) {
+      throw new Error(
+        'Unity client not connected. Use ClientInitializationUseCase to establish connection first.',
+      );
     }
-
-    // Disconnect any existing connection before creating new one
-    this.disconnect();
-
-    // Create new connection
-    await this.connect();
   }
 
   /**
    * Connect to Unity
    * Creates a new socket connection (should only be called after disconnect)
    */
-  async connect(): Promise<void> {
+  async connect(connectionSource: string = 'unknown'): Promise<void> {
+    // DEBUG: Increment connection attempt counter
+    UnityClient.connectAttemptCounter++;
+
+    // Debug log with stack trace to identify who's calling connect()
+    const stackTrace = new Error().stack || 'no stack trace available';
+    VibeLogger.logInfo(
+      'unity_client_connect_start',
+      `Unity client connect() called - ATTEMPT #${UnityClient.connectAttemptCounter} - attempting to connect to ${this.host}:${this.port}`,
+      {
+        host: this.host,
+        port: this.port,
+        currently_connected: this._connected,
+        socket_destroyed: this.socket?.destroyed ?? 'no_socket',
+        connection_source: connectionSource,
+        call_stack: stackTrace,
+        attempt_number: UnityClient.connectAttemptCounter,
+        successful_connections: UnityClient.successfulConnectionCounter,
+      },
+    );
+
     // Ensure we don't create multiple connections
     if (this._connected && this.socket && !this.socket.destroyed) {
+      VibeLogger.logInfo(
+        'unity_client_connect_skip',
+        'Already connected, skipping connection attempt',
+      );
       return; // Already connected
     }
 
@@ -206,10 +223,13 @@ export class UnityClient {
       this.socket.connect(this.port, this.host, () => {
         this._connected = true;
 
+        // DEBUG: Increment successful connection counter
+        UnityClient.successfulConnectionCounter++;
+
         // Log MCP connection establishment with endpoint information
         VibeLogger.logInfo(
           'mcp_connection_established',
-          'MCP connection to Unity established',
+          `MCP connection to Unity established - SUCCESS #${UnityClient.successfulConnectionCounter}`,
           {
             unity_endpoint: `${this.host}:${this.port}`,
             host: this.host,
@@ -219,6 +239,8 @@ export class UnityClient {
             socket_remote_address: this.socket?.remoteAddress,
             socket_remote_port: this.socket?.remotePort,
             process_id: this.processId,
+            attempt_number: UnityClient.connectAttemptCounter,
+            successful_connections: UnityClient.successfulConnectionCounter,
           },
           undefined,
           'MCP connection established - Unity endpoint and socket details tracked',
@@ -480,7 +502,11 @@ export class UnityClient {
    * Get available tools from Unity
    */
   async getAvailableTools(): Promise<string[]> {
-    await this.ensureConnected();
+    if (!this._connected) {
+      throw new Error(
+        'Unity client not connected. Use ClientInitializationUseCase to establish connection first.',
+      );
+    }
 
     const request = {
       jsonrpc: JSONRPC.VERSION,
@@ -504,7 +530,11 @@ export class UnityClient {
   async getToolDetails(
     includeDevelopmentOnly: boolean = false,
   ): Promise<Array<{ name: string; description: string; parameterSchema?: unknown }>> {
-    await this.ensureConnected();
+    if (!this._connected) {
+      throw new Error(
+        'Unity client not connected. Use ClientInitializationUseCase to establish connection first.',
+      );
+    }
 
     const request = {
       jsonrpc: JSONRPC.VERSION,
@@ -692,16 +722,38 @@ export class UnityClient {
   }
 
   /**
-   * Handle connection loss by delegating to UnityDiscovery
+   * Handle connection loss by starting UnityDiscovery polling only when needed
    */
   private handleConnectionLoss(): void {
+    // TEMPORARY: Disable UnityDiscovery to test for double connection issue
+    VibeLogger.logInfo(
+      'unity_discovery_disabled_for_testing',
+      'UnityDiscovery handleConnectionLost() disabled for testing',
+      {
+        process_id: this.processId,
+      },
+      undefined,
+      'Testing if UnityDiscovery causes duplicate connections on connection loss',
+    );
+
+    /*
     // Trigger ConnectionManager callback for backward compatibility
     this.connectionManager.triggerConnectionLost();
 
-    // Delegate to UnityDiscovery for unified connection management
+    // Start UnityDiscovery polling only when connection is lost (on-demand)
     if (this.unityDiscovery) {
+      VibeLogger.logInfo(
+        'unity_discovery_start_on_connection_loss',
+        'Starting Unity discovery polling due to connection loss',
+        {
+          process_id: this.processId,
+        },
+        undefined,
+        'Discovery polling will attempt to reconnect to Unity',
+      );
       this.unityDiscovery.handleConnectionLost();
     }
+    */
   }
 
   /**

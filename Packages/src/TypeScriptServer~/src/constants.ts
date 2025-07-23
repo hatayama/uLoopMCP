@@ -44,7 +44,7 @@ export const SERVER_CONFIG = {
 // Unity connection configuration
 export const UNITY_CONNECTION = {
   DEFAULT_PORT: '8700',
-  DEFAULT_HOST: 'localhost',
+  DEFAULT_HOST: '127.0.0.1',
   CONNECTION_TEST_MESSAGE: 'connection_test',
 } as const;
 

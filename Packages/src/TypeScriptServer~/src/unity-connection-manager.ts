@@ -113,9 +113,21 @@ export class UnityConnectionManager {
    */
   async handleUnityDiscovered(onConnectionEstablished?: () => Promise<void>): Promise<void> {
     try {
-      // Ensure UnityClient connection state is properly set
-      // Even though discovery confirmed TCP connectivity, we need to ensure the connection state is updated
-      await this.unityClient.ensureConnected();
+      // Connection should already be established by ClientInitializationUseCase
+      // Skip if not connected yet (avoid race condition with initialization)
+      if (!this.unityClient.connected) {
+        VibeLogger.logDebug(
+          'unity_connection_not_ready',
+          'Unity discovered but connection not established yet - skipping callback',
+          {
+            unity_connected: this.unityClient.connected,
+            process_id: process.pid,
+          },
+          undefined,
+          'Race condition avoided - ClientInitializationUseCase will handle the connection',
+        );
+        return;
+      }
 
       VibeLogger.logInfo(
         'unity_connection_established_via_discovery',
@@ -153,6 +165,7 @@ export class UnityConnectionManager {
 
   /**
    * Initialize connection manager with push notification system
+   * NOTE: Does not start UnityDiscovery polling - that should be started only after ClientInitializationUseCase completion
    */
   initialize(onConnectionEstablished?: () => Promise<void>): void {
     if (this.connectionManagerInitialized) {
@@ -166,10 +179,10 @@ export class UnityConnectionManager {
       'Unity connection manager initialized with push notification system',
       {},
       undefined,
-      'Push notification system active - no legacy polling',
+      'Push notification system active - UnityDiscovery will be started after first client initialization',
     );
 
-    // Setup discovery callbacks for push notification system
+    // Setup discovery callbacks for push notification system (but don't start discovery yet)
     this.unityDiscovery.setOnDiscoveredCallback(async (_port: number) => {
       await this.handleUnityDiscovered(onConnectionEstablished);
     });
@@ -179,6 +192,33 @@ export class UnityConnectionManager {
         // Connection lost detected - ready for reconnection
       }
     });
+  }
+
+  /**
+   * Start Unity discovery polling - should be called after ClientInitializationUseCase completion
+   */
+  startDiscoveryPolling(): void {
+    if (!this.connectionManagerInitialized) {
+      VibeLogger.logWarning(
+        'unity_discovery_start_without_init',
+        'Attempted to start Unity discovery before connection manager initialization',
+        {},
+        undefined,
+        'Call initialize() first before starting discovery',
+      );
+      return;
+    }
+
+    VibeLogger.logInfo(
+      'unity_discovery_polling_start',
+      'Starting Unity discovery polling after client initialization completion',
+      {},
+      undefined,
+      'Discovery will only run when needed for reconnection',
+    );
+
+    // UnityDiscovery is now started only when needed for connection recovery
+    // It will be started automatically when connection is lost
   }
 
   /**
@@ -197,14 +237,12 @@ export class UnityConnectionManager {
       this.reconnectionInProgress = true;
 
       // Force Unity discovery for faster reconnection
-      void this.unityDiscovery
-        .forceDiscovery()
-        .then(() => {
-          return callback();
-        })
-        .finally(() => {
-          this.reconnectionInProgress = false;
-        });
+      this.unityDiscovery.forceDiscovery();
+
+      // Execute callback and reset flag
+      void callback().finally(() => {
+        this.reconnectionInProgress = false;
+      });
     });
   }
 

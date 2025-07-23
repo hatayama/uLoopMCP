@@ -1,6 +1,16 @@
 import { UnityClient } from '../unity-client.js';
-import { DynamicUnityCommandTool } from '../tools/dynamic-unity-command-tool.js';
+import {
+  DynamicUnityCommandTool,
+  UnityParameterSchema,
+} from '../tools/dynamic-unity-command-tool.js';
 import { VibeLogger } from '../utils/vibe-logger.js';
+
+interface ToolInfo {
+  name: string;
+  description?: string;
+  parameterSchema?: unknown;
+  displayDevelopmentOnly?: boolean;
+}
 
 /**
  * Tool Refresh UseCase - Encapsulates temporal cohesion for Unity tool refresh process
@@ -60,7 +70,7 @@ export class ToolRefreshUseCase {
       }
 
       // Step 2: Ensure Unity connection
-      await this.ensureUnityConnection();
+      this.ensureUnityConnection();
 
       // Step 3: Fetch tool details from Unity
       const toolDetails = await this.fetchToolDetailsFromUnity();
@@ -104,9 +114,7 @@ export class ToolRefreshUseCase {
         'UseCase failed - tool refresh aborted with error',
       );
 
-      return ToolRefreshResult.Error(
-        error instanceof Error ? error.message : String(error),
-      );
+      return ToolRefreshResult.Error(error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -142,7 +150,7 @@ export class ToolRefreshUseCase {
   /**
    * Step 2: Ensure Unity connection is established
    */
-  private async ensureUnityConnection(): Promise<void> {
+  private ensureUnityConnection(): void {
     VibeLogger.logDebug(
       'tool_refresh_step_2',
       'Ensuring Unity connection',
@@ -153,7 +161,12 @@ export class ToolRefreshUseCase {
       'Step 2: Unity connection prerequisite check',
     );
 
-    await this.unityClient.ensureConnected();
+    // Connection should already be established by ClientInitializationUseCase
+    if (!this.unityClient.connected) {
+      throw new Error(
+        'Unity connection not established. ClientInitializationUseCase must be executed first.',
+      );
+    }
 
     VibeLogger.logDebug(
       'tool_refresh_step_2_complete',
@@ -254,7 +267,9 @@ export class ToolRefreshUseCase {
   /**
    * Step 4: Create dynamic tools from Unity tool details
    */
-  private createDynamicToolsFromDetails(toolDetails: unknown[]): Map<string, DynamicUnityCommandTool> {
+  private createDynamicToolsFromDetails(
+    toolDetails: unknown[],
+  ): Map<string, DynamicUnityCommandTool> {
     VibeLogger.logDebug(
       'tool_refresh_step_4',
       'Creating dynamic tools from details',
@@ -271,13 +286,12 @@ export class ToolRefreshUseCase {
     let skippedCount = 0;
     let createdCount = 0;
 
-    for (const toolInfo of toolDetails) {
-      const toolName = (toolInfo as { name: string }).name;
-      const description =
-        (toolInfo as { description?: string }).description || `Execute Unity tool: ${toolName}`;
-      const parameterSchema = (toolInfo as { parameterSchema?: unknown }).parameterSchema;
-      const displayDevelopmentOnly =
-        (toolInfo as { displayDevelopmentOnly?: boolean }).displayDevelopmentOnly || false;
+    for (const rawToolInfo of toolDetails) {
+      const toolInfo = rawToolInfo as ToolInfo;
+      const toolName = toolInfo.name;
+      const description = toolInfo.description || `Execute Unity tool: ${toolName}`;
+      const parameterSchema = toolInfo.parameterSchema as UnityParameterSchema | undefined;
+      const displayDevelopmentOnly = toolInfo.displayDevelopmentOnly || false;
 
       // Skip development-only tools in production mode
       if (displayDevelopmentOnly && !this.includeDevelopmentOnlyTools) {
@@ -289,7 +303,7 @@ export class ToolRefreshUseCase {
         toolContext,
         toolName,
         description,
-        parameterSchema as any, // Type assertion for schema compatibility
+        parameterSchema, // Unity parameter schema
       );
 
       dynamicTools.set(toolName, dynamicTool);

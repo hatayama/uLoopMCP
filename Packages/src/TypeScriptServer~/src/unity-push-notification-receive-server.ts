@@ -161,7 +161,7 @@ export class UnityPushNotificationReceiveServer extends EventEmitter {
     }
 
     return {
-      host: 'localhost',
+      host: '127.0.0.1',
       port: this.port,
       protocol: 'tcp',
     };

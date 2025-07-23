@@ -325,7 +325,7 @@ class UnityMcpServer {
       const pushServerPort = await this.pushNotificationManager.startPushNotificationServer();
 
       // Set push notification endpoint for Unity client
-      const pushEndpoint = `localhost:${pushServerPort}`;
+      const pushEndpoint = `127.0.0.1:${pushServerPort}`;
       this.unityClient.setPushNotificationEndpoint(pushEndpoint);
 
       VibeLogger.logInfo(
@@ -334,7 +334,7 @@ class UnityMcpServer {
         {
           endpoint: pushEndpoint,
           push_server_port: pushServerPort,
-          push_server_host: 'localhost',
+          push_server_host: '127.0.0.1',
           process_id: process.pid,
         },
         undefined,
