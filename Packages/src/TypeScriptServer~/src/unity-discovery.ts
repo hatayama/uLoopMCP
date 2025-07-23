@@ -96,7 +96,7 @@ export class UnityDiscovery {
   }
 
   /**
-   * Unified discovery and connection checking
+   * Unified discovery and connection checking using ConnectionRecoveryUseCase pattern
    * Handles both Unity discovery and connection health monitoring
    */
   private async unifiedDiscoveryAndConnectionCheck(): Promise<void> {
@@ -116,50 +116,50 @@ export class UnityDiscovery {
 
     VibeLogger.logInfo(
       'unity_discovery_cycle_start',
-      'Starting unified discovery and connection check cycle',
+      'Starting unified discovery and connection check cycle using UseCase pattern',
       {
         unity_connected: this.unityClient.connected,
         discovery_interval_ms: 1000,
         active_timer_count: UnityDiscovery.activeTimerCount,
       },
       correlationId,
-      'This cycle checks connection health and attempts Unity discovery if needed.',
+      'Using ConnectionRecoveryUseCase for temporal cohesion in connection recovery.',
     );
 
     try {
-      // If already connected, check connection health (lightweight)
-      if (this.unityClient.connected) {
-        const isConnectionHealthy = await this.checkConnectionHealth();
-
-        if (isConnectionHealthy) {
-          // Connection is healthy - stop discovery
-          VibeLogger.logInfo(
-            'unity_discovery_connection_healthy',
-            'Connection is healthy - stopping discovery',
-            { connection_healthy: true },
-            correlationId,
-          );
-          this.stop();
-          return;
-        } else {
-          // Connection might be temporarily unhealthy
-          // Don't immediately assume it's lost - give it time to recover
-          VibeLogger.logWarning(
-            'unity_discovery_connection_unhealthy',
-            'Connection appears unhealthy - continuing discovery without assuming loss',
-            { connection_healthy: false },
-            correlationId,
-            'Connection health check failed. Will continue discovery but not assume complete loss.',
-            'Connection may recover on next cycle. Monitor for persistent issues.',
-          );
-
-          // Don't trigger connection lost callback immediately
-          // Let discovery continue and see if connection recovers
-        }
+      // Import UseCase dynamically to avoid circular dependencies
+      const { ConnectionRecoveryUseCase } = await import('./usecases/connection-recovery-use-case.js');
+      
+      // Create UseCase instance (single-use pattern)
+      const useCase = new ConnectionRecoveryUseCase(this.unityClient, this.onDiscoveredCallback || undefined);
+      
+      // Execute all recovery steps with temporal cohesion
+      const result = await useCase.execute();
+      
+      // UseCase instance is automatically discarded after this point
+      
+      if (result.isSuccess && result.reason === 'already_healthy') {
+        // Connection was healthy - stop discovery
+        this.stop();
+        return;
       }
-
-      // Discover Unity by checking port range
-      await this.discoverUnityOnPorts();
+      
+      if (result.isSuccess && result.reason === 'success') {
+        // Recovery succeeded - continue with normal operation
+        return;
+      }
+      
+      // Recovery failed or Unity not found - continue polling
+      VibeLogger.logDebug(
+        'unity_discovery_recovery_incomplete',
+        'Connection recovery incomplete - continuing discovery polling',
+        {
+          recovery_reason: result.reason,
+          will_retry: true,
+        },
+        correlationId,
+        'Recovery UseCase completed but connection not established - will retry on next cycle',
+      );
     } finally {
       VibeLogger.logDebug(
         'unity_discovery_cycle_end',

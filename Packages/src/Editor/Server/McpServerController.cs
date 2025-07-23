@@ -38,6 +38,24 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static int ServerPort => mcpServer?.Port ?? McpEditorSettings.GetCustomPort();
 
+        /// <summary>
+        /// Set the server instance (for UseCase pattern)
+        /// </summary>
+        internal static void SetServerInstance(McpBridgeServer server)
+        {
+            mcpServer = server;
+            OnServerInstanceChanged?.Invoke(server);
+        }
+
+        /// <summary>
+        /// Clear the server instance (for UseCase pattern)
+        /// </summary>
+        internal static void ClearServerInstance()
+        {
+            mcpServer = null;
+            OnServerInstanceChanged?.Invoke(null);
+        }
+
         static McpServerController()
         {
             // Register cleanup for when Unity exits.
@@ -54,7 +72,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Starts the server.
+        /// Starts the server using ServerStartupUseCase pattern.
         /// </summary>
         /// <param name="port">
         /// The port number to bind to. Use -1 to fall back to the saved custom port
@@ -62,62 +80,20 @@ namespace io.github.hatayama.uLoopMCP
         /// </param>
         public static void StartServer(int port = -1)
         {
-            // Use saved port if no port specified
-            int actualPort = port == -1 ? McpEditorSettings.GetCustomPort() : port;
-
-            // Validate port before proceeding
-            if (!McpPortValidator.ValidatePort(actualPort, "for server startup"))
+            // Create UseCase instance (single-use pattern)
+            ServerStartupUseCase useCase = new(port);
+            
+            // Execute all startup steps with temporal cohesion
+            ServerStartupResult result = useCase.Execute();
+            
+            // UseCase instance is automatically discarded after this point
+            
+            // Handle result (no additional action needed for success case)
+            if (!result.IsSuccess)
             {
-                UnityEditor.EditorUtility.DisplayDialog(
-                    "Invalid Port",
-                    $"Port {actualPort} is not valid for server startup.\n\nPort must be 1024 or higher and not a reserved system port.",
-                    "OK"
-                );
+                // Failure already logged by UseCase - no additional action needed
                 return;
             }
-
-            // Find available port starting from the requested port
-            int availablePort = FindAvailablePort(actualPort);
-
-            // Show confirmation dialog if port was changed
-            if (availablePort != actualPort)
-            {
-                bool userConfirmed = UnityEditor.EditorUtility.DisplayDialog(
-                    "Port Conflict",
-                    $"Port {actualPort} is already in use.\n\nWould you like to use port {availablePort} instead?",
-                    "OK",
-                    "Cancel"
-                );
-
-                if (!userConfirmed)
-                {
-                    return;
-                }
-
-                // Automatically update all configured MCP editor settings with new port
-                McpPortChangeUpdater.UpdateAllConfigurationsForPortChange(availablePort, "Server port conflict resolution");
-            }
-
-            // Validate server configuration before starting
-            ValidateServerConfiguration(availablePort);
-
-            // Always stop the existing server (to release the port).
-            if (mcpServer != null)
-            {
-                StopServer();
-            }
-
-            mcpServer = new McpBridgeServer();
-            OnServerInstanceChanged?.Invoke(mcpServer);
-            mcpServer.StartServer(availablePort);
-
-            // Start new push notification session
-            PushNotificationSerializer.StartNewSession();
-
-            // Save the state to SessionState.
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            sessionManager.IsServerRunning = true;
-            sessionManager.ServerPort = availablePort;
         }
 
         /// <summary>
@@ -141,85 +117,23 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Processing before assembly reload.
+        /// Processing before assembly reload using GracefulShutdownUseCase pattern.
         /// </summary>
         private static void OnBeforeAssemblyReload()
         {
-            // Generate correlation ID for tracking this domain reload cycle
-            string correlationId = VibeLogger.GenerateCorrelationId();
-
-            // Set the domain reload start flag.
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            sessionManager.IsDomainReloadInProgress = true;
-
-            // Log server state before assembly reload
-            bool serverRunning = mcpServer?.IsRunning ?? false;
-
-            VibeLogger.LogInfo(
-                "domain_reload_start",
-                "Domain reload starting",
-                new
-                {
-                    server_running = serverRunning,
-                    server_port = mcpServer?.Port
-                },
-                correlationId
-            );
-
-            // If the server is running, save its state and stop it.
-            if (mcpServer?.IsRunning == true)
+            // Create UseCase instance (single-use pattern)
+            GracefulShutdownUseCase useCase = new(mcpServer);
+            
+            // Execute all shutdown steps with temporal cohesion
+            GracefulShutdownResult result = useCase.Execute();
+            
+            // UseCase instance is automatically discarded after this point
+            
+            // Handle failure case with exception
+            if (!result.IsSuccess)
             {
-                int portToSave = mcpServer.Port;
-
-                // Execute SessionState operations immediately (to ensure they are saved before a domain reload).
-                sessionManager.IsServerRunning = true;
-                sessionManager.ServerPort = portToSave;
-                sessionManager.IsAfterCompile = true; // Set the post-compilation flag.
-                sessionManager.IsReconnecting = true; // Set the reconnecting flag.
-                sessionManager.ShowReconnectingUI = true; // Set the UI display flag.
-                sessionManager.ShowPostCompileReconnectingUI = true; // Set the post-compile specific UI flag.
-
-                // Stop the server completely (using Dispose to ensure the TCP connection is released).
-                try
-                {
-                    VibeLogger.LogInfo(
-                        "domain_reload_server_stopping",
-                        "Stopping MCP server before domain reload",
-                        new { port = portToSave },
-                        correlationId
-                    );
-
-                    mcpServer.Dispose();
-                    mcpServer = null;
-                    OnServerInstanceChanged?.Invoke(null);
-
-                    VibeLogger.LogInfo(
-                        "domain_reload_server_stopped",
-                        "MCP server stopped successfully",
-                        new { tcp_port_released = true },
-                        correlationId
-                    );
-                }
-                catch (System.Exception ex)
-                {
-                    VibeLogger.LogException(
-                        "domain_reload_server_shutdown_error",
-                        ex,
-                        new
-                        {
-                            port = portToSave,
-                            server_was_running = true
-                        },
-                        correlationId,
-                        "Critical error during server shutdown before assembly reload. This may cause port conflicts on restart.",
-                        "Investigate server shutdown process and ensure proper TCP port release."
-                    );
-
-                    // Don't suppress this exception - server shutdown failure could leave ports locked
-                    // and cause startup issues after domain reload
-                    throw new System.InvalidOperationException(
-                        $"Failed to properly shutdown MCP server before assembly reload. This may cause port conflicts on restart.", ex);
-                }
+                // Re-throw exception to maintain existing behavior
+                throw new System.InvalidOperationException(result.ErrorMessage, result.Exception);
             }
         }
 
@@ -533,7 +447,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         /// <param name="startPort">The starting port number to check</param>
         /// <returns>The first available port number</returns>
-        private static int FindAvailablePort(int startPort)
+        internal static int FindAvailablePort(int startPort)
         {
             return NetworkUtility.FindAvailablePort(startPort);
         }
@@ -542,7 +456,7 @@ namespace io.github.hatayama.uLoopMCP
         /// Validates server configuration before starting
         /// Implements fail-fast behavior for invalid configurations
         /// </summary>
-        private static void ValidateServerConfiguration(int port)
+        internal static void ValidateServerConfiguration(int port)
         {
             // Validate port number using shared validator
             if (!McpPortValidator.ValidatePort(port, "for MCP server"))

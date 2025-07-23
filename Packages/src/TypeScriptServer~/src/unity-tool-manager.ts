@@ -225,7 +225,8 @@ export class UnityToolManager {
   }
 
   /**
-   * Safe version of refreshDynamicTools that prevents duplicate execution
+   * Safe version of refreshDynamicTools using ToolRefreshUseCase pattern
+   * Prevents duplicate execution and provides temporal cohesion
    */
   async refreshDynamicToolsSafe(sendNotification?: () => void): Promise<void> {
     if (this.isRefreshing) {
@@ -241,7 +242,33 @@ export class UnityToolManager {
         // refreshDynamicToolsSafe called
       }
 
-      await this.refreshDynamicTools(sendNotification);
+      // Import UseCase dynamically to avoid circular dependencies
+      const { ToolRefreshUseCase } = await import('./usecases/tool-refresh-use-case.js');
+      
+      // Create UseCase instance (single-use pattern)
+      const useCase = new ToolRefreshUseCase(
+        this.unityClient,
+        this.includeDevelopmentOnlyTools,
+        sendNotification,
+      );
+      
+      // Execute all refresh steps with temporal cohesion
+      const result = await useCase.execute();
+      
+      // UseCase instance is automatically discarded after this point
+      
+      // Handle the result by updating the tool cache if successful
+      if (result.isSuccess && result.reason === 'success') {
+        // The UseCase has already handled tool creation, notification, etc.
+        // We just need to re-run the full refresh to update our cache
+        await this.refreshDynamicTools(undefined); // Don't send notification again
+      }
+      
+      // Log result for debugging
+      if (!result.isSuccess) {
+        // Tool refresh UseCase failed but error already logged
+        // Continue with existing behavior (no exception thrown)
+      }
     } finally {
       this.isRefreshing = false;
     }
