@@ -8476,10 +8476,8 @@ var UnityToolManager = class {
 
 // src/mcp-client-compatibility.ts
 var McpClientCompatibility = class {
-  unityClient;
   clientName = DEFAULT_CLIENT_NAME;
-  constructor(unityClient) {
-    this.unityClient = unityClient;
+  constructor() {
   }
   /**
    * Set client name
@@ -8499,14 +8497,6 @@ var McpClientCompatibility = class {
    */
   getClientName() {
     return this.clientName;
-  }
-  /**
-   * Initialize client with name
-   * Only sends setClientName once during initialization - no automatic reconnect handling
-   */
-  async initializeClient(clientName) {
-    this.setClientName(clientName);
-    await this.unityClient.setClientName(this.clientName);
   }
 };
 
@@ -8802,14 +8792,235 @@ var package_default = {
   }
 };
 
+// src/client-initialization-use-case.ts
+var ClientInitializationUseCase = class {
+  constructor(unityClient, toolManager, connectionManager, pushNotificationManager, clientInfo) {
+    this.unityClient = unityClient;
+    this.toolManager = toolManager;
+    this.connectionManager = connectionManager;
+    this.pushNotificationManager = pushNotificationManager;
+    this.clientInfo = clientInfo;
+    this.correlationId = `init_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+  correlationId;
+  /**
+   * Execute complete client initialization process
+   * This method contains all initialization steps in temporal order
+   * Should be called only once per instance
+   */
+  async execute() {
+    const startTime = Date.now();
+    VibeLogger.logInfo(
+      "client_initialization_usecase_start",
+      `Starting client initialization for ${this.clientInfo.name}`,
+      {
+        client_name: this.clientInfo.name,
+        client_version: this.clientInfo.version
+      },
+      this.correlationId,
+      "UseCase pattern: Single-use initialization with temporal cohesion",
+      "Track this correlation ID for complete initialization flow"
+    );
+    try {
+      await this.waitForUnityConnection();
+      await this.registerClientWithUnity();
+      this.configurePushNotificationEndpoint();
+      this.initializeToolManager();
+      const tools = await this.retrieveUnityTools();
+      const result = this.buildInitializeResponseWithTools(tools);
+      const executionTime = Date.now() - startTime;
+      VibeLogger.logInfo(
+        "client_initialization_usecase_success",
+        `Client initialization completed successfully for ${this.clientInfo.name}`,
+        {
+          client_name: this.clientInfo.name,
+          tools_count: tools.length,
+          execution_time_ms: executionTime
+        },
+        this.correlationId,
+        "UseCase completed - instance should be discarded now"
+      );
+      return result;
+    } catch (error) {
+      const executionTime = Date.now() - startTime;
+      VibeLogger.logError(
+        "client_initialization_usecase_failure",
+        `Client initialization failed for ${this.clientInfo.name}`,
+        {
+          client_name: this.clientInfo.name,
+          error_message: error instanceof Error ? error.message : JSON.stringify(error),
+          execution_time_ms: executionTime
+        },
+        this.correlationId,
+        "UseCase failed - returning minimal response"
+      );
+      return this.buildInitializeResponse();
+    }
+  }
+  /**
+   * Step 1: Wait for Unity connection establishment
+   */
+  async waitForUnityConnection() {
+    VibeLogger.logDebug(
+      "client_initialization_step_1",
+      "Waiting for Unity connection",
+      { client_name: this.clientInfo.name },
+      this.correlationId,
+      "Step 1: Unity connection prerequisite"
+    );
+    await this.connectionManager.waitForUnityConnectionWithTimeout(1e4);
+    VibeLogger.logDebug(
+      "client_initialization_step_1_complete",
+      "Unity connection established",
+      { client_name: this.clientInfo.name },
+      this.correlationId,
+      "Step 1 complete: Ready for client registration"
+    );
+  }
+  /**
+   * Step 2: Register client with Unity (SINGLE setClientName call)
+   */
+  async registerClientWithUnity() {
+    VibeLogger.logDebug(
+      "client_initialization_step_2",
+      "Registering client with Unity",
+      { client_name: this.clientInfo.name },
+      this.correlationId,
+      "Step 2: Single setClientName call - no duplicates"
+    );
+    await this.unityClient.setClientName(this.clientInfo.name);
+    VibeLogger.logDebug(
+      "client_initialization_step_2_complete",
+      "Client registration completed",
+      { client_name: this.clientInfo.name },
+      this.correlationId,
+      "Step 2 complete: Client registered with Unity"
+    );
+  }
+  /**
+   * Step 3: Configure push notification endpoint
+   */
+  configurePushNotificationEndpoint() {
+    VibeLogger.logDebug(
+      "client_initialization_step_3",
+      "Configuring push notification endpoint",
+      { client_name: this.clientInfo.name },
+      this.correlationId,
+      "Step 3: Push notification setup"
+    );
+    const pushEndpoint = this.pushNotificationManager.getCurrentEndpoint();
+    if (pushEndpoint) {
+      this.unityClient.setPushNotificationEndpoint(pushEndpoint);
+      VibeLogger.logDebug(
+        "client_initialization_step_3_complete",
+        "Push notification endpoint configured",
+        {
+          client_name: this.clientInfo.name,
+          push_endpoint: pushEndpoint
+        },
+        this.correlationId,
+        "Step 3 complete: Push notifications ready"
+      );
+    } else {
+      VibeLogger.logWarning(
+        "client_initialization_step_3_no_endpoint",
+        "No push notification endpoint available",
+        { client_name: this.clientInfo.name },
+        this.correlationId,
+        "Step 3 warning: Push notifications not available"
+      );
+    }
+  }
+  /**
+   * Step 4: Initialize tool manager with client name
+   */
+  initializeToolManager() {
+    VibeLogger.logDebug(
+      "client_initialization_step_4",
+      "Initializing tool manager",
+      { client_name: this.clientInfo.name },
+      this.correlationId,
+      "Step 4: Tool manager setup"
+    );
+    this.toolManager.setClientName(this.clientInfo.name);
+    VibeLogger.logDebug(
+      "client_initialization_step_4_complete",
+      "Tool manager initialized",
+      { client_name: this.clientInfo.name },
+      this.correlationId,
+      "Step 4 complete: Tool manager ready"
+    );
+  }
+  /**
+   * Step 5: Retrieve Unity tools
+   */
+  async retrieveUnityTools() {
+    VibeLogger.logDebug(
+      "client_initialization_step_5",
+      "Retrieving Unity tools",
+      { client_name: this.clientInfo.name },
+      this.correlationId,
+      "Step 5: Tool retrieval from Unity"
+    );
+    const tools = await this.toolManager.getToolsFromUnity();
+    VibeLogger.logDebug(
+      "client_initialization_step_5_complete",
+      "Unity tools retrieved",
+      {
+        client_name: this.clientInfo.name,
+        tools_count: tools.length
+      },
+      this.correlationId,
+      "Step 5 complete: Tools ready for response"
+    );
+    return tools;
+  }
+  /**
+   * Build minimal initialize response (fallback)
+   */
+  buildInitializeResponse() {
+    return {
+      protocolVersion: MCP_PROTOCOL_VERSION,
+      capabilities: {
+        tools: {
+          listChanged: TOOLS_LIST_CHANGED_CAPABILITY
+        }
+      },
+      serverInfo: {
+        name: MCP_SERVER_NAME,
+        version: package_default.version
+      }
+    };
+  }
+  /**
+   * Build initialize response with tools (success case)
+   */
+  buildInitializeResponseWithTools(tools) {
+    return {
+      protocolVersion: MCP_PROTOCOL_VERSION,
+      capabilities: {
+        tools: {
+          listChanged: TOOLS_LIST_CHANGED_CAPABILITY
+        }
+      },
+      serverInfo: {
+        name: MCP_SERVER_NAME,
+        version: package_default.version
+      },
+      tools
+    };
+  }
+};
+
 // src/client-initialization-handler.ts
 var ClientInitializationHandler = class {
-  constructor(unityClient, toolManager, clientCompatibility, connectionManager, unityEventHandler) {
+  constructor(unityClient, toolManager, clientCompatibility, connectionManager, unityEventHandler, pushNotificationManager) {
     this.unityClient = unityClient;
     this.toolManager = toolManager;
     this.clientCompatibility = clientCompatibility;
     this.connectionManager = connectionManager;
     this.unityEventHandler = unityEventHandler;
+    this.pushNotificationManager = pushNotificationManager;
   }
   clientInfo = null;
   isUnityConnected = false;
@@ -8842,22 +9053,19 @@ var ClientInitializationHandler = class {
   }
   /**
    * Handle Unity connection establishment
+   * Note: setClientName is now handled by ClientInitializationUseCase - no duplicate calls
    */
   handleUnityConnection() {
     this.isUnityConnected = true;
-    if (this.clientInfo?.name) {
-      this.unityClient.setClientName(this.clientInfo.name).catch((error) => {
-      });
-    }
     VibeLogger.logInfo(
       "unity_connection_established_handler",
-      "Unity connection established - sending client name",
+      "Unity connection established - client registration handled by UseCase",
       {
         isUnityConnected: this.isUnityConnected,
         clientName: this.clientInfo?.name
       },
       void 0,
-      "Unity connection ready - setClientName will be sent now"
+      "Unity connection ready - setClientName handled by ClientInitializationUseCase"
     );
   }
   /**
@@ -8879,52 +9087,21 @@ var ClientInitializationHandler = class {
     return this.isUnityConnected;
   }
   /**
-   * Perform synchronous initialization for all clients
-   * All clients now use synchronous initialization for consistency and reliability
+   * Perform initialization using ClientInitializationUseCase
+   * UseCase pattern: create instance -> execute -> discard
    */
   async performInitialization() {
     if (!this.clientInfo) {
       return this.buildInitializeResponse();
     }
-    return await this.performSynchronousInitialization();
-  }
-  /**
-   * Synchronous initialization for all clients
-   * Waits for Unity connection and returns tools directly in initialize response
-   */
-  async performSynchronousInitialization() {
-    if (!this.clientInfo) {
-      return this.buildInitializeResponse();
-    }
-    try {
-      await this.clientCompatibility.initializeClient(this.clientInfo.name);
-      this.toolManager.setClientName(this.clientInfo.name);
-      await this.connectionManager.waitForUnityConnectionWithTimeout(1e4);
-      const tools = await this.toolManager.getToolsFromUnity();
-      VibeLogger.logInfo(
-        "mcp_sync_init_success",
-        "Synchronous initialization completed successfully",
-        {
-          client_name: this.clientInfo.name,
-          tools_count: tools.length
-        },
-        void 0,
-        "Synchronous initialization completed with Unity tools"
-      );
-      return this.buildInitializeResponseWithTools(tools);
-    } catch (error) {
-      VibeLogger.logError(
-        "mcp_unity_connection_timeout",
-        "Unity connection and tools timeout during synchronous initialization",
-        {
-          client_name: this.clientInfo.name,
-          error_message: error instanceof Error ? error.message : String(error)
-        },
-        void 0,
-        "Unity connection or tools retrieval timed out - check Unity MCP bridge status"
-      );
-      return this.buildInitializeResponse();
-    }
+    const useCase = new ClientInitializationUseCase(
+      this.unityClient,
+      this.toolManager,
+      this.connectionManager,
+      this.pushNotificationManager,
+      this.clientInfo
+    );
+    return await useCase.execute();
   }
   /**
    * Extract client information from initialize request
@@ -9487,7 +9664,7 @@ var UnityMcpServer = class {
     this.connectionManager = new UnityConnectionManager(this.unityClient);
     this.unityDiscovery = this.connectionManager.getUnityDiscovery();
     this.toolManager = new UnityToolManager(this.unityClient);
-    this.clientCompatibility = new McpClientCompatibility(this.unityClient);
+    this.clientCompatibility = new McpClientCompatibility();
     this.eventHandler = new UnityEventHandler(
       this.server,
       this.unityClient,
@@ -9516,7 +9693,8 @@ var UnityMcpServer = class {
       this.toolManager,
       this.clientCompatibility,
       this.connectionManager,
-      this.eventHandler
+      this.eventHandler,
+      this.pushNotificationManager
     );
     this.toolManager.setClientInitializationHandler(this.initializationHandler);
     this.connectionManager.setupReconnectionCallback(async () => {

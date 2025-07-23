@@ -340,7 +340,7 @@ export class UnityClient {
       'Client name detection process',
       'Debug empty client name issue - check stored vs env vs default',
     );
-    
+
     if (this.storedClientName) {
       return this.storedClientName;
     }

@@ -123,6 +123,9 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            UnityEngine.Debug.Log($"[uLoopMCP] AddConnectedTool called: {client.ClientName} ({client.Endpoint})");
+            UnityEngine.Debug.Log($"[uLoopMCP] Current connected tools: {string.Join(", ", _connectedTools.Select(t => $"{t.Name}({t.Endpoint})"))}");
+
             // Check if this specific endpoint is already registered
             bool alreadyExists = _connectedTools.Any(tool => 
                 tool.Name == client.ClientName && 
@@ -138,6 +141,12 @@ namespace io.github.hatayama.uLoopMCP
                 );
                 _connectedTools.Add(toolData);
                 InvalidateStoredToolsCache();
+                
+                UnityEngine.Debug.Log($"[uLoopMCP] Added new connected tool: {client.ClientName} ({client.Endpoint}). Total tools: {_connectedTools.Count}");
+            }
+            else
+            {
+                UnityEngine.Debug.Log($"[uLoopMCP] Tool already exists, skipping: {client.ClientName} ({client.Endpoint})");
             }
         }
 

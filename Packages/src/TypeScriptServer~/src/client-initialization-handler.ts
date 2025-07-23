@@ -4,6 +4,11 @@ import { UnityToolManager } from './unity-tool-manager.js';
 import { McpClientCompatibility } from './mcp-client-compatibility.js';
 import { UnityConnectionManager } from './unity-connection-manager.js';
 import { UnityEventHandler } from './unity-event-handler.js';
+import { UnityPushNotificationManager } from './unity-push-notification-manager.js';
+import {
+  ClientInitializationUseCase,
+  LLMToolInfo,
+} from './usecases/client-initialization-use-case.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 import {
   MCP_PROTOCOL_VERSION,
@@ -33,6 +38,7 @@ export class ClientInitializationHandler {
     private clientCompatibility: McpClientCompatibility,
     private connectionManager: UnityConnectionManager,
     private unityEventHandler: UnityEventHandler,
+    private pushNotificationManager: UnityPushNotificationManager,
   ) {}
 
   /**
@@ -68,27 +74,20 @@ export class ClientInitializationHandler {
 
   /**
    * Handle Unity connection establishment
+   * Note: setClientName is now handled by ClientInitializationUseCase - no duplicate calls
    */
   handleUnityConnection(): void {
     this.isUnityConnected = true;
 
-    // Send client name to Unity after connection is established
-    if (this.clientInfo?.name) {
-      // Use clientCompatibility to send the client name
-      this.unityClient.setClientName(this.clientInfo.name).catch(error => {
-        // Log error but don't block initialization
-      });
-    }
-
     VibeLogger.logInfo(
       'unity_connection_established_handler',
-      'Unity connection established - sending client name',
+      'Unity connection established - client registration handled by UseCase',
       {
         isUnityConnected: this.isUnityConnected,
         clientName: this.clientInfo?.name,
       },
       undefined,
-      'Unity connection ready - setClientName will be sent now',
+      'Unity connection ready - setClientName handled by ClientInitializationUseCase',
     );
   }
 
@@ -114,62 +113,27 @@ export class ClientInitializationHandler {
   }
 
   /**
-   * Perform synchronous initialization for all clients
-   * All clients now use synchronous initialization for consistency and reliability
+   * Perform initialization using ClientInitializationUseCase
+   * UseCase pattern: create instance -> execute -> discard
    */
   private async performInitialization(): Promise<InitializeResult> {
     if (!this.clientInfo) {
       return this.buildInitializeResponse();
     }
 
-    // All clients use synchronous initialization
-    return await this.performSynchronousInitialization();
-  }
+    // Create UseCase instance (single-use pattern)
+    const useCase = new ClientInitializationUseCase(
+      this.unityClient,
+      this.toolManager,
+      this.connectionManager,
+      this.pushNotificationManager,
+      this.clientInfo,
+    );
 
-  /**
-   * Synchronous initialization for all clients
-   * Waits for Unity connection and returns tools directly in initialize response
-   */
-  private async performSynchronousInitialization(): Promise<InitializeResult> {
-    if (!this.clientInfo) {
-      return this.buildInitializeResponse();
-    }
+    // Execute all initialization steps with temporal cohesion
+    return await useCase.execute();
 
-    try {
-      await this.clientCompatibility.initializeClient(this.clientInfo.name);
-      this.toolManager.setClientName(this.clientInfo.name);
-
-      // Wait for Unity connection first
-      await this.connectionManager.waitForUnityConnectionWithTimeout(10000);
-
-      // Now get tools after connection is established
-      const tools = await this.toolManager.getToolsFromUnity();
-
-      VibeLogger.logInfo(
-        'mcp_sync_init_success',
-        'Synchronous initialization completed successfully',
-        {
-          client_name: this.clientInfo.name,
-          tools_count: tools.length,
-        },
-        undefined,
-        'Synchronous initialization completed with Unity tools',
-      );
-
-      return this.buildInitializeResponseWithTools(tools);
-    } catch (error) {
-      VibeLogger.logError(
-        'mcp_unity_connection_timeout',
-        'Unity connection and tools timeout during synchronous initialization',
-        {
-          client_name: this.clientInfo.name,
-          error_message: error instanceof Error ? error.message : String(error),
-        },
-        undefined,
-        'Unity connection or tools retrieval timed out - check Unity MCP bridge status',
-      );
-      return this.buildInitializeResponse();
-    }
+    // UseCase instance is automatically discarded after this point
   }
 
   /**
@@ -236,9 +200,4 @@ export class ClientInitializationHandler {
       tools,
     };
   }
-}
-
-export interface LLMToolInfo {
-  name: string;
-  version: string;
 }

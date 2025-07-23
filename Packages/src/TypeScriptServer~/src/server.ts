@@ -97,7 +97,7 @@ class UnityMcpServer {
     this.toolManager = new UnityToolManager(this.unityClient);
 
     // Initialize MCP client compatibility manager
-    this.clientCompatibility = new McpClientCompatibility(this.unityClient);
+    this.clientCompatibility = new McpClientCompatibility();
 
     // Initialize Unity event handler
     this.eventHandler = new UnityEventHandler(
@@ -133,6 +133,7 @@ class UnityMcpServer {
       this.clientCompatibility,
       this.connectionManager,
       this.eventHandler,
+      this.pushNotificationManager,
     );
 
     // Set up cross-dependencies

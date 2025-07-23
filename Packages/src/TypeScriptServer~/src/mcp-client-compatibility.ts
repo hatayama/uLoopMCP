@@ -1,4 +1,3 @@
-import { UnityClient } from './unity-client.js';
 // Debug logging removed
 import { DEFAULT_CLIENT_NAME } from './constants.js';
 import { VibeLogger } from './utils/vibe-logger.js';
@@ -24,11 +23,10 @@ import { VibeLogger } from './utils/vibe-logger.js';
  * - Provides logging for debugging compatibility issues
  */
 export class McpClientCompatibility {
-  private unityClient: UnityClient;
   private clientName: string = DEFAULT_CLIENT_NAME;
 
-  constructor(unityClient: UnityClient) {
-    this.unityClient = unityClient;
+  constructor() {
+    // UnityClient dependency removed - setClientName now handled by ClientInitializationUseCase
   }
 
   /**
@@ -51,18 +49,5 @@ export class McpClientCompatibility {
    */
   getClientName(): string {
     return this.clientName;
-  }
-
-  /**
-   * Initialize client with name
-   * Only sends setClientName once during initialization - no automatic reconnect handling
-   */
-  async initializeClient(clientName: string): Promise<void> {
-    this.setClientName(clientName);
-
-    // Send client name to Unity once during initialization
-    // Note: Real reconnection handling should be managed at the application level,
-    // not automatically on every connection establishment
-    await this.unityClient.setClientName(this.clientName);
   }
 }
