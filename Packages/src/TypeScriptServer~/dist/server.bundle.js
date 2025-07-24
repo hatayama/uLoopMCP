@@ -8038,7 +8038,7 @@ var UnityToolManager = class {
    */
   async refreshDynamicTools(sendNotification) {
     try {
-      if (this.connectionManager) {
+      if (this.connectionManager && this.connectionManager.isConnected()) {
         const refreshToolsUseCase = new RefreshToolsUseCase(this.connectionManager, this);
         const result = await refreshToolsUseCase.execute({
           includeDevelopmentOnly: this.isDevelopment

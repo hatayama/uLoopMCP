@@ -183,7 +183,8 @@ export class UnityToolManager implements IToolService {
   async refreshDynamicTools(sendNotification?: () => void): Promise<void> {
     try {
       // Phase 3.2: Use RefreshToolsUseCase if connectionManager is available
-      if (this.connectionManager) {
+      // BUT avoid during connection establishment to prevent circular dependency
+      if (this.connectionManager && this.connectionManager.isConnected()) {
         const refreshToolsUseCase = new RefreshToolsUseCase(this.connectionManager, this);
 
         const result = await refreshToolsUseCase.execute({
