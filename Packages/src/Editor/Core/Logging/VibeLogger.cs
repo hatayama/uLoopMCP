@@ -234,10 +234,13 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             // Clean up old log files on first access only
-            if (!hasCleanedUpOnStartup)
+            lock (lockObject)
             {
-                CleanupOldLogFiles();
-                hasCleanedUpOnStartup = true;
+                if (!hasCleanedUpOnStartup)
+                {
+                    CleanupOldLogFiles();
+                    hasCleanedUpOnStartup = true;
+                }
             }
             
             string fileName = $"{LOG_FILE_PREFIX}_{DateTime.UtcNow:yyyyMMdd}.json";
