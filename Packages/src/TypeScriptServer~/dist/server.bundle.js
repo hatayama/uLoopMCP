@@ -5695,6 +5695,12 @@ var VibeLogger = class _VibeLogger {
   static MAX_MEMORY_LOGS = 1e3;
   static memoryLogs = [];
   static isDebugEnabled = process.env.MCP_DEBUG === "true";
+  // Performance optimization: Log buffering
+  static logBuffer = [];
+  static flushInterval = null;
+  static BUFFER_SIZE = 50;
+  static FLUSH_INTERVAL_MS = 1e3;
+  static isShuttingDown = false;
   /**
    * Log an info level message with structured context
    */
@@ -8085,9 +8091,11 @@ var ErrorConverter = class {
 var RefreshToolsUseCase = class {
   connectionService;
   toolManagementService;
-  constructor(connectionService, toolManagementService) {
+  toolQueryService;
+  constructor(connectionService, toolManagementService, toolQueryService) {
     this.connectionService = connectionService;
     this.toolManagementService = toolManagementService;
+    this.toolQueryService = toolQueryService;
   }
   /**
    * Execute the tool refresh workflow
@@ -8107,7 +8115,7 @@ var RefreshToolsUseCase = class {
     try {
       await this.ensureUnityConnection(correlationId);
       await this.refreshToolsFromUnity(correlationId);
-      const refreshedTools = this.toolManager.getAllTools();
+      const refreshedTools = this.toolQueryService.getAllTools();
       const response = {
         tools: refreshedTools,
         refreshedAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -8143,11 +8151,11 @@ var RefreshToolsUseCase = class {
         "Unity connection required for tool refresh after domain reload"
       );
       try {
-        await this.connectionService.waitForConnection(1e4);
+        await this.connectionService.ensureConnected(1e4);
       } catch (error) {
         const domainError = ErrorConverter.convertToDomainError(
           error,
-          "refresh_tools_connection_wait",
+          "refresh_tools_connection_ensure",
           correlationId
         );
         throw domainError;
@@ -8175,11 +8183,11 @@ var RefreshToolsUseCase = class {
         correlationId,
         "Fetching latest tool definitions from Unity after domain reload"
       );
-      await this.toolManagementService.initializeDynamicTools();
+      await this.toolManagementService.initializeTools();
       VibeLogger.logInfo(
         "refresh_tools_initialized",
         "Dynamic tools re-initialized successfully from Unity",
-        { tool_count: this.toolManagementService.getToolsCount() },
+        { tool_count: this.toolQueryService.getToolsCount() },
         correlationId,
         "Tool definitions updated from Unity after domain reload"
       );
