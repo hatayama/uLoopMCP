@@ -317,4 +317,3 @@ export class InitializeServerUseCase
     return this.createSuccessResponse([]);
   }
 }
-

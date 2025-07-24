@@ -105,7 +105,7 @@ export class ProcessNotificationUseCase
    * @param correlationId Correlation ID for logging
    */
   private validateNotificationMethod(method: string, correlationId: string): void {
-    const supportedMethods = Object.values(NOTIFICATION_METHODS) as string[];
+    const supportedMethods = Object.values(NOTIFICATION_METHODS);
 
     if (!supportedMethods.includes(method)) {
       VibeLogger.logWarning(
@@ -277,4 +277,3 @@ export class ProcessNotificationUseCase
     };
   }
 }
-

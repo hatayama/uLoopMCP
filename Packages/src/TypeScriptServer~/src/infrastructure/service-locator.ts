@@ -52,7 +52,7 @@ export class ServiceLocator {
   static register<T>(
     token: ServiceToken<T>,
     factory: () => T,
-    lifecycle: ServiceLifecycle = 'transient'
+    lifecycle: ServiceLifecycle = 'transient',
   ): void {
     this.services.set(token, { factory, lifecycle });
   }
@@ -67,7 +67,7 @@ export class ServiceLocator {
   static resolve<T>(token: ServiceToken<T>): T {
     // Circular dependency detection
     if (this.resolutionStack.has(token)) {
-      const stackArray = Array.from(this.resolutionStack).map(s => s.toString());
+      const stackArray = Array.from(this.resolutionStack).map((s) => s.toString());
       throw new ServiceResolutionError(
         `Circular dependency detected: ${stackArray.join(' -> ')} -> ${token.toString()}`,
         token.toString(),
@@ -115,7 +115,7 @@ export class ServiceLocator {
    * Primarily used for debugging
    */
   static getRegisteredServices(): string[] {
-    return Array.from(this.services.keys()).map(token => token.toString());
+    return Array.from(this.services.keys()).map((token) => token.toString());
   }
 
   /**
@@ -140,7 +140,7 @@ export class ServiceLocator {
     if (original) {
       this.originalServices.set(token, original);
     }
-    
+
     this.register(token, mockFactory, 'transient');
   }
 

@@ -48,17 +48,15 @@ describe('ErrorConverter Unit Tests', () => {
   describe('Infrastructure Error Conversion', () => {
     test('should convert UnityCommuncationError to ConnectionError', () => {
       // Arrange
-      const infraError = new UnityCommuncationError(
-        'Unity connection failed',
-        'localhost:8700',
-        { timeout: 5000 }
-      );
+      const infraError = new UnityCommuncationError('Unity connection failed', 'localhost:8700', {
+        timeout: 5000,
+      });
 
       // Act
       const result = ErrorConverter.convertToDomainError(
         infraError,
         'test_operation',
-        'test-correlation-id'
+        'test-correlation-id',
       );
 
       // Assert
@@ -71,23 +69,21 @@ describe('ErrorConverter Unit Tests', () => {
         'Infrastructure error during test_operation',
         expect.any(Object),
         'test-correlation-id',
-        expect.any(String)
+        expect.any(String),
       );
     });
 
     test('should convert ToolManagementError to ToolExecutionError', () => {
       // Arrange
-      const infraError = new ToolManagementError(
-        'Tool creation failed',
-        'test-tool',
-        { schema: 'invalid' }
-      );
+      const infraError = new ToolManagementError('Tool creation failed', 'test-tool', {
+        schema: 'invalid',
+      });
 
       // Act
       const result = ErrorConverter.convertToDomainError(
         infraError,
         'tool_management',
-        'tool-correlation-id'
+        'tool-correlation-id',
       );
 
       // Assert
@@ -99,17 +95,13 @@ describe('ErrorConverter Unit Tests', () => {
 
     test('should convert ServiceResolutionError to ValidationError', () => {
       // Arrange
-      const infraError = new ServiceResolutionError(
-        'Service not found',
-        'TEST_SERVICE_TOKEN',
-        ['TokenA', 'TokenB']
-      );
+      const infraError = new ServiceResolutionError('Service not found', 'TEST_SERVICE_TOKEN', [
+        'TokenA',
+        'TokenB',
+      ]);
 
       // Act
-      const result = ErrorConverter.convertToDomainError(
-        infraError,
-        'service_resolution'
-      );
+      const result = ErrorConverter.convertToDomainError(infraError, 'service_resolution');
 
       // Assert
       expect(result).toBeInstanceOf(ValidationError);
@@ -120,17 +112,10 @@ describe('ErrorConverter Unit Tests', () => {
 
     test('should convert NetworkError to DiscoveryError', () => {
       // Arrange
-      const infraError = new NetworkError(
-        'Port binding failed',
-        'localhost',
-        8700
-      );
+      const infraError = new NetworkError('Port binding failed', 'localhost', 8700);
 
       // Act
-      const result = ErrorConverter.convertToDomainError(
-        infraError,
-        'network_operation'
-      );
+      const result = ErrorConverter.convertToDomainError(infraError, 'network_operation');
 
       // Assert
       expect(result).toBeInstanceOf(DiscoveryError);
@@ -142,17 +127,12 @@ describe('ErrorConverter Unit Tests', () => {
 
     test('should convert McpProtocolError to ClientCompatibilityError', () => {
       // Arrange
-      const infraError = new McpProtocolError(
-        'Protocol version mismatch',
-        '2024-11-05',
-        { clientVersion: '2024-10-01' }
-      );
+      const infraError = new McpProtocolError('Protocol version mismatch', '2024-11-05', {
+        clientVersion: '2024-10-01',
+      });
 
       // Act
-      const result = ErrorConverter.convertToDomainError(
-        infraError,
-        'protocol_validation'
-      );
+      const result = ErrorConverter.convertToDomainError(infraError, 'protocol_validation');
 
       // Assert
       expect(result).toBeInstanceOf(ClientCompatibilityError);
@@ -204,7 +184,7 @@ describe('ErrorConverter Unit Tests', () => {
       // Act
       const result = ErrorConverter.convertToDomainError(
         'String error message',
-        'string_error_test'
+        'string_error_test',
       );
 
       // Assert
@@ -227,10 +207,10 @@ describe('ErrorConverter Unit Tests', () => {
         expect.any(String),
         expect.objectContaining({
           error_value: objectError,
-          error_type: 'object'
+          error_type: 'object',
         }),
         undefined,
-        expect.any(String)
+        expect.any(String),
       );
     });
 
@@ -296,7 +276,7 @@ describe('ErrorConverter Unit Tests', () => {
         'Test error',
         'test-endpoint',
         { key: 'value' },
-        new Error('Original cause')
+        new Error('Original cause'),
       );
 
       // Act
@@ -311,10 +291,10 @@ describe('ErrorConverter Unit Tests', () => {
           category: 'UNITY_COMMUNICATION',
           technicalDetails: expect.any(Object),
           originalError: 'Original cause',
-          stack: expect.any(String)
+          stack: expect.any(String),
         }),
         'log-correlation',
-        'Error Converter logging technical details before domain conversion'
+        'Error Converter logging technical details before domain conversion',
       );
     });
   });

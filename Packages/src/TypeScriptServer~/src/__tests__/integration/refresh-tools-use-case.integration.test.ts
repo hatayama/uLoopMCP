@@ -47,7 +47,7 @@ describe('RefreshToolsUseCase Integration Tests', () => {
   beforeEach(() => {
     // Reset all mocks
     jest.clearAllMocks();
-    
+
     // Create UseCase instance with mocked dependencies
     refreshToolsUseCase = new RefreshToolsUseCase(
       mockConnectionService,
@@ -60,14 +60,14 @@ describe('RefreshToolsUseCase Integration Tests', () => {
     test('should refresh tools successfully when Unity is connected', async () => {
       // Arrange
       const request: RefreshToolsRequest = {
-        includeDevelopmentOnly: false
+        includeDevelopmentOnly: false,
       };
 
       mockConnectionService.isConnected.mockReturnValue(true);
       mockToolManagementService.initializeTools.mockResolvedValue();
       mockToolQueryService.getAllTools.mockReturnValue([
         { name: 'tool1', description: 'Test tool 1' },
-        { name: 'tool2', description: 'Test tool 2' }
+        { name: 'tool2', description: 'Test tool 2' },
       ]);
 
       // Act
@@ -79,7 +79,7 @@ describe('RefreshToolsUseCase Integration Tests', () => {
       expect(result.refreshedAt).toBeDefined();
       expect(Array.isArray(result.tools)).toBe(true);
       expect(result.tools).toHaveLength(2);
-      
+
       // Verify workflow sequence
       expect(mockConnectionService.isConnected).toHaveBeenCalled();
       expect(mockToolManagementService.initializeTools).toHaveBeenCalled();
@@ -89,14 +89,14 @@ describe('RefreshToolsUseCase Integration Tests', () => {
     test('should establish connection when Unity is not connected', async () => {
       // Arrange
       const request: RefreshToolsRequest = {
-        includeDevelopmentOnly: true
+        includeDevelopmentOnly: true,
       };
 
       mockConnectionService.isConnected.mockReturnValue(false);
       mockConnectionService.ensureConnected.mockResolvedValue();
       mockToolManagementService.initializeTools.mockResolvedValue();
       mockToolQueryService.getAllTools.mockReturnValue([
-        { name: 'tool1', description: 'Test tool 1' }
+        { name: 'tool1', description: 'Test tool 1' },
       ]);
 
       // Act
@@ -115,12 +115,12 @@ describe('RefreshToolsUseCase Integration Tests', () => {
     test('should return empty tools list when connection cannot be established', async () => {
       // Arrange
       const request: RefreshToolsRequest = {
-        includeDevelopmentOnly: false
+        includeDevelopmentOnly: false,
       };
 
       mockConnectionService.isConnected.mockReturnValue(false);
       mockConnectionService.ensureConnected.mockRejectedValue(
-        new Error('Connection timeout after 10 seconds')
+        new Error('Connection timeout after 10 seconds'),
       );
 
       // Act
@@ -138,12 +138,12 @@ describe('RefreshToolsUseCase Integration Tests', () => {
     test('should return empty tools list when tool initialization fails', async () => {
       // Arrange
       const request: RefreshToolsRequest = {
-        includeDevelopmentOnly: false
+        includeDevelopmentOnly: false,
       };
 
       mockConnectionService.isConnected.mockReturnValue(true);
       mockToolManagementService.initializeTools.mockRejectedValue(
-        new Error('Unity communication failed')
+        new Error('Unity communication failed'),
       );
 
       // Act
@@ -160,20 +160,20 @@ describe('RefreshToolsUseCase Integration Tests', () => {
     test('should execute workflow steps in correct order', async () => {
       // Arrange
       const request: RefreshToolsRequest = {
-        includeDevelopmentOnly: false
+        includeDevelopmentOnly: false,
       };
 
       const callOrder: string[] = [];
-      
+
       mockConnectionService.isConnected.mockImplementation(() => {
         callOrder.push('isConnected');
         return true;
       });
-      
+
       mockToolManagementService.initializeTools.mockImplementation(async () => {
         callOrder.push('initializeTools');
       });
-      
+
       mockToolQueryService.getAllTools.mockImplementation(() => {
         callOrder.push('getAllTools');
         return [];
@@ -183,34 +183,30 @@ describe('RefreshToolsUseCase Integration Tests', () => {
       await refreshToolsUseCase.execute(request);
 
       // Assert - Verify correct execution order
-      expect(callOrder).toEqual([
-        'isConnected',
-        'initializeTools',
-        'getAllTools'
-      ]);
+      expect(callOrder).toEqual(['isConnected', 'initializeTools', 'getAllTools']);
     });
 
     test('should handle connection retry workflow correctly', async () => {
       // Arrange
       const request: RefreshToolsRequest = {
-        includeDevelopmentOnly: true
+        includeDevelopmentOnly: true,
       };
 
       const callOrder: string[] = [];
-      
+
       mockConnectionService.isConnected.mockImplementation(() => {
         callOrder.push('isConnected');
         return false;
       });
-      
+
       mockConnectionService.ensureConnected.mockImplementation(async () => {
         callOrder.push('ensureConnected');
       });
-      
+
       mockToolManagementService.initializeTools.mockImplementation(async () => {
         callOrder.push('initializeTools');
       });
-      
+
       mockToolQueryService.getAllTools.mockImplementation(() => {
         callOrder.push('getAllTools');
         return [];
@@ -224,7 +220,7 @@ describe('RefreshToolsUseCase Integration Tests', () => {
         'isConnected',
         'ensureConnected',
         'initializeTools',
-        'getAllTools'
+        'getAllTools',
       ]);
     });
   });
@@ -233,7 +229,7 @@ describe('RefreshToolsUseCase Integration Tests', () => {
     test('should return valid RefreshToolsResponse structure', async () => {
       // Arrange
       const request: RefreshToolsRequest = {
-        includeDevelopmentOnly: false
+        includeDevelopmentOnly: false,
       };
 
       mockConnectionService.isConnected.mockReturnValue(true);
@@ -248,7 +244,7 @@ describe('RefreshToolsUseCase Integration Tests', () => {
       expect(result).toHaveProperty('refreshedAt');
       expect(Array.isArray(result.tools)).toBe(true);
       expect(typeof result.refreshedAt).toBe('string');
-      
+
       // Validate ISO date string format
       expect(() => new Date(result.refreshedAt)).not.toThrow();
       expect(mockToolQueryService.getAllTools).toHaveBeenCalled();

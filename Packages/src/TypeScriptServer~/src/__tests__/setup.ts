@@ -20,7 +20,7 @@ jest.mock('../utils/vibe-logger.js', () => ({
 jest.mock('../tools/dynamic-unity-command-tool.js', () => ({
   DynamicUnityCommandTool: jest.fn().mockImplementation(() => ({
     execute: jest.fn().mockResolvedValue({
-      content: [{ type: 'text', text: 'Mock tool execution result' }]
+      content: [{ type: 'text', text: 'Mock tool execution result' }],
     }),
     name: 'mock-tool',
     description: 'Mock tool for testing',
@@ -34,7 +34,7 @@ const originalConsoleError = console.error;
 beforeEach(() => {
   // Reset all mocks before each test
   jest.clearAllMocks();
-  
+
   // Suppress console noise during tests (can be overridden in individual tests)
   console.warn = jest.fn();
   console.error = jest.fn();

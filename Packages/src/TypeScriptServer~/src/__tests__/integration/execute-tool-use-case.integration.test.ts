@@ -41,12 +41,9 @@ describe('ExecuteToolUseCase Integration Tests', () => {
   beforeEach(() => {
     // Reset all mocks
     jest.clearAllMocks();
-    
+
     // Create UseCase instance with mocked dependencies
-    executeToolUseCase = new ExecuteToolUseCase(
-      mockConnectionService,
-      mockToolQueryService,
-    );
+    executeToolUseCase = new ExecuteToolUseCase(mockConnectionService, mockToolQueryService);
   });
 
   describe('Successful tool execution workflow', () => {
@@ -58,18 +55,18 @@ describe('ExecuteToolUseCase Integration Tests', () => {
         inputSchema: {
           type: 'object',
           properties: {
-            message: { type: 'string' }
-          }
+            message: { type: 'string' },
+          },
         },
         execute: jest.fn().mockResolvedValue({
           content: [{ type: 'text', text: 'Tool executed successfully' }],
-          isError: false
-        })
+          isError: false,
+        }),
       } as unknown as DynamicUnityCommandTool;
 
       const request: ExecuteToolRequest = {
         toolName: 'test-tool',
-        arguments: { message: 'Hello World' }
+        arguments: { message: 'Hello World' },
       };
 
       // Mock successful flow
@@ -88,7 +85,7 @@ describe('ExecuteToolUseCase Integration Tests', () => {
       expect(mockConnectionService.isConnected).toHaveBeenCalled();
       expect(mockToolQueryService.hasTool).toHaveBeenCalledWith('test-tool');
       expect(mockToolQueryService.getTool).toHaveBeenCalledWith('test-tool');
-      expect((mockDynamicTool.execute as jest.Mock)).toHaveBeenCalledWith({ message: 'Hello World' });
+      expect(mockDynamicTool.execute as jest.Mock).toHaveBeenCalledWith({ message: 'Hello World' });
     });
   });
 
@@ -97,17 +94,15 @@ describe('ExecuteToolUseCase Integration Tests', () => {
       // Arrange
       const request: ExecuteToolRequest = {
         toolName: 'test-tool',
-        arguments: {}
+        arguments: {},
       };
 
       mockConnectionService.isConnected.mockReturnValue(false);
-      mockConnectionService.ensureConnected.mockRejectedValue(
-        new Error('Connection timeout')
-      );
+      mockConnectionService.ensureConnected.mockRejectedValue(new Error('Connection timeout'));
 
       // Act & Assert
       const result = await executeToolUseCase.execute(request);
-      
+
       expect(result).toBeDefined();
       expect(result.isError).toBe(true);
       expect(mockConnectionService.ensureConnected).toHaveBeenCalled();
@@ -119,7 +114,7 @@ describe('ExecuteToolUseCase Integration Tests', () => {
       // Arrange
       const request: ExecuteToolRequest = {
         toolName: 'non-existent-tool',
-        arguments: {}
+        arguments: {},
       };
 
       mockConnectionService.isConnected.mockReturnValue(true);
@@ -127,7 +122,7 @@ describe('ExecuteToolUseCase Integration Tests', () => {
 
       // Act
       const result = await executeToolUseCase.execute(request);
-      
+
       // Assert - ExecuteToolUseCase returns error response instead of throwing
       expect(result).toBeDefined();
       expect(result.isError).toBe(true);
@@ -139,7 +134,7 @@ describe('ExecuteToolUseCase Integration Tests', () => {
       // Arrange
       const request: ExecuteToolRequest = {
         toolName: 'test-tool',
-        arguments: {}
+        arguments: {},
       };
 
       mockConnectionService.isConnected.mockReturnValue(true);
@@ -148,7 +143,7 @@ describe('ExecuteToolUseCase Integration Tests', () => {
 
       // Act
       const result = await executeToolUseCase.execute(request);
-      
+
       // Assert - ExecuteToolUseCase returns error response instead of throwing
       expect(result).toBeDefined();
       expect(result.isError).toBe(true);
@@ -161,13 +156,11 @@ describe('ExecuteToolUseCase Integration Tests', () => {
       // Arrange
       const request: ExecuteToolRequest = {
         toolName: 'test-tool',
-        arguments: {}
+        arguments: {},
       };
 
       mockConnectionService.isConnected.mockReturnValue(false);
-      mockConnectionService.ensureConnected.mockRejectedValue(
-        new Error('Network error')
-      );
+      mockConnectionService.ensureConnected.mockRejectedValue(new Error('Network error'));
 
       // Act
       const result = await executeToolUseCase.execute(request);
@@ -185,7 +178,7 @@ describe('ExecuteToolUseCase Integration Tests', () => {
       // Arrange
       const request: ExecuteToolRequest = {
         toolName: 'test-tool',
-        arguments: {}
+        arguments: {},
       };
 
       const mockDynamicTool = {
@@ -193,8 +186,8 @@ describe('ExecuteToolUseCase Integration Tests', () => {
         description: 'Test tool',
         execute: jest.fn().mockResolvedValue({
           content: [{ type: 'text', text: 'Test result' }],
-          isError: false
-        })
+          isError: false,
+        }),
       } as unknown as DynamicUnityCommandTool;
 
       mockConnectionService.isConnected.mockReturnValue(true);
@@ -208,7 +201,7 @@ describe('ExecuteToolUseCase Integration Tests', () => {
       expect(mockConnectionService.isConnected).toHaveBeenCalled();
       expect(mockToolQueryService.hasTool).toHaveBeenCalled();
       expect(mockToolQueryService.getTool).toHaveBeenCalled();
-      
+
       // Verify no unexpected method calls
       expect(mockToolQueryService.getAllTools).not.toHaveBeenCalled();
       expect(mockToolQueryService.getToolsCount).not.toHaveBeenCalled();

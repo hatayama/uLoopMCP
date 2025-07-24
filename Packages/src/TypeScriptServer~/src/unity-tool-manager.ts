@@ -102,7 +102,7 @@ export class UnityToolManager
       if (error instanceof UnityCommuncationError) {
         throw error; // Re-throw infrastructure errors
       }
-      
+
       throw new UnityCommuncationError(
         'Failed to retrieve tools from Unity',
         'Unity Editor tools endpoint',
@@ -135,7 +135,7 @@ export class UnityToolManager
       if (error instanceof UnityCommuncationError) {
         throw error; // Re-throw infrastructure errors
       }
-      
+
       throw new ToolManagementError(
         'Failed to initialize dynamic tools',
         undefined,

@@ -94,56 +94,40 @@ export class ErrorConverter {
     // カテゴリに基づいてDomainErrorに変換
     switch (error.category) {
       case 'UNITY_COMMUNICATION':
-        return new ConnectionError(
-          `Unity communication failed: ${error.message}`,
-          { 
-            original_category: error.category,
-            unity_endpoint: (error as UnityCommuncationError).unityEndpoint,
-          },
-        );
+        return new ConnectionError(`Unity communication failed: ${error.message}`, {
+          original_category: error.category,
+          unity_endpoint: (error as UnityCommuncationError).unityEndpoint,
+        });
 
       case 'TOOL_MANAGEMENT':
-        return new ToolExecutionError(
-          `Tool management failed: ${error.message}`,
-          { 
-            original_category: error.category,
-            tool_name: (error as ToolManagementError).toolName,
-          },
-        );
+        return new ToolExecutionError(`Tool management failed: ${error.message}`, {
+          original_category: error.category,
+          tool_name: (error as ToolManagementError).toolName,
+        });
 
       case 'SERVICE_RESOLUTION':
-        return new ValidationError(
-          `Service resolution failed: ${error.message}`,
-          { 
-            original_category: error.category,
-            service_token: (error as ServiceResolutionError).serviceToken,
-          },
-        );
+        return new ValidationError(`Service resolution failed: ${error.message}`, {
+          original_category: error.category,
+          service_token: (error as ServiceResolutionError).serviceToken,
+        });
 
       case 'NETWORK':
-        return new DiscoveryError(
-          `Network operation failed: ${error.message}`,
-          { 
-            original_category: error.category,
-            endpoint: (error as NetworkError).endpoint,
-            port: (error as NetworkError).port,
-          },
-        );
+        return new DiscoveryError(`Network operation failed: ${error.message}`, {
+          original_category: error.category,
+          endpoint: (error as NetworkError).endpoint,
+          port: (error as NetworkError).port,
+        });
 
       case 'MCP_PROTOCOL':
-        return new ClientCompatibilityError(
-          `MCP protocol error: ${error.message}`,
-          { 
-            original_category: error.category,
-            protocol_version: (error as McpProtocolError).protocolVersion,
-          },
-        );
+        return new ClientCompatibilityError(`MCP protocol error: ${error.message}`, {
+          original_category: error.category,
+          protocol_version: (error as McpProtocolError).protocolVersion,
+        });
 
       default:
-        return new ToolExecutionError(
-          `Infrastructure error: ${error.message}`,
-          { original_category: error.category },
-        );
+        return new ToolExecutionError(`Infrastructure error: ${error.message}`, {
+          original_category: error.category,
+        });
     }
   }
 
@@ -158,7 +142,7 @@ export class ErrorConverter {
     VibeLogger.logError(
       `${operation}_generic_error`,
       `Generic error during ${operation}`,
-      { 
+      {
         error_name: error.name,
         error_message: error.message,
         stack: error.stack,
@@ -169,19 +153,19 @@ export class ErrorConverter {
 
     // メッセージから推測してエラー種別を決定
     const message = error.message.toLowerCase();
-    
+
     if (message.includes('connection') || message.includes('connect')) {
       return new ConnectionError(`Connection error: ${error.message}`);
     }
-    
+
     if (message.includes('tool') || message.includes('execute')) {
       return new ToolExecutionError(`Tool execution error: ${error.message}`);
     }
-    
+
     if (message.includes('validation') || message.includes('invalid')) {
       return new ValidationError(`Validation error: ${error.message}`);
     }
-    
+
     if (message.includes('discovery') || message.includes('network')) {
       return new DiscoveryError(`Discovery error: ${error.message}`);
     }
@@ -199,7 +183,7 @@ export class ErrorConverter {
     correlationId?: string,
   ): DomainError {
     const errorString = typeof error === 'string' ? error : JSON.stringify(error);
-    
+
     VibeLogger.logError(
       `${operation}_unknown_error`,
       `Unknown error type during ${operation}`,
@@ -222,14 +206,14 @@ export class ErrorConverter {
       case 'CONNECTION_ERROR':
       case 'DISCOVERY_ERROR':
         return true; // 接続・発見エラーは再試行可能
-      
+
       case 'VALIDATION_ERROR':
       case 'CLIENT_COMPATIBILITY_ERROR':
         return false; // 検証・互換性エラーは回復不可能
-      
+
       case 'TOOL_EXECUTION_ERROR':
         return true; // ツール実行エラーは状況によって再試行可能
-      
+
       default:
         return false; // 不明なエラーは安全のため回復不可能とする
     }

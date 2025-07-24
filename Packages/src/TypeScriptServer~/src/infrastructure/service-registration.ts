@@ -99,7 +99,11 @@ export function registerServices(): void {
     const discoveryService = ServiceLocator.resolve<IDiscoveryService>(
       ServiceTokens.DISCOVERY_APP_SERVICE,
     );
-    return new HandleConnectionLostUseCase(connectionService, toolManagementService, discoveryService);
+    return new HandleConnectionLostUseCase(
+      connectionService,
+      toolManagementService,
+      discoveryService,
+    );
   });
 
   ServiceLocator.register(ServiceTokens.PROCESS_NOTIFICATION_USE_CASE, () => {

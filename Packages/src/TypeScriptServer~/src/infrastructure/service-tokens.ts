@@ -62,13 +62,13 @@ export type ServiceTokenMap = {
   [ServiceTokens.EVENT_APP_SERVICE]: any;
   [ServiceTokens.MESSAGE_APP_SERVICE]: any;
   [ServiceTokens.DISCOVERY_APP_SERVICE]: any;
-  
+
   [ServiceTokens.EXECUTE_TOOL_USE_CASE]: any;
   [ServiceTokens.REFRESH_TOOLS_USE_CASE]: any;
   [ServiceTokens.INITIALIZE_SERVER_USE_CASE]: any;
   [ServiceTokens.HANDLE_CONNECTION_LOST_USE_CASE]: any;
   [ServiceTokens.PROCESS_NOTIFICATION_USE_CASE]: any;
-  
+
   [ServiceTokens.UNITY_CLIENT]: any;
   [ServiceTokens.UNITY_CONNECTION_MANAGER]: any;
   [ServiceTokens.UNITY_TOOL_MANAGER]: any;

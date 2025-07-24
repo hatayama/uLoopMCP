@@ -43,7 +43,7 @@ export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, Refresh
   constructor(
     connectionService: IConnectionService,
     toolManagementService: IToolManagementService,
-    toolQueryService: IToolQueryService
+    toolQueryService: IToolQueryService,
   ) {
     this.connectionService = connectionService;
     this.toolManagementService = toolManagementService;
@@ -169,7 +169,7 @@ export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, Refresh
         'refresh_tools_initialization',
         correlationId,
       );
-      
+
       throw domainError;
     }
   }
@@ -208,4 +208,3 @@ export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, Refresh
     };
   }
 }
-

@@ -63,6 +63,13 @@ export class VibeLogger {
   private static memoryLogs: VibeLogEntry[] = [];
   private static isDebugEnabled = process.env.MCP_DEBUG === 'true';
 
+  // Performance optimization: Log buffering
+  private static logBuffer: VibeLogEntry[] = [];
+  private static flushInterval: NodeJS.Timeout | null = null;
+  private static readonly BUFFER_SIZE = 50;
+  private static readonly FLUSH_INTERVAL_MS = 1000;
+  private static isShuttingDown = false;
+
   /**
    * Log an info level message with structured context
    */
@@ -264,20 +271,8 @@ export class VibeLogger {
       VibeLogger.memoryLogs.shift();
     }
 
-    // Save to file (fire and forget to avoid blocking)
-    VibeLogger.saveLogToFile(logEntry).catch((error) => {
-      // File logging failed - write to emergency log instead of console
-      // Critical: No console output to avoid MCP protocol interference
-      VibeLogger.writeEmergencyLog({
-        timestamp: VibeLogger.formatTimestamp(),
-        level: 'EMERGENCY',
-        message: 'VibeLogger saveLogToFile failed',
-        original_error: error instanceof Error ? error.message : String(error),
-        original_log_entry: logEntry,
-      });
-    });
-
-    // VibeLogger is designed for file output only - console output removed to prevent MCP protocol interference
+    // Performance optimization: Use buffering to reduce file I/O
+    VibeLogger.addToBuffer(logEntry);
   }
 
   /**
@@ -457,7 +452,79 @@ export class VibeLogger {
   }
 
   /**
+   * Add log entry to buffer and trigger flush if needed
+   */
+  private static addToBuffer(logEntry: VibeLogEntry): void {
+    VibeLogger.logBuffer.push(logEntry);
+
+    // Initialize flush interval if not already running
+    if (!VibeLogger.flushInterval && !VibeLogger.isShuttingDown) {
+      VibeLogger.flushInterval = setInterval(() => {
+        void VibeLogger.flushBuffer();
+      }, VibeLogger.FLUSH_INTERVAL_MS);
+    }
+
+    // Immediate flush if buffer is full
+    if (VibeLogger.logBuffer.length >= VibeLogger.BUFFER_SIZE) {
+      void VibeLogger.flushBuffer();
+    }
+  }
+
+  /**
+   * Flush buffered logs to file
+   */
+  private static async flushBuffer(): Promise<void> {
+    if (VibeLogger.logBuffer.length === 0) {
+      return;
+    }
+
+    // Take snapshot of buffer and clear it immediately to prevent blocking
+    const logsToFlush = [...VibeLogger.logBuffer];
+    VibeLogger.logBuffer = [];
+
+    try {
+      await VibeLogger.saveBufferedLogsToFile(logsToFlush);
+    } catch (error) {
+      // If flush fails, try fallback logging for each entry
+      for (const logEntry of logsToFlush) {
+        await VibeLogger.tryFallbackLogging(logEntry, error);
+      }
+    }
+  }
+
+  /**
+   * Save buffered logs to file with retry mechanism
+   */
+  private static async saveBufferedLogsToFile(logs: VibeLogEntry[]): Promise<void> {
+    const filePath = VibeLogger.prepareLogFilePath();
+
+    // Check file size and rotate if necessary
+    VibeLogger.rotateLogFileIfNeeded(filePath);
+
+    // Batch write all logs at once
+    const jsonLogs = logs.map((log) => JSON.stringify(log)).join('\n') + '\n';
+    await VibeLogger.writeLogWithRetry(filePath, jsonLogs);
+  }
+
+  /**
+   * Force flush all buffered logs and stop flush interval
+   */
+  static async forceFlush(): Promise<void> {
+    VibeLogger.isShuttingDown = true;
+
+    // Stop the interval timer
+    if (VibeLogger.flushInterval) {
+      clearInterval(VibeLogger.flushInterval);
+      VibeLogger.flushInterval = null;
+    }
+
+    // Flush any remaining logs
+    await VibeLogger.flushBuffer();
+  }
+
+  /**
    * Save log entry to file with retry mechanism for concurrent access
+   * @deprecated Use buffering system instead for better performance
    */
   private static async saveLogToFile(logEntry: VibeLogEntry): Promise<void> {
     try {

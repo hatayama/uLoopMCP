@@ -6,7 +6,7 @@
  *
  * This model represents the core business concept of a "Tool" in our domain,
  * completely independent of any external framework or library (like MCP SDK).
- * 
+ *
  * Key principles:
  * - No imports from external libraries
  * - Pure business logic representation

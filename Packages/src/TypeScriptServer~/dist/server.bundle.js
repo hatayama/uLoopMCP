@@ -5827,15 +5827,7 @@ var VibeLogger = class _VibeLogger {
     if (_VibeLogger.memoryLogs.length > _VibeLogger.MAX_MEMORY_LOGS) {
       _VibeLogger.memoryLogs.shift();
     }
-    _VibeLogger.saveLogToFile(logEntry).catch((error) => {
-      _VibeLogger.writeEmergencyLog({
-        timestamp: _VibeLogger.formatTimestamp(),
-        level: "EMERGENCY",
-        message: "VibeLogger saveLogToFile failed",
-        original_error: error instanceof Error ? error.message : String(error),
-        original_log_entry: logEntry
-      });
-    });
+    _VibeLogger.addToBuffer(logEntry);
   }
   /**
    * Validate file name to prevent dangerous characters
@@ -5962,7 +5954,59 @@ var VibeLogger = class _VibeLogger {
     }
   }
   /**
+   * Add log entry to buffer and trigger flush if needed
+   */
+  static addToBuffer(logEntry) {
+    _VibeLogger.logBuffer.push(logEntry);
+    if (!_VibeLogger.flushInterval && !_VibeLogger.isShuttingDown) {
+      _VibeLogger.flushInterval = setInterval(() => {
+        void _VibeLogger.flushBuffer();
+      }, _VibeLogger.FLUSH_INTERVAL_MS);
+    }
+    if (_VibeLogger.logBuffer.length >= _VibeLogger.BUFFER_SIZE) {
+      void _VibeLogger.flushBuffer();
+    }
+  }
+  /**
+   * Flush buffered logs to file
+   */
+  static async flushBuffer() {
+    if (_VibeLogger.logBuffer.length === 0) {
+      return;
+    }
+    const logsToFlush = [..._VibeLogger.logBuffer];
+    _VibeLogger.logBuffer = [];
+    try {
+      await _VibeLogger.saveBufferedLogsToFile(logsToFlush);
+    } catch (error) {
+      for (const logEntry of logsToFlush) {
+        await _VibeLogger.tryFallbackLogging(logEntry, error);
+      }
+    }
+  }
+  /**
+   * Save buffered logs to file with retry mechanism
+   */
+  static async saveBufferedLogsToFile(logs) {
+    const filePath = _VibeLogger.prepareLogFilePath();
+    _VibeLogger.rotateLogFileIfNeeded(filePath);
+    const jsonLogs = logs.map((log) => JSON.stringify(log)).join("\n") + "\n";
+    await _VibeLogger.writeLogWithRetry(filePath, jsonLogs);
+  }
+  /**
+   * Force flush all buffered logs and stop flush interval
+   */
+  static async forceFlush() {
+    _VibeLogger.isShuttingDown = true;
+    if (_VibeLogger.flushInterval) {
+      clearInterval(_VibeLogger.flushInterval);
+      _VibeLogger.flushInterval = null;
+    }
+    await _VibeLogger.flushBuffer();
+  }
+  /**
    * Save log entry to file with retry mechanism for concurrent access
+   * @deprecated Use buffering system instead for better performance
    */
   static async saveLogToFile(logEntry) {
     try {
@@ -7971,51 +8015,35 @@ var ErrorConverter = class {
     );
     switch (error.category) {
       case "UNITY_COMMUNICATION":
-        return new ConnectionError(
-          `Unity communication failed: ${error.message}`,
-          {
-            original_category: error.category,
-            unity_endpoint: error.unityEndpoint
-          }
-        );
+        return new ConnectionError(`Unity communication failed: ${error.message}`, {
+          original_category: error.category,
+          unity_endpoint: error.unityEndpoint
+        });
       case "TOOL_MANAGEMENT":
-        return new ToolExecutionError(
-          `Tool management failed: ${error.message}`,
-          {
-            original_category: error.category,
-            tool_name: error.toolName
-          }
-        );
+        return new ToolExecutionError(`Tool management failed: ${error.message}`, {
+          original_category: error.category,
+          tool_name: error.toolName
+        });
       case "SERVICE_RESOLUTION":
-        return new ValidationError(
-          `Service resolution failed: ${error.message}`,
-          {
-            original_category: error.category,
-            service_token: error.serviceToken
-          }
-        );
+        return new ValidationError(`Service resolution failed: ${error.message}`, {
+          original_category: error.category,
+          service_token: error.serviceToken
+        });
       case "NETWORK":
-        return new DiscoveryError(
-          `Network operation failed: ${error.message}`,
-          {
-            original_category: error.category,
-            endpoint: error.endpoint,
-            port: error.port
-          }
-        );
+        return new DiscoveryError(`Network operation failed: ${error.message}`, {
+          original_category: error.category,
+          endpoint: error.endpoint,
+          port: error.port
+        });
       case "MCP_PROTOCOL":
-        return new ClientCompatibilityError(
-          `MCP protocol error: ${error.message}`,
-          {
-            original_category: error.category,
-            protocol_version: error.protocolVersion
-          }
-        );
+        return new ClientCompatibilityError(`MCP protocol error: ${error.message}`, {
+          original_category: error.category,
+          protocol_version: error.protocolVersion
+        });
       default:
-        return new ToolExecutionError(
-          `Infrastructure error: ${error.message}`,
-          { original_category: error.category }
-        );
+        return new ToolExecutionError(`Infrastructure error: ${error.message}`, {
+          original_category: error.category
+        });
     }
   }
   /**
