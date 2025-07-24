@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -29,9 +30,11 @@ namespace io.github.hatayama.uLoopMCP
         private static readonly string LOG_FILE_PREFIX = "unity_vibe";
         private static readonly int MAX_FILE_SIZE_MB = 10;
         private static readonly int MAX_MEMORY_LOGS = 1000;
+        private static readonly int MAX_LOG_FILES = 3;
         
         private static readonly List<VibeLogEntry> memoryLogs = new();
         private static readonly object lockObject = new();
+        private static bool hasCleanedUpOnStartup = false;
         
         [Serializable]
         public class VibeLogEntry
@@ -230,6 +233,13 @@ namespace io.github.hatayama.uLoopMCP
                 Directory.CreateDirectory(LOG_DIRECTORY);
             }
             
+            // Clean up old log files on first access only
+            if (!hasCleanedUpOnStartup)
+            {
+                CleanupOldLogFiles();
+                hasCleanedUpOnStartup = true;
+            }
+            
             string fileName = $"{LOG_FILE_PREFIX}_{DateTime.UtcNow:yyyyMMdd}.json";
             string filePath = Path.Combine(LOG_DIRECTORY, fileName);
             
@@ -242,6 +252,9 @@ namespace io.github.hatayama.uLoopMCP
                     string rotatedFileName = $"{LOG_FILE_PREFIX}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
                     string rotatedFilePath = Path.Combine(LOG_DIRECTORY, rotatedFileName);
                     File.Move(filePath, rotatedFilePath);
+                    
+                    // Clean up old files after rotation
+                    CleanupOldLogFiles();
                 }
             }
             
@@ -287,6 +300,42 @@ namespace io.github.hatayama.uLoopMCP
             // ERROR_SHARING_VIOLATION (0x80070020)
             const int ERROR_SHARING_VIOLATION = unchecked((int)0x80070020);
             return ex.HResult == ERROR_SHARING_VIOLATION;
+        }
+        
+        /// <summary>
+        /// Clean up old log files, keeping only the most recent MAX_LOG_FILES
+        /// </summary>
+        private static void CleanupOldLogFiles()
+        {
+            try
+            {
+                if (!Directory.Exists(LOG_DIRECTORY))
+                    return;
+                    
+                // Get all vibe log files, sorted by creation time (newest first)
+                var logFiles = Directory.GetFiles(LOG_DIRECTORY, $"{LOG_FILE_PREFIX}_*.json")
+                    .Select(file => new FileInfo(file))
+                    .OrderByDescending(file => file.CreationTime)
+                    .ToArray();
+                    
+                // Delete files beyond the limit
+                for (int i = MAX_LOG_FILES; i < logFiles.Length; i++)
+                {
+                    try
+                    {
+                        logFiles[i].Delete();
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log deletion failure but don't crash
+                        UnityEngine.Debug.LogWarning($"[VibeLogger] Failed to delete old log file {logFiles[i].Name}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogWarning($"[VibeLogger] Failed to cleanup old log files: {ex.Message}");
+            }
         }
         
         /// <summary>
