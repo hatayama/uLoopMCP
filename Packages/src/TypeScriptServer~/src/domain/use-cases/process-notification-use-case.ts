@@ -5,8 +5,7 @@
  * - .kiro/specs/typescript-server-ddd-refactoring/design.md#ProcessNotificationUseCase
  *
  * Related classes:
- * - IEventService (application/interfaces/event-service.ts)
- * - IMessageService (application/interfaces/message-service.ts)
+ * - INotificationService (application/interfaces/notification-service.ts)
  * - ServiceLocator (infrastructure/service-locator.ts)
  */
 
@@ -184,8 +183,21 @@ export class ProcessNotificationUseCase
         'Sending notification via MCP server protocol',
       );
 
-      // Send notification via notification service
-      this.notificationService.sendToolsChangedNotification();
+      // Send appropriate notification based on method type
+      switch (request.method) {
+        case NOTIFICATION_METHODS.TOOLS_LIST_CHANGED:
+          this.notificationService.sendToolsChangedNotification();
+          break;
+        default:
+          VibeLogger.logWarning(
+            'process_notification_unsupported_method',
+            'Unsupported notification method requested',
+            { method: request.method },
+            correlationId,
+            'Notification method not implemented - skipping notification',
+          );
+          break;
+      }
 
       VibeLogger.logInfo(
         'notification_sent_success',
