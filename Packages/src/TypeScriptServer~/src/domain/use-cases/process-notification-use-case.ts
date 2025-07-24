@@ -15,6 +15,7 @@ import { ProcessNotificationRequest } from '../models/requests.js';
 import { ProcessNotificationResponse } from '../models/responses.js';
 import { VibeLogger } from '../../utils/vibe-logger.js';
 import { INotificationService } from '../../application/interfaces/notification-service.js';
+import { NOTIFICATION_METHODS } from '../../constants.js';
 
 /**
  * UseCase for processing and sending MCP notifications
@@ -49,7 +50,7 @@ export class ProcessNotificationUseCase
    * @param request Notification processing request
    * @returns Notification processing response
    */
-  async execute(request: ProcessNotificationRequest): Promise<ProcessNotificationResponse> {
+  execute(request: ProcessNotificationRequest): ProcessNotificationResponse {
     const correlationId = VibeLogger.generateCorrelationId();
 
     VibeLogger.logInfo(
@@ -77,7 +78,7 @@ export class ProcessNotificationUseCase
       }
 
       // Step 3: Send notification via MCP server
-      const notificationResult = await this.sendNotification(request, correlationId);
+      const notificationResult = this.sendNotification(request, correlationId);
 
       // Step 4: Return notification status
       VibeLogger.logInfo(
@@ -105,7 +106,7 @@ export class ProcessNotificationUseCase
    * @param correlationId Correlation ID for logging
    */
   private validateNotificationMethod(method: string, correlationId: string): void {
-    const supportedMethods = Object.values(NOTIFICATION_METHODS);
+    const supportedMethods = Object.values(NOTIFICATION_METHODS) as string[];
 
     if (!supportedMethods.includes(method)) {
       VibeLogger.logWarning(
@@ -162,10 +163,10 @@ export class ProcessNotificationUseCase
    * @param correlationId Correlation ID for logging
    * @returns Notification processing response
    */
-  private async sendNotification(
+  private sendNotification(
     request: ProcessNotificationRequest,
     correlationId: string,
-  ): Promise<ProcessNotificationResponse> {
+  ): ProcessNotificationResponse {
     const { method, params } = request;
 
     // Set notifying flag for duplicate prevention

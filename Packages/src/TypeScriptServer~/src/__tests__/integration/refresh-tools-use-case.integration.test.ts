@@ -11,13 +11,13 @@
  * - Test correlation ID propagation and logging
  */
 
+/* eslint-disable @typescript-eslint/unbound-method */
+
 import { RefreshToolsUseCase } from '../../domain/use-cases/refresh-tools-use-case.js';
 import { RefreshToolsRequest } from '../../domain/models/requests.js';
 import { IConnectionService } from '../../application/interfaces/connection-service.js';
 import { IToolManagementService } from '../../application/interfaces/tool-management-service.js';
 import { IToolQueryService } from '../../application/interfaces/tool-query-service.js';
-import { DomainTool } from '../../domain/models/domain-tool.js';
-import { ConnectionError } from '../../domain/errors.js';
 
 // Mock dependencies
 const mockConnectionService: jest.Mocked<IConnectionService> = {
@@ -170,7 +170,7 @@ describe('RefreshToolsUseCase Integration Tests', () => {
         return true;
       });
 
-      mockToolManagementService.initializeTools.mockImplementation(async () => {
+      mockToolManagementService.initializeTools.mockImplementation(() => {
         callOrder.push('initializeTools');
       });
 
@@ -199,11 +199,12 @@ describe('RefreshToolsUseCase Integration Tests', () => {
         return false;
       });
 
+      // eslint-disable-next-line @typescript-eslint/require-await
       mockConnectionService.ensureConnected.mockImplementation(async () => {
         callOrder.push('ensureConnected');
       });
 
-      mockToolManagementService.initializeTools.mockImplementation(async () => {
+      mockToolManagementService.initializeTools.mockImplementation(() => {
         callOrder.push('initializeTools');
       });
 

@@ -176,7 +176,7 @@ export class InitializeServerUseCase
       await this.connectionService.waitForConnection(10000);
 
       // Get tools from Unity
-      const tools = await this.toolService.getAllTools();
+      const tools = this.toolService.getAllTools();
 
       VibeLogger.logInfo(
         'initialize_server_sync_completed',

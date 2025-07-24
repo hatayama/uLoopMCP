@@ -11,6 +11,8 @@
  * - Ensure proper logging and correlation ID usage
  */
 
+/* eslint-disable @typescript-eslint/unbound-method */
+
 import { ExecuteToolUseCase } from '../../domain/use-cases/execute-tool-use-case.js';
 import { ExecuteToolRequest } from '../../domain/models/requests.js';
 import { IConnectionService } from '../../application/interfaces/connection-service.js';

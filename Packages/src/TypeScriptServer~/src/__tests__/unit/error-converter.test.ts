@@ -11,6 +11,8 @@
  * - Verify error recoverability assessment
  */
 
+/* eslint-disable @typescript-eslint/unbound-method */
+
 import { ErrorConverter } from '../../application/error-converter.js';
 import {
   DomainError,
@@ -21,7 +23,6 @@ import {
   ClientCompatibilityError,
 } from '../../domain/errors.js';
 import {
-  InfrastructureError,
   UnityCommuncationError,
   ToolManagementError,
   ServiceResolutionError,
@@ -289,9 +290,9 @@ describe('ErrorConverter Unit Tests', () => {
         expect.objectContaining({
           message: 'Test error',
           category: 'UNITY_COMMUNICATION',
-          technicalDetails: expect.any(Object),
+          technicalDetails: expect.any(Object) as unknown,
           originalError: 'Original cause',
-          stack: expect.any(String),
+          stack: expect.any(String) as unknown,
         }),
         'log-correlation',
         'Error Converter logging technical details before domain conversion',
