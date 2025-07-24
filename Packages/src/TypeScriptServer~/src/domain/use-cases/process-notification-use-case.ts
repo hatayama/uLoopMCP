@@ -13,9 +13,8 @@
 import { UseCase } from '../base-interfaces.js';
 import { ProcessNotificationRequest } from '../models/requests.js';
 import { ProcessNotificationResponse } from '../models/responses.js';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { VibeLogger } from '../../utils/vibe-logger.js';
-import { NOTIFICATION_METHODS } from '../../constants.js';
+import { INotificationService } from '../../application/interfaces/notification-service.js';
 
 /**
  * UseCase for processing and sending MCP notifications
@@ -37,11 +36,11 @@ import { NOTIFICATION_METHODS } from '../../constants.js';
 export class ProcessNotificationUseCase
   implements UseCase<ProcessNotificationRequest, ProcessNotificationResponse>
 {
-  private mcpServer: Server;
+  private notificationService: INotificationService;
   private isNotifying: boolean = false;
 
-  constructor(mcpServer: Server) {
-    this.mcpServer = mcpServer;
+  constructor(notificationService: INotificationService) {
+    this.notificationService = notificationService;
   }
 
   /**
@@ -184,11 +183,8 @@ export class ProcessNotificationUseCase
         'Sending notification via MCP server protocol',
       );
 
-      // Send notification via MCP server
-      await this.mcpServer.notification({
-        method,
-        params: (params || {}) as Record<string, unknown>,
-      });
+      // Send notification via notification service
+      this.notificationService.sendToolsChangedNotification();
 
       VibeLogger.logInfo(
         'notification_sent_success',
@@ -282,17 +278,3 @@ export class ProcessNotificationUseCase
   }
 }
 
-/**
- * Factory function for creating ProcessNotificationUseCase instances
- *
- * @returns New ProcessNotificationUseCase instance with injected dependencies
- */
-export function createProcessNotificationUseCase(): ProcessNotificationUseCase {
-  // Phase 3.3: Create temporary factory that will be replaced in Phase 4
-  // For now, we need external injection of dependencies
-  // This will be properly implemented when ServiceLocator is fully configured
-
-  throw new Error(
-    'ProcessNotificationUseCase factory needs to be initialized with concrete dependencies in Phase 3.3',
-  );
-}

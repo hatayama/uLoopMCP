@@ -14,10 +14,10 @@
 import { UseCase } from '../base-interfaces.js';
 import { HandleConnectionRequest } from '../models/requests.js';
 import { HandleConnectionResponse } from '../models/responses.js';
-import { UnityConnectionManager } from '../../unity-connection-manager.js';
-import { UnityToolManager } from '../../unity-tool-manager.js';
-import { UnityDiscovery } from '../../unity-discovery.js';
 import { VibeLogger } from '../../utils/vibe-logger.js';
+import { IConnectionService } from '../../application/interfaces/connection-service.js';
+import { IToolManagementService } from '../../application/interfaces/tool-management-service.js';
+import { IDiscoveryService } from '../../application/interfaces/discovery-service.js';
 
 /**
  * UseCase for handling Unity connection lost scenarios
@@ -39,18 +39,18 @@ import { VibeLogger } from '../../utils/vibe-logger.js';
 export class HandleConnectionLostUseCase
   implements UseCase<HandleConnectionRequest, HandleConnectionResponse>
 {
-  private connectionManager: UnityConnectionManager;
-  private toolManager: UnityToolManager;
-  private unityDiscovery: UnityDiscovery;
+  private connectionService: IConnectionService;
+  private toolManagementService: IToolManagementService;
+  private discoveryService: IDiscoveryService;
 
   constructor(
-    connectionManager: UnityConnectionManager,
-    toolManager: UnityToolManager,
-    unityDiscovery: UnityDiscovery,
+    connectionService: IConnectionService,
+    toolManagementService: IToolManagementService,
+    discoveryService: IDiscoveryService,
   ) {
-    this.connectionManager = connectionManager;
-    this.toolManager = toolManager;
-    this.unityDiscovery = unityDiscovery;
+    this.connectionService = connectionService;
+    this.toolManagementService = toolManagementService;
+    this.discoveryService = discoveryService;
   }
 
   /**
@@ -68,7 +68,7 @@ export class HandleConnectionLostUseCase
       {
         port: request.port,
         timeout: request.timeout,
-        current_connection_status: this.connectionManager.isConnected(),
+        current_connection_status: this.connectionService.isConnected(),
       },
       correlationId,
       'UseCase orchestrating Unity connection lost recovery for domain reload resilience',
@@ -111,8 +111,8 @@ export class HandleConnectionLostUseCase
    * @param correlationId Correlation ID for logging
    */
   private logConnectionLostContext(correlationId: string): void {
-    const currentToolsCount = this.toolManager.getToolsCount();
-    const isDiscoveryRunning = this.unityDiscovery.getIsDiscovering();
+    const currentToolsCount = this.toolManagementService.getToolsCount();
+    const isDiscoveryRunning = this.discoveryService.getIsDiscovering();
 
     VibeLogger.logWarning(
       'connection_lost_context',
@@ -120,7 +120,7 @@ export class HandleConnectionLostUseCase
       {
         tools_count_before_loss: currentToolsCount,
         is_discovery_running: isDiscoveryRunning,
-        connection_manager_connected: this.connectionManager.isConnected(),
+        connection_manager_connected: this.connectionService.isConnected(),
       },
       correlationId,
       'Connection lost context - tools may become stale until reconnection',
@@ -133,7 +133,7 @@ export class HandleConnectionLostUseCase
    * @param correlationId Correlation ID for logging
    */
   private clearOutdatedToolState(correlationId: string): void {
-    const toolsCountBefore = this.toolManager.getToolsCount();
+    const toolsCountBefore = this.toolManagementService.getToolsCount();
 
     VibeLogger.logInfo(
       'connection_lost_clearing_tools',
@@ -144,7 +144,7 @@ export class HandleConnectionLostUseCase
     );
 
     // Clear dynamic tools map as Unity state is now unknown
-    const dynamicTools = this.toolManager.getDynamicTools();
+    const dynamicTools = this.toolManagementService.getDynamicTools();
     dynamicTools.clear();
 
     VibeLogger.logInfo(
@@ -152,7 +152,7 @@ export class HandleConnectionLostUseCase
       'Outdated Unity tools cleared successfully',
       {
         tools_count_before: toolsCountBefore,
-        tools_count_after: this.toolManager.getToolsCount(),
+        tools_count_after: this.toolManagementService.getToolsCount(),
       },
       correlationId,
       'Tool state cleared - fresh tools will be loaded on reconnection',
@@ -169,20 +169,20 @@ export class HandleConnectionLostUseCase
       'connection_lost_restarting_discovery',
       'Restarting Unity discovery for reconnection attempts',
       {
-        was_discovering: this.unityDiscovery.getIsDiscovering(),
+        was_discovering: this.discoveryService.getIsDiscovering(),
       },
       correlationId,
       'Restarting discovery service to attempt Unity reconnection',
     );
 
     // Restart discovery if not already running (singleton pattern prevents duplicates)
-    this.unityDiscovery.start();
+    this.discoveryService.start();
 
     VibeLogger.logInfo(
       'connection_lost_discovery_restarted',
       'Unity discovery restarted successfully',
       {
-        is_now_discovering: this.unityDiscovery.getIsDiscovering(),
+        is_now_discovering: this.discoveryService.getIsDiscovering(),
       },
       correlationId,
       'Discovery service restarted - actively searching for Unity reconnection',
@@ -216,9 +216,9 @@ export class HandleConnectionLostUseCase
 
     try {
       // Attempt to wait for reconnection with shorter timeout than normal initialization
-      await this.connectionManager.waitForUnityConnectionWithTimeout(timeout);
+      await this.connectionService.waitForUnityConnectionWithTimeout(timeout);
 
-      if (this.connectionManager.isConnected()) {
+      if (this.connectionService.isConnected()) {
         VibeLogger.logInfo(
           'connection_lost_recovery_success',
           'Unity connection successfully restored',
@@ -295,17 +295,3 @@ export class HandleConnectionLostUseCase
   }
 }
 
-/**
- * Factory function for creating HandleConnectionLostUseCase instances
- *
- * @returns New HandleConnectionLostUseCase instance with injected dependencies
- */
-export function createHandleConnectionLostUseCase(): HandleConnectionLostUseCase {
-  // Phase 3.3: Create temporary factory that will be replaced in Phase 4
-  // For now, we need external injection of dependencies
-  // This will be properly implemented when ServiceLocator is fully configured
-
-  throw new Error(
-    'HandleConnectionLostUseCase factory needs to be initialized with concrete dependencies in Phase 3.3',
-  );
-}
