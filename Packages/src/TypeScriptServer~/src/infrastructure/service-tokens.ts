@@ -16,7 +16,6 @@
  */
 export type ServiceToken<T> = symbol & { __type: T };
 
-
 /**
  * All service tokens for the application
  * Organized by service type and lifecycle

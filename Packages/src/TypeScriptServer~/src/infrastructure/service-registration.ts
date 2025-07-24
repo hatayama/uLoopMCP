@@ -13,6 +13,12 @@
 import { ServiceLocator } from './service-locator.js';
 import { ServiceTokens } from './service-tokens.js';
 
+// Infrastructure Services
+import { UnityClient } from '../unity-client.js';
+import { UnityConnectionManager } from '../unity-connection-manager.js';
+import { UnityToolManager } from '../unity-tool-manager.js';
+import { McpClientCompatibility } from '../mcp-client-compatibility.js';
+
 // Application Services (placeholder implementations - to be created later)
 // import { ConnectionAppService } from '../application/services/connection-app-service.js';
 // import { ToolManagementAppService } from '../application/services/tool-management-app-service.js';
@@ -52,8 +58,24 @@ export function registerServices(): void {
   //   return new ConnectionAppService(unityClient);
   // });
 
-  // TODO: Register Infrastructure Services (will be connected in Phase 4)
-  // ServiceLocator.register(ServiceTokens.UNITY_CLIENT, () => UnityClient.getInstance());
+  // Register Infrastructure Services
+  ServiceLocator.register(ServiceTokens.UNITY_CLIENT, () => UnityClient.getInstance());
+
+  // Register actual implementation classes as application services temporarily
+  // TODO: Replace with proper application service wrappers in future
+  ServiceLocator.register(ServiceTokens.CONNECTION_APP_SERVICE, () => {
+    const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT);
+    return new UnityConnectionManager(unityClient);
+  });
+
+  ServiceLocator.register(ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE, () => {
+    const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT);
+    return new UnityToolManager(unityClient);
+  });
+
+  ServiceLocator.register(ServiceTokens.CLIENT_COMPATIBILITY_APP_SERVICE, () => {
+    return new McpClientCompatibility();
+  });
 
   // Register UseCase factories (create new instance each time)
   ServiceLocator.register(ServiceTokens.EXECUTE_TOOL_USE_CASE, () => {
@@ -92,7 +114,12 @@ export function registerServices(): void {
     const clientCompatibilityService = ServiceLocator.resolve<IClientCompatibilityService>(
       ServiceTokens.CLIENT_COMPATIBILITY_APP_SERVICE,
     );
-    return new InitializeServerUseCase(connectionService, toolService, toolManagementService, clientCompatibilityService);
+    return new InitializeServerUseCase(
+      connectionService,
+      toolService,
+      toolManagementService,
+      clientCompatibilityService,
+    );
   });
 
   ServiceLocator.register(ServiceTokens.HANDLE_CONNECTION_LOST_USE_CASE, () => {
