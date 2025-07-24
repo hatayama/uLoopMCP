@@ -179,6 +179,27 @@ export class UnityConnectionManager {
   }
 
   /**
+   * Ensure Unity connection is established
+   */
+  async ensureConnected(timeoutMs: number = 10000): Promise<void> {
+    if (this.isConnected()) {
+      return;
+    }
+    await this.waitForUnityConnectionWithTimeout(timeoutMs);
+  }
+
+  /**
+   * Test connection (validate connection state)
+   */
+  async testConnection(): Promise<boolean> {
+    try {
+      return this.isConnected();
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Disconnect from Unity
    */
   disconnect(): void {

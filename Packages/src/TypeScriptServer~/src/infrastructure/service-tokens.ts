@@ -22,28 +22,29 @@ export type ServiceToken<T> = symbol & { __type: T };
  */
 export const ServiceTokens = {
   // Application Services (Singleton lifecycle)
-  CONNECTION_APP_SERVICE: Symbol('CONNECTION_APP_SERVICE'),
-  TOOL_MANAGEMENT_APP_SERVICE: Symbol('TOOL_MANAGEMENT_APP_SERVICE'),
-  EVENT_APP_SERVICE: Symbol('EVENT_APP_SERVICE'),
-  MESSAGE_APP_SERVICE: Symbol('MESSAGE_APP_SERVICE'),
-  DISCOVERY_APP_SERVICE: Symbol('DISCOVERY_APP_SERVICE'),
-  CLIENT_COMPATIBILITY_APP_SERVICE: Symbol('CLIENT_COMPATIBILITY_APP_SERVICE'),
+  CONNECTION_APP_SERVICE: Symbol('CONNECTION_APP_SERVICE') as ServiceToken<IConnectionService>,
+  TOOL_MANAGEMENT_APP_SERVICE: Symbol('TOOL_MANAGEMENT_APP_SERVICE') as ServiceToken<IToolManagementService>,
+  TOOL_QUERY_APP_SERVICE: Symbol('TOOL_QUERY_APP_SERVICE') as ServiceToken<IToolQueryService>,
+  EVENT_APP_SERVICE: Symbol('EVENT_APP_SERVICE') as ServiceToken<IEventService>,
+  MESSAGE_APP_SERVICE: Symbol('MESSAGE_APP_SERVICE') as ServiceToken<IMessageService>,
+  DISCOVERY_APP_SERVICE: Symbol('DISCOVERY_APP_SERVICE') as ServiceToken<IDiscoveryService>,
+  CLIENT_COMPATIBILITY_APP_SERVICE: Symbol('CLIENT_COMPATIBILITY_APP_SERVICE') as ServiceToken<IClientCompatibilityService>,
 
   // UseCase Services (Transient lifecycle)
-  EXECUTE_TOOL_USE_CASE: Symbol('EXECUTE_TOOL_USE_CASE'),
-  REFRESH_TOOLS_USE_CASE: Symbol('REFRESH_TOOLS_USE_CASE'),
-  INITIALIZE_SERVER_USE_CASE: Symbol('INITIALIZE_SERVER_USE_CASE'),
-  HANDLE_CONNECTION_LOST_USE_CASE: Symbol('HANDLE_CONNECTION_LOST_USE_CASE'),
-  PROCESS_NOTIFICATION_USE_CASE: Symbol('PROCESS_NOTIFICATION_USE_CASE'),
+  EXECUTE_TOOL_USE_CASE: Symbol('EXECUTE_TOOL_USE_CASE') as ServiceToken<ExecuteToolUseCase>,
+  REFRESH_TOOLS_USE_CASE: Symbol('REFRESH_TOOLS_USE_CASE') as ServiceToken<RefreshToolsUseCase>,
+  INITIALIZE_SERVER_USE_CASE: Symbol('INITIALIZE_SERVER_USE_CASE') as ServiceToken<InitializeServerUseCase>,
+  HANDLE_CONNECTION_LOST_USE_CASE: Symbol('HANDLE_CONNECTION_LOST_USE_CASE') as ServiceToken<HandleConnectionLostUseCase>,
+  PROCESS_NOTIFICATION_USE_CASE: Symbol('PROCESS_NOTIFICATION_USE_CASE') as ServiceToken<ProcessNotificationUseCase>,
 
   // Infrastructure Services (Singleton lifecycle)
-  UNITY_CLIENT: Symbol('UNITY_CLIENT'),
-  UNITY_CONNECTION_MANAGER: Symbol('UNITY_CONNECTION_MANAGER'),
-  UNITY_TOOL_MANAGER: Symbol('UNITY_TOOL_MANAGER'),
-  UNITY_DISCOVERY: Symbol('UNITY_DISCOVERY'),
-  MCP_CLIENT_COMPATIBILITY: Symbol('MCP_CLIENT_COMPATIBILITY'),
-  UNITY_EVENT_HANDLER: Symbol('UNITY_EVENT_HANDLER'),
-  VIBE_LOGGER: Symbol('VIBE_LOGGER'),
+  UNITY_CLIENT: Symbol('UNITY_CLIENT') as ServiceToken<unknown>,
+  UNITY_CONNECTION_MANAGER: Symbol('UNITY_CONNECTION_MANAGER') as ServiceToken<unknown>,
+  UNITY_TOOL_MANAGER: Symbol('UNITY_TOOL_MANAGER') as ServiceToken<unknown>,
+  UNITY_DISCOVERY: Symbol('UNITY_DISCOVERY') as ServiceToken<unknown>,
+  MCP_CLIENT_COMPATIBILITY: Symbol('MCP_CLIENT_COMPATIBILITY') as ServiceToken<unknown>,
+  UNITY_EVENT_HANDLER: Symbol('UNITY_EVENT_HANDLER') as ServiceToken<unknown>,
+  VIBE_LOGGER: Symbol('VIBE_LOGGER') as ServiceToken<unknown>,
 } as const;
 
 /**
@@ -52,6 +53,7 @@ export const ServiceTokens = {
  */
 import type { IConnectionService } from '../application/interfaces/connection-service.js';
 import type { IToolManagementService } from '../application/interfaces/tool-management-service.js';
+import type { IToolQueryService } from '../application/interfaces/tool-query-service.js';
 import type { IEventService } from '../application/interfaces/event-service.js';
 import type { IMessageService } from '../application/interfaces/message-service.js';
 import type { IDiscoveryService } from '../application/interfaces/discovery-service.js';
@@ -65,6 +67,7 @@ import type { ProcessNotificationUseCase } from '../domain/use-cases/process-not
 export type ServiceTokenMap = {
   [ServiceTokens.CONNECTION_APP_SERVICE]: IConnectionService;
   [ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE]: IToolManagementService;
+  [ServiceTokens.TOOL_QUERY_APP_SERVICE]: IToolQueryService;
   [ServiceTokens.EVENT_APP_SERVICE]: IEventService;
   [ServiceTokens.MESSAGE_APP_SERVICE]: IMessageService;
   [ServiceTokens.DISCOVERY_APP_SERVICE]: IDiscoveryService;

@@ -7675,6 +7675,25 @@ var UnityConnectionManager = class {
     return this.unityClient.connected;
   }
   /**
+   * Ensure Unity connection is established
+   */
+  async ensureConnected(timeoutMs = 1e4) {
+    if (this.isConnected()) {
+      return;
+    }
+    await this.waitForUnityConnectionWithTimeout(timeoutMs);
+  }
+  /**
+   * Test connection (validate connection state)
+   */
+  async testConnection() {
+    try {
+      return this.isConnected();
+    } catch {
+      return false;
+    }
+  }
+  /**
    * Disconnect from Unity
    */
   disconnect() {

@@ -6,6 +6,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   InitializeRequestSchema,
+  InitializeResult,
 } from '@modelcontextprotocol/sdk/types.js';
 import { UnityClient } from './unity-client.js';
 import { VibeLogger } from './utils/vibe-logger.js';
@@ -103,7 +104,7 @@ class UnityMcpServer {
   /**
    * Initialize client synchronously (for list_changed unsupported clients)
    */
-  private async initializeSyncClient(clientName: string): Promise<InitializeResponse> {
+  private async initializeSyncClient(clientName: string): Promise<InitializeResult> {
     try {
       await this.clientCompatibility.initializeClient(clientName);
       this.toolManager.setClientName(clientName);
