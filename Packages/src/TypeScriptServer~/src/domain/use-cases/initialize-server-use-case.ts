@@ -20,11 +20,37 @@ import { IToolQueryService } from '../../application/interfaces/tool-query-servi
 import { IToolManagementService } from '../../application/interfaces/tool-management-service.js';
 import { IClientCompatibilityService } from '../../application/interfaces/client-compatibility-service.js';
 import { DomainTool } from '../models/domain-tool.js';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 // MCP Protocol constants
 const MCP_PROTOCOL_VERSION = '2024-11-05';
 const MCP_SERVER_NAME = 'Unity Editor MCP Bridge';
 const TOOLS_LIST_CHANGED_CAPABILITY = true;
+
+/**
+ * Get package version from package.json
+ */
+function getPackageVersion(): string {
+  try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const packageJsonPath = join(__dirname, '..', '..', '..', 'package.json');
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+    return packageJson.version || '0.5.0';
+  } catch (error) {
+    // Fallback to hardcoded version if package.json read fails
+    VibeLogger.logWarning(
+      'package_version_read_error',
+      'Failed to read package.json version, using fallback',
+      { error: error instanceof Error ? error.message : 'Unknown error' },
+      undefined,
+      'Package version could not be dynamically loaded',
+    );
+    return '0.5.0';
+  }
+}
 
 /**
  * UseCase for initializing the MCP server
