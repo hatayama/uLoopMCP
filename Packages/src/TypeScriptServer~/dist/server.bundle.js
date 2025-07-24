@@ -7284,6 +7284,33 @@ var UnityDiscovery = class _UnityDiscovery {
       );
       return;
     }
+    this.logDiscoveryCycleStart(correlationId);
+    try {
+      const shouldContinueDiscovery = await this.handleConnectionHealthCheck(correlationId);
+      if (!shouldContinueDiscovery) {
+        return;
+      }
+      await this.executeUnityDiscovery(correlationId);
+    } catch (error) {
+      VibeLogger.logError(
+        "unity_discovery_cycle_error",
+        "Discovery cycle encountered error",
+        {
+          error_message: error instanceof Error ? error.message : String(error),
+          is_discovering: this.isDiscovering,
+          correlation_id: correlationId
+        },
+        correlationId,
+        "Discovery cycle failed - forcing state reset to prevent hang"
+      );
+    } finally {
+      this.finalizeCycleWithCleanup(correlationId);
+    }
+  }
+  /**
+   * Log discovery cycle initialization
+   */
+  logDiscoveryCycleStart(correlationId) {
     this.isDiscovering = true;
     VibeLogger.logDebug(
       "unity_discovery_state_set",
@@ -7303,61 +7330,62 @@ var UnityDiscovery = class _UnityDiscovery {
       correlationId,
       "This cycle checks connection health and attempts Unity discovery if needed."
     );
-    try {
-      if (this.unityClient.connected) {
-        const isConnectionHealthy = await this.checkConnectionHealth();
-        if (isConnectionHealthy) {
-          VibeLogger.logInfo(
-            "unity_discovery_connection_healthy",
-            "Connection is healthy - stopping discovery",
-            { connection_healthy: true },
-            correlationId
-          );
-          this.stop();
-          return;
-        } else {
-          VibeLogger.logWarning(
-            "unity_discovery_connection_unhealthy",
-            "Connection appears unhealthy - continuing discovery without assuming loss",
-            { connection_healthy: false },
-            correlationId,
-            "Connection health check failed. Will continue discovery but not assume complete loss.",
-            "Connection may recover on next cycle. Monitor for persistent issues."
-          );
-        }
+  }
+  /**
+   * Handle connection health check and determine if discovery should continue
+   */
+  async handleConnectionHealthCheck(correlationId) {
+    if (this.unityClient.connected) {
+      const isConnectionHealthy = await this.checkConnectionHealth();
+      if (isConnectionHealthy) {
+        VibeLogger.logInfo(
+          "unity_discovery_connection_healthy",
+          "Connection is healthy - stopping discovery",
+          { connection_healthy: true },
+          correlationId
+        );
+        this.stop();
+        return false;
+      } else {
+        VibeLogger.logWarning(
+          "unity_discovery_connection_unhealthy",
+          "Connection appears unhealthy - continuing discovery without assuming loss",
+          { connection_healthy: false },
+          correlationId,
+          "Connection health check failed. Will continue discovery but not assume complete loss.",
+          "Connection may recover on next cycle. Monitor for persistent issues."
+        );
       }
-      await Promise.race([
-        this.discoverUnityOnPorts(),
-        new Promise(
-          (_, reject) => setTimeout(() => reject(new Error("Unity discovery timeout - 5 seconds")), 5e3)
-        )
-      ]);
-    } catch (error) {
-      VibeLogger.logError(
-        "unity_discovery_cycle_error",
-        "Discovery cycle encountered error",
-        {
-          error_message: error instanceof Error ? error.message : String(error),
-          is_discovering: this.isDiscovering,
-          correlation_id: correlationId
-        },
-        correlationId,
-        "Discovery cycle failed - forcing state reset to prevent hang"
-      );
-    } finally {
-      VibeLogger.logDebug(
-        "unity_discovery_cycle_end",
-        "Discovery cycle completed - resetting state",
-        {
-          is_discovering_before: this.isDiscovering,
-          is_discovering_after: false,
-          correlation_id: correlationId
-        },
-        correlationId,
-        "Discovery cycle finished and state reset to prevent hang"
-      );
-      this.isDiscovering = false;
     }
+    return true;
+  }
+  /**
+   * Execute Unity discovery with timeout protection
+   */
+  async executeUnityDiscovery(_correlationId) {
+    await Promise.race([
+      this.discoverUnityOnPorts(),
+      new Promise(
+        (_, reject) => setTimeout(() => reject(new Error("Unity discovery timeout - 5 seconds")), 5e3)
+      )
+    ]);
+  }
+  /**
+   * Finalize discovery cycle with cleanup and logging
+   */
+  finalizeCycleWithCleanup(correlationId) {
+    VibeLogger.logDebug(
+      "unity_discovery_cycle_end",
+      "Discovery cycle completed - resetting state",
+      {
+        is_discovering_before: this.isDiscovering,
+        is_discovering_after: false,
+        correlation_id: correlationId
+      },
+      correlationId,
+      "Discovery cycle finished and state reset to prevent hang"
+    );
+    this.isDiscovering = false;
   }
   /**
    * Check if the current connection is healthy with timeout protection
@@ -7506,16 +7534,6 @@ var UnityDiscovery = class _UnityDiscovery {
         resolve2(false);
       });
     });
-  }
-  /**
-   * Log current timer status for debugging (development mode only)
-   */
-  logTimerStatus() {
-    if (!this.isDevelopment) {
-      return;
-    }
-    if (_UnityDiscovery.activeTimerCount > 1) {
-    }
   }
   /**
    * Get debugging information about current timer state
@@ -8106,33 +8124,10 @@ var UnityToolManager = class {
   async refreshDynamicTools(sendNotification) {
     try {
       if (this.connectionManager && this.connectionManager.isConnected()) {
-        const refreshToolsUseCase = new RefreshToolsUseCase(this.connectionManager, this);
-        const result = await refreshToolsUseCase.execute({
-          includeDevelopmentOnly: this.isDevelopment
-        });
-        VibeLogger.logInfo(
-          "unity_tool_manager_refresh_completed",
-          "Dynamic tools refreshed successfully via UseCase",
-          { tool_count: result.tools.length, refreshed_at: result.refreshedAt },
-          void 0,
-          "Tool refresh completed - ready for domain reload recovery"
-        );
-        if (sendNotification) {
-          sendNotification();
-        }
+        await this.refreshToolsWithUseCase(sendNotification);
         return;
       }
-      VibeLogger.logDebug(
-        "unity_tool_manager_fallback_refresh",
-        "Using fallback refresh method (connectionManager not available)",
-        {},
-        void 0,
-        "Direct initialization fallback for domain reload recovery"
-      );
-      await this.initializeDynamicTools();
-      if (sendNotification) {
-        sendNotification();
-      }
+      await this.refreshToolsFallback(sendNotification);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       VibeLogger.logError(
@@ -8142,20 +8137,64 @@ var UnityToolManager = class {
         void 0,
         "Tool refresh failed - domain reload recovery may be impacted"
       );
-      try {
-        await this.initializeDynamicTools();
-        if (sendNotification) {
-          sendNotification();
-        }
-      } catch (fallbackError) {
-        VibeLogger.logError(
-          "unity_tool_manager_fallback_failed",
-          "Fallback tool initialization also failed",
-          { error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError) },
-          void 0,
-          "Both UseCase and fallback failed - domain reload recovery compromised"
-        );
+      await this.executeUltimateToolsFallback(sendNotification);
+    }
+  }
+  /**
+   * Refresh tools using RefreshToolsUseCase (preferred method)
+   */
+  async refreshToolsWithUseCase(sendNotification) {
+    if (!this.connectionManager) {
+      throw new Error("ConnectionManager is required for UseCase-based refresh");
+    }
+    const refreshToolsUseCase = new RefreshToolsUseCase(this.connectionManager, this);
+    const result = await refreshToolsUseCase.execute({
+      includeDevelopmentOnly: this.isDevelopment
+    });
+    VibeLogger.logInfo(
+      "unity_tool_manager_refresh_completed",
+      "Dynamic tools refreshed successfully via UseCase",
+      { tool_count: result.tools.length, refreshed_at: result.refreshedAt },
+      void 0,
+      "Tool refresh completed - ready for domain reload recovery"
+    );
+    if (sendNotification) {
+      sendNotification();
+    }
+  }
+  /**
+   * Refresh tools using direct initialization (fallback method)
+   */
+  async refreshToolsFallback(sendNotification) {
+    VibeLogger.logDebug(
+      "unity_tool_manager_fallback_refresh",
+      "Using fallback refresh method (connectionManager not available)",
+      {},
+      void 0,
+      "Direct initialization fallback for domain reload recovery"
+    );
+    await this.initializeDynamicTools();
+    if (sendNotification) {
+      sendNotification();
+    }
+  }
+  /**
+   * Execute ultimate fallback for tool refresh (last resort)
+   */
+  async executeUltimateToolsFallback(sendNotification) {
+    try {
+      await this.initializeDynamicTools();
+      if (sendNotification) {
+        sendNotification();
       }
+    } catch (fallbackError) {
+      VibeLogger.logError(
+        "unity_tool_manager_fallback_failed",
+        "Fallback tool initialization also failed",
+        { error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError) },
+        void 0,
+        "Both UseCase and fallback failed - domain reload recovery compromised"
+      );
     }
   }
   /**
@@ -8163,14 +8202,10 @@ var UnityToolManager = class {
    */
   async refreshDynamicToolsSafe(sendNotification) {
     if (this.isRefreshing) {
-      if (this.isDevelopment) {
-      }
       return;
     }
     this.isRefreshing = true;
     try {
-      if (this.isDevelopment) {
-      }
       await this.refreshDynamicTools(sendNotification);
     } finally {
       this.isRefreshing = false;
@@ -8651,6 +8686,79 @@ var UnityMcpServer = class {
     this.setupHandlers();
     this.eventHandler.setupSignalHandlers();
   }
+  /**
+   * Setup client compatibility configuration
+   */
+  setupClientCompatibility(clientName) {
+    this.clientCompatibility.setClientName(clientName);
+    this.clientCompatibility.logClientCompatibility(clientName);
+  }
+  /**
+   * Initialize client synchronously (for list_changed unsupported clients)
+   */
+  async initializeSyncClient(clientName) {
+    try {
+      await this.clientCompatibility.initializeClient(clientName);
+      this.toolManager.setClientName(clientName);
+      await this.connectionManager.waitForUnityConnectionWithTimeout(1e4);
+      const tools = await this.toolManager.getToolsFromUnity();
+      return {
+        protocolVersion: MCP_PROTOCOL_VERSION,
+        capabilities: {
+          tools: {
+            listChanged: TOOLS_LIST_CHANGED_CAPABILITY
+          }
+        },
+        serverInfo: {
+          name: MCP_SERVER_NAME,
+          version: package_default.version
+        },
+        tools
+      };
+    } catch (error) {
+      VibeLogger.logError(
+        "mcp_unity_connection_timeout",
+        "Unity connection timeout",
+        {
+          client_name: clientName,
+          error_message: error instanceof Error ? error.message : String(error)
+        },
+        void 0,
+        "Unity connection timed out - check Unity MCP bridge status"
+      );
+      return {
+        protocolVersion: MCP_PROTOCOL_VERSION,
+        capabilities: {
+          tools: {
+            listChanged: TOOLS_LIST_CHANGED_CAPABILITY
+          }
+        },
+        serverInfo: {
+          name: MCP_SERVER_NAME,
+          version: package_default.version
+        },
+        tools: []
+      };
+    }
+  }
+  /**
+   * Initialize client asynchronously (for list_changed supported clients)
+   */
+  initializeAsyncClient(clientName) {
+    void this.clientCompatibility.initializeClient(clientName);
+    this.toolManager.setClientName(clientName);
+    void this.toolManager.initializeDynamicTools().then(() => {
+    }).catch((error) => {
+      VibeLogger.logError(
+        "mcp_unity_connection_init_failed",
+        "Unity connection initialization failed",
+        { error_message: error instanceof Error ? error.message : String(error) },
+        void 0,
+        "Unity connection could not be established - check Unity MCP bridge"
+      );
+      this.unityDiscovery.start();
+    });
+  }
   setupHandlers() {
     this.server.setRequestHandler(InitializeRequestSchema, async (request) => {
       const clientInfo = request.params?.clientInfo;
@@ -8668,69 +8776,14 @@ var UnityMcpServer = class {
         "Analyze this to ensure claude-code is properly detected"
       );
       if (clientName) {
-        this.clientCompatibility.setClientName(clientName);
-        this.clientCompatibility.logClientCompatibility(clientName);
+        this.setupClientCompatibility(clientName);
       }
       if (!this.isInitialized) {
         this.isInitialized = true;
         if (this.clientCompatibility.isListChangedUnsupported(clientName)) {
-          try {
-            await this.clientCompatibility.initializeClient(clientName);
-            this.toolManager.setClientName(clientName);
-            await this.connectionManager.waitForUnityConnectionWithTimeout(1e4);
-            const tools = await this.toolManager.getToolsFromUnity();
-            return {
-              protocolVersion: MCP_PROTOCOL_VERSION,
-              capabilities: {
-                tools: {
-                  listChanged: TOOLS_LIST_CHANGED_CAPABILITY
-                }
-              },
-              serverInfo: {
-                name: MCP_SERVER_NAME,
-                version: package_default.version
-              },
-              tools
-            };
-          } catch (error) {
-            VibeLogger.logError(
-              "mcp_unity_connection_timeout",
-              "Unity connection timeout",
-              {
-                client_name: clientName,
-                error_message: error instanceof Error ? error.message : String(error)
-              },
-              void 0,
-              "Unity connection timed out - check Unity MCP bridge status"
-            );
-            return {
-              protocolVersion: MCP_PROTOCOL_VERSION,
-              capabilities: {
-                tools: {
-                  listChanged: TOOLS_LIST_CHANGED_CAPABILITY
-                }
-              },
-              serverInfo: {
-                name: MCP_SERVER_NAME,
-                version: package_default.version
-              },
-              tools: []
-            };
-          }
+          return this.initializeSyncClient(clientName);
         } else {
-          void this.clientCompatibility.initializeClient(clientName);
-          this.toolManager.setClientName(clientName);
-          void this.toolManager.initializeDynamicTools().then(() => {
-          }).catch((error) => {
-            VibeLogger.logError(
-              "mcp_unity_connection_init_failed",
-              "Unity connection initialization failed",
-              { error_message: error instanceof Error ? error.message : String(error) },
-              void 0,
-              "Unity connection could not be established - check Unity MCP bridge"
-            );
-            this.unityDiscovery.start();
-          });
+          this.initializeAsyncClient(clientName);
         }
       }
       return {

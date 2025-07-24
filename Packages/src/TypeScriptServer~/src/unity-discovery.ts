@@ -95,7 +95,7 @@ export class UnityDiscovery {
       clearInterval(this.discoveryInterval);
       this.discoveryInterval = null;
     }
-    
+
     // Always reset discovering flag regardless of interval state
     this.isDiscovering = false;
 
@@ -136,9 +136,42 @@ export class UnityDiscovery {
       return;
     }
 
+    // Initialize discovery cycle
+    this.logDiscoveryCycleStart(correlationId);
+
+    try {
+      // Check connection health if already connected
+      const shouldContinueDiscovery = await this.handleConnectionHealthCheck(correlationId);
+      if (!shouldContinueDiscovery) {
+        return;
+      }
+
+      // Execute Unity discovery with timeout protection
+      await this.executeUnityDiscovery(correlationId);
+    } catch (error) {
+      VibeLogger.logError(
+        'unity_discovery_cycle_error',
+        'Discovery cycle encountered error',
+        {
+          error_message: error instanceof Error ? error.message : String(error),
+          is_discovering: this.isDiscovering,
+          correlation_id: correlationId,
+        },
+        correlationId,
+        'Discovery cycle failed - forcing state reset to prevent hang',
+      );
+    } finally {
+      this.finalizeCycleWithCleanup(correlationId);
+    }
+  }
+
+  /**
+   * Log discovery cycle initialization
+   */
+  private logDiscoveryCycleStart(correlationId: string): void {
     // Atomic flag setting with additional logging for debugging
     this.isDiscovering = true;
-    
+
     VibeLogger.logDebug(
       'unity_discovery_state_set',
       'Discovery state set to true',
@@ -158,73 +191,75 @@ export class UnityDiscovery {
       correlationId,
       'This cycle checks connection health and attempts Unity discovery if needed.',
     );
+  }
 
-    try {
-      // If already connected, check connection health (lightweight)
-      if (this.unityClient.connected) {
-        const isConnectionHealthy = await this.checkConnectionHealth();
+  /**
+   * Handle connection health check and determine if discovery should continue
+   */
+  private async handleConnectionHealthCheck(correlationId: string): Promise<boolean> {
+    // If already connected, check connection health (lightweight)
+    if (this.unityClient.connected) {
+      const isConnectionHealthy = await this.checkConnectionHealth();
 
-        if (isConnectionHealthy) {
-          // Connection is healthy - stop discovery
-          VibeLogger.logInfo(
-            'unity_discovery_connection_healthy',
-            'Connection is healthy - stopping discovery',
-            { connection_healthy: true },
-            correlationId,
-          );
-          this.stop();
-          return;
-        } else {
-          // Connection might be temporarily unhealthy
-          // Don't immediately assume it's lost - give it time to recover
-          VibeLogger.logWarning(
-            'unity_discovery_connection_unhealthy',
-            'Connection appears unhealthy - continuing discovery without assuming loss',
-            { connection_healthy: false },
-            correlationId,
-            'Connection health check failed. Will continue discovery but not assume complete loss.',
-            'Connection may recover on next cycle. Monitor for persistent issues.',
-          );
+      if (isConnectionHealthy) {
+        // Connection is healthy - stop discovery
+        VibeLogger.logInfo(
+          'unity_discovery_connection_healthy',
+          'Connection is healthy - stopping discovery',
+          { connection_healthy: true },
+          correlationId,
+        );
+        this.stop();
+        return false; // Don't continue discovery
+      } else {
+        // Connection might be temporarily unhealthy
+        // Don't immediately assume it's lost - give it time to recover
+        VibeLogger.logWarning(
+          'unity_discovery_connection_unhealthy',
+          'Connection appears unhealthy - continuing discovery without assuming loss',
+          { connection_healthy: false },
+          correlationId,
+          'Connection health check failed. Will continue discovery but not assume complete loss.',
+          'Connection may recover on next cycle. Monitor for persistent issues.',
+        );
 
-          // Don't trigger connection lost callback immediately
-          // Let discovery continue and see if connection recovers
-        }
+        // Don't trigger connection lost callback immediately
+        // Let discovery continue and see if connection recovers
       }
-
-      // Discover Unity by checking port range with timeout protection
-      await Promise.race([
-        this.discoverUnityOnPorts(),
-        new Promise<void>((_, reject) =>
-          setTimeout(() => reject(new Error('Unity discovery timeout - 5 seconds')), 5000),
-        ),
-      ]);
-    } catch (error) {
-      VibeLogger.logError(
-        'unity_discovery_cycle_error',
-        'Discovery cycle encountered error',
-        { 
-          error_message: error instanceof Error ? error.message : String(error),
-          is_discovering: this.isDiscovering,
-          correlation_id: correlationId,
-        },
-        correlationId,
-        'Discovery cycle failed - forcing state reset to prevent hang',
-      );
-    } finally {
-      VibeLogger.logDebug(
-        'unity_discovery_cycle_end',
-        'Discovery cycle completed - resetting state',
-        { 
-          is_discovering_before: this.isDiscovering,
-          is_discovering_after: false,
-          correlation_id: correlationId,
-        },
-        correlationId,
-        'Discovery cycle finished and state reset to prevent hang',
-      );
-      // Force state reset regardless of outcome
-      this.isDiscovering = false;
     }
+    return true; // Continue discovery
+  }
+
+  /**
+   * Execute Unity discovery with timeout protection
+   */
+  private async executeUnityDiscovery(_correlationId: string): Promise<void> {
+    // Discover Unity by checking port range with timeout protection
+    await Promise.race([
+      this.discoverUnityOnPorts(),
+      new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('Unity discovery timeout - 5 seconds')), 5000),
+      ),
+    ]);
+  }
+
+  /**
+   * Finalize discovery cycle with cleanup and logging
+   */
+  private finalizeCycleWithCleanup(correlationId: string): void {
+    VibeLogger.logDebug(
+      'unity_discovery_cycle_end',
+      'Discovery cycle completed - resetting state',
+      {
+        is_discovering_before: this.isDiscovering,
+        is_discovering_after: false,
+        correlation_id: correlationId,
+      },
+      correlationId,
+      'Discovery cycle finished and state reset to prevent hang',
+    );
+    // Force state reset regardless of outcome
+    this.isDiscovering = false;
   }
 
   /**
@@ -340,11 +375,11 @@ export class UnityDiscovery {
    */
   handleConnectionLost(): void {
     const correlationId = VibeLogger.generateCorrelationId();
-    
+
     VibeLogger.logInfo(
       'unity_discovery_connection_lost_handler',
       'Handling connection lost event',
-      { 
+      {
         was_discovering: this.isDiscovering,
         has_discovery_interval: this.discoveryInterval !== null,
         active_timer_count: UnityDiscovery.activeTimerCount,
@@ -352,28 +387,28 @@ export class UnityDiscovery {
       correlationId,
       'Connection lost event received - preparing for recovery',
     );
-    
+
     // Force reset discovery state to ensure clean restart
     this.isDiscovering = false;
-    
+
     // Add delay before restarting discovery to allow Unity to fully shut down
     setTimeout(() => {
       VibeLogger.logInfo(
         'unity_discovery_restart_after_connection_lost',
         'Restarting discovery after connection lost delay',
-        { 
+        {
           has_discovery_interval: this.discoveryInterval !== null,
         },
         correlationId,
         'Starting discovery with delay to allow Unity server restart',
       );
-      
+
       // Restart discovery if not already running
       if (!this.discoveryInterval) {
         this.start();
       }
     }, 2000); // 2秒待ってからディスカバリー再開
-    
+
     // Trigger callback immediately
     if (this.onConnectionLostCallback) {
       this.onConnectionLostCallback();
@@ -404,20 +439,6 @@ export class UnityDiscovery {
         resolve(false);
       });
     });
-  }
-
-  /**
-   * Log current timer status for debugging (development mode only)
-   */
-  private logTimerStatus(): void {
-    if (!this.isDevelopment) {
-      return;
-    }
-
-    // Warning if multiple timers are detected
-    if (UnityDiscovery.activeTimerCount > 1) {
-      // WARNING: Multiple timers detected
-    }
   }
 
   /**

@@ -185,42 +185,12 @@ export class UnityToolManager implements IToolService {
       // Phase 3.2: Use RefreshToolsUseCase if connectionManager is available
       // BUT avoid during connection establishment to prevent circular dependency
       if (this.connectionManager && this.connectionManager.isConnected()) {
-        const refreshToolsUseCase = new RefreshToolsUseCase(this.connectionManager, this);
-
-        const result = await refreshToolsUseCase.execute({
-          includeDevelopmentOnly: this.isDevelopment,
-        });
-
-        VibeLogger.logInfo(
-          'unity_tool_manager_refresh_completed',
-          'Dynamic tools refreshed successfully via UseCase',
-          { tool_count: result.tools.length, refreshed_at: result.refreshedAt },
-          undefined,
-          'Tool refresh completed - ready for domain reload recovery',
-        );
-
-        // Send tools changed notification to MCP client if callback provided
-        // This is critical for notifying the client after domain reload
-        if (sendNotification) {
-          sendNotification();
-        }
+        await this.refreshToolsWithUseCase(sendNotification);
         return;
       }
 
       // Fallback: Use direct initialization if UseCase is not available
-      VibeLogger.logDebug(
-        'unity_tool_manager_fallback_refresh',
-        'Using fallback refresh method (connectionManager not available)',
-        {},
-        undefined,
-        'Direct initialization fallback for domain reload recovery',
-      );
-
-      await this.initializeDynamicTools();
-
-      if (sendNotification) {
-        sendNotification();
-      }
+      await this.refreshToolsFallback(sendNotification);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       VibeLogger.logError(
@@ -232,21 +202,75 @@ export class UnityToolManager implements IToolService {
       );
 
       // Final fallback: try direct initialization to maintain domain reload recovery
-      try {
-        await this.initializeDynamicTools();
+      await this.executeUltimateToolsFallback(sendNotification);
+    }
+  }
 
-        if (sendNotification) {
-          sendNotification();
-        }
-      } catch (fallbackError) {
-        VibeLogger.logError(
-          'unity_tool_manager_fallback_failed',
-          'Fallback tool initialization also failed',
-          { error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError) },
-          undefined,
-          'Both UseCase and fallback failed - domain reload recovery compromised',
-        );
+  /**
+   * Refresh tools using RefreshToolsUseCase (preferred method)
+   */
+  private async refreshToolsWithUseCase(sendNotification?: () => void): Promise<void> {
+    if (!this.connectionManager) {
+      throw new Error('ConnectionManager is required for UseCase-based refresh');
+    }
+    const refreshToolsUseCase = new RefreshToolsUseCase(this.connectionManager, this);
+
+    const result = await refreshToolsUseCase.execute({
+      includeDevelopmentOnly: this.isDevelopment,
+    });
+
+    VibeLogger.logInfo(
+      'unity_tool_manager_refresh_completed',
+      'Dynamic tools refreshed successfully via UseCase',
+      { tool_count: result.tools.length, refreshed_at: result.refreshedAt },
+      undefined,
+      'Tool refresh completed - ready for domain reload recovery',
+    );
+
+    // Send tools changed notification to MCP client if callback provided
+    // This is critical for notifying the client after domain reload
+    if (sendNotification) {
+      sendNotification();
+    }
+  }
+
+  /**
+   * Refresh tools using direct initialization (fallback method)
+   */
+  private async refreshToolsFallback(sendNotification?: () => void): Promise<void> {
+    VibeLogger.logDebug(
+      'unity_tool_manager_fallback_refresh',
+      'Using fallback refresh method (connectionManager not available)',
+      {},
+      undefined,
+      'Direct initialization fallback for domain reload recovery',
+    );
+
+    await this.initializeDynamicTools();
+
+    if (sendNotification) {
+      sendNotification();
+    }
+  }
+
+  /**
+   * Execute ultimate fallback for tool refresh (last resort)
+   */
+  private async executeUltimateToolsFallback(sendNotification?: () => void): Promise<void> {
+    try {
+      await this.initializeDynamicTools();
+
+      if (sendNotification) {
+        sendNotification();
       }
+    } catch (fallbackError) {
+      VibeLogger.logError(
+        'unity_tool_manager_fallback_failed',
+        'Fallback tool initialization also failed',
+        { error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError) },
+        undefined,
+        'Both UseCase and fallback failed - domain reload recovery compromised',
+      );
     }
   }
 
@@ -255,18 +279,11 @@ export class UnityToolManager implements IToolService {
    */
   async refreshDynamicToolsSafe(sendNotification?: () => void): Promise<void> {
     if (this.isRefreshing) {
-      if (this.isDevelopment) {
-        // refreshDynamicToolsSafe skipped: already in progress
-      }
       return;
     }
 
     this.isRefreshing = true;
     try {
-      if (this.isDevelopment) {
-        // refreshDynamicToolsSafe called
-      }
-
       await this.refreshDynamicTools(sendNotification);
     } finally {
       this.isRefreshing = false;
