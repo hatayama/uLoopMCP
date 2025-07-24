@@ -7251,9 +7251,22 @@ var UnityDiscovery = class _UnityDiscovery {
     if (this.discoveryInterval) {
       clearInterval(this.discoveryInterval);
       this.discoveryInterval = null;
-      this.isDiscovering = false;
-      _UnityDiscovery.activeTimerCount = Math.max(0, _UnityDiscovery.activeTimerCount - 1);
     }
+    this.isDiscovering = false;
+    _UnityDiscovery.activeTimerCount = Math.max(0, _UnityDiscovery.activeTimerCount - 1);
+  }
+  /**
+   * Force reset discovery state (for debugging and recovery)
+   */
+  forceResetDiscoveryState() {
+    this.isDiscovering = false;
+    VibeLogger.logWarning(
+      "unity_discovery_state_force_reset",
+      "Discovery state forcibly reset",
+      { was_discovering: true },
+      void 0,
+      "Manual recovery from stuck discovery state"
+    );
   }
   /**
    * Unified discovery and connection checking
@@ -7305,7 +7318,12 @@ var UnityDiscovery = class _UnityDiscovery {
           );
         }
       }
-      await this.discoverUnityOnPorts();
+      await Promise.race([
+        this.discoverUnityOnPorts(),
+        new Promise(
+          (_, reject) => setTimeout(() => reject(new Error("Unity discovery timeout - 5 seconds")), 5e3)
+        )
+      ]);
     } finally {
       VibeLogger.logDebug(
         "unity_discovery_cycle_end",
@@ -7411,6 +7429,7 @@ var UnityDiscovery = class _UnityDiscovery {
    * Handle connection lost event (called by UnityClient)
    */
   handleConnectionLost() {
+    this.isDiscovering = false;
     if (!this.discoveryInterval) {
       this.start();
     }

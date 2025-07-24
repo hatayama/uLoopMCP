@@ -94,11 +94,27 @@ export class UnityDiscovery {
     if (this.discoveryInterval) {
       clearInterval(this.discoveryInterval);
       this.discoveryInterval = null;
-      this.isDiscovering = false;
-
-      // Track active timer count for debugging
-      UnityDiscovery.activeTimerCount = Math.max(0, UnityDiscovery.activeTimerCount - 1);
     }
+    
+    // Always reset discovering flag regardless of interval state
+    this.isDiscovering = false;
+
+    // Track active timer count for debugging
+    UnityDiscovery.activeTimerCount = Math.max(0, UnityDiscovery.activeTimerCount - 1);
+  }
+
+  /**
+   * Force reset discovery state (for debugging and recovery)
+   */
+  forceResetDiscoveryState(): void {
+    this.isDiscovering = false;
+    VibeLogger.logWarning(
+      'unity_discovery_state_force_reset',
+      'Discovery state forcibly reset',
+      { was_discovering: true },
+      undefined,
+      'Manual recovery from stuck discovery state',
+    );
   }
 
   /**
@@ -164,8 +180,13 @@ export class UnityDiscovery {
         }
       }
 
-      // Discover Unity by checking port range
-      await this.discoverUnityOnPorts();
+      // Discover Unity by checking port range with timeout protection
+      await Promise.race([
+        this.discoverUnityOnPorts(),
+        new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error('Unity discovery timeout - 5 seconds')), 5000),
+        ),
+      ]);
     } finally {
       VibeLogger.logDebug(
         'unity_discovery_cycle_end',
@@ -289,6 +310,9 @@ export class UnityDiscovery {
    * Handle connection lost event (called by UnityClient)
    */
   handleConnectionLost(): void {
+    // Reset discovery state to ensure clean restart
+    this.isDiscovering = false;
+    
     // Restart discovery if not already running
     if (!this.discoveryInterval) {
       this.start();
