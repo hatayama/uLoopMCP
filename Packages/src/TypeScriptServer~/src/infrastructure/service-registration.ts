@@ -22,6 +22,7 @@ import { createExecuteToolUseCase } from '../domain/use-cases/execute-tool-use-c
 import { createRefreshToolsUseCase } from '../domain/use-cases/refresh-tools-use-case.js';
 import { createInitializeServerUseCase } from '../domain/use-cases/initialize-server-use-case.js';
 import { createHandleConnectionLostUseCase } from '../domain/use-cases/handle-connection-lost-use-case.js';
+import { createProcessNotificationUseCase } from '../domain/use-cases/process-notification-use-case.js';
 
 // Infrastructure components
 // import { UnityClient } from '../unity-client.js';
@@ -61,6 +62,10 @@ export function registerServices(): void {
 
   ServiceLocator.register(ServiceTokens.HANDLE_CONNECTION_LOST_USE_CASE, () => {
     return createHandleConnectionLostUseCase();
+  });
+
+  ServiceLocator.register(ServiceTokens.PROCESS_NOTIFICATION_USE_CASE, () => {
+    return createProcessNotificationUseCase();
   });
 
   // TODO: Add more UseCase registrations as they are implemented
