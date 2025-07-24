@@ -7223,6 +7223,12 @@ var UnityDiscovery = class _UnityDiscovery {
     this.onConnectionLostCallback = callback;
   }
   /**
+   * Check if discovery is currently running
+   */
+  getIsDiscovering() {
+    return this.isDiscovering;
+  }
+  /**
    * Start Unity discovery polling with unified connection management
    */
   start() {

@@ -57,6 +57,13 @@ export class UnityDiscovery {
   }
 
   /**
+   * Check if discovery is currently running
+   */
+  getIsDiscovering(): boolean {
+    return this.isDiscovering;
+  }
+
+  /**
    * Start Unity discovery polling with unified connection management
    */
   start(): void {
