@@ -3,9 +3,13 @@ import { UnityClient } from './unity-client.js';
 import { UnityConnectionManager } from './unity-connection-manager.js';
 import { ENVIRONMENT, NOTIFICATION_METHODS } from './constants.js';
 import { VibeLogger } from './utils/vibe-logger.js';
+import { IUnityEventService } from './application/interfaces/unity-event-service.js';
+import { INotificationService } from './application/interfaces/notification-service.js';
+import { IProcessControlService } from './application/interfaces/process-control-service.js';
 
 /**
  * Unity Event Handler - Manages Unity notifications and event processing
+ * Implements segregated interfaces following Interface Segregation Principle
  *
  * Design document reference: Packages/src/TypeScriptServer~/ARCHITECTURE.md
  *
@@ -21,7 +25,9 @@ import { VibeLogger } from './utils/vibe-logger.js';
  * - Signal handler configuration
  * - Graceful shutdown handling
  */
-export class UnityEventHandler {
+export class UnityEventHandler
+  implements IUnityEventService, INotificationService, IProcessControlService
+{
   private server: Server;
   private unityClient: UnityClient;
   private connectionManager: UnityConnectionManager;

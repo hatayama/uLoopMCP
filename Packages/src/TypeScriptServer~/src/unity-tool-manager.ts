@@ -5,6 +5,9 @@ import { ENVIRONMENT } from './constants.js';
 import { RefreshToolsUseCase } from './domain/use-cases/refresh-tools-use-case.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 import { IToolService } from './application/interfaces/tool-service.js';
+import { IToolQueryService } from './application/interfaces/tool-query-service.js';
+import { IToolManagementService } from './application/interfaces/tool-management-service.js';
+import { IUnityToolCommunicationService } from './application/interfaces/unity-tool-communication-service.js';
 import { UnityConnectionManager } from './unity-connection-manager.js';
 
 // Import UnityParameterSchema type from the tool file
@@ -26,7 +29,9 @@ type UnityParameterSchema = { [key: string]: unknown };
  * - Tool details fetching and parsing
  * - Development mode support
  */
-export class UnityToolManager implements IToolService {
+export class UnityToolManager
+  implements IToolService, IToolQueryService, IToolManagementService, IUnityToolCommunicationService
+{
   private unityClient: UnityClient;
   private readonly isDevelopment: boolean;
   private readonly dynamicTools: Map<string, DynamicUnityCommandTool> = new Map();

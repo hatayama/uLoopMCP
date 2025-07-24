@@ -6,7 +6,7 @@
  *
  * Related classes:
  * - IConnectionService (application/interfaces/connection-service.ts)
- * - IToolService (application/interfaces/tool-service.ts)
+ * - IToolQueryService (application/interfaces/tool-query-service.ts)
  * - IMessageService (application/interfaces/message-service.ts)
  * - ServiceLocator (infrastructure/service-locator.ts)
  */
@@ -17,7 +17,7 @@ import { ExecuteToolResponse } from '../models/responses.js';
 import { ServiceLocator } from '../../infrastructure/service-locator.js';
 import { ServiceTokens } from '../../infrastructure/service-tokens.js';
 import { IConnectionService } from '../../application/interfaces/connection-service.js';
-import { IToolService } from '../../application/interfaces/tool-service.js';
+import { IToolQueryService } from '../../application/interfaces/tool-query-service.js';
 import { ConnectionError, ToolExecutionError } from '../errors.js';
 import { VibeLogger } from '../../utils/vibe-logger.js';
 import { DynamicUnityCommandTool } from '../../tools/dynamic-unity-command-tool.js';
@@ -39,9 +39,9 @@ import { DynamicUnityCommandTool } from '../../tools/dynamic-unity-command-tool.
  */
 export class ExecuteToolUseCase implements UseCase<ExecuteToolRequest, ExecuteToolResponse> {
   private connectionService: IConnectionService;
-  private toolService: IToolService;
+  private toolService: IToolQueryService;
 
-  constructor(connectionService: IConnectionService, toolService: IToolService) {
+  constructor(connectionService: IConnectionService, toolService: IToolQueryService) {
     this.connectionService = connectionService;
     this.toolService = toolService;
   }
@@ -251,7 +251,7 @@ export function createExecuteToolUseCase(): ExecuteToolUseCase {
   const connectionService = ServiceLocator.resolve<IConnectionService>(
     ServiceTokens.CONNECTION_APP_SERVICE,
   );
-  const toolService = ServiceLocator.resolve<IToolService>(
+  const toolService = ServiceLocator.resolve<IToolQueryService>(
     ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE,
   );
 
