@@ -1,0 +1,11 @@
+{
+  "packages": {
+    "Packages/src": {
+      "release-type": "node",
+      "package-name": "io.github.hatayama.uloopmcp",
+      "extra-files": [
+        "Packages/src/TypeScriptServer~/package.json"
+      ]
+    }
+  }
+}
