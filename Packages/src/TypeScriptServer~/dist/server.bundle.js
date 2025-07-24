@@ -7878,14 +7878,216 @@ var DomainError = class extends Error {
 var ConnectionError = class extends DomainError {
   code = "CONNECTION_ERROR";
 };
+var ToolExecutionError = class extends DomainError {
+  code = "TOOL_EXECUTION_ERROR";
+};
+var ValidationError = class extends DomainError {
+  code = "VALIDATION_ERROR";
+};
+var DiscoveryError = class extends DomainError {
+  code = "DISCOVERY_ERROR";
+};
+var ClientCompatibilityError = class extends DomainError {
+  code = "CLIENT_COMPATIBILITY_ERROR";
+};
+
+// src/infrastructure/errors.ts
+var InfrastructureError = class extends Error {
+  constructor(message, technicalDetails, originalError) {
+    super(message);
+    this.technicalDetails = technicalDetails;
+    this.originalError = originalError;
+    this.name = this.constructor.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+  /**
+   * 技術的詳細を含む完全なエラー情報を取得
+   */
+  getFullErrorInfo() {
+    return {
+      message: this.message,
+      category: this.category,
+      technicalDetails: this.technicalDetails,
+      originalError: this.originalError?.message,
+      stack: this.stack
+    };
+  }
+};
+var UnityCommuncationError = class extends InfrastructureError {
+  constructor(message, unityEndpoint, requestData, originalError) {
+    super(message, { unityEndpoint, requestData }, originalError);
+    this.unityEndpoint = unityEndpoint;
+    this.requestData = requestData;
+  }
+  category = "UNITY_COMMUNICATION";
+};
+var ToolManagementError = class extends InfrastructureError {
+  constructor(message, toolName, toolData, originalError) {
+    super(message, { toolName, toolData }, originalError);
+    this.toolName = toolName;
+    this.toolData = toolData;
+  }
+  category = "TOOL_MANAGEMENT";
+};
+
+// src/application/error-converter.ts
+var ErrorConverter = class {
+  /**
+   * Infrastructure層のエラーをDomain層のエラーに変換
+   *
+   * @param error 変換対象のエラー
+   * @param operation 操作名（ログ用）
+   * @param correlationId 相関ID
+   * @returns 変換されたDomainError
+   */
+  static convertToDomainError(error, operation, correlationId) {
+    if (error instanceof DomainError) {
+      return error;
+    }
+    if (error instanceof InfrastructureError) {
+      return this.convertInfrastructureError(error, operation, correlationId);
+    }
+    if (error instanceof Error) {
+      return this.convertGenericError(error, operation, correlationId);
+    }
+    return this.convertUnknownError(error, operation, correlationId);
+  }
+  /**
+   * Infrastructure層エラーをDomain層エラーに変換
+   */
+  static convertInfrastructureError(error, operation, correlationId) {
+    VibeLogger.logError(
+      `${operation}_infrastructure_error`,
+      `Infrastructure error during ${operation}`,
+      error.getFullErrorInfo(),
+      correlationId,
+      "Error Converter logging technical details before domain conversion"
+    );
+    switch (error.category) {
+      case "UNITY_COMMUNICATION":
+        return new ConnectionError(
+          `Unity communication failed: ${error.message}`,
+          {
+            original_category: error.category,
+            unity_endpoint: error.unityEndpoint
+          }
+        );
+      case "TOOL_MANAGEMENT":
+        return new ToolExecutionError(
+          `Tool management failed: ${error.message}`,
+          {
+            original_category: error.category,
+            tool_name: error.toolName
+          }
+        );
+      case "SERVICE_RESOLUTION":
+        return new ValidationError(
+          `Service resolution failed: ${error.message}`,
+          {
+            original_category: error.category,
+            service_token: error.serviceToken
+          }
+        );
+      case "NETWORK":
+        return new DiscoveryError(
+          `Network operation failed: ${error.message}`,
+          {
+            original_category: error.category,
+            endpoint: error.endpoint,
+            port: error.port
+          }
+        );
+      case "MCP_PROTOCOL":
+        return new ClientCompatibilityError(
+          `MCP protocol error: ${error.message}`,
+          {
+            original_category: error.category,
+            protocol_version: error.protocolVersion
+          }
+        );
+      default:
+        return new ToolExecutionError(
+          `Infrastructure error: ${error.message}`,
+          { original_category: error.category }
+        );
+    }
+  }
+  /**
+   * 一般的なErrorをDomain層エラーに変換
+   */
+  static convertGenericError(error, operation, correlationId) {
+    VibeLogger.logError(
+      `${operation}_generic_error`,
+      `Generic error during ${operation}`,
+      {
+        error_name: error.name,
+        error_message: error.message,
+        stack: error.stack
+      },
+      correlationId,
+      "Error Converter handling generic Error instance"
+    );
+    const message = error.message.toLowerCase();
+    if (message.includes("connection") || message.includes("connect")) {
+      return new ConnectionError(`Connection error: ${error.message}`);
+    }
+    if (message.includes("tool") || message.includes("execute")) {
+      return new ToolExecutionError(`Tool execution error: ${error.message}`);
+    }
+    if (message.includes("validation") || message.includes("invalid")) {
+      return new ValidationError(`Validation error: ${error.message}`);
+    }
+    if (message.includes("discovery") || message.includes("network")) {
+      return new DiscoveryError(`Discovery error: ${error.message}`);
+    }
+    return new ToolExecutionError(`Unexpected error: ${error.message}`);
+  }
+  /**
+   * 不明なエラーオブジェクトをDomain層エラーに変換
+   */
+  static convertUnknownError(error, operation, correlationId) {
+    const errorString = typeof error === "string" ? error : JSON.stringify(error);
+    VibeLogger.logError(
+      `${operation}_unknown_error`,
+      `Unknown error type during ${operation}`,
+      { error_value: error, error_type: typeof error },
+      correlationId,
+      "Error Converter handling unknown error type"
+    );
+    return new ToolExecutionError(`Unknown error occurred: ${errorString}`);
+  }
+  /**
+   * エラーが回復可能かどうかを判定
+   *
+   * @param error 判定対象のエラー
+   * @returns 回復可能な場合true
+   */
+  static isRecoverable(error) {
+    switch (error.code) {
+      case "CONNECTION_ERROR":
+      case "DISCOVERY_ERROR":
+        return true;
+      // 接続・発見エラーは再試行可能
+      case "VALIDATION_ERROR":
+      case "CLIENT_COMPATIBILITY_ERROR":
+        return false;
+      // 検証・互換性エラーは回復不可能
+      case "TOOL_EXECUTION_ERROR":
+        return true;
+      // ツール実行エラーは状況によって再試行可能
+      default:
+        return false;
+    }
+  }
+};
 
 // src/domain/use-cases/refresh-tools-use-case.ts
 var RefreshToolsUseCase = class {
-  connectionManager;
-  toolManager;
-  constructor(connectionManager, toolManager) {
-    this.connectionManager = connectionManager;
-    this.toolManager = toolManager;
+  connectionService;
+  toolManagementService;
+  constructor(connectionService, toolManagementService) {
+    this.connectionService = connectionService;
+    this.toolManagementService = toolManagementService;
   }
   /**
    * Execute the tool refresh workflow
@@ -7932,7 +8134,7 @@ var RefreshToolsUseCase = class {
    * @throws ConnectionError if connection cannot be established
    */
   async ensureUnityConnection(correlationId) {
-    if (!this.connectionManager.isConnected()) {
+    if (!this.connectionService.isConnected()) {
       VibeLogger.logWarning(
         "refresh_tools_unity_not_connected",
         "Unity not connected during tool refresh, attempting to establish connection",
@@ -7941,12 +8143,14 @@ var RefreshToolsUseCase = class {
         "Unity connection required for tool refresh after domain reload"
       );
       try {
-        await this.connectionManager.waitForUnityConnectionWithTimeout(1e4);
+        await this.connectionService.waitForConnection(1e4);
       } catch (error) {
-        throw new ConnectionError(
-          `Cannot refresh tools: Unity connection failed - ${error instanceof Error ? error.message : "Unknown error"}`,
-          { original_error: error }
+        const domainError = ErrorConverter.convertToDomainError(
+          error,
+          "refresh_tools_connection_wait",
+          correlationId
         );
+        throw domainError;
       }
     }
     VibeLogger.logDebug(
@@ -7971,24 +8175,21 @@ var RefreshToolsUseCase = class {
         correlationId,
         "Fetching latest tool definitions from Unity after domain reload"
       );
-      await this.toolManager.initializeDynamicTools();
+      await this.toolManagementService.initializeDynamicTools();
       VibeLogger.logInfo(
         "refresh_tools_initialized",
         "Dynamic tools re-initialized successfully from Unity",
-        { tool_count: this.toolManager.getToolsCount() },
+        { tool_count: this.toolManagementService.getToolsCount() },
         correlationId,
         "Tool definitions updated from Unity after domain reload"
       );
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      VibeLogger.logError(
-        "refresh_tools_initialization_failed",
-        "Failed to re-initialize dynamic tools from Unity",
-        { error_message: errorMessage },
-        correlationId,
-        "Tool refresh failed during Unity communication"
+      const domainError = ErrorConverter.convertToDomainError(
+        error,
+        "refresh_tools_initialization",
+        correlationId
       );
-      throw new ConnectionError(`Tool refresh failed: ${errorMessage}`, { original_error: error });
+      throw domainError;
     }
   }
   /**
@@ -8060,7 +8261,11 @@ var UnityToolManager = class {
     try {
       const toolDetails = await this.unityClient.fetchToolDetailsFromUnity(this.isDevelopment);
       if (!toolDetails) {
-        return [];
+        throw new UnityCommuncationError(
+          "Unity returned no tool details",
+          "Unity Editor tools endpoint",
+          { development_mode: this.isDevelopment }
+        );
       }
       this.createDynamicToolsFromTools(toolDetails);
       const tools = [];
@@ -8073,7 +8278,15 @@ var UnityToolManager = class {
       }
       return tools;
     } catch (error) {
-      return [];
+      if (error instanceof UnityCommuncationError) {
+        throw error;
+      }
+      throw new UnityCommuncationError(
+        "Failed to retrieve tools from Unity",
+        "Unity Editor tools endpoint",
+        { development_mode: this.isDevelopment },
+        error instanceof Error ? error : void 0
+      );
     }
   }
   /**
@@ -8084,10 +8297,23 @@ var UnityToolManager = class {
       await this.unityClient.ensureConnected();
       const toolDetails = await this.unityClient.fetchToolDetailsFromUnity(this.isDevelopment);
       if (!toolDetails) {
-        return;
+        throw new UnityCommuncationError(
+          "Unity returned no tool details during initialization",
+          "Unity Editor tools endpoint",
+          { development_mode: this.isDevelopment }
+        );
       }
       this.createDynamicToolsFromTools(toolDetails);
     } catch (error) {
+      if (error instanceof UnityCommuncationError) {
+        throw error;
+      }
+      throw new ToolManagementError(
+        "Failed to initialize dynamic tools",
+        void 0,
+        { development_mode: this.isDevelopment },
+        error instanceof Error ? error : void 0
+      );
     }
   }
   /**

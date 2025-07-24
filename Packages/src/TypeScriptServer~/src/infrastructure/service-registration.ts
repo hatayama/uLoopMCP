@@ -19,10 +19,12 @@ import { ServiceTokens } from './service-tokens.js';
 
 // UseCase implementations
 import { ExecuteToolUseCase } from '../domain/use-cases/execute-tool-use-case.js';
+import { RefreshToolsUseCase } from '../domain/use-cases/refresh-tools-use-case.js';
 
 // Application Service interfaces
 import { IConnectionService } from '../application/interfaces/connection-service.js';
 import { IToolQueryService } from '../application/interfaces/tool-query-service.js';
+import { IToolManagementService } from '../application/interfaces/tool-management-service.js';
 
 // Infrastructure components
 // import { UnityClient } from '../unity-client.js';
@@ -59,8 +61,13 @@ export function registerServices(): void {
   });
 
   ServiceLocator.register(ServiceTokens.REFRESH_TOOLS_USE_CASE, () => {
-    // TODO: Implement proper dependency injection when other UseCases are refactored
-    throw new Error('RefreshToolsUseCase factory not yet implemented with Clean Architecture');
+    const connectionService = ServiceLocator.resolve<IConnectionService>(
+      ServiceTokens.CONNECTION_APP_SERVICE,
+    );
+    const toolManagementService = ServiceLocator.resolve<IToolManagementService>(
+      ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE,
+    );
+    return new RefreshToolsUseCase(connectionService, toolManagementService);
   });
 
   ServiceLocator.register(ServiceTokens.INITIALIZE_SERVER_USE_CASE, () => {

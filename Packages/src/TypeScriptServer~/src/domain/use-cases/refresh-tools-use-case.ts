@@ -13,11 +13,11 @@
 import { UseCase } from '../base-interfaces.js';
 import { RefreshToolsRequest } from '../models/requests.js';
 import { RefreshToolsResponse } from '../models/responses.js';
-import { UnityToolManager } from '../../unity-tool-manager.js';
-import { UnityConnectionManager } from '../../unity-connection-manager.js';
 import { ConnectionError } from '../errors.js';
 import { VibeLogger } from '../../utils/vibe-logger.js';
 import { ErrorConverter } from '../../application/error-converter.js';
+import { IConnectionService } from '../../application/interfaces/connection-service.js';
+import { IToolManagementService } from '../../application/interfaces/tool-management-service.js';
 
 /**
  * UseCase for refreshing Unity tools
@@ -35,12 +35,12 @@ import { ErrorConverter } from '../../application/error-converter.js';
  * 4. Support notification callback for MCP client updates
  */
 export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, RefreshToolsResponse> {
-  private connectionManager: UnityConnectionManager;
-  private toolManager: UnityToolManager;
+  private connectionService: IConnectionService;
+  private toolManagementService: IToolManagementService;
 
-  constructor(connectionManager: UnityConnectionManager, toolManager: UnityToolManager) {
-    this.connectionManager = connectionManager;
-    this.toolManager = toolManager;
+  constructor(connectionService: IConnectionService, toolManagementService: IToolManagementService) {
+    this.connectionService = connectionService;
+    this.toolManagementService = toolManagementService;
   }
 
   /**
@@ -99,7 +99,7 @@ export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, Refresh
    * @throws ConnectionError if connection cannot be established
    */
   private async ensureUnityConnection(correlationId: string): Promise<void> {
-    if (!this.connectionManager.isConnected()) {
+    if (!this.connectionService.isConnected()) {
       VibeLogger.logWarning(
         'refresh_tools_unity_not_connected',
         'Unity not connected during tool refresh, attempting to establish connection',
@@ -109,7 +109,7 @@ export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, Refresh
       );
 
       try {
-        await this.connectionManager.waitForUnityConnectionWithTimeout(10000);
+        await this.connectionService.waitForConnection(10000);
       } catch (error) {
         // Use ErrorConverter for consistent error handling
         const domainError = ErrorConverter.convertToDomainError(
@@ -146,12 +146,12 @@ export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, Refresh
       );
 
       // Re-initialize tools (this will fetch latest tool definitions from Unity)
-      await this.toolManager.initializeDynamicTools();
+      await this.toolManagementService.initializeDynamicTools();
 
       VibeLogger.logInfo(
         'refresh_tools_initialized',
         'Dynamic tools re-initialized successfully from Unity',
-        { tool_count: this.toolManager.getToolsCount() },
+        { tool_count: this.toolManagementService.getToolsCount() },
         correlationId,
         'Tool definitions updated from Unity after domain reload',
       );
@@ -202,17 +202,3 @@ export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, Refresh
   }
 }
 
-/**
- * Factory function for creating RefreshToolsUseCase instances
- *
- * @returns New RefreshToolsUseCase instance with injected dependencies
- */
-export function createRefreshToolsUseCase(): RefreshToolsUseCase {
-  // Phase 3.2: Create temporary factory that will be replaced in Phase 4
-  // For now, we need external injection of dependencies
-  // This will be properly implemented when ServiceLocator is fully configured
-
-  throw new Error(
-    'RefreshToolsUseCase factory needs to be initialized with concrete dependencies in Phase 3.2',
-  );
-}
