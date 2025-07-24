@@ -6,7 +6,7 @@
  *
  * Related classes:
  * - IConnectionService (application/interfaces/connection-service.ts)
- * - IToolService (application/interfaces/tool-service.ts)
+ * - IToolQueryService (application/interfaces/tool-query-service.ts)
  * - IClientCompatibilityService (application/interfaces/client-compatibility-service.ts)
  * - ServiceLocator (infrastructure/service-locator.ts)
  */
