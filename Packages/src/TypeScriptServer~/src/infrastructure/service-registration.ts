@@ -20,6 +20,7 @@ import { ServiceTokens } from './service-tokens.js';
 // UseCase implementations
 import { createExecuteToolUseCase } from '../domain/use-cases/execute-tool-use-case.js';
 import { createRefreshToolsUseCase } from '../domain/use-cases/refresh-tools-use-case.js';
+import { createInitializeServerUseCase } from '../domain/use-cases/initialize-server-use-case.js';
 
 // Infrastructure components
 // import { UnityClient } from '../unity-client.js';
@@ -51,6 +52,10 @@ export function registerServices(): void {
 
   ServiceLocator.register(ServiceTokens.REFRESH_TOOLS_USE_CASE, () => {
     return createRefreshToolsUseCase();
+  });
+
+  ServiceLocator.register(ServiceTokens.INITIALIZE_SERVER_USE_CASE, () => {
+    return createInitializeServerUseCase();
   });
 
   // TODO: Add more UseCase registrations as they are implemented

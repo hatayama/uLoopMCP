@@ -7536,8 +7536,8 @@ var UnityConnectionManager = class {
       return;
     }
     this.isInitialized = true;
-    this.unityDiscovery.setOnDiscoveredCallback(async (port) => {
-      void this.handleUnityDiscovered(onConnectionEstablished);
+    this.unityDiscovery.setOnDiscoveredCallback(async (_port) => {
+      await this.handleUnityDiscovered(onConnectionEstablished);
     });
     this.unityDiscovery.setOnConnectionLostCallback(() => {
       if (this.isDevelopment) {
