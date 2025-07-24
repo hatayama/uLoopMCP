@@ -260,7 +260,7 @@ export class UnityEventHandler
   /**
    * Check if shutdown is in progress
    */
-  isShuttingDownCheck(): boolean {
+  isShuttingDown(): boolean {
     return this.isShuttingDown;
   }
 }
