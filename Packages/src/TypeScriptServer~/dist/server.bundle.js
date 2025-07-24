@@ -7278,12 +7278,20 @@ var UnityDiscovery = class _UnityDiscovery {
       VibeLogger.logDebug(
         "unity_discovery_skip_in_progress",
         "Discovery already in progress - skipping",
-        { is_discovering: true },
-        correlationId
+        { is_discovering: true, active_timer_count: _UnityDiscovery.activeTimerCount },
+        correlationId,
+        "Another discovery cycle is already running - this is normal behavior."
       );
       return;
     }
     this.isDiscovering = true;
+    VibeLogger.logDebug(
+      "unity_discovery_state_set",
+      "Discovery state set to true",
+      { is_discovering: true, correlation_id: correlationId },
+      correlationId,
+      "Discovery state flag set - starting cycle"
+    );
     VibeLogger.logInfo(
       "unity_discovery_cycle_start",
       "Starting unified discovery and connection check cycle",
@@ -7324,12 +7332,29 @@ var UnityDiscovery = class _UnityDiscovery {
           (_, reject) => setTimeout(() => reject(new Error("Unity discovery timeout - 5 seconds")), 5e3)
         )
       ]);
+    } catch (error) {
+      VibeLogger.logError(
+        "unity_discovery_cycle_error",
+        "Discovery cycle encountered error",
+        {
+          error_message: error instanceof Error ? error.message : String(error),
+          is_discovering: this.isDiscovering,
+          correlation_id: correlationId
+        },
+        correlationId,
+        "Discovery cycle failed - forcing state reset to prevent hang"
+      );
     } finally {
       VibeLogger.logDebug(
         "unity_discovery_cycle_end",
-        "Discovery cycle completed",
-        { is_discovering: false },
-        correlationId
+        "Discovery cycle completed - resetting state",
+        {
+          is_discovering_before: this.isDiscovering,
+          is_discovering_after: false,
+          correlation_id: correlationId
+        },
+        correlationId,
+        "Discovery cycle finished and state reset to prevent hang"
       );
       this.isDiscovering = false;
     }
@@ -7429,10 +7454,33 @@ var UnityDiscovery = class _UnityDiscovery {
    * Handle connection lost event (called by UnityClient)
    */
   handleConnectionLost() {
+    const correlationId = VibeLogger.generateCorrelationId();
+    VibeLogger.logInfo(
+      "unity_discovery_connection_lost_handler",
+      "Handling connection lost event",
+      {
+        was_discovering: this.isDiscovering,
+        has_discovery_interval: this.discoveryInterval !== null,
+        active_timer_count: _UnityDiscovery.activeTimerCount
+      },
+      correlationId,
+      "Connection lost event received - preparing for recovery"
+    );
     this.isDiscovering = false;
-    if (!this.discoveryInterval) {
-      this.start();
-    }
+    setTimeout(() => {
+      VibeLogger.logInfo(
+        "unity_discovery_restart_after_connection_lost",
+        "Restarting discovery after connection lost delay",
+        {
+          has_discovery_interval: this.discoveryInterval !== null
+        },
+        correlationId,
+        "Starting discovery with delay to allow Unity server restart"
+      );
+      if (!this.discoveryInterval) {
+        this.start();
+      }
+    }, 2e3);
     if (this.onConnectionLostCallback) {
       this.onConnectionLostCallback();
     }
