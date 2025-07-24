@@ -69,7 +69,7 @@ export class UnityToolManager implements IToolService {
     }
 
     try {
-      const toolDetails = await this.fetchToolDetailsFromUnity();
+      const toolDetails = await this.unityClient.fetchToolDetailsFromUnity(this.isDevelopment);
 
       if (!toolDetails) {
         return [];
@@ -101,7 +101,7 @@ export class UnityToolManager implements IToolService {
     try {
       await this.unityClient.ensureConnected();
 
-      const toolDetails = await this.fetchToolDetailsFromUnity();
+      const toolDetails = await this.unityClient.fetchToolDetailsFromUnity(this.isDevelopment);
       if (!toolDetails) {
         return;
       }
@@ -113,31 +113,6 @@ export class UnityToolManager implements IToolService {
       // Failed to initialize dynamic tools
       // Continue without dynamic tools
     }
-  }
-
-  /**
-   * Fetch tool details from Unity
-   */
-  private async fetchToolDetailsFromUnity(): Promise<unknown[] | null> {
-    // Get detailed tool information including schemas
-    // Include development-only tools if in development mode
-    const params = { IncludeDevelopmentOnly: this.isDevelopment };
-
-    // Requesting tool details from Unity with params
-
-    const toolDetailsResponse = await this.unityClient.executeTool('get-tool-details', params);
-    // Received tool details response
-
-    // Handle new GetToolDetailsResponse structure
-    const toolDetails =
-      (toolDetailsResponse as { Tools?: unknown[] })?.Tools || toolDetailsResponse;
-    if (!Array.isArray(toolDetails)) {
-      // Invalid tool details response
-      return null;
-    }
-
-    // Successfully parsed tools from Unity
-    return toolDetails as unknown[];
   }
 
   /**

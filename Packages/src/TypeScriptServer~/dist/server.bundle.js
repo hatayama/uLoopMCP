@@ -7182,10 +7182,44 @@ var UnityClient = class _UnityClient {
   setReconnectedCallback(callback) {
     this.connectionManager.setReconnectedCallback(callback);
   }
+  /**
+   * Fetch tool details from Unity with development mode support
+   */
+  async fetchToolDetailsFromUnity(includeDevelopmentOnly = false) {
+    const params = { IncludeDevelopmentOnly: includeDevelopmentOnly };
+    const toolDetailsResponse = await this.executeTool("get-tool-details", params);
+    const toolDetails = toolDetailsResponse?.Tools || toolDetailsResponse;
+    if (!Array.isArray(toolDetails)) {
+      return null;
+    }
+    return toolDetails;
+  }
+  /**
+   * Check if Unity is available on specific port
+   * Performs low-level TCP connection test with short timeout
+   */
+  static async isUnityAvailable(port) {
+    return new Promise((resolve2) => {
+      const socket = new net.Socket();
+      const timeout = 500;
+      const timer = setTimeout(() => {
+        socket.destroy();
+        resolve2(false);
+      }, timeout);
+      socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
+        clearTimeout(timer);
+        socket.destroy();
+        resolve2(true);
+      });
+      socket.on("error", () => {
+        clearTimeout(timer);
+        resolve2(false);
+      });
+    });
+  }
 };
 
 // src/unity-discovery.ts
-import * as net2 from "net";
 var UnityDiscovery = class _UnityDiscovery {
   discoveryInterval = null;
   unityClient;
@@ -7426,7 +7460,7 @@ var UnityDiscovery = class _UnityDiscovery {
       "Checking specified port for Unity MCP server."
     );
     try {
-      if (await this.isUnityAvailable(port)) {
+      if (await UnityClient.isUnityAvailable(port)) {
         VibeLogger.logInfo(
           "unity_discovery_success",
           "Unity discovered and connection established",
@@ -7512,28 +7546,6 @@ var UnityDiscovery = class _UnityDiscovery {
     if (this.onConnectionLostCallback) {
       this.onConnectionLostCallback();
     }
-  }
-  /**
-   * Check if Unity is available on specific port
-   */
-  async isUnityAvailable(port) {
-    return new Promise((resolve2) => {
-      const socket = new net2.Socket();
-      const timeout = 500;
-      const timer = setTimeout(() => {
-        socket.destroy();
-        resolve2(false);
-      }, timeout);
-      socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
-        clearTimeout(timer);
-        socket.destroy();
-        resolve2(true);
-      });
-      socket.on("error", () => {
-        clearTimeout(timer);
-        resolve2(false);
-      });
-    });
   }
   /**
    * Get debugging information about current timer state
@@ -8046,7 +8058,7 @@ var UnityToolManager = class {
       return [];
     }
     try {
-      const toolDetails = await this.fetchToolDetailsFromUnity();
+      const toolDetails = await this.unityClient.fetchToolDetailsFromUnity(this.isDevelopment);
       if (!toolDetails) {
         return [];
       }
@@ -8070,25 +8082,13 @@ var UnityToolManager = class {
   async initializeDynamicTools() {
     try {
       await this.unityClient.ensureConnected();
-      const toolDetails = await this.fetchToolDetailsFromUnity();
+      const toolDetails = await this.unityClient.fetchToolDetailsFromUnity(this.isDevelopment);
       if (!toolDetails) {
         return;
       }
       this.createDynamicToolsFromTools(toolDetails);
     } catch (error) {
     }
-  }
-  /**
-   * Fetch tool details from Unity
-   */
-  async fetchToolDetailsFromUnity() {
-    const params = { IncludeDevelopmentOnly: this.isDevelopment };
-    const toolDetailsResponse = await this.unityClient.executeTool("get-tool-details", params);
-    const toolDetails = toolDetailsResponse?.Tools || toolDetailsResponse;
-    if (!Array.isArray(toolDetails)) {
-      return null;
-    }
-    return toolDetails;
   }
   /**
    * Create dynamic tools from Unity tool details
@@ -8287,6 +8287,13 @@ var McpClientCompatibility = class {
    */
   setClientName(clientName) {
     this.clientName = clientName;
+  }
+  /**
+   * Setup client compatibility configuration with logging
+   */
+  setupClientCompatibility(clientName) {
+    this.setClientName(clientName);
+    this.logClientCompatibility(clientName);
   }
   /**
    * Get client name
@@ -8687,13 +8694,6 @@ var UnityMcpServer = class {
     this.eventHandler.setupSignalHandlers();
   }
   /**
-   * Setup client compatibility configuration
-   */
-  setupClientCompatibility(clientName) {
-    this.clientCompatibility.setClientName(clientName);
-    this.clientCompatibility.logClientCompatibility(clientName);
-  }
-  /**
    * Initialize client synchronously (for list_changed unsupported clients)
    */
   async initializeSyncClient(clientName) {
@@ -8776,7 +8776,7 @@ var UnityMcpServer = class {
         "Analyze this to ensure claude-code is properly detected"
       );
       if (clientName) {
-        this.setupClientCompatibility(clientName);
+        this.clientCompatibility.setupClientCompatibility(clientName);
       }
       if (!this.isInitialized) {
         this.isInitialized = true;

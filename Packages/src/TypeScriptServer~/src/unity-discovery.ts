@@ -1,5 +1,4 @@
-import * as net from 'net';
-import { UNITY_CONNECTION, POLLING } from './constants.js';
+import { POLLING } from './constants.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 import { UnityClient } from './unity-client.js';
 
@@ -308,7 +307,7 @@ export class UnityDiscovery {
     );
 
     try {
-      if (await this.isUnityAvailable(port)) {
+      if (await UnityClient.isUnityAvailable(port)) {
         VibeLogger.logInfo(
           'unity_discovery_success',
           'Unity discovered and connection established',
@@ -413,32 +412,6 @@ export class UnityDiscovery {
     if (this.onConnectionLostCallback) {
       this.onConnectionLostCallback();
     }
-  }
-
-  /**
-   * Check if Unity is available on specific port
-   */
-  private async isUnityAvailable(port: number): Promise<boolean> {
-    return new Promise((resolve) => {
-      const socket = new net.Socket();
-      const timeout = 500; // Shorter timeout for faster discovery
-
-      const timer = setTimeout(() => {
-        socket.destroy();
-        resolve(false);
-      }, timeout);
-
-      socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
-        clearTimeout(timer);
-        socket.destroy();
-        resolve(true);
-      });
-
-      socket.on('error', () => {
-        clearTimeout(timer);
-        resolve(false);
-      });
-    });
   }
 
   /**

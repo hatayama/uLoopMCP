@@ -102,15 +102,6 @@ class UnityMcpServer {
   }
 
   /**
-   * Setup client compatibility configuration
-   */
-  private setupClientCompatibility(clientName: string): void {
-    this.clientCompatibility.setClientName(clientName);
-    this.clientCompatibility.logClientCompatibility(clientName);
-    // Client name received - no logging needed for normal operation
-  }
-
-  /**
    * Initialize client synchronously (for list_changed unsupported clients)
    */
   private async initializeSyncClient(clientName: string): Promise<InitializeResponse> {
@@ -208,7 +199,7 @@ class UnityMcpServer {
       );
 
       if (clientName) {
-        this.setupClientCompatibility(clientName);
+        this.clientCompatibility.setupClientCompatibility(clientName);
       }
 
       // Initialize Unity connection after receiving client name

@@ -33,6 +33,15 @@ export class McpClientCompatibility {
   }
 
   /**
+   * Setup client compatibility configuration with logging
+   */
+  setupClientCompatibility(clientName: string): void {
+    this.setClientName(clientName);
+    this.logClientCompatibility(clientName);
+    // Client name received - no logging needed for normal operation
+  }
+
+  /**
    * Get client name
    */
   getClientName(): string {
