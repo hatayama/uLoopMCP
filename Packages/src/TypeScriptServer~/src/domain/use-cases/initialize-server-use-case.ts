@@ -14,11 +14,10 @@
 import { UseCase } from '../base-interfaces.js';
 import { InitializeServerRequest } from '../models/requests.js';
 import { InitializeServerResponse } from '../models/responses.js';
-import { UnityConnectionManager } from '../../unity-connection-manager.js';
-import { UnityToolManager } from '../../unity-tool-manager.js';
-import { McpClientCompatibility } from '../../mcp-client-compatibility.js';
 import { VibeLogger } from '../../utils/vibe-logger.js';
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { IConnectionService } from '../../application/interfaces/connection-service.js';
+import { IToolQueryService } from '../../application/interfaces/tool-query-service.js';
+import { IClientCompatibilityService } from '../../application/interfaces/client-compatibility-service.js';
 
 // MCP Protocol constants
 const MCP_PROTOCOL_VERSION = '2024-11-05';
@@ -44,18 +43,18 @@ const TOOLS_LIST_CHANGED_CAPABILITY = true;
 export class InitializeServerUseCase
   implements UseCase<InitializeServerRequest, InitializeServerResponse>
 {
-  private connectionManager: UnityConnectionManager;
-  private toolManager: UnityToolManager;
-  private clientCompatibility: McpClientCompatibility;
+  private connectionService: IConnectionService;
+  private toolService: IToolQueryService;
+  private clientCompatibilityService: IClientCompatibilityService;
 
   constructor(
-    connectionManager: UnityConnectionManager,
-    toolManager: UnityToolManager,
-    clientCompatibility: McpClientCompatibility,
+    connectionService: IConnectionService,
+    toolService: IToolQueryService,
+    clientCompatibilityService: IClientCompatibilityService,
   ) {
-    this.connectionManager = connectionManager;
-    this.toolManager = toolManager;
-    this.clientCompatibility = clientCompatibility;
+    this.connectionService = connectionService;
+    this.toolService = toolService;
+    this.clientCompatibilityServiceService = clientCompatibilityService;
   }
 
   /**
@@ -90,7 +89,7 @@ export class InitializeServerUseCase
           client_name: clientName,
           tools_count: response.tools?.length || 0,
           is_list_changed_unsupported:
-            this.clientCompatibility.isListChangedUnsupported(clientName),
+            this.clientCompatibilityService.isListChangedUnsupported(clientName),
         },
         correlationId,
         'MCP server initialization completed - client connected and tools available',
@@ -110,8 +109,8 @@ export class InitializeServerUseCase
    */
   private setupClientCompatibility(clientName: string, correlationId: string): void {
     if (clientName) {
-      this.clientCompatibility.setClientName(clientName);
-      this.clientCompatibility.logClientCompatibility(clientName);
+      this.clientCompatibilityService.setClientName(clientName);
+      this.clientCompatibilityService.logClientCompatibility(clientName);
 
       VibeLogger.logInfo(
         'initialize_server_client_compatibility_setup',
@@ -119,7 +118,7 @@ export class InitializeServerUseCase
         {
           client_name: clientName,
           is_list_changed_unsupported:
-            this.clientCompatibility.isListChangedUnsupported(clientName),
+            this.clientCompatibilityService.isListChangedUnsupported(clientName),
         },
         correlationId,
         'Client compatibility determined - initialization strategy selected',
@@ -138,7 +137,7 @@ export class InitializeServerUseCase
     clientName: string,
     correlationId: string,
   ): Promise<InitializeServerResponse> {
-    if (this.clientCompatibility.isListChangedUnsupported(clientName)) {
+    if (this.clientCompatibilityService.isListChangedUnsupported(clientName)) {
       // Synchronous initialization for list_changed unsupported clients
       return await this.executeSyncInitialization(clientName, correlationId);
     } else {
@@ -168,16 +167,16 @@ export class InitializeServerUseCase
 
     try {
       // Initialize client compatibility
-      await this.clientCompatibility.initializeClient(clientName);
+      await this.clientCompatibilityService.initializeClient(clientName);
 
       // Setup tool manager with client name
-      this.toolManager.setClientName(clientName);
+      this.toolService.setClientName(clientName);
 
       // Wait for Unity connection with timeout
-      await this.connectionManager.waitForUnityConnectionWithTimeout(10000);
+      await this.connectionService.waitForConnection(10000);
 
       // Get tools from Unity
-      const tools = await this.toolManager.getToolsFromUnity();
+      const tools = await this.toolService.getAllTools();
 
       VibeLogger.logInfo(
         'initialize_server_sync_completed',
@@ -225,11 +224,11 @@ export class InitializeServerUseCase
     );
 
     // Start Unity connection initialization in background
-    void this.clientCompatibility.initializeClient(clientName);
-    this.toolManager.setClientName(clientName);
+    void this.clientCompatibilityService.initializeClient(clientName);
+    this.toolService.setClientName(clientName);
 
     // Start background tool initialization
-    void this.toolManager
+    void this.toolService
       .initializeDynamicTools()
       .then(() => {
         VibeLogger.logInfo(
@@ -319,17 +318,3 @@ export class InitializeServerUseCase
   }
 }
 
-/**
- * Factory function for creating InitializeServerUseCase instances
- *
- * @returns New InitializeServerUseCase instance with injected dependencies
- */
-export function createInitializeServerUseCase(): InitializeServerUseCase {
-  // Phase 3.3: Create temporary factory that will be replaced in Phase 4
-  // For now, we need external injection of dependencies
-  // This will be properly implemented when ServiceLocator is fully configured
-
-  throw new Error(
-    'InitializeServerUseCase factory needs to be initialized with concrete dependencies in Phase 3.3',
-  );
-}
