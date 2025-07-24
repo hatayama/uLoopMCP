@@ -16,12 +16,6 @@
  */
 export type ServiceToken<T> = symbol & { __type: T };
 
-/**
- * Create a type-safe service token
- */
-export function createServiceToken<T>(name: string): ServiceToken<T> {
-  return Symbol(name) as ServiceToken<T>;
-}
 
 /**
  * All service tokens for the application
