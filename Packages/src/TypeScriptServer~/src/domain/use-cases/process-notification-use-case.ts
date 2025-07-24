@@ -50,7 +50,7 @@ export class ProcessNotificationUseCase
    * @param request Notification processing request
    * @returns Notification processing response
    */
-  execute(request: ProcessNotificationRequest): ProcessNotificationResponse {
+  async execute(request: ProcessNotificationRequest): Promise<ProcessNotificationResponse> {
     const correlationId = VibeLogger.generateCorrelationId();
 
     VibeLogger.logInfo(

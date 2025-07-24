@@ -23,7 +23,7 @@ import {
   ClientCompatibilityError,
 } from '../../domain/errors.js';
 import {
-  UnityCommuncationError,
+  UnityCommunicationError,
   ToolManagementError,
   ServiceResolutionError,
   NetworkError,
@@ -47,9 +47,9 @@ describe('ErrorConverter Unit Tests', () => {
   });
 
   describe('Infrastructure Error Conversion', () => {
-    test('should convert UnityCommuncationError to ConnectionError', () => {
+    test('should convert UnityCommunicationError to ConnectionError', () => {
       // Arrange
-      const infraError = new UnityCommuncationError('Unity connection failed', 'localhost:8700', {
+      const infraError = new UnityCommunicationError('Unity connection failed', 'localhost:8700', {
         timeout: 5000,
       });
 
@@ -273,7 +273,7 @@ describe('ErrorConverter Unit Tests', () => {
   describe('Logging Integration', () => {
     test('should log technical details for Infrastructure errors', () => {
       // Arrange
-      const infraError = new UnityCommuncationError(
+      const infraError = new UnityCommunicationError(
         'Test error',
         'test-endpoint',
         { key: 'value' },

@@ -113,15 +113,13 @@ export class HandleConnectionLostUseCase
    * @param correlationId Correlation ID for logging
    */
   private logConnectionLostContext(correlationId: string): void {
-    const currentToolsCount = this.toolManagementService.getToolsCount();
-    const isDiscoveryRunning = this.discoveryService.getIsDiscovering();
+    const discoveryDebugInfo = this.discoveryService.getDebugInfo();
 
     VibeLogger.logWarning(
       'connection_lost_context',
       'Unity connection lost - analyzing current state',
       {
-        tools_count_before_loss: currentToolsCount,
-        is_discovery_running: isDiscoveryRunning,
+        is_discovery_running: discoveryDebugInfo.isDiscovering,
         connection_manager_connected: this.connectionService.isConnected(),
       },
       correlationId,
@@ -135,27 +133,21 @@ export class HandleConnectionLostUseCase
    * @param correlationId Correlation ID for logging
    */
   private clearOutdatedToolState(correlationId: string): void {
-    const toolsCountBefore = this.toolManagementService.getToolsCount();
-
     VibeLogger.logInfo(
       'connection_lost_clearing_tools',
       'Clearing potentially outdated Unity tools after connection loss',
-      { tools_count_before: toolsCountBefore },
+      {},
       correlationId,
       'Clearing tool state to prevent stale tool usage after connection loss',
     );
 
-    // Clear dynamic tools map as Unity state is now unknown
-    const dynamicTools = this.toolManagementService.getDynamicTools();
-    dynamicTools.clear();
+    // Tools will be refreshed through refreshTools method when connection is restored
+    // No direct access to tools count or dynamic tools map from interface
 
     VibeLogger.logInfo(
       'connection_lost_tools_cleared',
-      'Outdated Unity tools cleared successfully',
-      {
-        tools_count_before: toolsCountBefore,
-        tools_count_after: this.toolManagementService.getToolsCount(),
-      },
+      'Tool state will be refreshed on reconnection',
+      {},
       correlationId,
       'Tool state cleared - fresh tools will be loaded on reconnection',
     );
@@ -171,7 +163,7 @@ export class HandleConnectionLostUseCase
       'connection_lost_restarting_discovery',
       'Restarting Unity discovery for reconnection attempts',
       {
-        was_discovering: this.discoveryService.getIsDiscovering(),
+        was_discovering: this.discoveryService.getDebugInfo().isDiscovering,
       },
       correlationId,
       'Restarting discovery service to attempt Unity reconnection',
@@ -184,7 +176,7 @@ export class HandleConnectionLostUseCase
       'connection_lost_discovery_restarted',
       'Unity discovery restarted successfully',
       {
-        is_now_discovering: this.discoveryService.getIsDiscovering(),
+        is_now_discovering: this.discoveryService.getDebugInfo().isDiscovering,
       },
       correlationId,
       'Discovery service restarted - actively searching for Unity reconnection',
@@ -218,7 +210,7 @@ export class HandleConnectionLostUseCase
 
     try {
       // Attempt to wait for reconnection with shorter timeout than normal initialization
-      await this.connectionService.waitForUnityConnectionWithTimeout(timeout);
+      await this.connectionService.ensureConnected(timeout);
 
       if (this.connectionService.isConnected()) {
         VibeLogger.logInfo(

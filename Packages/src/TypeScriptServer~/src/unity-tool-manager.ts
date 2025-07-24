@@ -9,7 +9,7 @@ import { IToolQueryService } from './application/interfaces/tool-query-service.j
 import { IToolManagementService } from './application/interfaces/tool-management-service.js';
 import { IUnityToolCommunicationService } from './application/interfaces/unity-tool-communication-service.js';
 import { UnityConnectionManager } from './unity-connection-manager.js';
-import { UnityCommuncationError, ToolManagementError } from './infrastructure/errors.js';
+import { UnityCommunicationError, ToolManagementError } from './infrastructure/errors.js';
 
 // Import UnityParameterSchema type from the tool file
 type UnityParameterSchema = { [key: string]: unknown };
@@ -78,7 +78,7 @@ export class UnityToolManager
       const toolDetails = await this.unityClient.fetchToolDetailsFromUnity(this.isDevelopment);
 
       if (!toolDetails) {
-        throw new UnityCommuncationError(
+        throw new UnityCommunicationError(
           'Unity returned no tool details',
           'Unity Editor tools endpoint',
           { development_mode: this.isDevelopment },
@@ -99,11 +99,11 @@ export class UnityToolManager
 
       return tools;
     } catch (error) {
-      if (error instanceof UnityCommuncationError) {
+      if (error instanceof UnityCommunicationError) {
         throw error; // Re-throw infrastructure errors
       }
 
-      throw new UnityCommuncationError(
+      throw new UnityCommunicationError(
         'Failed to retrieve tools from Unity',
         'Unity Editor tools endpoint',
         { development_mode: this.isDevelopment },
@@ -121,7 +121,7 @@ export class UnityToolManager
 
       const toolDetails = await this.unityClient.fetchToolDetailsFromUnity(this.isDevelopment);
       if (!toolDetails) {
-        throw new UnityCommuncationError(
+        throw new UnityCommunicationError(
           'Unity returned no tool details during initialization',
           'Unity Editor tools endpoint',
           { development_mode: this.isDevelopment },
@@ -132,7 +132,7 @@ export class UnityToolManager
 
       // Tool details processed successfully
     } catch (error) {
-      if (error instanceof UnityCommuncationError) {
+      if (error instanceof UnityCommunicationError) {
         throw error; // Re-throw infrastructure errors
       }
 
@@ -218,7 +218,7 @@ export class UnityToolManager
     if (!this.connectionManager) {
       throw new Error('ConnectionManager is required for UseCase-based refresh');
     }
-    const refreshToolsUseCase = new RefreshToolsUseCase(this.connectionManager, this);
+    const refreshToolsUseCase = new RefreshToolsUseCase(this.connectionManager, this, this);
 
     const result = await refreshToolsUseCase.execute({
       includeDevelopmentOnly: this.isDevelopment,

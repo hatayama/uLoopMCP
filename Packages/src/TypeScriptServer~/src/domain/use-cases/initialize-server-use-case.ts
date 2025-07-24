@@ -19,7 +19,9 @@ import { InitializeServerResponse } from '../models/responses.js';
 import { VibeLogger } from '../../utils/vibe-logger.js';
 import { IConnectionService } from '../../application/interfaces/connection-service.js';
 import { IToolQueryService } from '../../application/interfaces/tool-query-service.js';
+import { IToolManagementService } from '../../application/interfaces/tool-management-service.js';
 import { IClientCompatibilityService } from '../../application/interfaces/client-compatibility-service.js';
+import { DomainTool } from '../models/domain-tool.js';
 
 // MCP Protocol constants
 const MCP_PROTOCOL_VERSION = '2024-11-05';
@@ -47,16 +49,19 @@ export class InitializeServerUseCase
 {
   private connectionService: IConnectionService;
   private toolService: IToolQueryService;
+  private toolManagementService: IToolManagementService;
   private clientCompatibilityService: IClientCompatibilityService;
 
   constructor(
     connectionService: IConnectionService,
     toolService: IToolQueryService,
+    toolManagementService: IToolManagementService,
     clientCompatibilityService: IClientCompatibilityService,
   ) {
     this.connectionService = connectionService;
     this.toolService = toolService;
-    this.clientCompatibilityServiceService = clientCompatibilityService;
+    this.toolManagementService = toolManagementService;
+    this.clientCompatibilityService = clientCompatibilityService;
   }
 
   /**
@@ -172,10 +177,10 @@ export class InitializeServerUseCase
       await this.clientCompatibilityService.initializeClient(clientName);
 
       // Setup tool manager with client name
-      this.toolService.setClientName(clientName);
+      this.toolManagementService.setClientName(clientName);
 
       // Wait for Unity connection with timeout
-      await this.connectionService.waitForConnection(10000);
+      await this.connectionService.ensureConnected(10000);
 
       // Get tools from Unity
       const tools = this.toolService.getAllTools();
@@ -227,11 +232,11 @@ export class InitializeServerUseCase
 
     // Start Unity connection initialization in background
     void this.clientCompatibilityService.initializeClient(clientName);
-    this.toolService.setClientName(clientName);
+    this.toolManagementService.setClientName(clientName);
 
     // Start background tool initialization
-    void this.toolService
-      .initializeDynamicTools()
+    void this.toolManagementService
+      .initializeTools()
       .then(() => {
         VibeLogger.logInfo(
           'initialize_server_async_unity_connected',
@@ -272,7 +277,7 @@ export class InitializeServerUseCase
    * @param tools Tools array to include in response
    * @returns Server initialization response
    */
-  private createSuccessResponse(tools: Tool[]): InitializeServerResponse {
+  private createSuccessResponse(tools: DomainTool[]): InitializeServerResponse {
     return {
       protocolVersion: MCP_PROTOCOL_VERSION,
       capabilities: {

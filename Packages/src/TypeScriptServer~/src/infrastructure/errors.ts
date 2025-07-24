@@ -65,7 +65,7 @@ export abstract class InfrastructureError extends Error {
  * - Unity APIレスポンスの解析エラー
  * - ネットワーク接続タイムアウト
  */
-export class UnityCommuncationError extends InfrastructureError {
+export class UnityCommunicationError extends InfrastructureError {
   readonly category = 'UNITY_COMMUNICATION';
 
   constructor(

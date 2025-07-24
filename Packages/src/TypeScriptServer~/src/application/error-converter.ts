@@ -25,7 +25,7 @@ import {
 } from '../domain/errors.js';
 import {
   InfrastructureError,
-  UnityCommuncationError,
+  UnityCommunicationError,
   ToolManagementError,
   ServiceResolutionError,
   NetworkError,
@@ -96,7 +96,7 @@ export class ErrorConverter {
       case 'UNITY_COMMUNICATION':
         return new ConnectionError(`Unity communication failed: ${error.message}`, {
           original_category: error.category,
-          unity_endpoint: (error as UnityCommuncationError).unityEndpoint,
+          unity_endpoint: (error as UnityCommunicationError).unityEndpoint,
         });
 
       case 'TOOL_MANAGEMENT':

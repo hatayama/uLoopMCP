@@ -73,7 +73,10 @@ export function registerServices(): void {
     const toolManagementService = ServiceLocator.resolve<IToolManagementService>(
       ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE,
     );
-    return new RefreshToolsUseCase(connectionService, toolManagementService);
+    const toolQueryService = ServiceLocator.resolve<IToolQueryService>(
+      ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE,
+    );
+    return new RefreshToolsUseCase(connectionService, toolManagementService, toolQueryService);
   });
 
   ServiceLocator.register(ServiceTokens.INITIALIZE_SERVER_USE_CASE, () => {
@@ -83,10 +86,13 @@ export function registerServices(): void {
     const toolService = ServiceLocator.resolve<IToolQueryService>(
       ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE,
     );
+    const toolManagementService = ServiceLocator.resolve<IToolManagementService>(
+      ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE,
+    );
     const clientCompatibilityService = ServiceLocator.resolve<IClientCompatibilityService>(
       ServiceTokens.CLIENT_COMPATIBILITY_APP_SERVICE,
     );
-    return new InitializeServerUseCase(connectionService, toolService, clientCompatibilityService);
+    return new InitializeServerUseCase(connectionService, toolService, toolManagementService, clientCompatibilityService);
   });
 
   ServiceLocator.register(ServiceTokens.HANDLE_CONNECTION_LOST_USE_CASE, () => {
