@@ -2,7 +2,7 @@
  * Infrastructure Error Types
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#エラーハンドリング
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#エラーハンドリング
  *
  * Related classes:
  * - DomainError (domain/errors.ts) - for conversion to domain errors

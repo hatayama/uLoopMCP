@@ -2,7 +2,7 @@
  * Tool Service Interface
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#IToolService
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#IToolService
  *
  * Related classes:
  * - UnityToolManager (existing implementation class)

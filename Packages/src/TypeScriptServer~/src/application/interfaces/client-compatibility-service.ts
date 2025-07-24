@@ -2,7 +2,7 @@
  * Client Compatibility Service Interface
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#IClientCompatibilityService
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#IClientCompatibilityService
  *
  * Related classes:
  * - McpClientCompatibility (existing implementation class)

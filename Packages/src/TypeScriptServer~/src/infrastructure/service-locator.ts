@@ -2,7 +2,7 @@
  * Enhanced Service Locator Pattern with Lifecycle Management
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#ServiceLocatorEnhancement
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#ServiceLocatorEnhancement
  *
  * Related classes:
  * - ApplicationService implementations (application/services/)

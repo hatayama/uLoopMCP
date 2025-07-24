@@ -2,7 +2,7 @@
  * Message Service Interface
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#IMessageService
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#IMessageService
  *
  * Related classes:
  * - MessageHandler (existing implementation class)

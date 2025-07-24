@@ -2,7 +2,7 @@
  * Service Registration Configuration
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#ファクトリー関数
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#ファクトリー関数
  *
  * Related classes:
  * - ServiceLocator (infrastructure/service-locator.ts)

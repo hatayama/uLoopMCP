@@ -2,7 +2,7 @@
  * Discovery Service Interface
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#IDiscoveryService
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#IDiscoveryService
  *
  * Related classes:
  * - UnityDiscovery (existing implementation class)

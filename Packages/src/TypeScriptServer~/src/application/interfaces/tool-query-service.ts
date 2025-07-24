@@ -2,7 +2,7 @@
  * Tool Query Service Interface
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#Interface-Segregation
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#Interface-Segregation
  *
  * Related classes:
  * - UnityToolManager (implementation class)

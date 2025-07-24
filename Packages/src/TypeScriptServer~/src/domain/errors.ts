@@ -2,7 +2,7 @@
  * ドメインエラー階層の定義
  *
  * 設計ドキュメント参照:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#エラーハンドリング
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#エラーハンドリング
  *
  * 関連クラス:
  * - UseCase実装クラス群（domain/use-cases/）

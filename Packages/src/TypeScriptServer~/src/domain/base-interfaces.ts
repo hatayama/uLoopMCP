@@ -2,7 +2,7 @@
  * DDD（ドメイン駆動設計）パターンの基底インターフェース
  *
  * 設計ドキュメント参照:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md
  *
  * 関連クラス:
  * - UseCaseクラス群（domain/use-cases/）

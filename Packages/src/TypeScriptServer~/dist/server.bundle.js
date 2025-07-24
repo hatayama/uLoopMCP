@@ -7913,7 +7913,7 @@ var InfrastructureError = class extends Error {
     };
   }
 };
-var UnityCommuncationError = class extends InfrastructureError {
+var UnityCommunicationError = class extends InfrastructureError {
   constructor(message, unityEndpoint, requestData, originalError) {
     super(message, { unityEndpoint, requestData }, originalError);
     this.unityEndpoint = unityEndpoint;
@@ -8247,7 +8247,7 @@ var UnityToolManager = class {
     try {
       const toolDetails = await this.unityClient.fetchToolDetailsFromUnity(this.isDevelopment);
       if (!toolDetails) {
-        throw new UnityCommuncationError(
+        throw new UnityCommunicationError(
           "Unity returned no tool details",
           "Unity Editor tools endpoint",
           { development_mode: this.isDevelopment }
@@ -8264,10 +8264,10 @@ var UnityToolManager = class {
       }
       return tools;
     } catch (error) {
-      if (error instanceof UnityCommuncationError) {
+      if (error instanceof UnityCommunicationError) {
         throw error;
       }
-      throw new UnityCommuncationError(
+      throw new UnityCommunicationError(
         "Failed to retrieve tools from Unity",
         "Unity Editor tools endpoint",
         { development_mode: this.isDevelopment },
@@ -8283,7 +8283,7 @@ var UnityToolManager = class {
       await this.unityClient.ensureConnected();
       const toolDetails = await this.unityClient.fetchToolDetailsFromUnity(this.isDevelopment);
       if (!toolDetails) {
-        throw new UnityCommuncationError(
+        throw new UnityCommunicationError(
           "Unity returned no tool details during initialization",
           "Unity Editor tools endpoint",
           { development_mode: this.isDevelopment }
@@ -8291,7 +8291,7 @@ var UnityToolManager = class {
       }
       this.createDynamicToolsFromTools(toolDetails);
     } catch (error) {
-      if (error instanceof UnityCommuncationError) {
+      if (error instanceof UnityCommunicationError) {
         throw error;
       }
       throw new ToolManagementError(
@@ -8359,7 +8359,7 @@ var UnityToolManager = class {
     if (!this.connectionManager) {
       throw new Error("ConnectionManager is required for UseCase-based refresh");
     }
-    const refreshToolsUseCase = new RefreshToolsUseCase(this.connectionManager, this);
+    const refreshToolsUseCase = new RefreshToolsUseCase(this.connectionManager, this, this);
     const result = await refreshToolsUseCase.execute({
       includeDevelopmentOnly: this.isDevelopment
     });
@@ -8573,7 +8573,7 @@ var UnityEventHandler = class {
   unityClient;
   connectionManager;
   isDevelopment;
-  isShuttingDown = false;
+  shuttingDown = false;
   isNotifying = false;
   constructor(server2, unityClient, connectionManager) {
     this.server = server2;
@@ -8731,10 +8731,10 @@ var UnityEventHandler = class {
    * BUG FIX: Enhanced shutdown process to prevent orphaned Node processes
    */
   gracefulShutdown() {
-    if (this.isShuttingDown) {
+    if (this.shuttingDown) {
       return;
     }
-    this.isShuttingDown = true;
+    this.shuttingDown = true;
     VibeLogger.logInfo(
       "graceful_shutdown_start",
       "Starting graceful shutdown...",
@@ -8768,8 +8768,8 @@ var UnityEventHandler = class {
   /**
    * Check if shutdown is in progress
    */
-  isShuttingDownCheck() {
-    return this.isShuttingDown;
+  isShuttingDown() {
+    return this.shuttingDown;
   }
 };
 

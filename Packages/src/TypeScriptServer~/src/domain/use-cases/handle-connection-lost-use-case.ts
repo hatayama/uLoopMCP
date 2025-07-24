@@ -2,7 +2,7 @@
  * Handle Connection Lost UseCase
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#HandleConnectionLostUseCase
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#HandleConnectionLostUseCase
  *
  * Related classes:
  * - IConnectionService (application/interfaces/connection-service.ts)

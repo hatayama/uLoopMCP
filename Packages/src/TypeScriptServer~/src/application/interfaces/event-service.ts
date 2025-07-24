@@ -2,7 +2,7 @@
  * Event Service Interface
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#IEventService
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#IEventService
  *
  * Related classes:
  * - UnityEventHandler (existing implementation class)

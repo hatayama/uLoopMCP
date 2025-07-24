@@ -2,7 +2,7 @@
  * Refresh Tools UseCase
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#RefreshToolsUseCase
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#RefreshToolsUseCase
  *
  * Related classes:
  * - IConnectionService (application/interfaces/connection-service.ts)

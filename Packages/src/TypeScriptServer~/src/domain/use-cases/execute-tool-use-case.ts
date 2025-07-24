@@ -2,7 +2,7 @@
  * Execute Tool UseCase
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#ExecuteToolUseCase
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#ExecuteToolUseCase
  *
  * Related classes:
  * - IConnectionService (application/interfaces/connection-service.ts)

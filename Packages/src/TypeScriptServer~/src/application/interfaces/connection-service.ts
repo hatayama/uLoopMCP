@@ -2,7 +2,7 @@
  * Connection Service Interface
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#IConnectionService
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#IConnectionService
  *
  * Related classes:
  * - UnityConnectionManager (existing implementation class)

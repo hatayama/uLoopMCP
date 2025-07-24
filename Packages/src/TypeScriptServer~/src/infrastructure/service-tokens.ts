@@ -2,7 +2,7 @@
  * Service Tokens for Type-Safe Dependency Injection
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#ServiceLocator
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#ServiceLocator
  *
  * Related classes:
  * - ServiceLocator (infrastructure/service-locator.ts)

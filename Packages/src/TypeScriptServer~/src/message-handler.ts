@@ -65,7 +65,7 @@ const hasValidId = (msg: unknown): msg is { id: string } => {
  * Handles JSON-RPC message processing with Content-Length framing support
  * Follows Single Responsibility Principle - only handles message parsing and routing
  *
- * Design document reference: .kiro/specs/tcp-protocol-improvement/design.md
+ * Design document reference: /Packages/docs/ARCHITECTURE_TypeScript.md
  * Architecture reference: Packages/src/TypeScriptServer~/ARCHITECTURE.md
  *
  * Related classes:

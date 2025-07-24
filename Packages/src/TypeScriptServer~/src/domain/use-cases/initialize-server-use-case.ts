@@ -2,7 +2,7 @@
  * Initialize Server UseCase
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#InitializeServerUseCase
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#InitializeServerUseCase
  *
  * Related classes:
  * - IConnectionService (application/interfaces/connection-service.ts)

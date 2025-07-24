@@ -2,7 +2,7 @@
  * Process Notification UseCase
  *
  * Design document reference:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#ProcessNotificationUseCase
+ * - /Packages/docs/ARCHITECTURE_TypeScript.md#ProcessNotificationUseCase
  *
  * Related classes:
  * - INotificationService (application/interfaces/notification-service.ts)
