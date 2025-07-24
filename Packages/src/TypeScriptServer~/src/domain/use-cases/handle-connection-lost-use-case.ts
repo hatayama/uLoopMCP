@@ -11,8 +11,6 @@
  * - ServiceLocator (infrastructure/service-locator.ts)
  */
 
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-
 import { UseCase } from '../base-interfaces.js';
 import { HandleConnectionRequest } from '../models/requests.js';
 import { HandleConnectionResponse } from '../models/responses.js';
