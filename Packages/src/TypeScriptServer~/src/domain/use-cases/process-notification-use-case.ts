@@ -49,6 +49,7 @@ export class ProcessNotificationUseCase
    * @param request Notification processing request
    * @returns Notification processing response
    */
+  // eslint-disable-next-line @typescript-eslint/require-await
   async execute(request: ProcessNotificationRequest): Promise<ProcessNotificationResponse> {
     const correlationId = VibeLogger.generateCorrelationId();
 
