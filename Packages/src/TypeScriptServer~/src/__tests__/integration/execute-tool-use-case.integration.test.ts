@@ -15,8 +15,6 @@ import { ExecuteToolUseCase } from '../../domain/use-cases/execute-tool-use-case
 import { ExecuteToolRequest } from '../../domain/models/requests.js';
 import { IConnectionService } from '../../application/interfaces/connection-service.js';
 import { IToolQueryService } from '../../application/interfaces/tool-query-service.js';
-import { DomainTool } from '../../domain/models/domain-tool.js';
-import { ConnectionError, ToolExecutionError } from '../../domain/errors.js';
 import { DynamicUnityCommandTool } from '../../tools/dynamic-unity-command-tool.js';
 
 // Mock dependencies

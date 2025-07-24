@@ -13,7 +13,6 @@
 import { UseCase } from '../base-interfaces.js';
 import { RefreshToolsRequest } from '../models/requests.js';
 import { RefreshToolsResponse } from '../models/responses.js';
-import { ConnectionError } from '../errors.js';
 import { VibeLogger } from '../../utils/vibe-logger.js';
 import { ErrorConverter } from '../../application/error-converter.js';
 import { IConnectionService } from '../../application/interfaces/connection-service.js';
