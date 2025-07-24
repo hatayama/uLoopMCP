@@ -134,8 +134,8 @@ export class ExecuteToolUseCase implements UseCase<ExecuteToolRequest, ExecuteTo
       throw new ToolExecutionError(`Tool ${toolName} is not available`, { tool_name: toolName });
     }
 
-    const dynamicTool = this.toolService.getTool(toolName);
-    if (!dynamicTool) {
+    const domainTool = this.toolService.getTool(toolName);
+    if (!domainTool) {
       VibeLogger.logError(
         'execute_tool_instance_not_found',
         'Tool exists in registry but instance not found',
@@ -149,7 +149,9 @@ export class ExecuteToolUseCase implements UseCase<ExecuteToolRequest, ExecuteTo
       });
     }
 
-    return dynamicTool;
+    // Cast to DynamicUnityCommandTool since the current implementation uses it
+    // TODO: This is a temporary solution - need proper abstraction for tool execution
+    return domainTool as unknown as DynamicUnityCommandTool;
   }
 
   /**

@@ -18,6 +18,7 @@ import { VibeLogger } from '../../utils/vibe-logger.js';
 import { ErrorConverter } from '../../application/error-converter.js';
 import { IConnectionService } from '../../application/interfaces/connection-service.js';
 import { IToolManagementService } from '../../application/interfaces/tool-management-service.js';
+import { IToolQueryService } from '../../application/interfaces/tool-query-service.js';
 
 /**
  * UseCase for refreshing Unity tools
@@ -37,10 +38,16 @@ import { IToolManagementService } from '../../application/interfaces/tool-manage
 export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, RefreshToolsResponse> {
   private connectionService: IConnectionService;
   private toolManagementService: IToolManagementService;
+  private toolQueryService: IToolQueryService;
 
-  constructor(connectionService: IConnectionService, toolManagementService: IToolManagementService) {
+  constructor(
+    connectionService: IConnectionService,
+    toolManagementService: IToolManagementService,
+    toolQueryService: IToolQueryService
+  ) {
     this.connectionService = connectionService;
     this.toolManagementService = toolManagementService;
+    this.toolQueryService = toolQueryService;
   }
 
   /**
@@ -68,7 +75,7 @@ export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, Refresh
       await this.refreshToolsFromUnity(correlationId);
 
       // Step 3: Get refreshed tools list
-      const refreshedTools = this.toolManager.getAllTools();
+      const refreshedTools = this.toolQueryService.getAllTools();
 
       const response: RefreshToolsResponse = {
         tools: refreshedTools,
@@ -109,12 +116,12 @@ export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, Refresh
       );
 
       try {
-        await this.connectionService.waitForConnection(10000);
+        await this.connectionService.ensureConnected(10000);
       } catch (error) {
         // Use ErrorConverter for consistent error handling
         const domainError = ErrorConverter.convertToDomainError(
           error,
-          'refresh_tools_connection_wait',
+          'refresh_tools_connection_ensure',
           correlationId,
         );
         throw domainError;
@@ -146,12 +153,12 @@ export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, Refresh
       );
 
       // Re-initialize tools (this will fetch latest tool definitions from Unity)
-      await this.toolManagementService.initializeDynamicTools();
+      await this.toolManagementService.initializeTools();
 
       VibeLogger.logInfo(
         'refresh_tools_initialized',
         'Dynamic tools re-initialized successfully from Unity',
-        { tool_count: this.toolManagementService.getToolsCount() },
+        { tool_count: this.toolQueryService.getToolsCount() },
         correlationId,
         'Tool definitions updated from Unity after domain reload',
       );
