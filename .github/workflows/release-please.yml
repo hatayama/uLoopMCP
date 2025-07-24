@@ -43,5 +43,4 @@ jobs:
         uses: googleapis/release-please-action@v4
         with:
           config-file: .release-please-config.json
-          target-branch: dependabot/github_actions/googleapis/release-please-action-4
           token: ${{ secrets.GITHUB_TOKEN }}
