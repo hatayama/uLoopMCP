@@ -9,6 +9,7 @@ import { IToolQueryService } from './application/interfaces/tool-query-service.j
 import { IToolManagementService } from './application/interfaces/tool-management-service.js';
 import { IUnityToolCommunicationService } from './application/interfaces/unity-tool-communication-service.js';
 import { UnityConnectionManager } from './unity-connection-manager.js';
+import { UnityCommuncationError, ToolManagementError } from './infrastructure/errors.js';
 
 // Import UnityParameterSchema type from the tool file
 type UnityParameterSchema = { [key: string]: unknown };
@@ -77,7 +78,11 @@ export class UnityToolManager
       const toolDetails = await this.unityClient.fetchToolDetailsFromUnity(this.isDevelopment);
 
       if (!toolDetails) {
-        return [];
+        throw new UnityCommuncationError(
+          'Unity returned no tool details',
+          'Unity Editor tools endpoint',
+          { development_mode: this.isDevelopment },
+        );
       }
 
       this.createDynamicToolsFromTools(toolDetails);
@@ -94,8 +99,16 @@ export class UnityToolManager
 
       return tools;
     } catch (error) {
-      // Failed to get tools from Unity
-      return [];
+      if (error instanceof UnityCommuncationError) {
+        throw error; // Re-throw infrastructure errors
+      }
+      
+      throw new UnityCommuncationError(
+        'Failed to retrieve tools from Unity',
+        'Unity Editor tools endpoint',
+        { development_mode: this.isDevelopment },
+        error instanceof Error ? error : undefined,
+      );
     }
   }
 
@@ -108,15 +121,27 @@ export class UnityToolManager
 
       const toolDetails = await this.unityClient.fetchToolDetailsFromUnity(this.isDevelopment);
       if (!toolDetails) {
-        return;
+        throw new UnityCommuncationError(
+          'Unity returned no tool details during initialization',
+          'Unity Editor tools endpoint',
+          { development_mode: this.isDevelopment },
+        );
       }
 
       this.createDynamicToolsFromTools(toolDetails);
 
       // Tool details processed successfully
     } catch (error) {
-      // Failed to initialize dynamic tools
-      // Continue without dynamic tools
+      if (error instanceof UnityCommuncationError) {
+        throw error; // Re-throw infrastructure errors
+      }
+      
+      throw new ToolManagementError(
+        'Failed to initialize dynamic tools',
+        undefined,
+        { development_mode: this.isDevelopment },
+        error instanceof Error ? error : undefined,
+      );
     }
   }
 

@@ -17,6 +17,7 @@ import { UnityToolManager } from '../../unity-tool-manager.js';
 import { UnityConnectionManager } from '../../unity-connection-manager.js';
 import { ConnectionError } from '../errors.js';
 import { VibeLogger } from '../../utils/vibe-logger.js';
+import { ErrorConverter } from '../../application/error-converter.js';
 
 /**
  * UseCase for refreshing Unity tools
@@ -110,10 +111,13 @@ export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, Refresh
       try {
         await this.connectionManager.waitForUnityConnectionWithTimeout(10000);
       } catch (error) {
-        throw new ConnectionError(
-          `Cannot refresh tools: Unity connection failed - ${error instanceof Error ? error.message : 'Unknown error'}`,
-          { original_error: error },
+        // Use ErrorConverter for consistent error handling
+        const domainError = ErrorConverter.convertToDomainError(
+          error,
+          'refresh_tools_connection_wait',
+          correlationId,
         );
+        throw domainError;
       }
     }
 
@@ -152,16 +156,14 @@ export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, Refresh
         'Tool definitions updated from Unity after domain reload',
       );
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      VibeLogger.logError(
-        'refresh_tools_initialization_failed',
-        'Failed to re-initialize dynamic tools from Unity',
-        { error_message: errorMessage },
+      // Use ErrorConverter to convert Infrastructure errors to Domain errors
+      const domainError = ErrorConverter.convertToDomainError(
+        error,
+        'refresh_tools_initialization',
         correlationId,
-        'Tool refresh failed during Unity communication',
       );
-
-      throw new ConnectionError(`Tool refresh failed: ${errorMessage}`, { original_error: error });
+      
+      throw domainError;
     }
   }
 

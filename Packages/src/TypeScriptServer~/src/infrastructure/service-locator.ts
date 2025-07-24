@@ -17,6 +17,7 @@
  */
 
 import { ServiceToken } from './service-tokens.js';
+import { ServiceResolutionError } from './errors.js';
 
 export type ServiceLifecycle = 'singleton' | 'transient';
 
@@ -67,8 +68,10 @@ export class ServiceLocator {
     // Circular dependency detection
     if (this.resolutionStack.has(token)) {
       const stackArray = Array.from(this.resolutionStack).map(s => s.toString());
-      throw new Error(
-        `Circular dependency detected: ${stackArray.join(' -> ')} -> ${token.toString()}`
+      throw new ServiceResolutionError(
+        `Circular dependency detected: ${stackArray.join(' -> ')} -> ${token.toString()}`,
+        token.toString(),
+        stackArray,
       );
     }
 
@@ -76,7 +79,10 @@ export class ServiceLocator {
     try {
       const registration = this.services.get(token);
       if (!registration) {
-        throw new Error(`Service not registered: ${token.toString()}`);
+        throw new ServiceResolutionError(
+          `Service not registered: ${token.toString()}`,
+          token.toString(),
+        );
       }
 
       // Singleton: return cached instance or create and cache
