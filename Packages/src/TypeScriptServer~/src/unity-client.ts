@@ -530,4 +530,57 @@ export class UnityClient {
   setReconnectedCallback(callback: () => void): void {
     this.connectionManager.setReconnectedCallback(callback);
   }
+
+  /**
+   * Fetch tool details from Unity with development mode support
+   */
+  async fetchToolDetailsFromUnity(
+    includeDevelopmentOnly: boolean = false,
+  ): Promise<unknown[] | null> {
+    // Get detailed tool information including schemas
+    // Include development-only tools if in development mode
+    const params = { IncludeDevelopmentOnly: includeDevelopmentOnly };
+
+    // Requesting tool details from Unity with params
+    const toolDetailsResponse = await this.executeTool('get-tool-details', params);
+    // Received tool details response
+
+    // Handle new GetToolDetailsResponse structure
+    const toolDetails =
+      (toolDetailsResponse as { Tools?: unknown[] })?.Tools || toolDetailsResponse;
+    if (!Array.isArray(toolDetails)) {
+      // Invalid tool details response
+      return null;
+    }
+
+    // Successfully parsed tools from Unity
+    return toolDetails as unknown[];
+  }
+
+  /**
+   * Check if Unity is available on specific port
+   * Performs low-level TCP connection test with short timeout
+   */
+  static async isUnityAvailable(port: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      const socket = new net.Socket();
+      const timeout = 500; // Shorter timeout for faster discovery
+
+      const timer = setTimeout(() => {
+        socket.destroy();
+        resolve(false);
+      }, timeout);
+
+      socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
+        clearTimeout(timer);
+        socket.destroy();
+        resolve(true);
+      });
+
+      socket.on('error', () => {
+        clearTimeout(timer);
+        resolve(false);
+      });
+    });
+  }
 }

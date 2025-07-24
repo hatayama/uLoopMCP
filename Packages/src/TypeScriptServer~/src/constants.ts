@@ -35,12 +35,6 @@ export const NOTIFICATION_METHODS = {
   TOOLS_LIST_CHANGED: 'notifications/tools/list_changed',
 } as const;
 
-// Server configuration (legacy - kept for backward compatibility)
-export const SERVER_CONFIG = {
-  NAME: 'unity-mcp-server',
-  VERSION: '0.1.0',
-} as const;
-
 // Unity connection configuration
 export const UNITY_CONNECTION = {
   DEFAULT_PORT: '8700',
@@ -117,13 +111,6 @@ export const ERROR_MESSAGES = {
 export const POLLING = {
   INTERVAL_MS: 1000, // Reduced from 3000ms to 1000ms for better responsiveness
   BUFFER_SECONDS: 15, // Increased for safer Unity startup timing
-} as const;
-
-// Test timeouts (milliseconds)
-export const TEST_TIMEOUTS = {
-  INTEGRATION_TEST_MS: 2000,
-  TOOLS_LIST_TEST_MS: 3000,
-  JEST_DEFAULT_MS: 10000,
 } as const;
 
 // Log messages
