@@ -32,7 +32,7 @@ export class UnityEventHandler
   private unityClient: UnityClient;
   private connectionManager: UnityConnectionManager;
   private readonly isDevelopment: boolean;
-  private isShuttingDown: boolean = false;
+  private shuttingDown: boolean = false;
   private isNotifying: boolean = false;
 
   constructor(server: Server, unityClient: UnityClient, connectionManager: UnityConnectionManager) {
@@ -214,11 +214,11 @@ export class UnityEventHandler
    */
   gracefulShutdown(): void {
     // Prevent multiple shutdown attempts
-    if (this.isShuttingDown) {
+    if (this.shuttingDown) {
       return;
     }
 
-    this.isShuttingDown = true;
+    this.shuttingDown = true;
     VibeLogger.logInfo(
       'graceful_shutdown_start',
       'Starting graceful shutdown...',
@@ -261,6 +261,6 @@ export class UnityEventHandler
    * Check if shutdown is in progress
    */
   isShuttingDown(): boolean {
-    return this.isShuttingDown;
+    return this.shuttingDown;
   }
 }
