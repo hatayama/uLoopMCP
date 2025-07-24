@@ -170,7 +170,7 @@ describe('RefreshToolsUseCase Integration Tests', () => {
         return true;
       });
 
-      mockToolManagementService.initializeTools.mockImplementation(() => {
+      mockToolManagementService.initializeTools.mockImplementation(async () => {
         callOrder.push('initializeTools');
       });
 
@@ -204,7 +204,7 @@ describe('RefreshToolsUseCase Integration Tests', () => {
         callOrder.push('ensureConnected');
       });
 
-      mockToolManagementService.initializeTools.mockImplementation(() => {
+      mockToolManagementService.initializeTools.mockImplementation(async () => {
         callOrder.push('initializeTools');
       });
 

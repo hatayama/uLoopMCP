@@ -64,17 +64,24 @@ export function registerServices(): void {
   // Register actual implementation classes as application services temporarily
   // TODO: Replace with proper application service wrappers in future
   ServiceLocator.register(ServiceTokens.CONNECTION_APP_SERVICE, () => {
-    const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT);
+    const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT) as UnityClient;
     return new UnityConnectionManager(unityClient);
   });
 
   ServiceLocator.register(ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE, () => {
-    const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT);
+    const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT) as UnityClient;
+    return new UnityToolManager(unityClient);
+  });
+
+  // Register the same UnityToolManager instance for IToolQueryService
+  ServiceLocator.register(ServiceTokens.TOOL_QUERY_APP_SERVICE, () => {
+    const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT) as UnityClient;
     return new UnityToolManager(unityClient);
   });
 
   ServiceLocator.register(ServiceTokens.CLIENT_COMPATIBILITY_APP_SERVICE, () => {
-    return new McpClientCompatibility();
+    const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT) as UnityClient;
+    return new McpClientCompatibility(unityClient);
   });
 
   // Register UseCase factories (create new instance each time)
@@ -83,7 +90,7 @@ export function registerServices(): void {
       ServiceTokens.CONNECTION_APP_SERVICE,
     );
     const toolService = ServiceLocator.resolve<IToolQueryService>(
-      ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE,
+      ServiceTokens.TOOL_QUERY_APP_SERVICE,
     );
     return new ExecuteToolUseCase(connectionService, toolService);
   });
@@ -96,7 +103,7 @@ export function registerServices(): void {
       ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE,
     );
     const toolQueryService = ServiceLocator.resolve<IToolQueryService>(
-      ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE,
+      ServiceTokens.TOOL_QUERY_APP_SERVICE,
     );
     return new RefreshToolsUseCase(connectionService, toolManagementService, toolQueryService);
   });
@@ -106,7 +113,7 @@ export function registerServices(): void {
       ServiceTokens.CONNECTION_APP_SERVICE,
     );
     const toolService = ServiceLocator.resolve<IToolQueryService>(
-      ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE,
+      ServiceTokens.TOOL_QUERY_APP_SERVICE,
     );
     const toolManagementService = ServiceLocator.resolve<IToolManagementService>(
       ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE,
