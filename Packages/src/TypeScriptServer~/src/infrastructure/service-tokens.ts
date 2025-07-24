@@ -1,53 +1,79 @@
 /**
- * サービストークン定義
+ * Service Tokens for Type-Safe Dependency Injection
  *
- * 設計ドキュメント参照:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#サービストークン定義
+ * Design document reference:
+ * - .kiro/specs/typescript-server-ddd-refactoring/design.md#ServiceLocator
  *
- * 関連クラス:
- * - ServiceLocator（infrastructure/service-locator.ts）
- * - 各ApplicationService実装クラス
- * - 各UseCase実装クラス
+ * Related classes:
+ * - ServiceLocator (infrastructure/service-locator.ts)
+ * - service-registration.ts (registration logic)
+ * - All UseCase factory functions
  */
 
 /**
- * サービストークン定数
- *
- * 責任:
- * - 依存性注入時の型安全なトークン提供
- * - サービス識別子の一元管理
- * - 文字列リテラルによるタイプミス防止
+ * Type-safe service token definition
+ * Uses Symbol for unique identification and type information
+ */
+export type ServiceToken<T> = symbol & { __type: T };
+
+/**
+ * Create a type-safe service token
+ */
+export function createServiceToken<T>(name: string): ServiceToken<T> {
+  return Symbol(name) as ServiceToken<T>;
+}
+
+/**
+ * All service tokens for the application
+ * Organized by service type and lifecycle
  */
 export const ServiceTokens = {
-  // ApplicationService層のトークン
-  CONNECTION_APP_SERVICE: 'ConnectionAppService',
-  TOOL_MANAGEMENT_APP_SERVICE: 'ToolManagementAppService',
-  EVENT_HANDLING_APP_SERVICE: 'EventHandlingAppService',
-  DISCOVERY_APP_SERVICE: 'DiscoveryAppService',
-  CLIENT_COMPATIBILITY_APP_SERVICE: 'ClientCompatibilityAppService',
-  MESSAGE_APP_SERVICE: 'MessageAppService',
+  // Application Services (Singleton lifecycle)
+  CONNECTION_APP_SERVICE: Symbol('CONNECTION_APP_SERVICE'),
+  TOOL_MANAGEMENT_APP_SERVICE: Symbol('TOOL_MANAGEMENT_APP_SERVICE'),
+  EVENT_APP_SERVICE: Symbol('EVENT_APP_SERVICE'),
+  MESSAGE_APP_SERVICE: Symbol('MESSAGE_APP_SERVICE'),
+  DISCOVERY_APP_SERVICE: Symbol('DISCOVERY_APP_SERVICE'),
 
-  // UseCase層のトークン（毎回新しいインスタンスを生成するためファクトリーを使用）
-  INITIALIZE_SERVER_USE_CASE: 'InitializeServerUseCase',
-  EXECUTE_TOOL_USE_CASE: 'ExecuteToolUseCase',
-  REFRESH_TOOLS_USE_CASE: 'RefreshToolsUseCase',
-  HANDLE_CONNECTION_LOST_USE_CASE: 'HandleConnectionLostUseCase',
-  PROCESS_NOTIFICATION_USE_CASE: 'ProcessNotificationUseCase',
+  // UseCase Services (Transient lifecycle)
+  EXECUTE_TOOL_USE_CASE: Symbol('EXECUTE_TOOL_USE_CASE'),
+  REFRESH_TOOLS_USE_CASE: Symbol('REFRESH_TOOLS_USE_CASE'),
+  INITIALIZE_SERVER_USE_CASE: Symbol('INITIALIZE_SERVER_USE_CASE'),
+  HANDLE_CONNECTION_LOST_USE_CASE: Symbol('HANDLE_CONNECTION_LOST_USE_CASE'),
+  PROCESS_NOTIFICATION_USE_CASE: Symbol('PROCESS_NOTIFICATION_USE_CASE'),
 
-  // Infrastructure層のトークン
-  UNITY_CLIENT: 'UnityClient',
-  VIBE_LOGGER: 'VibeLogger',
-  MESSAGE_HANDLER: 'MessageHandler',
-  UNITY_CONNECTION_MANAGER: 'UnityConnectionManager',
-  UNITY_TOOL_MANAGER: 'UnityToolManager',
-  UNITY_DISCOVERY: 'UnityDiscovery',
-  UNITY_EVENT_HANDLER: 'UnityEventHandler',
-  MCP_CLIENT_COMPATIBILITY: 'McpClientCompatibility',
+  // Infrastructure Services (Singleton lifecycle)
+  UNITY_CLIENT: Symbol('UNITY_CLIENT'),
+  UNITY_CONNECTION_MANAGER: Symbol('UNITY_CONNECTION_MANAGER'),
+  UNITY_TOOL_MANAGER: Symbol('UNITY_TOOL_MANAGER'),
+  UNITY_DISCOVERY: Symbol('UNITY_DISCOVERY'),
+  MCP_CLIENT_COMPATIBILITY: Symbol('MCP_CLIENT_COMPATIBILITY'),
+  UNITY_EVENT_HANDLER: Symbol('UNITY_EVENT_HANDLER'),
+  VIBE_LOGGER: Symbol('VIBE_LOGGER'),
 } as const;
 
 /**
- * サービストークンの型定義
- *
- * コンパイル時の型チェックを提供
+ * Service token type mapping for better type inference
+ * This helps with type-safe resolution in ServiceLocator
  */
-export type ServiceToken = (typeof ServiceTokens)[keyof typeof ServiceTokens];
+export type ServiceTokenMap = {
+  [ServiceTokens.CONNECTION_APP_SERVICE]: any; // Will be typed properly when implemented
+  [ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE]: any;
+  [ServiceTokens.EVENT_APP_SERVICE]: any;
+  [ServiceTokens.MESSAGE_APP_SERVICE]: any;
+  [ServiceTokens.DISCOVERY_APP_SERVICE]: any;
+  
+  [ServiceTokens.EXECUTE_TOOL_USE_CASE]: any;
+  [ServiceTokens.REFRESH_TOOLS_USE_CASE]: any;
+  [ServiceTokens.INITIALIZE_SERVER_USE_CASE]: any;
+  [ServiceTokens.HANDLE_CONNECTION_LOST_USE_CASE]: any;
+  [ServiceTokens.PROCESS_NOTIFICATION_USE_CASE]: any;
+  
+  [ServiceTokens.UNITY_CLIENT]: any;
+  [ServiceTokens.UNITY_CONNECTION_MANAGER]: any;
+  [ServiceTokens.UNITY_TOOL_MANAGER]: any;
+  [ServiceTokens.UNITY_DISCOVERY]: any;
+  [ServiceTokens.MCP_CLIENT_COMPATIBILITY]: any;
+  [ServiceTokens.UNITY_EVENT_HANDLER]: any;
+  [ServiceTokens.VIBE_LOGGER]: any;
+};

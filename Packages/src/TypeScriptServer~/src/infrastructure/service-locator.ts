@@ -1,81 +1,185 @@
 /**
- * 軽量サービスロケーターパターンの実装
+ * Enhanced Service Locator Pattern with Lifecycle Management
  *
- * 設計ドキュメント参照:
- * - .kiro/specs/typescript-server-ddd-refactoring/design.md#依存性注入の設計
+ * Design document reference:
+ * - .kiro/specs/typescript-server-ddd-refactoring/design.md#ServiceLocatorEnhancement
  *
- * 関連クラス:
- * - ApplicationService実装クラス群（application/services/）
- * - UseCase実装クラス群（domain/use-cases/）
- * - Infrastructure層のクラス群（infrastructure/）
+ * Related classes:
+ * - ApplicationService implementations (application/services/)
+ * - UseCase implementations (domain/use-cases/)
+ * - Infrastructure layer classes (infrastructure/)
+ *
+ * Key improvements:
+ * - Type-safe service tokens using Symbols
+ * - Lifecycle management (singleton vs transient)
+ * - Circular dependency detection
+ * - Enhanced testing support with mocking
  */
+
+import { ServiceToken } from './service-tokens.js';
+
+export type ServiceLifecycle = 'singleton' | 'transient';
+
+interface ServiceRegistration<T> {
+  factory: () => T;
+  lifecycle: ServiceLifecycle;
+  instance?: T; // Singleton instance cache
+}
 
 /**
- * サービスロケーター
+ * Enhanced Service Locator with type safety and lifecycle management
  *
- * 責任:
- * - 依存性の登録と解決
- * - ファクトリー関数による遅延初期化
- * - シングルトンパターンによるサービス管理（ApplicationService）
- * - 毎回新しいインスタンス生成（UseCase）
- *
- * 注意:
- * - DIコンテナではなく軽量なパターンを採用
- * - プロジェクト方針に従いシンプルな実装
+ * Responsibilities:
+ * - Type-safe dependency registration and resolution
+ * - Lifecycle management (singleton/transient)
+ * - Circular dependency detection
+ * - Test support with mocking capabilities
+ * - Performance optimization with singleton caching
  */
 export class ServiceLocator {
-  private static services: Map<string, () => unknown> = new Map();
+  private static services: Map<symbol, ServiceRegistration<unknown>> = new Map();
+  private static resolutionStack: Set<symbol> = new Set();
+  private static originalServices: Map<symbol, ServiceRegistration<unknown>> = new Map();
 
   /**
-   * サービスのファクトリー関数を登録
+   * Register service with lifecycle management
    *
-   * @param token サービストークン
-   * @param factory ファクトリー関数
+   * @param token Type-safe service token
+   * @param factory Factory function to create service instance
+   * @param lifecycle Service lifecycle (singleton or transient)
    */
-  static register<T>(token: string, factory: () => T): void {
-    this.services.set(token, factory);
+  static register<T>(
+    token: ServiceToken<T>,
+    factory: () => T,
+    lifecycle: ServiceLifecycle = 'transient'
+  ): void {
+    this.services.set(token, { factory, lifecycle });
   }
 
   /**
-   * サービスのインスタンスを解決
+   * Resolve service instance with circular dependency detection
    *
-   * @param token サービストークン
-   * @returns サービスのインスタンス
-   * @throws Error サービスが登録されていない場合
+   * @param token Type-safe service token
+   * @returns Service instance
+   * @throws Error if service not registered or circular dependency detected
    */
-  static resolve<T>(token: string): T {
-    const factory = this.services.get(token);
-    if (!factory) {
-      throw new Error(`Service not registered: ${token}`);
+  static resolve<T>(token: ServiceToken<T>): T {
+    // Circular dependency detection
+    if (this.resolutionStack.has(token)) {
+      const stackArray = Array.from(this.resolutionStack).map(s => s.toString());
+      throw new Error(
+        `Circular dependency detected: ${stackArray.join(' -> ')} -> ${token.toString()}`
+      );
     }
-    return factory() as T;
+
+    this.resolutionStack.add(token);
+    try {
+      const registration = this.services.get(token);
+      if (!registration) {
+        throw new Error(`Service not registered: ${token.toString()}`);
+      }
+
+      // Singleton: return cached instance or create and cache
+      if (registration.lifecycle === 'singleton') {
+        if (!registration.instance) {
+          registration.instance = registration.factory();
+        }
+        return registration.instance as T;
+      }
+
+      // Transient: create new instance every time
+      return registration.factory() as T;
+    } finally {
+      this.resolutionStack.delete(token);
+    }
   }
 
   /**
-   * 全てのサービス登録をクリア
-   *
-   * 主にテスト時に使用
+   * Clear all service registrations
+   * Primarily used for testing
    */
   static clear(): void {
     this.services.clear();
+    this.resolutionStack.clear();
+    this.originalServices.clear();
   }
 
   /**
-   * 登録されているサービス一覧を取得
-   *
-   * 主にデバッグ時に使用
+   * Get list of registered services
+   * Primarily used for debugging
    */
   static getRegisteredServices(): string[] {
-    return Array.from(this.services.keys());
+    return Array.from(this.services.keys()).map(token => token.toString());
   }
 
   /**
-   * サービスが登録されているかチェック
+   * Check if service is registered
    *
-   * @param token サービストークン
-   * @returns 登録されている場合true
+   * @param token Service token
+   * @returns true if registered
    */
-  static isRegistered(token: string): boolean {
+  static isRegistered<T>(token: ServiceToken<T>): boolean {
     return this.services.has(token);
+  }
+
+  /**
+   * Mock service for testing (temporarily replace)
+   *
+   * @param token Service token to mock
+   * @param mockFactory Mock factory function
+   */
+  static mock<T>(token: ServiceToken<T>, mockFactory: () => T): void {
+    // Backup original service if exists
+    const original = this.services.get(token);
+    if (original) {
+      this.originalServices.set(token, original);
+    }
+    
+    this.register(token, mockFactory, 'transient');
+  }
+
+  /**
+   * Restore mocked service to original
+   *
+   * @param token Service token to restore
+   */
+  static restore<T>(token: ServiceToken<T>): void {
+    const original = this.originalServices.get(token);
+    if (original) {
+      this.services.set(token, original);
+      this.originalServices.delete(token);
+    } else {
+      this.services.delete(token);
+    }
+  }
+
+  /**
+   * Restore all mocked services (cleanup after tests)
+   */
+  static restoreAll(): void {
+    for (const [token, original] of this.originalServices) {
+      this.services.set(token, original);
+    }
+    this.originalServices.clear();
+  }
+
+  /**
+   * Get service registration info (for debugging)
+   */
+  static getServiceInfo<T>(token: ServiceToken<T>): {
+    isRegistered: boolean;
+    lifecycle?: ServiceLifecycle;
+    hasInstance?: boolean;
+  } {
+    const registration = this.services.get(token);
+    if (!registration) {
+      return { isRegistered: false };
+    }
+
+    return {
+      isRegistered: true,
+      lifecycle: registration.lifecycle,
+      hasInstance: registration.lifecycle === 'singleton' && !!registration.instance,
+    };
   }
 }
