@@ -11,8 +11,7 @@
  * - Used by UseCase classes
  */
 
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { DynamicUnityCommandTool } from '../../tools/dynamic-unity-command-tool.js';
+import { DomainTool } from '../../domain/models/domain-tool.js';
 import { ApplicationService } from '../../domain/base-interfaces.js';
 
 /**
@@ -44,7 +43,7 @@ export interface IToolService extends ApplicationService {
    *
    * @returns Array of tools
    */
-  getAllTools(): Tool[];
+  getAllTools(): DomainTool[];
 
   /**
    * Check if specified tool exists
@@ -60,7 +59,7 @@ export interface IToolService extends ApplicationService {
    * @param name Tool name
    * @returns Tool instance, undefined if not found
    */
-  getTool(name: string): DynamicUnityCommandTool | undefined;
+  getTool(name: string): DomainTool | undefined;
 
   /**
    * Get tool list from Unity
@@ -68,7 +67,7 @@ export interface IToolService extends ApplicationService {
    * @returns Array of tools retrieved from Unity
    * @throws ToolExecutionError if Unity communication fails
    */
-  getToolsFromUnity(): Promise<Tool[]>;
+  getToolsFromUnity(): Promise<DomainTool[]>;
 
   /**
    * Set client name

@@ -9,7 +9,7 @@
  * - Request models defined in requests.ts
  */
 
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { DomainTool } from './domain-tool.js';
 
 /**
  * Response for tool execution UseCase
@@ -26,7 +26,7 @@ export interface ExecuteToolResponse {
  * Response for tools refresh UseCase
  */
 export interface RefreshToolsResponse {
-  tools: Tool[];
+  tools: DomainTool[];
   refreshedAt: string;
 }
 
@@ -37,7 +37,7 @@ export interface InitializeServerResponse {
   protocolVersion: string;
   capabilities: object;
   serverInfo: object;
-  tools?: Tool[];
+  tools?: DomainTool[];
 }
 
 /**

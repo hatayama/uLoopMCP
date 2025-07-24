@@ -9,8 +9,7 @@
  * - Used by UseCases that need tool querying only
  */
 
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { DynamicUnityCommandTool } from '../../tools/dynamic-unity-command-tool.js';
+import { DomainTool } from '../../domain/models/domain-tool.js';
 import { ApplicationService } from '../../domain/base-interfaces.js';
 
 /**
@@ -28,7 +27,7 @@ export interface IToolQueryService extends ApplicationService {
    *
    * @returns Array of tools
    */
-  getAllTools(): Tool[];
+  getAllTools(): DomainTool[];
 
   /**
    * Check if specified tool exists
@@ -44,7 +43,7 @@ export interface IToolQueryService extends ApplicationService {
    * @param name Tool name
    * @returns Tool instance, undefined if not found
    */
-  getTool(name: string): DynamicUnityCommandTool | undefined;
+  getTool(name: string): DomainTool | undefined;
 
   /**
    * Get number of tools

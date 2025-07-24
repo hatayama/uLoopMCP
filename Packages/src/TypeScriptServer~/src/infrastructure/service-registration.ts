@@ -18,11 +18,11 @@ import { ServiceTokens } from './service-tokens.js';
 // import { ToolManagementAppService } from '../application/services/tool-management-app-service.js';
 
 // UseCase implementations
-import { createExecuteToolUseCase } from '../domain/use-cases/execute-tool-use-case.js';
-import { createRefreshToolsUseCase } from '../domain/use-cases/refresh-tools-use-case.js';
-import { createInitializeServerUseCase } from '../domain/use-cases/initialize-server-use-case.js';
-import { createHandleConnectionLostUseCase } from '../domain/use-cases/handle-connection-lost-use-case.js';
-import { createProcessNotificationUseCase } from '../domain/use-cases/process-notification-use-case.js';
+import { ExecuteToolUseCase } from '../domain/use-cases/execute-tool-use-case.js';
+
+// Application Service interfaces
+import { IConnectionService } from '../application/interfaces/connection-service.js';
+import { IToolQueryService } from '../application/interfaces/tool-query-service.js';
 
 // Infrastructure components
 // import { UnityClient } from '../unity-client.js';
@@ -49,23 +49,33 @@ export function registerServices(): void {
 
   // Register UseCase factories (create new instance each time)
   ServiceLocator.register(ServiceTokens.EXECUTE_TOOL_USE_CASE, () => {
-    return createExecuteToolUseCase();
+    const connectionService = ServiceLocator.resolve<IConnectionService>(
+      ServiceTokens.CONNECTION_APP_SERVICE,
+    );
+    const toolService = ServiceLocator.resolve<IToolQueryService>(
+      ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE,
+    );
+    return new ExecuteToolUseCase(connectionService, toolService);
   });
 
   ServiceLocator.register(ServiceTokens.REFRESH_TOOLS_USE_CASE, () => {
-    return createRefreshToolsUseCase();
+    // TODO: Implement proper dependency injection when other UseCases are refactored
+    throw new Error('RefreshToolsUseCase factory not yet implemented with Clean Architecture');
   });
 
   ServiceLocator.register(ServiceTokens.INITIALIZE_SERVER_USE_CASE, () => {
-    return createInitializeServerUseCase();
+    // TODO: Implement proper dependency injection when other UseCases are refactored
+    throw new Error('InitializeServerUseCase factory not yet implemented with Clean Architecture');
   });
 
   ServiceLocator.register(ServiceTokens.HANDLE_CONNECTION_LOST_USE_CASE, () => {
-    return createHandleConnectionLostUseCase();
+    // TODO: Implement proper dependency injection when other UseCases are refactored
+    throw new Error('HandleConnectionLostUseCase factory not yet implemented with Clean Architecture');
   });
 
   ServiceLocator.register(ServiceTokens.PROCESS_NOTIFICATION_USE_CASE, () => {
-    return createProcessNotificationUseCase();
+    // TODO: Implement proper dependency injection when other UseCases are refactored
+    throw new Error('ProcessNotificationUseCase factory not yet implemented with Clean Architecture');
   });
 
   // TODO: Add more UseCase registrations as they are implemented

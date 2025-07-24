@@ -14,8 +14,6 @@
 import { UseCase } from '../base-interfaces.js';
 import { ExecuteToolRequest } from '../models/requests.js';
 import { ExecuteToolResponse } from '../models/responses.js';
-import { ServiceLocator } from '../../infrastructure/service-locator.js';
-import { ServiceTokens } from '../../infrastructure/service-tokens.js';
 import { IConnectionService } from '../../application/interfaces/connection-service.js';
 import { IToolQueryService } from '../../application/interfaces/tool-query-service.js';
 import { ConnectionError, ToolExecutionError } from '../errors.js';
@@ -242,18 +240,3 @@ export class ExecuteToolUseCase implements UseCase<ExecuteToolRequest, ExecuteTo
   }
 }
 
-/**
- * Factory function for creating ExecuteToolUseCase instances
- *
- * @returns New ExecuteToolUseCase instance with injected dependencies
- */
-export function createExecuteToolUseCase(): ExecuteToolUseCase {
-  const connectionService = ServiceLocator.resolve<IConnectionService>(
-    ServiceTokens.CONNECTION_APP_SERVICE,
-  );
-  const toolService = ServiceLocator.resolve<IToolQueryService>(
-    ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE,
-  );
-
-  return new ExecuteToolUseCase(connectionService, toolService);
-}
