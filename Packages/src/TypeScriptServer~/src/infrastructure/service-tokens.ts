@@ -1,9 +1,9 @@
 /**
  * サービストークン定義
- * 
+ *
  * 設計ドキュメント参照:
  * - .kiro/specs/typescript-server-ddd-refactoring/design.md#サービストークン定義
- * 
+ *
  * 関連クラス:
  * - ServiceLocator（infrastructure/service-locator.ts）
  * - 各ApplicationService実装クラス
@@ -12,7 +12,7 @@
 
 /**
  * サービストークン定数
- * 
+ *
  * 責任:
  * - 依存性注入時の型安全なトークン提供
  * - サービス識別子の一元管理
@@ -21,7 +21,7 @@
 export const ServiceTokens = {
   // ApplicationService層のトークン
   CONNECTION_APP_SERVICE: 'ConnectionAppService',
-  TOOL_MANAGEMENT_APP_SERVICE: 'ToolManagementAppService', 
+  TOOL_MANAGEMENT_APP_SERVICE: 'ToolManagementAppService',
   EVENT_HANDLING_APP_SERVICE: 'EventHandlingAppService',
   DISCOVERY_APP_SERVICE: 'DiscoveryAppService',
   CLIENT_COMPATIBILITY_APP_SERVICE: 'ClientCompatibilityAppService',
@@ -47,7 +47,7 @@ export const ServiceTokens = {
 
 /**
  * サービストークンの型定義
- * 
+ *
  * コンパイル時の型チェックを提供
  */
-export type ServiceToken = typeof ServiceTokens[keyof typeof ServiceTokens];
+export type ServiceToken = (typeof ServiceTokens)[keyof typeof ServiceTokens];

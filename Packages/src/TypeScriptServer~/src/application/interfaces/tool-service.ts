@@ -1,9 +1,9 @@
 /**
  * Tool Service Interface
- * 
+ *
  * Design document reference:
  * - .kiro/specs/typescript-server-ddd-refactoring/design.md#IToolService
- * 
+ *
  * Related classes:
  * - UnityToolManager (existing implementation class)
  * - ToolManagementAppService (new application service implementation)
@@ -17,7 +17,7 @@ import { ApplicationService } from '../../domain/base-interfaces.js';
 
 /**
  * Interface providing technical functionality for Unity tool management
- * 
+ *
  * Responsibilities:
  * - Unity tool initialization and updates
  * - Tool information retrieval and management
@@ -27,28 +27,28 @@ import { ApplicationService } from '../../domain/base-interfaces.js';
 export interface IToolService extends ApplicationService {
   /**
    * Initialize dynamic tools
-   * 
+   *
    * @throws ToolExecutionError if initialization fails
    */
   initializeTools(): Promise<void>;
 
   /**
    * Refresh dynamic tools (re-fetch)
-   * 
+   *
    * @throws ToolExecutionError if refresh fails
    */
   refreshTools(): Promise<void>;
 
   /**
    * Get all tools
-   * 
+   *
    * @returns Array of tools
    */
   getAllTools(): Tool[];
 
   /**
    * Check if specified tool exists
-   * 
+   *
    * @param name Tool name
    * @returns true if exists
    */
@@ -56,7 +56,7 @@ export interface IToolService extends ApplicationService {
 
   /**
    * Get specified tool
-   * 
+   *
    * @param name Tool name
    * @returns Tool instance, undefined if not found
    */
@@ -64,7 +64,7 @@ export interface IToolService extends ApplicationService {
 
   /**
    * Get tool list from Unity
-   * 
+   *
    * @returns Array of tools retrieved from Unity
    * @throws ToolExecutionError if Unity communication fails
    */
@@ -72,14 +72,14 @@ export interface IToolService extends ApplicationService {
 
   /**
    * Set client name
-   * 
+   *
    * @param clientName Client name
    */
   setClientName(clientName: string): void;
 
   /**
    * Get number of tools
-   * 
+   *
    * @returns Current number of tools
    */
   getToolsCount(): number;

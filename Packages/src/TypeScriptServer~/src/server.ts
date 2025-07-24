@@ -76,6 +76,8 @@ class UnityMcpServer {
 
     // Initialize Unity tool manager
     this.toolManager = new UnityToolManager(this.unityClient);
+    // Phase 3.2: Inject connectionManager for RefreshToolsUseCase integration
+    this.toolManager.setConnectionManager(this.connectionManager);
 
     // Initialize MCP client compatibility manager
     this.clientCompatibility = new McpClientCompatibility(this.unityClient);

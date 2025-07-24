@@ -1,9 +1,9 @@
 /**
  * Service Registration Configuration
- * 
+ *
  * Design document reference:
  * - .kiro/specs/typescript-server-ddd-refactoring/design.md#ファクトリー関数
- * 
+ *
  * Related classes:
  * - ServiceLocator (infrastructure/service-locator.ts)
  * - ServiceTokens (infrastructure/service-tokens.ts)
@@ -19,6 +19,7 @@ import { ServiceTokens } from './service-tokens.js';
 
 // UseCase implementations
 import { createExecuteToolUseCase } from '../domain/use-cases/execute-tool-use-case.js';
+import { createRefreshToolsUseCase } from '../domain/use-cases/refresh-tools-use-case.js';
 
 // Infrastructure components
 // import { UnityClient } from '../unity-client.js';
@@ -26,7 +27,7 @@ import { createExecuteToolUseCase } from '../domain/use-cases/execute-tool-use-c
 
 /**
  * Register all services with the ServiceLocator
- * 
+ *
  * This function sets up dependency injection by registering factory functions
  * for all services, maintaining the principle that:
  * - ApplicationServices are singletons (same instance returned)
@@ -48,12 +49,16 @@ export function registerServices(): void {
     return createExecuteToolUseCase();
   });
 
+  ServiceLocator.register(ServiceTokens.REFRESH_TOOLS_USE_CASE, () => {
+    return createRefreshToolsUseCase();
+  });
+
   // TODO: Add more UseCase registrations as they are implemented
 }
 
 /**
  * Clear all service registrations
- * 
+ *
  * Primarily used for testing
  */
 export function clearServices(): void {

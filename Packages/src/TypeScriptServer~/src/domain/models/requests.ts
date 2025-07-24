@@ -1,9 +1,9 @@
 /**
  * Request Models for UseCase Layer
- * 
+ *
  * Design document reference:
  * - .kiro/specs/typescript-server-ddd-refactoring/design.md#データモデル
- * 
+ *
  * Related classes:
  * - UseCase implementations use these as TRequest type parameters
  * - Response models defined in responses.ts

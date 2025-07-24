@@ -1,9 +1,9 @@
 /**
  * Connection Service Interface
- * 
+ *
  * Design document reference:
  * - .kiro/specs/typescript-server-ddd-refactoring/design.md#IConnectionService
- * 
+ *
  * Related classes:
  * - UnityConnectionManager (existing implementation class)
  * - ConnectionAppService (new application service implementation)
@@ -14,7 +14,7 @@ import { ApplicationService } from '../../domain/base-interfaces.js';
 
 /**
  * Interface providing technical functionality for Unity connection management
- * 
+ *
  * Responsibilities:
  * - Unity connection state management
  * - Connection establishment and disconnection
@@ -24,14 +24,14 @@ import { ApplicationService } from '../../domain/base-interfaces.js';
 export interface IConnectionService extends ApplicationService {
   /**
    * Check Unity connection status
-   * 
+   *
    * @returns true if connected
    */
   isConnected(): boolean;
 
   /**
    * Ensure Unity connection is established (only if not connected)
-   * 
+   *
    * @param timeoutMs Timeout in milliseconds
    * @returns Promise for connection establishment
    * @throws ConnectionError if connection fails
@@ -45,14 +45,14 @@ export interface IConnectionService extends ApplicationService {
 
   /**
    * Test connection (validate connection state)
-   * 
+   *
    * @returns true if connection is valid
    */
   testConnection(): Promise<boolean>;
 
   /**
    * Setup reconnection callback
-   * 
+   *
    * @param callback Callback to execute on reconnection
    */
   setupReconnectionCallback(callback: () => Promise<void>): void;

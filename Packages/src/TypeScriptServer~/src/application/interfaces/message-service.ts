@@ -1,9 +1,9 @@
 /**
  * Message Service Interface
- * 
+ *
  * Design document reference:
  * - .kiro/specs/typescript-server-ddd-refactoring/design.md#IMessageService
- * 
+ *
  * Related classes:
  * - MessageHandler (existing implementation class)
  * - MessageAppService (new application service implementation)
@@ -15,7 +15,7 @@ import { ApplicationService } from '../../domain/base-interfaces.js';
 
 /**
  * Interface providing technical functionality for JSON-RPC message processing
- * 
+ *
  * Responsibilities:
  * - JSON-RPC message parsing and routing
  * - Notification handler registration
@@ -26,14 +26,14 @@ import { ApplicationService } from '../../domain/base-interfaces.js';
 export interface IMessageService extends ApplicationService {
   /**
    * Handle incoming data with Content-Length framing
-   * 
+   *
    * @param data Buffer or string data from Unity
    */
   handleIncomingData(data: Buffer | string): void;
 
   /**
    * Create JSON-RPC request with Content-Length framing
-   * 
+   *
    * @param method Method name
    * @param params Request parameters
    * @param id Request ID
@@ -43,23 +43,27 @@ export interface IMessageService extends ApplicationService {
 
   /**
    * Register pending request for response tracking
-   * 
+   *
    * @param id Request ID
    * @param resolve Resolve callback
    * @param reject Reject callback
    */
-  registerPendingRequest(id: string, resolve: (value: unknown) => void, reject: (reason: unknown) => void): void;
+  registerPendingRequest(
+    id: string,
+    resolve: (value: unknown) => void,
+    reject: (reason: unknown) => void,
+  ): void;
 
   /**
    * Clear all pending requests
-   * 
+   *
    * @param reason Reason for clearing (used in error messages)
    */
   clearPendingRequests(reason: string): void;
 
   /**
    * Register notification handler for specific method
-   * 
+   *
    * @param method Method name
    * @param handler Handler function
    */
@@ -67,7 +71,7 @@ export interface IMessageService extends ApplicationService {
 
   /**
    * Remove notification handler
-   * 
+   *
    * @param method Method name
    */
   offNotification(method: string): void;
@@ -79,7 +83,7 @@ export interface IMessageService extends ApplicationService {
 
   /**
    * Get buffer statistics for debugging
-   * 
+   *
    * @returns Buffer statistics
    */
   getBufferStats(): {

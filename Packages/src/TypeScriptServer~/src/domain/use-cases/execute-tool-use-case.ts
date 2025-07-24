@@ -1,9 +1,9 @@
 /**
  * Execute Tool UseCase
- * 
+ *
  * Design document reference:
  * - .kiro/specs/typescript-server-ddd-refactoring/design.md#ExecuteToolUseCase
- * 
+ *
  * Related classes:
  * - IConnectionService (application/interfaces/connection-service.ts)
  * - IToolService (application/interfaces/tool-service.ts)
@@ -20,16 +20,17 @@ import { IConnectionService } from '../../application/interfaces/connection-serv
 import { IToolService } from '../../application/interfaces/tool-service.js';
 import { ConnectionError, ToolExecutionError } from '../errors.js';
 import { VibeLogger } from '../../utils/vibe-logger.js';
+import { DynamicUnityCommandTool } from '../../tools/dynamic-unity-command-tool.js';
 
 /**
  * UseCase for executing Unity tools
- * 
+ *
  * Responsibilities:
  * - Orchestrate the complete tool execution workflow
  * - Manage temporal cohesion of tool execution process
  * - Handle business-level error scenarios
  * - Coordinate multiple application services
- * 
+ *
  * Workflow:
  * 1. Validate connection state
  * 2. Verify tool existence
@@ -40,17 +41,14 @@ export class ExecuteToolUseCase implements UseCase<ExecuteToolRequest, ExecuteTo
   private connectionService: IConnectionService;
   private toolService: IToolService;
 
-  constructor(
-    connectionService: IConnectionService,
-    toolService: IToolService,
-  ) {
+  constructor(connectionService: IConnectionService, toolService: IToolService) {
     this.connectionService = connectionService;
     this.toolService = toolService;
   }
 
   /**
    * Execute the tool execution workflow
-   * 
+   *
    * @param request Tool execution request
    * @returns Tool execution response
    */
@@ -71,7 +69,7 @@ export class ExecuteToolUseCase implements UseCase<ExecuteToolRequest, ExecuteTo
       await this.ensureUnityConnection(correlationId);
 
       // Step 2: Verify tool exists and get tool instance
-      const dynamicTool = await this.validateAndGetTool(toolName, correlationId);
+      const dynamicTool = this.validateAndGetTool(toolName, correlationId);
 
       // Step 3: Execute the tool
       const result = await this.executeTool(dynamicTool, args || {}, correlationId);
@@ -92,7 +90,7 @@ export class ExecuteToolUseCase implements UseCase<ExecuteToolRequest, ExecuteTo
 
   /**
    * Ensure Unity connection is established
-   * 
+   *
    * @param correlationId Correlation ID for logging
    * @throws ConnectionError if connection cannot be established
    */
@@ -119,13 +117,13 @@ export class ExecuteToolUseCase implements UseCase<ExecuteToolRequest, ExecuteTo
 
   /**
    * Validate tool exists and retrieve tool instance
-   * 
+   *
    * @param toolName Tool name to validate
    * @param correlationId Correlation ID for logging
    * @returns Dynamic tool instance
    * @throws ToolExecutionError if tool doesn't exist
    */
-  private async validateAndGetTool(toolName: string, correlationId: string) {
+  private validateAndGetTool(toolName: string, correlationId: string): DynamicUnityCommandTool {
     if (!this.toolService.hasTool(toolName)) {
       VibeLogger.logError(
         'execute_tool_not_found',
@@ -135,10 +133,7 @@ export class ExecuteToolUseCase implements UseCase<ExecuteToolRequest, ExecuteTo
         'Tool validation failed - tool not found in available tools',
       );
 
-      throw new ToolExecutionError(
-        `Tool ${toolName} is not available`,
-        { tool_name: toolName },
-      );
+      throw new ToolExecutionError(`Tool ${toolName} is not available`, { tool_name: toolName });
     }
 
     const dynamicTool = this.toolService.getTool(toolName);
@@ -151,10 +146,9 @@ export class ExecuteToolUseCase implements UseCase<ExecuteToolRequest, ExecuteTo
         'Tool registry inconsistency - tool marked as available but instance is null',
       );
 
-      throw new ToolExecutionError(
-        `Tool ${toolName} instance is not available`,
-        { tool_name: toolName },
-      );
+      throw new ToolExecutionError(`Tool ${toolName} instance is not available`, {
+        tool_name: toolName,
+      });
     }
 
     return dynamicTool;
@@ -162,7 +156,7 @@ export class ExecuteToolUseCase implements UseCase<ExecuteToolRequest, ExecuteTo
 
   /**
    * Execute the dynamic tool
-   * 
+   *
    * @param dynamicTool Tool instance to execute
    * @param args Tool arguments
    * @param correlationId Correlation ID for logging
@@ -170,7 +164,7 @@ export class ExecuteToolUseCase implements UseCase<ExecuteToolRequest, ExecuteTo
    * @throws ToolExecutionError if execution fails
    */
   private async executeTool(
-    dynamicTool: any,
+    dynamicTool: DynamicUnityCommandTool,
     args: Record<string, unknown>,
     correlationId: string,
   ): Promise<ExecuteToolResponse> {
@@ -211,7 +205,7 @@ export class ExecuteToolUseCase implements UseCase<ExecuteToolRequest, ExecuteTo
 
   /**
    * Handle execution errors and return formatted error response
-   * 
+   *
    * @param error Error that occurred
    * @param toolName Tool name for context
    * @param correlationId Correlation ID for logging
@@ -250,7 +244,7 @@ export class ExecuteToolUseCase implements UseCase<ExecuteToolRequest, ExecuteTo
 
 /**
  * Factory function for creating ExecuteToolUseCase instances
- * 
+ *
  * @returns New ExecuteToolUseCase instance with injected dependencies
  */
 export function createExecuteToolUseCase(): ExecuteToolUseCase {

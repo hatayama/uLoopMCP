@@ -2,6 +2,10 @@ import { UnityClient } from './unity-client.js';
 import { DynamicUnityCommandTool } from './tools/dynamic-unity-command-tool.js';
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { ENVIRONMENT } from './constants.js';
+import { RefreshToolsUseCase } from './domain/use-cases/refresh-tools-use-case.js';
+import { VibeLogger } from './utils/vibe-logger.js';
+import { IToolService } from './application/interfaces/tool-service.js';
+import { UnityConnectionManager } from './unity-connection-manager.js';
 
 // Import UnityParameterSchema type from the tool file
 type UnityParameterSchema = { [key: string]: unknown };
@@ -22,16 +26,24 @@ type UnityParameterSchema = { [key: string]: unknown };
  * - Tool details fetching and parsing
  * - Development mode support
  */
-export class UnityToolManager {
+export class UnityToolManager implements IToolService {
   private unityClient: UnityClient;
   private readonly isDevelopment: boolean;
   private readonly dynamicTools: Map<string, DynamicUnityCommandTool> = new Map();
   private isRefreshing: boolean = false;
   private clientName: string = '';
+  private connectionManager?: UnityConnectionManager; // Will be injected for UseCase
 
   constructor(unityClient: UnityClient) {
     this.unityClient = unityClient;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+  }
+
+  /**
+   * Set connection manager for UseCase integration (Phase 3.2)
+   */
+  setConnectionManager(connectionManager: UnityConnectionManager): void {
+    this.connectionManager = connectionManager;
   }
 
   /**
@@ -165,13 +177,75 @@ export class UnityToolManager {
   /**
    * Refresh dynamic tools by re-fetching from Unity
    * This method can be called to update the tool list when Unity tools change
+   *
+   * IMPORTANT: This method is critical for domain reload recovery
    */
   async refreshDynamicTools(sendNotification?: () => void): Promise<void> {
-    await this.initializeDynamicTools();
+    try {
+      // Phase 3.2: Use RefreshToolsUseCase if connectionManager is available
+      if (this.connectionManager) {
+        const refreshToolsUseCase = new RefreshToolsUseCase(this.connectionManager, this);
 
-    // Send tools changed notification to MCP client if callback provided
-    if (sendNotification) {
-      sendNotification();
+        const result = await refreshToolsUseCase.execute({
+          includeDevelopmentOnly: this.isDevelopment,
+        });
+
+        VibeLogger.logInfo(
+          'unity_tool_manager_refresh_completed',
+          'Dynamic tools refreshed successfully via UseCase',
+          { tool_count: result.tools.length, refreshed_at: result.refreshedAt },
+          undefined,
+          'Tool refresh completed - ready for domain reload recovery',
+        );
+
+        // Send tools changed notification to MCP client if callback provided
+        // This is critical for notifying the client after domain reload
+        if (sendNotification) {
+          sendNotification();
+        }
+        return;
+      }
+
+      // Fallback: Use direct initialization if UseCase is not available
+      VibeLogger.logDebug(
+        'unity_tool_manager_fallback_refresh',
+        'Using fallback refresh method (connectionManager not available)',
+        {},
+        undefined,
+        'Direct initialization fallback for domain reload recovery',
+      );
+
+      await this.initializeDynamicTools();
+
+      if (sendNotification) {
+        sendNotification();
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      VibeLogger.logError(
+        'unity_tool_manager_refresh_failed',
+        'Failed to refresh dynamic tools',
+        { error: errorMessage },
+        undefined,
+        'Tool refresh failed - domain reload recovery may be impacted',
+      );
+
+      // Final fallback: try direct initialization to maintain domain reload recovery
+      try {
+        await this.initializeDynamicTools();
+
+        if (sendNotification) {
+          sendNotification();
+        }
+      } catch (fallbackError) {
+        VibeLogger.logError(
+          'unity_tool_manager_fallback_failed',
+          'Fallback tool initialization also failed',
+          { error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError) },
+          undefined,
+          'Both UseCase and fallback failed - domain reload recovery compromised',
+        );
+      }
     }
   }
 
@@ -232,6 +306,21 @@ export class UnityToolManager {
    */
   getToolsCount(): number {
     return this.dynamicTools.size;
+  }
+
+  // IToolService interface compatibility methods
+  /**
+   * Initialize dynamic tools (IToolService interface)
+   */
+  async initializeTools(): Promise<void> {
+    return this.initializeDynamicTools();
+  }
+
+  /**
+   * Refresh dynamic tools (IToolService interface)
+   */
+  async refreshTools(): Promise<void> {
+    return this.initializeDynamicTools();
   }
 
   /**

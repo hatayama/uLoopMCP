@@ -7536,7 +7536,7 @@ var UnityConnectionManager = class {
       return;
     }
     this.isInitialized = true;
-    this.unityDiscovery.setOnDiscoveredCallback(() => {
+    this.unityDiscovery.setOnDiscoveredCallback(async (port) => {
       void this.handleUnityDiscovered(onConnectionEstablished);
     });
     this.unityDiscovery.setOnConnectionLostCallback(() => {
@@ -7763,6 +7763,159 @@ var DynamicUnityCommandTool = class extends BaseTool {
   }
 };
 
+// src/domain/errors.ts
+var DomainError = class extends Error {
+  constructor(message, details) {
+    super(message);
+    this.details = details;
+    this.name = this.constructor.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+};
+var ConnectionError = class extends DomainError {
+  code = "CONNECTION_ERROR";
+};
+
+// src/domain/use-cases/refresh-tools-use-case.ts
+var RefreshToolsUseCase = class {
+  connectionManager;
+  toolManager;
+  constructor(connectionManager, toolManager) {
+    this.connectionManager = connectionManager;
+    this.toolManager = toolManager;
+  }
+  /**
+   * Execute the tool refresh workflow
+   *
+   * @param request Tool refresh request
+   * @returns Tool refresh response
+   */
+  async execute(request) {
+    const correlationId = VibeLogger.generateCorrelationId();
+    VibeLogger.logInfo(
+      "refresh_tools_use_case_start",
+      "Starting tool refresh workflow",
+      { include_development: request.includeDevelopmentOnly },
+      correlationId,
+      "UseCase orchestrating tool refresh workflow for domain reload recovery"
+    );
+    try {
+      await this.ensureUnityConnection(correlationId);
+      await this.refreshToolsFromUnity(correlationId);
+      const refreshedTools = this.toolManager.getAllTools();
+      const response = {
+        tools: refreshedTools,
+        refreshedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      VibeLogger.logInfo(
+        "refresh_tools_use_case_success",
+        "Tool refresh workflow completed successfully",
+        {
+          tool_count: refreshedTools.length,
+          refreshed_at: response.refreshedAt
+        },
+        correlationId,
+        "Tool refresh completed successfully - Unity tools updated after domain reload"
+      );
+      return response;
+    } catch (error) {
+      return this.handleRefreshError(error, request, correlationId);
+    }
+  }
+  /**
+   * Ensure Unity connection is established
+   *
+   * @param correlationId Correlation ID for logging
+   * @throws ConnectionError if connection cannot be established
+   */
+  async ensureUnityConnection(correlationId) {
+    if (!this.connectionManager.isConnected()) {
+      VibeLogger.logWarning(
+        "refresh_tools_unity_not_connected",
+        "Unity not connected during tool refresh, attempting to establish connection",
+        { connected: false },
+        correlationId,
+        "Unity connection required for tool refresh after domain reload"
+      );
+      try {
+        await this.connectionManager.waitForUnityConnectionWithTimeout(1e4);
+      } catch (error) {
+        throw new ConnectionError(
+          `Cannot refresh tools: Unity connection failed - ${error instanceof Error ? error.message : "Unknown error"}`,
+          { original_error: error }
+        );
+      }
+    }
+    VibeLogger.logDebug(
+      "refresh_tools_connection_verified",
+      "Unity connection verified for tool refresh",
+      { connected: true },
+      correlationId,
+      "Connection ready for tool refresh after domain reload"
+    );
+  }
+  /**
+   * Refresh tools from Unity by re-initializing dynamic tools
+   *
+   * @param correlationId Correlation ID for logging
+   */
+  async refreshToolsFromUnity(correlationId) {
+    try {
+      VibeLogger.logDebug(
+        "refresh_tools_initializing",
+        "Re-initializing dynamic tools from Unity",
+        {},
+        correlationId,
+        "Fetching latest tool definitions from Unity after domain reload"
+      );
+      await this.toolManager.initializeDynamicTools();
+      VibeLogger.logInfo(
+        "refresh_tools_initialized",
+        "Dynamic tools re-initialized successfully from Unity",
+        { tool_count: this.toolManager.getToolsCount() },
+        correlationId,
+        "Tool definitions updated from Unity after domain reload"
+      );
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      VibeLogger.logError(
+        "refresh_tools_initialization_failed",
+        "Failed to re-initialize dynamic tools from Unity",
+        { error_message: errorMessage },
+        correlationId,
+        "Tool refresh failed during Unity communication"
+      );
+      throw new ConnectionError(`Tool refresh failed: ${errorMessage}`, { original_error: error });
+    }
+  }
+  /**
+   * Handle tool refresh errors
+   *
+   * @param error Error that occurred
+   * @param request Original request
+   * @param correlationId Correlation ID for logging
+   * @returns RefreshToolsResponse with error state
+   */
+  handleRefreshError(error, request, correlationId) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    VibeLogger.logError(
+      "refresh_tools_use_case_error",
+      "Tool refresh workflow failed",
+      {
+        include_development: request.includeDevelopmentOnly,
+        error_message: errorMessage,
+        error_type: error instanceof Error ? error.constructor.name : typeof error
+      },
+      correlationId,
+      "UseCase workflow failed - returning empty tools list to prevent client errors"
+    );
+    return {
+      tools: [],
+      refreshedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+};
+
 // src/unity-tool-manager.ts
 var UnityToolManager = class {
   unityClient;
@@ -7770,9 +7923,17 @@ var UnityToolManager = class {
   dynamicTools = /* @__PURE__ */ new Map();
   isRefreshing = false;
   clientName = "";
+  connectionManager;
+  // Will be injected for UseCase
   constructor(unityClient) {
     this.unityClient = unityClient;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+  }
+  /**
+   * Set connection manager for UseCase integration (Phase 3.2)
+   */
+  setConnectionManager(connectionManager) {
+    this.connectionManager = connectionManager;
   }
   /**
    * Set client name for Unity communication
@@ -7866,11 +8027,62 @@ var UnityToolManager = class {
   /**
    * Refresh dynamic tools by re-fetching from Unity
    * This method can be called to update the tool list when Unity tools change
+   *
+   * IMPORTANT: This method is critical for domain reload recovery
    */
   async refreshDynamicTools(sendNotification) {
-    await this.initializeDynamicTools();
-    if (sendNotification) {
-      sendNotification();
+    try {
+      if (this.connectionManager) {
+        const refreshToolsUseCase = new RefreshToolsUseCase(this.connectionManager, this);
+        const result = await refreshToolsUseCase.execute({
+          includeDevelopmentOnly: this.isDevelopment
+        });
+        VibeLogger.logInfo(
+          "unity_tool_manager_refresh_completed",
+          "Dynamic tools refreshed successfully via UseCase",
+          { tool_count: result.tools.length, refreshed_at: result.refreshedAt },
+          void 0,
+          "Tool refresh completed - ready for domain reload recovery"
+        );
+        if (sendNotification) {
+          sendNotification();
+        }
+        return;
+      }
+      VibeLogger.logDebug(
+        "unity_tool_manager_fallback_refresh",
+        "Using fallback refresh method (connectionManager not available)",
+        {},
+        void 0,
+        "Direct initialization fallback for domain reload recovery"
+      );
+      await this.initializeDynamicTools();
+      if (sendNotification) {
+        sendNotification();
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      VibeLogger.logError(
+        "unity_tool_manager_refresh_failed",
+        "Failed to refresh dynamic tools",
+        { error: errorMessage },
+        void 0,
+        "Tool refresh failed - domain reload recovery may be impacted"
+      );
+      try {
+        await this.initializeDynamicTools();
+        if (sendNotification) {
+          sendNotification();
+        }
+      } catch (fallbackError) {
+        VibeLogger.logError(
+          "unity_tool_manager_fallback_failed",
+          "Fallback tool initialization also failed",
+          { error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError) },
+          void 0,
+          "Both UseCase and fallback failed - domain reload recovery compromised"
+        );
+      }
     }
   }
   /**
@@ -7922,6 +8134,19 @@ var UnityToolManager = class {
    */
   getToolsCount() {
     return this.dynamicTools.size;
+  }
+  // IToolService interface compatibility methods
+  /**
+   * Initialize dynamic tools (IToolService interface)
+   */
+  async initializeTools() {
+    return this.initializeDynamicTools();
+  }
+  /**
+   * Refresh dynamic tools (IToolService interface)
+   */
+  async refreshTools() {
+    return this.initializeDynamicTools();
   }
   /**
    * Convert input schema to MCP-compatible format safely
@@ -8338,6 +8563,7 @@ var UnityMcpServer = class {
     this.connectionManager = new UnityConnectionManager(this.unityClient);
     this.unityDiscovery = this.connectionManager.getUnityDiscovery();
     this.toolManager = new UnityToolManager(this.unityClient);
+    this.toolManager.setConnectionManager(this.connectionManager);
     this.clientCompatibility = new McpClientCompatibility(this.unityClient);
     this.eventHandler = new UnityEventHandler(
       this.server,
