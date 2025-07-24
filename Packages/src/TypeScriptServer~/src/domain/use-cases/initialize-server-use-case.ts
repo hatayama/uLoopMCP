@@ -37,7 +37,7 @@ function getPackageVersion(): string {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const packageJsonPath = join(__dirname, '..', '..', '..', 'package.json');
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8')) as { version?: string };
     return packageJson.version || '0.5.0';
   } catch (error) {
     // Fallback to hardcoded version if package.json read fails
@@ -311,7 +311,7 @@ export class InitializeServerUseCase
       },
       serverInfo: {
         name: MCP_SERVER_NAME,
-        version: '0.5.0', // This should come from package.json in production
+        version: getPackageVersion(),
       },
       tools,
     };
