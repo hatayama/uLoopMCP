@@ -57,6 +57,55 @@ namespace io.github.hatayama.uLoopMCP
         /// </param>
         public static void StartServer(int port = -1)
         {
+            // Feature Toggle: Use new UseCase implementation
+            const bool useNewImplementation = true;
+
+            if (useNewImplementation)
+            {
+                StartServerWithUseCase(port);
+            }
+            else
+            {
+                StartServerLegacy(port);
+            }
+        }
+
+        /// <summary>
+        /// Starts the server using new UseCase implementation.
+        /// </summary>
+        private static void StartServerWithUseCase(int port)
+        {
+            // Always stop the existing server first (to release the port)
+            if (mcpServer != null)
+            {
+                StopServer();
+            }
+
+            // Execute initialization UseCase
+            var useCase = new McpServerInitializationUseCase();
+            var schema = new ServerInitializationSchema { Port = port };
+            var cancellationToken = new System.Threading.CancellationToken();
+
+            var result = useCase.ExecuteAsync(schema, cancellationToken).GetAwaiter().GetResult();
+
+            if (result.Success)
+            {
+                // UseCase内で新しいサーバーインスタンスを作成したので、
+                // 既存のコードとの互換性のため、ここで参照を保持する
+                mcpServer = result.ServerInstance;
+            }
+            else
+            {
+                // エラーメッセージはUseCaseで処理済み
+                UnityEngine.Debug.LogError($"Server startup failed: {result.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Legacy server startup implementation.
+        /// </summary>
+        private static void StartServerLegacy(int port)
+        {
             // Use saved port if no port specified
             int actualPort = port == -1 ? McpEditorSettings.GetCustomPort() : port;
 
@@ -115,6 +164,48 @@ namespace io.github.hatayama.uLoopMCP
         /// Stops the server.
         /// </summary>
         public static void StopServer()
+        {
+            // Feature Toggle: Use new UseCase implementation
+            const bool useNewImplementation = true;
+
+            if (useNewImplementation)
+            {
+                StopServerWithUseCase();
+            }
+            else
+            {
+                StopServerLegacy();
+            }
+        }
+
+        /// <summary>
+        /// Stops the server using new UseCase implementation.
+        /// </summary>
+        private static void StopServerWithUseCase()
+        {
+            // Execute shutdown UseCase
+            var useCase = new McpServerShutdownUseCase();
+            var schema = new ServerShutdownSchema { ForceShutdown = false };
+            var cancellationToken = new System.Threading.CancellationToken();
+
+            var result = useCase.ExecuteAsync(schema, cancellationToken).GetAwaiter().GetResult();
+
+            if (result.Success)
+            {
+                // UseCaseでサーバーが停止されたので、参照をクリア
+                mcpServer = null;
+            }
+            else
+            {
+                // エラーメッセージはUseCaseで処理済み
+                UnityEngine.Debug.LogError($"Server shutdown failed: {result.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Legacy server shutdown implementation.
+        /// </summary>
+        private static void StopServerLegacy()
         {
             if (mcpServer != null)
             {

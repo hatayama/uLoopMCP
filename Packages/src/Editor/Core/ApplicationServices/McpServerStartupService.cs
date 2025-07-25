@@ -18,9 +18,16 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>The created server instance</returns>
         public ServiceResult<McpBridgeServer> StartServer(int port)
         {
-            McpBridgeServer server = new();
-            server.StartServer(port);
-            return ServiceResult<McpBridgeServer>.SuccessResult(server);
+            try
+            {
+                McpBridgeServer server = new();
+                server.StartServer(port);
+                return ServiceResult<McpBridgeServer>.SuccessResult(server);
+            }
+            catch (System.Exception ex)
+            {
+                return ServiceResult<McpBridgeServer>.FailureResult($"Failed to start server: {ex.Message}");
+            }
         }
 
         /// <summary>
