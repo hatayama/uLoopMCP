@@ -37,11 +37,18 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Success indicator</returns>
         public ServiceResult<bool> StopServer(McpBridgeServer server)
         {
-            if (server != null)
+            try
             {
-                server.Dispose();
+                if (server != null)
+                {
+                    server.Dispose();
+                }
+                return ServiceResult<bool>.SuccessResult(true);
             }
-            return ServiceResult<bool>.SuccessResult(true);
+            catch (System.Exception ex)
+            {
+                return ServiceResult<bool>.FailureResult($"Failed to stop server: {ex.Message}");
+            }
         }
 
         /// <summary>
