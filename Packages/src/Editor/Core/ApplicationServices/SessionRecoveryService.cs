@@ -47,7 +47,14 @@ namespace io.github.hatayama.uLoopMCP
                 if (isAfterCompile)
                 {
                     // コンパイル後は即座に再起動
-                    RestoreServerAfterCompileAsync(savedPort).Forget();
+                    _ = RestoreServerAfterCompileAsync(savedPort).ContinueWith(task =>
+                    {
+                        if (task.IsFaulted)
+                        {
+                            VibeLogger.LogError("server_restore_failed", 
+                                $"Failed to restore server after compile: {task.Exception?.GetBaseException().Message}");
+                        }
+                    }, TaskScheduler.FromCurrentSynchronizationContext());
                 }
                 else
                 {
@@ -55,7 +62,14 @@ namespace io.github.hatayama.uLoopMCP
                     bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
                     if (autoStartEnabled)
                     {
-                        RestoreServerOnStartupAsync(savedPort).Forget();
+                        _ = RestoreServerOnStartupAsync(savedPort).ContinueWith(task =>
+                        {
+                            if (task.IsFaulted)
+                            {
+                                VibeLogger.LogError("server_startup_restore_failed", 
+                                    $"Failed to restore server on startup: {task.Exception?.GetBaseException().Message}");
+                            }
+                        }, TaskScheduler.FromCurrentSynchronizationContext());
                     }
                     else
                     {
@@ -103,7 +117,14 @@ namespace io.github.hatayama.uLoopMCP
                 if (retryCount < MAX_RETRIES)
                 {
                     // リトライを実行
-                    RetryServerRestoreAsync(port, retryCount).Forget();
+                    _ = RetryServerRestoreAsync(port, retryCount).ContinueWith(task =>
+                    {
+                        if (task.IsFaulted)
+                        {
+                            VibeLogger.LogError("server_restore_retry_failed", 
+                                $"Failed to retry server restore (attempt {retryCount}): {task.Exception?.GetBaseException().Message}");
+                        }
+                    }, TaskScheduler.FromCurrentSynchronizationContext());
                     return ValidationResult.Success();
                 }
                 else
