@@ -5,26 +5,28 @@ using NUnit.Framework;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// GetLogsUseCaseのユニットテスト
+    /// Unit tests for GetLogsUseCase
+    /// Related classes: GetLogsUseCase, LogRetrievalService, LogFilteringService
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     [TestFixture]
     public class GetLogsUseCaseTests
     {
         /// <summary>
-        /// 正常なログ取得実行のテスト（最小限）
+        /// Test for normal log retrieval execution (minimal)
         /// </summary>
         [Test]
         public async Task ExecuteAsync_ValidParameters_ReturnsSuccessResponse()
         {
             // Arrange
-            var useCase = new GetLogsUseCase();
-            var schema = new GetLogsSchema
+            GetLogsUseCase useCase = new();
+            GetLogsSchema schema = new()
             {
                 LogType = McpLogType.All,
                 MaxCount = 10,
                 TimeoutSeconds = 10
             };
-            var cancellationToken = new CancellationToken();
+            CancellationToken cancellationToken = new();
 
             // Act
             var result = await useCase.ExecuteAsync(schema, cancellationToken);
@@ -34,24 +36,24 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsNotNull(result.Logs);
             Assert.IsTrue(result.TotalCount >= 0);
             Assert.IsTrue(result.DisplayedCount >= 0);
-            // Note: 実際のログ取得結果は環境に依存するため、レスポンス構造のみ検証
+            // Note: Actual log retrieval results depend on environment, so only response structure is verified
         }
 
         /// <summary>
-        /// 少ないログ取得テスト
+        /// Test for small log count retrieval
         /// </summary>
         [Test]
         public async Task ExecuteAsync_SmallMaxCount_HandlesCorrectly()
         {
             // Arrange
-            var useCase = new GetLogsUseCase();
-            var schema = new GetLogsSchema
+            GetLogsUseCase useCase = new();
+            GetLogsSchema schema = new()
             {
                 LogType = McpLogType.All,
                 MaxCount = 1,
                 TimeoutSeconds = 5
             };
-            var cancellationToken = new CancellationToken();
+            CancellationToken cancellationToken = new();
 
             // Act
             var result = await useCase.ExecuteAsync(schema, cancellationToken);
@@ -60,7 +62,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsNotNull(result);
             Assert.IsNotNull(result.Logs);
             Assert.IsTrue(result.DisplayedCount <= 1);
-            // 少ないMaxCountでも適切に処理されることを確認
+            // Verify that small MaxCount is handled properly
         }
     }
 }

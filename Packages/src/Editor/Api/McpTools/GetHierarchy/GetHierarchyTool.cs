@@ -20,7 +20,7 @@ namespace io.github.hatayama.uLoopMCP
         protected override async Task<GetHierarchyResponse> ExecuteAsync(GetHierarchySchema parameters, CancellationToken cancellationToken)
         {
             // GetHierarchyUseCaseインスタンスを生成して実行
-            var useCase = new GetHierarchyUseCase();
+            GetHierarchyUseCase useCase = new();
             return await useCase.ExecuteAsync(parameters, cancellationToken);
         }
     }

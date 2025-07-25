@@ -5,32 +5,32 @@ using UnityEditor.TestTools.TestRunner.Api;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// テスト実行処理の時間的凝集を担当
-    /// 処理順序：1. テストフィルターの作成, 2. テスト実行, 3. 結果の処理
-    /// 関連クラス: RunTestsTool, TestFilterCreationService, TestExecutionService
-    /// 設計書参照: DDDリファクタリング仕様 - UseCase Layer
+    /// Handles temporal cohesion for test execution processing
+    /// Processing sequence: 1. Test filter creation, 2. Test execution, 3. Result processing
+    /// Related classes: RunTestsTool, TestFilterCreationService, TestExecutionService
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     public class RunTestsUseCase : AbstractUseCase<RunTestsSchema, RunTestsResponse>
     {
         /// <summary>
-        /// テスト実行処理を実行する
+        /// Executes test execution processing
         /// </summary>
-        /// <param name="parameters">テスト実行パラメータ</param>
-        /// <param name="cancellationToken">キャンセレーション制御用トークン</param>
-        /// <returns>テスト実行結果</returns>
+        /// <param name="parameters">Test execution parameters</param>
+        /// <param name="cancellationToken">Cancellation control token</param>
+        /// <returns>Test execution result</returns>
         public override async Task<RunTestsResponse> ExecuteAsync(RunTestsSchema parameters, CancellationToken cancellationToken)
         {
-            // 1. テストフィルターの作成
+            // 1. Test filter creation
             TestExecutionFilter filter = null;
             if (parameters.FilterType != TestFilterType.all)
             {
-                var filterService = new TestFilterCreationService();
+                TestFilterCreationService filterService = new();
                 filter = filterService.CreateFilter(parameters.FilterType, parameters.FilterValue);
             }
             
-            // 2. テスト実行
+            // 2. Test execution
             cancellationToken.ThrowIfCancellationRequested();
-            var executionService = new TestExecutionService();
+            TestExecutionService executionService = new();
             SerializableTestResult result;
             
             if (parameters.TestMode == TestMode.PlayMode)
@@ -42,7 +42,7 @@ namespace io.github.hatayama.uLoopMCP
                 result = await executionService.ExecuteEditModeTestAsync(filter, parameters.SaveXml);
             }
             
-            // 3. レスポンス作成
+            // 3. Response creation
             return new RunTestsResponse(
                 success: result.success,
                 message: result.message,

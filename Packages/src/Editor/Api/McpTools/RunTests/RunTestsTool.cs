@@ -18,7 +18,7 @@ namespace io.github.hatayama.uLoopMCP
         protected override async Task<RunTestsResponse> ExecuteAsync(RunTestsSchema parameters, CancellationToken cancellationToken)
         {
             // RunTestsUseCaseインスタンスを生成して実行
-            var useCase = new RunTestsUseCase();
+            RunTestsUseCase useCase = new();
             return await useCase.ExecuteAsync(parameters, cancellationToken);
         }
 

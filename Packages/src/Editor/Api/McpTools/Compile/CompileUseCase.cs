@@ -5,23 +5,23 @@ using System.Linq;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// コンパイル処理の時間的凝集を担当
-    /// 処理順序：1. コンパイル状態の検証, 2. コンパイル実行, 3. 結果の整形
-    /// 関連クラス: CompileTool, CompilationStateValidationService, CompilationExecutionService
-    /// 設計書参照: DDDリファクタリング仕様 - UseCase Layer
+    /// Handles temporal cohesion for compilation processing
+    /// Processing sequence: 1. Compilation state validation, 2. Compilation execution, 3. Result formatting
+    /// Related classes: CompileTool, CompilationStateValidationService, CompilationExecutionService
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     public class CompileUseCase : AbstractUseCase<CompileSchema, CompileResponse>
     {
         /// <summary>
-        /// コンパイル処理を実行する
+        /// Executes compilation processing
         /// </summary>
-        /// <param name="parameters">コンパイルパラメータ</param>
-        /// <param name="cancellationToken">キャンセレーション制御用トークン</param>
-        /// <returns>コンパイル結果</returns>
+        /// <param name="parameters">Compilation parameters</param>
+        /// <param name="cancellationToken">Cancellation control token</param>
+        /// <returns>Compilation result</returns>
         public override async Task<CompileResponse> ExecuteAsync(CompileSchema parameters, CancellationToken cancellationToken)
         {
-            // 1. コンパイル状態の検証
-            var validationService = new CompilationStateValidationService();
+            // 1. Compilation state validation
+            CompilationStateValidationService validationService = new();
             ValidationResult validation = validationService.ValidateCompilationState();
             
             if (!validation.IsValid)
@@ -35,12 +35,12 @@ namespace io.github.hatayama.uLoopMCP
                 );
             }
             
-            // 2. コンパイル実行
+            // 2. Compilation execution
             cancellationToken.ThrowIfCancellationRequested();
-            var executionService = new CompilationExecutionService();
+            CompilationExecutionService executionService = new();
             CompileResult result = await executionService.ExecuteCompilationAsync(parameters.ForceRecompile);
             
-            // 3. 結果の整形
+            // 3. Result formatting
             if (result.IsIndeterminate)
             {
                 return new CompileResponse(

@@ -27,7 +27,7 @@ namespace io.github.hatayama.uLoopMCP
         protected override async Task<UnitySearchResponse> ExecuteAsync(UnitySearchSchema parameters, CancellationToken cancellationToken)
         {
             // UnitySearchUseCaseインスタンスを生成して実行
-            var useCase = new UnitySearchUseCase();
+            UnitySearchUseCase useCase = new();
             return await useCase.ExecuteAsync(parameters, cancellationToken);
         }
 

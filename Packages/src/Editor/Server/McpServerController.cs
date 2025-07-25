@@ -72,9 +72,9 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // Execute initialization UseCase
-            var useCase = new McpServerInitializationUseCase();
-            var schema = new ServerInitializationSchema { Port = port };
-            var cancellationToken = new System.Threading.CancellationToken();
+            McpServerInitializationUseCase useCase = new();
+            ServerInitializationSchema schema = new() { Port = port };
+            System.Threading.CancellationToken cancellationToken = new();
 
             var result = useCase.ExecuteAsync(schema, cancellationToken).GetAwaiter().GetResult();
 
@@ -105,9 +105,9 @@ namespace io.github.hatayama.uLoopMCP
         private static void StopServerWithUseCase()
         {
             // Execute shutdown UseCase
-            var useCase = new McpServerShutdownUseCase();
-            var schema = new ServerShutdownSchema { ForceShutdown = false };
-            var cancellationToken = new System.Threading.CancellationToken();
+            McpServerShutdownUseCase useCase = new();
+            ServerShutdownSchema schema = new() { ForceShutdown = false };
+            System.Threading.CancellationToken cancellationToken = new();
 
             var result = useCase.ExecuteAsync(schema, cancellationToken).GetAwaiter().GetResult();
 
@@ -129,7 +129,7 @@ namespace io.github.hatayama.uLoopMCP
         private static void OnBeforeAssemblyReload()
         {
             // DomainReloadRecoveryUseCaseインスタンスを生成して実行
-            var useCase = new DomainReloadRecoveryUseCase();
+            DomainReloadRecoveryUseCase useCase = new();
             ServiceResult<string> result = useCase.ExecuteBeforeDomainReload(mcpServer);
             
             // サーバー停止が成功した場合、インスタンスをクリア
@@ -145,7 +145,7 @@ namespace io.github.hatayama.uLoopMCP
         private static void OnAfterAssemblyReload()
         {
             // DomainReloadRecoveryUseCaseインスタンスを生成して実行
-            var useCase = new DomainReloadRecoveryUseCase();
+            DomainReloadRecoveryUseCase useCase = new();
             useCase.ExecuteAfterDomainReloadAsync().Forget();
         }
 

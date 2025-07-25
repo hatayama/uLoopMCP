@@ -17,7 +17,7 @@ namespace io.github.hatayama.uLoopMCP
         protected override async Task<GetLogsResponse> ExecuteAsync(GetLogsSchema parameters, CancellationToken cancellationToken)
         {
             // GetLogsUseCaseインスタンスを生成して実行
-            var useCase = new GetLogsUseCase();
+            GetLogsUseCase useCase = new();
             return await useCase.ExecuteAsync(parameters, cancellationToken);
         }
     }

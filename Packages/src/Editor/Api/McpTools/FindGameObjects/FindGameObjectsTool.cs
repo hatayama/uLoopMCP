@@ -17,7 +17,7 @@ namespace io.github.hatayama.uLoopMCP
         protected override async Task<FindGameObjectsResponse> ExecuteAsync(FindGameObjectsSchema parameters, CancellationToken cancellationToken)
         {
             // FindGameObjectsUseCaseインスタンスを生成して実行
-            var useCase = new FindGameObjectsUseCase();
+            FindGameObjectsUseCase useCase = new();
             return await useCase.ExecuteAsync(parameters, cancellationToken);
         }
     }

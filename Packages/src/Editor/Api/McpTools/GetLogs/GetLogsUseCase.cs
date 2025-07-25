@@ -4,23 +4,23 @@ using System.Threading;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// ログ取得処理の時間的凝集を担当
-    /// 処理順序：1. ログの取得, 2. フィルタリング, 3. 制限とフォーマット
-    /// 関連クラス: GetLogsTool, LogRetrievalService, LogFilteringService
-    /// 設計書参照: DDDリファクタリング仕様 - UseCase Layer
+    /// Handles temporal cohesion for log retrieval processing
+    /// Processing sequence: 1. Log retrieval, 2. Filtering, 3. Limiting and formatting
+    /// Related classes: GetLogsTool, LogRetrievalService, LogFilteringService
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     public class GetLogsUseCase : AbstractUseCase<GetLogsSchema, GetLogsResponse>
     {
         /// <summary>
-        /// ログ取得処理を実行する
+        /// Executes log retrieval processing
         /// </summary>
-        /// <param name="parameters">ログ取得パラメータ</param>
-        /// <param name="cancellationToken">キャンセレーション制御用トークン</param>
-        /// <returns>ログ取得結果</returns>
+        /// <param name="parameters">Log retrieval parameters</param>
+        /// <param name="cancellationToken">Cancellation control token</param>
+        /// <returns>Log retrieval result</returns>
         public override Task<GetLogsResponse> ExecuteAsync(GetLogsSchema parameters, CancellationToken cancellationToken)
         {
-            // 1. ログの取得
-            var retrievalService = new LogRetrievalService();
+            // 1. Log retrieval
+            LogRetrievalService retrievalService = new();
             LogDisplayDto logData;
             
             if (string.IsNullOrEmpty(parameters.SearchText))
@@ -36,16 +36,16 @@ namespace io.github.hatayama.uLoopMCP
                     parameters.SearchInStackTrace);
             }
             
-            // 2. フィルタリングと制限
+            // 2. Filtering and limiting
             cancellationToken.ThrowIfCancellationRequested();
-            var filteringService = new LogFilteringService();
+            LogFilteringService filteringService = new();
             LogEntry[] logs = filteringService.FilterAndLimitLogs(
                 logData.LogEntries, 
                 parameters.MaxCount, 
                 parameters.IncludeStackTrace);
             
-            // 3. レスポンス作成
-            var response = new GetLogsResponse(
+            // 3. Response creation
+            GetLogsResponse response = new GetLogsResponse(
                 totalCount: logData.TotalCount,
                 displayedCount: logs.Length,
                 logType: parameters.LogType.ToString(),

@@ -6,10 +6,8 @@ namespace io.github.hatayama.uLoopMCP
     /// <summary>
     /// ClearConsole tool handler - Type-safe implementation using Schema and Response
     /// Clears Unity console logs for clean development workflow
-    /// Related classes:
-    /// - ConsoleUtility: Service layer for console operations
-    /// - ClearConsoleSchema: Type-safe parameter schema
-    /// - ClearConsoleResponse: Type-safe response structure
+    /// Related classes: ClearConsoleUseCase, ConsoleUtility, ClearConsoleSchema, ClearConsoleResponse
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     [McpTool(Description = "Clear Unity console logs")]
     public class ClearConsoleTool : AbstractUnityTool<ClearConsoleSchema, ClearConsoleResponse>
@@ -24,8 +22,8 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Clear operation result</returns>
         protected override async Task<ClearConsoleResponse> ExecuteAsync(ClearConsoleSchema parameters, CancellationToken cancellationToken)
         {
-            // ClearConsoleUseCaseインスタンスを生成して実行
-            var useCase = new ClearConsoleUseCase();
+            // Create and execute ClearConsoleUseCase instance
+            ClearConsoleUseCase useCase = new();
             return await useCase.ExecuteAsync(parameters, cancellationToken);
         }
     }

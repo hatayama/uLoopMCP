@@ -15,7 +15,7 @@ namespace io.github.hatayama.uLoopMCP
         protected override async Task<GetMenuItemsResponse> ExecuteAsync(GetMenuItemsSchema parameters, CancellationToken cancellationToken)
         {
             // GetMenuItemsUseCaseインスタンスを生成して実行
-            var useCase = new GetMenuItemsUseCase();
+            GetMenuItemsUseCase useCase = new();
             return await useCase.ExecuteAsync(parameters, cancellationToken);
         }
     }
