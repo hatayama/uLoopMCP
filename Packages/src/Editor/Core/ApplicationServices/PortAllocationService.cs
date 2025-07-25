@@ -18,8 +18,19 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>The first available port number</returns>
         public ServiceResult<int> FindAvailablePort(int startPort)
         {
-            int availablePort = NetworkUtility.FindAvailablePort(startPort);
-            return ServiceResult<int>.SuccessResult(availablePort);
+            try
+            {
+                int availablePort = NetworkUtility.FindAvailablePort(startPort);
+                if (availablePort <= 0 || availablePort > 65535)
+                {
+                    return ServiceResult<int>.FailureResult($"Invalid port number returned: {availablePort}");
+                }
+                return ServiceResult<int>.SuccessResult(availablePort);
+            }
+            catch (System.Exception ex)
+            {
+                return ServiceResult<int>.FailureResult($"Failed to find available port: {ex.Message}");
+            }
         }
 
         /// <summary>
