@@ -28,7 +28,9 @@ jest.mock('../tools/dynamic-unity-command-tool.js', () => ({
 }));
 
 // Suppress console warnings during tests unless explicitly testing them
+// eslint-disable-next-line no-console
 const originalConsoleWarn = console.warn;
+// eslint-disable-next-line no-console
 const originalConsoleError = console.error;
 
 beforeEach(() => {
@@ -36,12 +38,16 @@ beforeEach(() => {
   jest.clearAllMocks();
 
   // Suppress console noise during tests (can be overridden in individual tests)
+  // eslint-disable-next-line no-console
   console.warn = jest.fn();
+  // eslint-disable-next-line no-console
   console.error = jest.fn();
 });
 
 afterEach(() => {
   // Restore console methods after each test
+  // eslint-disable-next-line no-console
   console.warn = originalConsoleWarn;
+  // eslint-disable-next-line no-console
   console.error = originalConsoleError;
 });

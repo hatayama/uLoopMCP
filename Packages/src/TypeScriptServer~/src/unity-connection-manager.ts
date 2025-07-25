@@ -193,7 +193,7 @@ export class UnityConnectionManager {
    */
   async testConnection(): Promise<boolean> {
     try {
-      return this.isConnected();
+      return await this.unityClient.testConnection();
     } catch {
       return false;
     }

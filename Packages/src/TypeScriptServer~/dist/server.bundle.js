@@ -7688,7 +7688,7 @@ var UnityConnectionManager = class {
    */
   async testConnection() {
     try {
-      return this.isConnected();
+      return await this.unityClient.testConnection();
     } catch {
       return false;
     }

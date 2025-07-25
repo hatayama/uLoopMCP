@@ -23,19 +23,29 @@ export type ServiceToken<T> = symbol & { __type: T };
 export const ServiceTokens = {
   // Application Services (Singleton lifecycle)
   CONNECTION_APP_SERVICE: Symbol('CONNECTION_APP_SERVICE') as ServiceToken<IConnectionService>,
-  TOOL_MANAGEMENT_APP_SERVICE: Symbol('TOOL_MANAGEMENT_APP_SERVICE') as ServiceToken<IToolManagementService>,
+  TOOL_MANAGEMENT_APP_SERVICE: Symbol(
+    'TOOL_MANAGEMENT_APP_SERVICE',
+  ) as ServiceToken<IToolManagementService>,
   TOOL_QUERY_APP_SERVICE: Symbol('TOOL_QUERY_APP_SERVICE') as ServiceToken<IToolQueryService>,
   EVENT_APP_SERVICE: Symbol('EVENT_APP_SERVICE') as ServiceToken<IEventService>,
   MESSAGE_APP_SERVICE: Symbol('MESSAGE_APP_SERVICE') as ServiceToken<IMessageService>,
   DISCOVERY_APP_SERVICE: Symbol('DISCOVERY_APP_SERVICE') as ServiceToken<IDiscoveryService>,
-  CLIENT_COMPATIBILITY_APP_SERVICE: Symbol('CLIENT_COMPATIBILITY_APP_SERVICE') as ServiceToken<IClientCompatibilityService>,
+  CLIENT_COMPATIBILITY_APP_SERVICE: Symbol(
+    'CLIENT_COMPATIBILITY_APP_SERVICE',
+  ) as ServiceToken<IClientCompatibilityService>,
 
   // UseCase Services (Transient lifecycle)
   EXECUTE_TOOL_USE_CASE: Symbol('EXECUTE_TOOL_USE_CASE') as ServiceToken<ExecuteToolUseCase>,
   REFRESH_TOOLS_USE_CASE: Symbol('REFRESH_TOOLS_USE_CASE') as ServiceToken<RefreshToolsUseCase>,
-  INITIALIZE_SERVER_USE_CASE: Symbol('INITIALIZE_SERVER_USE_CASE') as ServiceToken<InitializeServerUseCase>,
-  HANDLE_CONNECTION_LOST_USE_CASE: Symbol('HANDLE_CONNECTION_LOST_USE_CASE') as ServiceToken<HandleConnectionLostUseCase>,
-  PROCESS_NOTIFICATION_USE_CASE: Symbol('PROCESS_NOTIFICATION_USE_CASE') as ServiceToken<ProcessNotificationUseCase>,
+  INITIALIZE_SERVER_USE_CASE: Symbol(
+    'INITIALIZE_SERVER_USE_CASE',
+  ) as ServiceToken<InitializeServerUseCase>,
+  HANDLE_CONNECTION_LOST_USE_CASE: Symbol(
+    'HANDLE_CONNECTION_LOST_USE_CASE',
+  ) as ServiceToken<HandleConnectionLostUseCase>,
+  PROCESS_NOTIFICATION_USE_CASE: Symbol(
+    'PROCESS_NOTIFICATION_USE_CASE',
+  ) as ServiceToken<ProcessNotificationUseCase>,
 
   // Infrastructure Services (Singleton lifecycle)
   UNITY_CLIENT: Symbol('UNITY_CLIENT') as ServiceToken<unknown>,
