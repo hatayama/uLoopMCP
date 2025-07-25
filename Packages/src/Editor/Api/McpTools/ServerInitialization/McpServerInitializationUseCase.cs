@@ -11,6 +11,34 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class McpServerInitializationUseCase : AbstractUseCase<ServerInitializationSchema, ServerInitializationResponse>
     {
+        private readonly McpServerConfigurationService _configService;
+        private readonly SecurityValidationService _securityService;
+        private readonly PortAllocationService _portService;
+        private readonly McpServerStartupService _startupService;
+        private readonly InitializationNotificationService _notificationService;
+
+        public McpServerInitializationUseCase()
+        {
+            _configService = new McpServerConfigurationService();
+            _securityService = new SecurityValidationService();
+            _portService = new PortAllocationService();
+            _startupService = new McpServerStartupService();
+            _notificationService = new InitializationNotificationService();
+        }
+
+        public McpServerInitializationUseCase(
+            McpServerConfigurationService configService,
+            SecurityValidationService securityService,
+            PortAllocationService portService,
+            McpServerStartupService startupService,
+            InitializationNotificationService notificationService)
+        {
+            _configService = configService ?? throw new System.ArgumentNullException(nameof(configService));
+            _securityService = securityService ?? throw new System.ArgumentNullException(nameof(securityService));
+            _portService = portService ?? throw new System.ArgumentNullException(nameof(portService));
+            _startupService = startupService ?? throw new System.ArgumentNullException(nameof(startupService));
+            _notificationService = notificationService ?? throw new System.ArgumentNullException(nameof(notificationService));
+        }
         /// <summary>
         /// サーバー初期化処理を実行する
         /// </summary>
@@ -25,8 +53,7 @@ namespace io.github.hatayama.uLoopMCP
             try
             {
                 // 1. 設定検証 - McpServerConfigurationService
-                var configService = new McpServerConfigurationService();
-                var portResult = configService.ResolvePort(parameters.Port);
+                var portResult = _configService.ResolvePort(parameters.Port);
                 if (!portResult.Success)
                 {
                     response.Success = false;
@@ -35,11 +62,10 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 int actualPort = portResult.Data;
 
-                var validationResult = configService.ValidateConfiguration(actualPort);
+                var validationResult = _configService.ValidateConfiguration(actualPort);
                 if (!validationResult.Success)
                 {
-                    var notificationService = new InitializationNotificationService();
-                    notificationService.ShowInvalidPortDialog(actualPort);
+                    _notificationService.ShowInvalidPortDialog(actualPort);
                     
                     response.Success = false;
                     response.Message = validationResult.ErrorMessage;
@@ -47,8 +73,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 // 2. セキュリティ検証 - SecurityValidationService
-                var securityService = new SecurityValidationService();
-                var editorStateValidation = securityService.ValidateEditorState();
+                var editorStateValidation = _securityService.ValidateEditorState();
                 if (!editorStateValidation.IsValid)
                 {
                     response.Success = false;
@@ -56,7 +81,7 @@ namespace io.github.hatayama.uLoopMCP
                     return response;
                 }
 
-                var portSecurityValidation = securityService.ValidatePortSecurity(actualPort);
+                var portSecurityValidation = _securityService.ValidatePortSecurity(actualPort);
                 if (!portSecurityValidation.IsValid)
                 {
                     response.Success = false;
@@ -65,8 +90,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 // 3. ポート確保 - PortAllocationService
-                var portService = new PortAllocationService();
-                var availablePortResult = portService.FindAvailablePort(actualPort);
+                var availablePortResult = _portService.FindAvailablePort(actualPort);
                 if (!availablePortResult.Success)
                 {
                     response.Success = false;
@@ -78,7 +102,7 @@ namespace io.github.hatayama.uLoopMCP
                 // ポート競合の処理
                 if (availablePort != actualPort)
                 {
-                    var conflictResult = portService.HandlePortConflict(actualPort, availablePort);
+                    var conflictResult = _portService.HandlePortConflict(actualPort, availablePort);
                     if (!conflictResult.Success || !conflictResult.Data)
                     {
                         response.Success = false;
@@ -88,8 +112,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 // 4. サーバー起動 - McpServerStartupService
-                var startupService = new McpServerStartupService();
-                var serverResult = startupService.StartServer(availablePort);
+                var serverResult = _startupService.StartServer(availablePort);
                 if (!serverResult.Success)
                 {
                     response.Success = false;
@@ -99,7 +122,7 @@ namespace io.github.hatayama.uLoopMCP
                 McpBridgeServer serverInstance = serverResult.Data;
 
                 // 5. セッション状態更新
-                var sessionUpdateResult = startupService.UpdateSessionState(true, availablePort);
+                var sessionUpdateResult = _startupService.UpdateSessionState(true, availablePort);
                 if (!sessionUpdateResult.Success)
                 {
                     response.Success = false;
