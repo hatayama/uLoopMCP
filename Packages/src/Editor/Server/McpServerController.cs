@@ -146,7 +146,13 @@ namespace io.github.hatayama.uLoopMCP
         {
             // DomainReloadRecoveryUseCaseインスタンスを生成して実行
             DomainReloadRecoveryUseCase useCase = new();
-            useCase.ExecuteAfterDomainReloadAsync().Forget();
+            _ = useCase.ExecuteAfterDomainReloadAsync().ContinueWith(task =>
+            {
+                if (task.IsFaulted)
+                {
+                    UnityEngine.Debug.LogError($"Domain reload recovery failed: {task.Exception}");
+                }
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         /// <summary>
