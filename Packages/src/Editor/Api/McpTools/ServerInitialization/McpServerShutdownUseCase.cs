@@ -13,9 +13,13 @@ namespace io.github.hatayama.uLoopMCP
     {
         private readonly McpServerStartupService _startupService;
 
-        public McpServerShutdownUseCase(McpServerStartupService startupService = null)
+        public McpServerShutdownUseCase() : this(new McpServerStartupService())
         {
-            _startupService = startupService ?? new McpServerStartupService();
+        }
+
+        public McpServerShutdownUseCase(McpServerStartupService startupService)
+        {
+            _startupService = startupService ?? throw new System.ArgumentNullException(nameof(startupService));
         }
         /// <summary>
         /// サーバー終了処理を実行する
