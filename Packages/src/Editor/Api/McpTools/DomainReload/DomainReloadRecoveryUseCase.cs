@@ -36,20 +36,20 @@ namespace io.github.hatayama.uLoopMCP
                 try
                 {
                     // 4.1. クライアントに停止通知
-                    ClientNotificationService.NotifyServerStoppingBeforeDomainReload(correlationId, portToSave);
+                    ClientNotificationService.LogServerStoppingBeforeDomainReload(correlationId, portToSave);
 
                     // 4.2. サーバーを停止
                     currentServer.Dispose();
 
                     // 4.3. クライアントに停止完了通知
-                    ClientNotificationService.NotifyServerStoppedAfterDomainReload(correlationId);
+                    ClientNotificationService.LogServerStoppedAfterDomainReload(correlationId);
 
                     return ServiceResult<string>.SuccessResult(correlationId);
                 }
                 catch (System.Exception ex)
                 {
                     // 4.4. エラー通知
-                    ClientNotificationService.NotifyServerShutdownError(correlationId, ex, portToSave);
+                    ClientNotificationService.LogServerShutdownError(correlationId, ex, portToSave);
 
                     // サーバー停止失敗は重大なエラー（ポート競合の原因となる）
                     throw new System.InvalidOperationException(

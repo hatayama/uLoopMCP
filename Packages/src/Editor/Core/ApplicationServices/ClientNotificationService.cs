@@ -89,11 +89,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// サーバー停止前のクライアント通知を送信する
+        /// サーバー停止前のログを記録する
         /// </summary>
         /// <param name="correlationId">関連操作のトラッキング用ID</param>
         /// <param name="port">停止するサーバーのポート番号</param>
-        public static void NotifyServerStoppingBeforeDomainReload(string correlationId, int port)
+        public static void LogServerStoppingBeforeDomainReload(string correlationId, int port)
         {
             VibeLogger.LogInfo(
                 "domain_reload_server_stopping",
@@ -104,10 +104,10 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// サーバー停止完了のクライアント通知を送信する
+        /// サーバー停止完了のログを記録する
         /// </summary>
         /// <param name="correlationId">関連操作のトラッキング用ID</param>
-        public static void NotifyServerStoppedAfterDomainReload(string correlationId)
+        public static void LogServerStoppedAfterDomainReload(string correlationId)
         {
             VibeLogger.LogInfo(
                 "domain_reload_server_stopped",
@@ -118,12 +118,12 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// サーバー停止エラーのクライアント通知を送信する
+        /// サーバー停止エラーのログを記録する
         /// </summary>
         /// <param name="correlationId">関連操作のトラッキング用ID</param>
         /// <param name="ex">発生した例外</param>
         /// <param name="port">停止しようとしたポート番号</param>
-        public static void NotifyServerShutdownError(string correlationId, System.Exception ex, int port)
+        public static void LogServerShutdownError(string correlationId, System.Exception ex, int port)
         {
             VibeLogger.LogException(
                 "domain_reload_server_shutdown_error",
