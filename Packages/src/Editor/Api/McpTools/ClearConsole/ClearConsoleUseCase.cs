@@ -20,34 +20,61 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>クリア実行結果</returns>
         public override Task<ClearConsoleResponse> ExecuteAsync(ClearConsoleSchema parameters, CancellationToken cancellationToken)
         {
-            // 1. 現在のログ数取得
-            ConsoleUtility.GetConsoleLogCounts(out int errorCount, out int warningCount, out int logCount);
-            int totalLogCount = errorCount + warningCount + logCount;
+            cancellationToken.ThrowIfCancellationRequested();
             
-            ClearedLogCounts clearedCounts = new ClearedLogCounts(errorCount, warningCount, logCount);
-
-            // 2. コンソールクリア実行
-            ConsoleUtility.ClearConsole();
-
-            // 3. 確認メッセージ追加
-            if (parameters.AddConfirmationMessage)
+            if (parameters == null)
             {
-                Debug.Log("=== Console cleared via MCP tool ===");
+                throw new System.ArgumentNullException(nameof(parameters));
             }
 
-            // 4. 結果作成
-            string message = totalLogCount > 0 
-                ? $"Successfully cleared {totalLogCount} console logs (Errors: {errorCount}, Warnings: {warningCount}, Logs: {logCount})"
-                : "Console was already empty";
+            try
+            {
+                // 1. 現在のログ数取得
+                ConsoleUtility.GetConsoleLogCounts(out int errorCount, out int warningCount, out int logCount);
+                int totalLogCount = errorCount + warningCount + logCount;
+                
+                ClearedLogCounts clearedCounts = new ClearedLogCounts(errorCount, warningCount, logCount);
 
-            ClearConsoleResponse response = new ClearConsoleResponse(
-                success: true,
-                clearedLogCount: totalLogCount,
-                clearedCounts: clearedCounts,
-                message: message
-            );
+                cancellationToken.ThrowIfCancellationRequested();
 
-            return Task.FromResult(response);
+                // 2. コンソールクリア実行
+                ConsoleUtility.ClearConsole();
+
+                // 3. 確認メッセージ追加
+                if (parameters.AddConfirmationMessage)
+                {
+                    Debug.Log("=== Console cleared via MCP tool ===");
+                }
+
+                // 4. 結果作成
+                string message = totalLogCount > 0 
+                    ? $"Successfully cleared {totalLogCount} console logs (Errors: {errorCount}, Warnings: {warningCount}, Logs: {logCount})"
+                    : "Console was already empty";
+
+                ClearConsoleResponse response = new ClearConsoleResponse(
+                    success: true,
+                    clearedLogCount: totalLogCount,
+                    clearedCounts: clearedCounts,
+                    message: message
+                );
+
+                return Task.FromResult(response);
+            }
+            catch (System.OperationCanceledException)
+            {
+                throw; // Re-throw cancellation exceptions
+            }
+            catch (System.Exception ex)
+            {
+                // Handle exceptions from console operations
+                ClearConsoleResponse errorResponse = new ClearConsoleResponse(
+                    success: false,
+                    clearedLogCount: 0,
+                    clearedCounts: new ClearedLogCounts(0, 0, 0),
+                    message: $"Failed to clear console: {ex.Message}"
+                );
+                return Task.FromResult(errorResponse);
+            }
         }
     }
 }
