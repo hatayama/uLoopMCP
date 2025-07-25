@@ -18,6 +18,23 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Validation result with details</returns>
         public ServiceResult<bool> ValidateConfiguration(int port)
         {
+            // Validate port range
+            if (port < 1 || port > 65535)
+            {
+                return ServiceResult<bool>.FailureResult($"Port {port} is outside valid range (1-65535)");
+            }
+            
+            // Check for reserved ports
+            if (port < 1024)
+            {
+                return ServiceResult<bool>.FailureResult($"Port {port} is reserved and may require administrator privileges");
+            }
+            
+            // Additional validation could include:
+            // - Port availability check
+            // - Firewall restrictions
+            // - OS-specific limitations
+            
             return ServiceResult<bool>.SuccessResult(true);
         }
 
@@ -28,8 +45,23 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Resolved port number</returns>
         public ServiceResult<int> ResolvePort(int requestedPort)
         {
-            int actualPort = requestedPort == -1 ? McpEditorSettings.GetCustomPort() : requestedPort;
-            return ServiceResult<int>.SuccessResult(actualPort);
+            try
+            {
+                int actualPort = requestedPort == -1 ? McpEditorSettings.GetCustomPort() : requestedPort;
+                
+                // Validate the resolved port
+                var validation = ValidateConfiguration(actualPort);
+                if (!validation.Success)
+                {
+                    return ServiceResult<int>.FailureResult($"Resolved port {actualPort} is invalid: {validation.ErrorMessage}");
+                }
+                
+                return ServiceResult<int>.SuccessResult(actualPort);
+            }
+            catch (System.Exception ex)
+            {
+                return ServiceResult<int>.FailureResult($"Failed to resolve port: {ex.Message}");
+            }
         }
     }
 }
