@@ -2,7 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 
-namespace io.github.hatayama.uLoopMCP.Tests
+namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// GetLogsUseCaseのユニットテスト
@@ -32,22 +32,24 @@ namespace io.github.hatayama.uLoopMCP.Tests
             // Assert
             Assert.IsNotNull(result);
             Assert.IsNotNull(result.Logs);
+            Assert.IsTrue(result.TotalCount >= 0);
+            Assert.IsTrue(result.DisplayedCount >= 0);
             // Note: 実際のログ取得結果は環境に依存するため、レスポンス構造のみ検証
         }
 
         /// <summary>
-        /// 空のログ取得テスト
+        /// 少ないログ取得テスト
         /// </summary>
         [Test]
-        public async Task ExecuteAsync_EmptyLogType_HandlesGracefully()
+        public async Task ExecuteAsync_SmallMaxCount_HandlesCorrectly()
         {
             // Arrange
             var useCase = new GetLogsUseCase();
             var schema = new GetLogsSchema
             {
-                LogType = McpLogType.None,
-                MaxCount = 0,
-                TimeoutSeconds = 10
+                LogType = McpLogType.All,
+                MaxCount = 1,
+                TimeoutSeconds = 5
             };
             var cancellationToken = new CancellationToken();
 
@@ -56,7 +58,9 @@ namespace io.github.hatayama.uLoopMCP.Tests
 
             // Assert
             Assert.IsNotNull(result);
-            // 空のパラメータでも適切に処理されることを確認
+            Assert.IsNotNull(result.Logs);
+            Assert.IsTrue(result.DisplayedCount <= 1);
+            // 少ないMaxCountでも適切に処理されることを確認
         }
     }
 }

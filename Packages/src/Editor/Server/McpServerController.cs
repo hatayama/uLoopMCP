@@ -57,17 +57,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </param>
         public static void StartServer(int port = -1)
         {
-            // Feature Toggle: Use new UseCase implementation
-            const bool useNewImplementation = true;
-
-            if (useNewImplementation)
-            {
-                StartServerWithUseCase(port);
-            }
-            else
-            {
-                StartServerLegacy(port);
-            }
+            StartServerWithUseCase(port);
         }
 
         /// <summary>
@@ -102,80 +92,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Legacy server startup implementation.
-        /// </summary>
-        private static void StartServerLegacy(int port)
-        {
-            // Use saved port if no port specified
-            int actualPort = port == -1 ? McpEditorSettings.GetCustomPort() : port;
-
-            // Validate port before proceeding
-            if (!McpPortValidator.ValidatePort(actualPort, "for server startup"))
-            {
-                UnityEditor.EditorUtility.DisplayDialog(
-                    "Invalid Port",
-                    $"Port {actualPort} is not valid for server startup.\n\nPort must be 1024 or higher and not a reserved system port.",
-                    "OK"
-                );
-                return;
-            }
-
-            // Find available port starting from the requested port
-            int availablePort = FindAvailablePort(actualPort);
-
-            // Show confirmation dialog if port was changed
-            if (availablePort != actualPort)
-            {
-                bool userConfirmed = UnityEditor.EditorUtility.DisplayDialog(
-                    "Port Conflict",
-                    $"Port {actualPort} is already in use.\n\nWould you like to use port {availablePort} instead?",
-                    "OK",
-                    "Cancel"
-                );
-
-                if (!userConfirmed)
-                {
-                    return;
-                }
-
-                // Automatically update all configured MCP editor settings with new port
-                McpPortChangeUpdater.UpdateAllConfigurationsForPortChange(availablePort, "Server port conflict resolution");
-            }
-
-            // Validate server configuration before starting
-            ValidateServerConfiguration(availablePort);
-
-            // Always stop the existing server (to release the port).
-            if (mcpServer != null)
-            {
-                StopServer();
-            }
-
-            mcpServer = new McpBridgeServer();
-            mcpServer.StartServer(availablePort);
-
-            // Save the state to SessionState.
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            sessionManager.IsServerRunning = true;
-            sessionManager.ServerPort = availablePort;
-        }
-
-        /// <summary>
         /// Stops the server.
         /// </summary>
         public static void StopServer()
         {
-            // Feature Toggle: Use new UseCase implementation
-            const bool useNewImplementation = true;
-
-            if (useNewImplementation)
-            {
-                StopServerWithUseCase();
-            }
-            else
-            {
-                StopServerLegacy();
-            }
+            StopServerWithUseCase();
         }
 
         /// <summary>
@@ -200,22 +121,6 @@ namespace io.github.hatayama.uLoopMCP
                 // エラーメッセージはUseCaseで処理済み
                 UnityEngine.Debug.LogError($"Server shutdown failed: {result.Message}");
             }
-        }
-
-        /// <summary>
-        /// Legacy server shutdown implementation.
-        /// </summary>
-        private static void StopServerLegacy()
-        {
-            if (mcpServer != null)
-            {
-                mcpServer.Dispose();
-                mcpServer = null;
-            }
-
-            // Delete the state from SessionState.
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            sessionManager.ClearServerSession();
         }
 
         /// <summary>
