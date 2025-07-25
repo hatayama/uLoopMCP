@@ -171,6 +171,8 @@ describe('RefreshToolsUseCase Integration Tests', () => {
       });
 
       mockToolManagementService.initializeTools.mockImplementation(async () => {
+        // Simulate async tool initialization
+        await new Promise((resolve) => setTimeout(resolve, 1));
         callOrder.push('initializeTools');
       });
 
@@ -205,6 +207,8 @@ describe('RefreshToolsUseCase Integration Tests', () => {
       });
 
       mockToolManagementService.initializeTools.mockImplementation(async () => {
+        // Simulate async tool initialization
+        await new Promise((resolve) => setTimeout(resolve, 1));
         callOrder.push('initializeTools');
       });
 
