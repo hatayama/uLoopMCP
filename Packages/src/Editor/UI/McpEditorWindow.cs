@@ -4,7 +4,6 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-
 #if ULOOPMCP_DEBUG
 using System;
 #endif
@@ -27,15 +26,12 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class McpEditorWindow : EditorWindow
     {
-        // Singleton instance for external access
-        private static McpEditorWindow _instance;
-        
         // Configuration services factory
         private McpConfigServiceFactory _configServiceFactory;
 
         // View layer
         private McpEditorWindowView _view;
-        
+
         // Connected LLM Tools management (persisted across domain reload)
         private List<ConnectedLLMToolData> _connectedTools = new();
 
@@ -47,16 +43,11 @@ namespace io.github.hatayama.uLoopMCP
 
         // Server operations handler (MVP pattern helper)
         private McpServerOperations _serverOperations;
-        
+
         // Cache for stored tools to avoid repeated calls
         private IEnumerable<ConnectedClient> _cachedStoredTools;
         private float _lastStoredToolsUpdateTime;
 
-        /// <summary>
-        /// Get current instance for external access
-        /// </summary>
-        public static McpEditorWindow Instance => _instance;
-        
         // Backup storage for server restart
         private List<ConnectedLLMToolData> _toolsBackup;
 
@@ -69,7 +60,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnEnable()
         {
-            _instance = this;
             InitializeAll();
             SubscribeToServerEvents();
         }
@@ -77,13 +67,8 @@ namespace io.github.hatayama.uLoopMCP
         private void OnDestroy()
         {
             UnsubscribeFromServerEvents();
-            if (_instance == this)
-            {
-                _instance = null;
-            }
         }
 
-        
         private void InitializeAll()
         {
             InitializeModel();
@@ -93,7 +78,7 @@ namespace io.github.hatayama.uLoopMCP
             InitializeServerOperations();
             LoadSavedSettings();
             RestoreSessionState();
-            
+
             HandlePostCompileMode();
         }
 
@@ -125,10 +110,10 @@ namespace io.github.hatayama.uLoopMCP
 
             // Remove existing tool if present, then add
             _connectedTools.RemoveAll(tool => tool.Name == client.ClientName);
-            
+
             ConnectedLLMToolData toolData = new(
-                client.ClientName, 
-                client.Endpoint, 
+                client.ClientName,
+                client.Endpoint,
                 client.ConnectedAt
             );
             _connectedTools.Add(toolData);
@@ -164,7 +149,7 @@ namespace io.github.hatayama.uLoopMCP
             McpBridgeServer.OnToolDisconnected += OnToolDisconnected;
             McpBridgeServer.OnAllToolsCleared += OnAllToolsCleared;
         }
-        
+
         /// <summary>
         /// Unsubscribe from server lifecycle events
         /// </summary>
@@ -176,7 +161,7 @@ namespace io.github.hatayama.uLoopMCP
             McpBridgeServer.OnToolDisconnected -= OnToolDisconnected;
             McpBridgeServer.OnAllToolsCleared -= OnAllToolsCleared;
         }
-        
+
         /// <summary>
         /// Handle server stopping event - backup connected tools
         /// </summary>
@@ -186,7 +171,7 @@ namespace io.github.hatayama.uLoopMCP
                 .Where(tool => tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
                 .ToList();
         }
-        
+
         /// <summary>
         /// Handle server started event - restore connected tools
         /// </summary>
@@ -198,7 +183,7 @@ namespace io.github.hatayama.uLoopMCP
                 _toolsBackup = null;
             }
         }
-        
+
         /// <summary>
         /// Handle tool connected event - add tool to connected list
         /// </summary>
@@ -206,7 +191,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             AddConnectedTool(client);
         }
-        
+
         /// <summary>
         /// Handle tool disconnected event - remove tool from connected list
         /// </summary>
@@ -214,24 +199,13 @@ namespace io.github.hatayama.uLoopMCP
         {
             RemoveConnectedTool(toolName);
         }
-        
+
         /// <summary>
         /// Handle all tools cleared event - clear all connected tools
         /// </summary>
         private void OnAllToolsCleared()
         {
             ClearConnectedTools();
-        }
-        
-        /// <summary>
-        /// Backup current connected tools for server restart (legacy method for compatibility)
-        /// </summary>
-        public List<ConnectedLLMToolData> BackupConnectedTools()
-        {
-            List<ConnectedLLMToolData> backup = _connectedTools
-                .Where(tool => tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
-                .ToList();
-            return backup;
         }
 
         /// <summary>
@@ -298,7 +272,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 Repaint();
             }
-
         }
 
 
@@ -435,7 +408,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Draw debug background if ULOOPMCP_DEBUG is defined
             _view.DrawDebugBackground(position);
-            
+
             // Synchronize server port and UI settings
             SyncPortSettings();
 
@@ -519,16 +492,16 @@ namespace io.github.hatayama.uLoopMCP
         private ServerControlsData CreateServerControlsData()
         {
             bool isRunning = McpServerController.IsServerRunning;
-            
+
             // Check for port mismatch warnings
             bool hasPortWarning = false;
             string portWarningMessage = null;
-            
+
             if (!isRunning)
             {
                 // Check if requested port is valid and available
                 int requestedPort = _model.UI.CustomPort;
-                
+
                 // First check if port is valid
                 if (!McpPortValidator.ValidatePort(requestedPort))
                 {
@@ -542,7 +515,7 @@ namespace io.github.hatayama.uLoopMCP
                     portWarningMessage = $"Port {requestedPort} is already in use. Server will automatically find an available port when started.";
                 }
             }
-            
+
             return new ServerControlsData(_model.UI.CustomPort, _model.UI.AutoStartServer, isRunning, !isRunning, hasPortWarning, portWarningMessage);
         }
 
@@ -553,13 +526,13 @@ namespace io.github.hatayama.uLoopMCP
         {
             const float cacheDuration = 0.1f; // 100ms cache
             float currentTime = Time.realtimeSinceStartup;
-            
+
             if (_cachedStoredTools == null || (currentTime - _lastStoredToolsUpdateTime) > cacheDuration)
             {
                 _cachedStoredTools = GetConnectedToolsAsClients();
                 _lastStoredToolsUpdateTime = currentTime;
             }
-            
+
             return _cachedStoredTools;
         }
 
@@ -590,7 +563,7 @@ namespace io.github.hatayama.uLoopMCP
             // Check if we have stored tools available (with caching)
             IEnumerable<ConnectedClient> storedTools = GetCachedStoredTools();
             bool hasStoredTools = storedTools.Any();
-            
+
 
             // If we have stored tools, show them (prioritize stored tools over server clients)
             if (hasStoredTools)
@@ -600,8 +573,8 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // Show reconnecting UI only if no stored tools and no real clients
-            bool showReconnectingUI = !hasStoredTools && 
-                                      (showReconnectingUIFlag || showPostCompileUIFlag) && 
+            bool showReconnectingUI = !hasStoredTools &&
+                                      (showReconnectingUIFlag || showPostCompileUIFlag) &&
                                       !hasNamedClients;
 
 
@@ -638,7 +611,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     // Get configured port from the settings file
                     int configuredPort = configService.GetConfiguredPort();
-                    
+
                     // Check mismatch between server port and configured port
                     if (isServerRunning)
                     {
@@ -655,7 +628,7 @@ namespace io.github.hatayama.uLoopMCP
                 int portToCheck = isServerRunning ? currentPort : _model.UI.CustomPort;
                 isUpdateNeeded = configService.IsUpdateNeeded(portToCheck);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 configurationError = ex.Message;
                 isUpdateNeeded = true; // If error occurs, assume update is needed
@@ -814,6 +787,5 @@ namespace io.github.hatayama.uLoopMCP
                 StartServer();
             }
         }
-
     }
 }
