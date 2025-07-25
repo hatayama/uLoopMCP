@@ -102,12 +102,31 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// 保留中のコンパイルリクエストを処理する
+        /// 注意：現在は機能フラグにより無効化されている（メインスレッドエラー回避のため）
         /// </summary>
         private void ProcessPendingCompileRequests()
         {
-            // 一時的に無効化（メインスレッドエラー回避）
-            // TODO: メインスレッド問題解決後に再有効化
-            // CompileSessionState.StartForcedRecompile();
+            // 機能フラグによる制御（現在は無効化）
+            bool enablePendingCompileProcessing = false; // TODO: 設定ファイルまたはエディタ設定から読み込み
+            
+            if (enablePendingCompileProcessing)
+            {
+                // メインスレッド問題解決後に有効化予定
+                // CompileSessionState.StartForcedRecompile();
+                VibeLogger.LogInfo(
+                    "pending_compile_processing", 
+                    "Processing pending compile requests", 
+                    correlationId: VibeLogger.GenerateCorrelationId()
+                );
+            }
+            else
+            {
+                VibeLogger.LogInfo(
+                    "pending_compile_processing_disabled", 
+                    "Pending compile request processing is disabled via feature flag", 
+                    correlationId: VibeLogger.GenerateCorrelationId()
+                );
+            }
         }
     }
 }
