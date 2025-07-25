@@ -11,6 +11,12 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class McpServerShutdownUseCase : AbstractUseCase<ServerShutdownSchema, ServerShutdownResponse>
     {
+        private readonly McpServerStartupService _startupService;
+
+        public McpServerShutdownUseCase(McpServerStartupService startupService = null)
+        {
+            _startupService = startupService ?? new McpServerStartupService();
+        }
         /// <summary>
         /// サーバー終了処理を実行する
         /// </summary>
@@ -26,10 +32,15 @@ namespace io.github.hatayama.uLoopMCP
             {
                 // 1. 現在のサーバーインスタンスを取得
                 McpBridgeServer currentServer = McpServerController.CurrentServer;
+                if (currentServer == null)
+                {
+                    response.Success = true;
+                    response.Message = "Server was not running";
+                    return response;
+                }
 
                 // 2. サーバー停止処理 - McpServerStartupService
-                var startupService = new McpServerStartupService();
-                var stopResult = startupService.StopServer(currentServer);
+                var stopResult = _startupService.StopServer(currentServer);
                 if (!stopResult.Success)
                 {
                     response.Success = false;
@@ -38,7 +49,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 // 3. セッション状態クリア
-                var sessionUpdateResult = startupService.UpdateSessionState(false, 0);
+                var sessionUpdateResult = _startupService.UpdateSessionState(false, 0);
                 if (!sessionUpdateResult.Success)
                 {
                     response.Success = false;
@@ -53,19 +64,18 @@ namespace io.github.hatayama.uLoopMCP
                 // 成功レスポンス
                 response.Success = true;
                 response.Message = "Server shutdown completed successfully";
-
-                return response;
             }
             catch (System.Exception ex)
             {
                 response.Success = false;
                 response.Message = $"Server shutdown failed: {ex.Message}";
-                return response;
             }
             finally
             {
                 response.SetTimingInfo(startTime, System.DateTime.UtcNow);
             }
+
+            return response;
         }
     }
 }
