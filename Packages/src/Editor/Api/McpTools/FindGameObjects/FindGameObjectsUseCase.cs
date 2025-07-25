@@ -5,10 +5,10 @@ using System.Threading;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// GameObject検索処理の時間的凝集を担当
-    /// 処理順序：1. 検索条件の検証, 2. GameObject検索実行, 3. 結果の変換と整形
-    /// 関連クラス: FindGameObjectsTool, GameObjectFinderService, ComponentSerializer
-    /// 設計書参照: DDDリファクタリング仕様 - UseCase Layer
+    /// Responsible for temporal cohesion of GameObject search processing
+    /// Processing sequence: 1. Search criteria validation, 2. GameObject search execution, 3. Result conversion and formatting
+    /// Related classes: FindGameObjectsTool, GameObjectFinderService, ComponentSerializer
+    /// Design reference: DDD Refactoring Specification - UseCase Layer
     /// </summary>
     public class FindGameObjectsUseCase : AbstractUseCase<FindGameObjectsSchema, FindGameObjectsResponse>
     {
@@ -25,14 +25,14 @@ namespace io.github.hatayama.uLoopMCP
             _componentSerializer = componentSerializer ?? throw new System.ArgumentNullException(nameof(componentSerializer));
         }
         /// <summary>
-        /// GameObject検索処理を実行する
+        /// Execute GameObject search processing
         /// </summary>
-        /// <param name="parameters">検索パラメータ</param>
-        /// <param name="cancellationToken">キャンセレーション制御用トークン</param>
-        /// <returns>検索結果</returns>
+        /// <param name="parameters">Search parameters</param>
+        /// <param name="cancellationToken">Cancellation control token</param>
+        /// <returns>Search result</returns>
         public override Task<FindGameObjectsResponse> ExecuteAsync(FindGameObjectsSchema parameters, CancellationToken cancellationToken)
         {
-            // 1. 検索条件の検証
+            // 1. Search criteria validation
             if (string.IsNullOrEmpty(parameters.NamePattern) &&
                 (parameters.RequiredComponents == null || parameters.RequiredComponents.Length == 0) &&
                 string.IsNullOrEmpty(parameters.Tag) &&
@@ -46,7 +46,7 @@ namespace io.github.hatayama.uLoopMCP
                 });
             }
             
-            // 2. GameObject検索実行
+            // 2. GameObject search execution
             cancellationToken.ThrowIfCancellationRequested();
             
             GameObjectSearchOptions options = new GameObjectSearchOptions
@@ -62,7 +62,7 @@ namespace io.github.hatayama.uLoopMCP
             
             GameObjectDetails[] foundObjects = _finderService.FindGameObjectsAdvanced(options);
             
-            // 3. 結果の変換と整形
+            // 3. Result conversion and formatting
             cancellationToken.ThrowIfCancellationRequested();
             
             List<FindGameObjectResult> results = new List<FindGameObjectResult>();

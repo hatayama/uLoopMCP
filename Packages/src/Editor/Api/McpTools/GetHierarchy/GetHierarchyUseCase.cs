@@ -4,10 +4,10 @@ using System.Threading;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Unity Hierarchy取得処理の時間的凝集を担当
-    /// 処理順序：1. Hierarchy情報取得, 2. データ変換, 3. レスポンスサイズ判定とファイル出力
-    /// 関連クラス: GetHierarchyTool, HierarchyService, HierarchySerializer, HierarchyResultExporter
-    /// 設計書参照: DDDリファクタリング仕様 - UseCase Layer
+    /// Responsible for temporal cohesion of Unity Hierarchy retrieval processing
+    /// Processing sequence: 1. Hierarchy information retrieval, 2. Data conversion, 3. Response size determination and file output
+    /// Related classes: GetHierarchyTool, HierarchyService, HierarchySerializer, HierarchyResultExporter
+    /// Design reference: DDD Refactoring Specification - UseCase Layer
     /// </summary>
     public class GetHierarchyUseCase : AbstractUseCase<GetHierarchySchema, GetHierarchyResponse>
     {
@@ -24,11 +24,11 @@ namespace io.github.hatayama.uLoopMCP
             _hierarchySerializer = hierarchySerializer ?? throw new System.ArgumentNullException(nameof(hierarchySerializer));
         }
         /// <summary>
-        /// Unity Hierarchy取得処理を実行する
+        /// Execute Unity Hierarchy retrieval processing
         /// </summary>
-        /// <param name="parameters">Hierarchy取得パラメータ</param>
-        /// <param name="cancellationToken">キャンセレーション制御用トークン</param>
-        /// <returns>Hierarchy取得結果</returns>
+        /// <param name="parameters">Hierarchy retrieval parameters</param>
+        /// <param name="cancellationToken">Cancellation control token</param>
+        /// <returns>Hierarchy retrieval result</returns>
         public override Task<GetHierarchyResponse> ExecuteAsync(GetHierarchySchema parameters, CancellationToken cancellationToken)
         {
             if (parameters == null)
@@ -38,7 +38,7 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                // 1. Hierarchy情報取得
+                // 1. Hierarchy information retrieval
                 HierarchyOptions options = new HierarchyOptions
                 {
                     IncludeInactive = parameters.IncludeInactive,
@@ -52,17 +52,17 @@ namespace io.github.hatayama.uLoopMCP
                 var nodes = _hierarchyService.GetHierarchyNodes(options);
                 var context = _hierarchyService.GetCurrentContext();
                 
-                // 2. データ変換
+                // 2. Data conversion
                 cancellationToken.ThrowIfCancellationRequested();
                 
                 var nestedNodes = _hierarchySerializer.ConvertToNestedStructure(nodes);
                 
-                // 3. レスポンスサイズ判定とファイル出力
+                // 3. Response size determination and file output
                 cancellationToken.ThrowIfCancellationRequested();
                 
                 GetHierarchyResponse nestedResponse = new GetHierarchyResponse(nestedNodes, context);
                 
-                // レスポンスサイズを計算
+                // Calculate response size
                 var settings = new Newtonsoft.Json.JsonSerializerSettings
                 {
                     ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore,
@@ -72,7 +72,7 @@ namespace io.github.hatayama.uLoopMCP
                 int estimatedSizeBytes = System.Text.Encoding.UTF8.GetByteCount(jsonString);
                 int estimatedSizeKB = estimatedSizeBytes / 1024;
                 
-                // サイズ制限を超える場合はファイルに保存
+                // Save to file if size limit is exceeded
                 if (estimatedSizeKB >= parameters.MaxResponseSizeKB)
                 {
                     cancellationToken.ThrowIfCancellationRequested();

@@ -4,10 +4,10 @@ using System.Threading;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// サーバー初期化処理の時間的凝集を担当するUseCase
-    /// 処理順序：1. 設定検証, 2. ポート確保, 3. サーバー起動, 4. 状態更新
-    /// 関連クラス：McpServerConfigurationService, PortAllocationService, McpServerStartupService, SecurityValidationService
-    /// 設計書参照：DDDリファクタリング仕様 - UseCase Layer
+    /// UseCase responsible for temporal cohesion of server initialization processing
+    /// Processing sequence: 1. Configuration validation, 2. Port allocation, 3. Server startup, 4. State update
+    /// Related classes: McpServerConfigurationService, PortAllocationService, McpServerStartupService, SecurityValidationService
+    /// Design reference: DDD Refactoring Specification - UseCase Layer
     /// </summary>
     public class McpServerInitializationUseCase : AbstractUseCase<ServerInitializationSchema, ServerInitializationResponse>
     {
@@ -40,11 +40,11 @@ namespace io.github.hatayama.uLoopMCP
             _notificationService = notificationService ?? throw new System.ArgumentNullException(nameof(notificationService));
         }
         /// <summary>
-        /// サーバー初期化処理を実行する
+        /// Execute server initialization processing
         /// </summary>
-        /// <param name="parameters">初期化パラメータ</param>
-        /// <param name="cancellationToken">キャンセレーショントークン</param>
-        /// <returns>初期化結果</returns>
+        /// <param name="parameters">Initialization parameters</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Initialization result</returns>
         public override async Task<ServerInitializationResponse> ExecuteAsync(ServerInitializationSchema parameters, CancellationToken cancellationToken)
         {
             var response = new ServerInitializationResponse();
@@ -52,7 +52,7 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                // 1. 設定検証 - McpServerConfigurationService
+                // 1. Configuration validation - McpServerConfigurationService
                 var portResult = _configService.ResolvePort(parameters.Port);
                 if (!portResult.Success)
                 {
@@ -72,7 +72,7 @@ namespace io.github.hatayama.uLoopMCP
                     return response;
                 }
 
-                // 2. セキュリティ検証 - SecurityValidationService
+                // 2. Security validation - SecurityValidationService
                 var editorStateValidation = _securityService.ValidateEditorState();
                 if (!editorStateValidation.IsValid)
                 {
@@ -89,7 +89,7 @@ namespace io.github.hatayama.uLoopMCP
                     return response;
                 }
 
-                // 3. ポート確保 - PortAllocationService
+                // 3. Port allocation - PortAllocationService
                 var availablePortResult = _portService.FindAvailablePort(actualPort);
                 if (!availablePortResult.Success)
                 {
@@ -99,7 +99,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 int availablePort = availablePortResult.Data;
 
-                // ポート競合の処理
+                // Handle port conflict
                 if (availablePort != actualPort)
                 {
                     var conflictResult = _portService.HandlePortConflict(actualPort, availablePort);
@@ -111,7 +111,7 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }
 
-                // 4. サーバー起動 - McpServerStartupService
+                // 4. Server startup - McpServerStartupService
                 var serverResult = _startupService.StartServer(availablePort);
                 if (!serverResult.Success)
                 {
@@ -121,7 +121,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 McpBridgeServer serverInstance = serverResult.Data;
 
-                // 5. セッション状態更新
+                // 5. Session state update
                 var sessionUpdateResult = _startupService.UpdateSessionState(true, availablePort);
                 if (!sessionUpdateResult.Success)
                 {
@@ -130,7 +130,7 @@ namespace io.github.hatayama.uLoopMCP
                     return response;
                 }
 
-                // 成功レスポンス
+                // Success response
                 response.Success = true;
                 response.ServerPort = availablePort;
                 response.IsRunning = true;

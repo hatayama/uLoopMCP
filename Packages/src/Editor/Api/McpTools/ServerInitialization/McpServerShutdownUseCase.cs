@@ -4,10 +4,10 @@ using System.Threading;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// サーバー終了処理の時間的凝集を担当するUseCase
-    /// 処理順序：1. サーバー停止, 2. セッション状態クリア, 3. リソース解放
-    /// 関連クラス：McpServerStartupService, McpSessionManager
-    /// 設計書参照：DDDリファクタリング仕様 - UseCase Layer
+    /// UseCase responsible for temporal cohesion of server shutdown processing
+    /// Processing sequence: 1. Server stop, 2. Session state clear, 3. Resource disposal
+    /// Related classes: McpServerStartupService, McpSessionManager
+    /// Design reference: DDD Refactoring Specification - UseCase Layer
     /// </summary>
     public class McpServerShutdownUseCase : AbstractUseCase<ServerShutdownSchema, ServerShutdownResponse>
     {
@@ -22,11 +22,11 @@ namespace io.github.hatayama.uLoopMCP
             _startupService = startupService ?? throw new System.ArgumentNullException(nameof(startupService));
         }
         /// <summary>
-        /// サーバー終了処理を実行する
+        /// Execute server shutdown processing
         /// </summary>
-        /// <param name="parameters">終了パラメータ</param>
-        /// <param name="cancellationToken">キャンセレーショントークン</param>
-        /// <returns>終了結果</returns>
+        /// <param name="parameters">Shutdown parameters</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Shutdown result</returns>
         public override async Task<ServerShutdownResponse> ExecuteAsync(ServerShutdownSchema parameters, CancellationToken cancellationToken)
         {
             var response = new ServerShutdownResponse();
@@ -34,7 +34,7 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                // 1. 現在のサーバーインスタンスを取得
+                // 1. Get current server instance
                 McpBridgeServer currentServer = McpServerController.CurrentServer;
                 if (currentServer == null)
                 {
@@ -43,7 +43,7 @@ namespace io.github.hatayama.uLoopMCP
                     return response;
                 }
 
-                // 2. サーバー停止処理 - McpServerStartupService
+                // 2. Server stop processing - McpServerStartupService
                 var stopResult = _startupService.StopServer(currentServer);
                 if (!stopResult.Success)
                 {
@@ -52,7 +52,7 @@ namespace io.github.hatayama.uLoopMCP
                     return response;
                 }
 
-                // 3. セッション状態クリア
+                // 3. Session state clear
                 var sessionUpdateResult = _startupService.UpdateSessionState(false, 0);
                 if (!sessionUpdateResult.Success)
                 {
@@ -61,11 +61,11 @@ namespace io.github.hatayama.uLoopMCP
                     return response;  
                 }
 
-                // 4. SessionManagerでセッションクリア
+                // 4. Session clear with SessionManager
                 McpSessionManager sessionManager = McpSessionManager.instance;
                 sessionManager.ClearServerSession();
 
-                // 成功レスポンス
+                // Success response
                 response.Success = true;
                 response.Message = "Server shutdown completed successfully";
             }

@@ -4,54 +4,54 @@ using System.Threading;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Domain Reload復旧処理の時間的凝集を担当するUseCase
-    /// 処理順序：1. 事前停止処理, 2. 復旧処理, 3. 通知処理
-    /// 関連クラス：DomainReloadDetectionService, SessionRecoveryService, ClientNotificationService
-    /// 設計書参照：DDDリファクタリング仕様 - UseCase Layer
+    /// UseCase responsible for temporal cohesion of Domain Reload recovery processing
+    /// Processing sequence: 1. Pre-stop processing, 2. Recovery processing, 3. Notification processing
+    /// Related classes: DomainReloadDetectionService, SessionRecoveryService, ClientNotificationService
+    /// Design reference: DDD Refactoring Specification - UseCase Layer
     /// </summary>
     public class DomainReloadRecoveryUseCase
     {
         /// <summary>
-        /// Domain Reload開始前の処理を実行する
+        /// Execute processing before Domain Reload starts
         /// </summary>
-        /// <param name="currentServer">現在のサーバーインスタンス</param>
-        /// <returns>処理結果</returns>
+        /// <param name="currentServer">Current server instance</param>
+        /// <returns>Processing result</returns>
         public ServiceResult<string> ExecuteBeforeDomainReload(McpBridgeServer currentServer)
         {
-            // 1. 関連操作のトラッキング用IDを生成
+            // 1. Generate tracking ID for related operations
             string correlationId = VibeLogger.GenerateCorrelationId();
 
-            // 2. サーバー状態を確認
+            // 2. Check server state
             bool serverRunning = currentServer?.IsRunning ?? false;
             int? serverPort = currentServer?.Port;
 
-            // 3. Domain Reload開始を検出・記録
+            // 3. Detect and record Domain Reload start
             DomainReloadDetectionService.StartDomainReload(correlationId, serverRunning, serverPort);
 
-            // 4. サーバーが実行中の場合、停止処理を実行
+            // 4. If server is running, execute stop processing
             if (currentServer?.IsRunning == true)
             {
                 int portToSave = currentServer.Port;
                 
                 try
                 {
-                    // 4.1. クライアントに停止通知
+                    // 4.1. Notify client of server stop
                     ClientNotificationService.LogServerStoppingBeforeDomainReload(correlationId, portToSave);
 
-                    // 4.2. サーバーを停止
+                    // 4.2. Stop server
                     currentServer.Dispose();
 
-                    // 4.3. クライアントに停止完了通知
+                    // 4.3. Notify client of stop completion
                     ClientNotificationService.LogServerStoppedAfterDomainReload(correlationId);
 
                     return ServiceResult<string>.SuccessResult(correlationId);
                 }
                 catch (System.Exception ex)
                 {
-                    // 4.4. エラー通知
+                    // 4.4. Error notification
                     ClientNotificationService.LogServerShutdownError(correlationId, ex, portToSave);
 
-                    // サーバー停止失敗は重大なエラー（ポート競合の原因となる）
+                    // Server stop failure is a critical error (causes port conflicts)
                     throw new System.InvalidOperationException(
                         $"Failed to properly shutdown MCP server before assembly reload. This may cause port conflicts on restart.", ex);
                 }
@@ -61,37 +61,37 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Domain Reload完了後の復旧処理を実行する
+        /// Execute recovery processing after Domain Reload completion
         /// </summary>
-        /// <returns>処理結果</returns>
+        /// <returns>Processing result</returns>
         public async Task<ServiceResult<string>> ExecuteAfterDomainReloadAsync()
         {
-            // 1. 関連操作のトラッキング用IDを生成
+            // 1. Generate tracking ID for related operations
             string correlationId = VibeLogger.GenerateCorrelationId();
 
-            // 2. Domain Reload完了を記録
+            // 2. Record Domain Reload completion
             DomainReloadDetectionService.CompleteDomainReload(correlationId);
 
-            // 3. 再接続UI表示が必要な場合、タイムアウトを開始
+            // 3. Start timeout for reconnection UI display if needed
             if (DomainReloadDetectionService.ShouldShowReconnectingUI())
             {
                 SessionRecoveryService.StartReconnectionUITimeoutAsync().Forget();
             }
 
-            // 4. MCP設定を現在のデバッグ状態に更新
+            // 4. Update MCP settings to current debug state
             McpDebugStateUpdater.UpdateAllConfigurationsForDebugState();
 
-            // 5. サーバー状態を復旧
+            // 5. Restore server state
             ValidationResult restoreResult = SessionRecoveryService.RestoreServerStateIfNeeded();
             if (!restoreResult.IsValid)
             {
                 return ServiceResult<string>.FailureResult($"Server restoration failed: {restoreResult.ErrorMessage}");
             }
 
-            // 6. 保留中のコンパイルリクエストを処理（現在は無効化済み）
+            // 6. Process pending compile requests (currently disabled)
             ProcessPendingCompileRequests();
 
-            // 7. サーバーが実行中の場合、ツール変更通知を送信
+            // 7. Send tool change notification if server is running
             if (McpServerController.IsServerRunning)
             {
                 await ClientNotificationService.SendToolNotificationAfterCompilationAsync();
@@ -101,17 +101,17 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 保留中のコンパイルリクエストを処理する
-        /// 注意：現在は機能フラグにより無効化されている（メインスレッドエラー回避のため）
+        /// Process pending compile requests
+        /// Note: Currently disabled by feature flag (to avoid main thread errors)
         /// </summary>
         private void ProcessPendingCompileRequests()
         {
-            // 機能フラグによる制御（現在は無効化）
-            bool enablePendingCompileProcessing = false; // TODO: 設定ファイルまたはエディタ設定から読み込み
+            // Feature flag control (currently disabled)
+            bool enablePendingCompileProcessing = false; // TODO: Load from config file or editor settings
             
             if (enablePendingCompileProcessing)
             {
-                // メインスレッド問題解決後に有効化予定
+                // Planned to be enabled after main thread issue resolution
                 // CompileSessionState.StartForcedRecompile();
                 VibeLogger.LogInfo(
                     "pending_compile_processing", 
