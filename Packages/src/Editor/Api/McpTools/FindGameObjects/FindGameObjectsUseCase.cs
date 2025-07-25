@@ -12,6 +12,18 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class FindGameObjectsUseCase : AbstractUseCase<FindGameObjectsSchema, FindGameObjectsResponse>
     {
+        private readonly GameObjectFinderService _finderService;
+        private readonly ComponentSerializer _componentSerializer;
+
+        public FindGameObjectsUseCase() : this(new GameObjectFinderService(), new ComponentSerializer())
+        {
+        }
+
+        public FindGameObjectsUseCase(GameObjectFinderService finderService, ComponentSerializer componentSerializer)
+        {
+            _finderService = finderService ?? throw new System.ArgumentNullException(nameof(finderService));
+            _componentSerializer = componentSerializer ?? throw new System.ArgumentNullException(nameof(componentSerializer));
+        }
         /// <summary>
         /// GameObject検索処理を実行する
         /// </summary>
@@ -48,13 +60,11 @@ namespace io.github.hatayama.uLoopMCP
                 MaxResults = parameters.MaxResults
             };
             
-            GameObjectFinderService service = new GameObjectFinderService();
-            GameObjectDetails[] foundObjects = service.FindGameObjectsAdvanced(options);
+            GameObjectDetails[] foundObjects = _finderService.FindGameObjectsAdvanced(options);
             
             // 3. 結果の変換と整形
             cancellationToken.ThrowIfCancellationRequested();
             
-            ComponentSerializer serializer = new ComponentSerializer();
             List<FindGameObjectResult> results = new List<FindGameObjectResult>();
             
             foreach (GameObjectDetails details in foundObjects)
@@ -68,7 +78,7 @@ namespace io.github.hatayama.uLoopMCP
                     isActive = details.IsActive,
                     tag = details.GameObject.tag,
                     layer = details.GameObject.layer,
-                    components = serializer.SerializeComponents(details.GameObject)
+                    components = _componentSerializer.SerializeComponents(details.GameObject)
                 };
                 
                 results.Add(result);
