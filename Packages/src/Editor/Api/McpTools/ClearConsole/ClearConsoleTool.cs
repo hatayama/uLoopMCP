@@ -1,6 +1,5 @@
 using System.Threading;
 using System.Threading.Tasks;
-using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -23,36 +22,11 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="parameters">Type-safe parameters</param>
         /// <param name="cancellationToken">Cancellation token for timeout control</param>
         /// <returns>Clear operation result</returns>
-        protected override Task<ClearConsoleResponse> ExecuteAsync(ClearConsoleSchema parameters, CancellationToken cancellationToken)
+        protected override async Task<ClearConsoleResponse> ExecuteAsync(ClearConsoleSchema parameters, CancellationToken cancellationToken)
         {
-            // Get current log counts before clearing
-            ConsoleUtility.GetConsoleLogCounts(out int errorCount, out int warningCount, out int logCount);
-            int totalLogCount = errorCount + warningCount + logCount;
-            
-            ClearedLogCounts clearedCounts = new ClearedLogCounts(errorCount, warningCount, logCount);
-
-            // Perform console clear operation
-            ConsoleUtility.ClearConsole();
-
-            // Add confirmation message if requested
-            if (parameters.AddConfirmationMessage)
-            {
-                Debug.Log("=== Console cleared via MCP tool ===");
-            }
-
-            // Create success response
-            string message = totalLogCount > 0 
-                ? $"Successfully cleared {totalLogCount} console logs (Errors: {errorCount}, Warnings: {warningCount}, Logs: {logCount})"
-                : "Console was already empty";
-
-            ClearConsoleResponse response = new ClearConsoleResponse(
-                success: true,
-                clearedLogCount: totalLogCount,
-                clearedCounts: clearedCounts,
-                message: message
-            );
-
-            return Task.FromResult(response);
+            // ClearConsoleUseCaseインスタンスを生成して実行
+            var useCase = new ClearConsoleUseCase();
+            return await useCase.ExecuteAsync(parameters, cancellationToken);
         }
     }
 } 

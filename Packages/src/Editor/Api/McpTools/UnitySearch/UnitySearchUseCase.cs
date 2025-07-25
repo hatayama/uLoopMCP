@@ -19,6 +19,9 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>検索結果</returns>
         public override async Task<UnitySearchResponse> ExecuteAsync(UnitySearchSchema parameters, CancellationToken cancellationToken)
         {
+            // 0. デフォルト値適用（内部処理）
+            ApplyDefaultValues(parameters);
+
             // 1. 古いファイルのクリーンアップ
             cancellationToken.ThrowIfCancellationRequested();
             UnitySearchService.CleanupOldExports();
@@ -32,11 +35,10 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// スキーマにデフォルト値を適用する
+        /// スキーマにデフォルト値を適用する（内部処理）
         /// </summary>
         /// <param name="schema">スキーマ</param>
-        /// <returns>デフォルト値適用後のスキーマ</returns>
-        protected virtual UnitySearchSchema ApplyDefaultValues(UnitySearchSchema schema)
+        private void ApplyDefaultValues(UnitySearchSchema schema)
         {
             // 配列がnullでないことを保証
             schema.Providers ??= new string[0];
@@ -53,8 +55,6 @@ namespace io.github.hatayama.uLoopMCP
             // 検索クエリがnullでないことを保証
             schema.SearchQuery ??= "";
             schema.PathFilter ??= "";
-
-            return schema;
         }
     }
 }
