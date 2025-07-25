@@ -1,7 +1,5 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
-using UnityEditor.TestTools.TestRunner.Api;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -19,59 +17,10 @@ namespace io.github.hatayama.uLoopMCP
 
         protected override async Task<RunTestsResponse> ExecuteAsync(RunTestsSchema parameters, CancellationToken cancellationToken)
         {
-            // Check for cancellation before starting
-            cancellationToken.ThrowIfCancellationRequested();
-            
-            // Create filter if specified
-            TestExecutionFilter filter = null;
-            if (parameters.FilterType != TestFilterType.all)
-            {
-                filter = CreateFilter(parameters.FilterType.ToString(), parameters.FilterValue);
-            }
-
-            // Check for cancellation before test execution
-            cancellationToken.ThrowIfCancellationRequested();
-            
-            // Execute tests using appropriate method
-            SerializableTestResult result;
-            if (parameters.TestMode == TestMode.PlayMode)
-            {
-                result = await PlayModeTestExecuter.ExecutePlayModeTest(
-                    filter, 
-                    parameters.SaveXml);
-            }
-            else
-            {
-                result = await PlayModeTestExecuter.ExecuteEditModeTest(
-                    filter, 
-                    parameters.SaveXml);
-            }
-
-            return new RunTestsResponse(
-                success: result.success,
-                message: result.message,
-                completedAt: result.completedAt,
-                testCount: result.testCount,
-                passedCount: result.passedCount,
-                failedCount: result.failedCount,
-                skippedCount: result.skippedCount,
-                xmlPath: result.xmlPath
-            );
+            // RunTestsUseCaseインスタンスを生成して実行
+            var useCase = new RunTestsUseCase();
+            return await useCase.ExecuteAsync(parameters, cancellationToken);
         }
 
-        /// <summary>
-        /// Create test execution filter
-        /// </summary>
-        private TestExecutionFilter CreateFilter(string filterType, string filterValue)
-        {
-            return filterType.ToLower() switch
-            {
-                "all" => TestExecutionFilter.All(), // Run all tests
-                "exact" => TestExecutionFilter.ByTestName(filterValue), // Individual test method (exact match)
-                "regex" => TestExecutionFilter.ByClassName(filterValue), // Class name or namespace (regex pattern)
-                "assembly" => TestExecutionFilter.ByAssemblyName(filterValue), // Assembly name
-                _ => throw new ArgumentException($"Unsupported filter type: {filterType}")
-            };
-        }
     }
 }
