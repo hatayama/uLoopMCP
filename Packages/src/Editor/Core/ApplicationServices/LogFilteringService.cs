@@ -19,16 +19,13 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>フィルタリング後のログエントリ配列</returns>
         public LogEntry[] FilterAndLimitLogs(LogEntryDto[] entries, int maxCount, bool includeStackTrace)
         {
-            // 最新のログを取得し、maxCountで制限
-            LogEntryDto[] limitedEntries = entries;
-            if (entries.Length > maxCount)
-            {
-                limitedEntries = entries.Skip(entries.Length - maxCount).Reverse().ToArray();
-            }
-            else
-            {
-                limitedEntries = entries.Reverse().ToArray();
-            }
+            // Get the most recent logs, limited by maxCount
+            LogEntryDto[] limitedEntries = entries.Length > maxCount
+                ? entries.Skip(entries.Length - maxCount).ToArray()
+                : entries;
+            
+            // Reverse to show newest first
+            limitedEntries = limitedEntries.Reverse().ToArray();
 
             // LogEntryDtoからLogEntryに変換
             return limitedEntries.Select(entry => new LogEntry(
