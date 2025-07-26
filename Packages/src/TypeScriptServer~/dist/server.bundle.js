@@ -8792,6 +8792,115 @@ var UnityEventHandler = class {
   }
 };
 
+// src/notification-receive-server.ts
+import { createServer } from "http";
+import { URL as URL2 } from "url";
+var NotificationReceiveServer = class {
+  server = null;
+  port = 0;
+  // OSが動的に割り当て
+  onDomainReloadComplete;
+  constructor() {
+    this.server = createServer((req, res) => {
+      this.handleRequest(req, res);
+    });
+  }
+  handleRequest(req, res) {
+    const method = req.method;
+    const url = req.url;
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    if (method === "OPTIONS") {
+      res.statusCode = 200;
+      res.end();
+      return;
+    }
+    try {
+      const parsedUrl = new URL2(url || "", `http://localhost:${this.port}`);
+      const pathname = parsedUrl.pathname;
+      if (method === "POST" && pathname === "/domain-reload-complete") {
+        this.handleDomainReloadComplete(req, res);
+      } else if (method === "GET" && pathname === "/health") {
+        this.handleHealthCheck(res);
+      } else {
+        res.statusCode = 404;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ error: "Not Found" }));
+      }
+    } catch (error) {
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ error: "Internal Server Error" }));
+    }
+  }
+  handleDomainReloadComplete(req, res) {
+    VibeLogger.logInfo(
+      "domain_reload_notification_received",
+      "Received domain reload complete notification from Unity",
+      { timestamp: (/* @__PURE__ */ new Date()).toISOString() }
+    );
+    if (this.onDomainReloadComplete) {
+      this.onDomainReloadComplete();
+    }
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ status: "received" }));
+  }
+  handleHealthCheck(res) {
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "application/json");
+    res.end(
+      JSON.stringify({
+        status: "ok",
+        server: "notification-server",
+        port: this.port
+      })
+    );
+  }
+  async start() {
+    return new Promise((resolve2, reject) => {
+      if (!this.server) {
+        reject(new Error("Server not initialized"));
+        return;
+      }
+      this.server.listen(0, (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          const address = this.server?.address();
+          if (address && typeof address === "object" && "port" in address) {
+            this.port = address.port;
+            VibeLogger.logInfo(
+              "notification_receive_server_started",
+              `Notification receive server started on port ${this.port}`,
+              { port: this.port }
+            );
+            resolve2(this.port);
+          } else {
+            reject(new Error("Failed to get server port"));
+          }
+        }
+      });
+    });
+  }
+  getPort() {
+    return this.port;
+  }
+  stop() {
+    if (this.server) {
+      this.server.close();
+      VibeLogger.logInfo("notification_server_stopped", "Notification server stopped", {
+        port: this.port
+      });
+      this.server = null;
+    }
+  }
+  setDomainReloadHandler(handler) {
+    this.onDomainReloadComplete = handler;
+  }
+};
+
 // package.json
 var package_default = {
   name: "uloopmcp-server",
@@ -8802,10 +8911,10 @@ var package_default = {
   scripts: {
     prepare: "husky",
     build: "npm run build:bundle",
-    "build:bundle": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os",
-    "build:production": "ULOOPMCP_PRODUCTION=true NODE_ENV=production esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os",
+    "build:bundle": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --external:http --external:url",
+    "build:production": "ULOOPMCP_PRODUCTION=true NODE_ENV=production esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --external:http --external:url",
     dev: "NODE_ENV=development npm run build:bundle && NODE_ENV=development node dist/server.bundle.js",
-    "dev:watch": "NODE_ENV=development esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --watch",
+    "dev:watch": "NODE_ENV=development esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --external:http --external:url --watch",
     start: "node dist/server.bundle.js",
     "start:production": "ULOOPMCP_PRODUCTION=true node dist/server.bundle.js",
     "start:dev": "NODE_ENV=development node dist/server.bundle.js",
@@ -8891,6 +9000,7 @@ var UnityMcpServer = class {
   toolManager;
   clientCompatibility;
   eventHandler;
+  notificationReceiveServer;
   constructor() {
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
     VibeLogger.logInfo("mcp_server_starting", "Unity MCP Server Starting");
@@ -8918,6 +9028,7 @@ var UnityMcpServer = class {
       this.unityClient,
       this.connectionManager
     );
+    this.notificationReceiveServer = new NotificationReceiveServer();
     this.connectionManager.setupReconnectionCallback(async () => {
       await this.toolManager.refreshDynamicToolsSafe(() => {
         this.eventHandler.sendToolsChangedNotification();
@@ -9068,6 +9179,34 @@ var UnityMcpServer = class {
    * Start the server
    */
   async start() {
+    try {
+      const notificationPort = await this.notificationReceiveServer.start();
+      VibeLogger.logInfo(
+        "notification_receive_server_ready",
+        "Notification receive server is ready for domain reload notifications",
+        { port: notificationPort },
+        void 0,
+        "This server will receive domain reload complete notifications from Unity"
+      );
+      this.notificationReceiveServer.setDomainReloadHandler(() => {
+        VibeLogger.logInfo(
+          "domain_reload_notification_handled",
+          "Domain reload notification received - triggering immediate reconnection",
+          {},
+          void 0,
+          "Unity has completed domain reload, attempting immediate reconnection"
+        );
+        void this.connectionManager.ensureConnected();
+      });
+    } catch (error) {
+      VibeLogger.logWarning(
+        "notification_receive_server_startup_failed",
+        "Notification receive server failed to start - falling back to polling",
+        { error: error instanceof Error ? error.message : String(error) },
+        void 0,
+        "Domain reload notifications will use polling fallback"
+      );
+    }
     this.eventHandler.setupUnityEventListener(async () => {
       await this.toolManager.refreshDynamicToolsSafe(() => {
         this.eventHandler.sendToolsChangedNotification();

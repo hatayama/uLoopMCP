@@ -7,10 +7,10 @@
   "scripts": {
     "prepare": "husky",
     "build": "npm run build:bundle",
-    "build:bundle": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os",
-    "build:production": "ULOOPMCP_PRODUCTION=true NODE_ENV=production esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os",
+    "build:bundle": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --external:http --external:url",
+    "build:production": "ULOOPMCP_PRODUCTION=true NODE_ENV=production esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --external:http --external:url",
     "dev": "NODE_ENV=development npm run build:bundle && NODE_ENV=development node dist/server.bundle.js",
-    "dev:watch": "NODE_ENV=development esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --watch",
+    "dev:watch": "NODE_ENV=development esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --external:http --external:url --watch",
     "start": "node dist/server.bundle.js",
     "start:production": "ULOOPMCP_PRODUCTION=true node dist/server.bundle.js",
     "start:dev": "NODE_ENV=development node dist/server.bundle.js",

@@ -16,6 +16,7 @@ import { UnityToolManager } from './unity-tool-manager.js';
 import { McpClientCompatibility } from './mcp-client-compatibility.js';
 import { UnityEventHandler } from './unity-event-handler.js';
 import { ToolResponse } from './types/tool-types.js';
+import { NotificationReceiveServer } from './notification-receive-server.js';
 import {
   ENVIRONMENT,
   MCP_PROTOCOL_VERSION,
@@ -48,6 +49,7 @@ class UnityMcpServer {
   private toolManager: UnityToolManager;
   private clientCompatibility: McpClientCompatibility;
   private eventHandler: UnityEventHandler;
+  private notificationReceiveServer: NotificationReceiveServer;
 
   constructor() {
     // Simple environment variable check
@@ -89,6 +91,9 @@ class UnityMcpServer {
       this.unityClient,
       this.connectionManager,
     );
+
+    // Initialize notification receive server (optional feature)
+    this.notificationReceiveServer = new NotificationReceiveServer();
 
     // Setup reconnection callback for tool refresh
     this.connectionManager.setupReconnectionCallback(async () => {
@@ -280,6 +285,39 @@ class UnityMcpServer {
    * Start the server
    */
   async start(): Promise<void> {
+    // Start notification receive server (optional feature for domain reload notifications)
+    try {
+      const notificationPort = await this.notificationReceiveServer.start();
+      VibeLogger.logInfo(
+        'notification_receive_server_ready',
+        'Notification receive server is ready for domain reload notifications',
+        { port: notificationPort },
+        undefined,
+        'This server will receive domain reload complete notifications from Unity',
+      );
+
+      // Setup domain reload handler
+      this.notificationReceiveServer.setDomainReloadHandler(() => {
+        VibeLogger.logInfo(
+          'domain_reload_notification_handled',
+          'Domain reload notification received - triggering immediate reconnection',
+          {},
+          undefined,
+          'Unity has completed domain reload, attempting immediate reconnection',
+        );
+        // Trigger immediate reconnection attempt
+        void this.connectionManager.ensureConnected();
+      });
+    } catch (error) {
+      VibeLogger.logWarning(
+        'notification_receive_server_startup_failed',
+        'Notification receive server failed to start - falling back to polling',
+        { error: error instanceof Error ? error.message : String(error) },
+        undefined,
+        'Domain reload notifications will use polling fallback',
+      );
+    }
+
     // Setup Unity event notification listener (will be used after Unity connection)
     this.eventHandler.setupUnityEventListener(async () => {
       await this.toolManager.refreshDynamicToolsSafe(() => {
