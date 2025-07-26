@@ -191,9 +191,12 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (task.IsFaulted)
                 {
-                    Debug.LogError($"[uLoopMCP] Failed to perform delayed cleanup: {task.Exception?.GetBaseException().Message}");
+                    EditorApplication.delayCall += () =>
+                    {
+                        Debug.LogError($"[uLoopMCP] Failed to perform delayed cleanup: {task.Exception?.GetBaseException().Message}");
+                    };
                 }
-            });
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         /// <summary>
