@@ -3,6 +3,7 @@
     "Packages/src": {
       "release-type": "node",
       "package-name": "io.github.hatayama.uloopmcp",
+      "include-v-in-tag": true,
       "extra-files": [
         "Packages/src/TypeScriptServer~/package.json"
       ]

@@ -8795,7 +8795,7 @@ var UnityEventHandler = class {
 // package.json
 var package_default = {
   name: "uloopmcp-server",
-  version: "0.5.0",
+  version: "0.30.1",
   description: "TypeScript MCP Server for Unity-Cursor integration",
   main: "dist/server.bundle.js",
   type: "module",
