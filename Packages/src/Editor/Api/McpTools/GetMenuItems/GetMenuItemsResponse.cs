@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using uLoopMCP.Editor.Api.Commands.GetMenuItems;
 
 namespace io.github.hatayama.uLoopMCP
 {

@@ -74,11 +74,12 @@ For detailed communication protocols, connection management, and architectural p
 - **Client Compatibility**: Handles different MCP client requirements and behaviors
 - **Connection Resilience**: Automatic reconnection and discovery with graceful degradation
 
-### Unity Editor (MVP + Tool Pattern)
+### Unity Editor (DDD + MVP + Tool Pattern)
+- **Domain-Driven Design**: UseCase layer orchestrating business workflows, Application Service layer implementing single functions
+- **UseCase + Tool Pattern**: DDD-integrated architecture with temporal cohesion separation following Martin Fowler's refactoring principles
 - **MVP + Helper Pattern**: Clean separation of concerns with specialized helper classes
-- **Tool Pattern**: Extensible command system with automatic registration
 - **Security Architecture**: Comprehensive access control with configurable policies
-- **Session Management**: Domain reload resilient state management
+- **Session Management**: Domain reload resilient state management through specialized UseCases
 - **Schema-Driven Communication**: Type-safe JSON-RPC with automatic schema generation
 - **Dynamic Buffer Management**: Efficient TCP communication with fragmented message support
 
@@ -91,9 +92,11 @@ For detailed communication protocols, connection management, and architectural p
 - **Service Locator**: Type-safe dependency injection with factory functions
 
 ### Unity Editor Patterns
-- **Tool Creation**: Implement `IUnityCommand` and use `[McpTool]` attribute for automatic registration
+- **UseCase Development**: Extend `AbstractUseCase<TSchema, TResponse>` and orchestrate Application Services for business workflows
+- **Application Service Creation**: Implement single-function services returning `ServiceResult<T>` for clean separation
+- **Tool Creation**: Implement `IUnityTool`, delegate to UseCases, and use `[McpTool]` attribute for automatic registration
 - **UI Development**: Follow MVP + Helper pattern for maintainable Editor windows
 - **Security**: All tools subject to security validation through `McpSecurityChecker`
-- **Session State**: Use `ScriptableSingleton` for domain reload persistence
+- **Domain Reload Handling**: Use specialized `DomainReloadRecoveryUseCase` for state management
 
 For comprehensive implementation details, development workflows, and architectural decisions, please consult the detailed architecture documents.

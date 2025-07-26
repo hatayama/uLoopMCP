@@ -280,17 +280,31 @@ Its primary responsibilities are:
 
 The architecture is built upon several key design principles to ensure robustness, extensibility, and maintainability.
 
-### 2.1. Tool Pattern
-The system is centered around the **Tool Pattern**. Each action that can be triggered by an LLM tool is encapsulated in its own tool class.
+### 2.1. UseCase + Tool Pattern (DDD Integration)
+The system is centered around **Domain-Driven Design** integrated **UseCase + Tool Pattern**. Each action is structured according to DDD principles, with UseCase layer orchestrating business workflows and Application Service layer implementing single functions.
 
-- **`IUnityTool`**: The common interface for all tools.
-- **`AbstractUnityTool<TSchema, TResponse>`**: A generic abstract base class that provides type-safe handling of parameters and responses.
-- **`McpToolAttribute`**: Attribute used to mark tools for automatic registration, including Description configuration.
-- **`UnityToolRegistry`**: A central registry that discovers and holds all available tools.
-- **`UnityApiHandler`**: These classes receive a tool name and parameters, look up the tool in the registry, and execute it.
-- **`McpSecurityChecker`**: Validates tool execution permissions based on security settings.
+#### UseCase Layer (Domain Workflow Orchestration)
+- **`AbstractUseCase<TSchema, TResponse>`**: Base class for all UseCases, orchestrating workflows through a single `ExecuteAsync` method
+- **Concrete UseCases**: Manage complex workflows (e.g., `McpServerInitializationUseCase`, `DomainReloadRecoveryUseCase`)
+- **Temporal Cohesion Separation**: Following Martin Fowler's refactoring principles, temporal cohesion is separated into UseCase classes
 
-This pattern makes the system highly extensible. To add a new feature, a developer simply needs to create a new class that implements `IUnityTool` and decorate it with the `[McpTool(Description = "...")]` attribute. The system will automatically discover and expose it.
+#### Application Service Layer (Single Function Implementation)
+- **Single Responsibility Enforcement**: Each Application Service implements only one function
+- **Unified Service Results**: All services return results via `ServiceResult<T>`
+- **Examples**: `CompilationExecutionService`, `LogRetrievalService`, `TestExecutionService`
+
+#### Tool Layer (MCP Interface)
+- **`IUnityTool`**: Common interface for all tools (MCP connection point)
+- **`AbstractUnityTool<TSchema, TResponse>`**: Provides type-safe handling of parameters and responses
+- **`McpToolAttribute`**: Attribute for automatic tool registration
+- **Tool Implementation**: Each tool calls UseCases to execute business logic
+
+#### Registry and Security
+- **`UnityToolRegistry`**: Central registry that discovers and holds all available tools
+- **`UnityApiHandler`**: Receives tool names and parameters, looks up tools in registry and executes them
+- **`McpSecurityChecker`**: Validates execution permissions based on security settings
+
+This DDD-integrated architecture provides clear separation between business logic and infrastructure, achieving high extensibility and maintainability.
 
 ### 2.2. Security Architecture
 The system implements comprehensive security controls to prevent unauthorized tool execution:
@@ -308,32 +322,47 @@ The system maintains robust session management to handle client connections and 
 - **Domain Reload Resilience**: Session state survives Unity domain reloads through persistent storage.
 - **Reconnection Support**: Handles client reconnection scenarios gracefully.
 
-### 2.4. Command System Architecture
+### 2.4. DDD-Integrated System Architecture
 
 ```mermaid
 classDiagram
-    class IUnityCommand {
-        <<interface>>
-        +CommandName: string
-        +Description: string
-        +ParameterSchema: object
-        +ExecuteAsync(JToken): Task~object~
-    }
-
-    class AbstractUnityCommand {
+    class AbstractUseCase {
         <<abstract>>
-        +CommandName: string
+        +ExecuteAsync(TSchema, CancellationToken): Task~TResponse~
+    }
+
+    class CompileUseCase {
+        -compilationStateService: CompilationStateValidationService
+        -executionService: CompilationExecutionService
+        +ExecuteAsync(CompileSchema, CancellationToken): Task~CompileResponse~
+    }
+
+    class McpServerInitializationUseCase {
+        -configService: McpServerConfigurationService
+        -portService: PortAllocationService
+        -startupService: McpServerStartupService
+        +ExecuteAsync(ServerInitializationSchema, CancellationToken): Task~ServerInitializationResponse~
+    }
+
+    class CompilationStateValidationService {
+        +ValidateCompilationState(): ServiceResult~ValidationResult~
+    }
+
+    class CompilationExecutionService {
+        +ExecuteCompilationAsync(bool): Task~ServiceResult~CompilationResult~~
+    }
+
+    class IUnityTool {
+        <<interface>>
+        +ToolName: string
         +Description: string
         +ParameterSchema: object
         +ExecuteAsync(JToken): Task~object~
-        #ExecuteAsync(TSchema)*: Task~TResponse~
     }
 
-    class UnityCommandRegistry {
-        -commands: Dictionary
-        +RegisterCommand(IUnityCommand)
-        +GetCommand(string): IUnityCommand
-        +GetAllCommands(): IEnumerable
+    class CompileTool {
+        -useCase: CompileUseCase
+        +ExecuteAsync(CompileSchema): Task~CompileResponse~
     }
 
     class McpToolAttribute {
@@ -343,20 +372,14 @@ classDiagram
         +RequiredSecuritySetting: SecuritySettings
     }
 
-    class CompileCommand {
-        +ExecuteAsync(CompileSchema): Task~CompileResponse~
-    }
-
-    class RunTestsCommand {
-        +ExecuteAsync(RunTestsSchema): Task~RunTestsResponse~
-    }
-
-    IUnityCommand <|.. AbstractUnityCommand : implements
-    AbstractUnityCommand <|-- CompileCommand : extends
-    AbstractUnityCommand <|-- RunTestsCommand : extends
-    UnityCommandRegistry --> IUnityCommand : manages
-    CompileCommand ..|> McpToolAttribute : uses
-    RunTestsCommand ..|> McpToolAttribute : uses
+    AbstractUseCase <|-- CompileUseCase : extends
+    AbstractUseCase <|-- McpServerInitializationUseCase : extends
+    CompileUseCase --> CompilationStateValidationService : uses
+    CompileUseCase --> CompilationExecutionService : uses
+    McpServerInitializationUseCase --> CompilationStateValidationService : uses
+    IUnityTool <|.. CompileTool : implements
+    CompileTool --> CompileUseCase : delegates to
+    CompileTool ..|> McpToolAttribute : uses
 ```
 
 ### 2.5. MVP + Helper Architecture for UI
@@ -468,43 +491,65 @@ The UI layer implements a sophisticated **MVP (Model-View-Presenter) + Helper Pa
 - **Complex Operations**: Delegate to appropriate helper classes rather than implementing in Presenter
 - **Event Handling**: Isolate all Unity Editor event management in dedicated EventHandler
 
-### 2.9. Resilience to Domain Reloads
-A significant challenge in the Unity Editor is the "domain reload," which resets the application's state. The architecture handles this gracefully:
-- **`McpServerController`**: Uses `[InitializeOnLoad]` to hook into Editor lifecycle events.
-- **`AssemblyReloadEvents`**: Before a reload, `OnBeforeAssemblyReload` is used to save the server's running state (port, status) into `SessionState`.
-- **`SessionState`**: A Unity Editor feature that persists simple data across domain reloads.
-- After a reload, `OnAfterAssemblyReload` reads the `SessionState` and automatically restarts the server if it was previously running, ensuring a seamless experience for the connected client.
+### 2.9. Domain Reload Resilience (UseCase Integration)
+A significant challenge in the Unity Editor is the "domain reload," which resets the application's state. The DDD-integrated architecture handles this gracefully at the UseCase level:
 
-## 3. Implemented Commands
+#### Domain Reload Recovery UseCase
+- **`DomainReloadRecoveryUseCase`**: Orchestrates the entire domain reload workflow
+- **`DomainReloadDetectionService`**: Detects and determines domain reload state
+- **`SessionRecoveryService`**: Handles session state preservation and restoration
+- **`ClientNotificationService`**: Manages client notification processing
 
-The system currently implements 13 production-ready commands, each following the established Command Pattern architecture:
+#### McpServerController Integration
+- **`McpServerController`**: Uses `[InitializeOnLoad]` to hook into Editor lifecycle events
+- **UseCase Invocation**: Executes UseCases in `OnBeforeAssemblyReload` and `OnAfterAssemblyReload`
+- **`AssemblyReloadEvents`**: Delegates pre/post reload processing to UseCases
+- **`SessionState`**: Domain reload data persistence (managed by UseCases)
 
-### 3.1. Core System Commands
-- **`PingCommand`**: Connection health check and latency testing
-- **`CompileCommand`**: Project compilation with detailed error reporting
-- **`ClearConsoleCommand`**: Unity Console log clearing with confirmation
-- **`SetClientNameCommand`**: Client identification and session management
-- **`GetCommandDetailsCommand`**: Command introspection and metadata retrieval
+#### Orchestrated Workflow
+1. **Before Reload**: `DomainReloadRecoveryUseCase.ExecuteBeforeDomainReload()` saves server state
+2. **After Reload**: `DomainReloadRecoveryUseCase.ExecuteAfterDomainReloadAsync()` restores state
+3. **Client Notification**: Automatic tool list change notifications ensure seamless experience
 
-### 3.2. Information Retrieval Commands
-- **`GetLogsCommand`**: Console log retrieval with filtering and type selection
-- **`GetHierarchyCommand`**: Scene hierarchy export with component information
-- **`GetMenuItemsCommand`**: Unity menu item discovery and metadata
-- **`GetProviderDetailsCommand`**: Unity Search provider information
+This UseCase integration ensures domain reload processing is managed as a single business workflow, improving maintainability and reliability.
 
-### 3.3. GameObject and Scene Commands
-- **`FindGameObjectsCommand`**: Advanced GameObject search with multiple criteria
-- **`UnitySearchCommand`**: Unified search across assets, scenes, and project resources
+## 3. Implemented UseCases and Tools
 
-### 3.4. Execution Commands
-- **`RunTestsCommand`**: Test execution with NUnit XML export (security-controlled)
-- **`ExecuteMenuItemCommand`**: MenuItem execution via reflection (security-controlled)
+The system currently implements 13 production-ready features using **Domain-Driven Design** architecture with **UseCase + Tool Pattern**. Each feature provides business workflow orchestration through UseCases, single-function implementation through Application Services, and MCP interface through Tools:
 
-### 3.5. Security-Controlled Commands
-Several commands are subject to security restrictions and can be disabled via settings:
-- **Test Execution**: `RunTestsCommand` requires "Enable Tests Execution" setting
-- **Menu Item Execution**: `ExecuteMenuItemCommand` requires "Allow Menu Item Execution" setting
-- **Unknown Commands**: Blocked by default unless explicitly configured
+### 3.1. Core System UseCases and Tools
+- **`PingTool`**: Connection health check and latency testing
+- **`CompileUseCase` + `CompileTool`**: Compilation state validation and execution separated by Application Services, with detailed error reporting
+- **`ClearConsoleTool`**: Unity Console log clearing with confirmation
+- **`SetClientNameTool`**: Client identification and session management
+- **`GetCommandDetailsTool`**: Tool introspection and metadata retrieval
+
+### 3.2. Information Retrieval UseCases and Tools
+- **`GetLogsUseCase` + `GetLogsTool`**: Log retrieval and filtering separated by Application Services, with type selection
+- **`GetHierarchyUseCase` + `GetHierarchyTool`**: Scene hierarchy information collection and export with component information
+- **`GetMenuItemsUseCase` + `GetMenuItemsTool`**: Unity menu item discovery and metadata collection
+- **`GetProviderDetailsUseCase` + `GetProviderDetailsTool`**: Unity Search provider information collection
+
+### 3.3. GameObject and Scene UseCases and Tools
+- **`FindGameObjectsUseCase` + `FindGameObjectsTool`**: Multi-criteria search logic orchestrated by UseCase, advanced GameObject search
+- **`UnitySearchUseCase` + `UnitySearchTool`**: Unity Search API integrated unified search across assets, scenes, and project resources
+
+### 3.4. Execution UseCases and Tools
+- **`RunTestsUseCase` + `RunTestsTool`**: Test filter creation and execution separated by Application Services, NUnit XML export (security-controlled)
+- **`ExecuteMenuItemUseCase` + `ExecuteMenuItemTool`**: Menu item search and execution orchestrated by UseCase, reflection-based execution (security-controlled)
+
+### 3.5. Security-Controlled UseCases and Tools
+Several UseCases and Tools are subject to security restrictions and can be disabled via settings:
+- **Test Execution**: `RunTestsUseCase`/`RunTestsTool` requires "Enable Tests Execution" setting
+- **Menu Item Execution**: `ExecuteMenuItemUseCase`/`ExecuteMenuItemTool` requires "Allow Menu Item Execution" setting
+- **Unknown Tools**: Blocked by default unless explicitly configured
+
+### 3.6. Server Lifecycle UseCases
+- **`McpServerInitializationUseCase`**: Orchestrates complex server initialization workflow
+- **`McpServerShutdownUseCase`**: Manages proper server shutdown processing
+- **`DomainReloadRecoveryUseCase`**: Completely orchestrates state management before/after domain reloads
+
+These UseCases are not directly exposed as MCP Tools but are called internally by `McpServerController` to manage the system lifecycle.
 
 ## 4. Key Components (Directory Breakdown)
 
@@ -586,7 +631,7 @@ Contains low-level, general-purpose helper classes.
 
 ## 5. Key Workflows
 
-### 5.1. Command Execution Flow with Security
+### 5.1. UseCase + Tool Execution Flow with Security
 
 ```mermaid
 sequenceDiagram
@@ -599,28 +644,32 @@ sequenceDiagram
     participant JP as JsonRpcProcessor<br/>JsonRpcProcessor.cs
     participant UA as UnityApiHandler<br/>UnityApiHandler.cs
     participant SC as McpSecurityChecker<br/>McpSecurityChecker.cs
-    participant UR as UnityCommandRegistry<br/>UnityCommandRegistry.cs
-    participant AC as AbstractUnityCommand<br/>AbstractUnityCommand.cs
-    participant CC as ConcreteCommand<br/>*Command.cs
-    participant UT as Unity Tool<br/>(CompileController etc)
+    participant UR as UnityToolRegistry<br/>UnityToolRegistry.cs
+    participant AT as AbstractUnityTool<br/>AbstractUnityTool.cs
+    participant Tool as Concrete Tool<br/>*Tool.cs
+    participant UC as UseCase<br/>*UseCase.cs
+    participant AS as Application Service<br/>*Service.cs
     end
 
     TS->>MB: JSON String
     MB->>JP: ProcessRequest(json)
     JP->>JP: Deserialize to JsonRpcRequest
-    JP->>UA: ExecuteCommandAsync(name, params)
-    UA->>SC: ValidateCommand(name, params)
+    JP->>UA: ExecuteToolAsync(name, params)
+    UA->>SC: ValidateTool(name, params)
     alt Security Check Passed
         SC-->>UA: Validation Success
-        UA->>UR: GetCommand(name)
-        UR-->>UA: IUnityCommand instance
-        UA->>AC: ExecuteAsync(JToken)
-        AC->>AC: Deserialize to Schema
-        AC->>CC: ExecuteAsync(Schema)
-        CC->>UT: Execute Unity API
-        UT-->>CC: Result
-        CC-->>AC: Response object
-        AC-->>UA: Response
+        UA->>UR: GetTool(name)
+        UR-->>UA: IUnityTool instance
+        UA->>AT: ExecuteAsync(JToken)
+        AT->>AT: Deserialize to Schema
+        AT->>Tool: ExecuteAsync(Schema)
+        Tool->>UC: ExecuteAsync(Schema, CancellationToken)
+        UC->>AS: Call Application Services
+        AS->>AS: Execute single function
+        AS-->>UC: ServiceResult<T>
+        UC-->>Tool: UseCase Response
+        Tool-->>AT: Tool Response
+        AT-->>UA: Response
     else Security Check Failed
         SC-->>UA: Validation Failed
         UA-->>UA: Create Error Response

@@ -74,11 +74,12 @@ graph TB
 - **クライアント互換性**: 異なるMCPクライアントの要件と動作を処理
 - **接続レジリエンス**: 自動再接続と発見、優雅なデグラデーション
 
-### Unity Editor (MVP + Toolパターン)
+### Unity Editor (DDD + MVP + Toolパターン)
+- **Domain-Driven Design**: UseCase層でビジネスワークフローを統制、Application Service層で単一機能を実装
+- **UseCase + Toolパターン**: Martin Fowlerのリファクタリング原則に従った時間的結合分離を持つDDD統合アーキテクチャ
 - **MVP + Helperパターン**: 専門ヘルパークラスによる関心の清潔な分離
-- **Toolパターン**: 自動登録機能付きの拡張可能なコマンドシステム
 - **セキュリティアーキテクチャ**: 設定可能なポリシーを持つ包括的なアクセス制御
-- **セッション管理**: ドメインリロード耐性のある状態管理
+- **セッション管理**: 専用UseCaseを通じたドメインリロード耐性のある状態管理
 - **スキーマ駆動通信**: 自動スキーマ生成による型安全なJSON-RPC
 - **動的バッファ管理**: 断片化メッセージサポート付きの効率的なTCP通信
 
@@ -91,9 +92,11 @@ graph TB
 - **Service Locator**: ファクトリ関数による型安全な依存性注入
 
 ### Unity Editorパターン
-- **ツール作成**: `IUnityCommand`を実装し、自動登録のために`[McpTool]`属性を使用
+- **UseCase開発**: `AbstractUseCase<TSchema, TResponse>`を継承し、Application Serviceを統制してビジネスワークフローを実装
+- **Application Service作成**: `ServiceResult<T>`を返す単一機能サービスで清潔な分離を実装
+- **ツール作成**: `IUnityTool`を実装しUseCaseに委譲、自動登録のために`[McpTool]`属性を使用
 - **UI開発**: 保守可能なエディターウィンドウのためのMVP + Helperパターンに従う
 - **セキュリティ**: 全てのツールが`McpSecurityChecker`を通じてセキュリティ検証の対象
-- **セッション状態**: ドメインリロード永続化のために`ScriptableSingleton`を使用
+- **ドメインリロード処理**: 状態管理に専用の`DomainReloadRecoveryUseCase`を使用
 
 包括的な実装詳細、開発ワークフロー、アーキテクチャ決定については、詳細アーキテクチャドキュメントを参照してください。

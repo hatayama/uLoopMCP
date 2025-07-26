@@ -55,76 +55,72 @@ namespace io.github.hatayama.uLoopMCP
         /// The port number to bind to. Use -1 to fall back to the saved custom port
         /// from <see cref="McpEditorSettings.GetCustomPort"/>. Defaults to -1.
         /// </param>
-        public static void StartServer(int port = -1)
+        public static async void StartServer(int port = -1)
         {
-            // Use saved port if no port specified
-            int actualPort = port == -1 ? McpEditorSettings.GetCustomPort() : port;
+            await StartServerWithUseCaseAsync(port);
+        }
 
-            // Validate port before proceeding
-            if (!McpPortValidator.ValidatePort(actualPort, "for server startup"))
-            {
-                UnityEditor.EditorUtility.DisplayDialog(
-                    "Invalid Port",
-                    $"Port {actualPort} is not valid for server startup.\n\nPort must be 1024 or higher and not a reserved system port.",
-                    "OK"
-                );
-                return;
-            }
-
-            // Find available port starting from the requested port
-            int availablePort = FindAvailablePort(actualPort);
-
-            // Show confirmation dialog if port was changed
-            if (availablePort != actualPort)
-            {
-                bool userConfirmed = UnityEditor.EditorUtility.DisplayDialog(
-                    "Port Conflict",
-                    $"Port {actualPort} is already in use.\n\nWould you like to use port {availablePort} instead?",
-                    "OK",
-                    "Cancel"
-                );
-
-                if (!userConfirmed)
-                {
-                    return;
-                }
-
-                // Automatically update all configured MCP editor settings with new port
-                McpPortChangeUpdater.UpdateAllConfigurationsForPortChange(availablePort, "Server port conflict resolution");
-            }
-
-            // Validate server configuration before starting
-            ValidateServerConfiguration(availablePort);
-
-            // Always stop the existing server (to release the port).
+        /// <summary>
+        /// Starts the server using new UseCase implementation.
+        /// </summary>
+        private static async Task StartServerWithUseCaseAsync(int port)
+        {
+            // Always stop the existing server first (to release the port)
             if (mcpServer != null)
             {
-                StopServer();
+                await StopServerWithUseCaseAsync();
             }
 
-            mcpServer = new McpBridgeServer();
-            mcpServer.StartServer(availablePort);
+            // Execute initialization UseCase
+            McpServerInitializationUseCase useCase = new();
+            ServerInitializationSchema schema = new() { Port = port };
+            System.Threading.CancellationToken cancellationToken = System.Threading.CancellationToken.None;
 
-            // Save the state to SessionState.
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            sessionManager.IsServerRunning = true;
-            sessionManager.ServerPort = availablePort;
+            var result = await useCase.ExecuteAsync(schema, cancellationToken);
+
+            if (result.Success)
+            {
+                // UseCase creates a new server instance, so we keep a reference here
+                // for compatibility with existing code
+                mcpServer = result.ServerInstance;
+            }
+            else
+            {
+                // Error message already handled by UseCase
+                UnityEngine.Debug.LogError($"Server startup failed: {result.Message}");
+            }
         }
 
         /// <summary>
         /// Stops the server.
         /// </summary>
-        public static void StopServer()
+        public static async void StopServer()
         {
-            if (mcpServer != null)
+            await StopServerWithUseCaseAsync();
+        }
+
+        /// <summary>
+        /// Stops the server using new UseCase implementation.
+        /// </summary>
+        private static async Task StopServerWithUseCaseAsync()
+        {
+            // Execute shutdown UseCase
+            McpServerShutdownUseCase useCase = new(new McpServerStartupService());
+            ServerShutdownSchema schema = new() { ForceShutdown = false };
+            System.Threading.CancellationToken cancellationToken = System.Threading.CancellationToken.None;
+
+            var result = await useCase.ExecuteAsync(schema, cancellationToken);
+
+            if (result.Success)
             {
-                mcpServer.Dispose();
+                // Server stopped by UseCase, so clear the reference
                 mcpServer = null;
             }
-
-            // Delete the state from SessionState.
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            sessionManager.ClearServerSession();
+            else
+            {
+                // Error message already handled by UseCase
+                UnityEngine.Debug.LogError($"Server shutdown failed: {result.Message}");
+            }
         }
 
         /// <summary>
@@ -132,80 +128,14 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static void OnBeforeAssemblyReload()
         {
-            // Generate correlation ID for tracking this domain reload cycle
-            string correlationId = VibeLogger.GenerateCorrelationId();
-
-            // Set the domain reload start flag.
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            sessionManager.IsDomainReloadInProgress = true;
-
-            // Log server state before assembly reload
-            bool serverRunning = mcpServer?.IsRunning ?? false;
-
-            VibeLogger.LogInfo(
-                "domain_reload_start",
-                "Domain reload starting",
-                new
-                {
-                    server_running = serverRunning,
-                    server_port = mcpServer?.Port
-                },
-                correlationId
-            );
-
-            // If the server is running, save its state and stop it.
-            if (mcpServer?.IsRunning == true)
+            // Create and execute DomainReloadRecoveryUseCase instance
+            DomainReloadRecoveryUseCase useCase = new();
+            ServiceResult<string> result = useCase.ExecuteBeforeDomainReload(mcpServer);
+            
+            // Clear instance if server shutdown succeeded
+            if (result.Success)
             {
-                int portToSave = mcpServer.Port;
-
-                // Execute SessionState operations immediately (to ensure they are saved before a domain reload).
-                sessionManager.IsServerRunning = true;
-                sessionManager.ServerPort = portToSave;
-                sessionManager.IsAfterCompile = true; // Set the post-compilation flag.
-                sessionManager.IsReconnecting = true; // Set the reconnecting flag.
-                sessionManager.ShowReconnectingUI = true; // Set the UI display flag.
-                sessionManager.ShowPostCompileReconnectingUI = true; // Set the post-compile specific UI flag.
-
-                // Stop the server completely (using Dispose to ensure the TCP connection is released).
-                try
-                {
-                    VibeLogger.LogInfo(
-                        "domain_reload_server_stopping",
-                        "Stopping MCP server before domain reload",
-                        new { port = portToSave },
-                        correlationId
-                    );
-
-                    mcpServer.Dispose();
-                    mcpServer = null;
-
-                    VibeLogger.LogInfo(
-                        "domain_reload_server_stopped",
-                        "MCP server stopped successfully",
-                        new { tcp_port_released = true },
-                        correlationId
-                    );
-                }
-                catch (System.Exception ex)
-                {
-                    VibeLogger.LogException(
-                        "domain_reload_server_shutdown_error",
-                        ex,
-                        new
-                        {
-                            port = portToSave,
-                            server_was_running = true
-                        },
-                        correlationId,
-                        "Critical error during server shutdown before assembly reload. This may cause port conflicts on restart.",
-                        "Investigate server shutdown process and ensure proper TCP port release."
-                    );
-
-                    // Don't suppress this exception - server shutdown failure could leave ports locked
-                    // and cause startup issues after domain reload
-                    throw new System.InvalidOperationException(
-                        $"Failed to properly shutdown MCP server before assembly reload. This may cause port conflicts on restart.", ex);
-                }
+                mcpServer = null;
             }
         }
 
@@ -214,43 +144,15 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static void OnAfterAssemblyReload()
         {
-            // Generate correlation ID for tracking this domain reload recovery
-            string correlationId = VibeLogger.GenerateCorrelationId();
-
-            // Clear the domain reload completion flag.
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            sessionManager.ClearDomainReloadFlag();
-
-            // Start UI timeout if UI display flag is set
-            bool showReconnectingUI = sessionManager.ShowReconnectingUI;
-
-            VibeLogger.LogInfo(
-                "domain_reload_complete",
-                "Domain reload completed - starting server recovery process",
-                new { session_server_port = sessionManager.ServerPort },
-                correlationId
-            );
-
-            if (showReconnectingUI)
+            // Create and execute DomainReloadRecoveryUseCase instance
+            DomainReloadRecoveryUseCase useCase = new();
+            _ = useCase.ExecuteAfterDomainReloadAsync(System.Threading.CancellationToken.None).ContinueWith(task =>
             {
-                StartReconnectionUITimeoutAsync().Forget();
-            }
-
-            // Update MCP configurations to match current ULOOPMCP_DEBUG state
-            McpDebugStateUpdater.UpdateAllConfigurationsForDebugState();
-
-            // Restore server state.
-            RestoreServerStateIfNeeded();
-
-            // Process pending compile requests.
-            ProcessPendingCompileRequests();
-
-            // Always send tool change notification after compilation
-            // This ensures schema changes (descriptions, parameters) are communicated to Cursor
-            if (IsServerRunning)
-            {
-                SendToolNotificationAfterCompilationAsync().Forget();
-            }
+                if (task.IsFaulted)
+                {
+                    UnityEngine.Debug.LogError($"Domain reload recovery failed: {task.Exception}");
+                }
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         /// <summary>
