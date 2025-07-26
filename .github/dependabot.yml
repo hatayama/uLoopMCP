@@ -12,3 +12,5 @@ updates:
     ignore:
       - dependency-name: "google-github-actions/release-please-action"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "googleapis/release-please-action"
+        update-types: ["version-update:semver-major"]
