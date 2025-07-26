@@ -44,9 +44,8 @@ namespace io.github.hatayama.uLoopMCP
             CompileRequestInfo requestInfo = new CompileRequestInfo(requestId, forceRecompile, clientEndpoint);
             string json = JsonConvert.SerializeObject(requestInfo);
             
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            sessionManager.SetCompileRequestJson(requestId, json);
-            sessionManager.AddPendingCompileRequest(requestId);
+            McpEditorSettings.SetCompileRequestJson(requestId, json);
+            McpEditorSettings.AddPendingCompileRequest(requestId);
             
         }
 
@@ -55,7 +54,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string[] GetPendingRequestIds()
         {
-            return McpSessionManager.instance.PendingCompileRequestIds;
+            return McpEditorSettings.GetPendingCompileRequestIds();
         }
 
         /// <summary>
@@ -63,7 +62,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static CompileRequestInfo GetCompileRequest(string requestId)
         {
-            string json = McpSessionManager.instance.GetCompileRequestJson(requestId);
+            string json = McpEditorSettings.GetCompileRequestJson(requestId);
             if (string.IsNullOrEmpty(json)) return null;
 
             try
@@ -86,9 +85,8 @@ namespace io.github.hatayama.uLoopMCP
 
             requestInfo.isCompleted = true;
             string json = JsonConvert.SerializeObject(requestInfo);
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            sessionManager.SetCompileRequestJson(requestId, json);
-            sessionManager.RemovePendingCompileRequest(requestId);
+            McpEditorSettings.SetCompileRequestJson(requestId, json);
+            McpEditorSettings.RemovePendingCompileRequest(requestId);
             
         }
 
@@ -109,7 +107,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void ClearAll()
         {
-            McpSessionManager.instance.ClearAllCompileRequests();
+            McpEditorSettings.ClearAllCompileRequests();
             
         }
     }

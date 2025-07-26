@@ -341,10 +341,10 @@ namespace io.github.hatayama.uLoopMCP
             _model.EnablePostCompileMode();
 
             // Clear reconnecting UI flag on domain reload to ensure proper state
-            McpSessionManager.instance.ShowReconnectingUI = false;
+            McpEditorSettings.SetShowReconnectingUI(false);
 
             // Check if after compilation
-            bool isAfterCompile = McpSessionManager.instance.IsAfterCompile;
+            bool isAfterCompile = McpEditorSettings.GetIsAfterCompile();
 
             // Grace period is already started in OnEnable() if needed
 
@@ -357,10 +357,10 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (isAfterCompile)
                 {
-                    McpSessionManager.instance.ClearAfterCompileFlag();
+                    McpEditorSettings.ClearAfterCompileFlag();
 
                     // Use saved port number
-                    int savedPort = McpSessionManager.instance.ServerPort;
+                    int savedPort = McpEditorSettings.GetServerPort();
                     bool portNeedsUpdate = savedPort != _model.UI.CustomPort;
 
                     if (portNeedsUpdate)
@@ -553,8 +553,8 @@ namespace io.github.hatayama.uLoopMCP
             IReadOnlyCollection<ConnectedClient> connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
 
             // Check reconnecting UI flags from McpSessionManager
-            bool showReconnectingUIFlag = McpSessionManager.instance.ShowReconnectingUI;
-            bool showPostCompileUIFlag = McpSessionManager.instance.ShowPostCompileReconnectingUI;
+            bool showReconnectingUIFlag = McpEditorSettings.GetShowReconnectingUI();
+            bool showPostCompileUIFlag = McpEditorSettings.GetShowPostCompileReconnectingUI();
 
             // Only count clients with proper names (not Unknown Client) as "connected"
             bool hasNamedClients = connectedClients != null &&
@@ -581,7 +581,7 @@ namespace io.github.hatayama.uLoopMCP
             // Clear post-compile flag when named clients are connected
             if (hasNamedClients && showPostCompileUIFlag)
             {
-                McpSessionManager.instance.ClearPostCompileReconnectingUI();
+                McpEditorSettings.ClearPostCompileReconnectingUI();
             }
 
             return new ConnectedToolsData(connectedClients, _model.UI.ShowConnectedTools, isServerRunning, showReconnectingUI);
