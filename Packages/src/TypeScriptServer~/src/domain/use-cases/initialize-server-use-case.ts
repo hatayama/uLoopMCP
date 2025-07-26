@@ -119,8 +119,6 @@ export class InitializeServerUseCase
         {
           client_name: clientName,
           tools_count: response.tools?.length || 0,
-          is_list_changed_unsupported:
-            this.clientCompatibilityService.isListChangedUnsupported(clientName),
         },
         correlationId,
         'MCP server initialization completed - client connected and tools available',
@@ -148,11 +146,9 @@ export class InitializeServerUseCase
         'Client compatibility configuration completed',
         {
           client_name: clientName,
-          is_list_changed_unsupported:
-            this.clientCompatibilityService.isListChangedUnsupported(clientName),
         },
         correlationId,
-        'Client compatibility determined - initialization strategy selected',
+        'Client compatibility determined - unified initialization will be used',
       );
     }
   }
@@ -168,17 +164,13 @@ export class InitializeServerUseCase
     clientName: string,
     correlationId: string,
   ): Promise<InitializeServerResponse> {
-    if (this.clientCompatibilityService.isListChangedUnsupported(clientName)) {
-      // Synchronous initialization for list_changed unsupported clients
-      return await this.executeSyncInitialization(clientName, correlationId);
-    } else {
-      // Asynchronous initialization for list_changed supported clients
-      return this.executeAsyncInitialization(clientName, correlationId);
-    }
+    // All clients use synchronous initialization for consistency
+    // This eliminates complexity from list_changed support detection
+    return await this.executeSyncInitialization(clientName, correlationId);
   }
 
   /**
-   * Execute synchronous initialization workflow
+   * Execute synchronous initialization workflow (unified for all clients)
    *
    * @param clientName Client name
    * @param correlationId Correlation ID for logging
@@ -190,7 +182,7 @@ export class InitializeServerUseCase
   ): Promise<InitializeServerResponse> {
     VibeLogger.logInfo(
       'initialize_server_sync_strategy',
-      'Using synchronous initialization for list_changed unsupported client',
+      'Using unified synchronous initialization for all clients',
       { client_name: clientName },
       correlationId,
       'Sync initialization - waiting for Unity connection before returning response',
@@ -211,10 +203,10 @@ export class InitializeServerUseCase
 
       VibeLogger.logInfo(
         'initialize_server_sync_completed',
-        'Synchronous initialization completed successfully',
+        'Unified synchronous initialization completed successfully',
         { client_name: clientName, tools_count: tools.length },
         correlationId,
-        'Unity connection established and tools loaded for sync client',
+        'Unity connection established and tools loaded for all clients',
       );
 
       return this.createSuccessResponse(tools);
@@ -227,72 +219,12 @@ export class InitializeServerUseCase
           error_message: error instanceof Error ? error.message : String(error),
         },
         correlationId,
-        'Unity connection timed out - returning empty tools list for sync client',
+        'Unity connection timed out - returning empty tools list for client',
       );
 
-      // Return empty tools response for sync clients on timeout
+      // Return empty tools response for clients on timeout
       return this.createSuccessResponse([]);
     }
-  }
-
-  /**
-   * Execute asynchronous initialization workflow
-   *
-   * @param clientName Client name
-   * @param correlationId Correlation ID for logging
-   * @returns Server initialization response (tools loaded asynchronously)
-   */
-  private executeAsyncInitialization(
-    clientName: string,
-    correlationId: string,
-  ): InitializeServerResponse {
-    VibeLogger.logInfo(
-      'initialize_server_async_strategy',
-      'Using asynchronous initialization for list_changed supported client',
-      { client_name: clientName },
-      correlationId,
-      'Async initialization - starting background Unity connection',
-    );
-
-    // Start Unity connection initialization in background
-    void this.clientCompatibilityService.initializeClient(clientName);
-    this.toolManagementService.setClientName(clientName);
-
-    // Start background tool initialization
-    void this.toolManagementService
-      .initializeTools()
-      .then(() => {
-        VibeLogger.logInfo(
-          'initialize_server_async_unity_connected',
-          'Unity connection established successfully in background',
-          { client_name: clientName },
-          correlationId,
-          'Background Unity connection completed - tools will be notified via list_changed',
-        );
-      })
-      .catch((error) => {
-        VibeLogger.logError(
-          'initialize_server_async_unity_failed',
-          'Unity connection initialization failed in background',
-          {
-            client_name: clientName,
-            error_message: error instanceof Error ? error.message : String(error),
-          },
-          correlationId,
-          'Background Unity connection failed - client will be notified when available',
-        );
-      });
-
-    VibeLogger.logInfo(
-      'initialize_server_async_completed',
-      'Asynchronous initialization completed - Unity connection in progress',
-      { client_name: clientName },
-      correlationId,
-      'Async client response sent - tools will be updated via notifications',
-    );
-
-    // Return immediate response for async clients (tools loaded in background)
-    return this.createSuccessResponse([]);
   }
 
   /**

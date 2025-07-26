@@ -9167,7 +9167,7 @@ var UnityMcpServer = class {
     this.eventHandler.setupSignalHandlers();
   }
   /**
-   * Initialize client synchronously (for list_changed unsupported clients)
+   * Initialize client synchronously (unified initialization for all clients)
    */
   async initializeSyncClient(clientName) {
     try {
@@ -9214,24 +9214,6 @@ var UnityMcpServer = class {
       };
     }
   }
-  /**
-   * Initialize client asynchronously (for list_changed supported clients)
-   */
-  initializeAsyncClient(clientName) {
-    void this.clientCompatibility.initializeClient(clientName);
-    this.toolManager.setClientName(clientName);
-    void this.toolManager.initializeDynamicTools().then(() => {
-    }).catch((error) => {
-      VibeLogger.logError(
-        "mcp_unity_connection_init_failed",
-        "Unity connection initialization failed",
-        { error_message: error instanceof Error ? error.message : String(error) },
-        void 0,
-        "Unity connection could not be established - check Unity MCP bridge"
-      );
-      this.unityDiscovery.start();
-    });
-  }
   setupHandlers() {
     this.server.setRequestHandler(InitializeRequestSchema, async (request) => {
       const clientInfo = request.params?.clientInfo;
@@ -9241,8 +9223,7 @@ var UnityMcpServer = class {
         `MCP client name received: ${clientName}`,
         {
           client_name: clientName,
-          client_info: clientInfo,
-          is_list_changed_unsupported: this.clientCompatibility.isListChangedUnsupported(clientName)
+          client_info: clientInfo
         },
         void 0,
         "This logs the client name received during MCP initialize request",
@@ -9253,11 +9234,7 @@ var UnityMcpServer = class {
       }
       if (!this.isInitialized) {
         this.isInitialized = true;
-        if (this.clientCompatibility.isListChangedUnsupported(clientName)) {
-          return this.initializeSyncClient(clientName);
-        } else {
-          this.initializeAsyncClient(clientName);
-        }
+        return this.initializeSyncClient(clientName);
       }
       return {
         protocolVersion: MCP_PROTOCOL_VERSION,

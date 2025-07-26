@@ -115,7 +115,7 @@ class UnityMcpServer {
   }
 
   /**
-   * Initialize client synchronously (for list_changed unsupported clients)
+   * Initialize client synchronously (unified initialization for all clients)
    */
   private async initializeSyncClient(clientName: string): Promise<InitializeResult> {
     try {
@@ -165,31 +165,6 @@ class UnityMcpServer {
     }
   }
 
-  /**
-   * Initialize client asynchronously (for list_changed supported clients)
-   */
-  private initializeAsyncClient(clientName: string): void {
-    // Start Unity connection initialization in background
-    void this.clientCompatibility.initializeClient(clientName);
-    this.toolManager.setClientName(clientName);
-    void this.toolManager
-      .initializeDynamicTools()
-      .then(() => {
-        // Unity connection established successfully
-      })
-      .catch((error) => {
-        VibeLogger.logError(
-          'mcp_unity_connection_init_failed',
-          'Unity connection initialization failed',
-          { error_message: error instanceof Error ? error.message : String(error) },
-          undefined,
-          'Unity connection could not be established - check Unity MCP bridge',
-        );
-        // Start Unity discovery to retry connection (singleton pattern prevents duplicates)
-        this.unityDiscovery.start();
-      });
-  }
-
   private setupHandlers(): void {
     // Handle initialize request to get client information
     this.server.setRequestHandler(InitializeRequestSchema, async (request) => {
@@ -203,8 +178,6 @@ class UnityMcpServer {
         {
           client_name: clientName,
           client_info: clientInfo,
-          is_list_changed_unsupported:
-            this.clientCompatibility.isListChangedUnsupported(clientName),
         },
         undefined,
         'This logs the client name received during MCP initialize request',
@@ -219,15 +192,9 @@ class UnityMcpServer {
       if (!this.isInitialized) {
         this.isInitialized = true;
 
-        if (this.clientCompatibility.isListChangedUnsupported(clientName)) {
-          // list_changed unsupported client: wait for Unity connection
-          // Sync initialization for list_changed unsupported client
-          return this.initializeSyncClient(clientName);
-        } else {
-          // list_changed supported client: asynchronous approach
-          // Async initialization for list_changed supported client
-          this.initializeAsyncClient(clientName);
-        }
+        // All clients use synchronous initialization for consistency
+        // This eliminates complexity from list_changed support detection
+        return this.initializeSyncClient(clientName);
       }
 
       return {
