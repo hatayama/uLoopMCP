@@ -4,9 +4,13 @@
       "release-type": "node",
       "package-name": "io.github.hatayama.uloopmcp",
       "include-v-in-tag": true,
+      "skip-github-release": false,
+      "draft": false,
+      "prerelease": false,
       "extra-files": [
         "Packages/src/TypeScriptServer~/package.json"
       ]
     }
-  }
+  },
+  "skip-labeling": true
 }
