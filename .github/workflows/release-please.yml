@@ -40,7 +40,7 @@ jobs:
 
       # ── Execute release-please ───────────────────────────
       - name: 🚀 Run release‑please
-        uses: googleapis/release-please-action@v3
+        uses: googleapis/release-please-action@v4
         with:
           path: Packages/src
           release-type: node
