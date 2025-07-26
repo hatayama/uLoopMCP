@@ -363,11 +363,12 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return await Task.Run(() => listener.AcceptTcpClient(), cancellationToken);
             }
-            catch (ThreadAbortException)
+            catch (ThreadAbortException ex)
             {
                 // Log and re-throw ThreadAbortException
                 if (!McpEditorSettings.GetIsDomainReloadInProgress())
                 {
+                    OnError?.Invoke($"Unexpected thread abort: {ex.Message}");
                 }
                 throw;
             }

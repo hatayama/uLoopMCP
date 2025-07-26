@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEditor;
+using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -186,7 +187,13 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // Schedule cleanup after a short delay to remove actually disconnected tools
-            DelayedCleanupAsync().Forget();
+            DelayedCleanupAsync().ContinueWith(task =>
+            {
+                if (task.IsFaulted)
+                {
+                    Debug.LogError($"[uLoopMCP] Failed to perform delayed cleanup: {task.Exception?.GetBaseException().Message}");
+                }
+            });
         }
 
         /// <summary>
