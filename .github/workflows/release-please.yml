@@ -3,7 +3,7 @@ name: release-please
 on:
   push:
     branches:
-      - main        # Default branch
+      - feature/fix-release-pleaser  # Temporary for testing
   # Enable manual execution via "Run workflow" button in browser
   workflow_dispatch:
     inputs:
