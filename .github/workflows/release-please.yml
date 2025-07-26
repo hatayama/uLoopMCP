@@ -47,4 +47,4 @@ jobs:
           package-name: "io.github.hatayama.uloopmcp"
           token: ${{ secrets.GITHUB_TOKEN }}
           extra-files: |
-            Packages/src/TypeScriptServer~/package.json
+            TypeScriptServer~/package.json
