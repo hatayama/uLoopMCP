@@ -9,3 +9,6 @@ updates:
     labels:
       - "dependencies"
       - "github-actions"
+    ignore:
+      - dependency-name: "google-github-actions/release-please-action"
+        update-types: ["version-update:semver-major"]
