@@ -45,7 +45,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="parameters">Initialization parameters</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Initialization result</returns>
-        public override async Task<ServerInitializationResponse> ExecuteAsync(ServerInitializationSchema parameters, CancellationToken cancellationToken)
+        public override Task<ServerInitializationResponse> ExecuteAsync(ServerInitializationSchema parameters, CancellationToken cancellationToken)
         {
             var response = new ServerInitializationResponse();
             var startTime = System.DateTime.UtcNow;
@@ -58,7 +58,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     response.Success = false;
                     response.Message = portResult.ErrorMessage;
-                    return response;
+                    return Task.FromResult(response);
                 }
                 int actualPort = portResult.Data;
 
@@ -69,7 +69,7 @@ namespace io.github.hatayama.uLoopMCP
                     
                     response.Success = false;
                     response.Message = validationResult.ErrorMessage;
-                    return response;
+                    return Task.FromResult(response);
                 }
 
                 // 2. Security validation - SecurityValidationService
@@ -78,7 +78,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     response.Success = false;
                     response.Message = editorStateValidation.ErrorMessage;
-                    return response;
+                    return Task.FromResult(response);
                 }
 
                 var portSecurityValidation = _securityService.ValidatePortSecurity(actualPort);
@@ -86,7 +86,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     response.Success = false;
                     response.Message = portSecurityValidation.ErrorMessage;
-                    return response;
+                    return Task.FromResult(response);
                 }
 
                 // 3. Port allocation - PortAllocationService
@@ -95,7 +95,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     response.Success = false;
                     response.Message = availablePortResult.ErrorMessage;
-                    return response;
+                    return Task.FromResult(response);
                 }
                 int availablePort = availablePortResult.Data;
 
@@ -107,7 +107,7 @@ namespace io.github.hatayama.uLoopMCP
                     {
                         response.Success = false;
                         response.Message = "Port conflict resolution cancelled by user";
-                        return response;
+                        return Task.FromResult(response);
                     }
                 }
 
@@ -117,7 +117,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     response.Success = false;
                     response.Message = serverResult.ErrorMessage;
-                    return response;
+                    return Task.FromResult(response);
                 }
                 McpBridgeServer serverInstance = serverResult.Data;
 
@@ -127,7 +127,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     response.Success = false;
                     response.Message = sessionUpdateResult.ErrorMessage;
-                    return response;
+                    return Task.FromResult(response);
                 }
 
                 // Success response
@@ -137,13 +137,16 @@ namespace io.github.hatayama.uLoopMCP
                 response.ServerInstance = serverInstance;
                 response.Message = "Server initialization completed successfully";
 
-                return response;
+                return Task.FromResult(response);
             }
             catch (System.Exception ex)
             {
+                // Log the full exception for debugging
+                UnityEngine.Debug.LogError($"Server initialization failed: {ex}");
+                
                 response.Success = false;
-                response.Message = $"Server initialization failed: {ex.Message}";
-                return response;
+                response.Message = "Server initialization failed. Please check the logs for details.";
+                return Task.FromResult(response);
             }
             finally
             {

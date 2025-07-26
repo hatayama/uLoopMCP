@@ -146,7 +146,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Create and execute DomainReloadRecoveryUseCase instance
             DomainReloadRecoveryUseCase useCase = new();
-            _ = useCase.ExecuteAfterDomainReloadAsync().ContinueWith(task =>
+            _ = useCase.ExecuteAfterDomainReloadAsync(System.Threading.CancellationToken.None).ContinueWith(task =>
             {
                 if (task.IsFaulted)
                 {

@@ -64,7 +64,7 @@ namespace io.github.hatayama.uLoopMCP
         /// Execute recovery processing after Domain Reload completion
         /// </summary>
         /// <returns>Processing result</returns>
-        public async Task<ServiceResult<string>> ExecuteAfterDomainReloadAsync()
+        public async Task<ServiceResult<string>> ExecuteAfterDomainReloadAsync(CancellationToken cancellationToken = default)
         {
             // 1. Generate tracking ID for related operations
             string correlationId = VibeLogger.GenerateCorrelationId();
@@ -89,12 +89,19 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // 6. Process pending compile requests (currently disabled)
-            ProcessPendingCompileRequests();
+            ProcessPendingCompileRequests(correlationId);
 
             // 7. Send tool change notification if server is running
             if (McpServerController.IsServerRunning)
             {
-                await ClientNotificationService.SendToolNotificationAfterCompilationAsync();
+                try
+                {
+                    await ClientNotificationService.SendToolNotificationAfterCompilationAsync();
+                }
+                catch (System.Exception ex)
+                {
+                    VibeLogger.LogWarning("tool_notification_failed", $"Failed to send tool notification: {ex.Message}", correlationId: correlationId);
+                }
             }
 
             return ServiceResult<string>.SuccessResult(correlationId);
@@ -104,10 +111,12 @@ namespace io.github.hatayama.uLoopMCP
         /// Process pending compile requests
         /// Note: Currently disabled by feature flag (to avoid main thread errors)
         /// </summary>
-        private void ProcessPendingCompileRequests()
+        /// <param name="correlationId">Correlation ID for tracking related operations</param>
+        private void ProcessPendingCompileRequests(string correlationId)
         {
-            // Feature flag control (currently disabled)
-            bool enablePendingCompileProcessing = false; // TODO: Load from config file or editor settings
+            // Feature flag control - currently disabled, can be enabled via editor settings in the future
+            // TODO: Add McpEditorSettings.GetEnablePendingCompileProcessing() when needed
+            bool enablePendingCompileProcessing = false;
             
             if (enablePendingCompileProcessing)
             {
@@ -116,7 +125,7 @@ namespace io.github.hatayama.uLoopMCP
                 VibeLogger.LogInfo(
                     "pending_compile_processing", 
                     "Processing pending compile requests", 
-                    correlationId: VibeLogger.GenerateCorrelationId()
+                    correlationId: correlationId
                 );
             }
             else
@@ -124,7 +133,7 @@ namespace io.github.hatayama.uLoopMCP
                 VibeLogger.LogInfo(
                     "pending_compile_processing_disabled", 
                     "Pending compile request processing is disabled via feature flag", 
-                    correlationId: VibeLogger.GenerateCorrelationId()
+                    correlationId: correlationId
                 );
             }
         }

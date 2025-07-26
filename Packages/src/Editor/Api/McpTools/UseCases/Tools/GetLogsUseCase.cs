@@ -25,7 +25,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="parameters">Log retrieval parameters</param>
         /// <param name="cancellationToken">Cancellation control token</param>
         /// <returns>Log retrieval result</returns>
-        public override async Task<GetLogsResponse> ExecuteAsync(GetLogsSchema parameters, CancellationToken cancellationToken)
+        public override Task<GetLogsResponse> ExecuteAsync(GetLogsSchema parameters, CancellationToken cancellationToken)
         {
             try
             {
@@ -75,7 +75,7 @@ namespace io.github.hatayama.uLoopMCP
                     logs: logs
                 );
                 
-                return response;
+                return Task.FromResult(response);
             }
             catch (System.OperationCanceledException)
             {

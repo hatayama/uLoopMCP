@@ -23,59 +23,84 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="parameters">Shutdown parameters</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Shutdown result</returns>
-        public override async Task<ServerShutdownResponse> ExecuteAsync(ServerShutdownSchema parameters, CancellationToken cancellationToken)
+        public override Task<ServerShutdownResponse> ExecuteAsync(ServerShutdownSchema parameters, CancellationToken cancellationToken)
         {
             var response = new ServerShutdownResponse();
             var startTime = System.DateTime.UtcNow;
 
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
+                
                 // 1. Get current server instance
                 McpBridgeServer currentServer = McpServerController.CurrentServer;
                 if (currentServer == null)
                 {
                     response.Success = true;
                     response.Message = "Server was not running";
-                    return response;
+                    return Task.FromResult(response);
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
+                
                 // 2. Server stop processing - McpServerStartupService
                 var stopResult = _startupService.StopServer(currentServer);
                 if (!stopResult.Success)
                 {
                     response.Success = false;
                     response.Message = stopResult.ErrorMessage;
-                    return response;
+                    return Task.FromResult(response);
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
+                
                 // 3. Session state clear
                 var sessionUpdateResult = _startupService.UpdateSessionState(false, 0);
                 if (!sessionUpdateResult.Success)
                 {
                     response.Success = false;
                     response.Message = sessionUpdateResult.ErrorMessage;
-                    return response;  
+                    return Task.FromResult(response);  
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
+                
                 // 4. Session clear with SessionManager
-                McpSessionManager sessionManager = McpSessionManager.instance;
-                sessionManager.ClearServerSession();
+                try
+                {
+                    McpSessionManager sessionManager = McpSessionManager.instance;
+                    sessionManager.ClearServerSession();
+                }
+                catch (System.Exception sessionEx)
+                {
+                    response.Success = false;
+                    response.Message = $"Failed to clear session: {sessionEx.Message}";
+                    return Task.FromResult(response);
+                }
 
                 // Success response
                 response.Success = true;
                 response.Message = "Server shutdown completed successfully";
             }
+            catch (System.OperationCanceledException)
+            {
+                // Propagate cancellation exceptions
+                throw;
+            }
             catch (System.Exception ex)
             {
+                // Log the full exception for debugging
+                UnityEngine.Debug.LogError($"Server shutdown failed: {ex}");
+                
                 response.Success = false;
-                response.Message = $"Server shutdown failed: {ex.Message}";
+                response.Message = "Server shutdown failed. Please check the logs for details.";
             }
             finally
             {
                 response.SetTimingInfo(startTime, System.DateTime.UtcNow);
             }
 
-            return response;
+            return Task.FromResult(response);
         }
     }
 }
