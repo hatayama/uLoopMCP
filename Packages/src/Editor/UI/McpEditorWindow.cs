@@ -32,9 +32,6 @@ namespace io.github.hatayama.uLoopMCP
         // View layer
         private McpEditorWindowView _view;
 
-        // Connected LLM Tools management (persisted across domain reload)
-        private List<ConnectedLLMToolData> _connectedTools = new();
-
         // Model layer (MVP pattern)
         private McpEditorModel _model;
 
@@ -48,6 +45,9 @@ namespace io.github.hatayama.uLoopMCP
         private IEnumerable<ConnectedClient> _cachedStoredTools;
         private float _lastStoredToolsUpdateTime;
 
+        // Connected LLM Tools management (persisted across domain reload)
+        private List<ConnectedLLMToolData> _connectedTools = new();
+        
         // Backup storage for server restart
         private List<ConnectedLLMToolData> _toolsBackup;
 
@@ -78,6 +78,7 @@ namespace io.github.hatayama.uLoopMCP
             InitializeServerOperations();
             LoadSavedSettings();
             RestoreSessionState();
+            RestoreConnectedToolsFromSettings();
 
             HandlePostCompileMode();
         }
@@ -118,6 +119,9 @@ namespace io.github.hatayama.uLoopMCP
             );
             _connectedTools.Add(toolData);
             InvalidateStoredToolsCache();
+            
+            // Persist to settings
+            McpEditorSettings.AddConnectedLLMTool(toolData);
         }
 
         /// <summary>
@@ -127,6 +131,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             _connectedTools.RemoveAll(tool => tool.Name == toolName);
             InvalidateStoredToolsCache();
+            
+            // Persist to settings
+            McpEditorSettings.RemoveConnectedLLMTool(toolName);
         }
 
         /// <summary>
@@ -136,6 +143,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             _connectedTools.Clear();
             InvalidateStoredToolsCache();
+            
+            // Persist to settings
+            McpEditorSettings.ClearConnectedLLMTools();
         }
 
         /// <summary>
@@ -170,6 +180,9 @@ namespace io.github.hatayama.uLoopMCP
             _toolsBackup = _connectedTools
                 .Where(tool => tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
                 .ToList();
+                
+            // Also ensure settings are up to date
+            SyncConnectedToolsToSettings();
         }
 
         /// <summary>
@@ -333,6 +346,37 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Restore connected tools from persistent settings
+        /// </summary>
+        private void RestoreConnectedToolsFromSettings()
+        {
+            ConnectedLLMToolData[] savedTools = McpEditorSettings.GetConnectedLLMTools();
+            if (savedTools != null && savedTools.Length > 0)
+            {
+                _connectedTools.Clear();
+                foreach (ConnectedLLMToolData toolData in savedTools)
+                {
+                    if (toolData != null && !string.IsNullOrEmpty(toolData.Name))
+                    {
+                        _connectedTools.Add(toolData);
+                    }
+                }
+                InvalidateStoredToolsCache();
+            }
+        }
+
+        /// <summary>
+        /// Sync current connected tools to settings
+        /// </summary>
+        private void SyncConnectedToolsToSettings()
+        {
+            ConnectedLLMToolData[] toolsArray = _connectedTools
+                .Where(tool => tool != null && !string.IsNullOrEmpty(tool.Name) && tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
+                .ToArray();
+            McpEditorSettings.SetConnectedLLMTools(toolsArray);
+        }
+
+        /// <summary>
         /// Handle post-compile mode initialization and auto-start logic
         /// </summary>
         private void HandlePostCompileMode()
@@ -377,6 +421,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             CleanupEventHandler();
             SaveSessionState();
+            SyncConnectedToolsToSettings();
         }
 
         /// <summary>
