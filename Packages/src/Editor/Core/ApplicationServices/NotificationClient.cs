@@ -39,7 +39,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void SaveClientNotificationPort(string clientEndpoint, int notificationPort)
         {
-            McpEditorSettings.SetClientNotificationPort(clientEndpoint, notificationPort);
+            ConnectedToolsMonitoringService.UpdateNotificationPort(clientEndpoint, notificationPort);
             
             VibeLogger.LogInfo(
                 "client_notification_port_saved",

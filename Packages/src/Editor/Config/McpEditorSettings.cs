@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Security;
 using UnityEngine;
 
@@ -15,17 +16,6 @@ namespace io.github.hatayama.uLoopMCP
         public string json;
     }
 
-    /// <summary>
-    /// Client notification port mapping for domain reload notifications.
-    /// Maps client endpoints to their notification receive server ports.
-    /// </summary>
-    [Serializable]
-    public class ClientNotificationMapping
-    {
-        public string clientEndpoint;
-        public int notificationPort;
-        public string lastConnected; // ISO 8601 format datetime string
-    }
 
     /// <summary>
     /// Unity MCP Editor settings data.
@@ -66,9 +56,6 @@ namespace io.github.hatayama.uLoopMCP
         public string[] pendingCompileRequestIds = new string[0];
         public CompileRequestData[] compileRequests = new CompileRequestData[0];
         public ConnectedLLMToolData[] connectedLLMTools = new ConnectedLLMToolData[0];
-        
-        // Notification Server Settings (for domain reload notifications)
-        public ClientNotificationMapping[] clientNotificationPorts = new ClientNotificationMapping[0];
     }
 
     /// <summary>
@@ -733,8 +720,15 @@ namespace io.github.hatayama.uLoopMCP
 
             ConnectedLLMToolData[] tools = GetConnectedLLMTools();
             
-            // Remove existing tool with same name if present
-            ConnectedLLMToolData[] filteredTools = System.Array.FindAll(tools, t => t.Name != toolData.Name);
+            // Remove existing tool with same endpoint if present
+            ConnectedLLMToolData[] filteredTools = System.Array.FindAll(tools, t => t.Endpoint != toolData.Endpoint);
+            
+            // Remove existing tool with same notification port if present (port conflict prevention)
+            // Note: Only remove if notification port is > 0, as port 0 means no notification server running
+            if (toolData.NotificationPort > 0)
+            {
+                filteredTools = System.Array.FindAll(filteredTools, t => t.NotificationPort != toolData.NotificationPort);
+            }
             
             // Add new tool
             ConnectedLLMToolData[] newTools = new ConnectedLLMToolData[filteredTools.Length + 1];
@@ -764,6 +758,25 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Removes a connected LLM tool by endpoint.
+        /// </summary>
+        public static void RemoveConnectedLLMToolByEndpoint(string endpoint)
+        {
+            if (string.IsNullOrEmpty(endpoint))
+            {
+                return;
+            }
+
+            ConnectedLLMToolData[] tools = GetConnectedLLMTools();
+            ConnectedLLMToolData[] newTools = System.Array.FindAll(tools, t => t.Endpoint != endpoint);
+            
+            if (newTools.Length != tools.Length)
+            {
+                SetConnectedLLMTools(newTools);
+            }
+        }
+
+        /// <summary>
         /// Clears all connected LLM tools.
         /// </summary>
         public static void ClearConnectedLLMTools()
@@ -771,28 +784,52 @@ namespace io.github.hatayama.uLoopMCP
             SetConnectedLLMTools(new ConnectedLLMToolData[0]);
         }
 
-        // Client Notification Port management methods
-
         /// <summary>
-        /// Gets the client notification port mappings.
+        /// Removes duplicate tools based on notification port conflicts
         /// </summary>
-        public static ClientNotificationMapping[] GetClientNotificationPorts()
+        public static void CleanupDuplicateNotificationPorts()
         {
-            return GetSettings().clientNotificationPorts;
+            ConnectedLLMToolData[] tools = GetConnectedLLMTools();
+            System.Collections.Generic.List<ConnectedLLMToolData> cleanedTools = new();
+            System.Collections.Generic.HashSet<int> usedPorts = new();
+            System.Collections.Generic.HashSet<string> usedEndpoints = new();
+
+            // Keep only the most recent tool for each notification port and endpoint
+            foreach (ConnectedLLMToolData tool in tools.OrderByDescending(t => t.ConnectedAt))
+            {
+                bool shouldKeep = true;
+
+                // Skip if endpoint already used
+                if (usedEndpoints.Contains(tool.Endpoint))
+                {
+                    shouldKeep = false;
+                }
+                
+                // Skip if notification port already used (and port is valid)
+                if (tool.NotificationPort > 0 && usedPorts.Contains(tool.NotificationPort))
+                {
+                    shouldKeep = false;
+                }
+
+                if (shouldKeep)
+                {
+                    cleanedTools.Add(tool);
+                    usedEndpoints.Add(tool.Endpoint);
+                    if (tool.NotificationPort > 0)
+                    {
+                        usedPorts.Add(tool.NotificationPort);
+                    }
+                }
+            }
+
+            SetConnectedLLMTools(cleanedTools.ToArray());
         }
 
-        /// <summary>
-        /// Sets the client notification port mappings.
-        /// </summary>
-        public static void SetClientNotificationPorts(ClientNotificationMapping[] clientNotificationPorts)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { clientNotificationPorts = clientNotificationPorts };
-            SaveSettings(newSettings);
-        }
+        // Integrated Client Notification Port management methods (using ConnectedLLMTools)
 
         /// <summary>
         /// Sets the notification port for a specific client endpoint.
+        /// Integrates with ConnectedLLMTools to avoid duplicate data structures.
         /// </summary>
         public static void SetClientNotificationPort(string clientEndpoint, int notificationPort)
         {
@@ -801,28 +838,25 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            ClientNotificationMapping[] mappings = GetClientNotificationPorts();
-            ClientNotificationMapping existingMapping = System.Array.Find(mappings, m => m.clientEndpoint == clientEndpoint);
+            ConnectedLLMToolData[] tools = GetConnectedLLMTools();
+            ConnectedLLMToolData existingTool = System.Array.Find(tools, t => t.Endpoint == clientEndpoint);
 
-            if (existingMapping != null)
+            if (existingTool != null)
             {
-                existingMapping.notificationPort = notificationPort;
-                existingMapping.lastConnected = System.DateTime.UtcNow.ToString("O"); // ISO 8601 format
+                // Update existing tool with notification port
+                existingTool.NotificationPort = notificationPort;
+                existingTool.ConnectedAt = DateTime.Now; // Update last connected time
             }
             else
             {
-                ClientNotificationMapping[] newMappings = new ClientNotificationMapping[mappings.Length + 1];
-                System.Array.Copy(mappings, newMappings, mappings.Length);
-                newMappings[mappings.Length] = new()
-                {
-                    clientEndpoint = clientEndpoint,
-                    notificationPort = notificationPort,
-                    lastConnected = System.DateTime.UtcNow.ToString("O")
-                };
-                mappings = newMappings;
+                // Create new tool entry with unknown name (will be updated when client connects)
+                ConnectedLLMToolData[] newTools = new ConnectedLLMToolData[tools.Length + 1];
+                System.Array.Copy(tools, newTools, tools.Length);
+                newTools[tools.Length] = new ConnectedLLMToolData("unknown", clientEndpoint, DateTime.Now, notificationPort);
+                tools = newTools;
             }
 
-            SetClientNotificationPorts(mappings);
+            SetConnectedLLMTools(tools);
         }
 
         /// <summary>
@@ -835,9 +869,9 @@ namespace io.github.hatayama.uLoopMCP
                 return null;
             }
 
-            ClientNotificationMapping[] mappings = GetClientNotificationPorts();
-            ClientNotificationMapping mapping = System.Array.Find(mappings, m => m.clientEndpoint == clientEndpoint);
-            return mapping?.notificationPort;
+            ConnectedLLMToolData[] tools = GetConnectedLLMTools();
+            ConnectedLLMToolData tool = System.Array.Find(tools, t => t.Endpoint == clientEndpoint);
+            return tool?.NotificationPort > 0 ? tool.NotificationPort : null;
         }
 
         /// <summary>
@@ -845,13 +879,18 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static int[] GetAllNotificationPorts()
         {
-            ClientNotificationMapping[] mappings = GetClientNotificationPorts();
-            int[] ports = new int[mappings.Length];
-            for (int i = 0; i < mappings.Length; i++)
+            ConnectedLLMToolData[] tools = GetConnectedLLMTools();
+            System.Collections.Generic.List<int> ports = new();
+            
+            foreach (ConnectedLLMToolData tool in tools)
             {
-                ports[i] = mappings[i].notificationPort;
+                if (tool.NotificationPort > 0)
+                {
+                    ports.Add(tool.NotificationPort);
+                }
             }
-            return ports;
+            
+            return ports.ToArray();
         }
 
         /// <summary>
@@ -864,22 +903,17 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            ClientNotificationMapping[] mappings = GetClientNotificationPorts();
-            ClientNotificationMapping[] newMappings = System.Array.FindAll(mappings, m => m.clientEndpoint != clientEndpoint);
+            ConnectedLLMToolData[] tools = GetConnectedLLMTools();
+            ConnectedLLMToolData existingTool = System.Array.Find(tools, t => t.Endpoint == clientEndpoint);
 
-            if (newMappings.Length != mappings.Length)
+            if (existingTool != null)
             {
-                SetClientNotificationPorts(newMappings);
+                // Clear notification port but keep the tool entry
+                existingTool.NotificationPort = 0;
+                SetConnectedLLMTools(tools);
             }
         }
 
-        /// <summary>
-        /// Clears all client notification port mappings.
-        /// </summary>
-        public static void ClearClientNotificationPorts()
-        {
-            SetClientNotificationPorts(new ClientNotificationMapping[0]);
-        }
 
 
         /// <summary>

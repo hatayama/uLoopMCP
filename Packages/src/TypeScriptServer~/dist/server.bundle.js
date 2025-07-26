@@ -8925,6 +8925,106 @@ var NotificationReceiveServer = class {
   }
 };
 
+// src/domain/use-cases/initialize-notification-server-use-case.ts
+var InitializeNotificationServerUseCase = class {
+  notificationReceiveServer;
+  unityClient;
+  constructor(notificationReceiveServer, unityClient) {
+    this.notificationReceiveServer = notificationReceiveServer;
+    this.unityClient = unityClient;
+  }
+  /**
+   * Execute notification server initialization workflow
+   *
+   * @param request Notification server initialization request
+   * @returns Notification server initialization response
+   */
+  async execute(request) {
+    const correlationId = VibeLogger.generateCorrelationId();
+    VibeLogger.logInfo(
+      "initialize_notification_server_use_case_start",
+      "Starting notification server initialization workflow",
+      {
+        client_name: request.clientName,
+        unity_endpoint: request.unityEndpoint
+      },
+      correlationId,
+      "UseCase orchestrating Push notification server setup before Unity connection"
+    );
+    try {
+      const notificationPort = await this.startNotificationServer(correlationId);
+      this.unityClient.setNotificationPort(notificationPort);
+      VibeLogger.logInfo(
+        "initialize_notification_server_use_case_success",
+        "Notification server initialization workflow completed successfully",
+        {
+          client_name: request.clientName,
+          notification_port: notificationPort
+        },
+        correlationId,
+        "Push notification infrastructure ready - Unity connection can proceed"
+      );
+      return {
+        success: true,
+        notificationPort
+      };
+    } catch (error) {
+      return this.handleInitializationError(error, request.clientName, correlationId);
+    }
+  }
+  /**
+   * Start notification receive server on dynamic port
+   *
+   * @param correlationId Correlation ID for logging
+   * @returns Assigned notification port
+   */
+  async startNotificationServer(correlationId) {
+    VibeLogger.logInfo(
+      "notification_server_starting",
+      "Starting notification receive server on dynamic port",
+      {},
+      correlationId,
+      "HTTP server will listen for domain reload notifications from Unity"
+    );
+    const notificationPort = await this.notificationReceiveServer.start();
+    VibeLogger.logInfo(
+      "notification_server_started",
+      "Notification receive server started successfully",
+      { notification_port: notificationPort },
+      correlationId,
+      "Push notification infrastructure ready for domain reload notifications"
+    );
+    return notificationPort;
+  }
+  /**
+   * Handle initialization errors
+   *
+   * @param error Error that occurred
+   * @param clientName Client name
+   * @param correlationId Correlation ID for logging
+   * @returns InitializeNotificationServerResponse with error state
+   */
+  handleInitializationError(error, clientName, correlationId) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    VibeLogger.logError(
+      "initialize_notification_server_use_case_error",
+      "Notification server initialization workflow failed",
+      {
+        client_name: clientName,
+        error_message: errorMessage,
+        error_type: error instanceof Error ? error.constructor.name : typeof error
+      },
+      correlationId,
+      "UseCase workflow failed - Push notification features may not be available"
+    );
+    return {
+      success: false,
+      notificationPort: 0,
+      error: errorMessage
+    };
+  }
+};
+
 // package.json
 var package_default = {
   name: "uloopmcp-server",
@@ -9025,6 +9125,7 @@ var UnityMcpServer = class {
   clientCompatibility;
   eventHandler;
   notificationReceiveServer;
+  initializeNotificationServerUseCase;
   constructor() {
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
     VibeLogger.logInfo("mcp_server_starting", "Unity MCP Server Starting");
@@ -9053,6 +9154,10 @@ var UnityMcpServer = class {
       this.connectionManager
     );
     this.notificationReceiveServer = new NotificationReceiveServer();
+    this.initializeNotificationServerUseCase = new InitializeNotificationServerUseCase(
+      this.notificationReceiveServer,
+      this.unityClient
+    );
     this.connectionManager.setupReconnectionCallback(async () => {
       await this.toolManager.refreshDynamicToolsSafe(() => {
         this.eventHandler.sendToolsChangedNotification();
@@ -9204,24 +9309,21 @@ var UnityMcpServer = class {
    */
   async start() {
     try {
-      const notificationPort = await this.notificationReceiveServer.start();
-      VibeLogger.logInfo(
-        "notification_receive_server_ready",
-        "Notification receive server is ready for domain reload notifications",
-        { port: notificationPort },
-        void 0,
-        "This server will receive domain reload complete notifications from Unity"
-      );
-      this.notificationReceiveServer.setDomainReloadHandler(() => {
-        VibeLogger.logInfo(
-          "domain_reload_notification_handled",
-          "Domain reload notification received - triggering immediate reconnection",
-          {},
-          void 0,
-          "Unity has completed domain reload, attempting immediate reconnection"
-        );
-        void this.connectionManager.ensureConnected();
+      const result = await this.initializeNotificationServerUseCase.execute({
+        clientName: "server-startup"
       });
+      if (result.success) {
+        this.notificationReceiveServer.setDomainReloadHandler(() => {
+          VibeLogger.logInfo(
+            "domain_reload_notification_handled",
+            "Domain reload notification received - triggering immediate reconnection",
+            {},
+            void 0,
+            "Unity has completed domain reload, attempting immediate reconnection"
+          );
+          void this.connectionManager.ensureConnected();
+        });
+      }
     } catch (error) {
       VibeLogger.logWarning(
         "notification_receive_server_startup_failed",

@@ -107,21 +107,94 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // Remove existing tool if present, then add
-            _connectedTools.RemoveAll(tool => tool.Name == client.ClientName);
+            AddOrUpdateTool(client.ClientName, client.Endpoint, 0, client.ConnectedAt);
+        }
+
+        /// <summary>
+        /// Add or update a connected tool with notification port
+        /// Unified method for all tool management operations
+        /// </summary>
+        public static void AddOrUpdateTool(string clientName, string endpoint, int notificationPort, DateTime? connectedAt = null)
+        {
+            if (string.IsNullOrEmpty(clientName) || string.IsNullOrEmpty(endpoint))
+            {
+                return;
+            }
+
+            // Remove existing tool with same endpoint if present
+            _connectedTools.RemoveAll(tool => tool.Endpoint == endpoint);
+
+            // Remove existing tool with same notification port if present (port conflict prevention)
+            if (notificationPort > 0)
+            {
+                ConnectedLLMToolData conflictingTool = _connectedTools.Find(tool => tool.NotificationPort == notificationPort);
+                if (conflictingTool != null)
+                {
+                    VibeLogger.LogWarning(
+                        "notification_port_conflict_detected",
+                        "Removing tool with conflicting notification port",
+                        new { 
+                            conflicting_endpoint = conflictingTool.Endpoint,
+                            conflicting_client = conflictingTool.Name,
+                            new_endpoint = endpoint,
+                            new_client = clientName,
+                            notification_port = notificationPort 
+                        }
+                    );
+                    _connectedTools.RemoveAll(tool => tool.NotificationPort == notificationPort);
+                }
+            }
+
+            // Check if there's already a notification port if not provided
+            if (notificationPort == 0)
+            {
+                int? existingNotificationPort = McpEditorSettings.GetClientNotificationPort(endpoint);
+                notificationPort = existingNotificationPort ?? 0;
+            }
 
             ConnectedLLMToolData toolData = new(
-                client.ClientName,
-                client.Endpoint,
-                client.ConnectedAt
+                clientName,
+                endpoint,
+                connectedAt ?? DateTime.Now,
+                notificationPort
             );
             _connectedTools.Add(toolData);
             
             // Persist to settings
             McpEditorSettings.AddConnectedLLMTool(toolData);
             
+            VibeLogger.LogInfo(
+                "connected_tool_added_or_updated",
+                "Connected tool added or updated",
+                new { clientName, endpoint, notificationPort }
+            );
+            
             // Notify UI
             OnConnectedToolsChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Update notification port for a connected tool
+        /// </summary>
+        public static void UpdateNotificationPort(string endpoint, int notificationPort)
+        {
+            if (string.IsNullOrEmpty(endpoint))
+            {
+                return;
+            }
+
+            // Find existing tool
+            ConnectedLLMToolData existingTool = _connectedTools.Find(tool => tool.Endpoint == endpoint);
+            if (existingTool != null)
+            {
+                // Update existing tool
+                AddOrUpdateTool(existingTool.Name, endpoint, notificationPort);
+            }
+            else
+            {
+                // Create new tool entry with unknown name (will be updated when client connects)
+                AddOrUpdateTool("unknown", endpoint, notificationPort);
+            }
         }
 
         /// <summary>
