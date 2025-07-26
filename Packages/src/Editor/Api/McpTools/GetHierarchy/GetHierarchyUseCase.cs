@@ -14,10 +14,6 @@ namespace io.github.hatayama.uLoopMCP
         private readonly HierarchyService _hierarchyService;
         private readonly HierarchySerializer _hierarchySerializer;
 
-        public GetHierarchyUseCase() : this(new HierarchyService(), new HierarchySerializer())
-        {
-        }
-
         public GetHierarchyUseCase(HierarchyService hierarchyService, HierarchySerializer hierarchySerializer)
         {
             _hierarchyService = hierarchyService ?? throw new System.ArgumentNullException(nameof(hierarchyService));

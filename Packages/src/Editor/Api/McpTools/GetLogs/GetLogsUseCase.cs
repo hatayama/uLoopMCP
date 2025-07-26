@@ -14,10 +14,6 @@ namespace io.github.hatayama.uLoopMCP
         private readonly LogRetrievalService _retrievalService;
         private readonly LogFilteringService _filteringService;
 
-        public GetLogsUseCase() : this(new LogRetrievalService(), new LogFilteringService())
-        {
-        }
-
         public GetLogsUseCase(LogRetrievalService retrievalService, LogFilteringService filteringService)
         {
             _retrievalService = retrievalService ?? throw new System.ArgumentNullException(nameof(retrievalService));

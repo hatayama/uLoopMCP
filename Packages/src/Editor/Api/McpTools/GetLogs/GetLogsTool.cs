@@ -27,7 +27,7 @@ namespace io.github.hatayama.uLoopMCP
         protected override async Task<GetLogsResponse> ExecuteAsync(GetLogsSchema parameters, CancellationToken cancellationToken)
         {
             // Create and execute GetLogsUseCase instance
-            GetLogsUseCase useCase = new();
+            GetLogsUseCase useCase = new(new LogRetrievalService(), new LogFilteringService());
             return await useCase.ExecuteAsync(parameters, cancellationToken);
         }
     }

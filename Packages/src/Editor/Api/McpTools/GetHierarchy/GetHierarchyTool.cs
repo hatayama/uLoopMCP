@@ -29,7 +29,7 @@ namespace io.github.hatayama.uLoopMCP
         protected override async Task<GetHierarchyResponse> ExecuteAsync(GetHierarchySchema parameters, CancellationToken cancellationToken)
         {
             // Create and execute GetHierarchyUseCase instance
-            GetHierarchyUseCase useCase = new();
+            GetHierarchyUseCase useCase = new(new HierarchyService(), new HierarchySerializer());
             return await useCase.ExecuteAsync(parameters, cancellationToken);
         }
     }

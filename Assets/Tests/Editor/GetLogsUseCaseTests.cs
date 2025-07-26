@@ -19,7 +19,7 @@ namespace io.github.hatayama.uLoopMCP
         public async Task ExecuteAsync_ValidParameters_ReturnsSuccessResponse()
         {
             // Arrange
-            GetLogsUseCase useCase = new();
+            GetLogsUseCase useCase = new(new LogRetrievalService(), new LogFilteringService());
             GetLogsSchema schema = new()
             {
                 LogType = McpLogType.All,
@@ -46,7 +46,7 @@ namespace io.github.hatayama.uLoopMCP
         public async Task ExecuteAsync_SmallMaxCount_HandlesCorrectly()
         {
             // Arrange
-            GetLogsUseCase useCase = new();
+            GetLogsUseCase useCase = new(new LogRetrievalService(), new LogFilteringService());
             GetLogsSchema schema = new()
             {
                 LogType = McpLogType.All,

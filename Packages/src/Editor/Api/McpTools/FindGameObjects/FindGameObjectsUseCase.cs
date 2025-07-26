@@ -15,10 +15,6 @@ namespace io.github.hatayama.uLoopMCP
         private readonly GameObjectFinderService _finderService;
         private readonly ComponentSerializer _componentSerializer;
 
-        public FindGameObjectsUseCase() : this(new GameObjectFinderService(), new ComponentSerializer())
-        {
-        }
-
         public FindGameObjectsUseCase(GameObjectFinderService finderService, ComponentSerializer componentSerializer)
         {
             _finderService = finderService ?? throw new System.ArgumentNullException(nameof(finderService));

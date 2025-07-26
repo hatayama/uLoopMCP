@@ -105,7 +105,7 @@ namespace io.github.hatayama.uLoopMCP
         private static async Task StopServerWithUseCaseAsync()
         {
             // Execute shutdown UseCase
-            McpServerShutdownUseCase useCase = new();
+            McpServerShutdownUseCase useCase = new(new McpServerStartupService());
             ServerShutdownSchema schema = new() { ForceShutdown = false };
             System.Threading.CancellationToken cancellationToken = System.Threading.CancellationToken.None;
 
