@@ -1,12 +1,12 @@
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// サーバー初期化リクエストのスキーマ
+    /// Schema for server initialization request
     /// </summary>
     public class ServerInitializationSchema : BaseToolSchema
     {
         /// <summary>
-        /// 起動するポート番号（-1でデフォルト使用）
+        /// Port number to start server (-1 to use default)
         /// </summary>
         public int Port { get; set; } = -1;
     }

@@ -1,17 +1,17 @@
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// サーバー終了レスポンス
+    /// Server shutdown response
     /// </summary>
     public class ServerShutdownResponse : BaseToolResponse
     {
         /// <summary>
-        /// 処理が成功したかどうか
+        /// Whether the operation was successful
         /// </summary>
         public bool Success { get; set; }
 
         /// <summary>
-        /// 結果メッセージ
+        /// Result message
         /// </summary>
         public string Message { get; set; }
     }

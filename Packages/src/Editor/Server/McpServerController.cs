@@ -80,13 +80,13 @@ namespace io.github.hatayama.uLoopMCP
 
             if (result.Success)
             {
-                // UseCase内で新しいサーバーインスタンスを作成したので、
-                // 既存のコードとの互換性のため、ここで参照を保持する
+                // UseCase creates a new server instance, so we keep a reference here
+                // for compatibility with existing code
                 mcpServer = result.ServerInstance;
             }
             else
             {
-                // エラーメッセージはUseCaseで処理済み
+                // Error message already handled by UseCase
                 UnityEngine.Debug.LogError($"Server startup failed: {result.Message}");
             }
         }
@@ -113,12 +113,12 @@ namespace io.github.hatayama.uLoopMCP
 
             if (result.Success)
             {
-                // UseCaseでサーバーが停止されたので、参照をクリア
+                // Server stopped by UseCase, so clear the reference
                 mcpServer = null;
             }
             else
             {
-                // エラーメッセージはUseCaseで処理済み
+                // Error message already handled by UseCase
                 UnityEngine.Debug.LogError($"Server shutdown failed: {result.Message}");
             }
         }
@@ -128,11 +128,11 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static void OnBeforeAssemblyReload()
         {
-            // DomainReloadRecoveryUseCaseインスタンスを生成して実行
+            // Create and execute DomainReloadRecoveryUseCase instance
             DomainReloadRecoveryUseCase useCase = new();
             ServiceResult<string> result = useCase.ExecuteBeforeDomainReload(mcpServer);
             
-            // サーバー停止が成功した場合、インスタンスをクリア
+            // Clear instance if server shutdown succeeded
             if (result.Success)
             {
                 mcpServer = null;
@@ -144,7 +144,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static void OnAfterAssemblyReload()
         {
-            // DomainReloadRecoveryUseCaseインスタンスを生成して実行
+            // Create and execute DomainReloadRecoveryUseCase instance
             DomainReloadRecoveryUseCase useCase = new();
             _ = useCase.ExecuteAfterDomainReloadAsync().ContinueWith(task =>
             {

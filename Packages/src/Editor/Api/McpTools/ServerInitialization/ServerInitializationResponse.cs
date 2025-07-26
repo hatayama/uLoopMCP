@@ -1,32 +1,32 @@
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// サーバー初期化レスポンス
+    /// Server initialization response
     /// </summary>
     public class ServerInitializationResponse : BaseToolResponse
     {
         /// <summary>
-        /// 処理が成功したかどうか
+        /// Whether the operation was successful
         /// </summary>
         public bool Success { get; set; }
 
         /// <summary>
-        /// 実際に使用されたサーバーポート
+        /// Actually used server port
         /// </summary>
         public int ServerPort { get; set; }
 
         /// <summary>
-        /// サーバーが正常に起動したかどうか
+        /// Whether the server started successfully
         /// </summary>
         public bool IsRunning { get; set; }
 
         /// <summary>
-        /// 結果メッセージ
+        /// Result message
         /// </summary>
         public string Message { get; set; }
 
         /// <summary>
-        /// 作成されたサーバーインスタンス
+        /// Created server instance
         /// </summary>
         public McpBridgeServer ServerInstance { get; set; }
     }

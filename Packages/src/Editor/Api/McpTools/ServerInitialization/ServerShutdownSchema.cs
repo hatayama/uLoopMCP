@@ -1,12 +1,12 @@
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// サーバー終了リクエストのスキーマ
+    /// Schema for server shutdown request
     /// </summary>
     public class ServerShutdownSchema : BaseToolSchema
     {
         /// <summary>
-        /// 強制終了フラグ
+        /// Force shutdown flag
         /// </summary>
         public bool ForceShutdown { get; set; } = false;
     }
