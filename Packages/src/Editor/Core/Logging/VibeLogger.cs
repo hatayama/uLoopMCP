@@ -243,7 +243,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
-            string fileName = $"{LOG_FILE_PREFIX}_{DateTime.UtcNow:yyyyMMdd}.json";
+            string fileName = $"{LOG_FILE_PREFIX}_{DateTime.Now:yyyyMMdd}.json";
             string filePath = Path.Combine(LOG_DIRECTORY, fileName);
             
             // Check file size and rotate if necessary
@@ -252,7 +252,7 @@ namespace io.github.hatayama.uLoopMCP
                 var fileInfo = new FileInfo(filePath);
                 if (fileInfo.Length > MAX_FILE_SIZE_MB * 1024 * 1024)
                 {
-                    string rotatedFileName = $"{LOG_FILE_PREFIX}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
+                    string rotatedFileName = $"{LOG_FILE_PREFIX}_{DateTime.Now:yyyyMMdd_HHmmss}.json";
                     string rotatedFilePath = Path.Combine(LOG_DIRECTORY, rotatedFileName);
                     File.Move(filePath, rotatedFilePath);
                     

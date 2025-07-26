@@ -279,6 +279,7 @@ export class UnityClient {
       method: 'set-client-name',
       params: {
         ClientName: finalClientName,
+        NotificationPort: this.notificationPort, // Send notification port if available
       },
     };
 

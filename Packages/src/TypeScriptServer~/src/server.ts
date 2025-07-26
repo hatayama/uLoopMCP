@@ -331,6 +331,20 @@ class UnityMcpServer {
       const clientName = this.clientCompatibility.getClientName();
       if (clientName) {
         this.toolManager.setClientName(clientName);
+
+        // Set notification port in UnityClient before sending client name
+        const notificationPort = this.notificationReceiveServer.getPort();
+        if (notificationPort > 0) {
+          this.unityClient.setNotificationPort(notificationPort);
+          VibeLogger.logInfo(
+            'notification_port_set_for_unity',
+            'Set notification port for Unity client communication',
+            { notificationPort, clientName },
+            undefined,
+            'This port will be sent to Unity for domain reload notifications',
+          );
+        }
+
         await this.toolManager.initializeDynamicTools();
         // Unity connection established and tools initialized
 

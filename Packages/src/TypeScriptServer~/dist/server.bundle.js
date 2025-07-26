@@ -7008,7 +7008,9 @@ var UnityClient = class _UnityClient {
       id: this.generateId(),
       method: "set-client-name",
       params: {
-        ClientName: finalClientName
+        ClientName: finalClientName,
+        NotificationPort: this.notificationPort
+        // Send notification port if available
       }
     };
     try {
@@ -9238,6 +9240,17 @@ var UnityMcpServer = class {
       const clientName = this.clientCompatibility.getClientName();
       if (clientName) {
         this.toolManager.setClientName(clientName);
+        const notificationPort = this.notificationReceiveServer.getPort();
+        if (notificationPort > 0) {
+          this.unityClient.setNotificationPort(notificationPort);
+          VibeLogger.logInfo(
+            "notification_port_set_for_unity",
+            "Set notification port for Unity client communication",
+            { notificationPort, clientName },
+            void 0,
+            "This port will be sent to Unity for domain reload notifications"
+          );
+        }
         await this.toolManager.initializeDynamicTools();
         this.eventHandler.sendToolsChangedNotification();
       } else {

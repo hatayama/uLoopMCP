@@ -22,6 +22,12 @@ namespace io.github.hatayama.uLoopMCP
             
             UpdateClientNameInServer(clientName);
             
+            // Save notification port if provided
+            if (parameters.NotificationPort.HasValue)
+            {
+                SaveNotificationPort(clientName, parameters.NotificationPort.Value);
+            }
+            
             string message = string.Format(McpConstants.CLIENT_SUCCESS_MESSAGE_TEMPLATE, clientName);
             SetClientNameResponse response = new SetClientNameResponse(message, clientName);
             return Task.FromResult(response);
@@ -52,6 +58,27 @@ namespace io.github.hatayama.uLoopMCP
                 server.UpdateClientName(targetClient.Endpoint, clientName);
                 return;
             }
+        }
+        
+        private void SaveNotificationPort(string clientName, int notificationPort)
+        {
+            // Get current client context to identify the endpoint
+            var clientContext = JsonRpcProcessor.CurrentClientContext;
+            if (clientContext == null)
+            {
+                return;
+            }
+            
+            string clientEndpoint = clientContext.Endpoint;
+            
+            // Save notification port through DomainReloadDetectionService
+            DomainReloadDetectionService.SaveClientNotificationPort(clientEndpoint, notificationPort);
+            
+            VibeLogger.LogInfo(
+                "client_notification_port_received",
+                "Received and saved notification port from TypeScript client",
+                new { clientName, clientEndpoint, notificationPort }
+            );
         }
     }
 }

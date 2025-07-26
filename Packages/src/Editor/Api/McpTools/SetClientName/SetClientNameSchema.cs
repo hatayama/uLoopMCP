@@ -13,5 +13,11 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         [Description("Name of the MCP client tool")]
         public string ClientName { get; set; } = McpConstants.UNKNOWN_CLIENT_NAME;
+
+        /// <summary>
+        /// Notification receive server port for domain reload notifications (optional)
+        /// </summary>
+        [Description("Port number for receiving domain reload notifications from Unity")]
+        public int? NotificationPort { get; set; }
     }
 }
