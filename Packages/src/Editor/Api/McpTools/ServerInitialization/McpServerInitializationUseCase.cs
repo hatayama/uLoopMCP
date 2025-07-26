@@ -7,7 +7,7 @@ namespace io.github.hatayama.uLoopMCP
     /// UseCase responsible for temporal cohesion of server initialization processing
     /// Processing sequence: 1. Configuration validation, 2. Port allocation, 3. Server startup, 4. State update
     /// Related classes: McpServerConfigurationService, PortAllocationService, McpServerStartupService, SecurityValidationService
-    /// Design reference: DDD Refactoring Specification - UseCase Layer
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     public class McpServerInitializationUseCase : AbstractUseCase<ServerInitializationSchema, ServerInitializationResponse>
     {

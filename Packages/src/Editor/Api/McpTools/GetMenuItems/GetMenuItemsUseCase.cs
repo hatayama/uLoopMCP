@@ -7,27 +7,27 @@ using uLoopMCP.Editor.Api.Commands.GetMenuItems;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// MenuItem取得処理の時間的凝集を担当
-    /// 処理順序：1. MenuItem発見, 2. フィルタリング適用, 3. 件数制限適用, 4. レスポンス作成
-    /// 関連クラス: GetMenuItemsTool, MenuItemDiscoveryService
-    /// 設計書参照: DDDリファクタリング仕様 - UseCase Layer
+    /// Responsible for temporal cohesion of MenuItem retrieval processing
+    /// Processing sequence: 1. MenuItem discovery, 2. Apply filtering, 3. Apply count limit, 4. Create response
+    /// Related classes: GetMenuItemsTool, MenuItemDiscoveryService
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     public class GetMenuItemsUseCase : AbstractUseCase<GetMenuItemsSchema, GetMenuItemsResponse>
     {
         /// <summary>
-        /// MenuItem取得処理を実行する
+        /// Execute MenuItem retrieval processing
         /// </summary>
-        /// <param name="parameters">MenuItem取得パラメータ</param>
-        /// <param name="cancellationToken">キャンセレーション制御用トークン</param>
-        /// <returns>MenuItem取得結果</returns>
+        /// <param name="parameters">MenuItem retrieval parameters</param>
+        /// <param name="cancellationToken">Cancellation control token</param>
+        /// <returns>MenuItem retrieval result</returns>
         public override Task<GetMenuItemsResponse> ExecuteAsync(GetMenuItemsSchema parameters, CancellationToken cancellationToken)
         {
-            // 1. MenuItem発見
+            // 1. MenuItem discovery
             cancellationToken.ThrowIfCancellationRequested();
             
             List<MenuItemInfo> allMenuItems = MenuItemDiscoveryService.DiscoverAllMenuItems();
             
-            // 2. フィルタリング適用
+            // 2. Apply filtering
             cancellationToken.ThrowIfCancellationRequested();
             
             List<MenuItemInfo> filteredMenuItems = ApplyFiltering(
@@ -36,13 +36,13 @@ namespace io.github.hatayama.uLoopMCP
                 parameters.FilterType, 
                 parameters.IncludeValidation);
             
-            // 3. 件数制限適用
+            // 3. Apply count limit
             if (filteredMenuItems.Count > parameters.MaxCount)
             {
                 filteredMenuItems = filteredMenuItems.Take(parameters.MaxCount).ToList();
             }
             
-            // 4. レスポンス作成
+            // 4. Create response
             GetMenuItemsResponse response = new GetMenuItemsResponse
             {
                 MenuItems = filteredMenuItems,
@@ -56,7 +56,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 指定された条件でMenuItemリストにフィルタリングを適用する
+        /// Apply filtering to MenuItem list with specified conditions
         /// </summary>
         private List<MenuItemInfo> ApplyFiltering(
             List<MenuItemInfo> allMenuItems, 
@@ -66,13 +66,13 @@ namespace io.github.hatayama.uLoopMCP
         {
             List<MenuItemInfo> filtered = allMenuItems;
             
-            // バリデーション関数の包含でフィルター
+            // Filter by validation function inclusion
             if (!includeValidation)
             {
                 filtered = filtered.Where(item => !item.IsValidateFunction).ToList();
             }
             
-            // テキストフィルタリングを適用
+            // Apply text filtering
             if (!string.IsNullOrEmpty(filterText))
             {
                 filtered = ApplyTextFilter(filtered, filterText, filterType);
@@ -82,7 +82,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 指定されたフィルタータイプに基づいてテキストフィルタリングを適用する
+        /// Apply text filtering based on specified filter type
         /// </summary>
         private List<MenuItemInfo> ApplyTextFilter(
             List<MenuItemInfo> menuItems, 

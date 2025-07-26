@@ -6,7 +6,14 @@ namespace io.github.hatayama.uLoopMCP
     /// <summary>
     /// Unity Search tool handler - Type-safe implementation using Schema and Response
     /// Provides comprehensive Unity Search functionality via MCP interface
+    /// 
+    /// Design Reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
+    /// 
+    /// This Tool class delegates to UnitySearchUseCase for business logic execution,
+    /// following the UseCase + Tool pattern for separation of concerns.
+    /// 
     /// Related classes:
+    /// - UnitySearchUseCase: Business logic and orchestration
     /// - UnitySearchService: Service layer for Unity Search API integration
     /// - SearchResultItem: Individual search result data structure
     /// - SearchResultExporter: File export functionality for large result sets
@@ -26,7 +33,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Search results or file path if exported</returns>
         protected override async Task<UnitySearchResponse> ExecuteAsync(UnitySearchSchema parameters, CancellationToken cancellationToken)
         {
-            // UnitySearchUseCaseインスタンスを生成して実行
+            // Create and execute UnitySearchUseCase instance
             UnitySearchUseCase useCase = new();
             return await useCase.ExecuteAsync(parameters, cancellationToken);
         }

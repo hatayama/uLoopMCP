@@ -6,6 +6,16 @@ namespace io.github.hatayama.uLoopMCP
     /// <summary>
     /// ExecuteMenuItem tool handler - Executes Unity MenuItems by path
     /// Supports both EditorApplication.ExecuteMenuItem and reflection-based execution
+    /// 
+    /// Design Reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
+    /// 
+    /// This Tool class delegates to ExecuteMenuItemUseCase for business logic execution,
+    /// following the UseCase + Tool pattern for separation of concerns.
+    /// 
+    /// Related classes:
+    /// - ExecuteMenuItemUseCase: Business logic and orchestration
+    /// - ExecuteMenuItemSchema: Type-safe parameter schema
+    /// - ExecuteMenuItemResponse: Type-safe response structure
     /// </summary>
     [McpTool(
         RequiredSecuritySetting = SecuritySettings.AllowMenuItemExecution,
@@ -17,7 +27,7 @@ namespace io.github.hatayama.uLoopMCP
 
         protected override async Task<ExecuteMenuItemResponse> ExecuteAsync(ExecuteMenuItemSchema parameters, CancellationToken cancellationToken)
         {
-            // ExecuteMenuItemUseCaseインスタンスを生成して実行
+            // Create and execute ExecuteMenuItemUseCase instance
             ExecuteMenuItemUseCase useCase = new();
             return await useCase.ExecuteAsync(parameters, cancellationToken);
         }

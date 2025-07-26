@@ -1,33 +1,34 @@
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// サービス実行結果を表すジェネリックデータモデル
-    /// アプリケーションサービスレイヤで使用される
+    /// Generic data model representing service execution result
+    /// Used in Application Service Layer
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
     /// <typeparam name="T">結果データの型</typeparam>
     public class ServiceResult<T>
     {
         /// <summary>
-        /// 実行が成功したかどうか
+        /// Whether execution was successful
         /// </summary>
         public bool Success { get; }
 
         /// <summary>
-        /// 実行結果のデータ
+        /// Data of execution result
         /// </summary>
         public T Data { get; }
 
         /// <summary>
-        /// 実行失敗時のエラーメッセージ
+        /// Error message when execution fails
         /// </summary>
         public string ErrorMessage { get; }
 
         /// <summary>
-        /// ServiceResultを作成する
+        /// Create ServiceResult
         /// </summary>
-        /// <param name="success">実行結果</param>
-        /// <param name="data">結果データ</param>
-        /// <param name="errorMessage">エラーメッセージ（成功時はnull）</param>
+        /// <param name="success">Execution result</param>
+        /// <param name="data">Result data</param>
+        /// <param name="errorMessage">Error message (null on success)</param>
         public ServiceResult(bool success, T data = default, string errorMessage = null)
         {
             Success = success;
@@ -36,17 +37,17 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 成功結果を作成する
+        /// Create success result
         /// </summary>
-        /// <param name="data">結果データ</param>
-        /// <returns>成功を表すServiceResult</returns>
+        /// <param name="data">Result data</param>
+        /// <returns>ServiceResult representing success</returns>
         public static ServiceResult<T> SuccessResult(T data) => new(true, data);
 
         /// <summary>
-        /// 失敗結果を作成する
+        /// Create failure result
         /// </summary>
-        /// <param name="errorMessage">エラーメッセージ</param>
-        /// <returns>失敗を表すServiceResult</returns>
+        /// <param name="errorMessage">Error message</param>
+        /// <returns>ServiceResult representing failure</returns>
         public static ServiceResult<T> FailureResult(string errorMessage) => new(false, default, errorMessage);
     }
 }

@@ -3,27 +3,27 @@ using UnityEditor;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Domain Reload検出と状態管理を担当するアプリケーションサービス
-    /// 単一責任：Domain Reloadのライフサイクル管理
-    /// 関連クラス：McpSessionManager, McpServerController
-    /// 設計書参照：DDDリファクタリング仕様 - Application Services Layer
+    /// Application service responsible for Domain Reload detection and state management
+    /// Single responsibility: Domain Reload lifecycle management
+    /// Related classes: McpSessionManager, McpServerController
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
     public static class DomainReloadDetectionService
     {
         /// <summary>
-        /// Domain Reload開始処理を実行する
+        /// Execute Domain Reload start processing
         /// </summary>
-        /// <param name="correlationId">関連操作のトラッキング用ID</param>
-        /// <param name="serverIsRunning">サーバーが実行中かどうか</param>
-        /// <param name="serverPort">サーバーのポート番号</param>
+        /// <param name="correlationId">Tracking ID for related operations</param>
+        /// <param name="serverIsRunning">Whether server is running</param>
+        /// <param name="serverPort">Server port number</param>
         public static void StartDomainReload(string correlationId, bool serverIsRunning, int? serverPort)
         {
             McpSessionManager sessionManager = McpSessionManager.instance;
             
-            // Domain Reload進行フラグを設定
+            // Set Domain Reload in progress flag
             sessionManager.IsDomainReloadInProgress = true;
 
-            // サーバーが実行中の場合、セッション状態を保存
+            // Save session state if server is running
             if (serverIsRunning && serverPort.HasValue)
             {
                 sessionManager.IsServerRunning = true;
@@ -34,7 +34,7 @@ namespace io.github.hatayama.uLoopMCP
                 sessionManager.ShowPostCompileReconnectingUI = true;
             }
 
-            // ログ記録
+            // Log recording
             VibeLogger.LogInfo(
                 "domain_reload_start",
                 "Domain reload starting",
@@ -48,17 +48,17 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Domain Reload完了処理を実行する
+        /// Execute Domain Reload completion processing
         /// </summary>
-        /// <param name="correlationId">関連操作のトラッキング用ID</param>
+        /// <param name="correlationId">Tracking ID for related operations</param>
         public static void CompleteDomainReload(string correlationId)
         {
             McpSessionManager sessionManager = McpSessionManager.instance;
             
-            // Domain Reload完了フラグをクリア
+            // Clear Domain Reload completion flag
             sessionManager.ClearDomainReloadFlag();
 
-            // ログ記録
+            // Log recording
             VibeLogger.LogInfo(
                 "domain_reload_complete",
                 "Domain reload completed - starting server recovery process",
@@ -68,27 +68,27 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 現在Domain Reload中かどうかを確認する
+        /// Check if currently in Domain Reload
         /// </summary>
-        /// <returns>Domain Reload中の場合true</returns>
+        /// <returns>True if Domain Reload is in progress</returns>
         public static bool IsDomainReloadInProgress()
         {
             return McpSessionManager.instance.IsDomainReloadInProgress;
         }
 
         /// <summary>
-        /// 再接続UI表示が必要かどうかを確認する
+        /// Check if reconnection UI display is required
         /// </summary>
-        /// <returns>再接続UI表示が必要な場合true</returns>
+        /// <returns>True if reconnection UI display is required</returns>
         public static bool ShouldShowReconnectingUI()
         {
             return McpSessionManager.instance.ShowReconnectingUI;
         }
 
         /// <summary>
-        /// コンパイル後の状態かどうかを確認する
+        /// Check if in after-compile state
         /// </summary>
-        /// <returns>コンパイル後の場合true</returns>
+        /// <returns>True if after compile</returns>
         public static bool IsAfterCompile()
         {
             return McpSessionManager.instance.IsAfterCompile;

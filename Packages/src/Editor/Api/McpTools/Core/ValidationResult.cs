@@ -1,26 +1,27 @@
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// 検証結果を表すデータモデル
-    /// アプリケーションサービスレイヤで使用される
+    /// Data model representing validation result
+    /// Used in Application Service Layer
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
     public class ValidationResult
     {
         /// <summary>
-        /// 検証が成功したかどうか
+        /// Whether validation was successful
         /// </summary>
         public bool IsValid { get; }
 
         /// <summary>
-        /// 検証失敗時のエラーメッセージ
+        /// Error message when validation fails
         /// </summary>
         public string ErrorMessage { get; }
 
         /// <summary>
-        /// ValidationResultを作成する
+        /// Create ValidationResult
         /// </summary>
-        /// <param name="isValid">検証結果</param>
-        /// <param name="errorMessage">エラーメッセージ（成功時はnull）</param>
+        /// <param name="isValid">Validation result</param>
+        /// <param name="errorMessage">Error message (null on success)</param>
         public ValidationResult(bool isValid, string errorMessage = null)
         {
             IsValid = isValid;
@@ -28,16 +29,16 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 成功結果を作成する
+        /// Create success result
         /// </summary>
-        /// <returns>成功を表すValidationResult</returns>
+        /// <returns>ValidationResult representing success</returns>
         public static ValidationResult Success() => new(true);
 
         /// <summary>
-        /// 失敗結果を作成する
+        /// Create failure result
         /// </summary>
-        /// <param name="errorMessage">エラーメッセージ</param>
-        /// <returns>失敗を表すValidationResult</returns>
+        /// <param name="errorMessage">Error message</param>
+        /// <returns>ValidationResult representing failure</returns>
         public static ValidationResult Failure(string errorMessage) => new(false, errorMessage);
     }
 }

@@ -3,20 +3,20 @@ using System.Linq;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// ログフィルタリングサービス
-    /// 単一機能：ログエントリのフィルタリングと制限を行う
-    /// 関連クラス: GetLogsTool, GetLogsUseCase, LogEntry
-    /// 設計書参照: DDDリファクタリング仕様 - Application Service Layer
+    /// Log filtering service
+    /// Single function: Filter and limit log entries
+    /// Related classes: GetLogsTool, GetLogsUseCase, LogEntry
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
     public class LogFilteringService
     {
         /// <summary>
-        /// ログエントリをフィルタリングし、制限を適用する
+        /// Filter log entries and apply limits
         /// </summary>
-        /// <param name="entries">ログエントリ配列</param>
-        /// <param name="maxCount">最大取得件数</param>
-        /// <param name="includeStackTrace">スタックトレースを含めるか</param>
-        /// <returns>フィルタリング後のログエントリ配列</returns>
+        /// <param name="entries">Log entry array</param>
+        /// <param name="maxCount">Maximum retrieval count</param>
+        /// <param name="includeStackTrace">Whether to include stack trace</param>
+        /// <returns>Filtered log entry array</returns>
         public LogEntry[] FilterAndLimitLogs(LogEntryDto[] entries, int maxCount, bool includeStackTrace)
         {
             // Get the most recent logs, limited by maxCount
@@ -27,7 +27,7 @@ namespace io.github.hatayama.uLoopMCP
             // Reverse to show newest first
             limitedEntries = limitedEntries.Reverse().ToArray();
 
-            // LogEntryDtoからLogEntryに変換
+            // Convert from LogEntryDto to LogEntry
             return limitedEntries.Select(entry => new LogEntry(
                 type: entry.LogType,
                 message: entry.Message,

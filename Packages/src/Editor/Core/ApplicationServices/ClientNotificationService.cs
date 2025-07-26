@@ -4,15 +4,15 @@ using Newtonsoft.Json;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// クライアント通知処理を担当するアプリケーションサービス
-    /// 単一責任：MCPクライアントへの通知送信
-    /// 関連クラス：McpBridgeServer, CustomToolManager
-    /// 設計書参照：DDDリファクタリング仕様 - Application Services Layer
+    /// Application service responsible for client notification processing
+    /// Single responsibility: Sending notifications to MCP clients
+    /// Related classes: McpBridgeServer, CustomToolManager
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
     public static class ClientNotificationService
     {
         /// <summary>
-        /// ツール変更通知をクライアントに送信する
+        /// Send tool change notification to clients
         /// </summary>
         public static void SendToolsChangedNotification()
         {
@@ -22,7 +22,7 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // MCP標準通知のみを送信
+            // Send only MCP standard notification
             var notificationParams = new
             {
                 timestamp = System.DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
@@ -39,7 +39,7 @@ namespace io.github.hatayama.uLoopMCP
             string mcpNotificationJson = JsonConvert.SerializeObject(mcpNotification);
             currentServer.SendNotificationToClients(mcpNotificationJson);
 
-            // ログ記録
+            // Log recording
             System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace(true);
             string callerInfo = stackTrace.GetFrame(1)?.GetMethod()?.Name ?? "Unknown";
             
@@ -51,7 +51,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// サーバーが実行中かどうかを確認してツール変更通知を送信する
+        /// Check if server is running and send tool change notification
         /// </summary>
         public static void TriggerToolChangeNotification()
         {
@@ -62,21 +62,21 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// コンパイル後にフレーム遅延を伴ってツール通知を送信する
+        /// Send tool notification with frame delay after compilation
         /// </summary>
-        /// <returns>通知送信処理のTask</returns>
+        /// <returns>Task for notification sending process</returns>
         public static async Task SendToolNotificationAfterCompilationAsync()
         {
-            // Domain Reload後のUnityエディタ安定化のためのフレーム遅延
+            // Frame delay for Unity editor stabilization after Domain Reload
             await EditorDelay.DelayFrame(1);
             
             CustomToolManager.NotifyToolChanges();
         }
 
         /// <summary>
-        /// 特定のクライアントに通知を送信する
+        /// Send notification to specific clients
         /// </summary>
-        /// <param name="notification">送信する通知のJSONデータ</param>
+        /// <param name="notification">JSON data of notification to send</param>
         public static void SendNotificationToClients(string notification)
         {
             McpBridgeServer currentServer = McpServerController.CurrentServer;
@@ -89,10 +89,10 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// サーバー停止前のログを記録する
+        /// Log before server stop
         /// </summary>
-        /// <param name="correlationId">関連操作のトラッキング用ID</param>
-        /// <param name="port">停止するサーバーのポート番号</param>
+        /// <param name="correlationId">Tracking ID for related operations</param>
+        /// <param name="port">Port number of server to stop</param>
         public static void LogServerStoppingBeforeDomainReload(string correlationId, int port)
         {
             VibeLogger.LogInfo(
@@ -104,9 +104,9 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// サーバー停止完了のログを記録する
+        /// Log server stop completion
         /// </summary>
-        /// <param name="correlationId">関連操作のトラッキング用ID</param>
+        /// <param name="correlationId">Tracking ID for related operations</param>
         public static void LogServerStoppedAfterDomainReload(string correlationId)
         {
             VibeLogger.LogInfo(
@@ -118,11 +118,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// サーバー停止エラーのログを記録する
+        /// Log server stop error
         /// </summary>
-        /// <param name="correlationId">関連操作のトラッキング用ID</param>
-        /// <param name="ex">発生した例外</param>
-        /// <param name="port">停止しようとしたポート番号</param>
+        /// <param name="correlationId">Tracking ID for related operations</param>
+        /// <param name="ex">Exception that occurred</param>
+        /// <param name="port">Port number attempted to stop</param>
         public static void LogServerShutdownError(string correlationId, System.Exception ex, int port)
         {
             VibeLogger.LogException(

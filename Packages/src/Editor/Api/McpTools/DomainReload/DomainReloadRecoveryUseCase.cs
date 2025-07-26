@@ -7,7 +7,7 @@ namespace io.github.hatayama.uLoopMCP
     /// UseCase responsible for temporal cohesion of Domain Reload recovery processing
     /// Processing sequence: 1. Pre-stop processing, 2. Recovery processing, 3. Notification processing
     /// Related classes: DomainReloadDetectionService, SessionRecoveryService, ClientNotificationService
-    /// Design reference: DDD Refactoring Specification - UseCase Layer
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     public class DomainReloadRecoveryUseCase
     {

@@ -5,19 +5,19 @@ using UnityEngine;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Console クリア処理の時間的凝集を担当
-    /// 処理順序：1. 現在のログ数取得, 2. コンソールクリア実行, 3. 確認メッセージ追加, 4. 結果作成
-    /// 関連クラス: ClearConsoleTool, ConsoleUtility
-    /// 設計書参照: DDDリファクタリング仕様 - UseCase Layer
+    /// Responsible for temporal cohesion of Console clear processing
+    /// Processing sequence: 1. Get current log count, 2. Execute console clear, 3. Add confirmation message, 4. Create result
+    /// Related classes: ClearConsoleTool, ConsoleUtility
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     public class ClearConsoleUseCase : AbstractUseCase<ClearConsoleSchema, ClearConsoleResponse>
     {
         /// <summary>
-        /// Console クリア処理を実行する
+        /// Execute Console clear processing
         /// </summary>
-        /// <param name="parameters">クリア設定パラメータ</param>
-        /// <param name="cancellationToken">キャンセレーション制御用トークン</param>
-        /// <returns>クリア実行結果</returns>
+        /// <param name="parameters">Clear configuration parameters</param>
+        /// <param name="cancellationToken">Cancellation control token</param>
+        /// <returns>Clear execution result</returns>
         public override Task<ClearConsoleResponse> ExecuteAsync(ClearConsoleSchema parameters, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -29,7 +29,7 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                // 1. 現在のログ数取得
+                // 1. Get current log count
                 ConsoleUtility.GetConsoleLogCounts(out int errorCount, out int warningCount, out int logCount);
                 int totalLogCount = errorCount + warningCount + logCount;
                 
@@ -37,16 +37,16 @@ namespace io.github.hatayama.uLoopMCP
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // 2. コンソールクリア実行
+                // 2. Execute console clear
                 ConsoleUtility.ClearConsole();
 
-                // 3. 確認メッセージ追加
+                // 3. Add confirmation message
                 if (parameters.AddConfirmationMessage)
                 {
                     Debug.Log("=== Console cleared via MCP tool ===");
                 }
 
-                // 4. 結果作成
+                // 4. Create result
                 string message = totalLogCount > 0 
                     ? $"Successfully cleared {totalLogCount} console logs (Errors: {errorCount}, Warnings: {warningCount}, Logs: {logCount})"
                     : "Console was already empty";

@@ -3,19 +3,19 @@ using System;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// テストフィルター作成サービス
-    /// 単一機能：テスト実行用フィルターの作成を行う
-    /// 関連クラス: RunTestsTool, RunTestsUseCase, TestExecutionFilter
-    /// 設計書参照: DDDリファクタリング仕様 - Application Service Layer
+    /// Test filter creation service
+    /// Single function: Create filters for test execution
+    /// Related classes: RunTestsTool, RunTestsUseCase, TestExecutionFilter
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
     public class TestFilterCreationService
     {
         /// <summary>
-        /// テスト実行フィルターを作成する
+        /// Create test execution filter
         /// </summary>
-        /// <param name="filterType">フィルタータイプ</param>
-        /// <param name="filterValue">フィルター値</param>
-        /// <returns>テスト実行フィルター</returns>
+        /// <param name="filterType">Filter type</param>
+        /// <param name="filterValue">Filter value</param>
+        /// <returns>Test execution filter</returns>
         public TestExecutionFilter CreateFilter(TestFilterType filterType, string filterValue)
         {
             return filterType switch

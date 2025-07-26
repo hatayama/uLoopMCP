@@ -5,9 +5,17 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Tool to find multiple GameObjects with advanced search criteria
+    /// 
+    /// Design Reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
+    /// 
+    /// This Tool class delegates to FindGameObjectsUseCase for business logic execution,
+    /// following the UseCase + Tool pattern for separation of concerns.
+    /// 
     /// Related classes:
+    /// - FindGameObjectsUseCase: Business logic and orchestration
     /// - GameObjectFinderService: Core logic for finding GameObjects
     /// - FindGameObjectsSchema: Search parameters
+    /// - FindGameObjectsResponse: Type-safe response structure
     /// </summary>
     [McpTool(Description = "Find multiple GameObjects with advanced search criteria (component type, tag, layer, etc.)")]
     public class FindGameObjectsTool : AbstractUnityTool<FindGameObjectsSchema, FindGameObjectsResponse>
@@ -16,7 +24,7 @@ namespace io.github.hatayama.uLoopMCP
         
         protected override async Task<FindGameObjectsResponse> ExecuteAsync(FindGameObjectsSchema parameters, CancellationToken cancellationToken)
         {
-            // FindGameObjectsUseCaseインスタンスを生成して実行
+            // Create and execute FindGameObjectsUseCase instance
             FindGameObjectsUseCase useCase = new();
             return await useCase.ExecuteAsync(parameters, cancellationToken);
         }

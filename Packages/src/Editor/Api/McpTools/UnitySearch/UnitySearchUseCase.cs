@@ -4,55 +4,55 @@ using System.Threading;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Unity Search実行処理の時間的凝集を担当
-    /// 処理順序：1. 古いファイルのクリーンアップ, 2. 検索実行, 3. 結果の処理
-    /// 関連クラス: UnitySearchTool, UnitySearchService, SearchResultExporter
-    /// 設計書参照: DDDリファクタリング仕様 - UseCase Layer
+    /// Responsible for temporal cohesion of Unity Search execution processing
+    /// Processing sequence: 1. Clean up old files, 2. Execute search, 3. Process results
+    /// Related classes: UnitySearchTool, UnitySearchService, SearchResultExporter
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     public class UnitySearchUseCase : AbstractUseCase<UnitySearchSchema, UnitySearchResponse>
     {
         /// <summary>
-        /// Unity Search処理を実行する
+        /// Execute Unity Search processing
         /// </summary>
-        /// <param name="parameters">検索パラメータ</param>
-        /// <param name="cancellationToken">キャンセレーション制御用トークン</param>
-        /// <returns>検索結果</returns>
+        /// <param name="parameters">Search parameters</param>
+        /// <param name="cancellationToken">Cancellation control token</param>
+        /// <returns>Search result</returns>
         public override async Task<UnitySearchResponse> ExecuteAsync(UnitySearchSchema parameters, CancellationToken cancellationToken)
         {
-            // 0. デフォルト値適用（内部処理）
+            // 0. Apply default values (internal processing)
             ApplyDefaultValues(parameters);
 
-            // 1. 古いファイルのクリーンアップ
+            // 1. Clean up old files
             cancellationToken.ThrowIfCancellationRequested();
             UnitySearchService.CleanupOldExports();
 
-            // 2. 検索実行
+            // 2. Execute search
             cancellationToken.ThrowIfCancellationRequested();
             UnitySearchResponse response = await UnitySearchService.ExecuteSearchAsync(parameters);
 
-            // 3. 結果の処理（ログ記録等は既にUnitySearchServiceで処理済み）
+            // 3. Process results (logging etc. already handled by UnitySearchService)
             return response;
         }
 
         /// <summary>
-        /// スキーマにデフォルト値を適用する（内部処理）
+        /// Apply default values to schema (internal processing)
         /// </summary>
-        /// <param name="schema">スキーマ</param>
+        /// <param name="schema">Schema</param>
         private void ApplyDefaultValues(UnitySearchSchema schema)
         {
-            // 配列がnullでないことを保証
+            // Ensure arrays are not null
             schema.Providers ??= new string[0];
             schema.FileExtensions ??= new string[0];
             schema.AssetTypes ??= new string[0];
 
-            // 合理的なデフォルト値を適用
+            // Apply reasonable default values
             if (schema.MaxResults <= 0)
                 schema.MaxResults = 50;
 
             if (schema.AutoSaveThreshold < 0)
                 schema.AutoSaveThreshold = 100;
 
-            // 検索クエリがnullでないことを保証
+            // Ensure search query is not null
             schema.SearchQuery ??= "";
             schema.PathFilter ??= "";
         }

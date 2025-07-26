@@ -4,9 +4,10 @@ using System.Threading;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// UseCase基底クラス - 時間的凝集を担当
-    /// 毎回新しいインスタンスが生成され、Execute完了後に破棄される
-    /// 関連クラス: AbstractUnityTool, BaseToolSchema, BaseToolResponse
+    /// UseCase base class - Responsible for temporal cohesion
+    /// New instances are created each time and disposed after Execute completion
+    /// Related classes: AbstractUnityTool, BaseToolSchema, BaseToolResponse
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase Layer (Domain Workflow Orchestration)
     /// </summary>
     /// <typeparam name="TSchema">Schema type for tool parameters</typeparam>
     /// <typeparam name="TResponse">Response type for tool results</typeparam>
@@ -15,12 +16,12 @@ namespace io.github.hatayama.uLoopMCP
         where TResponse : BaseToolResponse
     {
         /// <summary>
-        /// UseCase実行メソッド - 唯一のpublicメソッド
-        /// 時間的凝集（複数の操作を順序立てて実行）を担当する
+        /// UseCase execution method - The only public method
+        /// Responsible for temporal cohesion (executing multiple operations in sequence)
         /// </summary>
-        /// <param name="parameters">型安全なパラメータ</param>
-        /// <param name="cancellationToken">キャンセレーション制御用トークン</param>
-        /// <returns>型安全な実行結果</returns>
+        /// <param name="parameters">Type-safe parameters</param>
+        /// <param name="cancellationToken">Cancellation control token</param>
+        /// <returns>Type-safe execution result</returns>
         public abstract Task<TResponse> ExecuteAsync(TSchema parameters, CancellationToken cancellationToken);
     }
 }

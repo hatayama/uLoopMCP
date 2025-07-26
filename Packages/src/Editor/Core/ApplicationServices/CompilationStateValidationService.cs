@@ -3,17 +3,17 @@ using UnityEditor;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// コンパイル状態検証サービス
-    /// 単一機能：コンパイル実行前の状態検証を行う
-    /// 関連クラス: CompileTool, CompileUseCase, McpSessionManager
-    /// 設計書参照: DDDリファクタリング仕様 - Application Service Layer
+    /// Compilation state validation service
+    /// Single function: Validate state before compilation execution
+    /// Related classes: CompileTool, CompileUseCase, McpSessionManager
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
     public class CompilationStateValidationService
     {
         /// <summary>
-        /// コンパイル実行前の状態を検証する
+        /// Validate state before compilation execution
         /// </summary>
-        /// <returns>検証結果</returns>
+        /// <returns>Validation result</returns>
         public ValidationResult ValidateCompilationState()
         {
             if (EditorApplication.isCompiling)

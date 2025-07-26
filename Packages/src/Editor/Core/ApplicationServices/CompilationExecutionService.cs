@@ -3,18 +3,18 @@ using System.Threading.Tasks;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// コンパイル実行サービス
-    /// 単一機能：Unity プロジェクトのコンパイルを実行する
-    /// 関連クラス: CompileController, CompileUseCase, CompileTool
-    /// 設計書参照: DDDリファクタリング仕様 - Application Service Layer
+    /// Compilation execution service
+    /// Single function: Execute Unity project compilation
+    /// Related classes: CompileController, CompileUseCase, CompileTool
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
     public class CompilationExecutionService
     {
         /// <summary>
-        /// コンパイルを非同期実行する
+        /// Execute compilation asynchronously
         /// </summary>
-        /// <param name="forceRecompile">強制再コンパイルフラグ</param>
-        /// <returns>コンパイル結果</returns>
+        /// <param name="forceRecompile">Force recompile flag</param>
+        /// <returns>Compilation result</returns>
         public async Task<CompileResult> ExecuteCompilationAsync(bool forceRecompile)
         {
             using CompileController compileController = new();

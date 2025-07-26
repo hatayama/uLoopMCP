@@ -8,19 +8,19 @@ using uLoopMCP.Editor.Api.Commands.GetMenuItems;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// MenuItem実行処理の時間的凝集を担当
-    /// 処理順序：1. パラメータ検証, 2. EditorApplication経由実行, 3. Reflection経由実行（フォールバック）, 4. 結果作成
-    /// 関連クラス: ExecuteMenuItemTool, MenuItemDiscoveryService
-    /// 設計書参照: DDDリファクタリング仕様 - UseCase Layer
+    /// Responsible for temporal cohesion of MenuItem execution processing
+    /// Processing sequence: 1. Parameter validation, 2. Execute via EditorApplication, 3. Execute via Reflection (fallback), 4. Create result
+    /// Related classes: ExecuteMenuItemTool, MenuItemDiscoveryService
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     public class ExecuteMenuItemUseCase : AbstractUseCase<ExecuteMenuItemSchema, ExecuteMenuItemResponse>
     {
         /// <summary>
-        /// MenuItem実行処理を実行する
+        /// Execute MenuItem execution processing
         /// </summary>
-        /// <param name="parameters">MenuItem実行パラメータ</param>
-        /// <param name="cancellationToken">キャンセレーション制御用トークン</param>
-        /// <returns>MenuItem実行結果</returns>
+        /// <param name="parameters">MenuItem execution parameters</param>
+        /// <param name="cancellationToken">Cancellation control token</param>
+        /// <returns>MenuItem execution result</returns>
         public override Task<ExecuteMenuItemResponse> ExecuteAsync(ExecuteMenuItemSchema parameters, CancellationToken cancellationToken)
         {
             ExecuteMenuItemResponse response = new ExecuteMenuItemResponse
@@ -28,7 +28,7 @@ namespace io.github.hatayama.uLoopMCP
                 MenuItemPath = parameters.MenuItemPath
             };
             
-            // 1. パラメータ検証
+            // 1. Parameter validation
             if (string.IsNullOrEmpty(parameters.MenuItemPath))
             {
                 response.Success = false;
@@ -37,16 +37,16 @@ namespace io.github.hatayama.uLoopMCP
                 return Task.FromResult(response);
             }
             
-            // 2. EditorApplication経由実行
+            // 2. Execute via EditorApplication
             bool success = TryExecuteViaEditorApplication(parameters.MenuItemPath, response);
             
-            // 3. Reflection経由実行（フォールバック）
+            // 3. Execute via Reflection (fallback)
             if (!success && parameters.UseReflectionFallback)
             {
                 success = TryExecuteViaReflection(parameters.MenuItemPath, response);
             }
             
-            // 4. 結果作成
+            // 4. Create result
             if (!success)
             {
                 response.Success = false;
@@ -60,7 +60,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// EditorApplication.ExecuteMenuItemを使用してMenuItem実行を試行する
+        /// Try to execute menuItem using EditorApplication.ExecuteMenuItem
         /// </summary>
         private bool TryExecuteViaEditorApplication(string menuItemPath, ExecuteMenuItemResponse response)
         {
@@ -82,11 +82,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Reflectionを使用してメソッドを直接見つけて実行する
+        /// Use Reflection to directly find and execute method
         /// </summary>
         private bool TryExecuteViaReflection(string menuItemPath, ExecuteMenuItemResponse response)
         {
-            // MenuItemメソッドをサービス経由で検索
+            // Search for MenuItem method via service
             MenuItemInfo menuItemInfo = MenuItemDiscoveryService.FindMenuItemByPath(menuItemPath);
             
             if (menuItemInfo == null)
@@ -98,7 +98,7 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
             
-            // バリデーション関数は実行しない
+            // Do not execute validation functions
             if (menuItemInfo.IsValidateFunction)
             {
                 response.ExecutionMethod = "Reflection";
@@ -108,7 +108,7 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
             
-            // セキュリティ: ロード前に型名を検証
+            // Security: Validate type name before loading
             if (!IsValidMenuItemTypeName(menuItemInfo.TypeName))
             {
                 response.ExecutionMethod = "Reflection";
@@ -118,7 +118,7 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
             
-            // メソッドを取得して実行
+            // Get method and execute
             Type type = Type.GetType(menuItemInfo.TypeName);
             if (type == null)
             {
@@ -139,7 +139,7 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
             
-            // メソッドを実行
+            // Execute method
             method.Invoke(null, null);
             
             response.Success = true;
@@ -150,7 +150,7 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// セキュリティ: 型名がロードしても安全かを検証
+        /// Security: Validate if type name is safe to load
         /// </summary>
         private bool IsValidMenuItemTypeName(string typeName)
         {
@@ -159,7 +159,7 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
             
-            // 許可された名前空間で始まるかチェック
+            // Check if it starts with allowed namespace
             foreach (string allowedNamespace in McpConstants.ALLOWED_NAMESPACES)
             {
                 if (typeName.StartsWith(allowedNamespace, StringComparison.Ordinal))
@@ -168,7 +168,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
-            // 危険なシステム型を拒否
+            // Reject dangerous system types
             foreach (string deniedType in McpConstants.DENIED_SYSTEM_TYPES)
             {
                 if (typeName.StartsWith(deniedType, StringComparison.Ordinal))
@@ -177,7 +177,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
-            return false; // セキュリティのためデフォルトで拒否
+            return false; // Default deny for security
         }
     }
 }

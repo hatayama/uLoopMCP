@@ -1,18 +1,18 @@
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// ログ取得サービス
-    /// 単一機能：Unity Console ログの取得を行う
-    /// 関連クラス: LogGetter, GetLogsTool, GetLogsUseCase
-    /// 設計書参照: DDDリファクタリング仕様 - Application Service Layer
+    /// Log retrieval service
+    /// Single function: Retrieve Unity Console logs
+    /// Related classes: LogGetter, GetLogsTool, GetLogsUseCase
+    /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
     public class LogRetrievalService
     {
         /// <summary>
-        /// 指定したログタイプのログを取得する
+        /// Retrieve logs of specified log type
         /// </summary>
-        /// <param name="logType">取得するログタイプ</param>
-        /// <returns>ログデータ</returns>
+        /// <param name="logType">Log type to retrieve</param>
+        /// <returns>Log data</returns>
         public LogDisplayDto GetLogs(McpLogType logType)
         {
             if (logType == McpLogType.All)
@@ -26,13 +26,13 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 検索条件を指定してログを取得する
+        /// Retrieve logs with search conditions
         /// </summary>
-        /// <param name="logType">取得するログタイプ</param>
-        /// <param name="searchText">検索テキスト</param>
-        /// <param name="useRegex">正規表現を使用するか</param>
-        /// <param name="searchInStackTrace">スタックトレース内も検索するか</param>
-        /// <returns>ログデータ</returns>
+        /// <param name="logType">Log type to retrieve</param>
+        /// <param name="searchText">Search text</param>
+        /// <param name="useRegex">Whether to use regular expressions</param>
+        /// <param name="searchInStackTrace">Whether to search within stack trace</param>
+        /// <returns>Log data</returns>
         public LogDisplayDto GetLogsWithSearch(McpLogType logType, string searchText, bool useRegex, bool searchInStackTrace)
         {
             return LogGetter.GetConsoleLog(logType, searchText, useRegex, searchInStackTrace);
