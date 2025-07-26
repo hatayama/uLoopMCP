@@ -44,6 +44,10 @@ namespace io.github.hatayama.uLoopMCP
             // Processing after assembly reload.
             AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
 
+            // Initialize connected tools monitoring service
+            // Note: ConnectedToolsMonitoringService has [InitializeOnLoad] so it's automatically initialized
+            // This comment ensures the service initialization order is documented
+
             // Restore server state on initialization.
             RestoreServerStateIfNeeded();
         }

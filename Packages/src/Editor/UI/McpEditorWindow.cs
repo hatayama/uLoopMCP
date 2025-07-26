@@ -45,12 +45,6 @@ namespace io.github.hatayama.uLoopMCP
         private IEnumerable<ConnectedClient> _cachedStoredTools;
         private float _lastStoredToolsUpdateTime;
 
-        // Connected LLM Tools management (persisted across domain reload)
-        private List<ConnectedLLMToolData> _connectedTools = new();
-        
-        // Backup storage for server restart
-        private List<ConnectedLLMToolData> _toolsBackup;
-
         [MenuItem("Window/uLoopMCP")]
         public static void ShowWindow()
         {
@@ -61,12 +55,10 @@ namespace io.github.hatayama.uLoopMCP
         private void OnEnable()
         {
             InitializeAll();
-            SubscribeToServerEvents();
         }
 
         private void OnDestroy()
         {
-            UnsubscribeFromServerEvents();
         }
 
         private void InitializeAll()
@@ -78,7 +70,6 @@ namespace io.github.hatayama.uLoopMCP
             InitializeServerOperations();
             LoadSavedSettings();
             RestoreSessionState();
-            RestoreConnectedToolsFromSettings();
 
             HandlePostCompileMode();
         }
@@ -99,193 +90,9 @@ namespace io.github.hatayama.uLoopMCP
             _view = new McpEditorWindowView();
         }
 
-        /// <summary>
-        /// Add a connected LLM tool
-        /// </summary>
-        public void AddConnectedTool(ConnectedClient client)
-        {
-            if (client.ClientName == McpConstants.UNKNOWN_CLIENT_NAME)
-            {
-                return;
-            }
 
-            // Remove existing tool if present, then add
-            _connectedTools.RemoveAll(tool => tool.Name == client.ClientName);
 
-            ConnectedLLMToolData toolData = new(
-                client.ClientName,
-                client.Endpoint,
-                client.ConnectedAt
-            );
-            _connectedTools.Add(toolData);
-            InvalidateStoredToolsCache();
-            
-            // Persist to settings
-            McpEditorSettings.AddConnectedLLMTool(toolData);
-        }
 
-        /// <summary>
-        /// Remove a connected LLM tool
-        /// </summary>
-        public void RemoveConnectedTool(string toolName)
-        {
-            _connectedTools.RemoveAll(tool => tool.Name == toolName);
-            InvalidateStoredToolsCache();
-            
-            // Persist to settings
-            McpEditorSettings.RemoveConnectedLLMTool(toolName);
-        }
-
-        /// <summary>
-        /// Clear all connected LLM tools
-        /// </summary>
-        public void ClearConnectedTools()
-        {
-            _connectedTools.Clear();
-            InvalidateStoredToolsCache();
-            
-            // Persist to settings
-            McpEditorSettings.ClearConnectedLLMTools();
-        }
-
-        /// <summary>
-        /// Subscribe to server lifecycle events
-        /// </summary>
-        private void SubscribeToServerEvents()
-        {
-            McpBridgeServer.OnServerStopping += OnServerStopping;
-            McpBridgeServer.OnServerStarted += OnServerStarted;
-            McpBridgeServer.OnToolConnected += OnToolConnected;
-            McpBridgeServer.OnToolDisconnected += OnToolDisconnected;
-            McpBridgeServer.OnAllToolsCleared += OnAllToolsCleared;
-        }
-
-        /// <summary>
-        /// Unsubscribe from server lifecycle events
-        /// </summary>
-        private void UnsubscribeFromServerEvents()
-        {
-            McpBridgeServer.OnServerStopping -= OnServerStopping;
-            McpBridgeServer.OnServerStarted -= OnServerStarted;
-            McpBridgeServer.OnToolConnected -= OnToolConnected;
-            McpBridgeServer.OnToolDisconnected -= OnToolDisconnected;
-            McpBridgeServer.OnAllToolsCleared -= OnAllToolsCleared;
-        }
-
-        /// <summary>
-        /// Handle server stopping event - backup connected tools
-        /// </summary>
-        private void OnServerStopping()
-        {
-            _toolsBackup = _connectedTools
-                .Where(tool => tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
-                .ToList();
-                
-            // Also ensure settings are up to date
-            SyncConnectedToolsToSettings();
-        }
-
-        /// <summary>
-        /// Handle server started event - restore connected tools
-        /// </summary>
-        private void OnServerStarted()
-        {
-            if (_toolsBackup != null && _toolsBackup.Count > 0)
-            {
-                RestoreConnectedTools(_toolsBackup);
-                _toolsBackup = null;
-            }
-        }
-
-        /// <summary>
-        /// Handle tool connected event - add tool to connected list
-        /// </summary>
-        private void OnToolConnected(ConnectedClient client)
-        {
-            AddConnectedTool(client);
-        }
-
-        /// <summary>
-        /// Handle tool disconnected event - remove tool from connected list
-        /// </summary>
-        private void OnToolDisconnected(string toolName)
-        {
-            RemoveConnectedTool(toolName);
-        }
-
-        /// <summary>
-        /// Handle all tools cleared event - clear all connected tools
-        /// </summary>
-        private void OnAllToolsCleared()
-        {
-            ClearConnectedTools();
-        }
-
-        /// <summary>
-        /// Restore connected tools from backup after server restart
-        /// First restore all tools immediately, then cleanup disconnected ones after a delay
-        /// </summary>
-        public void RestoreConnectedTools(List<ConnectedLLMToolData> backup)
-        {
-            if (backup == null || backup.Count == 0)
-            {
-                return;
-            }
-
-            // Immediately restore all tools to prevent "No connected tools found" flash
-            foreach (ConnectedLLMToolData toolData in backup)
-            {
-                ConnectedClient restoredClient = new(toolData.Endpoint, null, toolData.Name);
-                AddConnectedTool(restoredClient);
-            }
-
-            // Schedule cleanup after a short delay to remove actually disconnected tools
-            DelayedCleanupAsync().Forget();
-        }
-
-        /// <summary>
-        /// Clean up disconnected tools after a delay
-        /// </summary>
-        private async Task DelayedCleanupAsync()
-        {
-            // Wait 1 second for clients to reconnect
-            await TimerDelay.Wait(2000);
-
-            if (!McpServerController.IsServerRunning)
-            {
-                return;
-            }
-
-            // Get actually connected clients
-            IReadOnlyCollection<ConnectedClient> actualConnectedClients = McpServerController.CurrentServer?.GetConnectedClients();
-            if (actualConnectedClients == null)
-            {
-                return;
-            }
-
-            // Get list of actually connected client names
-            HashSet<string> actualClientNames = new HashSet<string>(
-                actualConnectedClients
-                    .Where(client => client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME)
-                    .Select(client => client.ClientName)
-            );
-
-            // Remove tools that are no longer connected
-            List<ConnectedLLMToolData> toolsToRemove = _connectedTools
-                .Where(tool => !actualClientNames.Contains(tool.Name))
-                .ToList();
-
-            foreach (ConnectedLLMToolData tool in toolsToRemove)
-            {
-                RemoveConnectedTool(tool.Name);
-            }
-
-            // Force UI update if any tools were removed
-            if (toolsToRemove.Count > 0)
-            {
-                Repaint();
-            }
-        }
 
 
         /// <summary>
@@ -293,16 +100,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public IEnumerable<ConnectedClient> GetConnectedToolsAsClients()
         {
-            return _connectedTools.OrderBy(tool => tool.Name).Select(tool => ConvertToConnectedClient(tool));
+            return ConnectedToolsMonitoringService.GetConnectedToolsAsClients();
         }
 
-        /// <summary>
-        /// Convert stored tool data to ConnectedClient for UI display
-        /// </summary>
-        private ConnectedClient ConvertToConnectedClient(ConnectedLLMToolData toolData)
-        {
-            return new ConnectedClient(toolData.Endpoint, null, toolData.Name);
-        }
 
         /// <summary>
         /// Initialize configuration services factory
@@ -345,36 +145,6 @@ namespace io.github.hatayama.uLoopMCP
             _model.LoadFromSessionState();
         }
 
-        /// <summary>
-        /// Restore connected tools from persistent settings
-        /// </summary>
-        private void RestoreConnectedToolsFromSettings()
-        {
-            ConnectedLLMToolData[] savedTools = McpEditorSettings.GetConnectedLLMTools();
-            if (savedTools != null && savedTools.Length > 0)
-            {
-                _connectedTools.Clear();
-                foreach (ConnectedLLMToolData toolData in savedTools)
-                {
-                    if (toolData != null && !string.IsNullOrEmpty(toolData.Name))
-                    {
-                        _connectedTools.Add(toolData);
-                    }
-                }
-                InvalidateStoredToolsCache();
-            }
-        }
-
-        /// <summary>
-        /// Sync current connected tools to settings
-        /// </summary>
-        private void SyncConnectedToolsToSettings()
-        {
-            ConnectedLLMToolData[] toolsArray = _connectedTools
-                .Where(tool => tool != null && !string.IsNullOrEmpty(tool.Name) && tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
-                .ToArray();
-            McpEditorSettings.SetConnectedLLMTools(toolsArray);
-        }
 
         /// <summary>
         /// Handle post-compile mode initialization and auto-start logic
@@ -421,7 +191,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             CleanupEventHandler();
             SaveSessionState();
-            SyncConnectedToolsToSettings();
         }
 
         /// <summary>

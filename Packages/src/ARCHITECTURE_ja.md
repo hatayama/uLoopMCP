@@ -78,6 +78,7 @@ graph TB
 - **Domain-Driven Design**: UseCase層でビジネスワークフローを統制、Application Service層で単一機能を実装
 - **UseCase + Toolパターン**: Martin Fowlerのリファクタリング原則に従った時間的結合分離を持つDDD統合アーキテクチャ
 - **MVP + Helperパターン**: 専門ヘルパークラスによる関心の清潔な分離
+- **Application Serviceパターン**: ConnectedToolsMonitoringServiceによる自動起動ツール監視、エディターウィンドウ非依存動作
 - **セキュリティアーキテクチャ**: 設定可能なポリシーを持つ包括的なアクセス制御
 - **セッション管理**: 専用UseCaseを通じたドメインリロード耐性のある状態管理
 - **スキーマ駆動通信**: 自動スキーマ生成による型安全なJSON-RPC
