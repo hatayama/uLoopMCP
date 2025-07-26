@@ -140,13 +140,24 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             // Execute method
-            method.Invoke(null, null);
-            
-            response.Success = true;
-            response.ExecutionMethod = "Reflection";
-            response.MenuItemFound = true;
-            response.Details = $"MenuItem executed successfully via reflection ({menuItemInfo.TypeName}.{menuItemInfo.MethodName})";
-            return true;
+            try
+            {
+                method.Invoke(null, null);
+                
+                response.Success = true;
+                response.ExecutionMethod = "Reflection";
+                response.MenuItemFound = true;
+                response.Details = $"MenuItem executed successfully via reflection ({menuItemInfo.TypeName}.{menuItemInfo.MethodName})";
+                return true;
+            }
+            catch (System.Exception ex)
+            {
+                response.ExecutionMethod = "Reflection";
+                response.ErrorMessage = $"Exception during method execution: {ex.GetBaseException().Message}";
+                response.MenuItemFound = true;
+                response.Details = $"Failed to execute {menuItemInfo.TypeName}.{menuItemInfo.MethodName}";
+                return false;
+            }
         }
         
         /// <summary>
