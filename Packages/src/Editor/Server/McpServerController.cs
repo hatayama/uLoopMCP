@@ -55,28 +55,28 @@ namespace io.github.hatayama.uLoopMCP
         /// The port number to bind to. Use -1 to fall back to the saved custom port
         /// from <see cref="McpEditorSettings.GetCustomPort"/>. Defaults to -1.
         /// </param>
-        public static void StartServer(int port = -1)
+        public static async void StartServer(int port = -1)
         {
-            StartServerWithUseCase(port);
+            await StartServerWithUseCaseAsync(port);
         }
 
         /// <summary>
         /// Starts the server using new UseCase implementation.
         /// </summary>
-        private static void StartServerWithUseCase(int port)
+        private static async Task StartServerWithUseCaseAsync(int port)
         {
             // Always stop the existing server first (to release the port)
             if (mcpServer != null)
             {
-                StopServer();
+                await StopServerWithUseCaseAsync();
             }
 
             // Execute initialization UseCase
             McpServerInitializationUseCase useCase = new();
             ServerInitializationSchema schema = new() { Port = port };
-            System.Threading.CancellationToken cancellationToken = new();
+            System.Threading.CancellationToken cancellationToken = System.Threading.CancellationToken.None;
 
-            var result = useCase.ExecuteAsync(schema, cancellationToken).GetAwaiter().GetResult();
+            var result = await useCase.ExecuteAsync(schema, cancellationToken);
 
             if (result.Success)
             {
@@ -94,22 +94,22 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Stops the server.
         /// </summary>
-        public static void StopServer()
+        public static async void StopServer()
         {
-            StopServerWithUseCase();
+            await StopServerWithUseCaseAsync();
         }
 
         /// <summary>
         /// Stops the server using new UseCase implementation.
         /// </summary>
-        private static void StopServerWithUseCase()
+        private static async Task StopServerWithUseCaseAsync()
         {
             // Execute shutdown UseCase
             McpServerShutdownUseCase useCase = new();
             ServerShutdownSchema schema = new() { ForceShutdown = false };
-            System.Threading.CancellationToken cancellationToken = new();
+            System.Threading.CancellationToken cancellationToken = System.Threading.CancellationToken.None;
 
-            var result = useCase.ExecuteAsync(schema, cancellationToken).GetAwaiter().GetResult();
+            var result = await useCase.ExecuteAsync(schema, cancellationToken);
 
             if (result.Success)
             {
