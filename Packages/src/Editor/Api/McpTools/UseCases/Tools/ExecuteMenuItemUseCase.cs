@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
-using uLoopMCP.Editor.Api.Commands.GetMenuItems;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -170,21 +169,21 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
             
+            // Reject dangerous system types first
+            foreach (string deniedType in McpConstants.DENIED_SYSTEM_TYPES)
+            {
+                if (typeName.StartsWith(deniedType, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+            
             // Check if it starts with allowed namespace
             foreach (string allowedNamespace in McpConstants.ALLOWED_NAMESPACES)
             {
                 if (typeName.StartsWith(allowedNamespace, StringComparison.Ordinal))
                 {
                     return true;
-                }
-            }
-            
-            // Reject dangerous system types
-            foreach (string deniedType in McpConstants.DENIED_SYSTEM_TYPES)
-            {
-                if (typeName.StartsWith(deniedType, StringComparison.Ordinal))
-                {
-                    return false;
                 }
             }
             

@@ -45,48 +45,84 @@ namespace io.github.hatayama.uLoopMCP
             // 2. GameObject search execution
             cancellationToken.ThrowIfCancellationRequested();
             
-            GameObjectSearchOptions options = new GameObjectSearchOptions
+            try
             {
-                NamePattern = parameters.NamePattern,
-                SearchMode = parameters.SearchMode,
-                RequiredComponents = parameters.RequiredComponents,
-                Tag = parameters.Tag,
-                Layer = parameters.Layer,
-                IncludeInactive = parameters.IncludeInactive,
-                MaxResults = parameters.MaxResults
-            };
-            
-            GameObjectDetails[] foundObjects = _finderService.FindGameObjectsAdvanced(options);
-            
-            // 3. Result conversion and formatting
-            cancellationToken.ThrowIfCancellationRequested();
-            
-            List<FindGameObjectResult> results = new List<FindGameObjectResult>();
-            
-            foreach (GameObjectDetails details in foundObjects)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                
-                FindGameObjectResult result = new FindGameObjectResult
+                GameObjectSearchOptions options = new GameObjectSearchOptions
                 {
-                    name = details.Name,
-                    path = details.Path,
-                    isActive = details.IsActive,
-                    tag = details.GameObject.tag,
-                    layer = details.GameObject.layer,
-                    components = _componentSerializer.SerializeComponents(details.GameObject)
+                    NamePattern = parameters.NamePattern,
+                    SearchMode = parameters.SearchMode,
+                    RequiredComponents = parameters.RequiredComponents,
+                    Tag = parameters.Tag,
+                    Layer = parameters.Layer,
+                    IncludeInactive = parameters.IncludeInactive,
+                    MaxResults = parameters.MaxResults
                 };
                 
-                results.Add(result);
+                GameObjectDetails[] foundObjects = _finderService.FindGameObjectsAdvanced(options);
+            
+                // 3. Result conversion and formatting
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                List<FindGameObjectResult> results = new List<FindGameObjectResult>();
+                
+                foreach (GameObjectDetails details in foundObjects)
+                {
+                    // Check cancellation less frequently for better performance
+                    if (results.Count % 100 == 0)
+                        cancellationToken.ThrowIfCancellationRequested();
+                    
+                    try
+                    {
+                        FindGameObjectResult result = new FindGameObjectResult
+                        {
+                            name = details.Name,
+                            path = details.Path,
+                            isActive = details.IsActive,
+                            tag = details.GameObject.tag,
+                            layer = details.GameObject.layer,
+                            components = _componentSerializer.SerializeComponents(details.GameObject)
+                        };
+                        
+                        results.Add(result);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        // Log error but continue processing other GameObjects
+                        UnityEngine.Debug.LogWarning($"Failed to process GameObject '{details.Name}': {ex.Message}");
+                        VibeLogger.LogWarning(
+                            "gameobject_processing_failed", 
+                            $"Failed to process GameObject: {details.Name}", 
+                            new { gameObjectName = details.Name, gameObjectPath = details.Path, error = ex.Message }
+                        );
+                        continue;
+                    }
+                }
+                
+                FindGameObjectsResponse response = new FindGameObjectsResponse
+                {
+                    results = results.ToArray(),
+                    totalFound = results.Count
+                };
+                
+                return Task.FromResult(response);
             }
-            
-            FindGameObjectsResponse response = new FindGameObjectsResponse
+            catch (System.Exception ex)
             {
-                results = results.ToArray(),
-                totalFound = results.Count
-            };
-            
-            return Task.FromResult(response);
+                // Log full exception details for debugging
+                UnityEngine.Debug.LogError($"GameObject search failed: {ex}");
+                VibeLogger.LogError(
+                    "gameobject_search_failed", 
+                    "GameObject search execution failed", 
+                    new { searchParameters = parameters, error = ex.Message }
+                );
+                
+                return Task.FromResult(new FindGameObjectsResponse
+                {
+                    results = new FindGameObjectResult[0],
+                    totalFound = 0,
+                    errorMessage = "Search execution failed. Please check the logs for details."
+                });
+            }
         }
     }
 }

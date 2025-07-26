@@ -33,13 +33,38 @@ namespace io.github.hatayama.uLoopMCP
             TestExecutionService executionService = new();
             SerializableTestResult result;
             
-            if (parameters.TestMode == TestMode.PlayMode)
+            try
             {
-                result = await executionService.ExecutePlayModeTestAsync(filter, parameters.SaveXml);
+                if (parameters.TestMode == TestMode.PlayMode)
+                {
+                    // TODO: Add cancellationToken parameter when TestExecutionService supports it
+                    // result = await executionService.ExecutePlayModeTestAsync(filter, parameters.SaveXml, cancellationToken);
+                    result = await executionService.ExecutePlayModeTestAsync(filter, parameters.SaveXml);
+                }
+                else
+                {
+                    // TODO: Add cancellationToken parameter when TestExecutionService supports it
+                    // result = await executionService.ExecuteEditModeTestAsync(filter, parameters.SaveXml, cancellationToken);
+                    result = await executionService.ExecuteEditModeTestAsync(filter, parameters.SaveXml);
+                }
             }
-            else
+            catch (System.OperationCanceledException)
             {
-                result = await executionService.ExecuteEditModeTestAsync(filter, parameters.SaveXml);
+                // Propagate cancellation exceptions
+                throw;
+            }
+            catch (System.Exception ex)
+            {
+                // Log full exception details for debugging
+                UnityEngine.Debug.LogError($"Test execution failed: {ex}");
+                VibeLogger.LogError(
+                    "test_execution_failed", 
+                    "Test execution encountered an error", 
+                    new { testMode = parameters.TestMode, filterType = parameters.FilterType, filterValue = parameters.FilterValue, error = ex.Message }
+                );
+                
+                // Create a minimal error result
+                throw new System.InvalidOperationException("Test execution failed. Please check the logs for details.", ex);
             }
             
             // 3. Response creation

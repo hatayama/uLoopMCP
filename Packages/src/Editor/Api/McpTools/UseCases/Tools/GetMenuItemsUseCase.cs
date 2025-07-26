@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using uLoopMCP.Editor.Api.Commands.GetMenuItems;
 
 namespace io.github.hatayama.uLoopMCP
 {
