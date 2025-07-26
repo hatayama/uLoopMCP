@@ -3,7 +3,7 @@ name: release-please
 on:
   push:
     branches:
-      - main        # Default branch
+      - feature/fix-release-pleaser        # Default branch
   # Enable manual execution via "Run workflow" button in browser
   workflow_dispatch:
     inputs:
@@ -40,7 +40,11 @@ jobs:
 
       # ── Execute release-please ───────────────────────────
       - name: 🚀 Run release‑please
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v3
         with:
-          config-file: .release-please-config.json
+          path: Packages/src
+          release-type: node
+          package-name: "io.github.hatayama.uloopmcp"
           token: ${{ secrets.GITHUB_TOKEN }}
+          extra-files: |
+            TypeScriptServer~/package.json
