@@ -59,9 +59,8 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Success indicator</returns>
         public ServiceResult<bool> UpdateSessionState(bool isRunning, int port)
         {
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            sessionManager.IsServerRunning = isRunning;
-            sessionManager.ServerPort = port;
+            McpEditorSettings.SetIsServerRunning(isRunning);
+            McpEditorSettings.SetServerPort(port);
             return ServiceResult<bool>.SuccessResult(true);
         }
     }

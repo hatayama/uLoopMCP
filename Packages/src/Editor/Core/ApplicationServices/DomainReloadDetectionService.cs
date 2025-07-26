@@ -18,20 +18,19 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="serverPort">Server port number</param>
         public static void StartDomainReload(string correlationId, bool serverIsRunning, int? serverPort)
         {
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            
+                        
             // Set Domain Reload in progress flag
-            sessionManager.IsDomainReloadInProgress = true;
+            McpEditorSettings.SetIsDomainReloadInProgress(true);
 
             // Save session state if server is running
             if (serverIsRunning && serverPort.HasValue)
             {
-                sessionManager.IsServerRunning = true;
-                sessionManager.ServerPort = serverPort.Value;
-                sessionManager.IsAfterCompile = true;
-                sessionManager.IsReconnecting = true;
-                sessionManager.ShowReconnectingUI = true;
-                sessionManager.ShowPostCompileReconnectingUI = true;
+                McpEditorSettings.SetIsServerRunning(true);
+                McpEditorSettings.SetServerPort(serverPort.Value);
+                McpEditorSettings.SetIsAfterCompile(true);
+                McpEditorSettings.SetIsReconnecting(true);
+                McpEditorSettings.SetShowReconnectingUI(true);
+                McpEditorSettings.SetShowPostCompileReconnectingUI(true);
             }
 
             // Log recording
@@ -53,16 +52,15 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="correlationId">Tracking ID for related operations</param>
         public static void CompleteDomainReload(string correlationId)
         {
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            
+                        
             // Clear Domain Reload completion flag
-            sessionManager.ClearDomainReloadFlag();
+            McpEditorSettings.ClearDomainReloadFlag();
 
             // Log recording
             VibeLogger.LogInfo(
                 "domain_reload_complete",
                 "Domain reload completed - starting server recovery process",
-                new { session_server_port = sessionManager.ServerPort },
+                new { session_server_port = McpEditorSettings.GetServerPort() },
                 correlationId
             );
         }
@@ -73,7 +71,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>True if Domain Reload is in progress</returns>
         public static bool IsDomainReloadInProgress()
         {
-            return McpSessionManager.instance.IsDomainReloadInProgress;
+            return McpEditorSettings.GetIsDomainReloadInProgress();
         }
 
         /// <summary>
@@ -82,7 +80,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>True if reconnection UI display is required</returns>
         public static bool ShouldShowReconnectingUI()
         {
-            return McpSessionManager.instance.ShowReconnectingUI;
+            return McpEditorSettings.GetShowReconnectingUI();
         }
 
         /// <summary>
@@ -91,7 +89,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>True if after compile</returns>
         public static bool IsAfterCompile()
         {
-            return McpSessionManager.instance.IsAfterCompile;
+            return McpEditorSettings.GetIsAfterCompile();
         }
     }
 }

@@ -25,6 +25,7 @@ graph TB
         MB[McpBridgeServer<br/>TCPサーバー<br/>McpBridgeServer.cs]
         CMD[ツールシステム<br/>UnityApiHandler.cs]
         UI[McpEditorWindow<br/>GUI<br/>McpEditorWindow.cs]
+        CTMS[ConnectedToolsMonitoringService<br/>自動起動ツール監視<br/>ConnectedToolsMonitoringService.cs]
         API[Unity APIs]
         SM[McpSessionManager<br/>McpSessionManager.cs]
     end
@@ -41,9 +42,10 @@ graph TB
     UC -->|setClientName| MB
     MB <--> CMD
     CMD <--> API
-    UI --> MB
-    UI --> CMD
+    UI --> CTMS
+    CTMS --> MB
     MB --> SM
+    CTMS --> SM
     
     classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef server fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
@@ -428,6 +430,11 @@ Unity Editorの重要な課題は、アプリケーションの状態をリセ�
 
 ### `/Core`
 セッションと状態管理のコアインフラストラクチャコンポーネントを含みます。
+
+#### Application Servicesディレクトリ
+- **`ConnectedToolsMonitoringService.cs`**: `[InitializeOnLoad]`属性で自動起動するConnectedLLMToolsの監視・管理サービス。エディターウィンドウが開いていない場合でも動作し、接続されたツールの状態管理、サーバーイベント処理、設定ファイルとの同期を行う。プレゼンテーション層とビジネスロジックの適切な分離を実現
+
+#### セッション管理
 - **`McpSessionManager.cs`**: クライアント接続状態、セッションメタデータを維持し、ドメインリロードを乗り越える`ScriptableSingleton`として実装されたシングルトンセッションマネージャー。集中クライアント識別と接続追跡を提供
 
 ### `/UI`

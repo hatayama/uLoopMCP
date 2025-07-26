@@ -68,8 +68,7 @@ namespace io.github.hatayama.uLoopMCP
                 // 4. Session clear with SessionManager
                 try
                 {
-                    McpSessionManager sessionManager = McpSessionManager.instance;
-                    sessionManager.ClearServerSession();
+                    McpEditorSettings.ClearServerSession();
                 }
                 catch (System.Exception sessionEx)
                 {

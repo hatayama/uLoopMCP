@@ -25,6 +25,7 @@ graph TB
         MB[McpBridgeServer<br/>TCP Server<br/>McpBridgeServer.cs]
         CMD[Tool System<br/>UnityApiHandler.cs]
         UI[McpEditorWindow<br/>GUI<br/>McpEditorWindow.cs]
+        CTMS[ConnectedToolsMonitoringService<br/>Auto-startup Tool Monitoring<br/>ConnectedToolsMonitoringService.cs]
         API[Unity APIs]
         SM[McpSessionManager<br/>McpSessionManager.cs]
     end
@@ -41,9 +42,10 @@ graph TB
     UC -->|setClientName| MB
     MB <--> CMD
     CMD <--> API
-    UI --> MB
-    UI --> CMD
+    UI --> CTMS
+    CTMS --> MB
     MB --> SM
+    CTMS --> SM
     
     classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef server fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
@@ -584,6 +586,11 @@ This is the heart of the command processing logic.
 
 ### `/Core`
 Contains core infrastructure components for session and state management.
+
+#### Application Services Directory
+- **`ConnectedToolsMonitoringService.cs`**: Auto-startup service for ConnectedLLMTools monitoring and management with `[InitializeOnLoad]` attribute. Operates even when editor window is closed, handling connected tools state management, server event processing, and settings file synchronization. Provides proper separation between presentation layer and business logic.
+
+#### Session Management
 - **`McpSessionManager.cs`**: Singleton session manager implemented as `ScriptableSingleton` that maintains client connection state, session metadata, and survives domain reloads. Provides centralized client identification and connection tracking.
 
 ### `/UI`

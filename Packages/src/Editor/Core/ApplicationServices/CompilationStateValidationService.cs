@@ -21,7 +21,7 @@ namespace io.github.hatayama.uLoopMCP
                 return ValidationResult.Failure("Compilation is already in progress. Please wait for the current compilation to finish.");
             }
             
-            if (McpSessionManager.instance.IsDomainReloadInProgress)
+            if (McpEditorSettings.GetIsDomainReloadInProgress())
             {
                 return ValidationResult.Failure("Cannot compile while domain reload is in progress. Please wait for the domain reload to complete.");
             }

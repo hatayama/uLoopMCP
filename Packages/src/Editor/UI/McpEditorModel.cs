@@ -73,12 +73,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Load state from Unity SessionState
+        /// Load state from persistent settings (formerly from SessionState)
         /// </summary>
         public void LoadFromSessionState()
         {
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            McpEditorType selectedEditor = sessionManager.SelectedEditorType;
+            McpEditorType selectedEditor = McpEditorSettings.GetSelectedEditorType();
 
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
@@ -91,12 +90,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Save current state to Unity SessionState
+        /// Save current state to persistent settings (formerly to SessionState)
         /// </summary>
         public void SaveToSessionState()
         {
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            sessionManager.SelectedEditorType = UI.SelectedEditorType;
+            McpEditorSettings.SetSelectedEditorType(UI.SelectedEditorType);
         }
 
         /// <summary>
@@ -249,7 +247,7 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: type,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: ui.ShowSecuritySettings));
-            McpSessionManager.instance.SelectedEditorType = type;
+            McpEditorSettings.SetSelectedEditorType(type);
         }
 
         /// <summary>

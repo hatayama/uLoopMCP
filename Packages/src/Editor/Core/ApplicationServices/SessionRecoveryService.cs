@@ -19,10 +19,9 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Recovery process result</returns>
         public static ValidationResult RestoreServerStateIfNeeded()
         {
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            bool wasRunning = sessionManager.IsServerRunning;
-            int savedPort = sessionManager.ServerPort;
-            bool isAfterCompile = sessionManager.IsAfterCompile;
+            bool wasRunning = McpEditorSettings.GetIsServerRunning();
+            int savedPort = McpEditorSettings.GetServerPort();
+            bool isAfterCompile = McpEditorSettings.GetIsAfterCompile();
 
             // If server is already running
             McpBridgeServer currentServer = McpServerController.CurrentServer;
@@ -30,7 +29,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (isAfterCompile)
                 {
-                    sessionManager.ClearAfterCompileFlag();
+                    McpEditorSettings.ClearAfterCompileFlag();
                 }
                 return ValidationResult.Success();
             }
@@ -38,7 +37,7 @@ namespace io.github.hatayama.uLoopMCP
             // Clear after-compile flag
             if (isAfterCompile)
             {
-                sessionManager.ClearAfterCompileFlag();
+                McpEditorSettings.ClearAfterCompileFlag();
             }
 
             // If server was running and is currently stopped
@@ -73,7 +72,7 @@ namespace io.github.hatayama.uLoopMCP
                     }
                     else
                     {
-                        sessionManager.ClearServerSession();
+                        McpEditorSettings.ClearServerSession();
                     }
                 }
             }
@@ -106,9 +105,8 @@ namespace io.github.hatayama.uLoopMCP
                 newServer.StartServer(availablePort);
 
                 // Update session state
-                McpSessionManager sessionManager = McpSessionManager.instance;
-                sessionManager.ServerPort = availablePort;
-                sessionManager.IsReconnecting = false;
+                                McpEditorSettings.SetServerPort(availablePort);
+                McpEditorSettings.SetIsReconnecting(false);
 
                 return ValidationResult.Success();
             }
@@ -130,7 +128,7 @@ namespace io.github.hatayama.uLoopMCP
                 else
                 {
                     // Clear session when maximum retry count is reached
-                    McpSessionManager.instance.ClearServerSession();
+                    McpEditorSettings.ClearServerSession();
                     return ValidationResult.Failure($"Failed to restore server after {MAX_RETRIES} retries: {ex.Message}");
                 }
             }
@@ -172,13 +170,12 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void ClearReconnectingFlag()
         {
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            bool wasReconnecting = sessionManager.IsReconnecting;
-            bool wasShowingUI = sessionManager.ShowReconnectingUI;
+                        bool wasReconnecting = McpEditorSettings.GetIsReconnecting();
+            bool wasShowingUI = McpEditorSettings.GetShowReconnectingUI();
 
             if (wasReconnecting || wasShowingUI)
             {
-                sessionManager.ClearReconnectingFlags();
+                McpEditorSettings.ClearReconnectingFlags();
             }
         }
 
@@ -191,11 +188,10 @@ namespace io.github.hatayama.uLoopMCP
             int timeoutFrames = McpConstants.RECONNECTION_TIMEOUT_SECONDS * 60;
             await EditorDelay.DelayFrame(timeoutFrames);
 
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            bool isStillShowingUI = sessionManager.ShowReconnectingUI;
+                        bool isStillShowingUI = McpEditorSettings.GetShowReconnectingUI();
             if (isStillShowingUI)
             {
-                sessionManager.ClearReconnectingFlags();
+                McpEditorSettings.ClearReconnectingFlags();
             }
         }
     }

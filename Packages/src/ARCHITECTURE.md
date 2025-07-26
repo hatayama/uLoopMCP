@@ -78,6 +78,7 @@ For detailed communication protocols, connection management, and architectural p
 - **Domain-Driven Design**: UseCase layer orchestrating business workflows, Application Service layer implementing single functions
 - **UseCase + Tool Pattern**: DDD-integrated architecture with temporal cohesion separation following Martin Fowler's refactoring principles
 - **MVP + Helper Pattern**: Clean separation of concerns with specialized helper classes
+- **Application Service Pattern**: ConnectedToolsMonitoringService providing auto-startup tool monitoring, editor window-independent operation
 - **Security Architecture**: Comprehensive access control with configurable policies
 - **Session Management**: Domain reload resilient state management through specialized UseCases
 - **Schema-Driven Communication**: Type-safe JSON-RPC with automatic schema generation

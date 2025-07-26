@@ -212,11 +212,11 @@ namespace io.github.hatayama.uLoopMCP
         private static void LoadFromSessionState()
         {
             // Restore logs.
-            string logsJson = McpSessionManager.instance.CommunicationLogsJson;
+            string logsJson = McpEditorSettings.GetCommunicationLogsJson();
             _logs = JsonConvert.DeserializeObject<List<McpCommunicationLogEntry>>(logsJson) ?? new List<McpCommunicationLogEntry>();
 
             // Restore pending requests.
-            string pendingJson = McpSessionManager.instance.PendingRequestsJson;
+            string pendingJson = McpEditorSettings.GetPendingRequestsJson();
             _pendingRequests = JsonConvert.DeserializeObject<Dictionary<string, PendingRequest>>(pendingJson) ?? new Dictionary<string, PendingRequest>();
         }
 
@@ -242,9 +242,8 @@ namespace io.github.hatayama.uLoopMCP
             string logsJson = JsonConvert.SerializeObject(logsSnapshot);
             string pendingJson = JsonConvert.SerializeObject(pendingSnapshot);
 
-            McpSessionManager sessionManager = McpSessionManager.instance;
-            sessionManager.CommunicationLogsJson = logsJson;
-            sessionManager.PendingRequestsJson = pendingJson;
+            McpEditorSettings.SetCommunicationLogsJson(logsJson);
+            McpEditorSettings.SetPendingRequestsJson(pendingJson);
         }
 
         /// <summary>
@@ -252,7 +251,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void ClearLogSessionState()
         {
-            McpSessionManager.instance.ClearCommunicationLogs();
+            McpEditorSettings.ClearCommunicationLogs();
             
             lock (_logs)
             {
