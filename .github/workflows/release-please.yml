@@ -3,7 +3,7 @@ name: release-please
 on:
   push:
     branches:
-      - main        # Default branch
+      - feature/fix-release-pleaser        # Default branch
   # Enable manual execution via "Run workflow" button in browser
   workflow_dispatch:
     inputs:
@@ -47,4 +47,4 @@ jobs:
           package-name: "io.github.hatayama.uloopmcp"
           token: ${{ secrets.GITHUB_TOKEN }}
           extra-files: |
-            TypeScriptServer~/package.json
+            Packages/src/TypeScriptServer~/package.json
