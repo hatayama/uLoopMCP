@@ -42,8 +42,8 @@ namespace io.github.hatayama.uLoopMCP
         public ServiceResult<bool> HandlePortConflict(int requestedPort, int availablePort)
         {
             bool userConfirmed = UnityEditor.EditorUtility.DisplayDialog(
-                "Port Conflict",
-                $"Port {requestedPort} is already in use.\n\nWould you like to use port {availablePort} instead?",
+                "uLoopMCP - Port Conflict",
+                $"uLoopMCP Server: Port {requestedPort} is already in use.\n\nWould you like to use port {availablePort} instead?",
                 "OK",
                 "Cancel"
             );
