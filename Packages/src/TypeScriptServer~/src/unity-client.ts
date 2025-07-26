@@ -47,6 +47,7 @@ export class UnityClient {
   private readonly processId: number = process.pid;
   private readonly randomSeed: number = Math.floor(Math.random() * 1000);
   private storedClientName: string | null = null;
+  private notificationPort: number | null = null; // Store notification server port
 
   private constructor() {
     const unityTcpPort: string | undefined = process.env.UNITY_TCP_PORT;
@@ -582,5 +583,30 @@ export class UnityClient {
         resolve(false);
       });
     });
+  }
+
+  /**
+   * Set notification port for domain reload notifications
+   * Called from server.ts when notification receive server starts
+   */
+  public setNotificationPort(port: number): void {
+    this.notificationPort = port;
+  }
+
+  /**
+   * Get stored notification port
+   */
+  public getNotificationPort(): number | null {
+    return this.notificationPort;
+  }
+
+  /**
+   * Handle domain reload notification from Unity
+   * Push通知ベースなのでpollingは不要
+   */
+  public handleDomainReloadNotification(): void {
+    // Push通知を受信した際の即座の再接続処理
+    // 既存のensureConnectedを呼び出すことで統一された接続処理を使用
+    void this.ensureConnected();
   }
 }

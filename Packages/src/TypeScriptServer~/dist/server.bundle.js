@@ -6831,6 +6831,8 @@ var UnityClient = class _UnityClient {
   processId = process.pid;
   randomSeed = Math.floor(Math.random() * 1e3);
   storedClientName = null;
+  notificationPort = null;
+  // Store notification server port
   constructor() {
     const unityTcpPort = process.env.UNITY_TCP_PORT;
     if (!unityTcpPort) {
@@ -7216,6 +7218,26 @@ var UnityClient = class _UnityClient {
         resolve2(false);
       });
     });
+  }
+  /**
+   * Set notification port for domain reload notifications
+   * Called from server.ts when notification receive server starts
+   */
+  setNotificationPort(port) {
+    this.notificationPort = port;
+  }
+  /**
+   * Get stored notification port
+   */
+  getNotificationPort() {
+    return this.notificationPort;
+  }
+  /**
+   * Handle domain reload notification from Unity
+   * Push通知ベースなのでpollingは不要
+   */
+  handleDomainReloadNotification() {
+    void this.ensureConnected();
   }
 };
 
