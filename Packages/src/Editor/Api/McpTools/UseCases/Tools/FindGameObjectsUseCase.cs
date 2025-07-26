@@ -104,6 +104,7 @@ namespace io.github.hatayama.uLoopMCP
                     totalFound = results.Count
                 };
                 
+                // Underlying services are synchronous; wrapping in Task.FromResult for API consistency.
                 return Task.FromResult(response);
             }
             catch (System.Exception ex)
