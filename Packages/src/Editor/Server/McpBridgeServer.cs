@@ -25,27 +25,30 @@ namespace io.github.hatayama.uLoopMCP
         public readonly string ClientName; 
         public readonly DateTime ConnectedAt;
         public readonly NetworkStream Stream;
+        public readonly int NotificationPort;
 
-        public ConnectedClient(string endpoint, NetworkStream stream, string clientName = McpConstants.UNKNOWN_CLIENT_NAME)
+        public ConnectedClient(string endpoint, NetworkStream stream, string clientName = McpConstants.UNKNOWN_CLIENT_NAME, int notificationPort = 0)
         {
             Endpoint = endpoint;
             Stream = stream; // Allow null stream for UI display purposes
             ClientName = clientName;
             ConnectedAt = DateTime.Now;
+            NotificationPort = notificationPort;
         }
         
         // Private constructor for WithClientName to preserve ConnectedAt
-        private ConnectedClient(string endpoint, NetworkStream stream, string clientName, DateTime connectedAt)
+        private ConnectedClient(string endpoint, NetworkStream stream, string clientName, DateTime connectedAt, int notificationPort)
         {
             Endpoint = endpoint;
             Stream = stream; // Allow null stream for UI display purposes
             ClientName = clientName;
             ConnectedAt = connectedAt;
+            NotificationPort = notificationPort;
         }
         
         public ConnectedClient WithClientName(string clientName)
         {
-            return new ConnectedClient(Endpoint, Stream, clientName, ConnectedAt);
+            return new ConnectedClient(Endpoint, Stream, clientName, ConnectedAt, NotificationPort);
         }
     }
 

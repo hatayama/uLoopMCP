@@ -290,16 +290,21 @@ namespace io.github.hatayama.uLoopMCP
             
             EditorGUILayout.BeginHorizontal();
             
-            EditorGUILayout.LabelField(McpUIConstants.CLIENT_ICON + client.ClientName, new GUIStyle(EditorStyles.label) { fontStyle = FontStyle.Bold }, GUILayout.MaxWidth(100f), GUILayout.ExpandWidth(true));
+            // Create Rich Text label with client name in bold and port in gray
+            string displayText;
+            if (client.NotificationPort > 0)
+            {
+                displayText = $"{McpUIConstants.CLIENT_ICON}<b>{client.ClientName}</b>  <color=#888888>:{client.NotificationPort}</color>";
+            }
+            else
+            {
+                displayText = $"{McpUIConstants.CLIENT_ICON}<b>{client.ClientName}</b>";
+            }
             
-            EditorGUILayout.EndHorizontal();
+            GUIStyle richTextStyle = new GUIStyle(EditorStyles.label);
+            richTextStyle.richText = true;
+            EditorGUILayout.LabelField(displayText, richTextStyle, GUILayout.ExpandWidth(true));
             
-            // Display endpoint information on a separate line to prevent horizontal overflow
-            EditorGUILayout.BeginHorizontal();
-            GUIStyle endpointStyle = new GUIStyle(EditorStyles.miniLabel);
-            endpointStyle.normal.textColor = Color.gray;
-            endpointStyle.wordWrap = true;
-            EditorGUILayout.LabelField(McpUIConstants.ENDPOINT_ARROW + client.Endpoint, endpointStyle, GUILayout.ExpandWidth(true));
             EditorGUILayout.EndHorizontal();
             
             EditorGUILayout.EndVertical();

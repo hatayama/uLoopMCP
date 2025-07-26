@@ -238,7 +238,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static ConnectedClient ConvertToConnectedClient(ConnectedLLMToolData toolData)
         {
-            return new ConnectedClient(toolData.Endpoint, null, toolData.Name);
+            return new ConnectedClient(toolData.Endpoint, null, toolData.Name, toolData.NotificationPort);
         }
 
         /// <summary>
