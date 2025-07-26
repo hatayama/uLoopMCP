@@ -16,6 +16,18 @@ namespace io.github.hatayama.uLoopMCP
     }
 
     /// <summary>
+    /// Client notification port mapping for domain reload notifications.
+    /// Maps client endpoints to their notification receive server ports.
+    /// </summary>
+    [Serializable]
+    public class ClientNotificationMapping
+    {
+        public string clientEndpoint;
+        public int notificationPort;
+        public string lastConnected; // ISO 8601 format datetime string
+    }
+
+    /// <summary>
     /// Unity MCP Editor settings data.
     /// </summary>
     [Serializable]
@@ -54,6 +66,9 @@ namespace io.github.hatayama.uLoopMCP
         public string[] pendingCompileRequestIds = new string[0];
         public CompileRequestData[] compileRequests = new CompileRequestData[0];
         public ConnectedLLMToolData[] connectedLLMTools = new ConnectedLLMToolData[0];
+        
+        // Notification Server Settings (for domain reload notifications)
+        public ClientNotificationMapping[] clientNotificationPorts = new ClientNotificationMapping[0];
     }
 
     /// <summary>
@@ -754,6 +769,116 @@ namespace io.github.hatayama.uLoopMCP
         public static void ClearConnectedLLMTools()
         {
             SetConnectedLLMTools(new ConnectedLLMToolData[0]);
+        }
+
+        // Client Notification Port management methods
+
+        /// <summary>
+        /// Gets the client notification port mappings.
+        /// </summary>
+        public static ClientNotificationMapping[] GetClientNotificationPorts()
+        {
+            return GetSettings().clientNotificationPorts;
+        }
+
+        /// <summary>
+        /// Sets the client notification port mappings.
+        /// </summary>
+        public static void SetClientNotificationPorts(ClientNotificationMapping[] clientNotificationPorts)
+        {
+            McpEditorSettingsData settings = GetSettings();
+            McpEditorSettingsData newSettings = settings with { clientNotificationPorts = clientNotificationPorts };
+            SaveSettings(newSettings);
+        }
+
+        /// <summary>
+        /// Sets the notification port for a specific client endpoint.
+        /// </summary>
+        public static void SetClientNotificationPort(string clientEndpoint, int notificationPort)
+        {
+            if (string.IsNullOrEmpty(clientEndpoint))
+            {
+                return;
+            }
+
+            ClientNotificationMapping[] mappings = GetClientNotificationPorts();
+            ClientNotificationMapping existingMapping = System.Array.Find(mappings, m => m.clientEndpoint == clientEndpoint);
+
+            if (existingMapping != null)
+            {
+                existingMapping.notificationPort = notificationPort;
+                existingMapping.lastConnected = System.DateTime.UtcNow.ToString("O"); // ISO 8601 format
+            }
+            else
+            {
+                ClientNotificationMapping[] newMappings = new ClientNotificationMapping[mappings.Length + 1];
+                System.Array.Copy(mappings, newMappings, mappings.Length);
+                newMappings[mappings.Length] = new()
+                {
+                    clientEndpoint = clientEndpoint,
+                    notificationPort = notificationPort,
+                    lastConnected = System.DateTime.UtcNow.ToString("O")
+                };
+                mappings = newMappings;
+            }
+
+            SetClientNotificationPorts(mappings);
+        }
+
+        /// <summary>
+        /// Gets the notification port for a specific client endpoint.
+        /// </summary>
+        public static int? GetClientNotificationPort(string clientEndpoint)
+        {
+            if (string.IsNullOrEmpty(clientEndpoint))
+            {
+                return null;
+            }
+
+            ClientNotificationMapping[] mappings = GetClientNotificationPorts();
+            ClientNotificationMapping mapping = System.Array.Find(mappings, m => m.clientEndpoint == clientEndpoint);
+            return mapping?.notificationPort;
+        }
+
+        /// <summary>
+        /// Gets all notification ports for sending domain reload notifications.
+        /// </summary>
+        public static int[] GetAllNotificationPorts()
+        {
+            ClientNotificationMapping[] mappings = GetClientNotificationPorts();
+            int[] ports = new int[mappings.Length];
+            for (int i = 0; i < mappings.Length; i++)
+            {
+                ports[i] = mappings[i].notificationPort;
+            }
+            return ports;
+        }
+
+        /// <summary>
+        /// Removes a client notification port mapping.
+        /// </summary>
+        public static void RemoveClientNotificationPort(string clientEndpoint)
+        {
+            if (string.IsNullOrEmpty(clientEndpoint))
+            {
+                return;
+            }
+
+            ClientNotificationMapping[] mappings = GetClientNotificationPorts();
+            ClientNotificationMapping[] newMappings = System.Array.FindAll(mappings, m => m.clientEndpoint != clientEndpoint);
+
+            if (newMappings.Length != mappings.Length)
+            {
+                SetClientNotificationPorts(newMappings);
+            }
+        }
+
+        /// <summary>
+        /// Clears all client notification port mappings.
+        /// </summary>
+        public static void ClearClientNotificationPorts()
+        {
+            SetClientNotificationPorts(new ClientNotificationMapping[0]);
         }
 
 

@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using UnityEditor;
 
 namespace io.github.hatayama.uLoopMCP
@@ -5,11 +6,46 @@ namespace io.github.hatayama.uLoopMCP
     /// <summary>
     /// Application service responsible for Domain Reload detection and state management
     /// Single responsibility: Domain Reload lifecycle management
-    /// Related classes: McpSessionManager, McpServerController
+    /// Related classes: McpSessionManager, McpServerController, NotificationClient
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
+    [InitializeOnLoad]
     public static class DomainReloadDetectionService
     {
+        private static NotificationClient notificationClient;
+
+        static DomainReloadDetectionService()
+        {
+            AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
+        }
+
+        private static NotificationClient GetOrCreateNotificationClient()
+        {
+            if (notificationClient == null)
+            {
+                notificationClient = new();
+            }
+            return notificationClient;
+        }
+
+        private static async void OnAfterAssemblyReload()
+        {
+            VibeLogger.LogInfo(
+                "domain_reload_detected",
+                "Domain reload detected, sending notification",
+                new { timestamp = System.DateTime.Now.ToString("O") }
+            );
+            
+            // domain reload後はstaticがnullになるため、GetOrCreateで新規作成
+            NotificationClient client = GetOrCreateNotificationClient();
+            await client.SendDomainReloadCompleteAsync();
+        }
+
+        public static void SaveClientNotificationPort(string clientEndpoint, int notificationPort)
+        {
+            NotificationClient client = GetOrCreateNotificationClient();
+            client.SaveClientNotificationPort(clientEndpoint, notificationPort);
+        }
         /// <summary>
         /// Execute Domain Reload start processing
         /// </summary>
