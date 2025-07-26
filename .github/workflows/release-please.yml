@@ -42,6 +42,7 @@ jobs:
       - name: 🚀 Run release‑please
         uses: googleapis/release-please-action@v4
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           release-type: node
           package-name: io.github.hatayama.uloopmcp
-          token: ${{ secrets.GITHUB_TOKEN }}
+          path: Packages/src
