@@ -1,6 +1,6 @@
 {
   "name": "io.github.hatayama.uloopmcp",
-  "version": "0.30.2",
+  "version": "0.30.3",
   "displayName": "uLoopMCP",
   "description": "Connect your Unity Editor to LLMs using the Model Context Protocol.",
   "unity": "2022.3",
