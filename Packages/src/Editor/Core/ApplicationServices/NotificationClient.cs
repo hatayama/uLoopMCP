@@ -25,7 +25,7 @@ namespace io.github.hatayama.uLoopMCP
         public NotificationClient()
         {
             httpClient = new();
-            httpClient.Timeout = TimeSpan.FromSeconds(5);
+            httpClient.Timeout = TimeSpan.FromSeconds(McpConstants.Network.HTTP_TIMEOUT_SECONDS);
             
             VibeLogger.LogInfo(
                 "notification_client_initialized",
@@ -120,16 +120,16 @@ namespace io.github.hatayama.uLoopMCP
 
                 string json = JsonUtility.ToJson(payload);
                 StringContent content = new(json, Encoding.UTF8, "application/json");
-                string notificationUrl = $"http://127.0.0.1:{notificationPort}";
+                string notificationUrl = $"http://{McpConstants.Network.LOCALHOST_IP}:{notificationPort}";
 
                 VibeLogger.LogInfo(
                     "domain_reload_notification_sending",
                     "Sending domain reload complete notification",
-                    new { notificationPort, url = $"{notificationUrl}/domain-reload-complete" }
+                    new { notificationPort, url = $"{notificationUrl}{McpConstants.Endpoints.DOMAIN_RELOAD_COMPLETE}" }
                 );
 
                 HttpResponseMessage response = await httpClient.PostAsync(
-                    $"{notificationUrl}/domain-reload-complete", 
+                    $"{notificationUrl}{McpConstants.Endpoints.DOMAIN_RELOAD_COMPLETE}", 
                     content
                 );
 
@@ -204,7 +204,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             try
             {
-                string healthUrl = $"http://127.0.0.1:{notificationPort}/health";
+                string healthUrl = $"http://{McpConstants.Network.LOCALHOST_IP}:{notificationPort}{McpConstants.Endpoints.HEALTH_CHECK}";
                 HttpResponseMessage response = await httpClient.GetAsync(healthUrl);
                 return response.IsSuccessStatusCode;
             }

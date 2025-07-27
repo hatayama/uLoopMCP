@@ -113,6 +113,37 @@ namespace io.github.hatayama.uLoopMCP
             "System.Activator"
         };
         
+        // Network configuration constants
+        public static class Network
+        {
+            public const int DEFAULT_MCP_PORT = 8700;
+            public const string LOCALHOST_IP = "127.0.0.1";
+            public const int HTTP_TIMEOUT_SECONDS = 15;
+        }
+        
+        // UI related constants
+        public static class UI
+        {
+            public const int FLASH_PREVENTION_DELAY_MS = 1000;
+            public const int MAX_COMMUNICATION_LOG_ENTRIES = 20;
+        }
+        
+        // Timeout configuration constants
+        public static class Timeouts
+        {
+            public const int DEFAULT_TOOL_SECONDS = 15;
+            public const int TEST_EXECUTION_SECONDS = 30;
+            public const int SERVER_SHUTDOWN_SECONDS = 5;
+        }
+        
+        // Endpoint constants
+        public static class Endpoints
+        {
+            public const string DOMAIN_RELOAD_COMPLETE = "/domain-reload-complete";
+            public const string SERVER_RESTART_COMPLETE = "/server-restart-complete";
+            public const string HEALTH_CHECK = "/health";
+        }
+        
         /// <summary>
         /// Gets the client name for the specified editor type
         /// </summary>

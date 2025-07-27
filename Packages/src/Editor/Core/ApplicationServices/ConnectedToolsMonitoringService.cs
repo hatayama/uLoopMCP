@@ -264,7 +264,7 @@ namespace io.github.hatayama.uLoopMCP
             try
             {
                 // Wait 1 second using TimerDelay with cancellation
-                await TimerDelay.Wait(1000, _displayDelayCancellation.Token);
+                await TimerDelay.Wait(McpConstants.UI.FLASH_PREVENTION_DELAY_MS, _displayDelayCancellation.Token);
                 
                 // Only update if not cancelled
                 if (_displayDelayCancellation != null && !_displayDelayCancellation.Token.IsCancellationRequested)

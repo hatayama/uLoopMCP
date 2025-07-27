@@ -8,7 +8,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Default port number.
         /// </summary>
-        public const int DEFAULT_PORT = 8700;
+        public const int DEFAULT_PORT = McpConstants.Network.DEFAULT_MCP_PORT;
         
         /// <summary>
         /// Buffer size for TCP/IP communication.
@@ -18,7 +18,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Wait timeout in seconds when stopping the server.
         /// </summary>
-        public const int SHUTDOWN_TIMEOUT_SECONDS = 5;
+        public const int SHUTDOWN_TIMEOUT_SECONDS = McpConstants.Timeouts.SERVER_SHUTDOWN_SECONDS;
         
         /// <summary>
         /// Version string for JSON-RPC 2.0.

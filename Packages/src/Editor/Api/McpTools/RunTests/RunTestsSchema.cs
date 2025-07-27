@@ -51,6 +51,6 @@ namespace io.github.hatayama.uLoopMCP
         /// Timeout for test execution in seconds (default: 60 seconds for EditMode, 120 seconds for PlayMode)
         /// </summary>
         [Description("Timeout for test execution in seconds (default: 30 seconds)")]
-        public override int TimeoutSeconds { get; set; } = 30;
+        public override int TimeoutSeconds { get; set; } = McpConstants.Timeouts.TEST_EXECUTION_SECONDS;
     }
 } 
