@@ -2,6 +2,13 @@ import { createServer, IncomingMessage, ServerResponse, Server } from 'http';
 import { URL } from 'url';
 import { VibeLogger } from './utils/vibe-logger';
 
+interface NotificationPayload {
+  type: string;
+  timestamp?: string;
+  message?: string;
+  [key: string]: unknown;
+}
+
 /**
  * Unity側からのdomain reload完了通知を受信するHTTPサーバー
  * 固定ポートではなく動的ポートを使用してポート競合を回避
@@ -39,6 +46,8 @@ export class NotificationReceiveServer {
 
       if (method === 'POST' && pathname === '/domain-reload-complete') {
         this.handleDomainReloadComplete(req, res);
+      } else if (method === 'POST' && pathname === '/api/notification') {
+        void this.handleNotification(req, res);
       } else if (method === 'GET' && pathname === '/health') {
         this.handleHealthCheck(res);
       } else {
@@ -67,6 +76,118 @@ export class NotificationReceiveServer {
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ status: 'received' }));
+  }
+
+  private async handleNotification(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      const body = await this.parseRequestBody(req);
+      const notificationType = body.type;
+
+      if (notificationType === 'domain_reload_complete') {
+        this.handleDomainReloadNotification(req, res);
+        return;
+      }
+
+      if (notificationType === 'server_restart_complete') {
+        this.handleServerRestartNotification(req, res);
+        return;
+      }
+
+      // Handle other notification types
+      res.statusCode = 400;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ success: false, error: 'Unknown notification type' }));
+    } catch (error) {
+      VibeLogger.logError('notification_handler_error', 'Failed to handle notification', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ success: false, error: 'Internal server error' }));
+    }
+  }
+
+  private async parseRequestBody(req: IncomingMessage): Promise<NotificationPayload> {
+    return new Promise((resolve, reject) => {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString();
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as NotificationPayload;
+          resolve(parsed);
+        } catch (error) {
+          reject(error);
+        }
+      });
+      req.on('error', (error) => {
+        reject(error);
+      });
+    });
+  }
+
+  private handleDomainReloadNotification(req: IncomingMessage, res: ServerResponse): void {
+    VibeLogger.logInfo(
+      'domain_reload_notification_received',
+      'Received domain reload notification from Unity',
+      { timestamp: new Date().toISOString() },
+    );
+
+    // Respond immediately
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(
+      JSON.stringify({
+        success: true,
+        timestamp: new Date().toISOString(),
+        message: 'Domain reload notification received',
+      }),
+    );
+
+    // Trigger existing domain reload handler
+    if (this.onDomainReloadComplete) {
+      this.onDomainReloadComplete();
+    }
+  }
+
+  private handleServerRestartNotification(req: IncomingMessage, res: ServerResponse): void {
+    VibeLogger.logInfo(
+      'server_restart_notification_received',
+      'Received server restart notification from Unity',
+      {
+        timestamp: new Date().toISOString(),
+        port: this.port,
+      },
+    );
+
+    // Respond immediately
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(
+      JSON.stringify({
+        success: true,
+        timestamp: new Date().toISOString(),
+        message: 'Server restart notification received',
+      }),
+    );
+
+    // Trigger reconnection process (same as domain reload)
+    this.triggerReconnection();
+  }
+
+  private triggerReconnection(): void {
+    // Use existing domain reload recovery mechanism
+    VibeLogger.logInfo(
+      'server_restart_reconnection_triggered',
+      'Triggering reconnection after server restart',
+      { timestamp: new Date().toISOString() },
+    );
+
+    // Same logic as domain reload - send setClientName to restore connection immediately
+    if (this.onDomainReloadComplete) {
+      this.onDomainReloadComplete();
+    }
   }
 
   private handleHealthCheck(res: ServerResponse): void {

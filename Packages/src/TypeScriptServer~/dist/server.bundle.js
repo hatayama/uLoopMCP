@@ -8845,6 +8845,8 @@ var NotificationReceiveServer = class {
       const pathname = parsedUrl.pathname;
       if (method === "POST" && pathname === "/domain-reload-complete") {
         this.handleDomainReloadComplete(req, res);
+      } else if (method === "POST" && pathname === "/api/notification") {
+        void this.handleNotification(req, res);
       } else if (method === "GET" && pathname === "/health") {
         this.handleHealthCheck(res);
       } else {
@@ -8870,6 +8872,98 @@ var NotificationReceiveServer = class {
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ status: "received" }));
+  }
+  async handleNotification(req, res) {
+    try {
+      const body = await this.parseRequestBody(req);
+      const notificationType = body.type;
+      if (notificationType === "domain_reload_complete") {
+        this.handleDomainReloadNotification(req, res);
+        return;
+      }
+      if (notificationType === "server_restart_complete") {
+        this.handleServerRestartNotification(req, res);
+        return;
+      }
+      res.statusCode = 400;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ success: false, error: "Unknown notification type" }));
+    } catch (error) {
+      VibeLogger.logError("notification_handler_error", "Failed to handle notification", {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ success: false, error: "Internal server error" }));
+    }
+  }
+  async parseRequestBody(req) {
+    return new Promise((resolve2, reject) => {
+      let body = "";
+      req.on("data", (chunk) => {
+        body += chunk.toString();
+      });
+      req.on("end", () => {
+        try {
+          const parsed = JSON.parse(body);
+          resolve2(parsed);
+        } catch (error) {
+          reject(error);
+        }
+      });
+      req.on("error", (error) => {
+        reject(error);
+      });
+    });
+  }
+  handleDomainReloadNotification(req, res) {
+    VibeLogger.logInfo(
+      "domain_reload_notification_received",
+      "Received domain reload notification from Unity",
+      { timestamp: (/* @__PURE__ */ new Date()).toISOString() }
+    );
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "application/json");
+    res.end(
+      JSON.stringify({
+        success: true,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        message: "Domain reload notification received"
+      })
+    );
+    if (this.onDomainReloadComplete) {
+      this.onDomainReloadComplete();
+    }
+  }
+  handleServerRestartNotification(req, res) {
+    VibeLogger.logInfo(
+      "server_restart_notification_received",
+      "Received server restart notification from Unity",
+      {
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        port: this.port
+      }
+    );
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "application/json");
+    res.end(
+      JSON.stringify({
+        success: true,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        message: "Server restart notification received"
+      })
+    );
+    this.triggerReconnection();
+  }
+  triggerReconnection() {
+    VibeLogger.logInfo(
+      "server_restart_reconnection_triggered",
+      "Triggering reconnection after server restart",
+      { timestamp: (/* @__PURE__ */ new Date()).toISOString() }
+    );
+    if (this.onDomainReloadComplete) {
+      this.onDomainReloadComplete();
+    }
   }
   handleHealthCheck(res) {
     res.statusCode = 200;
