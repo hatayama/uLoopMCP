@@ -1,6 +1,9 @@
 import { POLLING } from './constants.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 import { UnityClient } from './unity-client.js';
+import { ServiceLocator } from './infrastructure/service-locator.js';
+import { ServiceTokens } from './infrastructure/service-tokens.js';
+import { HandleUnityShutdownUseCase } from './domain/use-cases/handle-unity-shutdown-use-case.js';
 
 /**
  * Unity Discovery Service with Unified Connection Management
@@ -371,30 +374,102 @@ export class UnityDiscovery {
 
   /**
    * Handle connection lost event (called by UnityClient)
+   * Uses HandleUnityShutdownUseCase to determine whether to restart polling or stop cleanly
    */
   handleConnectionLost(): void {
     const correlationId = VibeLogger.generateCorrelationId();
 
     VibeLogger.logInfo(
       'unity_discovery_connection_lost_handler',
-      'Handling connection lost event',
+      'Handling connection lost event via UseCase',
       {
         was_discovering: this.isDiscovering,
         has_discovery_interval: this.discoveryInterval !== null,
         active_timer_count: UnityDiscovery.activeTimerCount,
       },
       correlationId,
-      'Connection lost event received - preparing for recovery',
+      'Connection lost event received - using UseCase to determine shutdown strategy',
     );
 
     // Force reset discovery state to ensure clean restart
     this.isDiscovering = false;
 
+    // Use HandleUnityShutdownUseCase to handle the shutdown decision
+    try {
+      const shutdownUseCase = ServiceLocator.resolve<HandleUnityShutdownUseCase>(
+        ServiceTokens.HANDLE_UNITY_SHUTDOWN_USE_CASE,
+      );
+
+      // Execute shutdown UseCase with default behavior (stop polling by default)
+      // This will determine if polling should be stopped or continued
+      void shutdownUseCase
+        .execute({
+          reason: 'connection_lost',
+          stopPolling: true, // Default: stop polling on Unity termination
+        })
+        .then((response) => {
+          VibeLogger.logInfo(
+            'unity_discovery_shutdown_use_case_completed',
+            'Unity shutdown UseCase completed',
+            {
+              shutdown_completed: response.shutdownCompleted,
+              polling_stopped: response.pollingStopped,
+              tools_cleared: response.toolsCleared,
+              reason: response.reason,
+            },
+            correlationId,
+            'UseCase-driven shutdown completed - polling behavior determined by UseCase',
+          );
+        })
+        .catch((error) => {
+          VibeLogger.logError(
+            'unity_discovery_shutdown_use_case_error',
+            'Unity shutdown UseCase failed - falling back to legacy behavior',
+            {
+              error_message: error instanceof Error ? error.message : String(error),
+              error_type: error instanceof Error ? error.constructor.name : typeof error,
+            },
+            correlationId,
+            'UseCase failed - falling back to automatic polling restart',
+          );
+
+          // Fallback to legacy behavior if UseCase fails
+          this.legacyConnectionLostHandler(correlationId);
+        });
+    } catch (serviceError) {
+      VibeLogger.logError(
+        'unity_discovery_service_resolution_error',
+        'Failed to resolve HandleUnityShutdownUseCase - falling back to legacy behavior',
+        {
+          error_message:
+            serviceError instanceof Error ? serviceError.message : String(serviceError),
+          error_type:
+            serviceError instanceof Error ? serviceError.constructor.name : typeof serviceError,
+        },
+        correlationId,
+        'Service resolution failed - using legacy connection lost handling',
+      );
+
+      // Fallback to legacy behavior if service resolution fails
+      this.legacyConnectionLostHandler(correlationId);
+    }
+
+    // Trigger callback immediately
+    if (this.onConnectionLostCallback) {
+      this.onConnectionLostCallback();
+    }
+  }
+
+  /**
+   * Legacy connection lost handler (fallback behavior)
+   * Automatically restarts polling after delay
+   */
+  private legacyConnectionLostHandler(correlationId: string): void {
     // Add delay before restarting discovery to allow Unity to fully shut down
     setTimeout(() => {
       VibeLogger.logInfo(
         'unity_discovery_restart_after_connection_lost',
-        'Restarting discovery after connection lost delay',
+        'Restarting discovery after connection lost delay (legacy fallback)',
         {
           has_discovery_interval: this.discoveryInterval !== null,
         },
@@ -407,10 +482,63 @@ export class UnityDiscovery {
         this.start();
       }
     }, 2000); // 2秒待ってからディスカバリー再開
+  }
 
-    // Trigger callback immediately
-    if (this.onConnectionLostCallback) {
-      this.onConnectionLostCallback();
+  /**
+   * Manually stop polling permanently (for user-initiated shutdown)
+   * Uses HandleUnityShutdownUseCase to perform clean shutdown
+   */
+  async stopPollingPermanently(): Promise<void> {
+    const correlationId = VibeLogger.generateCorrelationId();
+
+    VibeLogger.logInfo(
+      'unity_discovery_manual_stop_requested',
+      'Manual polling stop requested by user',
+      {
+        was_discovering: this.isDiscovering,
+        has_discovery_interval: this.discoveryInterval !== null,
+        active_timer_count: UnityDiscovery.activeTimerCount,
+      },
+      correlationId,
+      'User requested manual polling stop - executing clean shutdown',
+    );
+
+    try {
+      const shutdownUseCase = ServiceLocator.resolve<HandleUnityShutdownUseCase>(
+        ServiceTokens.HANDLE_UNITY_SHUTDOWN_USE_CASE,
+      );
+
+      const response = await shutdownUseCase.execute({
+        reason: 'manual_stop',
+        stopPolling: true,
+      });
+
+      VibeLogger.logInfo(
+        'unity_discovery_manual_stop_completed',
+        'Manual polling stop completed successfully',
+        {
+          shutdown_completed: response.shutdownCompleted,
+          polling_stopped: response.pollingStopped,
+          tools_cleared: response.toolsCleared,
+          reason: response.reason,
+        },
+        correlationId,
+        'Manual stop completed - polling permanently disabled until restart',
+      );
+    } catch (error) {
+      VibeLogger.logError(
+        'unity_discovery_manual_stop_error',
+        'Manual polling stop failed - falling back to direct stop',
+        {
+          error_message: error instanceof Error ? error.message : String(error),
+          error_type: error instanceof Error ? error.constructor.name : typeof error,
+        },
+        correlationId,
+        'UseCase failed - performing direct polling stop',
+      );
+
+      // Fallback: direct stop if UseCase fails
+      this.stop();
     }
   }
 

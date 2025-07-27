@@ -49,3 +49,11 @@ export interface ProcessNotificationRequest {
   method: string;
   params: unknown;
 }
+
+/**
+ * Request for Unity shutdown handling UseCase
+ */
+export interface HandleUnityShutdownRequest {
+  reason?: 'user_terminated' | 'connection_lost' | 'manual_stop';
+  stopPolling?: boolean;
+}

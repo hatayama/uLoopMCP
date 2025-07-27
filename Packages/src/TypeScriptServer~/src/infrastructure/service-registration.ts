@@ -28,6 +28,7 @@ import { ExecuteToolUseCase } from '../domain/use-cases/execute-tool-use-case.js
 import { RefreshToolsUseCase } from '../domain/use-cases/refresh-tools-use-case.js';
 import { InitializeServerUseCase } from '../domain/use-cases/initialize-server-use-case.js';
 import { HandleConnectionLostUseCase } from '../domain/use-cases/handle-connection-lost-use-case.js';
+import { HandleUnityShutdownUseCase } from '../domain/use-cases/handle-unity-shutdown-use-case.js';
 import { ProcessNotificationUseCase } from '../domain/use-cases/process-notification-use-case.js';
 
 // Application Service interfaces
@@ -140,6 +141,23 @@ export function registerServices(): void {
       ServiceTokens.DISCOVERY_APP_SERVICE,
     );
     return new HandleConnectionLostUseCase(
+      connectionService,
+      toolManagementService,
+      discoveryService,
+    );
+  });
+
+  ServiceLocator.register(ServiceTokens.HANDLE_UNITY_SHUTDOWN_USE_CASE, () => {
+    const connectionService = ServiceLocator.resolve<IConnectionService>(
+      ServiceTokens.CONNECTION_APP_SERVICE,
+    );
+    const toolManagementService = ServiceLocator.resolve<IToolManagementService>(
+      ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE,
+    );
+    const discoveryService = ServiceLocator.resolve<IDiscoveryService>(
+      ServiceTokens.DISCOVERY_APP_SERVICE,
+    );
+    return new HandleUnityShutdownUseCase(
       connectionService,
       toolManagementService,
       discoveryService,

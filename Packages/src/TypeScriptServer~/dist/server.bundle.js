@@ -7219,6 +7219,220 @@ var UnityClient = class _UnityClient {
   }
 };
 
+// src/infrastructure/errors.ts
+var InfrastructureError = class extends Error {
+  constructor(message, technicalDetails, originalError) {
+    super(message);
+    this.technicalDetails = technicalDetails;
+    this.originalError = originalError;
+    this.name = this.constructor.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+  /**
+   * 技術的詳細を含む完全なエラー情報を取得
+   */
+  getFullErrorInfo() {
+    return {
+      message: this.message,
+      category: this.category,
+      technicalDetails: this.technicalDetails,
+      originalError: this.originalError?.message,
+      stack: this.stack
+    };
+  }
+};
+var UnityCommunicationError = class extends InfrastructureError {
+  constructor(message, unityEndpoint, requestData, originalError) {
+    super(message, { unityEndpoint, requestData }, originalError);
+    this.unityEndpoint = unityEndpoint;
+    this.requestData = requestData;
+  }
+  category = "UNITY_COMMUNICATION";
+};
+var ToolManagementError = class extends InfrastructureError {
+  constructor(message, toolName, toolData, originalError) {
+    super(message, { toolName, toolData }, originalError);
+    this.toolName = toolName;
+    this.toolData = toolData;
+  }
+  category = "TOOL_MANAGEMENT";
+};
+var ServiceResolutionError = class extends InfrastructureError {
+  constructor(message, serviceToken, resolutionStack, originalError) {
+    super(message, { serviceToken, resolutionStack }, originalError);
+    this.serviceToken = serviceToken;
+    this.resolutionStack = resolutionStack;
+  }
+  category = "SERVICE_RESOLUTION";
+};
+
+// src/infrastructure/service-locator.ts
+var ServiceLocator = class {
+  static services = /* @__PURE__ */ new Map();
+  static resolutionStack = /* @__PURE__ */ new Set();
+  static originalServices = /* @__PURE__ */ new Map();
+  /**
+   * Register service with lifecycle management
+   *
+   * @param token Type-safe service token
+   * @param factory Factory function to create service instance
+   * @param lifecycle Service lifecycle (singleton or transient)
+   */
+  static register(token, factory, lifecycle = "transient") {
+    this.services.set(token, { factory, lifecycle });
+  }
+  /**
+   * Resolve service instance with circular dependency detection
+   *
+   * @param token Type-safe service token
+   * @returns Service instance
+   * @throws Error if service not registered or circular dependency detected
+   */
+  static resolve(token) {
+    if (this.resolutionStack.has(token)) {
+      const stackArray = Array.from(this.resolutionStack).map((s) => s.toString());
+      throw new ServiceResolutionError(
+        `Circular dependency detected: ${stackArray.join(" -> ")} -> ${token.toString()}`,
+        token.toString(),
+        stackArray
+      );
+    }
+    this.resolutionStack.add(token);
+    try {
+      const registration = this.services.get(token);
+      if (!registration) {
+        throw new ServiceResolutionError(
+          `Service not registered: ${token.toString()}`,
+          token.toString()
+        );
+      }
+      if (registration.lifecycle === "singleton") {
+        if (!registration.instance) {
+          registration.instance = registration.factory();
+        }
+        return registration.instance;
+      }
+      return registration.factory();
+    } finally {
+      this.resolutionStack.delete(token);
+    }
+  }
+  /**
+   * Clear all service registrations
+   * Primarily used for testing
+   */
+  static clear() {
+    this.services.clear();
+    this.resolutionStack.clear();
+    this.originalServices.clear();
+  }
+  /**
+   * Get list of registered services
+   * Primarily used for debugging
+   */
+  static getRegisteredServices() {
+    return Array.from(this.services.keys()).map((token) => token.toString());
+  }
+  /**
+   * Check if service is registered
+   *
+   * @param token Service token
+   * @returns true if registered
+   */
+  static isRegistered(token) {
+    return this.services.has(token);
+  }
+  /**
+   * Mock service for testing (temporarily replace)
+   *
+   * @param token Service token to mock
+   * @param mockFactory Mock factory function
+   */
+  static mock(token, mockFactory) {
+    const original = this.services.get(token);
+    if (original) {
+      this.originalServices.set(token, original);
+    }
+    this.register(token, mockFactory, "transient");
+  }
+  /**
+   * Restore mocked service to original
+   *
+   * @param token Service token to restore
+   */
+  static restore(token) {
+    const original = this.originalServices.get(token);
+    if (original) {
+      this.services.set(token, original);
+      this.originalServices.delete(token);
+    } else {
+      this.services.delete(token);
+    }
+  }
+  /**
+   * Restore all mocked services (cleanup after tests)
+   */
+  static restoreAll() {
+    for (const [token, original] of this.originalServices) {
+      this.services.set(token, original);
+    }
+    this.originalServices.clear();
+  }
+  /**
+   * Get service registration info (for debugging)
+   */
+  static getServiceInfo(token) {
+    const registration = this.services.get(token);
+    if (!registration) {
+      return { isRegistered: false };
+    }
+    return {
+      isRegistered: true,
+      lifecycle: registration.lifecycle,
+      hasInstance: registration.lifecycle === "singleton" && !!registration.instance
+    };
+  }
+};
+
+// src/infrastructure/service-tokens.ts
+var ServiceTokens = {
+  // Application Services (Singleton lifecycle)
+  CONNECTION_APP_SERVICE: Symbol("CONNECTION_APP_SERVICE"),
+  TOOL_MANAGEMENT_APP_SERVICE: Symbol(
+    "TOOL_MANAGEMENT_APP_SERVICE"
+  ),
+  TOOL_QUERY_APP_SERVICE: Symbol("TOOL_QUERY_APP_SERVICE"),
+  EVENT_APP_SERVICE: Symbol("EVENT_APP_SERVICE"),
+  MESSAGE_APP_SERVICE: Symbol("MESSAGE_APP_SERVICE"),
+  DISCOVERY_APP_SERVICE: Symbol("DISCOVERY_APP_SERVICE"),
+  CLIENT_COMPATIBILITY_APP_SERVICE: Symbol(
+    "CLIENT_COMPATIBILITY_APP_SERVICE"
+  ),
+  // UseCase Services (Transient lifecycle)
+  EXECUTE_TOOL_USE_CASE: Symbol("EXECUTE_TOOL_USE_CASE"),
+  REFRESH_TOOLS_USE_CASE: Symbol("REFRESH_TOOLS_USE_CASE"),
+  INITIALIZE_SERVER_USE_CASE: Symbol(
+    "INITIALIZE_SERVER_USE_CASE"
+  ),
+  HANDLE_CONNECTION_LOST_USE_CASE: Symbol(
+    "HANDLE_CONNECTION_LOST_USE_CASE"
+  ),
+  HANDLE_UNITY_SHUTDOWN_USE_CASE: Symbol(
+    "HANDLE_UNITY_SHUTDOWN_USE_CASE"
+  ),
+  PROCESS_NOTIFICATION_USE_CASE: Symbol(
+    "PROCESS_NOTIFICATION_USE_CASE"
+  ),
+  // Infrastructure Services (Singleton lifecycle)
+  UNITY_CLIENT: Symbol("UNITY_CLIENT"),
+  UNITY_CONNECTION_MANAGER: Symbol("UNITY_CONNECTION_MANAGER"),
+  UNITY_TOOL_MANAGER: Symbol("UNITY_TOOL_MANAGER"),
+  UNITY_DISCOVERY: Symbol("UNITY_DISCOVERY"),
+  MCP_CLIENT_COMPATIBILITY: Symbol("MCP_CLIENT_COMPATIBILITY"),
+  UNITY_EVENT_HANDLER: Symbol("UNITY_EVENT_HANDLER"),
+  VIBE_LOGGER: Symbol("VIBE_LOGGER")
+};
+
 // src/unity-discovery.ts
 var UnityDiscovery = class _UnityDiscovery {
   discoveryInterval = null;
@@ -7514,25 +7728,82 @@ var UnityDiscovery = class _UnityDiscovery {
   }
   /**
    * Handle connection lost event (called by UnityClient)
+   * Uses HandleUnityShutdownUseCase to determine whether to restart polling or stop cleanly
    */
   handleConnectionLost() {
     const correlationId = VibeLogger.generateCorrelationId();
     VibeLogger.logInfo(
       "unity_discovery_connection_lost_handler",
-      "Handling connection lost event",
+      "Handling connection lost event via UseCase",
       {
         was_discovering: this.isDiscovering,
         has_discovery_interval: this.discoveryInterval !== null,
         active_timer_count: _UnityDiscovery.activeTimerCount
       },
       correlationId,
-      "Connection lost event received - preparing for recovery"
+      "Connection lost event received - using UseCase to determine shutdown strategy"
     );
     this.isDiscovering = false;
+    try {
+      const shutdownUseCase = ServiceLocator.resolve(
+        ServiceTokens.HANDLE_UNITY_SHUTDOWN_USE_CASE
+      );
+      void shutdownUseCase.execute({
+        reason: "connection_lost",
+        stopPolling: true
+        // Default: stop polling on Unity termination
+      }).then((response) => {
+        VibeLogger.logInfo(
+          "unity_discovery_shutdown_use_case_completed",
+          "Unity shutdown UseCase completed",
+          {
+            shutdown_completed: response.shutdownCompleted,
+            polling_stopped: response.pollingStopped,
+            tools_cleared: response.toolsCleared,
+            reason: response.reason
+          },
+          correlationId,
+          "UseCase-driven shutdown completed - polling behavior determined by UseCase"
+        );
+      }).catch((error) => {
+        VibeLogger.logError(
+          "unity_discovery_shutdown_use_case_error",
+          "Unity shutdown UseCase failed - falling back to legacy behavior",
+          {
+            error_message: error instanceof Error ? error.message : String(error),
+            error_type: error instanceof Error ? error.constructor.name : typeof error
+          },
+          correlationId,
+          "UseCase failed - falling back to automatic polling restart"
+        );
+        this.legacyConnectionLostHandler(correlationId);
+      });
+    } catch (serviceError) {
+      VibeLogger.logError(
+        "unity_discovery_service_resolution_error",
+        "Failed to resolve HandleUnityShutdownUseCase - falling back to legacy behavior",
+        {
+          error_message: serviceError instanceof Error ? serviceError.message : String(serviceError),
+          error_type: serviceError instanceof Error ? serviceError.constructor.name : typeof serviceError
+        },
+        correlationId,
+        "Service resolution failed - using legacy connection lost handling"
+      );
+      this.legacyConnectionLostHandler(correlationId);
+    }
+    if (this.onConnectionLostCallback) {
+      this.onConnectionLostCallback();
+    }
+  }
+  /**
+   * Legacy connection lost handler (fallback behavior)
+   * Automatically restarts polling after delay
+   */
+  legacyConnectionLostHandler(correlationId) {
     setTimeout(() => {
       VibeLogger.logInfo(
         "unity_discovery_restart_after_connection_lost",
-        "Restarting discovery after connection lost delay",
+        "Restarting discovery after connection lost delay (legacy fallback)",
         {
           has_discovery_interval: this.discoveryInterval !== null
         },
@@ -7543,8 +7814,56 @@ var UnityDiscovery = class _UnityDiscovery {
         this.start();
       }
     }, 2e3);
-    if (this.onConnectionLostCallback) {
-      this.onConnectionLostCallback();
+  }
+  /**
+   * Manually stop polling permanently (for user-initiated shutdown)
+   * Uses HandleUnityShutdownUseCase to perform clean shutdown
+   */
+  async stopPollingPermanently() {
+    const correlationId = VibeLogger.generateCorrelationId();
+    VibeLogger.logInfo(
+      "unity_discovery_manual_stop_requested",
+      "Manual polling stop requested by user",
+      {
+        was_discovering: this.isDiscovering,
+        has_discovery_interval: this.discoveryInterval !== null,
+        active_timer_count: _UnityDiscovery.activeTimerCount
+      },
+      correlationId,
+      "User requested manual polling stop - executing clean shutdown"
+    );
+    try {
+      const shutdownUseCase = ServiceLocator.resolve(
+        ServiceTokens.HANDLE_UNITY_SHUTDOWN_USE_CASE
+      );
+      const response = await shutdownUseCase.execute({
+        reason: "manual_stop",
+        stopPolling: true
+      });
+      VibeLogger.logInfo(
+        "unity_discovery_manual_stop_completed",
+        "Manual polling stop completed successfully",
+        {
+          shutdown_completed: response.shutdownCompleted,
+          polling_stopped: response.pollingStopped,
+          tools_cleared: response.toolsCleared,
+          reason: response.reason
+        },
+        correlationId,
+        "Manual stop completed - polling permanently disabled until restart"
+      );
+    } catch (error) {
+      VibeLogger.logError(
+        "unity_discovery_manual_stop_error",
+        "Manual polling stop failed - falling back to direct stop",
+        {
+          error_message: error instanceof Error ? error.message : String(error),
+          error_type: error instanceof Error ? error.constructor.name : typeof error
+        },
+        correlationId,
+        "UseCase failed - performing direct polling stop"
+      );
+      this.stop();
     }
   }
   /**
@@ -7908,45 +8227,6 @@ var DiscoveryError = class extends DomainError {
 };
 var ClientCompatibilityError = class extends DomainError {
   code = "CLIENT_COMPATIBILITY_ERROR";
-};
-
-// src/infrastructure/errors.ts
-var InfrastructureError = class extends Error {
-  constructor(message, technicalDetails, originalError) {
-    super(message);
-    this.technicalDetails = technicalDetails;
-    this.originalError = originalError;
-    this.name = this.constructor.name;
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-  /**
-   * 技術的詳細を含む完全なエラー情報を取得
-   */
-  getFullErrorInfo() {
-    return {
-      message: this.message,
-      category: this.category,
-      technicalDetails: this.technicalDetails,
-      originalError: this.originalError?.message,
-      stack: this.stack
-    };
-  }
-};
-var UnityCommunicationError = class extends InfrastructureError {
-  constructor(message, unityEndpoint, requestData, originalError) {
-    super(message, { unityEndpoint, requestData }, originalError);
-    this.unityEndpoint = unityEndpoint;
-    this.requestData = requestData;
-  }
-  category = "UNITY_COMMUNICATION";
-};
-var ToolManagementError = class extends InfrastructureError {
-  constructor(message, toolName, toolData, originalError) {
-    super(message, { toolName, toolData }, originalError);
-    this.toolName = toolName;
-    this.toolData = toolData;
-  }
-  category = "TOOL_MANAGEMENT";
 };
 
 // src/application/error-converter.ts

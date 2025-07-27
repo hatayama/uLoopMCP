@@ -56,3 +56,14 @@ export interface ProcessNotificationResponse {
   processed: boolean;
   notificationsSent?: string[];
 }
+
+/**
+ * Response for Unity shutdown handling UseCase
+ */
+export interface HandleUnityShutdownResponse {
+  shutdownCompleted: boolean;
+  pollingStopped: boolean;
+  toolsCleared: boolean;
+  shutdownTime: string;
+  reason: string;
+}

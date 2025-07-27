@@ -43,6 +43,9 @@ export const ServiceTokens = {
   HANDLE_CONNECTION_LOST_USE_CASE: Symbol(
     'HANDLE_CONNECTION_LOST_USE_CASE',
   ) as ServiceToken<HandleConnectionLostUseCase>,
+  HANDLE_UNITY_SHUTDOWN_USE_CASE: Symbol(
+    'HANDLE_UNITY_SHUTDOWN_USE_CASE',
+  ) as ServiceToken<HandleUnityShutdownUseCase>,
   PROCESS_NOTIFICATION_USE_CASE: Symbol(
     'PROCESS_NOTIFICATION_USE_CASE',
   ) as ServiceToken<ProcessNotificationUseCase>,
@@ -72,6 +75,7 @@ import type { ExecuteToolUseCase } from '../domain/use-cases/execute-tool-use-ca
 import type { RefreshToolsUseCase } from '../domain/use-cases/refresh-tools-use-case.js';
 import type { InitializeServerUseCase } from '../domain/use-cases/initialize-server-use-case.js';
 import type { HandleConnectionLostUseCase } from '../domain/use-cases/handle-connection-lost-use-case.js';
+import type { HandleUnityShutdownUseCase } from '../domain/use-cases/handle-unity-shutdown-use-case.js';
 import type { ProcessNotificationUseCase } from '../domain/use-cases/process-notification-use-case.js';
 
 export type ServiceTokenMap = {
@@ -87,6 +91,7 @@ export type ServiceTokenMap = {
   [ServiceTokens.REFRESH_TOOLS_USE_CASE]: RefreshToolsUseCase;
   [ServiceTokens.INITIALIZE_SERVER_USE_CASE]: InitializeServerUseCase;
   [ServiceTokens.HANDLE_CONNECTION_LOST_USE_CASE]: HandleConnectionLostUseCase;
+  [ServiceTokens.HANDLE_UNITY_SHUTDOWN_USE_CASE]: HandleUnityShutdownUseCase;
   [ServiceTokens.PROCESS_NOTIFICATION_USE_CASE]: ProcessNotificationUseCase;
 
   [ServiceTokens.UNITY_CLIENT]: unknown; // External class - avoid circular imports
