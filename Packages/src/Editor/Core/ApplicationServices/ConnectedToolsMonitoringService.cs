@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
@@ -17,6 +18,9 @@ namespace io.github.hatayama.uLoopMCP
     public static class ConnectedToolsMonitoringService
     {
         private static List<ConnectedLLMToolData> _connectedTools = new();
+        private static List<ConnectedLLMToolData> _previousToolsForDisplay = new();
+        private static bool _isDisplayDelayActive = false;
+        private static CancellationTokenSource _displayDelayCancellation;
 
         // Events for UI notification
         public static event System.Action OnConnectedToolsChanged;
@@ -218,6 +222,79 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Get connected tools for UI display with flash prevention
+        /// Returns previous tools during delay period
+        /// </summary>
+        public static IEnumerable<ConnectedClient> GetConnectedToolsForDisplay()
+        {
+            // If delay is active, show previous tools
+            if (_isDisplayDelayActive)
+            {
+                return _previousToolsForDisplay.OrderBy(tool => tool.Name)
+                    .Select(tool => ConvertToConnectedClient(tool));
+            }
+            
+            // Normal display
+            return GetConnectedToolsAsClients();
+        }
+
+        /// <summary>
+        /// Backup current tools for display continuity before clearing
+        /// Uses TimerDelay for 1-second delay with cancellation support
+        /// </summary>
+        private static async void BackupToolsForDisplay()
+        {
+            // Cancel any existing delay operation
+            _displayDelayCancellation?.Cancel();
+            _displayDelayCancellation?.Dispose();
+            _displayDelayCancellation = new();
+            
+            _previousToolsForDisplay = _connectedTools
+                .Where(tool => tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
+                .ToList();
+            
+            _isDisplayDelayActive = true;
+            
+            VibeLogger.LogInfo(
+                "ui_flash_prevention_activated",
+                "UI flash prevention activated - showing previous tools for 1 second",
+                new { previousToolCount = _previousToolsForDisplay.Count }
+            );
+            
+            try
+            {
+                // Wait 1 second using TimerDelay with cancellation
+                await TimerDelay.Wait(1000, _displayDelayCancellation.Token);
+                
+                // Only update if not cancelled
+                if (_displayDelayCancellation != null && !_displayDelayCancellation.Token.IsCancellationRequested)
+                {
+                    _isDisplayDelayActive = false;
+                    OnConnectedToolsChanged?.Invoke();
+                    
+                    VibeLogger.LogInfo(
+                        "ui_flash_prevention_deactivated",
+                        "UI flash prevention deactivated - showing current tools",
+                        new { }
+                    );
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                VibeLogger.LogInfo(
+                    "ui_flash_prevention_cancelled",
+                    "UI flash prevention cancelled by new operation",
+                    new { }
+                );
+            }
+            finally
+            {
+                _displayDelayCancellation?.Dispose();
+                _displayDelayCancellation = null;
+            }
+        }
+
+        /// <summary>
         /// Convert stored tool data to ConnectedClient for UI display
         /// </summary>
         private static ConnectedClient ConvertToConnectedClient(ConnectedLLMToolData toolData)
@@ -267,6 +344,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             try
             {
+                // Backup tools for display before clearing
+                BackupToolsForDisplay();
+                
                 using NotificationClient client = new();
                 await client.SendServerRestartCompleteAsync();
                 

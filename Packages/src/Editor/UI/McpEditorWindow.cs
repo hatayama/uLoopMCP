@@ -100,7 +100,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public IEnumerable<ConnectedClient> GetConnectedToolsAsClients()
         {
-            return ConnectedToolsMonitoringService.GetConnectedToolsAsClients();
+            return ConnectedToolsMonitoringService.GetConnectedToolsForDisplay();
         }
 
 
