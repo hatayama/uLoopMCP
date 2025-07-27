@@ -15,7 +15,7 @@ namespace io.github.hatayama.uLoopMCP
         public const float BUTTON_HEIGHT_LARGE = 30f;
         
         // UI colors
-        private const float SECTION_BACKGROUND_COLOR_ONE = 0.2f;
+        private const float SECTION_BACKGROUND_COLOR_ONE = 0.18f;
         public static readonly Color SECTION_BACKGROUND_COLOR = new(SECTION_BACKGROUND_COLOR_ONE, SECTION_BACKGROUND_COLOR_ONE, SECTION_BACKGROUND_COLOR_ONE, 1f);
 
         private const float CLIENT_ITEM_BACKGROUND_COLOR_ONE = 0.3f;
