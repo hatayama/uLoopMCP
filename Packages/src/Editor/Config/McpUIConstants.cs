@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
@@ -11,14 +13,13 @@ namespace io.github.hatayama.uLoopMCP
 
         // UI spacing and dimensions
         public const float BUTTON_HEIGHT_LARGE = 30f;
-        public const float BUTTON_HEIGHT_MEDIUM = 25f;
-        public const float BUTTON_WIDTH_CLEAR = 60f;
         
-        // Content area heights
-        public const float JSON_SCROLL_FIXED_HEIGHT = 150f;
-        public const float JSON_CONTENT_PADDING = 50f;
-        
-        // UI colors (as floats for Unity Color)
+        // UI colors
+        private const float SECTION_BACKGROUND_COLOR_ONE = 0.18f;
+        public static readonly Color SECTION_BACKGROUND_COLOR = new(SECTION_BACKGROUND_COLOR_ONE, SECTION_BACKGROUND_COLOR_ONE, SECTION_BACKGROUND_COLOR_ONE, 1f);
+
+        private const float CLIENT_ITEM_BACKGROUND_COLOR_ONE = 0.3f;
+        public static readonly Color CLIENT_ITEM_BACKGROUND_COLOR = new(CLIENT_ITEM_BACKGROUND_COLOR_ONE, CLIENT_ITEM_BACKGROUND_COLOR_ONE, CLIENT_ITEM_BACKGROUND_COLOR_ONE, 0.5f);
 
         // Communication log settings
         public const int MAX_COMMUNICATION_LOG_ENTRIES = 20;
@@ -27,7 +28,5 @@ namespace io.github.hatayama.uLoopMCP
         public const float CLIENT_ITEM_SPACING = 3f;
         public const string CONNECTED_TOOLS_FOLDOUT_TEXT = "Connected LLM Tools";
         public const string CLIENT_ICON = "● ";
-        public const string ENDPOINT_ARROW = "→ ";
-        public const string RECONNECTING_MESSAGE = "Reconnecting...";
     }
 }

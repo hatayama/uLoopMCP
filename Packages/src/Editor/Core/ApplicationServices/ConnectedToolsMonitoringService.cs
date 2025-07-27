@@ -113,6 +113,7 @@ namespace io.github.hatayama.uLoopMCP
             ConnectedLLMToolData toolData = new(
                 client.ClientName,
                 client.Endpoint,
+                client.Port,
                 client.ConnectedAt
             );
             _connectedTools.Add(toolData);
@@ -165,7 +166,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static ConnectedClient ConvertToConnectedClient(ConnectedLLMToolData toolData)
         {
-            return new ConnectedClient(toolData.Endpoint, null, toolData.Name);
+            return new ConnectedClient(toolData.Endpoint, null, toolData.Port, toolData.Name);
         }
 
         /// <summary>
@@ -182,7 +183,7 @@ namespace io.github.hatayama.uLoopMCP
             // Immediately restore all tools to prevent "No connected tools found" flash
             foreach (ConnectedLLMToolData toolData in backup)
             {
-                ConnectedClient restoredClient = new(toolData.Endpoint, null, toolData.Name);
+                ConnectedClient restoredClient = new(toolData.Endpoint, null, toolData.Port, toolData.Name);
                 AddConnectedTool(restoredClient);
             }
 

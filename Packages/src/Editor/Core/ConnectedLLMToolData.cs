@@ -16,6 +16,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         [SerializeField] public string Name;
         [SerializeField] public string Endpoint;
+        [SerializeField] public int Port;
         [SerializeField] public string ConnectedAtString;
         
         // Unity doesn't serialize DateTime directly, so we use a string representation
@@ -31,10 +32,11 @@ namespace io.github.hatayama.uLoopMCP
             // Default constructor for Unity serialization
         }
 
-        public ConnectedLLMToolData(string name, string endpoint, DateTime connectedAt)
+        public ConnectedLLMToolData(string name, string endpoint, int port, DateTime connectedAt)
         {
             Name = name;
             Endpoint = endpoint;
+            Port = port;
             ConnectedAt = connectedAt;
         }
     }

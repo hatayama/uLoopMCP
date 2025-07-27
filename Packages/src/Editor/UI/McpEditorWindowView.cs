@@ -12,6 +12,29 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class McpEditorWindowView
     {
+        private GUIStyle CreateSectionBoxStyle()
+        {
+            GUIStyle style = new(EditorStyles.helpBox);
+            Texture2D backgroundTexture = new(1, 1);
+            backgroundTexture.SetPixel(0, 0, McpUIConstants.SECTION_BACKGROUND_COLOR);
+            backgroundTexture.Apply();
+            style.normal.background = backgroundTexture;
+            style.border = new RectOffset(4, 4, 4, 4);
+            style.padding = new RectOffset(8, 8, 8, 8);
+            return style;
+        }
+
+        private GUIStyle CreateClientItemBoxStyle()
+        {
+            GUIStyle style = new(EditorStyles.helpBox);
+            Texture2D backgroundTexture = new(1, 1);
+            backgroundTexture.SetPixel(0, 0, McpUIConstants.CLIENT_ITEM_BACKGROUND_COLOR);
+            backgroundTexture.Apply();
+            style.normal.background = backgroundTexture;
+            style.border = new RectOffset(4, 4, 4, 4);
+            style.padding = new RectOffset(8, 8, 8, 8);
+            return style;
+        }
         /// <summary>
         /// Draw debug background if ULOOPMCP_DEBUG is defined
         /// </summary>
@@ -41,7 +64,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public void DrawServerControls(ServerControlsData data, Action toggleServerCallback, Action<bool> autoStartCallback, Action<int> portChangeCallback)
         {
-            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.BeginVertical(CreateSectionBoxStyle());
             
             // Port settings
             EditorGUI.BeginDisabledGroup(data.IsServerRunning);
@@ -119,7 +142,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public void DrawConnectedToolsSection(ConnectedToolsData data, Action<bool> toggleFoldoutCallback)
         {
-            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.BeginVertical(CreateSectionBoxStyle());
             
             bool newShowFoldout = EditorGUILayout.Foldout(data.ShowFoldout, McpUIConstants.CONNECTED_TOOLS_FOLDOUT_TEXT, true);
             if (newShowFoldout != data.ShowFoldout)
@@ -139,7 +162,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public void DrawEditorConfigSection(EditorConfigData data, Action<McpEditorType> editorChangeCallback, Action<string> configureCallback, Action<bool> foldoutCallback)
         {
-            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.BeginVertical(CreateSectionBoxStyle());
             
             bool showFoldout = EditorGUILayout.Foldout(data.ShowFoldout, "LLM Tool Settings", true);
             if (showFoldout != data.ShowFoldout)
@@ -286,24 +309,18 @@ namespace io.github.hatayama.uLoopMCP
 
         private void DrawConnectedClientItem(ConnectedClient client)
         {
-            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.BeginVertical(CreateClientItemBoxStyle());
             
             EditorGUILayout.BeginHorizontal();
             
-            EditorGUILayout.LabelField(McpUIConstants.CLIENT_ICON + client.ClientName, new GUIStyle(EditorStyles.label) { fontStyle = FontStyle.Bold }, GUILayout.MaxWidth(100f), GUILayout.ExpandWidth(true));
+            string displayText = $"{McpUIConstants.CLIENT_ICON}<b>{client.ClientName}</b>  <color=#888888>:{client.Port}</color>";
+            
+            GUIStyle richTextStyle = new (EditorStyles.label);
+            richTextStyle.richText = true;
+            EditorGUILayout.LabelField(displayText, richTextStyle, GUILayout.ExpandWidth(true));
             
             EditorGUILayout.EndHorizontal();
-            
-            // Display endpoint information on a separate line to prevent horizontal overflow
-            EditorGUILayout.BeginHorizontal();
-            GUIStyle endpointStyle = new GUIStyle(EditorStyles.miniLabel);
-            endpointStyle.normal.textColor = Color.gray;
-            endpointStyle.wordWrap = true;
-            EditorGUILayout.LabelField(McpUIConstants.ENDPOINT_ARROW + client.Endpoint, endpointStyle, GUILayout.ExpandWidth(true));
-            EditorGUILayout.EndHorizontal();
-            
             EditorGUILayout.EndVertical();
-            
             EditorGUILayout.Space(McpUIConstants.CLIENT_ITEM_SPACING);
         }
 
@@ -355,7 +372,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void DrawSecuritySettings(SecuritySettingsData data, Action<bool> foldoutCallback, Action<bool> enableTestsCallback, Action<bool> allowMenuCallback, Action<bool> allowThirdPartyCallback)
         {
-            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.BeginVertical(CreateSectionBoxStyle());
             
             bool showFoldout = EditorGUILayout.Foldout(data.ShowSecuritySettings, "Security Settings", true);
             if (showFoldout != data.ShowSecuritySettings)

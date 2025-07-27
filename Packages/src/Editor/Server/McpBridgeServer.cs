@@ -24,29 +24,33 @@ namespace io.github.hatayama.uLoopMCP
         public readonly string Endpoint;
         public readonly string ClientName; 
         public readonly DateTime ConnectedAt;
+        public readonly int Port;
         public readonly NetworkStream Stream;
 
-        public ConnectedClient(string endpoint, NetworkStream stream, string clientName = McpConstants.UNKNOWN_CLIENT_NAME)
+        public ConnectedClient(string endpoint, NetworkStream stream, int port, string clientName = McpConstants.UNKNOWN_CLIENT_NAME)
         {
             Endpoint = endpoint;
             Stream = stream; // Allow null stream for UI display purposes
             ClientName = clientName;
             ConnectedAt = DateTime.Now;
+            Port = port;
         }
         
         // Private constructor for WithClientName to preserve ConnectedAt
-        private ConnectedClient(string endpoint, NetworkStream stream, string clientName, DateTime connectedAt)
+        private ConnectedClient(string endpoint, NetworkStream stream, int port, string clientName, DateTime connectedAt)
         {
             Endpoint = endpoint;
             Stream = stream; // Allow null stream for UI display purposes
             ClientName = clientName;
             ConnectedAt = connectedAt;
+            Port = port;
         }
         
         public ConnectedClient WithClientName(string clientName)
         {
-            return new ConnectedClient(Endpoint, Stream, clientName, ConnectedAt);
+            return new ConnectedClient(Endpoint, Stream, Port, clientName, ConnectedAt);
         }
+
     }
 
     /// <summary>
@@ -407,7 +411,8 @@ namespace io.github.hatayama.uLoopMCP
                     }
                     
                     // Add new client to connected clients for notification broadcasting
-                    ConnectedClient connectedClient = new ConnectedClient(clientEndpoint, stream);
+                    int clientPort = (client.Client.RemoteEndPoint as System.Net.IPEndPoint)?.Port ?? 0;
+                    ConnectedClient connectedClient = new ConnectedClient(clientEndpoint, stream, clientPort);
                     _connectedClients.TryAdd(clientKey, connectedClient);
                     
                     // Initialize new framing components
