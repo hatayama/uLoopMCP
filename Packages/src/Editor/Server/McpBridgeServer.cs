@@ -67,7 +67,6 @@ namespace io.github.hatayama.uLoopMCP
         // Events for individual tool management
         public static event System.Action<ConnectedClient> OnToolConnected;
         public static event System.Action<string> OnToolDisconnected;
-        public static event System.Action OnAllToolsCleared;
         
         // HResult error codes for normal disconnection detection
         private static readonly HashSet<int> NormalDisconnectionHResults = new()
@@ -306,11 +305,9 @@ namespace io.github.hatayama.uLoopMCP
                 _connectedClients.TryRemove(clientKey, out _);
             }
             
-            // Notify all tools cleared if not during domain reload
-            if (!McpEditorSettings.GetIsDomainReloadInProgress())
-            {
-                OnAllToolsCleared?.Invoke();
-            }
+            // Do not clear connectedLLMTools during server stop or domain reload
+            // Tools will be cleared after server restart notification is sent
+            // This preserves connected tools for recovery mechanism
         }
 
         /// <summary>

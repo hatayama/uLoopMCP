@@ -44,7 +44,6 @@ namespace io.github.hatayama.uLoopMCP
             McpBridgeServer.OnServerStarted += OnServerStarted;
             McpBridgeServer.OnToolConnected += OnToolConnected;
             McpBridgeServer.OnToolDisconnected += OnToolDisconnected;
-            McpBridgeServer.OnAllToolsCleared += OnAllToolsCleared;
         }
 
         /// <summary>
@@ -81,13 +80,6 @@ namespace io.github.hatayama.uLoopMCP
             RemoveConnectedTool(toolName);
         }
 
-        /// <summary>
-        /// Handle all tools cleared event - clear all connected tools
-        /// </summary>
-        private static void OnAllToolsCleared()
-        {
-            ClearConnectedTools();
-        }
 
         /// <summary>
         /// Add a connected LLM tool
