@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security;
+using System.Threading;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
@@ -68,6 +69,7 @@ namespace io.github.hatayama.uLoopMCP
         private static string SettingsFilePath => Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
 
         private static McpEditorSettingsData _cachedSettings;
+        private static readonly object _fileLock = new();
 
         /// <summary>
         /// Gets the settings data.
@@ -108,7 +110,10 @@ namespace io.github.hatayama.uLoopMCP
                 throw new SecurityException("Settings JSON content exceeds size limit");
             }
             
-            File.WriteAllText(SettingsFilePath, json);
+            lock (_fileLock)
+            {
+                File.WriteAllText(SettingsFilePath, json);
+            }
             _cachedSettings = settings;
 
             // MCP Editor settings saved
@@ -964,7 +969,11 @@ namespace io.github.hatayama.uLoopMCP
                         throw new SecurityException("Settings file exceeds size limit");
                     }
                     
-                    string json = File.ReadAllText(SettingsFilePath);
+                    string json;
+                    lock (_fileLock)
+                    {
+                        json = File.ReadAllText(SettingsFilePath);
+                    }
                     
                     // Security: Validate JSON content
                     if (string.IsNullOrWhiteSpace(json))
