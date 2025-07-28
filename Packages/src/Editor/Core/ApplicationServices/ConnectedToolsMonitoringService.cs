@@ -302,7 +302,6 @@ namespace io.github.hatayama.uLoopMCP
             return new ConnectedClient(toolData.Endpoint, null, toolData.Name, toolData.NotificationPort);
         }
 
-
         /// <summary>
         /// Restore connected tools from persistent settings
         /// </summary>

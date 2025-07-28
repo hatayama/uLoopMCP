@@ -2,11 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using System.Linq;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-
-#if ULOOPMCP_DEBUG
 using System;
-#endif
 
 namespace io.github.hatayama.uLoopMCP
 {

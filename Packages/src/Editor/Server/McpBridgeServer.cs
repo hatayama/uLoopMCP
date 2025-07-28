@@ -24,6 +24,7 @@ namespace io.github.hatayama.uLoopMCP
         public readonly string Endpoint;
         public readonly string ClientName; 
         public readonly DateTime ConnectedAt;
+        public readonly int Port;
         public readonly NetworkStream Stream;
         public readonly int NotificationPort;
 
@@ -50,6 +51,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             return new ConnectedClient(Endpoint, Stream, clientName, ConnectedAt, NotificationPort);
         }
+
     }
 
     /// <summary>

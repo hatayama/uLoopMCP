@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.30.3](https://github.com/hatayama/uLoopMCP/compare/v0.30.2...v0.30.3) (2025-07-27)
+
+
+### Bug Fixes
+
+* Enhance Connected Tools UI with Port Display and Better Contrast ([#268](https://github.com/hatayama/uLoopMCP/issues/268)) ([04589f6](https://github.com/hatayama/uLoopMCP/commit/04589f616a474dd4c448a9c24a9acd273d4568b7))
+
+## [0.30.2](https://github.com/hatayama/uLoopMCP/compare/v0.30.1...v0.30.2) (2025-07-26)
+
+
+### Bug Fixes
+
+* resolve TypeScript type errors in service registration and dependencies ([#250](https://github.com/hatayama/uLoopMCP/issues/250)) ([63a685d](https://github.com/hatayama/uLoopMCP/commit/63a685d6ec71a647ea812e4d77bc784e0e58b384))
+
 ## [0.30.1](https://github.com/hatayama/uLoopMCP/compare/v0.30.0...v0.30.1) (2025-07-20)
 
 
