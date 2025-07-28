@@ -17,6 +17,7 @@ import { ServiceTokens } from './service-tokens.js';
 import { UnityClient } from '../unity-client.js';
 import { UnityConnectionManager } from '../unity-connection-manager.js';
 import { UnityToolManager } from '../unity-tool-manager.js';
+import { UnityDiscovery } from '../unity-discovery.js';
 import { McpClientCompatibility } from '../mcp-client-compatibility.js';
 
 // Application Services (placeholder implementations - to be created later)
@@ -83,6 +84,11 @@ export function registerServices(): void {
   ServiceLocator.register(ServiceTokens.CLIENT_COMPATIBILITY_APP_SERVICE, () => {
     const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT) as UnityClient;
     return new McpClientCompatibility(unityClient);
+  });
+
+  ServiceLocator.register(ServiceTokens.DISCOVERY_APP_SERVICE, () => {
+    const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT) as UnityClient;
+    return UnityDiscovery.getInstance(unityClient);
   });
 
   // Register UseCase factories (create new instance each time)

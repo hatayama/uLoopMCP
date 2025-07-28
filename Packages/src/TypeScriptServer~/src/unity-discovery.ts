@@ -4,6 +4,7 @@ import { UnityClient } from './unity-client.js';
 import { ServiceLocator } from './infrastructure/service-locator.js';
 import { ServiceTokens } from './infrastructure/service-tokens.js';
 import { HandleUnityShutdownUseCase } from './domain/use-cases/handle-unity-shutdown-use-case.js';
+import { IDiscoveryService } from './application/interfaces/discovery-service.js';
 
 /**
  * Unity Discovery Service with Unified Connection Management
@@ -17,7 +18,7 @@ import { HandleUnityShutdownUseCase } from './domain/use-cases/handle-unity-shut
  * - UnityConnectionManager: Higher-level connection manager that uses this service
  * - UnityMcpServer: Main server that initiates discovery
  */
-export class UnityDiscovery {
+export class UnityDiscovery implements IDiscoveryService {
   private discoveryInterval: NodeJS.Timeout | null = null;
   private unityClient: UnityClient;
   private onDiscoveredCallback: ((port: number) => Promise<void>) | null = null;
@@ -545,7 +546,14 @@ export class UnityDiscovery {
   /**
    * Get debugging information about current timer state
    */
-  getDebugInfo(): object {
+  getDebugInfo(): {
+    isTimerActive: boolean;
+    isDiscovering: boolean;
+    activeTimerCount: number;
+    isConnected: boolean;
+    intervalMs: number;
+    hasSingleton: boolean;
+  } {
     return {
       isTimerActive: this.discoveryInterval !== null,
       isDiscovering: this.isDiscovering,

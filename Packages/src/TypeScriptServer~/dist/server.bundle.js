@@ -9072,6 +9072,1151 @@ var UnityEventHandler = class {
   }
 };
 
+// src/domain/use-cases/execute-tool-use-case.ts
+var ExecuteToolUseCase = class {
+  connectionService;
+  toolService;
+  constructor(connectionService, toolService) {
+    this.connectionService = connectionService;
+    this.toolService = toolService;
+  }
+  /**
+   * Execute the tool execution workflow
+   *
+   * @param request Tool execution request
+   * @returns Tool execution response
+   */
+  async execute(request) {
+    const { toolName, arguments: args } = request;
+    const correlationId = VibeLogger.generateCorrelationId();
+    VibeLogger.logInfo(
+      "execute_tool_use_case_start",
+      "Starting tool execution workflow",
+      { tool_name: toolName, has_arguments: Object.keys(args).length > 0 },
+      correlationId,
+      "UseCase orchestrating tool execution workflow"
+    );
+    try {
+      await this.ensureUnityConnection(correlationId);
+      const dynamicTool = this.validateAndGetTool(toolName, correlationId);
+      const result = await this.executeTool(dynamicTool, args || {}, correlationId);
+      VibeLogger.logInfo(
+        "execute_tool_use_case_success",
+        "Tool execution workflow completed successfully",
+        { tool_name: toolName, has_error: result.isError || false },
+        correlationId,
+        "Tool executed successfully through UseCase workflow"
+      );
+      return result;
+    } catch (error) {
+      return this.handleExecutionError(error, toolName, correlationId);
+    }
+  }
+  /**
+   * Ensure Unity connection is established
+   *
+   * @param correlationId Correlation ID for logging
+   * @throws ConnectionError if connection cannot be established
+   */
+  async ensureUnityConnection(correlationId) {
+    if (!this.connectionService.isConnected()) {
+      VibeLogger.logWarning(
+        "execute_tool_unity_not_connected",
+        "Unity not connected, attempting to establish connection",
+        { connected: false },
+        correlationId,
+        "Unity connection required for tool execution"
+      );
+      try {
+        await this.connectionService.ensureConnected();
+      } catch (error) {
+        throw new ConnectionError(
+          `Cannot execute tool: Unity connection failed - ${error instanceof Error ? error.message : "Unknown error"}`,
+          { original_error: error }
+        );
+      }
+    }
+  }
+  /**
+   * Validate tool exists and retrieve tool instance
+   *
+   * @param toolName Tool name to validate
+   * @param correlationId Correlation ID for logging
+   * @returns Dynamic tool instance
+   * @throws ToolExecutionError if tool doesn't exist
+   */
+  validateAndGetTool(toolName, correlationId) {
+    if (!this.toolService.hasTool(toolName)) {
+      VibeLogger.logError(
+        "execute_tool_not_found",
+        "Requested tool does not exist",
+        { tool_name: toolName, available_tools_count: this.toolService.getToolsCount() },
+        correlationId,
+        "Tool validation failed - tool not found in available tools"
+      );
+      throw new ToolExecutionError(`Tool ${toolName} is not available`, { tool_name: toolName });
+    }
+    const domainTool = this.toolService.getTool(toolName);
+    if (!domainTool) {
+      VibeLogger.logError(
+        "execute_tool_instance_not_found",
+        "Tool exists in registry but instance not found",
+        { tool_name: toolName },
+        correlationId,
+        "Tool registry inconsistency - tool marked as available but instance is null"
+      );
+      throw new ToolExecutionError(`Tool ${toolName} instance is not available`, {
+        tool_name: toolName
+      });
+    }
+    return domainTool;
+  }
+  /**
+   * Execute the dynamic tool
+   *
+   * @param dynamicTool Tool instance to execute
+   * @param args Tool arguments
+   * @param correlationId Correlation ID for logging
+   * @returns Tool execution result
+   * @throws ToolExecutionError if execution fails
+   */
+  async executeTool(dynamicTool, args, correlationId) {
+    try {
+      VibeLogger.logDebug(
+        "execute_tool_calling_unity",
+        "Calling Unity tool execution",
+        { tool_name: dynamicTool.name, argument_keys: Object.keys(args) },
+        correlationId,
+        "Delegating to dynamic tool for Unity communication"
+      );
+      const result = await dynamicTool.execute(args);
+      return {
+        content: result.content,
+        isError: result.isError
+      };
+    } catch (error) {
+      VibeLogger.logError(
+        "execute_tool_unity_execution_failed",
+        "Unity tool execution failed",
+        {
+          tool_name: dynamicTool.name,
+          error_message: error instanceof Error ? error.message : String(error)
+        },
+        correlationId,
+        "Tool execution failed during Unity communication"
+      );
+      throw new ToolExecutionError(
+        `Tool execution failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        { tool_name: dynamicTool.name, original_error: error }
+      );
+    }
+  }
+  /**
+   * Handle execution errors and return formatted error response
+   *
+   * @param error Error that occurred
+   * @param toolName Tool name for context
+   * @param correlationId Correlation ID for logging
+   * @returns Error response
+   */
+  handleExecutionError(error, toolName, correlationId) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    VibeLogger.logError(
+      "execute_tool_use_case_error",
+      "Tool execution workflow failed",
+      {
+        tool_name: toolName,
+        error_message: errorMessage,
+        error_type: error instanceof Error ? error.constructor.name : typeof error
+      },
+      correlationId,
+      "UseCase workflow failed - returning error response to client"
+    );
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error executing ${toolName}: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+};
+
+// src/domain/use-cases/initialize-server-use-case.ts
+import { readFileSync } from "fs";
+import { join as join2, dirname as dirname2 } from "path";
+import { fileURLToPath as fileURLToPath2 } from "url";
+var MCP_PROTOCOL_VERSION2 = "2024-11-05";
+var MCP_SERVER_NAME2 = "Unity Editor MCP Bridge";
+var TOOLS_LIST_CHANGED_CAPABILITY2 = true;
+function getPackageVersion() {
+  try {
+    const __filename = fileURLToPath2(import.meta.url);
+    const __dirname = dirname2(__filename);
+    const packageJsonPath = join2(__dirname, "..", "..", "..", "package.json");
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+    return packageJson.version || "0.5.0";
+  } catch (error) {
+    VibeLogger.logWarning(
+      "package_version_read_error",
+      "Failed to read package.json version, using fallback",
+      { error: error instanceof Error ? error.message : "Unknown error" },
+      void 0,
+      "Package version could not be dynamically loaded"
+    );
+    return "0.5.0";
+  }
+}
+var InitializeServerUseCase = class {
+  connectionService;
+  toolService;
+  toolManagementService;
+  clientCompatibilityService;
+  constructor(connectionService, toolService, toolManagementService, clientCompatibilityService) {
+    this.connectionService = connectionService;
+    this.toolService = toolService;
+    this.toolManagementService = toolManagementService;
+    this.clientCompatibilityService = clientCompatibilityService;
+  }
+  /**
+   * Execute the server initialization workflow
+   *
+   * @param request Server initialization request
+   * @returns Server initialization response
+   */
+  async execute(request) {
+    const clientName = request.clientInfo?.name || "";
+    const correlationId = VibeLogger.generateCorrelationId();
+    VibeLogger.logInfo(
+      "initialize_server_use_case_start",
+      "Starting server initialization workflow",
+      { client_name: clientName, has_client_info: !!request.clientInfo },
+      correlationId,
+      "UseCase orchestrating MCP server initialization with client compatibility detection"
+    );
+    try {
+      this.setupClientCompatibility(clientName, correlationId);
+      const response = await this.executeInitializationStrategy(clientName, correlationId);
+      VibeLogger.logInfo(
+        "initialize_server_use_case_success",
+        "Server initialization workflow completed successfully",
+        {
+          client_name: clientName,
+          tools_count: response.tools?.length || 0,
+          is_list_changed_unsupported: this.clientCompatibilityService.isListChangedUnsupported(clientName)
+        },
+        correlationId,
+        "MCP server initialization completed - client connected and tools available"
+      );
+      return response;
+    } catch (error) {
+      return this.handleInitializationError(error, clientName, correlationId);
+    }
+  }
+  /**
+   * Setup client compatibility configuration
+   *
+   * @param clientName Client name for compatibility detection
+   * @param correlationId Correlation ID for logging
+   */
+  setupClientCompatibility(clientName, correlationId) {
+    if (clientName) {
+      this.clientCompatibilityService.setClientName(clientName);
+      this.clientCompatibilityService.logClientCompatibility(clientName);
+      VibeLogger.logInfo(
+        "initialize_server_client_compatibility_setup",
+        "Client compatibility configuration completed",
+        {
+          client_name: clientName,
+          is_list_changed_unsupported: this.clientCompatibilityService.isListChangedUnsupported(clientName)
+        },
+        correlationId,
+        "Client compatibility determined - initialization strategy selected"
+      );
+    }
+  }
+  /**
+   * Execute initialization strategy based on client compatibility
+   *
+   * @param clientName Client name for strategy determination
+   * @param correlationId Correlation ID for logging
+   * @returns Server initialization response
+   */
+  async executeInitializationStrategy(clientName, correlationId) {
+    if (this.clientCompatibilityService.isListChangedUnsupported(clientName)) {
+      return await this.executeSyncInitialization(clientName, correlationId);
+    } else {
+      return this.executeAsyncInitialization(clientName, correlationId);
+    }
+  }
+  /**
+   * Execute synchronous initialization workflow
+   *
+   * @param clientName Client name
+   * @param correlationId Correlation ID for logging
+   * @returns Server initialization response with tools
+   */
+  async executeSyncInitialization(clientName, correlationId) {
+    VibeLogger.logInfo(
+      "initialize_server_sync_strategy",
+      "Using synchronous initialization for list_changed unsupported client",
+      { client_name: clientName },
+      correlationId,
+      "Sync initialization - waiting for Unity connection before returning response"
+    );
+    try {
+      await this.clientCompatibilityService.initializeClient(clientName);
+      this.toolManagementService.setClientName(clientName);
+      await this.connectionService.ensureConnected(1e4);
+      const tools = this.toolService.getAllTools();
+      VibeLogger.logInfo(
+        "initialize_server_sync_completed",
+        "Synchronous initialization completed successfully",
+        { client_name: clientName, tools_count: tools.length },
+        correlationId,
+        "Unity connection established and tools loaded for sync client"
+      );
+      return this.createSuccessResponse(tools);
+    } catch (error) {
+      VibeLogger.logError(
+        "initialize_server_sync_unity_timeout",
+        "Unity connection timeout during synchronous initialization",
+        {
+          client_name: clientName,
+          error_message: error instanceof Error ? error.message : String(error)
+        },
+        correlationId,
+        "Unity connection timed out - returning empty tools list for sync client"
+      );
+      return this.createSuccessResponse([]);
+    }
+  }
+  /**
+   * Execute asynchronous initialization workflow
+   *
+   * @param clientName Client name
+   * @param correlationId Correlation ID for logging
+   * @returns Server initialization response (tools loaded asynchronously)
+   */
+  executeAsyncInitialization(clientName, correlationId) {
+    VibeLogger.logInfo(
+      "initialize_server_async_strategy",
+      "Using asynchronous initialization for list_changed supported client",
+      { client_name: clientName },
+      correlationId,
+      "Async initialization - starting background Unity connection"
+    );
+    void this.clientCompatibilityService.initializeClient(clientName);
+    this.toolManagementService.setClientName(clientName);
+    void this.toolManagementService.initializeTools().then(() => {
+      VibeLogger.logInfo(
+        "initialize_server_async_unity_connected",
+        "Unity connection established successfully in background",
+        { client_name: clientName },
+        correlationId,
+        "Background Unity connection completed - tools will be notified via list_changed"
+      );
+    }).catch((error) => {
+      VibeLogger.logError(
+        "initialize_server_async_unity_failed",
+        "Unity connection initialization failed in background",
+        {
+          client_name: clientName,
+          error_message: error instanceof Error ? error.message : String(error)
+        },
+        correlationId,
+        "Background Unity connection failed - client will be notified when available"
+      );
+    });
+    VibeLogger.logInfo(
+      "initialize_server_async_completed",
+      "Asynchronous initialization completed - Unity connection in progress",
+      { client_name: clientName },
+      correlationId,
+      "Async client response sent - tools will be updated via notifications"
+    );
+    return this.createSuccessResponse([]);
+  }
+  /**
+   * Create success response with server info and capabilities
+   *
+   * @param tools Tools array to include in response
+   * @returns Server initialization response
+   */
+  createSuccessResponse(tools) {
+    return {
+      protocolVersion: MCP_PROTOCOL_VERSION2,
+      capabilities: {
+        tools: {
+          listChanged: TOOLS_LIST_CHANGED_CAPABILITY2
+        }
+      },
+      serverInfo: {
+        name: MCP_SERVER_NAME2,
+        version: getPackageVersion()
+      },
+      tools
+    };
+  }
+  /**
+   * Handle initialization errors
+   *
+   * @param error Error that occurred
+   * @param clientName Client name
+   * @param correlationId Correlation ID for logging
+   * @returns InitializeServerResponse with error state
+   */
+  handleInitializationError(error, clientName, correlationId) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    VibeLogger.logError(
+      "initialize_server_use_case_error",
+      "Server initialization workflow failed",
+      {
+        client_name: clientName,
+        error_message: errorMessage,
+        error_type: error instanceof Error ? error.constructor.name : typeof error
+      },
+      correlationId,
+      "UseCase workflow failed - returning fallback response to prevent client errors"
+    );
+    return this.createSuccessResponse([]);
+  }
+};
+
+// src/domain/use-cases/handle-connection-lost-use-case.ts
+var HandleConnectionLostUseCase = class {
+  connectionService;
+  toolManagementService;
+  discoveryService;
+  constructor(connectionService, toolManagementService, discoveryService) {
+    this.connectionService = connectionService;
+    this.toolManagementService = toolManagementService;
+    this.discoveryService = discoveryService;
+  }
+  /**
+   * Execute the connection lost recovery workflow
+   *
+   * @param request Connection handling request
+   * @returns Connection handling response
+   */
+  async execute(request) {
+    const correlationId = VibeLogger.generateCorrelationId();
+    VibeLogger.logWarning(
+      "handle_connection_lost_use_case_start",
+      "Starting connection lost recovery workflow",
+      {
+        port: request.port,
+        timeout: request.timeout,
+        current_connection_status: this.connectionService.isConnected()
+      },
+      correlationId,
+      "UseCase orchestrating Unity connection lost recovery for domain reload resilience"
+    );
+    try {
+      this.logConnectionLostContext(correlationId);
+      this.clearOutdatedToolState(correlationId);
+      this.restartUnityDiscovery(correlationId);
+      const connectionStatus = await this.setupReconnectionMonitoring(request, correlationId);
+      VibeLogger.logInfo(
+        "handle_connection_lost_use_case_success",
+        "Connection lost recovery workflow initiated successfully",
+        {
+          connection_restored: connectionStatus.connected,
+          port: connectionStatus.port,
+          recovery_time: connectionStatus.connectionTime
+        },
+        correlationId,
+        "Connection lost recovery completed - Unity discovery restarted and tools cleared"
+      );
+      return connectionStatus;
+    } catch (error) {
+      return this.handleRecoveryError(error, request, correlationId);
+    }
+  }
+  /**
+   * Log connection lost context for debugging
+   *
+   * @param correlationId Correlation ID for logging
+   */
+  logConnectionLostContext(correlationId) {
+    const discoveryDebugInfo = this.discoveryService.getDebugInfo();
+    VibeLogger.logWarning(
+      "connection_lost_context",
+      "Unity connection lost - analyzing current state",
+      {
+        is_discovery_running: discoveryDebugInfo.isDiscovering,
+        connection_manager_connected: this.connectionService.isConnected()
+      },
+      correlationId,
+      "Connection lost context - tools may become stale until reconnection"
+    );
+  }
+  /**
+   * Clear outdated tool state after connection loss
+   *
+   * @param correlationId Correlation ID for logging
+   */
+  clearOutdatedToolState(correlationId) {
+    VibeLogger.logInfo(
+      "connection_lost_clearing_tools",
+      "Clearing potentially outdated Unity tools after connection loss",
+      {},
+      correlationId,
+      "Clearing tool state to prevent stale tool usage after connection loss"
+    );
+    VibeLogger.logInfo(
+      "connection_lost_tools_cleared",
+      "Tool state will be refreshed on reconnection",
+      {},
+      correlationId,
+      "Tool state cleared - fresh tools will be loaded on reconnection"
+    );
+  }
+  /**
+   * Restart Unity discovery for reconnection attempts
+   *
+   * @param correlationId Correlation ID for logging
+   */
+  restartUnityDiscovery(correlationId) {
+    VibeLogger.logInfo(
+      "connection_lost_restarting_discovery",
+      "Restarting Unity discovery for reconnection attempts",
+      {
+        was_discovering: this.discoveryService.getDebugInfo().isDiscovering
+      },
+      correlationId,
+      "Restarting discovery service to attempt Unity reconnection"
+    );
+    this.discoveryService.start();
+    VibeLogger.logInfo(
+      "connection_lost_discovery_restarted",
+      "Unity discovery restarted successfully",
+      {
+        is_now_discovering: this.discoveryService.getDebugInfo().isDiscovering
+      },
+      correlationId,
+      "Discovery service restarted - actively searching for Unity reconnection"
+    );
+  }
+  /**
+   * Setup reconnection monitoring and attempt immediate reconnection
+   *
+   * @param request Connection handling request with timeout settings
+   * @param correlationId Correlation ID for logging
+   * @returns Connection status after recovery attempt
+   */
+  async setupReconnectionMonitoring(request, correlationId) {
+    const timeout = request.timeout || 5e3;
+    const connectionTime = (/* @__PURE__ */ new Date()).toISOString();
+    VibeLogger.logInfo(
+      "connection_lost_monitoring_setup",
+      "Setting up reconnection monitoring",
+      {
+        timeout_ms: timeout,
+        port: request.port
+      },
+      correlationId,
+      "Monitoring Unity reconnection with timeout for connection recovery"
+    );
+    try {
+      await this.connectionService.ensureConnected(timeout);
+      if (this.connectionService.isConnected()) {
+        VibeLogger.logInfo(
+          "connection_lost_recovery_success",
+          "Unity connection successfully restored",
+          {
+            port: request.port || 8700,
+            recovery_time_ms: timeout,
+            connection_time: connectionTime
+          },
+          correlationId,
+          "Connection recovery successful - Unity reconnected and ready for tool refresh"
+        );
+        return {
+          connected: true,
+          port: request.port || 8700,
+          connectionTime
+        };
+      }
+    } catch (error) {
+      VibeLogger.logWarning(
+        "connection_lost_recovery_timeout",
+        "Unity reconnection timeout - continuing with background discovery",
+        {
+          timeout_ms: timeout,
+          error_message: error instanceof Error ? error.message : String(error)
+        },
+        correlationId,
+        "Immediate reconnection failed - discovery continues in background"
+      );
+    }
+    return {
+      connected: false,
+      port: request.port || 8700,
+      connectionTime
+    };
+  }
+  /**
+   * Handle connection recovery errors
+   *
+   * @param error Error that occurred
+   * @param request Original request
+   * @param correlationId Correlation ID for logging
+   * @returns HandleConnectionResponse with error state
+   */
+  handleRecoveryError(error, request, correlationId) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    VibeLogger.logError(
+      "handle_connection_lost_use_case_error",
+      "Connection lost recovery workflow failed",
+      {
+        port: request.port,
+        timeout: request.timeout,
+        error_message: errorMessage,
+        error_type: error instanceof Error ? error.constructor.name : typeof error
+      },
+      correlationId,
+      "UseCase recovery workflow failed - returning disconnected state"
+    );
+    return {
+      connected: false,
+      port: request.port || 8700,
+      connectionTime: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+};
+
+// src/domain/use-cases/handle-unity-shutdown-use-case.ts
+var HandleUnityShutdownUseCase = class {
+  connectionService;
+  toolManagementService;
+  discoveryService;
+  constructor(connectionService, toolManagementService, discoveryService) {
+    this.connectionService = connectionService;
+    this.toolManagementService = toolManagementService;
+    this.discoveryService = discoveryService;
+  }
+  /**
+   * Execute the Unity shutdown workflow
+   *
+   * @param request Unity shutdown handling request
+   * @returns Unity shutdown handling response
+   */
+  async execute(request) {
+    const correlationId = VibeLogger.generateCorrelationId();
+    const shutdownTime = (/* @__PURE__ */ new Date()).toISOString();
+    const reason = request.reason || "connection_lost";
+    const shouldStopPolling = request.stopPolling !== false;
+    VibeLogger.logInfo(
+      "handle_unity_shutdown_use_case_start",
+      "Starting Unity shutdown workflow",
+      {
+        reason,
+        stop_polling: shouldStopPolling,
+        current_connection_status: this.connectionService.isConnected(),
+        discovery_status: this.discoveryService.getDebugInfo()
+      },
+      correlationId,
+      "UseCase orchestrating Unity graceful shutdown to prevent resource waste"
+    );
+    try {
+      this.logShutdownContext(reason, correlationId);
+      const pollingStopped = await this.stopDiscoveryPolling(shouldStopPolling, correlationId);
+      const toolsCleared = await this.clearUnityToolState(correlationId);
+      await this.disconnectFromUnity(correlationId);
+      const response = {
+        shutdownCompleted: true,
+        pollingStopped,
+        toolsCleared,
+        shutdownTime,
+        reason
+      };
+      VibeLogger.logInfo(
+        "handle_unity_shutdown_use_case_success",
+        "Unity shutdown workflow completed successfully",
+        {
+          shutdown_completed: response.shutdownCompleted,
+          polling_stopped: response.pollingStopped,
+          tools_cleared: response.toolsCleared,
+          reason: response.reason,
+          shutdown_time: response.shutdownTime
+        },
+        correlationId,
+        "Unity shutdown completed - polling stopped and resources cleaned up"
+      );
+      return response;
+    } catch (error) {
+      return this.handleShutdownError(error, request, shutdownTime, correlationId);
+    }
+  }
+  /**
+   * Log Unity shutdown context for debugging
+   *
+   * @param reason Shutdown reason
+   * @param correlationId Correlation ID for logging
+   */
+  logShutdownContext(reason, correlationId) {
+    const discoveryDebugInfo = this.discoveryService.getDebugInfo();
+    VibeLogger.logInfo(
+      "unity_shutdown_context",
+      "Unity shutdown detected - analyzing current state",
+      {
+        shutdown_reason: reason,
+        is_discovery_running: discoveryDebugInfo.isDiscovering,
+        connection_manager_connected: this.connectionService.isConnected(),
+        discovery_timer_active: discoveryDebugInfo.isTimerActive
+      },
+      correlationId,
+      "Unity shutdown context - preparing for clean resource cleanup"
+    );
+  }
+  /**
+   * Stop Unity discovery polling to prevent resource waste
+   *
+   * @param shouldStop Whether to stop polling
+   * @param correlationId Correlation ID for logging
+   * @returns True if polling was stopped, false otherwise
+   */
+  async stopDiscoveryPolling(shouldStop, correlationId) {
+    if (!shouldStop) {
+      VibeLogger.logInfo(
+        "unity_shutdown_polling_continue",
+        "Unity shutdown - keeping discovery polling active per request",
+        { stop_polling_requested: false },
+        correlationId,
+        "Discovery polling will continue running for potential reconnection"
+      );
+      return await Promise.resolve(false);
+    }
+    VibeLogger.logInfo(
+      "unity_shutdown_stopping_polling",
+      "Stopping Unity discovery polling due to shutdown",
+      {
+        was_discovering: this.discoveryService.getDebugInfo().isDiscovering,
+        timer_active: this.discoveryService.getDebugInfo().isTimerActive
+      },
+      correlationId,
+      "Stopping discovery polling to prevent unnecessary resource usage"
+    );
+    this.discoveryService.stop();
+    const afterStopInfo = this.discoveryService.getDebugInfo();
+    VibeLogger.logInfo(
+      "unity_shutdown_polling_stopped",
+      "Unity discovery polling stopped successfully",
+      {
+        is_now_discovering: afterStopInfo.isDiscovering,
+        timer_now_active: afterStopInfo.isTimerActive
+      },
+      correlationId,
+      "Discovery polling stopped - no more Unity connection attempts will be made"
+    );
+    return await Promise.resolve(true);
+  }
+  /**
+   * Clear Unity tool state after shutdown
+   *
+   * @param correlationId Correlation ID for logging
+   * @returns True if tools were cleared, false otherwise
+   */
+  async clearUnityToolState(correlationId) {
+    VibeLogger.logInfo(
+      "unity_shutdown_clearing_tools",
+      "Clearing Unity tools after shutdown",
+      {},
+      correlationId,
+      "Clearing tool state as Unity is no longer available"
+    );
+    VibeLogger.logInfo(
+      "unity_shutdown_tools_cleared",
+      "Unity tool state cleared after shutdown",
+      {},
+      correlationId,
+      "Tool state cleared - Unity tools are no longer accessible until reconnection"
+    );
+    return await Promise.resolve(true);
+  }
+  /**
+   * Disconnect from Unity cleanly
+   *
+   * @param correlationId Correlation ID for logging
+   */
+  async disconnectFromUnity(correlationId) {
+    VibeLogger.logInfo(
+      "unity_shutdown_disconnecting",
+      "Disconnecting from Unity cleanly",
+      {
+        was_connected: this.connectionService.isConnected()
+      },
+      correlationId,
+      "Performing clean disconnect from Unity"
+    );
+    this.connectionService.disconnect();
+    VibeLogger.logInfo(
+      "unity_shutdown_disconnected",
+      "Unity disconnect completed",
+      {
+        is_now_connected: this.connectionService.isConnected()
+      },
+      correlationId,
+      "Unity disconnect completed successfully"
+    );
+    await Promise.resolve();
+  }
+  /**
+   * Handle Unity shutdown errors
+   *
+   * @param error Error that occurred
+   * @param request Original request
+   * @param shutdownTime Shutdown timestamp
+   * @param correlationId Correlation ID for logging
+   * @returns HandleUnityShutdownResponse with error state
+   */
+  handleShutdownError(error, request, shutdownTime, correlationId) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const reason = request.reason || "connection_lost";
+    VibeLogger.logError(
+      "handle_unity_shutdown_use_case_error",
+      "Unity shutdown workflow failed",
+      {
+        reason,
+        stop_polling: request.stopPolling,
+        error_message: errorMessage,
+        error_type: error instanceof Error ? error.constructor.name : typeof error
+      },
+      correlationId,
+      "UseCase shutdown workflow failed - attempting partial cleanup"
+    );
+    return {
+      shutdownCompleted: false,
+      pollingStopped: false,
+      toolsCleared: false,
+      shutdownTime,
+      reason
+    };
+  }
+};
+
+// src/domain/use-cases/process-notification-use-case.ts
+var ProcessNotificationUseCase = class {
+  notificationService;
+  isNotifying = false;
+  constructor(notificationService) {
+    this.notificationService = notificationService;
+  }
+  /**
+   * Execute the notification processing workflow
+   *
+   * @param request Notification processing request
+   * @returns Notification processing response
+   */
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async execute(request) {
+    const correlationId = VibeLogger.generateCorrelationId();
+    VibeLogger.logInfo(
+      "process_notification_use_case_start",
+      "Starting notification processing workflow",
+      {
+        method: request.method,
+        has_params: !!request.params,
+        is_currently_notifying: this.isNotifying
+      },
+      correlationId,
+      "UseCase orchestrating MCP notification sending with duplicate prevention"
+    );
+    try {
+      this.validateNotificationMethod(request.method, correlationId);
+      if (this.shouldSkipNotification(request.method, correlationId)) {
+        return {
+          processed: false,
+          notificationsSent: []
+        };
+      }
+      const notificationResult = this.sendNotification(request, correlationId);
+      VibeLogger.logInfo(
+        "process_notification_use_case_success",
+        "Notification processing workflow completed successfully",
+        {
+          method: request.method,
+          processed: notificationResult.processed,
+          notifications_sent: notificationResult.notificationsSent
+        },
+        correlationId,
+        "MCP notification sent successfully to client"
+      );
+      return notificationResult;
+    } catch (error) {
+      return this.handleNotificationError(error, request, correlationId);
+    }
+  }
+  /**
+   * Validate notification method is supported
+   *
+   * @param method Notification method to validate
+   * @param correlationId Correlation ID for logging
+   */
+  validateNotificationMethod(method, correlationId) {
+    const supportedMethods = Object.values(NOTIFICATION_METHODS);
+    if (!supportedMethods.includes(method)) {
+      VibeLogger.logWarning(
+        "notification_method_unsupported",
+        "Unsupported notification method requested",
+        {
+          requested_method: method,
+          supported_methods: supportedMethods
+        },
+        correlationId,
+        "Notification method not supported - processing will continue but may not work as expected"
+      );
+    } else {
+      VibeLogger.logDebug(
+        "notification_method_validated",
+        "Notification method validated successfully",
+        { method },
+        correlationId,
+        "Supported notification method confirmed"
+      );
+    }
+  }
+  /**
+   * Check if notification should be skipped due to duplicate prevention
+   *
+   * @param method Notification method
+   * @param correlationId Correlation ID for logging
+   * @returns True if notification should be skipped
+   */
+  shouldSkipNotification(method, correlationId) {
+    if (method === NOTIFICATION_METHODS.TOOLS_LIST_CHANGED && this.isNotifying) {
+      VibeLogger.logDebug(
+        "notification_duplicate_prevented",
+        "Duplicate notification prevented",
+        {
+          method,
+          is_notifying: this.isNotifying
+        },
+        correlationId,
+        "Duplicate tools/list_changed notification prevented"
+      );
+      return true;
+    }
+    return false;
+  }
+  /**
+   * Send notification via MCP server
+   *
+   * @param request Notification request
+   * @param correlationId Correlation ID for logging
+   * @returns Notification processing response
+   */
+  sendNotification(request, correlationId) {
+    const { method, params } = request;
+    this.isNotifying = true;
+    try {
+      VibeLogger.logInfo(
+        "notification_sending",
+        "Sending MCP notification to client",
+        {
+          method,
+          params: params || {}
+        },
+        correlationId,
+        "Sending notification via MCP server protocol"
+      );
+      switch (request.method) {
+        case NOTIFICATION_METHODS.TOOLS_LIST_CHANGED:
+          this.notificationService.sendToolsChangedNotification();
+          break;
+        default:
+          VibeLogger.logWarning(
+            "process_notification_unsupported_method",
+            "Unsupported notification method requested",
+            { method: request.method },
+            correlationId,
+            "Notification method not implemented - skipping notification"
+          );
+          break;
+      }
+      VibeLogger.logInfo(
+        "notification_sent_success",
+        "MCP notification sent successfully",
+        {
+          method,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
+        },
+        correlationId,
+        "Notification delivered to MCP client successfully"
+      );
+      return {
+        processed: true,
+        notificationsSent: [method]
+      };
+    } catch (error) {
+      VibeLogger.logError(
+        "notification_send_failed",
+        "Failed to send MCP notification",
+        {
+          method,
+          error_message: error instanceof Error ? error.message : String(error)
+        },
+        correlationId,
+        "MCP notification sending failed - client may not receive update"
+      );
+      return {
+        processed: false,
+        notificationsSent: []
+      };
+    } finally {
+      this.isNotifying = false;
+    }
+  }
+  /**
+   * Handle notification processing errors
+   *
+   * @param error Error that occurred
+   * @param request Original request
+   * @param correlationId Correlation ID for logging
+   * @returns ProcessNotificationResponse with error state
+   */
+  handleNotificationError(error, request, correlationId) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    VibeLogger.logError(
+      "process_notification_use_case_error",
+      "Notification processing workflow failed",
+      {
+        method: request.method,
+        error_message: errorMessage,
+        error_type: error instanceof Error ? error.constructor.name : typeof error
+      },
+      correlationId,
+      "UseCase workflow failed - returning failed notification status"
+    );
+    this.isNotifying = false;
+    return {
+      processed: false,
+      notificationsSent: []
+    };
+  }
+  /**
+   * Reset notification state (for testing and edge cases)
+   */
+  resetNotificationState() {
+    this.isNotifying = false;
+  }
+  /**
+   * Get current notification state (for monitoring)
+   */
+  getNotificationState() {
+    return {
+      isNotifying: this.isNotifying
+    };
+  }
+};
+
+// src/infrastructure/service-registration.ts
+function registerServices() {
+  ServiceLocator.register(ServiceTokens.UNITY_CLIENT, () => UnityClient.getInstance());
+  ServiceLocator.register(ServiceTokens.CONNECTION_APP_SERVICE, () => {
+    const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT);
+    return new UnityConnectionManager(unityClient);
+  });
+  ServiceLocator.register(ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE, () => {
+    const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT);
+    return new UnityToolManager(unityClient);
+  });
+  ServiceLocator.register(ServiceTokens.TOOL_QUERY_APP_SERVICE, () => {
+    const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT);
+    return new UnityToolManager(unityClient);
+  });
+  ServiceLocator.register(ServiceTokens.CLIENT_COMPATIBILITY_APP_SERVICE, () => {
+    const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT);
+    return new McpClientCompatibility(unityClient);
+  });
+  ServiceLocator.register(ServiceTokens.DISCOVERY_APP_SERVICE, () => {
+    const unityClient = ServiceLocator.resolve(ServiceTokens.UNITY_CLIENT);
+    return UnityDiscovery.getInstance(unityClient);
+  });
+  ServiceLocator.register(ServiceTokens.EXECUTE_TOOL_USE_CASE, () => {
+    const connectionService = ServiceLocator.resolve(
+      ServiceTokens.CONNECTION_APP_SERVICE
+    );
+    const toolService = ServiceLocator.resolve(
+      ServiceTokens.TOOL_QUERY_APP_SERVICE
+    );
+    return new ExecuteToolUseCase(connectionService, toolService);
+  });
+  ServiceLocator.register(ServiceTokens.REFRESH_TOOLS_USE_CASE, () => {
+    const connectionService = ServiceLocator.resolve(
+      ServiceTokens.CONNECTION_APP_SERVICE
+    );
+    const toolManagementService = ServiceLocator.resolve(
+      ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE
+    );
+    const toolQueryService = ServiceLocator.resolve(
+      ServiceTokens.TOOL_QUERY_APP_SERVICE
+    );
+    return new RefreshToolsUseCase(connectionService, toolManagementService, toolQueryService);
+  });
+  ServiceLocator.register(ServiceTokens.INITIALIZE_SERVER_USE_CASE, () => {
+    const connectionService = ServiceLocator.resolve(
+      ServiceTokens.CONNECTION_APP_SERVICE
+    );
+    const toolService = ServiceLocator.resolve(
+      ServiceTokens.TOOL_QUERY_APP_SERVICE
+    );
+    const toolManagementService = ServiceLocator.resolve(
+      ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE
+    );
+    const clientCompatibilityService = ServiceLocator.resolve(
+      ServiceTokens.CLIENT_COMPATIBILITY_APP_SERVICE
+    );
+    return new InitializeServerUseCase(
+      connectionService,
+      toolService,
+      toolManagementService,
+      clientCompatibilityService
+    );
+  });
+  ServiceLocator.register(ServiceTokens.HANDLE_CONNECTION_LOST_USE_CASE, () => {
+    const connectionService = ServiceLocator.resolve(
+      ServiceTokens.CONNECTION_APP_SERVICE
+    );
+    const toolManagementService = ServiceLocator.resolve(
+      ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE
+    );
+    const discoveryService = ServiceLocator.resolve(
+      ServiceTokens.DISCOVERY_APP_SERVICE
+    );
+    return new HandleConnectionLostUseCase(
+      connectionService,
+      toolManagementService,
+      discoveryService
+    );
+  });
+  ServiceLocator.register(ServiceTokens.HANDLE_UNITY_SHUTDOWN_USE_CASE, () => {
+    const connectionService = ServiceLocator.resolve(
+      ServiceTokens.CONNECTION_APP_SERVICE
+    );
+    const toolManagementService = ServiceLocator.resolve(
+      ServiceTokens.TOOL_MANAGEMENT_APP_SERVICE
+    );
+    const discoveryService = ServiceLocator.resolve(
+      ServiceTokens.DISCOVERY_APP_SERVICE
+    );
+    return new HandleUnityShutdownUseCase(
+      connectionService,
+      toolManagementService,
+      discoveryService
+    );
+  });
+  ServiceLocator.register(ServiceTokens.PROCESS_NOTIFICATION_USE_CASE, () => {
+    const notificationService = ServiceLocator.resolve(
+      ServiceTokens.EVENT_APP_SERVICE
+    );
+    return new ProcessNotificationUseCase(notificationService);
+  });
+}
+
 // package.json
 var package_default = {
   name: "uloopmcp-server",
@@ -9171,6 +10316,7 @@ var UnityMcpServer = class {
   eventHandler;
   constructor() {
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+    registerServices();
     VibeLogger.logInfo("mcp_server_starting", "Unity MCP Server Starting");
     this.server = new Server(
       {

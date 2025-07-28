@@ -22,6 +22,7 @@ import {
   MCP_SERVER_NAME,
   TOOLS_LIST_CHANGED_CAPABILITY,
 } from './constants.js';
+import { registerServices } from './infrastructure/service-registration.js';
 import packageJson from '../package.json' assert { type: 'json' };
 
 /**
@@ -52,6 +53,9 @@ class UnityMcpServer {
   constructor() {
     // Simple environment variable check
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+
+    // Register all services with ServiceLocator before any other initialization
+    registerServices();
 
     VibeLogger.logInfo('mcp_server_starting', 'Unity MCP Server Starting');
 
