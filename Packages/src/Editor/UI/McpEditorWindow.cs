@@ -38,7 +38,7 @@ namespace io.github.hatayama.uLoopMCP
         private McpServerOperations _serverOperations;
 
         // Cache for stored tools to avoid repeated calls
-        private IEnumerable<ConnectedClient> _cachedStoredTools;
+        private List<ConnectedClient> _cachedStoredTools;
         private float _lastStoredToolsUpdateTime;
 
         [MenuItem("Window/uLoopMCP")]
@@ -97,7 +97,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Get connected tools as ConnectedClient objects for UI display, sorted by name
         /// </summary>
-        public IEnumerable<ConnectedClient> GetConnectedToolsAsClients()
+        public List<ConnectedClient> GetConnectedToolsAsClients()
         {
             return ConnectedToolsMonitoringService.GetConnectedToolsForDisplay();
         }
@@ -351,14 +351,14 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Get stored tools with caching to avoid repeated calls
         /// </summary>
-        private IEnumerable<ConnectedClient> GetCachedStoredTools()
+        private List<ConnectedClient> GetCachedStoredTools()
         {
             const float cacheDuration = 0.1f; // 100ms cache
             float currentTime = Time.realtimeSinceStartup;
 
             if (_cachedStoredTools == null || (currentTime - _lastStoredToolsUpdateTime) > cacheDuration)
             {
-                _cachedStoredTools = GetConnectedToolsAsClients();
+                _cachedStoredTools = GetConnectedToolsAsClients().ToList();
                 _lastStoredToolsUpdateTime = currentTime;
             }
 
@@ -390,7 +390,7 @@ namespace io.github.hatayama.uLoopMCP
                                    connectedClients.Any(client => client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME);
 
             // Check if we have stored tools available (with caching)
-            IEnumerable<ConnectedClient> storedTools = GetCachedStoredTools();
+            List<ConnectedClient> storedTools = GetCachedStoredTools();
             bool hasStoredTools = storedTools.Any();
 
 

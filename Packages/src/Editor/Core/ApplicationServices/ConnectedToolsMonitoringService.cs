@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -21,6 +23,10 @@ namespace io.github.hatayama.uLoopMCP
         private static List<ConnectedLLMToolData> _previousToolsForDisplay = new();
         private static bool _isDisplayDelayActive = false;
         private static CancellationTokenSource _displayDelayCancellation;
+
+        // New: Active TCP connection management (Fowler: Add Field refactoring)
+        // This runs parallel to existing _connectedTools without affecting current functionality
+        private static readonly ConcurrentDictionary<string, NetworkStream> ActiveConnections = new();
 
         // Events for UI notification
         public static event System.Action OnConnectedToolsChanged;
@@ -109,7 +115,7 @@ namespace io.github.hatayama.uLoopMCP
         public static void AddOrUpdateTool(string clientName, string endpoint, int notificationPort, DateTime? connectedAt = null)
         {
             if (string.IsNullOrEmpty(clientName) || string.IsNullOrEmpty(endpoint))
-            {
+            { 
                 return;
             }
 
@@ -240,6 +246,10 @@ namespace io.github.hatayama.uLoopMCP
                 // Notify UI
                 OnConnectedToolsChanged?.Invoke();
             }
+
+            // NEW: Also clean up TCP connection (Fowler: Expand Interface)
+            // This addition runs parallel to existing UI cleanup without affecting it
+            RemoveActiveConnection(endpoint);
         }
 
         /// <summary>
@@ -259,22 +269,22 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Get connected tools as ConnectedClient objects for UI display, sorted by name
         /// </summary>
-        public static IEnumerable<ConnectedClient> GetConnectedToolsAsClients()
+        public static List<ConnectedClient> GetConnectedToolsAsClients()
         {
-            return _connectedTools.OrderBy(tool => tool.Name).Select(tool => ConvertToConnectedClient(tool));
+            return _connectedTools.OrderBy(tool => tool.Name).Select(tool => ConvertToConnectedClient(tool)).ToList();
         }
 
         /// <summary>
         /// Get connected tools for UI display with flash prevention
         /// Returns previous tools during delay period
         /// </summary>
-        public static IEnumerable<ConnectedClient> GetConnectedToolsForDisplay()
+        public static List<ConnectedClient> GetConnectedToolsForDisplay()
         {
             // If delay is active, show previous tools
             if (_isDisplayDelayActive)
             {
                 return _previousToolsForDisplay.OrderBy(tool => tool.Name)
-                    .Select(tool => ConvertToConnectedClient(tool));
+                    .Select(tool => ConvertToConnectedClient(tool)).ToList();
             }
             
             // Normal display
@@ -420,6 +430,141 @@ namespace io.github.hatayama.uLoopMCP
                     "server_restart_notification_error",
                     "Failed to send server restart notification",
                     new { error = ex.Message, type = ex.GetType().Name }
+                );
+            }
+        }
+
+        // =============================================================================
+        // NEW: Active TCP Connection Management (Fowler: Extract Method)
+        // These methods run parallel to existing functionality without interference
+        // =============================================================================
+
+        /// <summary>
+        /// Updates active TCP connection for an endpoint (Fowler: Extract Method)
+        /// Safely manages NetworkStream lifecycle without affecting existing UI data
+        /// </summary>
+        /// <param name="endpoint">Client endpoint identifier</param>
+        /// <param name="stream">Active NetworkStream for the connection</param>
+        public static void UpdateActiveConnection(string endpoint, NetworkStream stream)
+        {
+            if (string.IsNullOrEmpty(endpoint) || stream == null)
+            {
+                VibeLogger.LogWarning(
+                    "update_active_connection_invalid_params",
+                    "UpdateActiveConnection called with invalid parameters",
+                    new { endpoint, streamIsNull = stream == null }
+                );
+                return;
+            }
+
+            // Safely add or update connection with proper cleanup of old streams
+            ActiveConnections.AddOrUpdate(endpoint, stream, (key, oldStream) =>
+            {
+                // Clean up old connection if it exists
+                try
+                {
+                    if (oldStream?.CanWrite == true)
+                    {
+                        oldStream.Close();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    VibeLogger.LogWarning(
+                        "old_connection_cleanup_failed", 
+                        "Failed to cleanup old connection during update", 
+                        new { endpoint, error = ex.Message }
+                    );
+                }
+                return stream;
+            });
+
+            VibeLogger.LogInfo(
+                "active_connection_updated",
+                "Active TCP connection updated successfully",
+                new { endpoint, streamCanWrite = stream.CanWrite }
+            );
+        }
+
+        /// <summary>
+        /// Gets active TCP connections for notification sending (Fowler: Extract Method)
+        /// Returns only valid connections, automatically cleaning up invalid ones
+        /// </summary>
+        /// <returns>Read-only dictionary of valid endpoint-to-stream mappings</returns>
+        public static IReadOnlyDictionary<string, NetworkStream> GetActiveConnections()
+        {
+            Dictionary<string, NetworkStream> validConnections = new();
+            List<string> invalidEndpoints = new();
+
+            // Check each connection for validity
+            foreach (KeyValuePair<string, NetworkStream> connection in ActiveConnections)
+            {
+                if (connection.Value?.CanWrite == true)
+                {
+                    validConnections[connection.Key] = connection.Value;
+                }
+                else
+                {
+                    invalidEndpoints.Add(connection.Key);
+
+                    VibeLogger.LogInfo(
+                        "invalid_connection_detected",
+                        "Invalid connection detected during GetActiveConnections",
+                        new { endpoint = connection.Key, streamIsNull = connection.Value == null }
+                    );
+                }
+            }
+
+            // Clean up invalid connections
+            foreach (string endpoint in invalidEndpoints)
+            {
+                RemoveActiveConnection(endpoint);
+            }
+
+            VibeLogger.LogInfo(
+                "active_connections_retrieved",
+                "Active connections retrieved with cleanup",
+                new { validCount = validConnections.Count, removedCount = invalidEndpoints.Count }
+            );
+
+            return validConnections;
+        }
+
+        /// <summary>
+        /// Removes active TCP connection and cleans up resources (Fowler: Extract Method)
+        /// Private method for internal connection lifecycle management
+        /// </summary>
+        /// <param name="endpoint">Endpoint identifier to remove</param>
+        private static void RemoveActiveConnection(string endpoint)
+        {
+            if (string.IsNullOrEmpty(endpoint))
+            {
+                return;
+            }
+
+            if (ActiveConnections.TryRemove(endpoint, out NetworkStream removedStream))
+            {
+                // Safe cleanup of NetworkStream
+                try
+                {
+                    if (removedStream?.CanWrite == true)
+                    {
+                        removedStream.Close();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    VibeLogger.LogWarning(
+                        "connection_cleanup_failed", 
+                        "Failed to cleanup removed connection", 
+                        new { endpoint, error = ex.Message }
+                    );
+                }
+
+                VibeLogger.LogInfo(
+                    "active_connection_removed", 
+                    "Active TCP connection removed successfully", 
+                    new { endpoint }
                 );
             }
         }

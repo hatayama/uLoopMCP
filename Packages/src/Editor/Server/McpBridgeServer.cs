@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -86,7 +85,6 @@ namespace io.github.hatayama.uLoopMCP
         private bool _isRunning = false;
         
         // Client management for broadcasting notifications
-        private readonly ConcurrentDictionary<string, ConnectedClient> _connectedClients = new();
         
         /// <summary>
         /// Whether the server is running.
@@ -114,46 +112,48 @@ namespace io.github.hatayama.uLoopMCP
         public event Action<string> OnError;
 
         /// <summary>
-        /// Generate unique client key using Endpoint
-        /// 
-        /// IMPORTANT: Always use endpoint as unique identifier, not clientName.
-        /// Client names can be duplicated or "Unknown Client" during connection processes.
-        /// </summary>
-        private string GenerateClientKey(string endpoint)
-        {
-            // Use endpoint as unique identifier
-            return endpoint;
-        }
-
-        /// <summary>
         /// Get list of connected clients sorted by name
         /// </summary>
         public IReadOnlyCollection<ConnectedClient> GetConnectedClients()
         {
-            return _connectedClients.Values.OrderBy(client => client.ClientName).ToArray();
+            // Phase 4: Now delegates to ConnectedToolsMonitoringService (Replace Method)
+            return ConnectedToolsMonitoringService.GetConnectedToolsForDisplay()
+                .OrderBy(client => client.ClientName)
+                .ToArray();
         }
 
         /// <summary>
         /// Update client name for a connected client
+        /// Phase 4: Fully delegated to ConnectedToolsMonitoringService (Replace Method)
         /// </summary>
         public void UpdateClientName(string clientEndpoint, string clientName)
         {
-            // Find client by endpoint (backward compatibility)
-            ConnectedClient targetClient = _connectedClients.Values
+            // Phase 4: Find client using unified system instead of _connectedClients
+            ConnectedClient existingClient = ConnectedToolsMonitoringService.GetConnectedToolsForDisplay()
                 .FirstOrDefault(c => c.Endpoint == clientEndpoint);
                 
-            if (targetClient != null)
+            if (existingClient != null)
             {
-                string clientKey = GenerateClientKey(targetClient.Endpoint);
-                ConnectedClient updatedClient = targetClient.WithClientName(clientName);
-                bool updateResult = _connectedClients.TryUpdate(clientKey, updatedClient, targetClient);
-                
                 // Clear reconnecting flags when client name is successfully set (client is now fully connected)
-                if (updateResult && clientName != McpConstants.UNKNOWN_CLIENT_NAME)
+                if (clientName != McpConstants.UNKNOWN_CLIENT_NAME)
                 {
                     McpServerController.ClearReconnectingFlag();
                     
-                    // Notify tool connected
+                    // Update in centralized system
+                    ConnectedToolsMonitoringService.AddOrUpdateTool(
+                        clientName, 
+                        clientEndpoint, 
+                        existingClient.NotificationPort, 
+                        existingClient.ConnectedAt
+                    );
+                    
+                    // Notify tool connected with updated client
+                    ConnectedClient updatedClient = new ConnectedClient(
+                        clientEndpoint, 
+                        null, // Stream not needed for event notification
+                        clientName, 
+                        existingClient.NotificationPort
+                    );
                     OnToolConnected?.Invoke(updatedClient);
                 }
             }
@@ -275,40 +275,42 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Explicitly disconnect all connected clients
+        /// Phase 4: Uses unified connection management system
         /// This ensures TypeScript clients receive proper close events
         /// </summary>
         private void DisconnectAllClients()
         {
-            if (_connectedClients.IsEmpty)
+            IReadOnlyDictionary<string, NetworkStream> activeConnections = ConnectedToolsMonitoringService.GetActiveConnections();
+            if (activeConnections.Count == 0)
             {
                 return;
             }
 
+            List<string> endpointsToRemove = new List<string>();
             
-            List<string> clientsToRemove = new List<string>();
-            
-            foreach (KeyValuePair<string, ConnectedClient> client in _connectedClients)
+            foreach (KeyValuePair<string, NetworkStream> connection in activeConnections)
             {
                 try
                 {
                     // Close the NetworkStream to send proper close event to TypeScript client
-                    if (client.Value.Stream != null && client.Value.Stream.CanWrite)
+                    if (connection.Value != null && connection.Value.CanWrite)
                     {
-                        client.Value.Stream.Close();
+                        connection.Value.Close();
                     }
-                    clientsToRemove.Add(client.Key);
+                    endpointsToRemove.Add(connection.Key);
                 }
                 catch (Exception ex)
                 {
-                    OnError?.Invoke($"Error disconnecting client {client.Key}: {ex.Message}");
-                    clientsToRemove.Add(client.Key); // Remove even if disconnect failed
+                    OnError?.Invoke($"Error disconnecting client {connection.Key}: {ex.Message}");
+                    endpointsToRemove.Add(connection.Key); // Remove even if disconnect failed
                 }
             }
             
-            // Remove all clients from the connected clients list
-            foreach (string clientKey in clientsToRemove)
+            // Remove all clients from the unified system
+            foreach (string endpoint in endpointsToRemove)
             {
-                _connectedClients.TryRemove(clientKey, out _);
+                // This will trigger proper cleanup through the unified system
+                OnToolDisconnected?.Invoke(endpoint);
             }
             
             // Do not clear connectedLLMTools during server stop or domain reload
@@ -401,20 +403,19 @@ namespace io.github.hatayama.uLoopMCP
                 using (NetworkStream stream = client.GetStream())
                 {
                     
-                    // Check for existing connection from same endpoint and close it
-                    string clientKey = GenerateClientKey(clientEndpoint);
-                    if (_connectedClients.TryGetValue(clientKey, out ConnectedClient existingClient))
+                    // Phase 4: Check for existing connection using unified system
+                    IReadOnlyDictionary<string, NetworkStream> activeConnections = ConnectedToolsMonitoringService.GetActiveConnections();
+                    if (activeConnections.TryGetValue(clientEndpoint, out NetworkStream existingStream))
                     {
-                        existingClient.Stream?.Close();
-                        _connectedClients.TryRemove(clientKey, out _);
+                        existingStream?.Close();
                         
                         // Notify tool disconnected with endpoint
-                        OnToolDisconnected?.Invoke(existingClient.Endpoint);
+                        // This will trigger unified cleanup through RemoveConnectedToolByEndpoint
+                        OnToolDisconnected?.Invoke(clientEndpoint);
                     }
                     
-                    // Add new client to connected clients for notification broadcasting
-                    ConnectedClient connectedClient = new ConnectedClient(clientEndpoint, stream);
-                    _connectedClients.TryAdd(clientKey, connectedClient);
+                    // Phase 4: Register in centralized connection management only
+                    ConnectedToolsMonitoringService.UpdateActiveConnection(clientEndpoint, stream);
                     
                     // Initialize new framing components
                     bufferManager = new DynamicBufferManager();
@@ -504,19 +505,11 @@ namespace io.github.hatayama.uLoopMCP
                     OnError?.Invoke($"Error during client disposal: {ex.Message}");
                 }
                 
-                // Remove client from connected clients list
-                // Find client by endpoint to get the correct key
-                ConnectedClient clientToRemove = _connectedClients.Values
-                    .FirstOrDefault(c => c.Endpoint == clientEndpoint);
-                    
-                if (clientToRemove != null)
-                {
-                    string clientKey = GenerateClientKey(clientToRemove.Endpoint);
-                    _connectedClients.TryRemove(clientKey, out _);
-                    
-                    // Notify tool disconnected with endpoint
-                    OnToolDisconnected?.Invoke(clientToRemove.Endpoint);
-                }
+                // Phase 4: Simplified cleanup using unified system only
+                // Notify tool disconnected with endpoint
+                // This will trigger ConnectedToolsMonitoringService.RemoveConnectedToolByEndpoint
+                // which includes TCP cleanup through the integrated system
+                OnToolDisconnected?.Invoke(clientEndpoint);
                 
                 
                 client.Close();
@@ -526,11 +519,17 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Sends a pre-formatted JSON-RPC notification to all connected clients using Content-Length framing.
+        /// Updated to use ConnectedToolsMonitoringService (Fowler: Substitute Algorithm)
         /// </summary>
         /// <param name="notificationJson">The complete JSON-RPC notification string</param>
         public void SendNotificationToClients(string notificationJson)
         {
-            if (_connectedClients.IsEmpty)
+            // NEW: Get active connections from ConnectedToolsMonitoringService
+            // This replaces the old _connectedClients approach gradually
+            IReadOnlyDictionary<string, NetworkStream> activeConnections = 
+                ConnectedToolsMonitoringService.GetActiveConnections();
+
+            if (activeConnections.Count == 0)
             {
                 return;
             }
@@ -539,44 +538,41 @@ namespace io.github.hatayama.uLoopMCP
             string framedNotification = CreateContentLengthFrame(notificationJson);
             byte[] notificationData = Encoding.UTF8.GetBytes(framedNotification);
             
-            SendNotificationDataAsync(notificationData).Forget();
+            SendNotificationDataAsync(notificationData, activeConnections).Forget();
         }
 
         /// <summary>
         /// Send notification data to all connected clients
+        /// Updated to use new connection management (Fowler: Replace Method)
         /// </summary>
-        private async Task SendNotificationDataAsync(byte[] notificationData)
+        private async Task SendNotificationDataAsync(byte[] notificationData, IReadOnlyDictionary<string, NetworkStream> activeConnections)
         {
-            List<string> clientsToRemove = new List<string>();
+            List<string> endpointsToRemove = new();
             
-            foreach (KeyValuePair<string, ConnectedClient> client in _connectedClients)
+            foreach (KeyValuePair<string, NetworkStream> connection in activeConnections)
             {
                 try
                 {
-                    if (client.Value.Stream?.CanWrite == true)
+                    if (connection.Value?.CanWrite == true)
                     {
-                        await client.Value.Stream.WriteAsync(notificationData, 0, notificationData.Length);
+                        await connection.Value.WriteAsync(notificationData, 0, notificationData.Length);
                     }
                     else
                     {
-                        clientsToRemove.Add(client.Key);
+                        endpointsToRemove.Add(connection.Key);
                     }
                 }
                 catch (Exception ex)
                 {
-                    OnError?.Invoke($"Error writing notification to client {client.Key}: {ex.Message}");
-                    clientsToRemove.Add(client.Key);
+                    OnError?.Invoke($"Error writing notification to client {connection.Key}: {ex.Message}");
+                    endpointsToRemove.Add(connection.Key);
                 }
             }
             
-            // Remove disconnected clients
-            foreach (string clientKey in clientsToRemove)
+            // Remove disconnected clients through ConnectedToolsMonitoringService
+            foreach (string endpoint in endpointsToRemove)
             {
-                if (_connectedClients.TryRemove(clientKey, out ConnectedClient removedClient))
-                {
-                    // Notify tool disconnected with endpoint
-                    OnToolDisconnected?.Invoke(removedClient.Endpoint);
-                }
+                ConnectedToolsMonitoringService.RemoveConnectedToolByEndpoint(endpoint);
             }
         }
 
