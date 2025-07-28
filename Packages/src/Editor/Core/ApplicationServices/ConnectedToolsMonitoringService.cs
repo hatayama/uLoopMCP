@@ -114,8 +114,29 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void AddOrUpdateTool(string clientName, string endpoint, int notificationPort, DateTime? connectedAt = null)
         {
+            var stackTrace = new System.Diagnostics.StackTrace(1, true);
+            var callerInfo = stackTrace.GetFrames()?.Take(5)
+                .Select(frame => new {
+                    method = $"{frame.GetMethod()?.DeclaringType?.Name}.{frame.GetMethod()?.Name}",
+                    file = System.IO.Path.GetFileName(frame.GetFileName()),
+                    line = frame.GetFileLineNumber()
+                })
+                .Where(info => !string.IsNullOrEmpty(info.file))
+                .ToArray();
+
+            VibeLogger.LogInfo(
+                "add_or_update_tool_called",
+                "AddOrUpdateTool method called",
+                new { clientName, endpoint, notificationPort, callerStack = callerInfo }
+            );
+
             if (string.IsNullOrEmpty(clientName) || string.IsNullOrEmpty(endpoint))
-            { 
+            {
+                VibeLogger.LogWarning(
+                    "add_or_update_tool_skipped",
+                    "AddOrUpdateTool skipped due to invalid parameters",
+                    new { clientName, endpoint, notificationPort }
+                );
                 return;
             }
 
@@ -158,6 +179,18 @@ namespace io.github.hatayama.uLoopMCP
             );
             _connectedTools.Add(toolData);
             
+            VibeLogger.LogInfo(
+                "connected_tools_list_updated",
+                "Connected tools list updated",
+                new { 
+                    clientName, 
+                    endpoint, 
+                    notificationPort, 
+                    currentCount = _connectedTools.Count,
+                    allTools = _connectedTools.Select(t => new { t.Name, t.Endpoint, t.NotificationPort }).ToArray()
+                }
+            );
+            
             // Persist to settings
             McpEditorSettings.AddConnectedLLMTool(toolData);
             
@@ -190,13 +223,22 @@ namespace io.github.hatayama.uLoopMCP
             ConnectedLLMToolData existingTool = _connectedTools.Find(tool => tool.Endpoint == endpoint);
             if (existingTool != null)
             {
-                // Update existing tool
+                // Update existing tool with correct name
                 AddOrUpdateTool(existingTool.Name, endpoint, notificationPort);
+                
+                VibeLogger.LogInfo(
+                    "notification_port_updated_existing",
+                    "Notification port updated for existing client",
+                    new { clientName = existingTool.Name, endpoint, notificationPort }
+                );
             }
             else
             {
-                // Create new tool entry with unknown name (will be updated when client connects)
-                AddOrUpdateTool("unknown", endpoint, notificationPort);
+                VibeLogger.LogWarning(
+                    "notification_port_update_no_client",
+                    "Cannot update notification port - client not found",
+                    new { endpoint, notificationPort }
+                );
             }
         }
 
@@ -271,7 +313,20 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static List<ConnectedClient> GetConnectedToolsAsClients()
         {
-            return _connectedTools.OrderBy(tool => tool.Name).Select(tool => ConvertToConnectedClient(tool)).ToList();
+            var result = _connectedTools.OrderBy(tool => tool.Name).Select(tool => ConvertToConnectedClient(tool)).ToList();
+            
+            VibeLogger.LogInfo(
+                "get_connected_tools_as_clients_called",
+                "GetConnectedToolsAsClients called",
+                new { 
+                    connectedToolsCount = _connectedTools.Count,
+                    resultCount = result.Count,
+                    allTools = _connectedTools.Select(t => new { t.Name, t.Endpoint, t.NotificationPort }).ToArray(),
+                    resultTools = result.Select(r => new { r.ClientName, r.Endpoint, r.NotificationPort }).ToArray()
+                }
+            );
+            
+            return result;
         }
 
         /// <summary>
@@ -280,14 +335,11 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static List<ConnectedClient> GetConnectedToolsForDisplay()
         {
-            // If delay is active, show previous tools
-            if (_isDisplayDelayActive)
-            {
-                return _previousToolsForDisplay.OrderBy(tool => tool.Name)
-                    .Select(tool => ConvertToConnectedClient(tool)).ToList();
-            }
+            // TEMPORARY: Disable UI flash prevention to fix display issues
+            // TODO: Investigate TimerDelay.Wait cancellation issues
+            // Debug.Log($"[hatayama] _isDisplayDelayActive: {_isDisplayDelayActive} (UI flash prevention disabled)");
             
-            // Normal display
+            // Always show current tools (bypassing flash prevention)
             return GetConnectedToolsAsClients();
         }
 

@@ -20,9 +20,11 @@ namespace io.github.hatayama.uLoopMCP
         {
             string clientName = parameters.ClientName;
             
+            // IMPORTANT: Update client name first before saving notification port
+            // This ensures the client is properly registered before UpdateNotificationPort creates entries
             UpdateClientNameInServer(clientName);
             
-            // Save notification port if provided
+            // Save notification port if provided (after client name is updated)
             if (parameters.NotificationPort.HasValue)
             {
                 SaveNotificationPort(clientName, parameters.NotificationPort.Value);
@@ -44,28 +46,40 @@ namespace io.github.hatayama.uLoopMCP
         
         private void UpdateClientNameInServer(string clientName)
         {
-            McpBridgeServer server = McpServerController.CurrentServer;
-            if (server == null) return;
-            
-            var connectedClients = server.GetConnectedClients();
-            if (connectedClients.Count == 0) return;
-            
             // Get current client context
             var clientContext = GetCurrentClientContext();
             if (clientContext == null)
             {
+                VibeLogger.LogWarning(
+                    "set_client_name_no_context",
+                    "No client context available for SetClientName",
+                    new { clientName }
+                );
                 return;
             }
             
+            string clientEndpoint = clientContext.Endpoint;
             
-            // Find client by endpoint
-            ConnectedClient targetClient = connectedClients
-                .FirstOrDefault(c => c.Endpoint == clientContext.Endpoint);
+            // FIXED: Directly add/update tool entry instead of relying on existing entries
+            // This resolves the chicken-and-egg problem where UpdateClientName required existing clients
+            ConnectedToolsMonitoringService.AddOrUpdateTool(
+                clientName, 
+                clientEndpoint, 
+                0, // notification port will be updated separately in SaveNotificationPort
+                System.DateTime.Now
+            );
             
-            if (targetClient != null)
+            VibeLogger.LogInfo(
+                "client_name_updated_in_server",
+                "Client name updated directly in ConnectedToolsMonitoringService",
+                new { clientName, clientEndpoint }
+            );
+            
+            // Also update McpBridgeServer for backward compatibility
+            McpBridgeServer server = McpServerController.CurrentServer;
+            if (server != null)
             {
-                server.UpdateClientName(targetClient.Endpoint, clientName);
-                return;
+                server.UpdateClientName(clientEndpoint, clientName);
             }
         }
         

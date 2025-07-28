@@ -116,10 +116,10 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public IReadOnlyCollection<ConnectedClient> GetConnectedClients()
         {
-            // Phase 4: Now delegates to ConnectedToolsMonitoringService (Replace Method)
-            return ConnectedToolsMonitoringService.GetConnectedToolsForDisplay()
+            List<ConnectedClient> resutlt = ConnectedToolsMonitoringService.GetConnectedToolsForDisplay()
                 .OrderBy(client => client.ClientName)
-                .ToArray();
+                .ToList();
+            return resutlt;
         }
 
         /// <summary>

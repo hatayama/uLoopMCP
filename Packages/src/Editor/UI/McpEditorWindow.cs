@@ -111,8 +111,8 @@ namespace io.github.hatayama.uLoopMCP
             _cachedStoredTools = null;
             _lastStoredToolsUpdateTime = 0;
             
-            // Force editor window repaint
-            Repaint();
+            // Force editor window repaint on main thread
+            UnityEditor.EditorApplication.delayCall += () => Repaint();
         }
 
 
