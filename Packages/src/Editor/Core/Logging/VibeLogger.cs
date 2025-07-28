@@ -37,6 +37,24 @@ namespace io.github.hatayama.uLoopMCP
         private static bool hasCleanedUpOnStartup = false;
         
         [Serializable]
+        public class StackFrame
+        {
+            public string functionName;
+            public string filePath;
+            public int? lineNumber;
+            public int? columnNumber;
+            public string rawLine;
+        }
+
+        [Serializable]
+        public class StackTraceInfo
+        {
+            public string raw;
+            public StackFrame[] parsed;
+            public string captureLocation;
+        }
+
+        [Serializable]
         public class VibeLogEntry
         {
             public string timestamp;
@@ -49,6 +67,7 @@ namespace io.github.hatayama.uLoopMCP
             public string human_note;
             public string ai_todo;
             public EnvironmentInfo environment;
+            public StackTraceInfo stack_trace;
         }
         
         [Serializable]
@@ -66,9 +85,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         [Conditional(McpConstants.ENV_KEY_ULOOPMCP_DEBUG)]
         public static void LogInfo(string operation, string message, object context = null, 
-                                  string correlationId = null, string humanNote = null, string aiTodo = null)
+                                  string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = false)
         {
-            Log("INFO", operation, message, context, correlationId, humanNote, aiTodo);
+            Log("INFO", operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
         }
         
         /// <summary>
@@ -77,9 +96,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         [Conditional(McpConstants.ENV_KEY_ULOOPMCP_DEBUG)]
         public static void LogWarning(string operation, string message, object context = null, 
-                                     string correlationId = null, string humanNote = null, string aiTodo = null)
+                                     string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = false)
         {
-            Log("WARNING", operation, message, context, correlationId, humanNote, aiTodo);
+            Log("WARNING", operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
         }
         
         /// <summary>
@@ -88,9 +107,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         [Conditional(McpConstants.ENV_KEY_ULOOPMCP_DEBUG)]
         public static void LogError(string operation, string message, object context = null, 
-                                   string correlationId = null, string humanNote = null, string aiTodo = null)
+                                   string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = true)
         {
-            Log("ERROR", operation, message, context, correlationId, humanNote, aiTodo);
+            Log("ERROR", operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
         }
         
         /// <summary>
@@ -99,9 +118,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         [Conditional(McpConstants.ENV_KEY_ULOOPMCP_DEBUG)]
         public static void LogDebug(string operation, string message, object context = null, 
-                                   string correlationId = null, string humanNote = null, string aiTodo = null)
+                                   string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = false)
         {
-            Log("DEBUG", operation, message, context, correlationId, humanNote, aiTodo);
+            Log("DEBUG", operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
         }
         
         /// <summary>
@@ -127,7 +146,7 @@ namespace io.github.hatayama.uLoopMCP
             };
             
             Log("ERROR", operation, $"Exception occurred: {exception.Message}", exceptionContext, 
-                correlationId, humanNote, aiTodo);
+                correlationId, humanNote, aiTodo, true);
         }
         
         /// <summary>
@@ -136,6 +155,43 @@ namespace io.github.hatayama.uLoopMCP
         public static string GenerateCorrelationId()
         {
             return $"unity_{Guid.NewGuid().ToString("N")[..8]}_{DateTime.Now:HHmmss}";
+        }
+
+        /// <summary>
+        /// Capture current stack trace information
+        /// </summary>
+        private static StackTraceInfo CaptureStackTrace(int skipFrames = 3)
+        {
+            var stackTrace = new StackTrace(skipFrames, true);
+            var frames = new List<StackFrame>();
+
+            for (int i = 0; i < stackTrace.FrameCount; i++)
+            {
+                var frame = stackTrace.GetFrame(i);
+                if (frame != null)
+                {
+                    var method = frame.GetMethod();
+                    var fileName = frame.GetFileName();
+                    var lineNumber = frame.GetFileLineNumber();
+                    var columnNumber = frame.GetFileColumnNumber();
+
+                    frames.Add(new StackFrame
+                    {
+                        functionName = method != null ? $"{method.DeclaringType?.Name}.{method.Name}" : "Unknown",
+                        filePath = fileName ?? "Unknown",
+                        lineNumber = lineNumber > 0 ? lineNumber : null,
+                        columnNumber = columnNumber > 0 ? columnNumber : null,
+                        rawLine = null
+                    });
+                }
+            }
+
+            return new StackTraceInfo
+            {
+                raw = new StackTrace(skipFrames, true).ToString(),
+                parsed = frames.ToArray(),
+                captureLocation = "VibeLogger.CaptureStackTrace"
+            };
         }
         
         /// <summary>
@@ -182,7 +238,7 @@ namespace io.github.hatayama.uLoopMCP
         /// Core logging method
         /// </summary>
         private static void Log(string level, string operation, string message, object context,
-                               string correlationId, string humanNote, string aiTodo)
+                               string correlationId, string humanNote, string aiTodo, bool includeStackTrace = false)
         {
             var logEntry = new VibeLogEntry
             {
@@ -195,7 +251,8 @@ namespace io.github.hatayama.uLoopMCP
                 source = "Unity",
                 human_note = humanNote,
                 ai_todo = aiTodo,
-                environment = GetEnvironmentInfo()
+                environment = GetEnvironmentInfo(),
+                stack_trace = includeStackTrace ? CaptureStackTrace() : null
             };
             
             // Add to memory logs
@@ -301,8 +358,8 @@ namespace io.github.hatayama.uLoopMCP
         private static bool IsFileSharingViolation(IOException ex)
         {
             // ERROR_SHARING_VIOLATION (0x80070020)
-            const int ERROR_SHARING_VIOLATION = unchecked((int)0x80070020);
-            return ex.HResult == ERROR_SHARING_VIOLATION;
+            const int errorSharingViolation = unchecked((int)0x80070020);
+            return ex.HResult == errorSharingViolation;
         }
         
         /// <summary>

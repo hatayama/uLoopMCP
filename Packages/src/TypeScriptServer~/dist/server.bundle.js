@@ -5698,26 +5698,62 @@ var VibeLogger = class _VibeLogger {
   /**
    * Log an info level message with structured context
    */
-  static logInfo(operation, message, context, correlationId, humanNote, aiTodo) {
-    _VibeLogger.log("INFO", operation, message, context, correlationId, humanNote, aiTodo);
+  static logInfo(operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace = false) {
+    _VibeLogger.log(
+      "INFO",
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace
+    );
   }
   /**
    * Log a warning level message with structured context
    */
-  static logWarning(operation, message, context, correlationId, humanNote, aiTodo) {
-    _VibeLogger.log("WARNING", operation, message, context, correlationId, humanNote, aiTodo);
+  static logWarning(operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace = false) {
+    _VibeLogger.log(
+      "WARNING",
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace
+    );
   }
   /**
    * Log an error level message with structured context
    */
-  static logError(operation, message, context, correlationId, humanNote, aiTodo) {
-    _VibeLogger.log("ERROR", operation, message, context, correlationId, humanNote, aiTodo);
+  static logError(operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace = true) {
+    _VibeLogger.log(
+      "ERROR",
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace
+    );
   }
   /**
    * Log a debug level message with structured context
    */
-  static logDebug(operation, message, context, correlationId, humanNote, aiTodo) {
-    _VibeLogger.log("DEBUG", operation, message, context, correlationId, humanNote, aiTodo);
+  static logDebug(operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace = false) {
+    _VibeLogger.log(
+      "DEBUG",
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace
+    );
   }
   /**
    * Log an exception with structured context
@@ -5739,7 +5775,8 @@ var VibeLogger = class _VibeLogger {
       exceptionContext,
       correlationId,
       humanNote,
-      aiTodo
+      aiTodo,
+      true
     );
   }
   /**
@@ -5748,6 +5785,57 @@ var VibeLogger = class _VibeLogger {
   static generateCorrelationId() {
     const timestamp = (/* @__PURE__ */ new Date()).toISOString().slice(11, 19).replace(/:/g, "");
     return `ts_${v4_default().slice(0, 8)}_${timestamp}`;
+  }
+  /**
+   * Capture current stack trace information
+   */
+  static captureStackTrace(skipFrames = 4) {
+    const error = new Error();
+    const stack = error.stack || "";
+    return {
+      raw: stack,
+      parsed: _VibeLogger.parseStackTrace(stack, skipFrames),
+      capture_location: "VibeLogger.captureStackTrace"
+    };
+  }
+  /**
+   * Parse stack trace string into structured format
+   */
+  static parseStackTrace(stack, skipFrames = 0) {
+    if (!stack) {
+      return [];
+    }
+    const lines = stack.split("\n");
+    const frames = [];
+    for (let i = skipFrames + 1; i < lines.length; i++) {
+      const line = lines.at(i);
+      if (!line || typeof line !== "string") {
+        continue;
+      }
+      const match = line.match(/^\s*at\s+(.+?)\s+\((.+?):(\d+):(\d+)\)$/);
+      if (match) {
+        frames.push({
+          function_name: match[1],
+          file_path: match[2],
+          line_number: parseInt(match[3], 10),
+          column_number: parseInt(match[4], 10)
+        });
+      } else {
+        const simpleMatch = line.match(/^\s*at\s+(.+?):(\d+):(\d+)$/);
+        if (simpleMatch) {
+          frames.push({
+            file_path: simpleMatch[1],
+            line_number: parseInt(simpleMatch[2], 10),
+            column_number: parseInt(simpleMatch[3], 10)
+          });
+        } else {
+          frames.push({
+            raw_line: line.trim()
+          });
+        }
+      }
+    }
+    return frames;
   }
   /**
    * Get logs for AI analysis (formatted for Claude Code)
@@ -5801,7 +5889,7 @@ var VibeLogger = class _VibeLogger {
    * Core logging method
    * Only logs when MCP_DEBUG environment variable is set to 'true'
    */
-  static log(level, operation, message, context, correlationId, humanNote, aiTodo) {
+  static log(level, operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace = false) {
     if (!_VibeLogger.isDebugEnabled) {
       return;
     }
@@ -5815,7 +5903,8 @@ var VibeLogger = class _VibeLogger {
       source: "TypeScript",
       human_note: humanNote,
       ai_todo: aiTodo,
-      environment: _VibeLogger.getEnvironmentInfo()
+      environment: _VibeLogger.getEnvironmentInfo(),
+      ...includeStackTrace && { stack_trace: _VibeLogger.captureStackTrace() }
     };
     _VibeLogger.memoryLogs.push(logEntry);
     if (_VibeLogger.memoryLogs.length > _VibeLogger.MAX_MEMORY_LOGS) {

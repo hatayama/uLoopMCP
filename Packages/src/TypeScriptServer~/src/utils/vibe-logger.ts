@@ -21,6 +21,20 @@ import { OUTPUT_DIRECTORIES } from '../constants.js';
  * - Correlation ID tracking for related operations
  */
 
+export interface StackFrame {
+  function_name?: string;
+  file_path?: string;
+  line_number?: number;
+  column_number?: number;
+  raw_line?: string;
+}
+
+export interface StackTraceInfo {
+  raw: string;
+  parsed: StackFrame[];
+  capture_location: string;
+}
+
 export interface VibeLogEntry {
   timestamp: string;
   level: string;
@@ -32,6 +46,7 @@ export interface VibeLogEntry {
   human_note?: string;
   ai_todo?: string;
   environment: EnvironmentInfo;
+  stack_trace?: StackTraceInfo;
 }
 
 export interface EnvironmentInfo {
@@ -73,8 +88,18 @@ export class VibeLogger {
     correlationId?: string,
     humanNote?: string,
     aiTodo?: string,
+    includeStackTrace: boolean = false,
   ): void {
-    VibeLogger.log('INFO', operation, message, context, correlationId, humanNote, aiTodo);
+    VibeLogger.log(
+      'INFO',
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace,
+    );
   }
 
   /**
@@ -87,8 +112,18 @@ export class VibeLogger {
     correlationId?: string,
     humanNote?: string,
     aiTodo?: string,
+    includeStackTrace: boolean = false,
   ): void {
-    VibeLogger.log('WARNING', operation, message, context, correlationId, humanNote, aiTodo);
+    VibeLogger.log(
+      'WARNING',
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace,
+    );
   }
 
   /**
@@ -101,8 +136,18 @@ export class VibeLogger {
     correlationId?: string,
     humanNote?: string,
     aiTodo?: string,
+    includeStackTrace: boolean = true,
   ): void {
-    VibeLogger.log('ERROR', operation, message, context, correlationId, humanNote, aiTodo);
+    VibeLogger.log(
+      'ERROR',
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace,
+    );
   }
 
   /**
@@ -115,8 +160,18 @@ export class VibeLogger {
     correlationId?: string,
     humanNote?: string,
     aiTodo?: string,
+    includeStackTrace: boolean = false,
   ): void {
-    VibeLogger.log('DEBUG', operation, message, context, correlationId, humanNote, aiTodo);
+    VibeLogger.log(
+      'DEBUG',
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace,
+    );
   }
 
   /**
@@ -148,6 +203,7 @@ export class VibeLogger {
       correlationId,
       humanNote,
       aiTodo,
+      true,
     );
   }
 
@@ -157,6 +213,64 @@ export class VibeLogger {
   static generateCorrelationId(): string {
     const timestamp = new Date().toISOString().slice(11, 19).replace(/:/g, '');
     return `ts_${uuidv4().slice(0, 8)}_${timestamp}`;
+  }
+
+  /**
+   * Capture current stack trace information
+   */
+  private static captureStackTrace(skipFrames: number = 4): StackTraceInfo {
+    const error = new Error();
+    const stack = error.stack || '';
+
+    return {
+      raw: stack,
+      parsed: VibeLogger.parseStackTrace(stack, skipFrames),
+      capture_location: 'VibeLogger.captureStackTrace',
+    };
+  }
+
+  /**
+   * Parse stack trace string into structured format
+   */
+  private static parseStackTrace(stack: string, skipFrames: number = 0): StackFrame[] {
+    if (!stack) {
+      return [];
+    }
+
+    const lines = stack.split('\n');
+    const frames: StackFrame[] = [];
+
+    for (let i = skipFrames + 1; i < lines.length; i++) {
+      const line = lines.at(i);
+      if (!line || typeof line !== 'string') {
+        continue;
+      }
+
+      const match = line.match(/^\s*at\s+(.+?)\s+\((.+?):(\d+):(\d+)\)$/);
+      if (match) {
+        frames.push({
+          function_name: match[1],
+          file_path: match[2],
+          line_number: parseInt(match[3], 10),
+          column_number: parseInt(match[4], 10),
+        });
+      } else {
+        const simpleMatch = line.match(/^\s*at\s+(.+?):(\d+):(\d+)$/);
+        if (simpleMatch) {
+          frames.push({
+            file_path: simpleMatch[1],
+            line_number: parseInt(simpleMatch[2], 10),
+            column_number: parseInt(simpleMatch[3], 10),
+          });
+        } else {
+          frames.push({
+            raw_line: line.trim(),
+          });
+        }
+      }
+    }
+
+    return frames;
   }
 
   /**
@@ -237,6 +351,7 @@ export class VibeLogger {
     correlationId?: string,
     humanNote?: string,
     aiTodo?: string,
+    includeStackTrace: boolean = false,
   ): void {
     // Only log when MCP_DEBUG is enabled
     if (!VibeLogger.isDebugEnabled) {
@@ -254,6 +369,7 @@ export class VibeLogger {
       human_note: humanNote,
       ai_todo: aiTodo,
       environment: VibeLogger.getEnvironmentInfo(),
+      ...(includeStackTrace && { stack_trace: VibeLogger.captureStackTrace() }),
     };
 
     // Add to memory logs
