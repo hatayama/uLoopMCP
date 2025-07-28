@@ -16,7 +16,6 @@ namespace io.github.hatayama.uLoopMCP
     {
         [SerializeField] public string Name;
         [SerializeField] public string Endpoint;
-        [SerializeField] public int Port;
         [SerializeField] public string ConnectedAtString;
         [SerializeField] public int NotificationPort;
         
@@ -33,16 +32,7 @@ namespace io.github.hatayama.uLoopMCP
             // Default constructor for Unity serialization
         }
 
-        public ConnectedLLMToolData(string name, string endpoint, int port, DateTime connectedAt)
-        {
-            Name = name;
-            Endpoint = endpoint;
-            Port = port;
-            ConnectedAt = connectedAt;
-            NotificationPort = 0; // Default to 0 (not set)
-        }
-        
-        public ConnectedLLMToolData(string name, string endpoint, DateTime connectedAt, int notificationPort)
+        public ConnectedLLMToolData(string name, string endpoint, DateTime connectedAt, int notificationPort = 0)
         {
             Name = name;
             Endpoint = endpoint;

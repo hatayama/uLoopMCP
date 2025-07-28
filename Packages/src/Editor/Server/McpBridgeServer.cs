@@ -24,7 +24,6 @@ namespace io.github.hatayama.uLoopMCP
         public readonly string Endpoint;
         public readonly string ClientName; 
         public readonly DateTime ConnectedAt;
-        public readonly int Port;
         public readonly NetworkStream Stream;
         public readonly int NotificationPort;
 
@@ -38,7 +37,7 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         // Private constructor for WithClientName to preserve ConnectedAt
-        private ConnectedClient(string endpoint, NetworkStream stream, string clientName, DateTime connectedAt, int notificationPort)
+        private ConnectedClient(string endpoint, NetworkStream stream, string clientName, int notificationPort, DateTime connectedAt)
         {
             Endpoint = endpoint;
             Stream = stream; // Allow null stream for UI display purposes
@@ -49,7 +48,7 @@ namespace io.github.hatayama.uLoopMCP
         
         public ConnectedClient WithClientName(string clientName)
         {
-            return new ConnectedClient(Endpoint, Stream, clientName, ConnectedAt, NotificationPort);
+            return new ConnectedClient(Endpoint, Stream, clientName, NotificationPort, ConnectedAt);
         }
 
     }
@@ -68,7 +67,9 @@ namespace io.github.hatayama.uLoopMCP
         
         // Events for individual tool management
         public static event System.Action<ConnectedClient> OnToolConnected;
-        public static event System.Action<string> OnToolDisconnected;
+        // IMPORTANT: OnToolDisconnected parameter is endpoint, not clientName.
+        // Do not rely on clientName for deletion as it may be "Unknown Client" during disconnection.
+        public static event System.Action<string> OnToolDisconnected; // Parameter: endpoint
         
         // HResult error codes for normal disconnection detection
         private static readonly HashSet<int> NormalDisconnectionHResults = new()
@@ -114,6 +115,9 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Generate unique client key using Endpoint
+        /// 
+        /// IMPORTANT: Always use endpoint as unique identifier, not clientName.
+        /// Client names can be duplicated or "Unknown Client" during connection processes.
         /// </summary>
         private string GenerateClientKey(string endpoint)
         {
@@ -404,8 +408,8 @@ namespace io.github.hatayama.uLoopMCP
                         existingClient.Stream?.Close();
                         _connectedClients.TryRemove(clientKey, out _);
                         
-                        // Notify tool disconnected
-                        OnToolDisconnected?.Invoke(existingClient.ClientName);
+                        // Notify tool disconnected with endpoint
+                        OnToolDisconnected?.Invoke(existingClient.Endpoint);
                     }
                     
                     // Add new client to connected clients for notification broadcasting
@@ -510,8 +514,8 @@ namespace io.github.hatayama.uLoopMCP
                     string clientKey = GenerateClientKey(clientToRemove.Endpoint);
                     _connectedClients.TryRemove(clientKey, out _);
                     
-                    // Notify tool disconnected
-                    OnToolDisconnected?.Invoke(clientToRemove.ClientName);
+                    // Notify tool disconnected with endpoint
+                    OnToolDisconnected?.Invoke(clientToRemove.Endpoint);
                 }
                 
                 
@@ -570,8 +574,8 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (_connectedClients.TryRemove(clientKey, out ConnectedClient removedClient))
                 {
-                    // Notify tool disconnected
-                    OnToolDisconnected?.Invoke(removedClient.ClientName);
+                    // Notify tool disconnected with endpoint
+                    OnToolDisconnected?.Invoke(removedClient.Endpoint);
                 }
             }
         }

@@ -51,6 +51,9 @@ namespace io.github.hatayama.uLoopMCP
         private void OnEnable()
         {
             InitializeAll();
+            
+            // Subscribe to connected tools change events
+            ConnectedToolsMonitoringService.OnConnectedToolsChanged += OnConnectedToolsChanged;
         }
 
         private void OnDestroy()
@@ -97,6 +100,19 @@ namespace io.github.hatayama.uLoopMCP
         public IEnumerable<ConnectedClient> GetConnectedToolsAsClients()
         {
             return ConnectedToolsMonitoringService.GetConnectedToolsForDisplay();
+        }
+
+        /// <summary>
+        /// Handle connected tools change event - clear cache to refresh UI
+        /// </summary>
+        private void OnConnectedToolsChanged()
+        {
+            // Clear cached tools to force refresh on next access
+            _cachedStoredTools = null;
+            _lastStoredToolsUpdateTime = 0;
+            
+            // Force editor window repaint
+            Repaint();
         }
 
 
@@ -195,6 +211,9 @@ namespace io.github.hatayama.uLoopMCP
         private void CleanupEventHandler()
         {
             _eventHandler?.Cleanup();
+            
+            // Unsubscribe from connected tools change events
+            ConnectedToolsMonitoringService.OnConnectedToolsChanged -= OnConnectedToolsChanged;
         }
 
         /// <summary>

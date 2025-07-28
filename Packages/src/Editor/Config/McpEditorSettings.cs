@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security;
@@ -839,20 +840,35 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             ConnectedLLMToolData[] tools = GetConnectedLLMTools();
-            ConnectedLLMToolData existingTool = System.Array.Find(tools, t => t.Endpoint == clientEndpoint);
+            int existingIndex = System.Array.FindIndex(tools, t => t.Endpoint == clientEndpoint);
 
-            if (existingTool != null)
+            if (existingIndex >= 0)
             {
-                // Update existing tool with notification port
-                existingTool.NotificationPort = notificationPort;
-                existingTool.ConnectedAt = DateTime.Now; // Update last connected time
+                // Create a new array with updated tool
+                ConnectedLLMToolData[] newTools = new ConnectedLLMToolData[tools.Length];
+                System.Array.Copy(tools, newTools, tools.Length);
+
+                // Create a new tool instance with updated values
+                ConnectedLLMToolData existingTool = tools[existingIndex];
+                newTools[existingIndex] = new ConnectedLLMToolData(
+                    existingTool.Name,
+                    existingTool.Endpoint,
+                    DateTime.Now,
+                    notificationPort
+                );
+                tools = newTools;
             }
             else
             {
                 // Create new tool entry with unknown name (will be updated when client connects)
                 ConnectedLLMToolData[] newTools = new ConnectedLLMToolData[tools.Length + 1];
                 System.Array.Copy(tools, newTools, tools.Length);
-                newTools[tools.Length] = new ConnectedLLMToolData("unknown", clientEndpoint, DateTime.Now, notificationPort);
+                newTools[tools.Length] = new ConnectedLLMToolData(
+                    "unknown",
+                    clientEndpoint,
+                    DateTime.Now,
+                    notificationPort
+                );
                 tools = newTools;
             }
 
@@ -880,7 +896,7 @@ namespace io.github.hatayama.uLoopMCP
         public static int[] GetAllNotificationPorts()
         {
             ConnectedLLMToolData[] tools = GetConnectedLLMTools();
-            System.Collections.Generic.List<int> ports = new();
+            List<int> ports = new List<int>();
             
             foreach (ConnectedLLMToolData tool in tools)
             {
@@ -894,7 +910,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Removes a client notification port mapping.
+        /// Remove notification port for specific client endpoint
         /// </summary>
         public static void RemoveClientNotificationPort(string clientEndpoint)
         {
@@ -904,13 +920,23 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             ConnectedLLMToolData[] tools = GetConnectedLLMTools();
-            ConnectedLLMToolData existingTool = System.Array.Find(tools, t => t.Endpoint == clientEndpoint);
+            int existingIndex = System.Array.FindIndex(tools, t => t.Endpoint == clientEndpoint);
 
-            if (existingTool != null)
+            if (existingIndex >= 0)
             {
-                // Clear notification port but keep the tool entry
-                existingTool.NotificationPort = 0;
-                SetConnectedLLMTools(tools);
+                // Create a new array with updated tool
+                ConnectedLLMToolData[] newTools = new ConnectedLLMToolData[tools.Length];
+                System.Array.Copy(tools, newTools, tools.Length);
+                
+                // Create a new tool instance with cleared notification port
+                ConnectedLLMToolData existingTool = tools[existingIndex];
+                newTools[existingIndex] = new ConnectedLLMToolData(
+                    existingTool.Name,
+                    existingTool.Endpoint,
+                    existingTool.ConnectedAt,
+                    0
+                );
+                SetConnectedLLMTools(newTools);
             }
         }
 

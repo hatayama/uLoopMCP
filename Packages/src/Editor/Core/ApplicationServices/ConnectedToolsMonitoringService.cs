@@ -78,10 +78,14 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Handle tool disconnected event - remove tool from connected list
+        /// Uses endpoint-based removal for more reliable disconnection handling
+        /// 
+        /// NOTE: Parameter is endpoint, not clientName. Do not rely on clientName 
+        /// for deletion as it may be "Unknown Client" during disconnection.
         /// </summary>
-        private static void OnToolDisconnected(string toolName)
+        private static void OnToolDisconnected(string endpoint)
         {
-            RemoveConnectedTool(toolName);
+            RemoveConnectedToolByEndpoint(endpoint);
         }
 
 
@@ -95,7 +99,7 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            AddOrUpdateTool(client.ClientName, client.Endpoint, 0, client.ConnectedAt);
+            AddOrUpdateTool(client.ClientName, client.Endpoint, client.NotificationPort, client.ConnectedAt);
         }
 
         /// <summary>
@@ -158,6 +162,11 @@ namespace io.github.hatayama.uLoopMCP
             );
             
             // Notify UI
+            VibeLogger.LogInfo(
+                "ui_notification_triggered",
+                "Triggering UI update for connected tools change",
+                new { clientName, endpoint, notificationPort }
+            );
             OnConnectedToolsChanged?.Invoke();
         }
 
@@ -186,7 +195,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Remove a connected LLM tool
+        /// Remove a connected LLM tool by name
         /// </summary>
         public static void RemoveConnectedTool(string toolName)
         {
@@ -197,6 +206,40 @@ namespace io.github.hatayama.uLoopMCP
             
             // Notify UI
             OnConnectedToolsChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Remove a connected LLM tool by endpoint
+        /// Used when client name is unknown or unreliable during disconnection
+        /// 
+        /// IMPORTANT: Do not rely on clientName for deletion during disconnection.
+        /// Client names may be "Unknown Client" or unreliable when connections are lost.
+        /// Always use endpoint-based deletion for reliable removal.
+        /// </summary>
+        public static void RemoveConnectedToolByEndpoint(string endpoint)
+        {
+            if (string.IsNullOrEmpty(endpoint))
+            {
+                return;
+            }
+
+            ConnectedLLMToolData toolToRemove = _connectedTools.Find(tool => tool.Endpoint == endpoint);
+            if (toolToRemove != null)
+            {
+                _connectedTools.RemoveAll(tool => tool.Endpoint == endpoint);
+                
+                // Persist to settings using endpoint-based removal
+                McpEditorSettings.RemoveConnectedLLMToolByEndpoint(endpoint);
+                
+                VibeLogger.LogInfo(
+                    "connected_tool_removed_by_endpoint",
+                    "Connected tool removed by endpoint during disconnection",
+                    new { endpoint, removedToolName = toolToRemove.Name }
+                );
+                
+                // Notify UI
+                OnConnectedToolsChanged?.Invoke();
+            }
         }
 
         /// <summary>
@@ -299,6 +342,16 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static ConnectedClient ConvertToConnectedClient(ConnectedLLMToolData toolData)
         {
+            VibeLogger.LogInfo(
+                "convert_to_connected_client",
+                "Converting tool data to ConnectedClient for UI display",
+                new { 
+                    name = toolData.Name, 
+                    endpoint = toolData.Endpoint, 
+                    notificationPort = toolData.NotificationPort 
+                }
+            );
+            
             return new ConnectedClient(toolData.Endpoint, null, toolData.Name, toolData.NotificationPort);
         }
 

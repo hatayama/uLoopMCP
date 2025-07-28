@@ -36,9 +36,20 @@ namespace io.github.hatayama.uLoopMCP
                 new { timestamp = System.DateTime.Now.ToString("O") }
             );
             
-            // domain reload後はstaticがnullになるため、GetOrCreateで新規作成
+            // Static fields become null after domain reload, so create new instance via GetOrCreate
             NotificationClient client = GetOrCreateNotificationClient();
-            await client.SendDomainReloadCompleteAsync();
+            try
+            {
+                await client.SendDomainReloadCompleteAsync();
+            }
+            catch (System.Exception ex)
+            {
+                VibeLogger.LogError(
+                    "domain_reload_notification_failed", 
+                    "Failed to send domain reload notification", 
+                    ex
+                );
+            }
         }
 
         public static void SaveClientNotificationPort(string clientEndpoint, int notificationPort)

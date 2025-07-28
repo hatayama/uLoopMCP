@@ -387,7 +387,7 @@ namespace io.github.hatayama.uLoopMCP
         private static async Task StartReconnectionUITimeoutAsync()
         {
             // Wait for the timeout period (convert seconds to frames at ~60fps)
-            int timeoutFrames = McpConstants.RECONNECTION_TIMEOUT_SECONDS * 60;
+            int timeoutFrames = McpConstants.Timeouts.RECONNECTION_SECONDS * 60;
             await EditorDelay.DelayFrame(timeoutFrames);
 
             // Check if UI flag is still set after timeout

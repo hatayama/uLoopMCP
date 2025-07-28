@@ -54,9 +54,6 @@ namespace io.github.hatayama.uLoopMCP
         // Command messages
         public const string CLIENT_SUCCESS_MESSAGE_TEMPLATE = "Client name registered successfully: {0}";
         
-        // Reconnection settings
-        public const int RECONNECTION_TIMEOUT_SECONDS = 10;
-        
         // Editor settings keys (development mode)
         public const string SETTINGS_KEY_ENABLE_DEVELOPMENT_MODE = "EnableDevelopmentMode";
         
@@ -134,6 +131,7 @@ namespace io.github.hatayama.uLoopMCP
             public const int DEFAULT_TOOL_SECONDS = 15;
             public const int TEST_EXECUTION_SECONDS = 30;
             public const int SERVER_SHUTDOWN_SECONDS = 5;
+            public const int RECONNECTION_SECONDS = 10;
         }
         
         // Endpoint constants

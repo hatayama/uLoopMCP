@@ -8,6 +8,42 @@ using UnityEngine;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
+    /// Payload for domain reload complete notification
+    /// </summary>
+    [System.Serializable]
+    public record DomainReloadCompletePayload
+    {
+        public string type;
+        public string timestamp;
+        public int unityProcessId;
+
+        public DomainReloadCompletePayload()
+        {
+            type = "domain_reload_complete";
+            timestamp = DateTime.UtcNow.ToString("O");
+            unityProcessId = System.Diagnostics.Process.GetCurrentProcess().Id;
+        }
+    }
+
+    /// <summary>
+    /// Payload for server restart complete notification
+    /// </summary>
+    [System.Serializable]
+    public record ServerRestartCompletePayload
+    {
+        public string type;
+        public string timestamp;
+        public string message;
+
+        public ServerRestartCompletePayload()
+        {
+            type = "server_restart_complete";
+            timestamp = DateTime.UtcNow.ToString("O");
+            message = "Unity MCP Server has restarted - please reconnect";
+        }
+    }
+
+    /// <summary>
     /// TypeScript側のNotification Receive Serverに通知を送信するクライアント
     /// McpEditorSettingsを使用してクライアントごとのポート情報を管理
     /// 
@@ -111,13 +147,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             try
             {
-                object payload = new
-                {
-                    type = "domain_reload_complete",
-                    timestamp = DateTime.UtcNow.ToString("O"),
-                    unityProcessId = System.Diagnostics.Process.GetCurrentProcess().Id
-                };
-
+                DomainReloadCompletePayload payload = new();
                 string json = JsonUtility.ToJson(payload);
                 StringContent content = new(json, Encoding.UTF8, "application/json");
                 string notificationUrl = $"http://{McpConstants.Network.LOCALHOST_IP}:{notificationPort}";
@@ -164,13 +194,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             try
             {
-                object payload = new
-                {
-                    type = "server_restart_complete",
-                    timestamp = DateTime.UtcNow.ToString("O"),
-                    message = "Unity MCP Server has restarted - please reconnect"
-                };
-
+                ServerRestartCompletePayload payload = new();
                 string jsonPayload = JsonUtility.ToJson(payload);
                 StringContent content = new(jsonPayload, Encoding.UTF8, "application/json");
                 

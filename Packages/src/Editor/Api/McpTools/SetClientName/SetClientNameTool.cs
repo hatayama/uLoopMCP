@@ -33,6 +33,15 @@ namespace io.github.hatayama.uLoopMCP
             return Task.FromResult(response);
         }
         
+        /// <summary>
+        /// Gets the current client context from JsonRpcProcessor
+        /// </summary>
+        /// <returns>The current client context, or null if not available</returns>
+        private ClientExecutionContext GetCurrentClientContext()
+        {
+            return JsonRpcProcessor.CurrentClientContext;
+        }
+        
         private void UpdateClientNameInServer(string clientName)
         {
             McpBridgeServer server = McpServerController.CurrentServer;
@@ -42,7 +51,7 @@ namespace io.github.hatayama.uLoopMCP
             if (connectedClients.Count == 0) return;
             
             // Get current client context
-            var clientContext = JsonRpcProcessor.CurrentClientContext;
+            var clientContext = GetCurrentClientContext();
             if (clientContext == null)
             {
                 return;
@@ -63,7 +72,7 @@ namespace io.github.hatayama.uLoopMCP
         private void SaveNotificationPort(string clientName, int notificationPort)
         {
             // Get current client context to identify the endpoint
-            var clientContext = JsonRpcProcessor.CurrentClientContext;
+            var clientContext = GetCurrentClientContext();
             if (clientContext == null)
             {
                 return;
@@ -71,14 +80,25 @@ namespace io.github.hatayama.uLoopMCP
             
             string clientEndpoint = clientContext.Endpoint;
             
-            // Save notification port through DomainReloadDetectionService
-            DomainReloadDetectionService.SaveClientNotificationPort(clientEndpoint, notificationPort);
-            
-            VibeLogger.LogInfo(
-                "client_notification_port_received",
-                "Received and saved notification port from TypeScript client",
-                new { clientName, clientEndpoint, notificationPort }
-            );
+            try
+            {
+                // Save notification port through DomainReloadDetectionService
+                DomainReloadDetectionService.SaveClientNotificationPort(clientEndpoint, notificationPort);
+                
+                VibeLogger.LogInfo(
+                    "client_notification_port_received",
+                    "Received and saved notification port from TypeScript client",
+                    new { clientName, clientEndpoint, notificationPort }
+                );
+            }
+            catch (System.Exception ex)
+            {
+                VibeLogger.LogError(
+                    "client_notification_port_save_failed",
+                    "Failed to save client notification port",
+                    new { clientName, clientEndpoint, notificationPort, error = ex.Message }
+                );
+            }
         }
     }
 }
