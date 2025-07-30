@@ -114,6 +114,10 @@ Packages/*/TypeScriptServer/.tsbuildinfo
 !Packages/*/TypeScriptServer/dist/server.bundle.js
 !Packages/*/TypeScriptServer/dist/server.bundle.js.meta
 
+# Source maps (generated at build time, not needed in version control)
+*.map
+Packages/*/TypeScriptServer/dist/*.map
+
 # 環境設定ファイル
 .env
 .env.local

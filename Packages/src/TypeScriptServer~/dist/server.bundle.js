@@ -8852,13 +8852,13 @@ var package_default = {
   scripts: {
     prepare: "husky",
     build: "npm run build:bundle",
-    "build:bundle": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os",
-    "build:production": "ULOOPMCP_PRODUCTION=true NODE_ENV=production esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os",
-    dev: "NODE_ENV=development npm run build:bundle && NODE_ENV=development node dist/server.bundle.js",
-    "dev:watch": "NODE_ENV=development esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --watch",
-    start: "node dist/server.bundle.js",
-    "start:production": "ULOOPMCP_PRODUCTION=true node dist/server.bundle.js",
-    "start:dev": "NODE_ENV=development node dist/server.bundle.js",
+    "build:bundle": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap",
+    "build:production": "ULOOPMCP_PRODUCTION=true NODE_ENV=production esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap",
+    dev: 'NODE_ENV=development npm run build:bundle && NODE_ENV=development NODE_OPTIONS="--enable-source-maps" node dist/server.bundle.js',
+    "dev:watch": "NODE_ENV=development esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap --watch",
+    start: 'NODE_OPTIONS="--enable-source-maps" node dist/server.bundle.js',
+    "start:production": 'ULOOPMCP_PRODUCTION=true NODE_OPTIONS="--enable-source-maps" node dist/server.bundle.js',
+    "start:dev": 'NODE_ENV=development NODE_OPTIONS="--enable-source-maps" node dist/server.bundle.js',
     lint: "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "security:check": "eslint src --ext .ts",
@@ -9151,3 +9151,4 @@ server.start().catch((error) => {
   );
   process.exit(1);
 });
+//# sourceMappingURL=server.bundle.js.map
