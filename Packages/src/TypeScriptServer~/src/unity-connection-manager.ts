@@ -95,10 +95,6 @@ export class UnityConnectionManager {
       // Even though discovery confirmed TCP connectivity, we need to ensure the connection state is updated
       await this.unityClient.ensureConnected();
 
-      if (this.isDevelopment) {
-        // Unity discovered - connection state updated
-      }
-
       // Unity connection established via discovery
 
       // Execute callback if provided
@@ -129,19 +125,8 @@ export class UnityConnectionManager {
       await this.handleUnityDiscovered(onConnectionEstablished);
     });
 
-    // Setup connection lost callback for connection recovery
-    this.unityDiscovery.setOnConnectionLostCallback(() => {
-      if (this.isDevelopment) {
-        // Connection lost detected - ready for reconnection
-      }
-    });
-
     // Start Unity discovery immediately
     this.unityDiscovery.start();
-
-    if (this.isDevelopment) {
-      // Connection manager initialized
-    }
   }
 
   /**
@@ -151,9 +136,6 @@ export class UnityConnectionManager {
     this.unityClient.setReconnectedCallback(() => {
       // Prevent duplicate reconnection handling
       if (this.isReconnecting) {
-        if (this.isDevelopment) {
-          // Reconnection already in progress, skipping duplicate callback
-        }
         return;
       }
 

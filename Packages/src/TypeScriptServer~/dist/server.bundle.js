@@ -7684,8 +7684,6 @@ var UnityConnectionManager = class {
   async handleUnityDiscovered(onConnectionEstablished) {
     try {
       await this.unityClient.ensureConnected();
-      if (this.isDevelopment) {
-      }
       if (onConnectionEstablished) {
         await onConnectionEstablished();
       }
@@ -7704,13 +7702,7 @@ var UnityConnectionManager = class {
     this.unityDiscovery.setOnDiscoveredCallback(async (_port) => {
       await this.handleUnityDiscovered(onConnectionEstablished);
     });
-    this.unityDiscovery.setOnConnectionLostCallback(() => {
-      if (this.isDevelopment) {
-      }
-    });
     this.unityDiscovery.start();
-    if (this.isDevelopment) {
-    }
   }
   /**
    * Setup reconnection callback
@@ -7718,8 +7710,6 @@ var UnityConnectionManager = class {
   setupReconnectionCallback(callback) {
     this.unityClient.setReconnectedCallback(() => {
       if (this.isReconnecting) {
-        if (this.isDevelopment) {
-        }
         return;
       }
       this.isReconnecting = true;
@@ -8667,15 +8657,13 @@ var UnityEventHandler = class {
    */
   setupUnityEventListener(onToolsChanged) {
     this.unityClient.onNotification("notifications/tools/list_changed", (_params) => {
-      if (this.isDevelopment) {
-        VibeLogger.logInfo(
-          "unity_notification_received",
-          "Unity notification received: notifications/tools/list_changed",
-          void 0,
-          void 0,
-          "Unity notified that tool list has changed"
-        );
-      }
+      VibeLogger.logInfo(
+        "unity_notification_received",
+        "Unity notification received: notifications/tools/list_changed",
+        void 0,
+        void 0,
+        "Unity notified that tool list has changed"
+      );
       try {
         void onToolsChanged();
       } catch (error) {
