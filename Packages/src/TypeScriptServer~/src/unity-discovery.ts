@@ -67,11 +67,29 @@ export class UnityDiscovery {
    * Get current polling interval based on attempt count
    */
   private getCurrentPollingInterval(): number {
-    if (this.discoveryAttemptCount < POLLING.INITIAL_ATTEMPTS) {
-      return POLLING.INITIAL_INTERVAL_MS;
-    } else {
-      return POLLING.EXTENDED_INTERVAL_MS;
+    const currentInterval =
+      this.discoveryAttemptCount <= POLLING.INITIAL_ATTEMPTS
+        ? POLLING.INITIAL_INTERVAL_MS
+        : POLLING.EXTENDED_INTERVAL_MS;
+
+    // Log when switching from initial to extended polling
+    if (this.discoveryAttemptCount === POLLING.INITIAL_ATTEMPTS + 1) {
+      VibeLogger.logInfo(
+        'unity_discovery_polling_switch',
+        'Switching from initial to extended polling interval',
+        {
+          previous_interval_ms: POLLING.INITIAL_INTERVAL_MS,
+          new_interval_ms: POLLING.EXTENDED_INTERVAL_MS,
+          discovery_attempt_count: this.discoveryAttemptCount,
+          switch_threshold: POLLING.INITIAL_ATTEMPTS,
+        },
+        undefined,
+        'Polling interval changed to reduce CPU usage after initial attempts',
+        'Monitor if this reduces system load while maintaining connection reliability',
+      );
     }
+
+    return currentInterval;
   }
 
   /**
@@ -79,6 +97,20 @@ export class UnityDiscovery {
    */
   private scheduleNextDiscovery(): void {
     const currentInterval = this.getCurrentPollingInterval();
+    const isInitialPolling = this.discoveryAttemptCount <= POLLING.INITIAL_ATTEMPTS;
+
+    VibeLogger.logDebug(
+      'unity_discovery_scheduling_next',
+      'Scheduling next discovery attempt',
+      {
+        next_interval_ms: currentInterval,
+        discovery_attempt_count: this.discoveryAttemptCount,
+        is_initial_polling: isInitialPolling,
+        polling_type: isInitialPolling ? 'initial_fast' : 'extended_slow',
+      },
+      undefined,
+      `Next discovery scheduled in ${currentInterval}ms`,
+    );
 
     this.discoveryInterval = setTimeout(() => {
       void this.unifiedDiscoveryAndConnectionCheck();

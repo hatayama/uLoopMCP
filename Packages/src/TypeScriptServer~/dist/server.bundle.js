@@ -5524,7 +5524,7 @@ var POLLING = {
   // Number of initial attempts with fast polling
   INITIAL_INTERVAL_MS: 1e3,
   // Fast polling interval for initial attempts
-  EXTENDED_INTERVAL_MS: 5e3
+  EXTENDED_INTERVAL_MS: 1e4
   // Slower polling interval after initial attempts
 };
 var LIST_CHANGED_UNSUPPORTED_CLIENTS = [
@@ -7274,17 +7274,42 @@ var UnityDiscovery = class _UnityDiscovery {
    * Get current polling interval based on attempt count
    */
   getCurrentPollingInterval() {
-    if (this.discoveryAttemptCount < POLLING.INITIAL_ATTEMPTS) {
-      return POLLING.INITIAL_INTERVAL_MS;
-    } else {
-      return POLLING.EXTENDED_INTERVAL_MS;
+    const currentInterval = this.discoveryAttemptCount <= POLLING.INITIAL_ATTEMPTS ? POLLING.INITIAL_INTERVAL_MS : POLLING.EXTENDED_INTERVAL_MS;
+    if (this.discoveryAttemptCount === POLLING.INITIAL_ATTEMPTS + 1) {
+      VibeLogger.logInfo(
+        "unity_discovery_polling_switch",
+        "Switching from initial to extended polling interval",
+        {
+          previous_interval_ms: POLLING.INITIAL_INTERVAL_MS,
+          new_interval_ms: POLLING.EXTENDED_INTERVAL_MS,
+          discovery_attempt_count: this.discoveryAttemptCount,
+          switch_threshold: POLLING.INITIAL_ATTEMPTS
+        },
+        void 0,
+        "Polling interval changed to reduce CPU usage after initial attempts",
+        "Monitor if this reduces system load while maintaining connection reliability"
+      );
     }
+    return currentInterval;
   }
   /**
    * Schedule next discovery attempt with adaptive interval
    */
   scheduleNextDiscovery() {
     const currentInterval = this.getCurrentPollingInterval();
+    const isInitialPolling = this.discoveryAttemptCount <= POLLING.INITIAL_ATTEMPTS;
+    VibeLogger.logDebug(
+      "unity_discovery_scheduling_next",
+      "Scheduling next discovery attempt",
+      {
+        next_interval_ms: currentInterval,
+        discovery_attempt_count: this.discoveryAttemptCount,
+        is_initial_polling: isInitialPolling,
+        polling_type: isInitialPolling ? "initial_fast" : "extended_slow"
+      },
+      void 0,
+      `Next discovery scheduled in ${currentInterval}ms`
+    );
     this.discoveryInterval = setTimeout(() => {
       void this.unifiedDiscoveryAndConnectionCheck();
       if (this.discoveryInterval) {

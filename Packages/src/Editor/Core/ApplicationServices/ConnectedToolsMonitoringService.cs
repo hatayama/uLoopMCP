@@ -205,8 +205,8 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static async Task DelayedCleanupAsync()
         {
-            // Wait 2 seconds for clients to reconnect
-            await TimerDelay.Wait(2000);
+            // Wait 8 seconds for clients to reconnect
+            await TimerDelay.Wait(8000);
 
             if (!McpServerController.IsServerRunning)
             {
