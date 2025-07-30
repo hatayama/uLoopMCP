@@ -5517,8 +5517,15 @@ var ERROR_MESSAGES = {
 var POLLING = {
   INTERVAL_MS: 1e3,
   // Reduced from 3000ms to 1000ms for better responsiveness
-  BUFFER_SECONDS: 15
+  BUFFER_SECONDS: 15,
   // Increased for safer Unity startup timing
+  // Adaptive polling configuration
+  INITIAL_ATTEMPTS: 1,
+  // Number of initial attempts with fast polling
+  INITIAL_INTERVAL_MS: 1e3,
+  // Fast polling interval for initial attempts
+  EXTENDED_INTERVAL_MS: 5e3
+  // Slower polling interval after initial attempts
 };
 var LIST_CHANGED_UNSUPPORTED_CLIENTS = [
   "claude",
@@ -7227,6 +7234,7 @@ var UnityDiscovery = class _UnityDiscovery {
   onConnectionLostCallback = null;
   isDiscovering = false;
   isDevelopment = false;
+  discoveryAttemptCount = 0;
   // Singleton pattern to prevent multiple instances
   static instance = null;
   static activeTimerCount = 0;
@@ -7263,6 +7271,28 @@ var UnityDiscovery = class _UnityDiscovery {
     return this.isDiscovering;
   }
   /**
+   * Get current polling interval based on attempt count
+   */
+  getCurrentPollingInterval() {
+    if (this.discoveryAttemptCount < POLLING.INITIAL_ATTEMPTS) {
+      return POLLING.INITIAL_INTERVAL_MS;
+    } else {
+      return POLLING.EXTENDED_INTERVAL_MS;
+    }
+  }
+  /**
+   * Schedule next discovery attempt with adaptive interval
+   */
+  scheduleNextDiscovery() {
+    const currentInterval = this.getCurrentPollingInterval();
+    this.discoveryInterval = setTimeout(() => {
+      void this.unifiedDiscoveryAndConnectionCheck();
+      if (this.discoveryInterval) {
+        this.scheduleNextDiscovery();
+      }
+    }, currentInterval);
+  }
+  /**
    * Start Unity discovery polling with unified connection management
    */
   start() {
@@ -7272,10 +7302,9 @@ var UnityDiscovery = class _UnityDiscovery {
     if (this.isDiscovering) {
       return;
     }
+    this.discoveryAttemptCount = 0;
     void this.unifiedDiscoveryAndConnectionCheck();
-    this.discoveryInterval = setInterval(() => {
-      void this.unifiedDiscoveryAndConnectionCheck();
-    }, POLLING.INTERVAL_MS);
+    this.scheduleNextDiscovery();
     _UnityDiscovery.activeTimerCount++;
   }
   /**
@@ -7283,10 +7312,11 @@ var UnityDiscovery = class _UnityDiscovery {
    */
   stop() {
     if (this.discoveryInterval) {
-      clearInterval(this.discoveryInterval);
+      clearTimeout(this.discoveryInterval);
       this.discoveryInterval = null;
     }
     this.isDiscovering = false;
+    this.discoveryAttemptCount = 0;
     _UnityDiscovery.activeTimerCount = Math.max(0, _UnityDiscovery.activeTimerCount - 1);
   }
   /**
@@ -7346,6 +7376,8 @@ var UnityDiscovery = class _UnityDiscovery {
    */
   logDiscoveryCycleStart(correlationId) {
     this.isDiscovering = true;
+    this.discoveryAttemptCount++;
+    const currentInterval = this.getCurrentPollingInterval();
     VibeLogger.logDebug(
       "unity_discovery_state_set",
       "Discovery state set to true",
@@ -7358,7 +7390,9 @@ var UnityDiscovery = class _UnityDiscovery {
       "Starting unified discovery and connection check cycle",
       {
         unity_connected: this.unityClient.connected,
-        polling_interval_ms: POLLING.INTERVAL_MS,
+        polling_interval_ms: currentInterval,
+        discovery_attempt_count: this.discoveryAttemptCount,
+        is_initial_polling: this.discoveryAttemptCount <= POLLING.INITIAL_ATTEMPTS,
         active_timer_count: _UnityDiscovery.activeTimerCount
       },
       correlationId,
@@ -7529,6 +7563,7 @@ var UnityDiscovery = class _UnityDiscovery {
       "Connection lost event received - preparing for recovery"
     );
     this.isDiscovering = false;
+    this.discoveryAttemptCount = 0;
     setTimeout(() => {
       VibeLogger.logInfo(
         "unity_discovery_restart_after_connection_lost",
@@ -7556,7 +7591,9 @@ var UnityDiscovery = class _UnityDiscovery {
       isDiscovering: this.isDiscovering,
       activeTimerCount: _UnityDiscovery.activeTimerCount,
       isConnected: this.unityClient.connected,
-      intervalMs: POLLING.INTERVAL_MS,
+      intervalMs: this.getCurrentPollingInterval(),
+      discoveryAttemptCount: this.discoveryAttemptCount,
+      isInitialPolling: this.discoveryAttemptCount <= POLLING.INITIAL_ATTEMPTS,
       hasSingleton: _UnityDiscovery.instance !== null
     };
   }
