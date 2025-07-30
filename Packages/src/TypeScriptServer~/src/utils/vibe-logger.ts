@@ -78,7 +78,7 @@ export class VibeLogger {
   }
 
   /**
-   * Log a warning level message with structured context
+   * Log a warning level message with structured context and stack trace
    */
   static logWarning(
     operation: string,
@@ -88,7 +88,12 @@ export class VibeLogger {
     humanNote?: string,
     aiTodo?: string,
   ): void {
-    VibeLogger.log('WARNING', operation, message, context, correlationId, humanNote, aiTodo);
+    const warningContext = {
+      original_context: context,
+      stack: new Error().stack,
+    } as const;
+
+    VibeLogger.log('WARNING', operation, message, warningContext, correlationId, humanNote, aiTodo);
   }
 
   /**

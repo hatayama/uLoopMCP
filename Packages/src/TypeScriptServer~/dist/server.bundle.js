@@ -5709,10 +5709,14 @@ var VibeLogger = class _VibeLogger {
     _VibeLogger.log("INFO", operation, message, context, correlationId, humanNote, aiTodo);
   }
   /**
-   * Log a warning level message with structured context
+   * Log a warning level message with structured context and stack trace
    */
   static logWarning(operation, message, context, correlationId, humanNote, aiTodo) {
-    _VibeLogger.log("WARNING", operation, message, context, correlationId, humanNote, aiTodo);
+    const warningContext = {
+      original_context: context,
+      stack: new Error().stack
+    };
+    _VibeLogger.log("WARNING", operation, message, warningContext, correlationId, humanNote, aiTodo);
   }
   /**
    * Log an error level message with structured context
