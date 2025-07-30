@@ -48,16 +48,13 @@ export class UnityEventHandler
   setupUnityEventListener(onToolsChanged: () => Promise<void>): void {
     // Listen for MCP standard notifications from Unity
     this.unityClient.onNotification('notifications/tools/list_changed', (_params: unknown) => {
-      // Only log in development mode
-      if (this.isDevelopment) {
-        VibeLogger.logInfo(
-          'unity_notification_received',
-          'Unity notification received: notifications/tools/list_changed',
-          undefined,
-          undefined,
-          'Unity notified that tool list has changed',
-        );
-      }
+      VibeLogger.logInfo(
+        'unity_notification_received',
+        'Unity notification received: notifications/tools/list_changed',
+        undefined,
+        undefined,
+        'Unity notified that tool list has changed',
+      );
 
       try {
         void onToolsChanged();
