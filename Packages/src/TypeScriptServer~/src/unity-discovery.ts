@@ -21,6 +21,7 @@ export class UnityDiscovery {
   private onConnectionLostCallback: (() => void) | null = null;
   private isDiscovering: boolean = false;
   private isDevelopment: boolean = false;
+  private discoveryAttemptCount: number = 0;
 
   // Singleton pattern to prevent multiple instances
   private static instance: UnityDiscovery | null = null;
@@ -63,6 +64,64 @@ export class UnityDiscovery {
   }
 
   /**
+   * Get current polling interval based on attempt count
+   */
+  private getCurrentPollingInterval(): number {
+    const currentInterval =
+      this.discoveryAttemptCount <= POLLING.INITIAL_ATTEMPTS
+        ? POLLING.INITIAL_INTERVAL_MS
+        : POLLING.EXTENDED_INTERVAL_MS;
+
+    // Log when switching from initial to extended polling
+    if (this.discoveryAttemptCount === POLLING.INITIAL_ATTEMPTS + 1) {
+      VibeLogger.logInfo(
+        'unity_discovery_polling_switch',
+        'Switching from initial to extended polling interval',
+        {
+          previous_interval_ms: POLLING.INITIAL_INTERVAL_MS,
+          new_interval_ms: POLLING.EXTENDED_INTERVAL_MS,
+          discovery_attempt_count: this.discoveryAttemptCount,
+          switch_threshold: POLLING.INITIAL_ATTEMPTS,
+        },
+        undefined,
+        'Polling interval changed to reduce CPU usage after initial attempts',
+        'Monitor if this reduces system load while maintaining connection reliability',
+      );
+    }
+
+    return currentInterval;
+  }
+
+  /**
+   * Schedule next discovery attempt with adaptive interval
+   */
+  private scheduleNextDiscovery(): void {
+    const currentInterval = this.getCurrentPollingInterval();
+    const isInitialPolling = this.discoveryAttemptCount <= POLLING.INITIAL_ATTEMPTS;
+
+    VibeLogger.logDebug(
+      'unity_discovery_scheduling_next',
+      'Scheduling next discovery attempt',
+      {
+        next_interval_ms: currentInterval,
+        discovery_attempt_count: this.discoveryAttemptCount,
+        is_initial_polling: isInitialPolling,
+        polling_type: isInitialPolling ? 'initial_fast' : 'extended_slow',
+      },
+      undefined,
+      `Next discovery scheduled in ${currentInterval}ms`,
+    );
+
+    this.discoveryInterval = setTimeout(() => {
+      void this.unifiedDiscoveryAndConnectionCheck();
+      // Schedule next attempt recursively
+      if (this.discoveryInterval) {
+        this.scheduleNextDiscovery();
+      }
+    }, currentInterval);
+  }
+
+  /**
    * Start Unity discovery polling with unified connection management
    */
   start(): void {
@@ -74,13 +133,14 @@ export class UnityDiscovery {
       return; // Already discovering
     }
 
+    // Reset attempt count when starting
+    this.discoveryAttemptCount = 0;
+
     // Immediate discovery attempt
     void this.unifiedDiscoveryAndConnectionCheck();
 
-    // Set up periodic unified discovery and connection checking
-    this.discoveryInterval = setInterval(() => {
-      void this.unifiedDiscoveryAndConnectionCheck();
-    }, POLLING.INTERVAL_MS);
+    // Set up adaptive polling
+    this.scheduleNextDiscovery();
 
     // Track active timer count for debugging
     UnityDiscovery.activeTimerCount++;
@@ -91,12 +151,15 @@ export class UnityDiscovery {
    */
   stop(): void {
     if (this.discoveryInterval) {
-      clearInterval(this.discoveryInterval);
+      clearTimeout(this.discoveryInterval);
       this.discoveryInterval = null;
     }
 
     // Always reset discovering flag regardless of interval state
     this.isDiscovering = false;
+
+    // Reset attempt count when stopping
+    this.discoveryAttemptCount = 0;
 
     // Track active timer count for debugging
     UnityDiscovery.activeTimerCount = Math.max(0, UnityDiscovery.activeTimerCount - 1);
@@ -171,6 +234,11 @@ export class UnityDiscovery {
     // Atomic flag setting with additional logging for debugging
     this.isDiscovering = true;
 
+    // Increment attempt count for adaptive polling
+    this.discoveryAttemptCount++;
+
+    const currentInterval = this.getCurrentPollingInterval();
+
     VibeLogger.logDebug(
       'unity_discovery_state_set',
       'Discovery state set to true',
@@ -184,7 +252,9 @@ export class UnityDiscovery {
       'Starting unified discovery and connection check cycle',
       {
         unity_connected: this.unityClient.connected,
-        polling_interval_ms: POLLING.INTERVAL_MS,
+        polling_interval_ms: currentInterval,
+        discovery_attempt_count: this.discoveryAttemptCount,
+        is_initial_polling: this.discoveryAttemptCount <= POLLING.INITIAL_ATTEMPTS,
         active_timer_count: UnityDiscovery.activeTimerCount,
       },
       correlationId,
@@ -389,6 +459,7 @@ export class UnityDiscovery {
 
     // Force reset discovery state to ensure clean restart
     this.isDiscovering = false;
+    this.discoveryAttemptCount = 0;
 
     // Add delay before restarting discovery to allow Unity to fully shut down
     setTimeout(() => {
@@ -423,7 +494,9 @@ export class UnityDiscovery {
       isDiscovering: this.isDiscovering,
       activeTimerCount: UnityDiscovery.activeTimerCount,
       isConnected: this.unityClient.connected,
-      intervalMs: POLLING.INTERVAL_MS,
+      intervalMs: this.getCurrentPollingInterval(),
+      discoveryAttemptCount: this.discoveryAttemptCount,
+      isInitialPolling: this.discoveryAttemptCount <= POLLING.INITIAL_ATTEMPTS,
       hasSingleton: UnityDiscovery.instance !== null,
     };
   }

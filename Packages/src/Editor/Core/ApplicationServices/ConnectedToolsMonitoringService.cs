@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
@@ -18,6 +19,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         private static List<ConnectedLLMToolData> _connectedTools = new();
         private static List<ConnectedLLMToolData> _toolsBackup;
+        private static CancellationTokenSource _cleanupCancellationTokenSource;
 
         // Events for UI notification
         public static event System.Action OnConnectedToolsChanged;
@@ -187,10 +189,15 @@ namespace io.github.hatayama.uLoopMCP
                 AddConnectedTool(restoredClient);
             }
 
+            // Cancel any existing cleanup task
+            _cleanupCancellationTokenSource?.Cancel();
+            _cleanupCancellationTokenSource?.Dispose();
+            _cleanupCancellationTokenSource = new CancellationTokenSource();
+
             // Schedule cleanup after a short delay to remove actually disconnected tools
-            DelayedCleanupAsync().ContinueWith(task =>
+            DelayedCleanupAsync(_cleanupCancellationTokenSource.Token).ContinueWith(task =>
             {
-                if (task.IsFaulted)
+                if (task.IsFaulted && !task.IsCanceled)
                 {
                     EditorApplication.delayCall += () =>
                     {
@@ -203,19 +210,28 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Clean up disconnected tools after a delay
         /// </summary>
-        private static async Task DelayedCleanupAsync()
+        /// <param name="cancellationToken">Cancellation token to cancel the cleanup operation</param>
+        private static async Task DelayedCleanupAsync(CancellationToken cancellationToken = default)
         {
-            // Wait 2 seconds for clients to reconnect
-            await TimerDelay.Wait(2000);
+            try
+            {
+                // Wait 8 seconds for clients to reconnect
+                await TimerDelay.Wait(8000, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // Cleanup was cancelled, which is expected behavior
+                return;
+            }
 
-            if (!McpServerController.IsServerRunning)
+            if (!McpServerController.IsServerRunning || cancellationToken.IsCancellationRequested)
             {
                 return;
             }
 
             // Get actually connected clients
             IReadOnlyCollection<ConnectedClient> actualConnectedClients = McpServerController.CurrentServer?.GetConnectedClients();
-            if (actualConnectedClients == null)
+            if (actualConnectedClients == null || cancellationToken.IsCancellationRequested)
             {
                 return;
             }
