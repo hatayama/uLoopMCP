@@ -48,15 +48,13 @@ namespace io.github.hatayama.uLoopMCP
             public string source;
             public string human_note;
             public string ai_todo;
+            public string stack_trace;
             public EnvironmentInfo environment;
         }
         
         [Serializable]
         public class EnvironmentInfo
         {
-            public string unity_version;
-            public string platform;
-            public string editor_mode;
             public string domain_reload_state;
         }
         
@@ -66,9 +64,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         [Conditional(McpConstants.ENV_KEY_ULOOPMCP_DEBUG)]
         public static void LogInfo(string operation, string message, object context = null, 
-                                  string correlationId = null, string humanNote = null, string aiTodo = null)
+                                  string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = false)
         {
-            Log("INFO", operation, message, context, correlationId, humanNote, aiTodo);
+            Log("INFO", operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
         }
         
         /// <summary>
@@ -77,9 +75,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         [Conditional(McpConstants.ENV_KEY_ULOOPMCP_DEBUG)]
         public static void LogWarning(string operation, string message, object context = null, 
-                                     string correlationId = null, string humanNote = null, string aiTodo = null)
+                                     string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = true)
         {
-            Log("WARNING", operation, message, context, correlationId, humanNote, aiTodo);
+            Log("WARNING", operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
         }
         
         /// <summary>
@@ -88,9 +86,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         [Conditional(McpConstants.ENV_KEY_ULOOPMCP_DEBUG)]
         public static void LogError(string operation, string message, object context = null, 
-                                   string correlationId = null, string humanNote = null, string aiTodo = null)
+                                   string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = true)
         {
-            Log("ERROR", operation, message, context, correlationId, humanNote, aiTodo);
+            Log("ERROR", operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
         }
         
         /// <summary>
@@ -99,9 +97,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         [Conditional(McpConstants.ENV_KEY_ULOOPMCP_DEBUG)]
         public static void LogDebug(string operation, string message, object context = null, 
-                                   string correlationId = null, string humanNote = null, string aiTodo = null)
+                                   string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = false)
         {
-            Log("DEBUG", operation, message, context, correlationId, humanNote, aiTodo);
+            Log("DEBUG", operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace);
         }
         
         /// <summary>
@@ -110,7 +108,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         [Conditional(McpConstants.ENV_KEY_ULOOPMCP_DEBUG)]
         public static void LogException(string operation, Exception exception, object context = null, 
-                                       string correlationId = null, string humanNote = null, string aiTodo = null)
+                                       string correlationId = null, string humanNote = null, string aiTodo = null, bool includeStackTrace = true)
         {
             var exceptionContext = new Dictionary<string, object>();
             if (context != null)
@@ -127,7 +125,7 @@ namespace io.github.hatayama.uLoopMCP
             };
             
             Log("ERROR", operation, $"Exception occurred: {exception.Message}", exceptionContext, 
-                correlationId, humanNote, aiTodo);
+                correlationId, humanNote, aiTodo, includeStackTrace);
         }
         
         /// <summary>
@@ -182,7 +180,7 @@ namespace io.github.hatayama.uLoopMCP
         /// Core logging method
         /// </summary>
         private static void Log(string level, string operation, string message, object context,
-                               string correlationId, string humanNote, string aiTodo)
+                               string correlationId, string humanNote, string aiTodo, bool includeStackTrace = true)
         {
             var logEntry = new VibeLogEntry
             {
@@ -195,6 +193,7 @@ namespace io.github.hatayama.uLoopMCP
                 source = "Unity",
                 human_note = humanNote,
                 ai_todo = aiTodo,
+                stack_trace = includeStackTrace ? new StackTrace(true).ToString() : null,
                 environment = GetEnvironmentInfo()
             };
             
@@ -348,9 +347,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             return new EnvironmentInfo
             {
-                unity_version = Application.unityVersion,
-                platform = Application.platform.ToString(),
-                editor_mode = Application.isEditor ? "Editor" : "Runtime",
                 domain_reload_state = McpEditorSettings.GetIsDomainReloadInProgress() ? "InProgress" : "Idle"
             };
         }
