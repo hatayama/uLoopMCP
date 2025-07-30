@@ -111,6 +111,10 @@ export const ERROR_MESSAGES = {
 export const POLLING = {
   INTERVAL_MS: 1000, // Reduced from 3000ms to 1000ms for better responsiveness
   BUFFER_SECONDS: 15, // Increased for safer Unity startup timing
+  // Adaptive polling configuration
+  INITIAL_ATTEMPTS: 1, // Number of initial attempts with fast polling
+  INITIAL_INTERVAL_MS: 1000, // Fast polling interval for initial attempts
+  EXTENDED_INTERVAL_MS: 5000, // Slower polling interval after initial attempts
 } as const;
 
 // Log messages
