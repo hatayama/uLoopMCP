@@ -44,9 +44,7 @@ namespace io.github.hatayama.uLoopMCP
             // Processing after assembly reload.
             AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
 
-            // Initialize connected tools monitoring service
-            // Note: ConnectedToolsMonitoringService has [InitializeOnLoad] so it's automatically initialized
-            // This comment ensures the service initialization order is documented
+            // NOTE: ConnectedToolsMonitoringService removed
 
             // Restore server state on initialization.
             RestoreServerStateIfNeeded();
@@ -87,6 +85,8 @@ namespace io.github.hatayama.uLoopMCP
                 // UseCase creates a new server instance, so we keep a reference here
                 // for compatibility with existing code
                 mcpServer = result.ServerInstance;
+                
+                // Display update is now handled by UseCase
             }
             else
             {
@@ -119,6 +119,8 @@ namespace io.github.hatayama.uLoopMCP
             {
                 // Server stopped by UseCase, so clear the reference
                 mcpServer = null;
+                
+                // Display update is now handled by UseCase
             }
             else
             {
@@ -140,6 +142,8 @@ namespace io.github.hatayama.uLoopMCP
             if (result.Success)
             {
                 mcpServer = null;
+                
+                // Display update is now handled by UseCase
             }
         }
 
@@ -243,6 +247,9 @@ namespace io.github.hatayama.uLoopMCP
                 // Clear server-side reconnecting flag on successful restoration
                 // NOTE: Do NOT clear UI display flag here - let it be cleared by timeout or client connection
                 McpEditorSettings.SetIsReconnecting(false);
+                
+                // Display update should be handled by proper UseCase
+                // TODO: Refactor to use McpServerInitializationUseCase
 
                 // Tools changed notification will be sent by OnAfterAssemblyReload
             }

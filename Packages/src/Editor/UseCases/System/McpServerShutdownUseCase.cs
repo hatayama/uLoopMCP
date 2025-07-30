@@ -76,6 +76,9 @@ namespace io.github.hatayama.uLoopMCP
                     response.Message = $"Failed to clear session: {sessionEx.Message}";
                     return Task.FromResult(response);
                 }
+                
+                // 5. Update display state
+                McpEditorWindow.Instance?.UpdateServerRunningState(false);
 
                 // Success response
                 response.Success = true;

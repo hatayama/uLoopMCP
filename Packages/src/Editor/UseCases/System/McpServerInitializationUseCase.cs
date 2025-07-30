@@ -129,6 +129,12 @@ namespace io.github.hatayama.uLoopMCP
                     response.Message = sessionUpdateResult.ErrorMessage;
                     return Task.FromResult(response);
                 }
+                
+                // 6. Update display state
+                McpEditorWindow.Instance?.UpdateServerRunningState(true);
+                
+                // 7. Handle connected tools display persistence
+                HandleConnectedToolsDisplay();
 
                 // Success response
                 response.Success = true;
@@ -152,6 +158,69 @@ namespace io.github.hatayama.uLoopMCP
             {
                 response.SetTimingInfo(startTime, System.DateTime.UtcNow);
             }
+        }
+        
+        /// <summary>
+        /// Handle connected tools display persistence during server startup
+        /// </summary>
+        private void HandleConnectedToolsDisplay()
+        {
+            // 1. Load current display data from settings
+            // This shows the previously connected tools immediately
+            McpEditorWindow.Instance?.ReloadDisplayData();
+            
+            // 2. Send server restart notification to TypeScript clients
+            // This triggers them to reconnect via notification ports
+            Task.Run(async () =>
+            {
+                try
+                {
+                    // Wait a bit for server to stabilize
+                    await Task.Delay(500);
+                    
+                    // Send notification via HTTP to all saved notification ports
+                    NotificationClient notificationClient = new();
+                    await notificationClient.SendServerRestartCompleteAsync();
+                    notificationClient.Dispose();
+                    
+                    VibeLogger.LogInfo(
+                        "server_restart_notification_completed",
+                        "Server restart notification sent to all clients",
+                        new { }
+                    );
+                }
+                catch (System.Exception ex)
+                {
+                    VibeLogger.LogError(
+                        "server_restart_notification_failed",
+                        "Failed to send server restart notification",
+                        new { error = ex.Message }
+                    );
+                }
+            });
+            
+            // 3. Schedule clearing and refresh after 3 seconds
+            // This gives more time for TypeScript clients to reconnect and call SetClientName
+            TimerDelay.Wait(3000).ContinueWith(task =>
+            {
+                if (!task.IsFaulted)
+                {
+                    UnityEditor.EditorApplication.delayCall += () =>
+                    {
+                        // Clear old connections first
+                        McpEditorSettings.ClearConnectedLLMTools();
+                        
+                        // Then reload to show only active connections
+                        McpEditorWindow.Instance?.ReloadDisplayData();
+                    };
+                }
+            });
+            
+            VibeLogger.LogInfo(
+                "server_startup_display_handling",
+                "Connected tools display persistence initiated",
+                new { clearDelay = 3000 }
+            );
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -70,7 +71,8 @@ namespace io.github.hatayama.uLoopMCP
     /// Design document reference: Packages/src/Editor/ARCHITECTURE.md
     /// 
     /// Related classes:
-    /// - ConnectedToolsMonitoringService: Core service for client management
+    /// - McpEditorSettings: Persistent storage for connected tools
+    /// - McpEditorWindow: Display management for connected tools
     /// - McpBridgeServer: TCP server that manages connections
     /// - SetClientNameTool: Tool that delegates to this UseCase
     /// 
@@ -123,7 +125,11 @@ namespace io.github.hatayama.uLoopMCP
                 // Step 4: Update McpBridgeServer for backward compatibility
                 UpdateLegacyServerEntry(parameters.ClientEndpoint, parameters.ClientName);
 
-                // Step 5: Success response
+                // Step 5: Send tools changed notification to all clients
+                // This ensures newly connected clients receive the current tool list
+                ClientNotificationService.SendToolsChangedNotification();
+                
+                // Step 6: Success response
                 string successMessage = string.Format(McpConstants.CLIENT_SUCCESS_MESSAGE_TEMPLATE, parameters.ClientName);
                 
                 VibeLogger.LogInfo(
@@ -184,22 +190,26 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Step 2: Register client entry in ConnectedToolsMonitoringService
+        /// Step 2: Register client entry in McpEditorSettings
         /// </summary>
         private void RegisterClientEntry(string clientName, string clientEndpoint)
         {
             VibeLogger.LogInfo(
                 "client_registration_step2_register",
-                "Registering client entry in ConnectedToolsMonitoringService",
+                "Registering client entry in McpEditorSettings",
                 new { clientName, clientEndpoint }
             );
 
-            ConnectedToolsMonitoringService.AddOrUpdateTool(
-                clientName, 
-                clientEndpoint, 
-                0, // notification port will be updated in step 3 if provided
-                DateTime.Now
+            // Save to McpEditorSettings
+            ConnectedLLMToolData toolData = new(
+                clientName,
+                clientEndpoint,
+                DateTime.Now,
+                0  // notification port will be updated in step 3 if provided
             );
+            McpEditorSettings.AddConnectedLLMTool(toolData);
+            
+            // Note: Display update will happen when notification port is set
         }
 
         /// <summary>
@@ -215,7 +225,23 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                ConnectedToolsMonitoringService.UpdateNotificationPort(clientEndpoint, notificationPort);
+                // Update in McpEditorSettings
+                McpEditorSettings.SetClientNotificationPort(clientEndpoint, notificationPort);
+                
+                // Get client info for display update
+                ConnectedLLMToolData[] tools = McpEditorSettings.GetConnectedLLMTools();
+                ConnectedLLMToolData tool = tools?.FirstOrDefault(t => t.Endpoint == clientEndpoint);
+                
+                if (tool != null && notificationPort > 0)
+                {
+                    // Update display
+                    McpEditorWindow.Instance?.AddDisplayTool(
+                        tool.Name,
+                        tool.Endpoint,
+                        notificationPort
+                    );
+                }
+                
                 return true;
             }
             catch (Exception ex)

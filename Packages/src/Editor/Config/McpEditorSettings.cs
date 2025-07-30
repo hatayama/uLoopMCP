@@ -783,6 +783,25 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Removes a connected LLM tool by notification port.
+        /// </summary>
+        public static void RemoveConnectedLLMToolByPort(int notificationPort)
+        {
+            if (notificationPort <= 0)
+            {
+                return;
+            }
+
+            ConnectedLLMToolData[] tools = GetConnectedLLMTools();
+            ConnectedLLMToolData[] newTools = System.Array.FindAll(tools, t => t.NotificationPort != notificationPort);
+            
+            if (newTools.Length != tools.Length)
+            {
+                SetConnectedLLMTools(newTools);
+            }
+        }
+
+        /// <summary>
         /// Clears all connected LLM tools.
         /// </summary>
         public static void ClearConnectedLLMTools()

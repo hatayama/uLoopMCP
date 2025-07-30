@@ -16,9 +16,20 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void SendToolsChangedNotification()
         {
+            VibeLogger.LogInfo(
+                "tools_changed_notification_attempt",
+                "Attempting to send tools changed notification",
+                new { }
+            );
+            
             McpBridgeServer currentServer = McpServerController.CurrentServer;
             if (currentServer == null)
             {
+                VibeLogger.LogWarning(
+                    "tools_changed_notification_no_server",
+                    "Cannot send notification - no server instance",
+                    new { }
+                );
                 return;
             }
 
@@ -37,6 +48,13 @@ namespace io.github.hatayama.uLoopMCP
             };
 
             string mcpNotificationJson = JsonConvert.SerializeObject(mcpNotification);
+            
+            VibeLogger.LogInfo(
+                "tools_changed_notification_sending",
+                $"Sending notification: {mcpNotificationJson}",
+                new { notificationJson = mcpNotificationJson }
+            );
+            
             currentServer.SendNotificationToClients(mcpNotificationJson);
 
             // Log recording

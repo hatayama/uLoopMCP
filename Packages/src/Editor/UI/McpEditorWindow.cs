@@ -22,6 +22,9 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class McpEditorWindow : EditorWindow
     {
+        // Singleton instance
+        private static McpEditorWindow _instance;
+
         // Configuration services factory
         private McpConfigServiceFactory _configServiceFactory;
 
@@ -37,27 +40,60 @@ namespace io.github.hatayama.uLoopMCP
         // Server operations handler (MVP pattern helper)
         private McpServerOperations _serverOperations;
 
-        // Cache for stored tools to avoid repeated calls
-        private List<ConnectedClient> _cachedStoredTools;
-        private float _lastStoredToolsUpdateTime;
+        // Display-specific data for Connected Tools (separate from actual connected clients)
+        private List<ConnectedClient> _displayToolsData = new();
+        private readonly object _displayDataLock = new object();
+
+        // Server running state (managed by external usecase)
+        private bool _serverRunningState = false;
+
+        /// <summary>
+        /// Get the singleton instance of McpEditorWindow
+        /// </summary>
+        public static McpEditorWindow Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = GetWindow<McpEditorWindow>(McpConstants.PROJECT_NAME, false);
+                }
+                return _instance;
+            }
+        }
 
         [MenuItem("Window/uLoopMCP")]
         public static void ShowWindow()
         {
-            McpEditorWindow window = GetWindow<McpEditorWindow>(McpConstants.PROJECT_NAME);
+            McpEditorWindow window = Instance;
             window.Show();
         }
 
         private void OnEnable()
         {
+            // Set singleton instance
+            _instance = this;
+            
             InitializeAll();
             
-            // Subscribe to connected tools change events
-            ConnectedToolsMonitoringService.OnConnectedToolsChanged += OnConnectedToolsChanged;
+            // NOTE: Data restoration is now handled by external usecase
         }
 
         private void OnDestroy()
         {
+            // NOTE: Data saving is now handled by external usecase
+            
+            // Clear singleton instance
+            if (_instance == this)
+            {
+                _instance = null;
+            }
+            
+            // Clear display data
+            lock (_displayDataLock)
+            {
+                _displayToolsData.Clear();
+            }
         }
 
         private void InitializeAll()
@@ -69,6 +105,9 @@ namespace io.github.hatayama.uLoopMCP
             InitializeServerOperations();
             LoadSavedSettings();
             RestoreSessionState();
+            
+            // Initialize server running state
+            _serverRunningState = McpServerController.IsServerRunning;
 
             HandlePostCompileMode();
         }
@@ -94,26 +133,8 @@ namespace io.github.hatayama.uLoopMCP
 
 
 
-        /// <summary>
-        /// Get connected tools as ConnectedClient objects for UI display, sorted by name
-        /// </summary>
-        public List<ConnectedClient> GetConnectedToolsAsClients()
-        {
-            return ConnectedToolsMonitoringService.GetConnectedToolsForDisplay();
-        }
-
-        /// <summary>
-        /// Handle connected tools change event - clear cache to refresh UI
-        /// </summary>
-        private void OnConnectedToolsChanged()
-        {
-            // Clear cached tools to force refresh on next access
-            _cachedStoredTools = null;
-            _lastStoredToolsUpdateTime = 0;
-            
-            // Force editor window repaint on main thread
-            UnityEditor.EditorApplication.delayCall += () => Repaint();
-        }
+        // NOTE: GetConnectedToolsAsClients and OnConnectedToolsChanged removed with ConnectedToolsMonitoringService
+        // UI updates now handled via public APIs
 
 
         /// <summary>
@@ -155,6 +176,39 @@ namespace io.github.hatayama.uLoopMCP
         private void RestoreSessionState()
         {
             _model.LoadFromSessionState();
+            
+            // Load display data from settings
+            LoadDisplayDataFromSettings();
+        }
+        
+        /// <summary>
+        /// Load display data from McpEditorSettings
+        /// </summary>
+        private void LoadDisplayDataFromSettings()
+        {
+            lock (_displayDataLock)
+            {
+                _displayToolsData.Clear();
+                
+                // Load from settings
+                ConnectedLLMToolData[] tools = McpEditorSettings.GetConnectedLLMTools();
+                
+                VibeLogger.LogInfo(
+                    "load_display_data_from_settings",
+                    $"Loading {tools?.Length ?? 0} tools from settings",
+                    new { toolCount = tools?.Length ?? 0 }
+                );
+                
+                foreach (ConnectedLLMToolData tool in tools)
+                {
+                    _displayToolsData.Add(new ConnectedClient(
+                        tool.Endpoint,
+                        null, // NetworkStream is not needed for display
+                        tool.Name,
+                        tool.NotificationPort
+                    ));
+                }
+            }
         }
 
 
@@ -212,8 +266,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             _eventHandler?.Cleanup();
             
-            // Unsubscribe from connected tools change events
-            ConnectedToolsMonitoringService.OnConnectedToolsChanged -= OnConnectedToolsChanged;
+            // NOTE: ConnectedToolsMonitoringService removed
         }
 
         /// <summary>
@@ -259,7 +312,30 @@ namespace io.github.hatayama.uLoopMCP
                 autoStartCallback: UpdateAutoStartServer,
                 portChangeCallback: UpdateCustomPort);
 
-            ConnectedToolsData toolsData = CreateConnectedToolsData();
+            // Create simple data structure for Connected Tools display
+            IReadOnlyCollection<ConnectedClient> displayClients;
+            lock (_displayDataLock)
+            {
+                displayClients = _displayToolsData.ToList();
+            }
+            
+            // Debug logging
+            if (displayClients.Count == 0)
+            {
+                VibeLogger.LogWarning(
+                    "no_display_clients",
+                    "No clients in display data",
+                    new { settingsCount = McpEditorSettings.GetConnectedLLMTools()?.Length ?? 0 }
+                );
+            }
+
+            ConnectedToolsData toolsData = new(
+                displayClients,
+                _model.UI.ShowConnectedTools,
+                _serverRunningState,  // Use locally managed state
+                false  // showReconnectingUI is always false (controlled externally)
+            );
+
             _view.DrawConnectedToolsSection(
                 data: toolsData,
                 toggleFoldoutCallback: UpdateShowConnectedTools);
@@ -348,73 +424,9 @@ namespace io.github.hatayama.uLoopMCP
             return new ServerControlsData(_model.UI.CustomPort, _model.UI.AutoStartServer, isRunning, !isRunning, hasPortWarning, portWarningMessage);
         }
 
-        /// <summary>
-        /// Get stored tools with caching to avoid repeated calls
-        /// </summary>
-        private List<ConnectedClient> GetCachedStoredTools()
-        {
-            const float cacheDuration = 0.1f; // 100ms cache
-            float currentTime = Time.realtimeSinceStartup;
+        // NOTE: GetCachedStoredTools and InvalidateStoredToolsCache removed with ConnectedToolsMonitoringService
 
-            if (_cachedStoredTools == null || (currentTime - _lastStoredToolsUpdateTime) > cacheDuration)
-            {
-                _cachedStoredTools = GetConnectedToolsAsClients().ToList();
-                _lastStoredToolsUpdateTime = currentTime;
-            }
-
-            return _cachedStoredTools;
-        }
-
-        /// <summary>
-        /// Invalidate cached stored tools (call when tools change)
-        /// </summary>
-        private void InvalidateStoredToolsCache()
-        {
-            _cachedStoredTools = null;
-        }
-
-        /// <summary>
-        /// Create connected tools data for view rendering
-        /// </summary>
-        private ConnectedToolsData CreateConnectedToolsData()
-        {
-            bool isServerRunning = McpServerController.IsServerRunning;
-            IReadOnlyCollection<ConnectedClient> connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
-
-            // Check reconnecting UI flags from McpSessionManager
-            bool showReconnectingUIFlag = McpEditorSettings.GetShowReconnectingUI();
-            bool showPostCompileUIFlag = McpEditorSettings.GetShowPostCompileReconnectingUI();
-
-            // Only count clients with proper names (not Unknown Client) as "connected"
-            bool hasNamedClients = connectedClients != null &&
-                                   connectedClients.Any(client => client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME);
-
-            // Check if we have stored tools available (with caching)
-            List<ConnectedClient> storedTools = GetCachedStoredTools();
-            bool hasStoredTools = storedTools.Any();
-
-
-            // If we have stored tools, show them (prioritize stored tools over server clients)
-            if (hasStoredTools)
-            {
-                connectedClients = storedTools.ToList();
-                hasNamedClients = true;
-            }
-
-            // Show reconnecting UI only if no stored tools and no real clients
-            bool showReconnectingUI = !hasStoredTools &&
-                                      (showReconnectingUIFlag || showPostCompileUIFlag) &&
-                                      !hasNamedClients;
-
-
-            // Clear post-compile flag when named clients are connected
-            if (hasNamedClients && showPostCompileUIFlag)
-            {
-                McpEditorSettings.ClearPostCompileReconnectingUI();
-            }
-
-            return new ConnectedToolsData(connectedClients, _model.UI.ShowConnectedTools, isServerRunning, showReconnectingUI);
-        }
+        // NOTE: CreateConnectedToolsData removed - display data now managed via public APIs
 
         /// <summary>
         /// Create editor config data for view rendering
@@ -616,5 +628,118 @@ namespace io.github.hatayama.uLoopMCP
                 StartServer();
             }
         }
+
+        #region Public Display APIs
+
+        /// <summary>
+        /// Add or update a tool in the display list by notification port
+        /// Thread-safe operation with automatic UI refresh
+        /// </summary>
+        public void AddDisplayTool(string clientName, string endpoint, int notificationPort)
+        {
+            if (notificationPort <= 0) return; // Invalid port
+            
+            lock (_displayDataLock)
+            {
+                // Remove existing entry with same notification port
+                _displayToolsData.RemoveAll(c => c.NotificationPort == notificationPort);
+                
+                // Add new entry
+                ConnectedClient displayClient = new(endpoint, null, clientName, notificationPort);
+                _displayToolsData.Add(displayClient);
+                
+                // Sort by name
+                _displayToolsData.Sort((a, b) => string.Compare(a.ClientName, b.ClientName, StringComparison.Ordinal));
+            }
+            
+            // Trigger UI refresh on main thread
+            EditorApplication.delayCall += () => Repaint();
+            
+            VibeLogger.LogInfo(
+                "display_tool_added",
+                "Tool added to display list via public API",
+                new { clientName, endpoint, notificationPort }
+            );
+        }
+
+        /// <summary>
+        /// Remove a tool from the display list by notification port
+        /// Thread-safe operation with automatic UI refresh
+        /// </summary>
+        public void RemoveDisplayTool(int notificationPort)
+        {
+            if (notificationPort <= 0) return; // Invalid port
+            
+            lock (_displayDataLock)
+            {
+                _displayToolsData.RemoveAll(c => c.NotificationPort == notificationPort);
+            }
+            
+            // Trigger UI refresh on main thread
+            EditorApplication.delayCall += () => Repaint();
+            
+            VibeLogger.LogInfo(
+                "display_tool_removed",
+                "Tool removed from display list via public API",
+                new { notificationPort }
+            );
+        }
+
+        /// <summary>
+        /// Clear all tools from the display list
+        /// Thread-safe operation with automatic UI refresh
+        /// </summary>
+        public void ClearDisplayTools()
+        {
+            lock (_displayDataLock)
+            {
+                _displayToolsData.Clear();
+            }
+            
+            // Trigger UI refresh on main thread
+            EditorApplication.delayCall += () => Repaint();
+            
+            VibeLogger.LogInfo(
+                "display_tools_cleared",
+                "All tools cleared from display list via public API",
+                new { }
+            );
+        }
+
+        /// <summary>
+        /// Get current display tools (read-only)
+        /// Thread-safe operation
+        /// </summary>
+        public IReadOnlyList<ConnectedClient> GetDisplayTools()
+        {
+            lock (_displayDataLock)
+            {
+                return _displayToolsData.ToList();
+            }
+        }
+
+        /// <summary>
+        /// Update server running state from external usecase
+        /// </summary>
+        public void UpdateServerRunningState(bool isRunning)
+        {
+            _serverRunningState = isRunning;
+            
+            // Trigger UI refresh
+            EditorApplication.delayCall += () => Repaint();
+        }
+        
+        /// <summary>
+        /// Reload display data from settings
+        /// </summary>
+        public void ReloadDisplayData()
+        {
+            LoadDisplayDataFromSettings();
+            
+            // Trigger UI refresh
+            EditorApplication.delayCall += () => Repaint();
+        }
+
+        #endregion
     }
 }

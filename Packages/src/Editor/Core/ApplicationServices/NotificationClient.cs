@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -75,7 +76,22 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void SaveClientNotificationPort(string clientEndpoint, int notificationPort)
         {
-            ConnectedToolsMonitoringService.UpdateNotificationPort(clientEndpoint, notificationPort);
+            // Update in McpEditorSettings
+            McpEditorSettings.SetClientNotificationPort(clientEndpoint, notificationPort);
+            
+            // Get client info for display update
+            ConnectedLLMToolData[] tools = McpEditorSettings.GetConnectedLLMTools();
+            ConnectedLLMToolData tool = tools?.FirstOrDefault(t => t.Endpoint == clientEndpoint);
+            
+            if (tool != null && notificationPort > 0)
+            {
+                // Update display
+                McpEditorWindow.Instance?.AddDisplayTool(
+                    tool.Name,
+                    tool.Endpoint,
+                    notificationPort
+                );
+            }
             
             VibeLogger.LogInfo(
                 "client_notification_port_saved",

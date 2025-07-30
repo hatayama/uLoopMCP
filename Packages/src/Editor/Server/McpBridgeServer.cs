@@ -83,8 +83,12 @@ namespace io.github.hatayama.uLoopMCP
         private CancellationTokenSource _cancellationTokenSource;
         private Task _serverTask;
         private bool _isRunning = false;
+        private bool _isShuttingDown = false;
         
-        // Client management for broadcasting notifications
+        // Active network streams for broadcasting notifications
+        // This is separate from McpEditorSettings which handles persistence
+        private readonly Dictionary<string, NetworkStream> _activeStreams = new();
+        private readonly object _streamsLock = new object();
         
         /// <summary>
         /// Whether the server is running.
@@ -116,43 +120,51 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public IReadOnlyCollection<ConnectedClient> GetConnectedClients()
         {
-            List<ConnectedClient> resutlt = ConnectedToolsMonitoringService.GetConnectedToolsForDisplay()
-                .OrderBy(client => client.ClientName)
-                .ToList();
-            return resutlt;
+            // NOTE: This method is deprecated. Use McpEditorWindow.Instance.GetDisplayTools() instead
+            return McpEditorWindow.Instance?.GetDisplayTools() ?? new List<ConnectedClient>();
         }
 
         /// <summary>
         /// Update client name for a connected client
-        /// Phase 4: Fully delegated to ConnectedToolsMonitoringService (Replace Method)
         /// </summary>
         public void UpdateClientName(string clientEndpoint, string clientName)
         {
-            // Phase 4: Find client using unified system instead of _connectedClients
-            ConnectedClient existingClient = ConnectedToolsMonitoringService.GetConnectedToolsForDisplay()
-                .FirstOrDefault(c => c.Endpoint == clientEndpoint);
+            // Find client from settings instead of ConnectedToolsMonitoringService
+            ConnectedLLMToolData[] tools = McpEditorSettings.GetConnectedLLMTools();
+            ConnectedLLMToolData existingTool = tools.FirstOrDefault(t => t.Endpoint == clientEndpoint);
                 
-            if (existingClient != null)
+            if (existingTool != null)
             {
                 // Clear reconnecting flags when client name is successfully set (client is now fully connected)
                 if (clientName != McpConstants.UNKNOWN_CLIENT_NAME)
                 {
                     McpServerController.ClearReconnectingFlag();
                     
-                    // Update in centralized system
-                    ConnectedToolsMonitoringService.AddOrUpdateTool(
-                        clientName, 
-                        clientEndpoint, 
-                        existingClient.NotificationPort, 
-                        existingClient.ConnectedAt
+                    // Update in McpEditorSettings
+                    ConnectedLLMToolData toolData = new(
+                        clientName,
+                        clientEndpoint,
+                        existingTool.ConnectedAt,
+                        existingTool.NotificationPort
                     );
+                    McpEditorSettings.AddConnectedLLMTool(toolData);
+                    
+                    // Update display if notification port is available
+                    if (existingTool.NotificationPort > 0)
+                    {
+                        McpEditorWindow.Instance?.AddDisplayTool(
+                            clientName,
+                            clientEndpoint,
+                            existingTool.NotificationPort
+                        );
+                    }
                     
                     // Notify tool connected with updated client
                     ConnectedClient updatedClient = new ConnectedClient(
                         clientEndpoint, 
                         null, // Stream not needed for event notification
                         clientName, 
-                        existingClient.NotificationPort
+                        existingTool.NotificationPort
                     );
                     OnToolConnected?.Invoke(updatedClient);
                 }
@@ -192,6 +204,7 @@ namespace io.github.hatayama.uLoopMCP
                 _tcpListener = new TcpListener(IPAddress.Loopback, Port);
                 _tcpListener.Start();
                 _isRunning = true;
+            _isShuttingDown = false;
                 
                 _serverTask = Task.Run(() => ServerLoopAsync(_cancellationTokenSource.Token));
                 
@@ -229,6 +242,7 @@ namespace io.github.hatayama.uLoopMCP
             OnServerStopping?.Invoke();
             
             _isRunning = false;
+            _isShuttingDown = true;
             
             // Explicitly disconnect all connected clients before stopping the server
             DisconnectAllClients();
@@ -275,43 +289,36 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Explicitly disconnect all connected clients
-        /// Phase 4: Uses unified connection management system
         /// This ensures TypeScript clients receive proper close events
         /// </summary>
         private void DisconnectAllClients()
         {
-            IReadOnlyDictionary<string, NetworkStream> activeConnections = ConnectedToolsMonitoringService.GetActiveConnections();
-            if (activeConnections.Count == 0)
+            Dictionary<string, NetworkStream> streamsSnapshot;
+            lock (_streamsLock)
             {
-                return;
+                // Create a snapshot and clear the original
+                streamsSnapshot = new Dictionary<string, NetworkStream>(_activeStreams);
+                _activeStreams.Clear();
             }
-
-            List<string> endpointsToRemove = new List<string>();
             
-            foreach (KeyValuePair<string, NetworkStream> connection in activeConnections)
+            foreach (var kvp in streamsSnapshot)
             {
                 try
                 {
                     // Close the NetworkStream to send proper close event to TypeScript client
-                    if (connection.Value != null && connection.Value.CanWrite)
+                    if (kvp.Value != null && kvp.Value.CanWrite)
                     {
-                        connection.Value.Close();
+                        kvp.Value.Close();
                     }
-                    endpointsToRemove.Add(connection.Key);
                 }
                 catch (Exception ex)
                 {
-                    OnError?.Invoke($"Error disconnecting client {connection.Key}: {ex.Message}");
-                    endpointsToRemove.Add(connection.Key); // Remove even if disconnect failed
+                    OnError?.Invoke($"Error disconnecting client {kvp.Key}: {ex.Message}");
                 }
             }
-            
-            // Remove all clients from the unified system
-            foreach (string endpoint in endpointsToRemove)
-            {
-                // This will trigger proper cleanup through the unified system
-                OnToolDisconnected?.Invoke(endpoint);
-            }
+
+            // Clear display tools when server is stopping
+            McpEditorWindow.Instance?.ClearDisplayTools();
             
             // Do not clear connectedLLMTools during server stop or domain reload
             // Tools will be cleared after server restart notification is sent
@@ -403,19 +410,19 @@ namespace io.github.hatayama.uLoopMCP
                 using (NetworkStream stream = client.GetStream())
                 {
                     
-                    // Phase 4: Check for existing connection using unified system
-                    IReadOnlyDictionary<string, NetworkStream> activeConnections = ConnectedToolsMonitoringService.GetActiveConnections();
-                    if (activeConnections.TryGetValue(clientEndpoint, out NetworkStream existingStream))
-                    {
-                        existingStream?.Close();
-                        
-                        // Notify tool disconnected with endpoint
-                        // This will trigger unified cleanup through RemoveConnectedToolByEndpoint
-                        OnToolDisconnected?.Invoke(clientEndpoint);
-                    }
+                    // Register new connection - handle duplicate connections
+                    // Note: Duplicate connection handling is now done via McpEditorSettings
                     
-                    // Phase 4: Register in centralized connection management only
-                    ConnectedToolsMonitoringService.UpdateActiveConnection(clientEndpoint, stream);
+                    // Add to active streams for notification broadcasting
+                    lock (_streamsLock)
+                    {
+                        _activeStreams[clientEndpoint] = stream;
+                        VibeLogger.LogInfo(
+                            "active_stream_added",
+                            $"Added active stream for {clientEndpoint}",
+                            new { clientEndpoint, totalStreams = _activeStreams.Count }
+                        );
+                    }
                     
                     // Initialize new framing components
                     bufferManager = new DynamicBufferManager();
@@ -505,12 +512,27 @@ namespace io.github.hatayama.uLoopMCP
                     OnError?.Invoke($"Error during client disposal: {ex.Message}");
                 }
                 
-                // Phase 4: Simplified cleanup using unified system only
-                // Notify tool disconnected with endpoint
-                // This will trigger ConnectedToolsMonitoringService.RemoveConnectedToolByEndpoint
-                // which includes TCP cleanup through the integrated system
+                // Notify tool disconnected
                 OnToolDisconnected?.Invoke(clientEndpoint);
                 
+                // Execute disconnection usecase only if not shutting down
+                // During server shutdown, we preserve connection data for recovery
+                if (!_isShuttingDown)
+                {
+                    ClientDisconnectionUseCase disconnectionUseCase = new();
+                    disconnectionUseCase.Execute(clientEndpoint);
+                }
+                
+                // Remove from active streams
+                lock (_streamsLock)
+                {
+                    bool removed = _activeStreams.Remove(clientEndpoint);
+                    VibeLogger.LogInfo(
+                        "active_stream_removed",
+                        $"Removed active stream for {clientEndpoint}",
+                        new { clientEndpoint, removed, remainingStreams = _activeStreams.Count }
+                    );
+                }
                 
                 client.Close();
                 OnClientDisconnected?.Invoke(clientEndpoint);
@@ -519,60 +541,88 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Sends a pre-formatted JSON-RPC notification to all connected clients using Content-Length framing.
-        /// Updated to use ConnectedToolsMonitoringService (Fowler: Substitute Algorithm)
         /// </summary>
         /// <param name="notificationJson">The complete JSON-RPC notification string</param>
         public void SendNotificationToClients(string notificationJson)
         {
-            // NEW: Get active connections from ConnectedToolsMonitoringService
-            // This replaces the old _connectedClients approach gradually
-            IReadOnlyDictionary<string, NetworkStream> activeConnections = 
-                ConnectedToolsMonitoringService.GetActiveConnections();
-
-            if (activeConnections.Count == 0)
+            Dictionary<string, NetworkStream> streamsSnapshot;
+            lock (_streamsLock)
             {
+                // Create a snapshot to avoid holding the lock during I/O
+                streamsSnapshot = new Dictionary<string, NetworkStream>(_activeStreams);
+            }
+            
+            VibeLogger.LogInfo(
+                "send_notification_to_clients",
+                $"SendNotificationToClients called with {streamsSnapshot.Count} active streams",
+                new { activeStreamCount = streamsSnapshot.Count }
+            );
+            
+            if (streamsSnapshot.Count == 0)
+            {
+                VibeLogger.LogWarning(
+                    "send_notification_no_streams",
+                    "No active streams to send notification to",
+                    new { }
+                );
                 return;
             }
-
+            
             // Frame the notification with Content-Length header
             string framedNotification = CreateContentLengthFrame(notificationJson);
             byte[] notificationData = Encoding.UTF8.GetBytes(framedNotification);
             
-            SendNotificationDataAsync(notificationData, activeConnections).Forget();
+            SendNotificationDataAsync(notificationData, streamsSnapshot).Forget();
         }
 
         /// <summary>
         /// Send notification data to all connected clients
-        /// Updated to use new connection management (Fowler: Replace Method)
         /// </summary>
-        private async Task SendNotificationDataAsync(byte[] notificationData, IReadOnlyDictionary<string, NetworkStream> activeConnections)
+        private async Task SendNotificationDataAsync(byte[] notificationData, Dictionary<string, NetworkStream> streams)
         {
             List<string> endpointsToRemove = new();
             
-            foreach (KeyValuePair<string, NetworkStream> connection in activeConnections)
+            foreach (var kvp in streams)
             {
+                string endpoint = kvp.Key;
+                NetworkStream stream = kvp.Value;
+                
                 try
                 {
-                    if (connection.Value?.CanWrite == true)
+                    if (stream?.CanWrite == true)
                     {
-                        await connection.Value.WriteAsync(notificationData, 0, notificationData.Length);
+                        await stream.WriteAsync(notificationData, 0, notificationData.Length);
                     }
                     else
                     {
-                        endpointsToRemove.Add(connection.Key);
+                        endpointsToRemove.Add(endpoint);
                     }
                 }
                 catch (Exception ex)
                 {
-                    OnError?.Invoke($"Error writing notification to client {connection.Key}: {ex.Message}");
-                    endpointsToRemove.Add(connection.Key);
+                    OnError?.Invoke($"Error writing notification to client {endpoint}: {ex.Message}");
+                    endpointsToRemove.Add(endpoint);
                 }
             }
             
-            // Remove disconnected clients through ConnectedToolsMonitoringService
-            foreach (string endpoint in endpointsToRemove)
+            // Remove disconnected clients
+            if (endpointsToRemove.Count > 0)
             {
-                ConnectedToolsMonitoringService.RemoveConnectedToolByEndpoint(endpoint);
+                foreach (string endpoint in endpointsToRemove)
+                {
+                    // Execute disconnection usecase
+                    ClientDisconnectionUseCase disconnectionUseCase = new();
+                    disconnectionUseCase.Execute(endpoint);
+                    
+                    // Remove from active streams
+                    lock (_streamsLock)
+                    {
+                        _activeStreams.Remove(endpoint);
+                    }
+                    
+                    // Trigger disconnect event
+                    OnToolDisconnected?.Invoke(endpoint);
+                }
             }
         }
 
