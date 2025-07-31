@@ -389,19 +389,6 @@ export class UnityDiscovery {
           'Monitor for tools/list_changed notifications after this discovery.',
         );
 
-        // Test warning log with stack trace for debugging
-        VibeLogger.logWarning(
-          'unity_discovery_test_warning',
-          'Test warning log to verify stack trace functionality',
-          {
-            discovered_port: port,
-            test_purpose: 'stack_trace_verification',
-          },
-          correlationId,
-          'This is a test warning to verify that stack traces are properly displayed with source maps.',
-          'Check that TypeScript file locations are shown correctly in the stack trace output.',
-        );
-
         // Update client port - connection management is UnityClient's responsibility
         this.unityClient.updatePort(port);
 
