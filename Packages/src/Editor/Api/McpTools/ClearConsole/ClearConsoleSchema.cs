@@ -16,6 +16,6 @@ namespace io.github.hatayama.uLoopMCP
         /// Whether to add a confirmation log message after clearing
         /// </summary>
         [Description("Whether to add a confirmation log message after clearing")]
-        public bool AddConfirmationMessage { get; set; } = true;
+        public bool AddConfirmationMessage { get; set; } = false;
     }
 } 
