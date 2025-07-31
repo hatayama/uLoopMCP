@@ -40,6 +40,7 @@ namespace io.github.hatayama.uLoopMCP
                 // MCP_CLIENT_NAME removed - now using clientInfo.name from MCP protocol
 #if ULOOPMCP_DEBUG
                 , { McpConstants.ENV_KEY_MCP_DEBUG, McpConstants.ENV_VALUE_TRUE }
+                , { McpConstants.ENV_KEY_NODE_OPTIONS, McpConstants.NODE_OPTIONS_ENABLE_SOURCE_MAPS }
 #endif
             };
 
