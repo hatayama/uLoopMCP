@@ -11,9 +11,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Tool execution duration in milliseconds
         /// </summary>
-#pragma warning disable IDE0051 // Remove unused private members
         public long ExecutionTimeMs { get; set; }
-#pragma warning restore IDE0051
 
         /// <summary>
         /// Set timing information automatically
