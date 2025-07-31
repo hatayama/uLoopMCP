@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.30.4](https://github.com/hatayama/uLoopMCP/compare/v0.30.3...v0.30.4) (2025-07-31)
+
+
+### Bug Fixes
+
+* remove empty development mode conditionals and unused callbacks ([#271](https://github.com/hatayama/uLoopMCP/issues/271)) ([85f7e93](https://github.com/hatayama/uLoopMCP/commit/85f7e93790b7e5ffde6c4fca8807dcdf3e810d10))
+* remove unnecessary timing properties from BaseToolResponse ([#274](https://github.com/hatayama/uLoopMCP/issues/274)) ([2e319cc](https://github.com/hatayama/uLoopMCP/commit/2e319cccbe950f8a4ec0de9a946c44c1efa980e0))
+
 ## [0.30.3](https://github.com/hatayama/uLoopMCP/compare/v0.30.2...v0.30.3) (2025-07-27)
 
 
