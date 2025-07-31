@@ -73,12 +73,22 @@ export class VibeLogger {
     correlationId?: string,
     humanNote?: string,
     aiTodo?: string,
+    includeStackTrace?: boolean,
   ): void {
-    VibeLogger.log('INFO', operation, message, context, correlationId, humanNote, aiTodo);
+    VibeLogger.log(
+      'INFO',
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace,
+    );
   }
 
   /**
-   * Log a warning level message with structured context
+   * Log a warning level message with structured context and optional stack trace
    */
   static logWarning(
     operation: string,
@@ -87,12 +97,22 @@ export class VibeLogger {
     correlationId?: string,
     humanNote?: string,
     aiTodo?: string,
+    includeStackTrace: boolean = true,
   ): void {
-    VibeLogger.log('WARNING', operation, message, context, correlationId, humanNote, aiTodo);
+    VibeLogger.log(
+      'WARNING',
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace,
+    );
   }
 
   /**
-   * Log an error level message with structured context
+   * Log an error level message with structured context and optional stack trace
    */
   static logError(
     operation: string,
@@ -101,12 +121,22 @@ export class VibeLogger {
     correlationId?: string,
     humanNote?: string,
     aiTodo?: string,
+    includeStackTrace: boolean = true,
   ): void {
-    VibeLogger.log('ERROR', operation, message, context, correlationId, humanNote, aiTodo);
+    VibeLogger.log(
+      'ERROR',
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace,
+    );
   }
 
   /**
-   * Log a debug level message with structured context
+   * Log a debug level message with structured context and optional stack trace
    */
   static logDebug(
     operation: string,
@@ -115,12 +145,22 @@ export class VibeLogger {
     correlationId?: string,
     humanNote?: string,
     aiTodo?: string,
+    includeStackTrace?: boolean,
   ): void {
-    VibeLogger.log('DEBUG', operation, message, context, correlationId, humanNote, aiTodo);
+    VibeLogger.log(
+      'DEBUG',
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace,
+    );
   }
 
   /**
-   * Log an exception with structured context
+   * Log an exception with structured context and optional additional stack trace
    */
   static logException(
     operation: string,
@@ -129,6 +169,7 @@ export class VibeLogger {
     correlationId?: string,
     humanNote?: string,
     aiTodo?: string,
+    includeStackTrace?: boolean,
   ): void {
     const exceptionContext = {
       original_context: context,
@@ -148,6 +189,7 @@ export class VibeLogger {
       correlationId,
       humanNote,
       aiTodo,
+      includeStackTrace,
     );
   }
 
@@ -237,10 +279,20 @@ export class VibeLogger {
     correlationId?: string,
     humanNote?: string,
     aiTodo?: string,
+    includeStackTrace?: boolean,
   ): void {
     // Only log when MCP_DEBUG is enabled
     if (!VibeLogger.isDebugEnabled) {
       return;
+    }
+
+    // Handle stack trace option
+    let finalContext = context;
+    if (includeStackTrace) {
+      finalContext = {
+        original_context: context,
+        stack: VibeLogger.cleanStackTrace(new Error().stack),
+      } as const;
     }
 
     const logEntry: VibeLogEntry = {
@@ -248,7 +300,7 @@ export class VibeLogger {
       level,
       operation,
       message,
-      context: VibeLogger.sanitizeContext(context),
+      context: VibeLogger.sanitizeContext(finalContext),
       correlation_id: correlationId || VibeLogger.generateCorrelationId(),
       source: 'TypeScript',
       human_note: humanNote,
@@ -643,6 +695,34 @@ export class VibeLogger {
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
     return `${year}${month}${day}_${hours}${minutes}${seconds}`;
+  }
+
+  /**
+   * Clean stack trace by removing VibeLogger internal calls and Error prefix
+   */
+  private static cleanStackTrace(stack: string | undefined): string {
+    if (!stack) {
+      return '';
+    }
+
+    const lines = stack.split('\n');
+    const cleanedLines: string[] = [];
+
+    for (const line of lines) {
+      // Skip the "Error" line at the beginning
+      if (line.trim() === 'Error') {
+        continue;
+      }
+
+      // Skip VibeLogger internal calls
+      if (line.includes('vibe-logger.ts') || line.includes('VibeLogger')) {
+        continue;
+      }
+
+      cleanedLines.push(line);
+    }
+
+    return cleanedLines.join('\n').trim();
   }
 }
 

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Security;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
@@ -105,7 +106,7 @@ namespace io.github.hatayama.uLoopMCP
                 throw new SecurityException("Settings JSON content exceeds size limit");
             }
             
-            File.WriteAllText(SettingsFilePath, json);
+            _ = WriteSettingsFileWithRetryAsync(SettingsFilePath, json);
             _cachedSettings = settings;
 
             // MCP Editor settings saved
@@ -828,6 +829,54 @@ namespace io.github.hatayama.uLoopMCP
                 UnityEngine.Debug.LogError($"{McpConstants.SECURITY_LOG_PREFIX} Error validating settings path {path}: {ex.Message}");
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Writes settings file with retry mechanism to handle sharing violations.
+        /// </summary>
+        /// <param name="filePath">Path to settings file</param>
+        /// <param name="content">JSON content to write</param>
+        private static async Task WriteSettingsFileWithRetryAsync(string filePath, string content)
+        {
+            const int maxRetries = 3;
+            const int retryDelayMs = 50;
+
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    File.WriteAllText(filePath, content);
+                    return; // Success
+                }
+                catch (IOException ex) when (IsFileSharingViolation(ex))
+                {
+                    if (attempt == maxRetries)
+                    {
+                        UnityEngine.Debug.LogError($"Failed to write settings file after {maxRetries} attempts: {ex.Message}");
+                        return; // Give up gracefully instead of throwing
+                    }
+
+                    // Wait before retry using TimerDelay (Unity-safe async delay)
+                    await TimerDelay.Wait(retryDelayMs * attempt);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks if IOException is a file sharing violation based on HResult.
+        /// </summary>
+        /// <param name="ex">IOException to check</param>
+        /// <returns>True if it's a sharing violation</returns>
+        private static bool IsFileSharingViolation(IOException ex)
+        {
+            // Windows ERROR_SHARING_VIOLATION = 0x80070020
+            // Windows ERROR_LOCK_VIOLATION = 0x80070021
+            // macOS/Unix may have different error codes but IOException base handling should work
+            const int ERROR_SHARING_VIOLATION = unchecked((int)0x80070020);
+            const int ERROR_LOCK_VIOLATION = unchecked((int)0x80070021);
+            
+            return ex.HResult == ERROR_SHARING_VIOLATION || 
+                   ex.HResult == ERROR_LOCK_VIOLATION;
         }
     }
 }

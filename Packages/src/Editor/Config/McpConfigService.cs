@@ -261,6 +261,7 @@ namespace io.github.hatayama.uLoopMCP
             updatedEnv.Remove(McpConstants.ENV_KEY_ULOOPMCP_DEBUG);
             updatedEnv.Remove(McpConstants.ENV_KEY_ULOOPMCP_PRODUCTION);
             updatedEnv.Remove(McpConstants.ENV_KEY_MCP_DEBUG);
+            updatedEnv.Remove(McpConstants.ENV_KEY_NODE_OPTIONS);
             
             // MCP_CLIENT_NAME is no longer used - client identification handled by MCP protocol
             
@@ -268,8 +269,10 @@ namespace io.github.hatayama.uLoopMCP
             if (enableMcpLogs)
             {
                 updatedEnv[McpConstants.ENV_KEY_MCP_DEBUG] = McpConstants.ENV_VALUE_TRUE;
+                // Enable source maps when debug mode is enabled for better stack traces
+                updatedEnv[McpConstants.ENV_KEY_NODE_OPTIONS] = McpConstants.NODE_OPTIONS_ENABLE_SOURCE_MAPS;
             }
-            // For disabled logs, simply don't set MCP_DEBUG (default behavior)
+            // For disabled logs, simply don't set MCP_DEBUG and NODE_OPTIONS (default behavior)
             
             // Create updated configuration (keeping command and args unchanged)
             McpServerConfigData updatedConfig = new McpServerConfigData(

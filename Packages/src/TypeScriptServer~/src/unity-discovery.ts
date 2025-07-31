@@ -326,6 +326,8 @@ export class UnityDiscovery {
       },
       correlationId,
       'Discovery cycle finished and state reset to prevent hang',
+      undefined,
+      true,
     );
     // Force state reset regardless of outcome
     this.isDiscovering = false;

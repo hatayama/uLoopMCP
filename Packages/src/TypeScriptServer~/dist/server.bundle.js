@@ -5705,31 +5705,67 @@ var VibeLogger = class _VibeLogger {
   /**
    * Log an info level message with structured context
    */
-  static logInfo(operation, message, context, correlationId, humanNote, aiTodo) {
-    _VibeLogger.log("INFO", operation, message, context, correlationId, humanNote, aiTodo);
+  static logInfo(operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace) {
+    _VibeLogger.log(
+      "INFO",
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace
+    );
   }
   /**
-   * Log a warning level message with structured context
+   * Log a warning level message with structured context and optional stack trace
    */
-  static logWarning(operation, message, context, correlationId, humanNote, aiTodo) {
-    _VibeLogger.log("WARNING", operation, message, context, correlationId, humanNote, aiTodo);
+  static logWarning(operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace = true) {
+    _VibeLogger.log(
+      "WARNING",
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace
+    );
   }
   /**
-   * Log an error level message with structured context
+   * Log an error level message with structured context and optional stack trace
    */
-  static logError(operation, message, context, correlationId, humanNote, aiTodo) {
-    _VibeLogger.log("ERROR", operation, message, context, correlationId, humanNote, aiTodo);
+  static logError(operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace = true) {
+    _VibeLogger.log(
+      "ERROR",
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace
+    );
   }
   /**
-   * Log a debug level message with structured context
+   * Log a debug level message with structured context and optional stack trace
    */
-  static logDebug(operation, message, context, correlationId, humanNote, aiTodo) {
-    _VibeLogger.log("DEBUG", operation, message, context, correlationId, humanNote, aiTodo);
+  static logDebug(operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace) {
+    _VibeLogger.log(
+      "DEBUG",
+      operation,
+      message,
+      context,
+      correlationId,
+      humanNote,
+      aiTodo,
+      includeStackTrace
+    );
   }
   /**
-   * Log an exception with structured context
+   * Log an exception with structured context and optional additional stack trace
    */
-  static logException(operation, error, context, correlationId, humanNote, aiTodo) {
+  static logException(operation, error, context, correlationId, humanNote, aiTodo, includeStackTrace) {
     const exceptionContext = {
       original_context: context,
       exception: {
@@ -5746,7 +5782,8 @@ var VibeLogger = class _VibeLogger {
       exceptionContext,
       correlationId,
       humanNote,
-      aiTodo
+      aiTodo,
+      includeStackTrace
     );
   }
   /**
@@ -5808,16 +5845,23 @@ var VibeLogger = class _VibeLogger {
    * Core logging method
    * Only logs when MCP_DEBUG environment variable is set to 'true'
    */
-  static log(level, operation, message, context, correlationId, humanNote, aiTodo) {
+  static log(level, operation, message, context, correlationId, humanNote, aiTodo, includeStackTrace) {
     if (!_VibeLogger.isDebugEnabled) {
       return;
+    }
+    let finalContext = context;
+    if (includeStackTrace) {
+      finalContext = {
+        original_context: context,
+        stack: _VibeLogger.cleanStackTrace(new Error().stack)
+      };
     }
     const logEntry = {
       timestamp: _VibeLogger.formatTimestamp(),
       level,
       operation,
       message,
-      context: _VibeLogger.sanitizeContext(context),
+      context: _VibeLogger.sanitizeContext(finalContext),
       correlation_id: correlationId || _VibeLogger.generateCorrelationId(),
       source: "TypeScript",
       human_note: humanNote,
@@ -6112,6 +6156,26 @@ var VibeLogger = class _VibeLogger {
     const minutes = String(now.getMinutes()).padStart(2, "0");
     const seconds = String(now.getSeconds()).padStart(2, "0");
     return `${year}${month}${day}_${hours}${minutes}${seconds}`;
+  }
+  /**
+   * Clean stack trace by removing VibeLogger internal calls and Error prefix
+   */
+  static cleanStackTrace(stack) {
+    if (!stack) {
+      return "";
+    }
+    const lines = stack.split("\n");
+    const cleanedLines = [];
+    for (const line of lines) {
+      if (line.trim() === "Error") {
+        continue;
+      }
+      if (line.includes("vibe-logger.ts") || line.includes("VibeLogger")) {
+        continue;
+      }
+      cleanedLines.push(line);
+    }
+    return cleanedLines.join("\n").trim();
   }
 };
 
@@ -7476,7 +7540,9 @@ var UnityDiscovery = class _UnityDiscovery {
         correlation_id: correlationId
       },
       correlationId,
-      "Discovery cycle finished and state reset to prevent hang"
+      "Discovery cycle finished and state reset to prevent hang",
+      void 0,
+      true
     );
     this.isDiscovering = false;
   }
@@ -8852,13 +8918,13 @@ var package_default = {
   scripts: {
     prepare: "husky",
     build: "npm run build:bundle",
-    "build:bundle": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os",
-    "build:production": "ULOOPMCP_PRODUCTION=true NODE_ENV=production esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os",
-    dev: "NODE_ENV=development npm run build:bundle && NODE_ENV=development node dist/server.bundle.js",
-    "dev:watch": "NODE_ENV=development esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --watch",
-    start: "node dist/server.bundle.js",
-    "start:production": "ULOOPMCP_PRODUCTION=true node dist/server.bundle.js",
-    "start:dev": "NODE_ENV=development node dist/server.bundle.js",
+    "build:bundle": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap",
+    "build:production": "cross-env ULOOPMCP_PRODUCTION=true NODE_ENV=production esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap",
+    dev: "cross-env NODE_ENV=development npm run build:bundle && cross-env NODE_ENV=development NODE_OPTIONS=--enable-source-maps node dist/server.bundle.js",
+    "dev:watch": "cross-env NODE_ENV=development esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap --watch",
+    start: "cross-env NODE_OPTIONS=--enable-source-maps node dist/server.bundle.js",
+    "start:production": "cross-env ULOOPMCP_PRODUCTION=true NODE_OPTIONS=--enable-source-maps node dist/server.bundle.js",
+    "start:dev": "cross-env NODE_ENV=development NODE_OPTIONS=--enable-source-maps node dist/server.bundle.js",
     lint: "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "security:check": "eslint src --ext .ts",
@@ -8913,6 +8979,7 @@ var package_default = {
     "@types/node": "20.19.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
+    "cross-env": "^10.0.0",
     esbuild: "^0.25.6",
     eslint: "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
@@ -9151,3 +9218,4 @@ server.start().catch((error) => {
   );
   process.exit(1);
 });
+//# sourceMappingURL=server.bundle.js.map
