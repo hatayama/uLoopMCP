@@ -164,18 +164,22 @@ namespace io.github.hatayama.uLoopMCP
             if (!buttonEnabled)
             {
                 _configureButton.style.backgroundColor = new StyleColor(new UnityEngine.Color(0.5f, 0.5f, 0.5f, 0.5f));
+                _configureButton.style.color = StyleKeyword.Null;
             }
             else if (!data.IsConfigured || data.HasPortMismatch)
             {
                 _configureButton.style.backgroundColor = new StyleColor(new UnityEngine.Color(1f, 0.9f, 0.4f));
+                _configureButton.style.color = new StyleColor(UnityEngine.Color.black);
             }
             else if (data.IsUpdateNeeded)
             {
                 _configureButton.style.backgroundColor = new StyleColor(new UnityEngine.Color(0.7f, 0.9f, 1f));
+                _configureButton.style.color = StyleKeyword.Null;
             }
             else
             {
                 _configureButton.style.backgroundColor = StyleKeyword.Null;
+                _configureButton.style.color = StyleKeyword.Null;
             }
             
             // Adjust button height based on content
