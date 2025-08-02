@@ -60,11 +60,11 @@ namespace io.github.hatayama.uLoopMCP
             PrintVisualElementHierarchy(_root, 0);
             
             // Query containers
-            _scrollView = _root.Q<ScrollView>(McpUIToolkitConstants.ELEMENT_MAIN_SCROLL_VIEW);
-            _serverControlsContainer = _root.Q<VisualElement>(McpUIToolkitConstants.ELEMENT_SERVER_CONTROLS);
-            _connectedToolsFoldout = _root.Q<Foldout>(McpUIToolkitConstants.ELEMENT_CONNECTED_TOOLS);
-            _editorConfigFoldout = _root.Q<Foldout>(McpUIToolkitConstants.ELEMENT_EDITOR_CONFIG);
-            _securitySettingsFoldout = _root.Q<Foldout>(McpUIToolkitConstants.ELEMENT_SECURITY_SETTINGS);
+            _scrollView = _root.Q<ScrollView>(McpUIToolkitCommonConstants.ELEMENT_MAIN_SCROLL_VIEW);
+            _serverControlsContainer = _root.Q<VisualElement>(McpUIToolkitCommonConstants.ELEMENT_SERVER_CONTROLS);
+            _connectedToolsFoldout = _root.Q<Foldout>(McpUIToolkitCommonConstants.ELEMENT_CONNECTED_TOOLS);
+            _editorConfigFoldout = _root.Q<Foldout>(McpUIToolkitCommonConstants.ELEMENT_EDITOR_CONFIG);
+            _securitySettingsFoldout = _root.Q<Foldout>(McpUIToolkitCommonConstants.ELEMENT_SECURITY_SETTINGS);
             
             // Debug log for container queries
             Debug.Log($"ScrollView found: {_scrollView != null}");

@@ -9,6 +9,14 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class SecuritySettingsView
     {
+        // Element names for this view
+        private const string ELEMENT_SECURITY_SETTINGS_CONTENT = "security-settings-content";
+        private const string ELEMENT_ENABLE_TESTS_TOGGLE = "enable-tests-toggle";
+        private const string ELEMENT_ENABLE_TESTS_LABEL = "enable-tests-label";
+        private const string ELEMENT_ALLOW_MENU_TOGGLE = "allow-menu-toggle";
+        private const string ELEMENT_ALLOW_MENU_LABEL = "allow-menu-label";
+        private const string ELEMENT_ALLOW_THIRD_PARTY_TOGGLE = "allow-third-party-toggle";
+        private const string ELEMENT_ALLOW_THIRD_PARTY_LABEL = "allow-third-party-label";
         private readonly Foldout _foldout;
         private readonly VisualElement _contentContainer;
         private Toggle _enableTestsToggle;
@@ -30,11 +38,11 @@ namespace io.github.hatayama.uLoopMCP
             _foldout.text = "Security Settings";
             
             // Get or create content container
-            _contentContainer = _foldout.Q<VisualElement>(McpUIToolkitConstants.ELEMENT_SECURITY_SETTINGS_CONTENT);
+            _contentContainer = _foldout.Q<VisualElement>(ELEMENT_SECURITY_SETTINGS_CONTENT);
             if (_contentContainer == null)
             {
                 _contentContainer = new();
-                _contentContainer.name = McpUIToolkitConstants.ELEMENT_SECURITY_SETTINGS_CONTENT;
+                _contentContainer.name = ELEMENT_SECURITY_SETTINGS_CONTENT;
                 _foldout.Add(_contentContainer);
             }
             
@@ -47,12 +55,12 @@ namespace io.github.hatayama.uLoopMCP
         private void BuildUI()
         {
             // UXMLで定義された要素を取得（動的生成から変更）
-            _enableTestsToggle = _contentContainer.Q<Toggle>(McpUIToolkitConstants.ELEMENT_ENABLE_TESTS_TOGGLE);
-            _enableTestsLabel = _contentContainer.Q<Label>(McpUIToolkitConstants.ELEMENT_ENABLE_TESTS_LABEL);
-            _allowMenuToggle = _contentContainer.Q<Toggle>(McpUIToolkitConstants.ELEMENT_ALLOW_MENU_TOGGLE);
-            _allowMenuLabel = _contentContainer.Q<Label>(McpUIToolkitConstants.ELEMENT_ALLOW_MENU_LABEL);
-            _allowThirdPartyToggle = _contentContainer.Q<Toggle>(McpUIToolkitConstants.ELEMENT_ALLOW_THIRD_PARTY_TOGGLE);
-            _allowThirdPartyLabel = _contentContainer.Q<Label>(McpUIToolkitConstants.ELEMENT_ALLOW_THIRD_PARTY_LABEL);
+            _enableTestsToggle = _contentContainer.Q<Toggle>(ELEMENT_ENABLE_TESTS_TOGGLE);
+            _enableTestsLabel = _contentContainer.Q<Label>(ELEMENT_ENABLE_TESTS_LABEL);
+            _allowMenuToggle = _contentContainer.Q<Toggle>(ELEMENT_ALLOW_MENU_TOGGLE);
+            _allowMenuLabel = _contentContainer.Q<Label>(ELEMENT_ALLOW_MENU_LABEL);
+            _allowThirdPartyToggle = _contentContainer.Q<Toggle>(ELEMENT_ALLOW_THIRD_PARTY_TOGGLE);
+            _allowThirdPartyLabel = _contentContainer.Q<Label>(ELEMENT_ALLOW_THIRD_PARTY_LABEL);
             
             // イベントハンドラーの登録
             if (_enableTestsToggle != null)

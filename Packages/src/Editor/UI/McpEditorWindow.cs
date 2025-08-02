@@ -603,11 +603,11 @@ namespace io.github.hatayama.uLoopMCP
             // Adjust update frequency based on focus state
             if (hasFocus)
             {
-                _updateScheduler.Every(McpUIToolkitConstants.UPDATE_INTERVAL_FOCUSED);
+                _updateScheduler.Every(McpUIToolkitCommonConstants.UPDATE_INTERVAL_FOCUSED);
             }
             else
             {
-                _updateScheduler.Every(McpUIToolkitConstants.UPDATE_INTERVAL_DEFAULT);
+                _updateScheduler.Every(McpUIToolkitCommonConstants.UPDATE_INTERVAL_DEFAULT);
             }
         }
 

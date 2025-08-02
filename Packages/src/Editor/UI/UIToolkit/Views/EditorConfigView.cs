@@ -11,6 +11,13 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class EditorConfigView
     {
+        // Element names for this view
+        private const string ELEMENT_EDITOR_CONFIG_CONTENT = "editor-config-content";
+        private const string ELEMENT_EDITOR_TYPE_FIELD = "editor-type-field";
+        private const string ELEMENT_ERROR_BOX = "error-box";
+        private const string ELEMENT_ERROR_LABEL = "error-label";
+        private const string ELEMENT_CONFIGURE_BUTTON = "configure-button";
+        private const string ELEMENT_OPEN_SETTINGS_BUTTON = "open-settings-button";
         private readonly Foldout _foldout;
         private readonly VisualElement _contentContainer;
         private EnumField _editorTypeField;
@@ -30,11 +37,11 @@ namespace io.github.hatayama.uLoopMCP
             _foldout.text = "LLM Tool Settings";
             
             // Get or create content container
-            _contentContainer = _foldout.Q<VisualElement>(McpUIToolkitConstants.ELEMENT_EDITOR_CONFIG_CONTENT);
+            _contentContainer = _foldout.Q<VisualElement>(ELEMENT_EDITOR_CONFIG_CONTENT);
             if (_contentContainer == null)
             {
                 _contentContainer = new();
-                _contentContainer.name = McpUIToolkitConstants.ELEMENT_EDITOR_CONFIG_CONTENT;
+                _contentContainer.name = ELEMENT_EDITOR_CONFIG_CONTENT;
                 _foldout.Add(_contentContainer);
             }
             
@@ -47,11 +54,11 @@ namespace io.github.hatayama.uLoopMCP
         private void BuildUI()
         {
             // UXMLで定義された要素を取得（動的生成から変更）
-            _editorTypeField = _contentContainer.Q<EnumField>(McpUIToolkitConstants.ELEMENT_EDITOR_TYPE_FIELD);
-            _errorBox = _contentContainer.Q<VisualElement>(McpUIToolkitConstants.ELEMENT_ERROR_BOX);
-            _errorLabel = _errorBox?.Q<Label>(McpUIToolkitConstants.ELEMENT_ERROR_LABEL);
-            _configureButton = _contentContainer.Q<Button>(McpUIToolkitConstants.ELEMENT_CONFIGURE_BUTTON);
-            _openSettingsButton = _contentContainer.Q<Button>(McpUIToolkitConstants.ELEMENT_OPEN_SETTINGS_BUTTON);
+            _editorTypeField = _contentContainer.Q<EnumField>(ELEMENT_EDITOR_TYPE_FIELD);
+            _errorBox = _contentContainer.Q<VisualElement>(ELEMENT_ERROR_BOX);
+            _errorLabel = _errorBox?.Q<Label>(ELEMENT_ERROR_LABEL);
+            _configureButton = _contentContainer.Q<Button>(ELEMENT_CONFIGURE_BUTTON);
+            _openSettingsButton = _contentContainer.Q<Button>(ELEMENT_OPEN_SETTINGS_BUTTON);
             
             // EnumFieldの初期設定
             if (_editorTypeField != null)
@@ -138,8 +145,8 @@ namespace io.github.hatayama.uLoopMCP
             _configureButton.SetEnabled(buttonEnabled);
             
             // Update button styling based on state
-            _configureButton.RemoveFromClassList(McpUIToolkitConstants.CLASS_MCP_BUTTON_WARNING);
-            _configureButton.RemoveFromClassList(McpUIToolkitConstants.CLASS_MCP_BUTTON_DISABLED);
+            _configureButton.RemoveFromClassList(McpUIToolkitCommonConstants.CLASS_MCP_BUTTON_WARNING);
+            _configureButton.RemoveFromClassList(McpUIToolkitCommonConstants.CLASS_MCP_BUTTON_DISABLED);
             
             if (!buttonEnabled)
             {
@@ -165,13 +172,13 @@ namespace io.github.hatayama.uLoopMCP
             // Adjust button height based on content
             if (buttonText.Contains("\n"))
             {
-                _configureButton.style.minHeight = McpUIToolkitConstants.BUTTON_HEIGHT_MULTILINE;
+                _configureButton.style.minHeight = McpUIToolkitCommonConstants.BUTTON_HEIGHT_MULTILINE;
                 _configureButton.style.height = StyleKeyword.Auto;
             }
             else
             {
-                _configureButton.style.minHeight = McpUIToolkitConstants.BUTTON_HEIGHT_NORMAL;
-                _configureButton.style.height = McpUIToolkitConstants.BUTTON_HEIGHT_NORMAL;
+                _configureButton.style.minHeight = McpUIToolkitCommonConstants.BUTTON_HEIGHT_NORMAL;
+                _configureButton.style.height = McpUIToolkitCommonConstants.BUTTON_HEIGHT_NORMAL;
             }
             
             // Update open settings button

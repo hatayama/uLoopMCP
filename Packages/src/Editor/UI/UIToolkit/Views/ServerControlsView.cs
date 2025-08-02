@@ -10,6 +10,18 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class ServerControlsView
     {
+        // Element names for this view
+        private const string ELEMENT_STATUS_LABEL = "status-label";
+        private const string ELEMENT_PORT_FIELD = "port-field";
+        private const string ELEMENT_PORT_WARNING_BOX = "port-warning-box";
+        private const string ELEMENT_PORT_WARNING_LABEL = "port-warning-label";
+        private const string ELEMENT_TOGGLE_BUTTON = "toggle-button";
+        private const string ELEMENT_AUTO_START_TOGGLE = "auto-start-toggle";
+        private const string ELEMENT_AUTO_START_LABEL = "auto-start-label";
+        
+        // CSS classes for this view
+        private const string CLASS_TOGGLE_BUTTON_START = "mcp-server-controls__toggle-button--start";
+        private const string CLASS_TOGGLE_BUTTON_STOP = "mcp-server-controls__toggle-button--stop";
         private readonly VisualElement _container;
         private Label _statusLabel;
         private IntegerField _portField;
@@ -33,13 +45,13 @@ namespace io.github.hatayama.uLoopMCP
         private void BuildUI()
         {
             // UXMLで定義された要素を取得（動的生成から変更）
-            _statusLabel = _container.Q<Label>(McpUIToolkitConstants.ELEMENT_STATUS_LABEL);
-            _portField = _container.Q<IntegerField>(McpUIToolkitConstants.ELEMENT_PORT_FIELD);
-            _portWarningBox = _container.Q<VisualElement>(McpUIToolkitConstants.ELEMENT_PORT_WARNING_BOX);
-            _portWarningLabel = _portWarningBox?.Q<Label>(McpUIToolkitConstants.ELEMENT_PORT_WARNING_LABEL);
-            _toggleButton = _container.Q<Button>(McpUIToolkitConstants.ELEMENT_TOGGLE_BUTTON);
-            _autoStartToggle = _container.Q<Toggle>(McpUIToolkitConstants.ELEMENT_AUTO_START_TOGGLE);
-            _autoStartLabel = _container.Q<Label>(McpUIToolkitConstants.ELEMENT_AUTO_START_LABEL);
+            _statusLabel = _container.Q<Label>(ELEMENT_STATUS_LABEL);
+            _portField = _container.Q<IntegerField>(ELEMENT_PORT_FIELD);
+            _portWarningBox = _container.Q<VisualElement>(ELEMENT_PORT_WARNING_BOX);
+            _portWarningLabel = _portWarningBox?.Q<Label>(ELEMENT_PORT_WARNING_LABEL);
+            _toggleButton = _container.Q<Button>(ELEMENT_TOGGLE_BUTTON);
+            _autoStartToggle = _container.Q<Toggle>(ELEMENT_AUTO_START_TOGGLE);
+            _autoStartLabel = _container.Q<Label>(ELEMENT_AUTO_START_LABEL);
             
             // イベントハンドラーの登録
             if (_portField != null)
@@ -94,13 +106,13 @@ namespace io.github.hatayama.uLoopMCP
             _toggleButton.text = data.IsServerRunning ? "Stop Server" : "Start Server";
             
             // Remove existing button classes
-            _toggleButton.RemoveFromClassList(McpUIToolkitConstants.CLASS_MCP_SERVER_CONTROLS_TOGGLE_BUTTON_START);
-            _toggleButton.RemoveFromClassList(McpUIToolkitConstants.CLASS_MCP_SERVER_CONTROLS_TOGGLE_BUTTON_STOP);
+            _toggleButton.RemoveFromClassList(CLASS_TOGGLE_BUTTON_START);
+            _toggleButton.RemoveFromClassList(CLASS_TOGGLE_BUTTON_STOP);
             
             // Add appropriate button class
             string buttonClass = data.IsServerRunning ?
-                McpUIToolkitConstants.CLASS_MCP_SERVER_CONTROLS_TOGGLE_BUTTON_STOP :
-                McpUIToolkitConstants.CLASS_MCP_SERVER_CONTROLS_TOGGLE_BUTTON_START;
+                CLASS_TOGGLE_BUTTON_STOP :
+                CLASS_TOGGLE_BUTTON_START;
             _toggleButton.AddToClassList(buttonClass);
             
             // Update auto start toggle
