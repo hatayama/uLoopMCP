@@ -4,7 +4,6 @@ using System.Linq;
 using System.Collections.Generic;
 using System;
 using UnityEngine.UIElements;
-using Debug = UnityEngine.Debug;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -567,10 +566,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void StartBackgroundUpdates()
         {
-            Debug.Log("=== StartBackgroundUpdates ===");
-            Debug.Log($"rootVisualElement: {rootVisualElement}");
-            Debug.Log($"rootVisualElement children: {rootVisualElement.childCount}");
-
             // Schedule regular updates
             _updateScheduler = rootVisualElement.schedule.Execute(UpdateUIToolkit);
             OnEditorFocusChanged(true);
