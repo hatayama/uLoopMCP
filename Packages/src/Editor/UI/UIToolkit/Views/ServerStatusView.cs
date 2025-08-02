@@ -10,7 +10,6 @@ namespace io.github.hatayama.uLoopMCP
     {
         private readonly VisualElement _container;
         private Label _statusLabel;
-        private Label _statusValue;
         
         public ServerStatusView(VisualElement container)
         {
@@ -23,28 +22,19 @@ namespace io.github.hatayama.uLoopMCP
             _container.Clear();
             _container.AddToClassList("mcp-server-status");
             
-            _statusLabel = new Label("Status:");
+            _statusLabel = new Label();
             _statusLabel.AddToClassList("mcp-server-status__label");
+            _statusLabel.enableRichText = true;
             _container.Add(_statusLabel);
-            
-            _statusValue = new Label();
-            _statusValue.AddToClassList("mcp-server-status__value");
-            _container.Add(_statusValue);
         }
         
         public void Update(ServerStatusData data)
         {
-            _statusValue.text = data.Status;
-            
-            // Remove existing status classes
-            _statusValue.RemoveFromClassList("mcp-server-status__value--running");
-            _statusValue.RemoveFromClassList("mcp-server-status__value--stopped");
-            
-            // Add appropriate status class
-            string statusClass = data.IsRunning ? 
-                "mcp-server-status__value--running" : 
-                "mcp-server-status__value--stopped";
-            _statusValue.AddToClassList(statusClass);
+            // Use rich text to make the status value bold and colored
+            string statusText = data.IsRunning ? 
+                "Status: <b><color=#4CAF50>Running</color></b>" : 
+                "Status: <b><color=#F44336>Stopped</color></b>";
+            _statusLabel.text = statusText;
         }
     }
 }

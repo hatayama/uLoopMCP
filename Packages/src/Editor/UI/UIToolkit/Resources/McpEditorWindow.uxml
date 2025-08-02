@@ -2,12 +2,7 @@
     <ui:Style src="McpEditorWindow.uss" />
     <ui:VisualElement name="mcp-editor-window" class="mcp-editor-window">
         <ui:ScrollView name="main-scroll-view" class="mcp-editor-window__scroll-view">
-            <!-- Server Status -->
-            <ui:VisualElement name="server-status" class="mcp-section mcp-server-status">
-                <!-- Content injected by C# -->
-            </ui:VisualElement>
-            
-            <!-- Server Controls -->
+            <!-- Server Controls (with integrated status) -->
             <ui:VisualElement name="server-controls" class="mcp-section mcp-server-controls">
                 <!-- Content injected by C# -->
             </ui:VisualElement>

@@ -42,29 +42,25 @@
 }
 
 .mcp-server-status__label {
-    -unity-font-style: bold;
-    min-width: 50px;
     -unity-text-align: middle-left;
 }
 
-.mcp-server-status__value {
-    margin-left: 8px;
-    -unity-font-style: bold;
-}
-
-.mcp-server-status__value--running {
-    color: var(--mcp-text-green);
-}
-
-.mcp-server-status__value--stopped {
-    color: var(--mcp-text-red);
-}
 
 /* Server Controls Block */
+.mcp-server-controls__status-port-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.mcp-server-controls__status-label {
+    flex-grow: 1;
+}
+
 .mcp-server-controls__port-row {
     flex-direction: row;
     align-items: center;
-    margin-bottom: 8px;
 }
 
 .mcp-server-controls__port-label {
@@ -85,7 +81,7 @@
 .mcp-server-controls__toggle-button {
     height: 25px;
     font-size: 12px;
-    margin: 8px 0;
+    margin: 4px 0;
     -unity-font-style: bold;
 }
 

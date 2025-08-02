@@ -18,14 +18,12 @@ namespace io.github.hatayama.uLoopMCP
         private ScrollView _scrollView;
         
         // Section containers
-        private VisualElement _serverStatusContainer;
         private VisualElement _serverControlsContainer;
         private Foldout _connectedToolsFoldout;
         private Foldout _editorConfigFoldout;
         private Foldout _securitySettingsFoldout;
         
         // View components
-        private ServerStatusView _serverStatusView;
         private ServerControlsView _serverControlsView;
         private ConnectedToolsView _connectedToolsView;
         private EditorConfigView _editorConfigView;
@@ -63,7 +61,6 @@ namespace io.github.hatayama.uLoopMCP
             
             // Query containers
             _scrollView = _root.Q<ScrollView>(McpUIToolkitConstants.ELEMENT_MAIN_SCROLL_VIEW);
-            _serverStatusContainer = _root.Q<VisualElement>(McpUIToolkitConstants.ELEMENT_SERVER_STATUS);
             _serverControlsContainer = _root.Q<VisualElement>(McpUIToolkitConstants.ELEMENT_SERVER_CONTROLS);
             _connectedToolsFoldout = _root.Q<Foldout>(McpUIToolkitConstants.ELEMENT_CONNECTED_TOOLS);
             _editorConfigFoldout = _root.Q<Foldout>(McpUIToolkitConstants.ELEMENT_EDITOR_CONFIG);
@@ -71,7 +68,6 @@ namespace io.github.hatayama.uLoopMCP
             
             // Debug log for container queries
             Debug.Log($"ScrollView found: {_scrollView != null}");
-            Debug.Log($"ServerStatus found: {_serverStatusContainer != null}");
             Debug.Log($"ServerControls found: {_serverControlsContainer != null}");
             Debug.Log($"ConnectedTools found: {_connectedToolsFoldout != null}");
             Debug.Log($"EditorConfig found: {_editorConfigFoldout != null}");
@@ -98,9 +94,6 @@ namespace io.github.hatayama.uLoopMCP
         
         private void InitializeSubViews()
         {
-            if (_serverStatusContainer != null)
-                _serverStatusView = new(_serverStatusContainer);
-            
             if (_serverControlsContainer != null)
                 _serverControlsView = new(_serverControlsContainer);
             
@@ -112,11 +105,6 @@ namespace io.github.hatayama.uLoopMCP
             
             if (_securitySettingsFoldout != null)
                 _securitySettingsView = new(_securitySettingsFoldout);
-        }
-        
-        public void UpdateServerStatus(ServerStatusData data)
-        {
-            _serverStatusView?.Update(data);
         }
         
         public void UpdateServerControls(ServerControlsData data, Action toggleCallback, 

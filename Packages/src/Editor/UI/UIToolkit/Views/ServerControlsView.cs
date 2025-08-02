@@ -11,6 +11,7 @@ namespace io.github.hatayama.uLoopMCP
     public class ServerControlsView
     {
         private readonly VisualElement _container;
+        private Label _statusLabel;
         private IntegerField _portField;
         private Button _toggleButton;
         private Toggle _autoStartToggle;
@@ -34,20 +35,27 @@ namespace io.github.hatayama.uLoopMCP
             _container.Clear();
             _container.AddToClassList("mcp-server-controls");
             
-            // Port configuration row
-            VisualElement portRow = new();
-            portRow.AddToClassList("mcp-server-controls__port-row");
+            // Status and Port row
+            VisualElement statusPortRow = new();
+            statusPortRow.AddToClassList("mcp-server-controls__status-port-row");
             
+            // Status label
+            _statusLabel = new Label();
+            _statusLabel.AddToClassList("mcp-server-controls__status-label");
+            _statusLabel.enableRichText = true;
+            statusPortRow.Add(_statusLabel);
+            
+            // Port label
             Label portLabel = new("Port:");
             portLabel.AddToClassList("mcp-server-controls__port-label");
-            portRow.Add(portLabel);
+            statusPortRow.Add(portLabel);
             
             _portField = new IntegerField();
             _portField.AddToClassList("mcp-server-controls__port-field");
             _portField.RegisterValueChangedCallback(OnPortChanged);
-            portRow.Add(_portField);
+            statusPortRow.Add(_portField);
             
-            _container.Add(portRow);
+            _container.Add(statusPortRow);
             
             // Port warning message
             _portWarningBox = new();
@@ -90,6 +98,12 @@ namespace io.github.hatayama.uLoopMCP
             _toggleCallback = toggleCallback;
             _autoStartCallback = autoStartCallback;
             _portCallback = portCallback;
+            
+            // Update status label
+            string statusText = data.IsServerRunning ? 
+                "Status: <b><color=#4CAF50>Running</color></b>" : 
+                "Status: <b><color=#F44336>Stopped</color></b>";
+            _statusLabel.text = statusText;
             
             // Update port field
             _portField.SetValueWithoutNotify(data.CustomPort);

@@ -15,7 +15,6 @@ namespace io.github.hatayama.uLoopMCP
         
         // Element names
         public const string ELEMENT_MAIN_SCROLL_VIEW = "main-scroll-view";
-        public const string ELEMENT_SERVER_STATUS = "server-status";
         public const string ELEMENT_SERVER_CONTROLS = "server-controls";
         public const string ELEMENT_CONNECTED_TOOLS = "connected-tools";
         public const string ELEMENT_EDITOR_CONFIG = "editor-config";

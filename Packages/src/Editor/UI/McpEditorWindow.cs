@@ -628,11 +628,7 @@ namespace io.github.hatayama.uLoopMCP
                 UpdateMainScrollPosition(currentScrollPosition);
             }
 
-            // Update server status
-            ServerStatusData statusData = CreateServerStatusData();
-            _uitView.UpdateServerStatus(statusData);
-
-            // Update server controls
+            // Update server controls (now includes status)
             ServerControlsData controlsData = CreateServerControlsData();
             _uitView.UpdateServerControls(controlsData, ToggleServer,
                 UpdateAutoStartServer, UpdateCustomPort);
