@@ -141,7 +141,11 @@ namespace io.github.hatayama.uLoopMCP
         
         private void OnFoldoutChanged(ChangeEvent<bool> evt)
         {
-            _foldoutCallback?.Invoke(evt.newValue);
+            // Only process events from the foldout itself, not from child elements
+            if (evt.target == _foldout)
+            {
+                _foldoutCallback?.Invoke(evt.newValue);
+            }
         }
         
         private void OnEnableTestsChanged(ChangeEvent<bool> evt)
