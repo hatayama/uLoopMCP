@@ -228,8 +228,21 @@
 /* Enum field styles */
 .mcp-enum-field {
     flex-grow: 1;
-    max-width: 200px;
+    flex-shrink: 1;
     min-width: 100px;
+    margin: 0;
+    padding: 0;
+}
+
+/* Editor config specific styles */
+.mcp-editor-config__row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.mcp-editor-config__label {
+    min-width: 50px;
 }
 
 /* Security settings specific styles */

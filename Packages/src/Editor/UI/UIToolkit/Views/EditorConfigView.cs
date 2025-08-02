@@ -50,12 +50,10 @@ namespace io.github.hatayama.uLoopMCP
             
             // Editor type selection row
             VisualElement editorRow = new();
-            editorRow.style.flexDirection = FlexDirection.Row;
-            editorRow.style.alignItems = Align.Center;
-            editorRow.style.marginBottom = 8;
+            editorRow.AddToClassList("mcp-editor-config__row");
             
             Label targetLabel = new("Target:");
-            targetLabel.style.minWidth = 50;
+            targetLabel.AddToClassList("mcp-editor-config__label");
             editorRow.Add(targetLabel);
             
             _editorTypeField = new EnumField(McpEditorType.Cursor);
