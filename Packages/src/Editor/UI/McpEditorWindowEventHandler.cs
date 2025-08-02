@@ -17,12 +17,16 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     internal class McpEditorWindowEventHandler
     {
-        private readonly McpEditorModel _model;
         private readonly McpEditorWindow _window;
+        
+        // Runtime state tracking
+        private bool _lastServerRunning;
+        private int _lastServerPort;
+        private int _lastConnectedClientsCount;
+        private string _lastClientsInfoHash = "";
 
-        public McpEditorWindowEventHandler(McpEditorModel model, McpEditorWindow window)
+        public McpEditorWindowEventHandler(McpEditorWindow window)
         {
-            _model = model;
             _window = window;
         }
 
@@ -103,13 +107,10 @@ namespace io.github.hatayama.uLoopMCP
             McpServerController.ClearReconnectingFlag();
             
             // Mark that repaint is needed since events are called from background thread
-            _model.RequestRepaint();
+            _window.RequestRepaint();
 
             // Exit post-compile mode when client connects
-            if (_model.Runtime.IsPostCompileMode)
-            {
-                _model.DisablePostCompileMode();
-            }
+            _window.DisablePostCompileMode();
         }
 
         /// <summary>
@@ -123,7 +124,7 @@ namespace io.github.hatayama.uLoopMCP
             
             
             // Mark that repaint is needed since events are called from background thread
-            _model.RequestRepaint();
+            _window.RequestRepaint();
         }
 
         /// <summary>
@@ -134,17 +135,9 @@ namespace io.github.hatayama.uLoopMCP
             // Always check for server state changes
             CheckServerStateChanges();
 
-            // In post-compile mode, always repaint for immediate updates
-            if (_model.Runtime.IsPostCompileMode)
+            // Always repaint if window requests it
+            if (_window.NeedsRepaint())
             {
-                _window.Repaint();
-                return;
-            }
-
-            // Normal mode: repaint only when needed
-            if (_model.Runtime.NeedsRepaint)
-            {
-                _model.ClearRepaintRequest();
                 _window.Repaint();
             }
         }
@@ -162,13 +155,16 @@ namespace io.github.hatayama.uLoopMCP
             string clientsInfoHash = GenerateClientsInfoHash(connectedClients);
 
             // Check if any server state has changed
-            if (isRunning != _model.Runtime.LastServerRunning ||
-                port != _model.Runtime.LastServerPort ||
-                connectedCount != _model.Runtime.LastConnectedClientsCount ||
-                clientsInfoHash != _model.Runtime.LastClientsInfoHash)
+            if (isRunning != _lastServerRunning ||
+                port != _lastServerPort ||
+                connectedCount != _lastConnectedClientsCount ||
+                clientsInfoHash != _lastClientsInfoHash)
             {
-                _model.UpdateServerStateTracking(isRunning, port, connectedCount, clientsInfoHash);
-                _model.RequestRepaint();
+                _lastServerRunning = isRunning;
+                _lastServerPort = port;
+                _lastConnectedClientsCount = connectedCount;
+                _lastClientsInfoHash = clientsInfoHash;
+                _window.RequestRepaint();
             }
         }
 

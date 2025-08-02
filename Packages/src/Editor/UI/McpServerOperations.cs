@@ -15,12 +15,12 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     internal class McpServerOperations
     {
-        private readonly McpEditorModel _model;
+        private readonly McpEditorWindow _window;
         private readonly McpEditorWindowEventHandler _eventHandler;
 
-        public McpServerOperations(McpEditorModel model, McpEditorWindowEventHandler eventHandler)
+        public McpServerOperations(McpEditorWindow window, McpEditorWindowEventHandler eventHandler)
         {
-            _model = model;
+            _window = window;
             _eventHandler = eventHandler;
         }
 
@@ -57,7 +57,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>True if successful</returns>
         private bool ValidatePortAndStartServer(bool showErrorDialogs)
         {
-            int currentPort = _model.UI.CustomPort;
+            int currentPort = _window.CustomPort;
             
             // Validate port range
             bool portInValidRange = currentPort >= McpServerConfig.MIN_PORT_NUMBER && 

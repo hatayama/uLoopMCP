@@ -34,8 +34,53 @@ namespace io.github.hatayama.uLoopMCP
         private McpConfigServiceFactory _configServiceFactory;
 
 
-        // Model layer (MVP pattern)
-        private McpEditorModel _model;
+        // State fields (simplified from previous Model layer)
+        private int _customPort;
+        private bool _autoStartServer;
+        private bool _showLLMToolSettings;
+        private bool _showConnectedTools;
+        private McpEditorType _selectedEditorType;
+        private Vector2 _mainScrollPosition;
+        private bool _showSecuritySettings;
+        
+        // Runtime state
+        private bool _isPostCompileMode;
+        private bool _needsRepaint;
+
+        // Public properties for state access
+        public int CustomPort => _customPort;
+
+        /// <summary>
+        /// Request UI repaint
+        /// </summary>
+        public void RequestRepaint()
+        {
+            _needsRepaint = true;
+        }
+
+        /// <summary>
+        /// Check if repaint is needed
+        /// </summary>
+        public bool NeedsRepaint()
+        {
+            if (_isPostCompileMode || _needsRepaint)
+            {
+                _needsRepaint = false;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Disable post-compile mode
+        /// </summary>
+        public void DisablePostCompileMode()
+        {
+            if (_isPostCompileMode)
+            {
+                _isPostCompileMode = false;
+            }
+        }
 
         // Event handler (MVP pattern helper)
         private McpEditorWindowEventHandler _eventHandler;
@@ -82,7 +127,16 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void InitializeModel()
         {
-            _model = new McpEditorModel();
+            // Initialize state with defaults
+            _customPort = McpServerConfig.DEFAULT_PORT;
+            _autoStartServer = false;
+            _showLLMToolSettings = true;
+            _showConnectedTools = true;
+            _selectedEditorType = McpEditorType.Cursor;
+            _mainScrollPosition = default;
+            _showSecuritySettings = false;
+            _isPostCompileMode = false;
+            _needsRepaint = false;
         }
 
         /// <summary>
@@ -122,7 +176,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void InitializeEventHandler()
         {
-            _eventHandler = new McpEditorWindowEventHandler(_model, this);
+            _eventHandler = new McpEditorWindowEventHandler(this);
             _eventHandler.Initialize();
         }
 
@@ -131,7 +185,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void InitializeServerOperations()
         {
-            _serverOperations = new McpServerOperations(_model, _eventHandler);
+            _serverOperations = new McpServerOperations(this, _eventHandler);
         }
 
         /// <summary>
@@ -139,7 +193,10 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void LoadSavedSettings()
         {
-            _model.LoadFromSettings();
+            McpEditorSettingsData settings = McpEditorSettings.GetSettings();
+            _customPort = settings.customPort;
+            _autoStartServer = settings.autoStartServer;
+            _showSecuritySettings = settings.showSecuritySettings;
         }
 
         /// <summary>
@@ -147,7 +204,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void RestoreSessionState()
         {
-            _model.LoadFromSessionState();
+            _selectedEditorType = McpEditorSettings.GetSelectedEditorType();
         }
 
 
@@ -157,7 +214,8 @@ namespace io.github.hatayama.uLoopMCP
         private void HandlePostCompileMode()
         {
             // Enable post-compile mode after domain reload
-            _model.EnablePostCompileMode();
+            _isPostCompileMode = true;
+            _needsRepaint = true;
 
             // Clear reconnecting UI flag on domain reload to ensure proper state
             McpEditorSettings.SetShowReconnectingUI(false);
@@ -168,7 +226,7 @@ namespace io.github.hatayama.uLoopMCP
             // Grace period is already started in OnEnable() if needed
 
             // Determine if server should be started automatically
-            bool shouldStartAutomatically = isAfterCompile || _model.UI.AutoStartServer;
+            bool shouldStartAutomatically = isAfterCompile || _autoStartServer;
             bool serverNotRunning = !McpServerController.IsServerRunning;
             bool shouldStartServer = shouldStartAutomatically && serverNotRunning;
 
@@ -180,11 +238,11 @@ namespace io.github.hatayama.uLoopMCP
 
                     // Use saved port number
                     int savedPort = McpEditorSettings.GetServerPort();
-                    bool portNeedsUpdate = savedPort != _model.UI.CustomPort;
+                    bool portNeedsUpdate = savedPort != _customPort;
 
                     if (portNeedsUpdate)
                     {
-                        _model.UpdateCustomPort(savedPort);
+                        UpdateCustomPort(savedPort);
                     }
                 }
 
@@ -212,7 +270,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void SaveSessionState()
         {
-            _model.SaveToSessionState();
+            McpEditorSettings.SetSelectedEditorType(_selectedEditorType);
         }
 
         /// <summary>
@@ -236,11 +294,11 @@ namespace io.github.hatayama.uLoopMCP
             if (serverIsRunning)
             {
                 int actualServerPort = McpServerController.ServerPort;
-                bool portMismatch = _model.UI.CustomPort != actualServerPort;
+                bool portMismatch = _customPort != actualServerPort;
 
                 if (portMismatch)
                 {
-                    _model.UpdateCustomPort(actualServerPort);
+                    UpdateCustomPort(actualServerPort);
                 }
             }
         }
@@ -271,7 +329,7 @@ namespace io.github.hatayama.uLoopMCP
             if (!isRunning)
             {
                 // Check if requested port is valid and available
-                int requestedPort = _model.UI.CustomPort;
+                int requestedPort = _customPort;
 
                 // First check if port is valid
                 if (!McpPortValidator.ValidatePort(requestedPort))
@@ -287,7 +345,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            return new ServerControlsData(_model.UI.CustomPort, _model.UI.AutoStartServer, isRunning, !isRunning, hasPortWarning, portWarningMessage);
+            return new ServerControlsData(_customPort, _autoStartServer, isRunning, !isRunning, hasPortWarning, portWarningMessage);
         }
 
         /// <summary>
@@ -355,7 +413,7 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorSettings.ClearPostCompileReconnectingUI();
             }
 
-            return new ConnectedToolsData(connectedClients, _model.UI.ShowConnectedTools, isServerRunning, showReconnectingUI);
+            return new ConnectedToolsData(connectedClients, _showConnectedTools, isServerRunning, showReconnectingUI);
         }
 
         /// <summary>
@@ -374,7 +432,7 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                McpConfigService configService = GetConfigService(_model.UI.SelectedEditorType);
+                McpConfigService configService = GetConfigService(_selectedEditorType);
                 isConfigured = configService.IsConfigured();
 
                 // Check for port mismatch if configured
@@ -391,12 +449,12 @@ namespace io.github.hatayama.uLoopMCP
                     else
                     {
                         // When server is not running, check if UI port matches configured port
-                        hasPortMismatch = _model.UI.CustomPort != configuredPort;
+                        hasPortMismatch = _customPort != configuredPort;
                     }
                 }
 
                 // Check if update is needed
-                int portToCheck = isServerRunning ? currentPort : _model.UI.CustomPort;
+                int portToCheck = isServerRunning ? currentPort : _customPort;
                 isUpdateNeeded = configService.IsUpdateNeeded(portToCheck);
             }
             catch (Exception ex)
@@ -405,7 +463,7 @@ namespace io.github.hatayama.uLoopMCP
                 isUpdateNeeded = true; // If error occurs, assume update is needed
             }
 
-            return new EditorConfigData(_model.UI.SelectedEditorType, _model.UI.ShowLLMToolSettings, isServerRunning, currentPort, isConfigured, hasPortMismatch, configurationError, isUpdateNeeded);
+            return new EditorConfigData(_selectedEditorType, _showLLMToolSettings, isServerRunning, currentPort, isConfigured, hasPortMismatch, configurationError, isUpdateNeeded);
         }
 
         /// <summary>
@@ -414,7 +472,7 @@ namespace io.github.hatayama.uLoopMCP
         private SecuritySettingsData CreateSecuritySettingsData()
         {
             return new SecuritySettingsData(
-                _model.UI.ShowSecuritySettings,
+                _showSecuritySettings,
                 McpEditorSettings.GetEnableTestsExecution(),
                 McpEditorSettings.GetAllowMenuItemExecution(),
                 McpEditorSettings.GetAllowThirdPartyTools());
@@ -425,9 +483,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void ConfigureEditor()
         {
-            McpConfigService configService = GetConfigService(_model.UI.SelectedEditorType);
+            McpConfigService configService = GetConfigService(_selectedEditorType);
             bool isServerRunning = McpServerController.IsServerRunning;
-            int portToUse = isServerRunning ? McpServerController.ServerPort : _model.UI.CustomPort;
+            int portToUse = isServerRunning ? McpServerController.ServerPort : _customPort;
 
             configService.AutoConfigure(portToUse);
             Repaint();
@@ -468,7 +526,8 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateAutoStartServer(bool autoStart)
         {
-            _model.UpdateAutoStartServer(autoStart);
+            _autoStartServer = autoStart;
+            McpEditorSettings.SetAutoStartServer(autoStart);
         }
 
         /// <summary>
@@ -476,7 +535,11 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateCustomPort(int port)
         {
-            _model.UpdateCustomPort(port);
+            _customPort = port;
+            McpEditorSettings.SetCustomPort(port);
+            
+            // Automatically update all configured MCP editor settings with new port
+            McpPortChangeUpdater.UpdateAllConfigurationsForPortChange(port, "UI port change");
         }
 
         /// <summary>
@@ -484,7 +547,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateShowConnectedTools(bool show)
         {
-            _model.UpdateShowConnectedTools(show);
+            _showConnectedTools = show;
         }
 
         /// <summary>
@@ -492,7 +555,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateShowLLMToolSettings(bool show)
         {
-            _model.UpdateShowLLMToolSettings(show);
+            _showLLMToolSettings = show;
         }
 
         /// <summary>
@@ -500,7 +563,8 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateSelectedEditorType(McpEditorType type)
         {
-            _model.UpdateSelectedEditorType(type);
+            _selectedEditorType = type;
+            McpEditorSettings.SetSelectedEditorType(type);
         }
 
         /// <summary>
@@ -508,7 +572,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateMainScrollPosition(Vector2 position)
         {
-            _model.UpdateMainScrollPosition(position);
+            _mainScrollPosition = position;
         }
 
         /// <summary>
@@ -516,7 +580,8 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateShowSecuritySettings(bool show)
         {
-            _model.UpdateShowSecuritySettings(show);
+            _showSecuritySettings = show;
+            McpEditorSettings.SetShowSecuritySettings(show);
         }
 
         /// <summary>
@@ -524,7 +589,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateEnableTestsExecution(bool enable)
         {
-            _model.UpdateEnableTestsExecution(enable);
+            McpEditorSettings.SetEnableTestsExecution(enable);
         }
 
         /// <summary>
@@ -532,7 +597,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateAllowMenuItemExecution(bool allow)
         {
-            _model.UpdateAllowMenuItemExecution(allow);
+            McpEditorSettings.SetAllowMenuItemExecution(allow);
         }
 
         /// <summary>
@@ -540,7 +605,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateAllowThirdPartyTools(bool allow)
         {
-            _model.UpdateAllowThirdPartyTools(allow);
+            McpEditorSettings.SetAllowThirdPartyTools(allow);
         }
 
 
@@ -619,7 +684,7 @@ namespace io.github.hatayama.uLoopMCP
 
             // Update scroll position
             Vector2 currentScrollPosition = _uitView.GetScrollPosition();
-            if (currentScrollPosition != _model.UI.MainScrollPosition)
+            if (currentScrollPosition != _mainScrollPosition)
             {
                 UpdateMainScrollPosition(currentScrollPosition);
             }
