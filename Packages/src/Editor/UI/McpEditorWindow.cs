@@ -13,7 +13,8 @@ namespace io.github.hatayama.uLoopMCP
     /// Coordinates between Model, View, and helper classes for server management
     /// Related classes:
     /// - McpEditorModel: Model layer for state management and business logic
-    /// - McpEditorWindowView: View layer for UI rendering
+    /// - McpEditorWindowUITView: UI Toolkit view layer for UI rendering
+    /// - ServerControlsView, ConnectedToolsView, EditorConfigView, SecuritySettingsView: UI Toolkit view components
     /// - McpEditorWindowEventHandler: Event management helper (Unity/Server events)
     /// - McpServerOperations: Server operations helper (start/stop/validation)
     /// - McpEditorWindowState: State objects (UIState, RuntimeState, DebugState)

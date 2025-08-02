@@ -1,7 +1,7 @@
 /* Unity標準のダークテーマ色を維持 */
 :root {
     --mcp-background-dark: #383838;
-    --mcp-section-background: #393939;
+    --mcp-section-background: #333333;
     --mcp-button-green: #5A9758;
     --mcp-button-green-hover: #6BA769;
     --mcp-text-green: #4CAF50;
