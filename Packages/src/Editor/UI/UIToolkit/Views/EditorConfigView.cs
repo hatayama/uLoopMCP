@@ -125,20 +125,16 @@ namespace io.github.hatayama.uLoopMCP
                             $"Update {GetEditorDisplayName(data.SelectedEditor)} Settings\n(Port {data.CurrentPort})" : 
                             $"Update {GetEditorDisplayName(data.SelectedEditor)} Settings";
                     }
-                    buttonEnabled = true;
                 }
                 else
                 {
-                    buttonText = data.IsServerRunning ? 
-                        $"Settings Already Configured\n(Port {data.CurrentPort})" : 
-                        $"Settings Already Configured\n(Port {data.CurrentPort})";
+                    buttonText = $"Settings Already Configured\n(Port {data.CurrentPort})";
                     buttonEnabled = false;
                 }
             }
             else
             {
                 buttonText = $"Settings not found.\nConfigure {GetEditorDisplayName(data.SelectedEditor)}";
-                buttonEnabled = true;
             }
             
             _configureButton.text = buttonText;

@@ -33,8 +33,6 @@ namespace io.github.hatayama.uLoopMCP
         
         public void Initialize()
         {
-            Debug.Log("=== McpEditorWindowUITView.Initialize() START ===");
-            
             // Load UXML from Resources (USSはUXML内で自動的に読み込まれる)
             VisualTreeAsset visualTree = Resources.Load<VisualTreeAsset>("McpEditorWindow");
             
@@ -43,21 +41,13 @@ namespace io.github.hatayama.uLoopMCP
                 Debug.LogError("Failed to load McpEditorWindow.uxml from Resources folder");
                 return;
             }
-            else
-            {
-                Debug.Log("UXML file loaded successfully");
-            }
-            
+
             _root = visualTree.CloneTree();
-            
             if (_root == null)
             {
                 Debug.LogError("Failed to clone visual tree");
                 return;
             }
-            
-            // Print hierarchy
-            PrintVisualElementHierarchy(_root, 0);
             
             // Query containers
             _scrollView = _root.Q<ScrollView>(McpUIToolkitCommonConstants.ELEMENT_MAIN_SCROLL_VIEW);
@@ -66,30 +56,8 @@ namespace io.github.hatayama.uLoopMCP
             _editorConfigFoldout = _root.Q<Foldout>(McpUIToolkitCommonConstants.ELEMENT_EDITOR_CONFIG);
             _securitySettingsFoldout = _root.Q<Foldout>(McpUIToolkitCommonConstants.ELEMENT_SECURITY_SETTINGS);
             
-            // Debug log for container queries
-            Debug.Log($"ScrollView found: {_scrollView != null}");
-            Debug.Log($"ServerControls found: {_serverControlsContainer != null}");
-            Debug.Log($"ConnectedTools found: {_connectedToolsFoldout != null}");
-            Debug.Log($"EditorConfig found: {_editorConfigFoldout != null}");
-            Debug.Log($"SecuritySettings found: {_securitySettingsFoldout != null}");
-            
             // Initialize sub-views
             InitializeSubViews();
-            
-            Debug.Log("=== McpEditorWindowUITView.Initialize() END ===");
-        }
-        
-        private void PrintVisualElementHierarchy(VisualElement element, int depth)
-        {
-            string indent = new string(' ', depth * 2);
-            string name = string.IsNullOrEmpty(element.name) ? "<unnamed>" : element.name;
-            string classes = element.GetClasses().Count() > 0 ? $" [{string.Join(", ", element.GetClasses())}]" : "";
-            Debug.Log($"{indent}{element.GetType().Name} - {name}{classes}");
-            
-            foreach (var child in element.Children())
-            {
-                PrintVisualElementHierarchy(child, depth + 1);
-            }
         }
         
         private void InitializeSubViews()
