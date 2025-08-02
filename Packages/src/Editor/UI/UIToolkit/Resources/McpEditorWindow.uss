@@ -21,11 +21,12 @@
 /* Element */
 .mcp-editor-window__scroll-view {
     flex-grow: 1;
+    padding: 0 4px;
 }
 
 /* Section base - Unity標準のhelpBoxスタイルを再現 */
 .mcp-section {
-    margin: 4px 4px 8px 4px;
+    margin: 4px 0 8px 0;
     padding: 8px;
     background-color: var(--mcp-section-background);
     border-radius: 3px;
@@ -152,8 +153,8 @@
 
 /* Foldout customization */
 .unity-foldout__toggle {
-    margin-left: 0;
-    padding-left: 15px;
+    margin-left: -2px;
+    padding-left: 0;
 }
 
 .unity-foldout__text {
