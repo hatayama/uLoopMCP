@@ -16,12 +16,10 @@ namespace io.github.hatayama.uLoopMCP
     internal class McpServerOperations
     {
         private readonly McpEditorWindow _window;
-        private readonly McpEditorWindowEventHandler _eventHandler;
 
-        public McpServerOperations(McpEditorWindow window, McpEditorWindowEventHandler eventHandler)
+        public McpServerOperations(McpEditorWindow window)
         {
             _window = window;
-            _eventHandler = eventHandler;
         }
 
         /// <summary>
@@ -92,7 +90,7 @@ namespace io.github.hatayama.uLoopMCP
                 McpServerController.StartServer(currentPort);
 
                 // Refresh server event subscriptions after successful start
-                _eventHandler.RefreshServerEventSubscriptions();
+                _window.RefreshServerEventSubscriptions();
 
                 return true;
             }

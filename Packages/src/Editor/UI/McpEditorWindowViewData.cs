@@ -8,22 +8,6 @@ namespace io.github.hatayama.uLoopMCP
     /// Related classes: McpEditorWindow, McpEditorWindowView
     /// </summary>
     
-    public record ServerStatusData
-    {
-        public readonly bool IsRunning;
-        public readonly int Port;
-        public readonly string Status;
-        public readonly Color StatusColor;
-
-        public ServerStatusData(bool isRunning, int port, string status, Color statusColor)
-        {
-            IsRunning = isRunning;
-            Port = port;
-            Status = status;
-            StatusColor = statusColor;
-        }
-    }
-    
     public record ServerControlsData
     {
         public readonly int CustomPort;

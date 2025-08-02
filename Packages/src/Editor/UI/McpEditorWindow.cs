@@ -82,8 +82,11 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        // Event handler (MVP pattern helper)
-        private McpEditorWindowEventHandler _eventHandler;
+        // Runtime state tracking (from EventHandler)
+        private bool _lastServerRunning;
+        private int _lastServerPort;
+        private int _lastConnectedClientsCount;
+        private string _lastClientsInfoHash = "";
 
         // Server operations handler (MVP pattern helper)
         private McpServerOperations _serverOperations;
@@ -103,10 +106,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             InitializeAll();
             StartBackgroundUpdates();
-        }
-
-        private void OnDestroy()
-        {
         }
 
         private void InitializeAll()
@@ -174,10 +173,16 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Initialize event handler
         /// </summary>
+        /// <summary>
+        /// Initialize event subscriptions
+        /// </summary>
         private void InitializeEventHandler()
         {
-            _eventHandler = new McpEditorWindowEventHandler(this);
-            _eventHandler.Initialize();
+            // Subscribe to Unity Editor events
+            EditorApplication.update += OnEditorUpdate;
+            
+            // Subscribe to server events
+            SubscribeToServerEvents();
         }
 
         /// <summary>
@@ -185,7 +190,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void InitializeServerOperations()
         {
-            _serverOperations = new McpServerOperations(this, _eventHandler);
+            _serverOperations = new McpServerOperations(this);
         }
 
         /// <summary>
@@ -258,11 +263,15 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Cleanup event handler
+        /// Cleanup event subscriptions
         /// </summary>
         private void CleanupEventHandler()
         {
-            _eventHandler?.Cleanup();
+            // Unsubscribe from Unity Editor events
+            EditorApplication.update -= OnEditorUpdate;
+            
+            // Unsubscribe from server events
+            UnsubscribeFromServerEvents();
         }
 
         /// <summary>
@@ -301,18 +310,6 @@ namespace io.github.hatayama.uLoopMCP
                     UpdateCustomPort(actualServerPort);
                 }
             }
-        }
-
-        /// <summary>
-        /// Create server status data for view rendering
-        /// </summary>
-        private ServerStatusData CreateServerStatusData()
-        {
-            (bool isRunning, int port, bool _) = McpServerController.GetServerStatus();
-            string status = isRunning ? "Running" : "Stopped";
-            Color statusColor = isRunning ? Color.green : Color.red;
-
-            return new ServerStatusData(isRunning, port, status, statusColor);
         }
 
         /// <summary>
@@ -709,6 +706,127 @@ namespace io.github.hatayama.uLoopMCP
                 UpdateEnableTestsExecution, UpdateAllowMenuItemExecution,
                 UpdateAllowThirdPartyTools);
         }
+
+        #region Event Handler Methods
+
+        /// <summary>
+        /// Subscribe to server events for immediate UI updates
+        /// </summary>
+        private void SubscribeToServerEvents()
+        {
+            // Unsubscribe first to avoid duplicate subscriptions
+            UnsubscribeFromServerEvents();
+
+            McpBridgeServer currentServer = McpServerController.CurrentServer;
+            if (currentServer != null)
+            {
+                currentServer.OnClientConnected += OnClientConnected;
+                currentServer.OnClientDisconnected += OnClientDisconnected;
+            }
+        }
+
+        /// <summary>
+        /// Unsubscribe from server events
+        /// </summary>
+        private void UnsubscribeFromServerEvents()
+        {
+            McpBridgeServer currentServer = McpServerController.CurrentServer;
+            if (currentServer != null)
+            {
+                currentServer.OnClientConnected -= OnClientConnected;
+                currentServer.OnClientDisconnected -= OnClientDisconnected;
+            }
+        }
+
+        /// <summary>
+        /// Handle client connection event - force UI repaint for immediate update
+        /// </summary>
+        private void OnClientConnected(string clientEndpoint)
+        {
+            // Clear reconnecting flags when client connects
+            McpServerController.ClearReconnectingFlag();
+            
+            // Mark that repaint is needed since events are called from background thread
+            RequestRepaint();
+
+            // Exit post-compile mode when client connects
+            DisablePostCompileMode();
+        }
+
+        /// <summary>
+        /// Handle client disconnection event - force UI repaint for immediate update
+        /// </summary>
+        private void OnClientDisconnected(string clientEndpoint)
+        {
+            // Mark that repaint is needed since events are called from background thread
+            RequestRepaint();
+        }
+
+        /// <summary>
+        /// Called from EditorApplication.update - handles UI refresh even when Unity is not focused
+        /// </summary>
+        private void OnEditorUpdate()
+        {
+            // Always check for server state changes
+            CheckServerStateChanges();
+
+            // Always repaint if window requests it
+            if (NeedsRepaint())
+            {
+                Repaint();
+            }
+        }
+
+        /// <summary>
+        /// Check if server state has changed and mark repaint if needed
+        /// </summary>
+        private void CheckServerStateChanges()
+        {
+            (bool isRunning, int port, bool _) = McpServerController.GetServerStatus();
+            var connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
+            int connectedCount = connectedClients?.Count ?? 0;
+
+            // Generate hash of client information to detect changes in client names
+            string clientsInfoHash = GenerateClientsInfoHash(connectedClients);
+
+            // Check if any server state has changed
+            if (isRunning != _lastServerRunning ||
+                port != _lastServerPort ||
+                connectedCount != _lastConnectedClientsCount ||
+                clientsInfoHash != _lastClientsInfoHash)
+            {
+                _lastServerRunning = isRunning;
+                _lastServerPort = port;
+                _lastConnectedClientsCount = connectedCount;
+                _lastClientsInfoHash = clientsInfoHash;
+                RequestRepaint();
+            }
+        }
+
+        /// <summary>
+        /// Generate hash string from client information to detect changes
+        /// </summary>
+        private string GenerateClientsInfoHash(IReadOnlyCollection<ConnectedClient> clients)
+        {
+            if (clients == null || clients.Count == 0)
+            {
+                return "empty";
+            }
+
+            // Create a hash based on endpoint and client name for unique identification
+            var info = clients.Select(c => $"{c.Endpoint}:{c.ClientName}").OrderBy(s => s);
+            return string.Join("|", info);
+        }
+
+        /// <summary>
+        /// Re-subscribe to server events (called after server start)
+        /// </summary>
+        public void RefreshServerEventSubscriptions()
+        {
+            SubscribeToServerEvents();
+        }
+
+        #endregion
 
         #endregion
     }
