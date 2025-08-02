@@ -32,63 +32,33 @@ namespace io.github.hatayama.uLoopMCP
         
         private void BuildUI()
         {
-            _container.Clear();
-            _container.AddToClassList("mcp-server-controls");
+            // UXMLで定義された要素を取得（動的生成から変更）
+            _statusLabel = _container.Q<Label>(McpUIToolkitConstants.ELEMENT_STATUS_LABEL);
+            _portField = _container.Q<IntegerField>(McpUIToolkitConstants.ELEMENT_PORT_FIELD);
+            _portWarningBox = _container.Q<VisualElement>(McpUIToolkitConstants.ELEMENT_PORT_WARNING_BOX);
+            _portWarningLabel = _portWarningBox?.Q<Label>(McpUIToolkitConstants.ELEMENT_PORT_WARNING_LABEL);
+            _toggleButton = _container.Q<Button>(McpUIToolkitConstants.ELEMENT_TOGGLE_BUTTON);
+            _autoStartToggle = _container.Q<Toggle>(McpUIToolkitConstants.ELEMENT_AUTO_START_TOGGLE);
+            _autoStartLabel = _container.Q<Label>(McpUIToolkitConstants.ELEMENT_AUTO_START_LABEL);
             
-            // Status and Port row
-            VisualElement statusPortRow = new();
-            statusPortRow.AddToClassList("mcp-server-controls__status-port-row");
-            
-            // Status label
-            _statusLabel = new Label();
-            _statusLabel.AddToClassList("mcp-server-controls__status-label");
-            _statusLabel.enableRichText = true;
-            statusPortRow.Add(_statusLabel);
-            
-            // Port label
-            Label portLabel = new("Port:");
-            portLabel.AddToClassList("mcp-server-controls__port-label");
-            statusPortRow.Add(portLabel);
-            
-            _portField = new IntegerField();
-            _portField.AddToClassList("mcp-server-controls__port-field");
-            _portField.RegisterValueChangedCallback(OnPortChanged);
-            statusPortRow.Add(_portField);
-            
-            _container.Add(statusPortRow);
-            
-            // Port warning message
-            _portWarningBox = new();
-            _portWarningBox.AddToClassList("mcp-helpbox");
-            _portWarningBox.AddToClassList("mcp-helpbox--warning");
-            _portWarningBox.style.display = DisplayStyle.None;
-            
-            _portWarningLabel = new();
-            _portWarningBox.Add(_portWarningLabel);
-            _container.Add(_portWarningBox);
-            
-            // Toggle server button
-            _toggleButton = new Button(OnToggleButtonClicked);
-            _toggleButton.AddToClassList("mcp-server-controls__toggle-button");
-            _container.Add(_toggleButton);
-            
-            // Auto start checkbox row
-            VisualElement autoStartRow = new();
-            autoStartRow.AddToClassList("mcp-server-controls__auto-start-row");
-            
-            _autoStartToggle = new Toggle();
-            _autoStartToggle.AddToClassList("mcp-server-controls__auto-start-toggle");
-            _autoStartToggle.RegisterValueChangedCallback(OnAutoStartChanged);
-            autoStartRow.Add(_autoStartToggle);
-            
-            _autoStartLabel = new Label("Auto Start Server");
-            _autoStartLabel.AddToClassList("mcp-server-controls__auto-start-label");
-            _autoStartLabel.RegisterCallback<ClickEvent>(evt => {
-                _autoStartToggle.value = !_autoStartToggle.value;
-            });
-            autoStartRow.Add(_autoStartLabel);
-            
-            _container.Add(autoStartRow);
+            // イベントハンドラーの登録
+            if (_portField != null)
+                _portField.RegisterValueChangedCallback(OnPortChanged);
+                
+            if (_toggleButton != null)
+                _toggleButton.clicked += OnToggleButtonClicked;
+                
+            if (_autoStartToggle != null)
+                _autoStartToggle.RegisterValueChangedCallback(OnAutoStartChanged);
+                
+            // ラベルクリックでトグルを切り替える機能
+            if (_autoStartLabel != null)
+            {
+                _autoStartLabel.RegisterCallback<ClickEvent>(evt => {
+                    if (_autoStartToggle != null)
+                        _autoStartToggle.value = !_autoStartToggle.value;
+                });
+            }
         }
         
         public void Update(ServerControlsData data, Action toggleCallback, 
@@ -124,13 +94,13 @@ namespace io.github.hatayama.uLoopMCP
             _toggleButton.text = data.IsServerRunning ? "Stop Server" : "Start Server";
             
             // Remove existing button classes
-            _toggleButton.RemoveFromClassList("mcp-server-controls__toggle-button--start");
-            _toggleButton.RemoveFromClassList("mcp-server-controls__toggle-button--stop");
+            _toggleButton.RemoveFromClassList(McpUIToolkitConstants.CLASS_MCP_SERVER_CONTROLS_TOGGLE_BUTTON_START);
+            _toggleButton.RemoveFromClassList(McpUIToolkitConstants.CLASS_MCP_SERVER_CONTROLS_TOGGLE_BUTTON_STOP);
             
             // Add appropriate button class
             string buttonClass = data.IsServerRunning ?
-                "mcp-server-controls__toggle-button--stop" :
-                "mcp-server-controls__toggle-button--start";
+                McpUIToolkitConstants.CLASS_MCP_SERVER_CONTROLS_TOGGLE_BUTTON_STOP :
+                McpUIToolkitConstants.CLASS_MCP_SERVER_CONTROLS_TOGGLE_BUTTON_START;
             _toggleButton.AddToClassList(buttonClass);
             
             // Update auto start toggle

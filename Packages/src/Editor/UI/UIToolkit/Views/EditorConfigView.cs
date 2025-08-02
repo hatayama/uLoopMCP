@@ -30,11 +30,11 @@ namespace io.github.hatayama.uLoopMCP
             _foldout.text = "LLM Tool Settings";
             
             // Get or create content container
-            _contentContainer = _foldout.Q<VisualElement>("editor-config-content");
+            _contentContainer = _foldout.Q<VisualElement>(McpUIToolkitConstants.ELEMENT_EDITOR_CONFIG_CONTENT);
             if (_contentContainer == null)
             {
                 _contentContainer = new();
-                _contentContainer.name = "editor-config-content";
+                _contentContainer.name = McpUIToolkitConstants.ELEMENT_EDITOR_CONFIG_CONTENT;
                 _foldout.Add(_contentContainer);
             }
             
@@ -46,44 +46,26 @@ namespace io.github.hatayama.uLoopMCP
         
         private void BuildUI()
         {
-            _contentContainer.Clear();
+            // UXMLで定義された要素を取得（動的生成から変更）
+            _editorTypeField = _contentContainer.Q<EnumField>(McpUIToolkitConstants.ELEMENT_EDITOR_TYPE_FIELD);
+            _errorBox = _contentContainer.Q<VisualElement>(McpUIToolkitConstants.ELEMENT_ERROR_BOX);
+            _errorLabel = _errorBox?.Q<Label>(McpUIToolkitConstants.ELEMENT_ERROR_LABEL);
+            _configureButton = _contentContainer.Q<Button>(McpUIToolkitConstants.ELEMENT_CONFIGURE_BUTTON);
+            _openSettingsButton = _contentContainer.Q<Button>(McpUIToolkitConstants.ELEMENT_OPEN_SETTINGS_BUTTON);
             
-            // Editor type selection row
-            VisualElement editorRow = new();
-            editorRow.AddToClassList("mcp-editor-config__row");
+            // EnumFieldの初期設定
+            if (_editorTypeField != null)
+            {
+                _editorTypeField.Init(McpEditorType.Cursor);
+                _editorTypeField.RegisterValueChangedCallback(OnEditorTypeChanged);
+            }
             
-            Label targetLabel = new("Target:");
-            targetLabel.AddToClassList("mcp-editor-config__label");
-            editorRow.Add(targetLabel);
-            
-            _editorTypeField = new EnumField(McpEditorType.Cursor);
-            _editorTypeField.AddToClassList("mcp-enum-field");
-            _editorTypeField.RegisterValueChangedCallback(OnEditorTypeChanged);
-            editorRow.Add(_editorTypeField);
-            
-            _contentContainer.Add(editorRow);
-            
-            // Error box (initially hidden)
-            _errorBox = new();
-            _errorBox.AddToClassList("mcp-helpbox");
-            _errorBox.AddToClassList("mcp-helpbox--error");
-            _errorBox.style.display = DisplayStyle.None;
-            
-            _errorLabel = new();
-            _errorBox.Add(_errorLabel);
-            _contentContainer.Add(_errorBox);
-            
-            // Configure button
-            _configureButton = new Button(OnConfigureButtonClicked);
-            _configureButton.AddToClassList("mcp-button");
-            _configureButton.AddToClassList("mcp-button--primary");
-            _contentContainer.Add(_configureButton);
-            
-            // Open settings file button
-            _openSettingsButton = new Button(OnOpenSettingsButtonClicked);
-            _openSettingsButton.AddToClassList("mcp-button");
-            _openSettingsButton.AddToClassList("mcp-button--secondary");
-            _contentContainer.Add(_openSettingsButton);
+            // イベントハンドラーの登録
+            if (_configureButton != null)
+                _configureButton.clicked += OnConfigureButtonClicked;
+                
+            if (_openSettingsButton != null)
+                _openSettingsButton.clicked += OnOpenSettingsButtonClicked;
         }
         
         public void Update(EditorConfigData data, Action<McpEditorType> editorCallback,
@@ -156,8 +138,8 @@ namespace io.github.hatayama.uLoopMCP
             _configureButton.SetEnabled(buttonEnabled);
             
             // Update button styling based on state
-            _configureButton.RemoveFromClassList("mcp-button--warning");
-            _configureButton.RemoveFromClassList("mcp-button--disabled");
+            _configureButton.RemoveFromClassList(McpUIToolkitConstants.CLASS_MCP_BUTTON_WARNING);
+            _configureButton.RemoveFromClassList(McpUIToolkitConstants.CLASS_MCP_BUTTON_DISABLED);
             
             if (!buttonEnabled)
             {

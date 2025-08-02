@@ -20,11 +20,11 @@ namespace io.github.hatayama.uLoopMCP
             _foldout.text = McpUIConstants.CONNECTED_TOOLS_FOLDOUT_TEXT;
             
             // Get or create content container
-            _contentContainer = _foldout.Q<VisualElement>("connected-tools-content");
+            _contentContainer = _foldout.Q<VisualElement>(McpUIToolkitConstants.ELEMENT_CONNECTED_TOOLS_CONTENT);
             if (_contentContainer == null)
             {
                 _contentContainer = new();
-                _contentContainer.name = "connected-tools-content";
+                _contentContainer.name = McpUIToolkitConstants.ELEMENT_CONNECTED_TOOLS_CONTENT;
                 _foldout.Add(_contentContainer);
             }
             
@@ -89,21 +89,21 @@ namespace io.github.hatayama.uLoopMCP
         private void AddClientItem(ConnectedClient client)
         {
             VisualElement clientItem = new();
-            clientItem.AddToClassList("mcp-connected-tools__client-item");
+            clientItem.AddToClassList(McpUIToolkitConstants.CLASS_MCP_CONNECTED_TOOLS_CLIENT_ITEM);
             
             // Client icon
             Label iconLabel = new(McpUIConstants.CLIENT_ICON);
-            iconLabel.AddToClassList("mcp-connected-tools__client-icon");
+            iconLabel.AddToClassList(McpUIToolkitConstants.CLASS_MCP_CONNECTED_TOOLS_CLIENT_ICON);
             clientItem.Add(iconLabel);
             
             // Client name
             Label nameLabel = new(client.ClientName);
-            nameLabel.AddToClassList("mcp-connected-tools__client-name");
+            nameLabel.AddToClassList(McpUIToolkitConstants.CLASS_MCP_CONNECTED_TOOLS_CLIENT_NAME);
             clientItem.Add(nameLabel);
             
             // Client port
             Label portLabel = new($":{client.Port}");
-            portLabel.AddToClassList("mcp-connected-tools__client-port");
+            portLabel.AddToClassList(McpUIToolkitConstants.CLASS_MCP_CONNECTED_TOOLS_CLIENT_PORT);
             clientItem.Add(portLabel);
             
             _contentContainer.Add(clientItem);
@@ -112,18 +112,18 @@ namespace io.github.hatayama.uLoopMCP
         private void ShowHelpBox(string message, McpMessageType type)
         {
             VisualElement helpBox = new();
-            helpBox.AddToClassList("mcp-helpbox");
+            helpBox.AddToClassList(McpUIToolkitConstants.CLASS_MCP_HELPBOX);
             
             switch (type)
             {
                 case McpMessageType.Info:
-                    helpBox.AddToClassList("mcp-helpbox--info");
+                    helpBox.AddToClassList(McpUIToolkitConstants.CLASS_MCP_HELPBOX_INFO);
                     break;
                 case McpMessageType.Warning:
-                    helpBox.AddToClassList("mcp-helpbox--warning");
+                    helpBox.AddToClassList(McpUIToolkitConstants.CLASS_MCP_HELPBOX_WARNING);
                     break;
                 case McpMessageType.Error:
-                    helpBox.AddToClassList("mcp-helpbox--error");
+                    helpBox.AddToClassList(McpUIToolkitConstants.CLASS_MCP_HELPBOX_ERROR);
                     break;
             }
             

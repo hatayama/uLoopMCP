@@ -4,7 +4,26 @@
         <ui:ScrollView name="main-scroll-view" class="mcp-editor-window__scroll-view">
             <!-- Server Controls (with integrated status) -->
             <ui:VisualElement name="server-controls" class="mcp-section mcp-server-controls">
-                <!-- Content injected by C# -->
+                <!-- Status and Port row -->
+                <ui:VisualElement class="mcp-server-controls__status-port-row">
+                    <ui:Label name="status-label" class="mcp-server-controls__status-label" enable-rich-text="true" />
+                    <ui:Label text="Port:" class="mcp-server-controls__port-label" />
+                    <uie:IntegerField name="port-field" class="mcp-server-controls__port-field" />
+                </ui:VisualElement>
+                
+                <!-- Port warning message -->
+                <ui:VisualElement name="port-warning-box" class="mcp-helpbox mcp-helpbox--warning" style="display: none;">
+                    <ui:Label name="port-warning-label" />
+                </ui:VisualElement>
+                
+                <!-- Toggle server button -->
+                <ui:Button name="toggle-button" class="mcp-server-controls__toggle-button" />
+                
+                <!-- Auto start checkbox row -->
+                <ui:VisualElement class="mcp-server-controls__auto-start-row">
+                    <ui:Toggle name="auto-start-toggle" class="mcp-server-controls__auto-start-toggle" />
+                    <ui:Label name="auto-start-label" text="Auto Start Server" class="mcp-server-controls__auto-start-label" />
+                </ui:VisualElement>
             </ui:VisualElement>
             
             <!-- Connected Tools -->
@@ -17,14 +36,53 @@
             <!-- Editor Config -->
             <ui:Foldout name="editor-config" class="mcp-section mcp-editor-config">
                 <ui:VisualElement name="editor-config-content">
-                    <!-- Content injected by C# -->
+                    <!-- Editor type selection row -->
+                    <ui:VisualElement class="mcp-editor-config__row">
+                        <ui:Label text="Target:" class="mcp-editor-config__label" />
+                        <uie:EnumField name="editor-type-field" class="mcp-enum-field" />
+                    </ui:VisualElement>
+                    
+                    <!-- Error box (initially hidden) -->
+                    <ui:VisualElement name="error-box" class="mcp-helpbox mcp-helpbox--error" style="display: none;">
+                        <ui:Label name="error-label" />
+                    </ui:VisualElement>
+                    
+                    <!-- Configure button -->
+                    <ui:Button name="configure-button" class="mcp-button mcp-button--primary" />
+                    
+                    <!-- Open settings file button -->
+                    <ui:Button name="open-settings-button" class="mcp-button mcp-button--secondary" />
                 </ui:VisualElement>
             </ui:Foldout>
             
             <!-- Security Settings -->
             <ui:Foldout name="security-settings" class="mcp-section mcp-security-settings">
                 <ui:VisualElement name="security-settings-content">
-                    <!-- Content injected by C# -->
+                    <!-- Security warning -->
+                    <ui:VisualElement class="mcp-helpbox mcp-helpbox--error">
+                        <ui:Label text="These settings control dangerous MCP operations. Only enable if you trust the AI system.&#10;&#10;For safer operation, consider using sandbox environments or containers.&#10;&#10;Changes take effect immediately - no server restart required." />
+                    </ui:VisualElement>
+                    
+                    <!-- Space after warning -->
+                    <ui:VisualElement style="height: 8px;" />
+                    
+                    <!-- Enable Tests Execution -->
+                    <ui:VisualElement class="mcp-security-settings__toggle-row">
+                        <ui:Toggle name="enable-tests-toggle" class="mcp-security-settings__toggle" />
+                        <ui:Label name="enable-tests-label" text="Allow Tests Execution" class="mcp-security-settings__label" />
+                    </ui:VisualElement>
+                    
+                    <!-- Allow Menu Item Execution -->
+                    <ui:VisualElement class="mcp-security-settings__toggle-row">
+                        <ui:Toggle name="allow-menu-toggle" class="mcp-security-settings__toggle" />
+                        <ui:Label name="allow-menu-label" text="Allow Menu Item Execution" class="mcp-security-settings__label" />
+                    </ui:VisualElement>
+                    
+                    <!-- Allow Third Party Tools -->
+                    <ui:VisualElement class="mcp-security-settings__toggle-row">
+                        <ui:Toggle name="allow-third-party-toggle" class="mcp-security-settings__toggle" />
+                        <ui:Label name="allow-third-party-label" text="Allow Third Party Tools" class="mcp-security-settings__label" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
             </ui:Foldout>
         </ui:ScrollView>

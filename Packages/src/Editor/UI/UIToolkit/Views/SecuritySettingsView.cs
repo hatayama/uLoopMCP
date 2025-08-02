@@ -30,11 +30,11 @@ namespace io.github.hatayama.uLoopMCP
             _foldout.text = "Security Settings";
             
             // Get or create content container
-            _contentContainer = _foldout.Q<VisualElement>("security-settings-content");
+            _contentContainer = _foldout.Q<VisualElement>(McpUIToolkitConstants.ELEMENT_SECURITY_SETTINGS_CONTENT);
             if (_contentContainer == null)
             {
                 _contentContainer = new();
-                _contentContainer.name = "security-settings-content";
+                _contentContainer.name = McpUIToolkitConstants.ELEMENT_SECURITY_SETTINGS_CONTENT;
                 _foldout.Add(_contentContainer);
             }
             
@@ -46,73 +46,38 @@ namespace io.github.hatayama.uLoopMCP
         
         private void BuildUI()
         {
-            _contentContainer.Clear();
+            // UXMLで定義された要素を取得（動的生成から変更）
+            _enableTestsToggle = _contentContainer.Q<Toggle>(McpUIToolkitConstants.ELEMENT_ENABLE_TESTS_TOGGLE);
+            _enableTestsLabel = _contentContainer.Q<Label>(McpUIToolkitConstants.ELEMENT_ENABLE_TESTS_LABEL);
+            _allowMenuToggle = _contentContainer.Q<Toggle>(McpUIToolkitConstants.ELEMENT_ALLOW_MENU_TOGGLE);
+            _allowMenuLabel = _contentContainer.Q<Label>(McpUIToolkitConstants.ELEMENT_ALLOW_MENU_LABEL);
+            _allowThirdPartyToggle = _contentContainer.Q<Toggle>(McpUIToolkitConstants.ELEMENT_ALLOW_THIRD_PARTY_TOGGLE);
+            _allowThirdPartyLabel = _contentContainer.Q<Label>(McpUIToolkitConstants.ELEMENT_ALLOW_THIRD_PARTY_LABEL);
             
-            // Security warning
-            VisualElement warningBox = new();
-            warningBox.AddToClassList("mcp-helpbox");
-            warningBox.AddToClassList("mcp-helpbox--error");
-            
-            Label warningLabel = new("These settings control dangerous MCP operations. Only enable if you trust the AI system.\n\nFor safer operation, consider using sandbox environments or containers.\n\nChanges take effect immediately - no server restart required.");
-            warningBox.Add(warningLabel);
-            
-            _contentContainer.Add(warningBox);
-            
-            // Space after warning
-            VisualElement spacer = new();
-            spacer.style.height = 8;
-            _contentContainer.Add(spacer);
-            
-            // Enable Tests Execution
-            VisualElement testsRow = CreateToggleRow(
-                out _enableTestsToggle,
-                out _enableTestsLabel,
-                "Allow Tests Execution",
-                OnEnableTestsChanged
-            );
-            _contentContainer.Add(testsRow);
-            
-            // Allow Menu Item Execution
-            VisualElement menuRow = CreateToggleRow(
-                out _allowMenuToggle,
-                out _allowMenuLabel,
-                "Allow Menu Item Execution",
-                OnAllowMenuChanged
-            );
-            _contentContainer.Add(menuRow);
-            
-            // Allow Third Party Tools
-            VisualElement thirdPartyRow = CreateToggleRow(
-                out _allowThirdPartyToggle,
-                out _allowThirdPartyLabel,
-                "Allow Third Party Tools",
-                OnAllowThirdPartyChanged
-            );
-            _contentContainer.Add(thirdPartyRow);
+            // イベントハンドラーの登録
+            if (_enableTestsToggle != null)
+                _enableTestsToggle.RegisterValueChangedCallback(OnEnableTestsChanged);
+                
+            if (_allowMenuToggle != null)
+                _allowMenuToggle.RegisterValueChangedCallback(OnAllowMenuChanged);
+                
+            if (_allowThirdPartyToggle != null)
+                _allowThirdPartyToggle.RegisterValueChangedCallback(OnAllowThirdPartyChanged);
+                
+            // ラベルクリックでトグルを切り替える機能
+            RegisterLabelClickHandler(_enableTestsLabel, _enableTestsToggle);
+            RegisterLabelClickHandler(_allowMenuLabel, _allowMenuToggle);
+            RegisterLabelClickHandler(_allowThirdPartyLabel, _allowThirdPartyToggle);
         }
         
-        private VisualElement CreateToggleRow(out Toggle toggle, out Label label, 
-            string labelText, EventCallback<ChangeEvent<bool>> callback)
+        private void RegisterLabelClickHandler(Label label, Toggle toggle)
         {
-            VisualElement row = new();
-            row.AddToClassList("mcp-security-settings__toggle-row");
-            
-            toggle = new Toggle();
-            toggle.AddToClassList("mcp-security-settings__toggle");
-            toggle.RegisterValueChangedCallback(callback);
-            row.Add(toggle);
-            
-            label = new Label(labelText);
-            label.AddToClassList("mcp-security-settings__label");
-            
-            // Create local reference to avoid out parameter in lambda
-            Toggle toggleRef = toggle;
-            label.RegisterCallback<ClickEvent>(evt => {
-                toggleRef.value = !toggleRef.value;
-            });
-            row.Add(label);
-            
-            return row;
+            if (label != null && toggle != null)
+            {
+                label.RegisterCallback<ClickEvent>(evt => {
+                    toggle.value = !toggle.value;
+                });
+            }
         }
         
         public void Update(SecuritySettingsData data, Action<bool> foldoutCallback,
