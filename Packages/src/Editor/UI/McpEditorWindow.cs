@@ -4,6 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System;
 using UnityEngine.UIElements;
+using Debug = UnityEngine.Debug;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -565,13 +566,13 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void StartBackgroundUpdates()
         {
-            UnityEngine.Debug.Log("=== StartBackgroundUpdates ===");
-            UnityEngine.Debug.Log($"rootVisualElement: {rootVisualElement}");
-            UnityEngine.Debug.Log($"rootVisualElement children: {rootVisualElement.childCount}");
+            Debug.Log("=== StartBackgroundUpdates ===");
+            Debug.Log($"rootVisualElement: {rootVisualElement}");
+            Debug.Log($"rootVisualElement children: {rootVisualElement.childCount}");
 
             // Schedule regular updates
             _updateScheduler = rootVisualElement.schedule.Execute(UpdateUIToolkit);
-            _updateScheduler.Every(500); // Update every 500ms
+            OnEditorFocusChanged(true);
 
             // Subscribe to focus change events
             EditorApplication.focusChanged += OnEditorFocusChanged;
@@ -602,11 +603,11 @@ namespace io.github.hatayama.uLoopMCP
             // Adjust update frequency based on focus state
             if (hasFocus)
             {
-                _updateScheduler.Every(200); // High frequency when focused
+                _updateScheduler.Every(McpUIToolkitConstants.UPDATE_INTERVAL_FOCUSED);
             }
             else
             {
-                _updateScheduler.Every(1000); // Low frequency when in background
+                _updateScheduler.Every(McpUIToolkitConstants.UPDATE_INTERVAL_DEFAULT);
             }
         }
 

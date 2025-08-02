@@ -183,13 +183,13 @@ namespace io.github.hatayama.uLoopMCP
             // Adjust button height based on content
             if (buttonText.Contains("\n"))
             {
-                _configureButton.style.minHeight = 40;
+                _configureButton.style.minHeight = McpUIToolkitConstants.BUTTON_HEIGHT_MULTILINE;
                 _configureButton.style.height = StyleKeyword.Auto;
             }
             else
             {
-                _configureButton.style.minHeight = 25;
-                _configureButton.style.height = 25;
+                _configureButton.style.minHeight = McpUIToolkitConstants.BUTTON_HEIGHT_NORMAL;
+                _configureButton.style.height = McpUIToolkitConstants.BUTTON_HEIGHT_NORMAL;
             }
             
             // Update open settings button

@@ -1,7 +1,5 @@
 using UnityEngine;
 using UnityEngine.UIElements;
-using UnityEditor;
-using UnityEditor.UIElements;
 using System;
 using System.Linq;
 
@@ -37,93 +35,52 @@ namespace io.github.hatayama.uLoopMCP
         
         public void Initialize()
         {
-            UnityEngine.Debug.Log("=== McpEditorWindowUITView.Initialize() START ===");
+            Debug.Log("=== McpEditorWindowUITView.Initialize() START ===");
             
-            // Load UXML (USSはUXML内で自動的に読み込まれる)
-            string uxmlPath = "Packages/io.github.hatayama.uLoopMCP/src/Editor/UI/UIToolkit/McpEditorWindow.uxml";
-            UnityEngine.Debug.Log($"Loading UXML from: {uxmlPath}");
-            
-            VisualTreeAsset visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(uxmlPath);
+            // Load UXML from Resources (USSはUXML内で自動的に読み込まれる)
+            VisualTreeAsset visualTree = Resources.Load<VisualTreeAsset>("McpEditorWindow");
             
             if (visualTree == null)
             {
-                UnityEngine.Debug.LogError($"Failed to load UXML file at: {uxmlPath}");
-                // Try alternative paths
-                string[] alternativePaths = {
-                    "Assets/uLoopMCP/src/Editor/UI/UIToolkit/McpEditorWindow.uxml",
-                    "Packages/src/Editor/UI/UIToolkit/McpEditorWindow.uxml",
-                    AssetDatabase.GUIDToAssetPath(AssetDatabase.FindAssets("McpEditorWindow t:VisualTreeAsset").FirstOrDefault())
-                };
-                
-                foreach (var path in alternativePaths)
-                {
-                    UnityEngine.Debug.Log($"Trying alternative path: {path}");
-                    visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(path);
-                    if (visualTree != null)
-                    {
-                        UnityEngine.Debug.Log($"Success! Found UXML at: {path}");
-                        break;
-                    }
-                }
-                
-                if (visualTree == null)
-                {
-                    UnityEngine.Debug.LogError("Could not find UXML file in any location!");
-                    return;
-                }
+                Debug.LogError("Failed to load McpEditorWindow.uxml from Resources folder");
+                return;
             }
             else
             {
-                UnityEngine.Debug.Log("UXML file loaded successfully");
+                Debug.Log("UXML file loaded successfully");
             }
             
             _root = visualTree.CloneTree();
             
             if (_root == null)
             {
-                UnityEngine.Debug.LogError("Failed to clone visual tree");
+                Debug.LogError("Failed to clone visual tree");
                 return;
-            }
-            
-            UnityEngine.Debug.Log($"Visual tree cloned. Root has {_root.childCount} children");
-            UnityEngine.Debug.Log($"Root classes: {string.Join(", ", _root.GetClasses())}");
-            
-            // Try to load USS manually if not loaded
-            string ussPath = "Packages/io.github.hatayama.uLoopMCP/src/Editor/UI/UIToolkit/McpEditorWindow.uss";
-            StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(ussPath);
-            if (styleSheet != null)
-            {
-                _root.styleSheets.Add(styleSheet);
-                UnityEngine.Debug.Log($"USS loaded manually from: {ussPath}");
-            }
-            else
-            {
-                UnityEngine.Debug.LogError($"Failed to load USS from: {ussPath}");
             }
             
             // Print hierarchy
             PrintVisualElementHierarchy(_root, 0);
             
             // Query containers
-            _scrollView = _root.Q<ScrollView>("main-scroll-view");
-            _serverStatusContainer = _root.Q<VisualElement>("server-status");
-            _serverControlsContainer = _root.Q<VisualElement>("server-controls");
-            _connectedToolsFoldout = _root.Q<Foldout>("connected-tools");
-            _editorConfigFoldout = _root.Q<Foldout>("editor-config");
-            _securitySettingsFoldout = _root.Q<Foldout>("security-settings");
+            _scrollView = _root.Q<ScrollView>(McpUIToolkitConstants.ELEMENT_MAIN_SCROLL_VIEW);
+            _serverStatusContainer = _root.Q<VisualElement>(McpUIToolkitConstants.ELEMENT_SERVER_STATUS);
+            _serverControlsContainer = _root.Q<VisualElement>(McpUIToolkitConstants.ELEMENT_SERVER_CONTROLS);
+            _connectedToolsFoldout = _root.Q<Foldout>(McpUIToolkitConstants.ELEMENT_CONNECTED_TOOLS);
+            _editorConfigFoldout = _root.Q<Foldout>(McpUIToolkitConstants.ELEMENT_EDITOR_CONFIG);
+            _securitySettingsFoldout = _root.Q<Foldout>(McpUIToolkitConstants.ELEMENT_SECURITY_SETTINGS);
             
             // Debug log for container queries
-            UnityEngine.Debug.Log($"ScrollView found: {_scrollView != null}");
-            UnityEngine.Debug.Log($"ServerStatus found: {_serverStatusContainer != null}");
-            UnityEngine.Debug.Log($"ServerControls found: {_serverControlsContainer != null}");
-            UnityEngine.Debug.Log($"ConnectedTools found: {_connectedToolsFoldout != null}");
-            UnityEngine.Debug.Log($"EditorConfig found: {_editorConfigFoldout != null}");
-            UnityEngine.Debug.Log($"SecuritySettings found: {_securitySettingsFoldout != null}");
+            Debug.Log($"ScrollView found: {_scrollView != null}");
+            Debug.Log($"ServerStatus found: {_serverStatusContainer != null}");
+            Debug.Log($"ServerControls found: {_serverControlsContainer != null}");
+            Debug.Log($"ConnectedTools found: {_connectedToolsFoldout != null}");
+            Debug.Log($"EditorConfig found: {_editorConfigFoldout != null}");
+            Debug.Log($"SecuritySettings found: {_securitySettingsFoldout != null}");
             
             // Initialize sub-views
             InitializeSubViews();
             
-            UnityEngine.Debug.Log("=== McpEditorWindowUITView.Initialize() END ===");
+            Debug.Log("=== McpEditorWindowUITView.Initialize() END ===");
         }
         
         private void PrintVisualElementHierarchy(VisualElement element, int depth)
@@ -131,7 +88,7 @@ namespace io.github.hatayama.uLoopMCP
             string indent = new string(' ', depth * 2);
             string name = string.IsNullOrEmpty(element.name) ? "<unnamed>" : element.name;
             string classes = element.GetClasses().Count() > 0 ? $" [{string.Join(", ", element.GetClasses())}]" : "";
-            UnityEngine.Debug.Log($"{indent}{element.GetType().Name} - {name}{classes}");
+            Debug.Log($"{indent}{element.GetType().Name} - {name}{classes}");
             
             foreach (var child in element.Children())
             {
