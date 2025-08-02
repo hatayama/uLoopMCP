@@ -1,6 +1,7 @@
 /* Unity標準のダークテーマ色を維持 */
 :root {
     --mcp-background-dark: #383838;
+    --mcp-background-debug: #c8006c; /* Debug時の背景色 */
     --mcp-section-background: #333333;
     --mcp-button-green: #5A9758;
     --mcp-button-green-hover: #6BA769;
@@ -16,6 +17,11 @@
     flex-grow: 1;
     background-color: var(--mcp-background-dark);
     padding: 4px;
+}
+
+/* Modifier for debug mode */
+.mcp-editor-window--debug {
+    background-color: var(--mcp-background-debug);
 }
 
 /* Element */

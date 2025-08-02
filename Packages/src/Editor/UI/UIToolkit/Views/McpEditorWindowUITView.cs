@@ -49,6 +49,15 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
             
+            // Apply debug mode styling if ULOOPMCP_DEBUG symbol is defined
+#if ULOOPMCP_DEBUG
+            VisualElement editorWindow = _root.Q<VisualElement>(className: "mcp-editor-window");
+            if (editorWindow != null)
+            {
+                editorWindow.AddToClassList("mcp-editor-window--debug");
+            }
+#endif
+            
             // Query containers
             _scrollView = _root.Q<ScrollView>(McpUIToolkitCommonConstants.ELEMENT_MAIN_SCROLL_VIEW);
             _serverControlsContainer = _root.Q<VisualElement>(McpUIToolkitCommonConstants.ELEMENT_SERVER_CONTROLS);
