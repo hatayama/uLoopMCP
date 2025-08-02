@@ -3,8 +3,8 @@
     --mcp-background-dark: #383838;
     --mcp-background-debug: #c8006c; /* Debug時の背景色 */
     --mcp-section-background: #333333;
-    --mcp-button-green: #5A9758;
-    --mcp-button-green-hover: #6BA769;
+    --mcp-button-green: #0b8401;
+    --mcp-button-green-hover: #0d9700;
     --mcp-text-green: #4CAF50;
     --mcp-text-red: #F44336;
     --mcp-text-secondary: #888888;
