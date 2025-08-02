@@ -1,0 +1,270 @@
+/* Unity標準のダークテーマ色を維持 */
+:root {
+    --mcp-background-dark: #383838;
+    --mcp-background-debug: #c8006c; /* Debug時の背景色 */
+    --mcp-section-background: #333333;
+    --mcp-button-green: #0b8401;
+    --mcp-button-green-hover: #0d9700;
+    --mcp-text-green: #4CAF50;
+    --mcp-text-red: #F44336;
+    --mcp-text-secondary: #888888;
+    --mcp-warning-background: #5A5037;
+    --mcp-info-background: #3B4A5A;
+}
+
+/* Block */
+.mcp-editor-window {
+    flex-grow: 1;
+    background-color: var(--mcp-background-dark);
+    padding: 4px;
+}
+
+/* Modifier for debug mode */
+.mcp-editor-window--debug {
+    background-color: var(--mcp-background-debug);
+}
+
+/* Element */
+.mcp-editor-window__scroll-view {
+    flex-grow: 1;
+    padding: 0 4px;
+}
+
+/* Section base - Unity標準のhelpBoxスタイルを再現 */
+.mcp-section {
+    margin: 4px 0 8px 0;
+    padding: 8px;
+    background-color: var(--mcp-section-background);
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: #232323;
+}
+
+/* Server Status Block */
+.mcp-server-status {
+    flex-direction: row;
+    align-items: center;
+    min-height: 20px;
+}
+
+.mcp-server-status__label {
+    -unity-text-align: middle-left;
+}
+
+
+/* Server Controls Block */
+.mcp-server-controls__status-port-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.mcp-server-controls__status-label {
+    flex-grow: 1;
+}
+
+.mcp-server-controls__port-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.mcp-server-controls__port-label {
+    min-width: 30px;
+    -unity-text-align: middle-left;
+}
+
+.mcp-server-controls__port-field {
+    width: 50px;
+    -unity-text-align: middle-right;
+    margin-left: 4px;
+}
+
+.mcp-server-controls__port-field:disabled {
+    opacity: 0.5;
+}
+
+.mcp-server-controls__toggle-button {
+    height: 25px;
+    font-size: 12px;
+    margin: 4px 0;
+    -unity-font-style: bold;
+}
+
+.mcp-server-controls__toggle-button--start {
+    background-color: var(--mcp-button-green);
+}
+
+.mcp-server-controls__toggle-button--start:hover {
+    background-color: var(--mcp-button-green-hover);
+}
+
+.mcp-server-controls__toggle-button--stop {
+    background-color: #994444;
+}
+
+.mcp-server-controls__toggle-button--stop:hover {
+    background-color: #AA5555;
+}
+
+/* Auto Start Checkbox */
+.mcp-server-controls__auto-start-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.mcp-server-controls__auto-start-toggle {
+    margin-right: 4px;
+}
+
+.mcp-server-controls__auto-start-label {
+    flex-grow: 1;
+    -unity-text-align: middle-left;
+    cursor: link;
+}
+
+.mcp-server-controls__auto-start-label:hover {
+    color: #CCCCCC;
+}
+
+/* Connected Tools Block */
+.mcp-connected-tools__client-item {
+    margin: 4px 0;
+    padding: 6px 8px;
+    background-color: #414141;
+    border-radius: 3px;
+    flex-direction: row;
+    align-items: center;
+}
+
+.mcp-connected-tools__client-icon {
+    margin-right: 6px;
+    -unity-font-style: normal;
+    font-size: 14px;
+}
+
+.mcp-connected-tools__client-name {
+    -unity-font-style: bold;
+    color: #DDDDDD;
+}
+
+.mcp-connected-tools__client-port {
+    color: var(--mcp-text-secondary);
+    margin-left: 4px;
+}
+
+/* Foldout customization */
+.unity-foldout__toggle {
+    margin-left: -2px;
+    padding-left: 0;
+}
+
+.unity-foldout__text {
+    -unity-font-style: bold;
+}
+
+.unity-foldout__content {
+    margin-left: 0;
+    padding-left: 0;
+}
+
+/* HelpBox styles */
+.mcp-helpbox {
+    padding: 8px;
+    margin: 4px 0;
+    border-radius: 3px;
+    border-width: 1px;
+    white-space: normal;
+    flex-shrink: 1;
+    flex-grow: 1;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+.mcp-helpbox Label {
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    flex-shrink: 1;
+}
+
+.mcp-helpbox--info {
+    background-color: var(--mcp-info-background);
+    border-color: #2A3948;
+}
+
+.mcp-helpbox--warning {
+    background-color: var(--mcp-warning-background);
+    border-color: #493F27;
+}
+
+.mcp-helpbox--error {
+    background-color: #5A3737;
+    border-color: #492727;
+}
+
+/* Button styles */
+.mcp-button {
+    min-height: 25px;
+    margin: 4px 0;
+    padding: 4px 8px;
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+.mcp-button--primary {
+    background-color: #5A6C7D;
+}
+
+.mcp-button--primary:hover {
+    background-color: #6B7D8E;
+}
+
+.mcp-button--secondary {
+    background-color: #4A4A4A;
+}
+
+.mcp-button--secondary:hover {
+    background-color: #5A5A5A;
+}
+
+/* Enum field styles */
+.mcp-enum-field {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 100px;
+    margin: 0;
+    padding: 0;
+}
+
+/* Editor config specific styles */
+.mcp-editor-config__row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.mcp-editor-config__label {
+    min-width: 50px;
+}
+
+/* Security settings specific styles */
+.mcp-security-settings__toggle-row {
+    flex-direction: row;
+    align-items: center;
+    margin: 2px 0;
+}
+
+.mcp-security-settings__toggle {
+    margin-right: 4px;
+}
+
+.mcp-security-settings__label {
+    flex-grow: 1;
+    color: #F44336;
+    cursor: link;
+}
+
+.mcp-security-settings__label:hover {
+    color: #FF6666;
+}

@@ -3,6 +3,7 @@ using UnityEditor;
 using System.Linq;
 using System.Collections.Generic;
 using System;
+using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -11,7 +12,8 @@ namespace io.github.hatayama.uLoopMCP
     /// Coordinates between Model, View, and helper classes for server management
     /// Related classes:
     /// - McpEditorModel: Model layer for state management and business logic
-    /// - McpEditorWindowView: View layer for UI rendering
+    /// - McpEditorWindowUITView: UI Toolkit view layer for UI rendering
+    /// - ServerControlsView, ConnectedToolsView, EditorConfigView, SecuritySettingsView: UI Toolkit view components
     /// - McpEditorWindowEventHandler: Event management helper (Unity/Server events)
     /// - McpServerOperations: Server operations helper (start/stop/validation)
     /// - McpEditorWindowState: State objects (UIState, RuntimeState, DebugState)
@@ -22,11 +24,15 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class McpEditorWindow : EditorWindow
     {
+        // UI Toolkit View
+        private McpEditorWindowUITView _uitView;
+
+        // Background update scheduler
+        private IVisualElementScheduledItem _updateScheduler;
+
         // Configuration services factory
         private McpConfigServiceFactory _configServiceFactory;
 
-        // View layer
-        private McpEditorWindowView _view;
 
         // Model layer (MVP pattern)
         private McpEditorModel _model;
@@ -51,6 +57,7 @@ namespace io.github.hatayama.uLoopMCP
         private void OnEnable()
         {
             InitializeAll();
+            StartBackgroundUpdates();
         }
 
         private void OnDestroy()
@@ -83,12 +90,14 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void InitializeView()
         {
-            _view = new McpEditorWindowView();
+            _uitView = new McpEditorWindowUITView();
+            _uitView.Initialize();
+
+            if (_uitView.Root != null)
+            {
+                rootVisualElement.Add(_uitView.Root);
+            }
         }
-
-
-
-
 
 
         /// <summary>
@@ -185,6 +194,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnDisable()
         {
+            StopBackgroundUpdates();
             CleanupEventHandler();
             SaveSessionState();
         }
@@ -214,55 +224,6 @@ namespace io.github.hatayama.uLoopMCP
             Repaint();
         }
 
-        private void OnGUI()
-        {
-            // Draw debug background if ULOOPMCP_DEBUG is defined
-            _view.DrawDebugBackground(position);
-
-            // Synchronize server port and UI settings
-            SyncPortSettings();
-
-            // Make entire window scrollable
-            Vector2 newScrollPosition = EditorGUILayout.BeginScrollView(_model.UI.MainScrollPosition);
-            if (newScrollPosition != _model.UI.MainScrollPosition)
-            {
-                UpdateMainScrollPosition(newScrollPosition);
-            }
-
-            // Use view layer for rendering
-            ServerStatusData statusData = CreateServerStatusData();
-            _view.DrawServerStatus(statusData);
-
-            ServerControlsData controlsData = CreateServerControlsData();
-            _view.DrawServerControls(
-                data: controlsData,
-                toggleServerCallback: ToggleServer,
-                autoStartCallback: UpdateAutoStartServer,
-                portChangeCallback: UpdateCustomPort);
-
-            ConnectedToolsData toolsData = CreateConnectedToolsData();
-            _view.DrawConnectedToolsSection(
-                data: toolsData,
-                toggleFoldoutCallback: UpdateShowConnectedTools);
-
-            EditorConfigData configData = CreateEditorConfigData();
-            _view.DrawEditorConfigSection(
-                data: configData,
-                editorChangeCallback: UpdateSelectedEditorType,
-                configureCallback: (editor) => ConfigureEditor(),
-                foldoutCallback: UpdateShowLLMToolSettings);
-
-            SecuritySettingsData securityData = CreateSecuritySettingsData();
-            _view.DrawSecuritySettings(
-                data: securityData,
-                foldoutCallback: UpdateShowSecuritySettings,
-                enableTestsCallback: UpdateEnableTestsExecution,
-                allowMenuCallback: UpdateAllowMenuItemExecution,
-                allowThirdPartyCallback: UpdateAllowThirdPartyTools);
-
-
-            EditorGUILayout.EndScrollView();
-        }
 
         /// <summary>
         /// Synchronize server port and UI settings
@@ -597,5 +558,93 @@ namespace io.github.hatayama.uLoopMCP
                 StartServer();
             }
         }
+
+        #region UI Toolkit Support
+
+        /// <summary>
+        /// Start background updates for UI Toolkit
+        /// </summary>
+        private void StartBackgroundUpdates()
+        {
+            // Schedule regular updates
+            _updateScheduler = rootVisualElement.schedule.Execute(UpdateUIToolkit);
+            OnEditorFocusChanged(true);
+
+            // Subscribe to focus change events
+            EditorApplication.focusChanged += OnEditorFocusChanged;
+
+            // Do an immediate update
+            UpdateUIToolkit();
+        }
+
+        /// <summary>
+        /// Stop background updates for UI Toolkit
+        /// </summary>
+        private void StopBackgroundUpdates()
+        {
+            // Pause scheduled updates
+            _updateScheduler?.Pause();
+
+            // Unsubscribe from events
+            EditorApplication.focusChanged -= OnEditorFocusChanged;
+        }
+
+        /// <summary>
+        /// Handle editor focus changes
+        /// </summary>
+        private void OnEditorFocusChanged(bool hasFocus)
+        {
+            if (_updateScheduler == null) return;
+
+            // Adjust update frequency based on focus state
+            if (hasFocus)
+            {
+                _updateScheduler.Every(McpUIToolkitCommonConstants.UPDATE_INTERVAL_FOCUSED);
+            }
+            else
+            {
+                _updateScheduler.Every(McpUIToolkitCommonConstants.UPDATE_INTERVAL_DEFAULT);
+            }
+        }
+
+        /// <summary>
+        /// Update UI Toolkit view
+        /// </summary>
+        private void UpdateUIToolkit()
+        {
+            if (_uitView == null) return;
+
+            // Synchronize server port and UI settings
+            SyncPortSettings();
+
+            // Update scroll position
+            Vector2 currentScrollPosition = _uitView.GetScrollPosition();
+            if (currentScrollPosition != _model.UI.MainScrollPosition)
+            {
+                UpdateMainScrollPosition(currentScrollPosition);
+            }
+
+            // Update server controls (now includes status)
+            ServerControlsData controlsData = CreateServerControlsData();
+            _uitView.UpdateServerControls(controlsData, ToggleServer,
+                UpdateAutoStartServer, UpdateCustomPort);
+
+            // Update connected tools
+            ConnectedToolsData toolsData = CreateConnectedToolsData();
+            _uitView.UpdateConnectedTools(toolsData, UpdateShowConnectedTools);
+
+            // Update editor config
+            EditorConfigData configData = CreateEditorConfigData();
+            _uitView.UpdateEditorConfig(configData, UpdateSelectedEditorType,
+                (editor) => ConfigureEditor(), UpdateShowLLMToolSettings);
+
+            // Update security settings
+            SecuritySettingsData securityData = CreateSecuritySettingsData();
+            _uitView.UpdateSecuritySettings(securityData, UpdateShowSecuritySettings,
+                UpdateEnableTestsExecution, UpdateAllowMenuItemExecution,
+                UpdateAllowThirdPartyTools);
+        }
+
+        #endregion
     }
 }
