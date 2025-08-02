@@ -1,0 +1,37 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Style src="McpEditorWindow.uss" />
+    <ui:VisualElement name="mcp-editor-window" class="mcp-editor-window">
+        <ui:ScrollView name="main-scroll-view" class="mcp-editor-window__scroll-view">
+            <!-- Server Status -->
+            <ui:VisualElement name="server-status" class="mcp-section mcp-server-status">
+                <!-- Content injected by C# -->
+            </ui:VisualElement>
+            
+            <!-- Server Controls -->
+            <ui:VisualElement name="server-controls" class="mcp-section mcp-server-controls">
+                <!-- Content injected by C# -->
+            </ui:VisualElement>
+            
+            <!-- Connected Tools -->
+            <ui:Foldout name="connected-tools" class="mcp-section mcp-connected-tools">
+                <ui:VisualElement name="connected-tools-content">
+                    <!-- Content injected by C# -->
+                </ui:VisualElement>
+            </ui:Foldout>
+            
+            <!-- Editor Config -->
+            <ui:Foldout name="editor-config" class="mcp-section mcp-editor-config">
+                <ui:VisualElement name="editor-config-content">
+                    <!-- Content injected by C# -->
+                </ui:VisualElement>
+            </ui:Foldout>
+            
+            <!-- Security Settings -->
+            <ui:Foldout name="security-settings" class="mcp-section mcp-security-settings">
+                <ui:VisualElement name="security-settings-content">
+                    <!-- Content injected by C# -->
+                </ui:VisualElement>
+            </ui:Foldout>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

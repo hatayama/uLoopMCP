@@ -3,6 +3,7 @@ using UnityEditor;
 using System.Linq;
 using System.Collections.Generic;
 using System;
+using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -22,6 +23,15 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class McpEditorWindow : EditorWindow
     {
+        // UI Toolkit migration flag
+        private const bool USE_UI_TOOLKIT = true; // UI Toolkit enabled
+        
+        // UI Toolkit View
+        private McpEditorWindowUITView _uitView;
+        
+        // Background update scheduler
+        private IVisualElementScheduledItem _updateScheduler;
+        
         // Configuration services factory
         private McpConfigServiceFactory _configServiceFactory;
 
@@ -51,6 +61,11 @@ namespace io.github.hatayama.uLoopMCP
         private void OnEnable()
         {
             InitializeAll();
+            
+            if (USE_UI_TOOLKIT)
+            {
+                StartBackgroundUpdates();
+            }
         }
 
         private void OnDestroy()
@@ -83,7 +98,25 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void InitializeView()
         {
-            _view = new McpEditorWindowView();
+            if (USE_UI_TOOLKIT)
+            {
+                _uitView = new McpEditorWindowUITView();
+                _uitView.Initialize();
+                
+                if (_uitView.Root != null)
+                {
+                    rootVisualElement.Add(_uitView.Root);
+                    UnityEngine.Debug.Log("UI Toolkit root added to window");
+                }
+                else
+                {
+                    UnityEngine.Debug.LogError("UI Toolkit root is null after initialization");
+                }
+            }
+            else
+            {
+                _view = new McpEditorWindowView();
+            }
         }
 
 
@@ -185,6 +218,11 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnDisable()
         {
+            if (USE_UI_TOOLKIT)
+            {
+                StopBackgroundUpdates();
+            }
+            
             CleanupEventHandler();
             SaveSessionState();
         }
@@ -216,6 +254,12 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnGUI()
         {
+            if (USE_UI_TOOLKIT)
+            {
+                // UI Toolkit mode - updates are handled by the scheduler
+                return;
+            }
+            
             // Draw debug background if ULOOPMCP_DEBUG is defined
             _view.DrawDebugBackground(position);
 
@@ -597,5 +641,101 @@ namespace io.github.hatayama.uLoopMCP
                 StartServer();
             }
         }
+        
+        #region UI Toolkit Support
+        
+        /// <summary>
+        /// Start background updates for UI Toolkit
+        /// </summary>
+        private void StartBackgroundUpdates()
+        {
+            UnityEngine.Debug.Log("=== StartBackgroundUpdates ===");
+            UnityEngine.Debug.Log($"rootVisualElement: {rootVisualElement}");
+            UnityEngine.Debug.Log($"rootVisualElement children: {rootVisualElement.childCount}");
+            
+            // Schedule regular updates
+            _updateScheduler = rootVisualElement.schedule.Execute(UpdateUIToolkit);
+            _updateScheduler.Every(500); // Update every 500ms
+            
+            // Subscribe to focus change events
+            EditorApplication.focusChanged += OnEditorFocusChanged;
+            
+            // Do an immediate update
+            UpdateUIToolkit();
+        }
+        
+        /// <summary>
+        /// Stop background updates for UI Toolkit
+        /// </summary>
+        private void StopBackgroundUpdates()
+        {
+            // Pause scheduled updates
+            _updateScheduler?.Pause();
+            
+            // Unsubscribe from events
+            EditorApplication.focusChanged -= OnEditorFocusChanged;
+        }
+        
+        /// <summary>
+        /// Handle editor focus changes
+        /// </summary>
+        private void OnEditorFocusChanged(bool hasFocus)
+        {
+            if (_updateScheduler == null) return;
+            
+            // Adjust update frequency based on focus state
+            if (hasFocus)
+            {
+                _updateScheduler.Every(200); // High frequency when focused
+            }
+            else
+            {
+                _updateScheduler.Every(1000); // Low frequency when in background
+            }
+        }
+        
+        /// <summary>
+        /// Update UI Toolkit view
+        /// </summary>
+        private void UpdateUIToolkit()
+        {
+            if (_uitView == null) return;
+            
+            // Synchronize server port and UI settings
+            SyncPortSettings();
+            
+            // Update scroll position
+            Vector2 currentScrollPosition = _uitView.GetScrollPosition();
+            if (currentScrollPosition != _model.UI.MainScrollPosition)
+            {
+                UpdateMainScrollPosition(currentScrollPosition);
+            }
+            
+            // Update server status
+            ServerStatusData statusData = CreateServerStatusData();
+            _uitView.UpdateServerStatus(statusData);
+            
+            // Update server controls
+            ServerControlsData controlsData = CreateServerControlsData();
+            _uitView.UpdateServerControls(controlsData, ToggleServer, 
+                UpdateAutoStartServer, UpdateCustomPort);
+            
+            // Update connected tools
+            ConnectedToolsData toolsData = CreateConnectedToolsData();
+            _uitView.UpdateConnectedTools(toolsData, UpdateShowConnectedTools);
+            
+            // Update editor config
+            EditorConfigData configData = CreateEditorConfigData();
+            _uitView.UpdateEditorConfig(configData, UpdateSelectedEditorType,
+                (editor) => ConfigureEditor(), UpdateShowLLMToolSettings);
+            
+            // Update security settings
+            SecuritySettingsData securityData = CreateSecuritySettingsData();
+            _uitView.UpdateSecuritySettings(securityData, UpdateShowSecuritySettings,
+                UpdateEnableTestsExecution, UpdateAllowMenuItemExecution, 
+                UpdateAllowThirdPartyTools);
+        }
+        
+        #endregion
     }
 }
