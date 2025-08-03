@@ -1,0 +1,80 @@
+/* Content Container */
+.content-container {
+    padding: 10px;
+}
+
+/* Title Label */
+.title-label {
+    font-size: 18px;
+    -unity-font-style: bold;
+    margin-bottom: 20px;
+}
+
+/* Section Titles */
+.section-title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin-bottom: 10px;
+}
+
+/* Text Display Label */
+.text-display-label {
+    font-size: 14px;
+    background-color: rgba(51, 51, 51, 0.3);
+    padding: 10px;
+    border-width: 1px;
+    border-color: #808080;
+}
+
+/* Data Display Labels */
+.data-display-label {
+    font-size: 12px;
+    padding: 10px;
+    border-width: 1px;
+    white-space: normal;
+}
+
+/* Complex Data Style */
+.complex-data-style {
+    background-color: rgba(26, 51, 26, 0.3);
+    border-color: #008000;
+}
+
+/* Non-Serializable Data Style */
+.non-serializable-style {
+    background-color: rgba(51, 26, 26, 0.3);
+    border-color: #FF0000;
+}
+
+/* Primary Button */
+.primary-button {
+    margin-top: 20px;
+    height: 30px;
+}
+
+/* Secondary Button */
+.secondary-button {
+    height: 25px;
+}
+
+/* Button Container */
+.button-container {
+    flex-direction: row;
+    margin-top: 10px;
+}
+
+.button-container > .secondary-button {
+    margin-right: 10px;
+}
+
+.button-container > .secondary-button:last-child {
+    margin-right: 0;
+}
+
+/* Separator */
+.separator {
+    height: 2px;
+    background-color: #808080;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
