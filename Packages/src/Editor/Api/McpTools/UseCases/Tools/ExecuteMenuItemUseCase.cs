@@ -61,6 +61,12 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Try to execute menuItem using EditorApplication.ExecuteMenuItem
         /// </summary>
+        /// <summary>
+        /// Try to execute menuItem using EditorApplication.ExecuteMenuItem
+        /// </summary>
+        /// <summary>
+        /// Try to execute menuItem using EditorApplication.ExecuteMenuItem
+        /// </summary>
         private bool TryExecuteViaEditorApplication(string menuItemPath, ExecuteMenuItemResponse response)
         {
             bool success = EditorApplication.ExecuteMenuItem(menuItemPath);
@@ -71,6 +77,14 @@ namespace io.github.hatayama.uLoopMCP
                 response.ExecutionMethod = "EditorApplication";
                 response.MenuItemFound = true;
                 response.Details = "MenuItem executed successfully via EditorApplication.ExecuteMenuItem";
+                
+                // 重複チェックのためにMenuItemInfoを取得
+                MenuItemInfo menuItemInfo = MenuItemDiscoveryService.FindMenuItemByPath(menuItemPath);
+                if (menuItemInfo != null && !string.IsNullOrEmpty(menuItemInfo.WarningMessage))
+                {
+                    response.WarningMessage = menuItemInfo.WarningMessage;
+                }
+                
                 return true;
             }
             
@@ -147,16 +161,13 @@ namespace io.github.hatayama.uLoopMCP
                 response.ExecutionMethod = "Reflection";
                 response.MenuItemFound = true;
                 
-                // 基本的な実行成功メッセージ
-                string details = $"MenuItem executed successfully via reflection ({menuItemInfo.TypeName}.{menuItemInfo.MethodName})";
+                response.Details = $"MenuItem executed successfully via reflection ({menuItemInfo.TypeName}.{menuItemInfo.MethodName})";
                 
-                // 警告メッセージがある場合は追加
+                // 警告メッセージがある場合は専用フィールドに設定
                 if (!string.IsNullOrEmpty(menuItemInfo.WarningMessage))
                 {
-                    details += $"\nWarning: {menuItemInfo.WarningMessage}";
+                    response.WarningMessage = menuItemInfo.WarningMessage;
                 }
-                
-                response.Details = details;
                 return true;
             }
             catch (System.Exception ex)

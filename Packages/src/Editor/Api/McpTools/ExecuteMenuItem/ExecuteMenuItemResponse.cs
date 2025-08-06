@@ -36,12 +36,18 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public bool MenuItemFound { get; set; }
 
+        /// <summary>
+        /// Warning message if there are issues with this MenuItem (e.g., duplicate attributes)
+        /// </summary>
+        public string WarningMessage { get; set; }
+
         public ExecuteMenuItemResponse()
         {
             MenuItemPath = string.Empty;
             ExecutionMethod = string.Empty;
             ErrorMessage = string.Empty;
             Details = string.Empty;
+            WarningMessage = string.Empty;
         }
     }
 }

@@ -136,8 +136,7 @@ namespace io.github.hatayama.uLoopMCP
             if (menuItemAttributes.Length > 1)
             {
                 string methodName = $"{method.DeclaringType?.FullName}.{method.Name}";
-                string duplicatePaths = string.Join(", ", menuItemAttributes.Select(attr => $"'{attr.menuItem}'"));
-                menuItemInfo.WarningMessage = $"Method '{methodName}' has multiple MenuItem attributes: {duplicatePaths}. Using the first one: '{menuItemAttributes[0].menuItem}'";
+                menuItemInfo.WarningMessage = $"Method '{methodName}' has {menuItemAttributes.Length} duplicate MenuItem attributes for '{menuItemAttribute.menuItem}'. Using the first one.";
             }
             
             return menuItemInfo;
