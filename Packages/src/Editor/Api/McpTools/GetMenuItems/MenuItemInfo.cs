@@ -44,12 +44,18 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public bool CanExecuteViaEditorApplication { get; set; }
 
+        /// <summary>
+        /// Warning message if there are issues with this MenuItem (e.g., duplicate attributes)
+        /// </summary>
+        public string WarningMessage { get; set; }
+
         public MenuItemInfo()
         {
             Path = string.Empty;
             MethodName = string.Empty;
             TypeName = string.Empty;
             AssemblyName = string.Empty;
+            WarningMessage = string.Empty;
         }
 
         public MenuItemInfo(string path, MethodInfo method, int priority, bool isValidateFunction)
@@ -61,6 +67,7 @@ namespace io.github.hatayama.uLoopMCP
             TypeName = method?.DeclaringType?.FullName ?? string.Empty;
             AssemblyName = method?.DeclaringType?.Assembly?.GetName()?.Name ?? string.Empty;
             CanExecuteViaEditorApplication = true; // Default to true, can be overridden
+            WarningMessage = string.Empty;
         }
 
         public override string ToString()

@@ -119,15 +119,28 @@ namespace io.github.hatayama.uLoopMCP
 
         private static MenuItemInfo CreateMenuItemInfo(MethodInfo method)
         {
-            MenuItem menuItemAttribute = method.GetCustomAttribute<MenuItem>();
-            if (menuItemAttribute == null) return null;
+            // 複数のMenuItem属性が付いている可能性があるため、GetCustomAttributesを使用
+            MenuItem[] menuItemAttributes = method.GetCustomAttributes<MenuItem>(false).ToArray();
+            if (menuItemAttributes.Length == 0) return null;
             
-            return new MenuItemInfo(
+            // 最初のものを使用してMenuItemInfoを作成
+            MenuItem menuItemAttribute = menuItemAttributes[0];
+            MenuItemInfo menuItemInfo = new MenuItemInfo(
                 menuItemAttribute.menuItem,
                 method,
                 menuItemAttribute.priority,
                 menuItemAttribute.validate
             );
+            
+            // 複数ある場合は警告メッセージを設定
+            if (menuItemAttributes.Length > 1)
+            {
+                string methodName = $"{method.DeclaringType?.FullName}.{method.Name}";
+                string duplicatePaths = string.Join(", ", menuItemAttributes.Select(attr => $"'{attr.menuItem}'"));
+                menuItemInfo.WarningMessage = $"Method '{methodName}' has multiple MenuItem attributes: {duplicatePaths}. Using the first one: '{menuItemAttributes[0].menuItem}'";
+            }
+            
+            return menuItemInfo;
         }
     }
 } 

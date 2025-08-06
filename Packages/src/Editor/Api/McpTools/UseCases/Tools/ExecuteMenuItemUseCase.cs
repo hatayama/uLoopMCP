@@ -146,7 +146,17 @@ namespace io.github.hatayama.uLoopMCP
                 response.Success = true;
                 response.ExecutionMethod = "Reflection";
                 response.MenuItemFound = true;
-                response.Details = $"MenuItem executed successfully via reflection ({menuItemInfo.TypeName}.{menuItemInfo.MethodName})";
+                
+                // 基本的な実行成功メッセージ
+                string details = $"MenuItem executed successfully via reflection ({menuItemInfo.TypeName}.{menuItemInfo.MethodName})";
+                
+                // 警告メッセージがある場合は追加
+                if (!string.IsNullOrEmpty(menuItemInfo.WarningMessage))
+                {
+                    details += $"\nWarning: {menuItemInfo.WarningMessage}";
+                }
+                
+                response.Details = details;
                 return true;
             }
             catch (System.Exception ex)
