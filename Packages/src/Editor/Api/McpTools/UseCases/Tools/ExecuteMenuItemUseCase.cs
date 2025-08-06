@@ -57,7 +57,7 @@ namespace io.github.hatayama.uLoopMCP
             
             return Task.FromResult(response);
         }
-
+        
         /// <summary>
         /// Try to execute menuItem using EditorApplication.ExecuteMenuItem
         /// </summary>
@@ -71,6 +71,14 @@ namespace io.github.hatayama.uLoopMCP
                 response.ExecutionMethod = "EditorApplication";
                 response.MenuItemFound = true;
                 response.Details = "MenuItem executed successfully via EditorApplication.ExecuteMenuItem";
+                
+                // 重複チェックのためにMenuItemInfoを取得
+                MenuItemInfo menuItemInfo = MenuItemDiscoveryService.FindMenuItemByPath(menuItemPath);
+                if (menuItemInfo != null && !string.IsNullOrEmpty(menuItemInfo.WarningMessage))
+                {
+                    response.WarningMessage = menuItemInfo.WarningMessage;
+                }
+                
                 return true;
             }
             
@@ -146,7 +154,14 @@ namespace io.github.hatayama.uLoopMCP
                 response.Success = true;
                 response.ExecutionMethod = "Reflection";
                 response.MenuItemFound = true;
+                
                 response.Details = $"MenuItem executed successfully via reflection ({menuItemInfo.TypeName}.{menuItemInfo.MethodName})";
+                
+                // 警告メッセージがある場合は専用フィールドに設定
+                if (!string.IsNullOrEmpty(menuItemInfo.WarningMessage))
+                {
+                    response.WarningMessage = menuItemInfo.WarningMessage;
+                }
                 return true;
             }
             catch (System.Exception ex)
