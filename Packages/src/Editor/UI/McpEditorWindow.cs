@@ -3,6 +3,7 @@ using UnityEditor;
 using System.Linq;
 using System.Collections.Generic;
 using System;
+using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -11,7 +12,8 @@ namespace io.github.hatayama.uLoopMCP
     /// Coordinates between Model, View, and helper classes for server management
     /// Related classes:
     /// - McpEditorModel: Model layer for state management and business logic
-    /// - McpEditorWindowView: View layer for UI rendering
+    /// - McpEditorWindowUITView: UI Toolkit view layer for UI rendering
+    /// - ServerControlsView, ConnectedToolsView, EditorConfigView, SecuritySettingsView: UI Toolkit view components
     /// - McpEditorWindowEventHandler: Event management helper (Unity/Server events)
     /// - McpServerOperations: Server operations helper (start/stop/validation)
     /// - McpEditorWindowState: State objects (UIState, RuntimeState, DebugState)
@@ -22,17 +24,69 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class McpEditorWindow : EditorWindow
     {
+        // UI Toolkit View
+        private McpEditorWindowUITView _uitView;
+
+        // Background update scheduler
+        private IVisualElementScheduledItem _updateScheduler;
+
         // Configuration services factory
         private McpConfigServiceFactory _configServiceFactory;
 
-        // View layer
-        private McpEditorWindowView _view;
 
-        // Model layer (MVP pattern)
-        private McpEditorModel _model;
+        // State fields (simplified from previous Model layer)
+        private int _customPort;
+        private bool _autoStartServer;
+        private bool _showLLMToolSettings;
+        private bool _showConnectedTools;
+        private McpEditorType _selectedEditorType;
+        private Vector2 _mainScrollPosition;
+        private bool _showSecuritySettings;
+        
+        // Runtime state
+        private bool _isPostCompileMode;
+        private bool _needsRepaint;
 
-        // Event handler (MVP pattern helper)
-        private McpEditorWindowEventHandler _eventHandler;
+        // Public properties for state access
+        public int CustomPort => _customPort;
+
+        /// <summary>
+        /// Request UI repaint
+        /// </summary>
+        public void RequestRepaint()
+        {
+            _needsRepaint = true;
+        }
+
+        /// <summary>
+        /// Check if repaint is needed
+        /// </summary>
+        public bool NeedsRepaint()
+        {
+            if (_isPostCompileMode || _needsRepaint)
+            {
+                _needsRepaint = false;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Disable post-compile mode
+        /// </summary>
+        public void DisablePostCompileMode()
+        {
+            if (_isPostCompileMode)
+            {
+                _isPostCompileMode = false;
+            }
+        }
+
+        // Runtime state tracking (from EventHandler)
+        private bool _lastServerRunning;
+        private int _lastServerPort;
+        private int _lastConnectedClientsCount;
+        private string _lastClientsInfoHash = "";
 
         // Server operations handler (MVP pattern helper)
         private McpServerOperations _serverOperations;
@@ -51,10 +105,7 @@ namespace io.github.hatayama.uLoopMCP
         private void OnEnable()
         {
             InitializeAll();
-        }
-
-        private void OnDestroy()
-        {
+            StartBackgroundUpdates();
         }
 
         private void InitializeAll()
@@ -75,7 +126,16 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void InitializeModel()
         {
-            _model = new McpEditorModel();
+            // Initialize state with defaults
+            _customPort = McpServerConfig.DEFAULT_PORT;
+            _autoStartServer = false;
+            _showLLMToolSettings = true;
+            _showConnectedTools = true;
+            _selectedEditorType = McpEditorType.Cursor;
+            _mainScrollPosition = default;
+            _showSecuritySettings = false;
+            _isPostCompileMode = false;
+            _needsRepaint = false;
         }
 
         /// <summary>
@@ -83,12 +143,14 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void InitializeView()
         {
-            _view = new McpEditorWindowView();
+            _uitView = new McpEditorWindowUITView();
+            _uitView.Initialize();
+
+            if (_uitView.Root != null)
+            {
+                rootVisualElement.Add(_uitView.Root);
+            }
         }
-
-
-
-
 
 
         /// <summary>
@@ -111,10 +173,16 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Initialize event handler
         /// </summary>
+        /// <summary>
+        /// Initialize event subscriptions
+        /// </summary>
         private void InitializeEventHandler()
         {
-            _eventHandler = new McpEditorWindowEventHandler(_model, this);
-            _eventHandler.Initialize();
+            // Subscribe to Unity Editor events
+            EditorApplication.update += OnEditorUpdate;
+            
+            // Subscribe to server events
+            SubscribeToServerEvents();
         }
 
         /// <summary>
@@ -122,7 +190,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void InitializeServerOperations()
         {
-            _serverOperations = new McpServerOperations(_model, _eventHandler);
+            _serverOperations = new McpServerOperations(this);
         }
 
         /// <summary>
@@ -130,7 +198,10 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void LoadSavedSettings()
         {
-            _model.LoadFromSettings();
+            McpEditorSettingsData settings = McpEditorSettings.GetSettings();
+            _customPort = settings.customPort;
+            _autoStartServer = settings.autoStartServer;
+            _showSecuritySettings = settings.showSecuritySettings;
         }
 
         /// <summary>
@@ -138,7 +209,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void RestoreSessionState()
         {
-            _model.LoadFromSessionState();
+            _selectedEditorType = McpEditorSettings.GetSelectedEditorType();
         }
 
 
@@ -148,7 +219,8 @@ namespace io.github.hatayama.uLoopMCP
         private void HandlePostCompileMode()
         {
             // Enable post-compile mode after domain reload
-            _model.EnablePostCompileMode();
+            _isPostCompileMode = true;
+            _needsRepaint = true;
 
             // Clear reconnecting UI flag on domain reload to ensure proper state
             McpEditorSettings.SetShowReconnectingUI(false);
@@ -159,7 +231,7 @@ namespace io.github.hatayama.uLoopMCP
             // Grace period is already started in OnEnable() if needed
 
             // Determine if server should be started automatically
-            bool shouldStartAutomatically = isAfterCompile || _model.UI.AutoStartServer;
+            bool shouldStartAutomatically = isAfterCompile || _autoStartServer;
             bool serverNotRunning = !McpServerController.IsServerRunning;
             bool shouldStartServer = shouldStartAutomatically && serverNotRunning;
 
@@ -171,11 +243,11 @@ namespace io.github.hatayama.uLoopMCP
 
                     // Use saved port number
                     int savedPort = McpEditorSettings.GetServerPort();
-                    bool portNeedsUpdate = savedPort != _model.UI.CustomPort;
+                    bool portNeedsUpdate = savedPort != _customPort;
 
                     if (portNeedsUpdate)
                     {
-                        _model.UpdateCustomPort(savedPort);
+                        UpdateCustomPort(savedPort);
                     }
                 }
 
@@ -185,16 +257,21 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnDisable()
         {
+            StopBackgroundUpdates();
             CleanupEventHandler();
             SaveSessionState();
         }
 
         /// <summary>
-        /// Cleanup event handler
+        /// Cleanup event subscriptions
         /// </summary>
         private void CleanupEventHandler()
         {
-            _eventHandler?.Cleanup();
+            // Unsubscribe from Unity Editor events
+            EditorApplication.update -= OnEditorUpdate;
+            
+            // Unsubscribe from server events
+            UnsubscribeFromServerEvents();
         }
 
         /// <summary>
@@ -202,7 +279,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void SaveSessionState()
         {
-            _model.SaveToSessionState();
+            McpEditorSettings.SetSelectedEditorType(_selectedEditorType);
         }
 
         /// <summary>
@@ -214,55 +291,6 @@ namespace io.github.hatayama.uLoopMCP
             Repaint();
         }
 
-        private void OnGUI()
-        {
-            // Draw debug background if ULOOPMCP_DEBUG is defined
-            _view.DrawDebugBackground(position);
-
-            // Synchronize server port and UI settings
-            SyncPortSettings();
-
-            // Make entire window scrollable
-            Vector2 newScrollPosition = EditorGUILayout.BeginScrollView(_model.UI.MainScrollPosition);
-            if (newScrollPosition != _model.UI.MainScrollPosition)
-            {
-                UpdateMainScrollPosition(newScrollPosition);
-            }
-
-            // Use view layer for rendering
-            ServerStatusData statusData = CreateServerStatusData();
-            _view.DrawServerStatus(statusData);
-
-            ServerControlsData controlsData = CreateServerControlsData();
-            _view.DrawServerControls(
-                data: controlsData,
-                toggleServerCallback: ToggleServer,
-                autoStartCallback: UpdateAutoStartServer,
-                portChangeCallback: UpdateCustomPort);
-
-            ConnectedToolsData toolsData = CreateConnectedToolsData();
-            _view.DrawConnectedToolsSection(
-                data: toolsData,
-                toggleFoldoutCallback: UpdateShowConnectedTools);
-
-            EditorConfigData configData = CreateEditorConfigData();
-            _view.DrawEditorConfigSection(
-                data: configData,
-                editorChangeCallback: UpdateSelectedEditorType,
-                configureCallback: (editor) => ConfigureEditor(),
-                foldoutCallback: UpdateShowLLMToolSettings);
-
-            SecuritySettingsData securityData = CreateSecuritySettingsData();
-            _view.DrawSecuritySettings(
-                data: securityData,
-                foldoutCallback: UpdateShowSecuritySettings,
-                enableTestsCallback: UpdateEnableTestsExecution,
-                allowMenuCallback: UpdateAllowMenuItemExecution,
-                allowThirdPartyCallback: UpdateAllowThirdPartyTools);
-
-
-            EditorGUILayout.EndScrollView();
-        }
 
         /// <summary>
         /// Synchronize server port and UI settings
@@ -275,25 +303,13 @@ namespace io.github.hatayama.uLoopMCP
             if (serverIsRunning)
             {
                 int actualServerPort = McpServerController.ServerPort;
-                bool portMismatch = _model.UI.CustomPort != actualServerPort;
+                bool portMismatch = _customPort != actualServerPort;
 
                 if (portMismatch)
                 {
-                    _model.UpdateCustomPort(actualServerPort);
+                    UpdateCustomPort(actualServerPort);
                 }
             }
-        }
-
-        /// <summary>
-        /// Create server status data for view rendering
-        /// </summary>
-        private ServerStatusData CreateServerStatusData()
-        {
-            (bool isRunning, int port, bool _) = McpServerController.GetServerStatus();
-            string status = isRunning ? "Running" : "Stopped";
-            Color statusColor = isRunning ? Color.green : Color.red;
-
-            return new ServerStatusData(isRunning, port, status, statusColor);
         }
 
         /// <summary>
@@ -310,7 +326,7 @@ namespace io.github.hatayama.uLoopMCP
             if (!isRunning)
             {
                 // Check if requested port is valid and available
-                int requestedPort = _model.UI.CustomPort;
+                int requestedPort = _customPort;
 
                 // First check if port is valid
                 if (!McpPortValidator.ValidatePort(requestedPort))
@@ -326,7 +342,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            return new ServerControlsData(_model.UI.CustomPort, _model.UI.AutoStartServer, isRunning, !isRunning, hasPortWarning, portWarningMessage);
+            return new ServerControlsData(_customPort, _autoStartServer, isRunning, !isRunning, hasPortWarning, portWarningMessage);
         }
 
         /// <summary>
@@ -394,7 +410,7 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorSettings.ClearPostCompileReconnectingUI();
             }
 
-            return new ConnectedToolsData(connectedClients, _model.UI.ShowConnectedTools, isServerRunning, showReconnectingUI);
+            return new ConnectedToolsData(connectedClients, _showConnectedTools, isServerRunning, showReconnectingUI);
         }
 
         /// <summary>
@@ -413,7 +429,7 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                McpConfigService configService = GetConfigService(_model.UI.SelectedEditorType);
+                McpConfigService configService = GetConfigService(_selectedEditorType);
                 isConfigured = configService.IsConfigured();
 
                 // Check for port mismatch if configured
@@ -430,12 +446,12 @@ namespace io.github.hatayama.uLoopMCP
                     else
                     {
                         // When server is not running, check if UI port matches configured port
-                        hasPortMismatch = _model.UI.CustomPort != configuredPort;
+                        hasPortMismatch = _customPort != configuredPort;
                     }
                 }
 
                 // Check if update is needed
-                int portToCheck = isServerRunning ? currentPort : _model.UI.CustomPort;
+                int portToCheck = isServerRunning ? currentPort : _customPort;
                 isUpdateNeeded = configService.IsUpdateNeeded(portToCheck);
             }
             catch (Exception ex)
@@ -444,7 +460,7 @@ namespace io.github.hatayama.uLoopMCP
                 isUpdateNeeded = true; // If error occurs, assume update is needed
             }
 
-            return new EditorConfigData(_model.UI.SelectedEditorType, _model.UI.ShowLLMToolSettings, isServerRunning, currentPort, isConfigured, hasPortMismatch, configurationError, isUpdateNeeded);
+            return new EditorConfigData(_selectedEditorType, _showLLMToolSettings, isServerRunning, currentPort, isConfigured, hasPortMismatch, configurationError, isUpdateNeeded);
         }
 
         /// <summary>
@@ -453,7 +469,7 @@ namespace io.github.hatayama.uLoopMCP
         private SecuritySettingsData CreateSecuritySettingsData()
         {
             return new SecuritySettingsData(
-                _model.UI.ShowSecuritySettings,
+                _showSecuritySettings,
                 McpEditorSettings.GetEnableTestsExecution(),
                 McpEditorSettings.GetAllowMenuItemExecution(),
                 McpEditorSettings.GetAllowThirdPartyTools());
@@ -464,9 +480,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void ConfigureEditor()
         {
-            McpConfigService configService = GetConfigService(_model.UI.SelectedEditorType);
+            McpConfigService configService = GetConfigService(_selectedEditorType);
             bool isServerRunning = McpServerController.IsServerRunning;
-            int portToUse = isServerRunning ? McpServerController.ServerPort : _model.UI.CustomPort;
+            int portToUse = isServerRunning ? McpServerController.ServerPort : _customPort;
 
             configService.AutoConfigure(portToUse);
             Repaint();
@@ -507,7 +523,8 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateAutoStartServer(bool autoStart)
         {
-            _model.UpdateAutoStartServer(autoStart);
+            _autoStartServer = autoStart;
+            McpEditorSettings.SetAutoStartServer(autoStart);
         }
 
         /// <summary>
@@ -515,7 +532,11 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateCustomPort(int port)
         {
-            _model.UpdateCustomPort(port);
+            _customPort = port;
+            McpEditorSettings.SetCustomPort(port);
+            
+            // Automatically update all configured MCP editor settings with new port
+            McpPortChangeUpdater.UpdateAllConfigurationsForPortChange(port, "UI port change");
         }
 
         /// <summary>
@@ -523,7 +544,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateShowConnectedTools(bool show)
         {
-            _model.UpdateShowConnectedTools(show);
+            _showConnectedTools = show;
         }
 
         /// <summary>
@@ -531,7 +552,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateShowLLMToolSettings(bool show)
         {
-            _model.UpdateShowLLMToolSettings(show);
+            _showLLMToolSettings = show;
         }
 
         /// <summary>
@@ -539,7 +560,8 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateSelectedEditorType(McpEditorType type)
         {
-            _model.UpdateSelectedEditorType(type);
+            _selectedEditorType = type;
+            McpEditorSettings.SetSelectedEditorType(type);
         }
 
         /// <summary>
@@ -547,7 +569,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateMainScrollPosition(Vector2 position)
         {
-            _model.UpdateMainScrollPosition(position);
+            _mainScrollPosition = position;
         }
 
         /// <summary>
@@ -555,7 +577,8 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateShowSecuritySettings(bool show)
         {
-            _model.UpdateShowSecuritySettings(show);
+            _showSecuritySettings = show;
+            McpEditorSettings.SetShowSecuritySettings(show);
         }
 
         /// <summary>
@@ -563,7 +586,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateEnableTestsExecution(bool enable)
         {
-            _model.UpdateEnableTestsExecution(enable);
+            McpEditorSettings.SetEnableTestsExecution(enable);
         }
 
         /// <summary>
@@ -571,7 +594,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateAllowMenuItemExecution(bool allow)
         {
-            _model.UpdateAllowMenuItemExecution(allow);
+            McpEditorSettings.SetAllowMenuItemExecution(allow);
         }
 
         /// <summary>
@@ -579,7 +602,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void UpdateAllowThirdPartyTools(bool allow)
         {
-            _model.UpdateAllowThirdPartyTools(allow);
+            McpEditorSettings.SetAllowThirdPartyTools(allow);
         }
 
 
@@ -597,5 +620,214 @@ namespace io.github.hatayama.uLoopMCP
                 StartServer();
             }
         }
+
+        #region UI Toolkit Support
+
+        /// <summary>
+        /// Start background updates for UI Toolkit
+        /// </summary>
+        private void StartBackgroundUpdates()
+        {
+            // Schedule regular updates
+            _updateScheduler = rootVisualElement.schedule.Execute(UpdateUIToolkit);
+            OnEditorFocusChanged(true);
+
+            // Subscribe to focus change events
+            EditorApplication.focusChanged += OnEditorFocusChanged;
+
+            // Do an immediate update
+            UpdateUIToolkit();
+        }
+
+        /// <summary>
+        /// Stop background updates for UI Toolkit
+        /// </summary>
+        private void StopBackgroundUpdates()
+        {
+            // Pause scheduled updates
+            _updateScheduler?.Pause();
+
+            // Unsubscribe from events
+            EditorApplication.focusChanged -= OnEditorFocusChanged;
+        }
+
+        /// <summary>
+        /// Handle editor focus changes
+        /// </summary>
+        private void OnEditorFocusChanged(bool hasFocus)
+        {
+            if (_updateScheduler == null) return;
+
+            // Adjust update frequency based on focus state
+            if (hasFocus)
+            {
+                _updateScheduler.Every(McpUIToolkitCommonConstants.UPDATE_INTERVAL_FOCUSED);
+            }
+            else
+            {
+                _updateScheduler.Every(McpUIToolkitCommonConstants.UPDATE_INTERVAL_DEFAULT);
+            }
+        }
+
+        /// <summary>
+        /// Update UI Toolkit view
+        /// </summary>
+        private void UpdateUIToolkit()
+        {
+            if (_uitView == null) return;
+
+            // Synchronize server port and UI settings
+            SyncPortSettings();
+
+            // Update scroll position
+            Vector2 currentScrollPosition = _uitView.GetScrollPosition();
+            if (currentScrollPosition != _mainScrollPosition)
+            {
+                UpdateMainScrollPosition(currentScrollPosition);
+            }
+
+            // Update server controls (now includes status)
+            ServerControlsData controlsData = CreateServerControlsData();
+            _uitView.UpdateServerControls(controlsData, ToggleServer,
+                UpdateAutoStartServer, UpdateCustomPort);
+
+            // Update connected tools
+            ConnectedToolsData toolsData = CreateConnectedToolsData();
+            _uitView.UpdateConnectedTools(toolsData, UpdateShowConnectedTools);
+
+            // Update editor config
+            EditorConfigData configData = CreateEditorConfigData();
+            _uitView.UpdateEditorConfig(configData, UpdateSelectedEditorType,
+                (editor) => ConfigureEditor(), UpdateShowLLMToolSettings);
+
+            // Update security settings
+            SecuritySettingsData securityData = CreateSecuritySettingsData();
+            _uitView.UpdateSecuritySettings(securityData, UpdateShowSecuritySettings,
+                UpdateEnableTestsExecution, UpdateAllowMenuItemExecution,
+                UpdateAllowThirdPartyTools);
+        }
+
+        #region Event Handler Methods
+
+        /// <summary>
+        /// Subscribe to server events for immediate UI updates
+        /// </summary>
+        private void SubscribeToServerEvents()
+        {
+            // Unsubscribe first to avoid duplicate subscriptions
+            UnsubscribeFromServerEvents();
+
+            McpBridgeServer currentServer = McpServerController.CurrentServer;
+            if (currentServer != null)
+            {
+                currentServer.OnClientConnected += OnClientConnected;
+                currentServer.OnClientDisconnected += OnClientDisconnected;
+            }
+        }
+
+        /// <summary>
+        /// Unsubscribe from server events
+        /// </summary>
+        private void UnsubscribeFromServerEvents()
+        {
+            McpBridgeServer currentServer = McpServerController.CurrentServer;
+            if (currentServer != null)
+            {
+                currentServer.OnClientConnected -= OnClientConnected;
+                currentServer.OnClientDisconnected -= OnClientDisconnected;
+            }
+        }
+
+        /// <summary>
+        /// Handle client connection event - force UI repaint for immediate update
+        /// </summary>
+        private void OnClientConnected(string clientEndpoint)
+        {
+            // Clear reconnecting flags when client connects
+            McpServerController.ClearReconnectingFlag();
+            
+            // Mark that repaint is needed since events are called from background thread
+            RequestRepaint();
+
+            // Exit post-compile mode when client connects
+            DisablePostCompileMode();
+        }
+
+        /// <summary>
+        /// Handle client disconnection event - force UI repaint for immediate update
+        /// </summary>
+        private void OnClientDisconnected(string clientEndpoint)
+        {
+            // Mark that repaint is needed since events are called from background thread
+            RequestRepaint();
+        }
+
+        /// <summary>
+        /// Called from EditorApplication.update - handles UI refresh even when Unity is not focused
+        /// </summary>
+        private void OnEditorUpdate()
+        {
+            // Always check for server state changes
+            CheckServerStateChanges();
+
+            // Always repaint if window requests it
+            if (NeedsRepaint())
+            {
+                Repaint();
+            }
+        }
+
+        /// <summary>
+        /// Check if server state has changed and mark repaint if needed
+        /// </summary>
+        private void CheckServerStateChanges()
+        {
+            (bool isRunning, int port, bool _) = McpServerController.GetServerStatus();
+            var connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
+            int connectedCount = connectedClients?.Count ?? 0;
+
+            // Generate hash of client information to detect changes in client names
+            string clientsInfoHash = GenerateClientsInfoHash(connectedClients);
+
+            // Check if any server state has changed
+            if (isRunning != _lastServerRunning ||
+                port != _lastServerPort ||
+                connectedCount != _lastConnectedClientsCount ||
+                clientsInfoHash != _lastClientsInfoHash)
+            {
+                _lastServerRunning = isRunning;
+                _lastServerPort = port;
+                _lastConnectedClientsCount = connectedCount;
+                _lastClientsInfoHash = clientsInfoHash;
+                RequestRepaint();
+            }
+        }
+
+        /// <summary>
+        /// Generate hash string from client information to detect changes
+        /// </summary>
+        private string GenerateClientsInfoHash(IReadOnlyCollection<ConnectedClient> clients)
+        {
+            if (clients == null || clients.Count == 0)
+            {
+                return "empty";
+            }
+
+            // Create a hash based on endpoint and client name for unique identification
+            var info = clients.Select(c => $"{c.Endpoint}:{c.ClientName}").OrderBy(s => s);
+            return string.Join("|", info);
+        }
+
+        /// <summary>
+        /// Re-subscribe to server events (called after server start)
+        /// </summary>
+        public void RefreshServerEventSubscriptions()
+        {
+            SubscribeToServerEvents();
+        }
+
+        #endregion
+
+        #endregion
     }
 }
