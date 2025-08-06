@@ -57,13 +57,7 @@ namespace io.github.hatayama.uLoopMCP
             
             return Task.FromResult(response);
         }
-
-        /// <summary>
-        /// Try to execute menuItem using EditorApplication.ExecuteMenuItem
-        /// </summary>
-        /// <summary>
-        /// Try to execute menuItem using EditorApplication.ExecuteMenuItem
-        /// </summary>
+        
         /// <summary>
         /// Try to execute menuItem using EditorApplication.ExecuteMenuItem
         /// </summary>
