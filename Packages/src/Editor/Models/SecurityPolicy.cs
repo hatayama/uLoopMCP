@@ -47,6 +47,15 @@ namespace uLoopMCP.DynamicExecution
         /// <summary>リフレクション使用許可</summary>
         public bool AllowReflection { get; set; } = false;
 
+        /// <summary>unsafe コード許可</summary>
+        public bool AllowUnsafeCode { get; set; } = false;
+
+        /// <summary>外部プロセス実行許可</summary>
+        public bool AllowProcessExecution { get; set; } = false;
+
+        /// <summary>最大コード長</summary>
+        public int MaxCodeLength { get; set; } = 10000;
+
         /// <summary>
         /// デフォルトセキュリティポリシーを取得
         /// </summary>

@@ -56,11 +56,17 @@ namespace uLoopMCP.DynamicExecution
         /// <summary>実行成功フラグ</summary>
         public bool Success { get; set; }
 
+        /// <summary>実行結果文字列</summary>
+        public string Result { get; set; } = "";
+
         /// <summary>戻り値</summary>
         public object ReturnValue { get; set; }
 
         /// <summary>ログメッセージ</summary>
         public List<string> Logs { get; set; } = new();
+
+        /// <summary>エラーメッセージ（失敗時）</summary>
+        public string ErrorMessage { get; set; } = "";
 
         /// <summary>発生した例外</summary>
         public Exception Exception { get; set; }

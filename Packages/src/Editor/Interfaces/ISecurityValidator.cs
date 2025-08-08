@@ -9,102 +9,86 @@ namespace uLoopMCP.DynamicExecution
     /// </summary>
     public interface ISecurityValidator
     {
-        /// <summary>
-        /// C#コードのセキュリティチェックを実行する
-        /// </summary>
-        /// <param name="code">検証するC#コード</param>
-        /// <returns>検証結果</returns>
+        /// <summary>コードセキュリティ検証</summary>
         ValidationResult ValidateCode(string code);
-
-        /// <summary>
-        /// セキュリティポリシーを読み込む
-        /// </summary>
-        /// <param name="jsonPath">セキュリティポリシーJSONファイルのパス</param>
+        
+        /// <summary>セキュリティポリシー読み込み</summary>
         void LoadSecurityPolicy(string jsonPath);
-
-        /// <summary>
-        /// 指定したメソッドの使用が許可されているかチェックする
-        /// </summary>
-        /// <param name="methodSignature">メソッドシグネチャ</param>
-        /// <returns>許可されている場合true</returns>
+        
+        /// <summary>メソッド許可チェック</summary>
         bool IsMethodAllowed(string methodSignature);
     }
 
-    /// <summary>
-    /// セキュリティ検証結果のデータモデル
-    /// </summary>
+    /// <summary>検証結果</summary>
     public class ValidationResult
     {
-        /// <summary>検証が有効（問題なし）かどうか</summary>
+        /// <summary>検証成功フラグ</summary>
         public bool IsValid { get; set; }
-
-        /// <summary>セキュリティ違反の詳細</summary>
+        
+        /// <summary>セキュリティ違反リスト</summary>
         public List<SecurityViolation> Violations { get; set; } = new();
-
+        
         /// <summary>リスクレベル</summary>
         public SecurityLevel RiskLevel { get; set; }
     }
 
-    /// <summary>
-    /// セキュリティ違反情報
-    /// </summary>
+    /// <summary>セキュリティ違反</summary>
     public class SecurityViolation
     {
-        /// <summary>違反の種類</summary>
+        /// <summary>違反タイプ</summary>
         public SecurityViolationType Type { get; set; }
-
-        /// <summary>違反の詳細説明</summary>
+        
+        /// <summary>違反説明</summary>
         public string Description { get; set; } = "";
-
-        /// <summary>違反が発生した行番号</summary>
+        
+        /// <summary>行番号</summary>
         public int LineNumber { get; set; }
-
-        /// <summary>違反を含むコードスニペット</summary>
+        
+        /// <summary>コードスニペット</summary>
         public string CodeSnippet { get; set; } = "";
     }
 
-    /// <summary>
-    /// セキュリティ違反の種類
-    /// </summary>
+    /// <summary>セキュリティ違反タイプ</summary>
     public enum SecurityViolationType
     {
-        /// <summary>禁止された名前空間の使用</summary>
-        ForbiddenNamespace,
-
-        /// <summary>危険なメソッドの呼び出し</summary>
+        /// <summary>危険なメソッド呼び出し</summary>
         DangerousMethodCall,
-
-        /// <summary>禁止された型の使用</summary>
-        ForbiddenType,
-
-        /// <summary>リフレクションの不正使用</summary>
-        IllegalReflection,
-
+        
         /// <summary>ファイルシステムアクセス</summary>
         FileSystemAccess,
-
+        
         /// <summary>ネットワークアクセス</summary>
-        NetworkAccess
+        NetworkAccess,
+        
+        /// <summary>リフレクション使用</summary>
+        ReflectionUsage,
+        
+        /// <summary>unsafe コード</summary>
+        UnsafeCode,
+        
+        /// <summary>外部プロセス実行</summary>
+        ProcessExecution,
+        
+        /// <summary>禁止名前空間</summary>
+        ForbiddenNamespace
     }
 
-    /// <summary>
-    /// セキュリティリスクレベル
-    /// </summary>
+    /// <summary>セキュリティレベル</summary>
     public enum SecurityLevel
     {
         /// <summary>安全</summary>
-        Safe,
-
+        Safe = 0,
+        
         /// <summary>低リスク</summary>
-        Low,
-
+        Low = 1,
+        
         /// <summary>中リスク</summary>
-        Medium,
-
+        Medium = 2,
+        
         /// <summary>高リスク</summary>
-        High,
-
+        High = 3,
+        
         /// <summary>危険</summary>
-        Critical
+        Critical = 4
     }
 }

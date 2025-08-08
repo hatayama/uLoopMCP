@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using io.github.hatayama.uLoopMCP;
+using uLoopMCP.DynamicExecution;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -15,20 +16,20 @@ namespace io.github.hatayama.uLoopMCP
     [McpTool(Description = "Execute C# code dynamically with security validation and timeout control")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
-        private readonly IDynamicCodeExecutor _executor;
+        private readonly global::uLoopMCP.DynamicExecution.IDynamicCodeExecutor _executor;
         
         public override string ToolName => "execute-dynamic-code";
         
         public ExecuteDynamicCodeTool()
         {
-            // スタブ実装 - 後でDynamicCodeExecutorFactoryを実装
-            _executor = new StubDynamicCodeExecutor();
+            // 実際のDynamicCodeExecutor実装を使用
+            _executor = global::uLoopMCP.Factory.DynamicCodeExecutorFactory.CreateDefault();
         }
         
         /// <summary>
         /// テスト用コンストラクタ（依存性注入対応）
         /// </summary>
-        public ExecuteDynamicCodeTool(IDynamicCodeExecutor executor)
+        public ExecuteDynamicCodeTool(global::uLoopMCP.DynamicExecution.IDynamicCodeExecutor executor)
         {
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
         }
@@ -56,20 +57,23 @@ namespace io.github.hatayama.uLoopMCP
                     "Monitor execution flow and performance"
                 );
                 
-                // ExecutionRequestに変換
-                var request = new ExecutionRequest
+                // パラメータ配列に変換
+                object[] parametersArray = null;
+                if (parameters.Parameters != null && parameters.Parameters.Count > 0)
                 {
-                    Code = parameters.Code ?? "",
-                    TimeoutSeconds = parameters.TimeoutSeconds,
-                    DryRun = parameters.DryRun,
-                    Parameters = parameters.Parameters ?? new Dictionary<string, object>()
-                };
+                    parametersArray = parameters.Parameters.Values.ToArray();
+                }
                 
-                // 実行
-                var response = await _executor.ExecuteAsync(request);
+                // 実行（ExecuteCodeAsyncを使用）
+                var executionResult = await _executor.ExecuteCodeAsync(
+                    parameters.Code ?? "",
+                    "DynamicCommand",
+                    parametersArray,
+                    cancellationToken
+                );
                 
                 // レスポンスに変換
-                var toolResponse = ConvertToToolResponse(response, correlationId);
+                var toolResponse = ConvertExecutionResultToResponse(executionResult, correlationId);
                 
                 // VibeLoggerで実行完了をログ
                 VibeLogger.LogInfo(
@@ -77,13 +81,13 @@ namespace io.github.hatayama.uLoopMCP
                     "Dynamic code execution completed",
                     new { 
                         correlationId,
-                        success = response.Success,
-                        executionTimeMs = response.ExecutionTime.TotalMilliseconds,
-                        logsCount = response.Logs?.Count ?? 0,
-                        errorsCount = response.CompilationErrors?.Count ?? 0
+                        success = executionResult.Success,
+                        executionTimeMs = executionResult.ExecutionTime.TotalMilliseconds,
+                        logsCount = executionResult.Logs?.Count ?? 0,
+                        result_length = executionResult.Result?.Length ?? 0
                     },
                     correlationId,
-                    $"Execution completed: {(response.Success ? "Success" : "Failed")}",
+                    $"Execution completed: {(executionResult.Success ? "Success" : "Failed")}",
                     "Check execution results and performance metrics"
                 );
                 
@@ -112,17 +116,30 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// ExecutionResponseをExecuteDynamicCodeResponseに変換
         /// </summary>
-        private ExecuteDynamicCodeResponse ConvertToToolResponse(ExecutionResponse response, string correlationId)
+        private ExecuteDynamicCodeResponse ConvertExecutionResultToResponse(ExecutionResult result, string correlationId)
         {
-            return new ExecuteDynamicCodeResponse
+            var response = new ExecuteDynamicCodeResponse
             {
-                Success = response.Success,
-                Result = response.Result ?? "",
-                Logs = response.Logs ?? new List<string>(),
-                CompilationErrors = ConvertCompilationErrors(response.CompilationErrors),
-                ErrorMessage = response.ErrorMessage,
-                ExecutionTimeMs = (long)response.ExecutionTime.TotalMilliseconds
+                Success = result.Success,
+                Result = result.Result ?? "",
+                Logs = result.Logs ?? new List<string>(),
+                CompilationErrors = new List<CompilationErrorDto>(), // ExecutionResultからは取得不可
+                ErrorMessage = result.ErrorMessage ?? "",
+                ExecutionTimeMs = (long)result.ExecutionTime.TotalMilliseconds
             };
+
+            // 例外が発生した場合のエラー情報追加
+            if (result.Exception != null)
+            {
+                if (response.Logs == null) response.Logs = new List<string>();
+                response.Logs.Add($"Exception: {result.Exception.Message}");
+                if (!string.IsNullOrEmpty(result.Exception.StackTrace))
+                {
+                    response.Logs.Add($"Stack Trace: {result.Exception.StackTrace}");
+                }
+            }
+
+            return response;
         }
         
         /// <summary>
