@@ -57,7 +57,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
             // 全Unityアセンブリを自動追加
             int addedCount = AddUnityAssemblies();
             
-            UnityEngine.Debug.Log($"RoslynCompiler: Unityアセンブリ自動追加完了 - {addedCount}個のアセンブリを追加");
+            UnityEngine.Debug.Log($"RoslynCompiler: Unity & プロジェクトアセンブリ自動追加完了 - {addedCount}個のアセンブリを追加");
             
             // System.Runtimeを明示的に追加
             string[] runtimePaths = new[]
@@ -377,13 +377,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
         {
             try
             {
-                var unityAssemblies = System.AppDomain.CurrentDomain.GetAssemblies()
-                    .Where(IsUnityAssembly)
+                // 現在のAppDomainのアセンブリを全て取得（シンプル・確実）
+                Assembly[] allAssemblies = AppDomain.CurrentDomain.GetAssemblies()
                     .Where(HasValidLocation)
                     .ToArray();
                 
                 int addedCount = 0;
-                foreach (Assembly assembly in unityAssemblies)
+                foreach (Assembly assembly in allAssemblies)
                 {
                     if (TryAddAssemblyReference(assembly))
                     {
@@ -393,25 +393,17 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                 
                 return addedCount;
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                UnityEngine.Debug.LogError($"RoslynCompiler: Unity自動アセンブリ追加でエラー - {ex.Message}");
+                UnityEngine.Debug.LogError($"RoslynCompiler: アセンブリ自動追加でエラー - {ex.Message}");
                 return 0;
             }
         }
-
-        private bool IsUnityAssembly(Assembly assembly)
-        {
-            return assembly.FullName.StartsWith("UnityEngine.") || 
-                   assembly.FullName.StartsWith("Unity.") ||
-                   assembly.FullName.StartsWith("UnityEditor.");
-        }
-
         private bool HasValidLocation(Assembly assembly)
         {
             try
             {
-                return !string.IsNullOrEmpty(assembly.Location) && System.IO.File.Exists(assembly.Location);
+                return !string.IsNullOrEmpty(assembly.Location) && File.Exists(assembly.Location);
             }
             catch
             {
@@ -426,7 +418,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                 _defaultReferences.Add(MetadataReference.CreateFromFile(assembly.Location));
                 return true;
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 UnityEngine.Debug.LogWarning($"RoslynCompiler: アセンブリ追加失敗 {assembly.FullName} - {ex.Message}");
                 return false;
