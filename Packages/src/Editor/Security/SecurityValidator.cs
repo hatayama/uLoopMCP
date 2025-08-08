@@ -6,11 +6,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
-using uLoopMCP.DynamicExecution;
+using io.github.hatayama.uLoopMCP.DynamicExecution;
 using UnityEngine;
 using io.github.hatayama.uLoopMCP;
 
-namespace uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// コードセキュリティ検証機能
@@ -79,7 +79,7 @@ namespace uLoopMCP.DynamicExecution
                     "Monitor security violation patterns"
                 );
 
-                var result = new ValidationResult { IsValid = true };
+                ValidationResult result = new ValidationResult { IsValid = true };
 
                 if (string.IsNullOrWhiteSpace(code))
                 {
@@ -101,10 +101,10 @@ namespace uLoopMCP.DynamicExecution
                 }
 
                 // Syntax Tree解析による詳細チェック
-                var syntaxTree = CSharpSyntaxTree.ParseText(code);
-                var root = syntaxTree.GetRoot();
+                SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code);
+                SyntaxNode root = syntaxTree.GetRoot();
                 
-                var walker = new SecuritySyntaxWalker(_policy, _dangerousMethods, _forbiddenNamespaces);
+                SecuritySyntaxWalker walker = new SecuritySyntaxWalker(_policy, _dangerousMethods, _forbiddenNamespaces);
                 walker.Visit(root);
                 
                 result.Violations.AddRange(walker.Violations);
@@ -171,8 +171,8 @@ namespace uLoopMCP.DynamicExecution
                     return;
                 }
 
-                var jsonContent = File.ReadAllText(jsonPath);
-                var policy = JsonConvert.DeserializeObject<SecurityPolicy>(jsonContent);
+                string jsonContent = File.ReadAllText(jsonPath);
+                SecurityPolicy policy = JsonConvert.DeserializeObject<SecurityPolicy>(jsonContent);
                 if (policy != null)
                 {
                     _policy = policy;
@@ -205,11 +205,11 @@ namespace uLoopMCP.DynamicExecution
         {
             if (!violations.Any()) return SecurityLevel.Safe;
 
-            var maxRisk = SecurityLevel.Safe;
+            SecurityLevel maxRisk = SecurityLevel.Safe;
             
-            foreach (var violation in violations)
+            foreach (SecurityViolation violation in violations)
             {
-                var riskLevel = violation.Type switch
+                SecurityLevel riskLevel = violation.Type switch
                 {
                     SecurityViolationType.UnsafeCode => SecurityLevel.Critical,
                     SecurityViolationType.ProcessExecution => SecurityLevel.Critical,
@@ -249,10 +249,10 @@ namespace uLoopMCP.DynamicExecution
 
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
-            var methodCall = node.ToString();
+            string methodCall = node.ToString();
             
             // 危険なメソッド呼び出しチェック
-            foreach (var dangerous in _dangerousMethods)
+            foreach (string dangerous in _dangerousMethods)
             {
                 if (methodCall.Contains(dangerous))
                 {
@@ -271,7 +271,7 @@ namespace uLoopMCP.DynamicExecution
 
         public override void VisitUsingDirective(UsingDirectiveSyntax node)
         {
-            var namespaceName = node.Name?.ToString();
+            string namespaceName = node.Name?.ToString();
             
             if (namespaceName != null && _forbiddenNamespaces.Contains(namespaceName))
             {

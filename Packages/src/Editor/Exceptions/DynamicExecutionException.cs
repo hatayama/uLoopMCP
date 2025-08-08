@@ -1,6 +1,6 @@
 using System;
 
-namespace uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// 動的コード実行機能の基底例外クラス

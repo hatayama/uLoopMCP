@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// セキュリティポリシー設定
@@ -69,7 +69,7 @@ namespace uLoopMCP.DynamicExecution
         /// </summary>
         public static SecurityPolicy GetStrict()
         {
-            var policy = new SecurityPolicy();
+            SecurityPolicy policy = new SecurityPolicy();
             policy.ForbiddenNamespaces.AddRange(new[]
             {
                 "System.IO",

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 
-namespace uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// コンパイル済みコードの実行制御インターフェース

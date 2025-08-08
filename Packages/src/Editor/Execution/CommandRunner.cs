@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using uLoopMCP.DynamicExecution;
+using io.github.hatayama.uLoopMCP.DynamicExecution;
 using UnityEngine;
 using io.github.hatayama.uLoopMCP;
 
-namespace uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// コンパイル済みコードの実行制御
@@ -62,20 +62,20 @@ namespace uLoopMCP.DynamicExecution
                     "Monitor execution performance and timeout behavior"
                 );
 
-                var startTime = DateTime.Now;
+                DateTime startTime = DateTime.Now;
                 
                 // タイムアウト設定
-                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(context.TimeoutSeconds));
-                using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                using CancellationTokenSource timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(context.TimeoutSeconds));
+                using CancellationTokenSource combinedCts = CancellationTokenSource.CreateLinkedTokenSource(
                     _cancellationTokenSource.Token, 
                     timeoutCts.Token,
                     context.CancellationToken
                 );
 
                 // 実行
-                var result = ExecuteInternal(context, combinedCts.Token, correlationId);
+                ExecutionResult result = ExecuteInternal(context, combinedCts.Token, correlationId);
                 
-                var endTime = DateTime.Now;
+                DateTime endTime = DateTime.Now;
                 result.ExecutionTime = endTime - startTime;
 
                 VibeLogger.LogInfo(
@@ -160,14 +160,14 @@ namespace uLoopMCP.DynamicExecution
             try
             {
                 // アセンブリから実行可能な型を探す
-                var types = context.CompiledAssembly.GetTypes();
+                Type[] types = context.CompiledAssembly.GetTypes();
                 Type targetType = null;
                 MethodInfo executeMethod = null;
 
                 // Executeメソッドを持つ型を探す
-                foreach (var type in types)
+                foreach (Type type in types)
                 {
-                    var method = type.GetMethod("Execute", BindingFlags.Public | BindingFlags.Instance);
+                    MethodInfo method = type.GetMethod("Execute", BindingFlags.Public | BindingFlags.Instance);
                     if (method != null)
                     {
                         targetType = type;
@@ -188,7 +188,7 @@ namespace uLoopMCP.DynamicExecution
                 }
 
                 // インスタンス作成
-                var instance = Activator.CreateInstance(targetType);
+                object instance = Activator.CreateInstance(targetType);
                 if (instance == null)
                 {
                     return new ExecutionResult
@@ -204,7 +204,7 @@ namespace uLoopMCP.DynamicExecution
 
                 // メソッド実行
                 object executionResult;
-                var parameters = executeMethod.GetParameters();
+                System.Reflection.ParameterInfo[] parameters = executeMethod.GetParameters();
                 
                 if (parameters.Length == 0)
                 {
@@ -241,7 +241,7 @@ namespace uLoopMCP.DynamicExecution
             catch (TargetInvocationException ex)
             {
                 // 実際の例外を取得
-                var innerException = ex.InnerException ?? ex;
+                Exception innerException = ex.InnerException ?? ex;
                 
                 return new ExecutionResult
                 {

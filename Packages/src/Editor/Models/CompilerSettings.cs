@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// コンパイラ設定

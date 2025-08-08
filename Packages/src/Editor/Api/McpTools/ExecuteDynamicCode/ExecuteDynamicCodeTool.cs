@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using io.github.hatayama.uLoopMCP;
-using uLoopMCP.DynamicExecution;
+using io.github.hatayama.uLoopMCP.DynamicExecution;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -16,20 +16,20 @@ namespace io.github.hatayama.uLoopMCP
     [McpTool(Description = "Execute C# code dynamically with security validation and timeout control")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
-        private readonly global::uLoopMCP.DynamicExecution.IDynamicCodeExecutor _executor;
+        private readonly global::io.github.hatayama.uLoopMCP.DynamicExecution.IDynamicCodeExecutor _executor;
         
         public override string ToolName => "execute-dynamic-code";
         
         public ExecuteDynamicCodeTool()
         {
             // 実際のDynamicCodeExecutor実装を使用
-            _executor = global::uLoopMCP.Factory.DynamicCodeExecutorFactory.CreateDefault();
+            _executor = global::io.github.hatayama.uLoopMCP.Factory.DynamicCodeExecutorFactory.CreateDefault();
         }
         
         /// <summary>
         /// テスト用コンストラクタ（依存性注入対応）
         /// </summary>
-        public ExecuteDynamicCodeTool(global::uLoopMCP.DynamicExecution.IDynamicCodeExecutor executor)
+        public ExecuteDynamicCodeTool(global::io.github.hatayama.uLoopMCP.DynamicExecution.IDynamicCodeExecutor executor)
         {
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
         }
@@ -65,7 +65,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 
                 // 実行（ExecuteCodeAsyncを使用）
-                var executionResult = await _executor.ExecuteCodeAsync(
+                ExecutionResult executionResult = await _executor.ExecuteCodeAsync(
                     parameters.Code ?? "",
                     "DynamicCommand",
                     parametersArray,
@@ -73,7 +73,7 @@ namespace io.github.hatayama.uLoopMCP
                 );
                 
                 // レスポンスに変換
-                var toolResponse = ConvertExecutionResultToResponse(executionResult, correlationId);
+                ExecuteDynamicCodeResponse toolResponse = ConvertExecutionResultToResponse(executionResult, correlationId);
                 
                 // VibeLoggerで実行完了をログ
                 VibeLogger.LogInfo(
@@ -118,7 +118,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private ExecuteDynamicCodeResponse ConvertExecutionResultToResponse(ExecutionResult result, string correlationId)
         {
-            var response = new ExecuteDynamicCodeResponse
+            ExecuteDynamicCodeResponse response = new ExecuteDynamicCodeResponse
             {
                 Success = result.Success,
                 Result = result.Result ?? "",

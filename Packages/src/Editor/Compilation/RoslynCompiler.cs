@@ -6,11 +6,11 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using uLoopMCP.DynamicExecution;
+using io.github.hatayama.uLoopMCP.DynamicExecution;
 using UnityEngine;
 using io.github.hatayama.uLoopMCP;
 
-namespace uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// Roslynを使用したC#動的コンパイル機能
@@ -34,7 +34,7 @@ namespace uLoopMCP.DynamicExecution
             try
             {
                 // .NET Standard/Core基本アセンブリ
-                var netStandardAssembly = Assembly.Load("netstandard");
+                Assembly netStandardAssembly = Assembly.Load("netstandard");
                 if (netStandardAssembly != null)
                 {
                     _defaultReferences.Add(MetadataReference.CreateFromFile(netStandardAssembly.Location));
@@ -45,7 +45,7 @@ namespace uLoopMCP.DynamicExecution
                 // netstandard見つからない場合はmscorlib/System.Runtimeで代替
                 try
                 {
-                    var mscorlibPath = typeof(object).Assembly.Location;
+                    string mscorlibPath = typeof(object).Assembly.Location;
                     _defaultReferences.Add(MetadataReference.CreateFromFile(mscorlibPath));
                 }
                 catch { }
@@ -62,13 +62,13 @@ namespace uLoopMCP.DynamicExecution
             try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(UnityEngine.GameObject).Assembly.Location)); } catch { }
             
             // System.Runtimeを明示的に追加
-            var runtimePaths = new[]
+            string[] runtimePaths = new[]
             {
                 Path.Combine(Path.GetDirectoryName(typeof(object).Assembly.Location), "System.Runtime.dll"),
                 Path.Combine(Path.GetDirectoryName(typeof(object).Assembly.Location), "System.Private.CoreLib.dll")
             };
             
-            foreach (var path in runtimePaths)
+            foreach (string path in runtimePaths)
             {
                 if (File.Exists(path))
                 {
@@ -125,13 +125,13 @@ namespace uLoopMCP.DynamicExecution
                 string wrappedCode = WrapCodeIfNeeded(request.Code, request.Namespace, request.ClassName);
                 
                 // Syntax Treeの作成
-                var syntaxTree = CSharpSyntaxTree.ParseText(wrappedCode);
+                SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(wrappedCode);
                 
                 // 参照の準備
-                var references = new List<MetadataReference>(_defaultReferences);
+                List<MetadataReference> references = new List<MetadataReference>(_defaultReferences);
                 
                 // 追加参照を処理
-                foreach (var additionalRef in request.AdditionalReferences ?? new List<string>())
+                foreach (string additionalRef in request.AdditionalReferences ?? new List<string>())
                 {
                     if (File.Exists(additionalRef))
                     {
@@ -140,14 +140,14 @@ namespace uLoopMCP.DynamicExecution
                 }
                 
                 // コンパイル設定
-                var compilationOptions = new CSharpCompilationOptions(
+                CSharpCompilationOptions compilationOptions = new CSharpCompilationOptions(
                     OutputKind.DynamicallyLinkedLibrary,
                     optimizationLevel: OptimizationLevel.Release,
                     allowUnsafe: false // セキュリティのためunsafeコードは禁止
                 );
                 
                 // コンパイル実行
-                var compilation = CSharpCompilation.Create(
+                CSharpCompilation compilation = CSharpCompilation.Create(
                     $"DynamicAssembly_{correlationId}",
                     new[] { syntaxTree },
                     references,
@@ -155,10 +155,10 @@ namespace uLoopMCP.DynamicExecution
                 );
                 
                 // メモリにアセンブリを生成
-                using var memoryStream = new MemoryStream();
-                var emitResult = compilation.Emit(memoryStream);
+                using MemoryStream memoryStream = new MemoryStream();
+                Microsoft.CodeAnalysis.Emit.EmitResult emitResult = compilation.Emit(memoryStream);
                 
-                var result = new CompilationResult
+                CompilationResult result = new CompilationResult
                 {
                     UpdatedCode = wrappedCode
                 };
@@ -166,7 +166,7 @@ namespace uLoopMCP.DynamicExecution
                 if (emitResult.Success)
                 {
                     memoryStream.Seek(0, SeekOrigin.Begin);
-                    var assembly = Assembly.Load(memoryStream.ToArray());
+                    Assembly assembly = Assembly.Load(memoryStream.ToArray());
                     
                     result.Success = true;
                     result.CompiledAssembly = assembly;
@@ -205,7 +205,7 @@ namespace uLoopMCP.DynamicExecution
                 }
                 
                 // 警告も収集
-                var warnings = emitResult.Diagnostics
+                List<string> warnings = emitResult.Diagnostics
                     .Where(d => d.Severity == DiagnosticSeverity.Warning)
                     .Select(d => d.ToString())
                     .ToList();
@@ -267,7 +267,7 @@ namespace uLoopMCP.DynamicExecution
             }
             
             // シンプルなメソッドや式の場合は、クラスでラップ
-            var wrappedCode = new StringBuilder();
+            StringBuilder wrappedCode = new StringBuilder();
             wrappedCode.AppendLine("using System;");
             wrappedCode.AppendLine("using System.Collections.Generic;");
             wrappedCode.AppendLine("using System.Linq;");
@@ -281,8 +281,8 @@ namespace uLoopMCP.DynamicExecution
             wrappedCode.AppendLine("        {");
             
             // コードを適切にインデント
-            var lines = code.Split('\n');
-            foreach (var line in lines)
+            string[] lines = code.Split(new char[] { '\n' }, StringSplitOptions.None);
+            foreach (string line in lines)
             {
                 wrappedCode.AppendLine($"            {line}");
             }
@@ -310,14 +310,14 @@ namespace uLoopMCP.DynamicExecution
 
         private string GenerateCacheKey(CompilationRequest request)
         {
-            var keyBuilder = new StringBuilder();
+            StringBuilder keyBuilder = new StringBuilder();
             keyBuilder.Append(request.Code);
             keyBuilder.Append(request.ClassName);
             keyBuilder.Append(request.Namespace);
             
             if (request.AdditionalReferences != null)
             {
-                foreach (var reference in request.AdditionalReferences.OrderBy(r => r))
+                foreach (string reference in request.AdditionalReferences.OrderBy(r => r))
                 {
                     keyBuilder.Append(reference);
                 }

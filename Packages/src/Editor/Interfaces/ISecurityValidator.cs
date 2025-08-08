@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// コードセキュリティ検証機能のインターフェース

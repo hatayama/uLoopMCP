@@ -1,7 +1,7 @@
-using uLoopMCP.DynamicExecution;
+using io.github.hatayama.uLoopMCP.DynamicExecution;
 using io.github.hatayama.uLoopMCP;
 
-namespace uLoopMCP.Factory
+namespace io.github.hatayama.uLoopMCP.Factory
 {
     /// <summary>
     /// DynamicCodeExecutor生成ファクトリー
@@ -13,22 +13,22 @@ namespace uLoopMCP.Factory
         /// <summary>デフォルト設定でDynamicCodeExecutorを作成</summary>
         public static uLoopMCP.DynamicExecution.IDynamicCodeExecutor CreateDefault()
         {
-            var correlationId = System.Guid.NewGuid().ToString("N")[..8];
+            string correlationId = System.Guid.NewGuid().ToString("N")[..8];
 
             try
             {
                 // コンパイラー初期化
-                var compiler = new RoslynCompiler();
+                RoslynCompiler compiler = new RoslynCompiler();
                 compiler.InitializeReferences();
 
                 // セキュリティバリデーター初期化（デフォルトポリシー使用）
-                var validator = new SecurityValidator();
+                SecurityValidator validator = new SecurityValidator();
 
                 // コマンドランナー初期化
-                var runner = new CommandRunner();
+                CommandRunner runner = new CommandRunner();
 
                 // 統合エグゼキューター作成
-                var executor = new DynamicCodeExecutor(compiler, validator, runner);
+                DynamicCodeExecutor executor = new DynamicCodeExecutor(compiler, validator, runner);
 
                 VibeLogger.LogInfo(
                     "dynamic_executor_created",
@@ -68,17 +68,17 @@ namespace uLoopMCP.Factory
         /// <summary>厳格なセキュリティ設定でDynamicCodeExecutorを作成</summary>
         public static uLoopMCP.DynamicExecution.IDynamicCodeExecutor CreateStrict()
         {
-            var correlationId = System.Guid.NewGuid().ToString("N")[..8];
+            string correlationId = System.Guid.NewGuid().ToString("N")[..8];
 
             try
             {
-                var compiler = new RoslynCompiler();
+                RoslynCompiler compiler = new RoslynCompiler();
                 compiler.InitializeReferences();
 
-                var validator = new SecurityValidator();
-                var runner = new CommandRunner();
+                SecurityValidator validator = new SecurityValidator();
+                CommandRunner runner = new CommandRunner();
 
-                var executor = new DynamicCodeExecutor(compiler, validator, runner);
+                DynamicCodeExecutor executor = new DynamicCodeExecutor(compiler, validator, runner);
 
                 VibeLogger.LogInfo(
                     "dynamic_executor_created_strict",

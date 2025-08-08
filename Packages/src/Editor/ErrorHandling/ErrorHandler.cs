@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// エラーハンドリング統合機能
@@ -19,7 +19,7 @@ namespace uLoopMCP.DynamicExecution
         /// <returns>詳細なエラー情報</returns>
         public static DetailedErrorInfo ConvertToDetailedError(Exception exception, string context = "")
         {
-            var errorInfo = new DetailedErrorInfo
+            DetailedErrorInfo errorInfo = new DetailedErrorInfo
             {
                 ErrorType = exception.GetType().Name,
                 Message = exception.Message,
@@ -74,7 +74,7 @@ namespace uLoopMCP.DynamicExecution
         /// <returns>ユーザーフレンドリーなメッセージ</returns>
         public static string CreateUserFriendlyMessage(Exception exception, bool includeDetails = false)
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
 
             switch (exception)
             {
@@ -83,7 +83,7 @@ namespace uLoopMCP.DynamicExecution
                     sb.AppendLine("以下のエラーを修正してください:");
                     if (compEx.Errors != null)
                     {
-                        foreach (var error in compEx.Errors)
+                        foreach (CompilationError error in compEx.Errors)
                         {
                             sb.AppendLine($"- 行 {error.LineNumber}: {error.Message}");
                         }
@@ -95,7 +95,7 @@ namespace uLoopMCP.DynamicExecution
                     sb.AppendLine($"違反タイプ: {secEx.ViolationType}");
                     if (includeDetails && secEx.Violations != null)
                     {
-                        foreach (var violation in secEx.Violations)
+                        foreach (SecurityViolation violation in secEx.Violations)
                         {
                             sb.AppendLine($"- 行 {violation.LineNumber}: {violation.Description}");
                         }
@@ -138,10 +138,10 @@ namespace uLoopMCP.DynamicExecution
             if (string.IsNullOrEmpty(stackTrace))
                 return "";
 
-            var lines = stackTrace.Split('\n');
-            var cleanLines = new List<string>();
+            string[] lines = stackTrace.Split(new char[] { '\n' }, StringSplitOptions.None);
+            List<string> cleanLines = new List<string>();
 
-            foreach (var line in lines)
+            foreach (string line in lines)
             {
                 // システム内部のスタックフレームを除外
                 if (line.Contains("System.") && 

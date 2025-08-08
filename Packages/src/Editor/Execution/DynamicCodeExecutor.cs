@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using io.github.hatayama.uLoopMCP;
 
-namespace uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// 動的コード実行統合実装
@@ -52,8 +52,8 @@ namespace uLoopMCP.DynamicExecution
             object[] parameters = null,
             CancellationToken cancellationToken = default)
         {
-            var correlationId = Guid.NewGuid().ToString("N")[..8];
-            var stopwatch = Stopwatch.StartNew();
+            string correlationId = Guid.NewGuid().ToString("N")[..8];
+            Stopwatch stopwatch = Stopwatch.StartNew();
 
             try
             {
@@ -72,7 +72,7 @@ namespace uLoopMCP.DynamicExecution
                 );
 
                 // Phase 1: セキュリティ検証
-                var validationResult = ValidateCodeSecurity(code, correlationId);
+                ValidationResult validationResult = ValidateCodeSecurity(code, correlationId);
                 if (!validationResult.IsValid)
                 {
                     return CreateFailureResult("セキュリティ違反が検出されました", 
@@ -80,7 +80,7 @@ namespace uLoopMCP.DynamicExecution
                 }
 
                 // Phase 2: コンパイル
-                var compilationResult = CompileCode(code, className, correlationId);
+                CompilationResult compilationResult = CompileCode(code, className, correlationId);
                 if (!compilationResult.Success)
                 {
                     return CreateCompilationFailureResult("コンパイルエラーが発生しました",
@@ -88,7 +88,7 @@ namespace uLoopMCP.DynamicExecution
                 }
 
                 // Phase 3: 実行
-                var executionResult = ExecuteCompiledCode(
+                ExecutionResult executionResult = ExecuteCompiledCode(
                     compilationResult.CompiledAssembly, 
                     className, 
                     parameters, 
@@ -118,7 +118,7 @@ namespace uLoopMCP.DynamicExecution
             }
             catch (Exception ex)
             {
-                var result = CreateExceptionResult("実行中に予期しないエラーが発生しました", 
+                ExecutionResult result = CreateExceptionResult("実行中に予期しないエラーが発生しました", 
                     ex, stopwatch.Elapsed);
                 UpdateStatistics(result, stopwatch.Elapsed);
 
@@ -147,7 +147,7 @@ namespace uLoopMCP.DynamicExecution
             CancellationToken cancellationToken = default)
         {
             // JsonRpcProcessorで既にMainThreadに切り替え済み
-            return ExecuteCode(code, className, parameters, cancellationToken);
+            return await Task.FromResult(ExecuteCode(code, className, parameters, cancellationToken));
         }
 
         /// <summary>セキュリティポリシー設定</summary>
@@ -188,7 +188,7 @@ namespace uLoopMCP.DynamicExecution
         // プライベートヘルパーメソッド
         private ValidationResult ValidateCodeSecurity(string code, string correlationId)
         {
-            var result = _validator.ValidateCode(code);
+            ValidationResult result = _validator.ValidateCode(code);
             
             if (!result.IsValid)
             {
@@ -216,14 +216,14 @@ namespace uLoopMCP.DynamicExecution
 
         private CompilationResult CompileCode(string code, string className, string correlationId)
         {
-            var request = new CompilationRequest
+            CompilationRequest request = new CompilationRequest
             {
                 Code = code,
                 ClassName = className,
                 Namespace = "uLoopMCP.Dynamic"
             };
 
-            var result = _compiler.Compile(request);
+            CompilationResult result = _compiler.Compile(request);
 
             if (!result.Success)
             {
@@ -257,7 +257,7 @@ namespace uLoopMCP.DynamicExecution
             CancellationToken cancellationToken)
         {
             // ExecutionContextを作成してExecuteメソッドを呼び出す
-            var context = new ExecutionContext
+            ExecutionContext context = new ExecutionContext
             {
                 CompiledAssembly = assembly,
                 Parameters = ConvertParametersToDict(parameters ?? new object[0]),
@@ -269,8 +269,8 @@ namespace uLoopMCP.DynamicExecution
         private ExecutionResult CreateFailureResult(string message, TimeSpan executionTime, 
             List<SecurityViolation> violations)
         {
-            var violationMessages = new List<string>();
-            foreach (var violation in violations)
+            List<string> violationMessages = new List<string>();
+            foreach (SecurityViolation violation in violations)
             {
                 violationMessages.Add($"{violation.Type}: {violation.Description}");
             }
@@ -287,8 +287,8 @@ namespace uLoopMCP.DynamicExecution
         private ExecutionResult CreateCompilationFailureResult(string message, TimeSpan executionTime,
             List<CompilationError> errors)
         {
-            var errorMessages = new List<string>();
-            foreach (var error in errors)
+            List<string> errorMessages = new List<string>();
+            foreach (CompilationError error in errors)
             {
                 errorMessages.Add($"Line {error.Line}: {error.Message}");
             }
@@ -330,7 +330,7 @@ namespace uLoopMCP.DynamicExecution
                 }
 
                 // 平均実行時間の更新（単純移動平均）
-                var totalMs = _statistics.AverageExecutionTime.TotalMilliseconds * (_statistics.TotalExecutions - 1);
+                double totalMs = _statistics.AverageExecutionTime.TotalMilliseconds * (_statistics.TotalExecutions - 1);
                 totalMs += executionTime.TotalMilliseconds;
                 _statistics.AverageExecutionTime = TimeSpan.FromMilliseconds(totalMs / _statistics.TotalExecutions);
             }
@@ -338,7 +338,7 @@ namespace uLoopMCP.DynamicExecution
 
         private Dictionary<string, object> ConvertParametersToDict(object[] parameters)
         {
-            var dict = new Dictionary<string, object>();
+            Dictionary<string, object> dict = new Dictionary<string, object>();
             if (parameters != null)
             {
                 for (int i = 0; i < parameters.Length; i++)
