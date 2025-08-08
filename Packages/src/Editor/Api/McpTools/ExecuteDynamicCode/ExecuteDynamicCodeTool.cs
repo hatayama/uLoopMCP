@@ -38,6 +38,7 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
     {
         private readonly global::io.github.hatayama.uLoopMCP.DynamicExecution.IDynamicCodeExecutor _executor;
         private readonly global::io.github.hatayama.uLoopMCP.DynamicExecution.ImprovedErrorHandler _errorHandler;
+        private readonly global::io.github.hatayama.uLoopMCP.DynamicExecution.SmartCodeFixer _smartFixer;
         
         public override string ToolName => "execute-dynamic-code";
         
@@ -46,6 +47,7 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
             // 実際のDynamicCodeExecutor実装を使用
             _executor = global::io.github.hatayama.uLoopMCP.Factory.DynamicCodeExecutorFactory.CreateDefault();
             _errorHandler = new global::io.github.hatayama.uLoopMCP.DynamicExecution.ImprovedErrorHandler();
+            _smartFixer = new global::io.github.hatayama.uLoopMCP.DynamicExecution.SmartCodeFixer();
         }
         
         /// <summary>
@@ -79,6 +81,26 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
                     "Monitor execution flow and performance"
                 );
                 
+                // Phase 1: スマート修正の事前実行
+                string originalCode = parameters.Code ?? "";
+                global::io.github.hatayama.uLoopMCP.DynamicExecution.SmartFixResult fixResult = 
+                    _smartFixer.AnalyzeAndFix(originalCode);
+                
+                VibeLogger.LogInfo(
+                    "smart_fix_applied",
+                    "Smart code fixes applied before execution",
+                    new
+                    {
+                        issues_found = fixResult.TotalIssuesFound,
+                        issues_fixed = fixResult.IssuesFixed,
+                        confidence = fixResult.Confidence,
+                        code_changed = originalCode != fixResult.FixedCode
+                    },
+                    correlationId,
+                    "Pre-execution code fixing completed",
+                    "Monitor fix success rate and effectiveness"
+                );
+
                 // パラメータ配列に変換
                 object[] parametersArray = null;
                 if (parameters.Parameters != null && parameters.Parameters.Count > 0)
@@ -86,9 +108,9 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
                     parametersArray = parameters.Parameters.Values.ToArray();
                 }
                 
-                // 実行（ExecuteCodeAsyncを使用）
+                // Phase 2: 修正されたコードで実行（ExecuteCodeAsyncを使用）
                 ExecutionResult executionResult = await _executor.ExecuteCodeAsync(
-                    parameters.Code ?? "",
+                    fixResult.FixedCode, // 修正されたコードを使用
                     "DynamicCommand",
                     parametersArray,
                     cancellationToken,
@@ -97,7 +119,7 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
                 
                 // レスポンスに変換（エラー時は改善されたメッセージを使用）
                 ExecuteDynamicCodeResponse toolResponse = ConvertExecutionResultToResponse(
-                    executionResult, parameters.Code ?? "", correlationId);
+                    executionResult, originalCode, fixResult, correlationId);
                 
                 // VibeLoggerで実行完了をログ
                 VibeLogger.LogInfo(
@@ -141,7 +163,7 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
         /// ExecutionResponseをExecuteDynamicCodeResponseに変換
         /// </summary>
         private ExecuteDynamicCodeResponse ConvertExecutionResultToResponse(
-            ExecutionResult result, string originalCode, string correlationId)
+            ExecutionResult result, string originalCode, global::io.github.hatayama.uLoopMCP.DynamicExecution.SmartFixResult fixResult, string correlationId)
         {
             ExecuteDynamicCodeResponse response = new ExecuteDynamicCodeResponse
             {
@@ -152,6 +174,28 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
                 ErrorMessage = result.ErrorMessage ?? "",
                 ExecutionTimeMs = (long)result.ExecutionTime.TotalMilliseconds
             };
+
+            // Smart Fix適用情報をレスポンスに追加
+            if (fixResult.TotalIssuesFound > 0)
+            {
+                if (response.Logs == null) response.Logs = new List<string>();
+                
+                response.Logs.Add($"Smart Fix適用: {fixResult.IssuesFixed}/{fixResult.TotalIssuesFound} 件の問題を修正");
+                
+                if (fixResult.AppliedFixes?.Any() == true)
+                {
+                    response.Logs.Add("適用された修正:");
+                    foreach (var fix in fixResult.AppliedFixes)
+                    {
+                        response.Logs.Add($"- {fix.PatternName}: {fix.Description}");
+                    }
+                }
+                
+                if (fixResult.Confidence < 0.8)
+                {
+                    response.Logs.Add($"修正信頼度: {fixResult.Confidence:P0} （元のコードも確認してください）");
+                }
+            }
 
             // エラー時は改善されたメッセージを使用
             if (!result.Success)
