@@ -50,7 +50,6 @@ namespace io.github.hatayama.uLoopMCP
         public float communicationLogHeight = McpUIConstants.DEFAULT_COMMUNICATION_LOG_HEIGHT;
         public string communicationLogsJson = "[]";
         public string pendingRequestsJson = "{}";
-        public string compileWindowLogText = "";
         public bool compileWindowHasData = false;
         public string[] pendingCompileRequestIds = new string[0];
         public CompileRequestData[] compileRequests = new CompileRequestData[0];
@@ -478,23 +477,6 @@ namespace io.github.hatayama.uLoopMCP
             SaveSettings(newSettings);
         }
 
-        /// <summary>
-        /// Gets the compile window log text.
-        /// </summary>
-        public static string GetCompileWindowLogText()
-        {
-            return GetSettings().compileWindowLogText;
-        }
-
-        /// <summary>
-        /// Sets the compile window log text.
-        /// </summary>
-        public static void SetCompileWindowLogText(string compileWindowLogText)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { compileWindowLogText = compileWindowLogText };
-            SaveSettings(newSettings);
-        }
 
         /// <summary>
         /// Gets the compile window has data flag.
@@ -571,7 +553,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void ClearCompileWindowData()
         {
-            SetCompileWindowLogText("");
             SetCompileWindowHasData(false);
         }
 

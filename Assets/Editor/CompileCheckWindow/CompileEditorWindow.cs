@@ -30,13 +30,8 @@ namespace io.github.hatayama.uLoopMCP
                 _compileController = new CompileController();
                 _logDisplay = new CompileLogDisplay();
 
-                // Restore persisted logs from McpSessionManager
-                bool hasPersistedData = McpEditorSettings.GetCompileWindowHasData();
-                if (hasPersistedData)
-                {
-                    string persistentLogText = McpEditorSettings.GetCompileWindowLogText();
-                    _logDisplay.RestoreFromText(persistentLogText);
-                }
+                // Note: Previously restored persisted logs, but this was causing
+                // settings file size issues and wasn't necessary for functionality
 
                 // Subscribe to events
                 _compileController.OnCompileStarted += _logDisplay.AppendStartMessage;
@@ -138,8 +133,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             _logDisplay.AppendCompletionMessage(result);
 
-            // Persist log to McpSessionManager
-            McpEditorSettings.SetCompileWindowLogText(_logDisplay.LogText);
+            // Mark that we have compile data (no longer persist the full log text)
             McpEditorSettings.SetCompileWindowHasData(true);
 
             Repaint();
