@@ -54,9 +54,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
             try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location)); } catch { }
             try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(System.Console).Assembly.Location)); } catch { }
             
-            // Unityアセンブリを追加
-            try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(UnityEngine.Debug).Assembly.Location)); } catch { }
-            try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(UnityEngine.GameObject).Assembly.Location)); } catch { }
+            // 全Unityアセンブリを自動追加
+            int addedCount = AddUnityAssemblies();
+            
+            UnityEngine.Debug.Log($"RoslynCompiler: Unityアセンブリ自動追加完了 - {addedCount}個のアセンブリを追加");
             
             // System.Runtimeを明示的に追加
             string[] runtimePaths = new[]
@@ -370,6 +371,66 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                     ColumnNumber = d.Location.GetLineSpan().StartLinePosition.Character + 1
                 })
                 .ToList();
+        }
+
+        private int AddUnityAssemblies()
+        {
+            try
+            {
+                var unityAssemblies = System.AppDomain.CurrentDomain.GetAssemblies()
+                    .Where(IsUnityAssembly)
+                    .Where(HasValidLocation)
+                    .ToArray();
+                
+                int addedCount = 0;
+                foreach (Assembly assembly in unityAssemblies)
+                {
+                    if (TryAddAssemblyReference(assembly))
+                    {
+                        addedCount++;
+                    }
+                }
+                
+                return addedCount;
+            }
+            catch (System.Exception ex)
+            {
+                UnityEngine.Debug.LogError($"RoslynCompiler: Unity自動アセンブリ追加でエラー - {ex.Message}");
+                return 0;
+            }
+        }
+
+        private bool IsUnityAssembly(Assembly assembly)
+        {
+            return assembly.FullName.StartsWith("UnityEngine.") || 
+                   assembly.FullName.StartsWith("Unity.") ||
+                   assembly.FullName.StartsWith("UnityEditor.");
+        }
+
+        private bool HasValidLocation(Assembly assembly)
+        {
+            try
+            {
+                return !string.IsNullOrEmpty(assembly.Location) && System.IO.File.Exists(assembly.Location);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private bool TryAddAssemblyReference(Assembly assembly)
+        {
+            try
+            {
+                _defaultReferences.Add(MetadataReference.CreateFromFile(assembly.Location));
+                return true;
+            }
+            catch (System.Exception ex)
+            {
+                UnityEngine.Debug.LogWarning($"RoslynCompiler: アセンブリ追加失敗 {assembly.FullName} - {ex.Message}");
+                return false;
+            }
         }
 
         private string GenerateCacheKey(CompilationRequest request)
