@@ -9,7 +9,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// 動的コード実行統合実装
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md
+
     /// 関連クラス: IRoslynCompiler, ISecurityValidator, ICommandRunner
     /// </summary>
     public class DynamicCodeExecutor : IDynamicCodeExecutor

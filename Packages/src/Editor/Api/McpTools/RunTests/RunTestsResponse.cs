@@ -48,7 +48,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public string XmlPath { get; set; }
 
-
         /// <summary>
         /// Create a new RunTestsResponse
         /// </summary>

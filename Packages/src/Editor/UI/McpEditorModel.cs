@@ -43,7 +43,6 @@ namespace io.github.hatayama.uLoopMCP
             Runtime = updater(Runtime);
         }
 
-
         /// <summary>
         /// Load state from persistent settings
         /// </summary>

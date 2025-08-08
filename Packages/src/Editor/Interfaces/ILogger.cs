@@ -6,7 +6,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// ログ出力機能の抽象化インターフェース
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md
+
     /// 関連クラス: ConsoleLogger, TestLogger
     /// </summary>
     public interface ILogger

@@ -218,7 +218,6 @@ namespace io.github.hatayama.uLoopMCP
         }
 
 
-
         /// <summary>
         /// Gets a log entry at the specified index using reflection
         /// </summary>

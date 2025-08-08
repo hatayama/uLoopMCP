@@ -6,7 +6,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// Roslynを使用した動的C#コンパイル機能のインターフェース
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md
+
     /// 関連クラス: RoslynCompiler, CompilationRequest, CompilationResult
     /// </summary>
     public interface IRoslynCompiler

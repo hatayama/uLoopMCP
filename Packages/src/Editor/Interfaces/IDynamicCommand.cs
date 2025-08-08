@@ -8,7 +8,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// 動的実行コマンドのインターフェース
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md
+
     /// 関連クラス: CommandContext
     /// </summary>
     public interface IDynamicCommand

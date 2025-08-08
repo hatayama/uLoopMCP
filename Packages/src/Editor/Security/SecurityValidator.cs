@@ -14,51 +14,20 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// コードセキュリティ検証機能
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md
     /// 関連クラス: ISecurityValidator, SecurityPolicy
     /// </summary>
     public class SecurityValidator : ISecurityValidator
     {
         private SecurityPolicy _policy;
-        private readonly HashSet<string> _dangerousMethods;
-        private readonly HashSet<string> _forbiddenNamespaces;
 
         public SecurityValidator()
         {
-            // デフォルトの危険なメソッド
-            _dangerousMethods = new HashSet<string>
-            {
-                "System.IO.File.Delete",
-                "System.IO.File.WriteAllText",
-                "System.IO.Directory.Delete",
-                "System.Diagnostics.Process.Start",
-                "System.Reflection.Assembly.LoadFrom",
-                "System.Reflection.Assembly.LoadFile",
-                "System.Runtime.InteropServices.Marshal",
-                "System.Net.WebClient",
-                "System.Net.Http.HttpClient"
-            };
-            
-            // デフォルトの禁止名前空間
-            _forbiddenNamespaces = new HashSet<string>
-            {
-                "System.IO",
-                "System.Net",
-                "System.Diagnostics",
-                "System.Runtime.InteropServices",
-                "Microsoft.Win32"
-            };
-            
-            // デフォルトポリシー
-            _policy = new SecurityPolicy
-            {
-                AllowFileSystemAccess = false,
-                AllowNetworkAccess = false,
-                AllowReflection = false,
-                AllowUnsafeCode = false,
-                AllowProcessExecution = false,
-                MaxCodeLength = 10000
-            };
+            _policy = SecurityPolicy.GetDefault();
+        }
+
+        public SecurityValidator(SecurityPolicy policy)
+        {
+            _policy = policy ?? SecurityPolicy.GetDefault();
         }
 
         public ValidationResult ValidateCode(string code)
@@ -72,7 +41,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                     "Security validation started",
                     new { 
                         codeLength = code?.Length ?? 0,
-                        policyStrictness = _policy.MaxCodeLength
+                        policyStrictness = _policy.MaxCodeLength,
+                        forbiddenMethodsCount = _policy.ForbiddenMethods.Count,
+                        forbiddenNamespacesCount = _policy.ForbiddenNamespaces.Count
                     },
                     correlationId,
                     "Starting security validation of dynamic code",
@@ -104,7 +75,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                 SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code);
                 SyntaxNode root = syntaxTree.GetRoot();
                 
-                SecuritySyntaxWalker walker = new SecuritySyntaxWalker(_policy, _dangerousMethods, _forbiddenNamespaces);
+                SecuritySyntaxWalker walker = new SecuritySyntaxWalker(_policy);
                 walker.Visit(root);
                 
                 result.Violations.AddRange(walker.Violations);
@@ -190,12 +161,12 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
             if (string.IsNullOrWhiteSpace(methodSignature))
                 return true;
 
-            // 危険なメソッドチェック
-            if (_dangerousMethods.Any(dangerous => methodSignature.Contains(dangerous)))
+            // SecurityPolicyの禁止メソッドチェック
+            if (_policy.ForbiddenMethods.Any(forbidden => methodSignature.Contains(forbidden)))
                 return false;
 
-            // 禁止名前空間チェック
-            if (_forbiddenNamespaces.Any(ns => methodSignature.StartsWith(ns)))
+            // SecurityPolicyの禁止名前空間チェック  
+            if (_policy.ForbiddenNamespaces.Any(ns => methodSignature.StartsWith(ns)))
                 return false;
 
             return true;
@@ -235,31 +206,27 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
     internal class SecuritySyntaxWalker : CSharpSyntaxWalker
     {
         private readonly SecurityPolicy _policy;
-        private readonly HashSet<string> _dangerousMethods;
-        private readonly HashSet<string> _forbiddenNamespaces;
         
         public List<SecurityViolation> Violations { get; } = new();
 
-        public SecuritySyntaxWalker(SecurityPolicy policy, HashSet<string> dangerousMethods, HashSet<string> forbiddenNamespaces)
+        public SecuritySyntaxWalker(SecurityPolicy policy)
         {
             _policy = policy;
-            _dangerousMethods = dangerousMethods;
-            _forbiddenNamespaces = forbiddenNamespaces;
         }
 
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             string methodCall = node.ToString();
             
-            // 危険なメソッド呼び出しチェック
-            foreach (string dangerous in _dangerousMethods)
+            // SecurityPolicyの禁止メソッド呼び出しチェック
+            foreach (string forbidden in _policy.ForbiddenMethods)
             {
-                if (methodCall.Contains(dangerous))
+                if (methodCall.Contains(forbidden))
                 {
                     Violations.Add(new SecurityViolation
                     {
                         Type = SecurityViolationType.DangerousMethodCall,
-                        Description = $"Dangerous method call detected: {dangerous}",
+                        Description = $"Forbidden method call detected: {forbidden}",
                         LineNumber = node.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
                         CodeSnippet = methodCall
                     });
@@ -273,7 +240,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
         {
             string namespaceName = node.Name?.ToString();
             
-            if (namespaceName != null && _forbiddenNamespaces.Contains(namespaceName))
+            if (namespaceName != null && _policy.ForbiddenNamespaces.Contains(namespaceName))
             {
                 Violations.Add(new SecurityViolation
                 {

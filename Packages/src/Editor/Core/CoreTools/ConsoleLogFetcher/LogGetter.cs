@@ -18,7 +18,6 @@ namespace io.github.hatayama.uLoopMCP
             LogRetriever = new ConsoleLogRetriever();
         }
 
-
         /// <summary>
         /// Converts McpLogType to Unity's LogType
         /// </summary>

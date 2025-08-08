@@ -193,7 +193,6 @@ namespace io.github.hatayama.uLoopMCP
             return new ToolSecurityInfo(toolName, isAllowed, reason);
         }
 
-
         /// <summary>
         /// Checks if tests execution is allowed
         /// </summary>
@@ -297,7 +296,6 @@ namespace io.github.hatayama.uLoopMCP
             RequiredSecuritySetting = requiredSecuritySetting;
         }
     }
-
 
     /// <summary>
     /// Exception thrown when a tool is blocked by security settings

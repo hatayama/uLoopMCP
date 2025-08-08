@@ -5,7 +5,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// コンパイラ設定
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md
+
     /// 関連クラス: RoslynCompiler
     /// </summary>
     [Serializable]

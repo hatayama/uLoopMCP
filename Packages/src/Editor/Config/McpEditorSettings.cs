@@ -204,7 +204,6 @@ namespace io.github.hatayama.uLoopMCP
             SaveSettings(newSettings);
         }
 
-
         // Security Settings Methods
 
         /// <summary>
@@ -756,7 +755,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             SetConnectedLLMTools(new ConnectedLLMToolData[0]);
         }
-
 
         /// <summary>
         /// Loads the settings file.

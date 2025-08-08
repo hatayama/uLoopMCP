@@ -89,7 +89,6 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-
         /// <summary>
         /// Handle client connection event - force UI repaint for immediate update
         /// </summary>
@@ -97,7 +96,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Enhanced logging for debugging client connection
             // Count check for debugging purposes only
-            
             
             // Clear reconnecting flags when client connects
             McpServerController.ClearReconnectingFlag();
@@ -119,7 +117,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Enhanced logging for debugging client disconnection issues
             // Count check for debugging purposes only
-            
             
             
             // Mark that repaint is needed since events are called from background thread

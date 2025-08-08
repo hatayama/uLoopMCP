@@ -4,7 +4,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// 動的コード実行機能の基底例外クラス
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md
+
     /// 関連クラス: CompilationFailedException, SecurityViolationException
     /// </summary>
     public class DynamicExecutionException : Exception

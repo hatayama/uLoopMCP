@@ -7,7 +7,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// コンパイル済みコードの実行制御インターフェース
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md
+
     /// 関連クラス: CommandRunner, ExecutionContext, ExecutionResult
     /// </summary>
     public interface ICommandRunner

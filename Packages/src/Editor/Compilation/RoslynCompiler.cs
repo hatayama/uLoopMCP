@@ -6,15 +6,12 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using io.github.hatayama.uLoopMCP.DynamicExecution;
-using UnityEngine;
-using io.github.hatayama.uLoopMCP;
 
 namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// Roslynを使用したC#動的コンパイル機能
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md
+
     /// 関連クラス: IRoslynCompiler, CompilationRequest, CompilationResult
     /// </summary>
     public class RoslynCompiler : IRoslynCompiler
@@ -91,157 +88,26 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
 
         public CompilationResult Compile(CompilationRequest request)
         {
-            string correlationId = Guid.NewGuid().ToString("N")[..8];
+            string correlationId = GenerateCorrelationId();
             
             try
             {
-                VibeLogger.LogInfo(
-                    "roslyn_compile_start",
-                    "Starting Roslyn compilation",
-                    new { 
-                        codeLength = request.Code?.Length ?? 0,
-                        className = request.ClassName,
-                        @namespace = request.Namespace,
-                        additionalRefsCount = request.AdditionalReferences?.Count ?? 0
-                    },
-                    correlationId,
-                    "Dynamic code compilation started",
-                    "Monitor compilation success rate and performance"
-                );
+                LogCompilationStart(request, correlationId);
                 
-                // キャッシュチェック
-                string cacheKey = GenerateCacheKey(request);
-                if (_compilationCache.TryGetValue(cacheKey, out Assembly cachedAssembly))
-                {
-                    return new CompilationResult
-                    {
-                        Success = true,
-                        CompiledAssembly = cachedAssembly,
-                        UpdatedCode = request.Code
-                    };
-                }
+                // 早期return でネスト浅く
+                CompilationResult cachedResult = CheckCache(request);
+                if (cachedResult != null) return cachedResult;
                 
-                // コードの前処理（必要に応じて名前空間とクラスでラップ）
-                string wrappedCode = WrapCodeIfNeeded(request.Code, request.Namespace, request.ClassName);
+                CompilationContext context = PrepareCompilation(request);
+                CompilationResult result = ExecuteCompilation(context, correlationId);
                 
-                // Syntax Treeの作成
-                SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(wrappedCode);
-                
-                // 参照の準備
-                List<MetadataReference> references = new List<MetadataReference>(_defaultReferences);
-                
-                // 追加参照を処理
-                foreach (string additionalRef in request.AdditionalReferences ?? new List<string>())
-                {
-                    if (File.Exists(additionalRef))
-                    {
-                        references.Add(MetadataReference.CreateFromFile(additionalRef));
-                    }
-                }
-                
-                // コンパイル設定
-                CSharpCompilationOptions compilationOptions = new CSharpCompilationOptions(
-                    OutputKind.DynamicallyLinkedLibrary,
-                    optimizationLevel: OptimizationLevel.Release,
-                    allowUnsafe: false // セキュリティのためunsafeコードは禁止
-                );
-                
-                // コンパイル実行
-                CSharpCompilation compilation = CSharpCompilation.Create(
-                    $"DynamicAssembly_{correlationId}",
-                    new[] { syntaxTree },
-                    references,
-                    compilationOptions
-                );
-                
-                // メモリにアセンブリを生成
-                using MemoryStream memoryStream = new MemoryStream();
-                Microsoft.CodeAnalysis.Emit.EmitResult emitResult = compilation.Emit(memoryStream);
-                
-                CompilationResult result = new CompilationResult
-                {
-                    UpdatedCode = wrappedCode
-                };
-                
-                if (emitResult.Success)
-                {
-                    memoryStream.Seek(0, SeekOrigin.Begin);
-                    Assembly assembly = Assembly.Load(memoryStream.ToArray());
-                    
-                    result.Success = true;
-                    result.CompiledAssembly = assembly;
-                    
-                    // キャッシュに保存
-                    _compilationCache[cacheKey] = assembly;
-                    
-                    VibeLogger.LogInfo(
-                        "roslyn_compile_success",
-                        "Compilation completed successfully",
-                        new { 
-                            assemblyName = assembly.FullName,
-                            typeCount = assembly.GetTypes().Length
-                        },
-                        correlationId,
-                        "Dynamic code compilation succeeded",
-                        "Track compilation success patterns"
-                    );
-                }
-                else
-                {
-                    result.Success = false;
-                    result.Errors = ConvertDiagnosticsToErrors(emitResult.Diagnostics);
-                    
-                    VibeLogger.LogWarning(
-                        "roslyn_compile_failure",
-                        "Compilation failed with errors",
-                        new { 
-                            errorCount = result.Errors.Count,
-                            errors = result.Errors.Select(e => e.Message).ToArray()
-                        },
-                        correlationId,
-                        "Dynamic code compilation failed",
-                        "Analyze common compilation errors for auto-fix patterns"
-                    );
-                }
-                
-                // 警告も収集
-                List<string> warnings = emitResult.Diagnostics
-                    .Where(d => d.Severity == DiagnosticSeverity.Warning)
-                    .Select(d => d.ToString())
-                    .ToList();
-                result.Warnings = warnings;
+                CacheResultIfSuccessful(request, result);
                 
                 return result;
             }
             catch (Exception ex)
             {
-                VibeLogger.LogError(
-                    "roslyn_compile_exception",
-                    "Exception during Roslyn compilation",
-                    new { 
-                        error = ex.Message,
-                        stackTrace = ex.StackTrace
-                    },
-                    correlationId,
-                    "Unexpected compilation error occurred",
-                    "Investigate and handle compilation exceptions"
-                );
-                
-                return new CompilationResult
-                {
-                    Success = false,
-                    UpdatedCode = request.Code,
-                    Errors = new List<CompilationError>
-                    {
-                        new()
-                        {
-                            Message = $"Compilation exception: {ex.Message}",
-                            ErrorCode = "INTERNAL_ERROR",
-                            LineNumber = 0,
-                            ColumnNumber = 0
-                        }
-                    }
-                };
+                return HandleCompilationException(ex, request, correlationId);
             }
         }
 
@@ -256,6 +122,204 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                 humanNote: "Compilation cache was cleared",
                 aiTodo: "Monitor cache usage patterns"
             );
+        }
+
+        private string GenerateCorrelationId()
+        {
+            return Guid.NewGuid().ToString("N")[..8];
+        }
+
+        private void LogCompilationStart(CompilationRequest request, string correlationId)
+        {
+            VibeLogger.LogInfo(
+                "roslyn_compile_start",
+                "Starting Roslyn compilation",
+                new { 
+                    codeLength = request.Code?.Length ?? 0,
+                    className = request.ClassName,
+                    @namespace = request.Namespace,
+                    additionalRefsCount = request.AdditionalReferences?.Count ?? 0
+                },
+                correlationId,
+                "Dynamic code compilation started",
+                "Monitor compilation success rate and performance"
+            );
+        }
+
+        private CompilationResult CheckCache(CompilationRequest request)
+        {
+            string cacheKey = GenerateCacheKey(request);
+            if (_compilationCache.TryGetValue(cacheKey, out Assembly cachedAssembly))
+            {
+                return new CompilationResult
+                {
+                    Success = true,
+                    CompiledAssembly = cachedAssembly,
+                    UpdatedCode = request.Code
+                };
+            }
+            return null;
+        }
+
+        private CompilationContext PrepareCompilation(CompilationRequest request)
+        {
+            string wrappedCode = WrapCodeIfNeeded(request.Code, request.Namespace, request.ClassName);
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(wrappedCode);
+            List<MetadataReference> references = PrepareReferences(request.AdditionalReferences);
+
+            return new CompilationContext
+            {
+                WrappedCode = wrappedCode,
+                SyntaxTree = syntaxTree,
+                References = references
+            };
+        }
+
+        private List<MetadataReference> PrepareReferences(List<string> additionalReferences)
+        {
+            List<MetadataReference> references = new List<MetadataReference>(_defaultReferences);
+            
+            foreach (string additionalRef in additionalReferences ?? new List<string>())
+            {
+                if (File.Exists(additionalRef))
+                {
+                    references.Add(MetadataReference.CreateFromFile(additionalRef));
+                }
+            }
+            
+            return references;
+        }
+
+        private CompilationResult ExecuteCompilation(CompilationContext context, string correlationId)
+        {
+            CSharpCompilationOptions compilationOptions = new CSharpCompilationOptions(
+                OutputKind.DynamicallyLinkedLibrary,
+                optimizationLevel: OptimizationLevel.Release,
+                allowUnsafe: false
+            );
+            
+            CSharpCompilation compilation = CSharpCompilation.Create(
+                $"DynamicAssembly_{correlationId}",
+                new[] { context.SyntaxTree },
+                context.References,
+                compilationOptions
+            );
+            
+            using MemoryStream memoryStream = new MemoryStream();
+            Microsoft.CodeAnalysis.Emit.EmitResult emitResult = compilation.Emit(memoryStream);
+            
+            return ProcessEmitResult(emitResult, memoryStream, context, correlationId);
+        }
+
+        private CompilationResult ProcessEmitResult(
+            Microsoft.CodeAnalysis.Emit.EmitResult emitResult, 
+            MemoryStream memoryStream, 
+            CompilationContext context,
+            string correlationId)
+        {
+            CompilationResult result = new CompilationResult
+            {
+                UpdatedCode = context.WrappedCode,
+                Warnings = CollectWarnings(emitResult.Diagnostics)
+            };
+            
+            if (emitResult.Success)
+            {
+                memoryStream.Seek(0, SeekOrigin.Begin);
+                Assembly assembly = Assembly.Load(memoryStream.ToArray());
+                
+                result.Success = true;
+                result.CompiledAssembly = assembly;
+                
+                LogCompilationSuccess(assembly, correlationId);
+            }
+            else
+            {
+                result.Success = false;
+                result.Errors = ConvertDiagnosticsToErrors(emitResult.Diagnostics);
+                
+                LogCompilationFailure(result, correlationId);
+            }
+            
+            return result;
+        }
+
+        private List<string> CollectWarnings(IEnumerable<Diagnostic> diagnostics)
+        {
+            return diagnostics
+                .Where(d => d.Severity == DiagnosticSeverity.Warning)
+                .Select(d => d.ToString())
+                .ToList();
+        }
+
+        private void LogCompilationSuccess(Assembly assembly, string correlationId)
+        {
+            VibeLogger.LogInfo(
+                "roslyn_compile_success",
+                "Compilation completed successfully",
+                new { 
+                    assemblyName = assembly.FullName,
+                    typeCount = assembly.GetTypes().Length
+                },
+                correlationId,
+                "Dynamic code compilation succeeded",
+                "Track compilation success patterns"
+            );
+        }
+
+        private void LogCompilationFailure(CompilationResult result, string correlationId)
+        {
+            VibeLogger.LogWarning(
+                "roslyn_compile_failure",
+                "Compilation failed with errors",
+                new { 
+                    errorCount = result.Errors.Count,
+                    errors = result.Errors.Select(e => e.Message).ToArray()
+                },
+                correlationId,
+                "Dynamic code compilation failed",
+                "Analyze common compilation errors for auto-fix patterns"
+            );
+        }
+
+        private void CacheResultIfSuccessful(CompilationRequest request, CompilationResult result)
+        {
+            if (result.Success)
+            {
+                string cacheKey = GenerateCacheKey(request);
+                _compilationCache[cacheKey] = result.CompiledAssembly;
+            }
+        }
+
+        private CompilationResult HandleCompilationException(Exception ex, CompilationRequest request, string correlationId)
+        {
+            VibeLogger.LogError(
+                "roslyn_compile_exception",
+                "Exception during Roslyn compilation",
+                new { 
+                    error = ex.Message,
+                    stackTrace = ex.StackTrace
+                },
+                correlationId,
+                "Unexpected compilation error occurred",
+                "Investigate and handle compilation exceptions"
+            );
+            
+            return new CompilationResult
+            {
+                Success = false,
+                UpdatedCode = request.Code,
+                Errors = new List<CompilationError>
+                {
+                    new()
+                    {
+                        Message = $"Compilation exception: {ex.Message}",
+                        ErrorCode = "INTERNAL_ERROR",
+                        LineNumber = 0,
+                        ColumnNumber = 0
+                    }
+                }
+            };
         }
 
         private string WrapCodeIfNeeded(string code, string namespaceName, string className)
@@ -323,7 +387,17 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                 }
             }
             
-            return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(keyBuilder.ToString()));
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(keyBuilder.ToString()));
         }
+    }
+
+    /// <summary>
+    /// コンパイル処理のコンテキスト情報
+    /// </summary>
+    internal class CompilationContext
+    {
+        public string WrappedCode { get; set; }
+        public SyntaxTree SyntaxTree { get; set; }
+        public List<MetadataReference> References { get; set; }
     }
 }

@@ -6,7 +6,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// 動的コード実行ツールのレスポンス
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md
+
     /// 関連クラス: ExecuteDynamicCodeTool, ExecuteDynamicCodeSchema
     /// </summary>
     public class ExecuteDynamicCodeResponse : BaseToolResponse
@@ -26,7 +26,6 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>エラーメッセージ（失敗時）</summary>
         public string ErrorMessage { get; set; }
         
-
     }
     
     /// <summary>
@@ -43,7 +42,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>列番号</summary>
         public int Column { get; set; }
         
-        /// <summary>エラーID</summary>
-        public string Id { get; set; }
+        /// <summary>コンパイラーエラーコード（CS0103など）</summary>
+        public string ErrorCode { get; set; }
     }
 }

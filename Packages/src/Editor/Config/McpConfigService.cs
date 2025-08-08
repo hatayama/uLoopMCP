@@ -306,7 +306,6 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-
         /// <summary>
         /// Gets the configured port number from the editor settings.
         /// If server is running, tries to find config matching the current server port.

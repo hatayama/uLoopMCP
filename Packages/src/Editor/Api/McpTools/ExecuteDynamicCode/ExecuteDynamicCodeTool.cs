@@ -10,7 +10,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// MCP 動的C#コード実行ツール（薄いラッパー）
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md  
+
     /// 関連クラス: IDynamicCodeExecutor
     /// </summary>
     [McpTool(Description = "Execute C# code dynamically with security validation and timeout control")]
@@ -49,7 +49,7 @@ namespace io.github.hatayama.uLoopMCP
                     new { 
                         correlationId,
                         codeLength = parameters.Code?.Length ?? 0,
-                        dryRun = parameters.DryRun,
+                        compileOnly = parameters.CompileOnly,
                         parametersCount = parameters.Parameters?.Count ?? 0
                     },
                     correlationId,
@@ -154,7 +154,7 @@ namespace io.github.hatayama.uLoopMCP
                 Message = error.Message ?? "",
                 Line = error.Line,
                 Column = error.Column,
-                Id = error.Id ?? ""
+                ErrorCode = error.ErrorCode ?? ""
             }).ToList();
         }
         
@@ -185,7 +185,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         public string Code { get; set; } = "";
         public int TimeoutSeconds { get; set; } = 60;
-        public bool DryRun { get; set; } = false;
+        public bool CompileOnly { get; set; } = false;
         public Dictionary<string, object> Parameters { get; set; } = new();
     }
     
@@ -204,24 +204,7 @@ namespace io.github.hatayama.uLoopMCP
         public string Message { get; set; } = "";
         public int Line { get; set; }
         public int Column { get; set; }
-        public string Id { get; set; } = "";
+        public string ErrorCode { get; set; } = "";
     }
-    
-    public class StubDynamicCodeExecutor : IDynamicCodeExecutor
-    {
-        public async Task<ExecutionResponse> ExecuteAsync(ExecutionRequest request)
-        {
-            await Task.Delay(100); // 実行時間をシミュレート
-            
-            return new ExecutionResponse
-            {
-                Success = true,
-                Result = $"Stub execution completed for code: {request.Code[..Math.Min(50, request.Code.Length)]}...",
-                Logs = new List<string> { "Stub: Code validation passed", "Stub: Execution simulated" },
-                CompilationErrors = new List<CompilationError>(),
-                ErrorMessage = null,
-                ExecutionTime = TimeSpan.FromMilliseconds(100)
-            };
-        }
-    }
+
 }

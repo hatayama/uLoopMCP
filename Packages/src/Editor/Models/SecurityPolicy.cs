@@ -5,29 +5,17 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// セキュリティポリシー設定
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md
+
     /// 関連クラス: SecurityValidator
     /// </summary>
     [Serializable]
     public class SecurityPolicy
     {
         /// <summary>禁止された名前空間一覧</summary>
-        public List<string> ForbiddenNamespaces { get; set; } = new()
-        {
-            "System.Net",
-            "System.Diagnostics", 
-            "System.Runtime.InteropServices",
-            "System.Reflection"
-        };
+        public List<string> ForbiddenNamespaces { get; set; } = new();
 
         /// <summary>禁止されたメソッド一覧</summary>
-        public List<string> ForbiddenMethods { get; set; } = new()
-        {
-            "UnityEditor.AssetDatabase.DeleteAsset",
-            "UnityEditor.FileUtil.DeleteFileOrDirectory",
-            "System.IO.File.Delete",
-            "System.IO.Directory.Delete"
-        };
+        public List<string> ForbiddenMethods { get; set; } = new();
 
         /// <summary>禁止された型一覧</summary>
         public List<string> ForbiddenTypes { get; set; } = new();
@@ -61,7 +49,44 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
         /// </summary>
         public static SecurityPolicy GetDefault()
         {
-            return new SecurityPolicy();
+            return new SecurityPolicy
+            {
+                ForbiddenNamespaces = new List<string>
+                {
+                    "System.Net",
+                    "System.Diagnostics", 
+                    "System.Runtime.InteropServices",
+                    "System.Reflection",
+                    "System.IO",
+                    "System.Threading",
+                    "Microsoft.Win32"
+                },
+                ForbiddenMethods = new List<string>
+                {
+                    // Unity危険メソッド
+                    "UnityEditor.AssetDatabase.DeleteAsset",
+                    "UnityEditor.FileUtil.DeleteFileOrDirectory",
+                    
+                    // ファイルシステム操作
+                    "System.IO.File.Delete",
+                    "System.IO.File.WriteAllText",
+                    "System.IO.Directory.Delete",
+                    
+                    // プロセス実行
+                    "System.Diagnostics.Process.Start",
+                    
+                    // リフレクション/アセンブリ操作
+                    "System.Reflection.Assembly.LoadFrom",
+                    "System.Reflection.Assembly.LoadFile",
+                    
+                    // ネットワーク
+                    "System.Net.WebClient",
+                    "System.Net.Http.HttpClient",
+                    
+                    // 危険なシステム操作
+                    "System.Runtime.InteropServices.Marshal"
+                }
+            };
         }
 
         /// <summary>

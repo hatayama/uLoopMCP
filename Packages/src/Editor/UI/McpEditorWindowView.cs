@@ -366,7 +366,6 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-
         /// <summary>
         /// Draw security settings section
         /// </summary>

@@ -6,7 +6,6 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// エラーハンドリング統合機能
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md
     /// 関連クラス: DynamicCodeExecutor
     /// </summary>
     public static class ErrorHandler

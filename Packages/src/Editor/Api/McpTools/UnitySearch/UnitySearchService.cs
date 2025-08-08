@@ -312,7 +312,6 @@ namespace io.github.hatayama.uLoopMCP
             return item.id ?? "";
         }
 
-
         /// <summary>
         /// Get item tags from Unity SearchItem
         /// </summary>

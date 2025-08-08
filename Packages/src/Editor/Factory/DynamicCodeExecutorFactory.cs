@@ -5,7 +5,7 @@ namespace io.github.hatayama.uLoopMCP.Factory
 {
     /// <summary>
     /// DynamicCodeExecutor生成ファクトリー
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md
+
     /// 関連クラス: DynamicCodeExecutor, RoslynCompiler, SecurityValidator, CommandRunner
     /// </summary>
     public static class DynamicCodeExecutorFactory

@@ -4,7 +4,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
 {
     /// <summary>
     /// コードセキュリティ検証機能のインターフェース
-    /// 設計ドキュメント: uLoopMCP_DynamicCodeExecution_Design.md
+
     /// 関連クラス: SecurityValidator, SecurityPolicy, ValidationResult
     /// </summary>
     public interface ISecurityValidator
