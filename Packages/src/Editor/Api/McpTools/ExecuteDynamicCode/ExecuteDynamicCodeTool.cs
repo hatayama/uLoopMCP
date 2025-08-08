@@ -13,10 +13,31 @@ namespace io.github.hatayama.uLoopMCP
 
     /// 関連クラス: IDynamicCodeExecutor
     /// </summary>
-    [McpTool(Description = "Execute C# code dynamically with security validation and timeout control")]
+    [McpTool(Description = @"Execute Unity C# code directly - no class/namespace needed!
+
+CORRECT Examples:
+- GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube); return ""Cube created"";  
+- for(int x=0; x<10; x++) for(int z=0; z<10; z++) { /* create grid */ } return ""Grid done"";
+- Camera.main.transform.position = new Vector3(5, 8, -8); return ""Camera positioned"";
+- Material mat = new Material(Shader.Find(""Standard"")); mat.color = Color.red; return ""Material ready"";
+
+AVOID These Patterns:
+- Don't write: namespace MyNamespace { class MyClass { ... } }
+- Don't write: public static void MyMethod() { ... }
+- Don't forget: return statement at the end (return ""message"";)
+- Don't use: Object.method() - use UnityEngine.Object.method() if ambiguous
+
+Common Fixes:
+- Missing return? Add: return ""Task completed"";
+- Object ambiguous? Use: UnityEngine.Object.FindObjectsOfType<GameObject>()
+- Editor API missing? It auto-adds: using UnityEditor;
+- Top-level error? Just write the code, no class wrapper needed!
+
+Perfect for: GameObject creation, scene manipulation, editor tools, batch operations.")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
         private readonly global::io.github.hatayama.uLoopMCP.DynamicExecution.IDynamicCodeExecutor _executor;
+        private readonly global::io.github.hatayama.uLoopMCP.DynamicExecution.ImprovedErrorHandler _errorHandler;
         
         public override string ToolName => "execute-dynamic-code";
         
@@ -24,6 +45,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             // 実際のDynamicCodeExecutor実装を使用
             _executor = global::io.github.hatayama.uLoopMCP.Factory.DynamicCodeExecutorFactory.CreateDefault();
+            _errorHandler = new global::io.github.hatayama.uLoopMCP.DynamicExecution.ImprovedErrorHandler();
         }
         
         /// <summary>
@@ -73,8 +95,9 @@ namespace io.github.hatayama.uLoopMCP
                     parameters.CompileOnly
                 );
                 
-                // レスポンスに変換
-                ExecuteDynamicCodeResponse toolResponse = ConvertExecutionResultToResponse(executionResult, correlationId);
+                // レスポンスに変換（エラー時は改善されたメッセージを使用）
+                ExecuteDynamicCodeResponse toolResponse = ConvertExecutionResultToResponse(
+                    executionResult, parameters.Code ?? "", correlationId);
                 
                 // VibeLoggerで実行完了をログ
                 VibeLogger.LogInfo(
@@ -117,7 +140,8 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// ExecutionResponseをExecuteDynamicCodeResponseに変換
         /// </summary>
-        private ExecuteDynamicCodeResponse ConvertExecutionResultToResponse(ExecutionResult result, string correlationId)
+        private ExecuteDynamicCodeResponse ConvertExecutionResultToResponse(
+            ExecutionResult result, string originalCode, string correlationId)
         {
             ExecuteDynamicCodeResponse response = new ExecuteDynamicCodeResponse
             {
@@ -128,6 +152,72 @@ namespace io.github.hatayama.uLoopMCP
                 ErrorMessage = result.ErrorMessage ?? "",
                 ExecutionTimeMs = (long)result.ExecutionTime.TotalMilliseconds
             };
+
+            // エラー時は改善されたメッセージを使用
+            if (!result.Success)
+            {
+                // コンパイルエラーの場合、Logsからエラー情報を取得
+                string actualErrorMessage = result.ErrorMessage ?? "";
+                if (result.Logs?.Any() == true)
+                {
+                    actualErrorMessage = string.Join(" ", result.Logs);
+                }
+                
+                global::io.github.hatayama.uLoopMCP.DynamicExecution.EnhancedErrorResponse enhancedError = 
+                    _errorHandler.ProcessError(result, originalCode);
+                
+                // 分かりやすいエラーメッセージに置き換え
+                response.ErrorMessage = enhancedError.FriendlyMessage;
+                
+                // 追加情報をLogsに追加
+                if (response.Logs == null) response.Logs = new List<string>();
+                
+                // 元のエラーも残しておく
+                response.Logs.Add($"元のエラー: {actualErrorMessage}");
+                
+                if (!string.IsNullOrEmpty(enhancedError.Explanation))
+                {
+                    response.Logs.Add($"説明: {enhancedError.Explanation}");
+                }
+                
+                if (!string.IsNullOrEmpty(enhancedError.Example))
+                {
+                    response.Logs.Add($"例: {enhancedError.Example}");
+                }
+                
+                if (enhancedError.SuggestedSolutions?.Any() == true)
+                {
+                    response.Logs.Add("解決策:");
+                    foreach (string solution in enhancedError.SuggestedSolutions)
+                    {
+                        response.Logs.Add($"- {solution}");
+                    }
+                }
+                
+                if (enhancedError.LearningTips?.Any() == true)
+                {
+                    response.Logs.Add("ヒント:");
+                    foreach (string tip in enhancedError.LearningTips)
+                    {
+                        response.Logs.Add($"- {tip}");
+                    }
+                }
+                
+                VibeLogger.LogInfo(
+                    "enhanced_error_response",
+                    "Enhanced error message generated",
+                    new
+                    {
+                        original_error = actualErrorMessage,
+                        friendly_message = enhancedError.FriendlyMessage,
+                        severity = enhancedError.Severity.ToString(),
+                        solutions_count = enhancedError.SuggestedSolutions?.Count ?? 0
+                    },
+                    correlationId,
+                    "Error message enhanced with user-friendly explanation",
+                    "Monitor error message effectiveness"
+                );
+            }
 
             // 例外が発生した場合のエラー情報追加
             if (result.Exception != null)
