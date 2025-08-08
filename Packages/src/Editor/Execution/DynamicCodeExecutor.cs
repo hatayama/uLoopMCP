@@ -146,9 +146,8 @@ namespace uLoopMCP.DynamicExecution
             object[] parameters = null,
             CancellationToken cancellationToken = default)
         {
-            return await Task.Run(() => 
-                ExecuteCode(code, className, parameters, cancellationToken), 
-                cancellationToken);
+            // JsonRpcProcessorで既にMainThreadに切り替え済み
+            return ExecuteCode(code, className, parameters, cancellationToken);
         }
 
         /// <summary>セキュリティポリシー設定</summary>
