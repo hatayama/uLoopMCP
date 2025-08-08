@@ -69,7 +69,8 @@ namespace io.github.hatayama.uLoopMCP
                     parameters.Code ?? "",
                     "DynamicCommand",
                     parametersArray,
-                    cancellationToken
+                    cancellationToken,
+                    parameters.CompileOnly
                 );
                 
                 // レスポンスに変換

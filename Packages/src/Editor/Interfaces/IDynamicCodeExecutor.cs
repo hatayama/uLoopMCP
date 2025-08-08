@@ -15,7 +15,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
             string code,
             string className = "DynamicCommand",
             object[] parameters = null,
-            CancellationToken cancellationToken = default
+            CancellationToken cancellationToken = default,
+            bool compileOnly = false
         );
 
         /// <summary>非同期コード実行</summary>
@@ -23,7 +24,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
             string code,
             string className = "DynamicCommand", 
             object[] parameters = null,
-            CancellationToken cancellationToken = default
+            CancellationToken cancellationToken = default,
+            bool compileOnly = false
         );
 
         /// <summary>セキュリティポリシー設定</summary>

@@ -50,7 +50,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
             string code,
             string className = "DynamicCommand",
             object[] parameters = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool compileOnly = false)
         {
             string correlationId = Guid.NewGuid().ToString("N")[..8];
             Stopwatch stopwatch = Stopwatch.StartNew();
@@ -64,7 +65,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                     {
                         class_name = className,
                         parameter_count = parameters?.Length ?? 0,
-                        code_length = code.Length
+                        code_length = code.Length,
+                        compile_only = compileOnly
                     },
                     correlationId,
                     "動的コード実行開始",
@@ -87,7 +89,32 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                         stopwatch.Elapsed, compilationResult.Errors);
                 }
 
-                // Phase 3: 実行
+                // CompileOnly=true の場合はここで終了
+                if (compileOnly)
+                {
+                    VibeLogger.LogInfo(
+                        "compile_only_complete",
+                        "Compilation completed successfully (compile-only mode)",
+                        new
+                        {
+                            compile_time_ms = stopwatch.ElapsedMilliseconds,
+                            assembly_name = compilationResult.CompiledAssembly?.FullName
+                        },
+                        correlationId,
+                        "コンパイル専用モード完了",
+                        "コンパイル結果の検証"
+                    );
+
+                    return new ExecutionResult
+                    {
+                        Success = true,
+                        Result = "Compilation completed successfully",
+                        ExecutionTime = stopwatch.Elapsed,
+                        Logs = new List<string> { "Code compiled successfully (no execution)" }
+                    };
+                }
+
+                // Phase 3: 実行 (CompileOnly=false の場合のみ)
                 ExecutionResult executionResult = ExecuteCompiledCode(
                     compilationResult.CompiledAssembly, 
                     className, 
@@ -144,10 +171,11 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
             string code,
             string className = "DynamicCommand",
             object[] parameters = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool compileOnly = false)
         {
             // JsonRpcProcessorで既にMainThreadに切り替え済み
-            return await Task.FromResult(ExecuteCode(code, className, parameters, cancellationToken));
+            return await Task.FromResult(ExecuteCode(code, className, parameters, cancellationToken, compileOnly));
         }
 
         /// <summary>セキュリティポリシー設定</summary>
