@@ -369,7 +369,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Draw security settings section
         /// </summary>
-        public void DrawSecuritySettings(SecuritySettingsData data, Action<bool> foldoutCallback, Action<bool> enableTestsCallback, Action<bool> allowMenuCallback, Action<bool> allowThirdPartyCallback)
+        public void DrawSecuritySettings(SecuritySettingsData data, Action<bool> foldoutCallback, Action<bool> enableTestsCallback, Action<bool> allowMenuCallback, Action<bool> allowThirdPartyCallback, Action<bool> allowPlayModeCallback)
         {
             EditorGUILayout.BeginVertical(CreateSectionBoxStyle());
             
@@ -432,6 +432,21 @@ namespace io.github.hatayama.uLoopMCP
                 if (newAllowThirdParty != data.AllowThirdPartyTools)
                 {
                     allowThirdPartyCallback?.Invoke(newAllowThirdParty);
+                }
+                EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.Space(2);
+                
+                // Allow Play Mode Control
+                EditorGUILayout.BeginHorizontal();
+                bool newAllowPlayMode = EditorGUILayout.Toggle(data.AllowPlayModeControl, GUILayout.Width(20));
+                if (GUILayout.Button("Allow Play Mode Control", redLabelStyle, GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true)))
+                {
+                    newAllowPlayMode = !data.AllowPlayModeControl;
+                }
+                if (newAllowPlayMode != data.AllowPlayModeControl)
+                {
+                    allowPlayModeCallback?.Invoke(newAllowPlayMode);
                 }
                 EditorGUILayout.EndHorizontal();
                 

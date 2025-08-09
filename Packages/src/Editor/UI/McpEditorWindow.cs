@@ -253,7 +253,8 @@ namespace io.github.hatayama.uLoopMCP
                 foldoutCallback: UpdateShowSecuritySettings,
                 enableTestsCallback: UpdateEnableTestsExecution,
                 allowMenuCallback: UpdateAllowMenuItemExecution,
-                allowThirdPartyCallback: UpdateAllowThirdPartyTools);
+                allowThirdPartyCallback: UpdateAllowThirdPartyTools,
+                allowPlayModeCallback: UpdateAllowPlayModeControl);
 
             EditorGUILayout.EndScrollView();
         }
@@ -448,7 +449,8 @@ namespace io.github.hatayama.uLoopMCP
                 _model.UI.ShowSecuritySettings,
                 McpEditorSettings.GetEnableTestsExecution(),
                 McpEditorSettings.GetAllowMenuItemExecution(),
-                McpEditorSettings.GetAllowThirdPartyTools());
+                McpEditorSettings.GetAllowThirdPartyTools(),
+                McpEditorSettings.GetAllowPlayModeControl());
         }
 
         /// <summary>
@@ -572,6 +574,14 @@ namespace io.github.hatayama.uLoopMCP
         private void UpdateAllowThirdPartyTools(bool allow)
         {
             _model.UpdateAllowThirdPartyTools(allow);
+        }
+
+        /// <summary>
+        /// Update AllowPlayModeControl setting with persistence
+        /// </summary>
+        private void UpdateAllowPlayModeControl(bool allow)
+        {
+            _model.UpdateAllowPlayModeControl(allow);
         }
 
         /// <summary>
