@@ -76,7 +76,7 @@ namespace io.github.hatayama.uLoopMCP
             testRunnerApi.RegisterCallbacks(callback);
             
             Filter unityFilter = CreateUnityFilter(testMode, filter);
-            testRunnerApi.Execute(new ExecutionSettings(unityFilter));
+            testRunnerApi.Execute(new UnityEditor.TestTools.TestRunner.Api.ExecutionSettings(unityFilter));
         }
 
         /// <summary>

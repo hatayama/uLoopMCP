@@ -12,9 +12,9 @@ namespace io.github.hatayama.uLoopMCP
     /// <summary>
     /// Roslynを使用したC#動的コンパイル機能
 
-    /// 関連クラス: IRoslynCompiler, CompilationRequest, CompilationResult
+    /// 関連クラス: CompilationRequest, CompilationResult
     /// </summary>
-    public class RoslynCompiler : IRoslynCompiler
+    public class RoslynCompiler
     {
         private readonly List<MetadataReference> _defaultReferences = new();
         private readonly Dictionary<string, Assembly> _compilationCache = new();
@@ -364,12 +364,12 @@ namespace io.github.hatayama.uLoopMCP
                 UpdatedCode = request.Code,
                 Errors = new List<CompilationError>
                 {
-                    new()
+                    new CompilationError()
                     {
                         Message = $"Compilation exception: {ex.Message}",
                         ErrorCode = "INTERNAL_ERROR",
-                        LineNumber = 0,
-                        ColumnNumber = 0
+                        Line = 0,
+                        Column = 0
                     }
                 }
             };
@@ -415,8 +415,8 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     Message = d.GetMessage(),
                     ErrorCode = d.Id,
-                    LineNumber = d.Location.GetLineSpan().StartLinePosition.Line + 1,
-                    ColumnNumber = d.Location.GetLineSpan().StartLinePosition.Character + 1
+                    Line = d.Location.GetLineSpan().StartLinePosition.Line + 1,
+                    Column = d.Location.GetLineSpan().StartLinePosition.Character + 1
                 })
                 .ToList();
         }

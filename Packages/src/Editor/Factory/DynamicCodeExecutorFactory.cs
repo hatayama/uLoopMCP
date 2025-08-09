@@ -1,4 +1,3 @@
-using io.github.hatayama.uLoopMCP.DynamicExecution;
 using io.github.hatayama.uLoopMCP;
 
 namespace io.github.hatayama.uLoopMCP.Factory
@@ -11,7 +10,7 @@ namespace io.github.hatayama.uLoopMCP.Factory
     public static class DynamicCodeExecutorFactory
     {
         /// <summary>デフォルト設定でDynamicCodeExecutorを作成</summary>
-        public static uLoopMCP.DynamicExecution.IDynamicCodeExecutor CreateDefault()
+        public static IDynamicCodeExecutor CreateDefault()
         {
             string correlationId = System.Guid.NewGuid().ToString("N")[..8];
 
@@ -66,7 +65,7 @@ namespace io.github.hatayama.uLoopMCP.Factory
         }
 
         /// <summary>厳格なセキュリティ設定でDynamicCodeExecutorを作成</summary>
-        public static uLoopMCP.DynamicExecution.IDynamicCodeExecutor CreateStrict()
+        public static IDynamicCodeExecutor CreateStrict()
         {
             string correlationId = System.Guid.NewGuid().ToString("N")[..8];
 

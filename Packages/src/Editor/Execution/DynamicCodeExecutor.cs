@@ -5,26 +5,26 @@ using System.Threading;
 using System.Threading.Tasks;
 using io.github.hatayama.uLoopMCP;
 
-namespace io.github.hatayama.uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// 動的コード実行統合実装
 
-    /// 関連クラス: IRoslynCompiler, ISecurityValidator, ICommandRunner
+    /// 関連クラス: RoslynCompiler, SecurityValidator, CommandRunner
     /// </summary>
     public class DynamicCodeExecutor : IDynamicCodeExecutor
     {
-        private readonly IRoslynCompiler _compiler;
-        private readonly ISecurityValidator _validator;
-        private readonly ICommandRunner _runner;
+        private readonly RoslynCompiler _compiler;
+        private readonly SecurityValidator _validator;
+        private readonly CommandRunner _runner;
         private readonly ExecutionStatistics _statistics;
         private readonly object _statsLock = new();
 
         /// <summary>コンストラクタ</summary>
         public DynamicCodeExecutor(
-            IRoslynCompiler compiler,
-            ISecurityValidator validator, 
-            ICommandRunner runner)
+            RoslynCompiler compiler,
+            SecurityValidator validator, 
+            CommandRunner runner)
         {
             _compiler = compiler ?? throw new ArgumentNullException(nameof(compiler));
             _validator = validator ?? throw new ArgumentNullException(nameof(validator));
@@ -74,7 +74,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                 );
 
                 // Phase 1: セキュリティ検証
-                ValidationResult validationResult = ValidateCodeSecurity(code, correlationId);
+                SecurityValidationResult validationResult = ValidateCodeSecurity(code, correlationId);
                 if (!validationResult.IsValid)
                 {
                     return CreateFailureResult("セキュリティ違反が検出されました", 
@@ -134,7 +134,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                     {
                         success = executionResult.Success,
                         execution_time_ms = stopwatch.ElapsedMilliseconds,
-                        result_length = executionResult.Result?.Length ?? 0
+                        result_length = executionResult.Result?.ToString()?.Length ?? 0
                     },
                     correlationId,
                     "動的コード実行完了",
@@ -214,9 +214,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
         }
 
         // プライベートヘルパーメソッド
-        private ValidationResult ValidateCodeSecurity(string code, string correlationId)
+        private SecurityValidationResult ValidateCodeSecurity(string code, string correlationId)
         {
-            ValidationResult result = _validator.ValidateCode(code);
+            SecurityValidationResult result = _validator.ValidateCode(code);
             
             if (!result.IsValid)
             {

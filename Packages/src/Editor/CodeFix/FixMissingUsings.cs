@@ -9,16 +9,16 @@ namespace io.github.hatayama.uLoopMCP
     /// Unity AI AssistantのFixMissingImports.cs実装パターンに完全準拠
     /// 関連クラス: CSharpFixProvider, SyntaxTreeUtility
     /// </summary>
-    internal class FixMissingUsings : CSharpFixProvider
+    public class FixMissingUsings : CSharpFixProvider
     {
-        private static readonly string[] DiagnosticIds = { "CS0246", "CS1061" };
+        private static readonly string[] DiagnosticIds = { "CS0246", "CS1061", "CS0103" };
 
         private readonly Dictionary<string, string[]> NamespaceKeywords = new()
         {
-            { "System.Linq", new[] { "Where", "Select", "OrderBy", "Concat", "Any", "First", "Last", "ToList", "ToArray" } },
-            { "System.Collections.Generic", new[] { "List<", "Dictionary<", "HashSet<", "Queue<", "Stack<" } },
-            { "UnityEngine", new[] { "GameObject", "Transform", "Component", "MonoBehaviour", "ScriptableObject", "Vector3", "Quaternion", "Color" } },
-            { "UnityEditor", new[] { "EditorWindow", "EditorGUI", "AssetDatabase", "Selection", "EditorUtility", "EditorApplication" } },
+            { "System.Linq", new[] { "Where", "Select", "OrderBy", "Concat", "Any", "First", "Last", "ToList", "ToArray", "Take", "Skip", "Count", "Sum", "GroupBy", "Distinct" } },
+            { "System.Collections.Generic", new[] { "List<>", "Dictionary<>", "HashSet<>", "Queue<>", "Stack<>" } },
+            { "UnityEngine", new[] { "GameObject", "Transform", "Component", "MonoBehaviour", "ScriptableObject", "Vector3", "Quaternion", "Color", "Debug" } },
+            { "UnityEditor", new[] { "EditorWindow", "EditorGUI", "AssetDatabase", "Selection", "EditorUtility", "EditorApplication", "Editor" } },
             { "UnityEngine.UI", new[] { "Button", "Text", "Image", "Canvas", "Toggle" } },
             { "System.IO", new[] { "File", "Directory", "Path", "StreamReader", "StreamWriter" } },
             { "System.Threading.Tasks", new[] { "Task", "async", "await" } }
@@ -38,11 +38,14 @@ namespace io.github.hatayama.uLoopMCP
 
             string message = diagnostic.GetMessage();
             
-            // キーワードベースの判定
-            foreach (string[] keywords in NamespaceKeywords.Values)
+            // Unity AI Assistant方式: 診断メッセージに 'keyword' の形で含まれるかチェック
+            foreach (KeyValuePair<string, string[]> kvp in NamespaceKeywords)
             {
-                if (keywords.Any(keyword => message.Contains($"'{keyword}'")))
-                    return true;
+                foreach (string keyword in kvp.Value)
+                {
+                    if (message.Contains($"'{keyword}'"))
+                        return true;
+                }
             }
 
             // 間違った名前空間の判定
@@ -59,13 +62,14 @@ namespace io.github.hatayama.uLoopMCP
         {
             string message = diagnostic.GetMessage();
             
-            // 正しい名前空間を追加
+            // Unity AI Assistant方式: 診断メッセージベースでusing文追加
             foreach (KeyValuePair<string, string[]> namespaceKeywords in NamespaceKeywords)
             {
                 string[] keywords = namespaceKeywords.Value;
-                if (keywords.Any(keyword => message.Contains($"'{keyword}'")))
+                foreach (string keyword in keywords)
                 {
-                    return tree.AddUsingDirective(namespaceKeywords.Key);
+                    if (message.Contains($"'{keyword}'"))
+                        return tree.AddUsingDirective(namespaceKeywords.Key);
                 }
             }
 

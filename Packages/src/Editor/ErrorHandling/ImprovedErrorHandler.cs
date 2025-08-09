@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace io.github.hatayama.uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// 設計ドキュメント: Dynamic Tool使い勝手改善プロジェクト  

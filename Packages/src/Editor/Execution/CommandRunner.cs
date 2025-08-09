@@ -3,18 +3,17 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using io.github.hatayama.uLoopMCP.DynamicExecution;
 using UnityEngine;
 using io.github.hatayama.uLoopMCP;
 
-namespace io.github.hatayama.uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// コンパイル済みコードの実行制御
 
-    /// 関連クラス: ICommandRunner, ExecutionContext, ExecutionResult
+    /// 関連クラス: ExecutionContext, ExecutionResult
     /// </summary>
-    public class CommandRunner : ICommandRunner
+    public class CommandRunner
     {
         private bool _isRunning = false;
         private CancellationTokenSource _cancellationTokenSource;
@@ -84,7 +83,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                     new { 
                         success = result.Success,
                         executionTimeMs = result.ExecutionTime.TotalMilliseconds,
-                        resultLength = result.Result?.Length ?? 0,
+                        resultLength = result.Result?.ToString()?.Length ?? 0,
                         logCount = result.Logs?.Count ?? 0
                     },
                     correlationId,

@@ -6,17 +6,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
-using io.github.hatayama.uLoopMCP.DynamicExecution;
 using UnityEngine;
 using io.github.hatayama.uLoopMCP;
 
-namespace io.github.hatayama.uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// コードセキュリティ検証機能
-    /// 関連クラス: ISecurityValidator, SecurityPolicy
+    /// 関連クラス: SecurityPolicy
     /// </summary>
-    public class SecurityValidator : ISecurityValidator
+    public class SecurityValidator
     {
         private SecurityPolicy _policy;
 
@@ -30,7 +29,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
             _policy = policy ?? SecurityPolicy.GetDefault();
         }
 
-        public ValidationResult ValidateCode(string code)
+        public SecurityValidationResult ValidateCode(string code)
         {
             string correlationId = Guid.NewGuid().ToString("N")[..8];
             
@@ -50,7 +49,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                     "Monitor security violation patterns"
                 );
 
-                ValidationResult result = new ValidationResult { IsValid = true };
+                SecurityValidationResult result = new SecurityValidationResult { IsValid = true };
 
                 if (string.IsNullOrWhiteSpace(code))
                 {
@@ -114,7 +113,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                     "Investigate validation failures"
                 );
 
-                return new ValidationResult
+                return new SecurityValidationResult
                 {
                     IsValid = false,
                     RiskLevel = SecurityLevel.Critical,

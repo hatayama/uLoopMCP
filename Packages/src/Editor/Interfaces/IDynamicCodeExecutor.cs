@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 
-namespace io.github.hatayama.uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// 動的コード実行統合機能のインターフェース

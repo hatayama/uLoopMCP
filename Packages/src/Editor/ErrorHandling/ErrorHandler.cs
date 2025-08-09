@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace io.github.hatayama.uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// エラーハンドリング統合機能
@@ -84,7 +84,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                     {
                         foreach (CompilationError error in compEx.Errors)
                         {
-                            sb.AppendLine($"- 行 {error.LineNumber}: {error.Message}");
+                            sb.AppendLine($"- 行 {error.Line}: {error.Message}");
                         }
                     }
                     break;

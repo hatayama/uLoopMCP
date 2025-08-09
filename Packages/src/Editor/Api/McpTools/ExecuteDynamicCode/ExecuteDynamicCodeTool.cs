@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using io.github.hatayama.uLoopMCP;
-using io.github.hatayama.uLoopMCP.DynamicExecution;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -36,9 +35,8 @@ Common Fixes:
 Perfect for: GameObject creation, scene manipulation, editor tools, batch operations.")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
-        private readonly global::io.github.hatayama.uLoopMCP.DynamicExecution.IDynamicCodeExecutor _executor;
-        private readonly global::io.github.hatayama.uLoopMCP.DynamicExecution.ImprovedErrorHandler _errorHandler;
-        private readonly global::io.github.hatayama.uLoopMCP.DynamicExecution.SmartCodeFixer _smartFixer;
+        private readonly global::io.github.hatayama.uLoopMCP.IDynamicCodeExecutor _executor;
+        private readonly global::io.github.hatayama.uLoopMCP.ImprovedErrorHandler _errorHandler;
         
         public override string ToolName => "execute-dynamic-code";
         
@@ -46,14 +44,13 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
         {
             // 実際のDynamicCodeExecutor実装を使用
             _executor = global::io.github.hatayama.uLoopMCP.Factory.DynamicCodeExecutorFactory.CreateDefault();
-            _errorHandler = new global::io.github.hatayama.uLoopMCP.DynamicExecution.ImprovedErrorHandler();
-            _smartFixer = new global::io.github.hatayama.uLoopMCP.DynamicExecution.SmartCodeFixer();
+            _errorHandler = new global::io.github.hatayama.uLoopMCP.ImprovedErrorHandler();
         }
         
         /// <summary>
         /// テスト用コンストラクタ（依存性注入対応）
         /// </summary>
-        public ExecuteDynamicCodeTool(global::io.github.hatayama.uLoopMCP.DynamicExecution.IDynamicCodeExecutor executor)
+        public ExecuteDynamicCodeTool(global::io.github.hatayama.uLoopMCP.IDynamicCodeExecutor executor)
         {
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
         }
@@ -81,25 +78,8 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
                     "Monitor execution flow and performance"
                 );
                 
-                // Phase 1: スマート修正の事前実行
+                // コード取得
                 string originalCode = parameters.Code ?? "";
-                global::io.github.hatayama.uLoopMCP.DynamicExecution.SmartFixResult fixResult = 
-                    _smartFixer.AnalyzeAndFix(originalCode);
-                
-                VibeLogger.LogInfo(
-                    "smart_fix_applied",
-                    "Smart code fixes applied before execution",
-                    new
-                    {
-                        issues_found = fixResult.TotalIssuesFound,
-                        issues_fixed = fixResult.IssuesFixed,
-                        confidence = fixResult.Confidence,
-                        code_changed = originalCode != fixResult.FixedCode
-                    },
-                    correlationId,
-                    "Pre-execution code fixing completed",
-                    "Monitor fix success rate and effectiveness"
-                );
 
                 // パラメータ配列に変換
                 object[] parametersArray = null;
@@ -108,9 +88,9 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
                     parametersArray = parameters.Parameters.Values.ToArray();
                 }
                 
-                // Phase 2: 修正されたコードで実行（ExecuteCodeAsyncを使用）
+                // コード実行（RoslynCompilerが診断駆動修正を行う）
                 ExecutionResult executionResult = await _executor.ExecuteCodeAsync(
-                    fixResult.FixedCode, // 修正されたコードを使用
+                    originalCode, // オリジナルコードを使用（RoslynCompilerが修正を行う）
                     "DynamicCommand",
                     parametersArray,
                     cancellationToken,
@@ -119,7 +99,7 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
                 
                 // レスポンスに変換（エラー時は改善されたメッセージを使用）
                 ExecuteDynamicCodeResponse toolResponse = ConvertExecutionResultToResponse(
-                    executionResult, originalCode, fixResult, correlationId);
+                    executionResult, originalCode, null, correlationId);
                 
                 // VibeLoggerで実行完了をログ
                 VibeLogger.LogInfo(
@@ -130,7 +110,7 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
                         success = executionResult.Success,
                         executionTimeMs = executionResult.ExecutionTime.TotalMilliseconds,
                         logsCount = executionResult.Logs?.Count ?? 0,
-                        result_length = executionResult.Result?.Length ?? 0
+                        result_length = executionResult.Result?.ToString()?.Length ?? 0
                     },
                     correlationId,
                     $"Execution completed: {(executionResult.Success ? "Success" : "Failed")}",
@@ -163,39 +143,19 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
         /// ExecutionResponseをExecuteDynamicCodeResponseに変換
         /// </summary>
         private ExecuteDynamicCodeResponse ConvertExecutionResultToResponse(
-            ExecutionResult result, string originalCode, global::io.github.hatayama.uLoopMCP.DynamicExecution.SmartFixResult fixResult, string correlationId)
+            ExecutionResult result, string originalCode, object fixResult, string correlationId)
         {
             ExecuteDynamicCodeResponse response = new ExecuteDynamicCodeResponse
             {
                 Success = result.Success,
-                Result = result.Result ?? "",
+                Result = result.Result?.ToString() ?? "",
                 Logs = result.Logs ?? new List<string>(),
                 CompilationErrors = new List<CompilationErrorDto>(), // ExecutionResultからは取得不可
                 ErrorMessage = result.ErrorMessage ?? "",
                 ExecutionTimeMs = (long)result.ExecutionTime.TotalMilliseconds
             };
 
-            // Smart Fix適用情報をレスポンスに追加
-            if (fixResult.TotalIssuesFound > 0)
-            {
-                if (response.Logs == null) response.Logs = new List<string>();
-                
-                response.Logs.Add($"Smart Fix適用: {fixResult.IssuesFixed}/{fixResult.TotalIssuesFound} 件の問題を修正");
-                
-                if (fixResult.AppliedFixes?.Any() == true)
-                {
-                    response.Logs.Add("適用された修正:");
-                    foreach (var fix in fixResult.AppliedFixes)
-                    {
-                        response.Logs.Add($"- {fix.PatternName}: {fix.Description}");
-                    }
-                }
-                
-                if (fixResult.Confidence < 0.8)
-                {
-                    response.Logs.Add($"修正信頼度: {fixResult.Confidence:P0} （元のコードも確認してください）");
-                }
-            }
+            // SmartCodeFixer削除済み - RoslynCompilerの診断駆動修正を使用
 
             // エラー時は改善されたメッセージを使用
             if (!result.Success)
@@ -207,7 +167,7 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
                     actualErrorMessage = string.Join(" ", result.Logs);
                 }
                 
-                global::io.github.hatayama.uLoopMCP.DynamicExecution.EnhancedErrorResponse enhancedError = 
+                global::io.github.hatayama.uLoopMCP.EnhancedErrorResponse enhancedError = 
                     _errorHandler.ProcessError(result, originalCode);
                 
                 // 分かりやすいエラーメッセージに置き換え
@@ -309,37 +269,4 @@ Perfect for: GameObject creation, scene manipulation, editor tools, batch operat
             };
         }
     }
-    
-    // スタブ実装 - 一旦コンパイルを通すため
-    public interface IDynamicCodeExecutor
-    {
-        Task<ExecutionResponse> ExecuteAsync(ExecutionRequest request);
-    }
-    
-    public class ExecutionRequest
-    {
-        public string Code { get; set; } = "";
-        public int TimeoutSeconds { get; set; } = 60;
-        public bool CompileOnly { get; set; } = false;
-        public Dictionary<string, object> Parameters { get; set; } = new();
-    }
-    
-    public class ExecutionResponse
-    {
-        public bool Success { get; set; }
-        public string Result { get; set; } = "";
-        public List<string> Logs { get; set; } = new();
-        public List<CompilationError> CompilationErrors { get; set; } = new();
-        public string ErrorMessage { get; set; }
-        public TimeSpan ExecutionTime { get; set; }
-    }
-    
-    public class CompilationError
-    {
-        public string Message { get; set; } = "";
-        public int Line { get; set; }
-        public int Column { get; set; }
-        public string ErrorCode { get; set; } = "";
-    }
-
 }
