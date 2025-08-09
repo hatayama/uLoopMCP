@@ -56,9 +56,9 @@ namespace io.github.hatayama.uLoopMCP
             
             // 基本的な.NETアセンブリを安全に追加
             try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(object).Assembly.Location)); } catch { }
-            try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(System.Collections.Generic.List<>).Assembly.Location)); } catch { }
-            try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location)); } catch { }
-            try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(System.Console).Assembly.Location)); } catch { }
+            try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(List<>).Assembly.Location)); } catch { }
+            try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location)); } catch { }
+            try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(Console).Assembly.Location)); } catch { }
             
             // 全Unityアセンブリを自動追加
             int addedCount = AddUnityAssemblies();
@@ -384,13 +384,14 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             // シンプルなメソッドや式の場合は、クラスでラップ
-            StringBuilder wrappedCode = new StringBuilder();
+            StringBuilder wrappedCode = new();
             // Unity AI Assistant準拠: using文はSyntaxTreeベースで後から追加
+            // WrapCodeIfNeededで生成されるコードは完全修飾名を使用し、using文に依存しない
             wrappedCode.AppendLine($"namespace {namespaceName}");
             wrappedCode.AppendLine("{");
             wrappedCode.AppendLine($"    public class {className}");
             wrappedCode.AppendLine("    {");
-            wrappedCode.AppendLine("        public object Execute(Dictionary<string, object> parameters = null)");
+            wrappedCode.AppendLine("        public object Execute(System.Collections.Generic.Dictionary<string, object> parameters = null)");
             wrappedCode.AppendLine("        {");
             
             // コードを適切にインデント
