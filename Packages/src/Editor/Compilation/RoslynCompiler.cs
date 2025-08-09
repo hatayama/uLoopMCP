@@ -7,7 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-namespace io.github.hatayama.uLoopMCP.DynamicExecution
+namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Roslynを使用したC#動的コンパイル機能
@@ -18,6 +18,12 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
     {
         private readonly List<MetadataReference> _defaultReferences = new();
         private readonly Dictionary<string, Assembly> _compilationCache = new();
+        
+        // Unity AI Assistant方式のFixProviderリスト
+        private static readonly List<CSharpFixProvider> FixProviders = new()
+        {
+            new FixMissingUsings()
+        };
         
         public RoslynCompiler()
         {
@@ -206,6 +212,52 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
                 compilationOptions
             );
             
+            // Unity AI Assistant方式の診断駆動修正
+            SyntaxTree currentTree = context.SyntaxTree;
+            bool hasError = true;
+            int maxAttempts = 3;
+            
+            for (int attempt = 0; attempt < maxAttempts && hasError; attempt++)
+            {
+                compilation = compilation.ReplaceSyntaxTree(
+                    compilation.SyntaxTrees.First(), 
+                    currentTree);
+                
+                Diagnostic[] diagnostics = compilation.GetDiagnostics()
+                    .Where(d => d.Severity == DiagnosticSeverity.Error)
+                    .ToArray();
+                
+                hasError = diagnostics.Any();
+                if (!hasError) break;
+                
+                // 修正適用
+                foreach (Diagnostic diagnostic in diagnostics)
+                {
+                    foreach (CSharpFixProvider provider in FixProviders)
+                    {
+                        if (provider.CanFix(diagnostic))
+                        {
+                            currentTree = provider.ApplyFix(currentTree, diagnostic);
+                            VibeLogger.LogInfo(
+                                "code_fix_applied",
+                                $"Applied fix: {provider.GetType().Name}",
+                                new { diagnosticId = diagnostic.Id },
+                                correlationId,
+                                "Code fix applied during compilation",
+                                "Track fix effectiveness");
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // 修正されたTreeでコンテキストを更新
+            context.SyntaxTree = currentTree;
+            context.WrappedCode = currentTree.ToString();
+            compilation = compilation.ReplaceSyntaxTree(
+                compilation.SyntaxTrees.First(),
+                currentTree);
+            
             using MemoryStream memoryStream = new MemoryStream();
             Microsoft.CodeAnalysis.Emit.EmitResult emitResult = compilation.Emit(memoryStream);
             
@@ -333,11 +385,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicExecution
             
             // シンプルなメソッドや式の場合は、クラスでラップ
             StringBuilder wrappedCode = new StringBuilder();
-            wrappedCode.AppendLine("using System;");
-            wrappedCode.AppendLine("using System.Collections.Generic;");
-            wrappedCode.AppendLine("using System.Linq;");
-            wrappedCode.AppendLine("using UnityEngine;");
-            wrappedCode.AppendLine();
+            // Unity AI Assistant準拠: using文はSyntaxTreeベースで後から追加
             wrappedCode.AppendLine($"namespace {namespaceName}");
             wrappedCode.AppendLine("{");
             wrappedCode.AppendLine($"    public class {className}");
