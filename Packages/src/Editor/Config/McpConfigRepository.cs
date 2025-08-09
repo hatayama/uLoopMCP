@@ -199,10 +199,11 @@ namespace io.github.hatayama.uLoopMCP
         
         /// <summary>
         /// Compares existing configuration content with new configuration to detect actual changes.
+        /// Only compares uLoopMCP-related entries to avoid false positives from other MCP servers.
         /// </summary>
         /// <param name="existingContent">Existing file content</param>
         /// <param name="newConfig">New configuration to compare</param>
-        /// <returns>True if configurations are equal, false if different</returns>
+        /// <returns>True if uLoopMCP configurations are equal, false if different</returns>
         private bool IsConfigurationEqual(string existingContent, McpConfig newConfig)
         {
             if (string.IsNullOrWhiteSpace(existingContent))
@@ -212,11 +213,34 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                // Parse existing configuration
-                McpConfig existingConfig = ParseConfigurationFromJson(existingContent);
+                // Parse existing JSON structure
+                Dictionary<string, object> existingStructure = JsonConvert.DeserializeObject<Dictionary<string, object>>(existingContent, SafeJsonSettings);
+                if (existingStructure == null || !existingStructure.ContainsKey(McpConstants.JSON_KEY_MCP_SERVERS))
+                {
+                    return false;
+                }
                 
-                // Compare configurations
-                return AreConfigurationsEqual(existingConfig, newConfig);
+                // Extract existing uLoopMCP servers
+                Dictionary<string, object> existingULoopServers = ExtractULoopMCPServers(existingStructure);
+                
+                // Extract new uLoopMCP servers
+                Dictionary<string, object> newULoopServers = newConfig.mcpServers
+                    .Where(kvp => IsULoopMCPServer(kvp.Key, kvp.Value))
+                    .ToDictionary(
+                        kvp => kvp.Key,
+                        kvp => (object)new
+                        {
+                            command = kvp.Value.command,
+                            args = kvp.Value.args,
+                            env = kvp.Value.env
+                        }
+                    );
+                
+                // Compare only uLoopMCP parts as normalized JSON strings
+                string normalizedExisting = JsonConvert.SerializeObject(existingULoopServers, Formatting.None, SafeJsonSettings);
+                string normalizedNew = JsonConvert.SerializeObject(newULoopServers, Formatting.None, SafeJsonSettings);
+                
+                return normalizedExisting == normalizedNew;
             }
             catch (System.Exception)
             {
@@ -226,110 +250,63 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// Parses configuration from JSON content.
+        /// Extracts uLoopMCP server entries from existing JSON structure.
         /// </summary>
-        /// <param name="jsonContent">JSON content</param>
-        /// <returns>Parsed configuration</returns>
-        private McpConfig ParseConfigurationFromJson(string jsonContent)
+        /// <param name="jsonStructure">Parsed JSON structure</param>
+        /// <returns>Dictionary containing only uLoopMCP server entries</returns>
+        private Dictionary<string, object> ExtractULoopMCPServers(Dictionary<string, object> jsonStructure)
         {
-            Dictionary<string, object> rootObject = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonContent, SafeJsonSettings);
-            Dictionary<string, McpServerConfigData> servers = new();
+            Dictionary<string, object> uloopServers = new();
             
-            if (rootObject == null || !rootObject.ContainsKey(McpConstants.JSON_KEY_MCP_SERVERS))
+            if (!jsonStructure.ContainsKey(McpConstants.JSON_KEY_MCP_SERVERS))
             {
-                return new McpConfig(servers);
+                return uloopServers;
             }
-
-            string mcpServersJson = JsonConvert.SerializeObject(rootObject[McpConstants.JSON_KEY_MCP_SERVERS], SafeJsonSettings);
-            Dictionary<string, object> mcpServersObject = JsonConvert.DeserializeObject<Dictionary<string, object>>(mcpServersJson, SafeJsonSettings);
             
-            if (mcpServersObject == null)
+            string mcpServersJson = JsonConvert.SerializeObject(jsonStructure[McpConstants.JSON_KEY_MCP_SERVERS], SafeJsonSettings);
+            Dictionary<string, object> mcpServers = JsonConvert.DeserializeObject<Dictionary<string, object>>(mcpServersJson, SafeJsonSettings);
+            
+            if (mcpServers == null)
             {
-                return new McpConfig(servers);
+                return uloopServers;
             }
-
-            foreach (KeyValuePair<string, object> serverEntry in mcpServersObject)
+            
+            foreach (KeyValuePair<string, object> serverEntry in mcpServers)
             {
-                string serverName = serverEntry.Key;
-                string serverConfigJson = JsonConvert.SerializeObject(serverEntry.Value, SafeJsonSettings);
-                Dictionary<string, object> serverConfigObject = JsonConvert.DeserializeObject<Dictionary<string, object>>(serverConfigJson, SafeJsonSettings);
-                
-                if (serverConfigObject == null)
+                if (!serverEntry.Key.StartsWith(McpConstants.PROJECT_NAME))
                 {
                     continue;
                 }
-
-                string command = serverConfigObject.ContainsKey(McpConstants.JSON_KEY_COMMAND) 
-                    ? serverConfigObject[McpConstants.JSON_KEY_COMMAND]?.ToString() ?? "" 
-                    : "";
                 
-                string[] args = new string[0];
-                if (serverConfigObject.ContainsKey(McpConstants.JSON_KEY_ARGS))
+                // Check if it has UNITY_TCP_PORT environment variable (uLoopMCP marker)
+                string serverJson = JsonConvert.SerializeObject(serverEntry.Value, SafeJsonSettings);
+                Dictionary<string, object> serverData = JsonConvert.DeserializeObject<Dictionary<string, object>>(serverJson, SafeJsonSettings);
+                
+                if (serverData?.ContainsKey(McpConstants.JSON_KEY_ENV) == true)
                 {
-                    string argsJson = JsonConvert.SerializeObject(serverConfigObject[McpConstants.JSON_KEY_ARGS], SafeJsonSettings);
-                    args = JsonConvert.DeserializeObject<string[]>(argsJson, SafeJsonSettings) ?? new string[0];
-                }
-                
-                Dictionary<string, string> env = new();
-                if (serverConfigObject.ContainsKey(McpConstants.JSON_KEY_ENV))
-                {
-                    string envJson = JsonConvert.SerializeObject(serverConfigObject[McpConstants.JSON_KEY_ENV], SafeJsonSettings);
-                    env = JsonConvert.DeserializeObject<Dictionary<string, string>>(envJson, SafeJsonSettings) ?? new Dictionary<string, string>();
-                }
-                
-                servers[serverName] = new McpServerConfigData(command, args, env);
-            }
-            
-            return new McpConfig(servers);
-        }
-        
-        /// <summary>
-        /// Compares two configurations for equality.
-        /// </summary>
-        /// <param name="config1">First configuration</param>
-        /// <param name="config2">Second configuration</param>
-        /// <returns>True if configurations are equal</returns>
-        private bool AreConfigurationsEqual(McpConfig config1, McpConfig config2)
-        {
-            if (config1.mcpServers.Count != config2.mcpServers.Count)
-            {
-                return false;
-            }
-            
-            foreach (KeyValuePair<string, McpServerConfigData> server1 in config1.mcpServers)
-            {
-                if (!config2.mcpServers.ContainsKey(server1.Key))
-                {
-                    return false;
-                }
-                
-                McpServerConfigData server2 = config2.mcpServers[server1.Key];
-                
-                if (server1.Value.command != server2.command)
-                {
-                    return false;
-                }
-                
-                if (!server1.Value.args.SequenceEqual(server2.args))
-                {
-                    return false;
-                }
-                
-                if (server1.Value.env.Count != server2.env.Count)
-                {
-                    return false;
-                }
-                
-                foreach (KeyValuePair<string, string> env1 in server1.Value.env)
-                {
-                    if (!server2.env.ContainsKey(env1.Key) || server2.env[env1.Key] != env1.Value)
+                    string envJson = JsonConvert.SerializeObject(serverData[McpConstants.JSON_KEY_ENV], SafeJsonSettings);
+                    Dictionary<string, string> env = JsonConvert.DeserializeObject<Dictionary<string, string>>(envJson, SafeJsonSettings);
+                    
+                    if (env?.ContainsKey(McpConstants.UNITY_TCP_PORT_ENV_KEY) == true)
                     {
-                        return false;
+                        uloopServers[serverEntry.Key] = serverEntry.Value;
                     }
                 }
             }
             
-            return true;
+            return uloopServers;
+        }
+        
+        /// <summary>
+        /// Determines if a server entry is a uLoopMCP server.
+        /// </summary>
+        /// <param name="serverKey">Server key</param>
+        /// <param name="serverConfig">Server configuration</param>
+        /// <returns>True if it's a uLoopMCP server</returns>
+        private bool IsULoopMCPServer(string serverKey, McpServerConfigData serverConfig)
+        {
+            return serverKey.StartsWith(McpConstants.PROJECT_NAME) 
+                   && serverConfig.env.ContainsKey(McpConstants.UNITY_TCP_PORT_ENV_KEY);
         }
     }
 
