@@ -3,107 +3,94 @@ using UnityEditor;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    public class PlayStopUnityToolTests
+    public class PlayUnityToolTests
     {
-        private PlayStopUnityTool playStopTool;
+        private PlayUnityTool playTool;
 
         [SetUp]
         public void Setup()
         {
-            playStopTool = new PlayStopUnityTool();
+            playTool = new PlayUnityTool();
         }
 
         /// <summary>
         /// Test for tool name.
-        /// - Asserts that the tool name is "play-stop-unity".
+        /// - Asserts that the tool name is "play-unity".
         /// </summary>
         [Test]
-        public void ToolName_ShouldReturnPlayStopUnity()
+        public void ToolName_ShouldReturnPlayUnity()
         {
             // Assert
-            Assert.That(playStopTool.ToolName, Is.EqualTo("play-stop-unity"));
+            Assert.That(playTool.ToolName, Is.EqualTo("play-unity"));
         }
+    }
 
-        /// <summary>
-        /// Parameter parsing test for play action.
-        /// </summary>
-        [Test]
-        public void ParseParameters_ShouldParsePlayActionCorrectly()
+    public class StopUnityToolTests
+    {
+        private StopUnityTool stopTool;
+
+        [SetUp]
+        public void Setup()
         {
-            // Arrange - Test the Schema object directly
-            PlayStopUnitySchema schema = new PlayStopUnitySchema
-            {
-                Action = "play"
-            };
-
-            // Assert - Schema properties should match what we set
-            Assert.That(schema.Action, Is.EqualTo("play"));
+            stopTool = new StopUnityTool();
         }
 
         /// <summary>
-        /// Parameter parsing test for stop action.
+        /// Test for tool name.
+        /// - Asserts that the tool name is "stop-unity".
         /// </summary>
         [Test]
-        public void ParseParameters_ShouldParseStopActionCorrectly()
+        public void ToolName_ShouldReturnStopUnity()
         {
-            // Arrange - Test the Schema object directly
-            PlayStopUnitySchema schema = new PlayStopUnitySchema
-            {
-                Action = "stop"
-            };
-
-            // Assert - Schema properties should match what we set
-            Assert.That(schema.Action, Is.EqualTo("stop"));
+            // Assert
+            Assert.That(stopTool.ToolName, Is.EqualTo("stop-unity"));
         }
 
         /// <summary>
-        /// Default value test with default schema.
+        /// Response structure test for play tool.
         /// </summary>
         [Test]
-        public void Schema_ShouldHaveEmptyActionByDefault()
-        {
-            // Arrange
-            PlayStopUnitySchema schema = new PlayStopUnitySchema();
-
-            // Assert - Default values should be empty
-            Assert.That(schema.Action, Is.EqualTo(""));
-        }
-
-        /// <summary>
-        /// Response structure test.
-        /// </summary>
-        [Test]
-        public void Response_ShouldHaveCorrectProperties()
+        public void PlayResponse_ShouldHaveCorrectProperties()
         {
             // Arrange
             PlayStopUnityResponse response = new PlayStopUnityResponse
             {
-                Message = "Test message",
+                Message = "Unity play mode started",
                 IsPlaying = true,
                 ActionPerformed = "play",
                 Success = true
             };
 
             // Assert - Response properties should match what we set
-            Assert.That(response.Message, Is.EqualTo("Test message"));
+            Assert.That(response.Message, Is.EqualTo("Unity play mode started"));
             Assert.That(response.IsPlaying, Is.True);
             Assert.That(response.ActionPerformed, Is.EqualTo("play"));
             Assert.That(response.Success, Is.True);
         }
+    }
 
+    public class StopUnityResponseTests
+    {
         /// <summary>
-        /// Test action validation with case sensitivity.
+        /// Response structure test for stop tool.
         /// </summary>
         [Test]
-        public void Action_ShouldBeCaseInsensitive()
+        public void StopResponse_ShouldHaveCorrectProperties()
         {
-            // Arrange - Test different case variations
-            var playSchema = new PlayStopUnitySchema { Action = "PLAY" };
-            var stopSchema = new PlayStopUnitySchema { Action = "Stop" };
+            // Arrange
+            PlayStopUnityResponse response = new PlayStopUnityResponse
+            {
+                Message = "Unity play mode stopped",
+                IsPlaying = false,
+                ActionPerformed = "stop",
+                Success = true
+            };
 
-            // Assert - These should be valid inputs (case insensitive)
-            Assert.That(playSchema.Action.ToLowerInvariant(), Is.EqualTo("play"));
-            Assert.That(stopSchema.Action.ToLowerInvariant(), Is.EqualTo("stop"));
+            // Assert - Response properties should match what we set
+            Assert.That(response.Message, Is.EqualTo("Unity play mode stopped"));
+            Assert.That(response.IsPlaying, Is.False);
+            Assert.That(response.ActionPerformed, Is.EqualTo("stop"));
+            Assert.That(response.Success, Is.True);
         }
     }
 }
