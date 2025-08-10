@@ -11,20 +11,22 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Roslynを使用したC#動的コンパイル機能
-
     /// 関連クラス: CompilationRequest, CompilationResult
     /// </summary>
     public class RoslynCompiler
     {
         private readonly List<MetadataReference> _defaultReferences = new();
         private readonly Dictionary<string, Assembly> _compilationCache = new();
-        
+
+        // キュレートされたアセンブリプレフィックス（Assembly-CSharp除外でセキュリティ強化）
+        private static readonly string[] CuratedAssemblyPrefixes = { "UnityEngine", "UnityEditor", "Unity.", "netstandard" };
+
         // Unity AI Assistant方式のFixProviderリスト
         private static readonly List<CSharpFixProvider> FixProviders = new()
         {
             new FixMissingUsings()
         };
-        
+
         public RoslynCompiler()
         {
             InitializeReferences();
@@ -33,55 +35,38 @@ namespace io.github.hatayama.uLoopMCP
         public void InitializeReferences()
         {
             _defaultReferences.Clear();
-            
-            try
+
+            // .NET Standard/Core基本アセンブリ
+            Assembly netStandardAssembly = Assembly.Load("netstandard");
+            if (netStandardAssembly != null)
             {
-                // .NET Standard/Core基本アセンブリ
-                Assembly netStandardAssembly = Assembly.Load("netstandard");
-                if (netStandardAssembly != null)
-                {
-                    _defaultReferences.Add(MetadataReference.CreateFromFile(netStandardAssembly.Location));
-                }
+                _defaultReferences.Add(MetadataReference.CreateFromFile(netStandardAssembly.Location));
             }
-            catch
-            {
-                // netstandard見つからない場合はmscorlib/System.Runtimeで代替
-                try
-                {
-                    string mscorlibPath = typeof(object).Assembly.Location;
-                    _defaultReferences.Add(MetadataReference.CreateFromFile(mscorlibPath));
-                }
-                catch { }
-            }
-            
-            // 基本的な.NETアセンブリを安全に追加
-            try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(object).Assembly.Location)); } catch { }
-            try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(List<>).Assembly.Location)); } catch { }
-            try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location)); } catch { }
-            try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(Console).Assembly.Location)); } catch { }
-            
-            // 全アセンブリ追加（旧方式）
-            int addedCount = AddUnityAssemblies();
-            UnityEngine.Debug.Log($"RoslynCompiler: Unity & プロジェクトアセンブリ自動追加完了 - {addedCount}個のアセンブリを追加");
-            
+
+            // 基本的な.NETアセンブリを追加
+            _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(object).Assembly.Location));
+            _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(List<>).Assembly.Location));
+            _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location));
+            _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(Console).Assembly.Location));
+
             // System.Runtimeを明示的に追加
             string[] runtimePaths = new[]
             {
                 Path.Combine(Path.GetDirectoryName(typeof(object).Assembly.Location), "System.Runtime.dll"),
                 Path.Combine(Path.GetDirectoryName(typeof(object).Assembly.Location), "System.Private.CoreLib.dll")
             };
-            
+
             foreach (string path in runtimePaths)
             {
                 if (File.Exists(path))
                 {
-                    try { _defaultReferences.Add(MetadataReference.CreateFromFile(path)); } catch { }
+                    _defaultReferences.Add(MetadataReference.CreateFromFile(path));
                 }
             }
-            
+
             // 現在のアセンブリも追加（uLoopMCP関連クラスにアクセスするため）
-            try { _defaultReferences.Add(MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location)); } catch { }
-            
+            _defaultReferences.Add(MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location));
+
             VibeLogger.LogInfo(
                 "roslyn_compiler_initialize",
                 "RoslynCompiler initialized with references",
@@ -95,20 +80,20 @@ namespace io.github.hatayama.uLoopMCP
         public CompilationResult Compile(CompilationRequest request)
         {
             string correlationId = GenerateCorrelationId();
-            
+
             try
             {
                 LogCompilationStart(request, correlationId);
-                
+
                 // 早期return でネスト浅く
                 CompilationResult cachedResult = CheckCache(request);
                 if (cachedResult != null) return cachedResult;
-                
+
                 CompilationContext context = PrepareCompilation(request);
                 CompilationResult result = ExecuteCompilation(context, correlationId);
-                
+
                 CacheResultIfSuccessful(request, result);
-                
+
                 return result;
             }
             catch (Exception ex)
@@ -140,7 +125,8 @@ namespace io.github.hatayama.uLoopMCP
             VibeLogger.LogInfo(
                 "roslyn_compile_start",
                 "Starting Roslyn compilation",
-                new { 
+                new
+                {
                     codeLength = request.Code?.Length ?? 0,
                     className = request.ClassName,
                     @namespace = request.Namespace,
@@ -164,6 +150,7 @@ namespace io.github.hatayama.uLoopMCP
                     UpdatedCode = request.Code
                 };
             }
+
             return null;
         }
 
@@ -171,7 +158,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             string wrappedCode = WrapCodeIfNeeded(request.Code, request.Namespace, request.ClassName);
             SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(wrappedCode);
-            
+
             // アセンブリ読み込みモードに応じて参照を準備
             // 注意: AllAssembliesモードでも、コンストラクタで既に全アセンブリが_defaultReferencesに追加済み
             List<MetadataReference> references = PrepareReferences(request.AdditionalReferences);
@@ -187,7 +174,7 @@ namespace io.github.hatayama.uLoopMCP
         private List<MetadataReference> PrepareReferences(List<string> additionalReferences)
         {
             List<MetadataReference> references = new List<MetadataReference>(_defaultReferences);
-            
+
             foreach (string additionalRef in additionalReferences ?? new List<string>())
             {
                 if (File.Exists(additionalRef))
@@ -195,7 +182,7 @@ namespace io.github.hatayama.uLoopMCP
                     references.Add(MetadataReference.CreateFromFile(additionalRef));
                 }
             }
-            
+
             return references;
         }
 
@@ -206,32 +193,32 @@ namespace io.github.hatayama.uLoopMCP
                 optimizationLevel: OptimizationLevel.Release,
                 allowUnsafe: false
             );
-            
+
             CSharpCompilation compilation = CSharpCompilation.Create(
                 $"DynamicAssembly_{correlationId}",
                 new[] { context.SyntaxTree },
                 context.References,
                 compilationOptions
             );
-            
+
             // Unity AI Assistant方式の診断駆動修正
             SyntaxTree currentTree = context.SyntaxTree;
             bool hasError = true;
             int maxAttempts = 3;
-            
+
             for (int attempt = 0; attempt < maxAttempts && hasError; attempt++)
             {
                 compilation = compilation.ReplaceSyntaxTree(
-                    compilation.SyntaxTrees.First(), 
+                    compilation.SyntaxTrees.First(),
                     currentTree);
-                
+
                 Diagnostic[] diagnostics = compilation.GetDiagnostics()
                     .Where(d => d.Severity == DiagnosticSeverity.Error)
                     .ToArray();
-                
+
                 hasError = diagnostics.Any();
                 if (!hasError) break;
-                
+
                 // Phase 1: 動的アセンブリ追加を試行
                 bool addedAssembly = TryAddMissingAssemblies(diagnostics, correlationId);
                 if (addedAssembly)
@@ -245,7 +232,7 @@ namespace io.github.hatayama.uLoopMCP
                     );
                     continue; // 次のループでエラーチェック
                 }
-                
+
                 // Phase 2: 修正適用
                 foreach (Diagnostic diagnostic in diagnostics)
                 {
@@ -266,23 +253,23 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }
             }
-            
+
             // 修正されたTreeでコンテキストを更新
             context.SyntaxTree = currentTree;
             context.WrappedCode = currentTree.ToString();
             compilation = compilation.ReplaceSyntaxTree(
                 compilation.SyntaxTrees.First(),
                 currentTree);
-            
+
             using MemoryStream memoryStream = new MemoryStream();
             Microsoft.CodeAnalysis.Emit.EmitResult emitResult = compilation.Emit(memoryStream);
-            
+
             return ProcessEmitResult(emitResult, memoryStream, context, correlationId);
         }
 
         private CompilationResult ProcessEmitResult(
-            Microsoft.CodeAnalysis.Emit.EmitResult emitResult, 
-            MemoryStream memoryStream, 
+            Microsoft.CodeAnalysis.Emit.EmitResult emitResult,
+            MemoryStream memoryStream,
             CompilationContext context,
             string correlationId)
         {
@@ -291,28 +278,28 @@ namespace io.github.hatayama.uLoopMCP
                 UpdatedCode = context.WrappedCode,
                 Warnings = CollectWarnings(emitResult.Diagnostics)
             };
-            
+
             if (emitResult.Success)
             {
                 memoryStream.Seek(0, SeekOrigin.Begin);
                 Assembly assembly = Assembly.Load(memoryStream.ToArray());
-                
+
                 result.Success = true;
                 result.CompiledAssembly = assembly;
-                
+
                 LogCompilationSuccess(assembly, correlationId);
             }
             else
             {
                 result.Success = false;
                 result.Errors = ConvertDiagnosticsToErrors(emitResult.Diagnostics);
-                
+
                 // セキュリティ違反を検出
                 DetectSecurityViolations(result, emitResult.Diagnostics);
-                
+
                 LogCompilationFailure(result, correlationId);
             }
-            
+
             return result;
         }
 
@@ -329,7 +316,8 @@ namespace io.github.hatayama.uLoopMCP
             VibeLogger.LogInfo(
                 "roslyn_compile_success",
                 "Compilation completed successfully",
-                new { 
+                new
+                {
                     assemblyName = assembly.FullName,
                     typeCount = assembly.GetTypes().Length
                 },
@@ -344,7 +332,8 @@ namespace io.github.hatayama.uLoopMCP
             VibeLogger.LogWarning(
                 "roslyn_compile_failure",
                 "Compilation failed with errors",
-                new { 
+                new
+                {
                     errorCount = result.Errors.Count,
                     errors = result.Errors.Select(e => e.Message).ToArray()
                 },
@@ -368,7 +357,8 @@ namespace io.github.hatayama.uLoopMCP
             VibeLogger.LogError(
                 "roslyn_compile_exception",
                 "Exception during Roslyn compilation",
-                new { 
+                new
+                {
                     error = ex.Message,
                     stackTrace = ex.StackTrace
                 },
@@ -376,7 +366,7 @@ namespace io.github.hatayama.uLoopMCP
                 "Unexpected compilation error occurred",
                 "Investigate and handle compilation exceptions"
             );
-            
+
             return new CompilationResult
             {
                 Success = false,
@@ -401,7 +391,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return code; // そのまま返す
             }
-            
+
             // シンプルなメソッドや式の場合は、クラスでラップ
             StringBuilder wrappedCode = new();
             // Unity AI Assistant準拠: using文はSyntaxTreeベースで後から追加
@@ -412,18 +402,18 @@ namespace io.github.hatayama.uLoopMCP
             wrappedCode.AppendLine("    {");
             wrappedCode.AppendLine("        public object Execute(System.Collections.Generic.Dictionary<string, object> parameters = null)");
             wrappedCode.AppendLine("        {");
-            
+
             // コードを適切にインデント
             string[] lines = code.Split(new char[] { '\n' }, StringSplitOptions.None);
             foreach (string line in lines)
             {
                 wrappedCode.AppendLine($"            {line}");
             }
-            
+
             wrappedCode.AppendLine("        }");
             wrappedCode.AppendLine("    }");
             wrappedCode.AppendLine("}");
-            
+
             return wrappedCode.ToString();
         }
 
@@ -441,60 +431,46 @@ namespace io.github.hatayama.uLoopMCP
                 .ToList();
         }
 
-        private int AddCuratedUnityAssemblies()
+
+        /// <summary>
+        /// Unity AI Assistant準拠のキュレートされたアセンブリのみを追加
+        /// </summary>
+        private int AddCuratedAssemblies()
         {
             try
             {
-                // Unity AI Assistant方式：キュレートされたプレフィックスのみ
-                string[] curatedPrefixes = { "Assembly-CSharp", "UnityEngine", "UnityEditor", "Unity.", "netstandard" };
-                
+                // Unity AI Assistant準拠のキュレートされたプレフィックス (Assembly-CSharpを除外してセキュリティ強化)
+
                 int addedCount = 0;
+
+                // キュレートされたアセンブリのみ追加（重複を避けるため明示的追加は削除）
                 foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
                 {
-                    if (!assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
+                    if (assembly.IsDynamic || string.IsNullOrWhiteSpace(assembly.Location))
+                        continue;
+
+                    // キュレートされたプレフィックスかチェック
+                    bool isCurated = false;
+                    foreach (string prefix in CuratedAssemblyPrefixes)
                     {
-                        if (curatedPrefixes.Any(prefix => assembly.FullName.StartsWith(prefix)))
+                        if (assembly.FullName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                         {
-                            if (TryAddAssemblyReference(assembly))
-                            {
-                                addedCount++;
-                            }
+                            isCurated = true;
+                            break;
                         }
                     }
+
+                    if (isCurated && TryAddAssemblyReference(assembly))
+                    {
+                        addedCount++;
+                    }
                 }
-                
+
                 return addedCount;
             }
             catch (Exception ex)
             {
                 UnityEngine.Debug.LogError($"RoslynCompiler: キュレートされたアセンブリ追加でエラー - {ex.Message}");
-                return 0;
-            }
-        }
-
-        private int AddUnityAssemblies()
-        {
-            try
-            {
-                // 現在のAppDomainのアセンブリを全て取得（シンプル・確実）
-                Assembly[] allAssemblies = AppDomain.CurrentDomain.GetAssemblies()
-                    .Where(HasValidLocation)
-                    .ToArray();
-                
-                int addedCount = 0;
-                foreach (Assembly assembly in allAssemblies)
-                {
-                    if (TryAddAssemblyReference(assembly))
-                    {
-                        addedCount++;
-                    }
-                }
-                
-                return addedCount;
-            }
-            catch (Exception ex)
-            {
-                UnityEngine.Debug.LogError($"RoslynCompiler: アセンブリ自動追加でエラー - {ex.Message}");
                 return 0;
             }
         }
@@ -512,7 +488,7 @@ namespace io.github.hatayama.uLoopMCP
         private bool TryAddMissingAssemblies(IEnumerable<Diagnostic> diagnostics, string correlationId)
         {
             bool addedNewAssembly = false;
-            
+
             foreach (Diagnostic diagnostic in diagnostics.Where(d => d.Id == "CS0246"))
             {
                 string typeName = ExtractTypeNameFromDiagnostic(diagnostic);
@@ -525,7 +501,8 @@ namespace io.github.hatayama.uLoopMCP
                         VibeLogger.LogInfo(
                             "dynamic_assembly_added",
                             $"Dynamically added assembly for type: {typeName}",
-                            new { 
+                            new
+                            {
                                 typeName,
                                 assemblyName = foundAssembly.FullName,
                                 diagnosticId = diagnostic.Id
@@ -537,179 +514,149 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }
             }
-            
+
             return addedNewAssembly;
         }
-        
+
         private string ExtractTypeNameFromDiagnostic(Diagnostic diagnostic)
         {
-            try
-            {
-                string message = diagnostic.GetMessage();
-                VibeLogger.LogInfo(
-                    "diagnostic_message_analysis",
-                    $"Analyzing diagnostic message for type extraction",
-                    new { 
-                        diagnosticId = diagnostic.Id,
-                        message = message,
-                        severity = diagnostic.Severity.ToString()
-                    },
-                    null,
-                    "Diagnostic message being processed for type name extraction",
-                    "Monitor type extraction patterns for improvement"
-                );
-                
-                // CS0246: The type or namespace name 'TypeName' could not be found
-                if (diagnostic.Id == "CS0246")
+            string message = diagnostic.GetMessage();
+            VibeLogger.LogInfo(
+                "diagnostic_message_analysis",
+                $"Analyzing diagnostic message for type extraction",
+                new
                 {
-                    int startIndex = message.IndexOf('\'') + 1;
-                    int endIndex = message.IndexOf('\'', startIndex);
-                    
-                    if (startIndex > 0 && endIndex > startIndex)
+                    diagnosticId = diagnostic.Id,
+                    message = message,
+                    severity = diagnostic.Severity.ToString()
+                },
+                null,
+                "Diagnostic message being processed for type name extraction",
+                "Monitor type extraction patterns for improvement"
+            );
+
+            // CS0246: The type or namespace name 'TypeName' could not be found
+            if (diagnostic.Id == "CS0246")
+            {
+                int startIndex = message.IndexOf('\'') + 1;
+                int endIndex = message.IndexOf('\'', startIndex);
+
+                if (startIndex > 0 && endIndex > startIndex)
+                {
+                    return message.Substring(startIndex, endIndex - startIndex);
+                }
+            }
+
+            // CS0103: The name 'TypeName' does not exist in the current context
+            if (diagnostic.Id == "CS0103")
+            {
+                int startIndex = message.IndexOf('\'') + 1;
+                int endIndex = message.IndexOf('\'', startIndex);
+
+                if (startIndex > 0 && endIndex > startIndex)
+                {
+                    string typeName = message.Substring(startIndex, endIndex - startIndex);
+                    // HttpClient, File など具体的な型名の場合
+                    if (!typeName.Contains('.') && char.IsUpper(typeName[0]))
                     {
-                        return message.Substring(startIndex, endIndex - startIndex);
+                        return typeName;
                     }
                 }
-                
-                // CS0103: The name 'TypeName' does not exist in the current context
-                if (diagnostic.Id == "CS0103")
+            }
+
+            // その他のパターンの場合もログ出力
+            VibeLogger.LogWarning(
+                "type_extraction_failed",
+                "Could not extract type name from diagnostic",
+                new
                 {
-                    int startIndex = message.IndexOf('\'') + 1;
-                    int endIndex = message.IndexOf('\'', startIndex);
-                    
-                    if (startIndex > 0 && endIndex > startIndex)
-                    {
-                        string typeName = message.Substring(startIndex, endIndex - startIndex);
-                        // HttpClient, File など具体的な型名の場合
-                        if (!typeName.Contains('.') && char.IsUpper(typeName[0]))
-                        {
-                            return typeName;
-                        }
-                    }
-                }
-                
-                // その他のパターンの場合もログ出力
-                VibeLogger.LogWarning(
-                    "type_extraction_failed",
-                    "Could not extract type name from diagnostic",
-                    new { 
-                        diagnosticId = diagnostic.Id,
-                        message = message
-                    },
-                    null,
-                    "Type name extraction failed for diagnostic message",
-                    "Review extraction patterns for completeness"
-                );
-            }
-            catch (Exception ex)
-            {
-                UnityEngine.Debug.LogWarning($"RoslynCompiler: 型名抽出失敗 - {ex.Message}");
-            }
-            
+                    diagnosticId = diagnostic.Id,
+                    message = message
+                },
+                null,
+                "Type name extraction failed for diagnostic message",
+                "Review extraction patterns for completeness"
+            );
+
             return null;
         }
-        
+
         private Assembly FindAssemblyContainingType(string typeName)
         {
-            try
+            // よく使われる型の名前空間マッピング
+            Dictionary<string, string[]> commonTypeMapping = new Dictionary<string, string[]>
             {
-                // よく使われる型の名前空間マッピング
-                Dictionary<string, string[]> commonTypeMapping = new Dictionary<string, string[]>
+                { "HttpClient", new[] { "System.Net.Http.HttpClient" } },
+                { "File", new[] { "System.IO.File" } },
+                { "Directory", new[] { "System.IO.Directory" } },
+                { "Path", new[] { "System.IO.Path" } },
+                { "WebClient", new[] { "System.Net.WebClient" } },
+                { "List", new[] { "System.Collections.Generic.List`1" } },
+                { "Dictionary", new[] { "System.Collections.Generic.Dictionary`2" } }
+            };
+
+            // 型名候補を準備
+            List<string> candidateTypes = new List<string> { typeName };
+            if (commonTypeMapping.ContainsKey(typeName))
+            {
+                candidateTypes.AddRange(commonTypeMapping[typeName]);
+            }
+
+            // AppDomain内の全アセンブリから型を検索
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (assembly.IsDynamic || string.IsNullOrWhiteSpace(assembly.Location))
+                    continue;
+
+                foreach (string candidate in candidateTypes)
                 {
-                    { "HttpClient", new[] { "System.Net.Http.HttpClient" } },
-                    { "File", new[] { "System.IO.File" } },
-                    { "Directory", new[] { "System.IO.Directory" } },
-                    { "Path", new[] { "System.IO.Path" } },
-                    { "WebClient", new[] { "System.Net.WebClient" } },
-                    { "List", new[] { "System.Collections.Generic.List`1" } },
-                    { "Dictionary", new[] { "System.Collections.Generic.Dictionary`2" } }
-                };
-                
-                // 型名候補を準備
-                List<string> candidateTypes = new List<string> { typeName };
-                if (commonTypeMapping.ContainsKey(typeName))
-                {
-                    candidateTypes.AddRange(commonTypeMapping[typeName]);
-                }
-                
-                // AppDomain内の全アセンブリから型を検索
-                foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-                {
-                    if (assembly.IsDynamic || string.IsNullOrWhiteSpace(assembly.Location))
-                        continue;
-                    
-                    try
+                    Type foundType = assembly.GetType(candidate) ??
+                                     assembly.GetTypes().FirstOrDefault(t =>
+                                         t.Name == candidate ||
+                                         t.FullName == candidate ||
+                                         t.Name == typeName ||
+                                         t.FullName == typeName);
+
+                    if (foundType != null)
                     {
-                        foreach (string candidate in candidateTypes)
-                        {
-                            Type foundType = assembly.GetType(candidate) ?? 
-                                           assembly.GetTypes().FirstOrDefault(t => 
-                                               t.Name == candidate || 
-                                               t.FullName == candidate ||
-                                               t.Name == typeName ||
-                                               t.FullName == typeName);
-                            
-                            if (foundType != null)
+                        VibeLogger.LogInfo(
+                            "assembly_found_for_type",
+                            $"Found assembly containing type: {typeName}",
+                            new
                             {
-                                VibeLogger.LogInfo(
-                                    "assembly_found_for_type",
-                                    $"Found assembly containing type: {typeName}",
-                                    new { 
-                                        typeName,
-                                        foundTypeName = foundType.FullName,
-                                        assemblyName = assembly.FullName,
-                                        assemblyLocation = assembly.Location
-                                    },
-                                    null,
-                                    "Assembly found for dynamic type resolution",
-                                    "Track successful type-to-assembly mappings"
-                                );
-                                return assembly;
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // アセンブリの読み込みやType取得でエラーが発生しても継続
-                        VibeLogger.LogWarning(
-                            "assembly_type_search_error",
-                            "Error searching types in assembly",
-                            new { 
+                                typeName,
+                                foundTypeName = foundType.FullName,
                                 assemblyName = assembly.FullName,
-                                error = ex.Message,
-                                typeName
+                                assemblyLocation = assembly.Location
                             },
                             null,
-                            "Error occurred while searching for type in assembly",
-                            "Monitor assembly access issues"
+                            "Assembly found for dynamic type resolution",
+                            "Track successful type-to-assembly mappings"
                         );
-                        continue;
+                        return assembly;
                     }
                 }
-                
-                VibeLogger.LogWarning(
-                    "type_not_found_in_assemblies",
-                    $"Type {typeName} not found in any loaded assembly",
-                    new { 
-                        typeName,
-                        searchedAssemblies = AppDomain.CurrentDomain.GetAssemblies()
-                            .Where(a => !a.IsDynamic && !string.IsNullOrWhiteSpace(a.Location))
-                            .Select(a => a.FullName)
-                            .ToArray()
-                    },
-                    null,
-                    "Type could not be resolved to any assembly",
-                    "Review type resolution patterns"
-                );
             }
-            catch (Exception ex)
-            {
-                UnityEngine.Debug.LogWarning($"RoslynCompiler: アセンブリ検索失敗 - {ex.Message}");
-            }
-            
+
+            VibeLogger.LogWarning(
+                "type_not_found_in_assemblies",
+                $"Type {typeName} not found in any loaded assembly",
+                new
+                {
+                    typeName,
+                    searchedAssemblies = AppDomain.CurrentDomain.GetAssemblies()
+                        .Where(a => !a.IsDynamic && !string.IsNullOrWhiteSpace(a.Location))
+                        .Select(a => a.FullName)
+                        .ToArray()
+                },
+                null,
+                "Type could not be resolved to any assembly",
+                "Review type resolution patterns"
+            );
+
             return null;
         }
-        
+
         /// <summary>
         /// 診断メッセージからセキュリティ違反を検出してCompilationResultに設定
         /// </summary>
@@ -717,25 +664,25 @@ namespace io.github.hatayama.uLoopMCP
         {
             SecurityPolicy securityPolicy = SecurityPolicy.GetDefault();
             List<SecurityViolation> violations = new();
-            
+
             foreach (Diagnostic diagnostic in diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error))
             {
                 string message = diagnostic.GetMessage();
-                
+
                 // 禁止された名前空間の使用を検出
                 foreach (string forbiddenNamespace in securityPolicy.ForbiddenNamespaces)
                 {
                     bool isViolation = false;
                     string detectionReason = "";
-                    
+
                     // パターン1: 直接的な名前空間エラー（"System.IO is a namespace but is used like a type"）
-                    if (message.Contains($"'{forbiddenNamespace}'") && 
+                    if (message.Contains($"'{forbiddenNamespace}'") &&
                         message.Contains("is a namespace but is used like a type"))
                     {
                         isViolation = true;
                         detectionReason = "Direct namespace usage error";
                     }
-                    
+
                     // パターン2: 子名前空間の使用エラー（"System.Net.Http is a namespace but is used like a type"）
                     else if (message.Contains("is a namespace but is used like a type"))
                     {
@@ -746,20 +693,20 @@ namespace io.github.hatayama.uLoopMCP
                             detectionReason = "Child namespace usage error";
                         }
                     }
-                    
+
                     // パターン3: 禁止名前空間に属する型の使用エラー（間接的検出）
                     // "HttpClient could not be found" で System.Net.Http.HttpClient を検出
                     else if (diagnostic.Id == "CS0246")
                     {
                         string context = diagnostic.Location.SourceTree?.ToString() ?? "";
-                        if (context.Contains($"using {forbiddenNamespace}") || 
+                        if (context.Contains($"using {forbiddenNamespace}") ||
                             context.Contains($"using {forbiddenNamespace}."))
                         {
                             isViolation = true;
                             detectionReason = "Forbidden namespace type usage";
                         }
                     }
-                    
+
                     if (isViolation)
                     {
                         SecurityViolation violation = new SecurityViolation
@@ -770,11 +717,12 @@ namespace io.github.hatayama.uLoopMCP
                             CodeSnippet = message
                         };
                         violations.Add(violation);
-                        
+
                         VibeLogger.LogWarning(
                             "security_violation_detected",
                             $"Security violation: forbidden namespace '{forbiddenNamespace}' detected in compilation",
-                            new { 
+                            new
+                            {
                                 forbiddenNamespace,
                                 diagnosticId = diagnostic.Id,
                                 diagnosticMessage = message,
@@ -788,7 +736,7 @@ namespace io.github.hatayama.uLoopMCP
                         break; // 最初にマッチした禁止名前空間で終了
                     }
                 }
-                
+
                 // 禁止されたメソッドの検出
                 foreach (string forbiddenMethod in securityPolicy.ForbiddenMethods)
                 {
@@ -805,7 +753,7 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }
             }
-            
+
             if (violations.Count > 0)
             {
                 result.HasSecurityViolations = true;
@@ -818,30 +766,11 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private bool HasValidLocation(Assembly assembly)
-        {
-            try
-            {
-                return !string.IsNullOrEmpty(assembly.Location) && File.Exists(assembly.Location);
-            }
-            catch
-            {
-                return false;
-            }
-        }
 
         private bool TryAddAssemblyReference(Assembly assembly)
         {
-            try
-            {
-                _defaultReferences.Add(MetadataReference.CreateFromFile(assembly.Location));
-                return true;
-            }
-            catch (Exception ex)
-            {
-                UnityEngine.Debug.LogWarning($"RoslynCompiler: アセンブリ追加失敗 {assembly.FullName} - {ex.Message}");
-                return false;
-            }
+            _defaultReferences.Add(MetadataReference.CreateFromFile(assembly.Location));
+            return true;
         }
 
         private string GenerateCacheKey(CompilationRequest request)
@@ -850,7 +779,7 @@ namespace io.github.hatayama.uLoopMCP
             keyBuilder.Append(request.Code);
             keyBuilder.Append(request.ClassName);
             keyBuilder.Append(request.Namespace);
-            
+
             if (request.AdditionalReferences != null)
             {
                 foreach (string reference in request.AdditionalReferences.OrderBy(r => r))
@@ -858,7 +787,7 @@ namespace io.github.hatayama.uLoopMCP
                     keyBuilder.Append(reference);
                 }
             }
-            
+
             return Convert.ToBase64String(Encoding.UTF8.GetBytes(keyBuilder.ToString()));
         }
     }
