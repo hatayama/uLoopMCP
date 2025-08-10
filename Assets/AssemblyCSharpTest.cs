@@ -1,10 +1,9 @@
-using UnityEngine;
 using System.IO;
 using System.Diagnostics;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    public class DynamicAssemblyTest
+    public class AssemblyCSharpTest
     {
         public string HelloWorld()
         {
