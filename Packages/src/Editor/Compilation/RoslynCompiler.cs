@@ -60,9 +60,8 @@ namespace io.github.hatayama.uLoopMCP
             try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location)); } catch { }
             try { _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(Console).Assembly.Location)); } catch { }
             
-            // 全Unityアセンブリを自動追加
+            // 全アセンブリ追加（旧方式）
             int addedCount = AddUnityAssemblies();
-            
             UnityEngine.Debug.Log($"RoslynCompiler: Unity & プロジェクトアセンブリ自動追加完了 - {addedCount}個のアセンブリを追加");
             
             // System.Runtimeを明示的に追加
@@ -172,6 +171,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             string wrappedCode = WrapCodeIfNeeded(request.Code, request.Namespace, request.ClassName);
             SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(wrappedCode);
+            
+            // アセンブリ読み込みモードに応じて参照を準備
+            // 注意: AllAssembliesモードでも、コンストラクタで既に全アセンブリが_defaultReferencesに追加済み
             List<MetadataReference> references = PrepareReferences(request.AdditionalReferences);
 
             return new CompilationContext
@@ -230,7 +232,21 @@ namespace io.github.hatayama.uLoopMCP
                 hasError = diagnostics.Any();
                 if (!hasError) break;
                 
-                // 修正適用
+                // Phase 1: 動的アセンブリ追加を試行
+                bool addedAssembly = TryAddMissingAssemblies(diagnostics, correlationId);
+                if (addedAssembly)
+                {
+                    // アセンブリが追加された場合はコンパイレーションを再構築
+                    compilation = CSharpCompilation.Create(
+                        $"DynamicAssembly_{correlationId}",
+                        new[] { currentTree },
+                        context.References,
+                        compilationOptions
+                    );
+                    continue; // 次のループでエラーチェック
+                }
+                
+                // Phase 2: 修正適用
                 foreach (Diagnostic diagnostic in diagnostics)
                 {
                     foreach (CSharpFixProvider provider in FixProviders)
@@ -290,6 +306,9 @@ namespace io.github.hatayama.uLoopMCP
             {
                 result.Success = false;
                 result.Errors = ConvertDiagnosticsToErrors(emitResult.Diagnostics);
+                
+                // セキュリティ違反を検出
+                DetectSecurityViolations(result, emitResult.Diagnostics);
                 
                 LogCompilationFailure(result, correlationId);
             }
@@ -422,6 +441,37 @@ namespace io.github.hatayama.uLoopMCP
                 .ToList();
         }
 
+        private int AddCuratedUnityAssemblies()
+        {
+            try
+            {
+                // Unity AI Assistant方式：キュレートされたプレフィックスのみ
+                string[] curatedPrefixes = { "Assembly-CSharp", "UnityEngine", "UnityEditor", "Unity.", "netstandard" };
+                
+                int addedCount = 0;
+                foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    if (!assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
+                    {
+                        if (curatedPrefixes.Any(prefix => assembly.FullName.StartsWith(prefix)))
+                        {
+                            if (TryAddAssemblyReference(assembly))
+                            {
+                                addedCount++;
+                            }
+                        }
+                    }
+                }
+                
+                return addedCount;
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogError($"RoslynCompiler: キュレートされたアセンブリ追加でエラー - {ex.Message}");
+                return 0;
+            }
+        }
+
         private int AddUnityAssemblies()
         {
             try
@@ -448,6 +498,316 @@ namespace io.github.hatayama.uLoopMCP
                 return 0;
             }
         }
+
+        private bool TryAddMissingAssemblies(IEnumerable<Diagnostic> diagnostics, string correlationId)
+        {
+            bool addedNewAssembly = false;
+            
+            foreach (Diagnostic diagnostic in diagnostics.Where(d => d.Id == "CS0246"))
+            {
+                string typeName = ExtractTypeNameFromDiagnostic(diagnostic);
+                if (!string.IsNullOrEmpty(typeName))
+                {
+                    Assembly foundAssembly = FindAssemblyContainingType(typeName);
+                    if (foundAssembly != null && TryAddAssemblyReference(foundAssembly))
+                    {
+                        addedNewAssembly = true;
+                        VibeLogger.LogInfo(
+                            "dynamic_assembly_added",
+                            $"Dynamically added assembly for type: {typeName}",
+                            new { 
+                                typeName,
+                                assemblyName = foundAssembly.FullName,
+                                diagnosticId = diagnostic.Id
+                            },
+                            correlationId,
+                            "Assembly dynamically added to resolve compilation error",
+                            "Track dynamic assembly addition patterns"
+                        );
+                    }
+                }
+            }
+            
+            return addedNewAssembly;
+        }
+        
+        private string ExtractTypeNameFromDiagnostic(Diagnostic diagnostic)
+        {
+            try
+            {
+                string message = diagnostic.GetMessage();
+                VibeLogger.LogInfo(
+                    "diagnostic_message_analysis",
+                    $"Analyzing diagnostic message for type extraction",
+                    new { 
+                        diagnosticId = diagnostic.Id,
+                        message = message,
+                        severity = diagnostic.Severity.ToString()
+                    },
+                    null,
+                    "Diagnostic message being processed for type name extraction",
+                    "Monitor type extraction patterns for improvement"
+                );
+                
+                // CS0246: The type or namespace name 'TypeName' could not be found
+                if (diagnostic.Id == "CS0246")
+                {
+                    int startIndex = message.IndexOf('\'') + 1;
+                    int endIndex = message.IndexOf('\'', startIndex);
+                    
+                    if (startIndex > 0 && endIndex > startIndex)
+                    {
+                        return message.Substring(startIndex, endIndex - startIndex);
+                    }
+                }
+                
+                // CS0103: The name 'TypeName' does not exist in the current context
+                if (diagnostic.Id == "CS0103")
+                {
+                    int startIndex = message.IndexOf('\'') + 1;
+                    int endIndex = message.IndexOf('\'', startIndex);
+                    
+                    if (startIndex > 0 && endIndex > startIndex)
+                    {
+                        string typeName = message.Substring(startIndex, endIndex - startIndex);
+                        // HttpClient, File など具体的な型名の場合
+                        if (!typeName.Contains('.') && char.IsUpper(typeName[0]))
+                        {
+                            return typeName;
+                        }
+                    }
+                }
+                
+                // その他のパターンの場合もログ出力
+                VibeLogger.LogWarning(
+                    "type_extraction_failed",
+                    "Could not extract type name from diagnostic",
+                    new { 
+                        diagnosticId = diagnostic.Id,
+                        message = message
+                    },
+                    null,
+                    "Type name extraction failed for diagnostic message",
+                    "Review extraction patterns for completeness"
+                );
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogWarning($"RoslynCompiler: 型名抽出失敗 - {ex.Message}");
+            }
+            
+            return null;
+        }
+        
+        private Assembly FindAssemblyContainingType(string typeName)
+        {
+            try
+            {
+                // よく使われる型の名前空間マッピング
+                Dictionary<string, string[]> commonTypeMapping = new Dictionary<string, string[]>
+                {
+                    { "HttpClient", new[] { "System.Net.Http.HttpClient" } },
+                    { "File", new[] { "System.IO.File" } },
+                    { "Directory", new[] { "System.IO.Directory" } },
+                    { "Path", new[] { "System.IO.Path" } },
+                    { "WebClient", new[] { "System.Net.WebClient" } },
+                    { "List", new[] { "System.Collections.Generic.List`1" } },
+                    { "Dictionary", new[] { "System.Collections.Generic.Dictionary`2" } }
+                };
+                
+                // 型名候補を準備
+                List<string> candidateTypes = new List<string> { typeName };
+                if (commonTypeMapping.ContainsKey(typeName))
+                {
+                    candidateTypes.AddRange(commonTypeMapping[typeName]);
+                }
+                
+                // AppDomain内の全アセンブリから型を検索
+                foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    if (assembly.IsDynamic || string.IsNullOrWhiteSpace(assembly.Location))
+                        continue;
+                    
+                    try
+                    {
+                        foreach (string candidate in candidateTypes)
+                        {
+                            Type foundType = assembly.GetType(candidate) ?? 
+                                           assembly.GetTypes().FirstOrDefault(t => 
+                                               t.Name == candidate || 
+                                               t.FullName == candidate ||
+                                               t.Name == typeName ||
+                                               t.FullName == typeName);
+                            
+                            if (foundType != null)
+                            {
+                                VibeLogger.LogInfo(
+                                    "assembly_found_for_type",
+                                    $"Found assembly containing type: {typeName}",
+                                    new { 
+                                        typeName,
+                                        foundTypeName = foundType.FullName,
+                                        assemblyName = assembly.FullName,
+                                        assemblyLocation = assembly.Location
+                                    },
+                                    null,
+                                    "Assembly found for dynamic type resolution",
+                                    "Track successful type-to-assembly mappings"
+                                );
+                                return assembly;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // アセンブリの読み込みやType取得でエラーが発生しても継続
+                        VibeLogger.LogWarning(
+                            "assembly_type_search_error",
+                            "Error searching types in assembly",
+                            new { 
+                                assemblyName = assembly.FullName,
+                                error = ex.Message,
+                                typeName
+                            },
+                            null,
+                            "Error occurred while searching for type in assembly",
+                            "Monitor assembly access issues"
+                        );
+                        continue;
+                    }
+                }
+                
+                VibeLogger.LogWarning(
+                    "type_not_found_in_assemblies",
+                    $"Type {typeName} not found in any loaded assembly",
+                    new { 
+                        typeName,
+                        searchedAssemblies = AppDomain.CurrentDomain.GetAssemblies()
+                            .Where(a => !a.IsDynamic && !string.IsNullOrWhiteSpace(a.Location))
+                            .Select(a => a.FullName)
+                            .ToArray()
+                    },
+                    null,
+                    "Type could not be resolved to any assembly",
+                    "Review type resolution patterns"
+                );
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogWarning($"RoslynCompiler: アセンブリ検索失敗 - {ex.Message}");
+            }
+            
+            return null;
+        }
+        
+        /// <summary>
+        /// 診断メッセージからセキュリティ違反を検出してCompilationResultに設定
+        /// </summary>
+        private void DetectSecurityViolations(CompilationResult result, IEnumerable<Diagnostic> diagnostics)
+        {
+            SecurityPolicy securityPolicy = SecurityPolicy.GetDefault();
+            List<SecurityViolation> violations = new();
+            
+            foreach (Diagnostic diagnostic in diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error))
+            {
+                string message = diagnostic.GetMessage();
+                
+                // 禁止された名前空間の使用を検出
+                foreach (string forbiddenNamespace in securityPolicy.ForbiddenNamespaces)
+                {
+                    bool isViolation = false;
+                    string detectionReason = "";
+                    
+                    // パターン1: 直接的な名前空間エラー（"System.IO is a namespace but is used like a type"）
+                    if (message.Contains($"'{forbiddenNamespace}'") && 
+                        message.Contains("is a namespace but is used like a type"))
+                    {
+                        isViolation = true;
+                        detectionReason = "Direct namespace usage error";
+                    }
+                    
+                    // パターン2: 子名前空間の使用エラー（"System.Net.Http is a namespace but is used like a type"）
+                    else if (message.Contains("is a namespace but is used like a type"))
+                    {
+                        // System.Net.Http の場合、System.Net で検出
+                        if (message.Contains($"'{forbiddenNamespace}."))
+                        {
+                            isViolation = true;
+                            detectionReason = "Child namespace usage error";
+                        }
+                    }
+                    
+                    // パターン3: 禁止名前空間に属する型の使用エラー（間接的検出）
+                    // "HttpClient could not be found" で System.Net.Http.HttpClient を検出
+                    else if (diagnostic.Id == "CS0246")
+                    {
+                        string context = diagnostic.Location.SourceTree?.ToString() ?? "";
+                        if (context.Contains($"using {forbiddenNamespace}") || 
+                            context.Contains($"using {forbiddenNamespace}."))
+                        {
+                            isViolation = true;
+                            detectionReason = "Forbidden namespace type usage";
+                        }
+                    }
+                    
+                    if (isViolation)
+                    {
+                        SecurityViolation violation = new SecurityViolation
+                        {
+                            Type = SecurityViolationType.ForbiddenNamespace,
+                            Description = $"Forbidden namespace '{forbiddenNamespace}' was used but blocked by security policy ({detectionReason})",
+                            LineNumber = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
+                            CodeSnippet = message
+                        };
+                        violations.Add(violation);
+                        
+                        VibeLogger.LogWarning(
+                            "security_violation_detected",
+                            $"Security violation: forbidden namespace '{forbiddenNamespace}' detected in compilation",
+                            new { 
+                                forbiddenNamespace,
+                                diagnosticId = diagnostic.Id,
+                                diagnosticMessage = message,
+                                lineNumber = violation.LineNumber,
+                                detectionReason
+                            },
+                            null,
+                            "Security policy violation detected during compilation",
+                            "Track security violations for policy effectiveness analysis"
+                        );
+                        break; // 最初にマッチした禁止名前空間で終了
+                    }
+                }
+                
+                // 禁止されたメソッドの検出
+                foreach (string forbiddenMethod in securityPolicy.ForbiddenMethods)
+                {
+                    if (message.Contains(forbiddenMethod))
+                    {
+                        SecurityViolation violation = new SecurityViolation
+                        {
+                            Type = SecurityViolationType.DangerousMethodCall,
+                            Description = $"Forbidden method '{forbiddenMethod}' was detected",
+                            LineNumber = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
+                            CodeSnippet = message
+                        };
+                        violations.Add(violation);
+                    }
+                }
+            }
+            
+            if (violations.Count > 0)
+            {
+                result.HasSecurityViolations = true;
+                result.SecurityViolations = violations;
+                result.FailureReason = CompilationFailureReason.SecurityViolation;
+            }
+            else
+            {
+                result.FailureReason = CompilationFailureReason.CompilationError;
+            }
+        }
+
         private bool HasValidLocation(Assembly assembly)
         {
             try

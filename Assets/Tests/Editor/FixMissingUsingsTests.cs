@@ -1,7 +1,7 @@
 using NUnit.Framework;
 using io.github.hatayama.uLoopMCP;
 
-namespace io.github.hatayama.uLoopMCP.Tests.Editor
+namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// FixMissingUsingsのテスト

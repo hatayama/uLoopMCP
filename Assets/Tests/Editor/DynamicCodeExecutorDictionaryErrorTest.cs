@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using io.github.hatayama.uLoopMCP;
 using io.github.hatayama.uLoopMCP.Factory;
 
-namespace uLoopMCP.Tests.Editor
+namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// DynamicCodeExecutorのDictionaryエラーを再現するテスト

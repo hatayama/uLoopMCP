@@ -24,5 +24,35 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>更新されたコード</summary>
         public string UpdatedCode { get; set; }
+
+        /// <summary>セキュリティ違反があった場合のフラグ</summary>
+        public bool HasSecurityViolations { get; set; }
+
+        /// <summary>セキュリティ違反の詳細</summary>
+        public List<SecurityViolation> SecurityViolations { get; set; } = new();
+
+        /// <summary>失敗の理由カテゴリ</summary>
+        public CompilationFailureReason FailureReason { get; set; } = CompilationFailureReason.None;
+    }
+
+    /// <summary>
+    /// コンパイル失敗の理由カテゴリ
+    /// </summary>
+    public enum CompilationFailureReason
+    {
+        /// <summary>失敗なし（成功）</summary>
+        None,
+
+        /// <summary>コンパイルエラー</summary>
+        CompilationError,
+
+        /// <summary>セキュリティ違反</summary>
+        SecurityViolation,
+
+        /// <summary>動的アセンブリ追加失敗</summary>
+        DynamicAssemblyFailed,
+
+        /// <summary>using文追加失敗</summary>
+        UsingStatementFailed
     }
 }

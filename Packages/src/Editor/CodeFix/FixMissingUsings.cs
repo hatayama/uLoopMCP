@@ -11,6 +11,13 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class FixMissingUsings : CSharpFixProvider
     {
+        private readonly SecurityPolicy _securityPolicy;
+
+        public FixMissingUsings()
+        {
+            _securityPolicy = SecurityPolicy.GetDefault();
+        }
+
         private static readonly string[] DiagnosticIds = { "CS0246", "CS1061", "CS0103" };
 
         private readonly Dictionary<string, string[]> NamespaceKeywords = new()
@@ -69,7 +76,30 @@ namespace io.github.hatayama.uLoopMCP
                 foreach (string keyword in keywords)
                 {
                     if (message.Contains($"'{keyword}'"))
-                        return tree.AddUsingDirective(namespaceKeywords.Key);
+                    {
+                        string namespaceToAdd = namespaceKeywords.Key;
+                        
+                        // セキュリティチェック: 禁止された名前空間は追加しない
+                        if (IsNamespaceForbidden(namespaceToAdd))
+                        {
+                            VibeLogger.LogWarning(
+                                "using_statement_blocked_by_security",
+                                $"Using statement for namespace '{namespaceToAdd}' blocked by security policy",
+                                new { 
+                                    namespaceToAdd,
+                                    keyword,
+                                    diagnosticId = diagnostic.Id,
+                                    diagnosticMessage = message
+                                },
+                                null,
+                                "Security policy prevented adding forbidden using statement",
+                                "Track security policy enforcement in code fixes"
+                            );
+                            return tree; // 変更せずに返す
+                        }
+                        
+                        return tree.AddUsingDirective(namespaceToAdd);
+                    }
                 }
             }
 
@@ -78,12 +108,56 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (message.Contains($"'{wrongNamespace.Value}'"))
                 {
+                    string namespaceToAdd = wrongNamespace.Key;
+                    
+                    // セキュリティチェック: 禁止された名前空間は追加しない
+                    if (IsNamespaceForbidden(namespaceToAdd))
+                    {
+                        VibeLogger.LogWarning(
+                            "using_statement_blocked_by_security",
+                            $"Using statement for namespace '{namespaceToAdd}' blocked by security policy",
+                            new { 
+                                namespaceToAdd,
+                                wrongNamespace = wrongNamespace.Value,
+                                diagnosticId = diagnostic.Id,
+                                diagnosticMessage = message
+                            },
+                            null,
+                            "Security policy prevented adding forbidden using statement",
+                            "Track security policy enforcement in code fixes"
+                        );
+                        return tree; // 変更せずに返す
+                    }
+                    
                     SyntaxTree cleanTree = tree.RemoveUsingDirective(wrongNamespace.Value);
-                    return cleanTree.AddUsingDirective(wrongNamespace.Key);
+                    return cleanTree.AddUsingDirective(namespaceToAdd);
                 }
             }
 
             return tree;
+        }
+
+        /// <summary>
+        /// 指定された名前空間が禁止されているかをチェック
+        /// </summary>
+        private bool IsNamespaceForbidden(string namespaceName)
+        {
+            // 完全一致チェック
+            if (_securityPolicy.ForbiddenNamespaces.Contains(namespaceName))
+            {
+                return true;
+            }
+            
+            // 部分一致チェック（System.Net は System.Net.Http もブロック）
+            foreach (string forbiddenNamespace in _securityPolicy.ForbiddenNamespaces)
+            {
+                if (namespaceName.StartsWith(forbiddenNamespace + "."))
+                {
+                    return true;
+                }
+            }
+            
+            return false;
         }
     }
 }

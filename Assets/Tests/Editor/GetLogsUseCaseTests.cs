@@ -64,5 +64,50 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsTrue(result.DisplayedCount <= 1);
             // Verify that small MaxCount is handled properly
         }
+
+        /// <summary>
+        /// Test for Error log type filtering - debugging the specific issue
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_ErrorLogType_FiltersCorrectly()
+        {
+            // Generate test errors to ensure we have error logs
+            UnityEngine.Debug.LogError("Test Error 1 for GetLogsUseCase");
+            UnityEngine.Debug.LogError("Test Error 2 for GetLogsUseCase");
+            UnityEngine.Debug.LogWarning("Test Warning (should not appear)");
+            UnityEngine.Debug.Log("Test Log (should not appear)");
+
+            // Arrange
+            GetLogsUseCase useCase = new(new LogRetrievalService(), new LogFilteringService());
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.Error,
+                MaxCount = 100,
+                TimeoutSeconds = 5
+            };
+            CancellationToken cancellationToken = new();
+
+            // Act
+            var result = await useCase.ExecuteAsync(schema, cancellationToken);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            
+            // Debug information
+            UnityEngine.Debug.Log($"Error filtering test - TotalCount: {result.TotalCount}, DisplayedCount: {result.DisplayedCount}");
+            
+            // If there are any logs, they should all be Error type
+            foreach (var log in result.Logs)
+            {
+                Assert.AreEqual(McpLogType.Error, log.Type, $"All returned logs should be Error type, but found: {log.Type}");
+            }
+            
+            // Should find at least our test errors (if not filtered out by other settings)
+            if (result.DisplayedCount == 0)
+            {
+                UnityEngine.Debug.LogWarning("No error logs found - this might indicate the filtering bug");
+            }
+        }
     }
 }

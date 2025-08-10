@@ -32,7 +32,20 @@ Common Fixes:
 - Editor API missing? It auto-adds: using UnityEditor;
 - Top-level error? Just write the code, no class wrapper needed!
 
-Perfect for: GameObject creation, scene manipulation, editor tools, batch operations.")]
+Perfect for: GameObject creation, scene manipulation, editor tools, batch operations.
+
+## Using Statements - Two Ways to Use:
+
+1. **Simple Code (Recommended)**: Just write the logic, tool auto-wraps
+   - var obj = new UnityEngine.GameObject(); return ""Created"";
+   - Use fully-qualified names or let auto-fixing handle it
+
+2. **Complete Class Definition**: Include full namespace + class structure  
+   - using UnityEngine; namespace Test { public class MyClass { public object Execute() { ... } } }
+   - Must include namespace, class, and Execute() method
+   - Using statements go at the top, before namespace
+
+AVOID: using statements in simple code - they'll be placed inside methods causing syntax errors\")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
         private readonly global::io.github.hatayama.uLoopMCP.IDynamicCodeExecutor _executor;

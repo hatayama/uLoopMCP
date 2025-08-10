@@ -6,7 +6,7 @@ using UnityEngine.TestTools;
 using io.github.hatayama.uLoopMCP;
 using Newtonsoft.Json.Linq;
 
-namespace io.github.hatayama.uLoopMCP.Tests.Editor
+namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// execute-dynamic-codeツールのusing文自動追加機能テスト
