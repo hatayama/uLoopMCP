@@ -45,13 +45,40 @@ namespace io.github.hatayama.uLoopMCP
 
             string message = diagnostic.GetMessage();
             
+            VibeLogger.LogInfo(
+                "fix_missing_usings_can_fix_check",
+                $"Checking if diagnostic can be fixed: {diagnostic.Id}",
+                new { 
+                    diagnosticId = diagnostic.Id,
+                    message = message
+                },
+                null,
+                "FixMissingUsings診断チェック",
+                "マッチングロジックの確認"
+            );
+            
             // Unity AI Assistant方式: 診断メッセージに 'keyword' の形で含まれるかチェック
             foreach (KeyValuePair<string, string[]> kvp in NamespaceKeywords)
             {
                 foreach (string keyword in kvp.Value)
                 {
-                    if (message.Contains($"'{keyword}'"))
+                    if (message.Contains($"'{keyword}'") || message.Contains($"'{keyword} "))
+                    {
+                        VibeLogger.LogInfo(
+                            "fix_missing_usings_match_found",
+                            $"Found match for keyword '{keyword}' in namespace '{kvp.Key}'",
+                            new { 
+                                keyword = keyword,
+                                namespaceToAdd = kvp.Key,
+                                diagnosticId = diagnostic.Id,
+                                message = message
+                            },
+                            null,
+                            "FixMissingUsingsマッチング成功",
+                            "修正対象の特定"
+                        );
                         return true;
+                    }
                 }
             }
 
@@ -75,7 +102,7 @@ namespace io.github.hatayama.uLoopMCP
                 string[] keywords = namespaceKeywords.Value;
                 foreach (string keyword in keywords)
                 {
-                    if (message.Contains($"'{keyword}'"))
+                    if (message.Contains($"'{keyword}'") || message.Contains($"'{keyword} "))
                     {
                         string namespaceToAdd = namespaceKeywords.Key;
                         

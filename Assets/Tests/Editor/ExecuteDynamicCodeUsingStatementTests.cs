@@ -237,7 +237,7 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         [Test]
-        public async System.Threading.Tasks.Task TestFileOperations_ShouldAutoAddSystemIOUsing()
+        public async System.Threading.Tasks.Task TestFileOperations_ShouldFailDueToForbiddenNamespace()
         {
             // Arrange
             string code = @"
@@ -257,12 +257,13 @@ namespace io.github.hatayama.uLoopMCP
             BaseToolResponse baseResponse = await _tool.ExecuteAsync(paramsJson);
             ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
             
-            // Assert
+            // Assert - 禁止された名前空間のためコンパイルエラーが発生することを期待
             Assert.IsNotNull(response, "Response should be ExecuteDynamicCodeResponse type");
-            Assert.IsTrue(response.Success, $"Execution should succeed. Error: {response.ErrorMessage}");
-            Assert.That(response.Result, Does.Contain("Project path:"));
-            Assert.That(response.Result, Does.Contain("README exists:"));
-            Assert.IsEmpty(response.CompilationErrors, "There should be no compilation errors");
+            Assert.IsFalse(response.Success, "Execution should fail due to forbidden namespace usage");
+            Assert.That(response.ErrorMessage, Does.Contain("コンパイルエラー").Or.Contain("does not exist"), 
+                "Error message should indicate compilation error for forbidden types");
+            Assert.That(response.Logs, Has.Some.Contains("Directory").Or.Some.Contains("File").Or.Some.Contains("Path"), 
+                "Should have compilation errors for System.IO types");
         }
         
         [Test]

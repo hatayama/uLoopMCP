@@ -64,6 +64,10 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
+            // Unity AI Assistant準拠のキュレートされたアセンブリ追加（Assembly-CSharp除外でセキュリティ強化）
+            int curatedCount = AddCuratedAssemblies();
+            UnityEngine.Debug.Log($"RoslynCompiler: セキュリティ強化モード - {curatedCount}個のキュレートされたアセンブリを追加（Assembly-CSharp除外）");
+            
             // 現在のアセンブリも追加（uLoopMCP関連クラスにアクセスするため）
             _defaultReferences.Add(MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location));
 
@@ -223,7 +227,8 @@ namespace io.github.hatayama.uLoopMCP
                 bool addedAssembly = TryAddMissingAssemblies(diagnostics, correlationId);
                 if (addedAssembly)
                 {
-                    // アセンブリが追加された場合はコンパイレーションを再構築
+                    // アセンブリが追加された場合はContextのReferencesを更新してコンパイレーションを再構築
+                    context.References = new List<MetadataReference>(_defaultReferences);
                     compilation = CSharpCompilation.Create(
                         $"DynamicAssembly_{correlationId}",
                         new[] { currentTree },
@@ -769,8 +774,45 @@ namespace io.github.hatayama.uLoopMCP
 
         private bool TryAddAssemblyReference(Assembly assembly)
         {
+            // 重複追加チェック - 既に同じLocationのアセンブリが存在するかチェック
+            string assemblyLocation = assembly.Location;
+            bool alreadyExists = _defaultReferences.Any(r => 
+                r is Microsoft.CodeAnalysis.PortableExecutableReference peRef && 
+                peRef.FilePath != null && 
+                string.Equals(peRef.FilePath, assemblyLocation, StringComparison.OrdinalIgnoreCase));
+            
+            if (alreadyExists)
+            {
+                VibeLogger.LogInfo(
+                    "assembly_reference_duplicate_skipped",
+                    $"Assembly reference already exists, skipping: {assembly.FullName}",
+                    new { 
+                        assemblyName = assembly.FullName,
+                        location = assemblyLocation
+                    },
+                    null,
+                    "重複アセンブリ参照のスキップ",
+                    "重複追加防止機能の動作確認"
+                );
+                return false; // 追加されなかった
+            }
+
             _defaultReferences.Add(MetadataReference.CreateFromFile(assembly.Location));
-            return true;
+            
+            VibeLogger.LogInfo(
+                "assembly_reference_added",
+                $"Assembly reference added: {assembly.FullName}",
+                new { 
+                    assemblyName = assembly.FullName,
+                    location = assemblyLocation,
+                    totalReferences = _defaultReferences.Count
+                },
+                null,
+                "アセンブリ参照追加",
+                "参照追加の追跡"
+            );
+            
+            return true; // 追加された
         }
 
         private string GenerateCacheKey(CompilationRequest request)

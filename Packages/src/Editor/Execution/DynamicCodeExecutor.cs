@@ -85,6 +85,13 @@ namespace io.github.hatayama.uLoopMCP
                 CompilationResult compilationResult = CompileCode(code, className, correlationId);
                 if (!compilationResult.Success)
                 {
+                    // セキュリティ違反がある場合は専用のエラーメッセージ
+                    if (compilationResult.HasSecurityViolations)
+                    {
+                        return CreateFailureResult("セキュリティポリシー違反が検出されました",
+                            stopwatch.Elapsed, ConvertToSecurityViolations(compilationResult.SecurityViolations));
+                    }
+                    
                     return CreateCompilationFailureResult("コンパイルエラーが発生しました",
                         stopwatch.Elapsed, compilationResult.Errors);
                 }
@@ -340,6 +347,15 @@ namespace io.github.hatayama.uLoopMCP
                 Logs = new List<string> { ex.ToString() },
                 ExecutionTime = executionTime
             };
+        }
+
+        /// <summary>
+        /// CompilationResult.SecurityViolationsをSecurityValidatorのSecurityViolationに変換
+        /// </summary>
+        private List<SecurityViolation> ConvertToSecurityViolations(List<SecurityViolation> compilationSecurityViolations)
+        {
+            // 同じ型なのでそのまま返す
+            return compilationSecurityViolations ?? new List<SecurityViolation>();
         }
 
         private void UpdateStatistics(ExecutionResult result, TimeSpan executionTime)
