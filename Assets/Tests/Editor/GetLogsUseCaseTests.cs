@@ -1,6 +1,11 @@
+using System;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -8,106 +13,701 @@ namespace io.github.hatayama.uLoopMCP
     /// Unit tests for GetLogsUseCase
     /// Related classes: GetLogsUseCase, LogRetrievalService, LogFilteringService
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
+    /// Test philosophy: Following Kent Beck's TDD and t-wada's testing principles
     /// </summary>
     [TestFixture]
     public class GetLogsUseCaseTests
     {
+        private GetLogsUseCase _useCase;
+        private CancellationTokenSource _cancellationTokenSource;
+
+        [SetUp]
+        public void SetUp()
+        {
+            // Clear console to ensure test isolation FIRST
+            Debug.ClearDeveloperConsole();
+            
+            // Clean setup for each test
+            _useCase = new GetLogsUseCase(new LogRetrievalService(), new LogFilteringService());
+            _cancellationTokenSource = new CancellationTokenSource();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _cancellationTokenSource?.Dispose();
+        }
+
+        #region 正常系テスト - Normal Cases
+
         /// <summary>
-        /// Test for normal log retrieval execution (minimal)
+        /// デフォルトパラメータでの実行が成功することを検証
         /// </summary>
         [Test]
-        public async Task ExecuteAsync_ValidParameters_ReturnsSuccessResponse()
+        public async Task ExecuteAsync_WithDefaultParameters_ReturnsValidResponse()
         {
             // Arrange
-            GetLogsUseCase useCase = new(new LogRetrievalService(), new LogFilteringService());
             GetLogsSchema schema = new()
             {
                 LogType = McpLogType.All,
-                MaxCount = 10,
+                MaxCount = 100,
                 TimeoutSeconds = 10
             };
-            CancellationToken cancellationToken = new();
 
             // Act
-            var result = await useCase.ExecuteAsync(schema, cancellationToken);
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
 
             // Assert
-            Assert.IsNotNull(result);
-            Assert.IsNotNull(result.Logs);
-            Assert.IsTrue(result.TotalCount >= 0);
-            Assert.IsTrue(result.DisplayedCount >= 0);
-            // Note: Actual log retrieval results depend on environment, so only response structure is verified
+            Assert.IsNotNull(result, "Response should not be null");
+            Assert.IsNotNull(result.Logs, "Logs array should not be null");
+            Assert.GreaterOrEqual(result.TotalCount, 0, "TotalCount should be non-negative");
+            Assert.GreaterOrEqual(result.DisplayedCount, 0, "DisplayedCount should be non-negative");
+            Assert.LessOrEqual(result.DisplayedCount, result.TotalCount, "DisplayedCount should not exceed TotalCount");
+            Assert.AreEqual(McpLogType.All, result.LogType, "LogType should match request");
+            Assert.AreEqual(100, result.MaxCount, "MaxCount should match request");
         }
 
         /// <summary>
-        /// Test for small log count retrieval
+        /// Errorタイプのフィルタリングが正しく動作することを検証
         /// </summary>
         [Test]
-        public async Task ExecuteAsync_SmallMaxCount_HandlesCorrectly()
+        public async Task ExecuteAsync_WithErrorLogType_FiltersOnlyErrors()
         {
-            // Arrange
-            GetLogsUseCase useCase = new(new LogRetrievalService(), new LogFilteringService());
-            GetLogsSchema schema = new()
-            {
-                LogType = McpLogType.All,
-                MaxCount = 1,
-                TimeoutSeconds = 5
-            };
-            CancellationToken cancellationToken = new();
+            // Arrange - Create test logs of different types
+            LogAssert.Expect(LogType.Error, "Test Error 1");
+            LogAssert.Expect(LogType.Error, "Test Error 2");
+            LogAssert.Expect(LogType.Warning, "Test Warning - should not appear");
+            LogAssert.Expect(LogType.Log, "Test Info - should not appear");
+            
+            Debug.LogError("Test Error 1");
+            Debug.LogError("Test Error 2");
+            Debug.LogWarning("Test Warning - should not appear");
+            Debug.Log("Test Info - should not appear");
 
-            // Act
-            var result = await useCase.ExecuteAsync(schema, cancellationToken);
-
-            // Assert
-            Assert.IsNotNull(result);
-            Assert.IsNotNull(result.Logs);
-            Assert.IsTrue(result.DisplayedCount <= 1);
-            // Verify that small MaxCount is handled properly
-        }
-
-        /// <summary>
-        /// Test for Error log type filtering - debugging the specific issue
-        /// </summary>
-        [Test]
-        public async Task ExecuteAsync_ErrorLogType_FiltersCorrectly()
-        {
-            // Generate test errors to ensure we have error logs
-            UnityEngine.Debug.LogError("Test Error 1 for GetLogsUseCase");
-            UnityEngine.Debug.LogError("Test Error 2 for GetLogsUseCase");
-            UnityEngine.Debug.LogWarning("Test Warning (should not appear)");
-            UnityEngine.Debug.Log("Test Log (should not appear)");
-
-            // Arrange
-            GetLogsUseCase useCase = new(new LogRetrievalService(), new LogFilteringService());
             GetLogsSchema schema = new()
             {
                 LogType = McpLogType.Error,
                 MaxCount = 100,
                 TimeoutSeconds = 5
             };
-            CancellationToken cancellationToken = new();
 
             // Act
-            var result = await useCase.ExecuteAsync(schema, cancellationToken);
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
 
             // Assert
             Assert.IsNotNull(result);
             Assert.IsNotNull(result.Logs);
             
-            // Debug information
-            UnityEngine.Debug.Log($"Error filtering test - TotalCount: {result.TotalCount}, DisplayedCount: {result.DisplayedCount}");
-            
-            // If there are any logs, they should all be Error type
-            foreach (var log in result.Logs)
+            // All returned logs should be Error type
+            foreach (LogEntry log in result.Logs)
             {
-                Assert.AreEqual(McpLogType.Error, log.Type, $"All returned logs should be Error type, but found: {log.Type}");
+                Assert.AreEqual(McpLogType.Error, log.Type, 
+                    $"Expected all logs to be Error type, but found {log.Type}: {log.Message}");
             }
             
-            // Should find at least our test errors (if not filtered out by other settings)
-            if (result.DisplayedCount == 0)
+            // Should find at least our test errors
+            Assert.GreaterOrEqual(result.DisplayedCount, 2, 
+                "Should find at least the 2 test error logs we created");
+            
+            // Verify specific test errors exist
+            bool hasTestError1 = result.Logs.Any(log => log.Message.Contains("Test Error 1"));
+            bool hasTestError2 = result.Logs.Any(log => log.Message.Contains("Test Error 2"));
+            Assert.IsTrue(hasTestError1, "Should contain 'Test Error 1'");
+            Assert.IsTrue(hasTestError2, "Should contain 'Test Error 2'");
+        }
+
+        /// <summary>
+        /// Warningタイプのフィルタリングが正しく動作することを検証
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithWarningLogType_FiltersOnlyWarnings()
+        {
+            // Arrange
+            LogAssert.Expect(LogType.Warning, "Test Warning 1");
+            LogAssert.Expect(LogType.Warning, "Test Warning 2");
+            LogAssert.Expect(LogType.Error, "Test Error - should not appear");
+            LogAssert.Expect(LogType.Log, "Test Info - should not appear");
+            
+            Debug.LogWarning("Test Warning 1");
+            Debug.LogWarning("Test Warning 2");
+            Debug.LogError("Test Error - should not appear");
+            Debug.Log("Test Info - should not appear");
+
+            GetLogsSchema schema = new()
             {
-                UnityEngine.Debug.LogWarning("No error logs found - this might indicate the filtering bug");
+                LogType = McpLogType.Warning,
+                MaxCount = 100,
+                TimeoutSeconds = 5
+            };
+
+            // Act
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            
+            // All returned logs should be Warning type
+            foreach (LogEntry log in result.Logs)
+            {
+                Assert.AreEqual(McpLogType.Warning, log.Type,
+                    $"Expected all logs to be Warning type, but found {log.Type}: {log.Message}");
+            }
+            
+            // Should find at least our test warnings
+            Assert.GreaterOrEqual(result.DisplayedCount, 2,
+                "Should find at least the 2 test warning logs we created");
+        }
+
+        /// <summary>
+        /// Logタイプのフィルタリングが正しく動作することを検証
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithLogType_FiltersOnlyLogs()
+        {
+            // Arrange
+            LogAssert.Expect(LogType.Log, "Test Log 1");
+            LogAssert.Expect(LogType.Log, "Test Log 2");
+            LogAssert.Expect(LogType.Error, "Test Error - should not appear");
+            LogAssert.Expect(LogType.Warning, "Test Warning - should not appear");
+            
+            Debug.Log("Test Log 1");
+            Debug.Log("Test Log 2");
+            Debug.LogError("Test Error - should not appear");
+            Debug.LogWarning("Test Warning - should not appear");
+
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.Log,
+                MaxCount = 100,
+                TimeoutSeconds = 5
+            };
+
+            // Act
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            
+            // All returned logs should be Log type
+            foreach (LogEntry log in result.Logs)
+            {
+                Assert.AreEqual(McpLogType.Log, log.Type,
+                    $"Expected all logs to be Log type, but found {log.Type}: {log.Message}");
+            }
+            
+            // Should find at least our test logs
+            Assert.GreaterOrEqual(result.DisplayedCount, 2,
+                "Should find at least the 2 test info logs we created");
+        }
+
+
+        /// <summary>
+        /// SearchTextでの検索が正しく動作することを検証
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithSearchText_FiltersCorrectly()
+        {
+            // Arrange
+            Debug.Log("This is a unique search term XYZ123");
+            Debug.Log("This is another message without the term");
+            Debug.Log("XYZ123 appears here too");
+
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.All,
+                SearchText = "XYZ123",
+                UseRegex = false,
+                MaxCount = 100,
+                TimeoutSeconds = 5
+            };
+
+            // Act
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            
+            // All returned logs should contain the search text
+            foreach (LogEntry log in result.Logs)
+            {
+                Assert.IsTrue(log.Message.Contains("XYZ123"),
+                    $"Log message should contain search text 'XYZ123': {log.Message}");
+            }
+            
+            // Should find at least our test logs with the search term
+            Assert.GreaterOrEqual(result.DisplayedCount, 2,
+                "Should find at least 2 logs containing 'XYZ123'");
+        }
+
+        /// <summary>
+        /// 正規表現検索が正しく動作することを検証
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithRegexSearch_FiltersCorrectly()
+        {
+            // Arrange
+            Debug.Log("Test123");
+            Debug.Log("Test456");
+            Debug.Log("NoMatch");
+
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.All,
+                SearchText = @"Test\d+",
+                UseRegex = true,
+                MaxCount = 100,
+                TimeoutSeconds = 5
+            };
+
+            // Act
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            
+            // All returned logs should match the regex pattern
+            foreach (LogEntry log in result.Logs)
+            {
+                bool matchesPattern = Regex.IsMatch(log.Message, @"Test\d+");
+                Assert.IsTrue(matchesPattern,
+                    $"Log message should match regex pattern 'Test\\d+': {log.Message}");
+            }
+            
+            // Should find at least our test logs matching the pattern
+            Assert.GreaterOrEqual(result.DisplayedCount, 2,
+                "Should find at least 2 logs matching the regex pattern");
+        }
+
+        /// <summary>
+        /// StackTrace表示の有効/無効が正しく動作することを検証
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithIncludeStackTrace_ControlsStackTraceDisplay()
+        {
+            // Arrange - Create an error with stack trace
+            LogAssert.Expect(LogType.Error, "Test Error with Stack Trace");
+            Debug.LogError("Test Error with Stack Trace");
+
+            // Test with StackTrace included
+            GetLogsSchema schemaWithStack = new()
+            {
+                LogType = McpLogType.Error,
+                IncludeStackTrace = true,
+                MaxCount = 10,
+                TimeoutSeconds = 5
+            };
+
+            // Act
+            GetLogsResponse resultWithStack = await _useCase.ExecuteAsync(schemaWithStack, _cancellationTokenSource.Token);
+
+            // Assert - With stack trace
+            Assert.IsNotNull(resultWithStack);
+            Assert.IsNotNull(resultWithStack.Logs);
+            Assert.IsTrue(resultWithStack.IncludeStackTrace, "IncludeStackTrace should be true");
+            
+            if (resultWithStack.Logs.Length > 0)
+            {
+                // At least one error log should have stack trace when available
+                // Note: Stack trace might not always be available in test environment
+                // We don't assert this because stack trace availability depends on Unity's compilation mode
+            }
+
+            // Test without StackTrace
+            GetLogsSchema schemaWithoutStack = new()
+            {
+                LogType = McpLogType.Error,
+                IncludeStackTrace = false,
+                MaxCount = 10,
+                TimeoutSeconds = 5
+            };
+
+            // Act
+            GetLogsResponse resultWithoutStack = await _useCase.ExecuteAsync(schemaWithoutStack, _cancellationTokenSource.Token);
+
+            // Assert - Without stack trace
+            Assert.IsNotNull(resultWithoutStack);
+            Assert.IsNotNull(resultWithoutStack.Logs);
+            Assert.IsFalse(resultWithoutStack.IncludeStackTrace, "IncludeStackTrace should be false");
+            
+            // All logs should have null or empty stack trace when IncludeStackTrace is false
+            foreach (LogEntry log in resultWithoutStack.Logs)
+            {
+                Assert.IsTrue(string.IsNullOrEmpty(log.StackTrace),
+                    "Stack trace should be empty when IncludeStackTrace is false");
             }
         }
+
+        #endregion
+
+        #region 境界値テスト - Boundary Value Tests
+
+        /// <summary>
+        /// MaxCount = 0での動作を検証
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithZeroMaxCount_ReturnsEmptyResult()
+        {
+            // Arrange
+            Debug.Log("Test Log");
+            Debug.LogWarning("Test Warning");
+
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.All,
+                MaxCount = 0,
+                TimeoutSeconds = 5
+            };
+
+            // Act
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            Assert.AreEqual(0, result.DisplayedCount, "DisplayedCount should be 0 when MaxCount is 0");
+            Assert.AreEqual(0, result.Logs.Length, "No logs should be returned when MaxCount is 0");
+            // TotalCount might still be > 0 as it represents available logs
+            Assert.GreaterOrEqual(result.TotalCount, 0, "TotalCount should still show available logs");
+        }
+
+        /// <summary>
+        /// MaxCount = 1での動作を検証
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithMaxCountOne_ReturnsOneLog()
+        {
+            // Arrange
+            Debug.Log("Test Log 1");
+            Debug.Log("Test Log 2");
+            Debug.Log("Test Log 3");
+
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.All,
+                MaxCount = 1,
+                TimeoutSeconds = 5
+            };
+
+            // Act
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            Assert.LessOrEqual(result.DisplayedCount, 1, "DisplayedCount should not exceed MaxCount of 1");
+            Assert.LessOrEqual(result.Logs.Length, 1, "Should return at most 1 log");
+        }
+
+        /// <summary>
+        /// 非常に大きなMaxCountでの動作を検証
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithLargeMaxCount_HandlesCorrectly()
+        {
+            // Arrange
+            // Create multiple logs
+            for (int i = 0; i < 10; i++)
+            {
+                Debug.Log($"Test Log {i}");
+            }
+
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.All,
+                MaxCount = int.MaxValue,
+                TimeoutSeconds = 5
+            };
+
+            // Act
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            Assert.AreEqual(result.TotalCount, result.DisplayedCount, 
+                "With very large MaxCount, all available logs should be returned");
+            Assert.GreaterOrEqual(result.DisplayedCount, 10,
+                "Should return at least the 10 test logs we created");
+        }
+
+        /// <summary>
+        /// 負のMaxCountでの動作を検証（エラー処理の確認）
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithNegativeMaxCount_HandlesGracefully()
+        {
+            // Arrange
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.All,
+                MaxCount = -1,
+                TimeoutSeconds = 5
+            };
+
+            // Act
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            // Negative MaxCount should be handled gracefully (likely treated as 0 or ignored)
+            Assert.GreaterOrEqual(result.DisplayedCount, 0, "DisplayedCount should be non-negative");
+        }
+
+        #endregion
+
+        #region 異常系テスト - Error Cases
+
+        /// <summary>
+        /// nullパラメータでの実行時の動作を検証
+        /// </summary>
+        [Test]
+        public void ExecuteAsync_WithNullParameters_ThrowsException()
+        {
+            // Act & Assert
+            // Currently throws InvalidOperationException wrapping NullReferenceException
+            // This is acceptable behavior as it indicates the parameter was null
+            Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            {
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type
+                await _useCase.ExecuteAsync(null, _cancellationTokenSource.Token);
+#pragma warning restore CS8625
+            });
+        }
+
+        /// <summary>
+        /// 無効なLogTypeでの動作を検証
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithInvalidLogType_HandlesGracefully()
+        {
+            // Arrange
+            GetLogsSchema schema = new()
+            {
+                LogType = "InvalidType",
+                MaxCount = 10,
+                TimeoutSeconds = 5
+            };
+
+            // Act
+            // Should not throw, but handle gracefully
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result, "Should return a result even with invalid LogType");
+            Assert.IsNotNull(result.Logs, "Logs array should not be null");
+            // Invalid type might be treated as None or All depending on implementation
+        }
+
+        /// <summary>
+        /// キャンセレーショントークンでの中断を検証
+        /// </summary>
+        [Test]
+        public void ExecuteAsync_WithCancellation_ThrowsTaskCanceledException()
+        {
+            // Arrange
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.All,
+                MaxCount = 100,
+                TimeoutSeconds = 5
+            };
+            
+            // Cancel immediately
+            _cancellationTokenSource.Cancel();
+
+            // Act & Assert
+            // TaskCanceledException is thrown by async operations when cancelled
+            Assert.ThrowsAsync<TaskCanceledException>(async () =>
+            {
+                await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+            });
+        }
+
+        /// <summary>
+        /// 無効な正規表現パターンでの動作を検証
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithInvalidRegexPattern_HandlesGracefully()
+        {
+            // Arrange
+            Debug.Log("Test Log");
+
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.All,
+                SearchText = "[invalid(regex",  // Invalid regex pattern
+                UseRegex = true,
+                MaxCount = 10,
+                TimeoutSeconds = 5
+            };
+
+            // Act
+            // Should handle invalid regex gracefully
+            Exception thrownException = null;
+            GetLogsResponse result = null;
+            
+            try
+            {
+                result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+            }
+            catch (Exception ex)
+            {
+                thrownException = ex;
+            }
+
+            // Assert
+            // Either returns empty result or throws a meaningful exception
+            if (thrownException != null)
+            {
+                Assert.IsTrue(
+                    thrownException is InvalidOperationException || 
+                    thrownException.InnerException is RegexMatchTimeoutException ||
+                    thrownException.InnerException is ArgumentException,
+                    "Should throw appropriate exception for invalid regex");
+            }
+            else
+            {
+                Assert.IsNotNull(result, "Should return a result even with invalid regex");
+                Assert.IsNotNull(result.Logs, "Logs array should not be null");
+            }
+        }
+
+        #endregion
+
+        #region 統合テスト - Integration Tests
+
+        /// <summary>
+        /// 複数の条件を組み合わせた複雑な検索を検証
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithComplexSearch_FiltersCorrectly()
+        {
+            // Arrange
+            LogAssert.Expect(LogType.Error, "Error: Connection failed");
+            LogAssert.Expect(LogType.Error, "Error: Timeout occurred");
+            LogAssert.Expect(LogType.Warning, "Warning: Low memory");
+            LogAssert.Expect(LogType.Log, "Info: Operation completed");
+            
+            Debug.LogError("Error: Connection failed");
+            Debug.LogError("Error: Timeout occurred");
+            Debug.LogWarning("Warning: Low memory");
+            Debug.Log("Info: Operation completed");
+
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.Error,
+                SearchText = "failed",
+                UseRegex = false,
+                SearchInStackTrace = false,
+                MaxCount = 5,
+                IncludeStackTrace = false,
+                TimeoutSeconds = 5
+            };
+
+            // Act
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            
+            // Should only find Error logs containing "failed"
+            foreach (LogEntry log in result.Logs)
+            {
+                Assert.AreEqual(McpLogType.Error, log.Type, "Should only return Error type");
+                Assert.IsTrue(log.Message.Contains("failed"), "Should contain search text 'failed'");
+                Assert.IsTrue(string.IsNullOrEmpty(log.StackTrace), "Stack trace should be empty");
+            }
+            
+            Assert.GreaterOrEqual(result.DisplayedCount, 1, "Should find at least one matching error");
+            Assert.LessOrEqual(result.DisplayedCount, 5, "Should respect MaxCount limit");
+        }
+
+        /// <summary>
+        /// 大量のログがある状況でのパフォーマンスを検証
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithManyLogs_PerformsEfficiently()
+        {
+            // Arrange - Create many logs
+            int logCount = 100;
+            
+            // Expect all the logs we're about to create
+            for (int i = 0; i < logCount; i++)
+            {
+                if (i % 3 == 0) LogAssert.Expect(LogType.Error, $"Error {i}");
+                else if (i % 3 == 1) LogAssert.Expect(LogType.Warning, $"Warning {i}");
+                else LogAssert.Expect(LogType.Log, $"Log {i}");
+            }
+            
+            // Create the actual logs
+            for (int i = 0; i < logCount; i++)
+            {
+                if (i % 3 == 0) Debug.LogError($"Error {i}");
+                else if (i % 3 == 1) Debug.LogWarning($"Warning {i}");
+                else Debug.Log($"Log {i}");
+            }
+
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.All,
+                MaxCount = 50,  // Limit to 50
+                TimeoutSeconds = 5
+            };
+
+            // Act
+            System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+            stopwatch.Stop();
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            Assert.AreEqual(50, result.DisplayedCount, "Should return exactly MaxCount logs");
+            Assert.GreaterOrEqual(result.TotalCount, logCount, "TotalCount should reflect all available logs");
+            
+            // Performance check - should complete within reasonable time
+            Assert.Less(stopwatch.ElapsedMilliseconds, 1000, 
+                "Should complete within 1 second even with many logs");
+        }
+
+        #endregion
+
+        #region サービス層の異常系テスト - Service Layer Error Tests
+
+        /// <summary>
+        /// LogRetrievalServiceがnullの場合のコンストラクタ動作を検証
+        /// </summary>
+        [Test]
+        public void Constructor_WithNullRetrievalService_ThrowsArgumentNullException()
+        {
+            // Act & Assert
+            ArgumentNullException ex = Assert.Throws<ArgumentNullException>(() =>
+            {
+                GetLogsUseCase _ = new(null, new LogFilteringService());
+            });
+            Assert.IsNotNull(ex, "Should throw ArgumentNullException for null LogRetrievalService");
+        }
+
+        /// <summary>
+        /// LogFilteringServiceがnullの場合のコンストラクタ動作を検証
+        /// </summary>
+        [Test]
+        public void Constructor_WithNullFilteringService_ThrowsArgumentNullException()
+        {
+            // Act & Assert
+            ArgumentNullException filterEx = Assert.Throws<ArgumentNullException>(() =>
+            {
+                GetLogsUseCase _ = new(new LogRetrievalService(), null);
+            });
+            Assert.IsNotNull(filterEx, "Should throw ArgumentNullException for null LogFilteringService");
+        }
+
+        #endregion
     }
 }

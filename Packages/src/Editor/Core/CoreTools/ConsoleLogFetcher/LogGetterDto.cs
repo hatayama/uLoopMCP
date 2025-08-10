@@ -6,10 +6,10 @@ namespace io.github.hatayama.uLoopMCP
     public record LogEntryDto
     {
         public readonly string Message;
-        public readonly McpLogType LogType;
+        public readonly string LogType;
         public readonly string StackTrace;
 
-        public LogEntryDto(McpLogType logType, string message, string stackTrace)
+        public LogEntryDto(string logType, string message, string stackTrace)
         {
             Message = message;
             LogType = logType;

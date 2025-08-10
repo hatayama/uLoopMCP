@@ -1,3 +1,4 @@
+using System;
 using UnityEditor;
 using UnityEngine;
 
@@ -116,13 +117,13 @@ namespace io.github.hatayama.uLoopMCP
                     {
                         switch (log.LogType)
                         {
-                            case McpLogType.Error:
+                            case var s when string.Equals(s, McpLogType.Error, StringComparison.OrdinalIgnoreCase):
                                 errorCount++;
                                 break;
-                            case McpLogType.Warning:
+                            case var s when string.Equals(s, McpLogType.Warning, StringComparison.OrdinalIgnoreCase):
                                 warningCount++;
                                 break;
-                            case McpLogType.Log:
+                            case var s when string.Equals(s, McpLogType.Log, StringComparison.OrdinalIgnoreCase):
                                 logCount++;
                                 break;
                         }

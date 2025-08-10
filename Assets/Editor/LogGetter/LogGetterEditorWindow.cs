@@ -69,7 +69,7 @@ namespace io.github.hatayama.uLoopMCP
             string buttonText = _selectedLogType == "All" ? "Get All Logs" : $"Get {_selectedLogType} Logs";
             if (GUILayout.Button(buttonText, GUILayout.Height(30)))
             {
-                McpLogType mcpLogType = ConvertStringToMcpLogType(_selectedLogType);
+                string mcpLogType = ConvertStringToMcpLogType(_selectedLogType);
                 _presenter.GetLogs(mcpLogType);
             }
 
@@ -141,16 +141,16 @@ namespace io.github.hatayama.uLoopMCP
             {
                 switch (entry.LogType)
                 {
-                    case McpLogType.Log:
+                    case var s when s == McpLogType.Log:
                         logCount++;
                         break;
-                    case McpLogType.Warning:
+                    case var s when s == McpLogType.Warning:
                         warningCount++;
                         break;
-                    case McpLogType.Error:
+                    case var s when s == McpLogType.Error:
                         errorCount++;
                         break;
-                    case McpLogType.None:
+                    default:
                         assertCount++;
                         break;
                 }
@@ -188,7 +188,7 @@ namespace io.github.hatayama.uLoopMCP
             GUILayout.Space(2);
         }
 
-        private McpLogType ConvertStringToMcpLogType(string logType)
+        private string ConvertStringToMcpLogType(string logType)
         {
             return logType switch
             {
@@ -200,15 +200,12 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        private GUIStyle GetLogStyle(McpLogType logType)
+        private GUIStyle GetLogStyle(string logType)
         {
             switch (logType)
             {
                 case McpLogType.Error:
-                case McpLogType.None:
-                    return EditorStyles.helpBox;
                 case McpLogType.Warning:
-                    return EditorStyles.helpBox;
                 default:
                     return EditorStyles.helpBox;
             }

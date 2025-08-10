@@ -11,21 +11,21 @@ namespace io.github.hatayama.uLoopMCP
 
         public void GetLogs()
         {
-            LogDisplayDto displayData = LogGetter.GetConsoleLog();
+            LogDisplayDto displayData = LogGetter.GetAllConsoleLogs();
             OnLogDataUpdated?.Invoke(displayData);
         }
 
-        public void GetLogs(McpLogType logType)
+        public void GetLogs(string logType)
         {
             LogDisplayDto displayData;
             
             if (logType == McpLogType.All)
             {
-                displayData = LogGetter.GetConsoleLog();
+                displayData = LogGetter.GetAllConsoleLogs();
             }
             else
             {
-                displayData = LogGetter.GetConsoleLog(logType);
+                displayData = LogGetter.GetConsoleLogsByType(logType);
             }
             
             OnLogDataUpdated?.Invoke(displayData);
