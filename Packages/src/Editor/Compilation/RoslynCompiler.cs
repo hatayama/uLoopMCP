@@ -499,6 +499,16 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
+        /// <summary>
+        /// 不足しているアセンブリを動的に追加を試行
+        /// 
+        /// TODO: 現在は不完全な実装
+        /// - AppDomain.CurrentDomain.GetAssemblies()で既に読み込まれたアセンブリのみ検索
+        /// - 独自DLL、NuGetパッケージ、外部ライブラリは発見できない  
+        /// - ファイルシステムスキャン + Assembly.LoadFromによる動的読み込みが必要
+        /// - 現状ではAdditionalReferencesによる手動指定を推奨
+        /// - 実際のプロジェクトではほとんど使われていない
+        /// </summary>
         private bool TryAddMissingAssemblies(IEnumerable<Diagnostic> diagnostics, string correlationId)
         {
             bool addedNewAssembly = false;
