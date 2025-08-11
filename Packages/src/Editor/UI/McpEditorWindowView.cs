@@ -388,6 +388,28 @@ namespace io.github.hatayama.uLoopMCP
                 
                 EditorGUILayout.Space();
                 
+                // Dynamic Code Security Level
+                EditorGUILayout.LabelField("Dynamic Code Security Level", EditorStyles.boldLabel);
+                DynamicCodeSecurityLevel currentLevel = McpEditorSettings.GetDynamicCodeSecurityLevel();
+                DynamicCodeSecurityLevel newLevel = (DynamicCodeSecurityLevel)EditorGUILayout.EnumPopup("Security Level", currentLevel);
+                if (newLevel != currentLevel)
+                {
+                    McpEditorSettings.SetDynamicCodeSecurityLevel(newLevel);
+                }
+                
+                // Security level description
+                string levelDescription = newLevel switch
+                {
+                    DynamicCodeSecurityLevel.Disabled => "Level 0: Code execution completely disabled (safest)",
+                    DynamicCodeSecurityLevel.Restricted => "Level 1: Unity APIs only, dangerous operations blocked (recommended)",
+                    DynamicCodeSecurityLevel.FullAccess => "Level 2: All APIs available (use with caution)",
+                    _ => "Unknown level"
+                };
+                EditorGUILayout.HelpBox(levelDescription, MessageType.Info);
+                
+                EditorGUILayout.Space(10);
+                EditorGUILayout.LabelField("Additional Security Options", EditorStyles.boldLabel);
+                
                 // Create red label style for dangerous options
                 GUIStyle redLabelStyle = new GUIStyle(EditorStyles.label);
                 redLabelStyle.normal.textColor = Color.red;

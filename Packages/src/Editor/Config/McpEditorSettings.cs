@@ -39,6 +39,9 @@ namespace io.github.hatayama.uLoopMCP
         // UI State Settings
         public bool showSecuritySettings = false;
         
+        // Dynamic Code Security Settings
+        public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted;
+        
         // Session State Settings (moved from McpSessionManager)
         public bool isServerRunning = false;
         public int serverPort = McpServerConfig.DEFAULT_PORT;
@@ -757,6 +760,36 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Gets the dynamic code security level.
+        /// </summary>
+        public static DynamicCodeSecurityLevel GetDynamicCodeSecurityLevel()
+        {
+            return (DynamicCodeSecurityLevel)GetSettings().dynamicCodeSecurityLevel;
+        }
+
+        /// <summary>
+        /// Sets the dynamic code security level.
+        /// </summary>
+        public static void SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel level)
+        {
+            McpEditorSettingsData settings = GetSettings();
+            McpEditorSettingsData newSettings = settings with { dynamicCodeSecurityLevel = (int)level };
+            SaveSettings(newSettings);
+            
+            // DynamicCodeSecurityManagerに通知
+            DynamicCodeSecurityManager.CurrentLevel = level;
+            
+            VibeLogger.LogInfo(
+                "editor_settings_security_level_changed",
+                $"Security level changed to: {level}",
+                new { level = level.ToString() },
+                correlationId: Guid.NewGuid().ToString("N")[..8],
+                humanNote: "Security level updated in editor settings",
+                aiTodo: "Monitor security level changes"
+            );
+        }
+
+        /// <summary>
         /// Loads the settings file.
         /// </summary>
         private static void LoadSettings()
@@ -788,6 +821,9 @@ namespace io.github.hatayama.uLoopMCP
                     
                     _cachedSettings = JsonUtility.FromJson<McpEditorSettingsData>(json);
                     // MCP Editor settings loaded
+                    
+                    // セキュリティレベルをDynamicCodeSecurityManagerに通知
+                    DynamicCodeSecurityManager.InitializeFromSettings((DynamicCodeSecurityLevel)_cachedSettings.dynamicCodeSecurityLevel);
                 }
                 else
                 {
@@ -795,6 +831,9 @@ namespace io.github.hatayama.uLoopMCP
                     _cachedSettings = new McpEditorSettingsData();
                     SaveSettings(_cachedSettings);
                     // Created default MCP Editor settings
+                    
+                    // デフォルトのセキュリティレベルをDynamicCodeSecurityManagerに通知
+                    DynamicCodeSecurityManager.InitializeFromSettings((DynamicCodeSecurityLevel)_cachedSettings.dynamicCodeSecurityLevel);
                 }
             }
             catch (Exception ex)

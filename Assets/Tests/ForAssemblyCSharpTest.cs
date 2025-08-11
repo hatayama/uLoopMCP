@@ -3,11 +3,10 @@ using System.Diagnostics;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    public class AssemblyCSharpTest
+    public class ForAssemblyCSharpTest
     {
         public string HelloWorld()
         {
-            UnityEngine.Debug.Log("Hello World");
             return "Hello World";
         }
 

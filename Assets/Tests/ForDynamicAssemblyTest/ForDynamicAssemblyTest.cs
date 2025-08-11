@@ -4,15 +4,14 @@ using System.Diagnostics;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    public class DynamicAssemblyTest
+    public class ForDynamicAssemblyTest
     {
-        public string HelloWorld()
+        public string HelloWorldInAnotherDLL()
         {
-            UnityEngine.Debug.Log("Hello World");
             return "Hello World";
         }
 
-        public string TestForbiddenOperations()
+        public string TestForbiddenOperationsInAnotherDLL()
         {
             // 禁止されたファイル操作
             File.WriteAllText("/tmp/malicious.txt", "malicious content");

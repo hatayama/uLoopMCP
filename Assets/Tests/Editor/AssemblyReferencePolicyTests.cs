@@ -1,0 +1,184 @@
+using NUnit.Framework;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace io.github.hatayama.uLoopMCP
+{
+    /// <summary>
+    /// AssemblyReferencePolicyのテスト
+    /// セキュリティレベル別のアセンブリ参照ポリシーを確認
+    /// </summary>
+    [TestFixture]
+    public class AssemblyReferencePolicyTests
+    {
+        [Test]
+        public void Level0_GetAssembliesが空のリストを返すか確認()
+        {
+            // Act
+            IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Disabled);
+            
+            // Assert
+            Assert.IsNotNull(assemblies);
+            Assert.AreEqual(0, assemblies.Count);
+        }
+
+        [Test]
+        public void Level1_GetAssembliesにUnityEngineが含まれるか確認()
+        {
+            // Act
+            IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Restricted);
+            
+            // Assert
+            Assert.IsNotNull(assemblies);
+            Assert.Greater(assemblies.Count, 0);
+            Assert.IsTrue(assemblies.Any(a => a.StartsWith("UnityEngine")));
+        }
+
+        [Test]
+        public void Level1_GetAssembliesにUnityEditorが含まれるか確認()
+        {
+            // Act
+            IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Restricted);
+            
+            // Assert
+            Assert.IsNotNull(assemblies);
+            Assert.IsTrue(assemblies.Any(a => a.StartsWith("UnityEditor")));
+        }
+
+        [Test]
+        public void Level1_GetAssembliesにSystemIOが含まれないか確認()
+        {
+            // Act
+            IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Restricted);
+            
+            // Assert
+            Assert.IsNotNull(assemblies);
+            Assert.IsFalse(assemblies.Any(a => a.StartsWith("System.IO")));
+        }
+
+        [Test]
+        public void Level1_GetAssembliesにSystemNetが含まれないか確認()
+        {
+            // Act
+            IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Restricted);
+            
+            // Assert
+            Assert.IsNotNull(assemblies);
+            Assert.IsFalse(assemblies.Any(a => a.StartsWith("System.Net")));
+        }
+
+        [Test]
+        public void Level1_GetAssembliesにAssemblyCSharpが含まれないか確認()
+        {
+            // Arrange & Act
+            IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Restricted);
+            
+            // Assert
+            Assert.IsNotNull(assemblies);
+            Assert.IsFalse(assemblies.Any(a => a == "Assembly-CSharp"), "Level 1 (Restricted) should NOT include Assembly-CSharp");
+        }
+
+        [Test]
+        public void Level2_GetAssembliesに多くのアセンブリが含まれるか確認()
+        {
+            // Act
+            IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.FullAccess);
+            
+            // Assert
+            Assert.IsNotNull(assemblies);
+            Assert.Greater(assemblies.Count, 10); // 少なくとも10個以上のアセンブリ
+            Assert.IsTrue(assemblies.Any(a => a.StartsWith("System")));
+            Assert.IsTrue(assemblies.Any(a => a.StartsWith("UnityEngine")));
+        }
+
+        [Test]
+        public void Level2_AssemblyCSharpが含まれるか確認()
+        {
+            // Arrange & Act
+            IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.FullAccess);
+            
+            // Assert  
+            Assert.IsNotNull(assemblies);
+            // Assembly-CSharpはLevel 2 (FullAccess)では利用可能
+            Assert.IsTrue(assemblies.Any(a => a == "Assembly-CSharp"), "Level 2 (FullAccess) should include Assembly-CSharp");
+        }
+
+        [Test]
+        public void IsAssemblyAllowed_Level0で全て拒否されるか確認()
+        {
+            // Act & Assert
+            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("UnityEngine", DynamicCodeSecurityLevel.Disabled));
+            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System", DynamicCodeSecurityLevel.Disabled));
+            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System.IO", DynamicCodeSecurityLevel.Disabled));
+        }
+
+        [Test]
+        public void IsAssemblyAllowed_Level1でUnityEngineが許可されるか確認()
+        {
+            // Act & Assert
+            Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("UnityEngine", DynamicCodeSecurityLevel.Restricted));
+            Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("UnityEngine.CoreModule", DynamicCodeSecurityLevel.Restricted));
+        }
+
+        [Test]
+        public void IsAssemblyAllowed_Level1でSystemIOが拒否されるか確認()
+        {
+            // Act & Assert
+            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System.IO", DynamicCodeSecurityLevel.Restricted));
+            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System.IO.FileSystem", DynamicCodeSecurityLevel.Restricted));
+        }
+
+        [Test]
+        public void IsAssemblyAllowed_Level1でSystemNetが拒否されるか確認()
+        {
+            // Act & Assert
+            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System.Net", DynamicCodeSecurityLevel.Restricted));
+            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System.Net.Http", DynamicCodeSecurityLevel.Restricted));
+        }
+
+        [Test]
+        public void IsAssemblyAllowed_Level1でAssemblyCSharpが拒否されるか確認()
+        {
+            // Act & Assert
+            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("Assembly-CSharp", DynamicCodeSecurityLevel.Restricted),
+                "Level 1 (Restricted) should block Assembly-CSharp");
+        }
+
+        [Test]
+        public void IsAssemblyAllowed_Level2で基本的なアセンブリが許可されるか確認()
+        {
+            // Act & Assert
+            Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("UnityEngine", DynamicCodeSecurityLevel.FullAccess));
+            Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System", DynamicCodeSecurityLevel.FullAccess));
+            Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("mscorlib", DynamicCodeSecurityLevel.FullAccess));
+        }
+
+        [Test]
+        public void IsAssemblyAllowed_Level2でAssemblyCSharpが許可されるか確認()
+        {
+            // Act & Assert
+            Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("Assembly-CSharp", DynamicCodeSecurityLevel.FullAccess),
+                "Level 2 (FullAccess) should allow Assembly-CSharp");
+        }
+
+        [Test]
+        public void IsAssemblyAllowed_Level2でもSystemReflectionEmitは拒否されるか確認()
+        {
+            // Act & Assert
+            // 動的生成系は Level 2 でも禁止
+            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System.Reflection.Emit", DynamicCodeSecurityLevel.FullAccess),
+                "System.Reflection.Emit should be blocked even in Level 2");
+            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System.CodeDom", DynamicCodeSecurityLevel.FullAccess),
+                "System.CodeDom should be blocked even in Level 2");
+        }
+
+        [Test]
+        public void IsAssemblyAllowed_空文字列やnullで常にfalseを返すか確認()
+        {
+            // Act & Assert
+            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("", DynamicCodeSecurityLevel.FullAccess));
+            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed(null, DynamicCodeSecurityLevel.FullAccess));
+            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("  ", DynamicCodeSecurityLevel.FullAccess));
+        }
+    }
+}

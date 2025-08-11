@@ -26,6 +26,19 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>エラーメッセージ（失敗時）</summary>
         public string ErrorMessage { get; set; }
         
+        /// <summary>現在のセキュリティレベル</summary>
+        public string SecurityLevel { get; set; }
+        
+        /// <summary>エラーメッセージ（ErrorMessageのエイリアス）</summary>
+        public string Error 
+        { 
+            get => ErrorMessage; 
+            set => ErrorMessage = value; 
+        }
+        
+        /// <summary>更新されたコード（修正適用後）</summary>
+        public string UpdatedCode { get; set; }
+        
     }
     
     /// <summary>

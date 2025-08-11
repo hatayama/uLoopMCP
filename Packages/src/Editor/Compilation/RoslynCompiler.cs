@@ -11,15 +11,17 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Roslynを使用したC#動的コンパイル機能
-    /// 関連クラス: CompilationRequest, CompilationResult
+    /// v3.0 静的アセンブリ初期化戦略対応
+    /// 関連クラス: CompilationRequest, CompilationResult, DynamicCodeSecurityManager
     /// </summary>
-    public class RoslynCompiler
+    public class RoslynCompiler : IDisposable
     {
         private readonly List<MetadataReference> _defaultReferences = new();
         private readonly Dictionary<string, Assembly> _compilationCache = new();
-
-        // キュレートされたアセンブリプレフィックス（Assembly-CSharp除外でセキュリティ強化）
-        private static readonly string[] CuratedAssemblyPrefixes = { "UnityEngine", "UnityEditor", "Unity.", "netstandard" };
+        private readonly Dictionary<DynamicCodeSecurityLevel, List<MetadataReference>> _referenceCache = new();
+        private DynamicCodeSecurityLevel _currentSecurityLevel;
+        private List<MetadataReference> _currentReferences;
+        private bool _disposed;
 
         // Unity AI Assistant方式のFixProviderリスト
         private static readonly List<CSharpFixProvider> FixProviders = new()
@@ -29,55 +31,142 @@ namespace io.github.hatayama.uLoopMCP
 
         public RoslynCompiler()
         {
-            InitializeReferences();
+            _currentSecurityLevel = DynamicCodeSecurityManager.CurrentLevel;
+            InitializeReferencesForLevel(_currentSecurityLevel);
+            
+            // セキュリティレベル変更イベントを監視
+            DynamicCodeSecurityManager.SecurityLevelChanged += HandleSecurityLevelChanged;
+        }
+        
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                // イベント登録解除
+                DynamicCodeSecurityManager.SecurityLevelChanged -= HandleSecurityLevelChanged;
+                
+                // キャッシュクリア
+                _referenceCache.Clear();
+                _compilationCache.Clear();
+                _defaultReferences.Clear();
+                
+                _disposed = true;
+            }
         }
 
-        public void InitializeReferences()
+        /// <summary>
+        /// セキュリティレベル変更ハンドラ
+        /// </summary>
+        private void HandleSecurityLevelChanged(DynamicCodeSecurityLevel newLevel)
         {
-            _defaultReferences.Clear();
-
-            // .NET Standard/Core基本アセンブリ
-            Assembly netStandardAssembly = Assembly.Load("netstandard");
-            if (netStandardAssembly != null)
+            string correlationId = Guid.NewGuid().ToString("N")[..8];
+            
+            VibeLogger.LogInfo(
+                "roslyn_compiler_security_level_change",
+                $"Handling security level change to: {newLevel}",
+                new { 
+                    oldLevel = _currentSecurityLevel.ToString(), 
+                    newLevel = newLevel.ToString() 
+                },
+                correlationId,
+                "Reinitializing compiler for new security level",
+                "Monitor compiler reinitialization performance"
+            );
+            
+            InitializeReferencesForLevel(newLevel);
+            ClearCompilationCache();
+        }
+        
+        /// <summary>
+        /// セキュリティレベルに応じたアセンブリ参照を初期化
+        /// </summary>
+        public void InitializeReferencesForLevel(DynamicCodeSecurityLevel level)
+        {
+            string correlationId = Guid.NewGuid().ToString("N")[..8];
+            _currentSecurityLevel = level;
+            
+            // キャッシュチェック
+            if (_referenceCache.TryGetValue(level, out List<MetadataReference> cachedReferences))
             {
-                _defaultReferences.Add(MetadataReference.CreateFromFile(netStandardAssembly.Location));
+                _currentReferences = cachedReferences;
+                _defaultReferences.Clear();
+                _defaultReferences.AddRange(cachedReferences);
+                
+                VibeLogger.LogInfo(
+                    "roslyn_compiler_references_from_cache",
+                    "Using cached references for security level",
+                    new { 
+                        level = level.ToString(),
+                        referenceCount = cachedReferences.Count 
+                    },
+                    correlationId,
+                    "References loaded from cache",
+                    "Monitor cache hit rate"
+                );
+                return;
             }
-
-            // 基本的な.NETアセンブリを追加
-            _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(object).Assembly.Location));
-            _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(List<>).Assembly.Location));
-            _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location));
-            _defaultReferences.Add(MetadataReference.CreateFromFile(typeof(Console).Assembly.Location));
-
-            // System.Runtimeを明示的に追加
-            string[] runtimePaths = new[]
+            
+            // 新規参照構築
+            _defaultReferences.Clear();
+            List<MetadataReference> newReferences = new();
+            
+            // セキュリティレベルに応じたアセンブリ取得
+            IReadOnlyList<string> allowedAssemblies = DynamicCodeSecurityManager.GetAllowedAssemblies(level);
+            
+            foreach (string assemblyName in allowedAssemblies)
             {
-                Path.Combine(Path.GetDirectoryName(typeof(object).Assembly.Location), "System.Runtime.dll"),
-                Path.Combine(Path.GetDirectoryName(typeof(object).Assembly.Location), "System.Private.CoreLib.dll")
-            };
-
-            foreach (string path in runtimePaths)
-            {
-                if (File.Exists(path))
+                Assembly assembly = AppDomain.CurrentDomain.GetAssemblies()
+                    .FirstOrDefault(a => a.GetName().Name == assemblyName);
+                
+                if (assembly != null && !assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
                 {
-                    _defaultReferences.Add(MetadataReference.CreateFromFile(path));
+                    MetadataReference reference = MetadataReference.CreateFromFile(assembly.Location);
+                    newReferences.Add(reference);
+                    _defaultReferences.Add(reference);
                 }
             }
-
-            // Unity AI Assistant準拠のキュレートされたアセンブリ追加（Assembly-CSharp除外でセキュリティ強化）
-            int curatedCount = AddCuratedAssemblies();
-            UnityEngine.Debug.Log($"RoslynCompiler: セキュリティ強化モード - {curatedCount}個のキュレートされたアセンブリを追加（Assembly-CSharp除外）");
             
-            // 現在のアセンブリも追加（uLoopMCP関連クラスにアクセスするため）
-            _defaultReferences.Add(MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location));
-
+            // 現在のアセンブリも追加（uLoopMCPクラスアクセス用）
+            Assembly currentAssembly = Assembly.GetExecutingAssembly();
+            if (!string.IsNullOrWhiteSpace(currentAssembly.Location))
+            {
+                MetadataReference currentRef = MetadataReference.CreateFromFile(currentAssembly.Location);
+                newReferences.Add(currentRef);
+                _defaultReferences.Add(currentRef);
+            }
+            
+            // キャッシュに保存
+            _referenceCache[level] = newReferences;
+            _currentReferences = newReferences;
+            
             VibeLogger.LogInfo(
-                "roslyn_compiler_initialize",
-                "RoslynCompiler initialized with references",
-                new { referenceCount = _defaultReferences.Count },
+                "roslyn_compiler_references_initialized",
+                "RoslynCompiler references initialized for security level",
+                new { 
+                    level = level.ToString(),
+                    referenceCount = newReferences.Count,
+                    assemblyCount = allowedAssemblies.Count
+                },
+                correlationId,
+                "Compiler references configured for security level",
+                "Monitor assembly loading patterns"
+            );
+        }
+        
+        /// <summary>
+        /// コンパイルキャッシュをクリア
+        /// </summary>
+        private void ClearCompilationCache()
+        {
+            _compilationCache.Clear();
+            
+            VibeLogger.LogInfo(
+                "roslyn_compilation_cache_cleared",
+                "Compilation cache cleared due to security level change",
+                new { cacheSize = 0 },
                 correlationId: Guid.NewGuid().ToString("N")[..8],
-                humanNote: "Roslyn compiler ready for dynamic code compilation",
-                aiTodo: "Monitor compilation performance and reference resolution"
+                humanNote: "Cache cleared for security consistency",
+                aiTodo: "Monitor cache clear frequency"
             );
         }
 
@@ -437,48 +526,6 @@ namespace io.github.hatayama.uLoopMCP
         }
 
 
-        /// <summary>
-        /// Unity AI Assistant準拠のキュレートされたアセンブリのみを追加
-        /// </summary>
-        private int AddCuratedAssemblies()
-        {
-            try
-            {
-                // Unity AI Assistant準拠のキュレートされたプレフィックス (Assembly-CSharpを除外してセキュリティ強化)
-
-                int addedCount = 0;
-
-                // キュレートされたアセンブリのみ追加（重複を避けるため明示的追加は削除）
-                foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-                {
-                    if (assembly.IsDynamic || string.IsNullOrWhiteSpace(assembly.Location))
-                        continue;
-
-                    // キュレートされたプレフィックスかチェック
-                    bool isCurated = false;
-                    foreach (string prefix in CuratedAssemblyPrefixes)
-                    {
-                        if (assembly.FullName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                        {
-                            isCurated = true;
-                            break;
-                        }
-                    }
-
-                    if (isCurated && TryAddAssemblyReference(assembly))
-                    {
-                        addedCount++;
-                    }
-                }
-
-                return addedCount;
-            }
-            catch (Exception ex)
-            {
-                UnityEngine.Debug.LogError($"RoslynCompiler: キュレートされたアセンブリ追加でエラー - {ex.Message}");
-                return 0;
-            }
-        }
 
         /// <summary>
         /// 不足しているアセンブリを動的に追加を試行

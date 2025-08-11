@@ -91,6 +91,36 @@ AVOID: using statements in simple code - they'll be placed inside methods causin
                     "Monitor execution flow and performance"
                 );
                 
+                // セキュリティチェック
+                DynamicCodeSecurityLevel currentLevel = DynamicCodeSecurityManager.CurrentLevel;
+                
+                // Level 0: 実行完全禁止
+                if (!DynamicCodeSecurityManager.CanExecute(currentLevel))
+                {
+                    return new ExecuteDynamicCodeResponse
+                    {
+                        Success = false,
+                        Error = "Code execution is disabled at current security level (Disabled)",
+                        UpdatedCode = parameters.Code,
+                        SecurityLevel = currentLevel.ToString()
+                    };
+                }
+                
+                // Level 1: 危険APIチェック
+                if (currentLevel == DynamicCodeSecurityLevel.Restricted)
+                {
+                    if (DynamicCodeSecurityManager.ContainsDangerousApi(parameters.Code))
+                    {
+                        return new ExecuteDynamicCodeResponse
+                        {
+                            Success = false,
+                            Error = "Code contains dangerous APIs that are blocked at Restricted security level",
+                            UpdatedCode = parameters.Code,
+                            SecurityLevel = currentLevel.ToString()
+                        };
+                    }
+                }
+                
                 // コード取得
                 string originalCode = parameters.Code ?? "";
 
@@ -113,6 +143,9 @@ AVOID: using statements in simple code - they'll be placed inside methods causin
                 // レスポンスに変換（エラー時は改善されたメッセージを使用）
                 ExecuteDynamicCodeResponse toolResponse = ConvertExecutionResultToResponse(
                     executionResult, originalCode, null, correlationId);
+                
+                // セキュリティレベルを追加
+                toolResponse.SecurityLevel = currentLevel.ToString();
                 
                 // VibeLoggerで実行完了をログ
                 VibeLogger.LogInfo(

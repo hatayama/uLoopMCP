@@ -457,15 +457,15 @@ namespace TestNamespace
         [Test]
         public void Compile_WithSeparateAssemblyClassFullyQualified_ShouldSucceedInAllAssembliesMode()
         {
-            // Arrange - Unity標準クラスを完全修飾名で使用（Assembly-CSharpではなくUnityEngine使用）
+            // Arrange - 別アセンブリのクラスを完全修飾名で使用
             string code = @"
-                var testGameObject = new UnityEngine.GameObject(""TestObject"");
-                return $""Created GameObject: {testGameObject.name}"";";
+                var testInstance = new io.github.hatayama.uLoopMCP.DynamicAssemblyTest();
+                return testInstance.HelloWorld();";
 
             CompilationRequest request = new CompilationRequest
             {
                 Code = code,
-                ClassName = "FullyQualifiedUnityEngineTestClass",
+                ClassName = "FullyQualifiedSeparateAssemblyTestClass",
                 Namespace = "TestNamespace",
                 AssemblyMode = AssemblyLoadingMode.AllAssemblies  // 全アセンブリモード
             };

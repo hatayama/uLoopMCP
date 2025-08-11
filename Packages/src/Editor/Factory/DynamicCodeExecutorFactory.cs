@@ -16,9 +16,8 @@ namespace io.github.hatayama.uLoopMCP.Factory
 
             try
             {
-                // コンパイラー初期化
+                // コンパイラー初期化（現在のセキュリティレベルで自動初期化される）
                 RoslynCompiler compiler = new RoslynCompiler();
-                compiler.InitializeReferences();
 
                 // セキュリティバリデーター初期化（デフォルトポリシー使用）
                 SecurityValidator validator = new SecurityValidator();
@@ -72,7 +71,6 @@ namespace io.github.hatayama.uLoopMCP.Factory
             try
             {
                 RoslynCompiler compiler = new RoslynCompiler();
-                compiler.InitializeReferences();
 
                 SecurityValidator validator = new SecurityValidator();
                 CommandRunner runner = new CommandRunner();
