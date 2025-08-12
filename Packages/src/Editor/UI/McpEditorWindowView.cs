@@ -394,7 +394,30 @@ namespace io.github.hatayama.uLoopMCP
                 DynamicCodeSecurityLevel newLevel = (DynamicCodeSecurityLevel)EditorGUILayout.EnumPopup("Security Level", currentLevel);
                 if (newLevel != currentLevel)
                 {
-                    McpEditorSettings.SetDynamicCodeSecurityLevel(newLevel);
+                    // Show confirmation dialog when enabling Roslyn features
+                    if (currentLevel == DynamicCodeSecurityLevel.Disabled && newLevel != DynamicCodeSecurityLevel.Disabled)
+                    {
+                        bool confirmed = EditorUtility.DisplayDialog(
+                            "Enable Roslyn Features",
+                            "Enabling Roslyn features requires the following NuGet packages:\n\n" +
+                            "• Microsoft.CodeAnalysis (v4.14.0)\n" +
+                            "• Microsoft.CodeAnalysis.CSharp (v4.14.0)\n\n" +
+                            "These DLLs must be installed in your Unity project.\n\n" +
+                            "See README for installation instructions.\n\n" +
+                            "Continue?",
+                            "Continue",
+                            "Cancel"
+                        );
+                        
+                        if (confirmed)
+                        {
+                            McpEditorSettings.SetDynamicCodeSecurityLevel(newLevel);
+                        }
+                    }
+                    else
+                    {
+                        McpEditorSettings.SetDynamicCodeSecurityLevel(newLevel);
+                    }
                 }
                 
                 // Security level description

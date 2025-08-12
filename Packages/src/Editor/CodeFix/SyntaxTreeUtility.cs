@@ -1,3 +1,4 @@
+#if ULOOPMCP_HAS_ROSLYN
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -54,3 +55,4 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 }
+#endif

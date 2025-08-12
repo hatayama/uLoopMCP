@@ -1,3 +1,4 @@
+#if ULOOPMCP_HAS_ROSLYN
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -480,3 +481,4 @@ namespace TestNamespace
         }
     }
 }
+#endif

@@ -1,6 +1,8 @@
+#if ULOOPMCP_HAS_ROSLYN
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+#endif
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,6 +13,7 @@ using io.github.hatayama.uLoopMCP;
 
 namespace io.github.hatayama.uLoopMCP
 {
+#if ULOOPMCP_HAS_ROSLYN
     /// <summary>
     /// コードセキュリティ検証機能
     /// 関連クラス: SecurityPolicy
@@ -269,4 +272,5 @@ namespace io.github.hatayama.uLoopMCP
             base.VisitUnsafeStatement(node);
         }
     }
+#endif
 }

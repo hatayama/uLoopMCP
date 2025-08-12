@@ -1,3 +1,4 @@
+#if ULOOPMCP_HAS_ROSLYN
 using NUnit.Framework;
 using io.github.hatayama.uLoopMCP;
 
@@ -97,3 +98,4 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 }
+#endif

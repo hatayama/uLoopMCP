@@ -14,20 +14,26 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class DynamicCodeExecutor : IDynamicCodeExecutor
     {
+#if ULOOPMCP_HAS_ROSLYN
         private readonly RoslynCompiler _compiler;
         private readonly SecurityValidator _validator;
+#endif
         private readonly CommandRunner _runner;
         private readonly ExecutionStatistics _statistics;
         private readonly object _statsLock = new();
 
         /// <summary>コンストラクタ</summary>
         public DynamicCodeExecutor(
+#if ULOOPMCP_HAS_ROSLYN
             RoslynCompiler compiler,
             SecurityValidator validator, 
+#endif
             CommandRunner runner)
         {
+#if ULOOPMCP_HAS_ROSLYN
             _compiler = compiler ?? throw new ArgumentNullException(nameof(compiler));
             _validator = validator ?? throw new ArgumentNullException(nameof(validator));
+#endif
             _runner = runner ?? throw new ArgumentNullException(nameof(runner));
             _statistics = new ExecutionStatistics();
 
@@ -36,8 +42,10 @@ namespace io.github.hatayama.uLoopMCP
                 "DynamicCodeExecutor initialized with dependencies",
                 new
                 {
+#if ULOOPMCP_HAS_ROSLYN
                     compiler_type = compiler.GetType().Name,
                     validator_type = validator.GetType().Name,
+#endif
                     runner_type = runner.GetType().Name
                 },
                 humanNote: "動的コード実行統合システムの初期化",
@@ -58,6 +66,16 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
+#if !ULOOPMCP_HAS_ROSLYN
+                // Roslyn無効時のエラーレスポンス
+                return new ExecutionResult
+                {
+                    Success = false,
+                    ErrorMessage = "ROSLYN_REQUIRED: Dynamic code execution requires Roslyn. Please enable it from Security Settings.",
+                    ExecutionTime = stopwatch.Elapsed,
+                    Statistics = _statistics
+                };
+#else
                 VibeLogger.LogInfo(
                     "execute_code_start",
                     "Code execution started",
@@ -149,6 +167,7 @@ namespace io.github.hatayama.uLoopMCP
                 );
 
                 return executionResult;
+#endif
             }
             catch (Exception ex)
             {
@@ -221,6 +240,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         // プライベートヘルパーメソッド
+#if ULOOPMCP_HAS_ROSLYN
         private SecurityValidationResult ValidateCodeSecurity(string code, string correlationId)
         {
             SecurityValidationResult result = _validator.ValidateCode(code);
@@ -337,6 +357,16 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
+        /// <summary>
+        /// CompilationResult.SecurityViolationsをSecurityValidatorのSecurityViolationに変換
+        /// </summary>
+        private List<SecurityViolation> ConvertToSecurityViolations(List<SecurityViolation> compilationSecurityViolations)
+        {
+            // 同じ型なのでそのまま返す
+            return compilationSecurityViolations ?? new List<SecurityViolation>();
+        }
+#endif
+
         private ExecutionResult CreateExceptionResult(string message, Exception ex, TimeSpan executionTime)
         {
             return new ExecutionResult
@@ -347,15 +377,6 @@ namespace io.github.hatayama.uLoopMCP
                 Logs = new List<string> { ex.ToString() },
                 ExecutionTime = executionTime
             };
-        }
-
-        /// <summary>
-        /// CompilationResult.SecurityViolationsをSecurityValidatorのSecurityViolationに変換
-        /// </summary>
-        private List<SecurityViolation> ConvertToSecurityViolations(List<SecurityViolation> compilationSecurityViolations)
-        {
-            // 同じ型なのでそのまま返す
-            return compilationSecurityViolations ?? new List<SecurityViolation>();
         }
 
         private void UpdateStatistics(ExecutionResult result, TimeSpan executionTime)

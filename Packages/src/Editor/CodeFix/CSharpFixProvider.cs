@@ -1,3 +1,4 @@
+#if ULOOPMCP_HAS_ROSLYN
 using Microsoft.CodeAnalysis;
 
 namespace io.github.hatayama.uLoopMCP
@@ -21,3 +22,4 @@ namespace io.github.hatayama.uLoopMCP
         public abstract SyntaxTree ApplyFix(SyntaxTree tree, Diagnostic diagnostic);
     }
 }
+#endif

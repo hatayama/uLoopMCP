@@ -1,7 +1,9 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
+using UnityEditor;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
@@ -779,6 +781,9 @@ namespace io.github.hatayama.uLoopMCP
             // DynamicCodeSecurityManagerに通知
             DynamicCodeSecurityManager.CurrentLevel = level;
             
+            // ULOOPMCP_HAS_ROSLYN Define Symbol管理
+            UpdateRoslynDefineSymbol(level);
+            
             VibeLogger.LogInfo(
                 "editor_settings_security_level_changed",
                 $"Security level changed to: {level}",
@@ -914,6 +919,56 @@ namespace io.github.hatayama.uLoopMCP
             
             return ex.HResult == ERROR_SHARING_VIOLATION || 
                    ex.HResult == ERROR_LOCK_VIOLATION;
+        }
+        
+        /// <summary>
+        /// Updates ULOOPMCP_HAS_ROSLYN Define Symbol based on security level
+        /// </summary>
+        private static void UpdateRoslynDefineSymbol(DynamicCodeSecurityLevel level)
+        {
+            const string ROSLYN_SYMBOL = "ULOOPMCP_HAS_ROSLYN";
+            
+            // Get current build target group
+            BuildTargetGroup targetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
+            
+            // Get current define symbols
+            string currentSymbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(targetGroup);
+            var symbols = currentSymbols.Split(';').Where(s => !string.IsNullOrEmpty(s)).ToList();
+            
+            bool hasRoslynSymbol = symbols.Contains(ROSLYN_SYMBOL);
+            bool shouldHaveRoslynSymbol = level != DynamicCodeSecurityLevel.Disabled;
+            
+            // Update symbols if needed
+            if (shouldHaveRoslynSymbol && !hasRoslynSymbol)
+            {
+                symbols.Add(ROSLYN_SYMBOL);
+                string newSymbols = string.Join(";", symbols);
+                PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, newSymbols);
+                
+                VibeLogger.LogInfo(
+                    "roslyn_symbol_added",
+                    $"Added {ROSLYN_SYMBOL} define symbol",
+                    new { symbols = newSymbols },
+                    correlationId: Guid.NewGuid().ToString("N")[..8],
+                    humanNote: "Roslyn features enabled",
+                    aiTodo: "Monitor Roslyn symbol changes"
+                );
+            }
+            else if (!shouldHaveRoslynSymbol && hasRoslynSymbol)
+            {
+                symbols.Remove(ROSLYN_SYMBOL);
+                string newSymbols = string.Join(";", symbols);
+                PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, newSymbols);
+                
+                VibeLogger.LogInfo(
+                    "roslyn_symbol_removed",
+                    $"Removed {ROSLYN_SYMBOL} define symbol",
+                    new { symbols = newSymbols },
+                    correlationId: Guid.NewGuid().ToString("N")[..8],
+                    humanNote: "Roslyn features disabled",
+                    aiTodo: "Monitor Roslyn symbol changes"
+                );
+            }
         }
     }
 }

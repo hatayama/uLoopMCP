@@ -440,6 +440,8 @@ All tools automatically include the following timing information:
 > - **Unity 2022.3 or later**
 > - **Node.js 18.0 or later** - Required for MCP server execution
 > - Install Node.js from [here](https://nodejs.org/en/download)
+> - **Microsoft.CodeAnalysis (Roslyn)** - Required for dynamic code execution features
+>   - See [Roslyn Setup](#roslyn-setup) section below
 
 ### Via Unity Package Manager
 
@@ -464,6 +466,49 @@ Scope(s): io.github.hatayama.uloopmcp
 ```
 
 3. Open Package Manager window and select OpenUPM in the My Registries section. uLoopMCP will be displayed.
+
+## Roslyn Setup
+
+uLoopMCP uses Microsoft.CodeAnalysis (Roslyn) for dynamic code execution features. These features are disabled by default.
+
+### Enabling Roslyn Features
+
+1. Open **Window > uLoopMCP > Security Settings**
+2. Change **Security Level** from `Disabled` to `Restricted` or `Full Access`
+3. A confirmation dialog will appear informing you about required NuGet packages
+4. Click **Continue** to enable Roslyn features
+
+### Installing Roslyn DLLs
+
+After enabling Roslyn features, you need to install the required DLLs:
+
+#### Option 1: Using NuGet CLI
+```bash
+nuget install Microsoft.CodeAnalysis -Version 4.14.0 -OutputDirectory ./temp
+nuget install Microsoft.CodeAnalysis.CSharp -Version 4.14.0 -OutputDirectory ./temp
+```
+
+#### Option 2: Manual Download
+Download the following NuGet packages and extract the DLLs:
+- Microsoft.CodeAnalysis (4.14.0)
+- Microsoft.CodeAnalysis.CSharp (4.14.0)
+
+### Required DLLs
+Place the following DLLs in your Unity project (e.g., `Assets/Plugins/Roslyn/`):
+- Microsoft.CodeAnalysis.dll
+- Microsoft.CodeAnalysis.CSharp.dll
+- System.Collections.Immutable.dll
+- System.Reflection.Metadata.dll
+- System.Runtime.CompilerServices.Unsafe.dll
+
+> [!IMPORTANT]
+> After adding the DLLs, ensure they are set to **Editor only** in the import settings.
+
+### Features Requiring Roslyn
+The following features require Roslyn to be enabled:
+- `execute-dynamic-code` - Dynamic C# code execution
+- Code security validation
+- Automatic using statement fixes
 
 ## Project-Specific Tool Development
 uLoopMCP enables efficient development of project-specific MCP tools without requiring changes to the core package.  

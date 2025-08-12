@@ -27,5 +27,8 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>ログ</summary>
         public List<string> Logs { get; set; } = new();
+
+        /// <summary>実行統計</summary>
+        public ExecutionStatistics Statistics { get; set; }
     }
 }

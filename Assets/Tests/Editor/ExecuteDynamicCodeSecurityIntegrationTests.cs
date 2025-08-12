@@ -1,3 +1,4 @@
+#if ULOOPMCP_HAS_ROSLYN
 using NUnit.Framework;
 using System.Collections.Generic;
 using System.Threading;
@@ -405,3 +406,4 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 }
+#endif

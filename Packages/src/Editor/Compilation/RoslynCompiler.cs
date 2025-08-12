@@ -1,5 +1,7 @@
+#if ULOOPMCP_HAS_ROSLYN
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+#endif
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,6 +11,7 @@ using System.Text;
 
 namespace io.github.hatayama.uLoopMCP
 {
+#if ULOOPMCP_HAS_ROSLYN
     /// <summary>
     /// Roslynを使用したC#動的コンパイル機能
     /// v3.0 静的アセンブリ初期化戦略対応
@@ -890,4 +893,5 @@ namespace io.github.hatayama.uLoopMCP
         public SyntaxTree SyntaxTree { get; set; }
         public List<MetadataReference> References { get; set; }
     }
+#endif
 }
