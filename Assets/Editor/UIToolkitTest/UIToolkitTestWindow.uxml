@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:ScrollView name="main-scroll-view">
+        <ui:VisualElement name="content-container" class="content-container">
+            <!-- Title Section -->
+            <ui:Label text="UI Toolkit Test Window" name="title-label" class="title-label" />
+            
+            <!-- Text Display Section -->
+            <ui:Label name="text-label" class="text-display-label" />
+            <ui:Button text="Switch Text" name="switch-text-button" class="primary-button" />
+            
+            <!-- Separator -->
+            <ui:VisualElement class="separator" />
+            
+            <!-- Persistence Comparison Section -->
+            <ui:Label text="Data Persistence Comparison" class="section-title" />
+            
+            <ui:VisualElement class="comparison-container">
+                <!-- Pattern 1: SerializeField -->
+                <ui:VisualElement class="pattern-box serialize-field-box">
+                    <ui:Label text="Pattern 1: [SerializeField]" class="pattern-title" />
+                    <ui:Label name="serialize-field-label" class="pattern-data-label" />
+                    <ui:Label text="✓ Domain Reload
+✓ Unity Restart
+✗ Window Close/Open" class="pattern-info" />
+                </ui:VisualElement>
+                
+                <!-- Pattern 2: Non-Serialized -->
+                <ui:VisualElement class="pattern-box non-serialized-box">
+                    <ui:Label text="Pattern 2: Non-Serialized" class="pattern-title" />
+                    <ui:Label name="non-serialized-label" class="pattern-data-label" />
+                    <ui:Label text="✗ Domain Reload
+✗ Unity Restart
+✗ Window Close/Open" class="pattern-info" />
+                </ui:VisualElement>
+                
+                <!-- Pattern 3: ScriptableSingleton -->
+                <ui:VisualElement class="pattern-box scriptable-singleton-box">
+                    <ui:Label text="Pattern 3: ScriptableSingleton" class="pattern-title" />
+                    <ui:Label name="scriptable-singleton-label" class="pattern-data-label" />
+                    <ui:Label text="✓ Domain Reload
+✓ Unity Restart
+✓ Window Close/Open" class="pattern-info" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            
+            <!-- Persistence Test Buttons -->
+            <ui:VisualElement class="button-container">
+                <ui:Button text="Increment All Counters" name="increment-counters-button" class="secondary-button" />
+                <ui:Button text="Update All Texts" name="update-texts-button" class="secondary-button" />
+                <ui:Button text="Reset ScriptableSingleton" name="reset-singleton-button" class="secondary-button" />
+            </ui:VisualElement>
+            
+            <!-- Separator -->
+            <ui:VisualElement class="separator" />
+            
+            <!-- Complex Data Test Section -->
+            <ui:Label text="Domain Reload Test - Complex Data" class="section-title" />
+            <ui:Label name="complex-data-label" class="data-display-label complex-data-style" />
+            
+            <ui:VisualElement class="button-container">
+                <ui:Button text="Update Display" name="update-complex-data-button" class="secondary-button" />
+                <ui:Button text="Randomize Data" name="randomize-data-button" class="secondary-button" />
+            </ui:VisualElement>
+            
+            <!-- Separator -->
+            <ui:VisualElement class="separator" />
+            
+            <!-- Non-Serializable Data Test Section -->
+            <ui:Label text="Non-Serializable Fields Test" class="section-title" />
+            <ui:Label name="non-serializable-label" class="data-display-label non-serializable-style" />
+            <ui:Button text="Update Non-Serializable Data" name="update-non-serializable-button" class="secondary-button" />
+        </ui:VisualElement>
+    </ui:ScrollView>
+</ui:UXML>
