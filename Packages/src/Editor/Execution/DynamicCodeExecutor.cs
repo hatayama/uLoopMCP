@@ -214,6 +214,24 @@ namespace io.github.hatayama.uLoopMCP
                     Statistics = _statistics
                 };
             }
+            
+            // NEW: Restrictedモードでセキュリティレベル変更をチェック
+            if (currentLevel == DynamicCodeSecurityLevel.Restricted)
+            {
+                if (code.Contains("SetDynamicCodeSecurityLevel") || 
+                    code.Contains("DynamicCodeSecurityLevel") ||
+                    code.Contains("DynamicCodeSecurityManager"))
+                {
+                    return new ExecutionResult
+                    {
+                        Success = false,
+                        ErrorMessage = "SECURITY_VIOLATION: Changing security level is not allowed in Restricted mode.",
+                        ExecutionTime = TimeSpan.Zero,
+                        Result = null,
+                        Statistics = _statistics
+                    };
+                }
+            }
             #endif
             
             // JsonRpcProcessorで既にMainThreadに切り替え済み

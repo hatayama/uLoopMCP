@@ -404,6 +404,70 @@ namespace io.github.hatayama.uLoopMCP
                 Assert.AreEqual(level.ToString(), response.SecurityLevel);
             }
         }
+
+        [Test]
+        public async Task TestSecurityLevelChangeBlocked_Restricted()
+        {
+            // Arrange
+            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            ExecuteDynamicCodeSchema parameters = new()
+            {
+                Code = "io.github.hatayama.uLoopMCP.McpEditorSettings.SetDynamicCodeSecurityLevel(io.github.hatayama.uLoopMCP.DynamicCodeSecurityLevel.FullAccess); return \"attempted\";",
+                CompileOnly = false
+            };
+
+            // Act
+            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
+            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
+
+            // Assert
+            Assert.IsNotNull(response);
+            Assert.IsFalse(response.Success);
+            Assert.IsTrue(response.ErrorMessage.Contains("SECURITY_VIOLATION"));
+            Assert.IsTrue(response.ErrorMessage.Contains("Changing security level is not allowed in Restricted mode"));
+        }
+
+        [Test]
+        public async Task TestSecurityLevelChangeAllowed_FullAccess()
+        {
+            // Arrange
+            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
+            ExecuteDynamicCodeSchema parameters = new()
+            {
+                Code = "var currentLevel = io.github.hatayama.uLoopMCP.McpEditorSettings.GetDynamicCodeSecurityLevel(); return currentLevel.ToString();",
+                CompileOnly = false
+            };
+
+            // Act
+            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
+            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
+
+            // Assert
+            Assert.IsNotNull(response);
+            Assert.IsTrue(response.Success);
+            Assert.AreEqual("FullAccess", response.Result);
+        }
+
+        [Test]
+        public async Task TestDynamicCodeSecurityManagerReferenceBlocked_Restricted()
+        {
+            // Arrange
+            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            ExecuteDynamicCodeSchema parameters = new()
+            {
+                Code = "var level = io.github.hatayama.uLoopMCP.DynamicCodeSecurityManager.CurrentLevel; return level.ToString();",
+                CompileOnly = false
+            };
+
+            // Act
+            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
+            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
+
+            // Assert
+            Assert.IsNotNull(response);
+            Assert.IsFalse(response.Success);
+            Assert.IsTrue(response.ErrorMessage.Contains("SECURITY_VIOLATION"));
+        }
     }
 }
 #endif

@@ -86,6 +86,22 @@ namespace io.github.hatayama.uLoopMCP
             new Regex(@"\bRegistry\.", RegexOptions.Compiled),
             new Regex(@"\bMicrosoft\.Win32\.", RegexOptions.Compiled)
         };
+        // Restrictedモードでのみチェックするセキュリティ関連APIパターン
+        private static readonly List<Regex> RestrictedModePatterns = new()
+        {
+            // セキュリティレベル変更関連
+            new Regex(@"\bSetDynamicCodeSecurityLevel\b", RegexOptions.Compiled),
+            new Regex(@"\bDynamicCodeSecurityLevel\b", RegexOptions.Compiled),
+            new Regex(@"\bDynamicCodeSecurityManager\b", RegexOptions.Compiled),
+            new Regex(@"\bMcpEditorSettings\.Set", RegexOptions.Compiled),
+            
+            // セキュリティ設定変更
+            new Regex(@"\bSetAutoStartServer\b", RegexOptions.Compiled),
+            new Regex(@"\bSetEnableTestsExecution\b", RegexOptions.Compiled),
+            new Regex(@"\bSetAllowMenuItemExecution\b", RegexOptions.Compiled),
+            new Regex(@"\bSetAllowThirdPartyTools\b", RegexOptions.Compiled),
+            new Regex(@"\bSetAllowPlayModeControl\b", RegexOptions.Compiled)
+        };
 
         /// <summary>
         /// 指定されたセキュリティレベルでコード実行が可能かチェック
@@ -146,6 +162,36 @@ namespace io.github.hatayama.uLoopMCP
                         correlationId: Guid.NewGuid().ToString("N")[..8],
                         humanNote: "Potentially dangerous API usage detected",
                         aiTodo: "Review API usage patterns for security"
+                    );
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// コードにセキュリティレベル変更が含まれているかチェック（Restrictedモード用）
+        /// </summary>
+        public static bool ContainsSecurityLevelChange(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+                return false;
+
+            foreach (Regex pattern in RestrictedModePatterns)
+            {
+                if (pattern.IsMatch(code))
+                {
+                    VibeLogger.LogWarning(
+                        "security_level_change_detected",
+                        $"Security level change pattern detected: {pattern}",
+                        new { 
+                            pattern = pattern.ToString(),
+                            codeLength = code.Length 
+                        },
+                        correlationId: Guid.NewGuid().ToString("N")[..8],
+                        humanNote: "Security level change attempt detected in Restricted mode",
+                        aiTodo: "Monitor security escalation attempts"
                     );
                     return true;
                 }

@@ -84,7 +84,15 @@ namespace io.github.hatayama.uLoopMCP
                     "System.Net.Http.HttpClient",
                     
                     // 危険なシステム操作
-                    "System.Runtime.InteropServices.Marshal"
+                    "System.Runtime.InteropServices.Marshal",
+                    
+                    // セキュリティ設定変更の禁止（新規追加）
+                    "McpEditorSettings.SetDynamicCodeSecurityLevel",
+                    "McpEditorSettings.SetAutoStartServer",
+                    "McpEditorSettings.SetEnableTestsExecution",
+                    "McpEditorSettings.SetAllowMenuItemExecution",
+                    "McpEditorSettings.SetAllowThirdPartyTools",
+                    "McpEditorSettings.SetAllowPlayModeControl"
                 }
             };
         }
