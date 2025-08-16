@@ -200,6 +200,22 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false)
         {
+            // 実行時セキュリティチェック追加
+            #if ULOOPMCP_HAS_ROSLYN
+            DynamicCodeSecurityLevel currentLevel = McpEditorSettings.GetDynamicCodeSecurityLevel();
+            if (currentLevel == DynamicCodeSecurityLevel.Disabled)
+            {
+                return new ExecutionResult
+                {
+                    Success = false,
+                    ErrorMessage = "EXECUTION_DISABLED: Dynamic code execution is currently disabled. Enable in McpEditorSettings > Security Level.",
+                    ExecutionTime = TimeSpan.Zero,
+                    Result = null,
+                    Statistics = _statistics
+                };
+            }
+            #endif
+            
             // JsonRpcProcessorで既にMainThreadに切り替え済み
             return await Task.FromResult(ExecuteCode(code, className, parameters, cancellationToken, compileOnly));
         }

@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
@@ -68,6 +70,8 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class McpEditorSettings
     {
+        private const string ROSLYN_SYMBOL = "ULOOPMCP_HAS_ROSLYN";
+        
         private static string SettingsFilePath => Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
 
         private static McpEditorSettingsData _cachedSettings;
@@ -922,53 +926,136 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
+        /// 設定済みプラットフォームのNamedBuildTargetを取得
+        /// </summary>
+        private static NamedBuildTarget[] GetAllKnownTargets()
+        {
+            List<NamedBuildTarget> targets = new();
+            
+            // Unity 2022.3 LTS対応プラットフォーム
+            NamedBuildTarget[] candidateTargets = new[]
+            {
+                NamedBuildTarget.Standalone,
+                NamedBuildTarget.Server,
+                NamedBuildTarget.iOS,
+                NamedBuildTarget.Android,
+                NamedBuildTarget.WebGL,
+                NamedBuildTarget.WindowsStoreApps,
+                NamedBuildTarget.tvOS
+            };
+            
+            foreach (NamedBuildTarget target in candidateTargets)
+            {
+                // 既にシンボルが設定されているターゲットのみ対象
+                string symbols = PlayerSettings.GetScriptingDefineSymbols(target);
+                if (!string.IsNullOrEmpty(symbols))
+                {
+                    targets.Add(target);
+                }
+            }
+            
+            return targets.ToArray();
+        }
+        
+        /// <summary>
         /// Updates ULOOPMCP_HAS_ROSLYN Define Symbol based on security level
         /// </summary>
         private static void UpdateRoslynDefineSymbol(DynamicCodeSecurityLevel level)
         {
-            const string ROSLYN_SYMBOL = "ULOOPMCP_HAS_ROSLYN";
+            string correlationId = Guid.NewGuid().ToString("N")[..8];
             
-            // Get current build target group
-            BuildTargetGroup targetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
+            // 全設定済みプラットフォームを取得
+            NamedBuildTarget[] targets = GetAllKnownTargets();
             
-            // Get current define symbols
-            string currentSymbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(targetGroup);
-            var symbols = currentSymbols.Split(';').Where(s => !string.IsNullOrEmpty(s)).ToList();
-            
-            bool hasRoslynSymbol = symbols.Contains(ROSLYN_SYMBOL);
-            bool shouldHaveRoslynSymbol = level != DynamicCodeSecurityLevel.Disabled;
-            
-            // Update symbols if needed
-            if (shouldHaveRoslynSymbol && !hasRoslynSymbol)
+            foreach (NamedBuildTarget target in targets)
             {
-                symbols.Add(ROSLYN_SYMBOL);
-                string newSymbols = string.Join(";", symbols);
-                PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, newSymbols);
+                string currentSymbols = PlayerSettings.GetScriptingDefineSymbols(target);
+                List<string> symbols = currentSymbols
+                    .Split(';')
+                    .Where(s => !string.IsNullOrEmpty(s))
+                    .ToList();
                 
-                VibeLogger.LogInfo(
-                    "roslyn_symbol_added",
-                    $"Added {ROSLYN_SYMBOL} define symbol",
-                    new { symbols = newSymbols },
-                    correlationId: Guid.NewGuid().ToString("N")[..8],
-                    humanNote: "Roslyn features enabled",
-                    aiTodo: "Monitor Roslyn symbol changes"
-                );
+                bool hasRoslynSymbol = symbols.Contains(ROSLYN_SYMBOL);
+                
+                // Disabled以外の時にシンボル追加（削除はしない）
+                if (level != DynamicCodeSecurityLevel.Disabled && !hasRoslynSymbol)
+                {
+                    symbols.Add(ROSLYN_SYMBOL);
+                    string newSymbols = string.Join(";", symbols);
+                    PlayerSettings.SetScriptingDefineSymbols(target, newSymbols);
+                    
+                    VibeLogger.LogInfo(
+                        "roslyn_symbol_added_to_platform",
+                        $"Added {ROSLYN_SYMBOL} to {target}",
+                        new { 
+                            platform = target.ToString(),
+                            symbols = newSymbols 
+                        },
+                        correlationId: correlationId,
+                        humanNote: $"Roslyn機能を{target}プラットフォームで有効化",
+                        aiTodo: "プラットフォーム別のシンボル追加を確認"
+                    );
+                }
             }
-            else if (!shouldHaveRoslynSymbol && hasRoslynSymbol)
+        }
+        
+        /// <summary>
+        /// domain reload後のシンボルチェックと自動追加
+        /// </summary>
+        [InitializeOnLoadMethod]
+        private static void CheckRoslynSymbolOnDomainReload()
+        {
+            EditorApplication.delayCall += () =>
             {
-                symbols.Remove(ROSLYN_SYMBOL);
-                string newSymbols = string.Join(";", symbols);
-                PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, newSymbols);
+                DynamicCodeSecurityLevel currentLevel = GetDynamicCodeSecurityLevel();
                 
-                VibeLogger.LogInfo(
-                    "roslyn_symbol_removed",
-                    $"Removed {ROSLYN_SYMBOL} define symbol",
-                    new { symbols = newSymbols },
-                    correlationId: Guid.NewGuid().ToString("N")[..8],
-                    humanNote: "Roslyn features disabled",
-                    aiTodo: "Monitor Roslyn symbol changes"
-                );
-            }
+                // Disabledの場合は早期return
+                if (currentLevel == DynamicCodeSecurityLevel.Disabled)
+                {
+                    return;
+                }
+                
+                string correlationId = Guid.NewGuid().ToString("N")[..8];
+                bool symbolAdded = false;
+                
+                NamedBuildTarget[] targets = GetAllKnownTargets();
+                
+                foreach (NamedBuildTarget target in targets)
+                {
+                    string currentSymbols = PlayerSettings.GetScriptingDefineSymbols(target);
+                    List<string> symbols = currentSymbols
+                        .Split(';')
+                        .Where(s => !string.IsNullOrEmpty(s))
+                        .ToList();
+                    
+                    if (symbols.Contains(ROSLYN_SYMBOL))
+                    {
+                        continue;
+                    }
+                    
+                    symbols.Add(ROSLYN_SYMBOL);
+                    string newSymbols = string.Join(";", symbols);
+                    PlayerSettings.SetScriptingDefineSymbols(target, newSymbols);
+                    symbolAdded = true;
+                    
+                    VibeLogger.LogInfo(
+                        "domain_reload_roslyn_symbol_restored",
+                        $"Restored {ROSLYN_SYMBOL} for {target} after domain reload",
+                        new { 
+                            platform = target.ToString(),
+                            security_level = currentLevel.ToString()
+                        },
+                        correlationId: correlationId,
+                        humanNote: "domain reload後にRoslynシンボルを自動復元",
+                        aiTodo: "domain reload後の状態復元を確認"
+                    );
+                }
+                
+                if (symbolAdded)
+                {
+                    AssetDatabase.Refresh();
+                }
+            };
         }
     }
 }
