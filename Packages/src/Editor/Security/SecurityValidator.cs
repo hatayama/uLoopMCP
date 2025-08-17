@@ -2,7 +2,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
-#endif
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -26,7 +25,6 @@ namespace io.github.hatayama.uLoopMCP
             this.securityLevel = level;
         }
         
-#if ULOOPMCP_HAS_ROSLYN
         /// <summary>
         /// Compilationオブジェクトを受け取って検証（新規メソッド）
         /// </summary>
@@ -106,14 +104,12 @@ namespace io.github.hatayama.uLoopMCP
             
             return result;
         }
-#endif
         
         /// <summary>
         /// 従来のコード文字列検証（後方互換性のため維持）
         /// </summary>
         public SecurityValidationResult ValidateCode(string code)
         {
-#if ULOOPMCP_HAS_ROSLYN
             // SyntaxTreeを作成
             SyntaxTree tree = CSharpSyntaxTree.ParseText(code);
             
@@ -122,45 +118,8 @@ namespace io.github.hatayama.uLoopMCP
             
             // 新しいメソッドに委譲
             return ValidateCompilation(compilation);
-#else
-            // Roslynがない場合は簡易チェックのみ
-            SecurityValidationResult result = new()
-            {
-                IsValid = true,
-                Violations = new List<SecurityViolation>(),
-                CompilationErrors = new List<string>()
-            };
-            
-            if (securityLevel == DynamicCodeSecurityLevel.Disabled)
-            {
-                result.IsValid = false;
-                result.Violations.Add(new SecurityViolation
-                {
-                    ViolationType = ViolationType.DangerousApiCall,
-                    Message = "Code execution is disabled",
-                    ApiName = "N/A"
-                });
-            }
-            else if (securityLevel == DynamicCodeSecurityLevel.Restricted)
-            {
-                // 簡易的な文字列ベースの危険API検出
-                if (DynamicCodeSecurityManager.ContainsDangerousApi(code))
-                {
-                    result.IsValid = false;
-                    result.Violations.Add(new SecurityViolation
-                    {
-                        ViolationType = ViolationType.DangerousApiCall,
-                        Message = "Dangerous API pattern detected",
-                        ApiName = "Unknown"
-                    });
-                }
-            }
-            
-            return result;
-#endif
         }
         
-#if ULOOPMCP_HAS_ROSLYN
         private CSharpCompilation CreateSimpleCompilation(SyntaxTree tree)
         {
             // 基本的な参照のみで簡易コンパイル
@@ -186,6 +145,6 @@ namespace io.github.hatayama.uLoopMCP
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
             );
         }
-#endif
     }
 }
+#endif

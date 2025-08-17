@@ -90,33 +90,6 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 危険なAPIが含まれているか簡易チェック（Roslynがない環境用フォールバック）
-        /// 通常はRoslynベースのSecurityValidatorを使用すること
-        /// </summary>
-        internal static bool ContainsDangerousApi(string code)
-        {
-            if (string.IsNullOrWhiteSpace(code))
-                return false;
-            
-            // 簡易的な危険API検出（Roslynがない場合のフォールバック）
-            string[] dangerousPatterns = new[]
-            {
-                "System.IO", "File.", "Directory.", "Path.",
-                "System.Net", "HttpClient", "WebClient",
-                "System.Reflection", "Assembly.Load", "Activator.CreateInstance",
-                "Process.", "Registry.", "Microsoft.Win32"
-            };
-            
-            foreach (string pattern in dangerousPatterns)
-            {
-                if (code.Contains(pattern))
-                    return true;
-            }
-            
-            return false;
-        }
-
-        /// <summary>
         /// セキュリティレベルを設定から初期化（テスト用に公開）
         /// </summary>
         public static void InitializeFromSettings(DynamicCodeSecurityLevel level)

@@ -1,3 +1,4 @@
+#if ULOOPMCP_HAS_ROSLYN
 using io.github.hatayama.uLoopMCP;
 
 namespace io.github.hatayama.uLoopMCP.Factory
@@ -16,33 +17,25 @@ namespace io.github.hatayama.uLoopMCP.Factory
 
             try
             {
-#if ULOOPMCP_HAS_ROSLYN
                 // コンパイラー初期化（現在のセキュリティレベルで自動初期化される）
                 RoslynCompiler compiler = new RoslynCompiler();
 
                 // セキュリティバリデーター初期化（現在のセキュリティレベル使用）
                 SecurityValidator validator = new SecurityValidator(DynamicCodeSecurityManager.CurrentLevel);
-#endif
 
                 // コマンドランナー初期化
                 CommandRunner runner = new CommandRunner();
 
                 // 統合エグゼキューター作成
-#if ULOOPMCP_HAS_ROSLYN
                 DynamicCodeExecutor executor = new DynamicCodeExecutor(compiler, validator, runner);
-#else
-                DynamicCodeExecutor executor = new DynamicCodeExecutor(runner);
-#endif
 
                 VibeLogger.LogInfo(
                     "dynamic_executor_created",
                     "DynamicCodeExecutor created with default settings",
                     new
                     {
-#if ULOOPMCP_HAS_ROSLYN
                         compiler_type = compiler.GetType().Name,
                         validator_type = validator.GetType().Name,
-#endif
                         runner_type = runner.GetType().Name
                     },
                     correlationId,
@@ -78,27 +71,19 @@ namespace io.github.hatayama.uLoopMCP.Factory
 
             try
             {
-#if ULOOPMCP_HAS_ROSLYN
                 RoslynCompiler compiler = new RoslynCompiler();
                 SecurityValidator validator = new SecurityValidator(DynamicCodeSecurityManager.CurrentLevel);
-#endif
                 CommandRunner runner = new CommandRunner();
 
-#if ULOOPMCP_HAS_ROSLYN
                 DynamicCodeExecutor executor = new DynamicCodeExecutor(compiler, validator, runner);
-#else
-                DynamicCodeExecutor executor = new DynamicCodeExecutor(runner);
-#endif
 
                 VibeLogger.LogInfo(
                     "dynamic_executor_created_strict",
                     "DynamicCodeExecutor created with strict security settings",
                     new
                     {
-#if ULOOPMCP_HAS_ROSLYN
                         compiler_type = compiler.GetType().Name,
                         validator_type = validator.GetType().Name,
-#endif
                         runner_type = runner.GetType().Name
                     },
                     correlationId,
@@ -128,3 +113,4 @@ namespace io.github.hatayama.uLoopMCP.Factory
         }
     }
 }
+#endif

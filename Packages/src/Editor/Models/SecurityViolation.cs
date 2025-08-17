@@ -32,6 +32,9 @@ namespace io.github.hatayama.uLoopMCP
 #if ULOOPMCP_HAS_ROSLYN
         /// <summary>ロケーション</summary>
         public Microsoft.CodeAnalysis.Location Location { get; set; }
+#else
+        /// <summary>ロケーション（Roslyn無効時はobject）</summary>
+        public object Location { get; set; }
 #endif
     }
 

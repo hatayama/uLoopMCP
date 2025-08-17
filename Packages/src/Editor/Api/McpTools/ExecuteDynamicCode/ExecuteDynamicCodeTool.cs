@@ -55,9 +55,15 @@ AVOID: using statements in simple code - they'll be placed inside methods causin
         
         public ExecuteDynamicCodeTool()
         {
+#if ULOOPMCP_HAS_ROSLYN
             // 実際のDynamicCodeExecutor実装を使用
             _executor = global::io.github.hatayama.uLoopMCP.Factory.DynamicCodeExecutorFactory.CreateDefault();
             _errorHandler = new global::io.github.hatayama.uLoopMCP.ImprovedErrorHandler();
+#else
+            // Roslyn無効時はnull（このツール自体が登録されないはず）
+            _executor = null;
+            _errorHandler = null;
+#endif
         }
         
         /// <summary>

@@ -1,3 +1,4 @@
+#if ULOOPMCP_HAS_ROSLYN
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -288,13 +289,8 @@ namespace io.github.hatayama.uLoopMCP
             
             SecurityValidationResult result = validator.ValidateCode(dangerousCode);
             
-#if ULOOPMCP_HAS_ROSLYN
             Assert.IsFalse(result.IsValid, "Dangerous code should be invalid");
             Assert.IsTrue(result.Violations.Count > 0, "Should have violations");
-#else
-            // Roslynがない場合は簡易チェック
-            Assert.IsFalse(result.IsValid, "Dangerous code should be invalid (regex check)");
-#endif
         }
         
         /// <summary>
@@ -334,3 +330,4 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 }
+#endif

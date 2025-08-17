@@ -1,6 +1,5 @@
 #if ULOOPMCP_HAS_ROSLYN
 using Microsoft.CodeAnalysis;
-#endif
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -118,7 +117,6 @@ namespace io.github.hatayama.uLoopMCP
                 namespaceName.StartsWith(ns, StringComparison.OrdinalIgnoreCase));
         }
         
-#if ULOOPMCP_HAS_ROSLYN
         public bool IsDangerousType(ITypeSymbol typeSymbol)
         {
             if (typeSymbol == null) return false;
@@ -126,7 +124,6 @@ namespace io.github.hatayama.uLoopMCP
             string fullTypeName = typeSymbol.ToDisplayString();
             return dangerousTypes.Contains(fullTypeName);
         }
-#endif
         
         public bool IsDangerousApi(string fullApiName)
         {
@@ -196,3 +193,4 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 }
+#endif

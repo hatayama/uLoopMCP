@@ -201,7 +201,6 @@ namespace io.github.hatayama.uLoopMCP
             bool compileOnly = false)
         {
             // 実行時セキュリティチェック追加
-            #if ULOOPMCP_HAS_ROSLYN
             // テスト時は DynamicCodeSecurityManager.CurrentLevel を優先
             DynamicCodeSecurityLevel currentLevel = DynamicCodeSecurityManager.CurrentLevel;
             if (currentLevel == DynamicCodeSecurityLevel.Disabled)
@@ -233,7 +232,6 @@ namespace io.github.hatayama.uLoopMCP
                     };
                 }
             }
-            #endif
             
             // JsonRpcProcessorで既にMainThreadに切り替え済み
             return await Task.FromResult(ExecuteCode(code, className, parameters, cancellationToken, compileOnly));
