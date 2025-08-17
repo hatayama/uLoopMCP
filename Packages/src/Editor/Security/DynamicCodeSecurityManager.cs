@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -50,58 +49,8 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        // 危険なAPIパターン定義（Level 1で検出）
-        private static readonly List<Regex> DangerousApiPatterns = new()
-        {
-            // ファイルシステム操作
-            new Regex(@"\bSystem\.IO\.", RegexOptions.Compiled),
-            new Regex(@"\bFile\.", RegexOptions.Compiled),
-            new Regex(@"\bDirectory\.", RegexOptions.Compiled),
-            new Regex(@"\bPath\.", RegexOptions.Compiled),
-            new Regex(@"\bFileInfo\b", RegexOptions.Compiled),
-            new Regex(@"\bDirectoryInfo\b", RegexOptions.Compiled),
-            
-            // ネットワーク操作
-            new Regex(@"\bSystem\.Net\.", RegexOptions.Compiled),
-            new Regex(@"\bHttpClient\b", RegexOptions.Compiled),
-            new Regex(@"\bWebClient\b", RegexOptions.Compiled),
-            new Regex(@"\bWebRequest\b", RegexOptions.Compiled),
-            new Regex(@"\bTcpClient\b", RegexOptions.Compiled),
-            new Regex(@"\bSocket\b", RegexOptions.Compiled),
-            
-            // リフレクション操作
-            new Regex(@"\bSystem\.Reflection\.", RegexOptions.Compiled),
-            new Regex(@"\bType\.GetType\b", RegexOptions.Compiled),
-            new Regex(@"\bAssembly\.Load", RegexOptions.Compiled),
-            new Regex(@"\bActivator\.CreateInstance", RegexOptions.Compiled),
-            new Regex(@"\bMethodInfo\b", RegexOptions.Compiled),
-            new Regex(@"\bFieldInfo\b", RegexOptions.Compiled),
-            
-            // プロセス操作
-            new Regex(@"\bProcess\.", RegexOptions.Compiled),
-            new Regex(@"\bProcessStartInfo\b", RegexOptions.Compiled),
-            new Regex(@"\bEnvironment\.", RegexOptions.Compiled),
-            
-            // レジストリ操作
-            new Regex(@"\bRegistry\.", RegexOptions.Compiled),
-            new Regex(@"\bMicrosoft\.Win32\.", RegexOptions.Compiled)
-        };
-        // Restrictedモードでのみチェックするセキュリティ関連APIパターン
-        private static readonly List<Regex> RestrictedModePatterns = new()
-        {
-            // セキュリティレベル変更関連
-            new Regex(@"\bSetDynamicCodeSecurityLevel\b", RegexOptions.Compiled),
-            new Regex(@"\bDynamicCodeSecurityLevel\b", RegexOptions.Compiled),
-            new Regex(@"\bDynamicCodeSecurityManager\b", RegexOptions.Compiled),
-            new Regex(@"\bMcpEditorSettings\.Set", RegexOptions.Compiled),
-            
-            // セキュリティ設定変更
-            new Regex(@"\bSetAutoStartServer\b", RegexOptions.Compiled),
-            new Regex(@"\bSetEnableTestsExecution\b", RegexOptions.Compiled),
-            new Regex(@"\bSetAllowMenuItemExecution\b", RegexOptions.Compiled),
-            new Regex(@"\bSetAllowThirdPartyTools\b", RegexOptions.Compiled),
-            new Regex(@"\bSetAllowPlayModeControl\b", RegexOptions.Compiled)
-        };
+        // 正規表現ベースの検出は廃止（Roslynベースに移行済み）
+        // DangerousApiDetectorとSecurityValidatorを使用
 
         /// <summary>
         /// 指定されたセキュリティレベルでコード実行が可能かチェック
@@ -141,90 +90,36 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// コードに危険なAPIが含まれているかチェック（Level 1用）
+        /// 危険なAPIが含まれているか簡易チェック（Roslynがない環境用フォールバック）
+        /// 通常はRoslynベースのSecurityValidatorを使用すること
         /// </summary>
-        public static bool ContainsDangerousApi(string code)
+        internal static bool ContainsDangerousApi(string code)
         {
             if (string.IsNullOrWhiteSpace(code))
                 return false;
-
-            foreach (Regex pattern in DangerousApiPatterns)
+            
+            // 簡易的な危険API検出（Roslynがない場合のフォールバック）
+            string[] dangerousPatterns = new[]
             {
-                if (pattern.IsMatch(code))
-                {
-                    VibeLogger.LogWarning(
-                        "dangerous_api_detected",
-                        $"Dangerous API pattern detected: {pattern}",
-                        new { 
-                            pattern = pattern.ToString(),
-                            codeLength = code.Length 
-                        },
-                        correlationId: Guid.NewGuid().ToString("N")[..8],
-                        humanNote: "Potentially dangerous API usage detected",
-                        aiTodo: "Review API usage patterns for security"
-                    );
+                "System.IO", "File.", "Directory.", "Path.",
+                "System.Net", "HttpClient", "WebClient",
+                "System.Reflection", "Assembly.Load", "Activator.CreateInstance",
+                "Process.", "Registry.", "Microsoft.Win32"
+            };
+            
+            foreach (string pattern in dangerousPatterns)
+            {
+                if (code.Contains(pattern))
                     return true;
-                }
             }
-
+            
             return false;
         }
 
         /// <summary>
-        /// コードにセキュリティレベル変更が含まれているかチェック（Restrictedモード用）
+        /// セキュリティレベルを設定から初期化（テスト用に公開）
         /// </summary>
-        public static bool ContainsSecurityLevelChange(string code)
-        {
-            if (string.IsNullOrWhiteSpace(code))
-                return false;
-
-            foreach (Regex pattern in RestrictedModePatterns)
-            {
-                if (pattern.IsMatch(code))
-                {
-                    VibeLogger.LogWarning(
-                        "security_level_change_detected",
-                        $"Security level change pattern detected: {pattern}",
-                        new { 
-                            pattern = pattern.ToString(),
-                            codeLength = code.Length 
-                        },
-                        correlationId: Guid.NewGuid().ToString("N")[..8],
-                        humanNote: "Security level change attempt detected in Restricted mode",
-                        aiTodo: "Monitor security escalation attempts"
-                    );
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// 現在のセキュリティレベルでコードが実行可能かチェック
-        /// </summary>
-        public static bool IsCodeAllowedForCurrentLevel(string code)
-        {
-            // Level 0: 実行完全禁止
-            if (_currentLevel == DynamicCodeSecurityLevel.Disabled)
-            {
-                return false;
-            }
-
-            // Level 1: 危険APIチェック
-            if (_currentLevel == DynamicCodeSecurityLevel.Restricted)
-            {
-                return !ContainsDangerousApi(code);
-            }
-
-            // Level 2: 全て許可
-            return true;
-        }
-
-        /// <summary>
-        /// セキュリティレベルを設定から初期化
-        /// </summary>
-        internal static void InitializeFromSettings(DynamicCodeSecurityLevel level)
+        public static void InitializeFromSettings(DynamicCodeSecurityLevel level)
         {
             _currentLevel = level;
             

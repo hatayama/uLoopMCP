@@ -358,6 +358,55 @@ namespace io.github.hatayama.uLoopMCP
                 compilation.SyntaxTrees.First(),
                 currentTree);
 
+            // セキュリティ検証（Level 1 Restrictedモードの場合）
+            if (_currentSecurityLevel == DynamicCodeSecurityLevel.Restricted)
+            {
+                SecurityValidator validator = new(_currentSecurityLevel);
+                SecurityValidationResult validationResult = validator.ValidateCompilation(compilation);
+                
+                if (!validationResult.IsValid)
+                {
+                    // セキュリティ違反を検出した場合はエラーとして返す
+                    VibeLogger.LogWarning(
+                        "roslyn_security_validation_failed",
+                        "Security validation failed during compilation",
+                        new
+                        {
+                            violationCount = validationResult.Violations.Count,
+                            violations = validationResult.Violations.Select(v => new
+                            {
+                                type = v.Type.ToString(),
+                                api = v.ApiName,
+                                message = v.Message
+                            }).ToArray()
+                        },
+                        correlationId,
+                        "Dangerous API usage detected in user code",
+                        "Review and fix security violations"
+                    );
+                    
+                    return new CompilationResult
+                    {
+                        Success = false,
+                        UpdatedCode = context.WrappedCode,
+                        Errors = new List<CompilationError>
+                        {
+                            new CompilationError
+                            {
+                                Message = validationResult.GetErrorSummary(),
+                                ErrorCode = "SECURITY001",
+                                Line = 0,
+                                Column = 0
+                            }
+                        },
+                        Warnings = new List<string>(),
+                        HasSecurityViolations = true,
+                        SecurityViolations = validationResult.Violations,
+                        FailureReason = CompilationFailureReason.SecurityViolation
+                    };
+                }
+            }
+
             using MemoryStream memoryStream = new MemoryStream();
             Microsoft.CodeAnalysis.Emit.EmitResult emitResult = compilation.Emit(memoryStream);
 

@@ -106,20 +106,9 @@ AVOID: using statements in simple code - they'll be placed inside methods causin
                     };
                 }
                 
-                // Level 1: 危険APIチェック
-                if (currentLevel == DynamicCodeSecurityLevel.Restricted)
-                {
-                    if (DynamicCodeSecurityManager.ContainsDangerousApi(parameters.Code))
-                    {
-                        return new ExecuteDynamicCodeResponse
-                        {
-                            Success = false,
-                            Error = "Code contains dangerous APIs that are blocked at Restricted security level",
-                            UpdatedCode = parameters.Code,
-                            SecurityLevel = currentLevel.ToString()
-                        };
-                    }
-                }
+                // Level 1: Restrictedモードでは、Roslynベースの検証に委譲
+                // 正規表現ベースのチェックは削除し、RoslynCompilerのSecurityValidatorが処理する
+                // これにより、ユーザー定義クラス（Assembly-CSharp）も適切に処理される
                 
                 // コード取得
                 string originalCode = parameters.Code ?? "";

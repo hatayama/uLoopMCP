@@ -1,276 +1,191 @@
 #if ULOOPMCP_HAS_ROSLYN
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Diagnostics;
 #endif
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Collections.Immutable;
 using System.Linq;
-using Newtonsoft.Json;
-using UnityEngine;
-using io.github.hatayama.uLoopMCP;
+using System.Text;
 
 namespace io.github.hatayama.uLoopMCP
 {
-#if ULOOPMCP_HAS_ROSLYN
     /// <summary>
-    /// コードセキュリティ検証機能
-    /// 関連クラス: SecurityPolicy
+    /// セキュリティ検証の中核クラス（改修版）
+    /// Compilationオブジェクトを受け取り、SemanticModelを活用
+    /// 設計ドキュメント参照: working-notes/2025-08-16_Restrictedモードユーザークラス実行機能_design.md
+    /// 関連クラス: SecuritySyntaxWalker, DangerousApiDetector, RoslynCompiler
     /// </summary>
     public class SecurityValidator
     {
-        private SecurityPolicy _policy;
-
-        public SecurityValidator()
+        private readonly DynamicCodeSecurityLevel securityLevel;
+        
+        public SecurityValidator(DynamicCodeSecurityLevel level)
         {
-            _policy = SecurityPolicy.GetDefault();
+            this.securityLevel = level;
         }
-
-        public SecurityValidator(SecurityPolicy policy)
+        
+#if ULOOPMCP_HAS_ROSLYN
+        /// <summary>
+        /// Compilationオブジェクトを受け取って検証（新規メソッド）
+        /// </summary>
+        public SecurityValidationResult ValidateCompilation(CSharpCompilation compilation)
         {
-            _policy = policy ?? SecurityPolicy.GetDefault();
-        }
-
-        public SecurityValidationResult ValidateCode(string code)
-        {
-            string correlationId = Guid.NewGuid().ToString("N")[..8];
-            
-            try
+            SecurityValidationResult result = new()
             {
-                VibeLogger.LogInfo(
-                    "security_validation_start",
-                    "Security validation started",
-                    new { 
-                        codeLength = code?.Length ?? 0,
-                        policyStrictness = _policy.MaxCodeLength,
-                        forbiddenMethodsCount = _policy.ForbiddenMethods.Count,
-                        forbiddenNamespacesCount = _policy.ForbiddenNamespaces.Count
-                    },
-                    correlationId,
-                    "Starting security validation of dynamic code",
-                    "Monitor security violation patterns"
-                );
-
-                SecurityValidationResult result = new SecurityValidationResult { IsValid = true };
-
-                if (string.IsNullOrWhiteSpace(code))
-                {
-                    return result; // 空のコードは安全
-                }
-
-                // コード長チェック
-                if (code.Length > _policy.MaxCodeLength)
-                {
-                    result.IsValid = false;
-                    result.RiskLevel = SecurityLevel.Medium;
-                    result.Violations.Add(new SecurityViolation
-                    {
-                        Type = SecurityViolationType.DangerousMethodCall,
-                        Description = $"Code length {code.Length} exceeds maximum allowed {_policy.MaxCodeLength}",
-                        LineNumber = 0,
-                        CodeSnippet = code.Substring(0, Math.Min(100, code.Length))
-                    });
-                }
-
-                // Syntax Tree解析による詳細チェック
-                SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code);
-                SyntaxNode root = syntaxTree.GetRoot();
-                
-                SecuritySyntaxWalker walker = new SecuritySyntaxWalker(_policy);
-                walker.Visit(root);
-                
-                result.Violations.AddRange(walker.Violations);
-                if (walker.Violations.Count > 0)
-                {
-                    result.IsValid = false;
-                    result.RiskLevel = DetermineRiskLevel(walker.Violations);
-                }
-
-                VibeLogger.LogInfo(
-                    "security_validation_complete",
-                    "Security validation completed",
-                    new { 
-                        isValid = result.IsValid,
-                        violationCount = result.Violations.Count,
-                        riskLevel = result.RiskLevel.ToString()
-                    },
-                    correlationId,
-                    $"Validation completed: {(result.IsValid ? "SAFE" : "VIOLATIONS FOUND")}",
-                    "Track security violation patterns for policy improvement"
-                );
-
+                IsValid = true,
+                Violations = new List<SecurityViolation>(),
+                CompilationErrors = new List<string>()
+            };
+            
+            // Level 2 (FullAccess)は検証スキップ
+            if (securityLevel == DynamicCodeSecurityLevel.FullAccess)
+            {
                 return result;
             }
-            catch (Exception ex)
+            
+            // Level 0 (Disabled)は即座に拒否
+            if (securityLevel == DynamicCodeSecurityLevel.Disabled)
             {
-                VibeLogger.LogError(
-                    "security_validation_error",
-                    "Security validation failed with exception",
-                    new { 
-                        error = ex.Message,
-                        stackTrace = ex.StackTrace
-                    },
-                    correlationId,
-                    "Security validation encountered an error",
-                    "Investigate validation failures"
-                );
-
-                return new SecurityValidationResult
+                result.IsValid = false;
+                result.Violations.Add(new SecurityViolation
                 {
-                    IsValid = false,
-                    RiskLevel = SecurityLevel.Critical,
-                    Violations = new List<SecurityViolation>
+                    ViolationType = ViolationType.DangerousApiCall,
+                    Message = "Code execution is disabled at current security level",
+                    ApiName = "N/A"
+                });
+                return result;
+            }
+            
+            // Level 1 (Restricted): 詳細検査を実行
+            string correlationId = Guid.NewGuid().ToString("N")[..8];
+            
+            // 全てのSyntaxTreeを検査
+            foreach (SyntaxTree tree in compilation.SyntaxTrees)
+            {
+                SemanticModel semanticModel = compilation.GetSemanticModel(tree);
+                SecuritySyntaxWalker walker = new(semanticModel);
+                
+                // ルートノードから走査開始
+                SyntaxNode root = tree.GetRoot();
+                walker.Visit(root);
+                
+                // 違反を収集
+                if (walker.Violations.Any())
+                {
+                    result.IsValid = false;
+                    result.Violations.AddRange(walker.Violations);
+                    
+                    // ログ出力
+                    foreach (SecurityViolation violation in walker.Violations)
                     {
-                        new()
-                        {
-                            Type = SecurityViolationType.DangerousMethodCall,
-                            Description = $"Security validation failed: {ex.Message}",
-                            LineNumber = 0,
-                            CodeSnippet = code.Substring(0, Math.Min(100, code.Length))
-                        }
+                        VibeLogger.LogWarning(
+                            "security_violation_detected",
+                            violation.Message,
+                            new
+                            {
+                                type = violation.Type.ToString(),
+                                location = violation.Location?.ToString(),
+                                apiName = violation.ApiName
+                            },
+                            correlationId,
+                            "Security violation found during code analysis",
+                            "Review and fix dangerous API usage"
+                        );
                     }
-                };
-            }
-        }
-
-        public void LoadSecurityPolicy(string jsonPath)
-        {
-            try
-            {
-                if (!File.Exists(jsonPath))
-                {
-                    Debug.LogWarning($"Security policy file not found: {jsonPath}");
-                    return;
-                }
-
-                string jsonContent = File.ReadAllText(jsonPath);
-                SecurityPolicy policy = JsonConvert.DeserializeObject<SecurityPolicy>(jsonContent);
-                if (policy != null)
-                {
-                    _policy = policy;
-                    Debug.Log($"Security policy loaded from: {jsonPath}");
                 }
             }
-            catch (Exception ex)
-            {
-                Debug.LogError($"Failed to load security policy: {ex.Message}");
-            }
-        }
-
-        public bool IsMethodAllowed(string methodSignature)
-        {
-            if (string.IsNullOrWhiteSpace(methodSignature))
-                return true;
-
-            // SecurityPolicyの禁止メソッドチェック
-            if (_policy.ForbiddenMethods.Any(forbidden => methodSignature.Contains(forbidden)))
-                return false;
-
-            // SecurityPolicyの禁止名前空間チェック  
-            if (_policy.ForbiddenNamespaces.Any(ns => methodSignature.StartsWith(ns)))
-                return false;
-
-            return true;
-        }
-
-        private SecurityLevel DetermineRiskLevel(List<SecurityViolation> violations)
-        {
-            if (!violations.Any()) return SecurityLevel.Safe;
-
-            SecurityLevel maxRisk = SecurityLevel.Safe;
             
-            foreach (SecurityViolation violation in violations)
+            // 診断情報も確認
+            ImmutableArray<Diagnostic> diagnostics = compilation.GetDiagnostics();
+            foreach (Diagnostic diagnostic in diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error))
             {
-                SecurityLevel riskLevel = violation.Type switch
-                {
-                    SecurityViolationType.UnsafeCode => SecurityLevel.Critical,
-                    SecurityViolationType.ProcessExecution => SecurityLevel.Critical,
-                    SecurityViolationType.FileSystemAccess => SecurityLevel.High,
-                    SecurityViolationType.NetworkAccess => SecurityLevel.High,
-                    SecurityViolationType.ReflectionUsage => SecurityLevel.Medium,
-                    SecurityViolationType.DangerousMethodCall => SecurityLevel.Medium,
-                    SecurityViolationType.ForbiddenNamespace => SecurityLevel.Low,
-                    _ => SecurityLevel.Low
-                };
-
-                if (riskLevel > maxRisk)
-                    maxRisk = riskLevel;
+                result.CompilationErrors.Add(diagnostic.GetMessage());
             }
-
-            return maxRisk;
+            
+            return result;
         }
-    }
-
-    /// <summary>
-    /// セキュリティ検証用Syntax Walker
-    /// </summary>
-    internal class SecuritySyntaxWalker : CSharpSyntaxWalker
-    {
-        private readonly SecurityPolicy _policy;
+#endif
         
-        public List<SecurityViolation> Violations { get; } = new();
-
-        public SecuritySyntaxWalker(SecurityPolicy policy)
+        /// <summary>
+        /// 従来のコード文字列検証（後方互換性のため維持）
+        /// </summary>
+        public SecurityValidationResult ValidateCode(string code)
         {
-            _policy = policy;
-        }
-
-        public override void VisitInvocationExpression(InvocationExpressionSyntax node)
-        {
-            string methodCall = node.ToString();
+#if ULOOPMCP_HAS_ROSLYN
+            // SyntaxTreeを作成
+            SyntaxTree tree = CSharpSyntaxTree.ParseText(code);
             
-            // SecurityPolicyの禁止メソッド呼び出しチェック
-            foreach (string forbidden in _policy.ForbiddenMethods)
+            // 簡易Compilationを作成
+            CSharpCompilation compilation = CreateSimpleCompilation(tree);
+            
+            // 新しいメソッドに委譲
+            return ValidateCompilation(compilation);
+#else
+            // Roslynがない場合は簡易チェックのみ
+            SecurityValidationResult result = new()
             {
-                if (methodCall.Contains(forbidden))
+                IsValid = true,
+                Violations = new List<SecurityViolation>(),
+                CompilationErrors = new List<string>()
+            };
+            
+            if (securityLevel == DynamicCodeSecurityLevel.Disabled)
+            {
+                result.IsValid = false;
+                result.Violations.Add(new SecurityViolation
                 {
-                    Violations.Add(new SecurityViolation
+                    ViolationType = ViolationType.DangerousApiCall,
+                    Message = "Code execution is disabled",
+                    ApiName = "N/A"
+                });
+            }
+            else if (securityLevel == DynamicCodeSecurityLevel.Restricted)
+            {
+                // 簡易的な文字列ベースの危険API検出
+                if (DynamicCodeSecurityManager.ContainsDangerousApi(code))
+                {
+                    result.IsValid = false;
+                    result.Violations.Add(new SecurityViolation
                     {
-                        Type = SecurityViolationType.DangerousMethodCall,
-                        Description = $"Forbidden method call detected: {forbidden}",
-                        LineNumber = node.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
-                        CodeSnippet = methodCall
+                        ViolationType = ViolationType.DangerousApiCall,
+                        Message = "Dangerous API pattern detected",
+                        ApiName = "Unknown"
                     });
                 }
             }
-
-            base.VisitInvocationExpression(node);
-        }
-
-        public override void VisitUsingDirective(UsingDirectiveSyntax node)
-        {
-            string namespaceName = node.Name?.ToString();
             
-            if (namespaceName != null && _policy.ForbiddenNamespaces.Contains(namespaceName))
-            {
-                Violations.Add(new SecurityViolation
-                {
-                    Type = SecurityViolationType.ForbiddenNamespace,
-                    Description = $"Forbidden namespace: {namespaceName}",
-                    LineNumber = node.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
-                    CodeSnippet = node.ToString()
-                });
-            }
-
-            base.VisitUsingDirective(node);
-        }
-
-        public override void VisitUnsafeStatement(UnsafeStatementSyntax node)
-        {
-            if (!_policy.AllowUnsafeCode)
-            {
-                Violations.Add(new SecurityViolation
-                {
-                    Type = SecurityViolationType.UnsafeCode,
-                    Description = "Unsafe code is not allowed",
-                    LineNumber = node.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
-                    CodeSnippet = node.ToString()
-                });
-            }
-
-            base.VisitUnsafeStatement(node);
-        }
-    }
+            return result;
 #endif
+        }
+        
+#if ULOOPMCP_HAS_ROSLYN
+        private CSharpCompilation CreateSimpleCompilation(SyntaxTree tree)
+        {
+            // 基本的な参照のみで簡易コンパイル
+            List<MetadataReference> references = new()
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location)
+            };
+            
+            // Unity関連アセンブリも追加
+            System.Reflection.Assembly unityEngine = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.GetName().Name == "UnityEngine");
+            if (unityEngine != null && !string.IsNullOrEmpty(unityEngine.Location))
+            {
+                references.Add(MetadataReference.CreateFromFile(unityEngine.Location));
+            }
+            
+            return CSharpCompilation.Create(
+                "SecurityValidation",
+                syntaxTrees: new[] { tree },
+                references: references,
+                options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+            );
+        }
+#endif
+    }
 }

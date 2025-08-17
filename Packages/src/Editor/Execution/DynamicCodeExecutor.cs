@@ -106,7 +106,7 @@ namespace io.github.hatayama.uLoopMCP
                     // セキュリティ違反がある場合は専用のエラーメッセージ
                     if (compilationResult.HasSecurityViolations)
                     {
-                        return CreateFailureResult("セキュリティポリシー違反が検出されました",
+                        return CreateFailureResult("セキュリティ違反が検出されました",
                             stopwatch.Elapsed, ConvertToSecurityViolations(compilationResult.SecurityViolations));
                     }
                     
@@ -202,7 +202,8 @@ namespace io.github.hatayama.uLoopMCP
         {
             // 実行時セキュリティチェック追加
             #if ULOOPMCP_HAS_ROSLYN
-            DynamicCodeSecurityLevel currentLevel = McpEditorSettings.GetDynamicCodeSecurityLevel();
+            // テスト時は DynamicCodeSecurityManager.CurrentLevel を優先
+            DynamicCodeSecurityLevel currentLevel = DynamicCodeSecurityManager.CurrentLevel;
             if (currentLevel == DynamicCodeSecurityLevel.Disabled)
             {
                 return new ExecutionResult
@@ -277,30 +278,42 @@ namespace io.github.hatayama.uLoopMCP
 #if ULOOPMCP_HAS_ROSLYN
         private SecurityValidationResult ValidateCodeSecurity(string code, string correlationId)
         {
-            SecurityValidationResult result = _validator.ValidateCode(code);
-            
-            if (!result.IsValid)
+            // Restrictedモードの場合、Roslyn経由でのセキュリティ検証に任せる
+            // ここでは簡易チェックのみ実施（空文字列チェックなど）
+            if (string.IsNullOrWhiteSpace(code))
             {
-                lock (_statsLock)
+                return new SecurityValidationResult
                 {
-                    _statistics.SecurityViolations++;
-                }
-
-                VibeLogger.LogWarning(
-                    "security_validation_failed",
-                    $"Security validation failed with {result.Violations.Count} violations",
-                    new
+                    IsValid = false,
+                    Violations = new List<SecurityViolation>
                     {
-                        violation_count = result.Violations.Count,
-                        risk_level = result.RiskLevel.ToString()
-                    },
-                    correlationId,
-                    "セキュリティ検証失敗",
-                    "違反内容の詳細分析"
-                );
+                        new SecurityViolation
+                        {
+                            Type = SecurityViolationType.DangerousCode,
+                            Description = "コードが空です",
+                            LineNumber = 0,
+                            CodeSnippet = string.Empty
+                        }
+                    }
+                };
             }
 
-            return result;
+            // Roslyn使用時はコンパイル時にSecurityValidatorで詳細チェックされるため
+            // ここでは基本的な検証のみで通す
+            VibeLogger.LogInfo(
+                "security_pre_validation_passed",
+                "Pre-validation passed, detailed check will be done during compilation",
+                new { code_length = code.Length },
+                correlationId,
+                "事前検証パス（詳細はコンパイル時）",
+                "コンパイル時のRoslyn検証に注目"
+            );
+
+            return new SecurityValidationResult
+            {
+                IsValid = true,
+                Violations = new List<SecurityViolation>()
+            };
         }
 
         private CompilationResult CompileCode(string code, string className, string correlationId)

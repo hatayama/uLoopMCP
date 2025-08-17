@@ -47,123 +47,8 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsTrue(canExecute);
         }
 
-        [Test]
-        public void ContainsDangerousApi_SystemIOFileを検出するか確認()
-        {
-            // Arrange
-            string code = "System.IO.File.ReadAllText(\"test.txt\");";
-            
-            // Act
-            bool isDangerous = DynamicCodeSecurityManager.ContainsDangerousApi(code);
-            
-            // Assert
-            Assert.IsTrue(isDangerous);
-        }
-
-        [Test]
-        public void ContainsDangerousApi_Fileクラスを検出するか確認()
-        {
-            // Arrange
-            string code = "File.WriteAllText(\"test.txt\", \"content\");";
-            
-            // Act
-            bool isDangerous = DynamicCodeSecurityManager.ContainsDangerousApi(code);
-            
-            // Assert
-            Assert.IsTrue(isDangerous);
-        }
-
-        [Test]
-        public void ContainsDangerousApi_HttpClientを検出するか確認()
-        {
-            // Arrange
-            string code = "var client = new HttpClient();";
-            
-            // Act
-            bool isDangerous = DynamicCodeSecurityManager.ContainsDangerousApi(code);
-            
-            // Assert
-            Assert.IsTrue(isDangerous);
-        }
-
-        [Test]
-        public void ContainsDangerousApi_SystemNetを検出するか確認()
-        {
-            // Arrange
-            string code = "System.Net.WebRequest.Create(\"http://example.com\");";
-            
-            // Act
-            bool isDangerous = DynamicCodeSecurityManager.ContainsDangerousApi(code);
-            
-            // Assert
-            Assert.IsTrue(isDangerous);
-        }
-
-        [Test]
-        public void ContainsDangerousApi_Processを検出するか確認()
-        {
-            // Arrange
-            string code = "Process.Start(\"notepad.exe\");";
-            
-            // Act
-            bool isDangerous = DynamicCodeSecurityManager.ContainsDangerousApi(code);
-            
-            // Assert
-            Assert.IsTrue(isDangerous);
-        }
-
-        [Test]
-        public void ContainsDangerousApi_リフレクションを検出するか確認()
-        {
-            // Arrange
-            string code = "Type.GetType(\"SomeClass\").GetMethod(\"SomeMethod\");";
-            
-            // Act
-            bool isDangerous = DynamicCodeSecurityManager.ContainsDangerousApi(code);
-            
-            // Assert
-            Assert.IsTrue(isDangerous);
-        }
-
-        [Test]
-        public void ContainsDangerousApi_GameObjectCreatePrimitiveは検出しないか確認()
-        {
-            // Arrange
-            string code = "GameObject.CreatePrimitive(PrimitiveType.Cube);";
-            
-            // Act
-            bool isDangerous = DynamicCodeSecurityManager.ContainsDangerousApi(code);
-            
-            // Assert
-            Assert.IsFalse(isDangerous);
-        }
-
-        [Test]
-        public void ContainsDangerousApi_UnityEngineは検出しないか確認()
-        {
-            // Arrange
-            string code = "UnityEngine.Debug.Log(\"Hello World\");";
-            
-            // Act
-            bool isDangerous = DynamicCodeSecurityManager.ContainsDangerousApi(code);
-            
-            // Assert
-            Assert.IsFalse(isDangerous);
-        }
-
-        [Test]
-        public void ContainsDangerousApi_空文字列でfalseを返すか確認()
-        {
-            // Act
-            bool isDangerous1 = DynamicCodeSecurityManager.ContainsDangerousApi("");
-            bool isDangerous2 = DynamicCodeSecurityManager.ContainsDangerousApi(null);
-            bool isDangerous3 = DynamicCodeSecurityManager.ContainsDangerousApi("   ");
-            
-            // Assert
-            Assert.IsFalse(isDangerous1);
-            Assert.IsFalse(isDangerous2);
-            Assert.IsFalse(isDangerous3);
-        }
+        // ContainsDangerousApiメソッドのテストは削除（RoslynベースのSecurityValidatorに移行）
+        // 新しいテストはRestrictedModeUserClassTestsに実装済み
 
         [Test]
         public void CurrentLevelプロパティの取得が動作するか確認()
@@ -246,50 +131,8 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        [Test]
-        public void IsCodeAllowedForCurrentLevel_Level0で常にfalseを返すか確認()
-        {
-            // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Disabled);
-            
-            // Act
-            bool allowed1 = DynamicCodeSecurityManager.IsCodeAllowedForCurrentLevel("GameObject.CreatePrimitive(PrimitiveType.Cube);");
-            bool allowed2 = DynamicCodeSecurityManager.IsCodeAllowedForCurrentLevel("System.IO.File.ReadAllText(\"test.txt\");");
-            
-            // Assert
-            Assert.IsFalse(allowed1);
-            Assert.IsFalse(allowed2);
-        }
-
-        [Test]
-        public void IsCodeAllowedForCurrentLevel_Level1で危険APIをブロックするか確認()
-        {
-            // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            
-            // Act
-            bool allowedSafe = DynamicCodeSecurityManager.IsCodeAllowedForCurrentLevel("GameObject.CreatePrimitive(PrimitiveType.Cube);");
-            bool allowedDangerous = DynamicCodeSecurityManager.IsCodeAllowedForCurrentLevel("System.IO.File.ReadAllText(\"test.txt\");");
-            
-            // Assert
-            Assert.IsTrue(allowedSafe);
-            Assert.IsFalse(allowedDangerous);
-        }
-
-        [Test]
-        public void IsCodeAllowedForCurrentLevel_Level2で全て許可するか確認()
-        {
-            // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
-            
-            // Act
-            bool allowed1 = DynamicCodeSecurityManager.IsCodeAllowedForCurrentLevel("GameObject.CreatePrimitive(PrimitiveType.Cube);");
-            bool allowed2 = DynamicCodeSecurityManager.IsCodeAllowedForCurrentLevel("System.IO.File.ReadAllText(\"test.txt\");");
-            
-            // Assert
-            Assert.IsTrue(allowed1);
-            Assert.IsTrue(allowed2);
-        }
+        // IsCodeAllowedForCurrentLevelメソッドは削除（RoslynベースのSecurityValidatorに移行）
+        // 関連テストは廃止
 
         [Test]
         public void GetAllowedAssemblies_各レベルで適切なリストを返すか確認()

@@ -1,6 +1,8 @@
 using NUnit.Framework;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -68,14 +70,23 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
-        public void Level1_GetAssembliesにAssemblyCSharpが含まれないか確認()
+        public void Level1_GetAssembliesにAssemblyCSharpが含まれるか確認()
         {
             // Arrange & Act
             IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Restricted);
             
             // Assert
             Assert.IsNotNull(assemblies);
-            Assert.IsFalse(assemblies.Any(a => a == "Assembly-CSharp"), "Level 1 (Restricted) should NOT include Assembly-CSharp");
+            // 新仕様: RestrictedモードでもAssembly-CSharpを許可（ユーザー定義クラス実行機能）
+            // Assembly-CSharpが存在する場合は含まれるはず
+            Assembly assemblyCSharp = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.GetName().Name == "Assembly-CSharp");
+            
+            if (assemblyCSharp != null)
+            {
+                Assert.IsTrue(assemblies.Any(a => a == "Assembly-CSharp"), 
+                    "Level 1 (Restricted) should include Assembly-CSharp when it exists");
+            }
         }
 
         [Test]
@@ -137,11 +148,12 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
-        public void IsAssemblyAllowed_Level1でAssemblyCSharpが拒否されるか確認()
+        public void IsAssemblyAllowed_Level1でAssemblyCSharpが許可されるか確認()
         {
+            // 新仕様: RestrictedモードでもAssembly-CSharpを許可（ユーザー定義クラス実行機能）
             // Act & Assert
-            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("Assembly-CSharp", DynamicCodeSecurityLevel.Restricted),
-                "Level 1 (Restricted) should block Assembly-CSharp");
+            Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("Assembly-CSharp", DynamicCodeSecurityLevel.Restricted),
+                "Level 1 (Restricted) should allow Assembly-CSharp (new feature)");
         }
 
         [Test]

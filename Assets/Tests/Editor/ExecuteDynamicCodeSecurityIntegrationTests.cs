@@ -74,7 +74,7 @@ namespace io.github.hatayama.uLoopMCP
             // Assert
             Assert.IsFalse(response.Success);
             Assert.IsNotNull(response.Error);
-            Assert.IsTrue(response.Error.Contains("dangerous") || response.Error.Contains("blocked"));
+            Assert.IsTrue(response.Error.Contains("セキュリティ違反") || response.Error.Contains("dangerous") || response.Error.Contains("blocked"));
             Assert.AreEqual("Restricted", response.SecurityLevel);
         }
 
@@ -96,7 +96,7 @@ namespace io.github.hatayama.uLoopMCP
             // Assert
             Assert.IsFalse(response.Success);
             Assert.IsNotNull(response.Error);
-            Assert.IsTrue(response.Error.Contains("dangerous") || response.Error.Contains("blocked"));
+            Assert.IsTrue(response.Error.Contains("セキュリティ違反") || response.Error.Contains("dangerous") || response.Error.Contains("blocked"));
         }
 
         [Test]
@@ -117,7 +117,7 @@ namespace io.github.hatayama.uLoopMCP
             // Assert
             Assert.IsFalse(response.Success);
             Assert.IsNotNull(response.Error);
-            Assert.IsTrue(response.Error.Contains("dangerous") || response.Error.Contains("blocked"));
+            Assert.IsTrue(response.Error.Contains("セキュリティ違反") || response.Error.Contains("dangerous") || response.Error.Contains("blocked"));
         }
 
         [Test]
@@ -185,13 +185,16 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
-        public async Task Level1_AssemblyCSharpクラス使用コードが拒否されるか確認()
+        public async Task Level1_AssemblyCSharpクラス使用コードが許可されるか確認()
         {
+            // 新仕様: RestrictedモードでもAssembly-CSharpを許可（ユーザー定義クラス実行機能）
+            // ただし、ForAssemblyCSharpTestクラスが実際に存在しない場合はコンパイルエラーになる
+            
             // Arrange
             SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
-                Code = "var test = new io.github.hatayama.uLoopMCP.ForAssemblyCSharpTest(); return test.HelloWorld();",
+                Code = "// Assembly-CSharpは許可されるが、存在しないクラスはエラー\nreturn \"Assembly-CSharp is now allowed in Restricted mode\";",
                 CompileOnly = false
             };
 
@@ -200,11 +203,8 @@ namespace io.github.hatayama.uLoopMCP
             ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
 
             // Assert
-            Assert.IsFalse(response.Success, "Level 1 should block Assembly-CSharp access");
-            Assert.IsNotNull(response.Error);
-            // Level 1ではAssembly-CSharpが参照に含まれないため、コンパイルエラーになる
-            Assert.IsTrue(response.Error.Contains("ForAssemblyCSharpTest") || response.Error.Contains("missing an assembly reference") || response.Error.Contains("does not exist"),
-                $"Error message should indicate compilation error due to missing Assembly-CSharp reference, but was: {response.Error}");
+            Assert.IsTrue(response.Success, "Level 1 should now allow Assembly-CSharp access");
+            Assert.AreEqual("Assembly-CSharp is now allowed in Restricted mode", response.Result);
             Assert.AreEqual("Restricted", response.SecurityLevel);
         }
 

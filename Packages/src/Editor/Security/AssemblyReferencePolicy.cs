@@ -45,8 +45,8 @@ namespace io.github.hatayama.uLoopMCP
             "System.Diagnostics.Process",
             "System.Reflection.Emit",
             "System.CodeDom",
-            "Microsoft.Win32",
-            "Assembly-CSharp"  // Level 1ではユーザーコードも禁止
+            "Microsoft.Win32"
+            // Assembly-CSharpは削除（ユーザー定義として動的判定）
         };
 
         // Level 2 (FullAccess) でも除外される危険なアセンブリ（動的生成系のみ）
@@ -130,7 +130,21 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
 
                 string assemblyName = assembly.GetName().Name;
-                if (IsRestrictedAssemblyAllowed(assemblyName))
+                
+                // ユーザー定義アセンブリは動的判定で許可
+                if (AssemblyClassifier.IsUserDefinedAssembly(assembly))
+                {
+                    assemblies.Add(assemblyName);
+                    VibeLogger.LogInfo(
+                        "assembly_allowed_user_defined",
+                        $"User-defined assembly allowed in Restricted mode: {assemblyName}",
+                        new { assemblyName, location = assembly.Location },
+                        correlationId: Guid.NewGuid().ToString("N")[..8],
+                        humanNote: "User assembly permitted for compilation",
+                        aiTodo: "Track user assembly usage"
+                    );
+                }
+                else if (IsRestrictedAssemblyAllowed(assemblyName))
                 {
                     assemblies.Add(assemblyName);
                 }
@@ -178,6 +192,12 @@ namespace io.github.hatayama.uLoopMCP
 
         private static bool IsRestrictedAssemblyAllowed(string assemblyName)
         {
+            // ユーザー定義アセンブリは許可（名前ベースの簡易判定）
+            if (AssemblyClassifier.IsUserDefinedAssemblyByName(assemblyName))
+            {
+                return true;
+            }
+            
             // 禁止リストチェック（優先）
             foreach (string forbidden in RestrictedForbiddenPrefixes)
             {

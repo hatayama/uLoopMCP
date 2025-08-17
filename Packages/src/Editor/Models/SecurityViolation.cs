@@ -3,7 +3,7 @@ namespace io.github.hatayama.uLoopMCP
     /// <summary>
     /// セキュリティ違反
     /// 
-    /// 関連クラス: SecurityValidator
+    /// 関連クラス: SecurityValidator, SecuritySyntaxWalker
     /// </summary>
     public class SecurityViolation
     {
@@ -18,6 +18,21 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>コードスニペット</summary>
         public string CodeSnippet { get; set; }
+        
+        // 拡張プロパティ（Roslyn検証用）
+        /// <summary>違反タイプ（Roslyn）</summary>
+        public ViolationType ViolationType { get; set; }
+        
+        /// <summary>メッセージ</summary>
+        public string Message { get; set; }
+        
+        /// <summary>API名</summary>
+        public string ApiName { get; set; }
+        
+#if ULOOPMCP_HAS_ROSLYN
+        /// <summary>ロケーション</summary>
+        public Microsoft.CodeAnalysis.Location Location { get; set; }
+#endif
     }
 
     /// <summary>
