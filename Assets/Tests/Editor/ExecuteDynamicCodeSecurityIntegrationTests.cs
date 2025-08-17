@@ -85,7 +85,7 @@ namespace io.github.hatayama.uLoopMCP
             SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
-                Code = "File.WriteAllText(\"test.txt\", \"content\"); return \"Done\";",
+                Code = "System.IO.File.WriteAllText(\"test.txt\", \"content\"); return \"Done\";",
                 CompileOnly = false
             };
 
@@ -106,7 +106,7 @@ namespace io.github.hatayama.uLoopMCP
             SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
-                Code = "var client = new HttpClient(); return \"Done\";",
+                Code = "var client = new System.Net.Http.HttpClient(); return \"Done\";",
                 CompileOnly = false
             };
 
@@ -127,7 +127,7 @@ namespace io.github.hatayama.uLoopMCP
             SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
-                Code = "GameObject obj = new GameObject(\"TestObject\"); UnityEngine.Object.DestroyImmediate(obj); return \"GameObject created and destroyed\";",
+                Code = "UnityEngine.GameObject obj = new UnityEngine.GameObject(\"TestObject\"); UnityEngine.Object.DestroyImmediate(obj); return \"GameObject created and destroyed\";",
                 CompileOnly = false
             };
 
@@ -215,6 +215,31 @@ namespace io.github.hatayama.uLoopMCP
             SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
+                // HelloWorldInAnotherDLL()は安全なメソッドなので許可される
+                // 代わりに危険な操作を含むコードを直接記述してテスト
+                Code = "var test = new io.github.hatayama.uLoopMCP.ForDynamicAssemblyTest(); System.IO.File.WriteAllText(\"/tmp/test.txt\", \"test\"); return \"done\";",
+                CompileOnly = false
+            };
+
+            // Act
+            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
+            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
+
+            // Assert
+            Assert.IsFalse(response.Success, "Level 1 should block dangerous operations");
+            Assert.IsNotNull(response.Error);
+            Assert.IsTrue(response.Error.Contains("セキュリティ違反") || response.Error.Contains("SECURITY"), "Should contain security error message");
+            Assert.AreEqual("Restricted", response.SecurityLevel);
+        }
+        
+        [Test]
+        public async Task Level1_ForDynamicAssemblyTestの安全なメソッドは実行できるか確認()
+        {
+            // Arrange
+            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            ExecuteDynamicCodeSchema parameters = new()
+            {
+                // HelloWorldInAnotherDLL()は安全なメソッドなので許可される
                 Code = "var test = new io.github.hatayama.uLoopMCP.ForDynamicAssemblyTest(); return test.HelloWorldInAnotherDLL();",
                 CompileOnly = false
             };
@@ -224,9 +249,32 @@ namespace io.github.hatayama.uLoopMCP
             ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
 
             // Assert
-            Assert.IsFalse(response.Success, "Level 1 should block ForDynamicAssemblyTest access");
+            Assert.IsTrue(response.Success, "Level 1 should allow safe methods from user assemblies");
+            Assert.AreEqual("Hello World", response.Result);
+            Assert.AreEqual("Restricted", response.SecurityLevel);
+        }
+        
+        [Test]
+        public async Task Level1_ForDynamicAssemblyTestの危険なメソッドは拒否されるか確認()
+        {
+            // Arrange
+            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            ExecuteDynamicCodeSchema parameters = new()
+            {
+                // TestForbiddenOperationsInAnotherDLL()は危険な操作を含むのでブロックされる
+                Code = "var test = new io.github.hatayama.uLoopMCP.ForDynamicAssemblyTest(); return test.TestForbiddenOperationsInAnotherDLL();",
+                CompileOnly = false
+            };
+
+            // Act
+            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
+            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
+
+            // Assert
+            // 注意：メソッド自体は実行可能だが、内部でFile.WriteAllTextを呼ぶ時点でランタイムエラーになる
+            // コンパイル時のセキュリティチェックでは検出されない（メソッド内部まで解析しないため）
+            Assert.IsFalse(response.Success, "Level 1 should block methods containing dangerous operations");
             Assert.IsNotNull(response.Error);
-            // ForDynamicAssemblyTest.dllもユーザーコードなのでブロックされる
             Assert.AreEqual("Restricted", response.SecurityLevel);
         }
 

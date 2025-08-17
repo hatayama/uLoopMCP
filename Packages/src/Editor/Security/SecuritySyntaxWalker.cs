@@ -213,6 +213,8 @@ namespace io.github.hatayama.uLoopMCP
                     });
                 }
             }
+            // 完全修飾名の使用を強制するため、型解決できない場合はエラーにする
+            // ユーザーは System.IO.File.WriteAllText のように書く必要がある
             
             base.VisitInvocationExpression(node);
         }

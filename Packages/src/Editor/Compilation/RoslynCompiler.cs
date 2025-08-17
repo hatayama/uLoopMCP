@@ -26,10 +26,10 @@ namespace io.github.hatayama.uLoopMCP
         private List<MetadataReference> _currentReferences;
         private bool _disposed;
 
-        // Unity AI Assistant方式のFixProviderリスト
+        // FixProviderリスト（現在は空）
+        // 完全修飾名の使用を推奨するため、using自動追加は無効化
         private static readonly List<CSharpFixProvider> FixProviders = new()
         {
-            new FixMissingUsings()
         };
 
         public RoslynCompiler()
@@ -297,6 +297,97 @@ namespace io.github.hatayama.uLoopMCP
                 compilationOptions
             );
 
+            // セキュリティ検証を最初に実行（Level 1 Restrictedモードの場合）
+            // エラーの有無に関わらず、危険なAPIの使用を検出
+            if (_currentSecurityLevel == DynamicCodeSecurityLevel.Restricted)
+            {
+                // セキュリティ検証用に一時的に全参照を含むコンパイレーションを作成
+                // これにより、System.IOなどの危険な型もSemanticModelで解決可能になる
+                List<MetadataReference> securityCheckReferences = new();
+                
+                // 全てのロード済みアセンブリから参照を作成（危険なものも含む）
+                foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    if (!assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
+                    {
+                        try
+                        {
+                            securityCheckReferences.Add(MetadataReference.CreateFromFile(assembly.Location));
+                        }
+                        catch
+                        {
+                            // 参照追加に失敗した場合は無視
+                        }
+                    }
+                }
+                
+                // セキュリティ検証用のコンパイレーション（全参照付き）
+                CSharpCompilation securityCheckCompilation = CSharpCompilation.Create(
+                    $"SecurityCheck_{correlationId}",
+                    new[] { context.SyntaxTree },
+                    securityCheckReferences,
+                    compilationOptions
+                );
+                
+                VibeLogger.LogInfo(
+                    "roslyn_security_check_compilation_created",
+                    "Created compilation with full references for security validation",
+                    new 
+                    { 
+                        referenceCount = securityCheckReferences.Count,
+                        originalReferenceCount = context.References.Count 
+                    },
+                    correlationId,
+                    "Security validation compilation prepared with all references",
+                    "This allows SemanticModel to resolve dangerous types for detection"
+                );
+                
+                SecurityValidator validator = new(_currentSecurityLevel);
+                SecurityValidationResult validationResult = validator.ValidateCompilation(securityCheckCompilation);
+                
+                if (!validationResult.IsValid)
+                {
+                    // セキュリティ違反を検出した場合は即座にエラーとして返す
+                    VibeLogger.LogWarning(
+                        "roslyn_security_validation_failed",
+                        "Security validation failed during compilation",
+                        new
+                        {
+                            violationCount = validationResult.Violations.Count,
+                            violations = validationResult.Violations.Select(v => new
+                            {
+                                type = v.Type.ToString(),
+                                api = v.ApiName,
+                                message = v.Message
+                            }).ToArray()
+                        },
+                        correlationId,
+                        "Dangerous API usage detected in user code",
+                        "Review and fix security violations"
+                    );
+                    
+                    return new CompilationResult
+                    {
+                        Success = false,
+                        UpdatedCode = context.WrappedCode,
+                        Errors = new List<CompilationError>
+                        {
+                            new CompilationError
+                            {
+                                Message = validationResult.GetErrorSummary(),
+                                ErrorCode = "SECURITY001",
+                                Line = 0,
+                                Column = 0
+                            }
+                        },
+                        Warnings = new List<string>(),
+                        HasSecurityViolations = true,
+                        SecurityViolations = validationResult.Violations,
+                        FailureReason = CompilationFailureReason.SecurityViolation
+                    };
+                }
+            }
+
             // Unity AI Assistant方式の診断駆動修正
             SyntaxTree currentTree = context.SyntaxTree;
             bool hasError = true;
@@ -358,54 +449,7 @@ namespace io.github.hatayama.uLoopMCP
                 compilation.SyntaxTrees.First(),
                 currentTree);
 
-            // セキュリティ検証（Level 1 Restrictedモードの場合）
-            if (_currentSecurityLevel == DynamicCodeSecurityLevel.Restricted)
-            {
-                SecurityValidator validator = new(_currentSecurityLevel);
-                SecurityValidationResult validationResult = validator.ValidateCompilation(compilation);
-                
-                if (!validationResult.IsValid)
-                {
-                    // セキュリティ違反を検出した場合はエラーとして返す
-                    VibeLogger.LogWarning(
-                        "roslyn_security_validation_failed",
-                        "Security validation failed during compilation",
-                        new
-                        {
-                            violationCount = validationResult.Violations.Count,
-                            violations = validationResult.Violations.Select(v => new
-                            {
-                                type = v.Type.ToString(),
-                                api = v.ApiName,
-                                message = v.Message
-                            }).ToArray()
-                        },
-                        correlationId,
-                        "Dangerous API usage detected in user code",
-                        "Review and fix security violations"
-                    );
-                    
-                    return new CompilationResult
-                    {
-                        Success = false,
-                        UpdatedCode = context.WrappedCode,
-                        Errors = new List<CompilationError>
-                        {
-                            new CompilationError
-                            {
-                                Message = validationResult.GetErrorSummary(),
-                                ErrorCode = "SECURITY001",
-                                Line = 0,
-                                Column = 0
-                            }
-                        },
-                        Warnings = new List<string>(),
-                        HasSecurityViolations = true,
-                        SecurityViolations = validationResult.Violations,
-                        FailureReason = CompilationFailureReason.SecurityViolation
-                    };
-                }
-            }
+
 
             using MemoryStream memoryStream = new MemoryStream();
             Microsoft.CodeAnalysis.Emit.EmitResult emitResult = compilation.Emit(memoryStream);

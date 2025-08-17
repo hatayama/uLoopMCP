@@ -14,6 +14,10 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void SetSecurityLevel(DynamicCodeSecurityLevel level)
         {
+            // 1. McpEditorSettingsを経由して設定（これがEditorPrefsに保存される）
+            McpEditorSettings.SetDynamicCodeSecurityLevel(level);
+            
+            // 2. DynamicCodeSecurityManagerも直接更新（念のため）
             // CurrentLevelプロパティのセッターを取得して呼び出す
             PropertyInfo currentLevelProperty = typeof(DynamicCodeSecurityManager).GetProperty(
                 "CurrentLevel",
