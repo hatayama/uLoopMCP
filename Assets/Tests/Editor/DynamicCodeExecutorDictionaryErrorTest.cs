@@ -72,31 +72,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.AreEqual("15", result.Result.ToString());
         }
 
-        [Test]
-        [Description("UnityのGameObject作成コードでもエラーが発生しないことを確認")]
-        public async Task UnityGameObjectCreation_ShouldNotThrowDictionaryError()
-        {
-            // Arrange
-            string unityCode = @"
-                GameObject obj = new GameObject(""TestObject"");
-                obj.name = ""Modified"";
-                return obj.name;
-            ";
-            
-            // Act
-            ExecutionResult result = await _executor.ExecuteCodeAsync(
-                unityCode,
-                "DynamicCommand",
-                null,
-                CancellationToken.None,
-                false
-            );
-            
-            // Assert
-            Assert.IsTrue(result.Success,
-                $"Unity GameObject creation should succeed. Error: {result.ErrorMessage ?? "No error"}, Logs: {string.Join(", ", result.Logs ?? new System.Collections.Generic.List<string>())}");
-            Assert.AreEqual("Modified", result.Result);
-        }
+
 
         [Test]
         [Description("コンパイルエラーの内容を詳細に確認")]

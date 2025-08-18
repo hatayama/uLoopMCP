@@ -29,23 +29,24 @@ AVOID These Patterns:
 Common Fixes:
 - Missing return? Add: return ""Task completed"";
 - Object ambiguous? Use: UnityEngine.Object.FindObjectsOfType<GameObject>()
-- Editor API missing? It auto-adds: using UnityEditor;
 - Top-level error? Just write the code, no class wrapper needed!
 
 Perfect for: GameObject creation, scene manipulation, editor tools, batch operations.
 
-## Using Statements - Two Ways to Use:
+## Using Statements - How It Works:
 
-1. **Simple Code (Recommended)**: Just write the logic, tool auto-wraps
-   - var obj = new UnityEngine.GameObject(); return ""Created"";
-   - Use fully-qualified names or let auto-fixing handle it
+**AI-Generated Code**: If your code includes using statements, they will be:
+- Automatically extracted from your code
+- Moved outside the class wrapper to proper location
+- Example: ""using UnityEngine; var obj = new GameObject();"" works correctly
 
-2. **Complete Class Definition**: Include full namespace + class structure  
-   - using UnityEngine; namespace Test { public class MyClass { public object Execute() { ... } } }
-   - Must include namespace, class, and Execute() method
-   - Using statements go at the top, before namespace
+**Simple Code (Recommended)**: Just write the logic without using statements
+- Use fully-qualified names: UnityEngine.GameObject instead of GameObject
+- Or let the system handle namespace resolution
 
-AVOID: using statements in simple code - they'll be placed inside methods causing syntax errors\")]
+**Note**: This tool extracts and relocates using statements from AI-generated code.
+It does NOT auto-add missing using statements. If you get ""type not found"" errors,
+either use fully-qualified names or include the necessary using statements in your code.")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
         private readonly global::io.github.hatayama.uLoopMCP.IDynamicCodeExecutor _executor;
