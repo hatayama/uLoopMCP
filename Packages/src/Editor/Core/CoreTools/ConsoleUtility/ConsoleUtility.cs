@@ -12,29 +12,6 @@ namespace io.github.hatayama.uLoopMCP
     public static class ConsoleUtility
     {
         /// <summary>
-        /// Event that fires when console logs change (Universal API)
-        /// </summary>
-        public static event System.Action consoleLogsChanged
-        {
-            add
-            {
-#if UNITY_6000_0_OR_NEWER
-                ConsoleWindowUtility.consoleLogsChanged += value;
-#else
-                GenericConsoleWindowUtility.consoleLogsChanged += value;
-#endif
-            }
-            remove
-            {
-#if UNITY_6000_0_OR_NEWER
-                ConsoleWindowUtility.consoleLogsChanged -= value;
-#else
-                GenericConsoleWindowUtility.consoleLogsChanged -= value;
-#endif
-            }
-        }
-
-        /// <summary>
         /// Gets console log counts by type (Universal API)
         /// </summary>
         /// <param name="errorCount">Number of error logs</param>

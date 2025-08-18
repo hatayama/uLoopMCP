@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
@@ -10,17 +13,7 @@ namespace io.github.hatayama.uLoopMCP
     public static class GenericConsoleWindowUtility
     {
         private static ConsoleLogRetriever logRetriever;
-        private static int lastLogCount = 0;
-        private static int lastErrorCount = 0;
-        private static int lastWarningCount = 0;
-        private static double lastCheckTime = 0;
-        private static readonly double CheckInterval = 1.0; // Check every 1000ms (1 second)
-
-        /// <summary>
-        /// Event that fires when console logs change (Unity 6 compatible)
-        /// </summary>
-        public static event System.Action consoleLogsChanged;
-
+        
         static GenericConsoleWindowUtility()
         {
             Initialize();
@@ -32,48 +25,6 @@ namespace io.github.hatayama.uLoopMCP
         private static void Initialize()
         {
             logRetriever = new ConsoleLogRetriever();
-            EditorApplication.update += CheckForLogChanges;
-        }
-
-        /// <summary>
-        /// Monitor for console log changes and fire events
-        /// </summary>
-        private static void CheckForLogChanges()
-        {
-            if (logRetriever == null) return;
-            
-            double currentTime = EditorApplication.timeSinceStartup;
-            if (currentTime - lastCheckTime < CheckInterval) return;
-            
-            lastCheckTime = currentTime;
-
-            try
-            {
-                // Get current counts
-                GetConsoleLogCounts(out int errorCount, out int warningCount, out int logCount);
-                
-                // Check if anything changed
-                if (errorCount != lastErrorCount || warningCount != lastWarningCount || logCount != lastLogCount)
-                {
-                    lastErrorCount = errorCount;
-                    lastWarningCount = warningCount;
-                    lastLogCount = logCount;
-                    
-                    // Fire the event
-                    consoleLogsChanged?.Invoke();
-                }
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Log monitoring failed: {ex.Message}");
-                // Mark as failed and stop monitoring to prevent repeated errors
-                logRetriever = null;
-                EditorApplication.update -= CheckForLogChanges;
-                
-                // This is a critical failure - log monitoring is now broken
-                throw new System.InvalidOperationException(
-                    "Console log monitoring has failed and been disabled. Log retrieval functionality is compromised.", ex);
-            }
         }
 
         /// <summary>
@@ -110,7 +61,7 @@ namespace io.github.hatayama.uLoopMCP
                     }
                     
                     // Get all logs and count by type
-                    var allLogs = logRetriever.GetAllLogs();
+                    List<LogEntryDto> allLogs = logRetriever.GetAllLogs();
                     
                     foreach (LogEntryDto log in allLogs)
                     {
@@ -134,11 +85,11 @@ namespace io.github.hatayama.uLoopMCP
                     logRetriever.SetMask(GetSimpleMaskFromUnityMask(originalMask));
                 }
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 Debug.LogError($"Console log count retrieval failed: {ex.Message}");
                 // Don't suppress this exception - caller needs to know count retrieval failed
-                throw new System.InvalidOperationException(
+                throw new InvalidOperationException(
                     "Failed to retrieve console log counts. Console monitoring may be compromised.", ex);
             }
         }
@@ -150,94 +101,22 @@ namespace io.github.hatayama.uLoopMCP
         {
             try
             {
-                var _logEntriesType = System.Reflection.Assembly.GetAssembly(typeof(EditorWindow))
+                Type _logEntriesType = Assembly.GetAssembly(typeof(EditorWindow))
                     .GetType("UnityEditor.LogEntries");
                 
-                var clearMethod = _logEntriesType.GetMethod("Clear", 
-                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                MethodInfo clearMethod = _logEntriesType.GetMethod("Clear", 
+                    BindingFlags.Public | BindingFlags.Static);
                 
                 if (clearMethod != null)
                 {
                     clearMethod.Invoke(null, null);
-                    
-                    // Reset our tracking counts
-                    lastLogCount = 0;
-                    lastErrorCount = 0;
-                    lastWarningCount = 0;
-                    // Fire the change event
-                    consoleLogsChanged?.Invoke();
                 }
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 Debug.LogError($"Console clear operation failed: {ex.Message}");
                 // Don't suppress this exception - caller needs to know clear failed
-                throw new System.InvalidOperationException(
-                    "Failed to clear Unity console. Console operations may be compromised.", ex);
-            }
-        }
-
-        /// <summary>
-        /// Gets all console logs (convenience method)
-        /// </summary>
-        /// <returns>List of all log entries</returns>
-        public static System.Collections.Generic.List<LogEntryDto> GetAllLogs()
-        {
-            if (logRetriever == null) 
-                return new System.Collections.Generic.List<LogEntryDto>();
-            
-            try
-            {
-                return logRetriever.GetAllLogs();
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Failed to retrieve console logs: {ex.Message}");
-                // Don't suppress this exception - caller needs to know retrieval failed
-                throw new System.InvalidOperationException(
-                    "Console log retrieval failed. Log data is not available.", ex);
-            }
-        }
-
-        /// <summary>
-        /// Gets current console mask state
-        /// </summary>
-        /// <returns>Current console mask</returns>
-        public static int GetCurrentMask()
-        {
-            if (logRetriever == null) return 0;
-            
-            try
-            {
-                return logRetriever.GetCurrentMask();
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Console mask retrieval failed: {ex.Message}");
-                // Don't suppress this exception - caller needs to know mask retrieval failed
-                throw new System.InvalidOperationException(
-                    "Failed to get console mask state. Console operations may be compromised.", ex);
-            }
-        }
-
-        /// <summary>
-        /// Sets console mask state
-        /// </summary>
-        /// <param name="mask">Mask value to set</param>
-        public static void SetMask(int mask)
-        {
-            if (logRetriever == null) return;
-            
-            try
-            {
-                logRetriever.SetMask(mask);
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Console mask setting failed: {ex.Message}");
-                // Don't suppress this exception - caller needs to know mask setting failed
-                throw new System.InvalidOperationException(
-                    $"Failed to set console mask to {mask}. Console operations may be compromised.", ex);
+                throw new InvalidOperationException("Failed to clear Unity console. Console operations may be compromised.", ex);
             }
         }
 
@@ -260,16 +139,6 @@ namespace io.github.hatayama.uLoopMCP
                 simpleMask |= 4;
             
             return simpleMask;
-        }
-
-        /// <summary>
-        /// Cleanup when domain reloads
-        /// </summary>
-        [UnityEditor.InitializeOnLoadMethod]
-        private static void OnDomainReload()
-        {
-            EditorApplication.update -= CheckForLogChanges;
-            Initialize();
         }
     }
 }
