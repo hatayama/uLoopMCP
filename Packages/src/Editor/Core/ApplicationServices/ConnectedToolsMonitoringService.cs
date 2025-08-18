@@ -215,8 +215,8 @@ namespace io.github.hatayama.uLoopMCP
         {
             try
             {
-                // Wait 8 seconds for clients to reconnect
-                await TimerDelay.Wait(8000, cancellationToken);
+                // Wait for clients to reconnect
+                await TimerDelay.Wait(10000, cancellationToken);
             }
             catch (OperationCanceledException)
             {
