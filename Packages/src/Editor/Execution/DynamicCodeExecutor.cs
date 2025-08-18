@@ -287,7 +287,7 @@ namespace io.github.hatayama.uLoopMCP
                     {
                         new SecurityViolation
                         {
-                            Type = SecurityViolationType.DangerousCode,
+                            Type = SecurityViolationType.DangerousApiCall,
                             Description = "コードが空です",
                             LineNumber = 0,
                             CodeSnippet = string.Empty
@@ -379,11 +379,11 @@ namespace io.github.hatayama.uLoopMCP
                     
                 if (!string.IsNullOrEmpty(violation.ApiName))
                 {
-                    violationMessages.Add($"{violation.ViolationType}: {violationMessage} (API: {violation.ApiName})");
+                    violationMessages.Add($"{violation.Type}: {violationMessage} (API: {violation.ApiName})");
                 }
                 else
                 {
-                    violationMessages.Add($"{violation.ViolationType}: {violationMessage}");
+                    violationMessages.Add($"{violation.Type}: {violationMessage}");
                 }
             }
 

@@ -19,10 +19,6 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>コードスニペット</summary>
         public string CodeSnippet { get; set; }
         
-        // 拡張プロパティ（Roslyn検証用）
-        /// <summary>違反タイプ（Roslyn）</summary>
-        public ViolationType ViolationType { get; set; }
-        
         /// <summary>メッセージ</summary>
         public string Message { get; set; }
         
@@ -39,35 +35,23 @@ namespace io.github.hatayama.uLoopMCP
     }
 
     /// <summary>
-    /// セキュリティ違反タイプ
+    /// セキュリティ違反タイプ（シンプル化済み）
     /// </summary>
     public enum SecurityViolationType
     {
-        /// <summary>禁止名前空間</summary>
+        /// <summary>禁止名前空間のusing宣言</summary>
         ForbiddenNamespace,
 
-        /// <summary>危険なコード</summary>
-        DangerousCode,
+        /// <summary>危険なAPI呼び出し（メソッド、プロパティ等）</summary>
+        DangerousApiCall,
 
-        /// <summary>危険なメソッド呼び出し</summary>
-        DangerousMethodCall,
+        /// <summary>危険なクラスの継承</summary>
+        DangerousInheritance,
 
-        /// <summary>安全でないコード</summary>
-        UnsafeCode,
-
-        /// <summary>プロセス実行</summary>
-        ProcessExecution,
-
-        /// <summary>ファイルアクセス</summary>
-        FileAccess,
-
-        /// <summary>ファイルシステムアクセス</summary>
-        FileSystemAccess,
-
-        /// <summary>ネットワークアクセス</summary>
-        NetworkAccess,
+        /// <summary>危険な型のインスタンス生成</summary>
+        DangerousTypeCreation,
 
         /// <summary>リフレクション使用</summary>
-        ReflectionUsage
+        UnauthorizedReflection
     }
 }

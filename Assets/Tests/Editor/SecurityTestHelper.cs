@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
     /// セキュリティ機能テスト用ヘルパークラス

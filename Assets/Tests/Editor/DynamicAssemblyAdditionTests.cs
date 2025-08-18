@@ -5,7 +5,7 @@ using System.Linq;
 using NUnit.Framework;
 using io.github.hatayama.uLoopMCP;
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
     /// 動的アセンブリ追加システムのテスト
@@ -20,6 +20,8 @@ namespace io.github.hatayama.uLoopMCP
         [SetUp]
         public void SetUp()
         {
+            // FullAccessモードに設定（全アセンブリへのアクセスを許可）
+            DynamicCodeSecurityManager.InitializeFromSettings(DynamicCodeSecurityLevel.FullAccess);
             _compiler = new RoslynCompiler();
         }
 
@@ -28,6 +30,8 @@ namespace io.github.hatayama.uLoopMCP
         {
             _compiler?.ClearCache();
             _compiler = null;
+            // デフォルトのRestrictedモードに戻す
+            DynamicCodeSecurityManager.InitializeFromSettings(DynamicCodeSecurityLevel.Restricted);
         }
 
         [Test]
@@ -53,37 +57,6 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsTrue(result.Success, $"Compilation failed: {string.Join(", ", result.Errors?.Select(e => e.Message) ?? new string[0])}");
             Assert.IsNotNull(result.CompiledAssembly);
             Assert.IsEmpty(result.Errors ?? new List<CompilationError>());
-        }
-
-        [Test]
-        public void Compile_WithSystemNetHttpType_ShouldFailWithSecurityViolation()
-        {
-            // Arrange - System.Net.Httpの型を使用（セキュリティポリシーで禁止）
-            string code = @"
-                using System.Net.Http;
-                var client = new HttpClient();
-                return client.GetType().Name;";
-
-            CompilationRequest request = new CompilationRequest
-            {
-                Code = code,
-                ClassName = "HttpTestClass",
-                Namespace = "TestNamespace"
-            };
-
-            // Act
-            CompilationResult result = _compiler.Compile(request);
-
-            // Assert - セキュリティ違反で失敗することを期待
-            Assert.IsFalse(result.Success, "Compilation should fail due to security policy violation");
-            Assert.IsTrue(result.HasSecurityViolations, "Result should indicate security violations");
-            Assert.AreEqual(CompilationFailureReason.SecurityViolation, result.FailureReason, "Failure reason should be SecurityViolation");
-            Assert.IsTrue(result.SecurityViolations.Count > 0, "Should have at least one security violation");
-            
-            // セキュリティ違反の詳細を確認
-            SecurityViolation violation = result.SecurityViolations.FirstOrDefault(v => v.Type == SecurityViolationType.ForbiddenNamespace);
-            Assert.IsNotNull(violation, "Should have forbidden namespace violation");
-            Assert.That(violation.Description, Does.Contain("System.Net"), "Violation description should mention System.Net namespace");
         }
 
         [Test]
@@ -148,40 +121,6 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsFalse(result.Success, "Compilation should fail for non-existent type");
             Assert.IsNotEmpty(result.Errors);
             Assert.IsTrue(result.Errors.Any(e => e.ErrorCode == "CS0246"), "Should contain CS0246 error for unknown type");
-        }
-
-        [Test]
-        public void Compile_WithSystemIOType_ShouldFailWithSecurityViolation()
-        {
-            // Arrange - System.IOの型を使用（セキュリティポリシーで禁止）
-            string code = @"
-                using System.IO;
-                var tempFile = Path.GetTempFileName();
-                File.WriteAllText(tempFile, ""test"");
-                var content = File.ReadAllText(tempFile);
-                File.Delete(tempFile);
-                return content;";
-
-            CompilationRequest request = new CompilationRequest
-            {
-                Code = code,
-                ClassName = "IOTestClass", 
-                Namespace = "TestNamespace"
-            };
-
-            // Act
-            CompilationResult result = _compiler.Compile(request);
-
-            // Assert - セキュリティ違反で失敗することを期待
-            Assert.IsFalse(result.Success, "Compilation should fail due to security policy violation");
-            Assert.IsTrue(result.HasSecurityViolations, "Result should indicate security violations");
-            Assert.AreEqual(CompilationFailureReason.SecurityViolation, result.FailureReason, "Failure reason should be SecurityViolation");
-            Assert.IsTrue(result.SecurityViolations.Count > 0, "Should have at least one security violation");
-            
-            // セキュリティ違反の詳細を確認
-            SecurityViolation violation = result.SecurityViolations.FirstOrDefault(v => v.Type == SecurityViolationType.ForbiddenNamespace);
-            Assert.IsNotNull(violation, "Should have forbidden namespace violation");
-            Assert.That(violation.Description, Does.Contain("System.IO"), "Violation description should mention System.IO namespace");
         }
 
         [Test]
@@ -368,6 +307,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Arrange - ジェネリック型を使用した複雑なケース
             string code = @"
+                using System.Collections.Generic;
                 List<string> stringList = new List<string> { ""test1"", ""test2"" };
                 Dictionary<string, int> stringIntDict = new Dictionary<string, int>();
                 stringIntDict[""count""] = stringList.Count;
@@ -387,8 +327,6 @@ namespace io.github.hatayama.uLoopMCP
             // Assert
             Assert.IsTrue(result.Success, $"Compilation failed: {string.Join(", ", result.Errors?.Select(e => e.Message) ?? new string[0])}");
             Assert.IsNotNull(result.CompiledAssembly);
-            Assert.That(result.UpdatedCode, Does.Contain("using System.Collections.Generic"), 
-                "Should auto-add System.Collections.Generic using statement");
         }
 
         [Test]

@@ -2,7 +2,7 @@
 using NUnit.Framework;
 using System.Collections.Generic;
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
     /// WrapCodeIfNeededメソッドのusing文処理テスト

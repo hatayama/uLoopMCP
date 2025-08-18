@@ -60,52 +60,55 @@ namespace io.github.hatayama.uLoopMCP
             
             // 危険なメンバー（型ごと）
             dangerousMembers["System.IO.File"] = new() { 
-                "Delete", "Create", "WriteAllText", "ReadAllText", "Copy", "Move", 
-                "WriteAllBytes", "ReadAllBytes", "AppendAllText", "Exists", "Open",
-                "OpenRead", "OpenWrite", "Replace"
+                "Delete", "WriteAllText", "WriteAllBytes", "Replace"
+                // Create, Copy, Move, ReadAllText, ReadAllBytes, Exists, Open系は比較的安全
             };
             
             dangerousMembers["System.IO.Directory"] = new() { 
-                "Delete", "Create", "GetFiles", "GetDirectories", "Move",
-                "Exists", "CreateDirectory", "GetFileSystemEntries"
+                "Delete"
+                // Create, GetFiles, GetDirectories, Move, Exists は比較的安全
             };
             
-            dangerousMembers["System.IO.Path"] = new() {
-                "GetFullPath", "GetTempPath", "GetTempFileName", "Combine"
-            };
+            // System.IO.Path は全て安全な補助機能なので除外
             
             dangerousMembers["System.Diagnostics.Process"] = new() { 
-                "Start", "Kill", "GetProcesses", "GetCurrentProcess",
-                "GetProcessById", "GetProcessesByName"
+                "Start", "Kill"
+                // GetProcesses, GetCurrentProcess等は情報取得のみで比較的安全
             };
             
             dangerousMembers["System.Reflection.Assembly"] = new() { 
-                "Load", "LoadFrom", "LoadFile", "LoadWithPartialName",
-                "GetExecutingAssembly", "GetCallingAssembly", "GetEntryAssembly"
+                "Load", "LoadFrom", "LoadFile", "LoadWithPartialName"
+                // GetExecutingAssembly等は情報取得のみで比較的安全
             };
             
             dangerousMembers["System.Type"] = new() { 
-                "GetType", "InvokeMember", "GetMethod", "GetProperty", "GetField"
+                "InvokeMember"  // 動的メソッド呼び出しは危険
+                // GetType, GetMethod等は情報取得のみで比較的安全  
             };
             
             dangerousMembers["System.Activator"] = new() { 
-                "CreateInstance", "CreateInstanceFrom", "CreateComInstanceFrom"
+                "CreateComInstanceFrom"  // COMオブジェクト作成は危険
+                // CreateInstanceは用途次第だが許可
             };
             
             dangerousMembers["UnityEditor.AssetDatabase"] = new() { 
-                "DeleteAsset", "MoveAsset", "CopyAsset", "CreateAsset"
+                "DeleteAsset"  // データ永久削除の危険性があるため制限
+                // MoveAsset, CopyAsset, CreateAssetは比較的安全なので除外
             };
             
             dangerousMembers["UnityEditor.FileUtil"] = new() { 
-                "DeleteFileOrDirectory", "CopyFileOrDirectory", "MoveFileOrDirectory"
+                "DeleteFileOrDirectory"
+                // CopyFileOrDirectory, MoveFileOrDirectoryは比較的安全
             };
             
             dangerousMembers["System.Environment"] = new() {
-                "Exit", "FailFast", "SetEnvironmentVariable", "ExpandEnvironmentVariables"
+                "Exit", "FailFast"  // アプリケーション終了は危険
+                // SetEnvironmentVariable, ExpandEnvironmentVariablesは比較的安全
             };
             
             dangerousMembers["System.Threading.Thread"] = new() {
-                "Start", "Abort", "Suspend", "Resume", "Join"
+                "Abort", "Suspend", "Resume"  // スレッド強制操作は危険
+                // Start, Joinは比較的安全
             };
         }
         

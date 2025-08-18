@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
     /// Restrictedモードユーザークラス実行機能のテスト
@@ -63,7 +63,7 @@ namespace io.github.hatayama.uLoopMCP
             
             // ファイルシステムAPI
             Assert.IsTrue(detector.IsDangerousApi("System.IO.File.Delete"));
-            Assert.IsTrue(detector.IsDangerousApi("System.IO.Directory.Create"));
+            Assert.IsTrue(detector.IsDangerousApi("System.IO.Directory.Delete"));
             
             // ネットワークAPI
             Assert.IsTrue(detector.IsDangerousApi("System.Net.Http.HttpClient"));
@@ -71,7 +71,7 @@ namespace io.github.hatayama.uLoopMCP
             
             // リフレクションAPI
             Assert.IsTrue(detector.IsDangerousApi("System.Reflection.Assembly.Load"));
-            Assert.IsTrue(detector.IsDangerousApi("System.Type.GetType"));
+            Assert.IsTrue(detector.IsDangerousApi("System.Type.InvokeMember"));
             
             // 安全なAPI
             Assert.IsFalse(detector.IsDangerousApi("UnityEngine.Debug.Log"));

@@ -340,6 +340,23 @@ namespace io.github.hatayama.uLoopMCP
                     "This allows SemanticModel to resolve dangerous types for detection"
                 );
                 
+                // デバッグログ：セキュリティ検証前のSyntaxTree確認
+                string syntaxTreePreview = context.SyntaxTree.GetRoot().ToFullString();
+                VibeLogger.LogInfo(
+                    "roslyn_security_validation_start",
+                    "Starting security validation with SyntaxTree",
+                    new 
+                    { 
+                        treeLength = syntaxTreePreview.Length,
+                        containsUsingIO = syntaxTreePreview.Contains("using System.IO"),
+                        containsUsingHttp = syntaxTreePreview.Contains("using System.Net.Http"),
+                        treePreview = syntaxTreePreview.Length > 500 ? syntaxTreePreview.Substring(0, 500) + "..." : syntaxTreePreview
+                    },
+                    correlationId,
+                    "Security validation starting with syntax tree inspection",
+                    "Check if using directives are present in the tree"
+                );
+                
                 SecurityValidator validator = new(_currentSecurityLevel);
                 SecurityValidationResult validationResult = validator.ValidateCompilation(securityCheckCompilation);
                 
@@ -626,6 +643,7 @@ namespace io.github.hatayama.uLoopMCP
             wrappedCode.AppendLine("}");
 
             // ログ出力（デバッグ用）
+            string wrappedCodeString = wrappedCode.ToString();
             if (usingStatements.Count > 0)
             {
                 VibeLogger.LogInfo(
@@ -634,7 +652,8 @@ namespace io.github.hatayama.uLoopMCP
                     new { 
                         usingCount = usingStatements.Count,
                         usings = usingStatements.ToArray(),
-                        className = className
+                        className = className,
+                        wrappedCodePreview = wrappedCodeString.Length > 500 ? wrappedCodeString.Substring(0, 500) + "..." : wrappedCodeString
                     },
                     correlationId: Guid.NewGuid().ToString("N")[..8],
                     humanNote: "AI-provided using statements preserved and relocated",
@@ -642,7 +661,7 @@ namespace io.github.hatayama.uLoopMCP
                 );
             }
 
-            return wrappedCode.ToString();
+            return wrappedCodeString;
         }
 
         private List<CompilationError> ConvertDiagnosticsToErrors(IEnumerable<Diagnostic> diagnostics)
@@ -749,7 +768,7 @@ namespace io.github.hatayama.uLoopMCP
                     {
                         SecurityViolation violation = new SecurityViolation
                         {
-                            Type = SecurityViolationType.DangerousMethodCall,
+                            Type = SecurityViolationType.DangerousApiCall,
                             Description = $"Forbidden method '{forbiddenMethod}' was detected",
                             LineNumber = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
                             CodeSnippet = message
