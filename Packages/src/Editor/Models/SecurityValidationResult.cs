@@ -35,7 +35,7 @@ namespace io.github.hatayama.uLoopMCP
             
             foreach (SecurityViolation violation in Violations)
             {
-                sb.AppendLine($"  - [{violation.ViolationType}] {violation.Message}");
+                sb.AppendLine($"  - [{violation.Type}] {violation.Message}");
                 if (!string.IsNullOrEmpty(violation.ApiName))
                 {
                     sb.AppendLine($"    API: {violation.ApiName}");

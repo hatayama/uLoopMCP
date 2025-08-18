@@ -49,7 +49,8 @@ namespace io.github.hatayama.uLoopMCP
                 result.IsValid = false;
                 result.Violations.Add(new SecurityViolation
                 {
-                    ViolationType = ViolationType.DangerousApiCall,
+                    Type = SecurityViolationType.DangerousApiCall,
+                    Description = "Code execution is disabled at current security level",
                     Message = "Code execution is disabled at current security level",
                     ApiName = "N/A"
                 });

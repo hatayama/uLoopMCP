@@ -39,7 +39,8 @@ namespace io.github.hatayama.uLoopMCP
                     {
                         violations.Add(new SecurityViolation
                         {
-                            ViolationType = ViolationType.DangerousInheritance,
+                            Type = SecurityViolationType.DangerousInheritance,
+                            Description = $"Class inherits from dangerous type: {typeSymbol}",
                             Message = $"Class inherits from dangerous type: {typeSymbol}",
                             Location = node.GetLocation(),
                             ApiName = typeSymbol.ToDisplayString()
@@ -119,11 +120,26 @@ namespace io.github.hatayama.uLoopMCP
         public override void VisitUsingDirective(UsingDirectiveSyntax node)
         {
             string namespaceName = node.Name?.ToString();
+            
+            // デバッグログ
+            VibeLogger.LogInfo(
+                "security_walker_using_check",
+                $"Checking using directive: {namespaceName}",
+                new { 
+                    namespaceName,
+                    isDangerous = !string.IsNullOrEmpty(namespaceName) && apiDetector.IsDangerousNamespace(namespaceName)
+                },
+                correlationId: System.Guid.NewGuid().ToString("N")[..8],
+                humanNote: "SecuritySyntaxWalker checking using directive",
+                aiTodo: "Track using directive security validation"
+            );
+            
             if (!string.IsNullOrEmpty(namespaceName) && apiDetector.IsDangerousNamespace(namespaceName))
             {
                 violations.Add(new SecurityViolation
                 {
-                    ViolationType = ViolationType.DangerousUsing,
+                    Type = SecurityViolationType.ForbiddenNamespace,
+                    Description = $"Using dangerous namespace: {namespaceName}",
                     Message = $"Using dangerous namespace: {namespaceName}",
                     Location = node.GetLocation(),
                     ApiName = namespaceName
@@ -144,7 +160,8 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     violations.Add(new SecurityViolation
                     {
-                        ViolationType = ViolationType.DangerousApiCall,
+                        Type = SecurityViolationType.DangerousApiCall,
+                        Description = $"Dangerous API detected: {fullName}",
                         Message = $"Dangerous API detected: {fullName}",
                         Location = node.GetLocation(),
                         ApiName = fullName
@@ -166,7 +183,8 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     violations.Add(new SecurityViolation
                     {
-                        ViolationType = ViolationType.DangerousApiCall,
+                        Type = SecurityViolationType.DangerousApiCall,
+                        Description = $"Dangerous type usage detected: {fullName}",
                         Message = $"Dangerous type usage detected: {fullName}",
                         Location = node.GetLocation(),
                         ApiName = fullName
@@ -185,7 +203,8 @@ namespace io.github.hatayama.uLoopMCP
             {
                 violations.Add(new SecurityViolation
                 {
-                    ViolationType = ViolationType.DangerousApiCall,
+                    Type = SecurityViolationType.DangerousTypeCreation,
+                    Description = $"Creating instance of dangerous type: {typeSymbol}",
                     Message = $"Creating instance of dangerous type: {typeSymbol}",
                     Location = node.GetLocation(),
                     ApiName = typeSymbol.ToDisplayString()
@@ -206,7 +225,8 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     violations.Add(new SecurityViolation
                     {
-                        ViolationType = ViolationType.DangerousApiCall,
+                        Type = SecurityViolationType.DangerousApiCall,
+                        Description = $"Dangerous method call detected: {fullName}",
                         Message = $"Dangerous method call detected: {fullName}",
                         Location = node.GetLocation(),
                         ApiName = fullName
