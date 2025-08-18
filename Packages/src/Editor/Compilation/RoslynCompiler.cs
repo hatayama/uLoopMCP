@@ -580,10 +580,46 @@ namespace io.github.hatayama.uLoopMCP
                 return code; // そのまま返す
             }
 
-            // シンプルなメソッドや式の場合は、クラスでラップ
+            // AIが書いたコードからusing文を抽出
+            List<string> usingStatements = new();
+            List<string> codeLines = new();
+            
+            string[] lines = code.Split(new char[] { '\n' }, StringSplitOptions.None);
+            foreach (string line in lines)
+            {
+                string trimmedLine = line.Trim();
+                
+                // using文を検出（"using " で始まり ";" を含む）
+                // コメント付きの場合も考慮
+                if (trimmedLine.StartsWith("using ") && trimmedLine.Contains(";"))
+                {
+                    // セキュリティ検証用にusing文を保持
+                    // ただし、RestrictedモードではWrapCodeIfNeeded後にセキュリティ検証で
+                    // 危険な名前空間が検出されるので、ここでは単に抽出のみ
+                    usingStatements.Add(trimmedLine);
+                }
+                else if (!string.IsNullOrWhiteSpace(trimmedLine))
+                {
+                    // using文以外のコード行
+                    codeLines.Add(line);
+                }
+            }
+
+            // クラスでラップ
             StringBuilder wrappedCode = new();
-            // Unity AI Assistant準拠: using文はSyntaxTreeベースで後から追加
-            // WrapCodeIfNeededで生成されるコードは完全修飾名を使用し、using文に依存しない
+            
+            // using文を最初に配置（AIが指定したものをそのまま使用）
+            foreach (string usingStatement in usingStatements)
+            {
+                wrappedCode.AppendLine(usingStatement);
+            }
+            
+            // using文があった場合は空行を追加
+            if (usingStatements.Count > 0)
+            {
+                wrappedCode.AppendLine();
+            }
+            
             wrappedCode.AppendLine($"namespace {namespaceName}");
             wrappedCode.AppendLine("{");
             wrappedCode.AppendLine($"    public class {className}");
@@ -591,9 +627,8 @@ namespace io.github.hatayama.uLoopMCP
             wrappedCode.AppendLine("        public object Execute(System.Collections.Generic.Dictionary<string, object> parameters = null)");
             wrappedCode.AppendLine("        {");
 
-            // コードを適切にインデント
-            string[] lines = code.Split(new char[] { '\n' }, StringSplitOptions.None);
-            foreach (string line in lines)
+            // using文以外のコードを適切にインデント
+            foreach (string line in codeLines)
             {
                 wrappedCode.AppendLine($"            {line}");
             }
@@ -601,6 +636,23 @@ namespace io.github.hatayama.uLoopMCP
             wrappedCode.AppendLine("        }");
             wrappedCode.AppendLine("    }");
             wrappedCode.AppendLine("}");
+
+            // ログ出力（デバッグ用）
+            if (usingStatements.Count > 0)
+            {
+                VibeLogger.LogInfo(
+                    "wrap_code_extracted_usings",
+                    $"Extracted {usingStatements.Count} using statements from AI-generated code",
+                    new { 
+                        usingCount = usingStatements.Count,
+                        usings = usingStatements.ToArray(),
+                        className = className
+                    },
+                    correlationId: Guid.NewGuid().ToString("N")[..8],
+                    humanNote: "AI-provided using statements preserved and relocated",
+                    aiTodo: "Monitor using statement extraction patterns"
+                );
+            }
 
             return wrappedCode.ToString();
         }

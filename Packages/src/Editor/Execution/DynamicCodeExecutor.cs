@@ -372,7 +372,25 @@ namespace io.github.hatayama.uLoopMCP
             List<string> violationMessages = new List<string>();
             foreach (SecurityViolation violation in violations)
             {
-                violationMessages.Add($"{violation.Type}: {violation.Description}");
+                // 新しいプロパティ（Message, ApiName）を優先的に使用
+                string violationMessage = !string.IsNullOrEmpty(violation.Message) 
+                    ? violation.Message 
+                    : violation.Description;
+                    
+                if (!string.IsNullOrEmpty(violation.ApiName))
+                {
+                    violationMessages.Add($"{violation.ViolationType}: {violationMessage} (API: {violation.ApiName})");
+                }
+                else
+                {
+                    violationMessages.Add($"{violation.ViolationType}: {violationMessage}");
+                }
+            }
+
+            // エラーメッセージに詳細を追加
+            if (violations.Count > 0)
+            {
+                message = $"{message} {string.Join(" ", violationMessages)}";
             }
 
             return new ExecutionResult
