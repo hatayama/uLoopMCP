@@ -49,8 +49,8 @@ It does NOT auto-add missing using statements. If you get ""type not found"" err
 either use fully-qualified names or include the necessary using statements in your code.")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
-        private readonly global::io.github.hatayama.uLoopMCP.IDynamicCodeExecutor _executor;
-        private readonly global::io.github.hatayama.uLoopMCP.ImprovedErrorHandler _errorHandler;
+        private readonly IDynamicCodeExecutor _executor;
+        private readonly ImprovedErrorHandler _errorHandler;
         
         public override string ToolName => "execute-dynamic-code";
         
@@ -58,8 +58,8 @@ either use fully-qualified names or include the necessary using statements in yo
         {
 #if ULOOPMCP_HAS_ROSLYN
             // 実際のDynamicCodeExecutor実装を使用
-            _executor = global::io.github.hatayama.uLoopMCP.Factory.DynamicCodeExecutorFactory.CreateDefault();
-            _errorHandler = new global::io.github.hatayama.uLoopMCP.ImprovedErrorHandler();
+            _executor = Factory.DynamicCodeExecutorFactory.CreateDefault();
+            _errorHandler = new ImprovedErrorHandler();
 #else
             // Roslyn無効時はnull（このツール自体が登録されないはず）
             _executor = null;
@@ -70,7 +70,7 @@ either use fully-qualified names or include the necessary using statements in yo
         /// <summary>
         /// テスト用コンストラクタ（依存性注入対応）
         /// </summary>
-        public ExecuteDynamicCodeTool(global::io.github.hatayama.uLoopMCP.IDynamicCodeExecutor executor)
+        public ExecuteDynamicCodeTool(IDynamicCodeExecutor executor)
         {
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
         }
@@ -209,7 +209,7 @@ either use fully-qualified names or include the necessary using statements in yo
                     actualErrorMessage = string.Join(" ", result.Logs);
                 }
                 
-                global::io.github.hatayama.uLoopMCP.EnhancedErrorResponse enhancedError = 
+                EnhancedErrorResponse enhancedError = 
                     _errorHandler.ProcessError(result, originalCode);
                 
                 // 分かりやすいエラーメッセージに置き換え
