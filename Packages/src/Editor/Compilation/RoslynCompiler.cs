@@ -280,131 +280,128 @@ namespace io.github.hatayama.uLoopMCP
             return references;
         }
 
-        private CompilationResult ExecuteCompilation(CompilationContext context, string correlationId)
+        /// <summary>
+        /// セキュリティ検証を実行（Restrictedモードの場合のみ）
+        /// </summary>
+        private CompilationResult ValidateSecurityIfNeeded(CompilationContext context, CSharpCompilationOptions compilationOptions, string correlationId)
         {
-            CSharpCompilationOptions compilationOptions = new CSharpCompilationOptions(
-                OutputKind.DynamicallyLinkedLibrary,
-                optimizationLevel: OptimizationLevel.Release,
-                allowUnsafe: false
-            );
-
-            CSharpCompilation compilation = CSharpCompilation.Create(
-                $"DynamicAssembly_{correlationId}",
-                new[] { context.SyntaxTree },
-                context.References,
-                compilationOptions
-            );
-
-            // セキュリティ検証を最初に実行（Level 1 Restrictedモードの場合）
-            // エラーの有無に関わらず、危険なAPIの使用を検出
-            if (_currentSecurityLevel == DynamicCodeSecurityLevel.Restricted)
+            if (_currentSecurityLevel != DynamicCodeSecurityLevel.Restricted)
             {
-                // セキュリティ検証用に一時的に全参照を含むコンパイレーションを作成
-                // これにより、System.IOなどの危険な型もSemanticModelで解決可能になる
-                List<MetadataReference> securityCheckReferences = new();
-                
-                // 全てのロード済みアセンブリから参照を作成（危険なものも含む）
-                foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-                {
-                    if (!assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
-                    {
-                        try
-                        {
-                            securityCheckReferences.Add(MetadataReference.CreateFromFile(assembly.Location));
-                        }
-                        catch
-                        {
-                            // 参照追加に失敗した場合は無視
-                        }
-                    }
-                }
-                
-                // セキュリティ検証用のコンパイレーション（全参照付き）
-                CSharpCompilation securityCheckCompilation = CSharpCompilation.Create(
-                    $"SecurityCheck_{correlationId}",
-                    new[] { context.SyntaxTree },
-                    securityCheckReferences,
-                    compilationOptions
-                );
-                
-                VibeLogger.LogInfo(
-                    "roslyn_security_check_compilation_created",
-                    "Created compilation with full references for security validation",
-                    new 
-                    { 
-                        referenceCount = securityCheckReferences.Count,
-                        originalReferenceCount = context.References.Count 
-                    },
-                    correlationId,
-                    "Security validation compilation prepared with all references",
-                    "This allows SemanticModel to resolve dangerous types for detection"
-                );
-                
-                // デバッグログ：セキュリティ検証前のSyntaxTree確認
-                string syntaxTreePreview = context.SyntaxTree.GetRoot().ToFullString();
-                VibeLogger.LogInfo(
-                    "roslyn_security_validation_start",
-                    "Starting security validation with SyntaxTree",
-                    new 
-                    { 
-                        treeLength = syntaxTreePreview.Length,
-                        containsUsingIO = syntaxTreePreview.Contains("using System.IO"),
-                        containsUsingHttp = syntaxTreePreview.Contains("using System.Net.Http"),
-                        treePreview = syntaxTreePreview.Length > 500 ? syntaxTreePreview.Substring(0, 500) + "..." : syntaxTreePreview
-                    },
-                    correlationId,
-                    "Security validation starting with syntax tree inspection",
-                    "Check if using directives are present in the tree"
-                );
-                
-                SecurityValidator validator = new(_currentSecurityLevel);
-                SecurityValidationResult validationResult = validator.ValidateCompilation(securityCheckCompilation);
-                
-                if (!validationResult.IsValid)
-                {
-                    // セキュリティ違反を検出した場合は即座にエラーとして返す
-                    VibeLogger.LogWarning(
-                        "roslyn_security_validation_failed",
-                        "Security validation failed during compilation",
-                        new
-                        {
-                            violationCount = validationResult.Violations.Count,
-                            violations = validationResult.Violations.Select(v => new
-                            {
-                                type = v.Type.ToString(),
-                                api = v.ApiName,
-                                message = v.Message
-                            }).ToArray()
-                        },
-                        correlationId,
-                        "Dangerous API usage detected in user code",
-                        "Review and fix security violations"
-                    );
-                    
-                    return new CompilationResult
-                    {
-                        Success = false,
-                        UpdatedCode = context.WrappedCode,
-                        Errors = new List<CompilationError>
-                        {
-                            new CompilationError
-                            {
-                                Message = validationResult.GetErrorSummary(),
-                                ErrorCode = "SECURITY001",
-                                Line = 0,
-                                Column = 0
-                            }
-                        },
-                        Warnings = new List<string>(),
-                        HasSecurityViolations = true,
-                        SecurityViolations = validationResult.Violations,
-                        FailureReason = CompilationFailureReason.SecurityViolation
-                    };
-                }
+                return null; // セキュリティ検証不要
             }
 
-            // Unity AI Assistant方式の診断駆動修正
-            SyntaxTree currentTree = context.SyntaxTree;
+            // セキュリティ検証用に一時的に全参照を含むコンパイレーションを作成
+            // これにより、System.IOなどの危険な型もSemanticModelで解決可能になる
+            List<MetadataReference> securityCheckReferences = new();
+            
+            // 全てのロード済みアセンブリから参照を作成（危険なものも含む）
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (!assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
+                {
+                    try
+                    {
+                        securityCheckReferences.Add(MetadataReference.CreateFromFile(assembly.Location));
+                    }
+                    catch
+                    {
+                        // 参照追加に失敗した場合は無視
+                    }
+                }
+            }
+            
+            // セキュリティ検証用のコンパイレーション（全参照付き）
+            CSharpCompilation securityCheckCompilation = CSharpCompilation.Create(
+                $"SecurityCheck_{correlationId}",
+                new[] { context.SyntaxTree },
+                securityCheckReferences,
+                compilationOptions
+            );
+            
+            VibeLogger.LogInfo(
+                "roslyn_security_check_compilation_created",
+                "Created compilation with full references for security validation",
+                new 
+                { 
+                    referenceCount = securityCheckReferences.Count,
+                    originalReferenceCount = context.References.Count 
+                },
+                correlationId,
+                "Security validation compilation prepared with all references",
+                "This allows SemanticModel to resolve dangerous types for detection"
+            );
+            
+            // デバッグログ：セキュリティ検証前のSyntaxTree確認
+            string syntaxTreePreview = context.SyntaxTree.GetRoot().ToFullString();
+            VibeLogger.LogInfo(
+                "roslyn_security_validation_start",
+                "Starting security validation with SyntaxTree",
+                new 
+                { 
+                    treeLength = syntaxTreePreview.Length,
+                    containsUsingIO = syntaxTreePreview.Contains("using System.IO"),
+                    containsUsingHttp = syntaxTreePreview.Contains("using System.Net.Http"),
+                    treePreview = syntaxTreePreview.Length > 500 ? syntaxTreePreview.Substring(0, 500) + "..." : syntaxTreePreview
+                },
+                correlationId,
+                "Security validation starting with syntax tree inspection",
+                "Check if using directives are present in the tree"
+            );
+            
+            SecurityValidator validator = new(_currentSecurityLevel);
+            SecurityValidationResult validationResult = validator.ValidateCompilation(securityCheckCompilation);
+            
+            if (!validationResult.IsValid)
+            {
+                // セキュリティ違反を検出した場合は即座にエラーとして返す
+                VibeLogger.LogWarning(
+                    "roslyn_security_validation_failed",
+                    "Security validation failed during compilation",
+                    new
+                    {
+                        violationCount = validationResult.Violations.Count,
+                        violations = validationResult.Violations.Select(v => new
+                        {
+                            type = v.Type.ToString(),
+                            api = v.ApiName,
+                            message = v.Message
+                        }).ToArray()
+                    },
+                    correlationId,
+                    "Dangerous API usage detected in user code",
+                    "Review and fix security violations"
+                );
+                
+                return new CompilationResult
+                {
+                    Success = false,
+                    UpdatedCode = context.WrappedCode,
+                    Errors = new List<CompilationError>
+                    {
+                        new CompilationError
+                        {
+                            Message = validationResult.GetErrorSummary(),
+                            ErrorCode = "SECURITY001",
+                            Line = 0,
+                            Column = 0
+                        }
+                    },
+                    Warnings = new List<string>(),
+                    HasSecurityViolations = true,
+                    SecurityViolations = validationResult.Violations,
+                    FailureReason = CompilationFailureReason.SecurityViolation
+                };
+            }
+
+            return null; // セキュリティ検証成功
+        }
+
+        /// <summary>
+        /// 診断駆動修正を適用
+        /// </summary>
+        private SyntaxTree ApplyDiagnosticFixes(CSharpCompilation compilation, SyntaxTree syntaxTree, string correlationId)
+        {
+            SyntaxTree currentTree = syntaxTree;
             bool hasError = true;
             int maxAttempts = 3;
 
@@ -445,15 +442,65 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
+            return currentTree;
+        }
+
+        /// <summary>
+        /// コンパイル初期化
+        /// </summary>
+        private CSharpCompilation CreateCompilation(string assemblyName, SyntaxTree syntaxTree, IEnumerable<MetadataReference> references)
+        {
+            CSharpCompilationOptions compilationOptions = new CSharpCompilationOptions(
+                OutputKind.DynamicallyLinkedLibrary,
+                optimizationLevel: OptimizationLevel.Release,
+                allowUnsafe: false
+            );
+
+            return CSharpCompilation.Create(
+                assemblyName,
+                new[] { syntaxTree },
+                references,
+                compilationOptions
+            );
+        }
+
+        private CompilationResult ExecuteCompilation(CompilationContext context, string correlationId)
+        {
+            // コンパイルオプションの準備
+            CSharpCompilationOptions compilationOptions = new CSharpCompilationOptions(
+                OutputKind.DynamicallyLinkedLibrary,
+                optimizationLevel: OptimizationLevel.Release,
+                allowUnsafe: false
+            );
+
+            // セキュリティ検証（Restrictedモードの場合）
+            CompilationResult securityValidationResult = ValidateSecurityIfNeeded(context, compilationOptions, correlationId);
+            if (securityValidationResult != null)
+            {
+                return securityValidationResult; // セキュリティ違反で早期リターン
+            }
+
+            // 基本のコンパイル作成
+            CSharpCompilation compilation = CreateCompilation(
+                $"DynamicAssembly_{correlationId}",
+                context.SyntaxTree,
+                context.References
+            );
+
+            // Unity AI Assistant方式の診断駆動修正
+            SyntaxTree fixedTree = ApplyDiagnosticFixes(compilation, context.SyntaxTree, correlationId);
+            
             // 修正されたTreeでコンテキストを更新
-            context.SyntaxTree = currentTree;
-            context.WrappedCode = currentTree.ToString();
+            context.SyntaxTree = fixedTree;
+            context.WrappedCode = fixedTree.ToString();
+            
+            // 最終的なコンパイル
             compilation = compilation.ReplaceSyntaxTree(
                 compilation.SyntaxTrees.First(),
-                currentTree);
+                fixedTree
+            );
 
-
-
+            // アセンブリの出力と結果処理
             using MemoryStream memoryStream = new MemoryStream();
             Microsoft.CodeAnalysis.Emit.EmitResult emitResult = compilation.Emit(memoryStream);
 
