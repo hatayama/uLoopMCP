@@ -215,12 +215,13 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
             
-            // NEW: Restrictedモードでセキュリティレベル変更をチェック
+            // Restrictedモードでセキュリティレベル変更をブロック（実行時チェック）
+            // CurrentLevelの読み取りは許可（変更のみ禁止）
             if (currentLevel == DynamicCodeSecurityLevel.Restricted)
             {
                 if (code.Contains("SetDynamicCodeSecurityLevel") || 
-                    code.Contains("DynamicCodeSecurityLevel") ||
-                    code.Contains("DynamicCodeSecurityManager"))
+                    code.Contains("InitializeFromSettings") ||
+                    code.Contains("McpEditorSettings.SetDynamicCodeSecurityLevel"))
                 {
                     return new ExecutionResult
                     {

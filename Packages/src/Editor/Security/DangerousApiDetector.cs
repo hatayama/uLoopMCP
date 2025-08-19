@@ -110,6 +110,18 @@ namespace io.github.hatayama.uLoopMCP
                 "Abort", "Suspend", "Resume"  // スレッド強制操作は危険
                 // Start, Joinは比較的安全
             };
+            
+            // セキュリティ設定の変更を防ぐための追加制限
+            dangerousTypes.Add("io.github.hatayama.uLoopMCP.DynamicCodeSecurityManager");
+            dangerousTypes.Add("io.github.hatayama.uLoopMCP.McpEditorSettings");
+            
+            dangerousMembers["io.github.hatayama.uLoopMCP.DynamicCodeSecurityManager"] = new() {
+                "InitializeFromSettings", "CurrentLevel"  // セキュリティレベル変更は危険
+            };
+            
+            dangerousMembers["io.github.hatayama.uLoopMCP.McpEditorSettings"] = new() {
+                "SetDynamicCodeSecurityLevel", "GetDynamicCodeSecurityLevel"  // セキュリティレベル操作は危険
+            };
         }
         
         public bool IsDangerousNamespace(string namespaceName)

@@ -497,9 +497,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public async Task TestDynamicCodeSecurityManagerReferenceBlocked_Restricted()
+        public async Task TestDynamicCodeSecurityManagerCurrentLevelRead_Restricted()
         {
             // Arrange
+            // CurrentLevelプロパティの読み取りは許可される（変更のみ禁止）
             SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
@@ -513,8 +514,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             // Assert
             Assert.IsNotNull(response);
-            Assert.IsFalse(response.Success);
-            Assert.IsTrue(response.ErrorMessage.Contains("SECURITY_VIOLATION"));
+            Assert.IsTrue(response.Success, "Reading CurrentLevel should be allowed");
+            Assert.AreEqual("Restricted", response.Result);
         }
 
         [Test]
