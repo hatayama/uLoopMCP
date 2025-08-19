@@ -439,7 +439,7 @@ return ""Many usings test"";";
 
             // Assert
             Assert.IsTrue(result.Success, "Compilation should succeed");
-            Assert.Less(sw.ElapsedMilliseconds, 5000, "Should compile within 5 seconds");
+            Assert.Less(sw.ElapsedMilliseconds, McpConstants.TEST_COMPILE_TIMEOUT_MS, "Should compile within 5 seconds");
             
             // 全てのusing文が保持されているか確認
             Assert.IsTrue(result.UpdatedCode.Contains("using UnityEngine;"));

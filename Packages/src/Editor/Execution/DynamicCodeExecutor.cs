@@ -71,7 +71,7 @@ namespace io.github.hatayama.uLoopMCP
                 return new ExecutionResult
                 {
                     Success = false,
-                    ErrorMessage = "ROSLYN_REQUIRED: Dynamic code execution requires Roslyn. Please enable it from Security Settings.",
+                    ErrorMessage = $"{McpConstants.ERROR_ROSLYN_REQUIRED}: {McpConstants.ERROR_MESSAGE_ROSLYN_REQUIRED}",
                     ExecutionTime = stopwatch.Elapsed,
                     Statistics = _statistics
                 };

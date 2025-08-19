@@ -103,6 +103,19 @@ namespace io.github.hatayama.uLoopMCP
         public const string ERROR_MESSAGE_SECURITY_LEVEL_CHANGE_BLOCKED = "Changing security level is not allowed in Restricted mode.";
         public const string ERROR_MESSAGE_EXECUTION_DISABLED = "Dynamic code execution is currently disabled. Enable in McpEditorSettings > Security Level.";
         
+        // Execution error messages
+        public const string ERROR_ROSLYN_REQUIRED = "ROSLYN_REQUIRED";
+        public const string ERROR_MESSAGE_ROSLYN_REQUIRED = "Dynamic code execution requires Roslyn. Please enable it from Security Settings.";
+        public const string ERROR_MESSAGE_EXECUTION_IN_PROGRESS = "Another execution is already in progress";
+        public const string ERROR_MESSAGE_EXECUTION_CANCELLED = "Execution was cancelled or timed out";
+        public const string ERROR_MESSAGE_NO_COMPILED_ASSEMBLY = "No compiled assembly provided";
+        public const string ERROR_MESSAGE_NO_EXECUTE_METHOD = "No Execute method found in compiled assembly";
+        public const string ERROR_MESSAGE_FAILED_TO_CREATE_INSTANCE = "Failed to create instance of target type";
+        public const string ERROR_MESSAGE_UNSUPPORTED_SIGNATURE = "Execute method signature not supported";
+        
+        // Test constants
+        public const int TEST_COMPILE_TIMEOUT_MS = 5000; // 5 seconds for test compilation
+        
         // Security constants
         public const int MAX_JSON_SIZE_BYTES = 1024 * 1024; // 1MB limit for JSON files
         public const int MAX_SETTINGS_SIZE_BYTES = 1024 * 16; // 16KB limit for settings files

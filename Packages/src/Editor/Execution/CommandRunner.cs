@@ -38,7 +38,7 @@ namespace io.github.hatayama.uLoopMCP
                     return new ExecutionResult
                     {
                         Success = false,
-                        ErrorMessage = "Another execution is already in progress",
+                        ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS,
                         ExecutionTime = TimeSpan.Zero
                     };
                 }
@@ -98,7 +98,7 @@ namespace io.github.hatayama.uLoopMCP
                 return new ExecutionResult
                 {
                     Success = false,
-                    ErrorMessage = "Execution was cancelled or timed out",
+                    ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
                     ExecutionTime = TimeSpan.FromSeconds(context.TimeoutSeconds),
                     Logs = new List<string> { "Execution cancelled due to timeout" }
                 };
@@ -151,7 +151,7 @@ namespace io.github.hatayama.uLoopMCP
                 return new ExecutionResult
                 {
                     Success = false,
-                    ErrorMessage = "No compiled assembly provided",
+                    ErrorMessage = McpConstants.ERROR_MESSAGE_NO_COMPILED_ASSEMBLY,
                     ExecutionTime = TimeSpan.Zero
                 };
             }
@@ -180,7 +180,7 @@ namespace io.github.hatayama.uLoopMCP
                     return new ExecutionResult
                     {
                         Success = false,
-                        ErrorMessage = "No Execute method found in compiled assembly",
+                        ErrorMessage = McpConstants.ERROR_MESSAGE_NO_EXECUTE_METHOD,
                         ExecutionTime = TimeSpan.Zero,
                         Logs = new List<string> { "Assembly types checked but no Execute method found" }
                     };
@@ -193,7 +193,7 @@ namespace io.github.hatayama.uLoopMCP
                     return new ExecutionResult
                     {
                         Success = false,
-                        ErrorMessage = "Failed to create instance of target type",
+                        ErrorMessage = McpConstants.ERROR_MESSAGE_FAILED_TO_CREATE_INSTANCE,
                         ExecutionTime = TimeSpan.Zero
                     };
                 }
@@ -220,7 +220,7 @@ namespace io.github.hatayama.uLoopMCP
                     return new ExecutionResult
                     {
                         Success = false,
-                        ErrorMessage = "Execute method signature not supported",
+                        ErrorMessage = McpConstants.ERROR_MESSAGE_UNSUPPORTED_SIGNATURE,
                         ExecutionTime = TimeSpan.Zero,
                         Logs = new List<string> { "Expected Execute() or Execute(Dictionary<string, object> parameters)" }
                     };
