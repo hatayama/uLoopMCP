@@ -21,5 +21,11 @@ namespace io.github.hatayama.uLoopMCP
         {
             return GetType().Assembly.GetName().Name;
         }
+
+        public void ExecuteAnoterInstanceMethod()
+        {
+            ForDynamicAssemblyTest a = new();
+            a.TestForbiddenOperationsInAnotherDLL();
+        }
     }
 }

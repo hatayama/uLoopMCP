@@ -516,6 +516,39 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsFalse(response.Success);
             Assert.IsTrue(response.ErrorMessage.Contains("SECURITY_VIOLATION"));
         }
+
+        [Test]
+        public async Task Level1_DynamicAssemblyTest_ExecuteAnoterInstanceMethod_ShouldFailAtRuntime()
+        {
+            // Arrange
+            // ExecuteAnoterInstanceMethodは外部アセンブリのメソッドなので
+            // コンパイル時には検出できないが、実行時にProcess.Startで失敗する
+            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            ExecuteDynamicCodeSchema parameters = new()
+            {
+                Code = @"
+                    var test = new io.github.hatayama.uLoopMCP.DynamicAssemblyTest();
+                    test.ExecuteAnoterInstanceMethod();
+                    return ""Should not reach here"";",
+                CompileOnly = false
+            };
+
+            // Act
+            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
+            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
+
+            // Assert
+            Assert.IsFalse(response.Success, "Should fail at runtime due to Process.Start");
+            Assert.IsNotNull(response.Error);
+            // Process.Startが実行できない環境でのエラーメッセージを確認
+            Assert.IsTrue(
+                response.Error.Contains("Process.Start") || 
+                response.Error.Contains("Cannot find") ||
+                response.Error.Contains("Exception"),
+                $"Should fail with process error. Actual: {response.Error}"
+            );
+            Assert.AreEqual("Restricted", response.SecurityLevel);
+        }
     }
 }
 #endif
