@@ -28,10 +28,10 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Level 2: フルアクセス
-        /// - 全アセンブリが利用可能（動的生成系を除く）
-        /// - System.Reflection.Emit、System.CodeDomは除外
-        /// - 用途: 高度な開発、システム統合、デバッグ
-        /// - 警告: セキュリティリスクあり
+        /// - 全アセンブリが利用可能（制限なし）
+        /// - System.Reflection.Emit、System.CodeDomも含む
+        /// - 用途: 高度な開発、システム統合、デバッグ、動的コード生成
+        /// - 警告: セキュリティリスクあり - 信頼できるコードのみで使用
         /// </summary>
         FullAccess = 2
     }

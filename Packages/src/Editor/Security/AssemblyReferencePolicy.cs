@@ -49,12 +49,10 @@ namespace io.github.hatayama.uLoopMCP
             // Assembly-CSharpは削除（ユーザー定義として動的判定）
         };
 
-        // Level 2 (FullAccess) でも除外される危険なアセンブリ（動的生成系のみ）
+        // Level 2 (FullAccess) では全アセンブリが利用可能
         private static readonly HashSet<string> AlwaysExcludedPrefixes = new()
         {
-            "System.Reflection.Emit",
-            "System.CodeDom"
-            // Assembly-CSharpはLevel 2では許可（仕様: 全アセンブリ利用可能）
+            // FullAccessレベルでは制限なし - 全てのアセンブリが利用可能
         };
 
         /// <summary>
