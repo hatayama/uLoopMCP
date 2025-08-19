@@ -17,9 +17,8 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class RoslynCompiler : IDisposable
     {
+        private readonly CompilationCacheManager _cacheManager = new();
         private readonly List<MetadataReference> _defaultReferences = new();
-        private readonly Dictionary<string, Assembly> _compilationCache = new();
-        private readonly Dictionary<DynamicCodeSecurityLevel, List<MetadataReference>> _referenceCache = new();
         private DynamicCodeSecurityLevel _currentSecurityLevel;
         private List<MetadataReference> _currentReferences;
         private bool _disposed;
@@ -47,8 +46,8 @@ namespace io.github.hatayama.uLoopMCP
                 DynamicCodeSecurityManager.SecurityLevelChanged -= HandleSecurityLevelChanged;
                 
                 // キャッシュクリア
-                _referenceCache.Clear();
-                _compilationCache.Clear();
+                _cacheManager.ClearReferenceCache();
+                _cacheManager.ClearCache();
                 _defaultReferences.Clear();
                 
                 _disposed = true;
@@ -86,30 +85,11 @@ namespace io.github.hatayama.uLoopMCP
             string correlationId = McpConstants.GenerateCorrelationId();
             _currentSecurityLevel = level;
             
-            // キャッシュチェック
-            if (_referenceCache.TryGetValue(level, out List<MetadataReference> cachedReferences))
+            // キャッシュから取得または新規作成
+            List<MetadataReference> references = _cacheManager.GetOrCreateReferences(level, () =>
             {
-                _currentReferences = cachedReferences;
-                _defaultReferences.Clear();
-                _defaultReferences.AddRange(cachedReferences);
-                
-                VibeLogger.LogInfo(
-                    "roslyn_compiler_references_from_cache",
-                    "Using cached references for security level",
-                    new { 
-                        level = level.ToString(),
-                        referenceCount = cachedReferences.Count 
-                    },
-                    correlationId,
-                    "References loaded from cache",
-                    "Monitor cache hit rate"
-                );
-                return;
-            }
-            
-            // 新規参照構築
-            _defaultReferences.Clear();
-            List<MetadataReference> newReferences = new();
+                // 新規参照構築
+                List<MetadataReference> newReferences = new();
             
             // セキュリティレベルに応じたアセンブリ取得
             IReadOnlyList<string> allowedAssemblies = DynamicCodeSecurityManager.GetAllowedAssemblies(level);
@@ -135,18 +115,20 @@ namespace io.github.hatayama.uLoopMCP
                 newReferences.Add(currentRef);
                 _defaultReferences.Add(currentRef);
             }
+                
+                return newReferences;
+            });
             
-            // キャッシュに保存
-            _referenceCache[level] = newReferences;
-            _currentReferences = newReferences;
+            _currentReferences = references;
+            _defaultReferences.Clear();
+            _defaultReferences.AddRange(references);
             
             VibeLogger.LogInfo(
                 "roslyn_compiler_references_initialized",
                 "RoslynCompiler references initialized for security level",
                 new { 
                     level = level.ToString(),
-                    referenceCount = newReferences.Count,
-                    assemblyCount = allowedAssemblies.Count
+                    referenceCount = references.Count
                 },
                 correlationId,
                 "Compiler references configured for security level",
@@ -159,16 +141,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void ClearCompilationCache()
         {
-            _compilationCache.Clear();
-            
-            VibeLogger.LogInfo(
-                "roslyn_compilation_cache_cleared",
-                "Compilation cache cleared due to security level change",
-                new { cacheSize = 0 },
-                correlationId: McpConstants.GenerateCorrelationId(),
-                humanNote: "Cache cleared for security consistency",
-                aiTodo: "Monitor cache clear frequency"
-            );
+            _cacheManager.ClearCompilationCache();
         }
 
         public CompilationResult Compile(CompilationRequest request)
@@ -198,15 +171,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public void ClearCache()
         {
-            _compilationCache.Clear();
-            VibeLogger.LogInfo(
-                "roslyn_cache_cleared",
-                "Compilation cache cleared",
-                new { },
-                correlationId: McpConstants.GenerateCorrelationId(),
-                humanNote: "Compilation cache was cleared",
-                aiTodo: "Monitor cache usage patterns"
-            );
+            _cacheManager.ClearCache();
         }
 
         private string GenerateCorrelationId()
@@ -234,18 +199,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private CompilationResult CheckCache(CompilationRequest request)
         {
-            string cacheKey = GenerateCacheKey(request);
-            if (_compilationCache.TryGetValue(cacheKey, out Assembly cachedAssembly))
-            {
-                return new CompilationResult
-                {
-                    Success = true,
-                    CompiledAssembly = cachedAssembly,
-                    UpdatedCode = request.Code
-                };
-            }
-
-            return null;
+            return _cacheManager.CheckCache(request);
         }
 
         private CompilationContext PrepareCompilation(CompilationRequest request)
@@ -585,11 +539,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void CacheResultIfSuccessful(CompilationRequest request, CompilationResult result)
         {
-            if (result.Success)
-            {
-                string cacheKey = GenerateCacheKey(request);
-                _compilationCache[cacheKey] = result.CompiledAssembly;
-            }
+            _cacheManager.CacheResultIfSuccessful(result, request);
         }
 
         private CompilationResult HandleCompilationException(Exception ex, CompilationRequest request, string correlationId)
@@ -840,20 +790,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private string GenerateCacheKey(CompilationRequest request)
         {
-            StringBuilder keyBuilder = new StringBuilder();
-            keyBuilder.Append(request.Code);
-            keyBuilder.Append(request.ClassName);
-            keyBuilder.Append(request.Namespace);
-
-            if (request.AdditionalReferences != null)
-            {
-                foreach (string reference in request.AdditionalReferences.OrderBy(r => r))
-                {
-                    keyBuilder.Append(reference);
-                }
-            }
-
-            return Convert.ToBase64String(Encoding.UTF8.GetBytes(keyBuilder.ToString()));
+            return _cacheManager.GenerateCacheKey(request);
         }
     }
 
