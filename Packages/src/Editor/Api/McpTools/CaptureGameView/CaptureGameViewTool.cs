@@ -24,7 +24,7 @@ namespace io.github.hatayama.uLoopMCP
             CaptureGameViewSchema parameters, 
             CancellationToken cancellationToken)
         {
-            string correlationId = Guid.NewGuid().ToString("N")[..8];
+            string correlationId = McpConstants.GenerateCorrelationId();
             
             // VibeLogger開始ログ
             VibeLogger.LogInfo(

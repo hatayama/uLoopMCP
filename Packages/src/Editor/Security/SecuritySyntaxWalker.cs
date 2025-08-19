@@ -129,7 +129,7 @@ namespace io.github.hatayama.uLoopMCP
                     namespaceName,
                     isDangerous = !string.IsNullOrEmpty(namespaceName) && apiDetector.IsDangerousNamespace(namespaceName)
                 },
-                correlationId: System.Guid.NewGuid().ToString("N")[..8],
+                correlationId: McpConstants.GenerateCorrelationId(),
                 humanNote: "SecuritySyntaxWalker checking using directive",
                 aiTodo: "Track using directive security validation"
             );

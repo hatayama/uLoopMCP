@@ -29,7 +29,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public ExecutionResult Execute(ExecutionContext context)
         {
-            string correlationId = Guid.NewGuid().ToString("N")[..8];
+            string correlationId = McpConstants.GenerateCorrelationId();
             
             lock (_lockObject)
             {

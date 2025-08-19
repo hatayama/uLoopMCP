@@ -61,7 +61,7 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false)
         {
-            string correlationId = Guid.NewGuid().ToString("N")[..8];
+            string correlationId = McpConstants.GenerateCorrelationId();
             Stopwatch stopwatch = Stopwatch.StartNew();
 
             try
@@ -208,7 +208,7 @@ namespace io.github.hatayama.uLoopMCP
                 return new ExecutionResult
                 {
                     Success = false,
-                    ErrorMessage = "EXECUTION_DISABLED: Dynamic code execution is currently disabled. Enable in McpEditorSettings > Security Level.",
+                    ErrorMessage = $"{McpConstants.ERROR_EXECUTION_DISABLED}: {McpConstants.ERROR_MESSAGE_EXECUTION_DISABLED}",
                     ExecutionTime = TimeSpan.Zero,
                     Result = null,
                     Statistics = _statistics
@@ -226,7 +226,7 @@ namespace io.github.hatayama.uLoopMCP
                     return new ExecutionResult
                     {
                         Success = false,
-                        ErrorMessage = "SECURITY_VIOLATION: Changing security level is not allowed in Restricted mode.",
+                        ErrorMessage = $"{McpConstants.ERROR_SECURITY_VIOLATION}: {McpConstants.ERROR_MESSAGE_SECURITY_LEVEL_CHANGE_BLOCKED}",
                         ExecutionTime = TimeSpan.Zero,
                         Result = null,
                         Statistics = _statistics

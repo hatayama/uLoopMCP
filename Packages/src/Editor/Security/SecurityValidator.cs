@@ -58,7 +58,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             // Level 1 (Restricted): 詳細検査を実行
-            string correlationId = Guid.NewGuid().ToString("N")[..8];
+            string correlationId = McpConstants.GenerateCorrelationId();
             
             // 全てのSyntaxTreeを検査
             foreach (SyntaxTree tree in compilation.SyntaxTrees)

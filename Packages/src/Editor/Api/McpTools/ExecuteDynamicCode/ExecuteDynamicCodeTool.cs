@@ -79,7 +79,7 @@ either use fully-qualified names or include the necessary using statements in yo
             ExecuteDynamicCodeSchema parameters, 
             CancellationToken cancellationToken)
         {
-            string correlationId = Guid.NewGuid().ToString("N")[..8];
+            string correlationId = McpConstants.GenerateCorrelationId();
             
             try
             {

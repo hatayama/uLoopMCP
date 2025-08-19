@@ -30,7 +30,7 @@ namespace io.github.hatayama.uLoopMCP
                     DynamicCodeSecurityLevel oldLevel = _currentLevel;
                     _currentLevel = value;
 
-                    string correlationId = Guid.NewGuid().ToString("N")[..8];
+                    string correlationId = McpConstants.GenerateCorrelationId();
                     VibeLogger.LogInfo(
                         "security_level_changed",
                         $"Security level changed from {oldLevel} to {value}",
@@ -65,7 +65,7 @@ namespace io.github.hatayama.uLoopMCP
                         "security_execution_blocked",
                         "Execution blocked at Disabled security level",
                         new { level = level.ToString() },
-                        correlationId: Guid.NewGuid().ToString("N")[..8],
+                        correlationId: McpConstants.GenerateCorrelationId(),
                         humanNote: "Code execution prevented by security policy",
                         aiTodo: "Track execution attempts at disabled level"
                     );
@@ -100,7 +100,7 @@ namespace io.github.hatayama.uLoopMCP
                 "security_manager_initialized",
                 $"Security manager initialized with level: {level}",
                 new { level = level.ToString() },
-                correlationId: Guid.NewGuid().ToString("N")[..8],
+                correlationId: McpConstants.GenerateCorrelationId(),
                 humanNote: "Security manager ready",
                 aiTodo: "Monitor initialization patterns"
             );

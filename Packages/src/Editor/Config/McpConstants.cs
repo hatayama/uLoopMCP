@@ -93,6 +93,16 @@ namespace io.github.hatayama.uLoopMCP
         public const string SESSION_KEY_RECONNECTING = "uLoopMCP.Reconnecting";
         public const string SESSION_KEY_SHOW_RECONNECTING_UI = "uLoopMCP.ShowReconnectingUI";
         
+        // Correlation ID constants
+        public const int CORRELATION_ID_LENGTH = 8; // Length for correlation ID generation
+        public const string GUID_FORMAT_NO_HYPHENS = "N"; // GUID format without hyphens
+        
+        // Error message constants
+        public const string ERROR_SECURITY_VIOLATION = "SECURITY_VIOLATION";
+        public const string ERROR_EXECUTION_DISABLED = "EXECUTION_DISABLED";
+        public const string ERROR_MESSAGE_SECURITY_LEVEL_CHANGE_BLOCKED = "Changing security level is not allowed in Restricted mode.";
+        public const string ERROR_MESSAGE_EXECUTION_DISABLED = "Dynamic code execution is currently disabled. Enable in McpEditorSettings > Security Level.";
+        
         // Security constants
         public const int MAX_JSON_SIZE_BYTES = 1024 * 1024; // 1MB limit for JSON files
         public const int MAX_SETTINGS_SIZE_BYTES = 1024 * 16; // 16KB limit for settings files
@@ -123,6 +133,15 @@ namespace io.github.hatayama.uLoopMCP
         public static string GetClientNameForEditor(McpEditorType editorType)
         {
             return EditorConfigProvider.GetClientName(editorType);
+        }
+        
+        /// <summary>
+        /// Generates a short correlation ID for logging and tracking
+        /// </summary>
+        /// <returns>8-character correlation ID</returns>
+        public static string GenerateCorrelationId()
+        {
+            return System.Guid.NewGuid().ToString(GUID_FORMAT_NO_HYPHENS)[..CORRELATION_ID_LENGTH];
         }
     }
 } 

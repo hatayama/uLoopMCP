@@ -13,7 +13,7 @@ namespace io.github.hatayama.uLoopMCP.Factory
         /// <summary>デフォルト設定でDynamicCodeExecutorを作成</summary>
         public static IDynamicCodeExecutor CreateDefault()
         {
-            string correlationId = System.Guid.NewGuid().ToString("N")[..8];
+            string correlationId = McpConstants.GenerateCorrelationId();
 
             try
             {
@@ -67,7 +67,7 @@ namespace io.github.hatayama.uLoopMCP.Factory
         /// <summary>厳格なセキュリティ設定でDynamicCodeExecutorを作成</summary>
         public static IDynamicCodeExecutor CreateStrict()
         {
-            string correlationId = System.Guid.NewGuid().ToString("N")[..8];
+            string correlationId = McpConstants.GenerateCorrelationId();
 
             try
             {

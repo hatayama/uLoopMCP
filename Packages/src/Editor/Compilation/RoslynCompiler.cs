@@ -60,7 +60,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void HandleSecurityLevelChanged(DynamicCodeSecurityLevel newLevel)
         {
-            string correlationId = Guid.NewGuid().ToString("N")[..8];
+            string correlationId = McpConstants.GenerateCorrelationId();
             
             VibeLogger.LogInfo(
                 "roslyn_compiler_security_level_change",
@@ -83,7 +83,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void InitializeReferencesForLevel(DynamicCodeSecurityLevel level)
         {
-            string correlationId = Guid.NewGuid().ToString("N")[..8];
+            string correlationId = McpConstants.GenerateCorrelationId();
             _currentSecurityLevel = level;
             
             // キャッシュチェック
@@ -165,7 +165,7 @@ namespace io.github.hatayama.uLoopMCP
                 "roslyn_compilation_cache_cleared",
                 "Compilation cache cleared due to security level change",
                 new { cacheSize = 0 },
-                correlationId: Guid.NewGuid().ToString("N")[..8],
+                correlationId: McpConstants.GenerateCorrelationId(),
                 humanNote: "Cache cleared for security consistency",
                 aiTodo: "Monitor cache clear frequency"
             );
@@ -203,7 +203,7 @@ namespace io.github.hatayama.uLoopMCP
                 "roslyn_cache_cleared",
                 "Compilation cache cleared",
                 new { },
-                correlationId: Guid.NewGuid().ToString("N")[..8],
+                correlationId: McpConstants.GenerateCorrelationId(),
                 humanNote: "Compilation cache was cleared",
                 aiTodo: "Monitor cache usage patterns"
             );
@@ -211,7 +211,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private string GenerateCorrelationId()
         {
-            return Guid.NewGuid().ToString("N")[..8];
+            return McpConstants.GenerateCorrelationId();
         }
 
         private void LogCompilationStart(CompilationRequest request, string correlationId)
@@ -655,7 +655,7 @@ namespace io.github.hatayama.uLoopMCP
                         className = className,
                         wrappedCodePreview = wrappedCodeString.Length > 500 ? wrappedCodeString.Substring(0, 500) + "..." : wrappedCodeString
                     },
-                    correlationId: Guid.NewGuid().ToString("N")[..8],
+                    correlationId: McpConstants.GenerateCorrelationId(),
                     humanNote: "AI-provided using statements preserved and relocated",
                     aiTodo: "Monitor using statement extraction patterns"
                 );

@@ -81,7 +81,7 @@ namespace io.github.hatayama.uLoopMCP
                         "assembly_policy_unknown_level",
                         $"Unknown security level: {level}",
                         new { level = level.ToString() },
-                        correlationId: Guid.NewGuid().ToString("N")[..8],
+                        correlationId: McpConstants.GenerateCorrelationId(),
                         humanNote: "Unknown security level encountered",
                         aiTodo: "Review security level enum changes"
                     );
@@ -139,7 +139,7 @@ namespace io.github.hatayama.uLoopMCP
                         "assembly_allowed_user_defined",
                         $"User-defined assembly allowed in Restricted mode: {assemblyName}",
                         new { assemblyName, location = assembly.Location },
-                        correlationId: Guid.NewGuid().ToString("N")[..8],
+                        correlationId: McpConstants.GenerateCorrelationId(),
                         humanNote: "User assembly permitted for compilation",
                         aiTodo: "Track user assembly usage"
                     );
@@ -154,7 +154,7 @@ namespace io.github.hatayama.uLoopMCP
                 "assembly_policy_restricted_list",
                 "Generated restricted assembly list",
                 new { count = assemblies.Count },
-                correlationId: Guid.NewGuid().ToString("N")[..8],
+                correlationId: McpConstants.GenerateCorrelationId(),
                 humanNote: "Restricted assembly list created",
                 aiTodo: "Monitor assembly usage patterns"
             );
@@ -182,7 +182,7 @@ namespace io.github.hatayama.uLoopMCP
                 "assembly_policy_full_access_list",
                 "Generated full access assembly list",
                 new { count = assemblies.Count },
-                correlationId: Guid.NewGuid().ToString("N")[..8],
+                correlationId: McpConstants.GenerateCorrelationId(),
                 humanNote: "Full access assembly list created",
                 aiTodo: "Review security implications"
             );

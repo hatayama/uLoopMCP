@@ -792,7 +792,7 @@ namespace io.github.hatayama.uLoopMCP
                 "editor_settings_security_level_changed",
                 $"Security level changed to: {level}",
                 new { level = level.ToString() },
-                correlationId: Guid.NewGuid().ToString("N")[..8],
+                correlationId: McpConstants.GenerateCorrelationId(),
                 humanNote: "Security level updated in editor settings",
                 aiTodo: "Monitor security level changes"
             );
@@ -962,7 +962,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static void UpdateRoslynDefineSymbol(DynamicCodeSecurityLevel level)
         {
-            string correlationId = Guid.NewGuid().ToString("N")[..8];
+            string correlationId = McpConstants.GenerateCorrelationId();
             
             // 全設定済みプラットフォームを取得
             NamedBuildTarget[] targets = GetAllKnownTargets();
