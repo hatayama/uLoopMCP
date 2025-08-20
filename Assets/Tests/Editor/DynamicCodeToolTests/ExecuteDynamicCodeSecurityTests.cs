@@ -32,7 +32,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public void Compile_WithSystemIOType_ShouldFailWithSecurityViolation()
         {
-            // Arrange - System.IOの危険なAPIを使用（セキュリティポリシーで禁止）
+            // Arrange - System.IOの危険なAPIを使用
             string code = @"
                 using System.IO;
                 string tempFile = ""test.txt"";
@@ -50,22 +50,23 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // Act
             CompilationResult result = _compiler.Compile(request);
 
-            // Assert - セキュリティ違反で失敗することを期待
-            Assert.IsFalse(result.Success, "Compilation should fail due to security policy violation");
+            // Assert - v4.0: コンパイルは成功し、実行時にセキュリティ違反を検出
+            // コンパイル自体は成功するが、セキュリティ違反は検出される
+            Assert.IsFalse(result.Success, "Should fail due to dangerous API detection");
             Assert.IsTrue(result.HasSecurityViolations, "Result should indicate security violations");
             Assert.AreEqual(CompilationFailureReason.SecurityViolation, result.FailureReason, "Failure reason should be SecurityViolation");
             Assert.IsTrue(result.SecurityViolations.Count > 0, "Should have at least one security violation");
             
             // セキュリティ違反の詳細を確認
-            SecurityViolation violation = result.SecurityViolations.FirstOrDefault(v => v.Type == SecurityViolationType.ForbiddenNamespace);
-            Assert.IsNotNull(violation, "Should have forbidden namespace violation");
-            Assert.That(violation.Description, Does.Contain("System.IO"), "Violation description should mention System.IO namespace");
+            SecurityViolation violation = result.SecurityViolations.FirstOrDefault(v => v.Type == SecurityViolationType.DangerousApiCall);
+            Assert.IsNotNull(violation, "Should have dangerous API violation");
+            Assert.That(violation.Description, Does.Contain("File.Delete").Or.Contain("File.WriteAllText"), "Violation description should mention dangerous API");
         }
 
         [Test]
         public void Compile_WithSystemNetHttpType_ShouldFailWithSecurityViolation()
         {
-            // Arrange - System.Net.Httpの型を使用（セキュリティポリシーで禁止）
+            // Arrange - System.Net.Httpの型を使用
             string code = @"
                 using System.Net.Http;
                 HttpClient client = new();
@@ -81,16 +82,20 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // Act
             CompilationResult result = _compiler.Compile(request);
 
-            // Assert - セキュリティ違反で失敗することを期待
-            Assert.IsFalse(result.Success, "Compilation should fail due to security policy violation");
+            // Assert - v4.0: HttpClientは危険な型として検出
+            Assert.IsFalse(result.Success, "Should fail due to dangerous type detection");
             Assert.IsTrue(result.HasSecurityViolations, "Result should indicate security violations");
             Assert.AreEqual(CompilationFailureReason.SecurityViolation, result.FailureReason, "Failure reason should be SecurityViolation");
             Assert.IsTrue(result.SecurityViolations.Count > 0, "Should have at least one security violation");
             
             // セキュリティ違反の詳細を確認
-            SecurityViolation violation = result.SecurityViolations.FirstOrDefault(v => v.Type == SecurityViolationType.ForbiddenNamespace);
-            Assert.IsNotNull(violation, "Should have forbidden namespace violation");
-            Assert.That(violation.Description, Does.Contain("System.Net"), "Violation description should mention System.Net namespace");
+            // HttpClientは危険な型として検出される（ForbiddenNamespaceではなくDangerousApiCallまたはDangerousTypeCreation）
+            SecurityViolation violation = result.SecurityViolations.FirstOrDefault(v => 
+                v.Type == SecurityViolationType.DangerousApiCall || 
+                v.Type == SecurityViolationType.DangerousTypeCreation);
+            Assert.IsNotNull(violation, "Should have dangerous API or type creation violation");
+            Assert.That(violation.Description, Does.Contain("HttpClient").Or.Contain("System.Net"), 
+                "Violation description should mention HttpClient or System.Net");
         }
 
         [Test]

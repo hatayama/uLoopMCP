@@ -13,8 +13,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [SetUp]
         public void SetUp()
         {
-            // テスト開始時にデフォルトレベルに戻す
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            // v4.0ステートレス設計のためSetUp不要
         }
 
         [Test]
@@ -50,86 +49,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         // ContainsDangerousApiメソッドのテストは削除（RoslynベースのSecurityValidatorに移行）
         // 新しいテストはRestrictedModeUserClassTestsに実装済み
 
-        [Test]
-        public void CurrentLevelプロパティの取得が動作するか確認()
-        {
-            // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
-            
-            // Act
-            DynamicCodeSecurityLevel level = DynamicCodeSecurityManager.CurrentLevel;
-            
-            // Assert
-            Assert.AreEqual(DynamicCodeSecurityLevel.FullAccess, level);
-        }
+        // CurrentLevelプロパティのテスト削除（v4.0では常にDisabledを返すため）
 
-        [Test]
-        public void CurrentLevelプロパティの設定が動作するか確認()
-        {
-            // Act
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Disabled);
-            
-            // Assert
-            Assert.AreEqual(DynamicCodeSecurityLevel.Disabled, DynamicCodeSecurityManager.CurrentLevel);
-        }
-
-        [Test]
-        public void SecurityLevelChangedイベントが発火するか確認()
-        {
-            // Arrange
-            bool eventFired = false;
-            DynamicCodeSecurityLevel capturedLevel = DynamicCodeSecurityLevel.Restricted;
-            
-            Action<DynamicCodeSecurityLevel> handler = (level) =>
-            {
-                eventFired = true;
-                capturedLevel = level;
-            };
-            
-            DynamicCodeSecurityManager.SecurityLevelChanged += handler;
-            
-            try
-            {
-                // Act
-                SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
-                
-                // Assert
-                Assert.IsTrue(eventFired);
-                Assert.AreEqual(DynamicCodeSecurityLevel.FullAccess, capturedLevel);
-            }
-            finally
-            {
-                DynamicCodeSecurityManager.SecurityLevelChanged -= handler;
-            }
-        }
-
-        [Test]
-        public void SecurityLevelChangedイベントが同じレベル設定では発火しないか確認()
-        {
-            // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            bool eventFired = false;
-            
-            Action<DynamicCodeSecurityLevel> handler = (level) =>
-            {
-                eventFired = true;
-            };
-            
-            DynamicCodeSecurityManager.SecurityLevelChanged += handler;
-            
-            try
-            {
-                // Act
-                SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-                
-                // Assert
-                Assert.IsFalse(eventFired);
-            }
-            finally
-            {
-                DynamicCodeSecurityManager.SecurityLevelChanged -= handler;
-            }
-        }
+        // SecurityLevelChangedイベントのテスト削除（v4.0ではイベント発火しないため）
 
         // IsCodeAllowedForCurrentLevelメソッドは削除（RoslynベースのSecurityValidatorに移行）
         // 関連テストは廃止
@@ -145,7 +67,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // Assert
             Assert.AreEqual(0, level0Assemblies.Count);
             Assert.Greater(level1Assemblies.Count, 0);
-            Assert.Greater(level2Assemblies.Count, level1Assemblies.Count);
+            // 新仕様: RestrictedとFullAccessは同じアセンブリ数を返す
+            Assert.AreEqual(level2Assemblies.Count, level1Assemblies.Count);
         }
     }
 }

@@ -48,25 +48,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void Level1_GetAssembliesにSystemIOが含まれないか確認()
+        public void Level1_GetAssembliesにSystemIOも含まれるか確認()
         {
+            // 新仕様: Restrictedモードでも全アセンブリを含む
             // Act
             IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Restricted);
             
             // Assert
             Assert.IsNotNull(assemblies);
-            Assert.IsFalse(assemblies.Any(a => a.StartsWith("System.IO")));
-        }
-
-        [Test]
-        public void Level1_GetAssembliesにSystemNetが含まれないか確認()
-        {
-            // Act
-            IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Restricted);
-            
-            // Assert
-            Assert.IsNotNull(assemblies);
-            Assert.IsFalse(assemblies.Any(a => a.StartsWith("System.Net")));
+            // System系のアセンブリが含まれていることを確認
+            Assert.IsTrue(assemblies.Any(a => a.StartsWith("System")), "System assemblies should be included in Restricted mode");
         }
 
         [Test]
@@ -131,20 +122,22 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("UnityEngine.CoreModule", DynamicCodeSecurityLevel.Restricted));
         }
 
-        [Test]
-        public void IsAssemblyAllowed_Level1でSystemIOが拒否されるか確認()
+                [Test]
+        public void IsAssemblyAllowed_Level1でSystemIOも許可されるか確認()
         {
+            // 新仕様: Restrictedモードでも全アセンブリを許可（実行時にメソッドレベルでブロック）
             // Act & Assert
-            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System.IO", DynamicCodeSecurityLevel.Restricted));
-            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System.IO.FileSystem", DynamicCodeSecurityLevel.Restricted));
+            Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.IO", DynamicCodeSecurityLevel.Restricted));
+            Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.IO.FileSystem", DynamicCodeSecurityLevel.Restricted));
         }
 
         [Test]
-        public void IsAssemblyAllowed_Level1でSystemNetが拒否されるか確認()
+        public void IsAssemblyAllowed_Level1でSystemNetも許可されるか確認()
         {
+            // 新仕様: Restrictedモードでも全アセンブリを許可（実行時にメソッドレベルでブロック）
             // Act & Assert
-            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System.Net", DynamicCodeSecurityLevel.Restricted));
-            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System.Net.Http", DynamicCodeSecurityLevel.Restricted));
+            Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.Net", DynamicCodeSecurityLevel.Restricted));
+            Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.Net.Http", DynamicCodeSecurityLevel.Restricted));
         }
 
         [Test]
@@ -174,14 +167,14 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void IsAssemblyAllowed_Level2でもSystemReflectionEmitは拒否されるか確認()
+        public void IsAssemblyAllowed_Level2でSystemReflectionEmitも許可されるか確認()
         {
+            // 新仕様: FullAccessモードでは全アセンブリを許可
             // Act & Assert
-            // 動的生成系は Level 2 でも禁止
-            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System.Reflection.Emit", DynamicCodeSecurityLevel.FullAccess),
-                "System.Reflection.Emit should be blocked even in Level 2");
-            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System.CodeDom", DynamicCodeSecurityLevel.FullAccess),
-                "System.CodeDom should be blocked even in Level 2");
+            Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.Reflection.Emit", DynamicCodeSecurityLevel.FullAccess),
+                "System.Reflection.Emit should be allowed in Level 2");
+            Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.CodeDom", DynamicCodeSecurityLevel.FullAccess),
+                "System.CodeDom should be allowed in Level 2");
         }
 
         [Test]

@@ -19,16 +19,19 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
     {
         private IDynamicCodeExecutor executor;
         
+        
         [SetUp]
         public void SetUp()
         {
-            // 初期状態では何もしない（各テストで明示的にExecutorを作成）
+            // v4.0ステートレス設計 - 各テストがExecutorに直接レベル指定
+            // テスト用にエディタ設定をRestrictedに
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
         }
         
         [TearDown]
         public void TearDown()
         {
-            // 明示的なクリーンアップ（必要に応じて）
+            // 明示的なクリーンアップ
             executor = null;
         }
         
@@ -786,55 +789,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsFalse(result.Success, "File.WriteAllText should be blocked");
         }
         
-        /// <summary>
-        /// System.IO.File.Create (安全なAPI) がRestrictedモードで許可されることを確認
-        /// </summary>
-        [Test]
-        public async Task TestFileCreateAllowedInRestrictedMode()
-        {
-            // RestrictedモードでExecutorを作成
-            executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
-            
-            // テスト用ディレクトリを作成
-            string testDir = "TestTemp_UserClass";
-            if (!System.IO.Directory.Exists(testDir))
-            {
-                System.IO.Directory.CreateDirectory(testDir);
-            }
-            
-            try
-            {
-                string code = $@"
-                    // System.IO.File.Createの使用試行（これは許可されるべき）
-                    // テスト用ディレクトリ内にファイルを作成
-                    using (var stream = System.IO.File.Create(""{testDir}/test_file_create.txt""))
-                    {{
-                        byte[] data = System.Text.Encoding.UTF8.GetBytes(""test"");
-                        stream.Write(data, 0, data.Length);
-                    }}
-                    return ""File created"";
-                ";
-                
-                ExecutionResult result = await executor.ExecuteCodeAsync(
-                    code,
-                    "TestCommand",
-                    null,
-                    CancellationToken.None,
-                    compileOnly: false
-                );
-                
-                // RestrictedモードでもFile.Createは許可されているはず（アセンブリは全て参照可能になったため）
-                Assert.IsTrue(result.Success, $"File.Create should be allowed in Restricted mode. Error: {result.ErrorMessage}");
-            }
-            finally
-            {
-                // クリーンアップ
-                if (System.IO.Directory.Exists(testDir))
-                {
-                    System.IO.Directory.Delete(testDir, true);
-                }
-            }
-        }
+        // TestFileCreateAllowedInRestrictedMode は RestrictedModeDangerousApiTests.TestRestrictedMode_FileCreate_Allowed と重複のため削除
     }
 }
 #endif

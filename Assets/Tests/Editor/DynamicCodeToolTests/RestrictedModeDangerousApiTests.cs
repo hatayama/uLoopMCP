@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace io.github.hatayama.uLoopMCP
+namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
     /// Restrictedモードで危険APIがブロックされ、
@@ -23,6 +23,10 @@ namespace io.github.hatayama.uLoopMCP
         [SetUp]
         public void SetUp()
         {
+            // v4.0ステートレス設計 - Executorに直接レベル指定
+            // テスト用にエディタ設定をRestrictedに
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            
             // 全テストでRestrictedモードを使用
             executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.Restricted

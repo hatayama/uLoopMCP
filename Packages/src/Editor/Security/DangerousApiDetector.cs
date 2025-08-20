@@ -43,12 +43,12 @@ namespace io.github.hatayama.uLoopMCP
             dangerousTypes.Add("System.Net.WebRequest");
             dangerousTypes.Add("System.Net.Sockets.Socket");
             dangerousTypes.Add("System.Net.Sockets.TcpClient");
-            dangerousTypes.Add("System.Diagnostics.Process");
+            // System.Diagnostics.Process - メソッドレベルで制御（Start, Killのみ危険）
             dangerousTypes.Add("System.Diagnostics.ProcessStartInfo");
-            dangerousTypes.Add("System.Reflection.Assembly");
-            dangerousTypes.Add("System.Activator");
-            dangerousTypes.Add("System.Type");
-            dangerousTypes.Add("System.Threading.Thread");
+            // System.Reflection.Assembly - メソッドレベルで制御（Load系のみ危険）
+            // System.Activator - メソッドレベルで制御（CreateComInstanceFromのみ危険）
+            // System.Type - メンバーレベルで制御（InvokeMemberのみ危険）
+            // System.Threading.Thread - メソッドレベルで制御（Abort, Suspend, Resumeのみ危険）
             dangerousTypes.Add("System.Threading.Tasks.Task");
             
             // 危険なメンバー（型ごと）
@@ -105,16 +105,38 @@ namespace io.github.hatayama.uLoopMCP
             };
             
             // セキュリティ設定の変更を防ぐための追加制限
-            dangerousTypes.Add("io.github.hatayama.uLoopMCP.DynamicCodeSecurityManager");
-            dangerousTypes.Add("io.github.hatayama.uLoopMCP.McpEditorSettings");
+            // 型全体ではなくメソッドレベルで制御
             
             dangerousMembers["io.github.hatayama.uLoopMCP.DynamicCodeSecurityManager"] = new() {
-                "InitializeFromSettings", "CurrentLevel"  // セキュリティレベル変更は危険
+                "InitializeFromSettings"  // セキュリティレベル変更は危険（CurrentLevelは読み取りのみなので許可）
             };
             
             dangerousMembers["io.github.hatayama.uLoopMCP.McpEditorSettings"] = new() {
                 "SetDynamicCodeSecurityLevel", "GetDynamicCodeSecurityLevel"  // セキュリティレベル操作は危険
             };
+            
+            // 追加の危険な型（テストで期待されている）
+            // System.Web関連（Unityでは通常利用不可だが念のため）
+            dangerousTypes.Add("System.Web.HttpContext");
+            dangerousTypes.Add("System.Web.HttpRequest");
+            dangerousTypes.Add("System.Web.HttpResponse");
+            
+            // UnityEngine.Networking関連
+            dangerousTypes.Add("UnityEngine.Networking.UnityWebRequest");
+            dangerousTypes.Add("UnityEngine.Networking.NetworkTransport");
+            
+            // System.Data関連
+            dangerousTypes.Add("System.Data.SqlClient.SqlConnection");
+            dangerousTypes.Add("System.Data.SqlClient.SqlCommand");
+            dangerousTypes.Add("System.Data.DataSet");
+            
+            // System.Runtime.Remoting関連
+            dangerousTypes.Add("System.Runtime.Remoting.RemotingConfiguration");
+            dangerousTypes.Add("System.Runtime.Remoting.RemotingServices");
+            
+            // System.Security.Cryptography関連（証明書操作）
+            dangerousTypes.Add("System.Security.Cryptography.X509Certificates.X509Certificate");
+            dangerousTypes.Add("System.Security.Cryptography.X509Certificates.X509Store");
         }
         
         public bool IsDangerousType(ITypeSymbol typeSymbol)
@@ -128,6 +150,12 @@ namespace io.github.hatayama.uLoopMCP
         public bool IsDangerousApi(string fullApiName)
         {
             if (string.IsNullOrWhiteSpace(fullApiName)) return false;
+            
+            // まず危険な型自体かチェック（型名のみの場合）
+            if (dangerousTypes.Contains(fullApiName))
+            {
+                return true;
+            }
             
             // APIフルネームを解析
             string[] parts = fullApiName.Split('.');
@@ -143,7 +171,7 @@ namespace io.github.hatayama.uLoopMCP
                 return dangerousMembers[typeName].Contains(memberName);
             }
             
-            // 危険な型自体かチェック（コンストラクタ呼び出しなど）
+            // 危険な型のコンストラクタなど
             if (dangerousTypes.Contains(typeName))
             {
                 return true;

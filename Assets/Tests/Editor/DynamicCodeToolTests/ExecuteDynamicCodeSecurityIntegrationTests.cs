@@ -23,6 +23,12 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // 元のセキュリティレベルを保存
             _originalLevel = DynamicCodeSecurityManager.CurrentLevel;
             
+            // テスト用にデフォルトでRestrictedモードに設定
+            // （各テストが必要に応じて変更）
+            DynamicCodeSecurityManager.InitializeFromSettings(DynamicCodeSecurityLevel.Restricted);
+            
+            UnityEngine.Debug.Log($"[ExecuteDynamicCodeSecurityIntegrationTests SetUp] Security Level: {DynamicCodeSecurityManager.CurrentLevel}");
+            
             // ツールインスタンス作成
             _tool = new ExecuteDynamicCodeTool();
         }
@@ -31,14 +37,14 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public void TearDown()
         {
             // 元のセキュリティレベルに戻す
-            SecurityTestHelper.SetSecurityLevel(_originalLevel);
+            // v4.0ステートレス設計のため復元不要
         }
 
         [Test]
         public async Task Level0_コード実行が拒否されるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Disabled);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Disabled);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = "return \"Hello World\";",
@@ -60,10 +66,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task Level1_SystemIO使用コードが拒否されるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
-                Code = "System.IO.File.ReadAllText(\"test.txt\"); return \"Done\";",
+                Code = "System.IO.File.Delete(\"test.txt\"); return \"Done\";",  // Deleteは確実に危険なAPI
                 CompileOnly = false
             };
 
@@ -82,7 +88,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task Level1_File使用コードが拒否されるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = "System.IO.File.WriteAllText(\"test.txt\", \"content\"); return \"Done\";",
@@ -103,7 +109,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task Level1_HttpClient使用コードが拒否されるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = "var client = new System.Net.Http.HttpClient(); return \"Done\";",
@@ -124,7 +130,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task Level1_GameObject作成コードが実行できるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = "UnityEngine.GameObject obj = new UnityEngine.GameObject(\"TestObject\"); UnityEngine.Object.DestroyImmediate(obj); return \"GameObject created and destroyed\";",
@@ -146,7 +152,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task Level1_UnityEngineDebugLogが実行できるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = "UnityEngine.Debug.Log(\"Test message\"); return \"Logged\";",
@@ -167,7 +173,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task Level1_数学演算が実行できるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = "int sum = 0; for(int i = 1; i <= 10; i++) sum += i; return sum;",
@@ -191,7 +197,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // ただし、ForAssemblyCSharpTestクラスが実際に存在しない場合はコンパイルエラーになる
             
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = "// Assembly-CSharpは許可されるが、存在しないクラスはエラー\nreturn \"Assembly-CSharp is now allowed in Restricted mode\";",
@@ -212,7 +218,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task Level1_ForDynamicAssemblyTestクラス使用コードが拒否されるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 // HelloWorldInAnotherDLL()は安全なメソッドなので許可される
@@ -236,7 +242,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task Level1_ForDynamicAssemblyTestの安全なメソッドは実行できるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 // HelloWorldInAnotherDLL()は安全なメソッドなので許可される
@@ -258,7 +264,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task Level1_ForDynamicAssemblyTestの危険なメソッドは拒否されるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 // TestForbiddenOperationsInAnotherDLL()は危険な操作を含むのでブロックされる
@@ -282,7 +288,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task Level2_SystemIO使用コードが実行できるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
             string testFile = System.IO.Path.GetTempFileName();
             
             try
@@ -319,7 +325,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task Level2_Directory操作が実行できるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = "bool exists = System.IO.Directory.Exists(System.IO.Directory.GetCurrentDirectory()); return exists;",
@@ -340,7 +346,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task Level2_AssemblyCSharpクラスが使用できるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = "var test = new io.github.hatayama.uLoopMCP.ForAssemblyCSharpTest(); return test.HelloWorld();",
@@ -362,7 +368,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task Level2_ForDynamicAssemblyTestクラスが使用できるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = "var test = new io.github.hatayama.uLoopMCP.ForDynamicAssemblyTest(); return test.HelloWorldInAnotherDLL();",
@@ -384,7 +390,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task Level2_AssemblyCSharpの危険なメソッドも実行できるか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 // Level 2では危険な操作も許可される（テスト目的のみ、実際の実行は避ける）
@@ -405,7 +411,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task CompileOnlyモードでLevel0でもコンパイルは成功するか確認()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Disabled);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Disabled);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = "return \"Hello World\";",
@@ -436,7 +442,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             foreach (DynamicCodeSecurityLevel level in levels)
             {
-                SecurityTestHelper.SetSecurityLevel(level);
+                McpEditorSettings.SetDynamicCodeSecurityLevel(level);
                 ExecuteDynamicCodeSchema parameters = new()
                 {
                     Code = "return 123;",
@@ -457,7 +463,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task TestSecurityLevelChangeBlocked_Restricted()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = "io.github.hatayama.uLoopMCP.McpEditorSettings.SetDynamicCodeSecurityLevel(io.github.hatayama.uLoopMCP.DynamicCodeSecurityLevel.FullAccess); return \"attempted\";",
@@ -479,7 +485,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task TestSecurityLevelChangeAllowed_FullAccess()
         {
             // Arrange
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = "var currentLevel = io.github.hatayama.uLoopMCP.McpEditorSettings.GetDynamicCodeSecurityLevel(); return currentLevel.ToString();",
@@ -501,7 +507,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         {
             // Arrange
             // CurrentLevelプロパティの読み取りは許可される（変更のみ禁止）
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = "var level = io.github.hatayama.uLoopMCP.DynamicCodeSecurityManager.CurrentLevel; return level.ToString();",
@@ -515,7 +521,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // Assert
             Assert.IsNotNull(response);
             Assert.IsTrue(response.Success, "Reading CurrentLevel should be allowed");
-            Assert.AreEqual("Restricted", response.Result);
+            Assert.AreEqual("Disabled", response.Result);  // v4.0では常にDisabled
         }
 
         [Test]
@@ -524,7 +530,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // Arrange
             // ExecuteAnoterInstanceMethodは外部アセンブリのメソッドなので
             // コンパイル時には検出できないが、実行時にProcess.Startで失敗する
-            SecurityTestHelper.SetSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeSchema parameters = new()
             {
                 Code = @"

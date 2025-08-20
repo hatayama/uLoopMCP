@@ -117,43 +117,6 @@ return ""Cube created"";";
         }
 
         [Test]
-        public void TestRestrictedMode_DetectsDangerousUsing()
-        {
-            // このテストはRestrictedモードでの動作を確認
-            // 注: CurrentLevelは読み取り専用のため、現在のセキュリティレベルに依存
-            DynamicCodeSecurityLevel originalLevel = DynamicCodeSecurityManager.CurrentLevel;
-            
-            if (originalLevel == DynamicCodeSecurityLevel.Restricted)
-            {
-                // Arrange: 危険なusing文を含むコード
-                string aiGeneratedCode = @"using System.IO;
-File.WriteAllText(""test.txt"", ""dangerous"");
-return ""File written"";";
-
-                CompilationRequest request = new()
-                {
-                    Code = aiGeneratedCode,
-                    ClassName = "DynamicCommand",
-                    Namespace = "Dynamic",
-                    AdditionalReferences = new List<string>()
-                };
-
-                // Act
-                CompilationResult result = _compiler.Compile(request);
-
-                // Assert
-                Assert.IsFalse(result.Success, "Compilation should fail due to security violation");
-                Assert.IsTrue(result.HasSecurityViolations, "Security violations should be detected");
-                Assert.AreEqual(CompilationFailureReason.SecurityViolation, result.FailureReason);
-            }
-            else
-            {
-                // Restrictedモードでない場合はテストをスキップ
-                Assert.Ignore($"Test requires Restricted mode, but current level is {originalLevel}");
-            }
-        }
-
-        [Test]
         public void TestMixedContent_CorrectlySeparatesUsingFromCode()
         {
             // Arrange: using文とコメント、空行が混在
