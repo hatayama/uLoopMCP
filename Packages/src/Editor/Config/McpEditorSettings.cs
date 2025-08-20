@@ -974,9 +974,11 @@ namespace io.github.hatayama.uLoopMCP
                     .ToList();
                 
                 bool hasRoslynSymbol = symbols.Contains(ROSLYN_SYMBOL);
-                bool shouldHaveSymbol = level != DynamicCodeSecurityLevel.Disabled;
+                bool shouldAddSymbol = level != DynamicCodeSecurityLevel.Disabled;
                 
-                if (shouldHaveSymbol && !hasRoslynSymbol)
+                // Disabled以外のレベルで、まだシンボルがない場合のみ追加
+                // Disabledに変更した場合はシンボルを削除しない（仕様通り）
+                if (shouldAddSymbol && !hasRoslynSymbol)
                 {
                     // Roslynシンボル追加
                     symbols.Add(ROSLYN_SYMBOL);
@@ -996,26 +998,7 @@ namespace io.github.hatayama.uLoopMCP
                         aiTodo: "プラットフォーム別のシンボル追加を確認"
                     );
                 }
-                else if (!shouldHaveSymbol && hasRoslynSymbol)
-                {
-                    // Roslynシンボル削除
-                    symbols.Remove(ROSLYN_SYMBOL);
-                    string newSymbols = string.Join(";", symbols);
-                    PlayerSettings.SetScriptingDefineSymbols(target, newSymbols);
-                    
-                    VibeLogger.LogInfo(
-                        "roslyn_symbol_removed_from_platform",
-                        $"Removed {ROSLYN_SYMBOL} from {target}",
-                        new { 
-                            platform = target.ToString(),
-                            symbols = newSymbols,
-                            level = level.ToString()
-                        },
-                        correlationId: correlationId,
-                        humanNote: $"Roslyn機能を{target}プラットフォームで無効化",
-                        aiTodo: "DisabledモードでのRoslyn無効化を確認"
-                    );
-                }
+                // 注意: Disabledレベルに変更してもシンボルは削除しない（仕様）
             }
         }
         
@@ -1029,7 +1012,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 DynamicCodeSecurityLevel currentLevel = GetDynamicCodeSecurityLevel();
                 
-                // Disabledの場合はシンボル削除、それ以外は追加
+                // Disabled以外の場合はシンボル追加（Disabledでも削除はしない）
                 UpdateRoslynDefineSymbol(currentLevel);
             };
         }

@@ -397,21 +397,35 @@ namespace io.github.hatayama.uLoopMCP
                     // Show confirmation dialog when enabling Roslyn features
                     if (currentLevel == DynamicCodeSecurityLevel.Disabled && newLevel != DynamicCodeSecurityLevel.Disabled)
                     {
-                        bool confirmed = EditorUtility.DisplayDialog(
-                            "Enable Roslyn Features",
-                            "Enabling Roslyn features requires the following NuGet packages:\n\n" +
-                            "• Microsoft.CodeAnalysis (v4.14.0)\n" +
-                            "• Microsoft.CodeAnalysis.CSharp (v4.14.0)\n\n" +
-                            "These DLLs must be installed in your Unity project.\n\n" +
-                            "See README for installation instructions.\n\n" +
-                            "Continue?",
-                            "Continue",
-                            "Cancel"
-                        );
+                        bool roslynAvailable = RoslynAssemblyChecker.IsRoslynAvailable();
                         
-                        if (confirmed)
+                        if (!roslynAvailable)
                         {
-                            McpEditorSettings.SetDynamicCodeSecurityLevel(newLevel);
+                            // Roslynがインストールされていない場合
+                            EditorUtility.DisplayDialog(
+                                "Roslyn Not Installed",
+                                RoslynAssemblyChecker.GetInstallationMessage(),
+                                "OK"
+                            );
+                            return; // セキュリティレベルの変更はキャンセル
+                        }
+                        else
+                        {
+                            // Roslynがインストール済みの場合
+                            string version = RoslynAssemblyChecker.GetRoslynVersion();
+                            bool confirmed = EditorUtility.DisplayDialog(
+                                "Enable Roslyn Features",
+                                $"Microsoft.CodeAnalysis.CSharp is installed (version: {version}).\n\n" +
+                                "This will enable advanced code analysis and execution features.\n\n" +
+                                "Continue?",
+                                "Enable",
+                                "Cancel"
+                            );
+                            
+                            if (confirmed)
+                            {
+                                McpEditorSettings.SetDynamicCodeSecurityLevel(newLevel);
+                            }
                         }
                     }
                     else

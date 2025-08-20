@@ -20,6 +20,7 @@ namespace io.github.hatayama.uLoopMCP
         private readonly CompilationCacheManager _cacheManager = new();
         private readonly List<MetadataReference> _defaultReferences = new();
         private readonly DynamicCodeSecurityLevel _currentSecurityLevel;
+        private readonly SecurityValidator _securityValidator;
         private List<MetadataReference> _currentReferences;
         private bool _disposed;
 
@@ -32,6 +33,7 @@ namespace io.github.hatayama.uLoopMCP
         public RoslynCompiler(DynamicCodeSecurityLevel securityLevel)
         {
             _currentSecurityLevel = securityLevel;
+            _securityValidator = new SecurityValidator(securityLevel);
             InitializeReferencesForLevel(_currentSecurityLevel);
         }
         
@@ -205,86 +207,6 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// セキュリティ検証を実行（Restrictedモードの場合のみ）
-        /// </summary>
-        private CompilationResult ValidateSecurityIfNeeded(CompilationContext context, CSharpCompilationOptions compilationOptions, string correlationId)
-        {
-            if (_currentSecurityLevel != DynamicCodeSecurityLevel.Restricted)
-            {
-                return null; // セキュリティ検証不要
-            }
-
-            // v4.1: 全アセンブリが参照可能になったため、通常のコンパイレーションでセキュリティ検証可能
-            // 別のコンパイレーション作成は不要
-            CSharpCompilation compilation = CSharpCompilation.Create(
-                $"DynamicAssembly_{correlationId}",
-                new[] { context.SyntaxTree },
-                context.References,
-                compilationOptions
-            );
-            
-            VibeLogger.LogInfo(
-                "roslyn_security_validation_start",
-                "Starting security validation with standard compilation",
-                new 
-                { 
-                    referenceCount = context.References.Count,
-                    securityLevel = _currentSecurityLevel.ToString()
-                },
-                correlationId,
-                "Security validation using standard compilation",
-                "All assemblies now available for type resolution"
-            );
-            
-            SecurityValidator validator = new(_currentSecurityLevel);
-            SecurityValidationResult validationResult = validator.ValidateCompilation(compilation);
-            
-            if (!validationResult.IsValid)
-            {
-                // セキュリティ違反を検出した場合は即座にエラーとして返す
-                VibeLogger.LogWarning(
-                    "roslyn_security_validation_failed",
-                    "Security validation failed during compilation",
-                    new
-                    {
-                        violationCount = validationResult.Violations.Count,
-                        violations = validationResult.Violations.Select(v => new
-                        {
-                            type = v.Type.ToString(),
-                            api = v.ApiName,
-                            message = v.Message
-                        }).ToArray()
-                    },
-                    correlationId,
-                    "Dangerous API usage detected in user code",
-                    "Review and fix security violations"
-                );
-                
-                return new CompilationResult
-                {
-                    Success = false,
-                    UpdatedCode = context.WrappedCode,
-                    Errors = new List<CompilationError>
-                    {
-                        new CompilationError
-                        {
-                            Message = validationResult.GetErrorSummary(),
-                            ErrorCode = "SECURITY001",
-                            Line = 0,
-                            Column = 0
-                        }
-                    },
-                    Warnings = new List<string>(),
-                    HasSecurityViolations = true,
-                    SecurityViolations = validationResult.Violations,
-                    FailureReason = CompilationFailureReason.SecurityViolation
-                };
-            }
-
-            return null; // セキュリティ検証成功
-        }
-
-        /// <summary>
         /// 診断駆動修正を適用
         /// </summary>
         private SyntaxTree ApplyDiagnosticFixes(CSharpCompilation compilation, SyntaxTree syntaxTree, string correlationId)
@@ -361,13 +283,8 @@ namespace io.github.hatayama.uLoopMCP
                 allowUnsafe: false
             );
 
-            // セキュリティ検証（Restrictedモードの場合）
-            CompilationResult securityValidationResult = ValidateSecurityIfNeeded(context, compilationOptions, correlationId);
-            if (securityValidationResult != null)
-            {
-                return securityValidationResult; // セキュリティ違反で早期リターン
-            }
-
+            // v5.1: コンパイル自体は成功させるが、セキュリティ違反を検出して結果に含める
+            
             // 基本のコンパイル作成
             CSharpCompilation compilation = CreateCompilation(
                 $"DynamicAssembly_{correlationId}",
@@ -392,7 +309,37 @@ namespace io.github.hatayama.uLoopMCP
             using MemoryStream memoryStream = new MemoryStream();
             Microsoft.CodeAnalysis.Emit.EmitResult emitResult = compilation.Emit(memoryStream);
 
-            return ProcessEmitResult(emitResult, memoryStream, context, correlationId);
+            // セキュリティチェック（Restrictedモードのみ）
+            CompilationResult result = ProcessEmitResult(emitResult, memoryStream, context, correlationId);
+            
+            // コンパイル成功時のみセキュリティ検証を実施
+            if (result.Success && _currentSecurityLevel == DynamicCodeSecurityLevel.Restricted)
+            {
+                SecurityValidationResult validationResult = _securityValidator.ValidateCompilation(compilation);
+                if (!validationResult.IsValid)
+                {
+                    result.HasSecurityViolations = true;
+                    result.SecurityViolations = validationResult.Violations;
+                    
+                    VibeLogger.LogWarning(
+                        "security_violations_detected",
+                        "Security violations detected in compiled code",
+                        new {
+                            violationCount = validationResult.Violations.Count,
+                            violations = validationResult.Violations.Select(v => new {
+                                type = v.Type.ToString(),
+                                api = v.ApiName,
+                                description = v.Description
+                            })
+                        },
+                        correlationId,
+                        "危険なAPIコールを検出",
+                        "実行時にブロックされます"
+                    );
+                }
+            }
+
+            return result;
         }
 
         private CompilationResult ProcessEmitResult(
@@ -422,8 +369,8 @@ namespace io.github.hatayama.uLoopMCP
                 result.Success = false;
                 result.Errors = ConvertDiagnosticsToErrors(emitResult.Diagnostics);
 
-                // セキュリティ違反を検出
-                DetectSecurityViolations(result, emitResult.Diagnostics);
+                // v5.1: コンパイル時のセキュリティ違反検出は廃止
+                // DetectSecurityViolations(result, emitResult.Diagnostics);
 
                 LogCompilationFailure(result, correlationId);
             }
@@ -612,114 +559,7 @@ namespace io.github.hatayama.uLoopMCP
 
 
 
-        /// <summary>
-        /// 診断メッセージからセキュリティ違反を検出してCompilationResultに設定
-        /// </summary>
-        private void DetectSecurityViolations(CompilationResult result, IEnumerable<Diagnostic> diagnostics)
-        {
-            SecurityPolicy securityPolicy = SecurityPolicy.GetDefault();
-            List<SecurityViolation> violations = new();
-
-            foreach (Diagnostic diagnostic in diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error))
-            {
-                string message = diagnostic.GetMessage();
-
-                // 禁止された名前空間の使用を検出
-                foreach (string forbiddenNamespace in securityPolicy.ForbiddenNamespaces)
-                {
-                    bool isViolation = false;
-                    string detectionReason = "";
-
-                    // パターン1: 直接的な名前空間エラー（"System.IO is a namespace but is used like a type"）
-                    if (message.Contains($"'{forbiddenNamespace}'") &&
-                        message.Contains("is a namespace but is used like a type"))
-                    {
-                        isViolation = true;
-                        detectionReason = "Direct namespace usage error";
-                    }
-
-                    // パターン2: 子名前空間の使用エラー（"System.Net.Http is a namespace but is used like a type"）
-                    else if (message.Contains("is a namespace but is used like a type"))
-                    {
-                        // System.Net.Http の場合、System.Net で検出
-                        if (message.Contains($"'{forbiddenNamespace}."))
-                        {
-                            isViolation = true;
-                            detectionReason = "Child namespace usage error";
-                        }
-                    }
-
-                    // パターン3: 禁止名前空間に属する型の使用エラー（間接的検出）
-                    // "HttpClient could not be found" で System.Net.Http.HttpClient を検出
-                    else if (diagnostic.Id == "CS0246")
-                    {
-                        string context = diagnostic.Location.SourceTree?.ToString() ?? "";
-                        if (context.Contains($"using {forbiddenNamespace}") ||
-                            context.Contains($"using {forbiddenNamespace}."))
-                        {
-                            isViolation = true;
-                            detectionReason = "Forbidden namespace type usage";
-                        }
-                    }
-
-                    if (isViolation)
-                    {
-                        SecurityViolation violation = new SecurityViolation
-                        {
-                            Type = SecurityViolationType.ForbiddenNamespace,
-                            Description = $"Forbidden namespace '{forbiddenNamespace}' was used but blocked by security policy ({detectionReason})",
-                            LineNumber = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
-                            CodeSnippet = message
-                        };
-                        violations.Add(violation);
-
-                        VibeLogger.LogWarning(
-                            "security_violation_detected",
-                            $"Security violation: forbidden namespace '{forbiddenNamespace}' detected in compilation",
-                            new
-                            {
-                                forbiddenNamespace,
-                                diagnosticId = diagnostic.Id,
-                                diagnosticMessage = message,
-                                lineNumber = violation.LineNumber,
-                                detectionReason
-                            },
-                            null,
-                            "Security policy violation detected during compilation",
-                            "Track security violations for policy effectiveness analysis"
-                        );
-                        break; // 最初にマッチした禁止名前空間で終了
-                    }
-                }
-
-                // 禁止されたメソッドの検出
-                foreach (string forbiddenMethod in securityPolicy.ForbiddenMethods)
-                {
-                    if (message.Contains(forbiddenMethod))
-                    {
-                        SecurityViolation violation = new SecurityViolation
-                        {
-                            Type = SecurityViolationType.DangerousApiCall,
-                            Description = $"Forbidden method '{forbiddenMethod}' was detected",
-                            LineNumber = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
-                            CodeSnippet = message
-                        };
-                        violations.Add(violation);
-                    }
-                }
-            }
-
-            if (violations.Count > 0)
-            {
-                result.HasSecurityViolations = true;
-                result.SecurityViolations = violations;
-                result.FailureReason = CompilationFailureReason.SecurityViolation;
-            }
-            else
-            {
-                result.FailureReason = CompilationFailureReason.CompilationError;
-            }
-        }
+        // v5.1: DetectSecurityViolationsメソッドは削除（コンパイル時セキュリティチェック廃止）
 
 
         private string GenerateCacheKey(CompilationRequest request)

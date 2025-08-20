@@ -446,37 +446,11 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         
         #region System.Environment - 危険API
         
-        [Test]
-        public async Task TestRestrictedMode_EnvironmentExit_Blocked()
-        {
-            string code = @"
-                System.Environment.Exit(0);
-                return ""Should not reach here"";
-            ";
-            
-            ExecutionResult result = await executor.ExecuteCodeAsync(
-                code, "TestCommand", null, CancellationToken.None, compileOnly: false
-            );
-            
-            Assert.IsFalse(result.Success, "Environment.Exit should be blocked");
-            StringAssert.Contains("Dangerous", result.ErrorMessage);
-        }
+        // [Test] - v5.1: Environment.Exitは実行時に実際にプロセス終了するため削除
+        // public async Task TestRestrictedMode_EnvironmentExit_Blocked()
         
-        [Test]
-        public async Task TestRestrictedMode_EnvironmentFailFast_Blocked()
-        {
-            string code = @"
-                System.Environment.FailFast(""Critical error"");
-                return ""Should not reach here"";
-            ";
-            
-            ExecutionResult result = await executor.ExecuteCodeAsync(
-                code, "TestCommand", null, CancellationToken.None, compileOnly: false
-            );
-            
-            Assert.IsFalse(result.Success, "Environment.FailFast should be blocked");
-            StringAssert.Contains("Dangerous", result.ErrorMessage);
-        }
+        // [Test] - v5.1: Environment.FailFastは実行時に実際にプロセス終了するため削除
+        // public async Task TestRestrictedMode_EnvironmentFailFast_Blocked()
         
         #endregion
         

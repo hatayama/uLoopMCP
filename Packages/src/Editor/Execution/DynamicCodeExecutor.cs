@@ -117,6 +117,13 @@ namespace io.github.hatayama.uLoopMCP
                         stopwatch.Elapsed, compilationResult.Errors);
                 }
 
+                // コンパイル成功後もセキュリティ違反をチェック（Restrictedモード）
+                if (compilationResult.HasSecurityViolations)
+                {
+                    return CreateFailureResult("セキュリティ違反が検出されました（危険なAPIコール）",
+                        stopwatch.Elapsed, compilationResult.SecurityViolations);
+                }
+
                 // CompileOnly=true の場合はここで終了
                 if (compileOnly)
                 {

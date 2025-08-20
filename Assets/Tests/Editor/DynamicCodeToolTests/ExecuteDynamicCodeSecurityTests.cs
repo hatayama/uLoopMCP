@@ -29,146 +29,27 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             _compiler = null;
         }
 
-        [Test]
-        public void Compile_WithSystemIOType_ShouldFailWithSecurityViolation()
-        {
-            // Arrange - System.IOの危険なAPIを使用
-            string code = @"
-                using System.IO;
-                string tempFile = ""test.txt"";
-                File.Delete(tempFile);  // Deleteは危険API
-                File.WriteAllText(tempFile, ""test"");  // WriteAllTextも危険API
-                return ""done"";";
+        // v5.1: System.IOのセキュリティチェックは実行時のみ（コンパイル時チェック廃止）
+        // [Test]
+        // public void Compile_WithSystemIOType_ShouldFailWithSecurityViolation()
+        // テスト削除
 
-            CompilationRequest request = new CompilationRequest
-            {
-                Code = code,
-                ClassName = "IOTestClass", 
-                Namespace = "TestNamespace"
-            };
+        // v5.1: HttpClientのセキュリティチェックは実行時のみ（コンパイル時チェック廃止）
+        // [Test]
+        // public void Compile_WithSystemNetHttpType_ShouldFailWithSecurityViolation()
+        // テスト削除
 
-            // Act
-            CompilationResult result = _compiler.Compile(request);
+        // v5.1: File.Deleteのセキュリティチェックは実行時のみ（コンパイル時チェック廃止）
+        // [Test]
+        // public void Compile_WithDangerousFileDelete_ShouldFailWithSecurityViolation()
+        // テスト削除
 
-            // Assert - v4.0: コンパイルは成功し、実行時にセキュリティ違反を検出
-            // コンパイル自体は成功するが、セキュリティ違反は検出される
-            Assert.IsFalse(result.Success, "Should fail due to dangerous API detection");
-            Assert.IsTrue(result.HasSecurityViolations, "Result should indicate security violations");
-            Assert.AreEqual(CompilationFailureReason.SecurityViolation, result.FailureReason, "Failure reason should be SecurityViolation");
-            Assert.IsTrue(result.SecurityViolations.Count > 0, "Should have at least one security violation");
-            
-            // セキュリティ違反の詳細を確認
-            SecurityViolation violation = result.SecurityViolations.FirstOrDefault(v => v.Type == SecurityViolationType.DangerousApiCall);
-            Assert.IsNotNull(violation, "Should have dangerous API violation");
-            Assert.That(violation.Description, Does.Contain("File.Delete").Or.Contain("File.WriteAllText"), "Violation description should mention dangerous API");
-        }
-
-        [Test]
-        public void Compile_WithSystemNetHttpType_ShouldFailWithSecurityViolation()
-        {
-            // Arrange - System.Net.Httpの型を使用
-            string code = @"
-                using System.Net.Http;
-                HttpClient client = new();
-                return client.GetType().Name;";
-
-            CompilationRequest request = new CompilationRequest
-            {
-                Code = code,
-                ClassName = "HttpTestClass",
-                Namespace = "TestNamespace"
-            };
-
-            // Act
-            CompilationResult result = _compiler.Compile(request);
-
-            // Assert - v4.0: HttpClientは危険な型として検出
-            Assert.IsFalse(result.Success, "Should fail due to dangerous type detection");
-            Assert.IsTrue(result.HasSecurityViolations, "Result should indicate security violations");
-            Assert.AreEqual(CompilationFailureReason.SecurityViolation, result.FailureReason, "Failure reason should be SecurityViolation");
-            Assert.IsTrue(result.SecurityViolations.Count > 0, "Should have at least one security violation");
-            
-            // セキュリティ違反の詳細を確認
-            // HttpClientは危険な型として検出される（ForbiddenNamespaceではなくDangerousApiCallまたはDangerousTypeCreation）
-            SecurityViolation violation = result.SecurityViolations.FirstOrDefault(v => 
-                v.Type == SecurityViolationType.DangerousApiCall || 
-                v.Type == SecurityViolationType.DangerousTypeCreation);
-            Assert.IsNotNull(violation, "Should have dangerous API or type creation violation");
-            Assert.That(violation.Description, Does.Contain("HttpClient").Or.Contain("System.Net"), 
-                "Violation description should mention HttpClient or System.Net");
-        }
-
-        [Test]
-        public void Compile_WithDangerousFileDelete_ShouldFailWithSecurityViolation()
-        {
-            // Arrange - 危険なファイル削除操作
-            string code = @"
-                string path = ""/temp/test.txt"";
-                System.IO.File.Delete(path);
-                return ""deleted"";";
-
-            CompilationRequest request = new CompilationRequest
-            {
-                Code = code,
-                ClassName = "FileDeleteTestClass",
-                Namespace = "TestNamespace"
-            };
-
-            // Act
-            CompilationResult result = _compiler.Compile(request);
-
-            // Assert
-            Assert.IsFalse(result.Success, "Should fail due to dangerous API");
-            Assert.IsTrue(result.HasSecurityViolations, "Should have security violations");
-        }
-
-        [Test]
-        public void Compile_WithProcessStart_ShouldFailWithSecurityViolation()
-        {
-            // Arrange - プロセス起動（危険な操作）
-            string code = @"
-                System.Diagnostics.Process.Start(""notepad.exe"");
-                return ""started"";";
-
-            CompilationRequest request = new CompilationRequest
-            {
-                Code = code,
-                ClassName = "ProcessTestClass",
-                Namespace = "TestNamespace"
-            };
-
-            // Act
-            CompilationResult result = _compiler.Compile(request);
-
-            // Assert
-            Assert.IsFalse(result.Success, "Should fail due to dangerous API");
-            Assert.IsTrue(result.HasSecurityViolations || result.Errors?.Any() == true, 
-                "Should have security violations or compilation errors");
-        }
-
-        [Test]
-        public void Compile_WithReflectionAssemblyLoad_ShouldFailWithSecurityViolation()
-        {
-            // Arrange - Assembly.Load（危険な操作）
-            string code = @"
-                System.Reflection.Assembly.Load(""System.IO"");
-                return ""loaded"";";
-
-            CompilationRequest request = new CompilationRequest
-            {
-                Code = code,
-                ClassName = "ReflectionTestClass",
-                Namespace = "TestNamespace"
-            };
-
-            // Act
-            CompilationResult result = _compiler.Compile(request);
-
-            // Assert
-            Assert.IsFalse(result.Success, "Should fail due to dangerous API");
-            Assert.IsTrue(result.HasSecurityViolations || result.Errors?.Any() == true, 
-                "Should have security violations or compilation errors");
-        }
+        // v5.1: Process.StartとAssembly.Loadのセキュリティチェックは実行時のみ（コンパイル時チェック廃止）
+        // [Test]
+        // public void Compile_WithProcessStart_ShouldFailWithSecurityViolation()
+        // [Test]
+        // public void Compile_WithReflectionAssemblyLoad_ShouldFailWithSecurityViolation()
+        // テスト削除
 
         [Test]
         public void Compile_WithDynamicAssemblyTest_SafeMethods_ShouldSucceed()

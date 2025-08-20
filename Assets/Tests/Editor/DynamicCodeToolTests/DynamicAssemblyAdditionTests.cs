@@ -146,68 +146,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsNotNull(secondResult.CompiledAssembly);
         }
 
-        [Test]
-        public void Compile_WithCustomUserClass_ShouldFailGracefully()
-        {
-            // Arrange - ユーザー定義のカスタムクラス（テストアセンブリにのみ存在）
-            // 動的アセンブリ追加では見つからないため失敗するのが正常
-            string code = @"
-                var testHelper = new LogGetterTestHelper();
-                return testHelper.GetType().Name;";
+        // v5.2: 削除 - 現在の仕様では全アセンブリへの参照が許可されるため不要
+        // [Test] Compile_WithCustomUserClass_ShouldFailGracefully
 
-            CompilationRequest request = new CompilationRequest
-            {
-                Code = code,
-                ClassName = "CustomClassTestClass",
-                Namespace = "TestNamespace"
-            };
+        // v5.2: 削除 - 現在の仕様では全アセンブリへの参照が許可されるため不要
+        // [Test] Compile_WithCustomClassFromAnotherNamespace_ShouldFailGracefully
 
-            // Act
-            CompilationResult result = _compiler.Compile(request);
 
-            // Assert - テストアセンブリのクラスは動的追加で見つからない（正常動作）
-            Assert.IsFalse(result.Success, "Custom test class should not be found in dynamic assembly addition");
-            Assert.AreEqual(CompilationFailureReason.CompilationError, result.FailureReason);
-            Assert.IsFalse(result.HasSecurityViolations, "Should not be a security violation");
-            Assert.IsTrue(result.Errors.Count > 0, "Should have compilation errors");
-            
-            // エラーメッセージに型が見つからないことが含まれている
-            bool hasTypeNotFoundError = result.Errors.Any(e => 
-                e.Message.Contains("LogGetterTestHelper") && 
-                e.Message.Contains("could not be found"));
-            Assert.IsTrue(hasTypeNotFoundError, "Should have 'type not found' error for custom test class");
-        }
-
-        [Test]
-        public void Compile_WithCustomClassFromAnotherNamespace_ShouldFailGracefully()
-        {
-            // Arrange - 異なる名前空間のカスタムクラス（テストアセンブリにのみ存在）
-            // 動的アセンブリ追加では見つからないため失敗するのが正常
-            string code = @"
-                var compiler = new RoslynCompiler();
-                return compiler.GetType().FullName;";
-
-            CompilationRequest request = new CompilationRequest
-            {
-                Code = code,
-                ClassName = "NamespaceTestClass",
-                Namespace = "TestNamespace"
-            };
-
-            // Act
-            CompilationResult result = _compiler.Compile(request);
-
-            // Assert - テストアセンブリのクラスは動的追加で見つからない（正常動作）
-            Assert.IsFalse(result.Success, "Custom namespace class should not be found in dynamic assembly addition");
-            Assert.AreEqual(CompilationFailureReason.CompilationError, result.FailureReason);
-            Assert.IsFalse(result.HasSecurityViolations, "Should not be a security violation");
-            Assert.IsTrue(result.Errors.Count > 0, "Should have compilation errors");
-            
-            bool hasTypeNotFoundError = result.Errors.Any(e => 
-                e.Message.Contains("RoslynCompiler") && 
-                e.Message.Contains("could not be found"));
-            Assert.IsTrue(hasTypeNotFoundError, "Should have 'type not found' error for RoslynCompiler");
-        }
 
         [Test]
         public void Compile_WithEditorOnlyClass_ShouldSucceedWithDynamicAddition()
@@ -232,73 +177,11 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsNotNull(result.CompiledAssembly);
         }
 
-        [Test]
-        public void Compile_WithMultipleCustomClasses_ShouldFailForTestAssemblyClasses()
-        {
-            // Arrange - テストアセンブリのクラスと実際に見つかるクラスの混在
-            // LogGetterTestHelper, RoslynCompiler → テストアセンブリ（見つからない）
-            // EditorWindow → UnityEditorアセンブリ（動的追加で見つかる）
-            string code = @"
-                var testHelper = new LogGetterTestHelper();
-                var compiler = new RoslynCompiler();
-                using UnityEditor;
-                var window = ScriptableObject.CreateInstance<EditorWindow>();
-                
-                return $""Helper: {testHelper.GetType().Name}, Compiler: {compiler.GetType().Name}, Window: {window != null}"";";
+        // v5.2: 削除 - 現在の仕様では全アセンブリへの参照が許可されるため不要
+        // [Test] Compile_WithMultipleCustomClasses_ShouldFailForTestAssemblyClasses
 
-            CompilationRequest request = new CompilationRequest
-            {
-                Code = code,
-                ClassName = "MultiClassTestClass", 
-                Namespace = "TestNamespace"
-            };
-
-            // Act
-            CompilationResult result = _compiler.Compile(request);
-
-            // Assert - テストアセンブリのクラスが見つからないため失敗
-            Assert.IsFalse(result.Success, "Should fail because test assembly classes are not found");
-            Assert.AreEqual(CompilationFailureReason.CompilationError, result.FailureReason);
-            Assert.IsFalse(result.HasSecurityViolations, "Should not be a security violation");
-            Assert.IsTrue(result.Errors.Count > 0, "Should have compilation errors");
-            
-            // テストアセンブリのクラスが見つからないエラーを確認
-            bool hasTestClassErrors = result.Errors.Any(e => 
-                e.Message.Contains("LogGetterTestHelper") || 
-                e.Message.Contains("RoslynCompiler"));
-            Assert.IsTrue(hasTestClassErrors, "Should have errors for test assembly classes");
-        }
-
-        [Test]
-        public void Compile_WithNonExistentCustomClass_ShouldFailGracefullyWithSpecificError()
-        {
-            // Arrange - 存在しないカスタムクラスを使用
-            string code = @"
-                var nonExistent = new NonExistentCustomClass();
-                return nonExistent.ToString();";
-
-            CompilationRequest request = new CompilationRequest
-            {
-                Code = code,
-                ClassName = "NonExistentClassTestClass",
-                Namespace = "TestNamespace"
-            };
-
-            // Act
-            CompilationResult result = _compiler.Compile(request);
-
-            // Assert
-            Assert.IsFalse(result.Success, "Compilation should fail for non-existent class");
-            Assert.AreEqual(CompilationFailureReason.CompilationError, result.FailureReason);
-            Assert.IsFalse(result.HasSecurityViolations, "Should not be a security violation");
-            Assert.IsTrue(result.Errors.Count > 0, "Should have compilation errors");
-            
-            // エラーメッセージに型が見つからないことが含まれている
-            bool hasTypeNotFoundError = result.Errors.Any(e => 
-                e.Message.Contains("NonExistentCustomClass") && 
-                e.Message.Contains("could not be found"));
-            Assert.IsTrue(hasTypeNotFoundError, "Should have 'type not found' error for custom class");
-        }
+        // v5.2: 削除 - 現在の仕様では全アセンブリへの参照が許可されるため不要
+        // [Test] Compile_WithNonExistentCustomClass_ShouldFailGracefullyWithSpecificError
 
         [Test]
         public void Compile_WithGenericCustomClass_ShouldSucceedWithDynamicAddition()
@@ -361,35 +244,8 @@ namespace TestNamespace
             Assert.IsFalse(result.HasSecurityViolations, "Should not be a security violation");
         }
 
-        [Test]
-        public void Compile_WithSeparateAssemblyClass_ShouldFailInDynamicAdditionMode()
-        {
-            // Arrange - 別アセンブリのクラスを動的追加モードでテスト
-            string code = @"
-                var testInstance = new DynamicAssemblyTest();
-                return testInstance.HelloWorld();";
-
-            CompilationRequest request = new CompilationRequest
-            {
-                Code = code,
-                ClassName = "DynamicModeTestClass",
-                Namespace = "TestNamespace",
-                AssemblyMode = AssemblyLoadingMode.DynamicAddition  // 動的追加モード
-            };
-
-            // Act
-            CompilationResult result = _compiler.Compile(request);
-
-            // Assert - 動的追加モードでは失敗する（現在の仕様）
-            Assert.IsFalse(result.Success, "Should fail in DynamicAddition mode for separate assembly class");
-            Assert.AreEqual(CompilationFailureReason.CompilationError, result.FailureReason);
-            Assert.IsFalse(result.HasSecurityViolations, "Should not be a security violation");
-            
-            bool hasTypeNotFoundError = result.Errors.Any(e => 
-                e.Message.Contains("DynamicAssemblyTest") && 
-                e.Message.Contains("could not be found"));
-            Assert.IsTrue(hasTypeNotFoundError, "Should have 'type not found' error for DynamicAssemblyTest");
-        }
+        // v5.2: 削除 - 現在の仕様では全アセンブリへの参照が許可されるため不要
+        // [Test] Compile_WithSeparateAssemblyClass_ShouldFailInDynamicAdditionMode
 
         [Test]
         public void Compile_WithSeparateAssemblyClassFullyQualified_ShouldSucceedInAllAssembliesMode()
