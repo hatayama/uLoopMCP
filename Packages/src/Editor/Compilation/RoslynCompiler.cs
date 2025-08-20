@@ -12,14 +12,14 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Roslynを使用したC#動的コンパイル機能
-    /// v3.0 静的アセンブリ初期化戦略対応
+    /// v4.0 明示的セキュリティレベル注入対応
     /// 関連クラス: CompilationRequest, CompilationResult, DynamicCodeSecurityManager
     /// </summary>
     public class RoslynCompiler : IDisposable
     {
         private readonly CompilationCacheManager _cacheManager = new();
         private readonly List<MetadataReference> _defaultReferences = new();
-        private DynamicCodeSecurityLevel _currentSecurityLevel;
+        private readonly DynamicCodeSecurityLevel _currentSecurityLevel;
         private List<MetadataReference> _currentReferences;
         private bool _disposed;
 
@@ -29,22 +29,16 @@ namespace io.github.hatayama.uLoopMCP
         {
         };
 
-        public RoslynCompiler()
+        public RoslynCompiler(DynamicCodeSecurityLevel securityLevel)
         {
-            _currentSecurityLevel = DynamicCodeSecurityManager.CurrentLevel;
+            _currentSecurityLevel = securityLevel;
             InitializeReferencesForLevel(_currentSecurityLevel);
-            
-            // セキュリティレベル変更イベントを監視
-            DynamicCodeSecurityManager.SecurityLevelChanged += HandleSecurityLevelChanged;
         }
         
         public void Dispose()
         {
             if (!_disposed)
             {
-                // イベント登録解除
-                DynamicCodeSecurityManager.SecurityLevelChanged -= HandleSecurityLevelChanged;
-                
                 // キャッシュクリア
                 _cacheManager.ClearReferenceCache();
                 _cacheManager.ClearCache();
@@ -53,37 +47,13 @@ namespace io.github.hatayama.uLoopMCP
                 _disposed = true;
             }
         }
-
-        /// <summary>
-        /// セキュリティレベル変更ハンドラ
-        /// </summary>
-        private void HandleSecurityLevelChanged(DynamicCodeSecurityLevel newLevel)
-        {
-            string correlationId = McpConstants.GenerateCorrelationId();
-            
-            VibeLogger.LogInfo(
-                "roslyn_compiler_security_level_change",
-                $"Handling security level change to: {newLevel}",
-                new { 
-                    oldLevel = _currentSecurityLevel.ToString(), 
-                    newLevel = newLevel.ToString() 
-                },
-                correlationId,
-                "Reinitializing compiler for new security level",
-                "Monitor compiler reinitialization performance"
-            );
-            
-            InitializeReferencesForLevel(newLevel);
-            ClearCompilationCache();
-        }
         
         /// <summary>
         /// セキュリティレベルに応じたアセンブリ参照を初期化
         /// </summary>
-        public void InitializeReferencesForLevel(DynamicCodeSecurityLevel level)
+        private void InitializeReferencesForLevel(DynamicCodeSecurityLevel level)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
-            _currentSecurityLevel = level;
             
             // キャッシュから取得または新規作成
             List<MetadataReference> references = _cacheManager.GetOrCreateReferences(level, () =>

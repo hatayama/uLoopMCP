@@ -9,7 +9,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// 動的コード実行統合実装
-
+    /// v4.0 明示的セキュリティレベル管理
     /// 関連クラス: RoslynCompiler, SecurityValidator, CommandRunner
     /// </summary>
     public class DynamicCodeExecutor : IDynamicCodeExecutor
@@ -17,6 +17,7 @@ namespace io.github.hatayama.uLoopMCP
 #if ULOOPMCP_HAS_ROSLYN
         private readonly RoslynCompiler _compiler;
         private readonly SecurityValidator _validator;
+        private readonly DynamicCodeSecurityLevel _securityLevel;
 #endif
         private readonly CommandRunner _runner;
         private readonly ExecutionStatistics _statistics;
@@ -26,13 +27,15 @@ namespace io.github.hatayama.uLoopMCP
         public DynamicCodeExecutor(
 #if ULOOPMCP_HAS_ROSLYN
             RoslynCompiler compiler,
-            SecurityValidator validator, 
+            SecurityValidator validator,
+            DynamicCodeSecurityLevel securityLevel,
 #endif
             CommandRunner runner)
         {
 #if ULOOPMCP_HAS_ROSLYN
             _compiler = compiler ?? throw new ArgumentNullException(nameof(compiler));
             _validator = validator ?? throw new ArgumentNullException(nameof(validator));
+            _securityLevel = securityLevel;
 #endif
             _runner = runner ?? throw new ArgumentNullException(nameof(runner));
             _statistics = new ExecutionStatistics();
@@ -200,10 +203,9 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false)
         {
+#if ULOOPMCP_HAS_ROSLYN
             // 実行時セキュリティチェック追加
-            // テスト時は DynamicCodeSecurityManager.CurrentLevel を優先
-            DynamicCodeSecurityLevel currentLevel = DynamicCodeSecurityManager.CurrentLevel;
-            if (currentLevel == DynamicCodeSecurityLevel.Disabled)
+            if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
             {
                 return new ExecutionResult
                 {
@@ -217,7 +219,7 @@ namespace io.github.hatayama.uLoopMCP
             
             // Restrictedモードでセキュリティレベル変更をブロック（実行時チェック）
             // CurrentLevelの読み取りは許可（変更のみ禁止）
-            if (currentLevel == DynamicCodeSecurityLevel.Restricted)
+            if (_securityLevel == DynamicCodeSecurityLevel.Restricted)
             {
                 if (code.Contains("SetDynamicCodeSecurityLevel") || 
                     code.Contains("InitializeFromSettings") ||
@@ -233,6 +235,16 @@ namespace io.github.hatayama.uLoopMCP
                     };
                 }
             }
+#else
+            // Roslyn無効時のエラーレスポンス
+            return new ExecutionResult
+            {
+                Success = false,
+                ErrorMessage = $"{McpConstants.ERROR_ROSLYN_REQUIRED}: {McpConstants.ERROR_MESSAGE_ROSLYN_REQUIRED}",
+                ExecutionTime = TimeSpan.Zero,
+                Statistics = _statistics
+            };
+#endif
             
             // JsonRpcProcessorで既にMainThreadに切り替え済み
             return await Task.FromResult(ExecuteCode(code, className, parameters, cancellationToken, compileOnly));

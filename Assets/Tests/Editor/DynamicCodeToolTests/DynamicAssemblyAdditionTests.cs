@@ -20,18 +20,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [SetUp]
         public void SetUp()
         {
-            // FullAccessモードに設定（全アセンブリへのアクセスを許可）
-            DynamicCodeSecurityManager.InitializeFromSettings(DynamicCodeSecurityLevel.FullAccess);
-            _compiler = new RoslynCompiler();
+            // FullAccessモードでコンパイラを作成
+            _compiler = new RoslynCompiler(DynamicCodeSecurityLevel.FullAccess);
         }
 
         [TearDown]
         public void TearDown()
         {
             _compiler?.ClearCache();
+            _compiler?.Dispose();
             _compiler = null;
-            // デフォルトのRestrictedモードに戻す
-            DynamicCodeSecurityManager.InitializeFromSettings(DynamicCodeSecurityLevel.Restricted);
         }
 
         [Test]

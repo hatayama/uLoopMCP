@@ -15,7 +15,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [SetUp]
         public void Setup()
         {
-            _compiler = new RoslynCompiler();
+            // FullAccessモードでコンパイラを作成（テスト用）
+            _compiler = new RoslynCompiler(DynamicCodeSecurityLevel.FullAccess);
         }
 
         [TearDown]

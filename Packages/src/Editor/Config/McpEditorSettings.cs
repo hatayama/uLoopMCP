@@ -782,8 +782,8 @@ namespace io.github.hatayama.uLoopMCP
             McpEditorSettingsData newSettings = settings with { dynamicCodeSecurityLevel = (int)level };
             SaveSettings(newSettings);
             
-            // DynamicCodeSecurityManagerに通知
-            DynamicCodeSecurityManager.CurrentLevel = level;
+            // v4.0: static変数削除により、この通知は不要になった
+            // 各コンポーネントは実行時に設定から直接レベルを取得する
             
             // ULOOPMCP_HAS_ROSLYN Define Symbol管理
             UpdateRoslynDefineSymbol(level);
@@ -831,8 +831,7 @@ namespace io.github.hatayama.uLoopMCP
                     _cachedSettings = JsonUtility.FromJson<McpEditorSettingsData>(json);
                     // MCP Editor settings loaded
                     
-                    // セキュリティレベルをDynamicCodeSecurityManagerに通知
-                    DynamicCodeSecurityManager.InitializeFromSettings((DynamicCodeSecurityLevel)_cachedSettings.dynamicCodeSecurityLevel);
+                    // v4.0: InitializeFromSettingsは廃止（各コンポーネントが直接設定を読む）
                 }
                 else
                 {
@@ -841,8 +840,7 @@ namespace io.github.hatayama.uLoopMCP
                     SaveSettings(_cachedSettings);
                     // Created default MCP Editor settings
                     
-                    // デフォルトのセキュリティレベルをDynamicCodeSecurityManagerに通知
-                    DynamicCodeSecurityManager.InitializeFromSettings((DynamicCodeSecurityLevel)_cachedSettings.dynamicCodeSecurityLevel);
+                    // v4.0: InitializeFromSettingsは廃止（各コンポーネントが直接設定を読む）
                 }
             }
             catch (Exception ex)

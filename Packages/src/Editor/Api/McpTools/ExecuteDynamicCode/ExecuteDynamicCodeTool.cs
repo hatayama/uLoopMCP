@@ -49,21 +49,35 @@ It does NOT auto-add missing using statements. If you get ""type not found"" err
 either use fully-qualified names or include the necessary using statements in your code.")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
-        private readonly IDynamicCodeExecutor _executor;
+        private IDynamicCodeExecutor _executor;
         private readonly ImprovedErrorHandler _errorHandler;
+        private DynamicCodeSecurityLevel _currentSecurityLevel;
         
         public override string ToolName => "execute-dynamic-code";
         
         public ExecuteDynamicCodeTool()
         {
 #if ULOOPMCP_HAS_ROSLYN
-            // 実際のDynamicCodeExecutor実装を使用
-            _executor = Factory.DynamicCodeExecutorFactory.CreateDefault();
+            // 設定から現在のセキュリティレベルを取得
+            _currentSecurityLevel = McpEditorSettings.GetDynamicCodeSecurityLevel();
+            
+            // セキュリティレベルを明示的に指定してExecutorを作成
+            _executor = Factory.DynamicCodeExecutorFactory.Create(_currentSecurityLevel);
             _errorHandler = new ImprovedErrorHandler();
+            
+            VibeLogger.LogInfo(
+                "execute_dynamic_code_tool_initialized",
+                $"ExecuteDynamicCodeTool initialized with security level: {_currentSecurityLevel}",
+                new { securityLevel = _currentSecurityLevel.ToString() },
+                correlationId: McpConstants.GenerateCorrelationId(),
+                humanNote: "Tool initialized with explicit security level",
+                aiTodo: "Monitor security level consistency"
+            );
 #else
             // Roslyn無効時はnull（このツール自体が登録されないはず）
             _executor = null;
             _errorHandler = null;
+            _currentSecurityLevel = DynamicCodeSecurityLevel.Disabled;
 #endif
         }
         
@@ -83,6 +97,28 @@ either use fully-qualified names or include the necessary using statements in yo
             
             try
             {
+#if ULOOPMCP_HAS_ROSLYN
+                // セキュリティレベルが変更されている場合はExecutorを再作成
+                DynamicCodeSecurityLevel currentLevel = McpEditorSettings.GetDynamicCodeSecurityLevel();
+                if (currentLevel != _currentSecurityLevel)
+                {
+                    VibeLogger.LogInfo(
+                        "execute_dynamic_code_recreating_executor",
+                        $"Security level changed from {_currentSecurityLevel} to {currentLevel}, recreating executor",
+                        new { 
+                            oldLevel = _currentSecurityLevel.ToString(),
+                            newLevel = currentLevel.ToString()
+                        },
+                        correlationId,
+                        "Recreating executor due to security level change",
+                        "Monitor security level change frequency"
+                    );
+                    
+                    _currentSecurityLevel = currentLevel;
+                    _executor = Factory.DynamicCodeExecutorFactory.Create(_currentSecurityLevel);
+                }
+#endif
+                
                 // VibeLoggerで実行開始をログ
                 VibeLogger.LogInfo(
                     "execute_dynamic_code_start",
@@ -91,25 +127,23 @@ either use fully-qualified names or include the necessary using statements in yo
                         correlationId,
                         codeLength = parameters.Code?.Length ?? 0,
                         compileOnly = parameters.CompileOnly,
-                        parametersCount = parameters.Parameters?.Count ?? 0
+                        parametersCount = parameters.Parameters?.Count ?? 0,
+                        securityLevel = _currentSecurityLevel.ToString()
                     },
                     correlationId,
                     "Dynamic code execution request received",
                     "Monitor execution flow and performance"
                 );
                 
-                // セキュリティチェック
-                DynamicCodeSecurityLevel currentLevel = DynamicCodeSecurityManager.CurrentLevel;
-                
                 // Level 0: 実行完全禁止
-                if (!DynamicCodeSecurityManager.CanExecute(currentLevel))
+                if (!DynamicCodeSecurityManager.CanExecute(_currentSecurityLevel))
                 {
                     return new ExecuteDynamicCodeResponse
                     {
                         Success = false,
                         Error = "Code execution is disabled at current security level (Disabled)",
                         UpdatedCode = parameters.Code,
-                        SecurityLevel = currentLevel.ToString()
+                        SecurityLevel = _currentSecurityLevel.ToString()
                     };
                 }
                 

@@ -4,50 +4,14 @@ using System.Collections.Generic;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// ExecuteDynamicCodeToolのセキュリティ管理
-    /// v3.0 静的アセンブリ初期化戦略 - シンプルで予測可能な動作
+    /// ExecuteDynamicCodeToolのセキュリティ管理ユーティリティ
+    /// v4.0 ステートレス設計 - static変数を排除し、明示的な依存性注入
     /// 関連クラス: DynamicCodeSecurityLevel, AssemblyReferencePolicy, RoslynCompiler
     /// </summary>
     public static class DynamicCodeSecurityManager
     {
-        private static DynamicCodeSecurityLevel _currentLevel = DynamicCodeSecurityLevel.Restricted;
-
-        /// <summary>
-        /// セキュリティレベル変更イベント
-        /// </summary>
-        public static event Action<DynamicCodeSecurityLevel> SecurityLevelChanged;
-
-        /// <summary>
-        /// 現在のセキュリティレベル
-        /// </summary>
-        public static DynamicCodeSecurityLevel CurrentLevel
-        {
-            get => _currentLevel;
-            internal set
-            {
-                if (_currentLevel != value)
-                {
-                    DynamicCodeSecurityLevel oldLevel = _currentLevel;
-                    _currentLevel = value;
-
-                    string correlationId = McpConstants.GenerateCorrelationId();
-                    VibeLogger.LogInfo(
-                        "security_level_changed",
-                        $"Security level changed from {oldLevel} to {value}",
-                        new { 
-                            oldLevel = oldLevel.ToString(), 
-                            newLevel = value.ToString() 
-                        },
-                        correlationId,
-                        "Security level updated",
-                        "Monitor security level changes"
-                    );
-
-                    // イベント発火
-                    SecurityLevelChanged?.Invoke(value);
-                }
-            }
-        }
+        // static変数を削除し、ステートレスなユーティリティクラスとして再設計
+        // セキュリティレベルは各コンポーネントのコンストラクタで明示的に受け取る
 
         // 正規表現ベースの検出は廃止（Roslynベースに移行済み）
         // DangerousApiDetectorとSecurityValidatorを使用
@@ -90,19 +54,50 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// セキュリティレベルを設定から初期化（テスト用に公開）
+        /// 現在のセキュリティレベルを取得（廃止予定 - v4.0）
         /// </summary>
+        [Obsolete("Security level should be passed explicitly to each component")]
+        public static DynamicCodeSecurityLevel CurrentLevel
+        {
+            get
+            {
+                // v4.0: static変数を削除したため、デフォルト値を返す
+                // 実際のセキュリティレベルは各コンポーネントが保持
+                VibeLogger.LogWarning(
+                    "security_current_level_deprecated",
+                    "CurrentLevel property accessed (deprecated)",
+                    null,
+                    correlationId: McpConstants.GenerateCorrelationId(),
+                    humanNote: "Deprecated property accessed - returning default",
+                    aiTodo: "Migrate to explicit level passing"
+                );
+                return DynamicCodeSecurityLevel.Disabled; // 安全なデフォルト値
+            }
+        }
+        
+        /// <summary>
+        /// セキュリティレベル変更イベント（廃止予定 - v4.0）
+        /// </summary>
+        [Obsolete("Components should be recreated instead of listening to events")]
+        public static event Action<DynamicCodeSecurityLevel> SecurityLevelChanged;
+        
+        /// <summary>
+        /// セキュリティレベルを設定から初期化（廃止予定 - v4.0）
+        /// 後方互換性のため残してあるが、実際の状態変更は行わない
+        /// </summary>
+        [Obsolete("Use explicit security level passing to constructors instead")]
         public static void InitializeFromSettings(DynamicCodeSecurityLevel level)
         {
-            _currentLevel = level;
+            // v4.0: static変数を削除したため、この メソッドは何もしない
+            // 各コンポーネントのコンストラクタで明示的にレベルを渡すように変更
             
             VibeLogger.LogInfo(
-                "security_manager_initialized",
-                $"Security manager initialized with level: {level}",
+                "security_manager_initialized_deprecated",
+                $"InitializeFromSettings called (deprecated): {level}",
                 new { level = level.ToString() },
                 correlationId: McpConstants.GenerateCorrelationId(),
-                humanNote: "Security manager ready",
-                aiTodo: "Monitor initialization patterns"
+                humanNote: "Deprecated method called - no actual state change",
+                aiTodo: "Migrate callers to use constructor injection"
             );
         }
     }

@@ -5,35 +5,38 @@ namespace io.github.hatayama.uLoopMCP.Factory
 {
     /// <summary>
     /// DynamicCodeExecutor生成ファクトリー
-
+    /// v4.0 明示的セキュリティレベル指定対応
     /// 関連クラス: DynamicCodeExecutor, RoslynCompiler, SecurityValidator, CommandRunner
     /// </summary>
     public static class DynamicCodeExecutorFactory
     {
-        /// <summary>デフォルト設定でDynamicCodeExecutorを作成</summary>
-        public static IDynamicCodeExecutor CreateDefault()
+        /// <summary>
+        /// 指定されたセキュリティレベルでDynamicCodeExecutorを作成
+        /// </summary>
+        public static IDynamicCodeExecutor Create(DynamicCodeSecurityLevel securityLevel)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
 
             try
             {
-                // コンパイラー初期化（現在のセキュリティレベルで自動初期化される）
-                RoslynCompiler compiler = new RoslynCompiler();
+                // コンパイラー初期化（明示的なセキュリティレベル指定）
+                RoslynCompiler compiler = new(securityLevel);
 
-                // セキュリティバリデーター初期化（現在のセキュリティレベル使用）
-                SecurityValidator validator = new SecurityValidator(DynamicCodeSecurityManager.CurrentLevel);
+                // セキュリティバリデーター初期化（明示的なセキュリティレベル指定）
+                SecurityValidator validator = new(securityLevel);
 
                 // コマンドランナー初期化
-                CommandRunner runner = new CommandRunner();
+                CommandRunner runner = new();
 
                 // 統合エグゼキューター作成
-                DynamicCodeExecutor executor = new DynamicCodeExecutor(compiler, validator, runner);
+                DynamicCodeExecutor executor = new(compiler, validator, securityLevel, runner);
 
                 VibeLogger.LogInfo(
                     "dynamic_executor_created",
-                    "DynamicCodeExecutor created with default settings",
+                    $"DynamicCodeExecutor created with security level: {securityLevel}",
                     new
                     {
+                        security_level = securityLevel.ToString(),
                         compiler_type = compiler.GetType().Name,
                         validator_type = validator.GetType().Name,
                         runner_type = runner.GetType().Name
@@ -63,53 +66,25 @@ namespace io.github.hatayama.uLoopMCP.Factory
                 throw;
             }
         }
+        
+        /// <summary>
+        /// デフォルト設定でDynamicCodeExecutorを作成（後方互換性のため残留）
+        /// </summary>
+        [System.Obsolete("Use Create(DynamicCodeSecurityLevel) instead")]
+        public static IDynamicCodeExecutor CreateDefault()
+        {
+            // デフォルトはDisabledレベル（最も安全）
+            return Create(DynamicCodeSecurityLevel.Disabled);
+        }
 
-        /// <summary>厳格なセキュリティ設定でDynamicCodeExecutorを作成</summary>
+        /// <summary>
+        /// 厳格なセキュリティ設定でDynamicCodeExecutorを作成（後方互換性のため残留）
+        /// </summary>
+        [System.Obsolete("Use Create(DynamicCodeSecurityLevel.Restricted) instead")]
         public static IDynamicCodeExecutor CreateStrict()
         {
-            string correlationId = McpConstants.GenerateCorrelationId();
-
-            try
-            {
-                RoslynCompiler compiler = new RoslynCompiler();
-                SecurityValidator validator = new SecurityValidator(DynamicCodeSecurityManager.CurrentLevel);
-                CommandRunner runner = new CommandRunner();
-
-                DynamicCodeExecutor executor = new DynamicCodeExecutor(compiler, validator, runner);
-
-                VibeLogger.LogInfo(
-                    "dynamic_executor_created_strict",
-                    "DynamicCodeExecutor created with strict security settings",
-                    new
-                    {
-                        compiler_type = compiler.GetType().Name,
-                        validator_type = validator.GetType().Name,
-                        runner_type = runner.GetType().Name
-                    },
-                    correlationId,
-                    "厳格セキュリティの動的コード実行システム初期化完了",
-                    "セキュリティ設定の確認"
-                );
-
-                return executor;
-            }
-            catch (System.Exception ex)
-            {
-                VibeLogger.LogError(
-                    "dynamic_executor_creation_failed_strict",
-                    "Failed to create strict DynamicCodeExecutor",
-                    new
-                    {
-                        error_type = ex.GetType().Name,
-                        error_message = ex.Message
-                    },
-                    correlationId,
-                    "厳格セキュリティ動的コード実行システム初期化失敗",
-                    "セキュリティ設定との互換性を調査"
-                );
-
-                throw;
-            }
+            // RestrictedレベルでExecutorを作成
+            return Create(DynamicCodeSecurityLevel.Restricted);
         }
     }
 }

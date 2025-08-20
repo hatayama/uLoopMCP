@@ -36,6 +36,11 @@ namespace io.github.hatayama.uLoopMCP
             dangerousNamespaces.Add("System.Reflection");
             dangerousNamespaces.Add("System.Runtime.InteropServices");
             dangerousNamespaces.Add("Microsoft.Win32");
+            dangerousNamespaces.Add("System.Web");
+            dangerousNamespaces.Add("UnityEngine.Networking");
+            dangerousNamespaces.Add("System.Data");
+            dangerousNamespaces.Add("System.Runtime.Remoting");
+            dangerousNamespaces.Add("System.Security.Cryptography");
             
             // 危険な型
             dangerousTypes.Add("System.IO.File");

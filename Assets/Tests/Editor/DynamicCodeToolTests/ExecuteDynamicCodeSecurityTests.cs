@@ -17,18 +17,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [SetUp]
         public void SetUp()
         {
-            // Restrictedモードに設定（セキュリティ検証を有効化）
-            DynamicCodeSecurityManager.InitializeFromSettings(DynamicCodeSecurityLevel.Restricted);
-            _compiler = new RoslynCompiler();
+            // Restrictedモードでコンパイラを作成（セキュリティ検証を有効化）
+            _compiler = new RoslynCompiler(DynamicCodeSecurityLevel.Restricted);
         }
 
         [TearDown]
         public void TearDown()
         {
             _compiler?.ClearCache();
+            _compiler?.Dispose();
             _compiler = null;
-            // デフォルトのRestrictedモードに戻す
-            DynamicCodeSecurityManager.InitializeFromSettings(DynamicCodeSecurityLevel.Restricted);
         }
 
         [Test]

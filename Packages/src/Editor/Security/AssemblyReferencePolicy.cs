@@ -45,7 +45,12 @@ namespace io.github.hatayama.uLoopMCP
             "System.Diagnostics.Process",
             "System.Reflection.Emit",
             "System.CodeDom",
-            "Microsoft.Win32"
+            "Microsoft.Win32",
+            "System.Web",                                      // Web関連（セキュリティリスク）
+            "UnityEngine.Networking",                          // Unity旧ネットワーキング（セキュリティリスク）
+            "System.Data.SqlClient",                           // データベース接続
+            "System.Runtime.Remoting",                         // リモート実行
+            "System.Security.Cryptography.X509Certificates"    // 証明書操作
             // Assembly-CSharpは削除（ユーザー定義として動的判定）
         };
 
