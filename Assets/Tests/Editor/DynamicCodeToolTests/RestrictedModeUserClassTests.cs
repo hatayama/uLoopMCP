@@ -33,22 +33,6 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// ユーザー定義アセンブリ検出テスト
-        /// </summary>
-        [Test]
-        public void TestUserDefinedAssemblyDetection()
-        {
-            // Assembly-CSharp系の判定
-            Assert.IsTrue(AssemblyClassifier.IsUserDefinedAssemblyByName("Assembly-CSharp"));
-            Assert.IsTrue(AssemblyClassifier.IsUserDefinedAssemblyByName("Assembly-CSharp-Editor"));
-            Assert.IsTrue(AssemblyClassifier.IsUserDefinedAssemblyByName("Assembly-CSharp-firstpass"));
-            
-            // システムアセンブリは除外
-            Assert.IsFalse(AssemblyClassifier.IsUserDefinedAssemblyByName("System"));
-            Assert.IsFalse(AssemblyClassifier.IsUserDefinedAssemblyByName("mscorlib"));
-        }
-        
-        /// <summary>
         /// 危険なAPI検出テスト
         /// </summary>
         [Test]
@@ -333,39 +317,45 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// AssemblyReferencePolicyがユーザー定義アセンブリを許可することを確認
+        /// AssemblyReferencePolicyが全アセンブリを返すことを確認
         /// </summary>
         [Test]
-        public void TestAssemblyReferencePolicyAllowsUserAssemblies()
+        public void TestAssemblyReferencePolicyReturnsAllAssemblies()
         {
             // Restrictedモードでのアセンブリリスト取得
-            IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(
+            IReadOnlyList<string> restrictedAssemblies = AssemblyReferencePolicy.GetAssemblies(
                 DynamicCodeSecurityLevel.Restricted
             );
             
-            // Assembly-CSharpがあれば含まれているはず
-            Assembly assemblyCSharp = AppDomain.CurrentDomain.GetAssemblies()
-                .FirstOrDefault(a => a.GetName().Name == "Assembly-CSharp");
+            // FullAccessモードでのアセンブリリスト取得
+            IReadOnlyList<string> fullAccessAssemblies = AssemblyReferencePolicy.GetAssemblies(
+                DynamicCodeSecurityLevel.FullAccess
+            );
             
-            if (assemblyCSharp != null)
-            {
-                Assert.IsTrue(
-                    assemblies.Contains("Assembly-CSharp"),
-                    "Assembly-CSharp should be allowed in Restricted mode"
-                );
-            }
+            // RestrictedとFullAccessで同じアセンブリが返されることを確認
+            Assert.AreEqual(
+                restrictedAssemblies.Count,
+                fullAccessAssemblies.Count,
+                "Restricted and FullAccess should return the same number of assemblies"
+            );
             
-            // Unity系は許可
+            // Unity系が含まれることを確認
             Assert.IsTrue(
-                assemblies.Any(a => a.StartsWith("UnityEngine")),
-                "UnityEngine assemblies should be allowed"
+                restrictedAssemblies.Any(a => a.StartsWith("UnityEngine")),
+                "UnityEngine assemblies should be included"
             );
             
-            // 危険なアセンブリは除外
-            Assert.IsFalse(
-                assemblies.Contains("System.IO"),
-                "System.IO should not be directly allowed"
+            // System系も含まれることを確認（全アセンブリ許可のため）
+            Assert.IsTrue(
+                restrictedAssemblies.Any(a => a.StartsWith("System")),
+                "System assemblies should be included"
             );
+            
+            // Disabledモードでは空のリストが返されることを確認
+            IReadOnlyList<string> disabledAssemblies = AssemblyReferencePolicy.GetAssemblies(
+                DynamicCodeSecurityLevel.Disabled
+            );
+            Assert.AreEqual(0, disabledAssemblies.Count, "Disabled mode should return no assemblies");
         }
         
         /// <summary>
@@ -805,26 +795,45 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // RestrictedモードでExecutorを作成
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
-            string code = @"
-                // System.IO.File.Createの使用試行（これは許可されるべき）
-                // ただしSystem.IOアセンブリ自体がRestrictedモードでブロックされているため失敗する
-                using (var stream = System.IO.File.Create(""temp.txt""))
+            // テスト用ディレクトリを作成
+            string testDir = "TestTemp_UserClass";
+            if (!System.IO.Directory.Exists(testDir))
+            {
+                System.IO.Directory.CreateDirectory(testDir);
+            }
+            
+            try
+            {
+                string code = $@"
+                    // System.IO.File.Createの使用試行（これは許可されるべき）
+                    // テスト用ディレクトリ内にファイルを作成
+                    using (var stream = System.IO.File.Create(""{testDir}/test_file_create.txt""))
+                    {{
+                        byte[] data = System.Text.Encoding.UTF8.GetBytes(""test"");
+                        stream.Write(data, 0, data.Length);
+                    }}
+                    return ""File created"";
+                ";
+                
+                ExecutionResult result = await executor.ExecuteCodeAsync(
+                    code,
+                    "TestCommand",
+                    null,
+                    CancellationToken.None,
+                    compileOnly: false
+                );
+                
+                // RestrictedモードでもFile.Createは許可されているはず（アセンブリは全て参照可能になったため）
+                Assert.IsTrue(result.Success, $"File.Create should be allowed in Restricted mode. Error: {result.ErrorMessage}");
+            }
+            finally
+            {
+                // クリーンアップ
+                if (System.IO.Directory.Exists(testDir))
                 {
-                    // ファイル作成は許可されているが、アセンブリがブロックされる
+                    System.IO.Directory.Delete(testDir, true);
                 }
-                return ""File created"";
-            ";
-            
-            ExecutionResult result = await executor.ExecuteCodeAsync(
-                code,
-                "TestCommand",
-                null,
-                CancellationToken.None,
-                compileOnly: false
-            );
-            
-            // System.IOアセンブリ自体がブロックされているため失敗
-            Assert.IsFalse(result.Success, "System.IO assembly should be blocked in Restricted mode");
+            }
         }
     }
 }

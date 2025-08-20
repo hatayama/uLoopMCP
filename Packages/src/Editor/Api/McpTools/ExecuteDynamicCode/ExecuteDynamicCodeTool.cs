@@ -175,7 +175,7 @@ either use fully-qualified names or include the necessary using statements in yo
                     executionResult, originalCode, null, correlationId);
                 
                 // セキュリティレベルを追加
-                toolResponse.SecurityLevel = currentLevel.ToString();
+                toolResponse.SecurityLevel = _currentSecurityLevel.ToString();
                 
                 // VibeLoggerで実行完了をログ
                 VibeLogger.LogInfo(

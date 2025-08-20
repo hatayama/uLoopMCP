@@ -702,22 +702,51 @@ namespace io.github.hatayama.uLoopMCP
         [Test]
         public async Task TestRestrictedMode_FileUtilCopyFileOrDirectory_Allowed()
         {
-            string code = @"
-                UnityEditor.FileUtil.CopyFileOrDirectory(""source"", ""dest"");
-                return ""File or directory copied"";
+            string code = $@"
+                // まず確実に存在するファイルを作成
+                string sourceFile = ""{TEST_TEMP_DIR}/source_file.txt"";
+                string destFile = ""{TEST_TEMP_DIR}/dest_file.txt"";
+                
+                // ディレクトリが存在することを確認
+                if (!System.IO.Directory.Exists(""{TEST_TEMP_DIR}""))
+                {{
+                    System.IO.Directory.CreateDirectory(""{TEST_TEMP_DIR}"");
+                }}
+                
+                // ソースファイルを作成
+                using (var stream = System.IO.File.Create(sourceFile))
+                {{
+                    byte[] data = System.Text.Encoding.UTF8.GetBytes(""test content for copy"");
+                    stream.Write(data, 0, data.Length);
+                }}
+                
+                // ファイルが確実に存在することを確認
+                if (!System.IO.File.Exists(sourceFile))
+                {{
+                    return ""Failed to create source file"";
+                }}
+                
+                // FileUtil.CopyFileOrDirectory を実行（これはセキュリティ違反ではないはず）
+                UnityEditor.FileUtil.CopyFileOrDirectory(sourceFile, destFile);
+                
+                // コピーが成功したことを確認
+                if (System.IO.File.Exists(destFile))
+                {{
+                    return ""FileUtil.CopyFileOrDirectory executed successfully"";
+                }}
+                
+                return ""FileUtil.CopyFileOrDirectory API call allowed (copy may have failed for other reasons)"";
             ";
             
             ExecutionResult result = await executor.ExecuteCodeAsync(
                 code, "TestCommand", null, CancellationToken.None, compileOnly: false
             );
             
-            // CopyFileOrDirectoryは実際の操作なので失敗する可能性があるが
-            // セキュリティ違反ではないはず
-            if (!result.Success)
-            {
-                StringAssert.DoesNotContain("Dangerous", result.ErrorMessage ?? "", 
-                    "FileUtil.CopyFileOrDirectory should not be blocked for security reasons");
-            }
+            // API呼び出し自体はセキュリティ違反ではないはず
+            Assert.IsTrue(
+                result.Success || !result.ErrorMessage?.Contains("Dangerous") == true,
+                $"FileUtil.CopyFileOrDirectory should not be blocked for security reasons. Error: {result.ErrorMessage}"
+            );
         }
         
         #endregion
