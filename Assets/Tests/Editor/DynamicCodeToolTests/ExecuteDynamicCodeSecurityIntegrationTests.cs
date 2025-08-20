@@ -15,19 +15,15 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
     public class ExecuteDynamicCodeSecurityIntegrationTests
     {
         private ExecuteDynamicCodeTool _tool;
-        private DynamicCodeSecurityLevel _originalLevel;
 
         [SetUp]
         public void SetUp()
         {
-            // 元のセキュリティレベルを保存
-            _originalLevel = DynamicCodeSecurityManager.CurrentLevel;
-            
+            // v4.0ステートレス設計では、セキュリティレベルは各Executorで制御
             // テスト用にデフォルトでRestrictedモードに設定
-            // （各テストが必要に応じて変更）
-            DynamicCodeSecurityManager.InitializeFromSettings(DynamicCodeSecurityLevel.Restricted);
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             
-            UnityEngine.Debug.Log($"[ExecuteDynamicCodeSecurityIntegrationTests SetUp] Security Level: {DynamicCodeSecurityManager.CurrentLevel}");
+            UnityEngine.Debug.Log($"[ExecuteDynamicCodeSecurityIntegrationTests SetUp] Test security level set to Restricted");
             
             // ツールインスタンス作成
             _tool = new ExecuteDynamicCodeTool();

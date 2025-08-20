@@ -124,21 +124,19 @@ return ""Mixed usings"";";
             CompilationResult result = _compiler.Compile(request);
 
             // Assert
-            // Restrictedモードでは危険なusing文でコンパイル失敗
-            if (DynamicCodeSecurityManager.CurrentLevel == DynamicCodeSecurityLevel.Restricted)
+            // v4.0ステートレス設計では、CurrentLevelは常にDisabledを返す
+            // そのため、この条件分岐は不要になった
+            // Restrictedモードでの検証はExecutorに直接レベルを渡して行う
+            if (!result.Success)
             {
-                Assert.IsFalse(result.Success, "Should fail with dangerous usings in Restricted mode");
+                // セキュリティ違反の場合
                 Assert.IsTrue(result.HasSecurityViolations, "Security violations should be detected");
             }
-            else if (DynamicCodeSecurityManager.CurrentLevel == DynamicCodeSecurityLevel.FullAccess)
+            else
             {
-                // FullAccessモードでは成功する可能性
-                // この場合もusing文は正しく配置されているはず
-                if (result.Success)
-                {
-                    Assert.IsTrue(result.UpdatedCode.Contains("using System.IO;"), 
-                        "System.IO using should be preserved in FullAccess mode");
-                }
+                // 成功した場合はusing文が正しく配置されているはず
+                Assert.IsTrue(result.UpdatedCode.Contains("using System.IO;"), 
+                    "System.IO using should be preserved in FullAccess mode");
             }
         }
 
@@ -388,19 +386,16 @@ return $""Cube has {methods.Length} methods"";";
             CompilationResult result = _compiler.Compile(request);
 
             // Assert
-            // System.Reflectionは危険な可能性があるが、設定による
-            if (DynamicCodeSecurityManager.CurrentLevel == DynamicCodeSecurityLevel.Restricted)
+            // v4.0ステートレス設計では、セキュリティレベルはExecutorで制御
+            // System.Reflectionの使用可否はセキュリティポリシーに依存
+            if (!result.Success && result.HasSecurityViolations)
             {
-                // Restrictedモードでの動作を確認
-                // System.Reflectionが禁止されているかどうかはポリシー次第
-                if (!result.Success && result.HasSecurityViolations)
-                {
-                    Assert.Pass("System.Reflection is blocked in Restricted mode as expected");
-                }
-                else if (result.Success)
-                {
-                    Assert.Pass("System.Reflection is allowed in current configuration");
-                }
+                // セキュリティ違反として検出された場合
+                Assert.Pass("System.Reflection is blocked as per security policy");
+            }
+            else if (result.Success)
+            {
+                Assert.Pass("System.Reflection is allowed in current configuration");
             }
         }
 

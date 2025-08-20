@@ -17,8 +17,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
     {
         private IDynamicCodeExecutor executor;
         
-        // テスト用の一時ディレクトリ
+        // テスト用の一時ディレクトリとアセットパス
         private const string TEST_TEMP_DIR = "TestTemp_RestrictedMode";
+        private const string TEST_ASSET_PATH = "Assets/Tests/Editor/DynamicCodeToolTests/Temp/TestTemp_RestrictedMode_temp_asset.asset";
         
         [SetUp]
         public void SetUp()
@@ -60,16 +61,25 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                     UnityEngine.Debug.Log($"[RestrictedModeDangerousApiTests] Cleaned up test directory: {TEST_TEMP_DIR}");
                 }
                 
-                // Assetsフォルダ内のテスト用ファイルも削除
-                string assetPath = $"Assets/{TEST_TEMP_DIR}_temp_asset.asset";
-                if (System.IO.File.Exists(assetPath))
+                // テスト用アセットファイルをAssetDatabase経由で削除（metaファイルも自動削除される）
+                string assetPath = TEST_ASSET_PATH;
+                if (UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath) != null)
                 {
-                    System.IO.File.Delete(assetPath);
+                    UnityEditor.AssetDatabase.DeleteAsset(assetPath);
+                    UnityEngine.Debug.Log($"[RestrictedModeDangerousApiTests] Deleted asset: {assetPath}");
                 }
-                string metaPath = $"{assetPath}.meta";
-                if (System.IO.File.Exists(metaPath))
+                
+                // Tempフォルダも削除（中身が空の場合）
+                string tempFolder = "Assets/Tests/Editor/DynamicCodeToolTests/Temp";
+                if (UnityEditor.AssetDatabase.IsValidFolder(tempFolder))
                 {
-                    System.IO.File.Delete(metaPath);
+                    // フォルダが空の場合のみ削除
+                    string[] assets = UnityEditor.AssetDatabase.FindAssets("", new[] { tempFolder });
+                    if (assets.Length == 0)
+                    {
+                        UnityEditor.AssetDatabase.DeleteAsset(tempFolder);
+                        UnityEngine.Debug.Log($"[RestrictedModeDangerousApiTests] Deleted temp folder: {tempFolder}");
+                    }
                 }
             }
             catch (Exception ex)
@@ -655,10 +665,17 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task TestRestrictedMode_AssetDatabaseCreateAsset_Allowed()
         {
-            string code = $@"
+            string code = @"
                 // Note: CreateAsset requires a UnityEngine.Object, so we use a ScriptableObject
                 var obj = UnityEngine.ScriptableObject.CreateInstance<UnityEngine.ScriptableObject>();
-                UnityEditor.AssetDatabase.CreateAsset(obj, ""Assets/{TEST_TEMP_DIR}_temp_asset.asset"");
+                // Tempフォルダが存在しない場合は作成
+                string tempDir = @""Assets/Tests/Editor/DynamicCodeToolTests/Temp"";
+                if (!UnityEditor.AssetDatabase.IsValidFolder(tempDir))
+                {
+                    string parent = @""Assets/Tests/Editor/DynamicCodeToolTests"";
+                    UnityEditor.AssetDatabase.CreateFolder(parent, ""Temp"");
+                }
+                UnityEditor.AssetDatabase.CreateAsset(obj, @""Assets/Tests/Editor/DynamicCodeToolTests/Temp/TestTemp_RestrictedMode_temp_asset.asset"");
                 return ""Asset created"";
             ";
             

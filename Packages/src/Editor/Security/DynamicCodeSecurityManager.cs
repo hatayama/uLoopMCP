@@ -76,12 +76,6 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// セキュリティレベル変更イベント（廃止予定 - v4.0）
-        /// </summary>
-        [Obsolete("Components should be recreated instead of listening to events")]
-        public static event Action<DynamicCodeSecurityLevel> SecurityLevelChanged;
-        
-        /// <summary>
         /// セキュリティレベルを設定から初期化（廃止予定 - v4.0）
         /// 後方互換性のため残してあるが、実際の状態変更は行わない
         /// </summary>
