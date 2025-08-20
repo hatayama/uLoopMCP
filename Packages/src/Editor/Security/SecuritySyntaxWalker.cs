@@ -117,35 +117,11 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         // using宣言の検査
+        // v4.1: 名前空間チェックは削除（メソッドレベル制御に移行）
         public override void VisitUsingDirective(UsingDirectiveSyntax node)
         {
-            string namespaceName = node.Name?.ToString();
-            
-            // デバッグログ
-            VibeLogger.LogInfo(
-                "security_walker_using_check",
-                $"Checking using directive: {namespaceName}",
-                new { 
-                    namespaceName,
-                    isDangerous = !string.IsNullOrEmpty(namespaceName) && apiDetector.IsDangerousNamespace(namespaceName)
-                },
-                correlationId: McpConstants.GenerateCorrelationId(),
-                humanNote: "SecuritySyntaxWalker checking using directive",
-                aiTodo: "Track using directive security validation"
-            );
-            
-            if (!string.IsNullOrEmpty(namespaceName) && apiDetector.IsDangerousNamespace(namespaceName))
-            {
-                violations.Add(new SecurityViolation
-                {
-                    Type = SecurityViolationType.ForbiddenNamespace,
-                    Description = $"Using dangerous namespace: {namespaceName}",
-                    Message = $"Using dangerous namespace: {namespaceName}",
-                    Location = node.GetLocation(),
-                    ApiName = namespaceName
-                });
-            }
-            
+            // using宣言自体は許可（コンパイル成功を保証）
+            // 実際の危険APIの使用はメソッドレベルでブロック
             base.VisitUsingDirective(node);
         }
         

@@ -214,66 +214,30 @@ namespace io.github.hatayama.uLoopMCP
                 return null; // セキュリティ検証不要
             }
 
-            // セキュリティ検証用に一時的に全参照を含むコンパイレーションを作成
-            // これにより、System.IOなどの危険な型もSemanticModelで解決可能になる
-            List<MetadataReference> securityCheckReferences = new();
-            
-            // 全てのロード済みアセンブリから参照を作成（危険なものも含む）
-            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                if (!assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
-                {
-                    try
-                    {
-                        securityCheckReferences.Add(MetadataReference.CreateFromFile(assembly.Location));
-                    }
-                    catch
-                    {
-                        // 参照追加に失敗した場合は無視
-                    }
-                }
-            }
-            
-            // セキュリティ検証用のコンパイレーション（全参照付き）
-            CSharpCompilation securityCheckCompilation = CSharpCompilation.Create(
-                $"SecurityCheck_{correlationId}",
+            // v4.1: 全アセンブリが参照可能になったため、通常のコンパイレーションでセキュリティ検証可能
+            // 別のコンパイレーション作成は不要
+            CSharpCompilation compilation = CSharpCompilation.Create(
+                $"DynamicAssembly_{correlationId}",
                 new[] { context.SyntaxTree },
-                securityCheckReferences,
+                context.References,
                 compilationOptions
             );
             
             VibeLogger.LogInfo(
-                "roslyn_security_check_compilation_created",
-                "Created compilation with full references for security validation",
-                new 
-                { 
-                    referenceCount = securityCheckReferences.Count,
-                    originalReferenceCount = context.References.Count 
-                },
-                correlationId,
-                "Security validation compilation prepared with all references",
-                "This allows SemanticModel to resolve dangerous types for detection"
-            );
-            
-            // デバッグログ：セキュリティ検証前のSyntaxTree確認
-            string syntaxTreePreview = context.SyntaxTree.GetRoot().ToFullString();
-            VibeLogger.LogInfo(
                 "roslyn_security_validation_start",
-                "Starting security validation with SyntaxTree",
+                "Starting security validation with standard compilation",
                 new 
                 { 
-                    treeLength = syntaxTreePreview.Length,
-                    containsUsingIO = syntaxTreePreview.Contains("using System.IO"),
-                    containsUsingHttp = syntaxTreePreview.Contains("using System.Net.Http"),
-                    treePreview = syntaxTreePreview.Length > 500 ? syntaxTreePreview.Substring(0, 500) + "..." : syntaxTreePreview
+                    referenceCount = context.References.Count,
+                    securityLevel = _currentSecurityLevel.ToString()
                 },
                 correlationId,
-                "Security validation starting with syntax tree inspection",
-                "Check if using directives are present in the tree"
+                "Security validation using standard compilation",
+                "All assemblies now available for type resolution"
             );
             
             SecurityValidator validator = new(_currentSecurityLevel);
-            SecurityValidationResult validationResult = validator.ValidateCompilation(securityCheckCompilation);
+            SecurityValidationResult validationResult = validator.ValidateCompilation(compilation);
             
             if (!validationResult.IsValid)
             {

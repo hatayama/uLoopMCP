@@ -7,10 +7,10 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// セキュリティレベルに基づくアセンブリ参照ポリシー
-    /// v3.0 静的アセンブリ初期化戦略 - シンプルで予測可能な動作
+    /// v4.1 実行時チェック移行 - コンパイル時制限を廃止
     /// 
     /// 設計ドキュメント参照: working-notes/2025-08-10_ExecuteDynamicCodeセキュリティ制限機能_design.md
-    /// 関連クラス: DynamicCodeSecurityLevel, DynamicCodeSecurityManager, RoslynCompiler
+    /// 関連クラス: DynamicCodeSecurityLevel, DangerousApiDetector, RoslynCompiler
     /// </summary>
     public static class AssemblyReferencePolicy
     {
@@ -37,21 +37,12 @@ namespace io.github.hatayama.uLoopMCP
         };
 
         // Level 1 (Restricted) で禁止される危険なアセンブリプレフィックス
+        // v4.1: コンパイル時の制限を廃止し、実行時チェックに移行
+        // これにより「コンパイルは成功、実行時にブロック」が実現できる
         private static readonly HashSet<string> RestrictedForbiddenPrefixes = new()
         {
-            "System.IO",
-            "System.Net",
-            "System.Threading",
-            "System.Diagnostics.Process",
-            "System.Reflection.Emit",
-            "System.CodeDom",
-            "Microsoft.Win32",
-            "System.Web",                                      // Web関連（セキュリティリスク）
-            "UnityEngine.Networking",                          // Unity旧ネットワーキング（セキュリティリスク）
-            "System.Data.SqlClient",                           // データベース接続
-            "System.Runtime.Remoting",                         // リモート実行
-            "System.Security.Cryptography.X509Certificates"    // 証明書操作
-            // Assembly-CSharpは削除（ユーザー定義として動的判定）
+            // 現在は空（全アセンブリを参照可能にする）
+            // セキュリティチェックはDangerousApiDetectorで実行時に行う
         };
 
         // Level 2 (FullAccess) では全アセンブリが利用可能

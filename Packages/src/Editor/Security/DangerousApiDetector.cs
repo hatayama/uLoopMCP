@@ -8,18 +8,17 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// 危険なAPIパターンを管理・検出するエンジン
+    /// v4.1 名前空間チェック削除 - メソッドレベル制御に特化
     /// 設計ドキュメント参照: working-notes/2025-08-16_Restrictedモードユーザークラス実行機能_design.md
     /// 関連クラス: SecuritySyntaxWalker, SecurityValidator
     /// </summary>
     public class DangerousApiDetector
     {
-        private readonly HashSet<string> dangerousNamespaces;
         private readonly HashSet<string> dangerousTypes;
         private readonly Dictionary<string, List<string>> dangerousMembers;
         
         public DangerousApiDetector()
         {
-            dangerousNamespaces = new();
             dangerousTypes = new();
             dangerousMembers = new();
             InitializeDangerousPatterns();
@@ -27,29 +26,18 @@ namespace io.github.hatayama.uLoopMCP
         
         private void InitializeDangerousPatterns()
         {
-            // 危険な名前空間
-            dangerousNamespaces.Add("System.IO");
-            dangerousNamespaces.Add("System.Net");
-            dangerousNamespaces.Add("System.Net.Http");
-            dangerousNamespaces.Add("System.Diagnostics");
-            dangerousNamespaces.Add("System.Threading");
-            dangerousNamespaces.Add("System.Reflection");
-            dangerousNamespaces.Add("System.Runtime.InteropServices");
-            dangerousNamespaces.Add("Microsoft.Win32");
-            dangerousNamespaces.Add("System.Web");
-            dangerousNamespaces.Add("UnityEngine.Networking");
-            dangerousNamespaces.Add("System.Data");
-            dangerousNamespaces.Add("System.Runtime.Remoting");
-            dangerousNamespaces.Add("System.Security.Cryptography");
+            // v4.1: 名前空間チェックは削除（コンパイル時制限廃止のため）
+            // メソッドレベルの細かい制御に集中
             
             // 危険な型
-            dangerousTypes.Add("System.IO.File");
-            dangerousTypes.Add("System.IO.Directory");
+            // System.IO.FileとDirectoryは型全体ではなくメソッドレベルで制御
+            // dangerousTypes.Add("System.IO.File");  // コメントアウト - メソッドレベル制御のみ
+            // dangerousTypes.Add("System.IO.Directory");  // コメントアウト - メソッドレベル制御のみ
             dangerousTypes.Add("System.IO.FileInfo");
             dangerousTypes.Add("System.IO.DirectoryInfo");
             dangerousTypes.Add("System.IO.Path");
-            dangerousTypes.Add("System.IO.Stream");
-            dangerousTypes.Add("System.IO.FileStream");
+            // Stream系は特定メソッドのみ制限（型全体は許可）
+            // FileStreamも型全体のブロックは避ける（File.Createが使えなくなるため）
             dangerousTypes.Add("System.Net.Http.HttpClient");
             dangerousTypes.Add("System.Net.WebClient");
             dangerousTypes.Add("System.Net.WebRequest");
@@ -129,14 +117,6 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
         
-        public bool IsDangerousNamespace(string namespaceName)
-        {
-            if (string.IsNullOrWhiteSpace(namespaceName)) return false;
-            
-            return dangerousNamespaces.Any(ns => 
-                namespaceName.StartsWith(ns, StringComparison.OrdinalIgnoreCase));
-        }
-        
         public bool IsDangerousType(ITypeSymbol typeSymbol)
         {
             if (typeSymbol == null) return false;
@@ -163,14 +143,14 @@ namespace io.github.hatayama.uLoopMCP
                 return dangerousMembers[typeName].Contains(memberName);
             }
             
-            // 危険な型自体かチェック
+            // 危険な型自体かチェック（コンストラクタ呼び出しなど）
             if (dangerousTypes.Contains(typeName))
             {
                 return true;
             }
             
-            // 危険な名前空間内のAPIかチェック
-            return dangerousNamespaces.Any(ns => fullApiName.StartsWith(ns, StringComparison.OrdinalIgnoreCase));
+            // v4.1: 名前空間チェックは削除（メソッドレベル制御に集中）
+            return false;
         }
         
         /// <summary>
@@ -208,8 +188,8 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public string GetPatternSummary()
         {
-            return $"Dangerous patterns: {dangerousNamespaces.Count} namespaces, " +
-                   $"{dangerousTypes.Count} types, {dangerousMembers.Count} type-member mappings";
+            return $"Dangerous patterns: {dangerousTypes.Count} types, " +
+                   $"{dangerousMembers.Count} type-member mappings";
         }
     }
 }
