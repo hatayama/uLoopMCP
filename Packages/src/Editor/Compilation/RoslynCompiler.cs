@@ -23,9 +23,6 @@ namespace io.github.hatayama.uLoopMCP
         private readonly SecurityValidator _securityValidator;
         private bool _disposed;
 
-        // FixProviderリスト（現在は空）
-        // 完全修飾名の使用を推奨するため、using自動追加は無効化
-        private static readonly List<CSharpFixProvider> FixProviders = new();
 
         public RoslynCompiler(DynamicCodeSecurityLevel securityLevel)
         {
@@ -358,25 +355,8 @@ namespace io.github.hatayama.uLoopMCP
                 // 動的アセンブリ追加機能は削除されました
                 // using文の抽出により型解決が改善されたため不要になりました
 
-                // Phase 2: 修正適用
-                foreach (Diagnostic diagnostic in diagnostics)
-                {
-                    foreach (CSharpFixProvider provider in FixProviders)
-                    {
-                        if (provider.CanFix(diagnostic))
-                        {
-                            currentTree = provider.ApplyFix(currentTree, diagnostic);
-                            VibeLogger.LogInfo(
-                                "code_fix_applied",
-                                $"Applied fix: {provider.GetType().Name}",
-                                new { diagnosticId = diagnostic.Id },
-                                correlationId,
-                                "Code fix applied during compilation",
-                                "Track fix effectiveness");
-                            break;
-                        }
-                    }
-                }
+                // Phase 2: 修正適用は現在無効化されています
+                // FixProviderの実装がないため、この部分はスキップされます
             }
 
             return currentTree;
