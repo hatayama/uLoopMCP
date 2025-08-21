@@ -939,7 +939,12 @@ namespace io.github.hatayama.uLoopMCP
                 NamedBuildTarget.Android,
                 NamedBuildTarget.WebGL,
                 NamedBuildTarget.WindowsStoreApps,
-                NamedBuildTarget.tvOS
+                NamedBuildTarget.tvOS,
+                NamedBuildTarget.PS4,
+                NamedBuildTarget.PS5,
+                NamedBuildTarget.XboxOne,
+                NamedBuildTarget.XboxSeries,
+                NamedBuildTarget.Switch
             };
             
             foreach (NamedBuildTarget target in candidateTargets)
