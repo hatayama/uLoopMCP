@@ -203,6 +203,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>非同期コード実行</summary>
+#pragma warning disable CS1998 // Async method lacks 'await' operators (ROSLYNがない場合にのみ発生)
         public async Task<ExecutionResult> ExecuteCodeAsync(
             string code,
             string className = "DynamicCommand",
@@ -210,6 +211,7 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false)
         {
+#pragma warning restore CS1998
 #if ULOOPMCP_HAS_ROSLYN
             // 実行時セキュリティチェック追加
             if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
@@ -253,8 +255,10 @@ namespace io.github.hatayama.uLoopMCP
             };
 #endif
             
+#if ULOOPMCP_HAS_ROSLYN
             // JsonRpcProcessorで既にMainThreadに切り替え済み
             return await Task.FromResult(ExecuteCode(code, className, parameters, cancellationToken, compileOnly));
+#endif
         }
 
         /// <summary>セキュリティポリシー設定</summary>

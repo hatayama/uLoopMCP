@@ -4,7 +4,9 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+#if ULOOPMCP_HAS_ROSLYN
 using Microsoft.CodeAnalysis;
+#endif
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -20,7 +22,9 @@ namespace io.github.hatayama.uLoopMCP
     public class CompilationCacheManager
     {
         private readonly Dictionary<string, Assembly> _compilationCache = new();
+#if ULOOPMCP_HAS_ROSLYN
         private readonly Dictionary<DynamicCodeSecurityLevel, List<MetadataReference>> _referenceCache = new();
+#endif
 
         /// <summary>
         /// キャッシュから結果を取得
@@ -99,6 +103,7 @@ namespace io.github.hatayama.uLoopMCP
             );
         }
 
+#if ULOOPMCP_HAS_ROSLYN
         /// <summary>
         /// セキュリティレベル用の参照キャッシュを取得または作成
         /// </summary>
@@ -111,13 +116,16 @@ namespace io.github.hatayama.uLoopMCP
             }
             return references;
         }
+#endif
 
         /// <summary>
         /// 参照キャッシュをクリア
         /// </summary>
         public void ClearReferenceCache()
         {
+#if ULOOPMCP_HAS_ROSLYN
             _referenceCache.Clear();
+#endif
         }
 
         /// <summary>
@@ -156,8 +164,13 @@ namespace io.github.hatayama.uLoopMCP
             return new CacheStatistics
             {
                 CompilationCacheCount = _compilationCache.Count,
+#if ULOOPMCP_HAS_ROSLYN
                 ReferenceCacheCount = _referenceCache.Count,
                 TotalCacheSize = _compilationCache.Count + _referenceCache.Count
+#else
+                ReferenceCacheCount = 0,
+                TotalCacheSize = _compilationCache.Count
+#endif
             };
         }
     }

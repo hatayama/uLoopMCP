@@ -32,6 +32,7 @@ namespace io.github.hatayama.uLoopMCP
         
         // Scripting define symbols
         public const string SCRIPTING_DEFINE_ULOOPMCP_DEBUG = "ULOOPMCP_DEBUG";
+        public const string SCRIPTING_DEFINE_ULOOPMCP_HAS_ROSLYN = "ULOOPMCP_HAS_ROSLYN";
         
         // Environment variable keys for development mode
         public const string ENV_KEY_ULOOPMCP_DEBUG = "ULOOPMCP_DEBUG";
