@@ -118,14 +118,77 @@ Retrieve information about the currently active Hierarchy in nested JSON format.
 → For large scenes, hierarchy data is saved to file and path is returned instead of raw JSON
 ```
 
+#### 11. execute-dynamic-code - Dynamic C# Code Execution
+Execute C# code dynamically within Unity Editor.
+
+> **⚠️ Important Prerequisites**  
+> To use this tool, you must install the `Microsoft.CodeAnalysis.CSharp` package using [OpenUPM NuGet](https://openupm.com/nuget/).
+> 
+> **Installation Instructions:** Please refer to the [OpenUPM NuGet](https://openupm.com/nuget/) documentation for details.
+
+**Security Level Support**: Implements 3-tier security control to progressively restrict executable code:
+
+  - **Level 0 - Disabled**
+    - No code execution allowed
+    
+  - **Level 1 - Restricted** 【Recommended Setting】
+    - All Unity APIs and .NET standard libraries are generally available
+    - User-defined assemblies (Assembly-CSharp, etc.) are also accessible
+    - Only pinpoint blocking of security-critical operations:
+      - **File deletion**: `File.Delete`, `Directory.Delete`, `FileUtil.DeleteFileOrDirectory`
+      - **File writing**: `File.WriteAllText`, `File.WriteAllBytes`, `File.Replace`
+      - **Network communication**: All `HttpClient`, `WebClient`, `WebRequest`, `Socket`, `TcpClient` operations
+      - **Process execution**: `Process.Start`, `Process.Kill`
+      - **Dynamic code execution**: `Assembly.Load*`, `Type.InvokeMember`, `Activator.CreateComInstanceFrom`
+      - **Thread manipulation**: Direct `Thread`, `Task` manipulation
+      - **Registry operations**: All `Microsoft.Win32` namespace operations
+    - Safe operations are allowed:
+      - File reading (`File.ReadAllText`, `File.Exists`, etc.)
+      - Path operations (all `Path.*` operations)
+      - Information retrieval (`Assembly.GetExecutingAssembly`, `Type.GetType`, etc.)
+    - Use cases: Normal Unity development, automation with safety assurance
+    
+  - **Level 2 - FullAccess**
+    - **All assemblies are accessible (no restrictions)**
+    - ⚠️ **Warning**: Security risks exist, use only with trusted code
+```
+→ execute-dynamic-code (Code: "GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube); return \"Cube created\";")
+→ Rapid prototype verification, batch processing automation
+→ Unity API usage restricted according to security level
+```
+
+#### 12. play-unity - Start Play Mode
+Start Unity Editor play mode.
+**Security Restriction**: Disabled by default and requires enabling Allow Play Mode Control in Security Settings.
+```
+→ play-unity
+→ Use as preprocessing for automated test execution
+```
+
+#### 13. stop-unity - Stop Play Mode
+Stop Unity Editor play mode.
+**Security Restriction**: Disabled by default and requires enabling Allow Play Mode Control in Security Settings.
+```
+→ stop-unity
+→ Use as postprocessing for automated test execution
+```
+
 > [!IMPORTANT]
 > **Security Settings**
 >
-> `run-tests` and `execute-menu-item` tools are disabled by default because AI can execute arbitrary code.  
-> To use these tools, enable the corresponding settings in the uLoopMCP window "Security Settings":
+> Some tools are disabled by default for security reasons.  
+> To use these tools, enable the corresponding items in the uLoopMCP window "Security Settings":
+>
+> **Basic Security Settings**:
 > - **Allow Tests Execution**: Enable `run-tests` tool
 > - **Allow Menu Item Execution**: Enable `execute-menu-item` tool
+> - **Allow Play Mode Control**: Enable `play-unity`/`stop-unity` tools
 > - **Allow Third Party Tools**: Enable user-developed custom tools
+>
+> **Dynamic Code Security Level** (`execute-dynamic-code` tool):
+> - **Level 0 (Disabled)**: Complete code execution disabled (safest)
+> - **Level 1 (Restricted)**: Unity API only, dangerous operations blocked (recommended)
+> - **Level 2 (FullAccess)**: All APIs available (use with caution)
 >
 > Setting changes take effect immediately without server restart.  
 > 
@@ -375,6 +438,44 @@ All tools automatically include the following timing information:
   - `Details` (string): Additional information about the execution
   - `MenuItemFound` (boolean): Whether the menu item was found in the system
 
+### 11. execute-dynamic-code
+- **Description**: Execute C# code dynamically within Unity Editor. Implements security levels and automatic using statement processing with enhanced error messaging
+- **Parameters**: 
+  - `Code` (string): The C# code to execute (default: "")
+  - `Parameters` (Dictionary<string, object>): Runtime parameters for execution (default: {})
+  - `CompileOnly` (boolean): Only compile, do not execute (default: false)
+- **Response**: 
+  - `Success` (boolean): Whether execution was successful
+  - `Result` (string): Execution result
+  - `Logs` (array): Array of log messages
+  - `CompilationErrors` (array): Array of compilation errors (if any)
+    - `Message` (string): Error message
+    - `Line` (number): Line number where error occurred
+    - `Column` (number): Column number where error occurred
+    - `ErrorCode` (string): Compiler error code (e.g., CS0103)
+  - `ErrorMessage` (string): Error message (if failed)
+  - `SecurityLevel` (string): Current security level ("Disabled", "Restricted", "FullAccess")
+  - `UpdatedCode` (string): Updated code (after applying fixes)
+  - `ExecutionTimeMs` (number): Execution time in milliseconds
+
+### 12. play-unity
+- **Description**: Start Unity Editor play mode
+- **Parameters**: None (uses EmptyToolSchema)
+- **Response**: 
+  - `Success` (boolean): Whether the operation was successful
+  - `Message` (string): Execution result message
+  - `IsPlaying` (boolean): Play mode state after execution
+  - `ActionPerformed` (string): Action that was performed ("play" or "play (already playing)")
+
+### 13. stop-unity
+- **Description**: Stop Unity Editor play mode
+- **Parameters**: None (uses EmptyToolSchema)
+- **Response**: 
+  - `Success` (boolean): Whether the operation was successful
+  - `Message` (string): Execution result message
+  - `IsPlaying` (boolean): Play mode state after execution
+  - `ActionPerformed` (string): Action that was performed ("stop" or "stop (already stopped)")
+
 ---
 
 ## Related Documentation
@@ -440,8 +541,6 @@ All tools automatically include the following timing information:
 > - **Unity 2022.3 or later**
 > - **Node.js 18.0 or later** - Required for MCP server execution
 > - Install Node.js from [here](https://nodejs.org/en/download)
-> - **Microsoft.CodeAnalysis (Roslyn)** - Required for dynamic code execution features
->   - See [Roslyn Setup](#roslyn-setup) section below
 
 ### Via Unity Package Manager
 
@@ -467,48 +566,7 @@ Scope(s): io.github.hatayama.uloopmcp
 
 3. Open Package Manager window and select OpenUPM in the My Registries section. uLoopMCP will be displayed.
 
-## Roslyn Setup
 
-uLoopMCP uses Microsoft.CodeAnalysis (Roslyn) for dynamic code execution features. These features are disabled by default.
-
-### Enabling Roslyn Features
-
-1. Open **Window > uLoopMCP > Security Settings**
-2. Change **Security Level** from `Disabled` to `Restricted` or `Full Access`
-3. A confirmation dialog will appear informing you about required NuGet packages
-4. Click **Continue** to enable Roslyn features
-
-### Installing Roslyn DLLs
-
-After enabling Roslyn features, you need to install the required DLLs:
-
-#### Option 1: Using NuGet CLI
-```bash
-nuget install Microsoft.CodeAnalysis -Version 4.14.0 -OutputDirectory ./temp
-nuget install Microsoft.CodeAnalysis.CSharp -Version 4.14.0 -OutputDirectory ./temp
-```
-
-#### Option 2: Manual Download
-Download the following NuGet packages and extract the DLLs:
-- Microsoft.CodeAnalysis (4.14.0)
-- Microsoft.CodeAnalysis.CSharp (4.14.0)
-
-### Required DLLs
-Place the following DLLs in your Unity project (e.g., `Assets/Plugins/Roslyn/`):
-- Microsoft.CodeAnalysis.dll
-- Microsoft.CodeAnalysis.CSharp.dll
-- System.Collections.Immutable.dll
-- System.Reflection.Metadata.dll
-- System.Runtime.CompilerServices.Unsafe.dll
-
-> [!IMPORTANT]
-> After adding the DLLs, ensure they are set to **Editor only** in the import settings.
-
-### Features Requiring Roslyn
-The following features require Roslyn to be enabled:
-- `execute-dynamic-code` - Dynamic C# code execution
-- Code security validation
-- Automatic using statement fixes
 
 ## Project-Specific Tool Development
 uLoopMCP enables efficient development of project-specific MCP tools without requiring changes to the core package.  
