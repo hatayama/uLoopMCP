@@ -85,6 +85,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // Assert - 成功または適切なエラーメッセージ
             if (!result.Success)
             {
+                // Ensure errors are present when compilation fails
+                Assert.IsNotNull(result.Errors, "Expected compilation errors when Success is false");
+                
                 // Newtonsoft.Jsonが見つからない場合は適切なエラーメッセージであることを確認
                 bool hasExpectedError = result.Errors.Any(e => 
                     e.Message.Contains("Newtonsoft") || 

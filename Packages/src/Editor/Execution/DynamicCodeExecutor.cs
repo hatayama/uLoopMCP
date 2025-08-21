@@ -261,23 +261,7 @@ namespace io.github.hatayama.uLoopMCP
 #endif
         }
 
-        /// <summary>セキュリティポリシー設定</summary>
-        public void SetSecurityPolicy(SecurityPolicy policy)
-        {
-            // SecurityValidatorにポリシーを設定する実装は後で拡張
-            VibeLogger.LogInfo(
-                "security_policy_updated",
-                "Security policy updated",
-                new
-                {
-                    max_execution_time = policy.MaxExecutionTimeSeconds,
-                    allow_file_system = policy.AllowFileSystemAccess,
-                    forbidden_namespaces_count = policy.ForbiddenNamespaces.Count
-                },
-                humanNote: "セキュリティポリシーの更新",
-                aiTodo: "ポリシー適用の確認"
-            );
-        }
+
 
         /// <summary>実行統計取得</summary>
         public ExecutionStatistics GetStatistics()

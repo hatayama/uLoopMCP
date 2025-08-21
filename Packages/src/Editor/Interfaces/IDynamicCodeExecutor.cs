@@ -28,8 +28,7 @@ namespace io.github.hatayama.uLoopMCP
             bool compileOnly = false
         );
 
-        /// <summary>セキュリティポリシー設定</summary>
-        void SetSecurityPolicy(SecurityPolicy policy);
+
 
         /// <summary>実行統計取得</summary>
         ExecutionStatistics GetStatistics();
