@@ -14,7 +14,6 @@ namespace io.github.hatayama.uLoopMCP
     public static class RoslynAssemblyChecker
     {
         private const string ROSLYN_ASSEMBLY_NAME = "Microsoft.CodeAnalysis.CSharp";
-        private const string REQUIRED_VERSION = "3.11.0";
         
         /// <summary>
         /// Roslynアセンブリが利用可能かチェック
@@ -75,12 +74,17 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string GetInstallationMessage()
         {
-            return $"Microsoft.CodeAnalysis.CSharp (v{REQUIRED_VERSION}) is required for Roslyn features.\n\n" +
-                   "Please install it using NuGet:\n" +
-                   "1. Open NuGet Package Manager\n" +
-                   "2. Search for 'Microsoft.CodeAnalysis.CSharp'\n" +
-                   $"3. Install version {REQUIRED_VERSION}\n\n" +
-                   "See README for detailed instructions.";
+            return $"Microsoft.CodeAnalysis.CSharp is required for Roslyn features.\n\n" +
+                   "Please install it using OpenUPM:\n" +
+                   "1. Open Project Settings → Package Manager\n" +
+                   "2. Add OpenUPM as Scoped Registry:\n" +
+                   "   - Name: OpenUPM\n" +
+                   "   - URL: https://package.openupm.com\n" +
+                   "   - Scope(s): org.nuget\n" +
+                   "3. Open Window → Package Manager\n" +
+                   "4. Select 'My Registries' from the dropdown\n" +
+                   "5. Search and install 'Microsoft.CodeAnalysis.CSharp' (version 4.14.0 or higher)\n" +
+                   "6. See README for detailed instructions.";
         }
     }
 }
