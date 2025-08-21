@@ -21,14 +21,11 @@ namespace io.github.hatayama.uLoopMCP
         private readonly List<MetadataReference> _defaultReferences = new();
         private readonly DynamicCodeSecurityLevel _currentSecurityLevel;
         private readonly SecurityValidator _securityValidator;
-        private List<MetadataReference> _currentReferences;
         private bool _disposed;
 
         // FixProviderリスト（現在は空）
         // 完全修飾名の使用を推奨するため、using自動追加は無効化
-        private static readonly List<CSharpFixProvider> FixProviders = new()
-        {
-        };
+        private static readonly List<CSharpFixProvider> FixProviders = new();
 
         public RoslynCompiler(DynamicCodeSecurityLevel securityLevel)
         {
@@ -36,7 +33,7 @@ namespace io.github.hatayama.uLoopMCP
             _securityValidator = new SecurityValidator(securityLevel);
             InitializeReferencesForLevel(_currentSecurityLevel);
         }
-        
+
         public void Dispose()
         {
             if (!_disposed)
@@ -45,71 +42,68 @@ namespace io.github.hatayama.uLoopMCP
                 _cacheManager.ClearReferenceCache();
                 _cacheManager.ClearCache();
                 _defaultReferences.Clear();
-                
+
                 _disposed = true;
             }
         }
-        
+
         /// <summary>
         /// セキュリティレベルに応じたアセンブリ参照を初期化
         /// </summary>
         private void InitializeReferencesForLevel(DynamicCodeSecurityLevel level)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
-            
-            // キャッシュから取得または新規作成
-            List<MetadataReference> references = _cacheManager.GetOrCreateReferences(level, () =>
+
+            // キャッシュ無効化: 毎回フレッシュな参照リストを作成（約144ms）
+            // 常に最新のアセンブリ状態を反映するため、キャッシュを使用しない
+
+            List<MetadataReference> references = new();
+
+            if (level == DynamicCodeSecurityLevel.Disabled)
             {
-                // 新規参照構築
-                List<MetadataReference> newReferences = new();
-                
-                if (level == DynamicCodeSecurityLevel.Disabled)
+                // Disabled レベルでは参照を追加しない
+                _defaultReferences.Clear();
+                return;
+            }
+
+            // Unity参照アセンブリを包括的に収集（AppDomainに依存しない）
+            HashSet<string> addedPaths = new();
+
+            // 1. Unityの参照アセンブリフォルダから収集
+            AddUnityReferenceAssemblies(references, addedPaths);
+
+            // 2. 現在ロード済みのアセンブリも追加（後方互換性）
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (!assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
                 {
-                    // Disabled レベルでは参照を追加しない
-                    return newReferences;
-                }
-                
-                // Unity参照アセンブリを包括的に収集（AppDomainに依存しない）
-                HashSet<string> addedPaths = new();
-                
-                // 1. Unityの参照アセンブリフォルダから収集
-                AddUnityReferenceAssemblies(newReferences, addedPaths);
-                
-                // 2. 現在ロード済みのアセンブリも追加（後方互換性）
-                foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-                {
-                    if (!assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
+                    if (addedPaths.Add(assembly.Location))
                     {
-                        if (addedPaths.Add(assembly.Location))
-                        {
-                            MetadataReference reference = MetadataReference.CreateFromFile(assembly.Location);
-                            newReferences.Add(reference);
-                        }
+                        MetadataReference reference = MetadataReference.CreateFromFile(assembly.Location);
+                        references.Add(reference);
                     }
                 }
-                
-                // 3. 現在のアセンブリも追加（uLoopMCPクラスアクセス用）
-                Assembly currentAssembly = Assembly.GetExecutingAssembly();
-                if (!string.IsNullOrWhiteSpace(currentAssembly.Location))
+            }
+
+            // 3. 現在のアセンブリも追加（uLoopMCPクラスアクセス用）
+            Assembly currentAssembly = Assembly.GetExecutingAssembly();
+            if (!string.IsNullOrWhiteSpace(currentAssembly.Location))
+            {
+                if (addedPaths.Add(currentAssembly.Location))
                 {
-                    if (addedPaths.Add(currentAssembly.Location))
-                    {
-                        MetadataReference currentRef = MetadataReference.CreateFromFile(currentAssembly.Location);
-                        newReferences.Add(currentRef);
-                    }
+                    MetadataReference currentRef = MetadataReference.CreateFromFile(currentAssembly.Location);
+                    references.Add(currentRef);
                 }
-                
-                return newReferences;
-            });
-            
-            _currentReferences = references;
+            }
+
             _defaultReferences.Clear();
             _defaultReferences.AddRange(references);
-            
+
             VibeLogger.LogInfo(
                 "roslyn_compiler_references_initialized",
                 "RoslynCompiler references initialized for security level",
-                new { 
+                new
+                {
                     level = level.ToString(),
                     referenceCount = references.Count
                 },
@@ -118,15 +112,7 @@ namespace io.github.hatayama.uLoopMCP
                 "Monitor assembly loading patterns"
             );
         }
-        
-        /// <summary>
-        /// コンパイルキャッシュをクリア
-        /// </summary>
-        private void ClearCompilationCache()
-        {
-            _cacheManager.ClearCompilationCache();
-        }
-        
+
         /// <summary>
         /// Unityの参照アセンブリを包括的に収集
         /// AppDomainに依存せず、Unityのインストールフォルダから直接収集
@@ -134,54 +120,52 @@ namespace io.github.hatayama.uLoopMCP
         private void AddUnityReferenceAssemblies(List<MetadataReference> references, HashSet<string> addedPaths)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
-            
+
             try
             {
                 // Unity Editorのパスを取得
                 string unityPath = UnityEditor.EditorApplication.applicationPath;
                 string contentsPath = string.Empty;
-                
-                #if UNITY_EDITOR_OSX
-                    // macOS: Unity.app/Contents
-                    contentsPath = System.IO.Path.Combine(
-                        System.IO.Path.GetDirectoryName(unityPath),
-                        ".."
-                    );
-                #elif UNITY_EDITOR_WIN
+
+#if UNITY_EDITOR_OSX
+                // macOS: Unity.app/Contents
+                // Unity.appはアプリケーションバンドルなので、直接Contentsを追加
+                contentsPath = System.IO.Path.Combine(unityPath, "Contents");
+#elif UNITY_EDITOR_WIN
                     // Windows: Editor/Data
                     contentsPath = System.IO.Path.Combine(
                         System.IO.Path.GetDirectoryName(unityPath),
                         "Data"
                     );
-                #elif UNITY_EDITOR_LINUX
+#elif UNITY_EDITOR_LINUX
                     // Linux: Editor/Data
                     contentsPath = System.IO.Path.Combine(
                         System.IO.Path.GetDirectoryName(unityPath),
                         "Data"
                     );
-                #endif
-                
+#endif
+
                 // 参照アセンブリのディレクトリを収集
                 List<string> searchPaths = new();
-                
+
                 // .NET Framework 4.x 参照アセンブリ
                 string monoApi = System.IO.Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "4.7.1-api");
                 string monoFacades = System.IO.Path.Combine(monoApi, "Facades");
                 string monoUnityjit = System.IO.Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "unityjit-macos");
-                
+
                 // .NET Standard 参照アセンブリ
                 string netStandard21 = System.IO.Path.Combine(contentsPath, "NetStandard", "ref", "2.1.0");
                 string netStandard20 = System.IO.Path.Combine(contentsPath, "NetStandard", "ref", "2.0.0");
                 string netStandardCompat = System.IO.Path.Combine(contentsPath, "NetStandard", "compat", "shims", "net472");
-                
+
                 // Unity Managed アセンブリ
                 string managed = System.IO.Path.Combine(contentsPath, "Managed");
                 string unityEngine = System.IO.Path.Combine(managed, "UnityEngine");
                 string unityEditor = System.IO.Path.Combine(managed, "UnityEditor");
-                
+
                 // プロジェクトアセンブリ
                 string scriptAssemblies = System.IO.Path.Combine(UnityEngine.Application.dataPath, "..", "Library", "ScriptAssemblies");
-                
+
                 // 存在するディレクトリを追加
                 AddDirectoryIfExists(searchPaths, monoApi);
                 AddDirectoryIfExists(searchPaths, monoFacades);
@@ -193,9 +177,9 @@ namespace io.github.hatayama.uLoopMCP
                 AddDirectoryIfExists(searchPaths, unityEngine);
                 AddDirectoryIfExists(searchPaths, unityEditor);
                 AddDirectoryIfExists(searchPaths, scriptAssemblies);
-                
+
                 int addedCount = 0;
-                
+
                 // 各ディレクトリから.dllファイルを収集
                 foreach (string searchPath in searchPaths)
                 {
@@ -220,11 +204,12 @@ namespace io.github.hatayama.uLoopMCP
                         }
                     }
                 }
-                
+
                 VibeLogger.LogInfo(
                     "roslyn_unity_references_added",
                     "Unity reference assemblies added",
-                    new { 
+                    new
+                    {
                         searchPaths = searchPaths.Count,
                         addedAssemblies = addedCount
                     },
@@ -245,7 +230,7 @@ namespace io.github.hatayama.uLoopMCP
                 );
             }
         }
-        
+
         /// <summary>
         /// ディレクトリが存在する場合のみリストに追加
         /// </summary>
@@ -256,7 +241,7 @@ namespace io.github.hatayama.uLoopMCP
                 list.Add(path);
             }
         }
-        
+
 
         public CompilationResult Compile(CompilationRequest request)
         {
@@ -418,15 +403,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private CompilationResult ExecuteCompilation(CompilationContext context, string correlationId)
         {
-            // コンパイルオプションの準備
-            CSharpCompilationOptions compilationOptions = new CSharpCompilationOptions(
-                OutputKind.DynamicallyLinkedLibrary,
-                optimizationLevel: OptimizationLevel.Release,
-                allowUnsafe: false
-            );
-
-            // v5.1: コンパイル自体は成功させるが、セキュリティ違反を検出して結果に含める
-            
             // 基本のコンパイル作成
             CSharpCompilation compilation = CreateCompilation(
                 $"DynamicAssembly_{correlationId}",
@@ -436,11 +412,11 @@ namespace io.github.hatayama.uLoopMCP
 
             // Unity AI Assistant方式の診断駆動修正
             SyntaxTree fixedTree = ApplyDiagnosticFixes(compilation, context.SyntaxTree, correlationId);
-            
+
             // 修正されたTreeでコンテキストを更新
             context.SyntaxTree = fixedTree;
             context.WrappedCode = fixedTree.ToString();
-            
+
             // 最終的なコンパイル
             compilation = compilation.ReplaceSyntaxTree(
                 compilation.SyntaxTrees.First(),
@@ -453,7 +429,7 @@ namespace io.github.hatayama.uLoopMCP
 
             // セキュリティチェック（Restrictedモードのみ）
             CompilationResult result = ProcessEmitResult(emitResult, memoryStream, context, correlationId);
-            
+
             // コンパイル成功時のみセキュリティ検証を実施
             if (result.Success && _currentSecurityLevel == DynamicCodeSecurityLevel.Restricted)
             {
@@ -462,13 +438,15 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     result.HasSecurityViolations = true;
                     result.SecurityViolations = validationResult.Violations;
-                    
+
                     VibeLogger.LogWarning(
                         "security_violations_detected",
                         "Security violations detected in compiled code",
-                        new {
+                        new
+                        {
                             violationCount = validationResult.Violations.Count,
-                            violations = validationResult.Violations.Select(v => new {
+                            violations = validationResult.Violations.Select(v => new
+                            {
                                 type = v.Type.ToString(),
                                 api = v.ApiName,
                                 description = v.Description
@@ -608,12 +586,12 @@ namespace io.github.hatayama.uLoopMCP
             // AIが書いたコードからusing文を抽出
             List<string> usingStatements = new();
             List<string> codeLines = new();
-            
+
             string[] lines = code.Split(new char[] { '\n' }, StringSplitOptions.None);
             foreach (string line in lines)
             {
                 string trimmedLine = line.Trim();
-                
+
                 // using文を検出（"using " で始まり ";" を含む）
                 // コメント付きの場合も考慮
                 if (trimmedLine.StartsWith("using ") && trimmedLine.Contains(";"))
@@ -632,19 +610,19 @@ namespace io.github.hatayama.uLoopMCP
 
             // クラスでラップ
             StringBuilder wrappedCode = new();
-            
+
             // using文を最初に配置（AIが指定したものをそのまま使用）
             foreach (string usingStatement in usingStatements)
             {
                 wrappedCode.AppendLine(usingStatement);
             }
-            
+
             // using文があった場合は空行を追加
             if (usingStatements.Count > 0)
             {
                 wrappedCode.AppendLine();
             }
-            
+
             wrappedCode.AppendLine($"namespace {namespaceName}");
             wrappedCode.AppendLine("{");
             wrappedCode.AppendLine($"    public class {className}");
@@ -669,7 +647,8 @@ namespace io.github.hatayama.uLoopMCP
                 VibeLogger.LogInfo(
                     "wrap_code_extracted_usings",
                     $"Extracted {usingStatements.Count} using statements from AI-generated code",
-                    new { 
+                    new
+                    {
                         usingCount = usingStatements.Count,
                         usings = usingStatements.ToArray(),
                         className = className,
@@ -696,17 +675,6 @@ namespace io.github.hatayama.uLoopMCP
                     Column = d.Location.GetLineSpan().StartLinePosition.Character + 1
                 })
                 .ToList();
-        }
-
-
-
-
-        // v5.1: DetectSecurityViolationsメソッドは削除（コンパイル時セキュリティチェック廃止）
-
-
-        private string GenerateCacheKey(CompilationRequest request)
-        {
-            return _cacheManager.GenerateCacheKey(request);
         }
     }
 
