@@ -62,34 +62,42 @@ namespace io.github.hatayama.uLoopMCP
             {
                 // 新規参照構築
                 List<MetadataReference> newReferences = new();
-            
-            // セキュリティレベルに応じたアセンブリ取得
-            IReadOnlyList<string> allowedAssemblies = DynamicCodeSecurityManager.GetAllowedAssemblies(level);
-            
-            foreach (string assemblyName in allowedAssemblies)
-            {
-                Assembly assembly = AppDomain.CurrentDomain.GetAssemblies()
-                    .FirstOrDefault(a => a.GetName().Name == assemblyName);
                 
-                if (assembly != null && !assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
+                if (level == DynamicCodeSecurityLevel.Disabled)
                 {
-                    MetadataReference reference = MetadataReference.CreateFromFile(assembly.Location);
-                    newReferences.Add(reference);
-                    _defaultReferences.Add(reference);
+                    // Disabled レベルでは参照を追加しない
+                    return newReferences;
                 }
-            }
-            
-            // 現在のアセンブリも追加（uLoopMCPクラスアクセス用）
-            Assembly currentAssembly = Assembly.GetExecutingAssembly();
-            if (!string.IsNullOrWhiteSpace(currentAssembly.Location))
-            {
-                MetadataReference currentRef = MetadataReference.CreateFromFile(currentAssembly.Location);
-                newReferences.Add(currentRef);
-                _defaultReferences.Add(currentRef);
-            }
-            
-            // System.Net.Http.dllを明示的に追加（AppDomainにロードされていない場合でも参照可能にする）
-            AddExplicitAssemblyReference(newReferences, "System.Net.Http.dll");
+                
+                // Unity参照アセンブリを包括的に収集（AppDomainに依存しない）
+                HashSet<string> addedPaths = new();
+                
+                // 1. Unityの参照アセンブリフォルダから収集
+                AddUnityReferenceAssemblies(newReferences, addedPaths);
+                
+                // 2. 現在ロード済みのアセンブリも追加（後方互換性）
+                foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    if (!assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
+                    {
+                        if (addedPaths.Add(assembly.Location))
+                        {
+                            MetadataReference reference = MetadataReference.CreateFromFile(assembly.Location);
+                            newReferences.Add(reference);
+                        }
+                    }
+                }
+                
+                // 3. 現在のアセンブリも追加（uLoopMCPクラスアクセス用）
+                Assembly currentAssembly = Assembly.GetExecutingAssembly();
+                if (!string.IsNullOrWhiteSpace(currentAssembly.Location))
+                {
+                    if (addedPaths.Add(currentAssembly.Location))
+                    {
+                        MetadataReference currentRef = MetadataReference.CreateFromFile(currentAssembly.Location);
+                        newReferences.Add(currentRef);
+                    }
+                }
                 
                 return newReferences;
             });
@@ -120,74 +128,135 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// 明示的にアセンブリ参照を追加する
+        /// Unityの参照アセンブリを包括的に収集
+        /// AppDomainに依存せず、Unityのインストールフォルダから直接収集
         /// </summary>
-        private void AddExplicitAssemblyReference(List<MetadataReference> references, string assemblyFileName)
+        private void AddUnityReferenceAssemblies(List<MetadataReference> references, HashSet<string> addedPaths)
         {
+            string correlationId = McpConstants.GenerateCorrelationId();
+            
             try
             {
-                // Unityのインストールパスを取得
+                // Unity Editorのパスを取得
                 string unityPath = UnityEditor.EditorApplication.applicationPath;
-                string monoPath = string.Empty;
-                
-                UnityEngine.Debug.Log($"[AddExplicitAssemblyReference] Starting for {assemblyFileName}");
-                UnityEngine.Debug.Log($"[AddExplicitAssemblyReference] Unity path: {unityPath}");
+                string contentsPath = string.Empty;
                 
                 #if UNITY_EDITOR_OSX
-                    // macOSの場合
-                    monoPath = System.IO.Path.Combine(
+                    // macOS: Unity.app/Contents
+                    contentsPath = System.IO.Path.Combine(
                         System.IO.Path.GetDirectoryName(unityPath),
-                        "MonoBleedingEdge/lib/mono/gac"
+                        ".."
                     );
-                    UnityEngine.Debug.Log($"[AddExplicitAssemblyReference] macOS MonoPath: {monoPath}");
                 #elif UNITY_EDITOR_WIN
-                    // Windowsの場合
-                    string dataPath = System.IO.Path.Combine(
+                    // Windows: Editor/Data
+                    contentsPath = System.IO.Path.Combine(
                         System.IO.Path.GetDirectoryName(unityPath),
                         "Data"
                     );
-                    monoPath = System.IO.Path.Combine(dataPath, "MonoBleedingEdge/lib/mono/gac");
+                #elif UNITY_EDITOR_LINUX
+                    // Linux: Editor/Data
+                    contentsPath = System.IO.Path.Combine(
+                        System.IO.Path.GetDirectoryName(unityPath),
+                        "Data"
+                    );
                 #endif
                 
-                if (!string.IsNullOrEmpty(monoPath) && System.IO.Directory.Exists(monoPath))
+                // 参照アセンブリのディレクトリを収集
+                List<string> searchPaths = new();
+                
+                // .NET Framework 4.x 参照アセンブリ
+                string monoApi = System.IO.Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "4.7.1-api");
+                string monoFacades = System.IO.Path.Combine(monoApi, "Facades");
+                string monoUnityjit = System.IO.Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "unityjit-macos");
+                
+                // .NET Standard 参照アセンブリ
+                string netStandard21 = System.IO.Path.Combine(contentsPath, "NetStandard", "ref", "2.1.0");
+                string netStandard20 = System.IO.Path.Combine(contentsPath, "NetStandard", "ref", "2.0.0");
+                string netStandardCompat = System.IO.Path.Combine(contentsPath, "NetStandard", "compat", "shims", "net472");
+                
+                // Unity Managed アセンブリ
+                string managed = System.IO.Path.Combine(contentsPath, "Managed");
+                string unityEngine = System.IO.Path.Combine(managed, "UnityEngine");
+                string unityEditor = System.IO.Path.Combine(managed, "UnityEditor");
+                
+                // プロジェクトアセンブリ
+                string scriptAssemblies = System.IO.Path.Combine(UnityEngine.Application.dataPath, "..", "Library", "ScriptAssemblies");
+                
+                // 存在するディレクトリを追加
+                AddDirectoryIfExists(searchPaths, monoApi);
+                AddDirectoryIfExists(searchPaths, monoFacades);
+                AddDirectoryIfExists(searchPaths, monoUnityjit);
+                AddDirectoryIfExists(searchPaths, netStandard21);
+                AddDirectoryIfExists(searchPaths, netStandard20);
+                AddDirectoryIfExists(searchPaths, netStandardCompat);
+                AddDirectoryIfExists(searchPaths, managed);
+                AddDirectoryIfExists(searchPaths, unityEngine);
+                AddDirectoryIfExists(searchPaths, unityEditor);
+                AddDirectoryIfExists(searchPaths, scriptAssemblies);
+                
+                int addedCount = 0;
+                
+                // 各ディレクトリから.dllファイルを収集
+                foreach (string searchPath in searchPaths)
                 {
-                    // System.Net.Httpの場合は特別な処理
-                    if (assemblyFileName == "System.Net.Http.dll")
+                    if (System.IO.Directory.Exists(searchPath))
                     {
-                        string httpPath = System.IO.Path.Combine(
-                            monoPath,
-                            "System.Net.Http/4.0.0.0__b03f5f7f11d50a3a/System.Net.Http.dll"
-                        );
-                        
-                        if (System.IO.File.Exists(httpPath))
+                        foreach (string dllPath in System.IO.Directory.GetFiles(searchPath, "*.dll"))
                         {
-                            MetadataReference httpRef = MetadataReference.CreateFromFile(httpPath);
-                            references.Add(httpRef);
-                            
-                            VibeLogger.LogInfo(
-                                "roslyn_explicit_assembly_added",
-                                "Added explicit assembly reference",
-                                new { assembly = assemblyFileName, path = httpPath },
-                                correlationId: McpConstants.GenerateCorrelationId(),
-                                humanNote: "System.Net.Http explicitly added to compilation references",
-                                aiTodo: "Monitor if other assemblies need explicit addition"
-                            );
+                            if (addedPaths.Add(dllPath))
+                            {
+                                try
+                                {
+                                    MetadataReference reference = MetadataReference.CreateFromFile(dllPath);
+                                    references.Add(reference);
+                                    addedCount++;
+                                }
+                                catch
+                                {
+                                    // 読み込めないDLLはスキップ（ネイティブDLL等）
+                                    // これは正常な動作（ネイティブDLL等は読み込めない）
+                                }
+                            }
                         }
                     }
                 }
+                
+                VibeLogger.LogInfo(
+                    "roslyn_unity_references_added",
+                    "Unity reference assemblies added",
+                    new { 
+                        searchPaths = searchPaths.Count,
+                        addedAssemblies = addedCount
+                    },
+                    correlationId,
+                    "Comprehensive Unity assembly references collected",
+                    "Monitor for missing assemblies in compilation"
+                );
             }
             catch (Exception ex)
             {
                 VibeLogger.LogWarning(
-                    "roslyn_explicit_assembly_failed",
-                    $"Failed to add explicit assembly reference: {ex.Message}",
-                    new { assembly = assemblyFileName, error = ex.Message },
-                    correlationId: McpConstants.GenerateCorrelationId(),
-                    humanNote: "Failed to add explicit assembly, continuing without it",
-                    aiTodo: "Review assembly loading strategy"
+                    "roslyn_unity_references_failed",
+                    $"Failed to add Unity reference assemblies: {ex.Message}",
+                    new { error = ex.Message },
+                    correlationId,
+                    "Falling back to AppDomain assemblies only",
+                    "Review Unity installation path detection"
                 );
             }
         }
+        
+        /// <summary>
+        /// ディレクトリが存在する場合のみリストに追加
+        /// </summary>
+        private void AddDirectoryIfExists(List<string> list, string path)
+        {
+            if (!string.IsNullOrEmpty(path) && System.IO.Directory.Exists(path))
+            {
+                list.Add(path);
+            }
+        }
+        
 
         public CompilationResult Compile(CompilationRequest request)
         {
