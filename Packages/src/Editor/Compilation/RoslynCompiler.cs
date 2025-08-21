@@ -130,17 +130,17 @@ namespace io.github.hatayama.uLoopMCP
 #if UNITY_EDITOR_OSX
                 // macOS: Unity.app/Contents
                 // Unity.appはアプリケーションバンドルなので、直接Contentsを追加
-                contentsPath = System.IO.Path.Combine(unityPath, "Contents");
+                contentsPath = Path.Combine(unityPath, "Contents");
 #elif UNITY_EDITOR_WIN
                     // Windows: Editor/Data
-                    contentsPath = System.IO.Path.Combine(
-                        System.IO.Path.GetDirectoryName(unityPath),
+                    contentsPath = Path.Combine(
+                        Path.GetDirectoryName(unityPath),
                         "Data"
                     );
 #elif UNITY_EDITOR_LINUX
                     // Linux: Editor/Data
-                    contentsPath = System.IO.Path.Combine(
-                        System.IO.Path.GetDirectoryName(unityPath),
+                    contentsPath = Path.Combine(
+                        Path.GetDirectoryName(unityPath),
                         "Data"
                     );
 #endif
@@ -149,22 +149,22 @@ namespace io.github.hatayama.uLoopMCP
                 List<string> searchPaths = new();
 
                 // .NET Framework 4.x 参照アセンブリ
-                string monoApi = System.IO.Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "4.7.1-api");
-                string monoFacades = System.IO.Path.Combine(monoApi, "Facades");
-                string monoUnityjit = System.IO.Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "unityjit-macos");
+                string monoApi = Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "4.7.1-api");
+                string monoFacades = Path.Combine(monoApi, "Facades");
+                string monoUnityjit = Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "unityjit-macos");
 
                 // .NET Standard 参照アセンブリ
-                string netStandard21 = System.IO.Path.Combine(contentsPath, "NetStandard", "ref", "2.1.0");
-                string netStandard20 = System.IO.Path.Combine(contentsPath, "NetStandard", "ref", "2.0.0");
-                string netStandardCompat = System.IO.Path.Combine(contentsPath, "NetStandard", "compat", "shims", "net472");
+                string netStandard21 = Path.Combine(contentsPath, "NetStandard", "ref", "2.1.0");
+                string netStandard20 = Path.Combine(contentsPath, "NetStandard", "ref", "2.0.0");
+                string netStandardCompat = Path.Combine(contentsPath, "NetStandard", "compat", "shims", "net472");
 
                 // Unity Managed アセンブリ
-                string managed = System.IO.Path.Combine(contentsPath, "Managed");
-                string unityEngine = System.IO.Path.Combine(managed, "UnityEngine");
-                string unityEditor = System.IO.Path.Combine(managed, "UnityEditor");
+                string managed = Path.Combine(contentsPath, "Managed");
+                string unityEngine = Path.Combine(managed, "UnityEngine");
+                string unityEditor = Path.Combine(managed, "UnityEditor");
 
                 // プロジェクトアセンブリ
-                string scriptAssemblies = System.IO.Path.Combine(UnityEngine.Application.dataPath, "..", "Library", "ScriptAssemblies");
+                string scriptAssemblies = Path.Combine(UnityEngine.Application.dataPath, "..", "Library", "ScriptAssemblies");
 
                 // 存在するディレクトリを追加
                 AddDirectoryIfExists(searchPaths, monoApi);
@@ -183,9 +183,9 @@ namespace io.github.hatayama.uLoopMCP
                 // 各ディレクトリから.dllファイルを収集
                 foreach (string searchPath in searchPaths)
                 {
-                    if (System.IO.Directory.Exists(searchPath))
+                    if (Directory.Exists(searchPath))
                     {
-                        foreach (string dllPath in System.IO.Directory.GetFiles(searchPath, "*.dll"))
+                        foreach (string dllPath in Directory.GetFiles(searchPath, "*.dll"))
                         {
                             if (addedPaths.Add(dllPath))
                             {
@@ -236,7 +236,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void AddDirectoryIfExists(List<string> list, string path)
         {
-            if (!string.IsNullOrEmpty(path) && System.IO.Directory.Exists(path))
+            if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
             {
                 list.Add(path);
             }
