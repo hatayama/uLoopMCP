@@ -66,26 +66,6 @@ namespace io.github.hatayama.uLoopMCP.Factory
                 throw;
             }
         }
-        
-        /// <summary>
-        /// デフォルト設定でDynamicCodeExecutorを作成（後方互換性のため残留）
-        /// </summary>
-        [System.Obsolete("Use Create(DynamicCodeSecurityLevel) instead")]
-        public static IDynamicCodeExecutor CreateDefault()
-        {
-            // デフォルトはDisabledレベル（最も安全）
-            return Create(DynamicCodeSecurityLevel.Disabled);
-        }
-
-        /// <summary>
-        /// 厳格なセキュリティ設定でDynamicCodeExecutorを作成（後方互換性のため残留）
-        /// </summary>
-        [System.Obsolete("Use Create(DynamicCodeSecurityLevel.Restricted) instead")]
-        public static IDynamicCodeExecutor CreateStrict()
-        {
-            // RestrictedレベルでExecutorを作成
-            return Create(DynamicCodeSecurityLevel.Restricted);
-        }
     }
 }
 #endif
