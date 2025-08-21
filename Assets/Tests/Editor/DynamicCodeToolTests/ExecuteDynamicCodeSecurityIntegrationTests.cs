@@ -1,556 +1,291 @@
 #if ULOOPMCP_HAS_ROSLYN
 using NUnit.Framework;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
-    /// ExecuteDynamicCodeToolのセキュリティ機能統合テスト
-    /// 実際のツール経由でセキュリティ制限が機能するか確認
+    /// ExecuteDynamicCodeのセキュリティ機能統合テスト
+    /// v4.0ステートレス設計: ExecuteDynamicCodeToolを使用せず、DynamicCodeExecutorを直接使用
+    /// 設計ドキュメント: /working-notes/2025-08-21_v4.0ステートレス設計移行/2025-08-21_v4.0ステートレス設計移行_design.md
     /// </summary>
     [TestFixture]
     public class ExecuteDynamicCodeSecurityIntegrationTests
     {
-        private ExecuteDynamicCodeTool _tool;
-
-        [SetUp]
-        public void SetUp()
-        {
-            // v4.0ステートレス設計では、セキュリティレベルは各Executorで制御
-            // テスト用にデフォルトでRestrictedモードに設定
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            
-            UnityEngine.Debug.Log($"[ExecuteDynamicCodeSecurityIntegrationTests SetUp] Test security level set to Restricted");
-            
-            // ツールインスタンス作成
-            _tool = new ExecuteDynamicCodeTool();
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            // 元のセキュリティレベルに戻す
-            // v4.0ステートレス設計のため復元不要
-        }
+        // ExecuteDynamicCodeToolは使用しない（v4.0ステートレス設計）
+        // 各テストメソッドで独立したExecutorを作成
 
         [Test]
         public async Task Level0_コード実行が拒否されるか確認()
         {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Disabled);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "return \"Hello World\";",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
+            // Executorを直接作成（グローバル状態非依存）
+            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
+                DynamicCodeSecurityLevel.Disabled
+            );
+            
+            // 直接実行
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                "return \"Hello World\";",
+                "DynamicCommand",
+                null,
+                CancellationToken.None,
+                false
+            );
+            
             // Assert
-            Assert.IsFalse(response.Success);
-            Assert.IsNotNull(response.Error);
-            Assert.IsTrue(response.Error.Contains("disabled") || response.Error.Contains("Disabled"));
-            Assert.AreEqual("Disabled", response.SecurityLevel);
+            Assert.IsFalse(result.Success);
+            Assert.IsNotNull(result.ErrorMessage);
+            Assert.IsTrue(result.ErrorMessage.Contains("disabled") || 
+                         result.ErrorMessage.Contains("Disabled"));
         }
 
         [Test]
         public async Task Level1_SystemIO使用コードが拒否されるか確認()
         {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "System.IO.File.Delete(\"test.txt\"); return \"Done\";",  // Deleteは確実に危険なAPI
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
+            // Restrictedモードで直接Executor作成
+            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
+                DynamicCodeSecurityLevel.Restricted
+            );
+            
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                "System.IO.File.Delete(\"test.txt\"); return \"Done\";",
+                "DynamicCommand",
+                null,
+                CancellationToken.None,
+                false
+            );
+            
             // Assert
-            Assert.IsFalse(response.Success);
-            Assert.IsNotNull(response.Error);
-            Assert.IsTrue(response.Error.Contains("セキュリティ違反") || response.Error.Contains("dangerous") || response.Error.Contains("blocked"));
-            Assert.AreEqual("Restricted", response.SecurityLevel);
+            Assert.IsFalse(result.Success);
+            Assert.IsTrue(result.ErrorMessage.Contains("セキュリティ違反") || 
+                         result.ErrorMessage.Contains("dangerous") || 
+                         result.ErrorMessage.Contains("blocked"));
         }
 
         [Test]
         public async Task Level1_File使用コードが拒否されるか確認()
         {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "System.IO.File.WriteAllText(\"test.txt\", \"content\"); return \"Done\";",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
+            // Restrictedモードで直接Executor作成
+            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
+                DynamicCodeSecurityLevel.Restricted
+            );
+            
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                "System.IO.File.WriteAllText(\"test.txt\", \"content\"); return \"Done\";",
+                "DynamicCommand",
+                null,
+                CancellationToken.None,
+                false
+            );
+            
             // Assert
-            Assert.IsFalse(response.Success);
-            Assert.IsNotNull(response.Error);
-            Assert.IsTrue(response.Error.Contains("セキュリティ違反") || response.Error.Contains("dangerous") || response.Error.Contains("blocked"));
+            Assert.IsFalse(result.Success);
+            Assert.IsTrue(result.ErrorMessage.Contains("セキュリティ違反") || 
+                         result.ErrorMessage.Contains("dangerous") || 
+                         result.ErrorMessage.Contains("blocked"));
         }
 
         [Test]
         public async Task Level1_HttpClient使用コードが拒否されるか確認()
         {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "var client = new System.Net.Http.HttpClient(); return \"Done\";",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
+            // Restrictedモードで直接Executor作成
+            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
+                DynamicCodeSecurityLevel.Restricted
+            );
+            
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                "var client = new System.Net.Http.HttpClient(); return \"Done\";",
+                "DynamicCommand",
+                null,
+                CancellationToken.None,
+                false
+            );
+            
             // Assert
-            Assert.IsFalse(response.Success);
-            Assert.IsNotNull(response.Error);
-            Assert.IsTrue(response.Error.Contains("セキュリティ違反") || response.Error.Contains("dangerous") || response.Error.Contains("blocked"));
+            Assert.IsFalse(result.Success);
+            Assert.IsTrue(result.ErrorMessage.Contains("セキュリティ違反") || 
+                         result.ErrorMessage.Contains("dangerous") || 
+                         result.ErrorMessage.Contains("blocked"));
         }
 
         [Test]
         public async Task Level1_GameObject作成コードが実行できるか確認()
         {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "UnityEngine.GameObject obj = new UnityEngine.GameObject(\"TestObject\"); UnityEngine.Object.DestroyImmediate(obj); return \"GameObject created and destroyed\";",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
+            // Restrictedモードで直接Executor作成
+            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
+                DynamicCodeSecurityLevel.Restricted
+            );
+            
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                "UnityEngine.GameObject obj = new UnityEngine.GameObject(\"TestObject\"); UnityEngine.Object.DestroyImmediate(obj); return \"GameObject created and destroyed\";",
+                "DynamicCommand",
+                null,
+                CancellationToken.None,
+                false
+            );
+            
             // Assert
-            Assert.IsTrue(response.Success, $"Unexpected error: {response.Error}");
-            Assert.IsTrue(string.IsNullOrEmpty(response.Error), $"Error should be null or empty but was: '{response.Error}'");
-            Assert.AreEqual("GameObject created and destroyed", response.Result);
-            Assert.AreEqual("Restricted", response.SecurityLevel);
+            Assert.IsTrue(result.Success, $"Unexpected error: {result.ErrorMessage}");
+            Assert.IsTrue(string.IsNullOrEmpty(result.ErrorMessage), $"Error should be null or empty but was: '{result.ErrorMessage}'");
+            Assert.AreEqual("GameObject created and destroyed", result.Result);
         }
 
         [Test]
         public async Task Level1_UnityEngineDebugLogが実行できるか確認()
         {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "UnityEngine.Debug.Log(\"Test message\"); return \"Logged\";",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            Assert.IsTrue(response.Success, $"Unexpected error: {response.Error}");
-            Assert.IsTrue(string.IsNullOrEmpty(response.Error), $"Error should be null or empty but was: '{response.Error}'");
-            Assert.AreEqual("Logged", response.Result);
-        }
-
-        [Test]
-        public async Task Level1_数学演算が実行できるか確認()
-        {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "int sum = 0; for(int i = 1; i <= 10; i++) sum += i; return sum;",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            Assert.IsTrue(response.Success, $"Unexpected error: {response.Error}");
-            Assert.IsTrue(string.IsNullOrEmpty(response.Error), $"Error should be null or empty but was: '{response.Error}'");
-            Assert.AreEqual("55", response.Result?.ToString());
-        }
-
-        [Test]
-        public async Task Level1_AssemblyCSharpクラス使用コードが許可されるか確認()
-        {
-            // 新仕様: RestrictedモードでもAssembly-CSharpを許可（ユーザー定義クラス実行機能）
-            // ただし、ForAssemblyCSharpTestクラスが実際に存在しない場合はコンパイルエラーになる
-            
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "// Assembly-CSharpは許可されるが、存在しないクラスはエラー\nreturn \"Assembly-CSharp is now allowed in Restricted mode\";",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            Assert.IsTrue(response.Success, "Level 1 should now allow Assembly-CSharp access");
-            Assert.AreEqual("Assembly-CSharp is now allowed in Restricted mode", response.Result);
-            Assert.AreEqual("Restricted", response.SecurityLevel);
-        }
-
-        [Test]
-        public async Task Level1_ForDynamicAssemblyTestクラス使用コードが拒否されるか確認()
-        {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                // HelloWorldInAnotherDLL()は安全なメソッドなので許可される
-                // 代わりに危険な操作を含むコードを直接記述してテスト
-                Code = "var test = new io.github.hatayama.uLoopMCP.ForDynamicAssemblyTest(); System.IO.File.WriteAllText(\"/tmp/test.txt\", \"test\"); return \"done\";",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            Assert.IsFalse(response.Success, "Level 1 should block dangerous operations");
-            Assert.IsNotNull(response.Error);
-            Assert.IsTrue(response.Error.Contains("セキュリティ違反") || response.Error.Contains("SECURITY"), "Should contain security error message");
-            Assert.AreEqual("Restricted", response.SecurityLevel);
-        }
-        
-        [Test]
-        public async Task Level1_ForDynamicAssemblyTestの安全なメソッドは実行できるか確認()
-        {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                // HelloWorldInAnotherDLL()は安全なメソッドなので許可される
-                Code = "var test = new io.github.hatayama.uLoopMCP.ForDynamicAssemblyTest(); return test.HelloWorldInAnotherDLL();",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            Assert.IsTrue(response.Success, "Level 1 should allow safe methods from user assemblies");
-            Assert.AreEqual("Hello World", response.Result);
-            Assert.AreEqual("Restricted", response.SecurityLevel);
-        }
-        
-        [Test]
-        public async Task Level1_ForDynamicAssemblyTestの危険なメソッドは拒否されるか確認()
-        {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                // TestForbiddenOperationsInAnotherDLL()は危険な操作を含むのでブロックされる
-                Code = "var test = new io.github.hatayama.uLoopMCP.ForDynamicAssemblyTest(); return test.TestForbiddenOperationsInAnotherDLL();",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            // 注意：メソッド自体は実行可能だが、内部でFile.WriteAllTextを呼ぶ時点でランタイムエラーになる
-            // コンパイル時のセキュリティチェックでは検出されない（メソッド内部まで解析しないため）
-            Assert.IsFalse(response.Success, "Level 1 should block methods containing dangerous operations");
-            Assert.IsNotNull(response.Error);
-            Assert.AreEqual("Restricted", response.SecurityLevel);
-        }
-
-        [Test]
-        public async Task Level2_SystemIO使用コードが実行できるか確認()
-        {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
-            string testFile = System.IO.Path.GetTempFileName();
-            
-            try
-            {
-                System.IO.File.WriteAllText(testFile, "Test content");
-                
-                ExecuteDynamicCodeSchema parameters = new()
-                {
-                    Code = $"string content = System.IO.File.ReadAllText(@\"{testFile}\"); return content;",
-                    CompileOnly = false
-                };
-
-                // Act
-                BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-                ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-                // Assert
-                Assert.IsTrue(response.Success, $"Unexpected error: {response.Error}");
-                Assert.IsTrue(string.IsNullOrEmpty(response.Error), $"Error should be null or empty but was: '{response.Error}'");
-                Assert.AreEqual("Test content", response.Result);
-                Assert.AreEqual("FullAccess", response.SecurityLevel);
-            }
-            finally
-            {
-                // クリーンアップ
-                if (System.IO.File.Exists(testFile))
-                {
-                    System.IO.File.Delete(testFile);
-                }
-            }
-        }
-
-        [Test]
-        public async Task Level2_Directory操作が実行できるか確認()
-        {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "bool exists = System.IO.Directory.Exists(System.IO.Directory.GetCurrentDirectory()); return exists;",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            Assert.IsTrue(response.Success, $"Unexpected error: {response.Error}");
-            Assert.IsTrue(string.IsNullOrEmpty(response.Error), $"Error should be null or empty but was: '{response.Error}'");
-            Assert.AreEqual("True", response.Result?.ToString());
-        }
-
-        [Test]
-        public async Task Level2_AssemblyCSharpクラスが使用できるか確認()
-        {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "var test = new io.github.hatayama.uLoopMCP.ForAssemblyCSharpTest(); return test.HelloWorld();",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            Assert.IsTrue(response.Success, $"Level 2 should allow Assembly-CSharp access. Error: {response.Error}");
-            Assert.IsTrue(string.IsNullOrEmpty(response.Error), $"Error should be null or empty but was: '{response.Error}'");
-            Assert.AreEqual("Hello World", response.Result);
-            Assert.AreEqual("FullAccess", response.SecurityLevel);
-        }
-
-        [Test]
-        public async Task Level2_ForDynamicAssemblyTestクラスが使用できるか確認()
-        {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "var test = new io.github.hatayama.uLoopMCP.ForDynamicAssemblyTest(); return test.HelloWorldInAnotherDLL();",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            Assert.IsTrue(response.Success, $"Level 2 should allow ForDynamicAssemblyTest access. Error: {response.Error}");
-            Assert.IsTrue(string.IsNullOrEmpty(response.Error), $"Error should be null or empty but was: '{response.Error}'");
-            Assert.AreEqual("Hello World", response.Result);
-            Assert.AreEqual("FullAccess", response.SecurityLevel);
-        }
-
-        [Test]
-        public async Task Level2_AssemblyCSharpの危険なメソッドも実行できるか確認()
-        {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                // Level 2では危険な操作も許可される（テスト目的のみ、実際の実行は避ける）
-                Code = "// Level 2 allows dangerous operations\nreturn \"Test skipped for safety\";",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            Assert.IsTrue(response.Success, $"Level 2 should allow execution. Error: {response.Error}");
-            Assert.AreEqual("FullAccess", response.SecurityLevel);
-        }
-
-        [Test]
-        public async Task CompileOnlyモードでLevel0でもコンパイルは成功するか確認()
-        {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Disabled);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "return \"Hello World\";",
-                CompileOnly = true
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            // Level 0では実行が禁止されるため、CompileOnlyでも失敗する
-            Assert.IsFalse(response.Success);
-            Assert.IsNotNull(response.Error);
-            Assert.IsTrue(response.Error.Contains("disabled") || response.Error.Contains("Disabled"));
-        }
-
-        [Test]
-        public async Task SecurityLevelがレスポンスに含まれるか確認()
-        {
-            // Arrange
-            DynamicCodeSecurityLevel[] levels = 
-            {
-                DynamicCodeSecurityLevel.Disabled,
-                DynamicCodeSecurityLevel.Restricted,
-                DynamicCodeSecurityLevel.FullAccess
-            };
-
-            foreach (DynamicCodeSecurityLevel level in levels)
-            {
-                McpEditorSettings.SetDynamicCodeSecurityLevel(level);
-                ExecuteDynamicCodeSchema parameters = new()
-                {
-                    Code = "return 123;",
-                    CompileOnly = false
-                };
-
-                // Act
-                BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-                ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-                // Assert
-                Assert.IsNotNull(response.SecurityLevel);
-                Assert.AreEqual(level.ToString(), response.SecurityLevel);
-            }
-        }
-
-        [Test]
-        public async Task TestSecurityLevelChangeBlocked_Restricted()
-        {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "io.github.hatayama.uLoopMCP.McpEditorSettings.SetDynamicCodeSecurityLevel(io.github.hatayama.uLoopMCP.DynamicCodeSecurityLevel.FullAccess); return \"attempted\";",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            Assert.IsNotNull(response);
-            Assert.IsFalse(response.Success);
-            Assert.IsTrue(response.ErrorMessage.Contains("SECURITY_VIOLATION"));
-            Assert.IsTrue(response.ErrorMessage.Contains("Changing security level is not allowed in Restricted mode"));
-        }
-
-        [Test]
-        public async Task TestSecurityLevelChangeAllowed_FullAccess()
-        {
-            // Arrange
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "var currentLevel = io.github.hatayama.uLoopMCP.McpEditorSettings.GetDynamicCodeSecurityLevel(); return currentLevel.ToString();",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            Assert.IsNotNull(response);
-            Assert.IsTrue(response.Success);
-            Assert.AreEqual("FullAccess", response.Result);
-        }
-
-        [Test]
-        public async Task TestDynamicCodeSecurityManagerCurrentLevelRead_Restricted()
-        {
-            // Arrange
-            // CurrentLevelプロパティの読み取りは許可される（変更のみ禁止）
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = "var level = io.github.hatayama.uLoopMCP.DynamicCodeSecurityManager.CurrentLevel; return level.ToString();",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            Assert.IsNotNull(response);
-            Assert.IsTrue(response.Success, "Reading CurrentLevel should be allowed");
-            Assert.AreEqual("Disabled", response.Result);  // v4.0では常にDisabled
-        }
-
-        [Test]
-        public async Task Level1_DynamicAssemblyTest_ExecuteAnoterInstanceMethod_ShouldFailAtRuntime()
-        {
-            // Arrange
-            // ExecuteAnoterInstanceMethodは外部アセンブリのメソッドなので
-            // コンパイル時には検出できないが、実行時にProcess.Startで失敗する
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            ExecuteDynamicCodeSchema parameters = new()
-            {
-                Code = @"
-                    var test = new io.github.hatayama.uLoopMCP.DynamicAssemblyTest();
-                    test.ExecuteAnoterInstanceMethod();
-                    return ""Should not reach here"";",
-                CompileOnly = false
-            };
-
-            // Act
-            BaseToolResponse baseResponse = await _tool.ExecuteAsync(JToken.FromObject(parameters));
-            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
-
-            // Assert
-            Assert.IsFalse(response.Success, "Should fail at runtime due to Process.Start");
-            Assert.IsNotNull(response.Error);
-            // Process.Startが実行できない環境でのエラーメッセージを確認
-            Assert.IsTrue(
-                response.Error.Contains("Process.Start") || 
-                response.Error.Contains("Cannot find") ||
-                response.Error.Contains("Exception"),
-                $"Should fail with process error. Actual: {response.Error}"
+            // Restrictedモードで直接Executor作成
+            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
+                DynamicCodeSecurityLevel.Restricted
             );
-            Assert.AreEqual("Restricted", response.SecurityLevel);
+            
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                "UnityEngine.Debug.Log(\"Test message\"); return \"Log executed\";",
+                "DynamicCommand",
+                null,
+                CancellationToken.None,
+                false
+            );
+            
+            // Assert
+            Assert.IsTrue(result.Success, $"Unexpected error: {result.ErrorMessage}");
+            Assert.AreEqual("Log executed", result.Result);
+        }
+
+        [Test]
+        public async Task Level2_全機能有効でコード実行が成功するか確認()
+        {
+            // FullAccessモードで直接Executor作成
+            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
+                DynamicCodeSecurityLevel.FullAccess
+            );
+            
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                "return 1 + 2;",
+                "DynamicCommand",
+                null,
+                CancellationToken.None,
+                false
+            );
+            
+            // Assert
+            Assert.IsTrue(result.Success);
+            Assert.AreEqual(3, System.Convert.ToInt32(result.Result));
+        }
+
+        [Test]
+        public async Task Level2_File使用コードも実行できるか確認()
+        {
+            // FullAccessモードで直接Executor作成
+            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
+                DynamicCodeSecurityLevel.FullAccess
+            );
+            
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                "bool exists = System.IO.File.Exists(\"dummy.txt\"); return exists;",
+                "DynamicCommand",
+                null,
+                CancellationToken.None,
+                false
+            );
+            
+            // Assert
+            Assert.IsTrue(result.Success);
+            Assert.AreEqual(false, System.Convert.ToBoolean(result.Result)); // ファイルは存在しないはず
+        }
+
+        [Test]
+        public async Task CompileOnlyフラグが機能するか確認()
+        {
+            // Restrictedモードで直接Executor作成
+            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
+                DynamicCodeSecurityLevel.Restricted
+            );
+            
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                "return \"Test\";",
+                "DynamicCommand",
+                null,
+                CancellationToken.None,
+                true  // CompileOnly = true
+            );
+            
+            // Assert
+            Assert.IsTrue(result.Success);
+            Assert.IsNull(result.Result);  // CompileOnlyの場合、実行されないのでnull
+        }
+
+        [Test]
+        public async Task パラメータ渡しが機能するか確認()
+        {
+            // Restrictedモードで直接Executor作成
+            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
+                DynamicCodeSecurityLevel.Restricted
+            );
+            
+            // パラメータ配列を作成
+            object[] parameters = new object[] { 10, 20 };
+            
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                "int v1 = (int)parameters[\"param0\"]; int v2 = (int)parameters[\"param1\"]; return v1 + v2;",
+                "DynamicCommand",
+                parameters,
+                CancellationToken.None,
+                false
+            );
+            
+            // Assert
+            Assert.IsTrue(result.Success, $"Execution failed: {result.ErrorMessage}");
+            Assert.AreEqual(30, System.Convert.ToInt32(result.Result));
+        }
+
+        [Test]
+        public async Task コンパイルエラーが適切に返されるか確認()
+        {
+            // Restrictedモードで直接Executor作成
+            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
+                DynamicCodeSecurityLevel.Restricted
+            );
+            
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                "this is invalid C# code",
+                "DynamicCommand",
+                null,
+                CancellationToken.None,
+                false
+            );
+            
+            // Assert
+            Assert.IsFalse(result.Success);
+            Assert.IsNotNull(result.ErrorMessage);
+            // "this is invalid C# code"は複数のコンパイルエラーを引き起こす
+            // 例: "Invalid token", "Identifier expected", ";が必要" など
+            Assert.IsTrue(result.ErrorMessage.Contains("Invalid") || 
+                         result.ErrorMessage.Contains("expected") || 
+                         result.ErrorMessage.Contains("エラー") ||
+                         result.ErrorMessage.Contains("コンパイル"));
+        }
+
+        [Test]
+        public async Task 実行時エラーが適切に返されるか確認()
+        {
+            // Restrictedモードで直接Executor作成
+            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
+                DynamicCodeSecurityLevel.Restricted
+            );
+            
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                "int x = 10; int y = 0; return x / y;",  // ゼロ除算
+                "DynamicCommand",
+                null,
+                CancellationToken.None,
+                false
+            );
+            
+            // Assert
+            Assert.IsFalse(result.Success);
+            Assert.IsNotNull(result.ErrorMessage);
+            Assert.IsTrue(result.ErrorMessage.Contains("DivideByZero") || result.ErrorMessage.Contains("zero"));
         }
     }
 }

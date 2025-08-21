@@ -19,9 +19,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [SetUp]
         public void SetUp()
         {
-            // テスト用にエディタ設定をRestrictedに
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
-            
+            // v4.0ステートレス設計 - グローバル設定への変更を削除
             // RestrictedモードでExecutorを作成
             _executor = DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
         }

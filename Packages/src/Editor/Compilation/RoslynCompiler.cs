@@ -87,6 +87,9 @@ namespace io.github.hatayama.uLoopMCP
                 newReferences.Add(currentRef);
                 _defaultReferences.Add(currentRef);
             }
+            
+            // System.Net.Http.dllを明示的に追加（AppDomainにロードされていない場合でも参照可能にする）
+            AddExplicitAssemblyReference(newReferences, "System.Net.Http.dll");
                 
                 return newReferences;
             });
@@ -114,6 +117,76 @@ namespace io.github.hatayama.uLoopMCP
         private void ClearCompilationCache()
         {
             _cacheManager.ClearCompilationCache();
+        }
+        
+        /// <summary>
+        /// 明示的にアセンブリ参照を追加する
+        /// </summary>
+        private void AddExplicitAssemblyReference(List<MetadataReference> references, string assemblyFileName)
+        {
+            try
+            {
+                // Unityのインストールパスを取得
+                string unityPath = UnityEditor.EditorApplication.applicationPath;
+                string monoPath = string.Empty;
+                
+                UnityEngine.Debug.Log($"[AddExplicitAssemblyReference] Starting for {assemblyFileName}");
+                UnityEngine.Debug.Log($"[AddExplicitAssemblyReference] Unity path: {unityPath}");
+                
+                #if UNITY_EDITOR_OSX
+                    // macOSの場合
+                    monoPath = System.IO.Path.Combine(
+                        System.IO.Path.GetDirectoryName(unityPath),
+                        "MonoBleedingEdge/lib/mono/gac"
+                    );
+                    UnityEngine.Debug.Log($"[AddExplicitAssemblyReference] macOS MonoPath: {monoPath}");
+                #elif UNITY_EDITOR_WIN
+                    // Windowsの場合
+                    string dataPath = System.IO.Path.Combine(
+                        System.IO.Path.GetDirectoryName(unityPath),
+                        "Data"
+                    );
+                    monoPath = System.IO.Path.Combine(dataPath, "MonoBleedingEdge/lib/mono/gac");
+                #endif
+                
+                if (!string.IsNullOrEmpty(monoPath) && System.IO.Directory.Exists(monoPath))
+                {
+                    // System.Net.Httpの場合は特別な処理
+                    if (assemblyFileName == "System.Net.Http.dll")
+                    {
+                        string httpPath = System.IO.Path.Combine(
+                            monoPath,
+                            "System.Net.Http/4.0.0.0__b03f5f7f11d50a3a/System.Net.Http.dll"
+                        );
+                        
+                        if (System.IO.File.Exists(httpPath))
+                        {
+                            MetadataReference httpRef = MetadataReference.CreateFromFile(httpPath);
+                            references.Add(httpRef);
+                            
+                            VibeLogger.LogInfo(
+                                "roslyn_explicit_assembly_added",
+                                "Added explicit assembly reference",
+                                new { assembly = assemblyFileName, path = httpPath },
+                                correlationId: McpConstants.GenerateCorrelationId(),
+                                humanNote: "System.Net.Http explicitly added to compilation references",
+                                aiTodo: "Monitor if other assemblies need explicit addition"
+                            );
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                VibeLogger.LogWarning(
+                    "roslyn_explicit_assembly_failed",
+                    $"Failed to add explicit assembly reference: {ex.Message}",
+                    new { assembly = assemblyFileName, error = ex.Message },
+                    correlationId: McpConstants.GenerateCorrelationId(),
+                    humanNote: "Failed to add explicit assembly, continuing without it",
+                    aiTodo: "Review assembly loading strategy"
+                );
+            }
         }
 
         public CompilationResult Compile(CompilationRequest request)

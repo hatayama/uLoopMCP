@@ -58,20 +58,19 @@ either use fully-qualified names or include the necessary using statements in yo
         public ExecuteDynamicCodeTool()
         {
 #if ULOOPMCP_HAS_ROSLYN
-            // 設定から現在のセキュリティレベルを取得
-            _currentSecurityLevel = McpEditorSettings.GetDynamicCodeSecurityLevel();
-            
-            // セキュリティレベルを明示的に指定してExecutorを作成
-            _executor = Factory.DynamicCodeExecutorFactory.Create(_currentSecurityLevel);
+            // v4.0 ステートレス設計: 初期状態は設定せず、最初のリクエスト時に初期化
+            _executor = null;
             _errorHandler = new ImprovedErrorHandler();
+            // 初期値は無効な値を設定（最初のリクエストで必ず再作成される）
+            _currentSecurityLevel = (DynamicCodeSecurityLevel)(-1);
             
             VibeLogger.LogInfo(
                 "execute_dynamic_code_tool_initialized",
-                $"ExecuteDynamicCodeTool initialized with security level: {_currentSecurityLevel}",
-                new { securityLevel = _currentSecurityLevel.ToString() },
+                "ExecuteDynamicCodeTool initialized (stateless design)",
+                new { },
                 correlationId: McpConstants.GenerateCorrelationId(),
-                humanNote: "Tool initialized with explicit security level",
-                aiTodo: "Monitor security level consistency"
+                humanNote: "Tool initialized without global state dependency",
+                aiTodo: "Monitor first request initialization"
             );
 #else
             // Roslyn無効時はnull（このツール自体が登録されないはず）
@@ -98,23 +97,29 @@ either use fully-qualified names or include the necessary using statements in yo
             try
             {
 #if ULOOPMCP_HAS_ROSLYN
-                // セキュリティレベルが変更されている場合はExecutorを再作成
-                DynamicCodeSecurityLevel currentLevel = McpEditorSettings.GetDynamicCodeSecurityLevel();
-                if (currentLevel != _currentSecurityLevel)
+                // v4.0 ステートレス設計: Unity Editor側の設定から取得（MCPクライアントからは指定不可）
+                DynamicCodeSecurityLevel editorLevel = McpEditorSettings.GetDynamicCodeSecurityLevel();
+                
+                // エディタ設定が変更された場合のみExecutorを再作成
+                if (_executor == null || editorLevel != _currentSecurityLevel)
                 {
+                    string action = _executor == null ? "Creating" : "Recreating";
+                    
                     VibeLogger.LogInfo(
-                        "execute_dynamic_code_recreating_executor",
-                        $"Security level changed from {_currentSecurityLevel} to {currentLevel}, recreating executor",
+                        "execute_dynamic_code_executor_init",
+                        $"{action} executor with editor security level: {editorLevel}",
                         new { 
+                            action = action.ToLower(),
                             oldLevel = _currentSecurityLevel.ToString(),
-                            newLevel = currentLevel.ToString()
+                            newLevel = editorLevel.ToString(),
+                            source = "EditorSettings"  // パラメータではなくエディタ設定から
                         },
                         correlationId,
-                        "Recreating executor due to security level change",
-                        "Monitor security level change frequency"
+                        $"{action} executor from editor settings",
+                        "Monitor executor lifecycle and security level changes"
                     );
                     
-                    _currentSecurityLevel = currentLevel;
+                    _currentSecurityLevel = editorLevel;
                     _executor = Factory.DynamicCodeExecutorFactory.Create(_currentSecurityLevel);
                 }
 #endif

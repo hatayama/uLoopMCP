@@ -143,7 +143,7 @@ namespace io.github.hatayama.uLoopMCP
                     return new ExecutionResult
                     {
                         Success = true,
-                        Result = "Compilation completed successfully",
+                        Result = null,  // CompileOnlyの場合はnullを返す（v4.0仕様）
                         ExecutionTime = stopwatch.Elapsed,
                         Logs = new List<string> { "Code compiled successfully (no execution)" }
                     };
