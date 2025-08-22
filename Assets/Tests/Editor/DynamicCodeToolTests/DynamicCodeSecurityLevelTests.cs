@@ -3,14 +3,14 @@ using NUnit.Framework;
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
-    /// DynamicCodeSecurityLevelのenumテスト
-    /// 各レベルの値とデフォルト値を確認
+    /// Test for DynamicCodeSecurityLevel enum
+    /// Verify values and default values for each level
     /// </summary>
     [TestFixture]
     public class DynamicCodeSecurityLevelTests
     {
         [Test]
-        public void 各レベルの値が正しいか確認()
+        public void Verify_Correct_Level_Values()
         {
             // Assert
             Assert.AreEqual(0, (int)DynamicCodeSecurityLevel.Disabled);
@@ -19,17 +19,17 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void デフォルト値がRestrictedであることを確認()
+        public void Verify_Default_Value_Is_Disabled()
         {
             // Arrange & Act
             DynamicCodeSecurityLevel defaultLevel = default(DynamicCodeSecurityLevel);
             
             // Assert
-            Assert.AreEqual(DynamicCodeSecurityLevel.Disabled, defaultLevel); // enumのデフォルトは0
+            Assert.AreEqual(DynamicCodeSecurityLevel.Disabled, defaultLevel); // enum default is 0
         }
 
         [Test]
-        public void 全てのレベルが定義されていることを確認()
+        public void Verify_All_Levels_Are_Defined()
         {
             // Arrange
             string[] expectedNames = { "Disabled", "Restricted", "FullAccess" };

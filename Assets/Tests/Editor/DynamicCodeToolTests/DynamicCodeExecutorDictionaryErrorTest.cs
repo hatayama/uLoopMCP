@@ -8,8 +8,8 @@ using io.github.hatayama.uLoopMCP.Factory;
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
-    /// DynamicCodeExecutorのDictionaryエラーを再現するテスト
-    /// TDDアプローチ: まず失敗するテストを書いて、エラーを再現する
+    /// Reproduce Dictionary Error in DynamicCodeExecutor
+    /// TDD Approach: Write failing tests first to reproduce the error
     /// </summary>
     [TestFixture]
     public class DynamicCodeExecutorDictionaryErrorTest
@@ -19,13 +19,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [SetUp]
         public void SetUp()
         {
-            // v4.0ステートレス設計 - グローバル設定への変更を削除
-            // RestrictedモードでExecutorを作成
+            // v4.0 Stateless design - Remove global configuration changes
+            // Create Executor in Restricted mode
             _executor = DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
         }
 
         [Test]
-        [Description("最もシンプルなコードでもDictionaryエラーが発生することを確認")]
+[Description("Confirm Dictionary Error occurs even in the simplest code")]
         public async Task SimpleReturnStatement_ShouldNotThrowDictionaryError()
         {
             // Arrange
@@ -40,14 +40,14 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 false
             );
             
-            // Assert - エラーが発生しないことを期待
+            // Assert - Expect no error
             Assert.IsTrue(result.Success, 
                 $"Simple return statement should succeed. Error: {result.ErrorMessage ?? "No error"}, Logs: {string.Join(", ", result.Logs ?? new System.Collections.Generic.List<string>())}");
             Assert.AreEqual("Hello World", result.Result);
         }
 
         [Test]
-        [Description("変数宣言を含むコードでもDictionaryエラーが発生しないことを確認")]
+[Description("Confirm no Dictionary Error occurs in code with variable declarations")]
         public async Task VariableDeclaration_ShouldNotThrowDictionaryError()
         {
             // Arrange
@@ -69,14 +69,14 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // Assert
             Assert.IsTrue(result.Success,
                 $"Variable declaration should succeed. Error: {result.ErrorMessage ?? "No error"}, Logs: {string.Join(", ", result.Logs ?? new System.Collections.Generic.List<string>())}");
-            // 注意: ExecuteDynamicCodeResponse.Resultはstring型なので、結果も文字列として比較
+            // Note: ExecuteDynamicCodeResponse.Result is string type, so compare results as strings
             Assert.AreEqual("15", result.Result.ToString());
         }
 
 
 
         [Test]
-        [Description("コンパイルエラーの内容を詳細に確認")]
+[Description("Detailed verification of compilation error content")]
         public async Task AnalyzeCompilationError_GetDetailedErrorInfo()
         {
             // Arrange
@@ -88,10 +88,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 "DynamicCommand",
                 null,
                 CancellationToken.None,
-                true // CompileOnlyモードでテスト
+                true // Test in CompileOnly mode
             );
             
-            // Assert - エラー内容を詳細に出力
+            // Assert - Output detailed error
             if (!result.Success)
             {
                 TestContext.WriteLine("=== Error Message ===");
@@ -103,7 +103,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                     TestContext.WriteLine($"Log: {log}");
                 }
                 
-                // Dictionaryエラーが含まれているか確認
+                // Check if Dictionary error is included
                 bool hasDictionaryError = false;
                 if (result.ErrorMessage != null && result.ErrorMessage.Contains("Dictionary"))
                 {

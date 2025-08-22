@@ -7,14 +7,14 @@ using System.Reflection;
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
-    /// AssemblyReferencePolicyのテスト
-    /// セキュリティレベル別のアセンブリ参照ポリシーを確認
+    /// Test for AssemblyReferencePolicy
+    /// Verify assembly reference policy for different security levels
     /// </summary>
     [TestFixture]
     public class AssemblyReferencePolicyTests
     {
         [Test]
-        public void Level0_GetAssembliesが空のリストを返すか確認()
+        public void Level0_GetAssemblies_Returns_Empty_List()
         {
             // Act
             IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Disabled);
@@ -25,7 +25,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void Level1_GetAssembliesにUnityEngineが含まれるか確認()
+        public void Level1_GetAssemblies_Includes_UnityEngine()
         {
             // Act
             IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Restricted);
@@ -37,7 +37,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void Level1_GetAssembliesにUnityEditorが含まれるか確認()
+        public void Level1_GetAssemblies_Includes_UnityEditor()
         {
             // Act
             IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Restricted);
@@ -48,28 +48,28 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void Level1_GetAssembliesにSystemIOも含まれるか確認()
+        public void Level1_GetAssemblies_Includes_SystemIO()
         {
-            // 新仕様: Restrictedモードでも全アセンブリを含む
+            // New specification: Include all assemblies even in Restricted mode
             // Act
             IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Restricted);
             
             // Assert
             Assert.IsNotNull(assemblies);
-            // System系のアセンブリが含まれていることを確認
+            // Confirm system assemblies are included
             Assert.IsTrue(assemblies.Any(a => a.StartsWith("System")), "System assemblies should be included in Restricted mode");
         }
 
         [Test]
-        public void Level1_GetAssembliesにAssemblyCSharpが含まれるか確認()
+        public void Level1_GetAssemblies_Includes_AssemblyCSharp()
         {
             // Arrange & Act
             IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Restricted);
             
             // Assert
             Assert.IsNotNull(assemblies);
-            // 新仕様: RestrictedモードでもAssembly-CSharpを許可（ユーザー定義クラス実行機能）
-            // Assembly-CSharpが存在する場合は含まれるはず
+            // New specification: Allow Assembly-CSharp in Restricted mode (user-defined class execution feature)
+            // Should include Assembly-CSharp if it exists
             Assembly assemblyCSharp = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => a.GetName().Name == "Assembly-CSharp");
             
@@ -81,32 +81,32 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void Level2_GetAssembliesに多くのアセンブリが含まれるか確認()
+        public void Level2_GetAssemblies_Includes_Multiple_Assemblies()
         {
             // Act
             IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.FullAccess);
             
             // Assert
             Assert.IsNotNull(assemblies);
-            Assert.Greater(assemblies.Count, 10); // 少なくとも10個以上のアセンブリ
+            Assert.Greater(assemblies.Count, 10); // At least 10 or more assemblies
             Assert.IsTrue(assemblies.Any(a => a.StartsWith("System")));
             Assert.IsTrue(assemblies.Any(a => a.StartsWith("UnityEngine")));
         }
 
         [Test]
-        public void Level2_AssemblyCSharpが含まれるか確認()
+        public void Level2_AssemblyCSharp_Is_Included()
         {
             // Arrange & Act
             IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.FullAccess);
             
             // Assert  
             Assert.IsNotNull(assemblies);
-            // Assembly-CSharpはLevel 2 (FullAccess)では利用可能
+            // Assembly-CSharp is available in Level 2 (FullAccess)
             Assert.IsTrue(assemblies.Any(a => a == "Assembly-CSharp"), "Level 2 (FullAccess) should include Assembly-CSharp");
         }
 
         [Test]
-        public void IsAssemblyAllowed_Level0で全て拒否されるか確認()
+        public void IsAssemblyAllowed_Level0_Denies_All()
         {
             // Act & Assert
             Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("UnityEngine", DynamicCodeSecurityLevel.Disabled));
@@ -115,7 +115,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void IsAssemblyAllowed_Level1でUnityEngineが許可されるか確認()
+        public void IsAssemblyAllowed_Level1_Allows_UnityEngine()
         {
             // Act & Assert
             Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("UnityEngine", DynamicCodeSecurityLevel.Restricted));
@@ -123,34 +123,34 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
                 [Test]
-        public void IsAssemblyAllowed_Level1でSystemIOも許可されるか確認()
+        public void IsAssemblyAllowed_Level1_Allows_SystemIO()
         {
-            // 新仕様: Restrictedモードでも全アセンブリを許可（コンパイル後に危険なAPIをブロック）
+            // New specification: Allow all assemblies in Restricted mode (block dangerous APIs after compilation)
             // Act & Assert
             Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.IO", DynamicCodeSecurityLevel.Restricted));
             Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.IO.FileSystem", DynamicCodeSecurityLevel.Restricted));
         }
 
         [Test]
-        public void IsAssemblyAllowed_Level1でSystemNetも許可されるか確認()
+        public void IsAssemblyAllowed_Level1_Allows_SystemNet()
         {
-            // 新仕様: Restrictedモードでも全アセンブリを許可（コンパイル後に危険なAPIをブロック）
+            // New specification: Allow all assemblies in Restricted mode (block dangerous APIs after compilation)
             // Act & Assert
             Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.Net", DynamicCodeSecurityLevel.Restricted));
             Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.Net.Http", DynamicCodeSecurityLevel.Restricted));
         }
 
         [Test]
-        public void IsAssemblyAllowed_Level1でAssemblyCSharpが許可されるか確認()
+        public void IsAssemblyAllowed_Level1_Allows_AssemblyCSharp()
         {
-            // 新仕様: RestrictedモードでもAssembly-CSharpを許可（ユーザー定義クラス実行機能）
+            // New specification: Allow Assembly-CSharp in Restricted mode (user-defined class execution feature)
             // Act & Assert
             Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("Assembly-CSharp", DynamicCodeSecurityLevel.Restricted),
                 "Level 1 (Restricted) should allow Assembly-CSharp (new feature)");
         }
 
         [Test]
-        public void IsAssemblyAllowed_Level2で基本的なアセンブリが許可されるか確認()
+        public void IsAssemblyAllowed_Level2_Allows_Basic_Assemblies()
         {
             // Act & Assert
             Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("UnityEngine", DynamicCodeSecurityLevel.FullAccess));
@@ -159,7 +159,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void IsAssemblyAllowed_Level2でAssemblyCSharpが許可されるか確認()
+        public void IsAssemblyAllowed_Level2_Allows_AssemblyCSharp()
         {
             // Act & Assert
             Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("Assembly-CSharp", DynamicCodeSecurityLevel.FullAccess),
@@ -167,9 +167,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void IsAssemblyAllowed_Level2でSystemReflectionEmitも許可されるか確認()
+        public void IsAssemblyAllowed_Level2_Allows_SystemReflectionEmit()
         {
-            // 新仕様: FullAccessモードでは全アセンブリを許可
+            // New specification: Allow all assemblies in FullAccess mode
             // Act & Assert
             Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.Reflection.Emit", DynamicCodeSecurityLevel.FullAccess),
                 "System.Reflection.Emit should be allowed in Level 2");
@@ -178,7 +178,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void IsAssemblyAllowed_空文字列やnullで常にfalseを返すか確認()
+        public void IsAssemblyAllowed_Returns_False_For_Empty_Or_Null()
         {
             // Act & Assert
             Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("", DynamicCodeSecurityLevel.FullAccess));

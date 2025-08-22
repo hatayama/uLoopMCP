@@ -6,8 +6,8 @@ using NUnit.Framework;
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
-    /// アセンブリ参照管理システムのテスト
-    /// 関連クラス: RoslynCompiler, CompilationRequest, CompilationResult
+    /// Test for Assembly Reference Management System
+    /// Related classes: RoslynCompiler, CompilationRequest, CompilationResult
     /// </summary>
     [TestFixture]
     public class AssemblyReferenceManagementTests
@@ -17,7 +17,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [SetUp]
         public void SetUp()
         {
-            // FullAccessモードでコンパイラを作成
+            // Create compiler in FullAccess mode
             _compiler = new RoslynCompiler(DynamicCodeSecurityLevel.FullAccess);
         }
 
@@ -32,7 +32,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public void Compile_WithBasicUnityTypes_ShouldSucceed()
         {
-            // Arrange - 基本的なUnityの型を使用（標準アセンブリ参照に含まれる）
+            // Arrange - Use basic Unity types (included in standard assembly references)
             string code = @"
                 var go = new UnityEngine.GameObject(""Test"");
                 UnityEngine.Debug.Log(""Hello from dynamic code"");
@@ -57,7 +57,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public void Compile_WithNewtonSoftJsonType_ShouldCompileIfAvailable()
         {
-            // Arrange - Newtonsoft.Jsonの型を使用（存在する場合）
+            // Arrange - Use Newtonsoft.Json types (if available)
             string code = @"
                 try 
                 {
@@ -79,13 +79,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // Act
             CompilationResult result = _compiler.Compile(request);
 
-            // Assert - 成功または適切なエラーメッセージ
+            // Assert - Success or appropriate error message
             if (!result.Success)
             {
                 // Ensure errors are present when compilation fails
                 Assert.IsNotNull(result.Errors, "Expected compilation errors when Success is false");
 
-                // Newtonsoft.Jsonが見つからない場合は適切なエラーメッセージであることを確認
+                // If Newtonsoft.Json is not found, confirm appropriate error message
                 bool hasExpectedError = result.Errors.Any(e =>
                     e.Message.Contains("Newtonsoft") ||
                     e.ErrorCode == "CS0246");
@@ -100,7 +100,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public void Compile_WithNonExistentType_ShouldFailGracefully()
         {
-            // Arrange - 存在しない型を使用
+            // Arrange - Use non-existent types
             string code = @"
                 var obj = new CompletelyFakeType();
                 return obj.ToString();";
@@ -133,7 +133,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 Namespace = "TestNamespace"
             };
 
-            // Act - コンパイル後にキャッシュクリア
+            // Act - Clear cache after compilation
             CompilationResult firstResult = _compiler.Compile(request);
             _compiler.ClearCache();
             CompilationResult secondResult = _compiler.Compile(request);
@@ -141,7 +141,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // Assert
             Assert.IsTrue(firstResult.Success);
             Assert.IsTrue(secondResult.Success);
-            // 両方とも成功するが、キャッシュがクリアされていることを確認
+            // Both should succeed, verify cache is cleared
             Assert.IsNotNull(firstResult.CompiledAssembly);
             Assert.IsNotNull(secondResult.CompiledAssembly);
         }
@@ -149,7 +149,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public void Compile_WithEditorOnlyClass_ShouldSucceed()
         {
-            // Arrange - UnityEditorのクラスを使用（アセンブリ参照に含まれる）
+            // Arrange - Use UnityEditor class (included in assembly references)
             string code = @"
                 var window = UnityEditor.EditorWindow.CreateInstance<UnityEditor.EditorWindow>();
                 return window != null ? ""EditorWindow created"" : ""Failed"";";
@@ -164,7 +164,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // Act
             CompilationResult result = _compiler.Compile(request);
 
-            // Assert - UnityEditorアセンブリは参照可能
+            // Assert - UnityEditor assembly is referenceable
             Assert.IsTrue(result.Success, $"Compilation failed: {string.Join(", ", result.Errors?.Select(e => e.Message) ?? new string[0])}");
             Assert.IsNotNull(result.CompiledAssembly);
         }
@@ -172,7 +172,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public void Compile_WithGenericCustomClass_ShouldSucceed()
         {
-            // Arrange - ジェネリック型を使用した複雑なケース
+            // Arrange - Complex case using generic types
             string code = @"
                 using System.Collections.Generic;
                 List<string> stringList = new List<string> { ""test1"", ""test2"" };
@@ -199,7 +199,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public void Compile_WithSeparateAssemblyClassWithUsing_ShouldSucceedInAllAssembliesMode()
         {
-            // Arrange - 別アセンブリ（DynamicAssemblyTest.dll）のクラスをusing文付きで使用
+            // Arrange - Use class from another assembly (DynamicAssemblyTest.dll) with using statement
             string code = @"using io.github.hatayama.uLoopMCP;
 namespace TestNamespace
 {
@@ -218,13 +218,13 @@ namespace TestNamespace
                 Code = code,
                 ClassName = "SeparateAssemblyWithUsingTestClass",
                 Namespace = "TestNamespace",
-                AssemblyMode = AssemblyLoadingMode.AllAssemblies // 全アセンブリモード
+                AssemblyMode = AssemblyLoadingMode.AllAssemblies // All assembly mode
             };
 
             // Act
             CompilationResult result = _compiler.Compile(request);
 
-            // Assert - 全アセンブリモードでは成功する
+            // Assert - Succeeds in all assembly mode
             Assert.IsTrue(result.Success, $"Compilation failed: {string.Join(", ", result.Errors?.Select(e => e.Message) ?? new string[0])}");
             Assert.IsNotNull(result.CompiledAssembly);
             Assert.IsFalse(result.HasSecurityViolations, "Should not be a security violation");
@@ -233,7 +233,7 @@ namespace TestNamespace
         [Test]
         public void Compile_WithSeparateAssemblyClassFullyQualified_ShouldSucceedInAllAssembliesMode()
         {
-            // Arrange - 別アセンブリのクラスを完全修飾名で使用
+            // Arrange - Use class from another assembly with fully qualified name
             string code = @"
                 var testInstance = new io.github.hatayama.uLoopMCP.DynamicAssemblyTest();
                 return testInstance.HelloWorld();";
@@ -243,13 +243,13 @@ namespace TestNamespace
                 Code = code,
                 ClassName = "FullyQualifiedSeparateAssemblyTestClass",
                 Namespace = "TestNamespace",
-                AssemblyMode = AssemblyLoadingMode.AllAssemblies // 全アセンブリモード
+                AssemblyMode = AssemblyLoadingMode.AllAssemblies // All assembly mode
             };
 
             // Act
             CompilationResult result = _compiler.Compile(request);
 
-            // Assert - 完全修飾名で全アセンブリモードでは成功
+            // Assert - Succeeds with fully qualified name in all assembly mode
             Assert.IsTrue(result.Success, $"Compilation failed: {string.Join(", ", result.Errors?.Select(e => e.Message) ?? new string[0])}");
             Assert.IsNotNull(result.CompiledAssembly);
             Assert.IsFalse(result.HasSecurityViolations, "Should not be a security violation");
