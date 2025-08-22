@@ -6,7 +6,6 @@ using System.Text.RegularExpressions;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// 設計ドキュメント: Dynamic Tool使い勝手改善プロジェクト  
     /// 関連クラス: FriendlyMessageGenerator, ErrorTranslationDictionary
     /// </summary>
     public class ImprovedErrorHandler

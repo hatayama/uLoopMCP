@@ -2,7 +2,6 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// セキュリティ違反
-    /// 
     /// 関連クラス: SecurityValidator, SecuritySyntaxWalker
     /// </summary>
     public class SecurityViolation
@@ -35,7 +34,7 @@ namespace io.github.hatayama.uLoopMCP
     }
 
     /// <summary>
-    /// セキュリティ違反タイプ（シンプル化済み）
+    /// セキュリティ違反タイプ
     /// </summary>
     public enum SecurityViolationType
     {

@@ -13,7 +13,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>コード実行</summary>
         ExecutionResult ExecuteCode(
             string code,
-            string className = "DynamicCommand",
+            string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
             object[] parameters = null,
             CancellationToken cancellationToken = default,
             bool compileOnly = false
@@ -22,7 +22,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>非同期コード実行</summary>
         System.Threading.Tasks.Task<ExecutionResult> ExecuteCodeAsync(
             string code,
-            string className = "DynamicCommand", 
+            string className = DynamicCodeConstants.DEFAULT_CLASS_NAME, 
             object[] parameters = null,
             CancellationToken cancellationToken = default,
             bool compileOnly = false

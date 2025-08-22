@@ -1,42 +1,33 @@
+#if ULOOPMCP_HAS_ROSLYN
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using io.github.hatayama.uLoopMCP;
 
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// 動的コード実行統合実装
-    /// v4.0 明示的セキュリティレベル管理
     /// 関連クラス: RoslynCompiler, SecurityValidator, CommandRunner
     /// </summary>
     public class DynamicCodeExecutor : IDynamicCodeExecutor
     {
-#if ULOOPMCP_HAS_ROSLYN
         private readonly RoslynCompiler _compiler;
-        private readonly SecurityValidator _validator;
         private readonly DynamicCodeSecurityLevel _securityLevel;
-#endif
         private readonly CommandRunner _runner;
         private readonly ExecutionStatistics _statistics;
         private readonly object _statsLock = new();
 
         /// <summary>コンストラクタ</summary>
         public DynamicCodeExecutor(
-#if ULOOPMCP_HAS_ROSLYN
             RoslynCompiler compiler,
             SecurityValidator validator,
             DynamicCodeSecurityLevel securityLevel,
-#endif
             CommandRunner runner)
         {
-#if ULOOPMCP_HAS_ROSLYN
             _compiler = compiler ?? throw new ArgumentNullException(nameof(compiler));
-            _validator = validator ?? throw new ArgumentNullException(nameof(validator));
             _securityLevel = securityLevel;
-#endif
             _runner = runner ?? throw new ArgumentNullException(nameof(runner));
             _statistics = new ExecutionStatistics();
 
@@ -45,10 +36,8 @@ namespace io.github.hatayama.uLoopMCP
                 "DynamicCodeExecutor initialized with dependencies",
                 new
                 {
-#if ULOOPMCP_HAS_ROSLYN
                     compiler_type = compiler.GetType().Name,
                     validator_type = validator.GetType().Name,
-#endif
                     runner_type = runner.GetType().Name
                 },
                 humanNote: "動的コード実行統合システムの初期化",
@@ -59,7 +48,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>コード実行</summary>
         public ExecutionResult ExecuteCode(
             string code,
-            string className = "DynamicCommand",
+            string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
             object[] parameters = null,
             CancellationToken cancellationToken = default,
             bool compileOnly = false)
@@ -69,199 +58,250 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-#if !ULOOPMCP_HAS_ROSLYN
-                // Roslyn無効時のエラーレスポンス
-                return new ExecutionResult
-                {
-                    Success = false,
-                    ErrorMessage = $"{McpConstants.ERROR_ROSLYN_REQUIRED}: {McpConstants.ERROR_MESSAGE_ROSLYN_REQUIRED}",
-                    ExecutionTime = stopwatch.Elapsed,
-                    Statistics = _statistics
-                };
-#else
-                VibeLogger.LogInfo(
-                    "execute_code_start",
-                    "Code execution started",
-                    new
-                    {
-                        class_name = className,
-                        parameter_count = parameters?.Length ?? 0,
-                        code_length = code.Length,
-                        compile_only = compileOnly
-                    },
-                    correlationId,
-                    "動的コード実行開始",
-                    "実行フローのステップ追跡"
-                );
+                LogExecutionStart(className, parameters, code, compileOnly, correlationId);
 
                 // Phase 1: セキュリティ検証
-                SecurityValidationResult validationResult = ValidateCodeSecurity(code, correlationId);
-                if (!validationResult.IsValid)
-                {
-                    return CreateFailureResult("セキュリティ違反が検出されました", 
-                        stopwatch.Elapsed, validationResult.Violations);
-                }
+                ExecutionResult securityResult = PerformSecurityValidation(code, correlationId, stopwatch);
+                if (!securityResult.Success) return securityResult;
 
                 // Phase 2: コンパイル
                 CompilationResult compilationResult = CompileCode(code, className, correlationId);
-                if (!compilationResult.Success)
-                {
-                    // セキュリティ違反がある場合は専用のエラーメッセージ
-                    if (compilationResult.HasSecurityViolations)
-                    {
-                        return CreateFailureResult("セキュリティ違反が検出されました",
-                            stopwatch.Elapsed, ConvertToSecurityViolations(compilationResult.SecurityViolations));
-                    }
-                    
-                    return CreateCompilationFailureResult("コンパイルエラーが発生しました",
-                        stopwatch.Elapsed, compilationResult.Errors);
-                }
+                ExecutionResult compilationErrorResult = HandleCompilationResult(compilationResult, stopwatch);
+                if (compilationErrorResult != null) return compilationErrorResult;
 
-                // コンパイル成功後もセキュリティ違反をチェック（Restrictedモード）
-                if (compilationResult.HasSecurityViolations)
-                {
-                    return CreateFailureResult("セキュリティ違反が検出されました（危険なAPIコール）",
-                        stopwatch.Elapsed, compilationResult.SecurityViolations);
-                }
-
-                // CompileOnly=true の場合はここで終了
+                // Phase 3: CompileOnlyモードのチェック
                 if (compileOnly)
                 {
-                    VibeLogger.LogInfo(
-                        "compile_only_complete",
-                        "Compilation completed successfully (compile-only mode)",
-                        new
-                        {
-                            compile_time_ms = stopwatch.ElapsedMilliseconds,
-                            assembly_name = compilationResult.CompiledAssembly?.FullName
-                        },
-                        correlationId,
-                        "コンパイル専用モード完了",
-                        "コンパイル結果の検証"
-                    );
-
-                    return new ExecutionResult
-                    {
-                        Success = true,
-                        Result = null,  // CompileOnlyの場合はnullを返す（v4.0仕様）
-                        ExecutionTime = stopwatch.Elapsed,
-                        Logs = new List<string> { "Code compiled successfully (no execution)" }
-                    };
+                    return CreateCompileOnlySuccessResult(compilationResult, correlationId, stopwatch);
                 }
 
-                // Phase 3: 実行 (CompileOnly=false の場合のみ)
-                ExecutionResult executionResult = ExecuteCompiledCode(
-                    compilationResult.CompiledAssembly, 
-                    className, 
-                    parameters, 
-                    correlationId, 
-                    cancellationToken);
-
-                executionResult.ExecutionTime = stopwatch.Elapsed;
-
-                // 統計更新
-                UpdateStatistics(executionResult, stopwatch.Elapsed);
-
-                VibeLogger.LogInfo(
-                    "execute_code_complete",
-                    $"Code execution completed: {(executionResult.Success ? "Success" : "Failed")}",
-                    new
-                    {
-                        success = executionResult.Success,
-                        execution_time_ms = stopwatch.ElapsedMilliseconds,
-                        result_length = executionResult.Result?.ToString()?.Length ?? 0
-                    },
+                // Phase 4: 実行
+                ExecutionResult executionResult = PerformExecution(
+                    compilationResult.CompiledAssembly,
+                    className,
+                    parameters,
                     correlationId,
-                    "動的コード実行完了",
-                    "実行結果とパフォーマンスの記録"
-                );
+                    cancellationToken,
+                    stopwatch);
 
+                LogExecutionComplete(executionResult, correlationId, stopwatch);
                 return executionResult;
-#endif
             }
             catch (Exception ex)
             {
-                ExecutionResult result = CreateExceptionResult("実行中に予期しないエラーが発生しました", 
-                    ex, stopwatch.Elapsed);
-                UpdateStatistics(result, stopwatch.Elapsed);
-
-                VibeLogger.LogError(
-                    "execute_code_exception",
-                    "Unexpected error during code execution",
-                    new
-                    {
-                        exception_type = ex.GetType().Name,
-                        execution_time_ms = stopwatch.ElapsedMilliseconds
-                    },
-                    correlationId,
-                    "動的コード実行エラー",
-                    "予期しない例外の調査"
-                );
-
-                return result;
+                return HandleExecutionException(ex, correlationId, stopwatch);
             }
+        }
+
+        private void LogExecutionStart(string className, object[] parameters, string code, bool compileOnly, string correlationId)
+        {
+            VibeLogger.LogInfo(
+                "execute_code_start",
+                "Code execution started",
+                new
+                {
+                    class_name = className,
+                    parameter_count = parameters?.Length ?? 0,
+                    code_length = code.Length,
+                    compile_only = compileOnly
+                },
+                correlationId,
+                "動的コード実行開始",
+                "実行フローのステップ追跡"
+            );
+        }
+
+        private ExecutionResult PerformSecurityValidation(string code, string correlationId, Stopwatch stopwatch)
+        {
+            SecurityValidationResult validationResult = ValidateCodeSecurity(code, correlationId);
+            if (!validationResult.IsValid)
+            {
+                return CreateFailureResult("セキュリティ違反が検出されました",
+                    stopwatch.Elapsed, validationResult.Violations);
+            }
+            return new ExecutionResult { Success = true };
+        }
+
+        private ExecutionResult HandleCompilationResult(CompilationResult compilationResult, Stopwatch stopwatch)
+        {
+            if (!compilationResult.Success)
+            {
+                if (compilationResult.HasSecurityViolations)
+                {
+                    return CreateFailureResult("セキュリティ違反が検出されました",
+                        stopwatch.Elapsed, ConvertToSecurityViolations(compilationResult.SecurityViolations));
+                }
+                return CreateCompilationFailureResult("コンパイルエラーが発生しました",
+                    stopwatch.Elapsed, compilationResult.Errors);
+            }
+
+            if (compilationResult.HasSecurityViolations)
+            {
+                return CreateFailureResult("セキュリティ違反が検出されました（危険なAPIコール）",
+                    stopwatch.Elapsed, compilationResult.SecurityViolations);
+            }
+
+            return null; // Success
+        }
+
+        private ExecutionResult CreateCompileOnlySuccessResult(CompilationResult compilationResult, string correlationId, Stopwatch stopwatch)
+        {
+            VibeLogger.LogInfo(
+                "compile_only_complete",
+                "Compilation completed successfully (compile-only mode)",
+                new
+                {
+                    compile_time_ms = stopwatch.ElapsedMilliseconds,
+                    assembly_name = compilationResult.CompiledAssembly?.FullName
+                },
+                correlationId,
+                "コンパイル専用モード完了",
+                "コンパイル結果の検証"
+            );
+
+            return new ExecutionResult
+            {
+                Success = true,
+                Result = null,
+                ExecutionTime = stopwatch.Elapsed,
+                Logs = new List<string> { "Code compiled successfully (no execution)" }
+            };
+        }
+
+        private ExecutionResult PerformExecution(
+            System.Reflection.Assembly assembly,
+            string className,
+            object[] parameters,
+            string correlationId,
+            CancellationToken cancellationToken,
+            Stopwatch stopwatch)
+        {
+            ExecutionResult executionResult = ExecuteCompiledCode(
+                assembly,
+                className,
+                parameters,
+                correlationId,
+                cancellationToken);
+
+            executionResult.ExecutionTime = stopwatch.Elapsed;
+            UpdateStatistics(executionResult, stopwatch.Elapsed);
+
+            return executionResult;
+        }
+
+        private void LogExecutionComplete(ExecutionResult executionResult, string correlationId, Stopwatch stopwatch)
+        {
+            VibeLogger.LogInfo(
+                "execute_code_complete",
+                $"Code execution completed: {(executionResult.Success ? "Success" : "Failed")}",
+                new
+                {
+                    success = executionResult.Success,
+                    execution_time_ms = stopwatch.ElapsedMilliseconds,
+                    result_length = executionResult.Result?.ToString()?.Length ?? 0
+                },
+                correlationId,
+                "動的コード実行完了",
+                "実行結果とパフォーマンスの記録"
+            );
+        }
+
+        private ExecutionResult HandleExecutionException(Exception ex, string correlationId, Stopwatch stopwatch)
+        {
+            ExecutionResult result = CreateExceptionResult("実行中に予期しないエラーが発生しました",
+                ex, stopwatch.Elapsed);
+            UpdateStatistics(result, stopwatch.Elapsed);
+
+            VibeLogger.LogError(
+                "execute_code_exception",
+                "Unexpected error during code execution",
+                new
+                {
+                    exception_type = ex.GetType().Name,
+                    execution_time_ms = stopwatch.ElapsedMilliseconds
+                },
+                correlationId,
+                "動的コード実行エラー",
+                "予期しない例外の調査"
+            );
+
+            return result;
         }
 
         /// <summary>非同期コード実行</summary>
 #pragma warning disable CS1998 // Async method lacks 'await' operators (ROSLYNがない場合にのみ発生)
         public async Task<ExecutionResult> ExecuteCodeAsync(
             string code,
-            string className = "DynamicCommand",
+            string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
             object[] parameters = null,
             CancellationToken cancellationToken = default,
             bool compileOnly = false)
         {
 #pragma warning restore CS1998
-#if ULOOPMCP_HAS_ROSLYN
-            // 実行時セキュリティチェック追加
+            // 実行時セキュリティチェック
+            ExecutionResult securityCheckResult = PerformRuntimeSecurityCheck(code);
+            if (!securityCheckResult.Success) return securityCheckResult;
+
+            // JsonRpcProcessorで既にMainThreadに切り替え済み
+            return await Task.FromResult(ExecuteCode(code, className, parameters, cancellationToken, compileOnly));
+        }
+
+        private ExecutionResult PerformRuntimeSecurityCheck(string code)
+        {
+            // 実行無効チェック
             if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
             {
-                return new ExecutionResult
-                {
-                    Success = false,
-                    ErrorMessage = $"{McpConstants.ERROR_EXECUTION_DISABLED}: {McpConstants.ERROR_MESSAGE_EXECUTION_DISABLED}",
-                    ExecutionTime = TimeSpan.Zero,
-                    Result = null,
-                    Statistics = _statistics
-                };
+                return CreateSecurityBlockedResult(
+                    McpConstants.ERROR_EXECUTION_DISABLED,
+                    McpConstants.ERROR_MESSAGE_EXECUTION_DISABLED);
             }
-            
-            // Restrictedモードでセキュリティレベル変更をブロック（実行時チェック）
-            // CurrentLevelの読み取りは許可（変更のみ禁止）
+
+            // Restrictedモードでのセキュリティレベル変更ブロック
             if (_securityLevel == DynamicCodeSecurityLevel.Restricted)
             {
-                if (code.Contains("SetDynamicCodeSecurityLevel") || 
-                    code.Contains("InitializeFromSettings") ||
-                    code.Contains("McpEditorSettings.SetDynamicCodeSecurityLevel"))
+                if (ContainsSecurityLevelChangeAttempt(code))
                 {
-                    return new ExecutionResult
-                    {
-                        Success = false,
-                        ErrorMessage = $"{McpConstants.ERROR_SECURITY_VIOLATION}: {McpConstants.ERROR_MESSAGE_SECURITY_LEVEL_CHANGE_BLOCKED}",
-                        ExecutionTime = TimeSpan.Zero,
-                        Result = null,
-                        Statistics = _statistics
-                    };
+                    return CreateSecurityBlockedResult(
+                        McpConstants.ERROR_SECURITY_VIOLATION,
+                        McpConstants.ERROR_MESSAGE_SECURITY_LEVEL_CHANGE_BLOCKED);
                 }
             }
-#else
-            // Roslyn無効時のエラーレスポンス
+
+            return new ExecutionResult { Success = true };
+        }
+
+        private bool ContainsSecurityLevelChangeAttempt(string code)
+        {
+            return code.Contains("SetDynamicCodeSecurityLevel") ||
+                   code.Contains("InitializeFromSettings") ||
+                   code.Contains("McpEditorSettings.SetDynamicCodeSecurityLevel");
+        }
+
+        private ExecutionResult CreateSecurityBlockedResult(string errorCode, string errorMessage)
+        {
+            ExecutionStatistics stats;
+            lock (_statsLock)
+            {
+                stats = new ExecutionStatistics
+                {
+                    TotalExecutions = _statistics.TotalExecutions,
+                    SuccessfulExecutions = _statistics.SuccessfulExecutions,
+                    FailedExecutions = _statistics.FailedExecutions,
+                    AverageExecutionTime = _statistics.AverageExecutionTime,
+                    SecurityViolations = _statistics.SecurityViolations,
+                    CompilationErrors = _statistics.CompilationErrors
+                };
+            }
+
             return new ExecutionResult
             {
                 Success = false,
-                ErrorMessage = $"{McpConstants.ERROR_ROSLYN_REQUIRED}: {McpConstants.ERROR_MESSAGE_ROSLYN_REQUIRED}",
+                ErrorMessage = $"{errorCode}: {errorMessage}",
                 ExecutionTime = TimeSpan.Zero,
-                Statistics = _statistics
+                Result = null,
+                Statistics = stats
             };
-#endif
-            
-#if ULOOPMCP_HAS_ROSLYN
-            // JsonRpcProcessorで既にMainThreadに切り替え済み
-            return await Task.FromResult(ExecuteCode(code, className, parameters, cancellationToken, compileOnly));
-#endif
         }
-
-
 
         /// <summary>実行統計取得</summary>
         public ExecutionStatistics GetStatistics()
@@ -281,7 +321,6 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         // プライベートヘルパーメソッド
-#if ULOOPMCP_HAS_ROSLYN
         private SecurityValidationResult ValidateCodeSecurity(string code, string correlationId)
         {
             // Restrictedモードの場合、Roslyn経由でのセキュリティ検証に任せる
@@ -328,7 +367,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 Code = code,
                 ClassName = className,
-                Namespace = "uLoopMCP.Dynamic"
+                Namespace = DynamicCodeConstants.DEFAULT_NAMESPACE
             };
 
             CompilationResult result = _compiler.Compile(request);
@@ -436,7 +475,6 @@ namespace io.github.hatayama.uLoopMCP
             // 同じ型なのでそのまま返す
             return compilationSecurityViolations ?? new List<SecurityViolation>();
         }
-#endif
 
         private ExecutionResult CreateExceptionResult(string message, Exception ex, TimeSpan executionTime)
         {
@@ -474,7 +512,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private Dictionary<string, object> ConvertParametersToDict(object[] parameters)
         {
-            Dictionary<string, object> dict = new Dictionary<string, object>();
+            Dictionary<string, object> dict = new();
             if (parameters != null)
             {
                 for (int i = 0; i < parameters.Length; i++)
@@ -486,3 +524,4 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 }
+#endif

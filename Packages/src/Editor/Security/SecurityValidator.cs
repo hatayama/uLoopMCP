@@ -1,28 +1,24 @@
 #if ULOOPMCP_HAS_ROSLYN
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.Diagnostics;
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
 
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// セキュリティ検証の中核クラス（改修版）
+    /// セキュリティ検証の中核クラス
     /// Compilationオブジェクトを受け取り、SemanticModelを活用
-    /// 設計ドキュメント参照: working-notes/2025-08-16_Restrictedモードユーザークラス実行機能_design.md
     /// 関連クラス: SecuritySyntaxWalker, DangerousApiDetector, RoslynCompiler
     /// </summary>
     public class SecurityValidator
     {
-        private readonly DynamicCodeSecurityLevel securityLevel;
+        private readonly DynamicCodeSecurityLevel _securityLevel;
         
         public SecurityValidator(DynamicCodeSecurityLevel level)
         {
-            this.securityLevel = level;
+            _securityLevel = level;
         }
         
         /// <summary>
@@ -38,13 +34,13 @@ namespace io.github.hatayama.uLoopMCP
             };
             
             // Level 2 (FullAccess)は検証スキップ
-            if (securityLevel == DynamicCodeSecurityLevel.FullAccess)
+            if (_securityLevel == DynamicCodeSecurityLevel.FullAccess)
             {
                 return result;
             }
             
             // Level 0 (Disabled)は即座に拒否
-            if (securityLevel == DynamicCodeSecurityLevel.Disabled)
+            if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
             {
                 result.IsValid = false;
                 result.Violations.Add(new SecurityViolation
@@ -104,47 +100,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             return result;
-        }
-        
-        /// <summary>
-        /// 従来のコード文字列検証（後方互換性のため維持）
-        /// </summary>
-        public SecurityValidationResult ValidateCode(string code)
-        {
-            // SyntaxTreeを作成
-            SyntaxTree tree = CSharpSyntaxTree.ParseText(code);
-            
-            // 簡易Compilationを作成
-            CSharpCompilation compilation = CreateSimpleCompilation(tree);
-            
-            // 新しいメソッドに委譲
-            return ValidateCompilation(compilation);
-        }
-        
-        private CSharpCompilation CreateSimpleCompilation(SyntaxTree tree)
-        {
-            // 基本的な参照のみで簡易コンパイル
-            List<MetadataReference> references = new()
-            {
-                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location)
-            };
-            
-            // Unity関連アセンブリも追加
-            System.Reflection.Assembly unityEngine = AppDomain.CurrentDomain.GetAssemblies()
-                .FirstOrDefault(a => a.GetName().Name == "UnityEngine");
-            if (unityEngine != null && !string.IsNullOrEmpty(unityEngine.Location))
-            {
-                references.Add(MetadataReference.CreateFromFile(unityEngine.Location));
-            }
-            
-            return CSharpCompilation.Create(
-                "SecurityValidation",
-                syntaxTrees: new[] { tree },
-                references: references,
-                options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
-            );
         }
     }
 }

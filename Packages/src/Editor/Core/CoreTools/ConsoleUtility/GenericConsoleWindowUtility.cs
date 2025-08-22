@@ -67,13 +67,13 @@ namespace io.github.hatayama.uLoopMCP
                     {
                         switch (log.LogType)
                         {
-                            case var s when string.Equals(s, McpLogType.Error, StringComparison.OrdinalIgnoreCase):
+                            case McpLogType.Error:
                                 errorCount++;
                                 break;
-                            case var s when string.Equals(s, McpLogType.Warning, StringComparison.OrdinalIgnoreCase):
+                            case McpLogType.Warning:
                                 warningCount++;
                                 break;
-                            case var s when string.Equals(s, McpLogType.Log, StringComparison.OrdinalIgnoreCase):
+                            case McpLogType.Log:
                                 logCount++;
                                 break;
                         }

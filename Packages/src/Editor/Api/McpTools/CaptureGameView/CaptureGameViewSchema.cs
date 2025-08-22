@@ -5,7 +5,6 @@ namespace io.github.hatayama.uLoopMCP
     /// <summary>
     /// GameViewキャプチャツールのパラメータスキーマ
     /// 関連クラス: CaptureGameViewTool, CaptureGameViewResponse
-    /// 設計ドキュメント: docs/design/gameview-capture-tool-design.md
     /// </summary>
     public class CaptureGameViewSchema : BaseToolSchema
     {

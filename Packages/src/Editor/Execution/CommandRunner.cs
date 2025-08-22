@@ -17,59 +17,86 @@ namespace io.github.hatayama.uLoopMCP
     {
         private bool _isRunning = false;
         private CancellationTokenSource _cancellationTokenSource;
-        private readonly object _lockObject = new();
 
-        public bool IsRunning 
-        { 
-            get 
-            { 
-                lock (_lockObject) { return _isRunning; } 
-            } 
+        public bool IsRunning => _isRunning;
+
+        private static void LogExecutionStart(ExecutionContext context, string correlationId)
+        {
+            VibeLogger.LogInfo(
+                "command_execution_start",
+                "Command execution started",
+                new { 
+                    assemblyName = context.CompiledAssembly?.FullName ?? "null",
+                    timeoutSeconds = context.TimeoutSeconds,
+                    parameterCount = context.Parameters?.Count ?? 0
+                },
+                correlationId,
+                "Starting dynamic command execution",
+                "Monitor execution performance and timeout behavior"
+            );
+        }
+
+        private static void LogExecutionComplete(ExecutionResult result, string correlationId)
+        {
+            VibeLogger.LogInfo(
+                "command_execution_complete",
+                "Command execution completed",
+                new { 
+                    success = result.Success,
+                    executionTimeMs = result.ExecutionTime.TotalMilliseconds,
+                    resultLength = result.Result?.ToString()?.Length ?? 0,
+                    logCount = result.Logs?.Count ?? 0
+                },
+                correlationId,
+                $"Execution completed: {(result.Success ? "SUCCESS" : "FAILED")}",
+                "Track execution success patterns and performance"
+            );
+        }
+
+        private static void LogExecutionError(Exception ex, string correlationId)
+        {
+            VibeLogger.LogError(
+                "command_execution_error",
+                "Command execution failed with exception",
+                new { 
+                    error = ex.Message,
+                    stackTrace = ex.StackTrace
+                },
+                correlationId,
+                "Unexpected execution error occurred",
+                "Investigate execution failures and improve error handling"
+            );
+        }
+
+        private CancellationTokenSource CreateCombinedCancellationTokenSource(ExecutionContext context)
+        {
+            CancellationTokenSource timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(context.TimeoutSeconds));
+            return CancellationTokenSource.CreateLinkedTokenSource(
+                _cancellationTokenSource.Token,
+                timeoutCts.Token,
+                context.CancellationToken
+            );
         }
 
         public ExecutionResult Execute(ExecutionContext context)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
             
-            lock (_lockObject)
+            if (_isRunning)
             {
-                if (_isRunning)
-                {
-                    return new ExecutionResult
-                    {
-                        Success = false,
-                        ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS,
-                        ExecutionTime = TimeSpan.Zero
-                    };
-                }
-                _isRunning = true;
-                _cancellationTokenSource = new CancellationTokenSource();
+                return CreateErrorResult(McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS);
             }
+            _isRunning = true;
+            _cancellationTokenSource = new CancellationTokenSource();
 
             try
             {
-                VibeLogger.LogInfo(
-                    "command_execution_start",
-                    "Command execution started",
-                    new { 
-                        assemblyName = context.CompiledAssembly?.FullName ?? "null",
-                        timeoutSeconds = context.TimeoutSeconds,
-                        parameterCount = context.Parameters?.Count ?? 0
-                    },
-                    correlationId,
-                    "Starting dynamic command execution",
-                    "Monitor execution performance and timeout behavior"
-                );
+                LogExecutionStart(context, correlationId);
 
                 DateTime startTime = DateTime.Now;
                 
                 // タイムアウト設定
-                using CancellationTokenSource timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(context.TimeoutSeconds));
-                using CancellationTokenSource combinedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                    _cancellationTokenSource.Token, 
-                    timeoutCts.Token,
-                    context.CancellationToken
-                );
+                using CancellationTokenSource combinedCts = CreateCombinedCancellationTokenSource(context);
 
                 // 実行
                 ExecutionResult result = ExecuteInternal(context, combinedCts.Token, correlationId);
@@ -77,70 +104,99 @@ namespace io.github.hatayama.uLoopMCP
                 DateTime endTime = DateTime.Now;
                 result.ExecutionTime = endTime - startTime;
 
-                VibeLogger.LogInfo(
-                    "command_execution_complete",
-                    "Command execution completed",
-                    new { 
-                        success = result.Success,
-                        executionTimeMs = result.ExecutionTime.TotalMilliseconds,
-                        resultLength = result.Result?.ToString()?.Length ?? 0,
-                        logCount = result.Logs?.Count ?? 0
-                    },
-                    correlationId,
-                    $"Execution completed: {(result.Success ? "SUCCESS" : "FAILED")}",
-                    "Track execution success patterns and performance"
-                );
+                LogExecutionComplete(result, correlationId);
 
                 return result;
             }
             catch (OperationCanceledException)
             {
-                return new ExecutionResult
-                {
-                    Success = false,
-                    ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
-                    ExecutionTime = TimeSpan.FromSeconds(context.TimeoutSeconds),
-                    Logs = new List<string> { "Execution cancelled due to timeout" }
-                };
+                ExecutionResult cancelResult = CreateErrorResult(
+                    McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
+                    new List<string> { "Execution cancelled due to timeout" });
+                cancelResult.ExecutionTime = TimeSpan.FromSeconds(context.TimeoutSeconds);
+                return cancelResult;
             }
             catch (Exception ex)
             {
-                VibeLogger.LogError(
-                    "command_execution_error",
-                    "Command execution failed with exception",
-                    new { 
-                        error = ex.Message,
-                        stackTrace = ex.StackTrace
-                    },
-                    correlationId,
-                    "Unexpected execution error occurred",
-                    "Investigate execution failures and improve error handling"
-                );
+                LogExecutionError(ex, correlationId);
 
-                return new ExecutionResult
-                {
-                    Success = false,
-                    ErrorMessage = ex.Message,
-                    ExecutionTime = TimeSpan.Zero,
-                    Logs = new List<string> { $"Exception: {ex.Message}" }
-                };
+                return CreateErrorResult(
+                    ex.Message,
+                    new List<string> { $"Exception: {ex.Message}" });
             }
             finally
             {
-                lock (_lockObject)
-                {
-                    _isRunning = false;
-                    _cancellationTokenSource?.Dispose();
-                    _cancellationTokenSource = null;
-                }
+                _isRunning = false;
+                _cancellationTokenSource?.Dispose();
+                _cancellationTokenSource = null;
             }
         }
 
         public void Cancel()
         {
-            lock (_lockObject)
+            _cancellationTokenSource?.Cancel();
+        }
+
+        private static ExecutionResult CreateErrorResult(string errorMessage, List<string> logs = null)
+        {
+            return new ExecutionResult
             {
-                _cancellationTokenSource?.Cancel();
+                Success = false,
+                ErrorMessage = errorMessage,
+                ExecutionTime = TimeSpan.Zero,
+                Logs = logs ?? new List<string>()
+            };
+        }
+
+        private static ExecutionResult CreateSuccessResult(string result, List<string> logs = null)
+        {
+            return new ExecutionResult
+            {
+                Success = true,
+                Result = result,
+                ExecutionTime = TimeSpan.Zero, // 呼び出し元で設定される
+                Logs = logs ?? new List<string> { "Execution completed successfully" }
+            };
+        }
+
+        private static (Type targetType, MethodInfo executeMethod) FindExecuteMethod(Assembly assembly)
+        {
+            Type[] types = assembly.GetTypes();
+            
+            foreach (Type type in types)
+            {
+                MethodInfo method = type.GetMethod("Execute", BindingFlags.Public | BindingFlags.Instance);
+                if (method != null)
+                {
+                    return (type, method);
+                }
+            }
+            
+            return (null, null);
+        }
+
+        private static object CreateInstance(Type targetType)
+        {
+            return Activator.CreateInstance(targetType);
+        }
+
+        private static object InvokeExecuteMethod(MethodInfo executeMethod, object instance, Dictionary<string, object> parameters)
+        {
+            System.Reflection.ParameterInfo[] methodParameters = executeMethod.GetParameters();
+            
+            if (methodParameters.Length == 0)
+            {
+                // パラメータなし
+                return executeMethod.Invoke(instance, null);
+            }
+            else if (methodParameters.Length == 1 && methodParameters[0].ParameterType == typeof(Dictionary<string, object>))
+            {
+                // パラメータ辞書あり
+                return executeMethod.Invoke(instance, new object[] { parameters });
+            }
+            else
+            {
+                throw new NotSupportedException("Expected Execute() or Execute(Dictionary<string, object> parameters)");
             }
         }
 
@@ -148,125 +204,70 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (context.CompiledAssembly == null)
             {
-                return new ExecutionResult
-                {
-                    Success = false,
-                    ErrorMessage = McpConstants.ERROR_MESSAGE_NO_COMPILED_ASSEMBLY,
-                    ExecutionTime = TimeSpan.Zero
-                };
+                return CreateErrorResult(McpConstants.ERROR_MESSAGE_NO_COMPILED_ASSEMBLY);
             }
 
             try
             {
                 // アセンブリから実行可能な型を探す
-                Type[] types = context.CompiledAssembly.GetTypes();
-                Type targetType = null;
-                MethodInfo executeMethod = null;
-
-                // Executeメソッドを持つ型を探す
-                foreach (Type type in types)
-                {
-                    MethodInfo method = type.GetMethod("Execute", BindingFlags.Public | BindingFlags.Instance);
-                    if (method != null)
-                    {
-                        targetType = type;
-                        executeMethod = method;
-                        break;
-                    }
-                }
-
+                (Type targetType, MethodInfo executeMethod) = FindExecuteMethod(context.CompiledAssembly);
+                
                 if (targetType == null || executeMethod == null)
                 {
-                    return new ExecutionResult
-                    {
-                        Success = false,
-                        ErrorMessage = McpConstants.ERROR_MESSAGE_NO_EXECUTE_METHOD,
-                        ExecutionTime = TimeSpan.Zero,
-                        Logs = new List<string> { "Assembly types checked but no Execute method found" }
-                    };
+                    return CreateErrorResult(
+                        McpConstants.ERROR_MESSAGE_NO_EXECUTE_METHOD,
+                        new List<string> { "Assembly types checked but no Execute method found" });
                 }
 
                 // インスタンス作成
-                object instance = Activator.CreateInstance(targetType);
+                object instance = CreateInstance(targetType);
                 if (instance == null)
                 {
-                    return new ExecutionResult
-                    {
-                        Success = false,
-                        ErrorMessage = McpConstants.ERROR_MESSAGE_FAILED_TO_CREATE_INSTANCE,
-                        ExecutionTime = TimeSpan.Zero
-                    };
+                    return CreateErrorResult(McpConstants.ERROR_MESSAGE_FAILED_TO_CREATE_INSTANCE);
                 }
 
                 // キャンセレーションチェック
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // メソッド実行
-                object executionResult;
-                System.Reflection.ParameterInfo[] parameters = executeMethod.GetParameters();
-                
-                if (parameters.Length == 0)
+                try
                 {
-                    // パラメータなし
-                    executionResult = executeMethod.Invoke(instance, null);
+                    // メソッド実行
+                    object executionResult = InvokeExecuteMethod(executeMethod, instance, context.Parameters);
+                    
+                    // 結果を文字列に変換
+                    string resultString = executionResult?.ToString() ?? "";
+                    
+                    return CreateSuccessResult(resultString);
                 }
-                else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Dictionary<string, object>))
+                catch (NotSupportedException ex)
                 {
-                    // パラメータ辞書あり
-                    executionResult = executeMethod.Invoke(instance, new object[] { context.Parameters });
+                    return CreateErrorResult(
+                        McpConstants.ERROR_MESSAGE_UNSUPPORTED_SIGNATURE,
+                        new List<string> { ex.Message });
                 }
-                else
-                {
-                    return new ExecutionResult
-                    {
-                        Success = false,
-                        ErrorMessage = McpConstants.ERROR_MESSAGE_UNSUPPORTED_SIGNATURE,
-                        ExecutionTime = TimeSpan.Zero,
-                        Logs = new List<string> { "Expected Execute() or Execute(Dictionary<string, object> parameters)" }
-                    };
-                }
-
-                // 結果を文字列に変換
-                string resultString = executionResult?.ToString() ?? "";
-
-                return new ExecutionResult
-                {
-                    Success = true,
-                    Result = resultString,
-                    ExecutionTime = TimeSpan.Zero, // 呼び出し元で設定される
-                    Logs = new List<string> { "Execution completed successfully" }
-                };
             }
             catch (TargetInvocationException ex)
             {
                 // 実際の例外を取得
                 Exception innerException = ex.InnerException ?? ex;
                 
-                return new ExecutionResult
-                {
-                    Success = false,
-                    ErrorMessage = innerException.Message,
-                    ExecutionTime = TimeSpan.Zero,
-                    Logs = new List<string> 
+                return CreateErrorResult(
+                    innerException.Message,
+                    new List<string> 
                     { 
                         $"Target invocation exception: {innerException.Message}",
                         $"Stack trace: {innerException.StackTrace}"
-                    }
-                };
+                    });
             }
             catch (Exception ex)
             {
-                return new ExecutionResult
-                {
-                    Success = false,
-                    ErrorMessage = ex.Message,
-                    ExecutionTime = TimeSpan.Zero,
-                    Logs = new List<string> 
+                return CreateErrorResult(
+                    ex.Message,
+                    new List<string> 
                     { 
                         $"Execution exception: {ex.Message}",
                         $"Stack trace: {ex.StackTrace}"
-                    }
-                };
+                    });
             }
         }
     }

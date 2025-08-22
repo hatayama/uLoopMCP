@@ -2,9 +2,6 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// ExecuteDynamicCodeToolのセキュリティレベル定義
-    /// v3.0 静的アセンブリ初期化戦略対応
-    /// 
-    /// 設計ドキュメント参照: working-notes/2025-08-10_ExecuteDynamicCodeセキュリティ制限機能_design.md
     /// 関連クラス: DynamicCodeSecurityManager, AssemblyReferencePolicy, RoslynCompiler
     /// </summary>
     public enum DynamicCodeSecurityLevel

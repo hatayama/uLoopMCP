@@ -1,15 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// セキュリティレベルに基づくアセンブリ参照ポリシー
-    /// v5.0 シンプル化 - アセンブリレベル制限を完全廃止
-    /// 
-    /// 設計ドキュメント参照: working-notes/2025-08-10_ExecuteDynamicCodeセキュリティ制限機能_design.md
     /// 関連クラス: DynamicCodeSecurityLevel, DangerousApiDetector, RoslynCompiler
     /// 
     /// 設計方針:
@@ -19,7 +15,6 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class AssemblyReferencePolicy
     {
-
         /// <summary>
         /// セキュリティレベルに応じたアセンブリ名リストを取得
         /// </summary>

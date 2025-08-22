@@ -11,7 +11,6 @@ namespace io.github.hatayama.uLoopMCP
     /// <summary>
     /// Unity Game Viewをキャプチャしてファイルに保存するMCPツール
     /// 関連クラス: CaptureGameViewSchema, CaptureGameViewResponse
-    /// 設計ドキュメント: docs/design/gameview-capture-tool-design.md
     /// </summary>
     [McpTool(Description = "Capture Unity Game View and save as PNG image")]
     public class CaptureGameViewTool : AbstractUnityTool<CaptureGameViewSchema, CaptureGameViewResponse>

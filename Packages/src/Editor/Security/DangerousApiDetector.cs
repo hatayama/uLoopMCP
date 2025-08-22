@@ -7,8 +7,6 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// 危険なAPIパターンを管理・検出するエンジン
-    /// v4.1 名前空間チェック削除 - メソッドレベル制御に特化
-    /// 設計ドキュメント参照: working-notes/2025-08-16_Restrictedモードユーザークラス実行機能_design.md
     /// 関連クラス: SecuritySyntaxWalker, SecurityValidator
     /// </summary>
     public class DangerousApiDetector
@@ -179,7 +177,6 @@ namespace io.github.hatayama.uLoopMCP
                 return true;
             }
             
-            // v4.1: 名前空間チェックは削除（メソッドレベル制御に集中）
             return false;
         }
     }

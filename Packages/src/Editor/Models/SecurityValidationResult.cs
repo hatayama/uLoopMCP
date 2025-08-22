@@ -16,9 +16,6 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>違反リスト</summary>
         public List<SecurityViolation> Violations { get; set; } = new();
-
-        /// <summary>リスクレベル</summary>
-        public SecurityLevel RiskLevel { get; set; }
         
         /// <summary>コンパイルエラー（拡張）</summary>
         public List<string> CompilationErrors { get; set; } = new();

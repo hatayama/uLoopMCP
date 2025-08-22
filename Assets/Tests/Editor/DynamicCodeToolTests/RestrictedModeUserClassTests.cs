@@ -1,18 +1,14 @@
 #if ULOOPMCP_HAS_ROSLYN
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
     /// Restrictedモードユーザークラス実行機能のテスト
-    /// 設計ドキュメント参照: working-notes/2025-08-16_Restrictedモードユーザークラス実行機能_design.md
     /// </summary>
     [TestFixture]
     public class RestrictedModeUserClassTests
@@ -312,7 +308,30 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 }
             ";
             
-            SecurityValidationResult result = validator.ValidateCode(dangerousCode);
+            // コンパイル用の参照アセンブリを準備
+            List<Microsoft.CodeAnalysis.MetadataReference> references = new()
+            {
+                Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(System.Console).Assembly.Location),
+                Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location)
+            };
+            
+            // CSharpCompilationを直接作成
+            Microsoft.CodeAnalysis.SyntaxTree syntaxTree = 
+                Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(dangerousCode);
+            
+            Microsoft.CodeAnalysis.CSharp.CSharpCompilation compilation = 
+                Microsoft.CodeAnalysis.CSharp.CSharpCompilation.Create(
+                    "TestAssembly",
+                    new[] { syntaxTree },
+                    references,
+                    new Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions(
+                        Microsoft.CodeAnalysis.OutputKind.DynamicallyLinkedLibrary
+                    )
+                );
+            
+            // 新しいAPIを使用
+            SecurityValidationResult result = validator.ValidateCompilation(compilation);
             
             Assert.IsFalse(result.IsValid, "Dangerous code should be invalid");
             Assert.IsTrue(result.Violations.Count > 0, "Should have violations");

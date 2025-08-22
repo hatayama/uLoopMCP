@@ -1,20 +1,18 @@
-#if ULOOPMCP_HAS_ROSLYN
-using io.github.hatayama.uLoopMCP;
-
 namespace io.github.hatayama.uLoopMCP.Factory
 {
     /// <summary>
     /// DynamicCodeExecutor生成ファクトリー
-    /// v4.0 明示的セキュリティレベル指定対応
-    /// 関連クラス: DynamicCodeExecutor, RoslynCompiler, SecurityValidator, CommandRunner
+    /// 関連クラス: DynamicCodeExecutor, DynamicCodeExecutorStub, RoslynCompiler, SecurityValidator, CommandRunner
     /// </summary>
     public static class DynamicCodeExecutorFactory
     {
         /// <summary>
         /// 指定されたセキュリティレベルでDynamicCodeExecutorを作成
+        /// Roslyn無効時はStub実装を返す
         /// </summary>
         public static IDynamicCodeExecutor Create(DynamicCodeSecurityLevel securityLevel)
         {
+#if ULOOPMCP_HAS_ROSLYN
             string correlationId = McpConstants.GenerateCorrelationId();
 
             try
@@ -65,7 +63,19 @@ namespace io.github.hatayama.uLoopMCP.Factory
 
                 throw;
             }
+#else
+            // Roslyn無効時はStub実装を返す
+            VibeLogger.LogInfo(
+                "dynamic_executor_stub_created",
+                "DynamicCodeExecutorStub created (Roslyn disabled)",
+                new { },
+                McpConstants.GenerateCorrelationId(),
+                "Roslyn無効のためStub実装を使用",
+                "動的コード実行は利用不可"
+            );
+            
+            return new DynamicCodeExecutorStub();
+#endif
         }
     }
 }
-#endif

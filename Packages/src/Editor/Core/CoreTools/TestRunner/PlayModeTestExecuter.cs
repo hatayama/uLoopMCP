@@ -21,7 +21,7 @@ namespace io.github.hatayama.uLoopMCP
             TestExecutionFilter filter = null, 
             bool saveXml = false)
         {
-            using DomainReloadDisableScope scope = new DomainReloadDisableScope();
+            using DomainReloadDisableScope scope = new();
             return await ExecuteTestWithEventNotification(TestMode.PlayMode, filter, saveXml);
         }
 
@@ -46,7 +46,7 @@ namespace io.github.hatayama.uLoopMCP
             TestExecutionFilter filter, 
             bool saveXml)
         {
-            TaskCompletionSource<SerializableTestResult> tcs = new TaskCompletionSource<SerializableTestResult>();
+            TaskCompletionSource<SerializableTestResult> tcs = new();
             
             using UnifiedTestCallback callback = new();
             callback.OnTestCompleted += (result, rawResult) =>
@@ -76,7 +76,7 @@ namespace io.github.hatayama.uLoopMCP
             testRunnerApi.RegisterCallbacks(callback);
             
             Filter unityFilter = CreateUnityFilter(testMode, filter);
-            testRunnerApi.Execute(new UnityEditor.TestTools.TestRunner.Api.ExecutionSettings(unityFilter));
+            testRunnerApi.Execute(new ExecutionSettings(unityFilter));
         }
 
         /// <summary>
