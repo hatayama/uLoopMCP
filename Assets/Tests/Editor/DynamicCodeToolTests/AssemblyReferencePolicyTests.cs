@@ -125,7 +125,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 [Test]
         public void IsAssemblyAllowed_Level1でSystemIOも許可されるか確認()
         {
-            // 新仕様: Restrictedモードでも全アセンブリを許可（実行時にメソッドレベルでブロック）
+            // 新仕様: Restrictedモードでも全アセンブリを許可（コンパイル後に危険なAPIをブロック）
             // Act & Assert
             Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.IO", DynamicCodeSecurityLevel.Restricted));
             Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.IO.FileSystem", DynamicCodeSecurityLevel.Restricted));
@@ -134,7 +134,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public void IsAssemblyAllowed_Level1でSystemNetも許可されるか確認()
         {
-            // 新仕様: Restrictedモードでも全アセンブリを許可（実行時にメソッドレベルでブロック）
+            // 新仕様: Restrictedモードでも全アセンブリを許可（コンパイル後に危険なAPIをブロック）
             // Act & Assert
             Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.Net", DynamicCodeSecurityLevel.Restricted));
             Assert.IsTrue(AssemblyReferencePolicy.IsAssemblyAllowed("System.Net.Http", DynamicCodeSecurityLevel.Restricted));

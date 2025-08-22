@@ -35,8 +35,8 @@ namespace io.github.hatayama.uLoopMCP
 /// </summary>
 public enum AssemblyLoadingMode
 {
-    /// <summary>必要なアセンブリのみを動的追加</summary>
-    DynamicAddition,
+    /// <summary>選択されたアセンブリのみを参照</summary>
+    SelectiveReference,
     
     /// <summary>全てのアセンブリを追加</summary>
     AllAssemblies

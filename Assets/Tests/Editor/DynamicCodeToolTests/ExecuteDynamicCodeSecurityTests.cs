@@ -29,28 +29,6 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             _compiler = null;
         }
 
-        // v5.1: System.IOのセキュリティチェックは実行時のみ（コンパイル時チェック廃止）
-        // [Test]
-        // public void Compile_WithSystemIOType_ShouldFailWithSecurityViolation()
-        // テスト削除
-
-        // v5.1: HttpClientのセキュリティチェックは実行時のみ（コンパイル時チェック廃止）
-        // [Test]
-        // public void Compile_WithSystemNetHttpType_ShouldFailWithSecurityViolation()
-        // テスト削除
-
-        // v5.1: File.Deleteのセキュリティチェックは実行時のみ（コンパイル時チェック廃止）
-        // [Test]
-        // public void Compile_WithDangerousFileDelete_ShouldFailWithSecurityViolation()
-        // テスト削除
-
-        // v5.1: Process.StartとAssembly.Loadのセキュリティチェックは実行時のみ（コンパイル時チェック廃止）
-        // [Test]
-        // public void Compile_WithProcessStart_ShouldFailWithSecurityViolation()
-        // [Test]
-        // public void Compile_WithReflectionAssemblyLoad_ShouldFailWithSecurityViolation()
-        // テスト削除
-
         [Test]
         public void Compile_WithDynamicAssemblyTest_SafeMethods_ShouldSucceed()
         {

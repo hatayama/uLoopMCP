@@ -440,17 +440,6 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         // ================================================================================
         // System.Environment テスト
         // ================================================================================
-        
-        #region System.Environment - 危険API
-        
-        // [Test] - v5.1: Environment.Exitは実行時に実際にプロセス終了するため削除
-        // public async Task TestRestrictedMode_EnvironmentExit_Blocked()
-        
-        // [Test] - v5.1: Environment.FailFastは実行時に実際にプロセス終了するため削除
-        // public async Task TestRestrictedMode_EnvironmentFailFast_Blocked()
-        
-        #endregion
-        
         #region System.Environment - 安全API
         
         [Test]

@@ -30,9 +30,6 @@ namespace io.github.hatayama.uLoopMCP
                 _compileController = new CompileController();
                 _logDisplay = new CompileLogDisplay();
 
-                // Note: Previously restored persisted logs, but this was causing
-                // settings file size issues and wasn't necessary for functionality
-
                 // Subscribe to events
                 _compileController.OnCompileStarted += _logDisplay.AppendStartMessage;
                 _compileController.OnAssemblyCompiled += _logDisplay.AppendAssemblyMessage;
@@ -72,13 +69,11 @@ namespace io.github.hatayama.uLoopMCP
                 _compileController.OnCompileCompleted -= OnCompileCompleted;
 
                 _compileController.Dispose();
-                // Set to null only on OnDisable
             }
 
             if (_logDisplay != null)
             {
                 _logDisplay.Dispose();
-                // Set to null only on OnDisable
             }
         }
 
@@ -132,10 +127,7 @@ namespace io.github.hatayama.uLoopMCP
         private void OnCompileCompleted(CompileResult result)
         {
             _logDisplay.AppendCompletionMessage(result);
-
-            // Mark that we have compile data (no longer persist the full log text)
             McpEditorSettings.SetCompileWindowHasData(true);
-
             Repaint();
         }
 

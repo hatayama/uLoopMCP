@@ -22,7 +22,10 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>警告</summary>
         public List<string> Warnings { get; set; } = new();
 
-        /// <summary>更新されたコード</summary>
+        /// <summary>
+        /// コンパイル用に整形されたコード
+        /// （using文の抽出・移動、クラス/メソッドラップ適用後）
+        /// </summary>
         public string UpdatedCode { get; set; }
 
         /// <summary>セキュリティ違反があった場合のフラグ</summary>

@@ -1,19 +1,16 @@
 #if ULOOPMCP_HAS_ROSLYN
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using io.github.hatayama.uLoopMCP;
 
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
-    /// 動的アセンブリ追加システムのテスト
-    /// 設計ドキュメント: フリーズ回避のための軽量化アセンブリ読み込み
+    /// アセンブリ参照管理システムのテスト
     /// 関連クラス: RoslynCompiler, CompilationRequest, CompilationResult
     /// </summary>
     [TestFixture]
-    public class DynamicAssemblyAdditionTests
+    public class AssemblyReferenceManagementTests
     {
         private RoslynCompiler _compiler;
 
@@ -33,9 +30,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void Compile_WithBasicUnityTypes_ShouldSucceedWithoutDynamicAddition()
+        public void Compile_WithBasicUnityTypes_ShouldSucceed()
         {
-            // Arrange - 基本的なUnityの型を使用（キュレートされたアセンブリに含まれる）
+            // Arrange - 基本的なUnityの型を使用（標準アセンブリ参照に含まれる）
             string code = @"
                 var go = new UnityEngine.GameObject(""Test"");
                 UnityEngine.Debug.Log(""Hello from dynamic code"");
@@ -58,7 +55,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void Compile_WithNewtonSoftJsonType_ShouldSucceedWithDynamicAddition()
+        public void Compile_WithNewtonSoftJsonType_ShouldCompileIfAvailable()
         {
             // Arrange - Newtonsoft.Jsonの型を使用（存在する場合）
             string code = @"
@@ -87,10 +84,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             {
                 // Ensure errors are present when compilation fails
                 Assert.IsNotNull(result.Errors, "Expected compilation errors when Success is false");
-                
+
                 // Newtonsoft.Jsonが見つからない場合は適切なエラーメッセージであることを確認
-                bool hasExpectedError = result.Errors.Any(e => 
-                    e.Message.Contains("Newtonsoft") || 
+                bool hasExpectedError = result.Errors.Any(e =>
+                    e.Message.Contains("Newtonsoft") ||
                     e.ErrorCode == "CS0246");
                 Assert.IsTrue(hasExpectedError, "Expected CS0246 error for missing Newtonsoft.Json type");
             }
@@ -149,18 +146,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsNotNull(secondResult.CompiledAssembly);
         }
 
-        // v5.2: 削除 - 現在の仕様では全アセンブリへの参照が許可されるため不要
-        // [Test] Compile_WithCustomUserClass_ShouldFailGracefully
-
-        // v5.2: 削除 - 現在の仕様では全アセンブリへの参照が許可されるため不要
-        // [Test] Compile_WithCustomClassFromAnotherNamespace_ShouldFailGracefully
-
-
-
         [Test]
-        public void Compile_WithEditorOnlyClass_ShouldSucceedWithDynamicAddition()
+        public void Compile_WithEditorOnlyClass_ShouldSucceed()
         {
-            // Arrange - UnityEditorのクラスを使用（動的アセンブリ追加で見つかる）
+            // Arrange - UnityEditorのクラスを使用（アセンブリ参照に含まれる）
             string code = @"
                 var window = UnityEditor.EditorWindow.CreateInstance<UnityEditor.EditorWindow>();
                 return window != null ? ""EditorWindow created"" : ""Failed"";";
@@ -175,19 +164,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // Act
             CompilationResult result = _compiler.Compile(request);
 
-            // Assert - UnityEditorアセンブリは動的追加で見つかる
+            // Assert - UnityEditorアセンブリは参照可能
             Assert.IsTrue(result.Success, $"Compilation failed: {string.Join(", ", result.Errors?.Select(e => e.Message) ?? new string[0])}");
             Assert.IsNotNull(result.CompiledAssembly);
         }
 
-        // v5.2: 削除 - 現在の仕様では全アセンブリへの参照が許可されるため不要
-        // [Test] Compile_WithMultipleCustomClasses_ShouldFailForTestAssemblyClasses
-
-        // v5.2: 削除 - 現在の仕様では全アセンブリへの参照が許可されるため不要
-        // [Test] Compile_WithNonExistentCustomClass_ShouldFailGracefullyWithSpecificError
-
         [Test]
-        public void Compile_WithGenericCustomClass_ShouldSucceedWithDynamicAddition()
+        public void Compile_WithGenericCustomClass_ShouldSucceed()
         {
             // Arrange - ジェネリック型を使用した複雑なケース
             string code = @"
@@ -235,7 +218,7 @@ namespace TestNamespace
                 Code = code,
                 ClassName = "SeparateAssemblyWithUsingTestClass",
                 Namespace = "TestNamespace",
-                AssemblyMode = AssemblyLoadingMode.AllAssemblies  // 全アセンブリモード
+                AssemblyMode = AssemblyLoadingMode.AllAssemblies // 全アセンブリモード
             };
 
             // Act
@@ -246,9 +229,6 @@ namespace TestNamespace
             Assert.IsNotNull(result.CompiledAssembly);
             Assert.IsFalse(result.HasSecurityViolations, "Should not be a security violation");
         }
-
-        // v5.2: 削除 - 現在の仕様では全アセンブリへの参照が許可されるため不要
-        // [Test] Compile_WithSeparateAssemblyClass_ShouldFailInDynamicAdditionMode
 
         [Test]
         public void Compile_WithSeparateAssemblyClassFullyQualified_ShouldSucceedInAllAssembliesMode()
@@ -263,7 +243,7 @@ namespace TestNamespace
                 Code = code,
                 ClassName = "FullyQualifiedSeparateAssemblyTestClass",
                 Namespace = "TestNamespace",
-                AssemblyMode = AssemblyLoadingMode.AllAssemblies  // 全アセンブリモード
+                AssemblyMode = AssemblyLoadingMode.AllAssemblies // 全アセンブリモード
             };
 
             // Act

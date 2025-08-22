@@ -7,13 +7,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
     /// ExecuteDynamicCodeのセキュリティ機能統合テスト
-    /// v4.0ステートレス設計: ExecuteDynamicCodeToolを使用せず、DynamicCodeExecutorを直接使用
-    /// 設計ドキュメント: /working-notes/2025-08-21_v4.0ステートレス設計移行/2025-08-21_v4.0ステートレス設計移行_design.md
+    /// ExecuteDynamicCodeToolを使用せず、DynamicCodeExecutorを直接使用
+    /// （テストの独立性を保つため）
     /// </summary>
     [TestFixture]
     public class ExecuteDynamicCodeSecurityIntegrationTests
     {
-        // ExecuteDynamicCodeToolは使用しない（v4.0ステートレス設計）
+        // ExecuteDynamicCodeToolは使用しない（テストの独立性のため）
         // 各テストメソッドで独立したExecutorを作成
 
         [Test]
