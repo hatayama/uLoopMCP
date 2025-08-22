@@ -34,7 +34,11 @@ namespace io.github.hatayama.uLoopMCP
             set => ErrorMessage = value; 
         }
         
-        /// <summary>更新されたコード（修正適用後）</summary>
+        /// <summary>
+        /// コンパイル用に整形されたコード
+        /// （using文の抽出・移動、クラス/メソッドラップ適用後）
+        /// デバッグ時に実際にコンパイルされたコードを確認可能
+        /// </summary>
         public string UpdatedCode { get; set; }
         
     }

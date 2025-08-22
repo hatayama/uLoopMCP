@@ -141,13 +141,13 @@ namespace io.github.hatayama.uLoopMCP
             {
                 switch (entry.LogType)
                 {
-                    case var s when s == McpLogType.Log:
+                    case McpLogType.Log:
                         logCount++;
                         break;
-                    case var s when s == McpLogType.Warning:
+                    case McpLogType.Warning:
                         warningCount++;
                         break;
-                    case var s when s == McpLogType.Error:
+                    case McpLogType.Error:
                         errorCount++;
                         break;
                     default:

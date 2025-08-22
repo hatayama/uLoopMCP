@@ -28,9 +28,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             return mcpLogType switch
             {
-                var s when string.Equals(s, McpLogType.Error, StringComparison.OrdinalIgnoreCase) => LogType.Error,
-                var s when string.Equals(s, McpLogType.Warning, StringComparison.OrdinalIgnoreCase) => LogType.Warning,
-                var s when string.Equals(s, McpLogType.Log, StringComparison.OrdinalIgnoreCase) => LogType.Log,
+                McpLogType.Error => LogType.Error,
+                McpLogType.Warning => LogType.Warning,
+                McpLogType.Log => LogType.Log,
                 _ => LogType.Log  // Default for unknown types, None will be handled separately
             };
         }

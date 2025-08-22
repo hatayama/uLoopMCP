@@ -12,11 +12,11 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Roslynを使用したC#動的コンパイル機能
-    /// v4.0 明示的セキュリティレベル注入対応
     /// 関連クラス: CompilationRequest, CompilationResult, DynamicCodeSecurityManager
     /// </summary>
     public class RoslynCompiler : IDisposable
     {
+        // コンパイル結果のキャッシュ管理（同じコードの再コンパイルを回避）
         private readonly CompilationCacheManager _cacheManager = new();
         private readonly List<MetadataReference> _defaultReferences = new();
         private readonly DynamicCodeSecurityLevel _currentSecurityLevel;
@@ -51,8 +51,10 @@ namespace io.github.hatayama.uLoopMCP
         {
             string correlationId = McpConstants.GenerateCorrelationId();
 
-            // キャッシュ無効化: 毎回フレッシュな参照リストを作成（約144ms）
-            // 常に最新のアセンブリ状態を反映するため、キャッシュを使用しない
+            // 参照アセンブリリストのキャッシュ無効化:
+            // - 毎回フレッシュな参照リストを作成（約144ms）
+            // - 理由: 最新のUnityアセンブリ状態を反映するため
+            // - 注意: これはコンパイル結果のキャッシュ（CompilationCacheManager）とは別
 
             List<MetadataReference> references = new();
 
@@ -69,7 +71,8 @@ namespace io.github.hatayama.uLoopMCP
             // 1. Unityの参照アセンブリフォルダから収集
             AddUnityReferenceAssemblies(references, addedPaths);
 
-            // 2. 現在ロード済みのアセンブリも追加（後方互換性）
+            // 2. 現在ロード済みのアセンブリも追加
+            // （動的ロードされたアセンブリやプラグイン等、Unityフォルダにないものを補完）
             foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
                 if (!assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
@@ -248,13 +251,14 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogCompilationStart(request, correlationId);
 
-                // 早期return でネスト浅く
+                // コンパイル結果のキャッシュチェック（同じコードは再コンパイルしない）
                 CompilationResult cachedResult = CheckCache(request);
-                if (cachedResult != null) return cachedResult;
+                if (cachedResult != null) return cachedResult;  // キャッシュヒット
 
                 CompilationContext context = PrepareCompilation(request);
                 CompilationResult result = ExecuteCompilation(context, correlationId);
 
+                // 成功したコンパイル結果をキャッシュに保存
                 CacheResultIfSuccessful(request, result);
 
                 return result;
@@ -351,12 +355,6 @@ namespace io.github.hatayama.uLoopMCP
 
                 hasError = diagnostics.Any();
                 if (!hasError) break;
-
-                // 動的アセンブリ追加機能は削除されました
-                // using文の抽出により型解決が改善されたため不要になりました
-
-                // Phase 2: 修正適用は現在無効化されています
-                // FixProviderの実装がないため、この部分はスキップされます
             }
 
             return currentTree;
@@ -468,10 +466,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 result.Success = false;
                 result.Errors = ConvertDiagnosticsToErrors(emitResult.Diagnostics);
-
-                // v5.1: コンパイル時のセキュリティ違反検出は廃止
-                // DetectSecurityViolations(result, emitResult.Diagnostics);
-
                 LogCompilationFailure(result, correlationId);
             }
 

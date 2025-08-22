@@ -14,6 +14,11 @@ namespace io.github.hatayama.uLoopMCP
     /// コンパイル結果のキャッシュ管理を担当するクラス
     /// RoslynCompilerから分離されたキャッシュ管理責務
     /// 
+    /// キャッシュの役割:
+    /// - 同じコードの再コンパイルを回避（パフォーマンス向上）
+    /// - SHA256ハッシュによるキャッシュキー生成
+    /// - 注意: 参照アセンブリリストのキャッシュとは独立
+    /// 
     /// 関連クラス:
     /// - RoslynCompiler: このキャッシュマネージャーを使用するコンパイラ
     /// - CompilationRequest: キャッシュキー生成に使用
@@ -21,6 +26,7 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class CompilationCacheManager
     {
+        // コンパイル済みアセンブリのキャッシュ（キー: コードのSHA256ハッシュ）
         private readonly Dictionary<string, Assembly> _compilationCache = new();
 #if ULOOPMCP_HAS_ROSLYN
         private readonly Dictionary<DynamicCodeSecurityLevel, List<MetadataReference>> _referenceCache = new();
@@ -43,17 +49,6 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return null;
-        }
-
-        /// <summary>
-        /// 成功した結果をキャッシュに保存
-        /// </summary>
-        public void CacheResultIfSuccessful(CompilationResult result, string cacheKey)
-        {
-            if (result.Success && result.CompiledAssembly != null)
-            {
-                _compilationCache[cacheKey] = result.CompiledAssembly;
-            }
         }
 
         /// <summary>
@@ -83,40 +78,6 @@ namespace io.github.hatayama.uLoopMCP
                 aiTodo: "Monitor cache usage patterns"
             );
         }
-
-        /// <summary>
-        /// セキュリティレベル変更時のキャッシュクリア
-        /// </summary>
-        public void ClearCompilationCache()
-        {
-            _compilationCache.Clear();
-            
-            VibeLogger.LogInfo(
-                "compilation_cache_cleared",
-                "Compilation cache cleared due to security level change",
-                new { 
-                    cacheSize = _compilationCache.Count 
-                },
-                correlationId: McpConstants.GenerateCorrelationId(),
-                humanNote: "Cache cleared after security level change",
-                aiTodo: "Monitor cache invalidation frequency"
-            );
-        }
-
-#if ULOOPMCP_HAS_ROSLYN
-        /// <summary>
-        /// セキュリティレベル用の参照キャッシュを取得または作成
-        /// </summary>
-        public List<MetadataReference> GetOrCreateReferences(DynamicCodeSecurityLevel level, Func<List<MetadataReference>> factory)
-        {
-            if (!_referenceCache.TryGetValue(level, out List<MetadataReference> references))
-            {
-                references = factory();
-                _referenceCache[level] = references;
-            }
-            return references;
-        }
-#endif
 
         /// <summary>
         /// 参照キャッシュをクリア
@@ -155,33 +116,5 @@ namespace io.github.hatayama.uLoopMCP
                 return Convert.ToBase64String(hashBytes);
             }
         }
-
-        /// <summary>
-        /// キャッシュ統計情報を取得
-        /// </summary>
-        public CacheStatistics GetStatistics()
-        {
-            return new CacheStatistics
-            {
-                CompilationCacheCount = _compilationCache.Count,
-#if ULOOPMCP_HAS_ROSLYN
-                ReferenceCacheCount = _referenceCache.Count,
-                TotalCacheSize = _compilationCache.Count + _referenceCache.Count
-#else
-                ReferenceCacheCount = 0,
-                TotalCacheSize = _compilationCache.Count
-#endif
-            };
-        }
-    }
-
-    /// <summary>
-    /// キャッシュ統計情報
-    /// </summary>
-    public class CacheStatistics
-    {
-        public int CompilationCacheCount { get; set; }
-        public int ReferenceCacheCount { get; set; }
-        public int TotalCacheSize { get; set; }
     }
 }

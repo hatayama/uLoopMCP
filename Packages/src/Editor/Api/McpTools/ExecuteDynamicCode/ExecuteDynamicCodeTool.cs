@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using io.github.hatayama.uLoopMCP;
 
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// MCP 動的C#コード実行ツール（薄いラッパー）
-
-    /// 関連クラス: IDynamicCodeExecutor
+    /// MCP 動的C#コード実行ツール
+    /// セキュリティレベル変更時のみExecutorを再生成し、通常はキャッシュして再利用
+    /// 関連クラス: IDynamicCodeExecutor, DynamicCodeExecutorFactory
     /// </summary>
     [McpTool(Description = @"Execute Unity C# code directly - no class/namespace needed!
 
@@ -58,7 +57,6 @@ either use fully-qualified names or include the necessary using statements in yo
         public ExecuteDynamicCodeTool()
         {
 #if ULOOPMCP_HAS_ROSLYN
-            // v4.0 ステートレス設計: 初期状態は設定せず、最初のリクエスト時に初期化
             _executor = null;
             _errorHandler = new ImprovedErrorHandler();
             // 初期値は無効な値を設定（最初のリクエストで必ず再作成される）
@@ -66,26 +64,18 @@ either use fully-qualified names or include the necessary using statements in yo
             
             VibeLogger.LogInfo(
                 "execute_dynamic_code_tool_initialized",
-                "ExecuteDynamicCodeTool initialized (stateless design)",
+                "ExecuteDynamicCodeTool initialized with conditional caching",
                 new { },
                 correlationId: McpConstants.GenerateCorrelationId(),
-                humanNote: "Tool initialized without global state dependency",
-                aiTodo: "Monitor first request initialization"
+                humanNote: "Tool initialized with executor caching for performance",
+                aiTodo: "Monitor executor lifecycle and cache hit rate"
             );
 #else
-            // Roslyn無効時はnull（このツール自体が登録されないはず）
+            // Roslyn無効時はnull
             _executor = null;
             _errorHandler = null;
             _currentSecurityLevel = DynamicCodeSecurityLevel.Disabled;
 #endif
-        }
-        
-        /// <summary>
-        /// テスト用コンストラクタ（依存性注入対応）
-        /// </summary>
-        public ExecuteDynamicCodeTool(IDynamicCodeExecutor executor)
-        {
-            _executor = executor ?? throw new ArgumentNullException(nameof(executor));
         }
         
         protected override async Task<ExecuteDynamicCodeResponse> ExecuteAsync(
@@ -97,10 +87,9 @@ either use fully-qualified names or include the necessary using statements in yo
             try
             {
 #if ULOOPMCP_HAS_ROSLYN
-                // v4.0 ステートレス設計: Unity Editor側の設定から取得（MCPクライアントからは指定不可）
                 DynamicCodeSecurityLevel editorLevel = McpEditorSettings.GetDynamicCodeSecurityLevel();
                 
-                // エディタ設定が変更された場合のみExecutorを再作成
+                // エディタ設定が変更された場合のみExecutorを再作成（パフォーマンスのためキャッシュ）
                 if (_executor == null || editorLevel != _currentSecurityLevel)
                 {
                     string action = _executor == null ? "Creating" : "Recreating";
@@ -177,7 +166,7 @@ either use fully-qualified names or include the necessary using statements in yo
                 
                 // レスポンスに変換（エラー時は改善されたメッセージを使用）
                 ExecuteDynamicCodeResponse toolResponse = ConvertExecutionResultToResponse(
-                    executionResult, originalCode, null, correlationId);
+                    executionResult, originalCode, correlationId);
                 
                 // セキュリティレベルを追加
                 toolResponse.SecurityLevel = _currentSecurityLevel.ToString();
@@ -191,7 +180,7 @@ either use fully-qualified names or include the necessary using statements in yo
                         success = executionResult.Success,
                         executionTimeMs = executionResult.ExecutionTime.TotalMilliseconds,
                         logsCount = executionResult.Logs?.Count ?? 0,
-                        result_length = executionResult.Result?.ToString()?.Length ?? 0
+                        result_length = executionResult.Result?.ToString().Length ?? 0
                     },
                     correlationId,
                     $"Execution completed: {(executionResult.Success ? "Success" : "Failed")}",
@@ -216,7 +205,7 @@ either use fully-qualified names or include the necessary using statements in yo
                     "Investigate error cause and improve error handling"
                 );
                 
-                return CreateErrorResponse(ex.Message, correlationId);
+                return CreateErrorResponse(ex.Message);
             }
         }
         
@@ -224,7 +213,7 @@ either use fully-qualified names or include the necessary using statements in yo
         /// ExecutionResponseをExecuteDynamicCodeResponseに変換
         /// </summary>
         private ExecuteDynamicCodeResponse ConvertExecutionResultToResponse(
-            ExecutionResult result, string originalCode, object fixResult, string correlationId)
+            ExecutionResult result, string originalCode, string correlationId)
         {
             ExecuteDynamicCodeResponse response = new ExecuteDynamicCodeResponse
             {
@@ -235,8 +224,6 @@ either use fully-qualified names or include the necessary using statements in yo
                 ErrorMessage = result.ErrorMessage ?? "",
                 ExecutionTimeMs = (long)result.ExecutionTime.TotalMilliseconds
             };
-
-            // SmartCodeFixer削除済み - RoslynCompilerの診断駆動修正を使用
 
             // エラー時は改善されたメッセージを使用
             if (!result.Success)
@@ -319,25 +306,9 @@ either use fully-qualified names or include the necessary using statements in yo
         }
         
         /// <summary>
-        /// コンパイルエラーをDTOに変換
-        /// </summary>
-        private List<CompilationErrorDto> ConvertCompilationErrors(List<CompilationError> errors)
-        {
-            if (errors == null) return new List<CompilationErrorDto>();
-            
-            return errors.Select(error => new CompilationErrorDto
-            {
-                Message = error.Message ?? "",
-                Line = error.Line,
-                Column = error.Column,
-                ErrorCode = error.ErrorCode ?? ""
-            }).ToList();
-        }
-        
-        /// <summary>
         /// エラーレスポンス作成
         /// </summary>
-        private ExecuteDynamicCodeResponse CreateErrorResponse(string errorMessage, string correlationId)
+        private ExecuteDynamicCodeResponse CreateErrorResponse(string errorMessage)
         {
             return new ExecuteDynamicCodeResponse
             {
