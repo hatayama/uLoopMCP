@@ -22,7 +22,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public override string ToolName => "get-provider-details";
 
-
         /// <summary>
         /// Execute the provider details retrieval tool
         /// </summary>

@@ -3,7 +3,6 @@ using UnityEditor;
 using Newtonsoft.Json;
 using UnityEngine;
 
-
 namespace io.github.hatayama.uLoopMCP
 {
     // Related classes:
@@ -345,7 +344,6 @@ namespace io.github.hatayama.uLoopMCP
             CustomToolManager.NotifyToolChanges();
         }
 
-
         /// <summary>
         /// Restore server after compilation with frame delay
         /// </summary>
@@ -367,7 +365,6 @@ namespace io.github.hatayama.uLoopMCP
 
             TryRestoreServerWithRetry(port, 0);
         }
-
 
         /// <summary>
         /// Retry server restore with frame delay

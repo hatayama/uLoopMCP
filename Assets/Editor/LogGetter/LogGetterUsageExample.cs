@@ -14,7 +14,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             Debug.Log("=== LogGetter Direct Test Start ===");
 
-            var logData = LogGetter.GetConsoleLog();
+            var logData = LogGetter.GetAllConsoleLogs();
             Debug.Log($"LogGetter Result: TotalCount={logData.TotalCount}, LogEntries.Length={logData.LogEntries.Length}");
 
             foreach (var entry in logData.LogEntries)
@@ -47,7 +47,7 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Log("--- Basic Usage ---");
 
             // How Masamichi requested to use it
-            LogDisplayDto log = LogGetter.GetConsoleLog();
+            LogDisplayDto log = LogGetter.GetAllConsoleLogs();
             Debug.Log($"Number of logs retrieved: {log.TotalCount}");
 
             // Get log entries directly
@@ -66,15 +66,15 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Log("--- Filtering Usage Example ---");
 
             // Get only error logs
-            LogDisplayDto errorLogs = LogGetter.GetConsoleLog(McpLogType.Error);
+            LogDisplayDto errorLogs = LogGetter.GetConsoleLogsByType(McpLogType.Error);
             Debug.Log($"Number of error logs: {errorLogs.TotalCount}");
 
             // Get only warning logs
-            LogDisplayDto warningLogs = LogGetter.GetConsoleLog(McpLogType.Warning);
+            LogDisplayDto warningLogs = LogGetter.GetConsoleLogsByType(McpLogType.Warning);
             Debug.Log($"Number of warning logs: {warningLogs.TotalCount}");
 
             // Get only normal logs
-            LogDisplayDto normalLogs = LogGetter.GetConsoleLog(McpLogType.Log);
+            LogDisplayDto normalLogs = LogGetter.GetConsoleLogsByType(McpLogType.Log);
             Debug.Log($"Number of normal logs: {normalLogs.TotalCount}");
         }
 
@@ -93,7 +93,7 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Log("=== Custom Processing Example ===");
 
             // Get logs and perform custom processing
-            LogDisplayDto logs = LogGetter.GetConsoleLog();
+            LogDisplayDto logs = LogGetter.GetAllConsoleLogs();
 
             int errorCount = 0;
             int warningCount = 0;

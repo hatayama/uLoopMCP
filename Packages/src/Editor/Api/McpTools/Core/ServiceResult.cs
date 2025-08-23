@@ -5,7 +5,7 @@ namespace io.github.hatayama.uLoopMCP
     /// Used in Application Service Layer
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
-    /// <typeparam name="T">結果データの型</typeparam>
+    /// <typeparam name="T">Type of result data</typeparam>
     public class ServiceResult<T>
     {
         /// <summary>

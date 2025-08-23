@@ -9,7 +9,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-
 namespace io.github.hatayama.uLoopMCP
 {
     // Related classes:
@@ -265,7 +264,6 @@ namespace io.github.hatayama.uLoopMCP
                 _cancellationTokenSource = null;
             }
             
-
             
         }
 
@@ -280,7 +278,6 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            
             List<string> clientsToRemove = new List<string>();
             
             foreach (KeyValuePair<string, ConnectedClient> client in _connectedClients)
@@ -517,7 +514,6 @@ namespace io.github.hatayama.uLoopMCP
                     OnToolDisconnected?.Invoke(clientToRemove.ClientName);
                 }
                 
-                
                 client.Close();
                 OnClientDisconnected?.Invoke(clientEndpoint);
             }
@@ -578,7 +574,6 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
         }
-
 
 
         /// <summary>

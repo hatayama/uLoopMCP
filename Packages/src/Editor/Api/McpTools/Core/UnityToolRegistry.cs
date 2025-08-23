@@ -92,7 +92,6 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-
         /// <summary>
         /// Register _tools manually (for backward compatibility)
         /// </summary>
@@ -154,7 +153,6 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     return false;
                 }
-                
                 
                 // Must have parameterless constructor
                 if (type.GetConstructor(Type.EmptyTypes) == null)
@@ -223,7 +221,6 @@ namespace io.github.hatayama.uLoopMCP
             await MainThreadSwitcher.SwitchToMainThread();
             return await tool.ExecuteAsync(paramsToken);
         }
-
 
         /// <summary>
         /// Get detailed information of registered _tools

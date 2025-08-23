@@ -42,7 +42,6 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
             
-            
             // Find client by endpoint
             ConnectedClient targetClient = connectedClients
                 .FirstOrDefault(c => c.Endpoint == clientContext.Endpoint);

@@ -8,7 +8,7 @@ namespace io.github.hatayama.uLoopMCP
     /// Tests buffer allocation, recycling, and memory management functionality.
     /// </summary>
     [TestFixture]
-    public class DynamicBufferManagerTests
+    public class TcpBufferManagerTests
     {
         private DynamicBufferManager bufferManager;
         

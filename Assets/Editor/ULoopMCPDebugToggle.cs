@@ -15,6 +15,8 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const string MENU_PATH_ENABLE = "uLoopMCP/Tools/Debug Settings/Enable Debug Mode";
         private const string MENU_PATH_DISABLE = "uLoopMCP/Tools/Debug Settings/Disable Debug Mode";
+        private const string MENU_PATH_ENABLE_ROSLYN = "uLoopMCP/Tools/Roslyn Settings/Enable Roslyn Support";
+        private const string MENU_PATH_DISABLE_ROSLYN = "uLoopMCP/Tools/Roslyn Settings/Disable Roslyn Support";
 
         /// <summary>
         /// Check if ULOOPMCP_DEBUG symbol is currently defined
@@ -94,5 +96,88 @@ namespace io.github.hatayama.uLoopMCP
         {
             return IsDebugModeEnabled();
         }
+
+        #region Roslyn Support Toggle
+
+        /// <summary>
+        /// Check if ULOOPMCP_HAS_ROSLYN symbol is currently defined
+        /// </summary>
+        private static bool IsRoslynSupportEnabled()
+        {
+            BuildTargetGroup targetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
+            string defines = PlayerSettings.GetScriptingDefineSymbolsForGroup(targetGroup);
+            return defines.Split(';').Contains(McpConstants.SCRIPTING_DEFINE_ULOOPMCP_HAS_ROSLYN);
+        }
+
+        /// <summary>
+        /// Enable ULOOPMCP_HAS_ROSLYN scripting define symbol
+        /// </summary>
+        [MenuItem(MENU_PATH_ENABLE_ROSLYN)]
+        public static void EnableRoslynSupport()
+        {
+            if (IsRoslynSupportEnabled())
+            {
+                Debug.Log("[uLoopMCP] Roslyn support is already enabled");
+                return;
+            }
+
+            BuildTargetGroup targetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
+            string defines = PlayerSettings.GetScriptingDefineSymbolsForGroup(targetGroup);
+            
+            if (string.IsNullOrEmpty(defines))
+            {
+                defines = McpConstants.SCRIPTING_DEFINE_ULOOPMCP_HAS_ROSLYN;
+            }
+            else
+            {
+                defines += ";" + McpConstants.SCRIPTING_DEFINE_ULOOPMCP_HAS_ROSLYN;
+            }
+            
+            PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, defines);
+            Debug.Log("[uLoopMCP] Roslyn support enabled. Unity will recompile scripts.");
+        }
+
+        /// <summary>
+        /// Disable ULOOPMCP_HAS_ROSLYN scripting define symbol
+        /// </summary>
+        [MenuItem(MENU_PATH_DISABLE_ROSLYN)]
+        public static void DisableRoslynSupport()
+        {
+            if (!IsRoslynSupportEnabled())
+            {
+                Debug.Log("[uLoopMCP] Roslyn support is already disabled");
+                return;
+            }
+
+            BuildTargetGroup targetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
+            string defines = PlayerSettings.GetScriptingDefineSymbolsForGroup(targetGroup);
+            
+            string[] defineArray = defines.Split(';');
+            defineArray = defineArray.Where(d => d != McpConstants.SCRIPTING_DEFINE_ULOOPMCP_HAS_ROSLYN).ToArray();
+            defines = string.Join(";", defineArray);
+            
+            PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, defines);
+            Debug.Log("[uLoopMCP] Roslyn support disabled. Unity will recompile scripts.");
+        }
+
+        /// <summary>
+        /// Validate menu item - only show Enable when Roslyn support is disabled
+        /// </summary>
+        [MenuItem(MENU_PATH_ENABLE_ROSLYN, true)]
+        public static bool ValidateEnableRoslynSupport()
+        {
+            return !IsRoslynSupportEnabled();
+        }
+
+        /// <summary>
+        /// Validate menu item - only show Disable when Roslyn support is enabled
+        /// </summary>
+        [MenuItem(MENU_PATH_DISABLE_ROSLYN, true)]
+        public static bool ValidateDisableRoslynSupport()
+        {
+            return IsRoslynSupportEnabled();
+        }
+
+        #endregion
     }
 }

@@ -15,7 +15,6 @@ namespace io.github.hatayama.uLoopMCP
     {
         public override string ToolName => "ping";
 
-
         protected override Task<PingResponse> ExecuteAsync(PingSchema parameters, CancellationToken cancellationToken)
         {
             // Type-safe parameter access - no more string parsing!

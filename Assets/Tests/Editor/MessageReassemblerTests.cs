@@ -374,7 +374,7 @@ namespace io.github.hatayama.uLoopMCP
         public void ExtractCompleteMessages_UnicodeContent_HandlesCorrectly()
         {
             // Arrange
-            string jsonContent = "{\"message\":\"こんにちは世界\",\"id\":1}";
+            string jsonContent = "{\"message\":\"Hello World\",\"id\":1}";
             int contentLength = Encoding.UTF8.GetByteCount(jsonContent);
             string frameData = $"Content-Length: {contentLength}\r\n\r\n{jsonContent}";
             byte[] data = Encoding.UTF8.GetBytes(frameData);

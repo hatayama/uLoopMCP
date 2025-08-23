@@ -30,7 +30,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         string ToolName { get; }
         
-        
         /// <summary>
         /// Get parameter schema information for TypeScript side
         /// </summary>

@@ -126,7 +126,6 @@ namespace io.github.hatayama.uLoopMCP
 #endif
             };
             
-
             return new McpServerConfigData(
                 command: McpConstants.NODE_COMMAND,
                 args: new[] { serverPath },

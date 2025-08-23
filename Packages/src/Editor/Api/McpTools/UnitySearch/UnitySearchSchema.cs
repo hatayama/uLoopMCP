@@ -81,7 +81,6 @@ namespace io.github.hatayama.uLoopMCP
         [Description("(Optional) Whether to include detailed descriptions in results (default: true)")]
         public bool IncludeDescription { get; set; } = true;
 
-
         /// <summary>
         /// Whether to include file metadata (size, modified date)
         /// </summary>

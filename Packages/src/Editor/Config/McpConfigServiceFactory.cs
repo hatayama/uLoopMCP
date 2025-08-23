@@ -56,7 +56,7 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (McpEditorType editorType in allEditorTypes)
             {
-                McpConfigRepository repository = new(editorType);
+                McpConfigRepository repository = new();
                 McpConfigService service = new(repository, editorType);
                 _configServices[editorType] = service;
             }

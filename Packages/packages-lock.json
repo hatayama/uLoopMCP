@@ -69,6 +69,119 @@
         "com.unity.nuget.newtonsoft-json": "3.2.1"
       }
     },
+    "org.nuget.microsoft.codeanalysis.analyzers": {
+      "version": "3.11.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://package.openupm.com"
+    },
+    "org.nuget.microsoft.codeanalysis.common": {
+      "version": "4.14.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "org.nuget.microsoft.codeanalysis.analyzers": "3.11.0",
+        "org.nuget.system.collections.immutable": "9.0.0",
+        "org.nuget.system.memory": "4.5.5",
+        "org.nuget.system.reflection.metadata": "9.0.0",
+        "org.nuget.system.runtime.compilerservices.unsafe": "6.0.0",
+        "org.nuget.system.text.encoding.codepages": "7.0.0",
+        "org.nuget.system.threading.tasks.extensions": "4.5.4",
+        "org.nuget.system.buffers": "4.5.1",
+        "org.nuget.system.numerics.vectors": "4.5.0"
+      },
+      "url": "https://package.openupm.com"
+    },
+    "org.nuget.microsoft.codeanalysis.csharp": {
+      "version": "4.14.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "org.nuget.microsoft.codeanalysis.common": "4.14.0",
+        "org.nuget.microsoft.codeanalysis.analyzers": "3.11.0",
+        "org.nuget.system.buffers": "4.5.1",
+        "org.nuget.system.collections.immutable": "9.0.0",
+        "org.nuget.system.memory": "4.5.5",
+        "org.nuget.system.numerics.vectors": "4.5.0",
+        "org.nuget.system.reflection.metadata": "9.0.0",
+        "org.nuget.system.runtime.compilerservices.unsafe": "6.0.0",
+        "org.nuget.system.text.encoding.codepages": "7.0.0",
+        "org.nuget.system.threading.tasks.extensions": "4.5.4"
+      },
+      "url": "https://package.openupm.com"
+    },
+    "org.nuget.system.buffers": {
+      "version": "4.5.1",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://package.openupm.com"
+    },
+    "org.nuget.system.collections.immutable": {
+      "version": "9.0.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "org.nuget.system.memory": "4.5.5",
+        "org.nuget.system.runtime.compilerservices.unsafe": "6.0.0"
+      },
+      "url": "https://package.openupm.com"
+    },
+    "org.nuget.system.memory": {
+      "version": "4.5.5",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "org.nuget.system.buffers": "4.5.1",
+        "org.nuget.system.numerics.vectors": "4.4.0",
+        "org.nuget.system.runtime.compilerservices.unsafe": "4.5.3"
+      },
+      "url": "https://package.openupm.com"
+    },
+    "org.nuget.system.numerics.vectors": {
+      "version": "4.5.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://package.openupm.com"
+    },
+    "org.nuget.system.reflection.metadata": {
+      "version": "9.0.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "org.nuget.system.collections.immutable": "9.0.0",
+        "org.nuget.system.memory": "4.5.5"
+      },
+      "url": "https://package.openupm.com"
+    },
+    "org.nuget.system.runtime.compilerservices.unsafe": {
+      "version": "6.0.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://package.openupm.com"
+    },
+    "org.nuget.system.text.encoding.codepages": {
+      "version": "7.0.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "org.nuget.system.memory": "4.5.5",
+        "org.nuget.system.runtime.compilerservices.unsafe": "6.0.0"
+      },
+      "url": "https://package.openupm.com"
+    },
+    "org.nuget.system.threading.tasks.extensions": {
+      "version": "4.5.4",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "org.nuget.system.runtime.compilerservices.unsafe": "4.5.3"
+      },
+      "url": "https://package.openupm.com"
+    },
     "com.unity.modules.imgui": {
       "version": "1.0.0",
       "depth": 1,

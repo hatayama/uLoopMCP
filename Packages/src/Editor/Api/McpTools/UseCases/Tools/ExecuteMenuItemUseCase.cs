@@ -72,7 +72,7 @@ namespace io.github.hatayama.uLoopMCP
                 response.MenuItemFound = true;
                 response.Details = "MenuItem executed successfully via EditorApplication.ExecuteMenuItem";
                 
-                // 重複チェックのためにMenuItemInfoを取得
+                // Retrieve MenuItemInfo for duplicate check
                 MenuItemInfo menuItemInfo = MenuItemDiscoveryService.FindMenuItemByPath(menuItemPath);
                 if (menuItemInfo != null && !string.IsNullOrEmpty(menuItemInfo.WarningMessage))
                 {
@@ -157,7 +157,7 @@ namespace io.github.hatayama.uLoopMCP
                 
                 response.Details = $"MenuItem executed successfully via reflection ({menuItemInfo.TypeName}.{menuItemInfo.MethodName})";
                 
-                // 警告メッセージがある場合は専用フィールドに設定
+                // Set dedicated field if warning message exists
                 if (!string.IsNullOrEmpty(menuItemInfo.WarningMessage))
                 {
                     response.WarningMessage = menuItemInfo.WarningMessage;

@@ -57,7 +57,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             
             int port = 7400;
-            McpConfigRepository repository = new(McpEditorType.Cursor);
+            McpConfigRepository repository = new();
             McpConfigService configService = new(repository, McpEditorType.Cursor);
             configService.AutoConfigure(port);
             

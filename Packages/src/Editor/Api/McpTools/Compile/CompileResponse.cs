@@ -42,7 +42,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public int? WarningCount { get; set; }
 
-
         /// <summary>
         /// Compilation errors. Null when status is indeterminate.
         /// </summary>

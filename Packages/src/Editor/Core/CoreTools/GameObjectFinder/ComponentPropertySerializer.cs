@@ -14,7 +14,6 @@ namespace io.github.hatayama.uLoopMCP
     public class ComponentPropertySerializer
     {
         
-        
         public ComponentPropertyInfo[] SerializeProperties(Component component)
         {
             if (component == null)
@@ -84,7 +83,6 @@ namespace io.github.hatayama.uLoopMCP
                     return null; // Unsupported property types
             }
         }
-        
         
         
         private object SerializeValue(object value)

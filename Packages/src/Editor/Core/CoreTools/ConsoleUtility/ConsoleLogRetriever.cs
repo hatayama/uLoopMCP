@@ -82,14 +82,14 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Converts Unity LogType to McpLogType
         /// </summary>
-        private McpLogType ConvertLogTypeToMcpLogType(LogType logType)
+        private string ConvertLogTypeToMcpLogType(LogType logType)
         {
             return logType switch
             {
                 LogType.Error => McpLogType.Error,
                 LogType.Warning => McpLogType.Warning,
                 LogType.Log => McpLogType.Log,
-                _ => McpLogType.None
+                _ => McpLogType.Log  // Default unknown types to Log
             };
         }
 
@@ -117,7 +117,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 List<LogEntryDto> logs = new();
                 int logCount = GetLogCount();
-                McpLogType targetMcpLogType = ConvertLogTypeToMcpLogType(logType);
+                string targetMcpLogType = ConvertLogTypeToMcpLogType(logType);
 
                 for (int i = 0; i < logCount; i++)
                 {
@@ -218,7 +218,6 @@ namespace io.github.hatayama.uLoopMCP
         }
 
 
-
         /// <summary>
         /// Gets a log entry at the specified index using reflection
         /// </summary>
@@ -264,7 +263,7 @@ namespace io.github.hatayama.uLoopMCP
             // Separate message and stack trace using Unity's internal boundary
             (string message, string stackTrace) = SeparateMessageAndStackTrace(fullMessage, callstackTextStart);
 
-            McpLogType mcpLogType = ConvertLogTypeToMcpLogType(logType);
+            string mcpLogType = ConvertLogTypeToMcpLogType(logType);
             return new LogEntryDto(mcpLogType, message, stackTrace);
         }
 

@@ -23,7 +23,6 @@ namespace io.github.hatayama.uLoopMCP
         public override string ToolName => "get-logs";
 
 
-
         protected override async Task<GetLogsResponse> ExecuteAsync(GetLogsSchema parameters, CancellationToken cancellationToken)
         {
             // Create and execute GetLogsUseCase instance

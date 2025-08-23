@@ -1,3 +1,5 @@
+using System;
+
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
@@ -13,15 +15,15 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         /// <param name="logType">Log type to retrieve</param>
         /// <returns>Log data</returns>
-        public LogDisplayDto GetLogs(McpLogType logType)
+        public LogDisplayDto GetLogs(string logType)
         {
-            if (logType == McpLogType.All)
+            if (string.Equals(logType, McpLogType.All, StringComparison.OrdinalIgnoreCase))
             {
-                return LogGetter.GetConsoleLog();
+                return LogGetter.GetAllConsoleLogs();
             }
             else
             {
-                return LogGetter.GetConsoleLog(logType);
+                return LogGetter.GetConsoleLogsByType(logType);
             }
         }
 
@@ -33,9 +35,9 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="useRegex">Whether to use regular expressions</param>
         /// <param name="searchInStackTrace">Whether to search within stack trace</param>
         /// <returns>Log data</returns>
-        public LogDisplayDto GetLogsWithSearch(McpLogType logType, string searchText, bool useRegex, bool searchInStackTrace)
+        public LogDisplayDto GetLogsWithSearch(string logType, string searchText, bool useRegex, bool searchInStackTrace)
         {
-            return LogGetter.GetConsoleLog(logType, searchText, useRegex, searchInStackTrace);
+            return LogGetter.SearchConsoleLogs(logType, searchText, useRegex, searchInStackTrace);
         }
     }
 }

@@ -7,11 +7,11 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class LogEntry
     {
-        public McpLogType Type { get; set; }
+        public string Type { get; set; }
         public string Message { get; set; }
         public string StackTrace { get; set; }
 
-        public LogEntry(McpLogType type, string message, string stackTrace)
+        public LogEntry(string type, string message, string stackTrace)
         {
             Type = type;
             Message = message;

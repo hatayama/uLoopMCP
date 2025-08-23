@@ -43,7 +43,6 @@ namespace io.github.hatayama.uLoopMCP
             Runtime = updater(Runtime);
         }
 
-
         /// <summary>
         /// Load state from persistent settings
         /// </summary>
@@ -303,6 +302,14 @@ namespace io.github.hatayama.uLoopMCP
         public void UpdateAllowThirdPartyTools(bool allow)
         {
             McpEditorSettings.SetAllowThirdPartyTools(allow);
+        }
+
+        /// <summary>
+        /// Update AllowPlayModeControl setting with persistence
+        /// </summary>
+        public void UpdateAllowPlayModeControl(bool allow)
+        {
+            McpEditorSettings.SetAllowPlayModeControl(allow);
         }
 
     }

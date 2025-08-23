@@ -117,14 +117,77 @@ UnitySearchが提供する検索プロバイダーを取得します
 → 大きなシーンでは、Hierarchyデータがファイルに保存され、生のJSONの代わりにパスが返されます
 ```
 
+#### 11. execute-dynamic-code - 動的C#コード実行
+Unity Editor内で動的にC#コードを実行します。
+
+> **⚠️ 重要な前提条件**  
+> このツールを使用するには、[OpenUPM NuGet](https://openupm.com/nuget/)を使用して`Microsoft.CodeAnalysis.CSharp`パッケージをインストールする必要があります。
+> 
+> **インストール手順:** 詳細は[OpenUPM NuGet](https://openupm.com/nuget/)のドキュメントを参照してください。
+
+**セキュリティレベル対応**: 3段階のセキュリティ制御を実装し、実行可能なコードを段階的に制限：
+
+  - **Level 0 - Disabled（無効化）**
+    - 何も実行できない状態
+    
+  - **Level 1 - Restricted（制限付き）**【推奨設定】
+    - 基本的に全てのUnity APIと.NET標準ライブラリが利用可能
+    - ユーザー定義アセンブリ（Assembly-CSharp等）も利用可能
+    - セキュリティ上危険な操作のみをピンポイントでブロック：
+      - **ファイル削除系**: `File.Delete`, `Directory.Delete`, `FileUtil.DeleteFileOrDirectory`
+      - **ファイル書き込み系**: `File.WriteAllText`, `File.WriteAllBytes`, `File.Replace`
+      - **ネットワーク通信**: `HttpClient`, `WebClient`, `WebRequest`, `Socket`, `TcpClient`全般
+      - **プロセス実行**: `Process.Start`, `Process.Kill`
+      - **動的コード実行**: `Assembly.Load*`, `Type.InvokeMember`, `Activator.CreateComInstanceFrom`
+      - **スレッド操作**: `Thread`, `Task`の直接操作
+      - **レジストリ操作**: `Microsoft.Win32`名前空間全般
+    - 安全な操作は許可：
+      - ファイル読み取り（`File.ReadAllText`, `File.Exists`等）
+      - パス操作（`Path.*`全般）
+      - 情報取得（`Assembly.GetExecutingAssembly`, `Type.GetType`等）
+    - 用途：通常のUnity開発、安全性を確保した自動化
+    
+  - **Level 2 - FullAccess（フルアクセス）**
+    - **全てのアセンブリが利用可能（制限なし）**
+    - ⚠️ **警告**: セキュリティリスクがあるため、信頼できるコードのみで使用
+```
+→ execute-dynamic-code (Code: "GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube); return \"Cube created\";")
+→ プロトタイプの迅速な検証、バッチ処理の自動化
+→ セキュリティレベルに応じてUnity APIの利用を制限
+```
+
+#### 12. play-unity - プレイモード開始
+Unity Editorのプレイモードを開始します。
+**セキュリティ制限**: デフォルトで無効化されており、Security SettingsでAllow Play Mode Controlを有効化する必要があります。
+```
+→ play-unity
+→ 自動テスト実行の前処理として使用
+```
+
+#### 13. stop-unity - プレイモード停止  
+Unity Editorのプレイモードを停止します。
+**セキュリティ制限**: デフォルトで無効化されており、Security SettingsでAllow Play Mode Controlを有効化する必要があります。
+```
+→ stop-unity
+→ 自動テスト実行の後処理として使用
+```
+
 > [!IMPORTANT]
 > **セキュリティ設定について**
 >
-> `run-tests`と`execute-menu-item`ツールは、AIが任意のコードを実行できてしまうため、デフォルトで無効化されています。  
+> 一部のツールはセキュリティ上の理由でデフォルトで無効化されています。  
 > これらのツールを使用するには、uLoopMCPウィンドウの「Security Settings」で該当する項目を有効化してください：
+>
+> **基本セキュリティ設定**:
 > - **Allow Tests Execution**: `run-tests`ツールを有効化
 > - **Allow Menu Item Execution**: `execute-menu-item`ツールを有効化
+> - **Allow Play Mode Control**: `play-unity`/`stop-unity`ツールを有効化
 > - **Allow Third Party Tools**: ユーザーが独自に拡張したtoolを有効化
+>
+> **Dynamic Code Security Level** (`execute-dynamic-code`ツール):
+> - **Level 0 (Disabled)**: コード実行完全無効化（最も安全）
+> - **Level 1 (Restricted)**: Unity APIのみ、危険な操作はブロック（推奨）
+> - **Level 2 (FullAccess)**: 全APIが利用可能（注意して使用）
 >
 > 設定変更は即座に反映され、サーバー再起動は不要です。  
 > 
@@ -373,6 +436,44 @@ UnitySearchが提供する検索プロバイダーを取得します
   - `Details` (string): 実行に関する追加情報
   - `MenuItemFound` (boolean): メニューアイテムがシステムで見つかったかどうか
 
+### 11. execute-dynamic-code
+- **説明**: Unity Editor内で動的C#コードを実行します。セキュリティレベルに応じてAPI利用を制限し、using文の自動処理やエラーメッセージの改善機能を提供します
+- **パラメータ**: 
+  - `Code` (string): 実行するC#コード（デフォルト: ""）
+  - `Parameters` (Dictionary<string, object>): 実行時パラメータ（デフォルト: {}）
+  - `CompileOnly` (boolean): コンパイルのみ実行（実行はしない）（デフォルト: false）
+- **レスポンス**: 
+  - `Success` (boolean): 実行が成功したかどうか
+  - `Result` (string): 実行結果
+  - `Logs` (array): ログメッセージの配列
+  - `CompilationErrors` (array): コンパイルエラーの配列（存在する場合）
+    - `Message` (string): エラーメッセージ
+    - `Line` (number): エラーが発生した行番号
+    - `Column` (number): エラーが発生した列番号
+    - `ErrorCode` (string): コンパイラーエラーコード（CS0103など）
+  - `ErrorMessage` (string): エラーメッセージ（失敗時）
+  - `SecurityLevel` (string): 現在のセキュリティレベル（"Disabled", "Restricted", "FullAccess"）
+  - `UpdatedCode` (string): 更新されたコード（修正適用後）
+  - `ExecutionTimeMs` (number): 実行時間（ミリ秒）
+
+### 12. play-unity
+- **説明**: Unity Editorのプレイモードを開始します
+- **パラメータ**: なし（EmptyToolSchemaを使用）
+- **レスポンス**: 
+  - `Success` (boolean): 操作が成功したかどうか
+  - `Message` (string): 実行結果メッセージ
+  - `IsPlaying` (boolean): プレイモード開始後の状態
+  - `ActionPerformed` (string): 実行されたアクション（"play"または"play (already playing)"）
+
+### 13. stop-unity
+- **説明**: Unity Editorのプレイモードを停止します  
+- **パラメータ**: なし（EmptyToolSchemaを使用）
+- **レスポンス**: 
+  - `Success` (boolean): 操作が成功したかどうか
+  - `Message` (string): 実行結果メッセージ
+  - `IsPlaying` (boolean): プレイモード停止後の状態
+  - `ActionPerformed` (string): 実行されたアクション（"stop"または"stop (already stopped)"）
+
 ---
 
 ## 関連ドキュメント
@@ -470,7 +571,8 @@ uLoopMCPはコアパッケージへの変更を必要とせず、プロジェク
 > [!IMPORTANT]  
 > **セキュリティ設定について**
 > 
-> プロジェクト固有に開発したツールは、uLoopMCPウィンドウの「Security Settings」で **Allow Third Party Tools** を有効化する必要があります。 
+> プロジェクト固有に開発したツールは、uLoopMCPウィンドウの「Security Settings」で **Allow Third Party Tools** を有効化する必要があります。  
+> また、動的コード実行を含むカスタムツールを開発する場合は、**Dynamic Code Security Level**の設定も考慮してください。 
 
 <details>
 <summary>実装ガイドを見る</summary>

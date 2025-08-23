@@ -3,15 +3,14 @@ using System.ComponentModel;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Supported log types for filtering
+    /// Supported log types for filtering: Log, Warning, Error, All
     /// </summary>
-    public enum McpLogType
+    public static class McpLogType
     {
-        None = -1,
-        Log = 0,
-        Warning = 1,
-        Error = 2,
-        All = 3,
+        public const string Log = "Log";
+        public const string Warning = "Warning";
+        public const string Error = "Error";
+        public const string All = "All";
     }
 
     /// <summary>
@@ -23,8 +22,8 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Log type to filter (Error, Warning, Log, All)
         /// </summary>
-        [Description("Log type to filter (Error(2), Warning(1), Log(0), All(3))")]
-        public McpLogType LogType { get; set; } = McpLogType.All;
+        [Description("Log type to filter (Error, Warning, Log, All)")]
+        public string LogType { get; set; } = McpLogType.All;
 
         /// <summary>
         /// Maximum number of logs to retrieve

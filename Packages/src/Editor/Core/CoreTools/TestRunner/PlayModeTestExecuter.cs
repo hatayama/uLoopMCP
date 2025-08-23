@@ -21,7 +21,7 @@ namespace io.github.hatayama.uLoopMCP
             TestExecutionFilter filter = null, 
             bool saveXml = false)
         {
-            using DomainReloadDisableScope scope = new DomainReloadDisableScope();
+            using DomainReloadDisableScope scope = new();
             return await ExecuteTestWithEventNotification(TestMode.PlayMode, filter, saveXml);
         }
 
@@ -46,7 +46,7 @@ namespace io.github.hatayama.uLoopMCP
             TestExecutionFilter filter, 
             bool saveXml)
         {
-            TaskCompletionSource<SerializableTestResult> tcs = new TaskCompletionSource<SerializableTestResult>();
+            TaskCompletionSource<SerializableTestResult> tcs = new();
             
             using UnifiedTestCallback callback = new();
             callback.OnTestCompleted += (result, rawResult) =>
@@ -99,7 +99,7 @@ namespace io.github.hatayama.uLoopMCP
                         break;
                     case TestExecutionFilterType.Regex:
                         // Use groupNames with regex for pattern matching (classes, namespaces)
-                        unityFilter.groupNames = new string[] { "^" + System.Text.RegularExpressions.Regex.Escape(filter.FilterValue) + "(\\.|$)" };
+                        unityFilter.groupNames = new string[] { filter.FilterValue };
                         break;
                     case TestExecutionFilterType.AssemblyName:
                         unityFilter.assemblyNames = new string[] { filter.FilterValue };

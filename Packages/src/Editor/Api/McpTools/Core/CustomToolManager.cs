@@ -79,7 +79,6 @@ namespace io.github.hatayama.uLoopMCP
             return SharedRegistry;
         }
 
-
         /// <summary>
         /// Debug: Get detailed registry information
         /// </summary>
