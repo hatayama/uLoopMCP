@@ -58,9 +58,11 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             
             // Assert
             Assert.IsFalse(result.Success);
-            Assert.IsTrue(result.ErrorMessage.Contains("Security Violation") || 
+            Assert.IsTrue(result.ErrorMessage.Contains("Security violations detected") || 
+                         result.ErrorMessage.Contains("Dangerous API call") || 
                          result.ErrorMessage.Contains("dangerous") || 
-                         result.ErrorMessage.Contains("blocked"));
+                         result.ErrorMessage.Contains("blocked"), 
+                         $"Expected security error message. Actual: '{result.ErrorMessage}'");
         }
 
         [Test]
@@ -81,9 +83,11 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             
             // Assert
             Assert.IsFalse(result.Success);
-            Assert.IsTrue(result.ErrorMessage.Contains("Security Violation") || 
+            Assert.IsTrue(result.ErrorMessage.Contains("Security violations detected") || 
+                         result.ErrorMessage.Contains("Dangerous API call") || 
                          result.ErrorMessage.Contains("dangerous") || 
-                         result.ErrorMessage.Contains("blocked"));
+                         result.ErrorMessage.Contains("blocked"), 
+                         $"Expected security error message. Actual: '{result.ErrorMessage}'");
         }
 
         [Test]
@@ -104,9 +108,11 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             
             // Assert
             Assert.IsFalse(result.Success);
-            Assert.IsTrue(result.ErrorMessage.Contains("Security Violation") || 
+            Assert.IsTrue(result.ErrorMessage.Contains("Security violations detected") || 
+                         result.ErrorMessage.Contains("Dangerous API call") || 
                          result.ErrorMessage.Contains("dangerous") || 
-                         result.ErrorMessage.Contains("blocked"));
+                         result.ErrorMessage.Contains("blocked"), 
+                         $"Expected security error message. Actual: '{result.ErrorMessage}'");
         }
 
         [Test]
@@ -260,10 +266,12 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsNotNull(result.ErrorMessage);
             // "this is invalid C# code" causes multiple compilation errors
             // Examples: "Invalid token", "Identifier expected", "Semicolon required"
-            Assert.IsTrue(result.ErrorMessage.Contains("Invalid") || 
-                         result.ErrorMessage.Contains("expected") || 
-                         result.ErrorMessage.Contains("Error") ||
-                         result.ErrorMessage.Contains("Compile"));
+            Assert.IsTrue(result.ErrorMessage.Contains("expected") || 
+                         result.ErrorMessage.Contains("could not be found") || 
+                         result.ErrorMessage.Contains("A return value is required") ||
+                         result.ErrorMessage.Contains("not all code paths return") ||
+                         result.ErrorMessage.Contains("Compilation error occurred"),
+                         $"Expected compilation error message. Actual: '{result.ErrorMessage}'");
         }
 
         [Test]

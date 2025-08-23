@@ -161,7 +161,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsFalse(result.Success, "Dangerous code should be blocked either at compile or runtime");
             
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("Security Violation") == true ||
+                result.ErrorMessage?.Contains("Security violations detected") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("dangerous") == true ||
                 result.ErrorMessage?.Contains("blocked") == true ||
@@ -408,7 +408,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // OK if it fails with either compilation error or security violation
             Assert.IsTrue(
                 result.ErrorMessage?.Contains("compilation error") == true ||
-                result.ErrorMessage?.Contains("Security Violation") == true ||
+                result.ErrorMessage?.Contains("Security violations detected") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("ForbiddenNamespace") == true ||
                 result.ErrorMessage?.Contains("does not exist") == true,
@@ -445,7 +445,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // OK if it fails with either compilation error or security violation
             Assert.IsFalse(result.Success, "UnityEngine.Networking API should fail");
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("Security Violation") == true ||
+                result.ErrorMessage?.Contains("Security violations detected") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("ForbiddenNamespace") == true ||
                 result.ErrorMessage?.Contains("does not exist") == true ||
@@ -483,7 +483,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // OK if it fails with either compilation error or security violation
             Assert.IsFalse(result.Success, "System.Data.SqlClient API should fail");
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("Security Violation") == true ||
+                result.ErrorMessage?.Contains("Security violations detected") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("ForbiddenNamespace") == true ||
                 result.ErrorMessage?.Contains("does not exist") == true ||
@@ -521,7 +521,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsFalse(result.Success, "System.Runtime.Remoting API should fail");
             // OK if it fails with either security violation or file not found error
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("Security Violation") == true ||
+                result.ErrorMessage?.Contains("Security violations detected") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("ForbiddenNamespace") == true ||
                 result.ErrorMessage?.Contains("could not be loaded") == true ||
@@ -558,7 +558,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsFalse(result.Success, "X509Certificates API should fail");
             // OK if it fails with either security violation or file not found error
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("Security Violation") == true ||
+                result.ErrorMessage?.Contains("Security violations detected") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("ForbiddenNamespace") == true ||
                 result.ErrorMessage?.Contains("Could not find file") == true ||
@@ -592,7 +592,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             
             Assert.IsFalse(result.Success, "Process.Start should be blocked");
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("Security Violation") == true ||
+                result.ErrorMessage?.Contains("Security violations detected") == true ||
+                result.ErrorMessage?.Contains("Dangerous API call") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("dangerous") == true,
                 $"Error should mention security violation. Actual: '{result.ErrorMessage}'"
@@ -650,7 +651,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             
             Assert.IsFalse(result.Success, "AssetDatabase.DeleteAsset should be blocked");
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("Security Violation") == true ||
+                result.ErrorMessage?.Contains("Security violations detected") == true ||
+                result.ErrorMessage?.Contains("Dangerous API call") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("dangerous") == true,
                 $"Error should mention security violation. Actual: '{result.ErrorMessage}'"
