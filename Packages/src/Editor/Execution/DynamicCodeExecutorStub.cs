@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Roslyn無効時のDynamicCodeExecutorスタブ実装
-    /// 常にRoslyn必要エラーを返す最小実装
-    /// 関連クラス: IDynamicCodeExecutor, DynamicCodeExecutor, DynamicCodeExecutorFactory
+    /// Stub implementation for DynamicCodeExecutor when Roslyn is disabled
+    /// Minimal implementation that always returns a 'Roslyn Required' error
+    /// Related classes: IDynamicCodeExecutor, DynamicCodeExecutor, DynamicCodeExecutorFactory
     /// </summary>
     public class DynamicCodeExecutorStub : IDynamicCodeExecutor
     {
@@ -19,7 +19,7 @@ namespace io.github.hatayama.uLoopMCP
             _statistics = new ExecutionStatistics();
         }
 
-        /// <summary>コード実行（常にRoslyn必要エラーを返す）</summary>
+        /// <summary>Execute code (always returns a Roslyn required error)</summary>
         public ExecutionResult ExecuteCode(
             string code,
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
@@ -30,7 +30,7 @@ namespace io.github.hatayama.uLoopMCP
             return CreateRoslynRequiredResult();
         }
 
-        /// <summary>非同期コード実行（常にRoslyn必要エラーを返す）</summary>
+        /// <summary>Execute code asynchronously (always returns a Roslyn required error)</summary>
         public async Task<ExecutionResult> ExecuteCodeAsync(
             string code,
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
@@ -41,7 +41,7 @@ namespace io.github.hatayama.uLoopMCP
             return await Task.FromResult(CreateRoslynRequiredResult());
         }
 
-        /// <summary>実行統計取得</summary>
+        /// <summary>Retrieve execution statistics</summary>
         public ExecutionStatistics GetStatistics()
         {
             return new ExecutionStatistics

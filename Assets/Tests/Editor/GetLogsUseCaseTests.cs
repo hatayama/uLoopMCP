@@ -38,10 +38,10 @@ namespace io.github.hatayama.uLoopMCP
             _cancellationTokenSource?.Dispose();
         }
 
-        #region 正常系テスト - Normal Cases
+        #region Normal Cases
 
         /// <summary>
-        /// デフォルトパラメータでの実行が成功することを検証
+        /// Verifies successful execution with default parameters
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithDefaultParameters_ReturnsValidResponse()
@@ -68,7 +68,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Errorタイプのフィルタリングが正しく動作することを検証
+        /// Verifies correct filtering of Error log type
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithErrorLogType_FiltersOnlyErrors()
@@ -117,7 +117,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Warningタイプのフィルタリングが正しく動作することを検証
+        /// Verifies correct filtering of Warning log type
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithWarningLogType_FiltersOnlyWarnings()
@@ -160,7 +160,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Logタイプのフィルタリングが正しく動作することを検証
+        /// Verifies correct filtering of Log type
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithLogType_FiltersOnlyLogs()
@@ -204,7 +204,7 @@ namespace io.github.hatayama.uLoopMCP
 
 
         /// <summary>
-        /// SearchTextでの検索が正しく動作することを検証
+        /// Verifies correct search operation with SearchText
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithSearchText_FiltersCorrectly()
@@ -243,7 +243,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 正規表現検索が正しく動作することを検証
+        /// Verifies correct regex search operation
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithRegexSearch_FiltersCorrectly()
@@ -283,7 +283,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// StackTrace表示の有効/無効が正しく動作することを検証
+        /// Verifies correct behavior of enabling/disabling StackTrace display
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithIncludeStackTrace_ControlsStackTraceDisplay()
@@ -343,10 +343,10 @@ namespace io.github.hatayama.uLoopMCP
 
         #endregion
 
-        #region 境界値テスト - Boundary Value Tests
+        #region Boundary Value Tests
 
         /// <summary>
-        /// MaxCount = 0での動作を検証
+        /// Verifies behavior with MaxCount = 0
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithZeroMaxCount_ReturnsEmptyResult()
@@ -375,7 +375,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// MaxCount = 1での動作を検証
+        /// Verifies behavior with MaxCount = 1
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithMaxCountOne_ReturnsOneLog()
@@ -403,7 +403,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 非常に大きなMaxCountでの動作を検証
+        /// Verifies behavior with very large MaxCount
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithLargeMaxCount_HandlesCorrectly()
@@ -435,7 +435,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 負のMaxCountでの動作を検証（エラー処理の確認）
+        /// Verifies behavior with negative MaxCount (error handling check)
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithNegativeMaxCount_HandlesGracefully()
@@ -460,10 +460,10 @@ namespace io.github.hatayama.uLoopMCP
 
         #endregion
 
-        #region 異常系テスト - Error Cases
+        #region Error Cases
 
         /// <summary>
-        /// nullパラメータでの実行時の動作を検証
+        /// Verifies behavior when executing with null parameters
         /// </summary>
         [Test]
         public void ExecuteAsync_WithNullParameters_ThrowsException()
@@ -480,7 +480,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 無効なLogTypeでの動作を検証
+        /// Verifies behavior with invalid LogType
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithInvalidLogType_HandlesGracefully()
@@ -504,7 +504,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// キャンセレーショントークンでの中断を検証
+        /// Verifies interruption with cancellation token
         /// </summary>
         [Test]
         public void ExecuteAsync_WithCancellation_ThrowsTaskCanceledException()
@@ -529,7 +529,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 無効な正規表現パターンでの動作を検証
+        /// Verifies behavior with invalid regex pattern
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithInvalidRegexPattern_HandlesGracefully()
@@ -579,10 +579,10 @@ namespace io.github.hatayama.uLoopMCP
 
         #endregion
 
-        #region 統合テスト - Integration Tests
+        #region Integration Tests
 
         /// <summary>
-        /// 複数の条件を組み合わせた複雑な検索を検証
+        /// Verifies complex search combining multiple conditions
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithComplexSearch_FiltersCorrectly()
@@ -629,7 +629,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 大量のログがある状況でのパフォーマンスを検証
+        /// Verifies performance with a large number of logs
         /// </summary>
         [Test]
         public async Task ExecuteAsync_WithManyLogs_PerformsEfficiently()
@@ -678,10 +678,10 @@ namespace io.github.hatayama.uLoopMCP
 
         #endregion
 
-        #region サービス層の異常系テスト - Service Layer Error Tests
+        #region Service Layer Error Tests
 
         /// <summary>
-        /// LogRetrievalServiceがnullの場合のコンストラクタ動作を検証
+        /// Verifies constructor behavior when LogRetrievalService is null
         /// </summary>
         [Test]
         public void Constructor_WithNullRetrievalService_ThrowsArgumentNullException()
@@ -695,7 +695,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// LogFilteringServiceがnullの場合のコンストラクタ動作を検証
+        /// Verifies constructor behavior when LogFilteringService is null
         /// </summary>
         [Test]
         public void Constructor_WithNullFilteringService_ThrowsArgumentNullException()

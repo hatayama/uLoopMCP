@@ -5,13 +5,13 @@ using io.github.hatayama.uLoopMCP;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// PlayModeTestExecuterのテスト
+    /// Tests for PlayModeTestExecuter
     /// </summary>
     [TestFixture]
     public class PlayModeTestExecuterTests
     {
         /// <summary>
-        /// フィルターがnullの場合、全テスト対象のFilterが生成されることをテスト
+        /// Test that when filter is null, a filter for all tests is generated
         /// </summary>
         [Test]
         public void CreateUnityFilter_WithNullFilter_ShouldCreateAllTestsFilter()
@@ -32,13 +32,13 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(unityFilter, Is.Not.Null);
             Assert.That(unityFilter.testMode, Is.EqualTo(TestMode.PlayMode));
             
-            // 他のフィルターは設定されていない
+            // No other filters are set
             Assert.That(unityFilter.testNames, Is.Null);
             Assert.That(unityFilter.groupNames, Is.Null);
         }
         
         /// <summary>
-        /// 正規表現フィルターが正しく動作することをテスト
+        /// Test that regex filter works correctly
         /// </summary>
         [Test]
         public void CreateUnityFilter_WithRegexFilter_ShouldCreateCorrectFilter()

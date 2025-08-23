@@ -468,17 +468,17 @@ namespace io.github.hatayama.uLoopMCP
                         
                         if (!roslynAvailable)
                         {
-                            // Roslynがインストールされていない場合
+                            // If Roslyn is not installed
                             EditorUtility.DisplayDialog(
                                 "Roslyn Not Installed",
                                 RoslynAssemblyChecker.GetInstallationMessage(),
                                 "OK"
                             );
-                            return; // セキュリティレベルの変更はキャンセル
+                            return; // Cancel security level change
                         }
                         else
                         {
-                            // Roslynがインストール済みの場合
+                            // If Roslyn is already installed
                             string version = RoslynAssemblyChecker.GetRoslynVersion();
                             bool confirmed = EditorUtility.DisplayDialog(
                                 "Enable Roslyn Features",

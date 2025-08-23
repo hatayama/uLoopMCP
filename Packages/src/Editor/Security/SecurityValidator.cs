@@ -8,9 +8,9 @@ using System.Linq;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// セキュリティ検証の中核クラス
-    /// Compilationオブジェクトを受け取り、SemanticModelを活用
-    /// 関連クラス: SecuritySyntaxWalker, DangerousApiDetector, RoslynCompiler
+    /// Core class for security validation
+    /// Receives a Compilation object and utilizes the SemanticModel
+    /// Related classes: SecuritySyntaxWalker, DangerousApiDetector, RoslynCompiler
     /// </summary>
     public class SecurityValidator
     {
@@ -22,7 +22,7 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// Compilationオブジェクトを受け取って検証（新規メソッド）
+        /// Validates a Compilation object (new method)
         /// </summary>
         public SecurityValidationResult ValidateCompilation(CSharpCompilation compilation)
         {
@@ -33,13 +33,13 @@ namespace io.github.hatayama.uLoopMCP
                 CompilationErrors = new List<string>()
             };
             
-            // Level 2 (FullAccess)は検証スキップ
+            // Skip validation for Level 2 (FullAccess)
             if (_securityLevel == DynamicCodeSecurityLevel.FullAccess)
             {
                 return result;
             }
             
-            // Level 0 (Disabled)は即座に拒否
+            // Immediately reject for Level 0 (Disabled)
             if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
             {
                 result.IsValid = false;
@@ -53,26 +53,26 @@ namespace io.github.hatayama.uLoopMCP
                 return result;
             }
             
-            // Level 1 (Restricted): 詳細検査を実行
+            // Level 1 (Restricted): Perform detailed inspection
             string correlationId = McpConstants.GenerateCorrelationId();
             
-            // 全てのSyntaxTreeを検査
+            // Inspect all SyntaxTrees
             foreach (SyntaxTree tree in compilation.SyntaxTrees)
             {
                 SemanticModel semanticModel = compilation.GetSemanticModel(tree);
                 SecuritySyntaxWalker walker = new(semanticModel);
                 
-                // ルートノードから走査開始
+                // Start scanning from root node
                 SyntaxNode root = tree.GetRoot();
                 walker.Visit(root);
                 
-                // 違反を収集
+                // Collect violations
                 if (walker.Violations.Any())
                 {
                     result.IsValid = false;
                     result.Violations.AddRange(walker.Violations);
                     
-                    // ログ出力
+                    // Log output
                     foreach (SecurityViolation violation in walker.Violations)
                     {
                         VibeLogger.LogWarning(
@@ -92,7 +92,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
-            // 診断情報も確認
+            // Also check diagnostic information
             ImmutableArray<Diagnostic> diagnostics = compilation.GetDiagnostics();
             foreach (Diagnostic diagnostic in diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error))
             {

@@ -1,22 +1,22 @@
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// コンパイルエラー
+    /// Represents a compilation error during code compilation
     /// 
-    /// 関連クラス: RoslynCompiler, CompilationResult
+    /// Related Classes: RoslynCompiler, CompilationResult
     /// </summary>
     public class CompilationError
     {
-        /// <summary>行番号</summary>
+        /// <summary>Line number where the compilation error occurred</summary>
         public int Line { get; set; }
 
-        /// <summary>カラム番号</summary>
+        /// <summary>Column number where the compilation error occurred</summary>
         public int Column { get; set; }
 
-        /// <summary>エラーメッセージ</summary>
+        /// <summary>Detailed error message describing the compilation error</summary>
         public string Message { get; set; }
 
-        /// <summary>エラーコード</summary>
+        /// <summary>Unique error code identifying the specific compilation error</summary>
         public string ErrorCode { get; set; }
     }
 }

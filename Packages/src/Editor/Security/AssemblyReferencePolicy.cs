@@ -5,31 +5,31 @@ using System.Reflection;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// セキュリティレベルに基づくアセンブリ参照ポリシー
-    /// 関連クラス: DynamicCodeSecurityLevel, DangerousApiDetector, RoslynCompiler
+    /// Assembly Reference Policy Based on Security Level
+    /// Related Classes: DynamicCodeSecurityLevel, DangerousApiDetector, RoslynCompiler
     /// 
-    /// 設計方針:
-    /// - Disabled: アセンブリ参照なし（コンパイル不可）
-    /// - Restricted/FullAccess: 全アセンブリ参照可能（コンパイル可能）
-    /// - セキュリティチェックは実行時にDangerousApiDetectorで行う
+    /// Design Principles:
+    /// - Disabled: No Assembly References (Compilation Not Allowed)
+    /// - Restricted/FullAccess: All Assembly References Allowed (Compilation Possible)
+    /// - Security Checks Performed at Runtime by DangerousApiDetector
     /// </summary>
     public static class AssemblyReferencePolicy
     {
         /// <summary>
-        /// セキュリティレベルに応じたアセンブリ名リストを取得
+        /// Retrieve Assembly Name List Based on Security Level
         /// </summary>
         public static IReadOnlyList<string> GetAssemblies(DynamicCodeSecurityLevel level)
         {
             switch (level)
             {
                 case DynamicCodeSecurityLevel.Disabled:
-                    // Level 0: 何も追加しない（コンパイル不可）
+                    // Level 0: Add Nothing (Compilation Not Allowed)
                     return new List<string>();
 
                 case DynamicCodeSecurityLevel.Restricted:
                 case DynamicCodeSecurityLevel.FullAccess:
-                    // Level 1 & 2: 全アセンブリ参照可能
-                    // セキュリティチェックは実行時に行う
+                    // Level 1 & 2: All Assemblies Referenceable
+                    // Security Checks Performed at Runtime
                     return GetAllAvailableAssemblies();
 
                 default:
@@ -46,7 +46,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 利用可能な全アセンブリを取得
+        /// Retrieve All Available Assemblies
         /// </summary>
         private static List<string> GetAllAvailableAssemblies()
         {
@@ -54,7 +54,7 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
-                // 動的アセンブリや場所が空のものは除外
+                // Exclude dynamic assemblies or those with empty locations
                 if (assembly.IsDynamic || string.IsNullOrWhiteSpace(assembly.Location))
                     continue;
 
@@ -75,8 +75,8 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 指定されたアセンブリがセキュリティレベルで許可されているかチェック
-        /// （後方互換性のために維持）
+        /// Check if the Specified Assembly is Allowed by Security Level
+        /// (Maintained for Backward Compatibility)
         /// </summary>
         public static bool IsAssemblyAllowed(string assemblyName, DynamicCodeSecurityLevel level)
         {
@@ -86,12 +86,12 @@ namespace io.github.hatayama.uLoopMCP
             switch (level)
             {
                 case DynamicCodeSecurityLevel.Disabled:
-                    // Level 0: 何も許可しない
+                    // Level 0: Allow Nothing
                     return false;
 
                 case DynamicCodeSecurityLevel.Restricted:
                 case DynamicCodeSecurityLevel.FullAccess:
-                    // Level 1 & 2: 全て許可
+                    // Level 1 & 2: Allow Everything
                     return true;
 
                 default:

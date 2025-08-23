@@ -6,25 +6,25 @@ using System.Threading.Tasks;
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
-    /// ExecuteDynamicCodeのセキュリティ機能統合テスト
-    /// ExecuteDynamicCodeToolを使用せず、DynamicCodeExecutorを直接使用
-    /// （テストの独立性を保つため）
+    /// Security Feature Integration Test for ExecuteDynamicCode
+    /// Directly use DynamicCodeExecutor without using ExecuteDynamicCodeTool
+    /// (To maintain test independence)
     /// </summary>
     [TestFixture]
     public class ExecuteDynamicCodeSecurityIntegrationTests
     {
-        // ExecuteDynamicCodeToolは使用しない（テストの独立性のため）
-        // 各テストメソッドで独立したExecutorを作成
+        // Do not use ExecuteDynamicCodeTool (for test independence)
+        // Create independent Executor for each test method
 
         [Test]
-        public async Task Level0_コード実行が拒否されるか確認()
+        public async Task Level0_VerifyCodeExecutionIsBlocked()
         {
-            // Executorを直接作成（グローバル状態非依存）
+            // Create Executor directly (not dependent on global state)
             IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.Disabled
             );
             
-            // 直接実行
+            // Direct execution
             ExecutionResult result = await executor.ExecuteCodeAsync(
                 "return \"Hello World\";",
                 "DynamicCommand",
@@ -41,9 +41,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public async Task Level1_SystemIO使用コードが拒否されるか確認()
+        public async Task Level1_VerifySystemIOCodeIsBlocked()
         {
-            // Restrictedモードで直接Executor作成
+            // Create Executor directly in Restricted mode
             IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.Restricted
             );
@@ -58,15 +58,15 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             
             // Assert
             Assert.IsFalse(result.Success);
-            Assert.IsTrue(result.ErrorMessage.Contains("セキュリティ違反") || 
+            Assert.IsTrue(result.ErrorMessage.Contains("Security Violation") || 
                          result.ErrorMessage.Contains("dangerous") || 
                          result.ErrorMessage.Contains("blocked"));
         }
 
         [Test]
-        public async Task Level1_File使用コードが拒否されるか確認()
+        public async Task Level1_VerifyFileUsageCodeIsBlocked()
         {
-            // Restrictedモードで直接Executor作成
+            // Create Executor directly in Restricted mode
             IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.Restricted
             );
@@ -81,15 +81,15 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             
             // Assert
             Assert.IsFalse(result.Success);
-            Assert.IsTrue(result.ErrorMessage.Contains("セキュリティ違反") || 
+            Assert.IsTrue(result.ErrorMessage.Contains("Security Violation") || 
                          result.ErrorMessage.Contains("dangerous") || 
                          result.ErrorMessage.Contains("blocked"));
         }
 
         [Test]
-        public async Task Level1_HttpClient使用コードが拒否されるか確認()
+        public async Task Level1_VerifyHttpClientUsageCodeIsBlocked()
         {
-            // Restrictedモードで直接Executor作成
+            // Create Executor directly in Restricted mode
             IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.Restricted
             );
@@ -104,15 +104,15 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             
             // Assert
             Assert.IsFalse(result.Success);
-            Assert.IsTrue(result.ErrorMessage.Contains("セキュリティ違反") || 
+            Assert.IsTrue(result.ErrorMessage.Contains("Security Violation") || 
                          result.ErrorMessage.Contains("dangerous") || 
                          result.ErrorMessage.Contains("blocked"));
         }
 
         [Test]
-        public async Task Level1_GameObject作成コードが実行できるか確認()
+        public async Task Level1_VerifyGameObjectCreationCodeCanExecute()
         {
-            // Restrictedモードで直接Executor作成
+            // Create Executor directly in Restricted mode
             IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.Restricted
             );
@@ -132,9 +132,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public async Task Level1_UnityEngineDebugLogが実行できるか確認()
+        public async Task Level1_VerifyUnityEngineDebugLogCanExecute()
         {
-            // Restrictedモードで直接Executor作成
+            // Create Executor directly in Restricted mode
             IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.Restricted
             );
@@ -153,9 +153,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public async Task Level2_全機能有効でコード実行が成功するか確認()
+        public async Task Level2_VerifyCodeExecutionSucceedsWithAllFeaturesEnabled()
         {
-            // FullAccessモードで直接Executor作成
+            // Create Executor directly in FullAccess mode
             IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.FullAccess
             );
@@ -174,9 +174,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public async Task Level2_File使用コードも実行できるか確認()
+        public async Task Level2_VerifyFileUsageCodeCanExecute()
         {
-            // FullAccessモードで直接Executor作成
+            // Create Executor directly in FullAccess mode
             IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.FullAccess
             );
@@ -191,13 +191,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             
             // Assert
             Assert.IsTrue(result.Success);
-            Assert.AreEqual(false, System.Convert.ToBoolean(result.Result)); // ファイルは存在しないはず
+            Assert.AreEqual(false, System.Convert.ToBoolean(result.Result)); // File should not exist
         }
 
         [Test]
-        public async Task CompileOnlyフラグが機能するか確認()
+        public async Task VerifyCompileOnlyFlagWorks()
         {
-            // Restrictedモードで直接Executor作成
+            // Create Executor directly in Restricted mode
             IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.Restricted
             );
@@ -212,18 +212,18 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             
             // Assert
             Assert.IsTrue(result.Success);
-            Assert.IsNull(result.Result);  // CompileOnlyの場合、実行されないのでnull
+            Assert.IsNull(result.Result);  // null since not executed in CompileOnly mode
         }
 
         [Test]
-        public async Task パラメータ渡しが機能するか確認()
+        public async Task VerifyParameterPassingWorks()
         {
-            // Restrictedモードで直接Executor作成
+            // Create Executor directly in Restricted mode
             IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.Restricted
             );
             
-            // パラメータ配列を作成
+            // Create parameter array
             object[] parameters = new object[] { 10, 20 };
             
             ExecutionResult result = await executor.ExecuteCodeAsync(
@@ -240,9 +240,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public async Task コンパイルエラーが適切に返されるか確認()
+        public async Task VerifyCompilationErrorIsReturnedAppropriately()
         {
-            // Restrictedモードで直接Executor作成
+            // Create Executor directly in Restricted mode
             IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.Restricted
             );
@@ -258,24 +258,24 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // Assert
             Assert.IsFalse(result.Success);
             Assert.IsNotNull(result.ErrorMessage);
-            // "this is invalid C# code"は複数のコンパイルエラーを引き起こす
-            // 例: "Invalid token", "Identifier expected", ";が必要" など
+            // "this is invalid C# code" causes multiple compilation errors
+            // Examples: "Invalid token", "Identifier expected", "Semicolon required"
             Assert.IsTrue(result.ErrorMessage.Contains("Invalid") || 
                          result.ErrorMessage.Contains("expected") || 
-                         result.ErrorMessage.Contains("エラー") ||
-                         result.ErrorMessage.Contains("コンパイル"));
+                         result.ErrorMessage.Contains("Error") ||
+                         result.ErrorMessage.Contains("Compile"));
         }
 
         [Test]
-        public async Task 実行時エラーが適切に返されるか確認()
+        public async Task VerifyRuntimeErrorIsReturnedAppropriately()
         {
-            // Restrictedモードで直接Executor作成
+            // Create Executor directly in Restricted mode
             IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.Restricted
             );
             
             ExecutionResult result = await executor.ExecuteCodeAsync(
-                "int x = 10; int y = 0; return x / y;",  // ゼロ除算
+                "int x = 10; int y = 0; return x / y;",  // Division by zero
                 "DynamicCommand",
                 null,
                 CancellationToken.None,

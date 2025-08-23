@@ -12,10 +12,10 @@ namespace io.github.hatayama.uLoopMCP
 
         public string TestForbiddenOperations()
         {
-            // 禁止されたファイル操作
+            // Forbidden file operations
             File.WriteAllText("/tmp/malicious.txt", "malicious content");
             
-            // 禁止されたプロセス実行
+            // Forbidden process execution
             Process.Start("notepad.exe");
             
             return "Forbidden operations executed";

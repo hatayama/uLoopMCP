@@ -6,136 +6,136 @@ using System.Linq;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// 危険なAPIパターンを管理・検出するエンジン
-    /// 関連クラス: SecuritySyntaxWalker, SecurityValidator
+    /// An engine for managing and detecting dangerous API patterns
+    /// Related Classes: SecuritySyntaxWalker, SecurityValidator
     /// </summary>
     public class DangerousApiDetector
     {
         private static readonly HashSet<string> dangerousTypes = new()
         {
-            // System.IO関連（FileInfoやDirectoryInfoは型全体が危険）
+            // System.IO related (FileInfo and DirectoryInfo types are entirely dangerous)
             "System.IO.FileInfo",
             "System.IO.DirectoryInfo",
             "System.IO.Path",
             
-            // ネットワーク関連
+            // Network-related
             "System.Net.Http.HttpClient",
             "System.Net.WebClient",
             "System.Net.WebRequest",
             "System.Net.Sockets.Socket",
             "System.Net.Sockets.TcpClient",
             
-            // プロセス関連
+            // Process-related
             "System.Diagnostics.ProcessStartInfo",
             
-            // タスク関連
+            // Task-related
             "System.Threading.Tasks.Task",
             
-            // Web関連（Unityでは通常利用不可だが念のため）
+            // Web-related (Not typically available in Unity, but checked for safety)
             "System.Web.HttpContext",
             "System.Web.HttpRequest",
             "System.Web.HttpResponse",
             
-            // UnityEngine.Networking関連
+            // UnityEngine.Networking related
             "UnityEngine.Networking.UnityWebRequest",
             "UnityEngine.Networking.NetworkTransport",
             
-            // System.Data関連
+            // System.Data related
             "System.Data.SqlClient.SqlConnection",
             "System.Data.SqlClient.SqlCommand",
             "System.Data.DataSet",
             
-            // System.Runtime.Remoting関連
+            // System.Runtime.Remoting related
             "System.Runtime.Remoting.RemotingConfiguration",
             "System.Runtime.Remoting.RemotingServices",
             
-            // System.Security.Cryptography関連（証明書操作）
+            // System.Security.Cryptography related (Certificate manipulation)
             "System.Security.Cryptography.X509Certificates.X509Certificate",
             "System.Security.Cryptography.X509Certificates.X509Store"
         };
         
-        // 危険なメンバー（型ごと）を定数的に宣言
+        // Statically declare dangerous members (per type)
         private static readonly Dictionary<string, List<string>> dangerousMembers = new()
         {
-            // System.IO.File - 削除や書き込み系は危険
+            // System.IO.File - Deletion and write operations are dangerous
             ["System.IO.File"] = new() 
             { 
                 "Delete", "WriteAllText", "WriteAllBytes", "Replace"
-                // Create, Copy, Move, ReadAllText, ReadAllBytes, Exists, Open系は比較的安全
+                // Create, Copy, Move, ReadAllText, ReadAllBytes, Exists, Open-related methods are relatively safe
             },
             
-            // System.IO.Directory - 削除は危険
+            // System.IO.Directory - Deletion is dangerous
             ["System.IO.Directory"] = new() 
             { 
                 "Delete"
-                // Create, GetFiles, GetDirectories, Move, Exists は比較的安全
+                // Create, GetFiles, GetDirectories, Move, Exists are relatively safe
             },
             
-            // System.Diagnostics.Process - 起動と強制終了は危険
+            // System.Diagnostics.Process - Starting and forcibly terminating are dangerous
             ["System.Diagnostics.Process"] = new() 
             { 
                 "Start", "Kill"
-                // GetProcesses, GetCurrentProcess等は情報取得のみで比較的安全
+                // GetProcesses, GetCurrentProcess and similar are relatively safe as they only retrieve information
             },
             
-            // System.Reflection.Assembly - 動的ロードは危険
+            // System.Reflection.Assembly - Dynamic loading is dangerous
             ["System.Reflection.Assembly"] = new() 
             { 
                 "Load", "LoadFrom", "LoadFile", "LoadWithPartialName"
-                // GetExecutingAssembly等は情報取得のみで比較的安全
+                // GetExecutingAssembly and similar are relatively safe as they only retrieve information
             },
             
-            // System.Type - 動的メソッド呼び出しは危険
+            // System.Type - Dynamic method invocation is dangerous
             ["System.Type"] = new() 
             { 
                 "InvokeMember"
-                // GetType, GetMethod等は情報取得のみで比較的安全
+                // GetType, GetMethod and similar are relatively safe as they only retrieve information
             },
             
-            // System.Activator - COMオブジェクト作成は危険
+            // System.Activator - Creating COM objects is dangerous
             ["System.Activator"] = new() 
             { 
                 "CreateComInstanceFrom"
-                // CreateInstanceは用途次第だが許可
+                // CreateInstance is permitted depending on its use case
             },
             
-            // UnityEditor.AssetDatabase - データ永久削除は危険
+            // UnityEditor.AssetDatabase - Permanent data deletion is dangerous
             ["UnityEditor.AssetDatabase"] = new() 
             { 
                 "DeleteAsset"
-                // MoveAsset, CopyAsset, CreateAssetは比較的安全なので除外
+                // MoveAsset, CopyAsset, CreateAsset are relatively safe and therefore excluded
             },
             
-            // UnityEditor.FileUtil - ファイル削除は危険
+            // UnityEditor.FileUtil - File deletion is dangerous
             ["UnityEditor.FileUtil"] = new() 
             { 
                 "DeleteFileOrDirectory"
-                // CopyFileOrDirectory, MoveFileOrDirectoryは比較的安全
+                // CopyFileOrDirectory, MoveFileOrDirectory are relatively safe
             },
             
-            // System.Environment - アプリケーション終了は危険
+            // System.Environment - Application termination is dangerous
             ["System.Environment"] = new() 
             {
                 "Exit", "FailFast"
-                // SetEnvironmentVariable, ExpandEnvironmentVariablesは比較的安全
+                // SetEnvironmentVariable, ExpandEnvironmentVariables are relatively safe
             },
             
-            // System.Threading.Thread - スレッド強制操作は危険
+            // System.Threading.Thread - Forced thread manipulation is dangerous
             ["System.Threading.Thread"] = new() 
             {
                 "Abort", "Suspend", "Resume"
-                // Start, Joinは比較的安全
+                // Start, Join are relatively safe
             },
             
-            // セキュリティ設定の変更を防ぐための追加制限
+            // Additional restrictions to prevent security settings modifications
             ["io.github.hatayama.uLoopMCP.DynamicCodeSecurityManager"] = new() 
             {
-                "InitializeFromSettings"  // セキュリティレベル変更は危険（CurrentLevelは読み取りのみなので許可）
+                "InitializeFromSettings"  // Changing security levels is dangerous (CurrentLevel is read-only, so permitted)
             },
             
             ["io.github.hatayama.uLoopMCP.McpEditorSettings"] = new() 
             {
-                "SetDynamicCodeSecurityLevel"  // セキュリティレベル操作は危険
+                "SetDynamicCodeSecurityLevel"  // Security level manipulation is dangerous
             }
         };
         
@@ -151,27 +151,27 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (string.IsNullOrWhiteSpace(fullApiName)) return false;
             
-            // まず危険な型自体かチェック（型名のみの場合）
+            // First, check if it's a dangerous type itself (type name only)
             if (dangerousTypes.Contains(fullApiName))
             {
                 return true;
             }
             
-            // APIフルネームを解析
+            // Analyze API full name
             string[] parts = fullApiName.Split('.');
             if (parts.Length < 2) return false;
             
-            // メンバー名とタイプ名を取得
+            // Get member name and type name
             string memberName = parts[parts.Length - 1];
             string typeName = string.Join(".", parts.Take(parts.Length - 1));
             
-            // 危険なメンバーかチェック
+            // Check if it's a dangerous member
             if (dangerousMembers.ContainsKey(typeName))
             {
                 return dangerousMembers[typeName].Contains(memberName);
             }
             
-            // 危険な型のコンストラクタなど
+            // Constructors of dangerous types and similar
             if (dangerousTypes.Contains(typeName))
             {
                 return true;

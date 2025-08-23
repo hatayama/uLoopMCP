@@ -8,7 +8,7 @@ using NUnit.Framework;
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
-    /// Restrictedモードユーザークラス実行機能のテスト
+    /// Test for executing user classes in Restricted mode
     /// </summary>
     [TestFixture]
     public class RestrictedModeUserClassTests
@@ -19,77 +19,77 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [SetUp]
         public void SetUp()
         {
-            // v4.0ステートレス設計 - グローバル設定への変更を削除
-            // 各テストがExecutorに直接レベル指定
+            // v4.0 stateless design - remove changes to global settings
+            // Each test directly specifies the level for the Executor
         }
         
         [TearDown]
         public void TearDown()
         {
-            // 明示的なクリーンアップ
+            // Explicit cleanup
             executor = null;
         }
         
         /// <summary>
-        /// 危険なAPI検出テスト
+        /// Test for detecting dangerous APIs
         /// </summary>
         [Test]
         public void TestDangerousApiDetection()
         {
             DangerousApiDetector detector = new();
             
-            // ファイルシステムAPI
+            // File system APIs
             Assert.IsTrue(detector.IsDangerousApi("System.IO.File.Delete"));
             Assert.IsTrue(detector.IsDangerousApi("System.IO.Directory.Delete"));
             
-            // ネットワークAPI
+            // Network APIs
             Assert.IsTrue(detector.IsDangerousApi("System.Net.Http.HttpClient"));
             Assert.IsTrue(detector.IsDangerousApi("System.Net.WebClient"));
             
-            // リフレクションAPI
+            // Reflection APIs
             Assert.IsTrue(detector.IsDangerousApi("System.Reflection.Assembly.Load"));
             Assert.IsTrue(detector.IsDangerousApi("System.Type.InvokeMember"));
             
-            // 新規追加された危険なAPI (2025-08-19)
-            // System.Web関連
+            // Newly added dangerous APIs (2025-08-19)
+            // System.Web related
             Assert.IsTrue(detector.IsDangerousApi("System.Web.HttpContext"));
             Assert.IsTrue(detector.IsDangerousApi("System.Web.HttpRequest"));
             Assert.IsTrue(detector.IsDangerousApi("System.Web.HttpResponse"));
             
-            // UnityEngine.Networking関連
+            // UnityEngine.Networking related
             Assert.IsTrue(detector.IsDangerousApi("UnityEngine.Networking.UnityWebRequest"));
             Assert.IsTrue(detector.IsDangerousApi("UnityEngine.Networking.NetworkTransport"));
             
-            // System.Data関連
+            // System.Data related
             Assert.IsTrue(detector.IsDangerousApi("System.Data.SqlClient.SqlConnection"));
             Assert.IsTrue(detector.IsDangerousApi("System.Data.SqlClient.SqlCommand"));
             Assert.IsTrue(detector.IsDangerousApi("System.Data.DataSet"));
             
-            // System.Runtime.Remoting関連
+            // System.Runtime.Remoting related
             Assert.IsTrue(detector.IsDangerousApi("System.Runtime.Remoting.RemotingConfiguration"));
             Assert.IsTrue(detector.IsDangerousApi("System.Runtime.Remoting.RemotingServices"));
             
-            // System.Security.Cryptography関連（証明書操作）
+            // System.Security.Cryptography related (certificate manipulation)
             Assert.IsTrue(detector.IsDangerousApi("System.Security.Cryptography.X509Certificates.X509Certificate"));
             Assert.IsTrue(detector.IsDangerousApi("System.Security.Cryptography.X509Certificates.X509Store"));
             
-            // 安全なAPI
+            // Safe APIs
             Assert.IsFalse(detector.IsDangerousApi("UnityEngine.Debug.Log"));
             Assert.IsFalse(detector.IsDangerousApi("System.String.Concat"));
             Assert.IsFalse(detector.IsDangerousApi("System.Math.Sqrt"));
         }
         
         /// <summary>
-        /// Restrictedモードで安全なコードが実行可能なことを確認
+        /// Verify that safe code can be executed in Restricted mode
         /// </summary>
         [Test]
         public async Task TestSafeCodeExecutionInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string safeCode = @"
-                // 安全なコードのテスト
+                // Test for safe code
                 UnityEngine.Debug.Log(""Safe logging"");
                 string message = ""Hello World"";
                 int result = 10 + 20;
@@ -104,7 +104,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 compileOnly: false
             );
             
-            // デバッグ用：実際の結果を出力
+            // For debugging: output actual results
             UnityEngine.Debug.Log($"[DEBUG] Success: {result.Success}");
             UnityEngine.Debug.Log($"[DEBUG] Result: '{result.Result}'");
             UnityEngine.Debug.Log($"[DEBUG] ErrorMessage: '{result.ErrorMessage}'");
@@ -114,17 +114,17 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// Restrictedモードで危険なAPIを含むコードがブロックされることを確認
+        /// Verify that code containing dangerous APIs is blocked in Restricted mode
         /// </summary>
         [Test]
         public async Task TestDangerousCodeBlockedInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string dangerousCode = @"
-                // 危険なAPIを含むコード
-                // 注: System.IOアセンブリはRestrictedモードでブロックされているはず
+                // Code containing dangerous API
+                // Note: System.IO assembly should be blocked in Restricted mode
                 System.IO.File.Delete(""test.txt"");
                 return ""Done"";
             ";
@@ -134,18 +134,18 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 "TestCommand",
                 null,
                 CancellationToken.None,
-                compileOnly: true  // まずコンパイルのみでテスト
+                compileOnly: true  // first test with compilation only
             );
             
-            // デバッグ用：実際の結果を出力
+            // For debugging: output actual results
             UnityEngine.Debug.Log($"[DEBUG] Success: {result.Success}");
             UnityEngine.Debug.Log($"[DEBUG] ErrorMessage: '{result.ErrorMessage}'");
             
-            // Restrictedモードではコンパイル段階でセキュリティ違反として検出されるべき
-            // または、コンパイルは成功しても実行時にブロックされるべき
+            // Should be detected as a security violation during compilation in Restricted mode
+            // Or should be blocked during runtime even if compilation succeeds
             if (result.Success)
             {
-                // コンパイルが成功した場合は、実行してブロックされることを確認
+                // If compilation succeeds, verify that execution is blocked
                 result = await executor.ExecuteCodeAsync(
                     dangerousCode,
                     "TestCommand",
@@ -161,7 +161,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsFalse(result.Success, "Dangerous code should be blocked either at compile or runtime");
             
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("セキュリティ違反") == true ||
+                result.ErrorMessage?.Contains("Security Violation") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("dangerous") == true ||
                 result.ErrorMessage?.Contains("blocked") == true ||
@@ -172,12 +172,12 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// ネストしたクラスでの危険API検出テスト
+        /// Test for dangerous API detection in nested classes
         /// </summary>
         [Test]
         public async Task TestDangerousApiInNestedClass()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
@@ -210,12 +210,12 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// ラムダ式内での危険API検出テスト
+        /// Test for dangerous API detection inside lambda expressions
         /// </summary>
         [Test]
         public async Task TestDangerousApiInLambda()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
@@ -225,7 +225,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                     public string ProcessData() {
                         var list = new[] { ""file1.txt"", ""file2.txt"" };
                         
-                        // ラムダ式内での危険なAPI
+                        // Dangerous API in lambda expression
                         var results = list.Select(f => {
                             if (System.IO.File.Exists(f)) {
                                 return f;
@@ -253,20 +253,20 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// FullAccessモードでは全て許可されることを確認
+        /// Verify that everything is allowed in FullAccess mode
         /// </summary>
         [Test]
         public async Task TestFullAccessModeAllowsEverything()
         {
-            // FullAccessモードでExecutorを作成
+            // Create Executor in FullAccess mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.FullAccess);
             
-            // デバッグ：現在のセキュリティレベルを確認
+            // Debug: verify current security level
             UnityEngine.Debug.Log($"[DEBUG] Current Security Level: FullAccess");
             
             string code = @"
-                // FullAccessモードでは通常のコードを実行
-                // Restrictedモードと同じ安全なコードでも動作することを確認
+                // Execute normal code in FullAccess mode
+                // Verify that the same safe code works
                 string message = ""FullAccess mode active"";
                 int value = 100 + 200;
                 UnityEngine.Debug.Log($""Running in FullAccess mode: {value}"");
@@ -281,7 +281,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 compileOnly: false
             );
             
-            // デバッグ用：実際の結果を出力
+            // For debugging: output actual results
             UnityEngine.Debug.Log($"[DEBUG] Success: {result.Success}");
             UnityEngine.Debug.Log($"[DEBUG] Result: '{result.Result}'");
             UnityEngine.Debug.Log($"[DEBUG] ErrorMessage: '{result.ErrorMessage}'");
@@ -291,14 +291,14 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// SecurityValidatorの単体テスト
+        /// Unit test for SecurityValidator
         /// </summary>
         [Test]
         public void TestSecurityValidator()
         {
             SecurityValidator validator = new(DynamicCodeSecurityLevel.Restricted);
             
-            // 危険なコード
+            // Dangerous code
             string dangerousCode = @"
                 using System.IO;
                 public class Test {
@@ -308,7 +308,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 }
             ";
             
-            // コンパイル用の参照アセンブリを準備
+            // Prepare reference assemblies for compilation
             List<Microsoft.CodeAnalysis.MetadataReference> references = new()
             {
                 Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
@@ -316,7 +316,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location)
             };
             
-            // CSharpCompilationを直接作成
+            // Create CSharpCompilation directly
             Microsoft.CodeAnalysis.SyntaxTree syntaxTree = 
                 Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(dangerousCode);
             
@@ -330,7 +330,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                     )
                 );
             
-            // 新しいAPIを使用
+            // Use new API
             SecurityValidationResult result = validator.ValidateCompilation(compilation);
             
             Assert.IsFalse(result.IsValid, "Dangerous code should be invalid");
@@ -338,41 +338,41 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// AssemblyReferencePolicyが全アセンブリを返すことを確認
+        /// Verify that AssemblyReferencePolicy returns all assemblies
         /// </summary>
         [Test]
         public void TestAssemblyReferencePolicyReturnsAllAssemblies()
         {
-            // Restrictedモードでのアセンブリリスト取得
+            // Get assembly list in Restricted mode
             IReadOnlyList<string> restrictedAssemblies = AssemblyReferencePolicy.GetAssemblies(
                 DynamicCodeSecurityLevel.Restricted
             );
             
-            // FullAccessモードでのアセンブリリスト取得
+            // Get assembly list in FullAccess mode
             IReadOnlyList<string> fullAccessAssemblies = AssemblyReferencePolicy.GetAssemblies(
                 DynamicCodeSecurityLevel.FullAccess
             );
             
-            // RestrictedとFullAccessで同じアセンブリが返されることを確認
+            // Verify that the same assemblies are returned for Restricted and FullAccess
             Assert.AreEqual(
                 restrictedAssemblies.Count,
                 fullAccessAssemblies.Count,
                 "Restricted and FullAccess should return the same number of assemblies"
             );
             
-            // Unity系が含まれることを確認
+            // Verify that Unity assemblies are included
             Assert.IsTrue(
                 restrictedAssemblies.Any(a => a.StartsWith("UnityEngine")),
                 "UnityEngine assemblies should be included"
             );
             
-            // System系も含まれることを確認（全アセンブリ許可のため）
+            // Verify that System assemblies are included (because all assemblies are allowed)
             Assert.IsTrue(
                 restrictedAssemblies.Any(a => a.StartsWith("System")),
                 "System assemblies should be included"
             );
             
-            // Disabledモードでは空のリストが返されることを確認
+            // Verify that an empty list is returned for Disabled mode
             IReadOnlyList<string> disabledAssemblies = AssemblyReferencePolicy.GetAssemblies(
                 DynamicCodeSecurityLevel.Disabled
             );
@@ -380,17 +380,17 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// System.Web APIがRestrictedモードでブロックされることを確認
+        /// Verify that System.Web API is blocked in Restricted mode
         /// </summary>
         [Test]
         public async Task TestSystemWebBlockedInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
-                // System.Web APIの使用試行
-                // 注: System.WebアセンブリはUnity環境では通常利用不可なのでコンパイルエラーになる
+                // Attempt to use System.Web API
+                // Note: System.Web assembly is typically unavailable in Unity environment, so compilation error is expected
                 var context = System.Web.HttpContext.Current;
                 return ""Web API accessed"";
             ";
@@ -403,12 +403,12 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 compileOnly: false
             );
             
-            // System.WebはUnity環境で利用不可なのでコンパイルエラーとなる
+            // System.Web is unavailable in Unity environment, so compilation error is expected
             Assert.IsFalse(result.Success, "System.Web API should fail in Unity environment");
-            // コンパイルエラーまたはセキュリティ違反のいずれかで失敗すればOK
+            // OK if it fails with either compilation error or security violation
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("コンパイルエラー") == true ||
-                result.ErrorMessage?.Contains("セキュリティ違反") == true ||
+                result.ErrorMessage?.Contains("compilation error") == true ||
+                result.ErrorMessage?.Contains("Security Violation") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("ForbiddenNamespace") == true ||
                 result.ErrorMessage?.Contains("does not exist") == true,
@@ -417,18 +417,18 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// UnityEngine.Networking APIがRestrictedモードでブロックされることを確認
+        /// Verify that UnityEngine.Networking API is blocked in Restricted mode
         /// </summary>
         [Test]
         public async Task TestUnityNetworkingBlockedInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
-                // UnityEngine.Networking APIの使用試行
-                // 注: Unity 2019以降ではLegacy Networking (UNet)は廃止されている
-                // UnityWebRequestは別の名前空間に移動している可能性
+                // Attempt to use UnityEngine.Networking API
+                // Note: Legacy Networking (UNet) has been deprecated since Unity 2019
+                // UnityWebRequest might have been moved to a different namespace
                 var request = UnityEngine.Networking.UnityWebRequest.Get(""https://example.com"");
                 return ""Networking API accessed"";
             ";
@@ -441,32 +441,32 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 compileOnly: false
             );
             
-            // Unity 2022ではこのAPIが存在しない可能性が高いため、
-            // コンパイルエラーまたはセキュリティ違反のいずれかで失敗すればOK
+            // Since this API likely does not exist in Unity 2022,
+            // OK if it fails with either compilation error or security violation
             Assert.IsFalse(result.Success, "UnityEngine.Networking API should fail");
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("セキュリティ違反") == true ||
+                result.ErrorMessage?.Contains("Security Violation") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("ForbiddenNamespace") == true ||
                 result.ErrorMessage?.Contains("does not exist") == true ||
-                result.ErrorMessage?.Contains("コンパイルエラー") == true ||
+                result.ErrorMessage?.Contains("compilation error") == true ||
                 result.ErrorMessage?.Contains("Networking") == true,
                 $"Error should be compilation error or security violation. Actual: '{result.ErrorMessage}'"
             );
         }
         
         /// <summary>
-        /// System.Data.SqlClient APIがRestrictedモードでブロックされることを確認
+        /// Verify that System.Data.SqlClient API is blocked in Restricted mode
         /// </summary>
         [Test]
         public async Task TestSqlClientBlockedInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
-                // System.Data.SqlClient APIの使用試行
-                // 注: Unity環境ではSystem.Data.SqlClientは通常利用不可
+                // Attempt to use System.Data.SqlClient API
+                // Note: System.Data.SqlClient is typically unavailable in Unity environment
                 var connection = new System.Data.SqlClient.SqlConnection(""Server=localhost;Database=test;"");
                 return ""SQL client accessed"";
             ";
@@ -479,33 +479,33 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 compileOnly: false
             );
             
-            // Unity環境ではこのAPIが存在しない可能性が高いため、
-            // コンパイルエラーまたはセキュリティ違反のいずれかで失敗すればOK
+            // Since this API likely does not exist in Unity environment,
+            // OK if it fails with either compilation error or security violation
             Assert.IsFalse(result.Success, "System.Data.SqlClient API should fail");
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("セキュリティ違反") == true ||
+                result.ErrorMessage?.Contains("Security Violation") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("ForbiddenNamespace") == true ||
                 result.ErrorMessage?.Contains("does not exist") == true ||
-                result.ErrorMessage?.Contains("コンパイルエラー") == true ||
+                result.ErrorMessage?.Contains("compilation error") == true ||
                 result.ErrorMessage?.Contains("SqlClient") == true,
                 $"Error should be compilation error or security violation. Actual: '{result.ErrorMessage}'"
             );
         }
         
         /// <summary>
-        /// System.Runtime.Remoting APIがRestrictedモードでブロックされることを確認
+        /// Verify that System.Runtime.Remoting API is blocked in Restricted mode
         /// </summary>
         [Test]
         public async Task TestRemotingBlockedInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
-                // System.Runtime.Remoting APIの使用試行
-                // 実行時エラーになる可能性があるが、危険なAPIとして検出されるべき
-                // ただし、ファイルが存在しないエラーで失敗することも許容
+                // Attempt to use System.Runtime.Remoting API
+                // May result in runtime error, but should be detected as a dangerous API
+                // However, failure due to non-existent file is also acceptable
                 System.Runtime.Remoting.RemotingConfiguration.Configure(""app.config"", false);
                 return ""Remoting configured"";
             ";
@@ -519,9 +519,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             );
             
             Assert.IsFalse(result.Success, "System.Runtime.Remoting API should fail");
-            // セキュリティ違反、またはファイルが見つからないエラーのいずれかで失敗すればOK
+            // OK if it fails with either security violation or file not found error
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("セキュリティ違反") == true ||
+                result.ErrorMessage?.Contains("Security Violation") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("ForbiddenNamespace") == true ||
                 result.ErrorMessage?.Contains("could not be loaded") == true ||
@@ -531,18 +531,18 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// System.Security.Cryptography.X509Certificates APIがRestrictedモードでブロックされることを確認
+        /// Verify that System.Security.Cryptography.X509Certificates API is blocked in Restricted mode
         /// </summary>
         [Test]
         public async Task TestX509CertificatesBlockedInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
-                // System.Security.Cryptography.X509Certificates APIの使用試行
-                // 実行時エラーになる可能性があるが、危険なAPIとして検出されるべき
-                // ただし、証明書ファイルが存在しないエラーで失敗することも許容
+                // Attempt to use System.Security.Cryptography.X509Certificates API
+                // May result in runtime error, but should be detected as a dangerous API
+                // However, failure due to non-existent certificate file is also acceptable
                 var cert = new System.Security.Cryptography.X509Certificates.X509Certificate(""cert.pfx"");
                 return ""Certificate loaded"";
             ";
@@ -556,9 +556,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             );
             
             Assert.IsFalse(result.Success, "X509Certificates API should fail");
-            // セキュリティ違反、またはファイルが見つからないエラーのいずれかで失敗すればOK
+            // OK if it fails with either security violation or file not found error
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("セキュリティ違反") == true ||
+                result.ErrorMessage?.Contains("Security Violation") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("ForbiddenNamespace") == true ||
                 result.ErrorMessage?.Contains("Could not find file") == true ||
@@ -568,16 +568,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// System.Diagnostics.Process APIがRestrictedモードでブロックされることを確認
+        /// Verify that System.Diagnostics.Process API is blocked in Restricted mode
         /// </summary>
         [Test]
         public async Task TestProcessStartBlockedInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
-                // System.Diagnostics.Process.Startの使用試行
+                // Attempt to use System.Diagnostics.Process.Start
                 System.Diagnostics.Process.Start(""notepad.exe"");
                 return ""Process started"";
             ";
@@ -592,7 +592,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             
             Assert.IsFalse(result.Success, "Process.Start should be blocked");
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("セキュリティ違反") == true ||
+                result.ErrorMessage?.Contains("Security Violation") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("dangerous") == true,
                 $"Error should mention security violation. Actual: '{result.ErrorMessage}'"
@@ -600,16 +600,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// System.Activator.CreateComInstanceFrom APIがRestrictedモードでブロックされることを確認
+        /// Verify that System.Activator.CreateComInstanceFrom API is blocked in Restricted mode
         /// </summary>
         [Test]
         public async Task TestActivatorCreateComInstanceFromBlockedInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
-                // System.Activator.CreateComInstanceFromの使用試行
+                // Attempt to use System.Activator.CreateComInstanceFrom
                 System.Activator.CreateComInstanceFrom(""test.dll"", ""TestClass"");
                 return ""COM instance created"";
             ";
@@ -626,16 +626,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// UnityEditor.AssetDatabase.DeleteAsset APIがRestrictedモードでブロックされることを確認
+        /// Verify that UnityEditor.AssetDatabase.DeleteAsset API is blocked in Restricted mode
         /// </summary>
         [Test]
         public async Task TestAssetDatabaseDeleteAssetBlockedInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
-                // UnityEditor.AssetDatabase.DeleteAssetの使用試行
+                // Attempt to use UnityEditor.AssetDatabase.DeleteAsset
                 UnityEditor.AssetDatabase.DeleteAsset(""Assets/Test.txt"");
                 return ""Asset deleted"";
             ";
@@ -650,7 +650,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             
             Assert.IsFalse(result.Success, "AssetDatabase.DeleteAsset should be blocked");
             Assert.IsTrue(
-                result.ErrorMessage?.Contains("セキュリティ違反") == true ||
+                result.ErrorMessage?.Contains("Security Violation") == true ||
                 result.ErrorMessage?.Contains("Security validation failed") == true ||
                 result.ErrorMessage?.Contains("dangerous") == true,
                 $"Error should mention security violation. Actual: '{result.ErrorMessage}'"
@@ -658,16 +658,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// UnityEditor.FileUtil.DeleteFileOrDirectory APIがRestrictedモードでブロックされることを確認
+        /// Verify that UnityEditor.FileUtil.DeleteFileOrDirectory API is blocked in Restricted mode
         /// </summary>
         [Test]
         public async Task TestFileUtilDeleteFileOrDirectoryBlockedInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
-                // UnityEditor.FileUtil.DeleteFileOrDirectoryの使用試行
+                // Attempt to use UnityEditor.FileUtil.DeleteFileOrDirectory
                 UnityEditor.FileUtil.DeleteFileOrDirectory(""Assets/Test"");
                 return ""File deleted"";
             ";
@@ -684,16 +684,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// System.Environment.Exit APIがRestrictedモードでブロックされることを確認
+        /// Verify that System.Environment.Exit API is blocked in Restricted mode
         /// </summary>
         [Test]
         public async Task TestEnvironmentExitBlockedInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
-                // System.Environment.Exitの使用試行
+                // Attempt to use System.Environment.Exit
                 System.Environment.Exit(0);
                 return ""Exiting"";
             ";
@@ -710,16 +710,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// System.Threading.Thread.Abort APIがRestrictedモードでブロックされることを確認
+        /// Verify that System.Threading.Thread.Abort API is blocked in Restricted mode
         /// </summary>
         [Test]
         public async Task TestThreadAbortBlockedInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
-                // System.Threading.Thread.Abortの使用試行
+                // Attempt to use System.Threading.Thread.Abort
                 var thread = System.Threading.Thread.CurrentThread;
                 thread.Abort();
                 return ""Thread aborted"";
@@ -737,16 +737,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// DynamicCodeSecurityManagerへのアクセスがRestrictedモードでブロックされることを確認
+        /// Verify that access to DynamicCodeSecurityManager is blocked in Restricted mode
         /// </summary>
         [Test]
         public async Task TestSecurityManagerAccessBlockedInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
-                // DynamicCodeSecurityManagerへのアクセス試行
+                // Attempt to access DynamicCodeSecurityManager
                 var level = io.github.hatayama.uLoopMCP.DynamicCodeSecurityManager.CurrentLevel;
                 return $""Security level: {level}"";
             ";
@@ -759,12 +759,12 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 compileOnly: false
             );
             
-            // CurrentLevelの読み取りは現在許可されているが、将来的にはブロックすべき
-            // TODO: CurrentLevel読み取りもブロックするよう修正
+            // CurrentLevel reading is currently allowed, but should be blocked in the future
+            // TODO: Modify to block CurrentLevel reading
             
-            // InitializeFromSettingsはブロックされるべき
+            // InitializeFromSettings should be blocked
             code = @"
-                // InitializeFromSettingsの呼び出し試行
+                // Attempt to call InitializeFromSettings
                 io.github.hatayama.uLoopMCP.DynamicCodeSecurityManager.InitializeFromSettings(
                     io.github.hatayama.uLoopMCP.DynamicCodeSecurityLevel.FullAccess);
                 return ""Security changed"";
@@ -782,16 +782,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
         
         /// <summary>
-        /// System.IO.File.WriteAllText APIがRestrictedモードでブロックされることを確認
+        /// Verify that System.IO.File.WriteAllText API is blocked in Restricted mode
         /// </summary>
         [Test]
         public async Task TestFileWriteAllTextBlockedInRestrictedMode()
         {
-            // RestrictedモードでExecutorを作成
+            // Create Executor in Restricted mode
             executor = Factory.DynamicCodeExecutorFactory.Create(DynamicCodeSecurityLevel.Restricted);
             
             string code = @"
-                // System.IO.File.WriteAllTextの使用試行
+                // Attempt to use System.IO.File.WriteAllText
                 System.IO.File.WriteAllText(""test.txt"", ""malicious content"");
                 return ""File written"";
             ";
@@ -807,7 +807,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsFalse(result.Success, "File.WriteAllText should be blocked");
         }
         
-        // TestFileCreateAllowedInRestrictedMode は RestrictedModeDangerousApiTests.TestRestrictedMode_FileCreate_Allowed と重複のため削除
+        // TestFileCreateAllowedInRestrictedMode is redundant with RestrictedModeDangerousApiTests.TestRestrictedMode_FileCreate_Allowed, so it is deleted
     }
 }
 #endif

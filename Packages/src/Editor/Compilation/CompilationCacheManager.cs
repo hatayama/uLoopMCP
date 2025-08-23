@@ -11,29 +11,30 @@ using Microsoft.CodeAnalysis;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// コンパイル結果のキャッシュ管理を担当するクラス
-    /// RoslynCompilerから分離されたキャッシュ管理責務
+    /// Manages the caching of compilation results
+    /// Separated cache management responsibility from RoslynCompiler
     /// 
-    /// キャッシュの役割:
-    /// - 同じコードの再コンパイルを回避（パフォーマンス向上）
-    /// - SHA256ハッシュによるキャッシュキー生成
-    /// - 注意: 参照アセンブリリストのキャッシュとは独立
+    /// Cache Responsibilities:
+    /// - Avoid recompiling the same code (performance improvement)
+    /// - Generate cache keys using SHA256 hash
+    /// - Note: Independent of reference assembly list caching
     /// 
-    /// 関連クラス:
-    /// - RoslynCompiler: このキャッシュマネージャーを使用するコンパイラ
-    /// - CompilationRequest: キャッシュキー生成に使用
-    /// - CompilationResult: キャッシュされる結果
+    /// Related Classes:
+    /// - RoslynCompiler: Compiler that uses this cache manager
+    /// - CompilationRequest: Used for cache key generation
+    /// - CompilationResult: Results to be cached
     /// </summary>
     public class CompilationCacheManager
     {
-        // コンパイル済みアセンブリのキャッシュ（キー: コードのSHA256ハッシュ）
+        // Compiled assembly cache (key: SHA256 hash of the code)
         private readonly Dictionary<string, Assembly> _compilationCache = new();
 #if ULOOPMCP_HAS_ROSLYN
+        // Reference cache for different dynamic code security levels
         private readonly Dictionary<DynamicCodeSecurityLevel, List<MetadataReference>> _referenceCache = new();
 #endif
 
         /// <summary>
-        /// キャッシュから結果を取得
+        /// Retrieve results from cache
         /// </summary>
         public CompilationResult CheckCache(CompilationRequest request)
         {
@@ -52,7 +53,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 成功した結果をキャッシュに保存（CompilationRequestベース）
+        /// Save successful results to cache (based on CompilationRequest)
         /// </summary>
         public void CacheResultIfSuccessful(CompilationResult result, CompilationRequest request)
         {
@@ -64,7 +65,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 公開用のキャッシュクリアメソッド
+        /// Public method to clear the cache
         /// </summary>
         public void ClearCache()
         {
@@ -80,7 +81,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 参照キャッシュをクリア
+        /// Clear the reference cache
         /// </summary>
         public void ClearReferenceCache()
         {
@@ -90,11 +91,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// CompilationRequestからキャッシュキーを生成
+        /// Generate cache key from CompilationRequest
         /// </summary>
         public string GenerateCacheKey(CompilationRequest request)
         {
-            // コード、クラス名、名前空間、追加参照を組み合わせてキーを生成
+            // Generate key by combining code, class name, namespace, and additional references
             StringBuilder keyBuilder = new StringBuilder();
             keyBuilder.Append(request.Code);
             keyBuilder.Append("|");
@@ -102,14 +103,14 @@ namespace io.github.hatayama.uLoopMCP
             keyBuilder.Append("|");
             keyBuilder.Append(request.Namespace ?? "");
             
-            // 追加参照がある場合は含める
+            // Include additional references if present
             if (request.AdditionalReferences != null && request.AdditionalReferences.Any())
             {
                 keyBuilder.Append("|");
                 keyBuilder.Append(string.Join(",", request.AdditionalReferences.OrderBy(r => r)));
             }
             
-            // SHA256でハッシュ化
+            // Hash with SHA256
             using (SHA256 sha256 = SHA256.Create())
             {
                 byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(keyBuilder.ToString()));

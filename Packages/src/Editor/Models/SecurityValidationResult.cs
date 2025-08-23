@@ -5,23 +5,23 @@ using System.Text;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// セキュリティ検証結果
+    /// Security Validation Result
     /// 
-    /// 関連クラス: SecurityValidator
+    /// Related Class: SecurityValidator
     /// </summary>
     public class SecurityValidationResult
     {
-        /// <summary>検証有効</summary>
+        /// <summary>Validation status</summary>
         public bool IsValid { get; set; }
 
-        /// <summary>違反リスト</summary>
+        /// <summary>List of security violations</summary>
         public List<SecurityViolation> Violations { get; set; } = new();
         
-        /// <summary>コンパイルエラー（拡張）</summary>
+        /// <summary>Compilation errors (extended)</summary>
         public List<string> CompilationErrors { get; set; } = new();
         
         /// <summary>
-        /// エラーサマリーを取得
+        /// Retrieve error summary
         /// </summary>
         public string GetErrorSummary()
         {

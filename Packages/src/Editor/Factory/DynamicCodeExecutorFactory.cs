@@ -1,14 +1,14 @@
 namespace io.github.hatayama.uLoopMCP.Factory
 {
     /// <summary>
-    /// DynamicCodeExecutor生成ファクトリー
-    /// 関連クラス: DynamicCodeExecutor, DynamicCodeExecutorStub, RoslynCompiler, SecurityValidator, CommandRunner
+    /// Factory for creating DynamicCodeExecutor instances
+    /// Related classes: DynamicCodeExecutor, DynamicCodeExecutorStub, RoslynCompiler, SecurityValidator, CommandRunner
     /// </summary>
     public static class DynamicCodeExecutorFactory
     {
         /// <summary>
-        /// 指定されたセキュリティレベルでDynamicCodeExecutorを作成
-        /// Roslyn無効時はStub実装を返す
+        /// Create DynamicCodeExecutor with specified security level
+        /// Returns Stub implementation when Roslyn is disabled
         /// </summary>
         public static IDynamicCodeExecutor Create(DynamicCodeSecurityLevel securityLevel)
         {
@@ -17,16 +17,16 @@ namespace io.github.hatayama.uLoopMCP.Factory
 
             try
             {
-                // コンパイラー初期化（明示的なセキュリティレベル指定）
+                // Initialize compiler (with explicit security level specification)
                 RoslynCompiler compiler = new(securityLevel);
 
-                // セキュリティバリデーター初期化（明示的なセキュリティレベル指定）
+                // Initialize security validator (with explicit security level specification)
                 SecurityValidator validator = new(securityLevel);
 
-                // コマンドランナー初期化
+                // Initialize command runner
                 CommandRunner runner = new();
 
-                // 統合エグゼキューター作成
+                // Create integrated executor
                 DynamicCodeExecutor executor = new(compiler, validator, securityLevel, runner);
 
                 VibeLogger.LogInfo(
@@ -40,8 +40,8 @@ namespace io.github.hatayama.uLoopMCP.Factory
                         runner_type = runner.GetType().Name
                     },
                     correlationId,
-                    "動的コード実行システム初期化完了",
-                    "実行準備完了"
+                    "Dynamic code execution system initialization completed",
+                    "Ready for execution"
                 );
 
                 return executor;
@@ -57,21 +57,21 @@ namespace io.github.hatayama.uLoopMCP.Factory
                         error_message = ex.Message
                     },
                     correlationId,
-                    "動的コード実行システム初期化失敗",
-                    "依存関係の問題を調査"
+                    "Dynamic code execution system initialization failed",
+                    "Investigate dependency issues"
                 );
 
                 throw;
             }
 #else
-            // Roslyn無効時はStub実装を返す
+            // Return Stub implementation when Roslyn is disabled
             VibeLogger.LogInfo(
                 "dynamic_executor_stub_created",
                 "DynamicCodeExecutorStub created (Roslyn disabled)",
                 new { },
                 McpConstants.GenerateCorrelationId(),
-                "Roslyn無効のためStub実装を使用",
-                "動的コード実行は利用不可"
+                "Using Stub implementation due to Roslyn being disabled",
+                "Dynamic code execution is not available"
             );
             
             return new DynamicCodeExecutorStub();

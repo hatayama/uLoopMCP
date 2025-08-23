@@ -1,9 +1,9 @@
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// 別アセンブリでのテスト用クラス（安全なAPI版）
-    /// DynamicAssemblyAdditionTestsで使用される
-    /// ForDynamicAssemblyTestとは異なり、危険なAPIは使用しない
+    /// Test class for another assembly (safe API version)
+    /// Used in DynamicAssemblyAdditionTests
+    /// Unlike ForDynamicAssemblyTest, does not use dangerous APIs
     /// </summary>
     public class DynamicAssemblyTest
     {

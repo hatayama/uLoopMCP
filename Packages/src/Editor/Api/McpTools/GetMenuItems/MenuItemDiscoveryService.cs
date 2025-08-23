@@ -119,11 +119,11 @@ namespace io.github.hatayama.uLoopMCP
 
         private static MenuItemInfo CreateMenuItemInfo(MethodInfo method)
         {
-            // 複数のMenuItem属性が付いている可能性があるため、GetCustomAttributesを使用
+            // Multiple MenuItem attributes may be present, so using GetCustomAttributes
             MenuItem[] menuItemAttributes = method.GetCustomAttributes<MenuItem>(false).ToArray();
             if (menuItemAttributes.Length == 0) return null;
             
-            // 最初のものを使用してMenuItemInfoを作成
+            // Create MenuItemInfo using the first one
             MenuItem menuItemAttribute = menuItemAttributes[0];
             MenuItemInfo menuItemInfo = new MenuItemInfo(
                 menuItemAttribute.menuItem,
@@ -132,7 +132,7 @@ namespace io.github.hatayama.uLoopMCP
                 menuItemAttribute.validate
             );
             
-            // 複数ある場合は警告メッセージを設定
+            // Set warning message if multiple exist
             if (menuItemAttributes.Length > 1)
             {
                 string methodName = $"{method.DeclaringType?.FullName}.{method.Name}";

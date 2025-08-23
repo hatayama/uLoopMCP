@@ -5,22 +5,22 @@ using System.Threading;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// 実行コンテキスト
+    /// Execution Context
     /// 
-    /// 関連クラス: CommandRunner
+    /// Related Class: CommandRunner
     /// </summary>
     public class ExecutionContext
     {
-        /// <summary>コンパイル済みアセンブリ</summary>
+        /// <summary>Compiled Assembly</summary>
         public Assembly CompiledAssembly { get; set; }
 
-        /// <summary>パラメーター</summary>
+        /// <summary>Parameters</summary>
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        /// <summary>キャンセレーショントークン</summary>
+        /// <summary>Cancellation Token</summary>
         public CancellationToken CancellationToken { get; set; }
 
-        /// <summary>タイムアウト秒数</summary>
+        /// <summary>Timeout in Seconds</summary>
         public int TimeoutSeconds { get; set; } = 60;
     }
 }

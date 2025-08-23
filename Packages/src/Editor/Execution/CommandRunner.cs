@@ -9,9 +9,9 @@ using io.github.hatayama.uLoopMCP;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// コンパイル済みコードの実行制御
-
-    /// 関連クラス: ExecutionContext, ExecutionResult
+    /// Controls the execution of compiled code.
+    /// 
+    /// Related Classes: ExecutionContext, ExecutionResult
     /// </summary>
     public class CommandRunner
     {
@@ -95,10 +95,10 @@ namespace io.github.hatayama.uLoopMCP
 
                 DateTime startTime = DateTime.Now;
                 
-                // タイムアウト設定
+                // Configure timeout
                 using CancellationTokenSource combinedCts = CreateCombinedCancellationTokenSource(context);
 
-                // 実行
+                // Execute
                 ExecutionResult result = ExecuteInternal(context, combinedCts.Token, correlationId);
                 
                 DateTime endTime = DateTime.Now;
@@ -154,7 +154,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 Success = true,
                 Result = result,
-                ExecutionTime = TimeSpan.Zero, // 呼び出し元で設定される
+                ExecutionTime = TimeSpan.Zero, // Will be set by the caller
                 Logs = logs ?? new List<string> { "Execution completed successfully" }
             };
         }
@@ -186,12 +186,12 @@ namespace io.github.hatayama.uLoopMCP
             
             if (methodParameters.Length == 0)
             {
-                // パラメータなし
+                // No parameters
                 return executeMethod.Invoke(instance, null);
             }
             else if (methodParameters.Length == 1 && methodParameters[0].ParameterType == typeof(Dictionary<string, object>))
             {
-                // パラメータ辞書あり
+                // Parameter dictionary available
                 return executeMethod.Invoke(instance, new object[] { parameters });
             }
             else
@@ -209,7 +209,7 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                // アセンブリから実行可能な型を探す
+                // Find executable type from assembly
                 (Type targetType, MethodInfo executeMethod) = FindExecuteMethod(context.CompiledAssembly);
                 
                 if (targetType == null || executeMethod == null)
@@ -219,22 +219,22 @@ namespace io.github.hatayama.uLoopMCP
                         new List<string> { "Assembly types checked but no Execute method found" });
                 }
 
-                // インスタンス作成
+                // Create instance
                 object instance = CreateInstance(targetType);
                 if (instance == null)
                 {
                     return CreateErrorResult(McpConstants.ERROR_MESSAGE_FAILED_TO_CREATE_INSTANCE);
                 }
 
-                // キャンセレーションチェック
+                // Check cancellation
                 cancellationToken.ThrowIfCancellationRequested();
 
                 try
                 {
-                    // メソッド実行
+                    // Execute method
                     object executionResult = InvokeExecuteMethod(executeMethod, instance, context.Parameters);
                     
-                    // 結果を文字列に変換
+                    // Convert result to string
                     string resultString = executionResult?.ToString() ?? "";
                     
                     return CreateSuccessResult(resultString);
@@ -248,7 +248,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (TargetInvocationException ex)
             {
-                // 実際の例外を取得
+                // Retrieve actual exception
                 Exception innerException = ex.InnerException ?? ex;
                 
                 return CreateErrorResult(

@@ -4,31 +4,31 @@ using System.Collections.Generic;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// 動的コード実行結果
+    /// Dynamic Code Execution Result
     /// 
-    /// 関連クラス: DynamicCodeExecutor, CommandRunner
+    /// Related Classes: DynamicCodeExecutor, CommandRunner
     /// </summary>
     public class ExecutionResult
     {
-        /// <summary>実行成功</summary>
+        /// <summary>Execution Success</summary>
         public bool Success { get; set; }
 
-        /// <summary>実行結果</summary>
+        /// <summary>Execution Result</summary>
         public object Result { get; set; }
 
-        /// <summary>エラーメッセージ</summary>
+        /// <summary>Error Message</summary>
         public string ErrorMessage { get; set; }
 
-        /// <summary>例外</summary>
+        /// <summary>Exception</summary>
         public Exception Exception { get; set; }
 
-        /// <summary>実行時間</summary>
+        /// <summary>Execution Time</summary>
         public TimeSpan ExecutionTime { get; set; }
 
-        /// <summary>ログ</summary>
+        /// <summary>Logs</summary>
         public List<string> Logs { get; set; } = new();
 
-        /// <summary>実行統計</summary>
+        /// <summary>Execution Statistics</summary>
         public ExecutionStatistics Statistics { get; set; }
     }
 }

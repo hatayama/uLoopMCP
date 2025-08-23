@@ -7,11 +7,11 @@ using System.Collections.Generic;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Roslynの構文木を走査してセキュリティ違反を検出するSyntaxWalker
-    /// 危険なAPI呼び出し、型の継承、インスタンス生成などを包括的に検査する。
-    /// CSharpSyntaxWalkerを継承し、各種構文要素に対するVisitメソッドを実装。
-    /// 検出した違反はSecurityViolationとして記録し、呼び出し元に報告する。
-    /// 関連クラス: DangerousApiDetector（危険API判定）, SecurityValidator（検証エントリポイント）
+    /// A SyntaxWalker that traverses the Roslyn syntax tree to detect security violations.
+    /// Comprehensively examines dangerous API calls, type inheritance, instance creation, and more.
+    /// Inherits from CSharpSyntaxWalker and implements Visit methods for various syntax elements.
+    /// Records detected violations as SecurityViolation and reports them to the caller.
+    /// Related classes: DangerousApiDetector (dangerous API detection), SecurityValidator (verification entry point)
     /// </summary>
     public class SecuritySyntaxWalker : CSharpSyntaxWalker
     {
@@ -28,14 +28,14 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// クラス宣言ノードを訪問し、継承関係のセキュリティ違反を検査する。
-        /// 基底クラスやインターフェースが危険な型でないかをチェックし、
-        /// 違反が見つかった場合はDangerousInheritanceタイプの違反として記録する。
+        /// Visits class declaration nodes to inspect security violations in inheritance relationships.
+        /// Checks whether base classes or interfaces are dangerous types and
+        /// records violations as DangerousInheritance type when found.
         /// </summary>
-        /// <param name="node">検査対象のクラス宣言構文ノード</param>
+        /// <param name="node">The class declaration syntax node to be examined</param>
         public override void VisitClassDeclaration(ClassDeclarationSyntax node)
         {
-            // 基底クラスの検査
+            // Inspect base class
             if (node.BaseList != null)
             {
                 foreach (BaseTypeSyntax baseType in node.BaseList.Types)
@@ -59,27 +59,27 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// メソッド宣言ノードを訪問し、メソッド本体内のセキュリティ違反を検査する。
-        /// ブロック形式とExpression-bodied形式の両方に対応し、
-        /// メソッド内で使用される危険なAPIや型を検出する。
+        /// Visits method declaration nodes to inspect security violations within method bodies.
+        /// Supports both block and expression-bodied forms, detecting
+        /// dangerous APIs and types used within methods.
         /// </summary>
-        /// <param name="node">検査対象のメソッド宣言構文ノード</param>
+        /// <param name="node">The method declaration syntax node to be examined</param>
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
-            // メソッド内の処理を検査
+            // Inspect method body processing
             CheckMethodBody(node.Body, node.ExpressionBody);
             base.VisitMethodDeclaration(node);
         }
         
         /// <summary>
-        /// プロパティ宣言ノードを訪問し、getter/setter内のセキュリティ違反を検査する。
-        /// 従来のアクセサ形式とExpression-bodied形式の両方に対応し、
-        /// プロパティ実装内で使用される危険なAPIや型を検出する。
+        /// Visits property declaration nodes to inspect security violations in getters and setters.
+        /// Supports both traditional accessor forms and expression-bodied forms, detecting
+        /// dangerous APIs and types used in property implementations.
         /// </summary>
-        /// <param name="node">検査対象のプロパティ宣言構文ノード</param>
+        /// <param name="node">The property declaration syntax node to be examined</param>
         public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
         {
-            // getterとsetterの検査
+            // Inspect getters and setters
             if (node.AccessorList != null)
             {
                 foreach (AccessorDeclarationSyntax accessor in node.AccessorList.Accessors)
@@ -88,7 +88,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
-            // Expression-bodied propertyの検査
+            // Inspect expression-bodied properties
             if (node.ExpressionBody != null)
             {
                 CheckExpression(node.ExpressionBody.Expression);
@@ -98,11 +98,11 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// コンストラクタ宣言ノードを訪問し、初期化処理のセキュリティ違反を検査する。
-        /// コンストラクタ本体内で使用される危険なAPIや型のインスタンス化を検出し、
-        /// オブジェクト初期化時のセキュリティリスクを特定する。
+        /// Visits constructor declaration nodes to inspect security violations in initialization processes.
+        /// Detects dangerous APIs and type instantiations used within constructor bodies,
+        /// identifying security risks during object initialization.
         /// </summary>
-        /// <param name="node">検査対象のコンストラクタ宣言構文ノード</param>
+        /// <param name="node">The constructor declaration syntax node to be examined</param>
         public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
         {
             CheckMethodBody(node.Body, node.ExpressionBody);
@@ -110,11 +110,11 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// 単純ラムダ式（パラメータが1つでかっこ無し）を訪問し、セキュリティ違反を検査する。
-        /// ラムダ本体内で使用される危険なAPIや型を検出し、
-        /// 匿名関数として実行されるコードのセキュリティリスクを特定する。
+        /// Visits simple lambda expression nodes (single parameter without parentheses) to inspect security violations.
+        /// Detects dangerous APIs and types used within lambda bodies,
+        /// identifying security risks in anonymous functions.
         /// </summary>
-        /// <param name="node">検査対象の単純ラムダ式構文ノード</param>
+        /// <param name="node">The simple lambda expression syntax node to be examined</param>
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node)
         {
             CheckLambdaBody(node.Body);
@@ -122,11 +122,11 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// 括弧付きラムダ式（複数パラメータまたは型指定あり）を訪問し、セキュリティ違反を検査する。
-        /// ラムダ本体内で使用される危険なAPIや型を検出し、
-        /// デリゲートやイベントハンドラとして使用されるコードのセキュリティリスクを特定する。
+        /// Visits parenthesized lambda expression nodes (multiple parameters or with type specification) to inspect security violations.
+        /// Detects dangerous APIs and types used within lambda bodies,
+        /// identifying security risks in delegates and event handlers.
         /// </summary>
-        /// <param name="node">検査対象の括弧付きラムダ式構文ノード</param>
+        /// <param name="node">The parenthesized lambda expression syntax node to be examined</param>
         public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node)
         {
             CheckLambdaBody(node.Body);
@@ -134,11 +134,11 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// 匿名メソッド（delegate キーワード使用）を訪問し、セキュリティ違反を検査する。
-        /// 匿名メソッド本体内で使用される危険なAPIや型を検出し、
-        /// デリゲートとして実行される匿名コードのセキュリティリスクを特定する。
+        /// Visits anonymous method expression nodes (using delegate keyword) to inspect security violations.
+        /// Detects dangerous APIs and types used within anonymous method bodies,
+        /// identifying security risks in code executed as delegates.
         /// </summary>
-        /// <param name="node">検査対象の匿名メソッド式構文ノード</param>
+        /// <param name="node">The anonymous method expression syntax node to be examined</param>
         public override void VisitAnonymousMethodExpression(AnonymousMethodExpressionSyntax node)
         {
             CheckLambdaBody(node.Body);
@@ -146,11 +146,11 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// ローカル関数（メソッド内で定義される関数）を訪問し、セキュリティ違反を検査する。
-        /// ローカル関数本体内で使用される危険なAPIや型を検出し、
-        /// メソッド内で定義・実行される関数のセキュリティリスクを特定する。
+        /// Visits local function statement nodes (functions defined within methods) to inspect security violations.
+        /// Detects dangerous APIs and types used within local function bodies,
+        /// identifying security risks in functions defined and executed within methods.
         /// </summary>
-        /// <param name="node">検査対象のローカル関数ステートメント構文ノード</param>
+        /// <param name="node">The local function statement syntax node to be examined</param>
         public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node)
         {
             CheckMethodBody(node.Body, node.ExpressionBody);
@@ -158,12 +158,12 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// メンバーアクセス式（ドット演算子による呼び出し）を訪問し、危険なAPI呼び出しを検出する。
-        /// プロパティ、メソッド、フィールドへのアクセスを検査し、
-        /// DangerousApiDetectorと連携して危険なAPIパターンをマッチングする。
-        /// 違反はDangerousApiCallタイプとして記録される。
+        /// Visits member access expression nodes (dot operator calls) to detect dangerous API calls.
+        /// Examines access to properties, methods, and fields,
+        /// matching dangerous API patterns in collaboration with DangerousApiDetector.
+        /// Violations are recorded as DangerousApiCall type.
         /// </summary>
-        /// <param name="node">検査対象のメンバーアクセス式構文ノード</param>
+        /// <param name="node">The member access expression syntax node to be examined</param>
         public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
             ISymbol symbol = semanticModel.GetSymbolInfo(node).Symbol;
@@ -187,12 +187,12 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// 識別子名（変数名、型名、メソッド名など）を訪問し、危険な型の直接参照を検出する。
-        /// 型として解決される識別子が危険な型でないかをチェックし、
-        /// System.Diagnostics.Processなどの危険な型への直接参照を特定する。
-        /// 違反はDangerousApiCallタイプとして記録される。
+        /// Visits identifier name nodes (variable names, type names, method names) to detect direct references to dangerous types.
+        /// Checks whether identifiers resolved as types are dangerous,
+        /// identifying direct references to types like System.Diagnostics.Process.
+        /// Violations are recorded as DangerousApiCall type.
         /// </summary>
-        /// <param name="node">検査対象の識別子名構文ノード</param>
+        /// <param name="node">The identifier name syntax node to be examined</param>
         public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
             ISymbol symbol = semanticModel.GetSymbolInfo(node).Symbol;
@@ -216,12 +216,12 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// オブジェクト生成式（new演算子）を訪問し、危険な型のインスタンス化を検出する。
-        /// 生成される型がDangerousApiDetectorの危険型リストに含まれるかをチェックし、
-        /// ProcessやWebClientなどの危険なオブジェクトの生成を特定する。
-        /// 違反はDangerousTypeCreationタイプとして記録される。
+        /// Visits object creation expression nodes (new operator) to detect instantiation of dangerous types.
+        /// Checks whether the type being created is in the dangerous type list of DangerousApiDetector,
+        /// identifying creation of dangerous objects like Process or WebClient.
+        /// Violations are recorded as DangerousTypeCreation type.
         /// </summary>
-        /// <param name="node">検査対象のオブジェクト生成式構文ノード</param>
+        /// <param name="node">The object creation expression syntax node to be examined</param>
         public override void VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
         {
             ITypeSymbol typeSymbol = semanticModel.GetTypeInfo(node).Type;
@@ -241,12 +241,12 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// メソッド呼び出し式を訪問し、危険なメソッドの実行を検出する。
-        /// 呼び出されるメソッドのシンボル情報を解析し、
-        /// File.Delete、Process.Startなどの危険なメソッド呼び出しを特定する。
-        /// 違反はDangerousApiCallタイプとして記録される。
+        /// Visits method invocation expression nodes to detect dangerous method executions.
+        /// Analyzes the symbol information of invoked methods,
+        /// identifying dangerous method calls like File.Delete or Process.Start.
+        /// Violations are recorded as DangerousApiCall type.
         /// </summary>
-        /// <param name="node">検査対象の呼び出し式構文ノード</param>
+        /// <param name="node">The invocation expression syntax node to be examined</param>
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             IMethodSymbol methodSymbol = semanticModel.GetSymbolInfo(node).Symbol as IMethodSymbol;
@@ -270,13 +270,12 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// メソッド本体の検査を共通化したヘルパーメソッド。
-        /// ブロック形式（{}で囲まれた複数ステートメント）とExpression-bodied形式（=>式）の
-        /// 両方に対応し、適切な検査メソッドを呼び出す。
-        /// メソッド、コンストラクタ、プロパティアクセサ等から共通で使用される。
+        /// A common helper method for method body inspection that supports multiple formats.
+        /// Handles both block-style (multiple statements enclosed in {}) and expression-bodied forms (=> expression).
+        /// Used commonly from methods, constructors, property accessors, etc.
         /// </summary>
-        /// <param name="block">ブロック形式のメソッド本体（nullの場合あり）</param>
-        /// <param name="expressionBody">Expression-bodied形式のメソッド本体（nullの場合あり）</param>
+        /// <param name="block">Method body in block form (can be null)</param>
+        /// <param name="expressionBody">Method body in expression-bodied form (can be null)</param>
         private void CheckMethodBody(BlockSyntax block, ArrowExpressionClauseSyntax expressionBody)
         {
             if (block != null)
@@ -291,12 +290,12 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// ラムダ式や匿名メソッドの本体を検査する共通ヘルパーメソッド。
-        /// ラムダ本体がブロック形式か単一式かを判定し、
-        /// 適切な検査メソッドを呼び出す。
-        /// 単純ラムダ、括弧付きラムダ、匿名メソッド全てから共通で使用される。
+        /// A common helper method for inspecting lambda and anonymous method bodies.
+        /// Determines whether the lambda body is a block or a single expression,
+        /// and calls the appropriate inspection method.
+        /// Used commonly for simple lambdas, parenthesized lambdas, and anonymous methods.
         /// </summary>
-        /// <param name="body">ラムダまたは匿名メソッドの本体（BlockSyntaxまたはExpressionSyntax）</param>
+        /// <param name="body">The lambda or anonymous method body (BlockSyntax or ExpressionSyntax)</param>
         private void CheckLambdaBody(CSharpSyntaxNode body)
         {
             if (body is BlockSyntax block)
@@ -310,37 +309,37 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// 単一の式を検査するヘルパーメソッド。
-        /// Expression-bodiedメンバーやラムダ式の単一式本体を検査する際に使用され、
-        /// Visitメソッドを呼び出して再帰的に構文木を走査する。
+        /// A helper method for inspecting single expressions.
+        /// Used when examining expression-bodied members or single-expression lambda bodies,
+        /// invoking Visit methods to recursively traverse the syntax tree.
         /// </summary>
-        /// <param name="expression">検査対象の式構文ノード</param>
+        /// <param name="expression">The expression syntax node to be examined</param>
         private void CheckExpression(ExpressionSyntax expression)
         {
             Visit(expression);
         }
         
         /// <summary>
-        /// シンボルの完全修飾名を取得するヘルパーメソッド。
-        /// 名前空間を含む完全な名前（例：System.Diagnostics.Process）を返し、
-        /// DangerousApiDetectorでのマッチングに使用される。
-        /// RoslynのSymbolDisplayFormat.FullyQualifiedFormatを使用して正確な名前を取得する。
+        /// A helper method to retrieve the fully qualified symbol name.
+        /// Returns a complete name including namespace (e.g., System.Diagnostics.Process)
+        /// used for matching in DangerousApiDetector.
+        /// Uses Roslyn's SymbolDisplayFormat.FullyQualifiedFormat to obtain the precise name.
         /// </summary>
-        /// <param name="symbol">名前を取得するシンボル</param>
-        /// <returns>完全修飾名の文字列</returns>
+        /// <param name="symbol">The symbol to retrieve the name for</param>
+        /// <returns>Fully qualified name as a string</returns>
         private string GetFullSymbolName(ISymbol symbol)
         {
             return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         }
         
         /// <summary>
-        /// メソッドシンボルの完全名（型名.メソッド名）を取得するヘルパーメソッド。
-        /// メソッドが所属する型の名前とメソッド名を結合して返し（例：System.IO.File.Delete）、
-        /// DangerousApiDetectorでの危険なメソッドパターンマッチングに使用される。
-        /// 所属型が不明な場合はメソッド名のみを返す。
+        /// A helper method to retrieve the fully qualified method name (type.methodName).
+        /// Combines the containing type name and method name (e.g., System.IO.File.Delete)
+        /// used for matching dangerous method patterns in DangerousApiDetector.
+        /// Returns only the method name if the containing type is unknown.
         /// </summary>
-        /// <param name="method">名前を取得するメソッドシンボル</param>
-        /// <returns>型名.メソッド名形式の文字列</returns>
+        /// <param name="method">The method symbol to retrieve the name for</param>
+        /// <returns>A string in the format "type.methodName"</returns>
         private string GetFullMethodName(IMethodSymbol method)
         {
             string typeName = method.ContainingType?.ToDisplayString() ?? "";

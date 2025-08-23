@@ -6,23 +6,23 @@ using UnityEngine;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Roslynアセンブリの存在確認ユーティリティ
+    /// Utility for checking the existence of Roslyn assemblies
     /// </summary>
     /// <summary>
-    /// Roslynアセンブリの存在確認ユーティリティ
+    /// Utility for checking the existence of Roslyn assemblies
     /// </summary>
     public static class RoslynAssemblyChecker
     {
         private const string ROSLYN_ASSEMBLY_NAME = "Microsoft.CodeAnalysis.CSharp";
         
         /// <summary>
-        /// Roslynアセンブリが利用可能かチェック
+        /// Check if Roslyn assembly is available
         /// </summary>
         public static bool IsRoslynAvailable()
         {
             try
             {
-                // アセンブリが読み込まれているか確認
+                // Check if the assembly is already loaded
                 Assembly[] loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
                 Assembly roslynAssembly = loadedAssemblies.FirstOrDefault(a => 
                     a.GetName().Name == ROSLYN_ASSEMBLY_NAME);
@@ -32,7 +32,7 @@ namespace io.github.hatayama.uLoopMCP
                     return true;
                 }
                 
-                // 型の存在確認（アセンブリがプロジェクトにあるか）
+                // Verify type existence (check if assembly is present in the project)
                 Type csharpSyntaxType = Type.GetType(
                     "Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree, Microsoft.CodeAnalysis.CSharp",
                     false);
@@ -46,7 +46,7 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// Roslynアセンブリのバージョン情報を取得
+        /// Retrieve version information for the Roslyn assembly
         /// </summary>
         public static string GetRoslynVersion()
         {
@@ -70,7 +70,7 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// インストール手順のメッセージを生成
+        /// Generate installation instructions message
         /// </summary>
         public static string GetInstallationMessage()
         {

@@ -3,31 +3,31 @@ using System.Collections.Generic;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// 動的コード実行ツールのレスポンス
+    /// Response for dynamic code execution tool
 
-    /// 関連クラス: ExecuteDynamicCodeTool, ExecuteDynamicCodeSchema
+    /// Related classes: ExecuteDynamicCodeTool, ExecuteDynamicCodeSchema
     /// </summary>
     public class ExecuteDynamicCodeResponse : BaseToolResponse
     {
-        /// <summary>実行成功フラグ</summary>
+        /// <summary>Execution success flag</summary>
         public bool Success { get; set; }
         
-        /// <summary>実行結果</summary>
+        /// <summary>Execution result</summary>
         public string Result { get; set; }
         
-        /// <summary>ログメッセージ</summary>
+        /// <summary>Log messages</summary>
         public List<string> Logs { get; set; } = new();
         
-        /// <summary>コンパイルエラー</summary>
+        /// <summary>Compilation errors</summary>
         public List<CompilationErrorDto> CompilationErrors { get; set; } = new();
         
-        /// <summary>エラーメッセージ（失敗時）</summary>
+        /// <summary>Error message (on failure)</summary>
         public string ErrorMessage { get; set; }
         
-        /// <summary>現在のセキュリティレベル</summary>
+        /// <summary>Current security level</summary>
         public string SecurityLevel { get; set; }
         
-        /// <summary>エラーメッセージ（ErrorMessageのエイリアス）</summary>
+        /// <summary>Error message (alias for ErrorMessage)</summary>
         public string Error 
         { 
             get => ErrorMessage; 
@@ -35,29 +35,29 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         /// <summary>
-        /// コンパイル用に整形されたコード
-        /// （using文の抽出・移動、クラス/メソッドラップ適用後）
-        /// デバッグ時に実際にコンパイルされたコードを確認可能
+        /// Code formatted for compilation
+        /// (After extracting/moving using statements and applying class/method wrapping)
+        /// Allows checking the actual compiled code during debugging
         /// </summary>
         public string UpdatedCode { get; set; }
         
     }
     
     /// <summary>
-    /// コンパイルエラー情報のDTO
+    /// DTO for compilation error information
     /// </summary>
     public class CompilationErrorDto
     {
-        /// <summary>エラーメッセージ</summary>
+        /// <summary>Error message</summary>
         public string Message { get; set; }
         
-        /// <summary>行番号</summary>
+        /// <summary>Line number</summary>
         public int Line { get; set; }
         
-        /// <summary>列番号</summary>
+        /// <summary>Column number</summary>
         public int Column { get; set; }
         
-        /// <summary>コンパイラーエラーコード（CS0103など）</summary>
+        /// <summary>Compiler error code (e.g., CS0103)</summary>
         public string ErrorCode { get; set; }
     }
 }

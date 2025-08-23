@@ -6,8 +6,8 @@ using System.Linq;
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
-    /// ExecuteDynamicCodeTool関連のRestrictedモードテスト
-    /// セキュリティ違反を検出するテストを集約
+    /// Tests related to ExecuteDynamicCodeTool in Restricted mode
+    /// Aggregates tests for detecting security violations
     /// </summary>
     [TestFixture]
     public class ExecuteDynamicCodeSecurityTests
@@ -17,7 +17,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [SetUp]
         public void SetUp()
         {
-            // Restrictedモードでコンパイラを作成（セキュリティ検証を有効化）
+            // Create compiler in Restricted mode (enable security verification)
             _compiler = new RoslynCompiler(DynamicCodeSecurityLevel.Restricted);
         }
 
@@ -32,7 +32,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public void Compile_WithDynamicAssemblyTest_SafeMethods_ShouldSucceed()
         {
-            // Arrange - DynamicAssemblyTestの安全なメソッド使用
+            // Arrange - Use safe method of DynamicAssemblyTest
             string code = @"
                 var test = new io.github.hatayama.uLoopMCP.DynamicAssemblyTest();
                 string hello = test.HelloWorld();
@@ -59,8 +59,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public void Compile_WithDynamicAssemblyTest_ExecuteAnoterInstanceMethod_ShouldSucceed()
         {
             // Arrange
-            // ExecuteAnoterInstanceMethodは別アセンブリのメソッドなので、
-            // コンパイル時には内容を検査できず、成功する
+            // ExecuteAnotherInstanceMethod is a method from another assembly,
+            // so it cannot be inspected during compilation and will succeed
             string code = @"
                 var test = new io.github.hatayama.uLoopMCP.DynamicAssemblyTest();
                 test.ExecuteAnoterInstanceMethod();
@@ -77,7 +77,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             CompilationResult result = _compiler.Compile(request);
 
             // Assert
-            // 別アセンブリのメソッド内容は検査できないため、コンパイルは成功する
+            // Cannot inspect method contents from another assembly, so compilation succeeds
             Assert.IsTrue(result.Success, "Should compile successfully as method content is not inspected");
             Assert.IsFalse(result.HasSecurityViolations, "Should not detect violations in external assembly methods");
         }
@@ -86,7 +86,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public void Compile_WithForDynamicAssemblyTest_DirectDangerousCall_ShouldSucceed()
         {
             // Arrange  
-            // ForDynamicAssemblyTestのメソッド呼び出し自体は検出できない
+            // Method call for DynamicAssemblyTest itself cannot be detected
             string code = @"
                 var forTest = new io.github.hatayama.uLoopMCP.ForDynamicAssemblyTest();
                 return forTest.TestForbiddenOperationsInAnotherDLL();";
@@ -102,7 +102,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             CompilationResult result = _compiler.Compile(request);
 
             // Assert
-            // 別アセンブリのメソッド呼び出しは、その内容まで検査できない
+            // Method calls from another assembly cannot be inspected to their full content
             Assert.IsTrue(result.Success, "External assembly method calls compile successfully");
             Assert.IsFalse(result.HasSecurityViolations, "Cannot detect violations inside external methods");
         }

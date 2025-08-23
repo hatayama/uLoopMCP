@@ -1,56 +1,56 @@
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// セキュリティ違反
-    /// 関連クラス: SecurityValidator, SecuritySyntaxWalker
+    /// Security Violation
+    /// Related Classes: SecurityValidator, SecuritySyntaxWalker
     /// </summary>
     public class SecurityViolation
     {
-        /// <summary>違反タイプ</summary>
+        /// <summary>Violation Type</summary>
         public SecurityViolationType Type { get; set; }
 
-        /// <summary>説明</summary>
+        /// <summary>Description of the Security Violation</summary>
         public string Description { get; set; }
 
-        /// <summary>行番号</summary>
+        /// <summary>Line Number where the Violation Occurred</summary>
         public int LineNumber { get; set; }
 
-        /// <summary>コードスニペット</summary>
+        /// <summary>Code Snippet Containing the Violation</summary>
         public string CodeSnippet { get; set; }
         
-        /// <summary>メッセージ</summary>
+        /// <summary>Violation Message</summary>
         public string Message { get; set; }
         
-        /// <summary>API名</summary>
+        /// <summary>API Name Involved in the Violation</summary>
         public string ApiName { get; set; }
         
 #if ULOOPMCP_HAS_ROSLYN
-        /// <summary>ロケーション</summary>
+        /// <summary>Location of the Violation</summary>
         public Microsoft.CodeAnalysis.Location Location { get; set; }
 #else
-        /// <summary>ロケーション（Roslyn無効時はobject）</summary>
+        /// <summary>Location (object when Roslyn is disabled)</summary>
         public object Location { get; set; }
 #endif
     }
 
     /// <summary>
-    /// セキュリティ違反タイプ
+    /// Security Violation Types
     /// </summary>
     public enum SecurityViolationType
     {
-        /// <summary>禁止名前空間のusing宣言</summary>
+        /// <summary>Using Declaration of a Forbidden Namespace</summary>
         ForbiddenNamespace,
 
-        /// <summary>危険なAPI呼び出し（メソッド、プロパティ等）</summary>
+        /// <summary>Dangerous API Call (Method, Property, etc.)</summary>
         DangerousApiCall,
 
-        /// <summary>危険なクラスの継承</summary>
+        /// <summary>Inheritance from a Dangerous Class</summary>
         DangerousInheritance,
 
-        /// <summary>危険な型のインスタンス生成</summary>
+        /// <summary>Instantiation of a Dangerous Type</summary>
         DangerousTypeCreation,
 
-        /// <summary>リフレクション使用</summary>
+        /// <summary>Unauthorized Reflection Usage</summary>
         UnauthorizedReflection
     }
 }

@@ -3,23 +3,23 @@
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// GameViewキャプチャツールのレスポンス
-    /// 関連クラス: CaptureGameViewTool, CaptureGameViewSchema
+    /// Response for the GameView capture tool
+    /// Related classes: CaptureGameViewTool, CaptureGameViewSchema
     /// </summary>
     public class CaptureGameViewResponse : BaseToolResponse
     {
         /// <summary>
-        /// 保存された画像ファイルの絶対パス（キャプチャ失敗時はnull）
+        /// Absolute path of the saved image file (null if capture failed)
         /// </summary>
         public string? ImagePath { get; set; }
 
         /// <summary>
-        /// 保存されたファイルのサイズ（バイト単位、キャプチャ失敗時はnull）
+        /// Size of the saved file in bytes (null if capture failed)
         /// </summary>
         public long? FileSizeBytes { get; set; }
 
         /// <summary>
-        /// 成功レスポンス生成用コンストラクタ
+        /// Constructor for generating a successful response
         /// </summary>
         public CaptureGameViewResponse(string imagePath, long fileSizeBytes)
         {
@@ -28,7 +28,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 失敗レスポンス生成用コンストラクタ
+        /// Constructor for generating a failure response
         /// </summary>
         public CaptureGameViewResponse(bool failure)
         {
@@ -37,7 +37,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// デフォルトコンストラクタ（JSON デシリアライゼーション用）
+        /// Default constructor (for JSON deserialization)
         /// </summary>
         public CaptureGameViewResponse()
         {

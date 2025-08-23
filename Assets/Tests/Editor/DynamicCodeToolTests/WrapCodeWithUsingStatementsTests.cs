@@ -5,8 +5,8 @@ using System.Collections.Generic;
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
-    /// WrapCodeIfNeededメソッドのusing文処理テスト
-    /// AI生成コードのusing文を適切に抽出・配置する機能のテスト
+    /// Test for WrapCodeIfNeeded method's using statement processing
+    /// Test the functionality of extracting and placing using statements for AI-generated code
     /// </summary>
     public class WrapCodeWithUsingStatementsTests
     {
@@ -15,7 +15,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [SetUp]
         public void Setup()
         {
-            // FullAccessモードでコンパイラを作成（テスト用）
+            // Create compiler in FullAccess mode (for testing)
             _compiler = new RoslynCompiler(DynamicCodeSecurityLevel.FullAccess);
         }
 
@@ -28,7 +28,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public void TestSimpleCodeWithUsing_ExtractsAndRelocatesUsing()
         {
-            // Arrange: AIが書いたコード（using文付き）
+            // Arrange: AI-generated code (with using statement)
             string aiGeneratedCode = @"using UnityEngine;
 GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
 return ""Cube created"";";
@@ -48,7 +48,7 @@ return ""Cube created"";";
             Assert.IsTrue(result.Success, "Compilation should succeed");
             Assert.IsNotNull(result.CompiledAssembly, "Assembly should be created");
             
-            // ラップされたコードにusing UnityEngine;が含まれることを確認
+            // Verify that the wrapped code contains using UnityEngine;
             Assert.IsTrue(result.UpdatedCode.Contains("using UnityEngine;"), 
                 "Using statement should be preserved");
             Assert.IsTrue(result.UpdatedCode.Contains("namespace Dynamic"), 
@@ -60,7 +60,7 @@ return ""Cube created"";";
         [Test]
         public void TestMultipleUsings_ExtractsAllUsings()
         {
-            // Arrange: 複数のusing文を含むコード
+            // Arrange: Code with multiple using statements
             string aiGeneratedCode = @"using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
@@ -83,7 +83,7 @@ return objects.Count;";
             // Assert
             Assert.IsTrue(result.Success, "Compilation should succeed");
             
-            // 全てのusing文が保持されていることを確認
+            // Verify that all using statements are preserved
             Assert.IsTrue(result.UpdatedCode.Contains("using UnityEngine;"), 
                 "UnityEngine using should be preserved");
             Assert.IsTrue(result.UpdatedCode.Contains("using System.Collections.Generic;"), 
@@ -95,7 +95,7 @@ return objects.Count;";
         [Test]
         public void TestCodeWithoutUsing_WorksAsExpected()
         {
-            // Arrange: using文なしのコード（完全修飾名使用）
+            // Arrange: Code without using statement (using fully qualified names)
             string aiGeneratedCode = @"UnityEngine.GameObject cube = UnityEngine.GameObject.CreatePrimitive(UnityEngine.PrimitiveType.Cube);
 return ""Cube created"";";
 
@@ -119,7 +119,7 @@ return ""Cube created"";";
         [Test]
         public void TestMixedContent_CorrectlySeparatesUsingFromCode()
         {
-            // Arrange: using文とコメント、空行が混在
+            // Arrange: Mixture of using statements, comments, and blank lines
             string aiGeneratedCode = @"using UnityEngine;
 // This is a comment
 using System;
@@ -142,13 +142,13 @@ return cube.name;";
             // Assert
             Assert.IsTrue(result.Success, "Compilation should succeed");
             
-            // using文が適切に抽出されていることを確認
+            // Verify that using statements are correctly extracted
             Assert.IsTrue(result.UpdatedCode.Contains("using UnityEngine;"), 
                 "UnityEngine using should be preserved");
             Assert.IsTrue(result.UpdatedCode.Contains("using System;"), 
                 "System using should be preserved");
             
-            // コメントは除外されていることを確認（using文以外として扱われる）
+            // Verify that comments are excluded (treated as non-using content)
             string[] lines = result.UpdatedCode.Split('\n');
             int namespaceIndex = System.Array.FindIndex(lines, l => l.Contains("namespace Dynamic"));
             Assert.Greater(namespaceIndex, 0, "Namespace should come after using statements");
@@ -157,7 +157,7 @@ return cube.name;";
         [Test]
         public void TestUsingStaticAndAlias_HandledCorrectly()
         {
-            // Arrange: using static と using alias を含むコード
+            // Arrange: Code with using static and using alias
             string aiGeneratedCode = @"using UnityEngine;
 using static UnityEngine.Mathf;
 using GO = UnityEngine.GameObject;

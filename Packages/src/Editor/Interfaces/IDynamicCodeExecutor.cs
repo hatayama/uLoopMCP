@@ -4,13 +4,13 @@ using System.Threading;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// 動的コード実行統合機能のインターフェース
+    /// Interface for dynamic code execution integration functionality
 
-    /// 関連クラス: DynamicCodeExecutor, RoslynCompiler, SecurityValidator, CommandRunner
+    /// Related classes: DynamicCodeExecutor, RoslynCompiler, SecurityValidator, CommandRunner
     /// </summary>
     public interface IDynamicCodeExecutor
     {
-        /// <summary>コード実行</summary>
+        /// <summary>Code execution</summary>
         ExecutionResult ExecuteCode(
             string code,
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
@@ -19,7 +19,7 @@ namespace io.github.hatayama.uLoopMCP
             bool compileOnly = false
         );
 
-        /// <summary>非同期コード実行</summary>
+        /// <summary>Asynchronous code execution</summary>
         System.Threading.Tasks.Task<ExecutionResult> ExecuteCodeAsync(
             string code,
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME, 
@@ -30,29 +30,29 @@ namespace io.github.hatayama.uLoopMCP
 
 
 
-        /// <summary>実行統計取得</summary>
+        /// <summary>Get execution statistics</summary>
         ExecutionStatistics GetStatistics();
     }
 
-    /// <summary>実行統計</summary>
+    /// <summary>Execution statistics</summary>
     public class ExecutionStatistics
     {
-        /// <summary>総実行回数</summary>
+        /// <summary>Total execution count</summary>
         public int TotalExecutions { get; set; }
 
-        /// <summary>成功実行回数</summary>
+        /// <summary>Successful execution count</summary>
         public int SuccessfulExecutions { get; set; }
 
-        /// <summary>失敗実行回数</summary>
+        /// <summary>Failed execution count</summary>
         public int FailedExecutions { get; set; }
 
-        /// <summary>平均実行時間</summary>
+        /// <summary>Average execution time</summary>
         public TimeSpan AverageExecutionTime { get; set; }
 
-        /// <summary>セキュリティ違反回数</summary>
+        /// <summary>Security violation count</summary>
         public int SecurityViolations { get; set; }
 
-        /// <summary>コンパイルエラー回数</summary>
+        /// <summary>Compilation error count</summary>
         public int CompilationErrors { get; set; }
     }
 }

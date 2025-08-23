@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// MCP 動的C#コード実行ツール
-    /// セキュリティレベル変更時のみExecutorを再生成し、通常はキャッシュして再利用
-    /// 関連クラス: IDynamicCodeExecutor, DynamicCodeExecutorFactory
+    /// MCP Dynamic C# Code Execution Tool
+    /// Regenerates Executor only when security level changes, otherwise caches and reuses
+    /// Related Classes: IDynamicCodeExecutor, DynamicCodeExecutorFactory
     /// </summary>
     [McpTool(Description = @"Execute Unity C# code directly - no class/namespace needed!
 
@@ -59,7 +59,7 @@ either use fully-qualified names or include the necessary using statements in yo
 #if ULOOPMCP_HAS_ROSLYN
             _executor = null;
             _errorHandler = new ImprovedErrorHandler();
-            // 初期値は無効な値を設定（最初のリクエストで必ず再作成される）
+            // Set initial value to an invalid value (will always be recreated on the first request)
             _currentSecurityLevel = (DynamicCodeSecurityLevel)(-1);
             
             VibeLogger.LogInfo(
@@ -71,7 +71,7 @@ either use fully-qualified names or include the necessary using statements in yo
                 aiTodo: "Monitor executor lifecycle and cache hit rate"
             );
 #else
-            // Roslyn無効時はnull
+            // Null when Roslyn is disabled
             _executor = null;
             _errorHandler = null;
             _currentSecurityLevel = DynamicCodeSecurityLevel.Disabled;
@@ -89,7 +89,7 @@ either use fully-qualified names or include the necessary using statements in yo
 #if ULOOPMCP_HAS_ROSLYN
                 DynamicCodeSecurityLevel editorLevel = McpEditorSettings.GetDynamicCodeSecurityLevel();
                 
-                // エディタ設定が変更された場合のみExecutorを再作成（パフォーマンスのためキャッシュ）
+                // Recreate Executor only when editor settings change (cache for performance)
                 if (_executor == null || editorLevel != _currentSecurityLevel)
                 {
                     string action = _executor == null ? "Creating" : "Recreating";
@@ -101,7 +101,7 @@ either use fully-qualified names or include the necessary using statements in yo
                             action = action.ToLower(),
                             oldLevel = _currentSecurityLevel.ToString(),
                             newLevel = editorLevel.ToString(),
-                            source = "EditorSettings"  // パラメータではなくエディタ設定から
+                            source = "EditorSettings"  // From editor settings, not parameters
                         },
                         correlationId,
                         $"{action} executor from editor settings",
@@ -113,7 +113,7 @@ either use fully-qualified names or include the necessary using statements in yo
                 }
 #endif
                 
-                // VibeLoggerで実行開始をログ
+                // Log execution start with VibeLogger
                 VibeLogger.LogInfo(
                     "execute_dynamic_code_start",
                     "Dynamic code execution started",
@@ -129,7 +129,7 @@ either use fully-qualified names or include the necessary using statements in yo
                     "Monitor execution flow and performance"
                 );
                 
-                // Level 0: 実行完全禁止
+                // Level 0: Execution completely prohibited
                 if (!DynamicCodeSecurityManager.CanExecute(_currentSecurityLevel))
                 {
                     return new ExecuteDynamicCodeResponse
@@ -141,37 +141,37 @@ either use fully-qualified names or include the necessary using statements in yo
                     };
                 }
                 
-                // Level 1: Restrictedモードでは、Roslynベースの検証に委譲
-                // 正規表現ベースのチェックは削除し、RoslynCompilerのSecurityValidatorが処理する
-                // これにより、ユーザー定義クラス（Assembly-CSharp）も適切に処理される
+                // Level 1: In Restricted mode, delegate to Roslyn-based validation
+                // Remove regex-based checks, SecurityValidator of RoslynCompiler handles this
+                // This allows proper handling of user-defined classes (Assembly-CSharp)
                 
-                // コード取得
+                // Retrieve code
                 string originalCode = parameters.Code ?? "";
 
-                // パラメータ配列に変換
+                // Convert to parameter array
                 object[] parametersArray = null;
                 if (parameters.Parameters != null && parameters.Parameters.Count > 0)
                 {
                     parametersArray = parameters.Parameters.Values.ToArray();
                 }
                 
-                // コード実行（RoslynCompilerが診断駆動修正を行う）
+                // Code execution (RoslynCompiler performs diagnostic-driven modifications)
                 ExecutionResult executionResult = await _executor.ExecuteCodeAsync(
-                    originalCode, // オリジナルコードを使用（RoslynCompilerが修正を行う）
+                    originalCode, // Use original code (RoslynCompiler will perform modifications)
                     "DynamicCommand",
                     parametersArray,
                     cancellationToken,
                     parameters.CompileOnly
                 );
                 
-                // レスポンスに変換（エラー時は改善されたメッセージを使用）
+                // Convert to response (use improved message on error)
                 ExecuteDynamicCodeResponse toolResponse = ConvertExecutionResultToResponse(
                     executionResult, originalCode, correlationId);
                 
-                // セキュリティレベルを追加
+                // Add security level
                 toolResponse.SecurityLevel = _currentSecurityLevel.ToString();
                 
-                // VibeLoggerで実行完了をログ
+                // Log execution completion with VibeLogger
                 VibeLogger.LogInfo(
                     "execute_dynamic_code_complete",
                     "Dynamic code execution completed",
@@ -191,7 +191,7 @@ either use fully-qualified names or include the necessary using statements in yo
             }
             catch (Exception ex)
             {
-                // VibeLoggerでエラーをログ
+                // Log error with VibeLogger
                 VibeLogger.LogError(
                     "execute_dynamic_code_error",
                     "Dynamic code execution failed with exception",
@@ -210,7 +210,7 @@ either use fully-qualified names or include the necessary using statements in yo
         }
         
         /// <summary>
-        /// ExecutionResponseをExecuteDynamicCodeResponseに変換
+        /// Convert ExecutionResponse to ExecuteDynamicCodeResponse
         /// </summary>
         private ExecuteDynamicCodeResponse ConvertExecutionResultToResponse(
             ExecutionResult result, string originalCode, string correlationId)
@@ -220,15 +220,15 @@ either use fully-qualified names or include the necessary using statements in yo
                 Success = result.Success,
                 Result = result.Result?.ToString() ?? "",
                 Logs = result.Logs ?? new List<string>(),
-                CompilationErrors = new List<CompilationErrorDto>(), // ExecutionResultからは取得不可
+                CompilationErrors = new List<CompilationErrorDto>(), // Cannot be retrieved from ExecutionResult
                 ErrorMessage = result.ErrorMessage ?? "",
                 ExecutionTimeMs = (long)result.ExecutionTime.TotalMilliseconds
             };
 
-            // エラー時は改善されたメッセージを使用
+            // Use improved message on error
             if (!result.Success)
             {
-                // コンパイルエラーの場合、Logsからエラー情報を取得
+                // In case of compilation error, retrieve error information from Logs
                 string actualErrorMessage = result.ErrorMessage ?? "";
                 if (result.Logs?.Any() == true)
                 {
@@ -238,28 +238,28 @@ either use fully-qualified names or include the necessary using statements in yo
                 EnhancedErrorResponse enhancedError = 
                     _errorHandler.ProcessError(result, originalCode);
                 
-                // 分かりやすいエラーメッセージに置き換え
+                // Replace with a more understandable error message
                 response.ErrorMessage = enhancedError.FriendlyMessage;
                 
-                // 追加情報をLogsに追加
+                // Add additional information to Logs
                 if (response.Logs == null) response.Logs = new List<string>();
                 
-                // 元のエラーも残しておく
-                response.Logs.Add($"元のエラー: {actualErrorMessage}");
+                // Keep the original error as well
+                response.Logs.Add($"Original Error: {actualErrorMessage}");
                 
                 if (!string.IsNullOrEmpty(enhancedError.Explanation))
                 {
-                    response.Logs.Add($"説明: {enhancedError.Explanation}");
+                    response.Logs.Add($"Explanation: {enhancedError.Explanation}");
                 }
                 
                 if (!string.IsNullOrEmpty(enhancedError.Example))
                 {
-                    response.Logs.Add($"例: {enhancedError.Example}");
+                    response.Logs.Add($"Example: {enhancedError.Example}");
                 }
                 
                 if (enhancedError.SuggestedSolutions?.Any() == true)
                 {
-                    response.Logs.Add("解決策:");
+                    response.Logs.Add("Solutions:");
                     foreach (string solution in enhancedError.SuggestedSolutions)
                     {
                         response.Logs.Add($"- {solution}");
@@ -268,7 +268,7 @@ either use fully-qualified names or include the necessary using statements in yo
                 
                 if (enhancedError.LearningTips?.Any() == true)
                 {
-                    response.Logs.Add("ヒント:");
+                    response.Logs.Add("Tips:");
                     foreach (string tip in enhancedError.LearningTips)
                     {
                         response.Logs.Add($"- {tip}");
@@ -291,7 +291,7 @@ either use fully-qualified names or include the necessary using statements in yo
                 );
             }
 
-            // 例外が発生した場合のエラー情報追加
+            // Add error information when an exception occurs
             if (result.Exception != null)
             {
                 if (response.Logs == null) response.Logs = new List<string>();
@@ -306,7 +306,7 @@ either use fully-qualified names or include the necessary using statements in yo
         }
         
         /// <summary>
-        /// エラーレスポンス作成
+        /// Create error response
         /// </summary>
         private ExecuteDynamicCodeResponse CreateErrorResponse(string errorMessage)
         {

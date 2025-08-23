@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// 動的コード実行統合実装
-    /// 関連クラス: RoslynCompiler, SecurityValidator, CommandRunner
+    /// Integrated Dynamic Code Execution Implementation
+    /// Related Classes: RoslynCompiler, SecurityValidator, CommandRunner
     /// </summary>
     public class DynamicCodeExecutor : IDynamicCodeExecutor
     {
@@ -19,7 +19,7 @@ namespace io.github.hatayama.uLoopMCP
         private readonly ExecutionStatistics _statistics;
         private readonly object _statsLock = new();
 
-        /// <summary>コンストラクタ</summary>
+        /// <summary>Constructor</summary>
         public DynamicCodeExecutor(
             RoslynCompiler compiler,
             SecurityValidator validator,
@@ -40,12 +40,12 @@ namespace io.github.hatayama.uLoopMCP
                     validator_type = validator.GetType().Name,
                     runner_type = runner.GetType().Name
                 },
-                humanNote: "動的コード実行統合システムの初期化",
-                aiTodo: "実行統計の収集開始"
+                humanNote: "Initializing Integrated Dynamic Code Execution System",
+                aiTodo: "Start Collecting Execution Statistics"
             );
         }
 
-        /// <summary>コード実行</summary>
+        /// <summary>Code Execution</summary>
         public ExecutionResult ExecuteCode(
             string code,
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
@@ -60,22 +60,22 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogExecutionStart(className, parameters, code, compileOnly, correlationId);
 
-                // Phase 1: セキュリティ検証
+                // Phase 1: Security Validation
                 ExecutionResult securityResult = PerformSecurityValidation(code, correlationId, stopwatch);
                 if (!securityResult.Success) return securityResult;
 
-                // Phase 2: コンパイル
+                // Phase 2: Compilation
                 CompilationResult compilationResult = CompileCode(code, className, correlationId);
                 ExecutionResult compilationErrorResult = HandleCompilationResult(compilationResult, stopwatch);
                 if (compilationErrorResult != null) return compilationErrorResult;
 
-                // Phase 3: CompileOnlyモードのチェック
+                // Phase 3: Check Compile-Only Mode
                 if (compileOnly)
                 {
                     return CreateCompileOnlySuccessResult(compilationResult, correlationId, stopwatch);
                 }
 
-                // Phase 4: 実行
+                // Phase 4: Execution
                 ExecutionResult executionResult = PerformExecution(
                     compilationResult.CompiledAssembly,
                     className,
@@ -106,8 +106,8 @@ namespace io.github.hatayama.uLoopMCP
                     compile_only = compileOnly
                 },
                 correlationId,
-                "動的コード実行開始",
-                "実行フローのステップ追跡"
+                "Dynamic Code Execution Started",
+                "Tracking Execution Flow Steps"
             );
         }
 
@@ -116,7 +116,7 @@ namespace io.github.hatayama.uLoopMCP
             SecurityValidationResult validationResult = ValidateCodeSecurity(code, correlationId);
             if (!validationResult.IsValid)
             {
-                return CreateFailureResult("セキュリティ違反が検出されました",
+                return CreateFailureResult("Security violations detected",
                     stopwatch.Elapsed, validationResult.Violations);
             }
             return new ExecutionResult { Success = true };
@@ -128,16 +128,16 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (compilationResult.HasSecurityViolations)
                 {
-                    return CreateFailureResult("セキュリティ違反が検出されました",
+                    return CreateFailureResult("Security violations detected",
                         stopwatch.Elapsed, ConvertToSecurityViolations(compilationResult.SecurityViolations));
                 }
-                return CreateCompilationFailureResult("コンパイルエラーが発生しました",
+                return CreateCompilationFailureResult("Compilation error occurred",
                     stopwatch.Elapsed, compilationResult.Errors);
             }
 
             if (compilationResult.HasSecurityViolations)
             {
-                return CreateFailureResult("セキュリティ違反が検出されました（危険なAPIコール）",
+                return CreateFailureResult("Security violations detected (Dangerous API call)",
                     stopwatch.Elapsed, compilationResult.SecurityViolations);
             }
 
@@ -155,8 +155,8 @@ namespace io.github.hatayama.uLoopMCP
                     assembly_name = compilationResult.CompiledAssembly?.FullName
                 },
                 correlationId,
-                "コンパイル専用モード完了",
-                "コンパイル結果の検証"
+                "Compile-Only Mode Completed",
+                "Verifying Compilation Results"
             );
 
             return new ExecutionResult
@@ -201,14 +201,14 @@ namespace io.github.hatayama.uLoopMCP
                     result_length = executionResult.Result?.ToString()?.Length ?? 0
                 },
                 correlationId,
-                "動的コード実行完了",
-                "実行結果とパフォーマンスの記録"
+                "Dynamic Code Execution Completed",
+                "Recording Execution Results and Performance"
             );
         }
 
         private ExecutionResult HandleExecutionException(Exception ex, string correlationId, Stopwatch stopwatch)
         {
-            ExecutionResult result = CreateExceptionResult("実行中に予期しないエラーが発生しました",
+            ExecutionResult result = CreateExceptionResult("An unexpected error occurred during execution",
                 ex, stopwatch.Elapsed);
             UpdateStatistics(result, stopwatch.Elapsed);
 
@@ -221,15 +221,15 @@ namespace io.github.hatayama.uLoopMCP
                     execution_time_ms = stopwatch.ElapsedMilliseconds
                 },
                 correlationId,
-                "動的コード実行エラー",
-                "予期しない例外の調査"
+                "Dynamic Code Execution Error",
+                "Investigating Unexpected Exception"
             );
 
             return result;
         }
 
-        /// <summary>非同期コード実行</summary>
-#pragma warning disable CS1998 // Async method lacks 'await' operators (ROSLYNがない場合にのみ発生)
+        /// <summary>Asynchronous Code Execution</summary>
+#pragma warning disable CS1998 // Async method lacks 'await' operators (Occurs only when Roslyn is not available)
         public async Task<ExecutionResult> ExecuteCodeAsync(
             string code,
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
@@ -238,17 +238,17 @@ namespace io.github.hatayama.uLoopMCP
             bool compileOnly = false)
         {
 #pragma warning restore CS1998
-            // 実行時セキュリティチェック
+            // Runtime Security Check
             ExecutionResult securityCheckResult = PerformRuntimeSecurityCheck(code);
             if (!securityCheckResult.Success) return securityCheckResult;
 
-            // JsonRpcProcessorで既にMainThreadに切り替え済み
+            // Already switched to Main Thread via JsonRpcProcessor
             return await Task.FromResult(ExecuteCode(code, className, parameters, cancellationToken, compileOnly));
         }
 
         private ExecutionResult PerformRuntimeSecurityCheck(string code)
         {
-            // 実行無効チェック
+            // Execution Disabled Check
             if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
             {
                 return CreateSecurityBlockedResult(
@@ -256,7 +256,7 @@ namespace io.github.hatayama.uLoopMCP
                     McpConstants.ERROR_MESSAGE_EXECUTION_DISABLED);
             }
 
-            // Restrictedモードでのセキュリティレベル変更ブロック
+            // Block Security Level Change in Restricted Mode
             if (_securityLevel == DynamicCodeSecurityLevel.Restricted)
             {
                 if (ContainsSecurityLevelChangeAttempt(code))
@@ -303,7 +303,7 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        /// <summary>実行統計取得</summary>
+        /// <summary>Get execution statistics</summary>
         public ExecutionStatistics GetStatistics()
         {
             lock (_statsLock)
@@ -320,11 +320,11 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        // プライベートヘルパーメソッド
+        // Private Helper Methods
         private SecurityValidationResult ValidateCodeSecurity(string code, string correlationId)
         {
-            // Restrictedモードの場合、Roslyn経由でのセキュリティ検証に任せる
-            // ここでは簡易チェックのみ実施（空文字列チェックなど）
+            // In Restricted Mode, defer security validation to Roslyn
+            // Perform only basic checks here (such as empty string check)
             if (string.IsNullOrWhiteSpace(code))
             {
                 return new SecurityValidationResult
@@ -335,7 +335,7 @@ namespace io.github.hatayama.uLoopMCP
                         new SecurityViolation
                         {
                             Type = SecurityViolationType.DangerousApiCall,
-                            Description = "コードが空です",
+                            Description = "Code is empty",
                             LineNumber = 0,
                             CodeSnippet = string.Empty
                         }
@@ -343,15 +343,15 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            // Roslyn使用時はコンパイル時にSecurityValidatorで詳細チェックされるため
-            // ここでは基本的な検証のみで通す
+            // Since detailed checks are performed by SecurityValidator during Roslyn compilation
+            // Pass through with only basic validation here
             VibeLogger.LogInfo(
                 "security_pre_validation_passed",
                 "Pre-validation passed, detailed check will be done during compilation",
                 new { code_length = code.Length },
                 correlationId,
-                "事前検証パス（詳細はコンパイル時）",
-                "コンパイル時のRoslyn検証に注目"
+                "Pre-validation passed (details during compilation)",
+                "Focusing on Roslyn validation during compilation"
             );
 
             return new SecurityValidationResult
@@ -388,8 +388,8 @@ namespace io.github.hatayama.uLoopMCP
                         warning_count = result.Warnings.Count
                     },
                     correlationId,
-                    "コンパイル失敗",
-                    "コンパイルエラーの原因分析"
+                    "Compilation Failed",
+                    "Analyzing Causes of Compilation Errors"
                 );
             }
 
@@ -403,7 +403,7 @@ namespace io.github.hatayama.uLoopMCP
             string correlationId,
             CancellationToken cancellationToken)
         {
-            // ExecutionContextを作成してExecuteメソッドを呼び出す
+            // Create ExecutionContext and call Execute method
             ExecutionContext context = new ExecutionContext
             {
                 CompiledAssembly = assembly,
@@ -419,7 +419,7 @@ namespace io.github.hatayama.uLoopMCP
             List<string> violationMessages = new List<string>();
             foreach (SecurityViolation violation in violations)
             {
-                // 新しいプロパティ（Message, ApiName）を優先的に使用
+                // Preferentially use new properties (Message, ApiName)
                 string violationMessage = !string.IsNullOrEmpty(violation.Message) 
                     ? violation.Message 
                     : violation.Description;
@@ -434,7 +434,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            // エラーメッセージに詳細を追加
+            // Add details to error message
             if (violations.Count > 0)
             {
                 message = $"{message} {string.Join(" ", violationMessages)}";
@@ -468,11 +468,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// CompilationResult.SecurityViolationsをSecurityValidatorのSecurityViolationに変換
+        /// Convert CompilationResult.SecurityViolations to SecurityValidator's SecurityViolation
         /// </summary>
         private List<SecurityViolation> ConvertToSecurityViolations(List<SecurityViolation> compilationSecurityViolations)
         {
-            // 同じ型なのでそのまま返す
+            // Return as-is since it's the same type
             return compilationSecurityViolations ?? new List<SecurityViolation>();
         }
 
@@ -503,7 +503,7 @@ namespace io.github.hatayama.uLoopMCP
                     _statistics.FailedExecutions++;
                 }
 
-                // 平均実行時間の更新（単純移動平均）
+                // Update average execution time (simple moving average)
                 double totalMs = _statistics.AverageExecutionTime.TotalMilliseconds * (_statistics.TotalExecutions - 1);
                 totalMs += executionTime.TotalMilliseconds;
                 _statistics.AverageExecutionTime = TimeSpan.FromMilliseconds(totalMs / _statistics.TotalExecutions);

@@ -3,42 +3,42 @@ using System.Collections.Generic;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// コンパイル要求
+    /// Compilation Request
     /// 
-    /// 関連クラス: RoslynCompiler
+    /// Related Class: RoslynCompiler
     /// </summary>
     public class CompilationRequest
     {
-        /// <summary>コード</summary>
+        /// <summary>Source code to compile</summary>
         public string Code { get; set; }
 
-        /// <summary>クラス名</summary>
+        /// <summary>Name of the class</summary>
         public string ClassName { get; set; }
 
-        /// <summary>名前空間</summary>
+        /// <summary>Namespace of the class</summary>
         public string Namespace { get; set; }
 
         /// <summary>
-        /// 追加参照（外部DLLファイルのパス）
-        /// AppDomainに読み込まれていない外部ライブラリ（NuGetパッケージのDLL等）を
-        /// ファイルパスで指定してコンパイル時に参照に追加する
-        /// 例: ["C:/MyLibrary/CustomLibrary.dll", "D:/ThirdParty/SomePackage.dll"]
+        /// Additional references (external DLL file paths)
+        /// Specify external libraries (such as NuGet package DLLs) that are not loaded in the AppDomain
+        /// by providing their file paths to be added as references during compilation
+        /// Example: ["C:/MyLibrary/CustomLibrary.dll", "D:/ThirdParty/SomePackage.dll"]
         /// </summary>
         public List<string> AdditionalReferences { get; set; } = new();
         
-        /// <summary>アセンブリ読み込みモード（デフォルト：全アセンブリ追加）</summary>
+        /// <summary>Assembly loading mode (default: Add all assemblies)</summary>
         public AssemblyLoadingMode AssemblyMode { get; set; } = AssemblyLoadingMode.AllAssemblies;
     }
 
 /// <summary>
-/// アセンブリ読み込みモード
+/// Defines the mode for loading assemblies during compilation
 /// </summary>
 public enum AssemblyLoadingMode
 {
-    /// <summary>選択されたアセンブリのみを参照</summary>
+    /// <summary>Reference only selected assemblies</summary>
     SelectiveReference,
     
-    /// <summary>全てのアセンブリを追加</summary>
+    /// <summary>Add all assemblies</summary>
     AllAssemblies
 }
 }

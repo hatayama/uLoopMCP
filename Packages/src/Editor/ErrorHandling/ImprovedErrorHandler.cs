@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// 関連クラス: FriendlyMessageGenerator, ErrorTranslationDictionary
+    /// Related Classes: FriendlyMessageGenerator, ErrorTranslationDictionary
     /// </summary>
     public class ImprovedErrorHandler
     {
@@ -20,13 +20,13 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 実行結果のエラーを分かりやすい形に変換
+        /// Convert execution result errors into a more understandable format
         /// </summary>
         public EnhancedErrorResponse ProcessError(
             ExecutionResult originalResult, 
             string originalCode)
         {
-            // エラーメッセージを取得（コンパイルエラーの場合はLogsからも確認）
+            // Retrieve error message (also check Logs for compilation errors)
             string errorMessage = originalResult.ErrorMessage ?? "";
             if (originalResult.Logs?.Any() == true)
             {
@@ -37,7 +37,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
-            // エラーパターンマッチング
+            // Error pattern matching
             ErrorPattern pattern = _dictionary.FindPattern(errorMessage);
             
             EnhancedErrorResponse response = new()
@@ -61,20 +61,20 @@ namespace io.github.hatayama.uLoopMCP
             
             if (errorMessage.Contains("Top-level statements"))
             {
-                tips.Add("Dynamic Toolでは、直接コードを書くだけで大丈夫です");
-                tips.Add("クラスやnamespace宣言は不要です");
+                tips.Add("In Dynamic Tool, you can write code directly");
+                tips.Add("Class and namespace declarations are not required");
             }
             
             if (errorMessage.Contains("not all code paths return"))
             {
-                tips.Add("コードの最後に return 文を追加してください");
-                tips.Add("実行結果を文字列で返すようにしましょう");
+                tips.Add("Add a return statement at the end of the code");
+                tips.Add("Return the execution result as a string");
             }
             
             if (errorMessage.Contains("ambiguous reference"))
             {
-                tips.Add("UnityEngine.Object と System.Object を明確に区別しましょう");
-                tips.Add("フルネーム（UnityEngine.Object）で書くと安全です");
+                tips.Add("Clearly distinguish between UnityEngine.Object and System.Object");
+                tips.Add("Using the full name (UnityEngine.Object) is safer");
             }
             
             return tips;
@@ -85,7 +85,7 @@ namespace io.github.hatayama.uLoopMCP
             if (errorMessage.Contains("Top-level statements") || 
                 errorMessage.Contains("not all code paths"))
             {
-                return ErrorSeverity.High; // よくあるパターンで重要
+                return ErrorSeverity.High; // Common pattern with high importance
             }
             
             if (errorMessage.Contains("ambiguous reference"))
@@ -98,7 +98,7 @@ namespace io.github.hatayama.uLoopMCP
     }
 
     /// <summary>
-    /// エラー翻訳辞書 - よくあるエラーパターンを分かりやすく翻訳
+    /// Error Translation Dictionary - Translating Common Error Patterns into Understandable Messages
     /// </summary>
     public class ErrorTranslationDictionary
     {
@@ -107,52 +107,52 @@ namespace io.github.hatayama.uLoopMCP
             ["Top-level statements must precede"] = new ErrorPattern
             {
                 PatternRegex = @"Top-level statements must precede",
-                FriendlyMessage = "コードの書き方に問題があります",
-                Explanation = "Dynamic Toolでは、クラスやnamespace宣言は不要です。Unity APIを使った処理を直接書いてください。",
+                FriendlyMessage = "There is an issue with the code structure",
+                Explanation = "In the Dynamic Tool, class and namespace declarations are not required. Write Unity API processing directly.",
                 Example = @"AVOID: namespace Test { class MyClass { void Method() { ... } } }
 
 CORRECT: GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
 cube.transform.position = Vector3.zero;
-return ""Cube作成完了"";",
+return ""Cube creation completed"";",
                 Solutions = new List<string>
                 {
-                    "クラス定義を削除してメソッド内のコードのみ記述",
-                    "namespace宣言を削除", 
-                    "using文は残してメイン処理のみ抽出"
+                    "Remove class definition and write only the code inside the method",
+                    "Remove namespace declaration", 
+                    "Keep using statements and extract only the main processing"
                 }
             },
             
             ["not all code paths return a value"] = new ErrorPattern
             {
                 PatternRegex = @"not all code paths return",
-                FriendlyMessage = "コードの最後に戻り値が必要です",
-                Explanation = "Dynamic Toolでは実行結果を返す必要があります。処理の最後に return 文を追加してください。",
+                FriendlyMessage = "A return value is required at the end of the code",
+                Explanation = "In the Dynamic Tool, you must return the execution result. Please add a return statement at the end of the processing.",
                 Example = @"AVOID: GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-Debug.Log(""完了"");
+Debug.Log(""Completed"");
 
 CORRECT: GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-Debug.Log(""完了"");
-return ""Cube作成完了"";",
+Debug.Log(""Completed"");
+return ""Cube creation completed"";",
                 Solutions = new List<string>
                 {
-                    "コード末尾に 'return \"実行完了\";' を追加",
-                    "条件分岐の全パスにreturn文を追加",
-                    "戻り値として実行結果の文字列を返す"
+                    "Add 'return \"Execution completed\";' at the end of the code",
+                    "Add return statements to all paths of conditional branching",
+                    "Return the execution result as a string"
                 }
             },
 
             ["Object' is an ambiguous reference"] = new ErrorPattern
             {
                 PatternRegex = @"'Object' is an ambiguous reference",
-                FriendlyMessage = "Objectクラスの参照が曖昧です",
-                Explanation = "UnityEngine.ObjectとSystem.Objectが混在しています。明示的に指定してください。",
+                FriendlyMessage = "Object class reference is ambiguous",
+                Explanation = "UnityEngine.Object and System.Object are mixed. Please specify explicitly.",
                 Example = @"AVOID: Object.DestroyImmediate(obj);
 
 CORRECT: UnityEngine.Object.DestroyImmediate(obj);",
                 Solutions = new List<string>
                 {
-                    "UnityEngine.Objectを明示的に指定",
-                    "フルネームでの記述を使用"
+                    "Explicitly specify UnityEngine.Object",
+                    "Use full name description"
                 }
             }
         };
@@ -171,39 +171,39 @@ CORRECT: UnityEngine.Object.DestroyImmediate(obj);",
     }
 
     /// <summary>
-    /// 分かりやすいメッセージ生成機能
+    /// User-Friendly Message Generation Feature
     /// </summary>
     public class FriendlyMessageGenerator
     {
         public string TranslateError(string originalError)
         {
-            // 基本的なエラー翻訳ロジック
+            // Basic error translation logic
             if (originalError.Contains("Top-level statements"))
             {
-                return "コードの書き方に問題があります。クラスやnamespace定義は不要です。";
+                return "There is an issue with the code structure. Class and namespace definitions are not required.";
             }
             
             if (originalError.Contains("not all code paths return"))
             {
-                return "コードの最後に戻り値が必要です。'return \"完了\";'を追加してください。";
+                return "A return value is required at the end of the code. Please add 'return \"Completed\";'.";
             }
             
             if (originalError.Contains("ambiguous reference"))
             {
-                return "クラス参照が曖昧です。UnityEngine.Objectと明示的に書いてください。";
+                return "Class reference is ambiguous. Please explicitly write UnityEngine.Object.";
             }
             
             if (originalError.Contains("Identifier expected"))
             {
-                return "文法エラーです。コードの構文を確認してください。";
+                return "Syntax error. Please verify the code syntax.";
             }
             
-            return originalError; // フォールバック
+            return originalError; // Fallback
         }
     }
 
     /// <summary>
-    /// エラーパターン定義
+    /// Error Pattern Definition
     /// </summary>
     public class ErrorPattern
     {
@@ -215,7 +215,7 @@ CORRECT: UnityEngine.Object.DestroyImmediate(obj);",
     }
 
     /// <summary>
-    /// 拡張されたエラーレスポンス
+    /// Enhanced Error Response
     /// </summary>
     public class EnhancedErrorResponse
     {
@@ -229,7 +229,7 @@ CORRECT: UnityEngine.Object.DestroyImmediate(obj);",
     }
 
     /// <summary>
-    /// エラーの重要度
+    /// Error Severity
     /// </summary>
     public enum ErrorSeverity
     {

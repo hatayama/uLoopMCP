@@ -1,34 +1,34 @@
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// ExecuteDynamicCodeToolのセキュリティレベル定義
-    /// 関連クラス: DynamicCodeSecurityManager, AssemblyReferencePolicy, RoslynCompiler
+    /// Security level definitions for ExecuteDynamicCodeTool
+    /// Related classes: DynamicCodeSecurityManager, AssemblyReferencePolicy, RoslynCompiler
     /// </summary>
     public enum DynamicCodeSecurityLevel
     {
         /// <summary>
-        /// Level 0: 完全無効化
-        /// - アセンブリを何も追加しない（コンパイラ提供の最小限参照のみ）
-        /// - コンパイルは可能だが実行は拒否される
-        /// - 用途: プロダクション環境、セキュリティ最優先
+        /// Level 0: Complete Disabled
+        /// - No additional assemblies added (only minimal references provided by the compiler)
+        /// - Compilation is possible but execution is denied
+        /// - Use case: Production environments, maximum security priority
         /// </summary>
         Disabled = 0,
 
         /// <summary>
-        /// Level 1: 制限付き実行（推奨）
-        /// - 基本.NETアセンブリ（mscorlib, System, netstandard）
-        /// - Unity公式APIアセンブリ（UnityEngine, UnityEditor等）
-        /// - 危険なAPI（System.IO、System.Net.Http、リフレクション等）はブロック
-        /// - 用途: 通常のUnity開発、安全性重視
+        /// Level 1: Restricted Execution (Recommended)
+        /// - Basic .NET assemblies (mscorlib, System, netstandard)
+        /// - Official Unity API assemblies (UnityEngine, UnityEditor, etc.)
+        /// - Dangerous APIs (System.IO, System.Net.Http, reflection, etc.) are blocked
+        /// - Use case: Standard Unity development, safety-focused
         /// </summary>
         Restricted = 1,
 
         /// <summary>
-        /// Level 2: フルアクセス
-        /// - 全アセンブリが利用可能（制限なし）
-        /// - System.Reflection.Emit、System.CodeDomも含む
-        /// - 用途: 高度な開発、システム統合、デバッグ、動的コード生成
-        /// - 警告: セキュリティリスクあり - 信頼できるコードのみで使用
+        /// Level 2: Full Access
+        /// - All assemblies available (no restrictions)
+        /// - Includes System.Reflection.Emit, System.CodeDom
+        /// - Use case: Advanced development, system integration, debugging, dynamic code generation
+        /// - Warning: Security risks present - use only with trusted code
         /// </summary>
         FullAccess = 2
     }

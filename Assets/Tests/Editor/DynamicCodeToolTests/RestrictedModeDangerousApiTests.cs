@@ -8,29 +8,29 @@ using UnityEngine;
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
-    /// Restrictedモードで危険APIがブロックされ、
-    /// 安全APIが許可されることを包括的にテストする
-    /// DangerousApiDetectorで定義された全APIの動作確認
+    /// Comprehensive testing that dangerous APIs are blocked in Restricted mode
+    /// and safe APIs are allowed
+    /// Verifies behavior of all APIs defined in DangerousApiDetector
     /// </summary>
     [TestFixture]
     public class RestrictedModeDangerousApiTests
     {
         private IDynamicCodeExecutor executor;
         
-        // テスト用の一時ディレクトリとアセットパス
+        // Temporary test directory and asset path
         private const string TEST_TEMP_DIR = "TestTemp_RestrictedMode";
         private const string TEST_ASSET_PATH = "Assets/Tests/Editor/DynamicCodeToolTests/Temp/TestTemp_RestrictedMode_temp_asset.asset";
         
         [SetUp]
         public void SetUp()
         {
-            // v4.0ステートレス設計 - グローバル設定への変更を削除
-            // Executorに直接レベル指定（既存のまま）
+            // v4.0 stateless design - Remove changes to global settings
+            // Directly specify level in Executor (keep existing)
             executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.Restricted
             );
             
-            // テスト用ディレクトリを作成
+            // Create test directory
             if (!System.IO.Directory.Exists(TEST_TEMP_DIR))
             {
                 System.IO.Directory.CreateDirectory(TEST_TEMP_DIR);
@@ -41,7 +41,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [TearDown]
         public void TearDown()
         {
-            // テスト後のクリーンアップ（ディレクトリごと削除）
+            // Cleanup after test (delete entire directory)
             CleanupTestDirectory();
             
             executor = null;
@@ -49,7 +49,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         
         private void CleanupTestDirectory()
         {
-            // テスト用ディレクトリを丸ごと削除
+            // Delete entire test directory
             try
             {
                 if (System.IO.Directory.Exists(TEST_TEMP_DIR))
@@ -58,7 +58,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                     UnityEngine.Debug.Log($"[RestrictedModeDangerousApiTests] Cleaned up test directory: {TEST_TEMP_DIR}");
                 }
                 
-                // テスト用アセットファイルをAssetDatabase経由で削除（metaファイルも自動削除される）
+                // Delete test asset file via AssetDatabase (meta file will be automatically deleted)
                 string assetPath = TEST_ASSET_PATH;
                 if (UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath) != null)
                 {
@@ -66,11 +66,11 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                     UnityEngine.Debug.Log($"[RestrictedModeDangerousApiTests] Deleted asset: {assetPath}");
                 }
                 
-                // Tempフォルダも削除（中身が空の場合）
+                // Delete Temp folder (if it's empty)
                 string tempFolder = "Assets/Tests/Editor/DynamicCodeToolTests/Temp";
                 if (UnityEditor.AssetDatabase.IsValidFolder(tempFolder))
                 {
-                    // フォルダが空の場合のみ削除
+                    // Delete only if folder is empty
                     string[] assets = UnityEditor.AssetDatabase.FindAssets("", new[] { tempFolder });
                     if (assets.Length == 0)
                     {
@@ -81,16 +81,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             }
             catch (Exception ex)
             {
-                // クリーンアップエラーは警告として記録
+                // Record cleanup errors as warnings
                 UnityEngine.Debug.LogWarning($"[RestrictedModeDangerousApiTests] Failed to delete test directory: {ex.Message}");
             }
         }
         
         // ================================================================================
-        // System.IO.File テスト
+        // System.IO.File Tests
         // ================================================================================
         
-        #region System.IO.File - 危険API（ブロックされるべき）
+        #region System.IO.File - Dangerous APIs (Should be blocked)
         
         [Test]
         public async Task TestRestrictedMode_FileDelete_Blocked()
@@ -158,7 +158,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         
         #endregion
         
-        #region System.IO.File - 安全API（許可されるべき）
+        #region System.IO.File - Safe APIs (Should be allowed)
         
         [Test]
         public async Task TestRestrictedMode_FileCreate_Allowed()
@@ -243,10 +243,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         #endregion
         
         // ================================================================================
-        // System.IO.Directory テスト
+        // System.IO.Directory Tests
         // ================================================================================
         
-        #region System.IO.Directory - 危険API
+        #region System.IO.Directory - Dangerous APIs
         
         [Test]
         public async Task TestRestrictedMode_DirectoryDelete_Blocked()
@@ -266,7 +266,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         
         #endregion
         
-        #region System.IO.Directory - 安全API
+        #region System.IO.Directory - Safe APIs
         
         [Test]
         public async Task TestRestrictedMode_DirectoryCreate_Allowed()
@@ -317,10 +317,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         #endregion
         
         // ================================================================================
-        // System.Diagnostics.Process テスト
+        // System.Diagnostics.Process Tests
         // ================================================================================
         
-        #region System.Diagnostics.Process - 危険API
+        #region System.Diagnostics.Process - Dangerous APIs
         
         [Test]
         public async Task TestRestrictedMode_ProcessStart_Blocked()
@@ -357,7 +357,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         
         #endregion
         
-        #region System.Diagnostics.Process - 安全API
+        #region System.Diagnostics.Process - Safe APIs
         
         [Test]
         public async Task TestRestrictedMode_ProcessGetCurrentProcess_Allowed()
@@ -378,10 +378,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         #endregion
         
         // ================================================================================
-        // System.Reflection.Assembly テスト
+        // System.Reflection.Assembly Tests
         // ================================================================================
         
-        #region System.Reflection.Assembly - 危険API
+        #region System.Reflection.Assembly - Dangerous APIs
         
         [Test]
         public async Task TestRestrictedMode_AssemblyLoad_Blocked()
@@ -417,7 +417,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         
         #endregion
         
-        #region System.Reflection.Assembly - 安全API
+        #region System.Reflection.Assembly - Safe APIs
         
         [Test]
         public async Task TestRestrictedMode_AssemblyGetExecutingAssembly_Allowed()
@@ -438,9 +438,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         #endregion
         
         // ================================================================================
-        // System.Environment テスト
+        // System.Environment Tests
         // ================================================================================
-        #region System.Environment - 安全API
+        #region System.Environment - Safe APIs
         
         [Test]
         public async Task TestRestrictedMode_EnvironmentGetEnvironmentVariable_Allowed()
@@ -461,10 +461,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         #endregion
         
         // ================================================================================
-        // System.Threading.Thread テスト
+        // System.Threading.Thread Tests
         // ================================================================================
         
-        #region System.Threading.Thread - 危険API
+        #region System.Threading.Thread - Dangerous APIs
         
         [Test]
         public async Task TestRestrictedMode_ThreadAbort_Blocked()
@@ -485,7 +485,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         
         #endregion
         
-        #region System.Threading.Thread - 安全API
+        #region System.Threading.Thread - Safe APIs
         
         [Test]
         public async Task TestRestrictedMode_ThreadCurrentThread_Allowed()
@@ -506,10 +506,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         #endregion
         
         // ================================================================================
-        // System.Type テスト
+        // System.Type Tests
         // ================================================================================
         
-        #region System.Type - 危険API
+        #region System.Type - Dangerous APIs
         
         [Test]
         public async Task TestRestrictedMode_TypeInvokeMember_Blocked()
@@ -532,7 +532,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         
         #endregion
         
-        #region System.Type - 安全API
+        #region System.Type - Safe APIs
         
         [Test]
         public async Task TestRestrictedMode_TypeGetType_Allowed()
@@ -553,10 +553,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         #endregion
         
         // ================================================================================
-        // System.Activator テスト
+        // System.Activator Tests
         // ================================================================================
         
-        #region System.Activator - 危険API
+        #region System.Activator - Dangerous APIs
         
         [Test]
         public async Task TestRestrictedMode_ActivatorCreateComInstanceFrom_Blocked()
@@ -576,7 +576,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         
         #endregion
         
-        #region System.Activator - 安全API
+        #region System.Activator - Safe APIs
         
         [Test]
         public async Task TestRestrictedMode_ActivatorCreateInstance_Allowed()
@@ -597,10 +597,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         #endregion
         
         // ================================================================================
-        // UnityEditor.AssetDatabase テスト
+        // UnityEditor.AssetDatabase Tests
         // ================================================================================
         
-        #region UnityEditor.AssetDatabase - 危険API
+        #region UnityEditor.AssetDatabase - Dangerous APIs
         
         [Test]
         public async Task TestRestrictedMode_AssetDatabaseDeleteAsset_Blocked()
@@ -620,7 +620,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         
         #endregion
         
-        #region UnityEditor.AssetDatabase - 安全API
+        #region UnityEditor.AssetDatabase - Safe APIs
         
         [Test]
         public async Task TestRestrictedMode_AssetDatabaseCreateAsset_Allowed()
@@ -628,7 +628,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             string code = @"
                 // Note: CreateAsset requires a UnityEngine.Object, so we use a ScriptableObject
                 var obj = UnityEngine.ScriptableObject.CreateInstance<UnityEngine.ScriptableObject>();
-                // Tempフォルダが存在しない場合は作成
+                // Create Temp folder if it does not exist
                 string tempDir = @""Assets/Tests/Editor/DynamicCodeToolTests/Temp"";
                 if (!UnityEditor.AssetDatabase.IsValidFolder(tempDir))
                 {
@@ -643,8 +643,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 code, "TestCommand", null, CancellationToken.None, compileOnly: false
             );
             
-            // CreateAssetは実際にはエディタ機能なので、実行時エラーになる可能性があるが
-            // セキュリティ違反ではないはず
+            // CreateAsset is actually an editor function, so it might result in a runtime error
+            // But it should not be a security violation
             if (!result.Success)
             {
                 StringAssert.DoesNotContain("Dangerous", result.ErrorMessage ?? "", 
@@ -655,10 +655,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         #endregion
         
         // ================================================================================
-        // UnityEditor.FileUtil テスト
+        // UnityEditor.FileUtil Tests
         // ================================================================================
         
-        #region UnityEditor.FileUtil - 危険API
+        #region UnityEditor.FileUtil - Dangerous APIs
         
         [Test]
         public async Task TestRestrictedMode_FileUtilDeleteFileOrDirectory_Blocked()
@@ -678,39 +678,39 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         
         #endregion
         
-        #region UnityEditor.FileUtil - 安全API
+        #region UnityEditor.FileUtil - Safe APIs
         
         [Test]
         public async Task TestRestrictedMode_FileUtilCopyFileOrDirectory_Allowed()
         {
             string code = $@"
-                // まず確実に存在するファイルを作成
+                // First, create a file that definitely exists
                 string sourceFile = ""{TEST_TEMP_DIR}/source_file.txt"";
                 string destFile = ""{TEST_TEMP_DIR}/dest_file.txt"";
                 
-                // ディレクトリが存在することを確認
+                // Confirm that the directory exists
                 if (!System.IO.Directory.Exists(""{TEST_TEMP_DIR}""))
                 {{
                     System.IO.Directory.CreateDirectory(""{TEST_TEMP_DIR}"");
                 }}
                 
-                // ソースファイルを作成
+                // Create source file
                 using (var stream = System.IO.File.Create(sourceFile))
                 {{
                     byte[] data = System.Text.Encoding.UTF8.GetBytes(""test content for copy"");
                     stream.Write(data, 0, data.Length);
                 }}
                 
-                // ファイルが確実に存在することを確認
+                // Confirm that the file definitely exists
                 if (!System.IO.File.Exists(sourceFile))
                 {{
                     return ""Failed to create source file"";
                 }}
                 
-                // FileUtil.CopyFileOrDirectory を実行（これはセキュリティ違反ではないはず）
+                // Execute FileUtil.CopyFileOrDirectory (this should not be a security violation)
                 UnityEditor.FileUtil.CopyFileOrDirectory(sourceFile, destFile);
                 
-                // コピーが成功したことを確認
+                // Confirm that the copy was successful
                 if (System.IO.File.Exists(destFile))
                 {{
                     return ""FileUtil.CopyFileOrDirectory executed successfully"";
@@ -723,7 +723,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 code, "TestCommand", null, CancellationToken.None, compileOnly: false
             );
             
-            // API呼び出し自体はセキュリティ違反ではないはず
+            // The API call itself should not be a security violation
             Assert.IsTrue(
                 result.Success || !result.ErrorMessage?.Contains("Dangerous") == true,
                 $"FileUtil.CopyFileOrDirectory should not be blocked for security reasons. Error: {result.ErrorMessage}"

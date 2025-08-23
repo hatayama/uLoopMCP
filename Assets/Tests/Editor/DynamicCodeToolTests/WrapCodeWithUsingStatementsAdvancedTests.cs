@@ -5,8 +5,8 @@ using System.Collections.Generic;
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
-    /// WrapCodeIfNeededメソッドのusing文処理に関する高度なテストケース
-    /// エッジケース、コーナーケース、セキュリティ境界値テスト
+    /// Advanced test cases for using statement processing in the WrapCodeIfNeeded method
+    /// Covering edge cases, corner cases, and security boundary tests
     /// </summary>
     public class WrapCodeWithUsingStatementsAdvancedTests
     {
@@ -15,7 +15,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [SetUp]
         public void Setup()
         {
-            // FullAccessモードでコンパイラを作成（テスト用）
+            // Create compiler in FullAccess mode (for testing)
             _compiler = new RoslynCompiler(DynamicCodeSecurityLevel.FullAccess);
         }
 
@@ -28,13 +28,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public void TestUsingWithInlineComments_ExtractsCorrectly()
         {
-            // Arrange: using文にインラインコメントが含まれる
-            // 注：現在の実装ではインラインコメント付きusing文は、コメント込みで抽出される
-            // これは将来の改善点として残す
-            string aiGeneratedCode = @"using UnityEngine; // Unity用
-using System.Collections.Generic; // コレクション用
-// これはコメント行
-using System.Linq; // LINQ用
+            // Arrange: using statements with inline comments
+            // Note: Current implementation extracts using statements with inline comments as-is
+            // This remains a potential future improvement point
+            string aiGeneratedCode = @"using UnityEngine; // For Unity
+using System.Collections.Generic; // For collections
+// This is a comment line
+using System.Linq; // For LINQ
 
 var objects = new List<GameObject>();
 return objects.Count;";
@@ -51,16 +51,16 @@ return objects.Count;";
             CompilationResult result = _compiler.Compile(request);
 
             // Assert
-            // 現在の実装では、インラインコメント付きusing文はそのまま抽出されるため
-            // コンパイルエラーになる可能性がある
+            // Current implementation extracts using statements with inline comments as-is
+            // which may cause compilation errors
             if (!result.Success)
             {
-                // インラインコメント付きusing文の処理は将来の改善項目
+                // Handling using statements with inline comments is a future improvement item
                 Assert.Pass("Inline comments in using statements are not yet supported - known limitation");
             }
             else
             {
-                // もし成功した場合は、using文が含まれているか確認
+                // If successful, verify that using statements are included
                 Assert.IsTrue(result.UpdatedCode.Contains("using UnityEngine"), 
                     "UnityEngine using should be preserved");
                 Assert.IsTrue(result.UpdatedCode.Contains("using System.Collections.Generic"), 
@@ -73,7 +73,7 @@ return objects.Count;";
         [Test]
         public void TestGlobalUsing_HandledAppropriately()
         {
-            // Arrange: global usingを含むコード（C# 10.0+）
+            // Arrange: Code containing global using statements (C# 10.0+)
             string aiGeneratedCode = @"global using UnityEngine;
 using System;
 
@@ -93,7 +93,7 @@ return cube.name;";
             CompilationResult result = _compiler.Compile(request);
 
             // Assert
-            // global usingもusing文として抽出される
+            // Global using statements are also extracted as using statements
             Assert.IsTrue(result.UpdatedCode.Contains("global using UnityEngine;"), 
                 "Global using should be preserved");
             Assert.IsTrue(result.UpdatedCode.Contains("using System;"), 
@@ -103,7 +103,7 @@ return cube.name;";
         [Test]
         public void TestMixedSafeAndUnsafeUsings_PartialSuccess()
         {
-            // Arrange: 安全と危険なusing文が混在
+            // Arrange: Mix of safe and unsafe using statements
             string aiGeneratedCode = @"using UnityEngine;
 using System.Collections.Generic;
 using System.IO;
@@ -124,17 +124,17 @@ return ""Mixed usings"";";
             CompilationResult result = _compiler.Compile(request);
 
             // Assert
-            // v4.0ステートレス設計では、CurrentLevelは常にDisabledを返す
-            // そのため、この条件分岐は不要になった
-            // Restrictedモードでの検証はExecutorに直接レベルを渡して行う
+            // In v4.0 stateless design, CurrentLevel always returns Disabled
+            // Therefore, this conditional branch is no longer necessary
+            // Verification in Restricted mode is done by directly passing the level to the Executor
             if (!result.Success)
             {
-                // セキュリティ違反の場合
+                // In case of security violation
                 Assert.IsTrue(result.HasSecurityViolations, "Security violations should be detected");
             }
             else
             {
-                // 成功した場合はusing文が正しく配置されているはず
+                // If successful, using statements should be correctly placed
                 Assert.IsTrue(result.UpdatedCode.Contains("using System.IO;"), 
                     "System.IO using should be preserved in FullAccess mode");
             }
@@ -143,7 +143,7 @@ return ""Mixed usings"";";
         [Test]
         public void TestUsingWithSpecialCharacters_HandledCorrectly()
         {
-            // Arrange: 特殊文字を含む名前空間（実際にはまれ）
+            // Arrange: Namespace with special characters (actually rare)
             string aiGeneratedCode = @"using UnityEngine;
 using MyCompany.Tools.Version2_0;
 
@@ -162,7 +162,7 @@ return ""Special namespace test"";";
             CompilationResult result = _compiler.Compile(request);
 
             // Assert
-            // 特殊文字を含む名前空間も正しく処理される
+            // Namespaces with special characters are also processed correctly
             Assert.IsTrue(result.UpdatedCode.Contains("using MyCompany.Tools.Version2_0;"), 
                 "Namespace with underscore and numbers should be preserved");
         }
@@ -170,7 +170,7 @@ return ""Special namespace test"";";
         [Test]
         public void TestEmptyLinesAndWhitespace_CleansUpProperly()
         {
-            // Arrange: 余分な空行や空白を含むコード
+            // Arrange: Code with extra blank lines and whitespace
             string aiGeneratedCode = @"
 
 using UnityEngine;
@@ -180,8 +180,7 @@ using System;
     
 GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
 
-return cube.name;
-";
+return cube.name;";
 
             CompilationRequest request = new()
             {
@@ -201,7 +200,7 @@ return cube.name;
             Assert.IsTrue(result.UpdatedCode.Contains("using System;"), 
                 "System using should be preserved");
             
-            // 適切にフォーマットされているか確認
+            // Verify that it is appropriately formatted
             string[] lines = result.UpdatedCode.Split('\n');
             int namespaceIndex = System.Array.FindIndex(lines, l => l.Contains("namespace Dynamic"));
             Assert.Greater(namespaceIndex, 1, "Should have using statements before namespace");
@@ -210,7 +209,7 @@ return cube.name;
         [Test]
         public void TestUsingInsideCodeBlock_NotExtracted()
         {
-            // Arrange: コード内に文字列として"using"が含まれる場合
+            // Arrange: When "using" is included as a string within the code
             string aiGeneratedCode = @"using UnityEngine;
 
 string message = ""using System.IO is dangerous"";
@@ -233,7 +232,7 @@ return cube.name;";
             Assert.IsTrue(result.Success, "Compilation should succeed");
             Assert.IsTrue(result.UpdatedCode.Contains("using UnityEngine;"), 
                 "Real using should be extracted");
-            // 文字列内の"using"は抽出されない
+            // "using" within a string is not extracted
             Assert.IsTrue(result.UpdatedCode.Contains("\"using System.IO is dangerous\""), 
                 "String content should remain intact");
         }
@@ -241,7 +240,7 @@ return cube.name;";
         [Test]
         public void TestNestedNamespaces_ExtractsCorrectly()
         {
-            // Arrange: ネストした名前空間のusing
+            // Arrange: Using statements with nested namespaces
             string aiGeneratedCode = @"using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
@@ -275,7 +274,7 @@ return ""Canvas created"";";
         [Test]
         public void TestConditionalCompilationDirectives_HandledProperly()
         {
-            // Arrange: 条件付きコンパイルディレクティブを含む
+            // Arrange: Including conditional compilation directives
             string aiGeneratedCode = @"using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -299,19 +298,19 @@ return ""Done"";";
             CompilationResult result = _compiler.Compile(request);
 
             // Assert
-            // 条件付きコンパイルディレクティブは現在のWrapCodeIfNeeded実装では
-            // 特別扱いされないが、using UnityEngineは抽出される
+            // Conditional compilation directives are not specially handled in the current WrapCodeIfNeeded implementation
+            // but using UnityEngine will be extracted
             Assert.IsTrue(result.UpdatedCode.Contains("using UnityEngine;"), 
                 "UnityEngine using should be preserved");
             
-            // #if UNITY_EDITORブロック内のusingは文字列として扱われる可能性
-            // 実装によって異なる動作
+            // Using statements inside #if UNITY_EDITOR blocks may be treated as strings
+            // Behavior may differ depending on implementation
         }
 
         [Test]
         public void TestVeryLongNamespace_HandledWithoutTruncation()
         {
-            // Arrange: 非常に長い名前空間
+            // Arrange: Very long namespace
             string aiGeneratedCode = @"using UnityEngine;
 using Company.Product.Module.SubModule.Feature.Implementation.Version2;
 
@@ -330,7 +329,7 @@ return ""Long namespace test"";";
             CompilationResult result = _compiler.Compile(request);
 
             // Assert
-            // 長い名前空間も切り詰められずに保持される
+            // Long namespace is preserved without truncation
             Assert.IsTrue(result.UpdatedCode.Contains(
                 "using Company.Product.Module.SubModule.Feature.Implementation.Version2;"), 
                 "Long namespace should be preserved without truncation");
@@ -339,7 +338,7 @@ return ""Long namespace test"";";
         [Test]
         public void TestUsingWithoutSemicolon_NotExtracted()
         {
-            // Arrange: セミコロンなしのusing（構文エラー）
+            // Arrange: Using statement without semicolon (syntax error)
             string aiGeneratedCode = @"using UnityEngine
 using System;
 
@@ -358,14 +357,14 @@ return cube.name;";
             CompilationResult result = _compiler.Compile(request);
 
             // Assert
-            // セミコロンなしのusingは抽出されない（構文エラーとなる）
+            // Using statement without semicolon is not extracted (results in syntax error)
             Assert.IsFalse(result.Success, "Should fail due to syntax error");
         }
 
         [Test]
         public void TestSystemReflection_SecurityBoundaryTest()
         {
-            // Arrange: リフレクションの使用（セキュリティ境界値）
+            // Arrange: Using reflection (security boundary test)
             string aiGeneratedCode = @"using UnityEngine;
 using System.Reflection;
 
@@ -386,11 +385,11 @@ return $""Cube has {methods.Length} methods"";";
             CompilationResult result = _compiler.Compile(request);
 
             // Assert
-            // v4.0ステートレス設計では、セキュリティレベルはExecutorで制御
-            // System.Reflectionの使用可否はセキュリティポリシーに依存
+            // In v4.0 stateless design, security level is controlled by Executor
+            // Usability of System.Reflection depends on security policy
             if (!result.Success && result.HasSecurityViolations)
             {
-                // セキュリティ違反として検出された場合
+                // If detected as a security violation
                 Assert.Pass("System.Reflection is blocked as per security policy");
             }
             else if (result.Success)
@@ -402,7 +401,7 @@ return $""Cube has {methods.Length} methods"";";
         [Test]
         public void TestPerformanceWithManyUsings_HandlesEfficiently()
         {
-            // Arrange: 多数のusing文
+            // Arrange: Multiple using statements
             string aiGeneratedCode = @"using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
@@ -437,7 +436,7 @@ return ""Many usings test"";";
             Assert.IsTrue(result.Success, "Compilation should succeed");
             Assert.Less(sw.ElapsedMilliseconds, McpConstants.TEST_COMPILE_TIMEOUT_MS, "Should compile within 5 seconds");
             
-            // 全てのusing文が保持されているか確認
+            // Verify that all using statements are preserved
             Assert.IsTrue(result.UpdatedCode.Contains("using UnityEngine;"));
             Assert.IsTrue(result.UpdatedCode.Contains("using System.Linq;"));
             Assert.IsTrue(result.UpdatedCode.Contains("using System.Text;"));
