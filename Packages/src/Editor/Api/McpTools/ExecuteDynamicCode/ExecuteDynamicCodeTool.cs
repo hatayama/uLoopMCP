@@ -13,7 +13,25 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     [McpTool(Description = @"<tool>
 <name>ExecuteDynamicCode</name>
-<purpose>Execute Unity C# code snippets directly without class/namespace definitions</purpose>
+<purpose>Automate Unity Editor operations programmatically - NOT for runtime game code</purpose>
+<primary_use>Execute editor automation tasks that users would normally do manually in Unity Editor</primary_use>
+
+<important_note>
+  <editor_automation_only>
+    This tool is designed for EDITOR AUTOMATION, not for writing runtime game logic.
+    Use this to:
+    • Create and configure GameObjects in the scene
+    • Set up test environments  
+    • Batch process assets
+    • Automate repetitive Editor tasks
+    • Prototype scene layouts quickly
+    
+    NOT for:
+    • Writing gameplay code (use .cs files instead)
+    • Creating runtime systems (use proper MonoBehaviours)
+    • Implementing game features (belongs in source files)
+  </editor_automation_only>
+</important_note>
 
 <critical_workflow>
   <monobehaviour_components>
@@ -43,85 +61,26 @@ namespace io.github.hatayama.uLoopMCP
 </valid_patterns>
 
 <invalid_patterns>
-  <pattern type=""class_definition"">
-    <code>namespace NS { class MyClass { } }</code>
-    <reason>Cannot define new types in dynamic execution</reason>
-  </pattern>
-  <pattern type=""method_definition"">
-    <code>public static void Method() { }</code>
-    <reason>Cannot define methods</reason>
-  </pattern>
   <pattern type=""missing_return"">
     <code>GameObject.CreatePrimitive(PrimitiveType.Cube);</code>
     <reason>Must include return statement</reason>
   </pattern>
+  <note>Cannot define classes, namespaces, or methods - only direct code execution</note>
 </invalid_patterns>
 
 <error_solutions>
-  <error type=""type_not_found"">
-    <solution>Use fully-qualified name: UnityEngine.GameObject</solution>
-  </error>
-  <error type=""ambiguous_reference"">
-    <solution>Use UnityEngine.Object.FindObjectsOfType&lt;T&gt;()</solution>
-  </error>
-  <error type=""top_level_statements"">
-    <solution>Remove class/namespace wrapper</solution>
-  </error>
   <error type=""component_not_found"">
     <solution>Verify compiled with compile tool first</solution>
   </error>
+  <note>Use fully-qualified names for ambiguous types (e.g., UnityEngine.Object)</note>
 </error_solutions>
 
 <inspector_references>
-  <critical>SerializeField references need special handling for persistence</critical>
-  
-  <setting_methods>
-    <runtime_only>
-      <code>fieldInfo.SetValue(component, value)</code>
-      <persistence>LOST on Play mode exit or domain reload</persistence>
-      <use_case>Temporary testing only</use_case>
-    </runtime_only>
-    
-    <persistent>
-      <code>SerializedObject so = new SerializedObject(component); SerializedProperty prop = so.FindProperty(""fieldName""); prop.objectReferenceValue = value; so.ApplyModifiedProperties(); EditorUtility.SetDirty(component);</code>
-      <persistence>SAVED permanently in scene</persistence>
-      <use_case>Production setup</use_case>
-    </persistent>
-  </setting_methods>
-  
-  <common_failures>
-    <failure type=""reference_shows_none"">
-      <symptom>Inspector shows None, NullReferenceException at runtime</symptom>
-      <cause>Reference not set or used runtime-only method</cause>
-      <solution>Use persistent method with SerializedObject</solution>
-    </failure>
-    
-    <failure type=""findproperty_returns_null"">
-      <symptom>SerializedProperty is null</symptom>
-      <cause>Using display name instead of field name</cause>
-      <example>WRONG: FindProperty(""Camera Holder"") RIGHT: FindProperty(""cameraHolder"")</example>
-    </failure>
-    
-    <failure type=""reference_lost_after_compile"">
-      <symptom>References become None after recompile</symptom>
-      <cause>Forgot EditorUtility.SetDirty()</cause>
-      <solution>Always call SetDirty after ApplyModifiedProperties</solution>
-    </failure>
-  </common_failures>
-  
-  <verification_required>
-    Always check Inspector visually after setting references
-    References showing None will cause NullReferenceException
-  </verification_required>
+  <critical>SerializeField references need SerializedObject for persistence</critical>
+  <persistent_method>SerializedObject so = new SerializedObject(component); SerializedProperty prop = so.FindProperty(""fieldName""); prop.objectReferenceValue = value; so.ApplyModifiedProperties(); EditorUtility.SetDirty(component);</persistent_method>
+  <note>Use field name (cameraHolder) not display name (Camera Holder) in FindProperty</note>
 </inspector_references>
 
-<using_statements>
-  <behavior>Automatically extracted and relocated from code</behavior>
-  <note>Does NOT auto-add missing using statements</note>
-  <recommendation>Use fully-qualified names or include using statements explicitly</recommendation>
-</using_statements>
-
-<use_cases>GameObject creation, scene manipulation, editor automation, batch operations</use_cases>
 </tool>")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
