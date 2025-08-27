@@ -1,6 +1,7 @@
 #if ULOOPMCP_HAS_ROSLYN
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -551,90 +552,114 @@ namespace io.github.hatayama.uLoopMCP
 
         private string WrapCodeIfNeeded(string code, string namespaceName, string className)
         {
-            // Check if namespace or class is already included
-            if (code.Contains("namespace ") || code.Contains("class "))
+            // Use Roslyn to detect actual structure instead of naive string checks
+            CompilationUnitSyntax root = null;
+            try
             {
-                return code; // Return as-is
+                SyntaxTree rawTree = CSharpSyntaxTree.ParseText(code);
+                root = rawTree.GetCompilationUnitRoot();
+            }
+            catch
+            {
+                // Fall back to legacy behavior if parsing fails
+                root = null;
             }
 
-            // Extract using statements from AI-generated code
-            List<string> usingStatements = new();
-            List<string> codeLines = new();
-
-            string[] lines = code.Split(new char[] { '\n' }, StringSplitOptions.None);
-            foreach (string line in lines)
+            if (root != null)
             {
-                string trimmedLine = line.Trim();
+                bool hasNamespace = root.Members.Any(m => m is NamespaceDeclarationSyntax || m is FileScopedNamespaceDeclarationSyntax);
+                bool hasType = root.Members.Any(m => m is BaseTypeDeclarationSyntax);
+                bool hasTopLevel = root.Members.Any(m => m is GlobalStatementSyntax);
 
-                // Detect using statements (starts with "using " and contains ";")
-                // Consider cases with comments
-                if (trimmedLine.StartsWith("using ") && trimmedLine.Contains(";"))
+                // If user already provided a proper namespace/type and no top-level statements, return as-is
+                if ((hasNamespace || hasType) && !hasTopLevel)
                 {
-                    // Retain using statements for security verification
-                    // However, in Restricted mode, security verification will detect
-                    // dangerous namespaces after WrapCodeIfNeeded, so here simply extract
-                    usingStatements.Add(trimmedLine);
+                    return code;
                 }
-                else if (!string.IsNullOrWhiteSpace(trimmedLine))
+
+                // Extract using directives via AST
+                List<string> usingStatements = root.Usings
+                    .Select(u => u.ToString().TrimEnd())
+                    .ToList();
+
+                // Build method body from top-level statements when available
+                string body;
+                if (hasTopLevel)
                 {
-                    // Code lines other than using statements
-                    codeLines.Add(line);
+                    IEnumerable<string> stmtTexts = root.Members
+                        .OfType<GlobalStatementSyntax>()
+                        .Select(gs => gs.Statement.ToString().TrimEnd());
+                    body = string.Join("\n", stmtTexts);
                 }
-            }
-
-            // Wrap in class
-            StringBuilder wrappedCode = new();
-
-            // Place using statements first (use exactly those specified by AI)
-            foreach (string usingStatement in usingStatements)
-            {
-                wrappedCode.AppendLine(usingStatement);
-            }
-
-            // Add empty line if using statements exist
-            if (usingStatements.Count > 0)
-            {
-                wrappedCode.AppendLine();
-            }
-
-            wrappedCode.AppendLine($"namespace {namespaceName}");
-            wrappedCode.AppendLine("{");
-            wrappedCode.AppendLine($"    public class {className}");
-            wrappedCode.AppendLine("    {");
-            wrappedCode.AppendLine("        public object Execute(System.Collections.Generic.Dictionary<string, object> parameters = null)");
-            wrappedCode.AppendLine("        {");
-
-            // Properly indent code lines other than using statements
-            foreach (string line in codeLines)
-            {
-                wrappedCode.AppendLine($"            {line}");
-            }
-
-            wrappedCode.AppendLine("        }");
-            wrappedCode.AppendLine("    }");
-            wrappedCode.AppendLine("}");
-
-            // Log output (for debugging)
-            string wrappedCodeString = wrappedCode.ToString();
-            if (usingStatements.Count > 0)
-            {
-                VibeLogger.LogInfo(
-                    "wrap_code_extracted_usings",
-                    $"Extracted {usingStatements.Count} using statements from AI-generated code",
-                    new
+                else
+                {
+                    // Fallback: remove using lines from original and use the rest as body
+                    string[] lines = code.Split(new char[] { '\n' }, StringSplitOptions.None);
+                    List<string> filtered = new();
+                    foreach (string line in lines)
                     {
-                        usingCount = usingStatements.Count,
-                        usings = usingStatements.ToArray(),
-                        className = className,
-                        wrappedCodePreview = wrappedCodeString.Length > 500 ? wrappedCodeString.Substring(0, 500) + "..." : wrappedCodeString
-                    },
-                    correlationId: McpConstants.GenerateCorrelationId(),
-                    humanNote: "AI-provided using statements preserved and relocated",
-                    aiTodo: "Monitor using statement extraction patterns"
-                );
+                        string trimmed = line.TrimStart();
+                        if (!(trimmed.StartsWith("using ") && trimmed.Contains(";")))
+                        {
+                            filtered.Add(line);
+                        }
+                    }
+                    body = string.Join("\n", filtered);
+                }
+
+                // Compose wrapped code
+                StringBuilder wrappedCode = new();
+
+                foreach (string usingStatement in usingStatements)
+                {
+                    wrappedCode.AppendLine(usingStatement);
+                }
+                if (usingStatements.Count > 0)
+                {
+                    wrappedCode.AppendLine();
+                }
+
+                wrappedCode.AppendLine($"namespace {namespaceName}");
+                wrappedCode.AppendLine("{");
+                wrappedCode.AppendLine($"    public class {className}");
+                wrappedCode.AppendLine("    {");
+                wrappedCode.AppendLine("        public object Execute(System.Collections.Generic.Dictionary<string, object> parameters = null)");
+                wrappedCode.AppendLine("        {");
+
+                foreach (string line in body.Split(new char[] { '\n' }, StringSplitOptions.None))
+                {
+                    wrappedCode.AppendLine($"            {line}");
+                }
+
+                wrappedCode.AppendLine("        }");
+                wrappedCode.AppendLine("    }");
+                wrappedCode.AppendLine("}");
+
+                string wrappedCodeString = wrappedCode.ToString();
+                if (usingStatements.Count > 0)
+                {
+                    VibeLogger.LogInfo(
+                        "wrap_code_extracted_usings",
+                        $"Extracted {usingStatements.Count} using statements from AI-generated code",
+                        new
+                        {
+                            usingCount = usingStatements.Count,
+                            usings = usingStatements.ToArray(),
+                            className = className,
+                            wrappedCodePreview = wrappedCodeString.Length > 500 ? wrappedCodeString.Substring(0, 500) + "..." : wrappedCodeString
+                        },
+                        correlationId: McpConstants.GenerateCorrelationId(),
+                        humanNote: "AI-provided using statements preserved and relocated",
+                        aiTodo: "Monitor using statement extraction patterns"
+                    );
+                }
+
+                return wrappedCodeString;
             }
 
-            return wrappedCodeString;
+            // No legacy string-based fallback: if AST parsing fails, return original code
+            // and let compilation diagnostics surface the issue clearly.
+            return code;
         }
 
         private List<CompilationError> ConvertDiagnosticsToErrors(IEnumerable<Diagnostic> diagnostics)
