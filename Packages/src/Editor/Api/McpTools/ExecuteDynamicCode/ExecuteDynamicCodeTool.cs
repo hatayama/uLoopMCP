@@ -81,6 +81,42 @@ namespace io.github.hatayama.uLoopMCP
   <note>Use field name (cameraHolder) not display name (Camera Holder) in FindProperty</note>
 </inspector_references>
 
+<preferred_utils>
+  <item>SerializedBindingUtil: Persistent bindings for Object/Float/Int/Bool/Color/Vector3/List with automatic dirty handling</item>
+  <item>ExpressionBindingUtil: Strongly-typed field selection via lambda expressions (compile-time name safety)</item>
+  <item>FieldName: Extract field name string from lambda for logs and assertions</item>
+  <item>PrefabEditUtil: Safe prefab load/edit/save/unload wrapper</item>
+  <item>DirtyUtil: Mark objects and scenes dirty consistently</item>
+  <item>ValidationUtil: Assert required references and append operation summary to logs</item>
+  <item>DryRunContext & OperationSummary: Dry-run without state mutation and collect success/failure report</item>
+</preferred_utils>
+
+<usage_examples>
+  <example title=""Expression-based binding (recommended)"">
+    ExpressionBindingUtil.BindObject(playerController, c => c.cameraPivot, cameraGO, new DryRunContext(false), new OperationSummary());
+  </example>
+  <example title=""Numeric binding with expressions"">
+    ExpressionBindingUtil.BindFloat(enemy, c => c.moveSpeed, 3.0f);
+  </example>
+  <example title=""Prefab edit wrapper"">
+    PrefabEditUtil.WithLoadedPrefab(""Assets/Prefabs/Enemy.prefab"", root => {
+      var comp = root.GetComponent<MyEnemy>();
+      ExpressionBindingUtil.BindInt(comp, c => c.level, 2);
+    });
+  </example>
+  <example title=""Validation and summary to logs"">
+    var summary = new OperationSummary();
+    ValidationUtil.AssertNotNull(cameraGO, ""Main Camera"", summary);
+    UnityEngine.Debug.Log(summary.BuildReport());
+  </example>
+  <example title=""Dry-run (no state changes)"">
+    var dry = new DryRunContext(true);
+    var summary = new OperationSummary();
+    SerializedBindingUtil.BindFloat(comp, ""speed"", 5f, dry, summary);
+    UnityEngine.Debug.Log(summary.BuildReport());
+  </example>
+</usage_examples>
+
 </tool>")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
