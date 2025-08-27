@@ -12,12 +12,22 @@ namespace io.github.hatayama.uLoopMCP
     /// Related Classes: IDynamicCodeExecutor, DynamicCodeExecutorFactory
     /// </summary>
     [McpTool(Description = @"## ExecuteDynamicCode
-Editor automation only (not runtime). See schema descriptions for details of `Code`, `Parameters`, and `CompileOnly`.
+Editor automation only — not for authoring source files.
 
-Key points:
-- Direct statements only; no classes/namespaces/methods; must return a value
-- For new MonoBehaviours: write .cs → compile (ForceRecompile=false, ensure ErrorCount=0) → AddComponent
-- Use SerializedObject/SerializedProperty + ApplyModifiedProperties + EditorUtility.SetDirty for persistent inspector refs
+Purpose:
+- Run short, direct Editor statements (no classes/namespaces/methods); must return a value
+- Automate scene/hierarchy/prefab/material/asset wiring in the Editor
+
+Hard restrictions:
+- Do NOT create or edit .cs/.asmdef with this tool. Author C# in your IDE/editor (e.g., Rider, Visual Studio, VS Code).
+- Do NOT generate new MonoBehaviour scripts here. If a type is missing, stop and report.
+- Not for runtime/gameplay logic; this tool runs in the Editor context only.
+
+When components are needed:
+- First author/compile scripts in the IDE, then use this tool to AddComponent and wire references.
+
+Usage notes:
+- Use SerializedObject/SerializedProperty + ApplyModifiedProperties + EditorUtility.SetDirty for persistence
 - Use fully-qualified names for ambiguous types (e.g., UnityEngine.Object)
 
 Utilities:
