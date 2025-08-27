@@ -11,113 +11,47 @@ namespace io.github.hatayama.uLoopMCP
     /// Regenerates Executor only when security level changes, otherwise caches and reuses
     /// Related Classes: IDynamicCodeExecutor, DynamicCodeExecutorFactory
     /// </summary>
-    [McpTool(Description = @"<tool>
-<name>ExecuteDynamicCode</name>
-<purpose>Automate Unity Editor operations programmatically - NOT for runtime game code</purpose>
-<primary_use>Execute editor automation tasks that users would normally do manually in Unity Editor</primary_use>
+    [McpTool(Description = @"## ExecuteDynamicCode
+Editor automation only (not runtime). See schema descriptions for details of `Code`, `Parameters`, and `CompileOnly`.
 
-<important_note>
-  <editor_automation_only>
-    This tool is designed for EDITOR AUTOMATION, not for writing runtime game logic.
-    Use this to:
-    • Create and configure GameObjects in the scene
-    • Set up test environments  
-    • Batch process assets
-    • Automate repetitive Editor tasks
-    • Prototype scene layouts quickly
-    
-    NOT for:
-    • Writing gameplay code (use .cs files instead)
-    • Creating runtime systems (use proper MonoBehaviours)
-    • Implementing game features (belongs in source files)
-  </editor_automation_only>
-</important_note>
+Key points:
+- Direct statements only; no classes/namespaces/methods; must return a value
+- For new MonoBehaviours: write .cs → compile (ForceRecompile=false, ensure ErrorCount=0) → AddComponent
+- Use SerializedObject/SerializedProperty + ApplyModifiedProperties + EditorUtility.SetDirty for persistent inspector refs
+- Use fully-qualified names for ambiguous types (e.g., UnityEngine.Object)
 
-<critical_workflow>
-  <monobehaviour_components>
-    <requirement>Creating NEW MonoBehaviour components requires compilation</requirement>
-    <steps>
-      <step order=""1"">Use Write tool to create .cs file</step>
-      <step order=""2"">Use mcp compile tool with ForceRecompile=false (MANDATORY - verify no errors)</step>
-      <step order=""3"">Use this tool to attach: gameObject.AddComponent&lt;YourScript&gt;()</step>
-    </steps>
-    <compile_tool_usage>
-      <correct>mcp__uLoopMCP__compile with ForceRecompile=false - Returns error/warning count</correct>
-      <incorrect>ForceRecompile=true - Returns indeterminate result, cannot verify compilation</incorrect>
-      <important>Always check ErrorCount=0 before proceeding to AddComponent</important>
-    </compile_tool_usage>
-    <common_failure>
-      <symptom>Type.GetType(""YourScript, Assembly-CSharp"") returns null</symptom>
-      <cause>Script not compiled into assembly</cause>
-      <solution>Run mcp__uLoopMCP__compile with ForceRecompile=false and verify ErrorCount=0</solution>
-    </common_failure>
-  </monobehaviour_components>
-</critical_workflow>
+Utilities:
+- SerializedBindingUtil: Persistent serialized bindings
+- ExpressionBindingUtil: Strongly-typed field selection via lambdas
+- FieldName: Extract field name from lambda
+- PrefabEditUtil: Safe prefab load/edit/save wrapper
+- DirtyUtil: Mark objects and scenes dirty
+- ValidationUtil: Assertions and summary to logs
+- DryRunContext & OperationSummary: Dry-run and compact reporting
 
-<valid_patterns>
-  <pattern>GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube); return ""Created"";</pattern>
-  <pattern>Camera.main.transform.position = Vector3.zero; return ""Done"";</pattern>
-  <pattern>Material mat = new Material(Shader.Find(""Standard"")); return ""Ready"";</pattern>
-</valid_patterns>
+Quick examples:
+- Expression-based binding:
+```csharp
+ExpressionBindingUtil.BindObject(player, c => c.cameraPivot, cameraGO);
+return ""OK"";
+```
 
-<invalid_patterns>
-  <pattern type=""missing_return"">
-    <code>GameObject.CreatePrimitive(PrimitiveType.Cube);</code>
-    <reason>Must include return statement</reason>
-  </pattern>
-  <note>Cannot define classes, namespaces, or methods - only direct code execution</note>
-</invalid_patterns>
+- Prefab edit wrapper:
+```csharp
+PrefabEditUtil.WithLoadedPrefab(""Assets/Prefabs/Enemy.prefab"", root => {
+  var comp = root.GetComponent<MyEnemy>();
+  ExpressionBindingUtil.BindInt(comp, c => c.level, 2);
+});
+return ""Prefab updated"";
+```
 
-<error_solutions>
-  <error type=""component_not_found"">
-    <solution>Verify compiled with compile tool first</solution>
-  </error>
-  <note>Use fully-qualified names for ambiguous types (e.g., UnityEngine.Object)</note>
-</error_solutions>
-
-<inspector_references>
-  <critical>SerializeField references need SerializedObject for persistence</critical>
-  <persistent_method>SerializedObject so = new SerializedObject(component); SerializedProperty prop = so.FindProperty(""fieldName""); prop.objectReferenceValue = value; so.ApplyModifiedProperties(); EditorUtility.SetDirty(component);</persistent_method>
-  <note>Use field name (cameraHolder) not display name (Camera Holder) in FindProperty</note>
-</inspector_references>
-
-<preferred_utils>
-  <item>SerializedBindingUtil: Persistent bindings for Object/Float/Int/Bool/Color/Vector3/List with automatic dirty handling</item>
-  <item>ExpressionBindingUtil: Strongly-typed field selection via lambda expressions (compile-time name safety)</item>
-  <item>FieldName: Extract field name string from lambda for logs and assertions</item>
-  <item>PrefabEditUtil: Safe prefab load/edit/save/unload wrapper</item>
-  <item>DirtyUtil: Mark objects and scenes dirty consistently</item>
-  <item>ValidationUtil: Assert required references and append operation summary to logs</item>
-  <item>DryRunContext & OperationSummary: Dry-run without state mutation and collect success/failure report</item>
-</preferred_utils>
-
-<usage_examples>
-  <example title=""Expression-based binding (recommended)"">
-    ExpressionBindingUtil.BindObject(playerController, c => c.cameraPivot, cameraGO, new DryRunContext(false), new OperationSummary());
-  </example>
-  <example title=""Numeric binding with expressions"">
-    ExpressionBindingUtil.BindFloat(enemy, c => c.moveSpeed, 3.0f);
-  </example>
-  <example title=""Prefab edit wrapper"">
-    PrefabEditUtil.WithLoadedPrefab(""Assets/Prefabs/Enemy.prefab"", root => {
-      var comp = root.GetComponent<MyEnemy>();
-      ExpressionBindingUtil.BindInt(comp, c => c.level, 2);
-    });
-  </example>
-  <example title=""Validation and summary to logs"">
-    var summary = new OperationSummary();
-    ValidationUtil.AssertNotNull(cameraGO, ""Main Camera"", summary);
-    UnityEngine.Debug.Log(summary.BuildReport());
-  </example>
-  <example title=""Dry-run (no state changes)"">
-    var dry = new DryRunContext(true);
-    var summary = new OperationSummary();
-    SerializedBindingUtil.BindFloat(comp, ""speed"", 5f, dry, summary);
-    UnityEngine.Debug.Log(summary.BuildReport());
-  </example>
-</usage_examples>
-
-</tool>")]
+- Dry-run with summary:
+```csharp
+var dry = new DryRunContext(true);
+var summary = new OperationSummary();
+SerializedBindingUtil.BindFloat(comp, ""speed"", 5f, dry, summary);
+return summary.BuildReport();
+```")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
         private IDynamicCodeExecutor _executor;
