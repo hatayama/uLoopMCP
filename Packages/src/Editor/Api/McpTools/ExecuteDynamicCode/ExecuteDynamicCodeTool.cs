@@ -23,6 +23,8 @@ Hard restrictions:
 - Do NOT generate new MonoBehaviour scripts here. If a type is missing, stop and report.
 - Not for runtime/gameplay logic; this tool runs in the Editor context only.
 
+- For any file/directory or other I/O operations, do NOT use this tool; run normal commands instead.
+
 When components are needed:
 - First author/compile scripts in the IDE, then use this tool to AddComponent and wire references.
 
@@ -30,38 +32,7 @@ Usage notes:
 - Use SerializedObject/SerializedProperty + ApplyModifiedProperties + EditorUtility.SetDirty for persistence
 - Use fully-qualified names for ambiguous types (e.g., UnityEngine.Object)
 
-Utilities:
-- SerializedBindingUtil: Persistent serialized bindings
-- ExpressionBindingUtil: Strongly-typed field selection via lambdas
-- FieldName: Extract field name from lambda
-- PrefabEditUtil: Safe prefab load/edit/save wrapper
-- DirtyUtil: Mark objects and scenes dirty
-- ValidationUtil: Assertions and summary to logs
-- DryRunContext & OperationSummary: Dry-run and compact reporting
-
-Quick examples:
-- Expression-based binding:
-```csharp
-ExpressionBindingUtil.BindObject(player, c => c.cameraPivot, cameraGO);
-return ""OK"";
-```
-
-- Prefab edit wrapper:
-```csharp
-PrefabEditUtil.WithLoadedPrefab(""Assets/Prefabs/Enemy.prefab"", root => {
-  var comp = root.GetComponent<MyEnemy>();
-  ExpressionBindingUtil.BindInt(comp, c => c.level, 2);
-});
-return ""Prefab updated"";
-```
-
-- Dry-run with summary:
-```csharp
-var dry = new DryRunContext(true);
-var summary = new OperationSummary();
-SerializedBindingUtil.BindFloat(comp, ""speed"", 5f, dry, summary);
-return summary.BuildReport();
-```")]
+")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
         private IDynamicCodeExecutor _executor;

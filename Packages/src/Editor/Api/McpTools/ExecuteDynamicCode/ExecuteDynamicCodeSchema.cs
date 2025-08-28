@@ -16,17 +16,8 @@ namespace io.github.hatayama.uLoopMCP
 - Must return a value (e.g., return ""Done"";)
 - Valid: GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube); return ""Created"";
 - Invalid: GameObject.CreatePrimitive(PrimitiveType.Cube); // missing return
-- Prefer utilities for persistence:
-  - SerializedBindingUtil example:
-```csharp
-SerializedBindingUtil.BindObject(comp, ""cameraPivot"", cameraGO);
-return ""OK"";
-```
-  - ExpressionBindingUtil example:
-```csharp
-ExpressionBindingUtil.BindFloat(enemy, c => c.moveSpeed, 3.0f);
-return ""Speed set"";
-```")]
+
+- For any file/directory or other I/O operations, do NOT use this tool; run normal commands instead.")]
         public string Code { get; set; } = "";
         
         /// <summary>Runtime parameters</summary>
