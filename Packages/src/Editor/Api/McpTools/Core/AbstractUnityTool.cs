@@ -113,7 +113,7 @@ namespace io.github.hatayama.uLoopMCP
                     errorMessage = $"Parameter 'Parameters' must be an object, not a string. Received: {paramsToken["parameters"]?.ToString() ?? paramsToken["Parameters"]?.ToString() ?? "null"}";
                 }
                 
-                throw new InvalidOperationException(errorMessage, ex);
+                throw new ParameterValidationException(errorMessage, ex);
             }
 
             // If deserialization returns null, create default instance

@@ -135,6 +135,11 @@ namespace io.github.hatayama.uLoopMCP
                 UnityEngine.Debug.LogError($"[JsonRpcProcessor] JSON serialization error: {ex.Message}\nStack trace: {ex.StackTrace}");
                 return CreateErrorResponse(request.Id, ex);
             }
+            catch (ParameterValidationException ex)
+            {
+                UnityEngine.Debug.LogError($"[JsonRpcProcessor] Parameter validation error: {ex.Message}\nStack trace: {ex.StackTrace}");
+                return CreateErrorResponse(request.Id, ex);
+            }
             catch (Exception ex)
             {
                 UnityEngine.Debug.LogError($"[JsonRpcProcessor] Error: {ex.Message}\nStack trace: {ex.StackTrace}");
@@ -203,6 +208,12 @@ namespace io.github.hatayama.uLoopMCP
             {
                 errorData = new InternalErrorData(timeoutEx.Message);
                 errorMessage = "Request timeout";
+            }
+            else if (ex is ParameterValidationException)
+            {
+                // Surface the detailed validation message directly to clients
+                errorData = new InternalErrorData(ex.Message);
+                errorMessage = ex.Message;
             }
             else
             {
