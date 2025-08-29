@@ -44,7 +44,7 @@ namespace io.github.hatayama.uLoopMCP
         public bool showSecuritySettings = false;
         
         // Dynamic Code Security Settings
-        public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted;
+        public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Disabled;
         
         // Session State Settings (moved from McpSessionManager)
         public bool isServerRunning = false;
