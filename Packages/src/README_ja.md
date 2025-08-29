@@ -123,7 +123,17 @@ Unity Editor内で動的にC#コードを実行します。
 > **⚠️ 重要な前提条件**  
 > このツールを使用するには、[OpenUPM NuGet](https://openupm.com/nuget/)を使用して`Microsoft.CodeAnalysis.CSharp`パッケージをインストールする必要があります。
 > 
-> **インストール手順:** 詳細は[OpenUPM NuGet](https://openupm.com/nuget/)のドキュメントを参照してください。
+> **インストール手順:**
+> ### OpenUPM経由（推奨）
+> ### Unity Package ManagerでScoped registryを使用
+> 1. Project Settingsウィンドウを開き、Package Managerページに移動
+> 2. Scoped Registriesリストに以下のエントリを追加：
+```
+Name: OpenUPM
+URL: https://package.openupm.com
+Scope(s): org.nuget
+```
+> 3. Package Managerウィンドウを開き、My RegistriesセクションのOpenUPMを選択。Microsoft.CodeAnalysis.CSharpをインストールします。
 
 **セキュリティレベル対応**: 3段階のセキュリティ制御を実装し、実行可能なコードを段階的に制限：
 
@@ -528,6 +538,7 @@ Name: OpenUPM
 URL: https://package.openupm.com
 Scope(s): io.github.hatayama.uloopmcp
 ```
+<img width="585" height="317" alt="image" src="https://github.com/user-attachments/assets/b9e0aab3-5379-405f-9b97-e7456f42bc77" />
 
 3. Package Managerウィンドウを開き、My RegistriesセクションのOpenUPMを選択。uLoopMCPが表示されます。
 
