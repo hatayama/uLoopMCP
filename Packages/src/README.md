@@ -124,7 +124,19 @@ Execute C# code dynamically within Unity Editor.
 > **⚠️ Important Prerequisites**  
 > To use this tool, you must install the `Microsoft.CodeAnalysis.CSharp` package using [OpenUPM NuGet](https://openupm.com/nuget/).
 > 
-> **Installation Instructions:** Please refer to the [OpenUPM NuGet](https://openupm.com/nuget/) documentation for details.
+> **Installation Instructions (Recommended: via OpenUPM Scoped Registry)**
+> 
+> Using Scoped registry in Unity Package Manager
+> 1. Open Project Settings window and go to the Package Manager page
+> 2. Add the following entry to the Scoped Registries list:
+
+```
+Name: OpenUPM
+URL: https://package.openupm.com
+Scope(s): org.nuget
+```
+
+> 3. Open the Package Manager window, select OpenUPM in the My Registries section, and install Microsoft.CodeAnalysis.CSharp.
 
 **Security Level Support**: Implements 3-tier security control to progressively restrict executable code:
 
@@ -546,6 +558,7 @@ The type-safe design allows for reliable custom tool implementation in minimal t
 > **Security Settings**
 > 
 > Project-specific tools require enabling **Allow Third Party Tools** in the uLoopMCP window "Security Settings".
+> When developing custom tools that involve dynamic code execution, also consider the **Dynamic Code Security Level** setting.
 
 <details>
 <summary>View Implementation Guide</summary>
