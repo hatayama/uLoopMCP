@@ -100,18 +100,7 @@ namespace io.github.hatayama.uLoopMCP
             _defaultReferences.Clear();
             _defaultReferences.AddRange(references);
 
-            VibeLogger.LogInfo(
-                "roslyn_compiler_references_initialized",
-                "RoslynCompiler references initialized for security level",
-                new
-                {
-                    level = level.ToString(),
-                    referenceCount = references.Count
-                },
-                correlationId,
-                "Compiler references configured for security level",
-                "Monitor assembly loading patterns"
-            );
+            
         }
 
         /// <summary>
@@ -206,18 +195,7 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }
 
-                VibeLogger.LogInfo(
-                    "roslyn_unity_references_added",
-                    "Unity reference assemblies added",
-                    new
-                    {
-                        searchPaths = searchPaths.Count,
-                        addedAssemblies = addedCount
-                    },
-                    correlationId,
-                    "Comprehensive Unity assembly references collected",
-                    "Monitor for missing assemblies in compilation"
-                );
+                
             }
             catch (Exception ex)
             {
@@ -282,20 +260,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void LogCompilationStart(CompilationRequest request, string correlationId)
         {
-            VibeLogger.LogInfo(
-                "roslyn_compile_start",
-                "Starting Roslyn compilation",
-                new
-                {
-                    codeLength = request.Code?.Length ?? 0,
-                    className = request.ClassName,
-                    @namespace = request.Namespace,
-                    additionalRefsCount = request.AdditionalReferences?.Count ?? 0
-                },
-                correlationId,
-                "Dynamic code compilation started",
-                "Monitor compilation success rate and performance"
-            );
+            
         }
 
         private CompilationResult CheckCache(CompilationRequest request)
@@ -461,7 +426,7 @@ namespace io.github.hatayama.uLoopMCP
                 result.Success = true;
                 result.CompiledAssembly = assembly;
 
-                LogCompilationSuccess(assembly, correlationId);
+                
             }
             else
             {
@@ -481,21 +446,7 @@ namespace io.github.hatayama.uLoopMCP
                 .ToList();
         }
 
-        private void LogCompilationSuccess(Assembly assembly, string correlationId)
-        {
-            VibeLogger.LogInfo(
-                "roslyn_compile_success",
-                "Compilation completed successfully",
-                new
-                {
-                    assemblyName = assembly.FullName,
-                    typeCount = assembly.GetTypes().Length
-                },
-                correlationId,
-                "Dynamic code compilation succeeded",
-                "Track compilation success patterns"
-            );
-        }
+        private void LogCompilationSuccess(Assembly assembly, string correlationId) { }
 
         private void LogCompilationFailure(CompilationResult result, string correlationId)
         {
@@ -636,23 +587,7 @@ namespace io.github.hatayama.uLoopMCP
                 wrappedCode.AppendLine("}");
 
                 string wrappedCodeString = wrappedCode.ToString();
-                if (usingStatements.Count > 0)
-                {
-                    VibeLogger.LogInfo(
-                        "wrap_code_extracted_usings",
-                        $"Extracted {usingStatements.Count} using statements from AI-generated code",
-                        new
-                        {
-                            usingCount = usingStatements.Count,
-                            usings = usingStatements.ToArray(),
-                            className = className,
-                            wrappedCodePreview = wrappedCodeString.Length > 500 ? wrappedCodeString.Substring(0, 500) + "..." : wrappedCodeString
-                        },
-                        correlationId: McpConstants.GenerateCorrelationId(),
-                        humanNote: "AI-provided using statements preserved and relocated",
-                        aiTodo: "Monitor using statement extraction patterns"
-                    );
-                }
+                
 
                 return wrappedCodeString;
             }

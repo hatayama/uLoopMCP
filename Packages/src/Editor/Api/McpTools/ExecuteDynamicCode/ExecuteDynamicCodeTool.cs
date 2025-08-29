@@ -48,15 +48,6 @@ Usage notes:
             _errorHandler = new ImprovedErrorHandler();
             // Set initial value to an invalid value (will always be recreated on the first request)
             _currentSecurityLevel = (DynamicCodeSecurityLevel)(-1);
-            
-            VibeLogger.LogInfo(
-                "execute_dynamic_code_tool_initialized",
-                "ExecuteDynamicCodeTool initialized with conditional caching",
-                new { },
-                correlationId: McpConstants.GenerateCorrelationId(),
-                humanNote: "Tool initialized with executor caching for performance",
-                aiTodo: "Monitor executor lifecycle and cache hit rate"
-            );
 #else
             // Null when Roslyn is disabled
             _executor = null;
@@ -79,22 +70,6 @@ Usage notes:
                 // Recreate Executor only when editor settings change (cache for performance)
                 if (_executor == null || editorLevel != _currentSecurityLevel)
                 {
-                    string action = _executor == null ? "Creating" : "Recreating";
-                    
-                    VibeLogger.LogInfo(
-                        "execute_dynamic_code_executor_init",
-                        $"{action} executor with editor security level: {editorLevel}",
-                        new { 
-                            action = action.ToLower(),
-                            oldLevel = _currentSecurityLevel.ToString(),
-                            newLevel = editorLevel.ToString(),
-                            source = "EditorSettings"  // From editor settings, not parameters
-                        },
-                        correlationId,
-                        $"{action} executor from editor settings",
-                        "Monitor executor lifecycle and security level changes"
-                    );
-                    
                     _currentSecurityLevel = editorLevel;
                     _executor = Factory.DynamicCodeExecutorFactory.Create(_currentSecurityLevel);
                 }
@@ -157,22 +132,6 @@ Usage notes:
                 
                 // Add security level
                 toolResponse.SecurityLevel = _currentSecurityLevel.ToString();
-                
-                // Log execution completion with VibeLogger
-                VibeLogger.LogInfo(
-                    "execute_dynamic_code_complete",
-                    "Dynamic code execution completed",
-                    new { 
-                        correlationId,
-                        success = executionResult.Success,
-                        executionTimeMs = executionResult.ExecutionTime.TotalMilliseconds,
-                        logsCount = executionResult.Logs?.Count ?? 0,
-                        result_length = executionResult.Result?.ToString().Length ?? 0
-                    },
-                    correlationId,
-                    $"Execution completed: {(executionResult.Success ? "Success" : "Failed")}",
-                    "Check execution results and performance metrics"
-                );
                 
                 return toolResponse;
             }
@@ -261,21 +220,6 @@ Usage notes:
                         response.Logs.Add($"- {tip}");
                     }
                 }
-                
-                VibeLogger.LogInfo(
-                    "enhanced_error_response",
-                    "Enhanced error message generated",
-                    new
-                    {
-                        original_error = actualErrorMessage,
-                        friendly_message = enhancedError.FriendlyMessage,
-                        severity = enhancedError.Severity.ToString(),
-                        solutions_count = enhancedError.SuggestedSolutions?.Count ?? 0
-                    },
-                    correlationId,
-                    "Error message enhanced with user-friendly explanation",
-                    "Monitor error message effectiveness"
-                );
             }
 
             // Add error information when an exception occurs

@@ -22,35 +22,10 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void LogExecutionStart(ExecutionContext context, string correlationId)
         {
-            VibeLogger.LogInfo(
-                "command_execution_start",
-                "Command execution started",
-                new { 
-                    assemblyName = context.CompiledAssembly?.FullName ?? "null",
-                    timeoutSeconds = context.TimeoutSeconds,
-                    parameterCount = context.Parameters?.Count ?? 0
-                },
-                correlationId,
-                "Starting dynamic command execution",
-                "Monitor execution performance and timeout behavior"
-            );
         }
 
         private static void LogExecutionComplete(ExecutionResult result, string correlationId)
         {
-            VibeLogger.LogInfo(
-                "command_execution_complete",
-                "Command execution completed",
-                new { 
-                    success = result.Success,
-                    executionTimeMs = result.ExecutionTime.TotalMilliseconds,
-                    resultLength = result.Result?.ToString()?.Length ?? 0,
-                    logCount = result.Logs?.Count ?? 0
-                },
-                correlationId,
-                $"Execution completed: {(result.Success ? "SUCCESS" : "FAILED")}",
-                "Track execution success patterns and performance"
-            );
         }
 
         private static void LogExecutionError(Exception ex, string correlationId)

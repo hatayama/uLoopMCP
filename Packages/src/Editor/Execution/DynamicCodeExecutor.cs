@@ -30,19 +30,6 @@ namespace io.github.hatayama.uLoopMCP
             _securityLevel = securityLevel;
             _runner = runner ?? throw new ArgumentNullException(nameof(runner));
             _statistics = new ExecutionStatistics();
-
-            VibeLogger.LogInfo(
-                "dynamic_code_executor_initialized",
-                "DynamicCodeExecutor initialized with dependencies",
-                new
-                {
-                    compiler_type = compiler.GetType().Name,
-                    validator_type = validator.GetType().Name,
-                    runner_type = runner.GetType().Name
-                },
-                humanNote: "Initializing Integrated Dynamic Code Execution System",
-                aiTodo: "Start Collecting Execution Statistics"
-            );
         }
 
         /// <summary>Code Execution</summary>
@@ -95,20 +82,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private void LogExecutionStart(string className, object[] parameters, string code, bool compileOnly, string correlationId)
         {
-            VibeLogger.LogInfo(
-                "execute_code_start",
-                "Code execution started",
-                new
-                {
-                    class_name = className,
-                    parameter_count = parameters?.Length ?? 0,
-                    code_length = code.Length,
-                    compile_only = compileOnly
-                },
-                correlationId,
-                "Dynamic Code Execution Started",
-                "Tracking Execution Flow Steps"
-            );
         }
 
         private ExecutionResult PerformSecurityValidation(string code, string correlationId, Stopwatch stopwatch)
@@ -146,19 +119,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private ExecutionResult CreateCompileOnlySuccessResult(CompilationResult compilationResult, string correlationId, Stopwatch stopwatch)
         {
-            VibeLogger.LogInfo(
-                "compile_only_complete",
-                "Compilation completed successfully (compile-only mode)",
-                new
-                {
-                    compile_time_ms = stopwatch.ElapsedMilliseconds,
-                    assembly_name = compilationResult.CompiledAssembly?.FullName
-                },
-                correlationId,
-                "Compile-Only Mode Completed",
-                "Verifying Compilation Results"
-            );
-
             return new ExecutionResult
             {
                 Success = true,
@@ -191,19 +151,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private void LogExecutionComplete(ExecutionResult executionResult, string correlationId, Stopwatch stopwatch)
         {
-            VibeLogger.LogInfo(
-                "execute_code_complete",
-                $"Code execution completed: {(executionResult.Success ? "Success" : "Failed")}",
-                new
-                {
-                    success = executionResult.Success,
-                    execution_time_ms = stopwatch.ElapsedMilliseconds,
-                    result_length = executionResult.Result?.ToString()?.Length ?? 0
-                },
-                correlationId,
-                "Dynamic Code Execution Completed",
-                "Recording Execution Results and Performance"
-            );
         }
 
         private ExecutionResult HandleExecutionException(Exception ex, string correlationId, Stopwatch stopwatch)
@@ -345,14 +292,6 @@ namespace io.github.hatayama.uLoopMCP
 
             // Since detailed checks are performed by SecurityValidator during Roslyn compilation
             // Pass through with only basic validation here
-            VibeLogger.LogInfo(
-                "security_pre_validation_passed",
-                "Pre-validation passed, detailed check will be done during compilation",
-                new { code_length = code.Length },
-                correlationId,
-                "Pre-validation passed (details during compilation)",
-                "Focusing on Roslyn validation during compilation"
-            );
 
             return new SecurityValidationResult
             {
@@ -378,19 +317,6 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     _statistics.CompilationErrors++;
                 }
-
-                VibeLogger.LogWarning(
-                    "compilation_failed",
-                    $"Code compilation failed with {result.Errors.Count} errors",
-                    new
-                    {
-                        error_count = result.Errors.Count,
-                        warning_count = result.Warnings.Count
-                    },
-                    correlationId,
-                    "Compilation Failed",
-                    "Analyzing Causes of Compilation Errors"
-                );
             }
 
             return result;
