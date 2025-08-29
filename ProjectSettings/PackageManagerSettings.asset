@@ -30,7 +30,6 @@ MonoBehaviour:
     m_Name: OpenUPM
     m_Url: https://package.openupm.com
     m_Scopes:
-    - com.github-glitchenzo.nugetforunity
     - org.nuget
     m_IsDefault: 0
     m_Capabilities: 0
