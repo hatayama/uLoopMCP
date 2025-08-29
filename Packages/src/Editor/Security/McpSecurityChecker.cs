@@ -103,8 +103,7 @@ namespace io.github.hatayama.uLoopMCP
                 case SecuritySettings.AllowMenuItemExecution:
                     return IsMenuItemExecutionAllowed();
                     
-                case SecuritySettings.AllowPlayModeControl:
-                    return IsPlayModeControlAllowed();
+                
                     
                 default:
                     return false; // Unknown setting - block by default
@@ -170,8 +169,7 @@ namespace io.github.hatayama.uLoopMCP
                 case SecuritySettings.AllowMenuItemExecution:
                     return "Menu item execution is disabled. Enable 'Allow Menu Item Execution' in uLoopMCP Security Settings.";
                     
-                case SecuritySettings.AllowPlayModeControl:
-                    return "Play mode control is disabled. Enable 'Allow Play Mode Control' in uLoopMCP Security Settings.";
+                
                     
                 case SecuritySettings.None:
                     // Check if it's actually a third party tool
@@ -217,14 +215,7 @@ namespace io.github.hatayama.uLoopMCP
             return McpEditorSettings.GetAllowMenuItemExecution();
         }
 
-        /// <summary>
-        /// Checks if play mode control is allowed
-        /// </summary>
-        /// <returns>True if play mode control is allowed</returns>
-        private static bool IsPlayModeControlAllowed()
-        {
-            return McpEditorSettings.GetAllowPlayModeControl();
-        }
+        
 
         /// <summary>
         /// Checks if third party tools execution is allowed

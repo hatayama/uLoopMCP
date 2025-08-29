@@ -156,21 +156,6 @@ Unity Editor内で動的にC#コードを実行します。
 → セキュリティレベルに応じてUnity APIの利用を制限
 ```
 
-#### 12. play-unity - プレイモード開始
-Unity Editorのプレイモードを開始します。
-**セキュリティ制限**: デフォルトで無効化されており、Security SettingsでAllow Play Mode Controlを有効化する必要があります。
-```
-→ play-unity
-→ 自動テスト実行の前処理として使用
-```
-
-#### 13. stop-unity - プレイモード停止  
-Unity Editorのプレイモードを停止します。
-**セキュリティ制限**: デフォルトで無効化されており、Security SettingsでAllow Play Mode Controlを有効化する必要があります。
-```
-→ stop-unity
-→ 自動テスト実行の後処理として使用
-```
 
 > [!IMPORTANT]
 > **セキュリティ設定について**
@@ -181,7 +166,6 @@ Unity Editorのプレイモードを停止します。
 > **基本セキュリティ設定**:
 > - **Allow Tests Execution**: `run-tests`ツールを有効化
 > - **Allow Menu Item Execution**: `execute-menu-item`ツールを有効化
-> - **Allow Play Mode Control**: `play-unity`/`stop-unity`ツールを有効化
 > - **Allow Third Party Tools**: ユーザーが独自に拡張したtoolを有効化
 >
 > **Dynamic Code Security Level** (`execute-dynamic-code`ツール):
@@ -456,23 +440,7 @@ Unity Editorのプレイモードを停止します。
   - `UpdatedCode` (string): 更新されたコード（修正適用後）
   - `ExecutionTimeMs` (number): 実行時間（ミリ秒）
 
-### 12. play-unity
-- **説明**: Unity Editorのプレイモードを開始します
-- **パラメータ**: なし（EmptyToolSchemaを使用）
-- **レスポンス**: 
-  - `Success` (boolean): 操作が成功したかどうか
-  - `Message` (string): 実行結果メッセージ
-  - `IsPlaying` (boolean): プレイモード開始後の状態
-  - `ActionPerformed` (string): 実行されたアクション（"play"または"play (already playing)"）
-
-### 13. stop-unity
-- **説明**: Unity Editorのプレイモードを停止します  
-- **パラメータ**: なし（EmptyToolSchemaを使用）
-- **レスポンス**: 
-  - `Success` (boolean): 操作が成功したかどうか
-  - `Message` (string): 実行結果メッセージ
-  - `IsPlaying` (boolean): プレイモード停止後の状態
-  - `ActionPerformed` (string): 実行されたアクション（"stop"または"stop (already stopped)"）
+ 
 
 ---
 

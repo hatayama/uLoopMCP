@@ -157,21 +157,7 @@ Execute C# code dynamically within Unity Editor.
 → Unity API usage restricted according to security level
 ```
 
-#### 12. play-unity - Start Play Mode
-Start Unity Editor play mode.
-**Security Restriction**: Disabled by default and requires enabling Allow Play Mode Control in Security Settings.
-```
-→ play-unity
-→ Use as preprocessing for automated test execution
-```
-
-#### 13. stop-unity - Stop Play Mode
-Stop Unity Editor play mode.
-**Security Restriction**: Disabled by default and requires enabling Allow Play Mode Control in Security Settings.
-```
-→ stop-unity
-→ Use as postprocessing for automated test execution
-```
+ 
 
 > [!IMPORTANT]
 > **Security Settings**
@@ -182,7 +168,6 @@ Stop Unity Editor play mode.
 > **Basic Security Settings**:
 > - **Allow Tests Execution**: Enable `run-tests` tool
 > - **Allow Menu Item Execution**: Enable `execute-menu-item` tool
-> - **Allow Play Mode Control**: Enable `play-unity`/`stop-unity` tools
 > - **Allow Third Party Tools**: Enable user-developed custom tools
 >
 > **Dynamic Code Security Level** (`execute-dynamic-code` tool):
@@ -458,23 +443,7 @@ All tools automatically include the following timing information:
   - `UpdatedCode` (string): Updated code (after applying fixes)
   - `ExecutionTimeMs` (number): Execution time in milliseconds
 
-### 12. play-unity
-- **Description**: Start Unity Editor play mode
-- **Parameters**: None (uses EmptyToolSchema)
-- **Response**: 
-  - `Success` (boolean): Whether the operation was successful
-  - `Message` (string): Execution result message
-  - `IsPlaying` (boolean): Play mode state after execution
-  - `ActionPerformed` (string): Action that was performed ("play" or "play (already playing)")
-
-### 13. stop-unity
-- **Description**: Stop Unity Editor play mode
-- **Parameters**: None (uses EmptyToolSchema)
-- **Response**: 
-  - `Success` (boolean): Whether the operation was successful
-  - `Message` (string): Execution result message
-  - `IsPlaying` (boolean): Play mode state after execution
-  - `ActionPerformed` (string): Action that was performed ("stop" or "stop (already stopped)")
+ 
 
 ---
 

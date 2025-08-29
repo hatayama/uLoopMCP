@@ -34,12 +34,6 @@ namespace io.github.hatayama.uLoopMCP
         [Description("allowMenuItemExecution")]
         AllowMenuItemExecution,
 
-        /// <summary>
-        /// Allow play mode control setting
-        /// Used by play-stop-unity command
-        /// </summary>
-        [Description("allowPlayModeControl")]
-        AllowPlayModeControl
     }
 
     /// <summary>

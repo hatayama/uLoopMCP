@@ -38,7 +38,7 @@ namespace io.github.hatayama.uLoopMCP
         public bool enableTestsExecution = false;
         public bool allowMenuItemExecution = false;
         public bool allowThirdPartyTools = false;
-        public bool allowPlayModeControl = false;
+        
         
         // UI State Settings
         public bool showSecuritySettings = false;
@@ -269,23 +269,7 @@ namespace io.github.hatayama.uLoopMCP
             SaveSettings(newSettings);
         }
 
-        /// <summary>
-        /// Gets the play mode control allowed flag.
-        /// </summary>
-        public static bool GetAllowPlayModeControl()
-        {
-            return GetSettings().allowPlayModeControl;
-        }
-
-        /// <summary>
-        /// Sets the play mode control allowed flag.
-        /// </summary>
-        public static void SetAllowPlayModeControl(bool allowPlayModeControl)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { allowPlayModeControl = allowPlayModeControl };
-            SaveSettings(newSettings);
-        }
+        
 
         /// <summary>
         /// Gets the show security settings flag.

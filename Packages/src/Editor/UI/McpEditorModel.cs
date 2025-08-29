@@ -304,13 +304,7 @@ namespace io.github.hatayama.uLoopMCP
             McpEditorSettings.SetAllowThirdPartyTools(allow);
         }
 
-        /// <summary>
-        /// Update AllowPlayModeControl setting with persistence
-        /// </summary>
-        public void UpdateAllowPlayModeControl(bool allow)
-        {
-            McpEditorSettings.SetAllowPlayModeControl(allow);
-        }
+        
 
     }
 } 
