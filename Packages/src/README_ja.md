@@ -124,10 +124,10 @@ Unity Editor内で動的にC#コードを実行します。
 > このツールを使用するには、[OpenUPM NuGet](https://openupm.com/nuget/)を使用して`Microsoft.CodeAnalysis.CSharp`パッケージをインストールする必要があります。
 > 
 > **インストール手順:**
-> ### OpenUPM経由（推奨）
-> ### Unity Package ManagerでScoped registryを使用
-> 1. Project Settingsウィンドウを開き、Package Managerページに移動
-> 2. Scoped Registriesリストに以下のエントリを追加：
+> OpenUPM経由（推奨）  
+> Unity Package ManagerでScoped registryを使用  
+> 1. Project Settingsウィンドウを開き、Package Managerページに移動  
+> 2. Scoped Registriesリストに以下のエントリを追加：  
 ```
 Name: OpenUPM
 URL: https://package.openupm.com
