@@ -45,6 +45,11 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // Network APIs
             Assert.IsTrue(detector.IsDangerousApi("System.Net.Http.HttpClient"));
             Assert.IsTrue(detector.IsDangerousApi("System.Net.WebClient"));
+            Assert.IsTrue(detector.IsDangerousApi("System.Net.Sockets.TcpListener"));
+            Assert.IsTrue(detector.IsDangerousApi("System.Net.Sockets.UdpClient"));
+            Assert.IsTrue(detector.IsDangerousApi("System.Net.Security.SslStream"));
+            Assert.IsTrue(detector.IsDangerousApi("System.Net.WebSockets.ClientWebSocket"));
+            Assert.IsTrue(detector.IsDangerousApi("System.Net.Dns"));
             
             // Reflection APIs
             Assert.IsTrue(detector.IsDangerousApi("System.Reflection.Assembly.Load"));

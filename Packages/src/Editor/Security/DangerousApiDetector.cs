@@ -17,6 +17,7 @@ namespace io.github.hatayama.uLoopMCP
             "System.IO.FileInfo",
             "System.IO.DirectoryInfo",
             "System.IO.Path",
+            "System.IO.FileSystemWatcher",
             
             // Network-related
             "System.Net.Http.HttpClient",
@@ -24,6 +25,21 @@ namespace io.github.hatayama.uLoopMCP
             "System.Net.WebRequest",
             "System.Net.Sockets.Socket",
             "System.Net.Sockets.TcpClient",
+            // Additional network-related (full ban, including localhost)
+            "System.Net.Sockets.TcpListener",
+            "System.Net.Sockets.UdpClient",
+            "System.Net.Sockets.NetworkStream",
+            "System.Net.Dns",
+            "System.Net.IPAddress",
+            "System.Net.HttpWebRequest",
+            "System.Net.Security.SslStream",
+            "System.Net.WebSockets.ClientWebSocket",
+            "System.Net.WebSockets.WebSocket",
+            "System.Net.Mail.SmtpClient",
+            "System.Net.NetworkInformation.Ping",
+            "System.Net.Http.HttpClientHandler",
+            "System.Net.Http.HttpMessageHandler",
+            "System.Net.Http.SocketsHttpHandler",
             
             // Process-related
             "System.Diagnostics.ProcessStartInfo",
@@ -60,14 +76,22 @@ namespace io.github.hatayama.uLoopMCP
             // System.IO.File - Deletion and write operations are dangerous
             ["System.IO.File"] = new() 
             { 
-                "Delete", "WriteAllText", "WriteAllBytes", "Replace"
+                "Delete", "WriteAllText", "WriteAllBytes", "Replace",
+                // Stage A additions
+                "OpenWrite", "AppendAllText", "AppendText",
+                // Explicit Set* family (wildcards not supported)
+                "SetAttributes", "SetCreationTime", "SetCreationTimeUtc",
+                "SetLastAccessTime", "SetLastAccessTimeUtc",
+                "SetLastWriteTime", "SetLastWriteTimeUtc"
                 // Create, Copy, Move, ReadAllText, ReadAllBytes, Exists, Open-related methods are relatively safe
             },
             
             // System.IO.Directory - Deletion is dangerous
             ["System.IO.Directory"] = new() 
             { 
-                "Delete"
+                "Delete",
+                // Stage A addition
+                "SetCurrentDirectory"
                 // Create, GetFiles, GetDirectories, Move, Exists are relatively safe
             },
             
@@ -91,12 +115,22 @@ namespace io.github.hatayama.uLoopMCP
                 "InvokeMember"
                 // GetType, GetMethod and similar are relatively safe as they only retrieve information
             },
+            // System.Reflection.MethodInfo / ConstructorInfo - Invocation is dangerous
+            ["System.Reflection.MethodInfo"] = new()
+            {
+                "Invoke"
+            },
+            ["System.Reflection.ConstructorInfo"] = new()
+            {
+                "Invoke"
+            },
             
             // System.Activator - Creating COM objects is dangerous
             ["System.Activator"] = new() 
             { 
-                "CreateComInstanceFrom"
-                // CreateInstance is permitted depending on its use case
+                "CreateComInstanceFrom",
+                // Stage A: Block CreateInstance, including generic
+                "CreateInstance"
             },
             
             // UnityEditor.AssetDatabase - Permanent data deletion is dangerous
@@ -116,8 +150,10 @@ namespace io.github.hatayama.uLoopMCP
             // System.Environment - Application termination is dangerous
             ["System.Environment"] = new() 
             {
-                "Exit", "FailFast"
-                // SetEnvironmentVariable, ExpandEnvironmentVariables are relatively safe
+                "Exit", "FailFast",
+                // Stage A: Block environment modification
+                "SetEnvironmentVariable"
+                // ExpandEnvironmentVariables remains allowed (read-only)
             },
             
             // System.Threading.Thread - Forced thread manipulation is dangerous
@@ -126,6 +162,9 @@ namespace io.github.hatayama.uLoopMCP
                 "Abort", "Suspend", "Resume"
                 // Start, Join are relatively safe
             },
+
+            // Note: GCSettings.LatencyMode will be blocked specifically on assignment
+            // via SecuritySyntaxWalker (do not blanket-block property access here)
             
             // Additional restrictions to prevent security settings modifications
             ["io.github.hatayama.uLoopMCP.DynamicCodeSecurityManager"] = new() 

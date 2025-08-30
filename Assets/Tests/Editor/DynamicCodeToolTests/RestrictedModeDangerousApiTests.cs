@@ -576,10 +576,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         
         #endregion
         
-        #region System.Activator - Safe APIs
-        
+        #region System.Activator - Blocked APIs
+
         [Test]
-        public async Task TestRestrictedMode_ActivatorCreateInstance_Allowed()
+        public async Task TestRestrictedMode_ActivatorCreateInstance_Blocked()
         {
             string code = @"
                 var obj = System.Activator.CreateInstance(typeof(System.Collections.Generic.List<string>));
@@ -590,10 +590,53 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 code, "TestCommand", null, CancellationToken.None, compileOnly: false
             );
             
-            Assert.IsTrue(result.Success, $"Activator.CreateInstance should be allowed. Error: {result.ErrorMessage}");
-            StringAssert.Contains("Instance created", result.Result?.ToString() ?? "");
+            Assert.IsFalse(result.Success, "Activator.CreateInstance should be blocked in Restricted mode");
+            StringAssert.Contains("Dangerous", result.ErrorMessage ?? "");
         }
         
+        #endregion
+
+        // ================================================================================
+        // Environment / GC tests
+        // ================================================================================
+
+        #region Environment and GC - Blocked APIs
+
+        [Test]
+        public async Task TestRestrictedMode_EnvironmentSetEnvironmentVariable_Blocked()
+        {
+            string code = @"
+                System.Environment.SetEnvironmentVariable(""TEST_VAR_ULOOPMCP"", ""x"");
+                return ""ok"";
+            ";
+
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                code, "TestCommand", null, CancellationToken.None, compileOnly: false
+            );
+
+            Assert.IsFalse(result.Success, "Environment.SetEnvironmentVariable should be blocked");
+            StringAssert.Contains("Dangerous", result.ErrorMessage ?? "");
+        }
+
+        [Test]
+        public async Task TestRestrictedMode_GCSettingsLatencyModeAssignment_Blocked()
+        {
+            string code = @"
+                System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.LowLatency;
+                return ""ok"";
+            ";
+
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                code, "TestCommand", null, CancellationToken.None, compileOnly: false
+            );
+
+            Assert.IsFalse(result.Success, "GCSettings.LatencyMode assignment should be blocked");
+            Assert.IsTrue(
+                result.ErrorMessage?.Contains("Dangerous") == true ||
+                result.ErrorMessage?.Contains("Security violations detected") == true,
+                $"Expected security error message. Actual: '{result.ErrorMessage}'");
+        }
+
         #endregion
         
         // ================================================================================
@@ -654,6 +697,92 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         
         #endregion
         
+        // ================================================================================
+        // Network API Tests (Full ban, including localhost)
+        // ================================================================================
+
+        #region Network APIs - Should be blocked in Restricted mode
+
+        [Test]
+        public async Task TestRestrictedMode_TcpClient_Blocked()
+        {
+            string code = @"
+                var c = new System.Net.Sockets.TcpClient(""127.0.0.1"", 9);
+                return ""connected"";
+            ";
+
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                code, "TestCommand", null, CancellationToken.None, compileOnly: false
+            );
+
+            Assert.IsFalse(result.Success, "TcpClient should be blocked in Restricted mode");
+            Assert.IsTrue(
+                result.ErrorMessage?.Contains("Security violations detected") == true ||
+                result.ErrorMessage?.Contains("Dangerous") == true ||
+                result.ErrorMessage?.Contains("blocked") == true,
+                $"Expected security error message. Actual: '{result.ErrorMessage}'");
+        }
+
+        [Test]
+        public async Task TestRestrictedMode_UdpClient_Blocked()
+        {
+            string code = @"
+                var c = new System.Net.Sockets.UdpClient();
+                return ""ok"";
+            ";
+
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                code, "TestCommand", null, CancellationToken.None, compileOnly: false
+            );
+
+            Assert.IsFalse(result.Success, "UdpClient should be blocked in Restricted mode");
+            StringAssert.Contains("Dangerous", result.ErrorMessage ?? "");
+        }
+
+        [Test]
+        public async Task TestRestrictedMode_DnsGetHostEntry_Blocked()
+        {
+            string code = @"
+                var e = System.Net.Dns.GetHostEntry(""localhost"");
+                return e?.HostName ?? ""none"";
+            ";
+
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                code, "TestCommand", null, CancellationToken.None, compileOnly: false
+            );
+
+            Assert.IsFalse(result.Success, "Dns.GetHostEntry should be blocked in Restricted mode");
+            Assert.IsTrue(
+                result.ErrorMessage?.Contains("Security violations detected") == true ||
+                result.ErrorMessage?.Contains("Dangerous") == true ||
+                result.ErrorMessage?.Contains("blocked") == true,
+                $"Expected security error message. Actual: '{result.ErrorMessage}'");
+        }
+
+        [Test]
+        public async Task TestRestrictedMode_ClientWebSocket_Blocked()
+        {
+            string code = @"
+                var ws = new System.Net.WebSockets.ClientWebSocket();
+                return ""ok"";
+            ";
+
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                code, "TestCommand", null, CancellationToken.None, compileOnly: false
+            );
+
+            Assert.IsFalse(result.Success, "ClientWebSocket should be blocked in Restricted mode");
+            Assert.IsTrue(
+                result.ErrorMessage?.Contains("Security violations detected") == true ||
+                result.ErrorMessage?.Contains("Dangerous") == true ||
+                result.ErrorMessage?.Contains("blocked") == true ||
+                result.ErrorMessage?.Contains("does not exist") == true ||
+                result.ErrorMessage?.Contains("compilation error") == true,
+                $"Expected security or compilation error message. Actual: '{result.ErrorMessage}'");
+        }
+
+        #endregion
+
         // ================================================================================
         // UnityEditor.FileUtil Tests
         // ================================================================================

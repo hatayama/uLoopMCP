@@ -268,6 +268,36 @@ namespace io.github.hatayama.uLoopMCP
             
             base.VisitInvocationExpression(node);
         }
+
+        /// <summary>
+        /// Visits assignment expressions to detect dangerous property assignments
+        /// (e.g., modifying GCSettings.LatencyMode).
+        /// </summary>
+        /// <param name="node">The assignment expression syntax node</param>
+        public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
+        {
+            // Check left-hand side symbol (target being assigned to)
+            ISymbol leftSymbol = semanticModel.GetSymbolInfo(node.Left).Symbol;
+            if (leftSymbol is IPropertySymbol propertySymbol)
+            {
+                string containingTypeName = propertySymbol.ContainingType?.ToDisplayString();
+                string propertyName = propertySymbol.Name;
+                if (containingTypeName == "System.Runtime.GCSettings" && propertyName == "LatencyMode")
+                {
+                    string apiName = $"{containingTypeName}.{propertyName}";
+                    violations.Add(new SecurityViolation
+                    {
+                        Type = SecurityViolationType.DangerousApiCall,
+                        Description = $"Dangerous property assignment detected: {apiName}",
+                        Message = $"Dangerous property assignment detected: {apiName}",
+                        Location = node.GetLocation(),
+                        ApiName = apiName
+                    });
+                }
+            }
+
+            base.VisitAssignmentExpression(node);
+        }
         
         /// <summary>
         /// A common helper method for method body inspection that supports multiple formats.
