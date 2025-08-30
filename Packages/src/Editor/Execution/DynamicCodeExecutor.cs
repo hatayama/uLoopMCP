@@ -195,7 +195,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private ExecutionResult PerformRuntimeSecurityCheck(string code)
         {
-            // Execution Disabled Check
+            // Execution Disabled Check only
             if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
             {
                 return CreateSecurityBlockedResult(
@@ -203,25 +203,7 @@ namespace io.github.hatayama.uLoopMCP
                     McpConstants.ERROR_MESSAGE_EXECUTION_DISABLED);
             }
 
-            // Block Security Level Change in Restricted Mode
-            if (_securityLevel == DynamicCodeSecurityLevel.Restricted)
-            {
-                if (ContainsSecurityLevelChangeAttempt(code))
-                {
-                    return CreateSecurityBlockedResult(
-                        McpConstants.ERROR_SECURITY_VIOLATION,
-                        McpConstants.ERROR_MESSAGE_SECURITY_LEVEL_CHANGE_BLOCKED);
-                }
-            }
-
             return new ExecutionResult { Success = true };
-        }
-
-        private bool ContainsSecurityLevelChangeAttempt(string code)
-        {
-            return code.Contains("SetDynamicCodeSecurityLevel") ||
-                   code.Contains("InitializeFromSettings") ||
-                   code.Contains("McpEditorSettings.SetDynamicCodeSecurityLevel");
         }
 
         private ExecutionResult CreateSecurityBlockedResult(string errorCode, string errorMessage)
