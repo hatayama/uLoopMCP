@@ -70,27 +70,36 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // Comprehensively collect Unity reference assemblies (independent of AppDomain)
+            // Comprehensively collect Unity/.NET reference assemblies (independent of AppDomain)
             HashSet<string> addedPaths = new();
 
-            // 1. Collect from Unity reference assembly folders
-            AddUnityReferenceAssemblies(references, addedPaths);
+            // Track assembly identities to avoid CS1703 (multiple assemblies with equivalent identity)
+            HashSet<string> addedAssemblyNames = new(StringComparer.OrdinalIgnoreCase);
 
-            // 2. Also add currently loaded assemblies
-            // (Complement assemblies dynamically loaded or plugins not in Unity folders)
-            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            // 1. Collect Unity/.NET + ScriptAssemblies from Unity folders
+            AddUnityReferenceAssemblies(references, addedPaths, addedAssemblyNames);
+
+            // 2. Always include precompiled plugin assemblies that belong to the project or packages
+            AddPrecompiledPluginAssemblies(references, addedPaths, addedAssemblyNames);
+
+            // 3. Security level specific handling
+            if (level == DynamicCodeSecurityLevel.FullAccess)
             {
-                if (!assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
+                // In FullAccess, also include all currently loaded AppDomain assemblies for maximum compatibility
+                foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
                 {
-                    if (addedPaths.Add(assembly.Location))
+                    if (!assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
                     {
-                        MetadataReference reference = MetadataReference.CreateFromFile(assembly.Location);
-                        references.Add(reference);
+                        if (addedPaths.Add(assembly.Location))
+                        {
+                            MetadataReference reference = MetadataReference.CreateFromFile(assembly.Location);
+                            references.Add(reference);
+                        }
                     }
                 }
             }
 
-            // 3. Also add current assembly (for uLoopMCP class access)
+            // 4. Also add current assembly (for uLoopMCP class access)
             Assembly currentAssembly = Assembly.GetExecutingAssembly();
             if (!string.IsNullOrWhiteSpace(currentAssembly.Location))
             {
@@ -98,6 +107,14 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     MetadataReference currentRef = MetadataReference.CreateFromFile(currentAssembly.Location);
                     references.Add(currentRef);
+                    try
+                    {
+                        if (TryGetAssemblyIdentity(currentAssembly.Location, out string n, out var _))
+                        {
+                            addedAssemblyNames.Add(n);
+                        }
+                    }
+                    catch { }
                 }
             }
 
@@ -108,10 +125,77 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Add precompiled plugin assemblies that are part of the current project or its packages.
+        /// Includes assemblies under Assets, Packages, and Library/PackageCache.
+        /// Skips unrelated system locations to avoid unintended exposure in Restricted mode.
+        /// </summary>
+        private void AddPrecompiledPluginAssemblies(List<MetadataReference> references, HashSet<string> addedPaths, HashSet<string> addedAssemblyNames = null)
+        {
+            try
+            {
+                string dataPath = UnityEngine.Application.dataPath; // {Project}/Assets
+                string projectRoot = Path.GetFullPath(Path.Combine(dataPath, ".."));
+                string assetsRoot = Path.GetFullPath(dataPath);
+                string packagesRoot = Path.Combine(projectRoot, "Packages");
+                string packageCacheRoot = Path.Combine(projectRoot, "Library", "PackageCache");
+
+                string Normalize(string p) => Path.GetFullPath(p).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                assetsRoot = Normalize(assetsRoot);
+                packagesRoot = Normalize(packagesRoot);
+                packageCacheRoot = Normalize(packageCacheRoot);
+
+                IEnumerable<string> roots = new[] { assetsRoot, packagesRoot, packageCacheRoot }
+                    .Where(root => !string.IsNullOrEmpty(root) && Directory.Exists(root));
+
+                foreach (string root in roots)
+                {
+                    foreach (string dllPath in Directory.GetFiles(root, "*.dll", SearchOption.AllDirectories))
+                    {
+                        string fullPath = Normalize(dllPath);
+
+                        if (!IsManagedAssembly(fullPath))
+                        {
+                            continue;
+                        }
+
+                        if (addedPaths.Add(fullPath))
+                        {
+                            // Avoid identity duplicates across sources (Managed vs Packages, etc.)
+                            if (addedAssemblyNames != null && TryGetAssemblyIdentity(fullPath, out string asmName, out var _))
+                            {
+                                if (!addedAssemblyNames.Add(asmName))
+                                {
+                                    continue;
+                                }
+                            }
+
+                            MetadataReference reference = TryCreateReference(fullPath);
+                            if (reference != null)
+                            {
+                                references.Add(reference);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                VibeLogger.LogWarning(
+                    "roslyn_precompiled_refs_failed",
+                    $"Failed to add precompiled plugin assemblies: {ex.Message}",
+                    new { error = ex.Message },
+                    McpConstants.GenerateCorrelationId(),
+                    "Continuing without precompiled plugin references",
+                    "Check Unity CompilationPipeline availability"
+                );
+            }
+        }
+
+        /// <summary>
         /// Comprehensively collect Unity reference assemblies
         /// Collect directly from Unity installation folders, independent of AppDomain
         /// </summary>
-        private void AddUnityReferenceAssemblies(List<MetadataReference> references, HashSet<string> addedPaths)
+        private void AddUnityReferenceAssemblies(List<MetadataReference> references, HashSet<string> addedPaths, HashSet<string> addedAssemblyNames = null)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
 
@@ -161,6 +245,24 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     if (addedPaths.Add(dllPath))
                     {
+                        // Avoid identity duplicates (CS1703)
+                        if (addedAssemblyNames != null && TryGetAssemblyIdentity(dllPath, out string asmName, out var _))
+                        {
+                            if (!addedAssemblyNames.Add(asmName))
+                            {
+                                continue;
+                            }
+                        }
+
+                        // Prefer newer CoreModule assemblies over legacy wrapper assemblies
+                        string fileName = Path.GetFileNameWithoutExtension(dllPath);
+                        if (string.Equals(fileName, "UnityEngine", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(fileName, "UnityEditor", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Skip legacy wrapper in favor of CoreModule variants
+                            continue;
+                        }
+
                         MetadataReference reference = TryCreateReference(dllPath);
                         if (reference != null)
                         {
@@ -231,7 +333,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             List<string> searchPaths = new();
 
-            // .NET Framework 4.x reference assemblies
+            // .NET Framework 4.x reference assemblies (use only when NetStandard 2.1 is unavailable)
             string monoApi = Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "4.7.1-api");
             string monoFacades = Path.Combine(monoApi, "Facades");
             string monoUnityjit = Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "unityjit-macos");
@@ -249,21 +351,13 @@ namespace io.github.hatayama.uLoopMCP
             // Project assemblies
             string scriptAssemblies = Path.Combine(UnityEngine.Application.dataPath, "..", "Library", "ScriptAssemblies");
 
-            // Add existing directories
+            // Use .NET Standard 2.0 + compat shims and also include mono 4.7.1 api/facades
+            // This combination allows referencing both netstandard libraries and 4.x-targeted assemblies
+            AddDirectoryIfExists(searchPaths, netStandard20);
+            AddDirectoryIfExists(searchPaths, netStandardCompat);
             AddDirectoryIfExists(searchPaths, monoApi);
             AddDirectoryIfExists(searchPaths, monoFacades);
             AddDirectoryIfExists(searchPaths, monoUnityjit);
-
-            // Prefer .NET Standard 2.1 when available; otherwise fall back to 2.0 + compat
-            if (!string.IsNullOrEmpty(netStandard21) && Directory.Exists(netStandard21))
-            {
-                AddDirectoryIfExists(searchPaths, netStandard21);
-            }
-            else
-            {
-                AddDirectoryIfExists(searchPaths, netStandard20);
-                AddDirectoryIfExists(searchPaths, netStandardCompat);
-            }
             AddDirectoryIfExists(searchPaths, managed);
             AddDirectoryIfExists(searchPaths, unityEngine);
             AddDirectoryIfExists(searchPaths, unityEditor);

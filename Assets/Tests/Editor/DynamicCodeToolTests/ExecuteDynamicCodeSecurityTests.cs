@@ -1,8 +1,22 @@
 #if ULOOPMCP_HAS_ROSLYN
 using NUnit.Framework;
+using System.Linq;
 
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
+    /// <summary>
+    /// Dummy type defined in the test assembly (*.Tests.dll).
+    /// Used to verify that, in Restricted mode, dynamic compilation can
+    /// reference types from test assemblies (ScriptAssemblies) as intended.
+    /// </summary>
+    public class EditorTestHelperType
+    {
+        public static string Ping()
+        {
+            return "pong";
+        }
+    }
+
     /// <summary>
     /// Tests related to ExecuteDynamicCodeTool in Restricted mode
     /// Aggregates tests for detecting security violations
@@ -11,6 +25,25 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
     public class ExecuteDynamicCodeSecurityTests
     {
         private RoslynCompiler _compiler;
+
+        // Ensure compile-time reference to the test-assembly type used by dynamic code
+        private static readonly string ForceReferenceToEditorTestHelperType =
+            nameof(EditorTestHelperType) + "." + nameof(EditorTestHelperType.Ping);
+
+        static ExecuteDynamicCodeSecurityTests()
+        {
+            var _ = ForceReferenceToEditorTestHelperType;
+        }
+
+        private void AssertSuccess(CompilationResult result)
+        {
+            if (!result.Success)
+            {
+                string details = string.Join("\n", (result.Errors ?? new System.Collections.Generic.List<CompilationError>())
+                    .Select(e => $"[{e.ErrorCode}] L{e.Line},{e.Column} {e.Message}"));
+                Assert.Fail($"Compilation failed. Errors:\n{details}");
+            }
+        }
 
         [SetUp]
         public void SetUp()
@@ -49,8 +82,86 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             CompilationResult result = _compiler.Compile(request);
 
             // Assert
-            Assert.IsTrue(result.Success, "Safe methods should compile successfully");
+            AssertSuccess(result);
             Assert.IsFalse(result.HasSecurityViolations, "Should not have security violations");
+        }
+
+        [Test]
+        public void Compile_Restricted_CanReference_TestAssemblyType_ShouldSucceed()
+        {
+            // Arrange - reference type defined in test assembly (*.Tests.dll)
+            string code =
+                "string ping = io.github.hatayama.uLoopMCP.DynamicCodeToolTests.EditorTestHelperType.Ping();\n" +
+                "return ping;";
+
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = code,
+                ClassName = "RefTestsAsmClass",
+                Namespace = "TestNamespace"
+            };
+
+            // Act
+            CompilationResult result = _compiler.Compile(request);
+
+            // Assert
+            AssertSuccess(result);
+            Assert.IsFalse(result.HasSecurityViolations, "No security violations expected");
+        }
+
+        [Test]
+        public void Compile_Restricted_CanReference_UnityPackageType_ShouldSucceed_IfPresent()
+        {
+            // Arrange - try referencing a commonly available package type
+            // Fallback to UnityEngine.Vector3 if package type isn't available
+            string code =
+                "#if UNITY_MATHEMATICS\n" +
+                "var v = new Unity.Mathematics.float3(1f, 2f, 3f);\n" +
+                "float sum = v.x + v.y + v.z;\n" +
+                "return sum;\n" +
+                "#else\n" +
+                "var v = new UnityEngine.Vector3(1f, 2f, 3f);\n" +
+                "float sum = v.x + v.y + v.z;\n" +
+                "return sum;\n" +
+                "#endif\n";
+
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = code,
+                ClassName = "RefPkgClass",
+                Namespace = "TestNamespace"
+            };
+
+            // Act
+            CompilationResult result = _compiler.Compile(request);
+
+            // Assert
+            AssertSuccess(result);
+            Assert.IsFalse(result.HasSecurityViolations, "No security violations expected");
+        }
+
+        [Test]
+        public void Compile_Restricted_CanReference_Editor_And_Engine_Types_ShouldSucceed()
+        {
+            // Arrange - mix UnityEditor and UnityEngine APIs
+            string code =
+                "double t = UnityEditor.EditorApplication.timeSinceStartup;\n" +
+                "var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();\n" +
+                "return scene.name;";
+
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = code,
+                ClassName = "RefEditorEngineClass",
+                Namespace = "TestNamespace"
+            };
+
+            // Act
+            CompilationResult result = _compiler.Compile(request);
+
+            // Assert
+            AssertSuccess(result);
+            Assert.IsFalse(result.HasSecurityViolations, "No security violations expected");
         }
 
         [Test]
@@ -76,7 +187,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             // Assert
             // Cannot inspect method contents from another assembly, so compilation succeeds
-            Assert.IsTrue(result.Success, "Should compile successfully as method content is not inspected");
+            AssertSuccess(result);
             Assert.IsFalse(result.HasSecurityViolations, "Should not detect violations in external assembly methods");
         }
 
@@ -101,7 +212,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             // Assert
             // Method calls from another assembly cannot be inspected to their full content
-            Assert.IsTrue(result.Success, "External assembly method calls compile successfully");
+            AssertSuccess(result);
             Assert.IsFalse(result.HasSecurityViolations, "Cannot detect violations inside external methods");
         }
     }
