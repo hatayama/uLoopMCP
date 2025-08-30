@@ -116,89 +116,21 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                // Get Unity Editor path
-                string unityPath = UnityEditor.EditorApplication.applicationPath;
-                string contentsPath = string.Empty;
+                string contentsPath = GetUnityContentsPath();
 
-#if UNITY_EDITOR_OSX
-                // macOS: Unity.app/Contents
-                // Unity.app is an application bundle, so directly add Contents
-                contentsPath = Path.Combine(unityPath, "Contents");
-#elif UNITY_EDITOR_WIN
-                    // Windows: Editor/Data
-                    contentsPath = Path.Combine(
-                        Path.GetDirectoryName(unityPath),
-                        "Data"
-                    );
-#elif UNITY_EDITOR_LINUX
-                    // Linux: Editor/Data
-                    contentsPath = Path.Combine(
-                        Path.GetDirectoryName(unityPath),
-                        "Data"
-                    );
-#endif
+                List<string> searchPaths = BuildSearchPaths(contentsPath);
 
-                // Collect reference assembly directories
-                List<string> searchPaths = new();
-
-                // .NET Framework 4.x reference assemblies
-                string monoApi = Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "4.7.1-api");
-                string monoFacades = Path.Combine(monoApi, "Facades");
-                string monoUnityjit = Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "unityjit-macos");
-
-                // .NET Standard reference assemblies
-                string netStandard21 = Path.Combine(contentsPath, "NetStandard", "ref", "2.1.0");
-                string netStandard20 = Path.Combine(contentsPath, "NetStandard", "ref", "2.0.0");
-                string netStandardCompat = Path.Combine(contentsPath, "NetStandard", "compat", "shims", "net472");
-
-                // Unity Managed assemblies
-                string managed = Path.Combine(contentsPath, "Managed");
-                string unityEngine = Path.Combine(managed, "UnityEngine");
-                string unityEditor = Path.Combine(managed, "UnityEditor");
-
-                // Project assemblies
-                string scriptAssemblies = Path.Combine(UnityEngine.Application.dataPath, "..", "Library", "ScriptAssemblies");
-
-                // Add existing directories
-                AddDirectoryIfExists(searchPaths, monoApi);
-                AddDirectoryIfExists(searchPaths, monoFacades);
-                AddDirectoryIfExists(searchPaths, monoUnityjit);
-                AddDirectoryIfExists(searchPaths, netStandard21);
-                AddDirectoryIfExists(searchPaths, netStandard20);
-                AddDirectoryIfExists(searchPaths, netStandardCompat);
-                AddDirectoryIfExists(searchPaths, managed);
-                AddDirectoryIfExists(searchPaths, unityEngine);
-                AddDirectoryIfExists(searchPaths, unityEditor);
-                AddDirectoryIfExists(searchPaths, scriptAssemblies);
-
-                int addedCount = 0;
-
-                // Collect .dll files from each directory
-                foreach (string searchPath in searchPaths)
+                foreach (string dllPath in EnumerateDllPaths(searchPaths))
                 {
-                    if (Directory.Exists(searchPath))
+                    if (addedPaths.Add(dllPath))
                     {
-                        foreach (string dllPath in Directory.GetFiles(searchPath, "*.dll"))
+                        MetadataReference reference = TryCreateReference(dllPath);
+                        if (reference != null)
                         {
-                            if (addedPaths.Add(dllPath))
-                            {
-                                try
-                                {
-                                    MetadataReference reference = MetadataReference.CreateFromFile(dllPath);
-                                    references.Add(reference);
-                                    addedCount++;
-                                }
-                                catch
-                                {
-                                    // Skip unloadable DLLs (native DLLs etc.)
-                                    // This is normal behavior (native DLLs cannot be loaded)
-                                }
-                            }
+                            references.Add(reference);
                         }
                     }
                 }
-
-                
             }
             catch (Exception ex)
             {
@@ -210,6 +142,97 @@ namespace io.github.hatayama.uLoopMCP
                     "Falling back to AppDomain assemblies only",
                     "Review Unity installation path detection"
                 );
+            }
+        }
+
+        private string GetUnityContentsPath()
+        {
+            string unityPath = UnityEditor.EditorApplication.applicationPath;
+            string contentsPath = string.Empty;
+
+#if UNITY_EDITOR_OSX
+            // macOS: Unity.app/Contents
+            // Unity.app is an application bundle, so directly add Contents
+            contentsPath = Path.Combine(unityPath, "Contents");
+#elif UNITY_EDITOR_WIN
+            // Windows: Editor/Data
+            contentsPath = Path.Combine(
+                Path.GetDirectoryName(unityPath),
+                "Data"
+            );
+#elif UNITY_EDITOR_LINUX
+            // Linux: Editor/Data
+            contentsPath = Path.Combine(
+                Path.GetDirectoryName(unityPath),
+                "Data"
+            );
+#endif
+
+            return contentsPath;
+        }
+
+        private List<string> BuildSearchPaths(string contentsPath)
+        {
+            List<string> searchPaths = new();
+
+            // .NET Framework 4.x reference assemblies
+            string monoApi = Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "4.7.1-api");
+            string monoFacades = Path.Combine(monoApi, "Facades");
+            string monoUnityjit = Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "unityjit-macos");
+
+            // .NET Standard reference assemblies
+            string netStandard21 = Path.Combine(contentsPath, "NetStandard", "ref", "2.1.0");
+            string netStandard20 = Path.Combine(contentsPath, "NetStandard", "ref", "2.0.0");
+            string netStandardCompat = Path.Combine(contentsPath, "NetStandard", "compat", "shims", "net472");
+
+            // Unity Managed assemblies
+            string managed = Path.Combine(contentsPath, "Managed");
+            string unityEngine = Path.Combine(managed, "UnityEngine");
+            string unityEditor = Path.Combine(managed, "UnityEditor");
+
+            // Project assemblies
+            string scriptAssemblies = Path.Combine(UnityEngine.Application.dataPath, "..", "Library", "ScriptAssemblies");
+
+            // Add existing directories
+            AddDirectoryIfExists(searchPaths, monoApi);
+            AddDirectoryIfExists(searchPaths, monoFacades);
+            AddDirectoryIfExists(searchPaths, monoUnityjit);
+            AddDirectoryIfExists(searchPaths, netStandard21);
+            AddDirectoryIfExists(searchPaths, netStandard20);
+            AddDirectoryIfExists(searchPaths, netStandardCompat);
+            AddDirectoryIfExists(searchPaths, managed);
+            AddDirectoryIfExists(searchPaths, unityEngine);
+            AddDirectoryIfExists(searchPaths, unityEditor);
+            AddDirectoryIfExists(searchPaths, scriptAssemblies);
+
+            return searchPaths;
+        }
+
+        private IEnumerable<string> EnumerateDllPaths(IEnumerable<string> searchPaths)
+        {
+            foreach (string searchPath in searchPaths)
+            {
+                if (Directory.Exists(searchPath))
+                {
+                    foreach (string dllPath in Directory.GetFiles(searchPath, "*.dll"))
+                    {
+                        yield return dllPath;
+                    }
+                }
+            }
+        }
+
+        private MetadataReference TryCreateReference(string dllPath)
+        {
+            try
+            {
+                return MetadataReference.CreateFromFile(dllPath);
+            }
+            catch
+            {
+                // Skip unloadable DLLs (native DLLs etc.)
+                // This is normal behavior (native DLLs cannot be loaded)
+                return null;
             }
         }
 
