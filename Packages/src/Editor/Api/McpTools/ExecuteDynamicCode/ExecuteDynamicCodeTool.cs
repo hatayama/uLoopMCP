@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -136,6 +138,37 @@ Usage notes:
                     cancellationToken,
                     parameters.CompileOnly
                 );
+
+                // Optional: simple auto-qualify retry if enabled and first attempt failed with likely UnityEngine identifiers
+                if (!executionResult.Success && parameters.AutoQualifyUnityTypesOnce)
+                {
+                    bool hasUsingUnityEngine = originalCode.Contains("using UnityEngine;");
+                    if (!hasUsingUnityEngine)
+                    {
+                        bool looksLikeUnityIdentifier = (executionResult.Logs?.Any(l => l.Contains("CS0103") || l.Contains("CS0246")) == true);
+                        if (looksLikeUnityIdentifier)
+                        {
+                            string retriedCode = "using UnityEngine;\n" + originalCode;
+                            ExecutionResult retryResult = await _executor.ExecuteCodeAsync(
+                                retriedCode,
+                                "DynamicCommand",
+                                parametersArray,
+                                cancellationToken,
+                                parameters.CompileOnly
+                            );
+                            // Prefer retry result if success, otherwise keep original but merge logs
+                            if (retryResult.Success)
+                            {
+                                executionResult = retryResult;
+                            }
+                            else if (retryResult.Logs?.Any() == true)
+                            {
+                                if (executionResult.Logs == null) executionResult.Logs = new List<string>();
+                                executionResult.Logs.AddRange(retryResult.Logs);
+                            }
+                        }
+                    }
+                }
                 
                 // Convert to response (use improved message on error)
                 ExecuteDynamicCodeResponse toolResponse = ConvertExecutionResultToResponse(
@@ -216,11 +249,8 @@ Usage notes:
                 // Replace with a more understandable error message
                 response.ErrorMessage = enhancedError.FriendlyMessage;
                 
-                // Add additional information to Logs
-                if (response.Logs == null) response.Logs = new List<string>();
-                
-                // Keep the original error as well
-                response.Logs.Add($"Original Error: {actualErrorMessage}");
+                // Prepare logs container; keep concise on failure (no raw per-line spam)
+                response.Logs = new List<string>();
                 
                 if (!string.IsNullOrEmpty(enhancedError.Explanation))
                 {
@@ -249,6 +279,35 @@ Usage notes:
                         response.Logs.Add($"- {tip}");
                     }
                 }
+
+                // Populate structured diagnostics and summary for clients
+                if (result.CompilationErrors?.Any() == true)
+                {
+                    // Build diagnostics with context, hints, and suggestions
+                    bool hasUsingUnityEngine = (originalCode ?? string.Empty).Contains("using UnityEngine;");
+                    response.Diagnostics = BuildDiagnostics(result.CompilationErrors, result.UpdatedCode, hasUsingUnityEngine);
+                    response.CompilationErrors = response.Diagnostics; // backward compat
+
+                    int total = response.Diagnostics.Count;
+                    int unique = response.Diagnostics
+                        .GroupBy(e => new { e.Line, e.Column, e.ErrorCode, e.Message })
+                        .Count();
+                    var first = response.Diagnostics.First();
+                    response.DiagnosticsSummary = $"Errors: {unique} unique ({total} total). First at L{first.Line}: {first.ErrorCode} {first.Message}";
+
+                    // Prefer concise summary in Logs instead of raw error spam
+                    response.Logs.Add(response.DiagnosticsSummary);
+
+                    // Preflight: detect unqualified UnityEngine identifiers (when no using UnityEngine)
+                    List<string> suspects = DetectUnqualifiedUnityIdentifiers(originalCode ?? string.Empty, hasUsingUnityEngine);
+                    if (suspects.Count > 0)
+                    {
+                        response.Logs.Add($"Preflight: Found potential unqualified UnityEngine identifiers: {string.Join(", ", suspects.Distinct())}");
+                    }
+                }
+
+                // Attach updated code when available (for line mapping)
+                response.UpdatedCode = result.UpdatedCode ?? response.UpdatedCode;
             }
 
             // Add error information when an exception occurs
@@ -263,6 +322,103 @@ Usage notes:
             }
 
             return response;
+        }
+
+        private static List<CompilationErrorDto> BuildDiagnostics(
+            List<CompilationError> errors,
+            string updatedCode,
+            bool hasUsingUnityEngine)
+        {
+            List<CompilationErrorDto> list = new();
+            string[] lines = string.IsNullOrEmpty(updatedCode) ? Array.Empty<string>() : updatedCode.Split(new char[] { '\n' }, StringSplitOptions.None);
+            foreach (CompilationError e in errors)
+            {
+                (string hint, List<string> suggestions) = GetHintAndSuggestions(e, hasUsingUnityEngine);
+                string context = ExtractContext(lines, e.Line, e.Column);
+                list.Add(new CompilationErrorDto
+                {
+                    Line = e.Line,
+                    Column = e.Column,
+                    Message = e.Message,
+                    ErrorCode = e.ErrorCode,
+                    Hint = hint,
+                    Suggestions = suggestions,
+                    Context = context,
+                    PointerColumn = e.Column
+                });
+            }
+
+            // Deduplicate by (line, column, code, message)
+            list = list
+                .GroupBy(d => new { d.Line, d.Column, d.ErrorCode, d.Message })
+                .Select(g => g.First())
+                .ToList();
+
+            return list;
+        }
+
+        private static (string, List<string>) GetHintAndSuggestions(CompilationError e, bool hasUsingUnityEngine)
+        {
+            string hint = string.Empty;
+            List<string> suggestions = new();
+            switch (e.ErrorCode)
+            {
+                case "CS0103": // name does not exist in the current context
+                case "CS0246": // type or namespace name could not be found
+                    hint = hasUsingUnityEngine
+                        ? "Identifier may require fully-qualified name (e.g., UnityEngine.Mathf)."
+                        : "Add 'using UnityEngine;' at the top or use fully-qualified name (e.g., UnityEngine.Mathf).";
+                    suggestions.Add("Add 'using UnityEngine;' at the top of the snippet");
+                    suggestions.Add("Qualify with 'UnityEngine.' prefix");
+                    break;
+                case "CS0104": // ambiguous reference
+                    hint = "Identifier is ambiguous; qualify explicitly (e.g., UnityEngine.Object).";
+                    suggestions.Add("Qualify with full namespace (e.g., UnityEngine.Object)");
+                    break;
+                default:
+                    break;
+            }
+            return (hint, suggestions);
+        }
+
+        private static string ExtractContext(string[] lines, int lineNumber1Based, int column1Based)
+        {
+            if (lines == null || lines.Length == 0 || lineNumber1Based <= 0 || lineNumber1Based > lines.Length)
+            {
+                return string.Empty;
+            }
+
+            int start = Math.Max(1, lineNumber1Based - 3);
+            int end = Math.Min(lines.Length, lineNumber1Based + 3);
+            StringBuilder sb = new();
+            for (int i = start; i <= end; i++)
+            {
+                string ln = lines[i - 1].TrimEnd('\r');
+                sb.AppendLine($"L{i}:{ln}");
+                if (i == lineNumber1Based)
+                {
+                    int caretPos = Math.Max(1, column1Based);
+                    sb.AppendLine("   " + new string(' ', Math.Max(0, caretPos - 1)) + "^");
+                }
+            }
+            return sb.ToString();
+        }
+
+        private static List<string> DetectUnqualifiedUnityIdentifiers(string originalCode, bool hasUsingUnityEngine)
+        {
+            List<string> suspects = new();
+            if (string.IsNullOrEmpty(originalCode)) return suspects;
+            if (hasUsingUnityEngine) return suspects; // with using, skip preflight
+
+            string pattern = @"(?<!UnityEngine\.)(?<!\.)\b(Mathf|Shader|GameObject|PrimitiveType|BoxCollider|SphereCollider|Rigidbody|Quaternion|Vector2|Vector3|Vector4|Color|Transform|Terrain|TerrainData|Renderer|MeshRenderer|Material)\b";
+            foreach (Match m in Regex.Matches(originalCode, pattern))
+            {
+                if (m.Success)
+                {
+                    suspects.Add(m.Value);
+                }
+            }
+            return suspects;
         }
         
         /// <summary>

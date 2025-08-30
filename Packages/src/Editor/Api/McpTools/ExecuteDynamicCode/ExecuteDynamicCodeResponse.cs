@@ -40,6 +40,16 @@ namespace io.github.hatayama.uLoopMCP
         /// Allows checking the actual compiled code during debugging
         /// </summary>
         public string UpdatedCode { get; set; }
+
+        /// <summary>
+        /// Summary of diagnostics (unique count, total count, first error brief)
+        /// </summary>
+        public string DiagnosticsSummary { get; set; }
+
+        /// <summary>
+        /// Structured diagnostics for rich clients (line/column/code/message/hint/suggestions)
+        /// </summary>
+        public List<CompilationErrorDto> Diagnostics { get; set; } = new();
         
     }
     
@@ -59,5 +69,17 @@ namespace io.github.hatayama.uLoopMCP
         
         /// <summary>Compiler error code (e.g., CS0103)</summary>
         public string ErrorCode { get; set; }
+
+        /// <summary>Optional hint for resolving the error</summary>
+        public string Hint { get; set; }
+
+        /// <summary>Suggested fixes (e.g., add using or qualify)</summary>
+        public List<string> Suggestions { get; set; } = new();
+
+        /// <summary>Context lines around the error with a caret pointer</summary>
+        public string Context { get; set; }
+
+        /// <summary>Pointer column for caret rendering (1-based)</summary>
+        public int PointerColumn { get; set; }
     }
 }

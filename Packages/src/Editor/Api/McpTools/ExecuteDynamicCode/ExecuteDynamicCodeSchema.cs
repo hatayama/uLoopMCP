@@ -25,12 +25,14 @@ namespace io.github.hatayama.uLoopMCP
 - For any file/directory or other I/O operations, do NOT use this tool; run normal commands instead.")]
         public string Code { get; set; } = "";
         
-        /// <summary>Runtime parameters</summary>
-        [Description(@"Runtime parameters passed to the snippet.
+        /// <summary>Runtime parameters (advanced; usually unnecessary)</summary>
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
+        [Description(@"Advanced, optional parameters passed to the snippet.
 
-- Use object values supported by the Editor
-- Use fully-qualified type names for ambiguous refs (e.g., UnityEngine.Object)
-- Prefer explicit setup inside code over relying on parameter ordering")]
+- For throwaway snippets, prefer defining locals directly in code
+- Keys are not preserved; values map to parameters[""param0""], parameters[""param1""], ...
+- Use when injecting UnityEngine.Object or sensitive values, or reusing a snippet with varying data
+- Use object values supported by the Editor; prefer fully-qualified type names for ambiguous refs (e.g., UnityEngine.Object)")]
         public Dictionary<string, object> Parameters { get; set; } = new();
         
         /// <summary>Compile only (do not execute)</summary>
@@ -39,5 +41,14 @@ namespace io.github.hatayama.uLoopMCP
 - Uses Roslyn validation to surface diagnostics
 - For new MonoBehaviours: create .cs → compile (mcp__uLoopMCP__compile with ForceRecompile=false) → ensure ErrorCount=0 → AddComponent")]
         public bool CompileOnly { get; set; } = false;
+
+        /// <summary>Attempt to auto-qualify common UnityEngine identifiers once and retry on failure</summary>
+        [Description(@"Auto-qualify common UnityEngine identifiers and retry once when compilation fails.
+
+- Behavior: If the snippet lacks 'using UnityEngine;' and errors like CS0103/CS0246 occur for common Unity types,
+  the tool inserts 'using UnityEngine;' at the top and retries once. This is a best-effort convenience and won't
+  modify your source files.
+- Disable if you prefer manual control.")]
+        public bool AutoQualifyUnityTypesOnce { get; set; } = false;
     }
 }

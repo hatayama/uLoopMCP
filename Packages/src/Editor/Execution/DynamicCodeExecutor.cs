@@ -121,7 +121,7 @@ namespace io.github.hatayama.uLoopMCP
                         stopwatch.Elapsed, ConvertToSecurityViolations(compilationResult.SecurityViolations));
                 }
                 return CreateCompilationFailureResult("Compilation error occurred",
-                    stopwatch.Elapsed, compilationResult.Errors);
+                    stopwatch.Elapsed, compilationResult);
             }
 
             if (compilationResult.HasSecurityViolations)
@@ -378,20 +378,17 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         private ExecutionResult CreateCompilationFailureResult(string message, TimeSpan executionTime,
-            List<CompilationError> errors)
+            CompilationResult compilationResult)
         {
-            List<string> errorMessages = new List<string>();
-            foreach (CompilationError error in errors)
-            {
-                errorMessages.Add($"Line {error.Line}: {error.Message}");
-            }
-
             return new ExecutionResult
             {
                 Success = false,
                 ErrorMessage = message,
-                Logs = errorMessages,
-                ExecutionTime = executionTime
+                // Do not include raw per-error lines here; the tool layer will format DiagnosticsSummary
+                Logs = new List<string>(),
+                ExecutionTime = executionTime,
+                CompilationErrors = compilationResult.Errors,
+                UpdatedCode = compilationResult.UpdatedCode
             };
         }
 

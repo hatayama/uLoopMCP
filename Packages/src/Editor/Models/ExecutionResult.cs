@@ -30,5 +30,17 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>Execution Statistics</summary>
         public ExecutionStatistics Statistics { get; set; }
+
+        /// <summary>
+        /// Structured compilation errors when compilation failed.
+        /// Preserved to enable rich diagnostics formatting at the tool layer.
+        /// </summary>
+        public List<CompilationError> CompilationErrors { get; set; } = new();
+
+        /// <summary>
+        /// Code that was actually compiled after wrapping/using hoist.
+        /// Useful for debugging reported line/column numbers.
+        /// </summary>
+        public string UpdatedCode { get; set; }
     }
 }
