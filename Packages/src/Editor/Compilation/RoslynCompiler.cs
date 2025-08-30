@@ -351,6 +351,36 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
+                // Explicitly block compilation at Level 0 (Disabled)
+                if (_currentSecurityLevel == DynamicCodeSecurityLevel.Disabled)
+                {
+                    VibeLogger.LogWarning(
+                        "roslyn_compilation_blocked_level0",
+                        "Compilation attempt blocked at security level 0",
+                        new { level = _currentSecurityLevel.ToString() },
+                        correlationId,
+                        "Compilation disabled by security policy",
+                        "Increase isolation level to 1 or higher to compile"
+                    );
+
+                    return new CompilationResult
+                    {
+                        Success = false,
+                        Errors = new List<CompilationError>
+                        {
+                            new CompilationError
+                            {
+                                Message = McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0,
+                                ErrorCode = McpConstants.ERROR_COMPILATION_DISABLED_LEVEL0,
+                                Line = 0,
+                                Column = 0
+                            }
+                        },
+                        FailureReason = CompilationFailureReason.CompilationError,
+                        UpdatedCode = request.Code
+                    };
+                }
+
                 LogCompilationStart(request, correlationId);
 
                 // Check compilation result cache (do not recompile the same code)

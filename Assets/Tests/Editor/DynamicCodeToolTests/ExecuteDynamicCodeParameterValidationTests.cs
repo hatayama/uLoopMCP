@@ -38,6 +38,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task ExecuteAsync_WithObjectParameters_ShouldSucceedInCompileOnly()
         {
             // Arrange
+            DynamicCodeSecurityLevel prev = McpEditorSettings.GetDynamicCodeSecurityLevel();
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeTool tool = new ExecuteDynamicCodeTool();
             JObject paramsToken = new JObject
             {
@@ -47,7 +49,15 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             };
 
             // Act
-            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsToken);
+            BaseToolResponse baseResponse = null;
+            try
+            {
+                baseResponse = await tool.ExecuteAsync(paramsToken);
+            }
+            finally
+            {
+                McpEditorSettings.SetDynamicCodeSecurityLevel(prev);
+            }
             ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
 
             // Assert

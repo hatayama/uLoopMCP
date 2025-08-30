@@ -39,8 +39,7 @@ namespace io.github.hatayama.uLoopMCP
                 return result;
             }
             
-            // Level 0 (Disabled): Do not perform static security rejection here.
-            // Runtime guard in ExecuteDynamicCodeTool blocks execution; compile-only may still be allowed.
+            // Level 0 (Disabled): Compilation is not allowed; this validator is not reached for Level 0.
             
             // Level 1 (Restricted): Perform detailed inspection
             string correlationId = McpConstants.GenerateCorrelationId();

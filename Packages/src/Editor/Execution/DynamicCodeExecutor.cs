@@ -45,12 +45,12 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                // Level 0: Execution completely prohibited (allow compile-only via async gate)
-                if (_securityLevel == DynamicCodeSecurityLevel.Disabled && !compileOnly)
+                // Level 0: Compilation and execution are prohibited
+                if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
                 {
                     return CreateSecurityBlockedResult(
-                        McpConstants.ERROR_EXECUTION_DISABLED,
-                        McpConstants.ERROR_MESSAGE_EXECUTION_DISABLED);
+                        McpConstants.ERROR_COMPILATION_DISABLED_LEVEL0,
+                        McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0);
                 }
 
                 LogExecutionStart(className, parameters, code, compileOnly, correlationId);
@@ -59,7 +59,13 @@ namespace io.github.hatayama.uLoopMCP
                 ExecutionResult securityResult = PerformSecurityValidation(code, correlationId, stopwatch);
                 if (!securityResult.Success) return securityResult;
 
-                // Phase 2: Compilation
+                // Phase 2: Compilation (blocked at Level 0)
+                if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
+                {
+                    return CreateSecurityBlockedResult(
+                        McpConstants.ERROR_COMPILATION_DISABLED_LEVEL0,
+                        McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0);
+                }
                 CompilationResult compilationResult = CompileCode(code, className, correlationId);
                 ExecutionResult compilationErrorResult = HandleCompilationResult(compilationResult, stopwatch);
                 if (compilationErrorResult != null) return compilationErrorResult;
@@ -70,12 +76,12 @@ namespace io.github.hatayama.uLoopMCP
                     return CreateCompileOnlySuccessResult(compilationResult, correlationId, stopwatch);
                 }
 
-                // Runtime Guard: Level 0 blocks execution (compile-only already returned above)
+                // Runtime Guard: Level 0 blocks execution (defensive; should be caught earlier)
                 if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
                 {
                     return CreateSecurityBlockedResult(
-                        McpConstants.ERROR_EXECUTION_DISABLED,
-                        McpConstants.ERROR_MESSAGE_EXECUTION_DISABLED);
+                        McpConstants.ERROR_COMPILATION_DISABLED_LEVEL0,
+                        McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0);
                 }
 
                 // Phase 4: Execution
@@ -195,9 +201,13 @@ namespace io.github.hatayama.uLoopMCP
             bool compileOnly = false)
         {
 #pragma warning restore CS1998
-            // Runtime Security Check
-            ExecutionResult securityCheckResult = PerformRuntimeSecurityCheck(code);
-            if (!securityCheckResult.Success) return securityCheckResult;
+            // Runtime Security Check (also blocks compilation at Level 0)
+            if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
+            {
+                return CreateSecurityBlockedResult(
+                    McpConstants.ERROR_COMPILATION_DISABLED_LEVEL0,
+                    McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0);
+            }
 
             // Already switched to Main Thread via JsonRpcProcessor
             return await Task.FromResult(ExecuteCode(code, className, parameters, cancellationToken, compileOnly));

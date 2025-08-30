@@ -141,7 +141,7 @@ Scope(s): org.nuget
 **Security Level Support**: Implements 3-tier security control to progressively restrict executable code:
 
   - **Level 0 - Disabled**
-    - No code execution allowed
+    - No compilation or execution allowed
     
   - **Level 1 - Restricted** 【Recommended Setting】
     - All Unity APIs and .NET standard libraries are generally available

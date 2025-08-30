@@ -8,8 +8,9 @@ namespace io.github.hatayama.uLoopMCP
     {
         /// <summary>
         /// Level 0: Complete Disabled
-        /// - No additional assemblies added (only minimal references provided by the compiler)
-        /// - Compilation is possible but execution is denied
+        /// - No assembly references are added
+        /// - Compilation is NOT allowed
+        /// - Execution is NOT allowed
         /// - Use case: Production environments, maximum security priority
         /// </summary>
         Disabled = 0,
