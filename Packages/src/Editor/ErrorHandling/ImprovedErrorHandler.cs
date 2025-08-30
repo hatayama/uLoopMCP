@@ -6,17 +6,218 @@ using System.Text.RegularExpressions;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
+    /// Translation result from Translator before formatting
+    /// </summary>
+    public class TranslationOutput
+    {
+        public string FriendlyMessage { get; set; } = "";
+        public string Explanation { get; set; } = "";
+        public string Example { get; set; } = "";
+        public List<string> Solutions { get; set; } = new();
+        public List<string> LearningTips { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Translate raw errors/exceptions into structured data (no severity weighting)
+    /// </summary>
+    public interface IErrorTranslator
+    {
+        TranslationOutput TranslateFromException(Exception exception);
+        TranslationOutput TranslateFromMessage(string errorMessage);
+    }
+
+    /// <summary>
+    /// Format translation into DTO with severity weighting and final output shape
+    /// </summary>
+    public interface IErrorFormatter
+    {
+        UserFriendlyErrorDto Format(TranslationOutput translation, string originalError, Exception exception = null);
+    }
+
+    /// <summary>
+    /// Default translator using pattern dictionary and simple fallbacks
+    /// </summary>
+    public class DefaultErrorTranslator : IErrorTranslator
+    {
+        private readonly ErrorTranslationDictionary _dictionary = new();
+        private readonly FriendlyMessageGenerator _messageGenerator = new();
+
+        public TranslationOutput TranslateFromException(Exception exception)
+        {
+            if (exception == null)
+            {
+                return new TranslationOutput
+                {
+                    FriendlyMessage = "Internal error",
+                    Explanation = string.Empty,
+                    Example = string.Empty,
+                    Solutions = new List<string>(),
+                    LearningTips = new List<string>()
+                };
+            }
+
+            if (exception is McpSecurityException securityException)
+            {
+                return new TranslationOutput
+                {
+                    FriendlyMessage = "Tool blocked by security settings",
+                    Explanation = securityException.SecurityReason ?? string.Empty,
+                    Solutions = new List<string>
+                    {
+                        "Open uLoopMCP Security Settings and enable the required permission"
+                    }
+                };
+            }
+
+            if (exception is TimeoutException)
+            {
+                return new TranslationOutput
+                {
+                    FriendlyMessage = "Request timeout",
+                    Explanation = exception.Message,
+                    Solutions = new List<string>
+                    {
+                        "Increase timeout or optimize the operation to complete faster"
+                    }
+                };
+            }
+
+            if (exception is ParameterValidationException)
+            {
+                return new TranslationOutput
+                {
+                    FriendlyMessage = exception.Message,
+                    Explanation = string.Empty,
+                    Solutions = new List<string>
+                    {
+                        "Fix parameter types/values according to the tool schema"
+                    }
+                };
+            }
+
+            return new TranslationOutput
+            {
+                FriendlyMessage = "Internal error",
+                Explanation = exception.Message
+            };
+        }
+
+        public TranslationOutput TranslateFromMessage(string errorMessage)
+        {
+            ErrorPattern pattern = _dictionary.FindPattern(errorMessage);
+
+            string friendly = pattern?.FriendlyMessage ?? _messageGenerator.TranslateError(errorMessage);
+            string explanation = pattern?.Explanation ?? string.Empty;
+            string example = pattern?.Example ?? string.Empty;
+            List<string> solutions = pattern?.Solutions ?? new List<string>();
+            List<string> tips = GetLearningTips(errorMessage);
+
+            return new TranslationOutput
+            {
+                FriendlyMessage = friendly,
+                Explanation = explanation,
+                Example = example,
+                Solutions = solutions,
+                LearningTips = tips
+            };
+        }
+
+        private List<string> GetLearningTips(string errorMessage)
+        {
+            List<string> tips = new();
+
+            if (errorMessage.Contains("Top-level statements"))
+            {
+                tips.Add("In Dynamic Tool, you can write code directly");
+                tips.Add("Class and namespace declarations are not required");
+            }
+
+            if (errorMessage.Contains("not all code paths return"))
+            {
+                tips.Add("Add a return statement at the end of the code");
+                tips.Add("Return the execution result as a string");
+            }
+
+            if (errorMessage.Contains("ambiguous reference"))
+            {
+                tips.Add("Clearly distinguish between UnityEngine.Object and System.Object");
+                tips.Add("Using the full name (UnityEngine.Object) is safer");
+            }
+
+            return tips;
+        }
+    }
+
+    /// <summary>
+    /// Default formatter applying severity weighting and assembling the DTO
+    /// </summary>
+    public class DefaultErrorFormatter : IErrorFormatter
+    {
+        public UserFriendlyErrorDto Format(TranslationOutput translation, string originalError, Exception exception = null)
+        {
+            return new UserFriendlyErrorDto
+            {
+                OriginalError = originalError ?? string.Empty,
+                FriendlyMessage = translation?.FriendlyMessage ?? string.Empty,
+                Explanation = translation?.Explanation ?? string.Empty,
+                Example = translation?.Example ?? string.Empty,
+                SuggestedSolutions = translation?.Solutions ?? new List<string>(),
+                LearningTips = translation?.LearningTips ?? new List<string>(),
+                Severity = DetermineSeverity(originalError, exception)
+            };
+        }
+
+        private ErrorSeverity DetermineSeverity(string errorMessage, Exception exception)
+        {
+            if (exception != null)
+            {
+                if (exception is McpSecurityException)
+                {
+                    return ErrorSeverity.High;
+                }
+                if (exception is TimeoutException)
+                {
+                    return ErrorSeverity.Medium;
+                }
+                if (exception is ParameterValidationException)
+                {
+                    return ErrorSeverity.Low;
+                }
+                return ErrorSeverity.High;
+            }
+
+            string msg = errorMessage ?? string.Empty;
+            if (msg.Contains("Top-level statements") || msg.Contains("not all code paths"))
+            {
+                return ErrorSeverity.High;
+            }
+            if (msg.Contains("ambiguous reference"))
+            {
+                return ErrorSeverity.Medium;
+            }
+            return ErrorSeverity.Low;
+        }
+    }
+
+    /// <summary>
     /// Related Classes: FriendlyMessageGenerator, ErrorTranslationDictionary
+    /// Now delegates to Translator and Formatter
     /// </summary>
     public class UserFriendlyErrorConverter
     {
-        private readonly ErrorTranslationDictionary _dictionary;
-        private readonly FriendlyMessageGenerator _messageGenerator;
+        private readonly IErrorTranslator _translator;
+        private readonly IErrorFormatter _formatter;
 
         public UserFriendlyErrorConverter()
         {
-            _dictionary = new ErrorTranslationDictionary();
-            _messageGenerator = new FriendlyMessageGenerator();
+            _translator = new DefaultErrorTranslator();
+            _formatter = new DefaultErrorFormatter();
+        }
+
+        public UserFriendlyErrorConverter(IErrorTranslator translator, IErrorFormatter formatter)
+        {
+            _translator = translator ?? new DefaultErrorTranslator();
+            _formatter = formatter ?? new DefaultErrorFormatter();
         }
 
         /// <summary>
@@ -38,45 +239,8 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            string friendlyMessage;
-            string explanation = string.Empty;
-            List<string> solutions = new List<string>();
-
-            if (exception is McpSecurityException securityException)
-            {
-                friendlyMessage = "Tool blocked by security settings";
-                explanation = securityException.SecurityReason ?? string.Empty;
-                solutions.Add("Open uLoopMCP Security Settings and enable the required permission");
-            }
-            else if (exception is TimeoutException)
-            {
-                friendlyMessage = "Request timeout";
-                explanation = exception.Message;
-                solutions.Add("Increase timeout or optimize the operation to complete faster");
-            }
-            else if (exception is ParameterValidationException)
-            {
-                // Parameter validation errors should surface detailed messages
-                friendlyMessage = exception.Message;
-                explanation = string.Empty;
-                solutions.Add("Fix parameter types/values according to the tool schema");
-            }
-            else
-            {
-                friendlyMessage = "Internal error";
-                explanation = exception.Message;
-            }
-
-            return new UserFriendlyErrorDto
-            {
-                OriginalError = exception.Message,
-                FriendlyMessage = friendlyMessage,
-                Explanation = explanation,
-                Example = string.Empty,
-                SuggestedSolutions = solutions,
-                LearningTips = new List<string>(),
-                Severity = DetermineErrorSeverityFromException(exception)
-            };
+            TranslationOutput translation = _translator.TranslateFromException(exception);
+            return _formatter.Format(translation, exception.Message, exception);
         }
 
         /// <summary>
@@ -86,8 +250,7 @@ namespace io.github.hatayama.uLoopMCP
             ExecutionResult originalResult, 
             string originalCode)
         {
-            // Retrieve error message (also check Logs for compilation errors)
-            string errorMessage = originalResult.ErrorMessage ?? "";
+            string errorMessage = originalResult.ErrorMessage ?? string.Empty;
             if (originalResult.Logs?.Any() == true)
             {
                 string combinedErrors = string.Join(" ", originalResult.Logs);
@@ -96,81 +259,9 @@ namespace io.github.hatayama.uLoopMCP
                     errorMessage += " " + combinedErrors;
                 }
             }
-            
-            // Error pattern matching
-            ErrorPattern pattern = _dictionary.FindPattern(errorMessage);
-            
-            UserFriendlyErrorDto response = new()
-            {
-                OriginalError = errorMessage,
-                FriendlyMessage = pattern?.FriendlyMessage ?? 
-                                 _messageGenerator.TranslateError(errorMessage),
-                Explanation = pattern?.Explanation ?? "",
-                Example = pattern?.Example ?? "",
-                SuggestedSolutions = pattern?.Solutions ?? new List<string>(),
-                LearningTips = GetLearningTips(errorMessage),
-                Severity = DetermineErrorSeverity(errorMessage)
-            };
 
-            return response;
-        }
-
-        private ErrorSeverity DetermineErrorSeverityFromException(Exception exception)
-        {
-            if (exception is McpSecurityException)
-            {
-                return ErrorSeverity.High;
-            }
-            if (exception is TimeoutException)
-            {
-                return ErrorSeverity.Medium;
-            }
-            if (exception is ParameterValidationException)
-            {
-                return ErrorSeverity.Low;
-            }
-            return ErrorSeverity.High;
-        }
-
-        private List<string> GetLearningTips(string errorMessage)
-        {
-            List<string> tips = new();
-            
-            if (errorMessage.Contains("Top-level statements"))
-            {
-                tips.Add("In Dynamic Tool, you can write code directly");
-                tips.Add("Class and namespace declarations are not required");
-            }
-            
-            if (errorMessage.Contains("not all code paths return"))
-            {
-                tips.Add("Add a return statement at the end of the code");
-                tips.Add("Return the execution result as a string");
-            }
-            
-            if (errorMessage.Contains("ambiguous reference"))
-            {
-                tips.Add("Clearly distinguish between UnityEngine.Object and System.Object");
-                tips.Add("Using the full name (UnityEngine.Object) is safer");
-            }
-            
-            return tips;
-        }
-
-        private ErrorSeverity DetermineErrorSeverity(string errorMessage)
-        {
-            if (errorMessage.Contains("Top-level statements") || 
-                errorMessage.Contains("not all code paths"))
-            {
-                return ErrorSeverity.High; // Common pattern with high importance
-            }
-            
-            if (errorMessage.Contains("ambiguous reference"))
-            {
-                return ErrorSeverity.Medium;
-            }
-            
-            return ErrorSeverity.Low;
+            TranslationOutput translation = _translator.TranslateFromMessage(errorMessage);
+            return _formatter.Format(translation, errorMessage);
         }
     }
 
