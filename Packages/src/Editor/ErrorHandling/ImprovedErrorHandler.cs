@@ -8,21 +8,81 @@ namespace io.github.hatayama.uLoopMCP
     /// <summary>
     /// Related Classes: FriendlyMessageGenerator, ErrorTranslationDictionary
     /// </summary>
-    public class ImprovedErrorHandler
+    public class UserFriendlyErrorConverter
     {
         private readonly ErrorTranslationDictionary _dictionary;
         private readonly FriendlyMessageGenerator _messageGenerator;
 
-        public ImprovedErrorHandler()
+        public UserFriendlyErrorConverter()
         {
             _dictionary = new ErrorTranslationDictionary();
             _messageGenerator = new FriendlyMessageGenerator();
         }
 
         /// <summary>
+        /// Convert an exception to an enhanced, user-friendly error response
+        /// </summary>
+        public UserFriendlyErrorDto ProcessException(Exception exception)
+        {
+            if (exception == null)
+            {
+                return new UserFriendlyErrorDto
+                {
+                    OriginalError = string.Empty,
+                    FriendlyMessage = "Internal error",
+                    Explanation = string.Empty,
+                    Example = string.Empty,
+                    SuggestedSolutions = new List<string>(),
+                    LearningTips = new List<string>(),
+                    Severity = ErrorSeverity.High
+                };
+            }
+
+            string friendlyMessage;
+            string explanation = string.Empty;
+            List<string> solutions = new List<string>();
+
+            if (exception is McpSecurityException securityException)
+            {
+                friendlyMessage = "Tool blocked by security settings";
+                explanation = securityException.SecurityReason ?? string.Empty;
+                solutions.Add("Open uLoopMCP Security Settings and enable the required permission");
+            }
+            else if (exception is TimeoutException)
+            {
+                friendlyMessage = "Request timeout";
+                explanation = exception.Message;
+                solutions.Add("Increase timeout or optimize the operation to complete faster");
+            }
+            else if (exception is ParameterValidationException)
+            {
+                // Parameter validation errors should surface detailed messages
+                friendlyMessage = exception.Message;
+                explanation = string.Empty;
+                solutions.Add("Fix parameter types/values according to the tool schema");
+            }
+            else
+            {
+                friendlyMessage = "Internal error";
+                explanation = exception.Message;
+            }
+
+            return new UserFriendlyErrorDto
+            {
+                OriginalError = exception.Message,
+                FriendlyMessage = friendlyMessage,
+                Explanation = explanation,
+                Example = string.Empty,
+                SuggestedSolutions = solutions,
+                LearningTips = new List<string>(),
+                Severity = DetermineErrorSeverityFromException(exception)
+            };
+        }
+
+        /// <summary>
         /// Convert execution result errors into a more understandable format
         /// </summary>
-        public EnhancedErrorResponse ProcessError(
+        public UserFriendlyErrorDto ProcessError(
             ExecutionResult originalResult, 
             string originalCode)
         {
@@ -40,7 +100,7 @@ namespace io.github.hatayama.uLoopMCP
             // Error pattern matching
             ErrorPattern pattern = _dictionary.FindPattern(errorMessage);
             
-            EnhancedErrorResponse response = new()
+            UserFriendlyErrorDto response = new()
             {
                 OriginalError = errorMessage,
                 FriendlyMessage = pattern?.FriendlyMessage ?? 
@@ -53,6 +113,23 @@ namespace io.github.hatayama.uLoopMCP
             };
 
             return response;
+        }
+
+        private ErrorSeverity DetermineErrorSeverityFromException(Exception exception)
+        {
+            if (exception is McpSecurityException)
+            {
+                return ErrorSeverity.High;
+            }
+            if (exception is TimeoutException)
+            {
+                return ErrorSeverity.Medium;
+            }
+            if (exception is ParameterValidationException)
+            {
+                return ErrorSeverity.Low;
+            }
+            return ErrorSeverity.High;
         }
 
         private List<string> GetLearningTips(string errorMessage)
@@ -215,9 +292,9 @@ CORRECT: UnityEngine.Object.DestroyImmediate(obj);",
     }
 
     /// <summary>
-    /// Enhanced Error Response
+    /// User-friendly error DTO for API/UI surfaces
     /// </summary>
-    public class EnhancedErrorResponse
+    public class UserFriendlyErrorDto
     {
         public string OriginalError { get; set; } = "";
         public string FriendlyMessage { get; set; } = "";

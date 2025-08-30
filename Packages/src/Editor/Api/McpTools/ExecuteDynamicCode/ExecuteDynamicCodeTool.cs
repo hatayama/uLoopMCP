@@ -36,7 +36,7 @@ Usage notes:
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
         private IDynamicCodeExecutor _executor;
-        private readonly ImprovedErrorHandler _errorHandler;
+        private readonly UserFriendlyErrorConverter _errorHandler;
         private DynamicCodeSecurityLevel _currentSecurityLevel;
         
         public override string ToolName => "execute-dynamic-code";
@@ -45,7 +45,7 @@ Usage notes:
         {
 #if ULOOPMCP_HAS_ROSLYN
             _executor = null;
-            _errorHandler = new ImprovedErrorHandler();
+            _errorHandler = new UserFriendlyErrorConverter();
             // Set initial value to an invalid value (will always be recreated on the first request)
             _currentSecurityLevel = (DynamicCodeSecurityLevel)(-1);
 #else
@@ -150,7 +150,27 @@ Usage notes:
                     "Unexpected error during dynamic code execution",
                     "Investigate error cause and improve error handling"
                 );
-                
+
+                // Delegate exception-to-DTO conversion to UserFriendlyErrorConverter
+                UserFriendlyErrorDto exceptionResponse = _errorHandler?.ProcessException(ex);
+                if (exceptionResponse != null)
+                {
+                    return new ExecuteDynamicCodeResponse
+                    {
+                        Success = false,
+                        Result = "",
+                        Logs = new List<string> 
+                        { 
+                            $"Original Error: {ex.Message}",
+                            string.IsNullOrEmpty(exceptionResponse.Explanation) ? null : $"Explanation: {exceptionResponse.Explanation}"
+                        }.Where(s => !string.IsNullOrEmpty(s)).ToList(),
+                        CompilationErrors = new List<CompilationErrorDto>(),
+                        ErrorMessage = exceptionResponse.FriendlyMessage,
+                        ExecutionTimeMs = 0,
+                        SecurityLevel = _currentSecurityLevel.ToString()
+                    };
+                }
+
                 return CreateErrorResponse(ex.Message);
             }
         }
@@ -181,7 +201,7 @@ Usage notes:
                     actualErrorMessage = string.Join(" ", result.Logs);
                 }
                 
-                EnhancedErrorResponse enhancedError = 
+                UserFriendlyErrorDto enhancedError = 
                     _errorHandler.ProcessError(result, originalCode);
                 
                 // Replace with a more understandable error message

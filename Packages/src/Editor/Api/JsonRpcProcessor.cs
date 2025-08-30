@@ -194,33 +194,23 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="ex">Exception to convert to error response</param>
         private static string CreateErrorResponse(object id, Exception ex)
         {
-            JsonRpcErrorData errorData;
-            string errorMessage;
+            // Centralize exception -> user-facing message via UserFriendlyErrorConverter
+            UserFriendlyErrorConverter handler = new UserFriendlyErrorConverter();
+            UserFriendlyErrorDto exceptionResponse = handler.ProcessException(ex);
             
-            // Handle security exceptions with detailed information
+            // Map UserFriendlyErrorDto to JsonRpcError
+            string errorMessage = exceptionResponse.FriendlyMessage;
+
+            JsonRpcErrorData errorData;
             if (ex is McpSecurityException secEx)
             {
-                errorData = new SecurityBlockedErrorData(secEx.ToolName, secEx.SecurityReason, secEx.Message);
-                errorMessage = "Tool blocked by security settings";
-            }
-            // Handle timeout exceptions with detailed information
-            else if (ex is TimeoutException timeoutEx)
-            {
-                errorData = new InternalErrorData(timeoutEx.Message);
-                errorMessage = "Request timeout";
-            }
-            else if (ex is ParameterValidationException)
-            {
-                // Surface the detailed validation message directly to clients
-                errorData = new InternalErrorData(ex.Message);
-                errorMessage = ex.Message;
+                errorData = new SecurityBlockedErrorData(secEx.ToolName, secEx.SecurityReason, exceptionResponse.Explanation ?? ex.Message);
             }
             else
             {
-                errorData = new InternalErrorData(ex.Message);
-                errorMessage = "Internal error";
+                errorData = new InternalErrorData(exceptionResponse.Explanation ?? ex.Message);
             }
-            
+
             JsonRpcErrorResponse errorResponse = new JsonRpcErrorResponse(
                 McpServerConfig.JSONRPC_VERSION,
                 id,
