@@ -68,16 +68,11 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogExecutionStart(context, correlationId);
 
-                DateTime startTime = DateTime.Now;
-                
                 // Configure timeout
                 using CancellationTokenSource combinedCts = CreateCombinedCancellationTokenSource(context);
 
                 // Execute
                 ExecutionResult result = ExecuteInternal(context, combinedCts.Token, correlationId);
-                
-                DateTime endTime = DateTime.Now;
-                result.ExecutionTime = endTime - startTime;
 
                 LogExecutionComplete(result, correlationId);
 
@@ -88,7 +83,6 @@ namespace io.github.hatayama.uLoopMCP
                 ExecutionResult cancelResult = CreateErrorResult(
                     McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
                     new List<string> { "Execution cancelled due to timeout" });
-                cancelResult.ExecutionTime = TimeSpan.FromSeconds(context.TimeoutSeconds);
                 return cancelResult;
             }
             catch (Exception ex)

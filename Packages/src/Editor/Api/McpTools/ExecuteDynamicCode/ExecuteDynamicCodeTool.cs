@@ -156,7 +156,6 @@ Usage notes:
                         }.Where(s => !string.IsNullOrEmpty(s)).ToList(),
                         CompilationErrors = new List<CompilationErrorDto>(),
                         ErrorMessage = exceptionResponse.FriendlyMessage,
-                        ExecutionTimeMs = 0,
                         SecurityLevel = _currentSecurityLevel.ToString()
                     };
                 }
@@ -177,8 +176,7 @@ Usage notes:
                 Result = result.Result?.ToString() ?? "",
                 Logs = result.Logs ?? new List<string>(),
                 CompilationErrors = new List<CompilationErrorDto>(), // Cannot be retrieved from ExecutionResult
-                ErrorMessage = result.ErrorMessage ?? "",
-                ExecutionTimeMs = (long)result.ExecutionTime.TotalMilliseconds
+                ErrorMessage = result.ErrorMessage ?? ""
             };
 
             // Use improved message on error
@@ -257,8 +255,7 @@ Usage notes:
                 Result = "",
                 Logs = new List<string>(),
                 CompilationErrors = new List<CompilationErrorDto>(),
-                ErrorMessage = errorMessage ?? "Unknown error occurred",
-                ExecutionTimeMs = 0
+                ErrorMessage = errorMessage ?? "Unknown error occurred"
             };
         }
     }
