@@ -143,13 +143,14 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (typeSymbol == null) return false;
             
-            string fullTypeName = typeSymbol.ToDisplayString();
+            string fullTypeName = NormalizeFullName(typeSymbol.ToDisplayString());
             return dangerousTypes.Contains(fullTypeName);
         }
         
         public bool IsDangerousApi(string fullApiName)
         {
             if (string.IsNullOrWhiteSpace(fullApiName)) return false;
+            fullApiName = NormalizeFullName(fullApiName);
             
             // First, check if it's a dangerous type itself (type name only)
             if (dangerousTypes.Contains(fullApiName))
@@ -178,6 +179,17 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             return false;
+        }
+
+        private static string NormalizeFullName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return name;
+            const string globalPrefix = "global::";
+            if (name.StartsWith(globalPrefix))
+            {
+                return name.Substring(globalPrefix.Length);
+            }
+            return name;
         }
     }
 }

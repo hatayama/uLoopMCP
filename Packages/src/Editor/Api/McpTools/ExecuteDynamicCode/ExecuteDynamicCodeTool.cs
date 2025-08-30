@@ -91,17 +91,7 @@ Usage notes:
                     "Monitor execution flow and performance"
                 );
                 
-                // Level 0: Execution completely prohibited
-                if (!DynamicCodeSecurityManager.CanExecute(_currentSecurityLevel))
-                {
-                    return new ExecuteDynamicCodeResponse
-                    {
-                        Success = false,
-                        Error = "Code execution is disabled at current security level (Disabled)",
-                        UpdatedCode = parameters.Code,
-                        SecurityLevel = _currentSecurityLevel.ToString()
-                    };
-                }
+                // Level 0 execution block is enforced inside DynamicCodeExecutor after compilation.
                 
                 // Level 1: In Restricted mode, delegate to Roslyn-based validation
                 // Remove regex-based checks, SecurityValidator of RoslynCompiler handles this

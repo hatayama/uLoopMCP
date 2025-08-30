@@ -45,6 +45,14 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
+                // Level 0: Execution completely prohibited (allow compile-only via async gate)
+                if (_securityLevel == DynamicCodeSecurityLevel.Disabled && !compileOnly)
+                {
+                    return CreateSecurityBlockedResult(
+                        McpConstants.ERROR_EXECUTION_DISABLED,
+                        McpConstants.ERROR_MESSAGE_EXECUTION_DISABLED);
+                }
+
                 LogExecutionStart(className, parameters, code, compileOnly, correlationId);
 
                 // Phase 1: Security Validation
@@ -60,6 +68,14 @@ namespace io.github.hatayama.uLoopMCP
                 if (compileOnly)
                 {
                     return CreateCompileOnlySuccessResult(compilationResult, correlationId, stopwatch);
+                }
+
+                // Runtime Guard: Level 0 blocks execution (compile-only already returned above)
+                if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
+                {
+                    return CreateSecurityBlockedResult(
+                        McpConstants.ERROR_EXECUTION_DISABLED,
+                        McpConstants.ERROR_MESSAGE_EXECUTION_DISABLED);
                 }
 
                 // Phase 4: Execution
@@ -86,12 +102,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private ExecutionResult PerformSecurityValidation(string code, string correlationId, Stopwatch stopwatch)
         {
-            SecurityValidationResult validationResult = ValidateCodeSecurity(code, correlationId);
-            if (!validationResult.IsValid)
-            {
-                return CreateFailureResult("Security violations detected",
-                    stopwatch.Elapsed, validationResult.Violations);
-            }
             return new ExecutionResult { Success = true };
         }
 
@@ -195,7 +205,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private ExecutionResult PerformRuntimeSecurityCheck(string code)
         {
-            // Execution Disabled Check only
+            // Execution Disabled Check (Level 0 immediate block)
             if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
             {
                 return CreateSecurityBlockedResult(

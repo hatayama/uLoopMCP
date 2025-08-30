@@ -39,19 +39,8 @@ namespace io.github.hatayama.uLoopMCP
                 return result;
             }
             
-            // Immediately reject for Level 0 (Disabled)
-            if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
-            {
-                result.IsValid = false;
-                result.Violations.Add(new SecurityViolation
-                {
-                    Type = SecurityViolationType.DangerousApiCall,
-                    Description = "Code execution is disabled at current security level",
-                    Message = "Code execution is disabled at current security level",
-                    ApiName = "N/A"
-                });
-                return result;
-            }
+            // Level 0 (Disabled): Do not perform static security rejection here.
+            // Runtime guard in ExecuteDynamicCodeTool blocks execution; compile-only may still be allowed.
             
             // Level 1 (Restricted): Perform detailed inspection
             string correlationId = McpConstants.GenerateCorrelationId();
