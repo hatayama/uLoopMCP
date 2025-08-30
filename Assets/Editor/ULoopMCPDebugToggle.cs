@@ -5,8 +5,13 @@ using System.Linq;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Unity Editor menu items for toggling ULOOPMCP_DEBUG scripting define symbol
-    /// Provides easy access to enable/disable debug features in uLoopMCP
+    /// Unity Editor menu items for toggling ULOOPMCP_DEBUG and debug-only Roslyn support.
+    ///
+    /// This file is intended for internal debugging convenience:
+    /// - It lives under Assets/Editor/ outside Packages, so it is NOT included in the distributed uLoopMCP package.
+    /// - In production, Roslyn define symbols are managed centrally via McpEditorSettings (see UpdateRoslynDefineSymbol).
+    ///   These menus operate only on the currently selected BuildTargetGroup and may temporarily diverge from global policy.
+    ///
     /// Related classes:
     /// - McpEditorWindow: Uses ULOOPMCP_DEBUG to show/hide developer tools
     /// - McpLogger: Debug logging behavior controlled by this symbol
