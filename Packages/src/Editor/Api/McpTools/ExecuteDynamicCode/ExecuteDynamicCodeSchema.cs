@@ -14,6 +14,11 @@ namespace io.github.hatayama.uLoopMCP
 
 - Direct statements only (no classes/namespaces/methods)
 - Must return a value (e.g., return ""Done"";)
+- You may include using directives at the top; they are hoisted above the generated wrapper.
+  Example:
+    using UnityEngine;
+    var x = Mathf.PI;
+    return x;
 - Valid: GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube); return ""Created"";
 - Invalid: GameObject.CreatePrimitive(PrimitiveType.Cube); // missing return
 
