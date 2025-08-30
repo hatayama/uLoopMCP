@@ -1,7 +1,5 @@
 #if ULOOPMCP_HAS_ROSLYN
 using NUnit.Framework;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
@@ -33,12 +31,12 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public void Compile_WithDynamicAssemblyTest_SafeMethods_ShouldSucceed()
         {
             // Arrange - Use safe method of DynamicAssemblyTest
-            string code = @"
-                var test = new io.github.hatayama.uLoopMCP.DynamicAssemblyTest();
-                string hello = test.HelloWorld();
-                int sum = test.Add(5, 3);
-                string assembly = test.GetAssemblyName();
-                return $""{hello}, Sum: {sum}, Assembly: {assembly}"";";
+            string code =
+                "var test = new io.github.hatayama.uLoopMCP." + nameof(io.github.hatayama.uLoopMCP.DynamicAssemblyTest) + "();\n" +
+                "string hello = test.HelloWorld();\n" +
+                "int sum = test.Add(5, 3);\n" +
+                "string assembly = test.GetAssemblyName();\n" +
+                "return $\"{hello}, Sum: {sum}, Assembly: {assembly}\";";
 
             CompilationRequest request = new CompilationRequest
             {
@@ -61,10 +59,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             // Arrange
             // ExecuteAnotherInstanceMethod is a method from another assembly,
             // so it cannot be inspected during compilation and will succeed
-            string code = @"
-                var test = new io.github.hatayama.uLoopMCP.DynamicAssemblyTest();
-                test.ExecuteAnoterInstanceMethod();
-                return ""Compiled"";";
+            string code =
+                "var test = new io.github.hatayama.uLoopMCP." + nameof(io.github.hatayama.uLoopMCP.DynamicAssemblyTest) + "();\n" +
+                "test.ExecuteAnoterInstanceMethod();\n" +
+                "return \"Compiled\";";
 
             CompilationRequest request = new CompilationRequest
             {

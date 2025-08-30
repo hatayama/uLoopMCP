@@ -200,18 +200,19 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public void Compile_WithSeparateAssemblyClassWithUsing_ShouldSucceedInAllAssembliesMode()
         {
             // Arrange - Use class from another assembly (DynamicAssemblyTest.dll) with using statement
-            string code = @"using io.github.hatayama.uLoopMCP;
-namespace TestNamespace
-{
-    public class SeparateAssemblyWithUsingTestClass
-    {
-        public object Execute()
-        {
-            var testInstance = new DynamicAssemblyTest();
-            return testInstance.HelloWorld();
-        }
-    }
-}";
+            string code =
+                "using io.github.hatayama.uLoopMCP;\n" +
+                "namespace TestNamespace\n" +
+                "{\n" +
+                "    public class SeparateAssemblyWithUsingTestClass\n" +
+                "    {\n" +
+                "        public object Execute()\n" +
+                "        {\n" +
+                "            var testInstance = new " + nameof(io.github.hatayama.uLoopMCP.DynamicAssemblyTest) + "();\n" +
+                "            return testInstance.HelloWorld();\n" +
+                "        }\n" +
+                "    }\n" +
+                "}";
 
             CompilationRequest request = new CompilationRequest
             {
@@ -234,9 +235,9 @@ namespace TestNamespace
         public void Compile_WithSeparateAssemblyClassFullyQualified_ShouldSucceedInAllAssembliesMode()
         {
             // Arrange - Use class from another assembly with fully qualified name
-            string code = @"
-                var testInstance = new io.github.hatayama.uLoopMCP.DynamicAssemblyTest();
-                return testInstance.HelloWorld();";
+            string code =
+                "var testInstance = new io.github.hatayama.uLoopMCP." + nameof(io.github.hatayama.uLoopMCP.DynamicAssemblyTest) + "();\n" +
+                "return testInstance.HelloWorld();";
 
             CompilationRequest request = new CompilationRequest
             {
