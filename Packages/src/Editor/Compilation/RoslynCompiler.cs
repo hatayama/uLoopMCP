@@ -46,7 +46,10 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Initialize assembly references according to security level
+        /// Initialize assembly references according to security level.
+        /// This method constructs the MetadataReference set used for compilation.
+        /// Note: AssemblyReferencePolicy is not consulted here; safety in Restricted mode
+        /// is enforced post-compilation by SecurityValidator/DangerousApiDetector.
         /// </summary>
         private void InitializeReferencesForLevel(DynamicCodeSecurityLevel level)
         {

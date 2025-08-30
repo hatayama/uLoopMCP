@@ -12,11 +12,20 @@ namespace io.github.hatayama.uLoopMCP
     /// - Disabled: No Assembly References (Compilation Not Allowed)
     /// - Restricted/FullAccess: All Assembly References Allowed (Compilation Possible)
     /// - Security Checks Performed at Runtime by DangerousApiDetector
+    /// 
+    /// Note:
+    /// - This class is declarative and is NOT consulted by RoslynCompiler when constructing
+    ///   MetadataReference collections for compilation.
+    /// - The actual reference set is built inside RoslynCompiler.InitializeReferencesForLevel.
+    /// - In Restricted mode, safety is enforced by post-compilation validation (SecurityValidator /
+    ///   DangerousApiDetector), rather than by filtering references at compile time.
     /// </summary>
     public static class AssemblyReferencePolicy
     {
         /// <summary>
-        /// Retrieve Assembly Name List Based on Security Level
+        /// Retrieve Assembly Name List Based on Security Level.
+        /// This list is intended for diagnostics and tests. It is not applied by RoslynCompiler
+        /// to include/exclude references during compilation.
         /// </summary>
         public static IReadOnlyList<string> GetAssemblies(DynamicCodeSecurityLevel level)
         {
@@ -77,6 +86,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Check if the Specified Assembly is Allowed by Security Level
         /// (Maintained for Backward Compatibility)
+        /// Note: This helper is not enforced by RoslynCompiler during reference construction.
         /// </summary>
         public static bool IsAssemblyAllowed(string assemblyName, DynamicCodeSecurityLevel level)
         {
