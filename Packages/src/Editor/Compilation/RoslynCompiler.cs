@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.PortableExecutable;
 using System.Text;
 
 namespace io.github.hatayama.uLoopMCP
@@ -120,7 +121,43 @@ namespace io.github.hatayama.uLoopMCP
 
                 List<string> searchPaths = BuildSearchPaths(contentsPath);
 
+                int scannedCount = 0;
+                int skippedNonManaged = 0;
+                int identityFailures = 0;
+                int duplicatesReplaced = 0;
+
+                Dictionary<string, (Version Version, string Path)> bestByName = new Dictionary<string, (Version Version, string Path)>(StringComparer.OrdinalIgnoreCase);
+
                 foreach (string dllPath in EnumerateDllPaths(searchPaths))
+                {
+                    scannedCount++;
+
+                    if (!IsManagedAssembly(dllPath))
+                    {
+                        skippedNonManaged++;
+                        continue;
+                    }
+
+                    if (!TryGetAssemblyIdentity(dllPath, out string assemblyName, out Version version))
+                    {
+                        identityFailures++;
+                        continue;
+                    }
+
+                    if (bestByName.TryGetValue(assemblyName, out var existing))
+                    {
+                        if (version != null && existing.Version != null && version.CompareTo(existing.Version) > 0)
+                        {
+                            bestByName[assemblyName] = (version, dllPath);
+                            duplicatesReplaced++;
+                        }
+                        continue;
+                    }
+
+                    bestByName[assemblyName] = (version, dllPath);
+                }
+
+                foreach (string dllPath in bestByName.Values.Select(v => v.Path).OrderBy(p => Path.GetFileName(p), StringComparer.OrdinalIgnoreCase))
                 {
                     if (addedPaths.Add(dllPath))
                     {
@@ -130,6 +167,25 @@ namespace io.github.hatayama.uLoopMCP
                             references.Add(reference);
                         }
                     }
+                }
+
+                if (skippedNonManaged > 0 || identityFailures > 0 || duplicatesReplaced > 0)
+                {
+                    VibeLogger.LogWarning(
+                        "roslyn_unity_references_summary",
+                        "Unity reference scan summary",
+                        new
+                        {
+                            scanned = scannedCount,
+                            selected = bestByName.Count,
+                            skippedNonManaged,
+                            identityFailures,
+                            duplicatesReplaced
+                        },
+                        correlationId,
+                        "Aggregated reference scan summary",
+                        "Individual failures suppressed to reduce noise"
+                    );
                 }
             }
             catch (Exception ex)
@@ -197,9 +253,17 @@ namespace io.github.hatayama.uLoopMCP
             AddDirectoryIfExists(searchPaths, monoApi);
             AddDirectoryIfExists(searchPaths, monoFacades);
             AddDirectoryIfExists(searchPaths, monoUnityjit);
-            AddDirectoryIfExists(searchPaths, netStandard21);
-            AddDirectoryIfExists(searchPaths, netStandard20);
-            AddDirectoryIfExists(searchPaths, netStandardCompat);
+
+            // Prefer .NET Standard 2.1 when available; otherwise fall back to 2.0 + compat
+            if (!string.IsNullOrEmpty(netStandard21) && Directory.Exists(netStandard21))
+            {
+                AddDirectoryIfExists(searchPaths, netStandard21);
+            }
+            else
+            {
+                AddDirectoryIfExists(searchPaths, netStandard20);
+                AddDirectoryIfExists(searchPaths, netStandardCompat);
+            }
             AddDirectoryIfExists(searchPaths, managed);
             AddDirectoryIfExists(searchPaths, unityEngine);
             AddDirectoryIfExists(searchPaths, unityEditor);
@@ -214,7 +278,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (Directory.Exists(searchPath))
                 {
-                    foreach (string dllPath in Directory.GetFiles(searchPath, "*.dll"))
+                    foreach (string dllPath in Directory.GetFiles(searchPath, "*.dll").OrderBy(p => Path.GetFileName(p), StringComparer.OrdinalIgnoreCase))
                     {
                         yield return dllPath;
                     }
@@ -233,6 +297,39 @@ namespace io.github.hatayama.uLoopMCP
                 // Skip unloadable DLLs (native DLLs etc.)
                 // This is normal behavior (native DLLs cannot be loaded)
                 return null;
+            }
+        }
+
+        private bool IsManagedAssembly(string dllPath)
+        {
+            try
+            {
+                using (FileStream stream = File.OpenRead(dllPath))
+                using (PEReader peReader = new PEReader(stream))
+                {
+                    return peReader.HasMetadata;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private bool TryGetAssemblyIdentity(string dllPath, out string assemblyName, out Version version)
+        {
+            assemblyName = null;
+            version = null;
+            try
+            {
+                AssemblyName an = AssemblyName.GetAssemblyName(dllPath);
+                assemblyName = an?.Name;
+                version = an?.Version ?? new Version(0, 0, 0, 0);
+                return !string.IsNullOrEmpty(assemblyName);
+            }
+            catch
+            {
+                return false;
             }
         }
 
