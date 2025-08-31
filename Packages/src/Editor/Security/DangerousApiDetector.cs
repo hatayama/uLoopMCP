@@ -16,7 +16,6 @@ namespace io.github.hatayama.uLoopMCP
             // System.IO related (FileInfo and DirectoryInfo types are entirely dangerous)
             "System.IO.FileInfo",
             "System.IO.DirectoryInfo",
-            "System.IO.Path",
             "System.IO.FileSystemWatcher",
             
             // Network-related

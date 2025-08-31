@@ -124,7 +124,7 @@ Need files/dirs? Run terminal commands.")]
 
                 // Pre-execution guard: block file/dir I/O attempts only in Restricted mode (use terminal instead)
                 if (_currentSecurityLevel == DynamicCodeSecurityLevel.Restricted &&
-                    Regex.IsMatch(originalCode, @"\b(System\.IO\.|File\.|Directory\.|Path\.|AssetDatabase\.CreateFolder\b)"))
+                    Regex.IsMatch(originalCode, @"\b(System\.IO\.|File\.|Directory\.|AssetDatabase\.CreateFolder\b)"))
                 {
                     VibeLogger.LogWarning(
                         "execute_dynamic_code_blocked_io",
