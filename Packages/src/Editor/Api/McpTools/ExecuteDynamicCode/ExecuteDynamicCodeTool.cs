@@ -13,28 +13,27 @@ namespace io.github.hatayama.uLoopMCP
     /// Regenerates Executor only when security level changes, otherwise caches and reuses
     /// Related Classes: IDynamicCodeExecutor, DynamicCodeExecutorFactory
     /// </summary>
-    [McpTool(Description = @"## ExecuteDynamicCode
-Editor automation only — not for authoring source files.
+    [McpTool(Description = @"Editor automation only — no file I/O, no script authoring.
 
-Purpose:
-- Run short, direct Editor statements (no classes/namespaces/methods); must return a value
-- Automate scene/hierarchy/prefab/material/asset wiring in the Editor
+Direct statements only (no classes/namespaces/methods); must return a value.
 
-Hard restrictions:
-- Do NOT create or edit .cs/.asmdef with this tool. Author C# in your IDE/editor (e.g., Rider, Visual Studio, VS Code).
-- Do NOT generate new MonoBehaviour scripts here. If a type is missing, stop and report.
-- Not for runtime/gameplay logic; this tool runs in the Editor context only.
+You may include using directives at the top; they are hoisted above the wrapper.
+Example:
+  using UnityEngine;
+  var x = Mathf.PI;
+  return x;
 
-- For any file/directory or other I/O operations, do NOT use this tool; run normal commands instead.
+Do:
+- Prefab/material wiring (PrefabUtility)
+- AddComponent + reference wiring (SerializedObject)
+- Scene/hierarchy edits
 
-When components are needed:
-- First author/compile scripts in the IDE, then use this tool to AddComponent and wire references.
+Don’t:
+- System.IO.* (File/Directory/Path)
+- AssetDatabase.CreateFolder / file writes
+- Create/edit .cs/.asmdef (use Terminal/IDE instead)
 
-Usage notes:
-- Use SerializedObject/SerializedProperty + ApplyModifiedProperties + EditorUtility.SetDirty for persistence
-- Use fully-qualified names for ambiguous types (e.g., UnityEngine.Object)
-
-")]
+Need files/dirs? Run terminal commands.")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
         private IDynamicCodeExecutor _executor;
@@ -122,6 +121,30 @@ Usage notes:
                 
                 // Retrieve code
                 string originalCode = parameters.Code ?? "";
+
+                // Pre-execution guard: block file/dir I/O attempts only in Restricted mode (use terminal instead)
+                if (_currentSecurityLevel == DynamicCodeSecurityLevel.Restricted &&
+                    Regex.IsMatch(originalCode, @"\b(System\.IO\.|File\.|Directory\.|Path\.|AssetDatabase\.CreateFolder\b)"))
+                {
+                    VibeLogger.LogWarning(
+                        "execute_dynamic_code_blocked_io",
+                        "Blocked due to file/dir I/O usage in dynamic code",
+                        new { pattern = "System.IO.*, File.*, Directory.*, Path.*, AssetDatabase.CreateFolder" },
+                        correlationId,
+                        "File/dir I/O is disallowed in ExecuteDynamicCode",
+                        "Use terminal commands for files/dirs"
+                    );
+
+                    return new ExecuteDynamicCodeResponse
+                    {
+                        Success = false,
+                        Result = string.Empty,
+                        Logs = new List<string> { "Explanation: File/dir I/O is disallowed in ExecuteDynamicCode. Use terminal commands instead." },
+                        CompilationErrors = new List<CompilationErrorDto>(),
+                        ErrorMessage = "File/dir I/O is disallowed in ExecuteDynamicCode. Use terminal commands instead.",
+                        SecurityLevel = _currentSecurityLevel.ToString()
+                    };
+                }
 
                 // Convert to parameter array
                 object[] parametersArray = null;

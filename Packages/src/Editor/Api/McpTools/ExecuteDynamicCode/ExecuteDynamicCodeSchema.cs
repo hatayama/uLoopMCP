@@ -10,19 +10,27 @@ namespace io.github.hatayama.uLoopMCP
     public class ExecuteDynamicCodeSchema : BaseToolSchema
     {
         /// <summary>C# code to execute</summary>
-        [Description(@"Editor automation C# snippet.
+        [Description(@"Editor automation only — no file I/O, no script authoring.
 
-- Direct statements only (no classes/namespaces/methods)
-- Must return a value (e.g., return ""Done"";)
-- You may include using directives at the top; they are hoisted above the generated wrapper.
-  Example:
-    using UnityEngine;
-    var x = Mathf.PI;
-    return x;
-- Valid: GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube); return ""Created"";
-- Invalid: GameObject.CreatePrimitive(PrimitiveType.Cube); // missing return
+Direct statements only (no classes/namespaces/methods); must return a value.
 
-- For any file/directory or other I/O operations, do NOT use this tool; run normal commands instead.")]
+You may include using directives at the top; they are hoisted above the wrapper.
+Example:
+  using UnityEngine;
+  var x = Mathf.PI;
+  return x;
+
+Do:
+- Prefab/material wiring (PrefabUtility)
+- AddComponent + reference wiring (SerializedObject)
+- Scene/hierarchy edits
+
+Don’t:
+- System.IO.* (File/Directory/Path)
+- AssetDatabase.CreateFolder / file writes
+- Create/edit .cs/.asmdef (use Terminal/IDE instead)
+
+Need files/dirs? Run terminal commands.")]
         public string Code { get; set; } = "";
         
         /// <summary>Runtime parameters (advanced; usually unnecessary)</summary>
