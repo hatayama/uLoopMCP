@@ -158,11 +158,24 @@ namespace io.github.hatayama.uLoopMCP
                             continue;
                         }
 
+                        // Early skip for analyzer assemblies based on centralized rules
+                        if (ReferenceExclusionRules.ShouldSkip(fullPath, null))
+                        {
+                            continue;
+                        }
+
                         if (addedPaths.Add(fullPath))
                         {
                             // Avoid identity duplicates across sources (Managed vs Packages, etc.)
-                            if (addedAssemblyNames != null && TryGetAssemblyIdentity(fullPath, out string asmName, out var _))
+                            string asmName = null;
+                            if (addedAssemblyNames != null && TryGetAssemblyIdentity(fullPath, out asmName, out Version _))
                             {
+                                // Skip analyzer assemblies based on assembly identity
+                                if (ReferenceExclusionRules.ShouldSkip(fullPath, asmName))
+                                {
+                                    continue;
+                                }
+
                                 if (!addedAssemblyNames.Add(asmName))
                                 {
                                     continue;
@@ -228,6 +241,12 @@ namespace io.github.hatayama.uLoopMCP
                         continue;
                     }
 
+                    // Skip analyzer assemblies (avoid type conflicts such as Vector3)
+                    if (ReferenceExclusionRules.ShouldSkip(dllPath, assemblyName))
+                    {
+                        continue;
+                    }
+
                     if (bestByName.TryGetValue(assemblyName, out var existing))
                     {
                         if (version != null && existing.Version != null && version.CompareTo(existing.Version) > 0)
@@ -246,8 +265,12 @@ namespace io.github.hatayama.uLoopMCP
                     if (addedPaths.Add(dllPath))
                     {
                         // Avoid identity duplicates (CS1703)
-                        if (addedAssemblyNames != null && TryGetAssemblyIdentity(dllPath, out string asmName, out var _))
+                        if (addedAssemblyNames != null && TryGetAssemblyIdentity(dllPath, out string asmName, out Version _))
                         {
+                            if (ReferenceExclusionRules.ShouldSkip(dllPath, asmName))
+                            {
+                                continue;
+                            }
                             if (!addedAssemblyNames.Add(asmName))
                             {
                                 continue;
