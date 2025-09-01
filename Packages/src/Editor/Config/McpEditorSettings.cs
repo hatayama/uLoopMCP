@@ -904,7 +904,31 @@ namespace io.github.hatayama.uLoopMCP
         private static NamedBuildTarget[] GetAllKnownTargets()
         {
             List<NamedBuildTarget> targets = new();
+
+            // Always include the active build target (even if it has no symbols yet)
+            BuildTargetGroup activeGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
+            if (activeGroup == BuildTargetGroup.Unknown)
+            {
+                activeGroup = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
+            }
             
+            if (activeGroup != BuildTargetGroup.Unknown)
+            {
+                NamedBuildTarget activeTarget = NamedBuildTarget.FromBuildTargetGroup(activeGroup);
+                if (!targets.Contains(activeTarget))
+                {
+                    targets.Add(activeTarget);
+                }
+            }
+            else
+            {
+                // Fallback to Standalone when no active group is detected
+                if (!targets.Contains(NamedBuildTarget.Standalone))
+                {
+                    targets.Add(NamedBuildTarget.Standalone);
+                }
+            }
+
             // Platforms supported in Unity 2022.3 LTS
             NamedBuildTarget[] candidateTargets = new[]
             {
@@ -919,16 +943,17 @@ namespace io.github.hatayama.uLoopMCP
                 NamedBuildTarget.XboxOne,
             };
             
+
             foreach (NamedBuildTarget target in candidateTargets)
             {
-                // Only target platforms where symbols are already set
                 string symbols = PlayerSettings.GetScriptingDefineSymbols(target);
-                if (!string.IsNullOrEmpty(symbols))
+                if (!string.IsNullOrEmpty(symbols) && !targets.Contains(target))
                 {
                     targets.Add(target);
                 }
             }
             
+
             return targets.ToArray();
         }
         
