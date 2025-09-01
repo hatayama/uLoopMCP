@@ -97,7 +97,24 @@ namespace io.github.hatayama.uLoopMCP
             JsonSerializer serializer = JsonSerializer.Create(settings);
             
             // Try to deserialize from JToken with custom serializer
-            TSchema schema = paramsToken.ToObject<TSchema>(serializer);
+            TSchema schema;
+            try
+            {
+                schema = paramsToken.ToObject<TSchema>(serializer);
+            }
+            catch (JsonSerializationException ex)
+            {
+                // Create detailed error message for type mismatches
+                string errorMessage = $"Parameter type mismatch for tool '{ToolName}': {ex.Message}";
+                
+                // Check for specific Dictionary<string, object> conversion errors
+                if (ex.Message.Contains("Dictionary") && ex.Message.Contains("Error converting value"))
+                {
+                    errorMessage = $"Parameter 'Parameters' must be an object, not a string. Received: {paramsToken["parameters"]?.ToString() ?? paramsToken["Parameters"]?.ToString() ?? "null"}";
+                }
+                
+                throw new ParameterValidationException(errorMessage, ex);
+            }
 
             // If deserialization returns null, create default instance
             if (schema == null)

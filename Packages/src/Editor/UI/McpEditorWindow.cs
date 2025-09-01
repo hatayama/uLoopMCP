@@ -88,9 +88,6 @@ namespace io.github.hatayama.uLoopMCP
 
 
 
-
-
-
         /// <summary>
         /// Get connected tools as ConnectedClient objects for UI display, sorted by name
         /// </summary>
@@ -98,7 +95,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             return ConnectedToolsMonitoringService.GetConnectedToolsAsClients();
         }
-
 
         /// <summary>
         /// Initialize configuration services factory
@@ -140,7 +136,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             _model.LoadFromSessionState();
         }
-
 
         /// <summary>
         /// Handle post-compile mode initialization and auto-start logic
@@ -260,7 +255,6 @@ namespace io.github.hatayama.uLoopMCP
                 allowMenuCallback: UpdateAllowMenuItemExecution,
                 allowThirdPartyCallback: UpdateAllowThirdPartyTools);
 
-
             EditorGUILayout.EndScrollView();
         }
 
@@ -374,7 +368,6 @@ namespace io.github.hatayama.uLoopMCP
             IEnumerable<ConnectedClient> storedTools = GetCachedStoredTools();
             bool hasStoredTools = storedTools.Any();
 
-
             // If we have stored tools, show them (prioritize stored tools over server clients)
             if (hasStoredTools)
             {
@@ -386,7 +379,6 @@ namespace io.github.hatayama.uLoopMCP
             bool showReconnectingUI = !hasStoredTools &&
                                       (showReconnectingUIFlag || showPostCompileUIFlag) &&
                                       !hasNamedClients;
-
 
             // Clear post-compile flag when named clients are connected
             if (hasNamedClients && showPostCompileUIFlag)
@@ -582,6 +574,7 @@ namespace io.github.hatayama.uLoopMCP
             _model.UpdateAllowThirdPartyTools(allow);
         }
 
+        
 
         /// <summary>
         /// Toggle server state (start if stopped, stop if running)

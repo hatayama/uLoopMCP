@@ -9,9 +9,8 @@ using UnityEditor;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Unity Game Viewをキャプチャしてファイルに保存するMCPツール
-    /// 関連クラス: CaptureGameViewSchema, CaptureGameViewResponse
-    /// 設計ドキュメント: docs/design/gameview-capture-tool-design.md
+    /// MCP Tool for capturing Unity Game View and saving it as a file
+    /// Related Classes: CaptureGameViewSchema, CaptureGameViewResponse
     /// </summary>
     [McpTool(Description = "Capture Unity Game View and save as PNG image")]
     public class CaptureGameViewTool : AbstractUnityTool<CaptureGameViewSchema, CaptureGameViewResponse>
@@ -24,9 +23,9 @@ namespace io.github.hatayama.uLoopMCP
             CaptureGameViewSchema parameters, 
             CancellationToken cancellationToken)
         {
-            string correlationId = Guid.NewGuid().ToString("N")[..8];
+            string correlationId = McpConstants.GenerateCorrelationId();
             
-            // VibeLogger開始ログ
+            // VibeLogger start log
             VibeLogger.LogInfo(
                 "capture_gameview_start",
                 "Game view capture started",
@@ -38,25 +37,25 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                // パラメータ検証
+                // Validate parameters
                 ValidateParameters(parameters);
                 
-                // 出力ディレクトリ作成
+                // Create output directory
                 string outputDirectory = EnsureOutputDirectoryExists();
                 
-                // Unity ScreenCapture API直接呼び出し
+                // Direct call to Unity ScreenCapture API
                 Texture2D texture = await CaptureGameViewAsync(parameters.ResolutionScale, cancellationToken);
                 
                 try
                 {
-                    // ファイル保存
+                    // Save file
                     string savedPath = SaveTextureAsPng(texture, outputDirectory);
                     
-                    // レスポンス生成
+                    // Generate response
                     var fileInfo = new FileInfo(savedPath);
                     var response = new CaptureGameViewResponse(savedPath, fileInfo.Length);
                     
-                    // VibeLogger成功ログ
+                    // VibeLogger success log
                     VibeLogger.LogInfo(
                         "capture_gameview_success",
                         "Game view captured successfully",
@@ -74,7 +73,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 finally
                 {
-                    // テクスチャのメモリ解放
+                    // Release texture memory
                     if (texture != null)
                     {
                         UnityEngine.Object.DestroyImmediate(texture);
@@ -84,7 +83,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (Exception ex)
             {
-                // VibeLoggerエラーログ
+                // VibeLogger error log
                 VibeLogger.LogError(
                     "capture_gameview_error",
                     "Game view capture failed",
@@ -94,12 +93,12 @@ namespace io.github.hatayama.uLoopMCP
                     aiTodo: "Investigate capture failure cause"
                 );
                 
-                // 例外を投げずに失敗レスポンスを返す
+                // Return failure response without throwing an exception
                 return new CaptureGameViewResponse(failure: true);
             }
             finally
             {
-                // VibeLogger完了ログ
+                // VibeLogger completion log
                 VibeLogger.LogInfo(
                     "capture_gameview_complete", 
                     "GameView capture operation completed",
@@ -109,7 +108,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// パラメータを検証する
+        /// Validate parameters
         /// </summary>
         private void ValidateParameters(CaptureGameViewSchema parameters)
         {
@@ -121,7 +120,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 出力ディレクトリが存在することを確認し、なければ作成する
+        /// Verify that the output directory exists, and create it if it does not
         /// </summary>
         private string EnsureOutputDirectoryExists()
         {
@@ -137,11 +136,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Game Viewをキャプチャしてテクスチャとして返す
+        /// Capture Game View and return as a texture
         /// </summary>
         private async Task<Texture2D> CaptureGameViewAsync(float resolutionScale, CancellationToken cancellationToken)
         {
-            // キャンセレーション確認
+            // Check for cancellation
             cancellationToken.ThrowIfCancellationRequested();
             
             string tempFileName = $"temp_screenshot_{System.DateTime.Now:yyyyMMdd_HHmmss_fff}.png";
@@ -149,23 +148,23 @@ namespace io.github.hatayama.uLoopMCP
             
             try
             {
-                // Unity再生中と停止中の両対応（万能キャプチャ処理）
+                // Support for both playing and stopped Unity states (universal capture processing)
                 ScreenCapture.CaptureScreenshot(tempFileName, 1);
                 
                 if (!Application.isPlaying)
                 {
-                    // 停止中：GameView を1フレーム強制再描画
+                    // When stopped: Force repaint GameView for one frame
                     Assembly asm = typeof(EditorWindow).Assembly;
                     EditorWindow gameView = EditorWindow.GetWindow(asm.GetType("UnityEditor.GameView"));
                     gameView.Repaint();
                 }
                 else
                 {
-                    // Play中：次フレームで保存完了するようキューを回す
+                    // When playing: Queue update to complete saving in the next frame
                     EditorApplication.QueuePlayerLoopUpdate();
                 }
                 
-                // ファイルが作成されるまで待機（最大5秒）
+                // Wait for file to be created (maximum 5 seconds)
                 int maxAttempts = 50;
                 int attempts = 0;
                 while (!File.Exists(fullPath) && attempts < maxAttempts)
@@ -179,14 +178,14 @@ namespace io.github.hatayama.uLoopMCP
                     throw new InvalidOperationException($"Failed to capture Game View - screenshot file was not created at: {fullPath}");
                 }
                 
-                // ファイルサイズ確認
+                // Check file size
                 var fileInfo = new FileInfo(fullPath);
                 if (fileInfo.Length == 0)
                 {
                     throw new InvalidOperationException("Failed to capture Game View - screenshot file is empty");
                 }
                 
-                // PNGファイルからテクスチャを読み込み
+                // Load texture from PNG file
                 byte[] fileData = File.ReadAllBytes(fullPath);
                 Texture2D texture = new(2, 2);
                 
@@ -196,7 +195,7 @@ namespace io.github.hatayama.uLoopMCP
                     throw new InvalidOperationException("Failed to load captured screenshot as texture");
                 }
                 
-                // 解像度スケーリング適用
+                // Apply resolution scaling
                 if (!Mathf.Approximately(resolutionScale, 1.0f))
                 {
                     texture = ApplyResolutionScaling(texture, resolutionScale);
@@ -206,7 +205,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
-                // 一時ファイルを削除
+                // Delete temporary file
                 if (File.Exists(fullPath))
                 {
                     File.Delete(fullPath);
@@ -215,7 +214,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// 解像度スケーリングを適用する
+        /// Apply resolution scaling
         /// </summary>
         private Texture2D ApplyResolutionScaling(Texture2D originalTexture, float scale)
         {
@@ -227,7 +226,7 @@ namespace io.github.hatayama.uLoopMCP
             
             Texture2D scaledTexture = new(newWidth, newHeight, originalTexture.format, false);
             
-            // RenderTextureを使用してスケーリング
+            // Scale using RenderTexture
             RenderTexture rt = RenderTexture.GetTemporary(newWidth, newHeight);
             try
             {
@@ -243,32 +242,32 @@ namespace io.github.hatayama.uLoopMCP
                 RenderTexture.ReleaseTemporary(rt);
             }
             
-            // 元のテクスチャは破棄
+            // Destroy original texture
             UnityEngine.Object.DestroyImmediate(originalTexture);
             
             return scaledTexture;
         }
 
         /// <summary>
-        /// テクスチャをPNGファイルとして保存する
+        /// Save texture as PNG file
         /// </summary>
         private string SaveTextureAsPng(Texture2D texture, string outputDirectory)
         {
-            // ファイル名生成
+            // Generate filename
             string fileName = GenerateFileName();
             string fullPath = Path.Combine(outputDirectory, fileName);
             
-            // PNG エンコード
+            // PNG encoding
             byte[] pngData = texture.EncodeToPNG();
             
-            // ファイル書き込み
+            // Write file
             File.WriteAllBytes(fullPath, pngData);
             
             return fullPath;
         }
 
         /// <summary>
-        /// 一意のファイル名を生成する
+        /// Generate a unique filename
         /// </summary>
         private string GenerateFileName()
         {

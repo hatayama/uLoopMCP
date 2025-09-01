@@ -366,7 +366,6 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-
         /// <summary>
         /// Draw security settings section
         /// </summary>
@@ -388,6 +387,9 @@ namespace io.github.hatayama.uLoopMCP
                 EditorGUILayout.HelpBox("These settings control dangerous MCP operations. Only enable if you trust the AI system.\n\nFor safer operation, consider using sandbox environments or containers.\n\nChanges take effect immediately - no server restart required.", MessageType.Error);
                 
                 EditorGUILayout.Space();
+                
+                EditorGUILayout.Space(10);
+                EditorGUILayout.LabelField("Additional Security Options", EditorStyles.boldLabel);
                 
                 // Create red label style for dangerous options
                 GUIStyle redLabelStyle = new GUIStyle(EditorStyles.label);
@@ -435,6 +437,76 @@ namespace io.github.hatayama.uLoopMCP
                     allowThirdPartyCallback?.Invoke(newAllowThirdParty);
                 }
                 EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.Space(2);
+                
+                EditorGUILayout.Space(10);
+                
+                // Dynamic Code Security Level - moved to bottom with red label
+                EditorGUILayout.LabelField("Dynamic Code Security Level", redLabelStyle);
+                DynamicCodeSecurityLevel currentLevel = McpEditorSettings.GetDynamicCodeSecurityLevel();
+                DynamicCodeSecurityLevel newLevel = (DynamicCodeSecurityLevel)EditorGUILayout.EnumPopup("Security Level", currentLevel);
+                if (newLevel != currentLevel)
+                {
+                    // Show confirmation dialog when enabling Roslyn features
+                    if (currentLevel == DynamicCodeSecurityLevel.Disabled && newLevel != DynamicCodeSecurityLevel.Disabled)
+                    {
+                        bool roslynAvailable = RoslynAssemblyChecker.IsRoslynAvailable();
+                        
+                        if (!roslynAvailable)
+                        {
+                            // If Roslyn is not installed
+                            EditorUtility.DisplayDialog(
+                                "Roslyn Not Installed",
+                                RoslynAssemblyChecker.GetInstallationMessage(),
+                                "OK"
+                            );
+                            return; // Cancel security level change
+                        }
+                        else
+                        {
+                            // If Roslyn is already installed
+                            string version = RoslynAssemblyChecker.GetRoslynVersion();
+                            bool confirmed = EditorUtility.DisplayDialog(
+                                "Enable Roslyn Features",
+                                $"Microsoft.CodeAnalysis.CSharp is installed (version: {version}).\n\n" +
+                                "This will enable advanced code analysis and execution features.\n\n" +
+                                "Continue?",
+                                "Enable",
+                                "Cancel"
+                            );
+                            
+                            if (confirmed)
+                            {
+                                McpEditorSettings.SetDynamicCodeSecurityLevel(newLevel);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        McpEditorSettings.SetDynamicCodeSecurityLevel(newLevel);
+                    }
+                }
+                
+                // Security level description
+                string levelDescription = newLevel switch
+                {
+                    DynamicCodeSecurityLevel.Disabled => "Level 0: Code execution completely disabled (safest)",
+                    DynamicCodeSecurityLevel.Restricted => "Level 1: Dangerous APIs blocked (recommended)",
+                    DynamicCodeSecurityLevel.FullAccess => "Level 2: All APIs available (use with caution)",
+                    _ => "Unknown level"
+                };
+                
+                // Choose appropriate MessageType based on security level
+                MessageType messageType = newLevel switch
+                {
+                    DynamicCodeSecurityLevel.Disabled => MessageType.Info,      // Blue info icon for disabled (safe)
+                    DynamicCodeSecurityLevel.Restricted => MessageType.Info,    // Blue info icon for restricted (recommended)
+                    DynamicCodeSecurityLevel.FullAccess => MessageType.Warning, // Yellow warning icon for full access (dangerous)
+                    _ => MessageType.Info
+                };
+                
+                EditorGUILayout.HelpBox(levelDescription, messageType);
                 
                 EditorGUILayout.Space();
             }

@@ -118,14 +118,74 @@ Retrieve information about the currently active Hierarchy in nested JSON format.
 → For large scenes, hierarchy data is saved to file and path is returned instead of raw JSON
 ```
 
+#### 11. execute-dynamic-code - Dynamic C# Code Execution
+Execute C# code dynamically within Unity Editor.
+
+> **⚠️ Important Prerequisites**  
+> To use this tool, you must install the `Microsoft.CodeAnalysis.CSharp` package using [OpenUPM NuGet](https://openupm.com/nuget/).
+> 
+> **Installation Instructions (Recommended: via OpenUPM Scoped Registry)**
+> 
+> Using Scoped registry in Unity Package Manager
+> 1. Open Project Settings window and go to the Package Manager page
+> 2. Add the following entry to the Scoped Registries list:
+
+```
+Name: OpenUPM
+URL: https://package.openupm.com
+Scope(s): org.nuget
+```
+
+> 3. Open the Package Manager window, select OpenUPM in the My Registries section, and install Microsoft.CodeAnalysis.CSharp.
+
+**Security Level Support**: Implements 3-tier security control to progressively restrict executable code:
+
+  - **Level 0 - Disabled**
+    - No compilation or execution allowed
+    
+  - **Level 1 - Restricted** 【Recommended Setting】
+    - All Unity APIs and .NET standard libraries are generally available
+    - User-defined assemblies (Assembly-CSharp, etc.) are also accessible
+    - Only pinpoint blocking of security-critical operations:
+      - **File deletion**: `File.Delete`, `Directory.Delete`, `FileUtil.DeleteFileOrDirectory`
+      - **File writing**: `File.WriteAllText`, `File.WriteAllBytes`, `File.Replace`
+      - **Network communication**: All `HttpClient`, `WebClient`, `WebRequest`, `Socket`, `TcpClient` operations
+      - **Process execution**: `Process.Start`, `Process.Kill`
+      - **Dynamic code execution**: `Assembly.Load*`, `Type.InvokeMember`, `Activator.CreateComInstanceFrom`
+      - **Thread manipulation**: Direct `Thread`, `Task` manipulation
+      - **Registry operations**: All `Microsoft.Win32` namespace operations
+    - Safe operations are allowed:
+      - File reading (`File.ReadAllText`, `File.Exists`, etc.)
+      - Path operations (all `Path.*` operations)
+      - Information retrieval (`Assembly.GetExecutingAssembly`, `Type.GetType`, etc.)
+    - Use cases: Normal Unity development, automation with safety assurance
+    
+  - **Level 2 - FullAccess**
+    - **All assemblies are accessible (no restrictions)**
+    - ⚠️ **Warning**: Security risks exist, use only with trusted code
+```
+→ execute-dynamic-code (Code: "GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube); return \"Cube created\";")
+→ Rapid prototype verification, batch processing automation
+→ Unity API usage restricted according to security level
+```
+
+ 
+
 > [!IMPORTANT]
 > **Security Settings**
 >
-> `run-tests` and `execute-menu-item` tools are disabled by default because AI can execute arbitrary code.  
-> To use these tools, enable the corresponding settings in the uLoopMCP window "Security Settings":
+> Some tools are disabled by default for security reasons.  
+> To use these tools, enable the corresponding items in the uLoopMCP window "Security Settings":
+>
+> **Basic Security Settings**:
 > - **Allow Tests Execution**: Enable `run-tests` tool
 > - **Allow Menu Item Execution**: Enable `execute-menu-item` tool
 > - **Allow Third Party Tools**: Enable user-developed custom tools
+>
+> **Dynamic Code Security Level** (`execute-dynamic-code` tool):
+> - **Level 0 (Disabled)**: Complete code execution disabled (safest)
+> - **Level 1 (Restricted)**: Unity API only, dangerous operations blocked (recommended)
+> - **Level 2 (FullAccess)**: All APIs available (use with caution)
 >
 > Setting changes take effect immediately without server restart.  
 > 
@@ -375,6 +435,28 @@ All tools automatically include the following timing information:
   - `Details` (string): Additional information about the execution
   - `MenuItemFound` (boolean): Whether the menu item was found in the system
 
+### 11. execute-dynamic-code
+- **Description**: Execute C# code dynamically within Unity Editor. Implements security levels and automatic using statement processing with enhanced error messaging
+- **Parameters**: 
+  - `Code` (string): The C# code to execute (default: "")
+  - `Parameters` (Dictionary<string, object>): Runtime parameters for execution (default: {})
+  - `CompileOnly` (boolean): Only compile, do not execute (default: false)
+- **Response**: 
+  - `Success` (boolean): Whether execution was successful
+  - `Result` (string): Execution result
+  - `Logs` (array): Array of log messages
+  - `CompilationErrors` (array): Array of compilation errors (if any)
+    - `Message` (string): Error message
+    - `Line` (number): Line number where error occurred
+    - `Column` (number): Column number where error occurred
+    - `ErrorCode` (string): Compiler error code (e.g., CS0103)
+  - `ErrorMessage` (string): Error message (if failed)
+  - `SecurityLevel` (string): Current security level ("Disabled", "Restricted", "FullAccess")
+  - `UpdatedCode` (string): Updated code (after applying fixes)
+  - `ExecutionTimeMs` (number): Execution time in milliseconds
+
+ 
+
 ---
 
 ## Related Documentation
@@ -465,6 +547,8 @@ Scope(s): io.github.hatayama.uloopmcp
 
 3. Open Package Manager window and select OpenUPM in the My Registries section. uLoopMCP will be displayed.
 
+
+
 ## Project-Specific Tool Development
 uLoopMCP enables efficient development of project-specific MCP tools without requiring changes to the core package.  
 The type-safe design allows for reliable custom tool implementation in minimal time.
@@ -474,6 +558,7 @@ The type-safe design allows for reliable custom tool implementation in minimal t
 > **Security Settings**
 > 
 > Project-specific tools require enabling **Allow Third Party Tools** in the uLoopMCP window "Security Settings".
+> When developing custom tools that involve dynamic code execution, also consider the **Dynamic Code Security Level** setting.
 
 <details>
 <summary>View Implementation Guide</summary>

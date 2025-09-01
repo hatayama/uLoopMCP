@@ -13,7 +13,6 @@ namespace io.github.hatayama.uLoopMCP
     {
         private readonly ComponentPropertySerializer _propertySerializer;
         
-        
         public ComponentSerializer()
         {
             _propertySerializer = new ComponentPropertySerializer();

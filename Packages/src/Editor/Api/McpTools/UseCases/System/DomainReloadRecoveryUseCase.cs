@@ -78,20 +78,17 @@ namespace io.github.hatayama.uLoopMCP
                 SessionRecoveryService.StartReconnectionUITimeoutAsync().Forget();
             }
 
-            // 4. Update MCP settings to current debug state
-            McpDebugStateUpdater.UpdateAllConfigurationsForDebugState();
-
-            // 5. Restore server state
+            // 4. Restore server state
             ValidationResult restoreResult = SessionRecoveryService.RestoreServerStateIfNeeded();
             if (!restoreResult.IsValid)
             {
                 return ServiceResult<string>.FailureResult($"Server restoration failed: {restoreResult.ErrorMessage}");
             }
 
-            // 6. Process pending compile requests (currently disabled)
+            // 5. Process pending compile requests (currently disabled)
             ProcessPendingCompileRequests(correlationId);
 
-            // 7. Send tool change notification if server is running
+            // 6. Send tool change notification if server is running
             if (McpServerController.IsServerRunning)
             {
                 try

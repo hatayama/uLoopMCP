@@ -805,8 +805,8 @@ PlayerSettings:
   webGLMemoryGeometricGrowthCap: 96
   webGLPowerPreference: 2
   scriptingDefineSymbols:
-    Standalone: ULOOPMCP_DEBUG
-    iPhone: ULOOPMCP_DEBUG
+    Standalone: ULOOPMCP_DEBUG;ULOOPMCP_HAS_ROSLYN
+    iPhone: ULOOPMCP_DEBUG;ULOOPMCP_HAS_ROSLYN
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

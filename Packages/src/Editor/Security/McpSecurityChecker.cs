@@ -103,6 +103,8 @@ namespace io.github.hatayama.uLoopMCP
                 case SecuritySettings.AllowMenuItemExecution:
                     return IsMenuItemExecutionAllowed();
                     
+                
+                    
                 default:
                     return false; // Unknown setting - block by default
             }
@@ -167,6 +169,8 @@ namespace io.github.hatayama.uLoopMCP
                 case SecuritySettings.AllowMenuItemExecution:
                     return "Menu item execution is disabled. Enable 'Allow Menu Item Execution' in uLoopMCP Security Settings.";
                     
+                
+                    
                 case SecuritySettings.None:
                     // Check if it's actually a third party tool
                     if (IsThirdPartyTool(toolName))
@@ -193,7 +197,6 @@ namespace io.github.hatayama.uLoopMCP
             return new ToolSecurityInfo(toolName, isAllowed, reason);
         }
 
-
         /// <summary>
         /// Checks if tests execution is allowed
         /// </summary>
@@ -211,6 +214,8 @@ namespace io.github.hatayama.uLoopMCP
         {
             return McpEditorSettings.GetAllowMenuItemExecution();
         }
+
+        
 
         /// <summary>
         /// Checks if third party tools execution is allowed
@@ -297,7 +302,6 @@ namespace io.github.hatayama.uLoopMCP
             RequiredSecuritySetting = requiredSecuritySetting;
         }
     }
-
 
     /// <summary>
     /// Exception thrown when a tool is blocked by security settings

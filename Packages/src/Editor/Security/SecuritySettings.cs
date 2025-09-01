@@ -32,7 +32,8 @@ namespace io.github.hatayama.uLoopMCP
         /// Used by execute-menu-item command
         /// </summary>
         [Description("allowMenuItemExecution")]
-        AllowMenuItemExecution
+        AllowMenuItemExecution,
+
     }
 
     /// <summary>

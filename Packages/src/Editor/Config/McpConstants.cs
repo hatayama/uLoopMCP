@@ -32,6 +32,7 @@ namespace io.github.hatayama.uLoopMCP
         
         // Scripting define symbols
         public const string SCRIPTING_DEFINE_ULOOPMCP_DEBUG = "ULOOPMCP_DEBUG";
+        public const string SCRIPTING_DEFINE_ULOOPMCP_HAS_ROSLYN = "ULOOPMCP_HAS_ROSLYN";
         
         // Environment variable keys for development mode
         public const string ENV_KEY_ULOOPMCP_DEBUG = "ULOOPMCP_DEBUG";
@@ -93,6 +94,31 @@ namespace io.github.hatayama.uLoopMCP
         public const string SESSION_KEY_RECONNECTING = "uLoopMCP.Reconnecting";
         public const string SESSION_KEY_SHOW_RECONNECTING_UI = "uLoopMCP.ShowReconnectingUI";
         
+        // Correlation ID constants
+        public const int CORRELATION_ID_LENGTH = 8; // Length for correlation ID generation
+        public const string GUID_FORMAT_NO_HYPHENS = "N"; // GUID format without hyphens
+        
+        // Error message constants
+        public const string ERROR_SECURITY_VIOLATION = "SECURITY_VIOLATION";
+        public const string ERROR_EXECUTION_DISABLED = "EXECUTION_DISABLED";
+        public const string ERROR_COMPILATION_DISABLED_LEVEL0 = "COMPILATION_DISABLED_AT_LEVEL0";
+        public const string ERROR_MESSAGE_SECURITY_LEVEL_CHANGE_BLOCKED = "Changing security level is not allowed in Restricted mode.";
+        public const string ERROR_MESSAGE_EXECUTION_DISABLED = "Dynamic code execution is currently disabled. Enable in McpEditorSettings > Security Level.";
+        public const string ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0 = "Compilation is disabled at isolation level 0. Raise to level 1+ to compile.";
+        
+        // Execution error messages
+        public const string ERROR_ROSLYN_REQUIRED = "ROSLYN_REQUIRED";
+        public const string ERROR_MESSAGE_ROSLYN_REQUIRED = "Dynamic code execution requires Roslyn. Please enable it from Security Settings.";
+        public const string ERROR_MESSAGE_EXECUTION_IN_PROGRESS = "Another execution is already in progress";
+        public const string ERROR_MESSAGE_EXECUTION_CANCELLED = "Execution was cancelled or timed out";
+        public const string ERROR_MESSAGE_NO_COMPILED_ASSEMBLY = "No compiled assembly provided";
+        public const string ERROR_MESSAGE_NO_EXECUTE_METHOD = "No Execute method found in compiled assembly";
+        public const string ERROR_MESSAGE_FAILED_TO_CREATE_INSTANCE = "Failed to create instance of target type";
+        public const string ERROR_MESSAGE_UNSUPPORTED_SIGNATURE = "Execute method signature not supported";
+        
+        // Test constants
+        public const int TEST_COMPILE_TIMEOUT_MS = 5000; // 5 seconds for test compilation
+        
         // Security constants
         public const int MAX_JSON_SIZE_BYTES = 1024 * 1024; // 1MB limit for JSON files
         public const int MAX_SETTINGS_SIZE_BYTES = 1024 * 16; // 16KB limit for settings files
@@ -123,6 +149,15 @@ namespace io.github.hatayama.uLoopMCP
         public static string GetClientNameForEditor(McpEditorType editorType)
         {
             return EditorConfigProvider.GetClientName(editorType);
+        }
+        
+        /// <summary>
+        /// Generates a short correlation ID for logging and tracking
+        /// </summary>
+        /// <returns>8-character correlation ID</returns>
+        public static string GenerateCorrelationId()
+        {
+            return System.Guid.NewGuid().ToString(GUID_FORMAT_NO_HYPHENS)[..CORRELATION_ID_LENGTH];
         }
     }
 } 

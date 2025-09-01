@@ -68,7 +68,7 @@ namespace io.github.hatayama.uLoopMCP
                 GetLogsResponse response = new GetLogsResponse(
                     totalCount: logData.TotalCount,
                     displayedCount: logs.Length,
-                    logType: parameters.LogType.ToString(),
+                    logType: parameters.LogType,
                     maxCount: parameters.MaxCount,
                     searchText: parameters.SearchText,
                     includeStackTrace: parameters.IncludeStackTrace,

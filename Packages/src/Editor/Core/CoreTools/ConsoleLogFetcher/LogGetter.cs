@@ -1,3 +1,4 @@
+using System;
 using UnityEditor;
 using UnityEngine;
 using System.Text.RegularExpressions;
@@ -18,28 +19,27 @@ namespace io.github.hatayama.uLoopMCP
             LogRetriever = new ConsoleLogRetriever();
         }
 
-
         /// <summary>
         /// Converts McpLogType to Unity's LogType
         /// </summary>
         /// <param name="mcpLogType">MCP log type</param>
         /// <returns>Corresponding Unity LogType</returns>
-        private static LogType ConvertMcpLogTypeToLogType(McpLogType mcpLogType)
+        private static LogType ConvertMcpLogTypeToLogType(string mcpLogType)
         {
             return mcpLogType switch
             {
                 McpLogType.Error => LogType.Error,
                 McpLogType.Warning => LogType.Warning,
                 McpLogType.Log => LogType.Log,
-                _ => LogType.Log
+                _ => LogType.Log  // Default for unknown types, None will be handled separately
             };
         }
 
         /// <summary>
-        /// Retrieves console logs and returns them as a LogDisplayDto.
+        /// Retrieves all console logs and returns them as a LogDisplayDto.
         /// </summary>
         /// <returns>The retrieved log data.</returns>
-        public static LogDisplayDto GetConsoleLog()
+        public static LogDisplayDto GetAllConsoleLogs()
         {
             System.Collections.Generic.List<LogEntryDto> logEntries = LogRetriever.GetAllLogs();
             return new LogDisplayDto(logEntries.ToArray(), logEntries.Count);
@@ -55,21 +55,21 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Filters and retrieves console logs based on specified conditions.
+        /// Filters and retrieves console logs by log type.
         /// </summary>
-        /// <param name="logType">The log type to filter by (if null, all types are retrieved).</param>
+        /// <param name="logType">The log type to filter by (if "All", all types are retrieved).</param>
         /// <returns>The filtered log data.</returns>
-        public static LogDisplayDto GetConsoleLog(McpLogType logType)
+        public static LogDisplayDto GetConsoleLogsByType(string logType)
         {
             System.Collections.Generic.List<LogEntryDto> allEntries;
             
-            if (logType == McpLogType.All)
+            if (string.Equals(logType, McpLogType.All, StringComparison.OrdinalIgnoreCase))
             {
                 allEntries = LogRetriever.GetAllLogs();
             }
             else
             {
-                // Convert McpLogType to LogType for ConsoleLogRetriever
+                // Convert string logType to LogType for ConsoleLogRetriever
                 UnityEngine.LogType unityLogType = ConvertMcpLogTypeToLogType(logType);
                 allEntries = LogRetriever.GetLogsByType(unityLogType);
             }
@@ -78,18 +78,18 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Filters and retrieves console logs by log type and message content.
+        /// Filters and retrieves console logs by log type and searches within message content.
         /// </summary>
-        /// <param name="logType">The log type to filter by (if null or "All", all types are included).</param>
+        /// <param name="logType">The log type to filter by (if "All", all types are included).</param>
         /// <param name="searchText">The text to search for within messages (if null or empty, no search is performed).</param>
         /// <param name="useRegex">Whether to use regular expression for search.</param>
         /// <param name="searchInStackTrace">Whether to search within stack trace as well.</param>
         /// <returns>The filtered log data.</returns>
-        public static LogDisplayDto GetConsoleLog(McpLogType logType, string searchText, bool useRegex, bool searchInStackTrace)
+        public static LogDisplayDto SearchConsoleLogs(string logType, string searchText, bool useRegex, bool searchInStackTrace)
         {
             // Get logs based on type
             System.Collections.Generic.List<LogEntryDto> allEntries;
-            if (logType == McpLogType.All)
+            if (string.Equals(logType, McpLogType.All, StringComparison.OrdinalIgnoreCase))
             {
                 allEntries = LogRetriever.GetAllLogs();
             }

@@ -30,7 +30,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     success = true,
                     message = "PlayMode test execution completed (detailed results not available)",
-                    completedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    completedAt = DateTime.Now.ToString("o"),
                     testCount = 1,
                     passedCount = 1,
                     failedCount = 0,
@@ -39,15 +39,34 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
             
+            int totalTests = CountTotalTests(result);
+            int passedTests = CountPassedTests(result);
+            int failedTests = CountFailedTests(result);
+            int skippedTests = CountSkippedTests(result);
+            
+            string message;
+            bool success;
+            
+            if (totalTests == 0)
+            {
+                message = "No tests found matching the specified filter criteria";
+                success = false;
+            }
+            else
+            {
+                message = $"Test execution completed with status: {result.TestStatus}";
+                success = result.TestStatus == TestStatus.Passed;
+            }
+            
             return new SerializableTestResult
             {
-                success = result.TestStatus == TestStatus.Passed,
-                message = $"Test execution completed with status: {result.TestStatus}",
-                completedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
-                testCount = CountTotalTests(result),
-                passedCount = CountPassedTests(result),
-                failedCount = CountFailedTests(result),
-                skippedCount = CountSkippedTests(result),
+                success = success,
+                message = message,
+                completedAt = DateTime.Now.ToString("o"),
+                testCount = totalTests,
+                passedCount = passedTests,
+                failedCount = failedTests,
+                skippedCount = skippedTests,
                 xmlPath = null
             };
         }
