@@ -65,6 +65,37 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsTrue(response.Success, $"Expected success but got error: {response.ErrorMessage}");
             Assert.IsTrue(string.IsNullOrEmpty(response.ErrorMessage), "ErrorMessage should be empty on success");
         }
+
+        [Test]
+        public async Task ExecuteAsync_CodeWithoutReturn_ShouldAutoReturnAndSucceed()
+        {
+            // Arrange
+            DynamicCodeSecurityLevel prev = McpEditorSettings.GetDynamicCodeSecurityLevel();
+            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            ExecuteDynamicCodeTool tool = new ExecuteDynamicCodeTool();
+            JObject paramsToken = new JObject
+            {
+                ["Code"] = "int x = 1; // no explicit return",
+                ["CompileOnly"] = false
+            };
+
+            // Act
+            BaseToolResponse baseResponse = null;
+            try
+            {
+                baseResponse = await tool.ExecuteAsync(paramsToken);
+            }
+            finally
+            {
+                McpEditorSettings.SetDynamicCodeSecurityLevel(prev);
+            }
+            ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
+
+            // Assert
+            Assert.IsNotNull(response, "Response should be ExecuteDynamicCodeResponse");
+            Assert.IsTrue(response.Success, $"Expected success but got error: {response.ErrorMessage}");
+            Assert.IsTrue(string.IsNullOrEmpty(response.ErrorMessage), "ErrorMessage should be empty on success");
+        }
     }
 }
 #endif

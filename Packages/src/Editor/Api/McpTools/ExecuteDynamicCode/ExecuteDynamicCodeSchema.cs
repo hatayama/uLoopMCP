@@ -12,7 +12,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>C# code to execute</summary>
         [Description(@"Editor automation only — no file I/O, no script authoring.
 
-Direct statements only (no classes/namespaces/methods); must return a value.
+Direct statements only (no classes/namespaces/methods); return is optional (auto 'return null;' if omitted).
 
 You may include using directives at the top; they are hoisted above the wrapper.
 Example:
@@ -40,7 +40,16 @@ Need files/dirs? Run terminal commands.")]
 - For throwaway snippets, prefer defining locals directly in code
 - Keys are not preserved; values map to parameters[""param0""], parameters[""param1""], ...
 - Use when injecting UnityEngine.Object or sensitive values, or reusing a snippet with varying data
-- Use object values supported by the Editor; prefer fully-qualified type names for ambiguous refs (e.g., UnityEngine.Object)")]
+- Use object values supported by the Editor; prefer fully-qualified type names for ambiguous refs (e.g., UnityEngine.Object)
+
+- Input type must be an OBJECT. Strings like ""{}"" are invalid.
+- Do: omit 'Parameters' entirely, or use {}
+- Don't: ""{}"" (string), ""{""a"":1}"" (string)
+
+Examples:
+OK:   ""Parameters"": {}
+OK:   (omit the 'Parameters' property)
+NG:   ""Parameters"": ""{}""")]
         public Dictionary<string, object> Parameters { get; set; } = new();
         
         /// <summary>Compile only (do not execute)</summary>

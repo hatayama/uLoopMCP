@@ -15,7 +15,7 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     [McpTool(Description = @"Editor automation only — no file I/O, no script authoring.
 
-Direct statements only (no classes/namespaces/methods); must return a value.
+Direct statements only (no classes/namespaces/methods); return is optional (auto 'return null;' if omitted).
 
 You may include using directives at the top; they are hoisted above the wrapper.
 Example:
@@ -79,7 +79,7 @@ Need files/dirs? Run terminal commands.")]
                 // Log execution start with VibeLogger
                 VibeLogger.LogInfo(
                     "execute_dynamic_code_start",
-                    "Dynamic code execution started",
+                    "Dynamic code execution started (return optional)",
                     new { 
                         correlationId,
                         codeLength = parameters.Code?.Length ?? 0,
@@ -88,7 +88,7 @@ Need files/dirs? Run terminal commands.")]
                         securityLevel = _currentSecurityLevel.ToString()
                     },
                     correlationId,
-                    "Dynamic code execution request received",
+                    "Dynamic code execution request received (return is optional)",
                     "Monitor execution flow and performance"
                 );
                 
@@ -161,6 +161,41 @@ Need files/dirs? Run terminal commands.")]
                     cancellationToken,
                     parameters.CompileOnly
                 );
+
+                // Optional: auto-insert return retry if missing return likely caused failure (unconditional)
+                if (!executionResult.Success)
+                {
+                    bool looksLikeMissingReturn = false;
+                    if (executionResult.CompilationErrors?.Any() == true)
+                    {
+                        looksLikeMissingReturn = executionResult.CompilationErrors.Any(e => e.ErrorCode == "CS0161" || e.ErrorCode == "CS0127");
+                    }
+                    else if (executionResult.Logs?.Any() == true)
+                    {
+                        looksLikeMissingReturn = executionResult.Logs.Any(l => l.Contains("CS0161") || l.Contains("CS0127") || l.Contains("must return a value"));
+                    }
+
+                    if (looksLikeMissingReturn)
+                    {
+                        string codeWithReturn = AppendReturnIfMissing(originalCode);
+                        ExecutionResult retryReturnResult = await _executor.ExecuteCodeAsync(
+                            codeWithReturn,
+                            "DynamicCommand",
+                            parametersArray,
+                            cancellationToken,
+                            parameters.CompileOnly
+                        );
+                        if (retryReturnResult.Success)
+                        {
+                            executionResult = retryReturnResult;
+                        }
+                        else if (retryReturnResult.Logs?.Any() == true)
+                        {
+                            if (executionResult.Logs == null) executionResult.Logs = new List<string>();
+                            executionResult.Logs.AddRange(retryReturnResult.Logs);
+                        }
+                    }
+                }
 
                 // Optional: simple auto-qualify retry if enabled and first attempt failed with likely UnityEngine identifiers
                 if (!executionResult.Success && parameters.AutoQualifyUnityTypesOnce)
@@ -442,6 +477,20 @@ Need files/dirs? Run terminal commands.")]
                 }
             }
             return suspects;
+        }
+        
+        /// <summary>
+        /// Append a safe default return when snippet likely misses a return statement.
+        /// - Adds a trailing semicolon if last non-whitespace char is not ';'
+        /// - Appends '\nreturn null;' to make result type object-compatible
+        /// </summary>
+        private static string AppendReturnIfMissing(string originalCode)
+        {
+            string code = originalCode ?? string.Empty;
+            string trimmed = code.TrimEnd();
+            bool endsWithSemicolon = trimmed.EndsWith(";");
+            string builder = endsWithSemicolon ? code : (code + ";");
+            return builder + "\nreturn null;";
         }
         
         /// <summary>
