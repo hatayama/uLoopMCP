@@ -110,7 +110,12 @@ namespace io.github.hatayama.uLoopMCP
                 // Check for specific Dictionary<string, object> conversion errors
                 if (ex.Message.Contains("Dictionary") && ex.Message.Contains("Error converting value"))
                 {
-                    errorMessage = $"Parameter 'Parameters' must be an object, not a string. Received: {paramsToken["parameters"]?.ToString() ?? paramsToken["Parameters"]?.ToString() ?? "null"}";
+                    string received = paramsToken["parameters"]?.ToString() ?? paramsToken["Parameters"]?.ToString() ?? "null";
+                    errorMessage =
+                        "Parameter 'Parameters' must be an object, not a string. " +
+                        "Do: omit 'Parameters' or use {}. " +
+                        "Don't: \"{}\" (string). " +
+                        $"Received: {received}";
                 }
                 
                 throw new ParameterValidationException(errorMessage, ex);
