@@ -30,15 +30,15 @@ namespace io.github.hatayama.uLoopMCP
         public AssemblyLoadingMode AssemblyMode { get; set; } = AssemblyLoadingMode.AllAssemblies;
     }
 
-/// <summary>
-/// Defines the mode for loading assemblies during compilation
-/// </summary>
-public enum AssemblyLoadingMode
-{
-    /// <summary>Reference only selected assemblies</summary>
-    SelectiveReference,
-    
-    /// <summary>Add all assemblies</summary>
-    AllAssemblies
-}
+    /// <summary>
+    /// Defines the mode for loading assemblies during compilation
+    /// </summary>
+    public enum AssemblyLoadingMode
+    {
+        /// <summary>Reference only selected assemblies</summary>
+        SelectiveReference,
+        
+        /// <summary>Add all assemblies</summary>
+        AllAssemblies
+    }
 }
