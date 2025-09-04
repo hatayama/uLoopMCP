@@ -42,7 +42,7 @@ namespace io.github.hatayama.uLoopMCP
             // Check all editor types for existing configurations
             foreach (McpEditorType editorType in Enum.GetValues(typeof(McpEditorType)))
             {
-                McpConfigService configService = factory.GetConfigService(editorType);
+                IMcpConfigService configService = factory.GetConfigService(editorType);
                 
                 // Only update if configuration already exists
                 if (configService.IsConfigured())
