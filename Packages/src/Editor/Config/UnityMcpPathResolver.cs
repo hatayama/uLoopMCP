@@ -101,7 +101,6 @@ namespace io.github.hatayama.uLoopMCP
         private const string VSCODE_CONFIG_DIR = ".vscode";
         private const string GEMINI_CONFIG_DIR = ".gemini";
         private const string CODEX_CONFIG_DIR = ".codex";
-        private const string CODEX_APPDATA_DIR = "codex";
         private const string CODEIUM_CONFIG_DIR = ".codeium";
         private const string WINDSURF_SUBDIR = "windsurf";
         private const string MCP_CONFIG_FILE = "mcp.json";
@@ -176,26 +175,12 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Gets the path to the Codex configuration file.
         /// macOS/Linux: ~/.codex/config.toml
-        /// Windows: If %USERPROFILE%\.codex\config.toml exists, use it (compat); otherwise %APPDATA%\codex\config.toml
+        /// Windows: %USERPROFILE%\\.codex\\config.toml
         /// </summary>
         public static string GetCodexConfigPath()
         {
             string homeDirectory = System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile);
-            string unixLikePath = Path.Combine(homeDirectory, CODEX_CONFIG_DIR, CODEX_CONFIG_FILE);
-
-            if (UnityEngine.SystemInfo.operatingSystemFamily == UnityEngine.OperatingSystemFamily.Windows)
-            {
-                string compatPath = unixLikePath;
-                if (File.Exists(compatPath))
-                {
-                    return compatPath;
-                }
-
-                string appDataDirectory = System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData);
-                return Path.Combine(appDataDirectory, CODEX_APPDATA_DIR, CODEX_CONFIG_FILE);
-            }
-
-            return unixLikePath;
+            return Path.Combine(homeDirectory, CODEX_CONFIG_DIR, CODEX_CONFIG_FILE);
         }
 
         /// <summary>
@@ -247,26 +232,12 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Gets the Codex configuration directory path.
         /// macOS/Linux: ~/.codex
-        /// Windows: If %USERPROFILE%\.codex\config.toml exists, use %USERPROFILE%\.codex; otherwise %APPDATA%\codex
+        /// Windows: %USERPROFILE%\\.codex
         /// </summary>
         public static string GetCodexConfigDirectory()
         {
             string homeDirectory = System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile);
-            string unixLikeDir = Path.Combine(homeDirectory, CODEX_CONFIG_DIR);
-
-            if (UnityEngine.SystemInfo.operatingSystemFamily == UnityEngine.OperatingSystemFamily.Windows)
-            {
-                string compatFilePath = Path.Combine(unixLikeDir, CODEX_CONFIG_FILE);
-                if (File.Exists(compatFilePath))
-                {
-                    return unixLikeDir;
-                }
-
-                string appDataDirectory = System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData);
-                return Path.Combine(appDataDirectory, CODEX_APPDATA_DIR);
-            }
-
-            return unixLikeDir;
+            return Path.Combine(homeDirectory, CODEX_CONFIG_DIR);
         }
 
         /// <summary>
