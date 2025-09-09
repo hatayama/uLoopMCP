@@ -55,7 +55,21 @@ namespace io.github.hatayama.uLoopMCP
             (string arg0, int? existingPort) = ReadCurrentValues(content);
             if (string.IsNullOrEmpty(arg0) || existingPort == null) return true;
 
-            return arg0 != expectedArg0 || existingPort.Value != port;
+            if (arg0 != expectedArg0 || existingPort.Value != port) return true;
+
+            // When compiled with ULOOPMCP_DEBUG, require debug env flags to be present
+#if ULOOPMCP_DEBUG
+            Match section = SectionRegex.Match(content);
+            if (section.Success)
+            {
+                System.Collections.Generic.Dictionary<string, string> envPairs = ParseEnvPairs(section.Value);
+                bool hasMcpDebug = envPairs.TryGetValue("MCP_DEBUG", out string debugVal) && string.Equals(debugVal, "true", System.StringComparison.Ordinal);
+                bool hasNodeOptions = envPairs.TryGetValue("NODE_OPTIONS", out string nodeOpt) && string.Equals(nodeOpt, "--enable-source-maps", System.StringComparison.Ordinal);
+                if (!hasMcpDebug || !hasNodeOptions) return true;
+            }
+#endif
+
+            return false;
         }
 
         public void AutoConfigure(int port)
@@ -110,31 +124,29 @@ namespace io.github.hatayama.uLoopMCP
             if (!File.Exists(path))
             {
                 AutoConfigure(port);
-                return;
             }
 
             string content = File.ReadAllText(path);
 
-            // If section not exists, create it first
+            // If section not exists, create it first and reload
             if (!SectionRegex.IsMatch(content))
             {
                 AutoConfigure(port);
-                return;
+                content = File.ReadAllText(path);
             }
 
             // Replace only within the uLoopMCP section and update dev logs settings
-            System.Text.RegularExpressions.Match section = SectionRegex.Match(content);
+            Match section = SectionRegex.Match(content);
             if (!section.Success)
             {
+                // As a last attempt, try to autoconfigure and reload once
                 AutoConfigure(port);
-                return;
-            }
-
-            string serverPath = UnityMcpPathResolver.GetTypeScriptServerPath();
-            if (string.IsNullOrEmpty(serverPath) || !File.Exists(serverPath))
-            {
-                // Cannot resolve server path; do not trigger an update.
-                return;
+                content = File.ReadAllText(path);
+                section = SectionRegex.Match(content);
+                if (!section.Success)
+                {
+                    return;
+                }
             }
 
             string updatedSection = UpdateSectionWithDevelopmentSettings(section.Value, port, developmentMode, enableMcpLogs);
@@ -144,19 +156,19 @@ namespace io.github.hatayama.uLoopMCP
 
         private static (string arg0, int? port) ReadCurrentValues(string content)
         {
-            System.Text.RegularExpressions.Match section = SectionRegex.Match(content);
+            Match section = SectionRegex.Match(content);
             if (!section.Success) return (null, null);
 
             string arg0 = null;
             int? port = null;
 
-            System.Text.RegularExpressions.Match a = Arg0InnerRegex.Match(section.Value);
+            Match a = Arg0InnerRegex.Match(section.Value);
             if (a.Success)
             {
                 arg0 = a.Groups["arg0"].Value;
             }
 
-            System.Text.RegularExpressions.Match p = PortInnerRegex.Match(section.Value);
+            Match p = PortInnerRegex.Match(section.Value);
             if (p.Success)
             {
                 int value;
@@ -176,22 +188,28 @@ namespace io.github.hatayama.uLoopMCP
             sb.AppendLine("[mcp_servers.uLoopMCP]");
             sb.AppendLine("command = \"node\"");
             sb.Append("args = [\"").Append(escapedPath).AppendLine("\"]");
-            sb.Append("env = { \"UNITY_TCP_PORT\" = \"").Append(port.ToString()).AppendLine("\" }");
+            System.Text.StringBuilder envLine = new System.Text.StringBuilder();
+            envLine.Append("env = { \"UNITY_TCP_PORT\" = \"").Append(port.ToString()).Append("\"");
+#if ULOOPMCP_DEBUG
+            envLine.Append(", \"MCP_DEBUG\" = \"true\", \"NODE_OPTIONS\" = \"--enable-source-maps\"");
+#endif
+            envLine.AppendLine(" }");
+            sb.Append(envLine.ToString());
             return sb.ToString();
         }
 
         private static string UpdateSectionWithDevelopmentSettings(string sectionText, int port, bool developmentMode, bool enableMcpLogs)
         {
             // Ensure env line exists and update key-values
-            System.Text.RegularExpressions.Match envMatch = EnvLineRegex.Match(sectionText);
+            Match envMatch = EnvLineRegex.Match(sectionText);
             string envBody = envMatch.Success ? envMatch.Groups["body"].Value : string.Empty;
 
             System.Collections.Generic.Dictionary<string, string> pairs = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.Ordinal);
 
             if (!string.IsNullOrEmpty(envBody))
             {
-                System.Text.RegularExpressions.MatchCollection mc = EnvPairRegex.Matches(envBody);
-                foreach (System.Text.RegularExpressions.Match m in mc)
+                MatchCollection mc = EnvPairRegex.Matches(envBody);
+                foreach (Match m in mc)
                 {
                     string key = m.Groups["key"].Value;
                     string value = m.Groups["value"].Value;
@@ -251,7 +269,7 @@ namespace io.github.hatayama.uLoopMCP
             else
             {
                 // Insert after args line if exists, otherwise append at end
-                System.Text.RegularExpressions.Match argsMatch = Arg0InnerRegex.Match(sectionText);
+                Match argsMatch = Arg0InnerRegex.Match(sectionText);
                 if (argsMatch.Success)
                 {
                     int insertIndex = argsMatch.Index + argsMatch.Length;
@@ -269,6 +287,29 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return updatedSection;
+        }
+
+        private static System.Collections.Generic.Dictionary<string, string> ParseEnvPairs(string sectionText)
+        {
+            System.Collections.Generic.Dictionary<string, string> pairs = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.Ordinal);
+            Match envMatch = EnvLineRegex.Match(sectionText);
+            if (!envMatch.Success) return pairs;
+
+            string envBody = envMatch.Groups["body"].Value;
+            if (string.IsNullOrEmpty(envBody)) return pairs;
+
+            MatchCollection mc = EnvPairRegex.Matches(envBody);
+            foreach (Match m in mc)
+            {
+                string key = m.Groups["key"].Value;
+                string value = m.Groups["value"].Value;
+                if (!pairs.ContainsKey(key))
+                {
+                    pairs.Add(key, value);
+                }
+            }
+
+            return pairs;
         }
 
         private static void EnsureDirectory(string filePath)

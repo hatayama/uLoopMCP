@@ -1,6 +1,4 @@
 using System;
-using System.Linq;
-using UnityEditor;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -17,7 +15,6 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class McpDebugStateUpdater
     {
-
         /// <summary>
         /// Updates all configured MCP editor settings to match current ULOOPMCP_DEBUG state
         /// Called during domain reload to ensure configurations stay in sync
