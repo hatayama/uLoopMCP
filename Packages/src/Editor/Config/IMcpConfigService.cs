@@ -1,5 +1,3 @@
-using System;
-
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>

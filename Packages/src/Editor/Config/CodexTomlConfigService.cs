@@ -9,10 +9,32 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public sealed class CodexTomlConfigService : IMcpConfigService
     {
-        private static readonly Regex SectionRegex = new Regex("(?ms)^\\[mcp_servers\\.uLoopMCP\\]\\s*.*?(?=^\\[|\\z)");
-        private static readonly Regex AnyMcpServerRegex = new Regex("(?ms)^\\[mcp_servers\\.[^\\]]+\\]\\s*.*?(?=^\\[|\\z)");
-        private static readonly Regex Arg0Regex = new Regex("(?ms)^\\[mcp_servers\\.uLoopMCP\\].*?^args\\s*=\\s*\\[\\s*\"(?<arg0>[^\"\\r\\n]+)\"");
-        private static readonly Regex PortRegex = new Regex("env\\s*=\\s*\\{[^}]*\"UNITY_TCP_PORT\"\\s*=\\s*\"(?<port>\\d+)\"");
+        private static readonly Regex SectionRegex = new Regex(
+            @"(?ms)^\[mcp_servers\.uLoopMCP\]\s*.*?(?=^\[|\z)",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex AnyMcpServerRegex = new Regex(
+            @"(?ms)^\[mcp_servers\.[^\]]+\]\s*.*?(?=^\[|\z)",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex Arg0Regex = new Regex(
+            @"(?ms)^\[mcp_servers\.uLoopMCP\].*?^\s*args\s*=\s*\[\s*""(?<arg0>[^""\r\n]+)""",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex PortRegex = new Regex(
+            @"env\s*=\s*\{[^}]*""UNITY_TCP_PORT""\s*=\s*['""]?(?<port>\d+)['""]?",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+        // Inner-scope regexes for parsing within the matched uLoopMCP section
+        private static readonly Regex Arg0InnerRegex = new Regex(
+            @"(?m)^\s*args\s*=\s*\[\s*""(?<arg0>[^""\r\n]+)""",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex PortInnerRegex = new Regex(
+            @"(?m)^\s*env\s*=\s*\{[^\}]*""UNITY_TCP_PORT""\s*=\s*['""]?(?<port>\d+)['""]?",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex EnvLineRegex = new Regex(
+            @"(?m)^\s*env\s*=\s*\{(?<body>[^\}]*)\}",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex EnvPairRegex = new Regex(
+            @"(?m)""(?<key>[^""]+)""\s*=\s*(?:""(?<value>[^""]+)""|(?<value>[^,}\r\n]+))",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         public bool IsConfigured()
         {
@@ -29,6 +51,7 @@ namespace io.github.hatayama.uLoopMCP
             string content = File.ReadAllText(path);
 
             string expectedArg0 = UnityMcpPathResolver.GetTypeScriptServerPath();
+            if (string.IsNullOrEmpty(expectedArg0) || !File.Exists(expectedArg0)) return false;
             (string arg0, int? existingPort) = ReadCurrentValues(content);
             if (string.IsNullOrEmpty(arg0) || existingPort == null) return true;
 
@@ -42,6 +65,10 @@ namespace io.github.hatayama.uLoopMCP
             string content = File.Exists(path) ? File.ReadAllText(path) : string.Empty;
 
             string serverPath = UnityMcpPathResolver.GetTypeScriptServerPath();
+            if (string.IsNullOrEmpty(serverPath) || !File.Exists(serverPath))
+            {
+                throw new System.InvalidOperationException("TypeScript server bundle path not found.");
+            }
             string block = BuildBlock(port, serverPath);
 
             string result;
@@ -95,30 +122,48 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // Replace only the port value in env
-            string newContent = PortRegex.Replace(content, m =>
+            // Replace only within the uLoopMCP section and update dev logs settings
+            System.Text.RegularExpressions.Match section = SectionRegex.Match(content);
+            if (!section.Success)
             {
-                return m.Value.Replace(m.Groups["port"].Value, port.ToString());
-            });
+                AutoConfigure(port);
+                return;
+            }
 
+            string serverPath = UnityMcpPathResolver.GetTypeScriptServerPath();
+            if (string.IsNullOrEmpty(serverPath) || !File.Exists(serverPath))
+            {
+                // Cannot resolve server path; do not trigger an update.
+                return;
+            }
+
+            string updatedSection = UpdateSectionWithDevelopmentSettings(section.Value, port, developmentMode, enableMcpLogs);
+            string newContent = content.Substring(0, section.Index) + updatedSection + content.Substring(section.Index + section.Length);
             File.WriteAllText(path, newContent);
         }
 
         private static (string arg0, int? port) ReadCurrentValues(string content)
         {
+            System.Text.RegularExpressions.Match section = SectionRegex.Match(content);
+            if (!section.Success) return (null, null);
+
             string arg0 = null;
             int? port = null;
 
-            var m = Arg0Regex.Match(content);
-            if (m.Success)
+            System.Text.RegularExpressions.Match a = Arg0InnerRegex.Match(section.Value);
+            if (a.Success)
             {
-                arg0 = m.Groups["arg0"].Value;
+                arg0 = a.Groups["arg0"].Value;
             }
 
-            var p = PortRegex.Match(content);
-            if (p.Success && int.TryParse(p.Groups["port"].Value, out int v))
+            System.Text.RegularExpressions.Match p = PortInnerRegex.Match(section.Value);
+            if (p.Success)
             {
-                port = v;
+                int value;
+                if (int.TryParse(p.Groups["port"].Value, out value))
+                {
+                    port = value;
+                }
             }
 
             return (arg0, port);
@@ -133,6 +178,97 @@ namespace io.github.hatayama.uLoopMCP
             sb.Append("args = [\"").Append(escapedPath).AppendLine("\"]");
             sb.Append("env = { \"UNITY_TCP_PORT\" = \"").Append(port.ToString()).AppendLine("\" }");
             return sb.ToString();
+        }
+
+        private static string UpdateSectionWithDevelopmentSettings(string sectionText, int port, bool developmentMode, bool enableMcpLogs)
+        {
+            // Ensure env line exists and update key-values
+            System.Text.RegularExpressions.Match envMatch = EnvLineRegex.Match(sectionText);
+            string envBody = envMatch.Success ? envMatch.Groups["body"].Value : string.Empty;
+
+            System.Collections.Generic.Dictionary<string, string> pairs = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.Ordinal);
+
+            if (!string.IsNullOrEmpty(envBody))
+            {
+                System.Text.RegularExpressions.MatchCollection mc = EnvPairRegex.Matches(envBody);
+                foreach (System.Text.RegularExpressions.Match m in mc)
+                {
+                    string key = m.Groups["key"].Value;
+                    string value = m.Groups["value"].Value;
+                    if (!pairs.ContainsKey(key))
+                    {
+                        pairs.Add(key, value);
+                    }
+                }
+            }
+
+            // Update mandatory port
+            pairs["UNITY_TCP_PORT"] = port.ToString();
+
+            // Clean legacy flags
+            pairs.Remove("ULOOPMCP_DEBUG");
+            pairs.Remove("ULOOPMCP_PRODUCTION");
+
+            // Apply MCP debug logs
+            if (enableMcpLogs)
+            {
+                pairs["MCP_DEBUG"] = "true";
+                pairs["NODE_OPTIONS"] = "--enable-source-maps";
+            }
+            else
+            {
+                pairs.Remove("MCP_DEBUG");
+                pairs.Remove("NODE_OPTIONS");
+            }
+
+            // Rebuild env line with deterministic ordering
+            System.Collections.Generic.List<string> orderedKeys = new System.Collections.Generic.List<string>();
+            if (pairs.ContainsKey("UNITY_TCP_PORT")) orderedKeys.Add("UNITY_TCP_PORT");
+            if (pairs.ContainsKey("MCP_DEBUG")) orderedKeys.Add("MCP_DEBUG");
+            if (pairs.ContainsKey("NODE_OPTIONS")) orderedKeys.Add("NODE_OPTIONS");
+            foreach (System.Collections.Generic.KeyValuePair<string, string> kv in pairs)
+            {
+                if (orderedKeys.Contains(kv.Key)) continue;
+                orderedKeys.Add(kv.Key);
+            }
+
+            System.Text.StringBuilder envBuilder = new System.Text.StringBuilder();
+            for (int i = 0; i < orderedKeys.Count; i++)
+            {
+                string key = orderedKeys[i];
+                string value = pairs[key];
+                if (i > 0) envBuilder.Append(", ");
+                envBuilder.Append("\"").Append(key).Append("\"").Append(" = ");
+                envBuilder.Append("\"").Append(value).Append("\"");
+            }
+            string newEnvLine = "env = { " + envBuilder.ToString() + " }";
+
+            string updatedSection;
+            if (envMatch.Success)
+            {
+                updatedSection = sectionText.Substring(0, envMatch.Index) + newEnvLine + sectionText.Substring(envMatch.Index + envMatch.Length);
+            }
+            else
+            {
+                // Insert after args line if exists, otherwise append at end
+                System.Text.RegularExpressions.Match argsMatch = Arg0InnerRegex.Match(sectionText);
+                if (argsMatch.Success)
+                {
+                    int insertIndex = argsMatch.Index + argsMatch.Length;
+                    // Find end of line
+                    int lineEnd = sectionText.IndexOf('\n', insertIndex);
+                    if (lineEnd < 0) lineEnd = insertIndex;
+                    string prefix = sectionText.Substring(0, lineEnd + 1);
+                    string suffix = sectionText.Substring(lineEnd + 1);
+                    updatedSection = prefix + newEnvLine + System.Environment.NewLine + suffix;
+                }
+                else
+                {
+                    updatedSection = sectionText.TrimEnd() + System.Environment.NewLine + newEnvLine + System.Environment.NewLine;
+                }
+            }
+
+            return updatedSection;
         }
 
         private static void EnsureDirectory(string filePath)
