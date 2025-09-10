@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -195,17 +196,47 @@ namespace io.github.hatayama.uLoopMCP
                         }
                     );
 
-                // Compare only uLoopMCP parts as normalized JSON strings
-                string normalizedExisting = JsonConvert.SerializeObject(existingULoopServers, Formatting.None, SafeJsonSettings);
-                string normalizedNew = JsonConvert.SerializeObject(newULoopServers, Formatting.None, SafeJsonSettings);
+                // Convert to JToken and normalize object property order recursively
+                JToken existingToken = NormalizeJToken(JToken.FromObject(existingULoopServers));
+                JToken newToken = NormalizeJToken(JToken.FromObject(newULoopServers));
 
-                return normalizedExisting == normalizedNew;
+                // Order-insensitive deep equality comparison
+                return JToken.DeepEquals(existingToken, newToken);
             }
             catch (System.Exception)
             {
                 // If parsing fails, assume content is different
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Recursively normalizes a JToken by sorting JObject properties by name.
+        /// Array element order is preserved.
+        /// </summary>
+        private static JToken NormalizeJToken(JToken token)
+        {
+            if (token is JObject obj)
+            {
+                JObject sorted = new JObject();
+                foreach (JProperty prop in obj.Properties().OrderBy(p => p.Name, System.StringComparer.Ordinal))
+                {
+                    sorted.Add(prop.Name, NormalizeJToken(prop.Value));
+                }
+                return sorted;
+            }
+
+            if (token is JArray arr)
+            {
+                JArray normalizedArray = new JArray();
+                foreach (JToken item in arr)
+                {
+                    normalizedArray.Add(NormalizeJToken(item));
+                }
+                return normalizedArray;
+            }
+
+            return token; // JValue and others
         }
 
         /// <summary>
