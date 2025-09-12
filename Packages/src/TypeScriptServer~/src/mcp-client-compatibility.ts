@@ -130,9 +130,7 @@ export class McpClientCompatibility {
     }
 
     const normalizedName = clientName.toLowerCase();
-    return LIST_CHANGED_SUPPORTED_CLIENTS.some((supported) =>
-      normalizedName.includes(supported),
-    );
+    return LIST_CHANGED_SUPPORTED_CLIENTS.some((supported) => normalizedName.includes(supported));
   }
 
   /**
