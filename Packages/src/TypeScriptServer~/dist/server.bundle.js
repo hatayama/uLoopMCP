@@ -5485,7 +5485,7 @@ var NOTIFICATION_METHODS = {
 };
 var UNITY_CONNECTION = {
   DEFAULT_PORT: "8700",
-  DEFAULT_HOST: "localhost",
+  DEFAULT_HOST: "127.0.0.1",
   CONNECTION_TEST_MESSAGE: "connection_test"
 };
 var JSONRPC = {
@@ -5527,11 +5527,16 @@ var POLLING = {
   EXTENDED_INTERVAL_MS: 1e4
   // Slower polling interval after initial attempts
 };
+var LIST_CHANGED_SUPPORTED_CLIENTS = [
+  "cursor",
+  "mcp-inspector"
+];
 var LIST_CHANGED_UNSUPPORTED_CLIENTS = [
   "claude",
   "claude-code",
   "gemini",
-  "codeium"
+  "codeium",
+  "codex"
 ];
 var OUTPUT_DIRECTORIES = {
   ROOT: "uLoopMCPOutputs",
@@ -8655,12 +8660,22 @@ var McpClientCompatibility = class {
    */
   isListChangedUnsupported(clientName) {
     if (!clientName) {
-      return false;
+      return true;
     }
     const normalizedName = clientName.toLowerCase();
-    return LIST_CHANGED_UNSUPPORTED_CLIENTS.some(
+    const isSupported = LIST_CHANGED_SUPPORTED_CLIENTS.some(
+      (supported) => normalizedName.includes(supported)
+    );
+    if (isSupported) {
+      return false;
+    }
+    const isExplicitlyUnsupported = LIST_CHANGED_UNSUPPORTED_CLIENTS.some(
       (unsupported) => normalizedName.includes(unsupported)
     );
+    if (isExplicitlyUnsupported) {
+      return true;
+    }
+    return true;
   }
   /**
    * Handle client name initialization and setup
@@ -8691,7 +8706,13 @@ var McpClientCompatibility = class {
    * Check if client supports list_changed notifications
    */
   isListChangedSupported(clientName) {
-    return !this.isListChangedUnsupported(clientName);
+    if (!clientName) {
+      return false;
+    }
+    const normalizedName = clientName.toLowerCase();
+    return LIST_CHANGED_SUPPORTED_CLIENTS.some(
+      (supported) => normalizedName.includes(supported)
+    );
   }
   /**
    * Log client compatibility information

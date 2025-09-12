@@ -1,6 +1,10 @@
 import { UnityClient } from './unity-client.js';
 // Debug logging removed
-import { LIST_CHANGED_UNSUPPORTED_CLIENTS, DEFAULT_CLIENT_NAME } from './constants.js';
+import {
+  LIST_CHANGED_SUPPORTED_CLIENTS,
+  LIST_CHANGED_UNSUPPORTED_CLIENTS,
+  DEFAULT_CLIENT_NAME,
+} from './constants.js';
 
 /**
  * MCP Client Compatibility Manager - Manages client-specific compatibility and list_changed handling
@@ -53,13 +57,29 @@ export class McpClientCompatibility {
    */
   isListChangedUnsupported(clientName: string): boolean {
     if (!clientName) {
-      return false;
+      return true;
     }
 
     const normalizedName = clientName.toLowerCase();
-    return LIST_CHANGED_UNSUPPORTED_CLIENTS.some((unsupported) =>
+
+    // Whitelist first: supported clients should use async (list_changed)
+    const isSupported = LIST_CHANGED_SUPPORTED_CLIENTS.some((supported) =>
+      normalizedName.includes(supported),
+    );
+    if (isSupported) {
+      return false;
+    }
+
+    // Explicit blacklist for known unsupported clients
+    const isExplicitlyUnsupported = LIST_CHANGED_UNSUPPORTED_CLIENTS.some((unsupported) =>
       normalizedName.includes(unsupported),
     );
+    if (isExplicitlyUnsupported) {
+      return true;
+    }
+
+    // Default fallback: treat as unsupported (safer default)
+    return true;
   }
 
   /**
@@ -105,7 +125,14 @@ export class McpClientCompatibility {
    * Check if client supports list_changed notifications
    */
   isListChangedSupported(clientName: string): boolean {
-    return !this.isListChangedUnsupported(clientName);
+    if (!clientName) {
+      return false;
+    }
+
+    const normalizedName = clientName.toLowerCase();
+    return LIST_CHANGED_SUPPORTED_CLIENTS.some((supported) =>
+      normalizedName.includes(supported),
+    );
   }
 
   /**
