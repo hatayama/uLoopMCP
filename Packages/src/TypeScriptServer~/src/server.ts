@@ -53,8 +53,6 @@ class UnityMcpServer {
     // Simple environment variable check
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
 
-    VibeLogger.logInfo('mcp_server_starting', 'Unity MCP Server Starting');
-
     this.server = new Server(
       {
         name: MCP_SERVER_NAME,
@@ -184,19 +182,7 @@ class UnityMcpServer {
       const clientName = clientInfo?.name || '';
 
       // Debug logging for client name detection
-      VibeLogger.logInfo(
-        'mcp_client_name_received',
-        `MCP client name received: ${clientName}`,
-        {
-          client_name: clientName,
-          client_info: clientInfo,
-          is_list_changed_unsupported:
-            this.clientCompatibility.isListChangedUnsupported(clientName),
-        },
-        undefined,
-        'This logs the client name received during MCP initialize request',
-        'Analyze this to ensure claude-code is properly detected',
-      );
+      
 
       if (clientName) {
         this.clientCompatibility.setupClientCompatibility(clientName);
@@ -294,7 +280,6 @@ class UnityMcpServer {
       if (clientName) {
         this.toolManager.setClientName(clientName);
         await this.toolManager.initializeDynamicTools();
-        // Unity connection established and tools initialized
 
         // Send immediate tools changed notification for faster recovery
         this.eventHandler.sendToolsChangedNotification();
@@ -307,7 +292,7 @@ class UnityMcpServer {
       // Server starting with unified discovery service
     }
 
-    // Connect to MCP transport first - wait for client name before connecting to Unity
+    // Connect to MCP transport last - wait for client name before connecting to Unity
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
   }
