@@ -18,7 +18,7 @@ namespace io.github.hatayama.uLoopMCP
     /// - McpPortValidator: Validates port numbers for configuration
     /// - McpEditorSettings: Manages editor-specific settings like custom port
     /// </summary>
-    public class McpConfigService
+    public class McpConfigService : IMcpConfigService
     {
         private readonly McpConfigRepository _repository;
         private readonly McpEditorType _editorType;

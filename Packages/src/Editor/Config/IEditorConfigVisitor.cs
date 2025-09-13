@@ -46,6 +46,12 @@ namespace io.github.hatayama.uLoopMCP
         T VisitWindsurf();
 
         /// <summary>
+        /// Visits Codex editor configuration.
+        /// </summary>
+        /// <returns>Configuration result for Codex</returns>
+        T VisitCodex();
+
+        /// <summary>
         /// Visits MCP Inspector configuration.
         /// </summary>
         /// <returns>Configuration result for MCP Inspector</returns>

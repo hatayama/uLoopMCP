@@ -156,6 +156,20 @@ namespace io.github.hatayama.uLoopMCP
                     UnityEngine.Debug.LogError($"Domain reload recovery failed: {task.Exception}");
                 }
             }, TaskScheduler.FromCurrentSynchronizationContext());
+
+            // Synchronize MCP editor configurations with current debug symbol state after domain reload
+            // Use delayCall to ensure the editor is fully initialized before file I/O
+            EditorApplication.delayCall += () =>
+            {
+                try
+                {
+                    McpDebugStateUpdater.UpdateAllConfigurationsForDebugState();
+                }
+                catch (System.Exception ex)
+                {
+                    UnityEngine.Debug.LogWarning($"MCP debug-state configuration sync failed: {ex.Message}");
+                }
+            };
         }
 
         /// <summary>

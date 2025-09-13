@@ -332,6 +332,7 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorType.ClaudeCode => "Claude Code",
                 McpEditorType.VSCode => "VSCode",
                 McpEditorType.GeminiCLI => "Gemini CLI",
+                McpEditorType.Codex => "Codex",
                 McpEditorType.McpInspector => "MCP Inspector",
                 _ => editorType.ToString()
             };

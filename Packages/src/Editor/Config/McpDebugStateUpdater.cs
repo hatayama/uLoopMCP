@@ -1,6 +1,4 @@
 using System;
-using System.Linq;
-using UnityEditor;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -17,7 +15,6 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class McpDebugStateUpdater
     {
-
         /// <summary>
         /// Updates all configured MCP editor settings to match current ULOOPMCP_DEBUG state
         /// Called during domain reload to ensure configurations stay in sync
@@ -42,7 +39,7 @@ namespace io.github.hatayama.uLoopMCP
             // Check all editor types for existing configurations
             foreach (McpEditorType editorType in Enum.GetValues(typeof(McpEditorType)))
             {
-                McpConfigService configService = factory.GetConfigService(editorType);
+                IMcpConfigService configService = factory.GetConfigService(editorType);
                 
                 // Only update if configuration already exists
                 if (configService.IsConfigured())

@@ -113,6 +113,15 @@ namespace io.github.hatayama.uLoopMCP
                 );
             }
 
+            public EditorConfig VisitCodex()
+            {
+                return new EditorConfig(
+                    McpConstants.CLIENT_NAME_CODEX,
+                    UnityMcpPathResolver.GetCodexConfigPath(),
+                    UnityMcpPathResolver.GetCodexConfigDirectory()
+                );
+            }
+
             public EditorConfig VisitMcpInspector()
             {
                 return new EditorConfig(
@@ -147,6 +156,7 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorType.VSCode => visitor.VisitVSCode(),
                 McpEditorType.GeminiCLI => visitor.VisitGeminiCLI(),
                 McpEditorType.Windsurf => visitor.VisitWindsurf(),
+                McpEditorType.Codex => visitor.VisitCodex(),
                 McpEditorType.McpInspector => visitor.VisitMcpInspector(),
                 _ => throw new ArgumentException($"Unsupported editor type: {editorType}", nameof(editorType))
             };

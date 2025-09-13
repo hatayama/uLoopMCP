@@ -13,6 +13,7 @@ namespace io.github.hatayama.uLoopMCP
         VSCode,
         GeminiCLI,
         Windsurf,
+        Codex,
         McpInspector,
     }
 
@@ -99,12 +100,14 @@ namespace io.github.hatayama.uLoopMCP
         private const string CURSOR_CONFIG_DIR = ".cursor";
         private const string VSCODE_CONFIG_DIR = ".vscode";
         private const string GEMINI_CONFIG_DIR = ".gemini";
+        private const string CODEX_CONFIG_DIR = ".codex";
         private const string CODEIUM_CONFIG_DIR = ".codeium";
         private const string WINDSURF_SUBDIR = "windsurf";
         private const string MCP_CONFIG_FILE = "mcp.json";
         private const string CLAUDE_CODE_CONFIG_FILE = ".mcp.json";
         private const string GEMINI_CONFIG_FILE = "settings.json";
         private const string WINDSURF_CONFIG_FILE = "mcp_config.json";
+        private const string CODEX_CONFIG_FILE = "config.toml";
         private const string MCP_INSPECTOR_CONFIG_FILE = ".inspector.mcp.json";
 
         /// <summary>
@@ -170,6 +173,17 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Gets the path to the Codex configuration file.
+        /// macOS/Linux: ~/.codex/config.toml
+        /// Windows: %USERPROFILE%\\.codex\\config.toml
+        /// </summary>
+        public static string GetCodexConfigPath()
+        {
+            string homeDirectory = System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile);
+            return Path.Combine(homeDirectory, CODEX_CONFIG_DIR, CODEX_CONFIG_FILE);
+        }
+
+        /// <summary>
         /// Gets the configuration file path for the specified editor.
         /// </summary>
         /// <param name="editorType">The type of editor.</param>
@@ -213,6 +227,17 @@ namespace io.github.hatayama.uLoopMCP
         {
             string homeDirectory = System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile);
             return Path.Combine(homeDirectory, CODEIUM_CONFIG_DIR, WINDSURF_SUBDIR);
+        }
+
+        /// <summary>
+        /// Gets the Codex configuration directory path.
+        /// macOS/Linux: ~/.codex
+        /// Windows: %USERPROFILE%\\.codex
+        /// </summary>
+        public static string GetCodexConfigDirectory()
+        {
+            string homeDirectory = System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile);
+            return Path.Combine(homeDirectory, CODEX_CONFIG_DIR);
         }
 
         /// <summary>

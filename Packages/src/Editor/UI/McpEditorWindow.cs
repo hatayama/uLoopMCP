@@ -405,7 +405,7 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                McpConfigService configService = GetConfigService(_model.UI.SelectedEditorType);
+                IMcpConfigService configService = GetConfigService(_model.UI.SelectedEditorType);
                 isConfigured = configService.IsConfigured();
 
                 // Check for port mismatch if configured
@@ -456,7 +456,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void ConfigureEditor()
         {
-            McpConfigService configService = GetConfigService(_model.UI.SelectedEditorType);
+            IMcpConfigService configService = GetConfigService(_model.UI.SelectedEditorType);
             bool isServerRunning = McpServerController.IsServerRunning;
             int portToUse = isServerRunning ? McpServerController.ServerPort : _model.UI.CustomPort;
 
@@ -487,7 +487,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Get corresponding configuration service from editor type
         /// </summary>
-        private McpConfigService GetConfigService(McpEditorType editorType)
+        private IMcpConfigService GetConfigService(McpEditorType editorType)
         {
             return _configServiceFactory.GetConfigService(editorType);
         }
