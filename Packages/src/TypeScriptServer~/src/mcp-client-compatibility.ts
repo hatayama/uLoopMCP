@@ -2,7 +2,6 @@ import { UnityClient } from './unity-client.js';
 // Debug logging removed
 import {
   LIST_CHANGED_SUPPORTED_CLIENTS,
-  LIST_CHANGED_UNSUPPORTED_CLIENTS,
   DEFAULT_CLIENT_NAME,
 } from './constants.js';
 
@@ -56,30 +55,7 @@ export class McpClientCompatibility {
    * Check if client doesn't support list_changed notifications
    */
   isListChangedUnsupported(clientName: string): boolean {
-    if (!clientName) {
-      return true;
-    }
-
-    const normalizedName = clientName.toLowerCase();
-
-    // Whitelist first: supported clients should use async (list_changed)
-    const isSupported = LIST_CHANGED_SUPPORTED_CLIENTS.some((supported) =>
-      normalizedName.includes(supported),
-    );
-    if (isSupported) {
-      return false;
-    }
-
-    // Explicit blacklist for known unsupported clients
-    const isExplicitlyUnsupported = LIST_CHANGED_UNSUPPORTED_CLIENTS.some((unsupported) =>
-      normalizedName.includes(unsupported),
-    );
-    if (isExplicitlyUnsupported) {
-      return true;
-    }
-
-    // Default fallback: treat as unsupported (safer default)
-    return true;
+    return !this.isListChangedSupported(clientName);
   }
 
   /**

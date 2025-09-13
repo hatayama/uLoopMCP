@@ -126,15 +126,6 @@ export const LOG_MESSAGES = {
 // List of clients that support list_changed notifications
 export const LIST_CHANGED_SUPPORTED_CLIENTS = ['cursor', 'mcp-inspector'] as const;
 
-// List of clients that don't support list_changed notifications
-export const LIST_CHANGED_UNSUPPORTED_CLIENTS = [
-  'claude',
-  'claude-code',
-  'gemini',
-  'codeium',
-  'codex',
-] as const;
-
 // File output directories
 export const OUTPUT_DIRECTORIES = {
   ROOT: 'uLoopMCPOutputs',

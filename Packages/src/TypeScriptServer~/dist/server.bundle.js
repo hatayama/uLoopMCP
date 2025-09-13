@@ -5528,13 +5528,6 @@ var POLLING = {
   // Slower polling interval after initial attempts
 };
 var LIST_CHANGED_SUPPORTED_CLIENTS = ["cursor", "mcp-inspector"];
-var LIST_CHANGED_UNSUPPORTED_CLIENTS = [
-  "claude",
-  "claude-code",
-  "gemini",
-  "codeium",
-  "codex"
-];
 var OUTPUT_DIRECTORIES = {
   ROOT: "uLoopMCPOutputs",
   VIBE_LOGS: "VibeLogs"
@@ -8677,23 +8670,7 @@ var McpClientCompatibility = class {
    * Check if client doesn't support list_changed notifications
    */
   isListChangedUnsupported(clientName) {
-    if (!clientName) {
-      return true;
-    }
-    const normalizedName = clientName.toLowerCase();
-    const isSupported = LIST_CHANGED_SUPPORTED_CLIENTS.some(
-      (supported) => normalizedName.includes(supported)
-    );
-    if (isSupported) {
-      return false;
-    }
-    const isExplicitlyUnsupported = LIST_CHANGED_UNSUPPORTED_CLIENTS.some(
-      (unsupported) => normalizedName.includes(unsupported)
-    );
-    if (isExplicitlyUnsupported) {
-      return true;
-    }
-    return true;
+    return !this.isListChangedSupported(clientName);
   }
   /**
    * Handle client name initialization and setup
