@@ -164,10 +164,8 @@ eslint-results.xml
 # Yarn Integrity file
 .yarn-integrity
 
-# uMPC
-TestResults**
-
-
 requirements/
 
 .coderabbit.yaml
+
+AGENTS.md

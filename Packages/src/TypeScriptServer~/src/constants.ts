@@ -38,7 +38,7 @@ export const NOTIFICATION_METHODS = {
 // Unity connection configuration
 export const UNITY_CONNECTION = {
   DEFAULT_PORT: '8700',
-  DEFAULT_HOST: 'localhost',
+  DEFAULT_HOST: '127.0.0.1',
   CONNECTION_TEST_MESSAGE: 'connection_test',
 } as const;
 
@@ -123,13 +123,8 @@ export const LOG_MESSAGES = {
   CONNECTION_RECOVERY_POLLING: 'Starting connection recovery polling',
 } as const;
 
-// List of clients that don't support list_changed notifications
-export const LIST_CHANGED_UNSUPPORTED_CLIENTS = [
-  'claude',
-  'claude-code',
-  'gemini',
-  'codeium',
-] as const;
+// List of clients that support list_changed notifications
+export const LIST_CHANGED_SUPPORTED_CLIENTS = ['cursor', 'mcp-inspector'] as const;
 
 // File output directories
 export const OUTPUT_DIRECTORIES = {

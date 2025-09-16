@@ -51,6 +51,7 @@ namespace io.github.hatayama.uLoopMCP
         public const string CLIENT_NAME_VSCODE = "VSCode";
         public const string CLIENT_NAME_GEMINI_CLI = "Gemini CLI";
         public const string CLIENT_NAME_WINDSURF = "Windsurf";
+        public const string CLIENT_NAME_CODEX = "Codex";
         public const string CLIENT_NAME_MCP_INSPECTOR = "MCP Inspector";
         public const string UNKNOWN_CLIENT_NAME = "Unknown Client";
         

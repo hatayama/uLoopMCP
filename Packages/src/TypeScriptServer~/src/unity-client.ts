@@ -10,6 +10,7 @@ import {
 import { safeSetTimeout } from './utils/safe-timer.js';
 import { ConnectionManager } from './connection-manager.js';
 import { MessageHandler } from './message-handler.js';
+import { VibeLogger } from './utils/vibe-logger.js';
 
 /**
  * Unity client interface for external dependencies
@@ -47,6 +48,8 @@ export class UnityClient {
   private readonly processId: number = process.pid;
   private readonly randomSeed: number = Math.floor(Math.random() * 1000);
   private storedClientName: string | null = null;
+  private isConnecting: boolean = false;
+  private connectingPromise: Promise<void> | null = null;
 
   private constructor() {
     const unityTcpPort: string | undefined = process.env.UNITY_TCP_PORT;
@@ -171,7 +174,6 @@ export class UnityClient {
     // If already connected and healthy, return immediately
     if (this._connected && this.socket && !this.socket.destroyed) {
       try {
-        // Quick health check - if it passes, we're good
         if (await this.testConnection()) {
           return;
         }
@@ -180,11 +182,31 @@ export class UnityClient {
       }
     }
 
-    // Disconnect any existing connection before creating new one
-    this.disconnect();
+    // Deduplicate concurrent connect attempts
+    if (this.connectingPromise) {
+      await this.connectingPromise;
+      return;
+    }
 
-    // Create new connection
-    await this.connect();
+    // Start a single connect attempt
+    this.connectingPromise = (async (): Promise<void> => {
+      this.isConnecting = true;
+      // Disconnect any existing connection before creating new one
+      this.disconnect();
+      await this.connect();
+    })()
+      .catch((error) => {
+        VibeLogger.logError('unity_connect_failed', 'Unity connect attempt failed', {
+          message: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      })
+      .finally(() => {
+        this.isConnecting = false;
+        this.connectingPromise = null;
+      });
+
+    await this.connectingPromise;
   }
 
   /**
@@ -218,9 +240,15 @@ export class UnityClient {
       // Handle errors (both during connection and after establishment)
       this.socket.on('error', (error) => {
         this._connected = false;
+        VibeLogger.logError('unity_socket_error', 'Unity socket error', {
+          message: error.message,
+        });
         if (this.socket?.connecting) {
           // Error during connection attempt
-          reject(new Error(`Unity connection failed: ${error.message}`));
+          const err = new Error(`Unity connection failed: ${error.message}`);
+          this.socket.destroy();
+          this.socket = null;
+          reject(err);
         } else {
           // Error after connection was established
           this.handleConnectionLoss();
@@ -240,6 +268,7 @@ export class UnityClient {
 
       // Handle incoming data (both notifications and responses)
       this.socket.on('data', (data) => {
+        // Trace frame arrival for debugging reconnect storms (rate limited by log system)
         // Handle incoming data as Buffer for proper Content-Length framing
         this.messageHandler.handleIncomingData(data);
       });

@@ -13,11 +13,11 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class McpConfigServiceFactory
     {
-        private readonly Dictionary<McpEditorType, McpConfigService> _configServices;
+        private readonly Dictionary<McpEditorType, IMcpConfigService> _configServices;
 
         public McpConfigServiceFactory()
         {
-            _configServices = new Dictionary<McpEditorType, McpConfigService>();
+            _configServices = new Dictionary<McpEditorType, IMcpConfigService>();
             InitializeAllServices();
         }
 
@@ -27,9 +27,9 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="editorType">Editor type</param>
         /// <returns>Configuration service</returns>
         /// <exception cref="ArgumentException">Thrown when unsupported editor type is specified</exception>
-        public McpConfigService GetConfigService(McpEditorType editorType)
+        public IMcpConfigService GetConfigService(McpEditorType editorType)
         {
-            if (_configServices.TryGetValue(editorType, out McpConfigService service))
+            if (_configServices.TryGetValue(editorType, out IMcpConfigService service))
             {
                 return service;
             }
@@ -41,7 +41,7 @@ namespace io.github.hatayama.uLoopMCP
         /// Get all available configuration services
         /// </summary>
         /// <returns>Read-only collection of all configuration services</returns>
-        public IReadOnlyDictionary<McpEditorType, McpConfigService> GetAllConfigServices()
+        public IReadOnlyDictionary<McpEditorType, IMcpConfigService> GetAllConfigServices()
         {
             return _configServices;
         }
@@ -56,8 +56,16 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (McpEditorType editorType in allEditorTypes)
             {
-                McpConfigRepository repository = new();
-                McpConfigService service = new(repository, editorType);
+                IMcpConfigService service;
+                if (editorType == McpEditorType.Codex)
+                {
+                    service = new CodexTomlConfigService();
+                }
+                else
+                {
+                    McpConfigRepository repository = new();
+                    service = new McpConfigService(repository, editorType);
+                }
                 _configServices[editorType] = service;
             }
         }

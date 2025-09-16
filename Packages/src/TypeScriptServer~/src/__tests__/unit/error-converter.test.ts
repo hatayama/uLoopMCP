@@ -49,7 +49,7 @@ describe('ErrorConverter Unit Tests', () => {
   describe('Infrastructure Error Conversion', () => {
     test('should convert UnityCommunicationError to ConnectionError', () => {
       // Arrange
-      const infraError = new UnityCommunicationError('Unity connection failed', 'localhost:8700', {
+      const infraError = new UnityCommunicationError('Unity connection failed', '127.0.0.1:8700', {
         timeout: 5000,
       });
 
@@ -64,7 +64,7 @@ describe('ErrorConverter Unit Tests', () => {
       expect(result).toBeInstanceOf(ConnectionError);
       expect(result.message).toContain('Unity communication failed');
       expect(result.details).toHaveProperty('original_category', 'UNITY_COMMUNICATION');
-      expect(result.details).toHaveProperty('unity_endpoint', 'localhost:8700');
+      expect(result.details).toHaveProperty('unity_endpoint', '127.0.0.1:8700');
       expect(mockVibeLogger.logError).toHaveBeenCalledWith(
         'test_operation_infrastructure_error',
         'Infrastructure error during test_operation',
@@ -113,7 +113,7 @@ describe('ErrorConverter Unit Tests', () => {
 
     test('should convert NetworkError to DiscoveryError', () => {
       // Arrange
-      const infraError = new NetworkError('Port binding failed', 'localhost', 8700);
+      const infraError = new NetworkError('Port binding failed', '127.0.0.1', 8700);
 
       // Act
       const result = ErrorConverter.convertToDomainError(infraError, 'network_operation');
@@ -122,7 +122,7 @@ describe('ErrorConverter Unit Tests', () => {
       expect(result).toBeInstanceOf(DiscoveryError);
       expect(result.message).toContain('Network operation failed');
       expect(result.details).toHaveProperty('original_category', 'NETWORK');
-      expect(result.details).toHaveProperty('endpoint', 'localhost');
+      expect(result.details).toHaveProperty('endpoint', '127.0.0.1');
       expect(result.details).toHaveProperty('port', 8700);
     });
 

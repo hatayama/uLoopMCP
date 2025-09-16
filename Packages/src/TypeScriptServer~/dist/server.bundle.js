@@ -5485,7 +5485,7 @@ var NOTIFICATION_METHODS = {
 };
 var UNITY_CONNECTION = {
   DEFAULT_PORT: "8700",
-  DEFAULT_HOST: "localhost",
+  DEFAULT_HOST: "127.0.0.1",
   CONNECTION_TEST_MESSAGE: "connection_test"
 };
 var JSONRPC = {
@@ -5527,12 +5527,7 @@ var POLLING = {
   EXTENDED_INTERVAL_MS: 1e4
   // Slower polling interval after initial attempts
 };
-var LIST_CHANGED_UNSUPPORTED_CLIENTS = [
-  "claude",
-  "claude-code",
-  "gemini",
-  "codeium"
-];
+var LIST_CHANGED_SUPPORTED_CLIENTS = ["cursor", "mcp-inspector"];
 var OUTPUT_DIRECTORIES = {
   ROOT: "uLoopMCPOutputs",
   VIBE_LOGS: "VibeLogs"
@@ -6902,6 +6897,8 @@ var UnityClient = class _UnityClient {
   processId = process.pid;
   randomSeed = Math.floor(Math.random() * 1e3);
   storedClientName = null;
+  isConnecting = false;
+  connectingPromise = null;
   constructor() {
     const unityTcpPort = process.env.UNITY_TCP_PORT;
     if (!unityTcpPort) {
@@ -7008,8 +7005,24 @@ var UnityClient = class _UnityClient {
       } catch (error) {
       }
     }
-    this.disconnect();
-    await this.connect();
+    if (this.connectingPromise) {
+      await this.connectingPromise;
+      return;
+    }
+    this.connectingPromise = (async () => {
+      this.isConnecting = true;
+      this.disconnect();
+      await this.connect();
+    })().catch((error) => {
+      VibeLogger.logError("unity_connect_failed", "Unity connect attempt failed", {
+        message: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }).finally(() => {
+      this.isConnecting = false;
+      this.connectingPromise = null;
+    });
+    await this.connectingPromise;
   }
   /**
    * Connect to Unity
@@ -7033,6 +7046,9 @@ var UnityClient = class _UnityClient {
       });
       this.socket.on("error", (error) => {
         this._connected = false;
+        VibeLogger.logError("unity_socket_error", "Unity socket error", {
+          message: error.message
+        });
         if (this.socket?.connecting) {
           reject(new Error(`Unity connection failed: ${error.message}`));
         } else {
@@ -8654,13 +8670,7 @@ var McpClientCompatibility = class {
    * Check if client doesn't support list_changed notifications
    */
   isListChangedUnsupported(clientName) {
-    if (!clientName) {
-      return false;
-    }
-    const normalizedName = clientName.toLowerCase();
-    return LIST_CHANGED_UNSUPPORTED_CLIENTS.some(
-      (unsupported) => normalizedName.includes(unsupported)
-    );
+    return !this.isListChangedSupported(clientName);
   }
   /**
    * Handle client name initialization and setup
@@ -8691,7 +8701,11 @@ var McpClientCompatibility = class {
    * Check if client supports list_changed notifications
    */
   isListChangedSupported(clientName) {
-    return !this.isListChangedUnsupported(clientName);
+    if (!clientName) {
+      return false;
+    }
+    const normalizedName = clientName.toLowerCase();
+    return LIST_CHANGED_SUPPORTED_CLIENTS.some((supported) => normalizedName.includes(supported));
   }
   /**
    * Log client compatibility information
@@ -9008,7 +9022,6 @@ var UnityMcpServer = class {
   eventHandler;
   constructor() {
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
-    VibeLogger.logInfo("mcp_server_starting", "Unity MCP Server Starting");
     this.server = new Server(
       {
         name: MCP_SERVER_NAME,
@@ -9111,18 +9124,6 @@ var UnityMcpServer = class {
     this.server.setRequestHandler(InitializeRequestSchema, async (request) => {
       const clientInfo = request.params?.clientInfo;
       const clientName = clientInfo?.name || "";
-      VibeLogger.logInfo(
-        "mcp_client_name_received",
-        `MCP client name received: ${clientName}`,
-        {
-          client_name: clientName,
-          client_info: clientInfo,
-          is_list_changed_unsupported: this.clientCompatibility.isListChangedUnsupported(clientName)
-        },
-        void 0,
-        "This logs the client name received during MCP initialize request",
-        "Analyze this to ensure claude-code is properly detected"
-      );
       if (clientName) {
         this.clientCompatibility.setupClientCompatibility(clientName);
       }
