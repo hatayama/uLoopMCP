@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.33.0](https://github.com/hatayama/uLoopMCP/compare/v0.32.2...v0.33.0) (2025-09-16)
+
+
+### Features
+
+* **Editor:** add Codex MCP TOML config service and update Editor UI ([#292](https://github.com/hatayama/uLoopMCP/issues/292)) ([612fc70](https://github.com/hatayama/uLoopMCP/commit/612fc7032d39339557cc6db2c88469533db813a3))
+
 ## [0.32.2](https://github.com/hatayama/uLoopMCP/compare/v0.32.1...v0.32.2) (2025-09-10)
 
 
