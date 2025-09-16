@@ -245,7 +245,10 @@ export class UnityClient {
         });
         if (this.socket?.connecting) {
           // Error during connection attempt
-          reject(new Error(`Unity connection failed: ${error.message}`));
+          const err = new Error(`Unity connection failed: ${error.message}`);
+          this.socket.destroy();
+          this.socket = null;
+          reject(err);
         } else {
           // Error after connection was established
           this.handleConnectionLoss();
