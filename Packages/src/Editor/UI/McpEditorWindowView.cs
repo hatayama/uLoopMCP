@@ -10,30 +10,45 @@ namespace io.github.hatayama.uLoopMCP
     /// Related classes: McpEditorWindow (Presenter+Model), McpEditorWindowViewData
     /// Design document: ARCHITECTURE.md - UI layer separation pattern
     /// </summary>
-    public class McpEditorWindowView
+    public class McpEditorWindowView : IDisposable
     {
+        private GUIStyle _sectionBoxStyle;
+        private GUIStyle _clientItemBoxStyle;
+        private Texture2D _sectionBackgroundTexture;
+        private Texture2D _clientItemBackgroundTexture;
+
         private GUIStyle CreateSectionBoxStyle()
         {
-            GUIStyle style = new(EditorStyles.helpBox);
-            Texture2D backgroundTexture = new(1, 1);
-            backgroundTexture.SetPixel(0, 0, McpUIConstants.SECTION_BACKGROUND_COLOR);
-            backgroundTexture.Apply();
-            style.normal.background = backgroundTexture;
-            style.border = new RectOffset(4, 4, 4, 4);
-            style.padding = new RectOffset(8, 8, 8, 8);
-            return style;
+            if (_sectionBoxStyle != null)
+            {
+                return _sectionBoxStyle;
+            }
+
+            _sectionBoxStyle = new GUIStyle(EditorStyles.helpBox);
+            _sectionBackgroundTexture = new Texture2D(1, 1);
+            _sectionBackgroundTexture.SetPixel(0, 0, McpUIConstants.SECTION_BACKGROUND_COLOR);
+            _sectionBackgroundTexture.Apply();
+            _sectionBoxStyle.normal.background = _sectionBackgroundTexture;
+            _sectionBoxStyle.border = new RectOffset(4, 4, 4, 4);
+            _sectionBoxStyle.padding = new RectOffset(8, 8, 8, 8);
+            return _sectionBoxStyle;
         }
 
         private GUIStyle CreateClientItemBoxStyle()
         {
-            GUIStyle style = new(EditorStyles.helpBox);
-            Texture2D backgroundTexture = new(1, 1);
-            backgroundTexture.SetPixel(0, 0, McpUIConstants.CLIENT_ITEM_BACKGROUND_COLOR);
-            backgroundTexture.Apply();
-            style.normal.background = backgroundTexture;
-            style.border = new RectOffset(4, 4, 4, 4);
-            style.padding = new RectOffset(8, 8, 8, 8);
-            return style;
+            if (_clientItemBoxStyle != null)
+            {
+                return _clientItemBoxStyle;
+            }
+
+            _clientItemBoxStyle = new GUIStyle(EditorStyles.helpBox);
+            _clientItemBackgroundTexture = new Texture2D(1, 1);
+            _clientItemBackgroundTexture.SetPixel(0, 0, McpUIConstants.CLIENT_ITEM_BACKGROUND_COLOR);
+            _clientItemBackgroundTexture.Apply();
+            _clientItemBoxStyle.normal.background = _clientItemBackgroundTexture;
+            _clientItemBoxStyle.border = new RectOffset(4, 4, 4, 4);
+            _clientItemBoxStyle.padding = new RectOffset(8, 8, 8, 8);
+            return _clientItemBoxStyle;
         }
         /// <summary>
         /// Draw debug background if ULOOPMCP_DEBUG is defined
@@ -562,6 +577,24 @@ namespace io.github.hatayama.uLoopMCP
             // Only show clients with properly set names
             // Filter out empty names and the default "Unknown Client" placeholder
             return !string.IsNullOrEmpty(clientName) && clientName != McpConstants.UNKNOWN_CLIENT_NAME;
+        }
+
+        public void Dispose()
+        {
+            if (_sectionBackgroundTexture != null)
+            {
+                UnityEngine.Object.DestroyImmediate(_sectionBackgroundTexture);
+                _sectionBackgroundTexture = null;
+            }
+
+            if (_clientItemBackgroundTexture != null)
+            {
+                UnityEngine.Object.DestroyImmediate(_clientItemBackgroundTexture);
+                _clientItemBackgroundTexture = null;
+            }
+
+            _sectionBoxStyle = null;
+            _clientItemBoxStyle = null;
         }
     }
 } 

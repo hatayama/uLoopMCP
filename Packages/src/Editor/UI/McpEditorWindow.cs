@@ -55,6 +55,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnDestroy()
         {
+            _view?.Dispose();
         }
 
         private void InitializeAll()
@@ -182,6 +183,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             CleanupEventHandler();
             SaveSessionState();
+            _view?.Dispose();
         }
 
         /// <summary>
