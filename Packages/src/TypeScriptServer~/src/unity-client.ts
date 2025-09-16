@@ -189,7 +189,7 @@ export class UnityClient {
     }
 
     // Start a single connect attempt
-    this.connectingPromise = (async () => {
+    this.connectingPromise = (async (): Promise<void> => {
       this.isConnecting = true;
       // Disconnect any existing connection before creating new one
       this.disconnect();

@@ -176,12 +176,13 @@ namespace io.github.hatayama.uLoopMCP
                 
                 EditorGUILayout.BeginHorizontal();
                 EditorGUILayout.LabelField("Target:", GUILayout.Width(50f));
-                McpEditorType newSelectedEditor = (McpEditorType)EditorGUILayout.EnumPopup(data.SelectedEditor, GUILayout.ExpandWidth(true));
+                bool hasSupportedEditors = TryDrawEditorSelectionFilteringCodexForNonMac(data.SelectedEditor, editorChangeCallback);
                 EditorGUILayout.EndHorizontal();
-                
-                if (newSelectedEditor != data.SelectedEditor)
+
+                if (!hasSupportedEditors)
                 {
-                    editorChangeCallback?.Invoke(newSelectedEditor);
+                    EditorGUILayout.EndVertical();
+                    return;
                 }
                 
                 EditorGUILayout.Space();
@@ -273,6 +274,43 @@ namespace io.github.hatayama.uLoopMCP
             
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space();
+        }
+
+        /// <summary>
+        /// Draws the editor selection popup and filters Codex to macOS only.
+        /// </summary>
+        private bool TryDrawEditorSelectionFilteringCodexForNonMac(McpEditorType currentEditor, Action<McpEditorType> editorChangeCallback)
+        {
+            McpEditorType[] availableEditors = Enum.GetValues(typeof(McpEditorType)).Cast<McpEditorType>().ToArray();
+            if (Application.platform != RuntimePlatform.OSXEditor)
+            {
+                availableEditors = availableEditors.Where(editor => editor != McpEditorType.Codex).ToArray();
+            }
+
+            if (availableEditors.Length == 0)
+            {
+                EditorGUILayout.LabelField("No supported editors", GUILayout.ExpandWidth(true));
+                return false;
+            }
+
+            string[] optionLabels = availableEditors.Select(GetEditorDisplayName).ToArray();
+            int currentIndex = Array.IndexOf(availableEditors, currentEditor);
+            bool selectionAdjusted = false;
+            if (currentIndex < 0)
+            {
+                currentIndex = 0;
+                selectionAdjusted = true;
+            }
+
+            int selectedIndex = EditorGUILayout.Popup(currentIndex, optionLabels, GUILayout.ExpandWidth(true));
+            McpEditorType selectedEditor = availableEditors[selectedIndex];
+
+            if (selectionAdjusted || selectedEditor != currentEditor)
+            {
+                editorChangeCallback?.Invoke(selectedEditor);
+            }
+
+            return true;
         }
 
         private void DrawConnectionStatus(ConnectedToolsData data)

@@ -182,7 +182,6 @@ class UnityMcpServer {
       const clientName = clientInfo?.name || '';
 
       // Debug logging for client name detection
-      
 
       if (clientName) {
         this.clientCompatibility.setupClientCompatibility(clientName);

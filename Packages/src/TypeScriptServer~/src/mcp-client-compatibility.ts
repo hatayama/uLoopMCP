@@ -1,9 +1,6 @@
 import { UnityClient } from './unity-client.js';
 // Debug logging removed
-import {
-  LIST_CHANGED_SUPPORTED_CLIENTS,
-  DEFAULT_CLIENT_NAME,
-} from './constants.js';
+import { LIST_CHANGED_SUPPORTED_CLIENTS, DEFAULT_CLIENT_NAME } from './constants.js';
 
 /**
  * MCP Client Compatibility Manager - Manages client-specific compatibility and list_changed handling
