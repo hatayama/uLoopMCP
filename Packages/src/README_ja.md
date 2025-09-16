@@ -474,6 +474,9 @@ Scope(s): org.nuget
 
 <img width="545" height="481" alt="image" src="https://github.com/user-attachments/assets/2497f85d-1964-4667-92fc-a9e33a946206" />
 
+> [!WARNING]  
+> **Codexについて**  
+> 現在Mac OSのみ対応です。Windowsでは利用できません。また、プロジェクト単位の設定ができず、global設定のみとなります。
 
 <details>
 <summary>手動設定（通常は不要）</summary>
