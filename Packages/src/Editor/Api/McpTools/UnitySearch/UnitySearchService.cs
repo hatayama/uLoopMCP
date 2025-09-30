@@ -287,17 +287,17 @@ namespace io.github.hatayama.uLoopMCP
                     return assetPath;
             }
 
-            // 2. Treat the description as a path when it looks like one
-            if (!string.IsNullOrEmpty(item.description) && item.description.Contains("/"))
-                return item.description;
-
-            // 3. Extract the GUID from the GlobalObjectId and resolve to a path
+            // 2. Resolve the GlobalObjectId into a project asset path
             if (!string.IsNullOrEmpty(item.id) && item.id.StartsWith("GlobalObjectId_"))
             {
                 string assetPath = ConvertGlobalObjectIdToPath(item.id);
                 if (!string.IsNullOrEmpty(assetPath))
                     return assetPath;
             }
+
+            // 3. Treat the description as a path when it looks like one
+            if (!string.IsNullOrEmpty(item.description) && item.description.Contains("/"))
+                return item.description;
 
             // 4. Fallback: return item.id as-is
             return item.id ?? "";

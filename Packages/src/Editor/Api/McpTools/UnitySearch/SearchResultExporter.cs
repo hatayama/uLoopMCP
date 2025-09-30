@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -106,17 +105,8 @@ namespace io.github.hatayama.uLoopMCP
             csv.AppendLine($"# Result Count: {results.Length}");
             csv.AppendLine();
 
-            // Collect all property keys for the header
-            List<string> propertyKeys = GetAllPropertyKeys(results);
-
             // Add CSV header
-            StringBuilder headerBuilder = new StringBuilder();
-            headerBuilder.Append("Id,Label,Description,Provider,Type,Path,Score,FileSize,LastModified,IsSelectable,Tags");
-            foreach (string key in propertyKeys)
-            {
-                headerBuilder.Append($",{EscapeCsvValue(key)}");
-            }
-            csv.AppendLine(headerBuilder.ToString());
+            csv.AppendLine("Id,Label,Description,Provider,Type,Path,Score,FileSize,LastModified,IsSelectable,Tags,Properties");
 
             // Add data rows
             foreach (SearchResultItem result in results)
@@ -134,18 +124,8 @@ namespace io.github.hatayama.uLoopMCP
                                  $"{result.IsSelectable}," +
                                  $"{EscapeCsvValue(string.Join(";", result.Tags))}");
 
-                // Append properties
-                foreach (string key in propertyKeys)
-                {
-                    if (result.Properties != null && result.Properties.TryGetValue(key, out object value))
-                    {
-                        rowBuilder.Append($",{EscapeCsvValue(value?.ToString() ?? "")}");
-                    }
-                    else
-                    {
-                        rowBuilder.Append(",");
-                    }
-                }
+                string propertiesJson = SerializeProperties(result.Properties);
+                rowBuilder.Append($",{EscapeCsvValue(propertiesJson)}");
 
                 csv.AppendLine(rowBuilder.ToString());
             }
@@ -169,17 +149,8 @@ namespace io.github.hatayama.uLoopMCP
             tsv.AppendLine($"# Result Count: {results.Length}");
             tsv.AppendLine();
 
-            // Collect all property keys for the header
-            List<string> propertyKeys = GetAllPropertyKeys(results);
-
             // Add TSV header
-            StringBuilder headerBuilder = new StringBuilder();
-            headerBuilder.Append("Id\tLabel\tDescription\tProvider\tType\tPath\tScore\tFileSize\tLastModified\tIsSelectable\tTags");
-            foreach (string key in propertyKeys)
-            {
-                headerBuilder.Append($"\t{EscapeTsvValue(key)}");
-            }
-            tsv.AppendLine(headerBuilder.ToString());
+            tsv.AppendLine("Id\tLabel\tDescription\tProvider\tType\tPath\tScore\tFileSize\tLastModified\tIsSelectable\tTags\tProperties");
 
             // Add data rows
             foreach (SearchResultItem result in results)
@@ -197,18 +168,8 @@ namespace io.github.hatayama.uLoopMCP
                                  $"{result.IsSelectable}\t" +
                                  $"{EscapeTsvValue(string.Join(";", result.Tags))}");
 
-                // Append properties
-                foreach (string key in propertyKeys)
-                {
-                    if (result.Properties != null && result.Properties.TryGetValue(key, out object value))
-                    {
-                        rowBuilder.Append($"\t{EscapeTsvValue(value?.ToString() ?? "")}");
-                    }
-                    else
-                    {
-                        rowBuilder.Append("\t");
-                    }
-                }
+                string propertiesJson = SerializeProperties(result.Properties);
+                rowBuilder.Append($"\t{EscapeTsvValue(propertiesJson)}");
 
                 tsv.AppendLine(rowBuilder.ToString());
             }
@@ -216,24 +177,6 @@ namespace io.github.hatayama.uLoopMCP
             File.WriteAllText(filePath, tsv.ToString(), Encoding.UTF8);
         }
 
-        /// <summary>
-        /// Collect all property keys from every result
-        /// </summary>
-        private static List<string> GetAllPropertyKeys(SearchResultItem[] results)
-        {
-            HashSet<string> keySet = new HashSet<string>();
-            foreach (SearchResultItem result in results)
-            {
-                if (result.Properties != null)
-                {
-                    foreach (string key in result.Properties.Keys)
-                    {
-                        keySet.Add(key);
-                    }
-                }
-            }
-            return keySet.OrderBy(k => k).ToList();
-        }
 
         /// <summary>
         /// Get file extension for the specified format
@@ -263,6 +206,12 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return value;
+        }
+
+        private static string SerializeProperties(Dictionary<string, object> properties)
+        {
+            Dictionary<string, object> safeProperties = properties ?? new Dictionary<string, object>();
+            return JsonConvert.SerializeObject(safeProperties, Formatting.None);
         }
 
         /// <summary>
