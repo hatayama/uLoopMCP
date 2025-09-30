@@ -106,23 +106,48 @@ namespace io.github.hatayama.uLoopMCP
             csv.AppendLine($"# Result Count: {results.Length}");
             csv.AppendLine();
 
+            // Collect all property keys for the header
+            List<string> propertyKeys = GetAllPropertyKeys(results);
+
             // Add CSV header
-            csv.AppendLine("Id,Label,Description,Provider,Type,Path,Score,FileSize,LastModified,IsSelectable,Tags");
+            StringBuilder headerBuilder = new StringBuilder();
+            headerBuilder.Append("Id,Label,Description,Provider,Type,Path,Score,FileSize,LastModified,IsSelectable,Tags");
+            foreach (string key in propertyKeys)
+            {
+                headerBuilder.Append($",{EscapeCsvValue(key)}");
+            }
+            csv.AppendLine(headerBuilder.ToString());
 
             // Add data rows
             foreach (SearchResultItem result in results)
             {
-                csv.AppendLine($"{EscapeCsvValue(result.Id)}," +
-                              $"{EscapeCsvValue(result.Label)}," +
-                              $"{EscapeCsvValue(result.Description)}," +
-                              $"{EscapeCsvValue(result.Provider)}," +
-                              $"{EscapeCsvValue(result.Type)}," +
-                              $"{EscapeCsvValue(result.Path)}," +
-                              $"{result.Score}," +
-                              $"{result.FileSize}," +
-                              $"{EscapeCsvValue(result.LastModified)}," +
-                              $"{result.IsSelectable}," +
-                              $"{EscapeCsvValue(string.Join(";", result.Tags))}");
+                StringBuilder rowBuilder = new StringBuilder();
+                rowBuilder.Append($"{EscapeCsvValue(result.Id)}," +
+                                 $"{EscapeCsvValue(result.Label)}," +
+                                 $"{EscapeCsvValue(result.Description)}," +
+                                 $"{EscapeCsvValue(result.Provider)}," +
+                                 $"{EscapeCsvValue(result.Type)}," +
+                                 $"{EscapeCsvValue(result.Path)}," +
+                                 $"{result.Score}," +
+                                 $"{result.FileSize}," +
+                                 $"{EscapeCsvValue(result.LastModified)}," +
+                                 $"{result.IsSelectable}," +
+                                 $"{EscapeCsvValue(string.Join(";", result.Tags))}");
+
+                // Append properties
+                foreach (string key in propertyKeys)
+                {
+                    if (result.Properties != null && result.Properties.TryGetValue(key, out object value))
+                    {
+                        rowBuilder.Append($",{EscapeCsvValue(value?.ToString() ?? "")}");
+                    }
+                    else
+                    {
+                        rowBuilder.Append(",");
+                    }
+                }
+
+                csv.AppendLine(rowBuilder.ToString());
             }
 
             File.WriteAllText(filePath, csv.ToString(), Encoding.UTF8);
@@ -144,26 +169,70 @@ namespace io.github.hatayama.uLoopMCP
             tsv.AppendLine($"# Result Count: {results.Length}");
             tsv.AppendLine();
 
+            // Collect all property keys for the header
+            List<string> propertyKeys = GetAllPropertyKeys(results);
+
             // Add TSV header
-            tsv.AppendLine("Id\tLabel\tDescription\tProvider\tType\tPath\tScore\tFileSize\tLastModified\tIsSelectable\tTags");
+            StringBuilder headerBuilder = new StringBuilder();
+            headerBuilder.Append("Id\tLabel\tDescription\tProvider\tType\tPath\tScore\tFileSize\tLastModified\tIsSelectable\tTags");
+            foreach (string key in propertyKeys)
+            {
+                headerBuilder.Append($"\t{EscapeTsvValue(key)}");
+            }
+            tsv.AppendLine(headerBuilder.ToString());
 
             // Add data rows
             foreach (SearchResultItem result in results)
             {
-                tsv.AppendLine($"{EscapeTsvValue(result.Id)}\t" +
-                              $"{EscapeTsvValue(result.Label)}\t" +
-                              $"{EscapeTsvValue(result.Description)}\t" +
-                              $"{EscapeTsvValue(result.Provider)}\t" +
-                              $"{EscapeTsvValue(result.Type)}\t" +
-                              $"{EscapeTsvValue(result.Path)}\t" +
-                              $"{result.Score}\t" +
-                              $"{result.FileSize}\t" +
-                              $"{EscapeTsvValue(result.LastModified)}\t" +
-                              $"{result.IsSelectable}\t" +
-                              $"{EscapeTsvValue(string.Join(";", result.Tags))}");
+                StringBuilder rowBuilder = new StringBuilder();
+                rowBuilder.Append($"{EscapeTsvValue(result.Id)}\t" +
+                                 $"{EscapeTsvValue(result.Label)}\t" +
+                                 $"{EscapeTsvValue(result.Description)}\t" +
+                                 $"{EscapeTsvValue(result.Provider)}\t" +
+                                 $"{EscapeTsvValue(result.Type)}\t" +
+                                 $"{EscapeTsvValue(result.Path)}\t" +
+                                 $"{result.Score}\t" +
+                                 $"{result.FileSize}\t" +
+                                 $"{EscapeTsvValue(result.LastModified)}\t" +
+                                 $"{result.IsSelectable}\t" +
+                                 $"{EscapeTsvValue(string.Join(";", result.Tags))}");
+
+                // Append properties
+                foreach (string key in propertyKeys)
+                {
+                    if (result.Properties != null && result.Properties.TryGetValue(key, out object value))
+                    {
+                        rowBuilder.Append($"\t{EscapeTsvValue(value?.ToString() ?? "")}");
+                    }
+                    else
+                    {
+                        rowBuilder.Append("\t");
+                    }
+                }
+
+                tsv.AppendLine(rowBuilder.ToString());
             }
 
             File.WriteAllText(filePath, tsv.ToString(), Encoding.UTF8);
+        }
+
+        /// <summary>
+        /// Collect all property keys from every result
+        /// </summary>
+        private static List<string> GetAllPropertyKeys(SearchResultItem[] results)
+        {
+            HashSet<string> keySet = new HashSet<string>();
+            foreach (SearchResultItem result in results)
+            {
+                if (result.Properties != null)
+                {
+                    foreach (string key in result.Properties.Keys)
+                    {
+                        keySet.Add(key);
+                    }
+                }
+            }
+            return keySet.OrderBy(k => k).ToList();
         }
 
         /// <summary>
