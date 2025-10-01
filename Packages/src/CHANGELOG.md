@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.34.0](https://github.com/hatayama/uLoopMCP/compare/v0.33.0...v0.34.0) (2025-10-01)
+
+
+### Features
+
+* trigger minor release ([#302](https://github.com/hatayama/uLoopMCP/issues/302)) ([b652ac1](https://github.com/hatayama/uLoopMCP/commit/b652ac174c8662bb73395ec3f43f1e22e63cc6dd))
+
 ## [0.33.0](https://github.com/hatayama/uLoopMCP/compare/v0.32.2...v0.33.0) (2025-09-16)
 
 
