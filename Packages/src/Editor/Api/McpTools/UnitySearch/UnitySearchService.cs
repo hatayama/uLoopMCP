@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.Search;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -102,31 +102,146 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static async Task<List<SearchItem>> ExecuteUnitySearchAsync(SearchContext context, UnitySearchSchema schema)
         {
-            TaskCompletionSource<List<SearchItem>> tcs = new TaskCompletionSource<List<SearchItem>>();
-            List<SearchItem> allItems = new List<SearchItem>();
+            ValidateTimeout(schema.TimeoutSeconds);
 
-            // Use SearchService.Request with callback
-            SearchService.Request(context, 
-                (ctx, items) => {
-                    // This is called when search completes
-                    allItems.AddRange(items);
-                    if (!tcs.Task.IsCompleted)
-                    {
-                        tcs.SetResult(allItems);
-                    }
-                }, 
+            TaskCompletionSource<List<SearchItem>> completionSource = CreateCompletionSource();
+            SearchResultCollector collector = new SearchResultCollector();
+            TimeoutGuard timeoutGuard = TimeoutGuard.Create(schema.TimeoutSeconds);
+
+            SearchService.Request(
+                context,
+                (ctx, items) => HandleSearchCallback(items, collector, completionSource, timeoutGuard.Token),
                 ConvertSearchFlags(schema.SearchFlags));
 
-            // Add timeout
-            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(schema.TimeoutSeconds));
-            Task completedTask = await Task.WhenAny(tcs.Task, timeoutTask);
+            timeoutGuard.RegisterTimeout(() => TryCompleteWithTimeout(completionSource, schema.TimeoutSeconds));
 
-            if (completedTask == timeoutTask)
+            try
             {
-                throw new TimeoutException($"Search timed out after {schema.TimeoutSeconds} seconds");
+                List<SearchItem> results = await completionSource.Task.ConfigureAwait(false);
+                return results;
+            }
+            finally
+            {
+                timeoutGuard.Dispose();
+            }
+        }
+
+        private static void ValidateTimeout(int timeoutSeconds)
+        {
+            if (timeoutSeconds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(timeoutSeconds),
+                    "Timeout must be greater than or equal to zero");
+            }
+        }
+
+        private static TaskCompletionSource<List<SearchItem>> CreateCompletionSource()
+        {
+            TaskCompletionSource<List<SearchItem>> completionSource =
+                new TaskCompletionSource<List<SearchItem>>(TaskCreationOptions.RunContinuationsAsynchronously);
+            return completionSource;
+        }
+
+        private static void HandleSearchCallback(
+            IList<SearchItem> items,
+            SearchResultCollector collector,
+            TaskCompletionSource<List<SearchItem>> completionSource,
+            CancellationToken timeoutToken)
+        {
+            if (timeoutToken.IsCancellationRequested)
+            {
+                return;
             }
 
-            return await tcs.Task;
+            try
+            {
+                List<SearchItem> snapshot = collector.TryCollect(items);
+                if (snapshot != null)
+                {
+                    completionSource.TrySetResult(snapshot);
+                }
+            }
+            catch (Exception ex)
+            {
+                completionSource.TrySetException(ex);
+            }
+        }
+
+        private static void TryCompleteWithTimeout(
+            TaskCompletionSource<List<SearchItem>> completionSource,
+            int timeoutSeconds)
+        {
+            TimeoutException timeoutException = new TimeoutException(
+                $"Search timed out after {timeoutSeconds} seconds");
+            completionSource.TrySetException(timeoutException);
+        }
+
+        private sealed class SearchResultCollector
+        {
+            private readonly List<SearchItem> items = new List<SearchItem>();
+            private readonly object syncRoot = new object();
+            private bool isHandled;
+
+            public List<SearchItem> TryCollect(IList<SearchItem> newItems)
+            {
+                lock (syncRoot)
+                {
+                    if (isHandled)
+                    {
+                        return null;
+                    }
+
+                    if (newItems != null)
+                    {
+                        items.AddRange(newItems);
+                    }
+
+                    isHandled = true;
+                    return new List<SearchItem>(items);
+                }
+            }
+        }
+
+        private sealed class TimeoutGuard : IDisposable
+        {
+            private readonly CancellationTokenSource source;
+
+            private TimeoutGuard(CancellationTokenSource source)
+            {
+                this.source = source;
+            }
+
+            public CancellationToken Token => source.Token;
+
+            public static TimeoutGuard Create(int timeoutSeconds)
+            {
+                CancellationTokenSource createdSource = new CancellationTokenSource();
+                TimeoutGuard guard = new TimeoutGuard(createdSource);
+
+                if (timeoutSeconds == 0)
+                {
+                    guard.source.Cancel();
+                    return guard;
+                }
+
+                if (timeoutSeconds > 0)
+                {
+                    TimeSpan timeoutSpan = TimeSpan.FromSeconds(timeoutSeconds);
+                    guard.source.CancelAfter(timeoutSpan);
+                }
+
+                return guard;
+            }
+
+            public void RegisterTimeout(Action onTimeout)
+            {
+                source.Token.Register(onTimeout);
+            }
+
+            public void Dispose()
+            {
+                source.Dispose();
+            }
         }
 
         /// <summary>
