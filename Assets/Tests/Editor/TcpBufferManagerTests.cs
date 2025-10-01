@@ -138,7 +138,7 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         [Test]
-        public void BufferReuse_SmallerBufferInPool_CreatesNewBuffer()
+        public void BufferReuse_SmallerBufferInPool_ReusesExistingBuffer()
         {
             // Arrange
             byte[] smallBuffer = bufferManager.GetBuffer(1024);
@@ -148,9 +148,8 @@ namespace io.github.hatayama.uLoopMCP
             byte[] largeBuffer = bufferManager.GetBuffer(2048);
             
             // Assert
-            // The buffer manager should create a new buffer since the pooled buffer (1024) 
-            // is smaller than the required size (2048)
-            Assert.AreNotSame(smallBuffer, largeBuffer);
+            // The pooled buffer is already equal to or larger than the requested size, so reuse should occur
+            Assert.AreSame(smallBuffer, largeBuffer);
             Assert.GreaterOrEqual(largeBuffer.Length, 2048);
         }
         

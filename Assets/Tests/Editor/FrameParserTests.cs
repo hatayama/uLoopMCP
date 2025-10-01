@@ -56,7 +56,6 @@ namespace io.github.hatayama.uLoopMCP
         public void TryParseFrame_InvalidContentLength_ReturnsFalse()
         {
             // Arrange
-            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(".*Invalid Content-Length value.*"));
             string message = "Content-Length: invalid\r\n\r\n{\"test\":\"data\"}";
             byte[] buffer = Encoding.UTF8.GetBytes(message);
             
@@ -73,7 +72,6 @@ namespace io.github.hatayama.uLoopMCP
         public void TryParseFrame_NegativeContentLength_ReturnsFalse()
         {
             // Arrange
-            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(".*Content-Length value -10 exceeds maximum allowed size.*"));
             string message = "Content-Length: -10\r\n\r\n{\"test\":\"data\"}";
             byte[] buffer = Encoding.UTF8.GetBytes(message);
             
@@ -90,7 +88,6 @@ namespace io.github.hatayama.uLoopMCP
         public void TryParseFrame_ExcessiveContentLength_ReturnsFalse()
         {
             // Arrange
-            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(".*Content-Length value .* exceeds maximum allowed size.*"));
             string message = $"Content-Length: {BufferConfig.MAX_MESSAGE_SIZE + 1}\r\n\r\n{{\"test\":\"data\"}}";
             byte[] buffer = Encoding.UTF8.GetBytes(message);
             

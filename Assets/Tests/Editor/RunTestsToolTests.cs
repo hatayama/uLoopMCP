@@ -5,11 +5,13 @@ namespace io.github.hatayama.uLoopMCP
     public class RunTestsToolTests
     {
         private RunTestsTool runTestsTool;
+        private TestFilterCreationService filterService;
 
         [SetUp]
         public void Setup()
         {
             runTestsTool = new RunTestsTool();
+            filterService = new TestFilterCreationService();
         }
 
         /// <summary>
@@ -41,7 +43,7 @@ namespace io.github.hatayama.uLoopMCP
             };
 
             // Assert - Schema properties should match what we set
-            Assert.That(schema.FilterType.ToString(), Is.EqualTo("regex"));
+            Assert.That(schema.FilterType, Is.EqualTo(TestFilterType.regex));
             Assert.That(schema.FilterValue, Is.EqualTo("TestClass"));
             Assert.That(schema.SaveXml, Is.True);
         }
@@ -59,26 +61,33 @@ namespace io.github.hatayama.uLoopMCP
             RunTestsSchema schema = new RunTestsSchema();
 
             // Assert - Schema should have default values
-            Assert.That(schema.FilterType.ToString(), Is.EqualTo("all"));
-            Assert.That(schema.FilterValue ?? "", Is.EqualTo(""));
+            Assert.That(schema.FilterType, Is.EqualTo(TestFilterType.all));
+            Assert.That(schema.FilterValue ?? string.Empty, Is.EqualTo(string.Empty));
             Assert.That(schema.SaveXml, Is.False);
         }
 
         /// <summary>
-        /// Test for filter creation.
+        /// Test for filter creation via service.
         /// </summary>
         [Test]
-        public void CreateFilter_ShouldCreateCorrectFilter()
+        public void CreateFilter_WithRegexType_ShouldReturnRegexFilter()
         {
-            // Act - Invoke private method using reflection.
-            System.Reflection.MethodInfo createFilterMethod = typeof(RunTestsTool)
-                .GetMethod("CreateFilter", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            
-            TestExecutionFilter result = (TestExecutionFilter)createFilterMethod.Invoke(runTestsTool, new object[] { "regex", "TestClass" });
+            TestExecutionFilter result = filterService.CreateFilter(TestFilterType.regex, "TestClass");
 
-            // Assert
             Assert.That(result.FilterType, Is.EqualTo(TestExecutionFilterType.Regex));
             Assert.That(result.FilterValue, Is.EqualTo("TestClass"));
+        }
+
+        /// <summary>
+        /// Test for creating exact filter.
+        /// </summary>
+        [Test]
+        public void CreateFilter_WithExactType_ShouldReturnExactFilter()
+        {
+            TestExecutionFilter result = filterService.CreateFilter(TestFilterType.exact, "io.github.Test");
+
+            Assert.That(result.FilterType, Is.EqualTo(TestExecutionFilterType.Exact));
+            Assert.That(result.FilterValue, Is.EqualTo("io.github.Test"));
         }
 
         /// <summary>
@@ -87,13 +96,9 @@ namespace io.github.hatayama.uLoopMCP
         [Test]
         public void CreateFilter_WithUnsupportedType_ShouldThrowException()
         {
-            // Act & Assert - Invoke private method using reflection.
-            System.Reflection.MethodInfo createFilterMethod = typeof(RunTestsTool)
-                .GetMethod("CreateFilter", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            
-            Assert.Throws<System.Reflection.TargetInvocationException>(() =>
+            Assert.Throws<System.ArgumentException>(() =>
             {
-                createFilterMethod.Invoke(runTestsTool, new object[] { "unsupported", "value" });
+                filterService.CreateFilter((TestFilterType)999, "value");
             });
         }
     }
