@@ -31,7 +31,16 @@ namespace io.github.hatayama.uLoopMCP
             // Assert
             Assert.That(response, Is.Not.Null);
             Assert.That(response.hierarchy, Is.Not.Null);
-            Assert.That(response.hierarchy.Count, Is.EqualTo(2));
+            Assert.That(response.hierarchy.Count, Is.EqualTo(1));
+
+            HierarchyNodeNested rootNode = response.hierarchy[0];
+            Assert.That(rootNode.name, Is.EqualTo("Root"));
+            Assert.That(rootNode.children.Count, Is.EqualTo(1));
+
+            HierarchyNodeNested childNode = rootNode.children[0];
+            Assert.That(childNode.name, Is.EqualTo("Child"));
+            Assert.That(childNode.children.Count, Is.EqualTo(0));
+
             Assert.That(response.context, Is.Not.Null);
             Assert.That(response.context.nodeCount, Is.EqualTo(2));
             Assert.That(response.context.maxDepth, Is.EqualTo(1));
