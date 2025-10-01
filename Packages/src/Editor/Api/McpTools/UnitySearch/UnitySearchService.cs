@@ -267,9 +267,12 @@ namespace io.github.hatayama.uLoopMCP
                     IsSelectable = true
                 };
 
-                // Always attach common fields and asset-specific details
-                AddCommonProperties(result, item);
-                AddAssetSpecificProperties(result, item);
+                // Optionally attach common fields and asset-specific details
+                if (schema.IncludeMetadata)
+                {
+                    AddCommonProperties(result, item);
+                    AddAssetSpecificProperties(result, item);
+                }
 
                 results.Add(result);
             }
@@ -698,23 +701,20 @@ namespace io.github.hatayama.uLoopMCP
             if (mesh == null)
                 return;
 
-            // VertexCount
-            result.Properties["VertexCount"] = mesh.vertexCount;
-
-            // TriangleCount
-            result.Properties["TriangleCount"] = mesh.triangles.Length / 3;
-
-            // SubMeshCount
-            result.Properties["SubMeshCount"] = mesh.subMeshCount;
-
-            // BlendShapeCount
-            result.Properties["BlendShapeCount"] = mesh.blendShapeCount;
-
-            // Bounds
-            result.Properties["Bounds"] = mesh.bounds.ToString();
-
             // IsReadable
             result.Properties["IsReadable"] = mesh.isReadable;
+
+            // Properties that don't require readable access
+            result.Properties["SubMeshCount"] = mesh.subMeshCount;
+            result.Properties["BlendShapeCount"] = mesh.blendShapeCount;
+            result.Properties["Bounds"] = mesh.bounds.ToString();
+
+            // Properties that require readable access
+            if (mesh.isReadable)
+            {
+                result.Properties["VertexCount"] = mesh.vertexCount;
+                result.Properties["TriangleCount"] = mesh.triangles.Length / 3;
+            }
         }
 
         /// <summary>
