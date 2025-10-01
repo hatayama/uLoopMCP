@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -107,22 +106,28 @@ namespace io.github.hatayama.uLoopMCP
             csv.AppendLine();
 
             // Add CSV header
-            csv.AppendLine("Id,Label,Description,Provider,Type,Path,Score,FileSize,LastModified,IsSelectable,Tags");
+            csv.AppendLine("Id,Label,Description,Provider,Type,Path,Score,FileSize,LastModified,IsSelectable,Tags,Properties");
 
             // Add data rows
             foreach (SearchResultItem result in results)
             {
-                csv.AppendLine($"{EscapeCsvValue(result.Id)}," +
-                              $"{EscapeCsvValue(result.Label)}," +
-                              $"{EscapeCsvValue(result.Description)}," +
-                              $"{EscapeCsvValue(result.Provider)}," +
-                              $"{EscapeCsvValue(result.Type)}," +
-                              $"{EscapeCsvValue(result.Path)}," +
-                              $"{result.Score}," +
-                              $"{result.FileSize}," +
-                              $"{EscapeCsvValue(result.LastModified)}," +
-                              $"{result.IsSelectable}," +
-                              $"{EscapeCsvValue(string.Join(";", result.Tags))}");
+                StringBuilder rowBuilder = new StringBuilder();
+                rowBuilder.Append($"{EscapeCsvValue(result.Id)}," +
+                                 $"{EscapeCsvValue(result.Label)}," +
+                                 $"{EscapeCsvValue(result.Description)}," +
+                                 $"{EscapeCsvValue(result.Provider)}," +
+                                 $"{EscapeCsvValue(result.Type)}," +
+                                 $"{EscapeCsvValue(result.Path)}," +
+                                 $"{result.Score}," +
+                                 $"{result.FileSize}," +
+                                 $"{EscapeCsvValue(result.LastModified)}," +
+                                 $"{result.IsSelectable}," +
+                                 $"{EscapeCsvValue(string.Join(";", result.Tags))}");
+
+                string propertiesJson = SerializeProperties(result.Properties);
+                rowBuilder.Append($",{EscapeCsvValue(propertiesJson)}");
+
+                csv.AppendLine(rowBuilder.ToString());
             }
 
             File.WriteAllText(filePath, csv.ToString(), Encoding.UTF8);
@@ -145,26 +150,33 @@ namespace io.github.hatayama.uLoopMCP
             tsv.AppendLine();
 
             // Add TSV header
-            tsv.AppendLine("Id\tLabel\tDescription\tProvider\tType\tPath\tScore\tFileSize\tLastModified\tIsSelectable\tTags");
+            tsv.AppendLine("Id\tLabel\tDescription\tProvider\tType\tPath\tScore\tFileSize\tLastModified\tIsSelectable\tTags\tProperties");
 
             // Add data rows
             foreach (SearchResultItem result in results)
             {
-                tsv.AppendLine($"{EscapeTsvValue(result.Id)}\t" +
-                              $"{EscapeTsvValue(result.Label)}\t" +
-                              $"{EscapeTsvValue(result.Description)}\t" +
-                              $"{EscapeTsvValue(result.Provider)}\t" +
-                              $"{EscapeTsvValue(result.Type)}\t" +
-                              $"{EscapeTsvValue(result.Path)}\t" +
-                              $"{result.Score}\t" +
-                              $"{result.FileSize}\t" +
-                              $"{EscapeTsvValue(result.LastModified)}\t" +
-                              $"{result.IsSelectable}\t" +
-                              $"{EscapeTsvValue(string.Join(";", result.Tags))}");
+                StringBuilder rowBuilder = new StringBuilder();
+                rowBuilder.Append($"{EscapeTsvValue(result.Id)}\t" +
+                                 $"{EscapeTsvValue(result.Label)}\t" +
+                                 $"{EscapeTsvValue(result.Description)}\t" +
+                                 $"{EscapeTsvValue(result.Provider)}\t" +
+                                 $"{EscapeTsvValue(result.Type)}\t" +
+                                 $"{EscapeTsvValue(result.Path)}\t" +
+                                 $"{result.Score}\t" +
+                                 $"{result.FileSize}\t" +
+                                 $"{EscapeTsvValue(result.LastModified)}\t" +
+                                 $"{result.IsSelectable}\t" +
+                                 $"{EscapeTsvValue(string.Join(";", result.Tags))}");
+
+                string propertiesJson = SerializeProperties(result.Properties);
+                rowBuilder.Append($"\t{EscapeTsvValue(propertiesJson)}");
+
+                tsv.AppendLine(rowBuilder.ToString());
             }
 
             File.WriteAllText(filePath, tsv.ToString(), Encoding.UTF8);
         }
+
 
         /// <summary>
         /// Get file extension for the specified format
@@ -194,6 +206,12 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return value;
+        }
+
+        private static string SerializeProperties(Dictionary<string, object> properties)
+        {
+            Dictionary<string, object> safeProperties = properties ?? new Dictionary<string, object>();
+            return JsonConvert.SerializeObject(safeProperties, Formatting.None);
         }
 
         /// <summary>

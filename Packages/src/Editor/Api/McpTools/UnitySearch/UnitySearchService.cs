@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.Search;
@@ -28,60 +29,50 @@ namespace io.github.hatayama.uLoopMCP
         public static async Task<UnitySearchResponse> ExecuteSearchAsync(UnitySearchSchema schema)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
-            
-            try
+
+            // Validate search query
+            if (string.IsNullOrWhiteSpace(schema.SearchQuery))
             {
-                // Validate search query
-                if (string.IsNullOrWhiteSpace(schema.SearchQuery))
-                {
-                    return new UnitySearchResponse("Search query cannot be empty", schema.SearchQuery);
-                }
-
-                // Create search context
-                SearchContext context = CreateSearchContext(schema);
-                if (context == null)
-                {
-                    return new UnitySearchResponse("Failed to create search context", schema.SearchQuery);
-                }
-
-                // Execute search
-                List<SearchItem> searchItems = await ExecuteUnitySearchAsync(context, schema);
-                
-                // Convert Unity SearchItems to our SearchResultItems
-                SearchResultItem[] results = ConvertSearchItems(searchItems, schema);
-                
-                // Apply additional filtering
-                results = ApplyFiltering(results, schema);
-                
-                // Apply result limit
-                if (results.Length > schema.MaxResults)
-                {
-                    results = results.Take(schema.MaxResults).ToArray();
-                }
-
-                stopwatch.Stop();
-                
-                // Get providers used
-                string[] providersUsed = GetProvidersUsed(context);
-                
-                // Determine if we should save to file
-                bool shouldSaveToFile = ShouldSaveToFile(results, schema);
-                
-                if (shouldSaveToFile)
-                {
-                    return CreateFileBasedResponse(results, schema, providersUsed, stopwatch.ElapsedMilliseconds);
-                }
-                else
-                {
-                    return new UnitySearchResponse(results, searchItems.Count, schema.SearchQuery, 
-                                                 providersUsed, stopwatch.ElapsedMilliseconds);
-                }
+                return new UnitySearchResponse("Search query cannot be empty", schema.SearchQuery);
             }
-            catch (Exception ex)
+
+            // Create search context
+            SearchContext context = CreateSearchContext(schema);
+            if (context == null)
             {
-                stopwatch.Stop();
-                return new UnitySearchResponse($"Search failed: {ex.Message}", schema.SearchQuery);
+                return new UnitySearchResponse("Failed to create search context", schema.SearchQuery);
             }
+
+            // Execute search
+            List<SearchItem> searchItems = await ExecuteUnitySearchAsync(context, schema);
+
+            // Convert Unity SearchItems to our SearchResultItems
+            SearchResultItem[] results = ConvertSearchItems(searchItems, schema);
+
+            // Apply additional filtering
+            results = ApplyFiltering(results, schema);
+
+            // Apply result limit
+            if (results.Length > schema.MaxResults)
+            {
+                results = results.Take(schema.MaxResults).ToArray();
+            }
+
+            stopwatch.Stop();
+
+            // Get providers used
+            string[] providersUsed = GetProvidersUsed(context);
+
+            // Determine if we should save to file
+            bool shouldSaveToFile = ShouldSaveToFile(results, schema);
+
+            if (shouldSaveToFile)
+            {
+                return CreateFileBasedResponse(results, schema, providersUsed, stopwatch.ElapsedMilliseconds);
+            }
+
+            return new UnitySearchResponse(results, searchItems.Count, schema.SearchQuery,
+                                           providersUsed, stopwatch.ElapsedMilliseconds);
         }
 
         /// <summary>
@@ -111,31 +102,146 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static async Task<List<SearchItem>> ExecuteUnitySearchAsync(SearchContext context, UnitySearchSchema schema)
         {
-            TaskCompletionSource<List<SearchItem>> tcs = new TaskCompletionSource<List<SearchItem>>();
-            List<SearchItem> allItems = new List<SearchItem>();
+            ValidateTimeout(schema.TimeoutSeconds);
 
-            // Use SearchService.Request with callback
-            SearchService.Request(context, 
-                (ctx, items) => {
-                    // This is called when search completes
-                    allItems.AddRange(items);
-                    if (!tcs.Task.IsCompleted)
-                    {
-                        tcs.SetResult(allItems);
-                    }
-                }, 
+            TaskCompletionSource<List<SearchItem>> completionSource = CreateCompletionSource();
+            SearchResultCollector collector = new SearchResultCollector();
+            TimeoutGuard timeoutGuard = TimeoutGuard.Create(schema.TimeoutSeconds);
+
+            SearchService.Request(
+                context,
+                (ctx, items) => HandleSearchCallback(items, collector, completionSource, timeoutGuard.Token),
                 ConvertSearchFlags(schema.SearchFlags));
 
-            // Add timeout
-            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(schema.TimeoutSeconds));
-            Task completedTask = await Task.WhenAny(tcs.Task, timeoutTask);
+            timeoutGuard.RegisterTimeout(() => TryCompleteWithTimeout(completionSource, schema.TimeoutSeconds));
 
-            if (completedTask == timeoutTask)
+            try
             {
-                throw new TimeoutException($"Search timed out after {schema.TimeoutSeconds} seconds");
+                List<SearchItem> results = await completionSource.Task.ConfigureAwait(false);
+                return results;
+            }
+            finally
+            {
+                timeoutGuard.Dispose();
+            }
+        }
+
+        private static void ValidateTimeout(int timeoutSeconds)
+        {
+            if (timeoutSeconds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(timeoutSeconds),
+                    "Timeout must be greater than or equal to zero");
+            }
+        }
+
+        private static TaskCompletionSource<List<SearchItem>> CreateCompletionSource()
+        {
+            TaskCompletionSource<List<SearchItem>> completionSource =
+                new TaskCompletionSource<List<SearchItem>>(TaskCreationOptions.RunContinuationsAsynchronously);
+            return completionSource;
+        }
+
+        private static void HandleSearchCallback(
+            IList<SearchItem> items,
+            SearchResultCollector collector,
+            TaskCompletionSource<List<SearchItem>> completionSource,
+            CancellationToken timeoutToken)
+        {
+            if (timeoutToken.IsCancellationRequested)
+            {
+                return;
             }
 
-            return await tcs.Task;
+            try
+            {
+                List<SearchItem> snapshot = collector.TryCollect(items);
+                if (snapshot != null)
+                {
+                    completionSource.TrySetResult(snapshot);
+                }
+            }
+            catch (Exception ex)
+            {
+                completionSource.TrySetException(ex);
+            }
+        }
+
+        private static void TryCompleteWithTimeout(
+            TaskCompletionSource<List<SearchItem>> completionSource,
+            int timeoutSeconds)
+        {
+            TimeoutException timeoutException = new TimeoutException(
+                $"Search timed out after {timeoutSeconds} seconds");
+            completionSource.TrySetException(timeoutException);
+        }
+
+        private sealed class SearchResultCollector
+        {
+            private readonly List<SearchItem> items = new List<SearchItem>();
+            private readonly object syncRoot = new object();
+            private bool isHandled;
+
+            public List<SearchItem> TryCollect(IList<SearchItem> newItems)
+            {
+                lock (syncRoot)
+                {
+                    if (isHandled)
+                    {
+                        return null;
+                    }
+
+                    if (newItems != null)
+                    {
+                        items.AddRange(newItems);
+                    }
+
+                    isHandled = true;
+                    return new List<SearchItem>(items);
+                }
+            }
+        }
+
+        private sealed class TimeoutGuard : IDisposable
+        {
+            private readonly CancellationTokenSource source;
+
+            private TimeoutGuard(CancellationTokenSource source)
+            {
+                this.source = source;
+            }
+
+            public CancellationToken Token => source.Token;
+
+            public static TimeoutGuard Create(int timeoutSeconds)
+            {
+                CancellationTokenSource createdSource = new CancellationTokenSource();
+                TimeoutGuard guard = new TimeoutGuard(createdSource);
+
+                if (timeoutSeconds == 0)
+                {
+                    guard.source.Cancel();
+                    return guard;
+                }
+
+                if (timeoutSeconds > 0)
+                {
+                    TimeSpan timeoutSpan = TimeSpan.FromSeconds(timeoutSeconds);
+                    guard.source.CancelAfter(timeoutSpan);
+                }
+
+                return guard;
+            }
+
+            public void RegisterTimeout(Action onTimeout)
+            {
+                source.Token.Register(onTimeout);
+            }
+
+            public void Dispose()
+            {
+                source.Dispose();
+            }
         }
 
         /// <summary>
@@ -161,10 +267,11 @@ namespace io.github.hatayama.uLoopMCP
                     IsSelectable = true
                 };
 
-                // Add metadata if requested
+                // Optionally attach common fields and asset-specific details
                 if (schema.IncludeMetadata)
                 {
-                    AddMetadata(result, item);
+                    AddCommonProperties(result, item);
+                    AddAssetSpecificProperties(result, item);
                 }
 
                 results.Add(result);
@@ -233,22 +340,13 @@ namespace io.github.hatayama.uLoopMCP
                                                                   string[] providersUsed, 
                                                                   long searchDurationMs)
         {
-            try
-            {
-                string filePath = SearchResultExporter.ExportSearchResults(results, schema.OutputFormat, 
-                                                                          schema.SearchQuery, providersUsed);
-                
-                string saveReason = schema.SaveToFile ? "user_request" : "auto_threshold";
-                
-                return new UnitySearchResponse(filePath, schema.OutputFormat.ToString(), saveReason,
-                                             results.Length, schema.SearchQuery, providersUsed, searchDurationMs);
-            }
-            catch (Exception)
-            {
-                // Fallback to inline response
-                return new UnitySearchResponse(results, results.Length, schema.SearchQuery, 
-                                             providersUsed, searchDurationMs);
-            }
+            string filePath = SearchResultExporter.ExportSearchResults(results, schema.OutputFormat,
+                                                                        schema.SearchQuery, providersUsed);
+
+            string saveReason = schema.SaveToFile ? "user_request" : "auto_threshold";
+
+            return new UnitySearchResponse(filePath, schema.OutputFormat.ToString(), saveReason,
+                                           results.Length, schema.SearchQuery, providersUsed, searchDurationMs);
         }
 
         /// <summary>
@@ -295,13 +393,11 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Get item path from Unity SearchItem
+        /// Improve path resolution so GlobalObjectId values are reliably handled
         /// </summary>
         private static string GetItemPath(SearchItem item)
         {
-            // Try various ways to get the path
-            if (!string.IsNullOrEmpty(item.description) && item.description.Contains("/"))
-                return item.description;
-
+            // 1. Attempt to resolve the path via the object reference
             if (item.data is UnityEngine.Object obj)
             {
                 string assetPath = AssetDatabase.GetAssetPath(obj);
@@ -309,7 +405,42 @@ namespace io.github.hatayama.uLoopMCP
                     return assetPath;
             }
 
+            // 2. Resolve the GlobalObjectId into a project asset path
+            if (!string.IsNullOrEmpty(item.id) && item.id.StartsWith("GlobalObjectId_"))
+            {
+                string assetPath = ConvertGlobalObjectIdToPath(item.id);
+                if (!string.IsNullOrEmpty(assetPath))
+                    return assetPath;
+            }
+
+            // 3. Treat the description as a path when it looks like one
+            if (!string.IsNullOrEmpty(item.description) && item.description.Contains("/"))
+                return item.description;
+
+            // 4. Fallback: return item.id as-is
             return item.id ?? "";
+        }
+
+        /// <summary>
+        /// Convert a GlobalObjectId into an asset path
+        /// Format: GlobalObjectId_V1-{type}-{guid}-{localId}-{prefabId}
+        /// </summary>
+        private static string ConvertGlobalObjectIdToPath(string globalObjectId)
+        {
+            if (string.IsNullOrEmpty(globalObjectId))
+                return string.Empty;
+
+            // Format resembles GlobalObjectId_V1-1-ec10ac4d5b9a745b1a9c82614fc533d6-2800000-0
+            string[] parts = globalObjectId.Split('-');
+            if (parts.Length < 3)
+                return string.Empty;
+
+            string guid = parts[2];
+            string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+            if (!string.IsNullOrEmpty(assetPath))
+                return assetPath;
+
+            return string.Empty;
         }
 
         /// <summary>
@@ -333,20 +464,286 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Add metadata to search result item
+        /// Retrieve a UnityEngine.Object from a SearchItem
+        /// Unity Search's asset provider sometimes omits direct object instances, so conversion is required
         /// </summary>
-        private static void AddMetadata(SearchResultItem result, SearchItem item)
+        private static UnityEngine.Object GetObjectFromSearchItem(SearchItem item)
         {
+            // 1. item.data already holds a UnityEngine.Object
             if (item.data is UnityEngine.Object obj)
+                return obj;
+
+            // 2. When the provider is asset, prefer resolving via GlobalObjectId
+            // (SearchUtils.ToObject does not exist)
+
+            // 3. Resolve through the GUID extracted from the GlobalObjectId
+            if (!string.IsNullOrEmpty(item.id) && item.id.StartsWith("GlobalObjectId_"))
             {
-                string assetPath = AssetDatabase.GetAssetPath(obj);
-                if (!string.IsNullOrEmpty(assetPath) && File.Exists(assetPath))
+                string assetPath = ConvertGlobalObjectIdToPath(item.id);
+                if (!string.IsNullOrEmpty(assetPath))
                 {
-                    FileInfo fileInfo = new FileInfo(assetPath);
-                    result.FileSize = fileInfo.Length;
-                    result.LastModified = fileInfo.LastWriteTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+                    return AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
                 }
             }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Add common properties shared across all assets
+        /// </summary>
+        private static void AddCommonProperties(SearchResultItem result, SearchItem item)
+        {
+            UnityEngine.Object obj = GetObjectFromSearchItem(item);
+            if (obj == null)
+                return;
+
+            string assetPath = AssetDatabase.GetAssetPath(obj);
+            if (string.IsNullOrEmpty(assetPath))
+                return;
+
+            // File details
+            if (File.Exists(assetPath))
+            {
+                FileInfo fileInfo = new FileInfo(assetPath);
+                result.FileSize = fileInfo.Length;
+                result.LastModified = fileInfo.LastWriteTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+                result.Properties["CreationTime"] = fileInfo.CreationTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+            }
+
+            // GUID
+            string guid = AssetDatabase.AssetPathToGUID(assetPath);
+            if (!string.IsNullOrEmpty(guid))
+            {
+                result.Properties["GUID"] = guid;
+            }
+
+            // Asset labels
+            string[] labels = AssetDatabase.GetLabels(obj);
+            if (labels.Length > 0)
+            {
+                result.Properties["Labels"] = string.Join(", ", labels);
+            }
+
+            // Addressables metadata when the package is available
+            AddAddressableInfo(result, assetPath);
+
+            // Number of dependent assets
+            string[] dependencies = AssetDatabase.GetDependencies(assetPath, false);
+            result.Properties["DependencyCount"] = dependencies.Length;
+
+            // Import settings hash
+            UnityEngine.Hash128 hash = AssetDatabase.GetAssetDependencyHash(assetPath);
+            result.Properties["ImportHash"] = hash.ToString();
+        }
+
+        /// <summary>
+        /// Append Addressables metadata
+        /// </summary>
+        private static void AddAddressableInfo(SearchResultItem result, string assetPath)
+        {
+            // Use reflection to acquire AddressableAssetSettings
+            System.Type settingsType = System.Type.GetType("UnityEditor.AddressableAssets.AddressableAssetSettings, Unity.Addressables.Editor");
+            if (settingsType == null)
+                return;
+
+            System.Reflection.PropertyInfo defaultSettingsProp = settingsType.GetProperty("DefaultObject",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+            if (defaultSettingsProp == null)
+                return;
+
+            object settings = defaultSettingsProp.GetValue(null);
+            if (settings == null)
+                return;
+
+            // Retrieve the FindAssetEntry method
+            System.Reflection.MethodInfo findEntryMethod = settingsType.GetMethod("FindAssetEntry",
+                new[] { typeof(string) });
+            if (findEntryMethod == null)
+                return;
+
+            string guid = AssetDatabase.AssetPathToGUID(assetPath);
+            object entry = findEntryMethod.Invoke(settings, new object[] { guid });
+            if (entry == null)
+                return;
+
+            // Extract the Address and Group
+            System.Type entryType = entry.GetType();
+            System.Reflection.PropertyInfo addressProp = entryType.GetProperty("address");
+            System.Reflection.PropertyInfo parentGroupProp = entryType.GetProperty("parentGroup");
+
+            if (addressProp != null)
+            {
+                string address = addressProp.GetValue(entry) as string;
+                if (!string.IsNullOrEmpty(address))
+                {
+                    result.Properties["AddressableAddress"] = address;
+                }
+            }
+
+            if (parentGroupProp != null)
+            {
+                object parentGroup = parentGroupProp.GetValue(entry);
+                if (parentGroup != null)
+                {
+                    System.Reflection.PropertyInfo nameProp = parentGroup.GetType().GetProperty("Name");
+                    if (nameProp != null)
+                    {
+                        string groupName = nameProp.GetValue(parentGroup) as string;
+                        if (!string.IsNullOrEmpty(groupName))
+                        {
+                            result.Properties["AddressableGroup"] = groupName;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Add asset-specific detailed properties
+        /// </summary>
+        private static void AddAssetSpecificProperties(SearchResultItem result, SearchItem item)
+        {
+            UnityEngine.Object obj = GetObjectFromSearchItem(item);
+            if (obj == null)
+                return;
+
+            string assetPath = AssetDatabase.GetAssetPath(obj);
+            if (string.IsNullOrEmpty(assetPath))
+                return;
+
+            // Texture information
+            AddTextureProperties(result, obj, assetPath);
+
+            // Mesh information
+            AddMeshProperties(result, obj, assetPath);
+
+            // Transform information
+            AddTransformProperties(result, obj);
+        }
+
+        /// <summary>
+        /// Add detailed texture properties
+        /// </summary>
+        private static void AddTextureProperties(SearchResultItem result, UnityEngine.Object obj, string assetPath)
+        {
+            if (!(obj is Texture texture))
+                return;
+
+            TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+            if (importer == null)
+                return;
+
+            // Width/Height
+            importer.GetSourceTextureWidthAndHeight(out int width, out int height);
+            result.Properties["Width"] = width;
+            result.Properties["Height"] = height;
+
+            // MaxTextureSize
+            result.Properties["MaxTextureSize"] = importer.maxTextureSize;
+
+            // TextureCompression
+            result.Properties["TextureCompression"] = importer.textureCompression.ToString();
+
+            // IsReadable (Importer)
+            result.Properties["IsReadable"] = importer.isReadable;
+
+            // Format
+            if (obj is Texture2D tex2D)
+            {
+                result.Properties["Format"] = tex2D.format.ToString();
+            }
+
+            // MipMapCount
+            result.Properties["MipMapCount"] = texture.mipmapCount;
+
+            // FilterMode
+            result.Properties["FilterMode"] = texture.filterMode.ToString();
+
+            // WrapMode
+            result.Properties["WrapMode"] = texture.wrapMode.ToString();
+
+            // AnisoLevel
+            result.Properties["AnisoLevel"] = texture.anisoLevel;
+        }
+
+        /// <summary>
+        /// Add detailed mesh properties
+        /// </summary>
+        private static void AddMeshProperties(SearchResultItem result, UnityEngine.Object obj, string assetPath)
+        {
+            Mesh mesh = null;
+
+            // Acquire a MeshFilter from the GameObject
+            if (obj is GameObject go)
+            {
+                if (go.TryGetComponent<MeshFilter>(out MeshFilter meshFilter))
+                {
+                    mesh = meshFilter.sharedMesh;
+                }
+                // Or use the SkinnedMeshRenderer
+                else if (go.TryGetComponent<SkinnedMeshRenderer>(out SkinnedMeshRenderer skinnedMesh))
+                {
+                    mesh = skinnedMesh.sharedMesh;
+                    // BoneCount
+                    if (skinnedMesh.bones != null)
+                    {
+                        result.Properties["BoneCount"] = skinnedMesh.bones.Length;
+                    }
+                }
+            }
+            // Direct mesh object
+            else if (obj is Mesh directMesh)
+            {
+                mesh = directMesh;
+            }
+
+            if (mesh == null)
+                return;
+
+            // IsReadable
+            result.Properties["IsReadable"] = mesh.isReadable;
+
+            // Properties that don't require readable access
+            result.Properties["SubMeshCount"] = mesh.subMeshCount;
+            result.Properties["BlendShapeCount"] = mesh.blendShapeCount;
+            result.Properties["Bounds"] = mesh.bounds.ToString();
+
+            // Properties that require readable access
+            if (mesh.isReadable)
+            {
+                result.Properties["VertexCount"] = mesh.vertexCount;
+                result.Properties["TriangleCount"] = mesh.triangles.Length / 3;
+            }
+        }
+
+        /// <summary>
+        /// Add detailed transform properties
+        /// </summary>
+        private static void AddTransformProperties(SearchResultItem result, UnityEngine.Object obj)
+        {
+            if (!(obj is GameObject gameObject) || gameObject.transform == null)
+                return;
+
+            Transform transform = gameObject.transform;
+
+            // Position (world space)
+            result.Properties["Position"] = transform.position.ToString();
+
+            // LocalPosition
+            result.Properties["LocalPosition"] = transform.localPosition.ToString();
+
+            // Rotation (Euler angles)
+            result.Properties["Rotation"] = transform.eulerAngles.ToString();
+
+            // LocalRotation (Euler angles)
+            result.Properties["LocalRotation"] = transform.localEulerAngles.ToString();
+
+            // LocalScale
+            result.Properties["LocalScale"] = transform.localScale.ToString();
+
+            // LossyScale
+            result.Properties["LossyScale"] = transform.lossyScale.ToString();
         }
 
         /// <summary>

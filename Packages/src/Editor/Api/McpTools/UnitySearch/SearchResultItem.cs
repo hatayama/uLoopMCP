@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -70,6 +71,12 @@ namespace io.github.hatayama.uLoopMCP
         public bool IsSelectable { get; set; }
 
         /// <summary>
+        /// Asset-specific detailed property information
+        /// For example, textures expose Width/Height, meshes expose VertexCount/TriangleCount
+        /// </summary>
+        public Dictionary<string, object> Properties { get; set; }
+
+        /// <summary>
         /// Default constructor
         /// </summary>
         public SearchResultItem()
@@ -84,6 +91,7 @@ namespace io.github.hatayama.uLoopMCP
             Tags = Array.Empty<string>();
             LastModified = string.Empty;
             IsSelectable = true;
+            Properties = new Dictionary<string, object>();
         }
 
         /// <summary>
@@ -103,6 +111,7 @@ namespace io.github.hatayama.uLoopMCP
             IsSelectable = true;
             Score = 0f;
             FileSize = 0L;
+            Properties = new Dictionary<string, object>();
         }
 
         public override string ToString()
