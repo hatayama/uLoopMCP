@@ -406,7 +406,9 @@ export class UnityClient {
   async executeTool(toolName: string, params: Record<string, unknown> = {}): Promise<unknown> {
     // Ensure connection before executing tool
     if (!this.connected) {
-      throw new Error('Not connected to Unity. Please wait for connection to be established.');
+      throw new Error(
+        'Not connected to Unity. Please wait for connection to be established. Note: If you just executed the compile tool, the Unity connection may be temporarily disconnected. Please wait a few seconds and try again.',
+      );
     }
 
     // Ensure client name is set (this completes the connection handshake)

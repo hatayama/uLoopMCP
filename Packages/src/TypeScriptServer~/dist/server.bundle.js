@@ -7050,7 +7050,10 @@ var UnityClient = class _UnityClient {
           message: error.message
         });
         if (this.socket?.connecting) {
-          reject(new Error(`Unity connection failed: ${error.message}`));
+          const err = new Error(`Unity connection failed: ${error.message}`);
+          this.socket.destroy();
+          this.socket = null;
+          reject(err);
         } else {
           this.handleConnectionLoss();
         }
@@ -7164,7 +7167,9 @@ var UnityClient = class _UnityClient {
    */
   async executeTool(toolName, params = {}) {
     if (!this.connected) {
-      throw new Error("Not connected to Unity. Please wait for connection to be established.");
+      throw new Error(
+        "Not connected to Unity. Please wait for connection to be established. Note: If you just executed the compile tool, the Unity connection may be temporarily disconnected. Please wait a few seconds and try again."
+      );
     }
     await this.setClientName();
     const request = {
