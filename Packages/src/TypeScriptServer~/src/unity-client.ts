@@ -7,7 +7,11 @@ import {
   DEFAULT_CLIENT_NAME,
 } from './constants.js';
 // Debug logging removed
-import { safeSetTimeout } from './utils/safe-timer.js';
+import { SafeTimer, safeSetTimeout, stopSafeTimer } from './utils/safe-timer.js';
+
+const createSafeTimeout = (callback: () => void, delay: number): SafeTimer => {
+  return safeSetTimeout(callback, delay);
+};
 import { ConnectionManager } from './connection-manager.js';
 import { MessageHandler } from './message-handler.js';
 import { VibeLogger } from './utils/vibe-logger.js';
@@ -150,27 +154,22 @@ export class UnityClient {
     }
 
     // Third check: ping test with timeout (only if socket state is good)
-    let timeoutTimer: NodeJS.Timeout | null = null;
+    let timeoutTimer: SafeTimer | null = null;
 
     try {
-      // Add timeout to prevent hanging
       await Promise.race([
         this.ping(UNITY_CONNECTION.CONNECTION_TEST_MESSAGE),
-        new Promise<never>((_, reject: (reason?: unknown) => void) => {
-          timeoutTimer = setTimeout(() => {
+        new Promise<never>((_resolve, reject: (reason?: unknown) => void) => {
+          timeoutTimer = createSafeTimeout(() => {
             reject(new Error('Health check timeout'));
           }, 1000);
         }),
       ]);
     } catch (error: unknown) {
-      // Ping failed or timed out, but don't disconnect - just report unhealthy
-      // This prevents creating new connections during health checks
       return false;
     } finally {
-      if (timeoutTimer !== null) {
-        clearTimeout(timeoutTimer);
-        timeoutTimer = null;
-      }
+      stopSafeTimer(timeoutTimer);
+      timeoutTimer = null;
     }
 
     return true;
@@ -539,11 +538,11 @@ export class UnityClient {
       this.messageHandler.registerPendingRequest(
         request.id,
         (response) => {
-          timeoutTimer.stop(); // Clean up timer
+          stopSafeTimer(timeoutTimer); // Clean up timer
           resolve(response as { id: string; error?: { message: string }; result?: unknown });
         },
         (error) => {
-          timeoutTimer.stop(); // Clean up timer
+          stopSafeTimer(timeoutTimer); // Clean up timer
           reject(error);
         },
       );

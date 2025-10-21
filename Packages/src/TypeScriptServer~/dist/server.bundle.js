@@ -5623,6 +5623,12 @@ var SafeTimer = class _SafeTimer {
 function safeSetTimeout(callback, delay) {
   return new SafeTimer(callback, delay, false);
 }
+function stopSafeTimer(timer) {
+  if (!timer) {
+    return;
+  }
+  timer.stop();
+}
 
 // src/utils/vibe-logger.ts
 import * as fs from "fs";
@@ -6879,6 +6885,9 @@ var MessageHandler = class {
 };
 
 // src/unity-client.ts
+var createSafeTimeout = (callback, delay) => {
+  return safeSetTimeout(callback, delay);
+};
 var UnityClient = class _UnityClient {
   static MAX_COUNTER = 9999;
   static COUNTER_PADDING = 4;
@@ -6984,8 +6993,8 @@ var UnityClient = class _UnityClient {
     try {
       await Promise.race([
         this.ping(UNITY_CONNECTION.CONNECTION_TEST_MESSAGE),
-        new Promise((_, reject) => {
-          timeoutTimer = setTimeout(() => {
+        new Promise((_resolve, reject) => {
+          timeoutTimer = createSafeTimeout(() => {
             reject(new Error("Health check timeout"));
           }, 1e3);
         })
@@ -6993,10 +7002,8 @@ var UnityClient = class _UnityClient {
     } catch (error) {
       return false;
     } finally {
-      if (timeoutTimer !== null) {
-        clearTimeout(timeoutTimer);
-        timeoutTimer = null;
-      }
+      stopSafeTimer(timeoutTimer);
+      timeoutTimer = null;
     }
     return true;
   }
@@ -7273,11 +7280,11 @@ var UnityClient = class _UnityClient {
       this.messageHandler.registerPendingRequest(
         request.id,
         (response) => {
-          timeoutTimer.stop();
+          stopSafeTimer(timeoutTimer);
           resolve2(response);
         },
         (error) => {
-          timeoutTimer.stop();
+          stopSafeTimer(timeoutTimer);
           reject(error);
         }
       );

@@ -143,6 +143,17 @@ export function safeSetInterval(callback: () => void, delay: number): SafeTimer 
 }
 
 /**
+ * Stop and clean up a SafeTimer instance safely
+ */
+export function stopSafeTimer(timer: SafeTimer | null | undefined): void {
+  if (!timer) {
+    return;
+  }
+
+  timer.stop();
+}
+
+/**
  * Promise-based delay with automatic cleanup
  */
 export function safeDelay(ms: number): Promise<void> {
