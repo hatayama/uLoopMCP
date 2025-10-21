@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.34.2](https://github.com/hatayama/uLoopMCP/compare/v0.34.1...v0.34.2) (2025-10-21)
+
+
+### Bug Fixes
+
+* Ensure Unity client retries after initial socket failure ([#306](https://github.com/hatayama/uLoopMCP/issues/306)) ([04cba58](https://github.com/hatayama/uLoopMCP/commit/04cba5887de3647d9622a14136abc2ae33e90fbc))
+
 ## [0.34.1](https://github.com/hatayama/uLoopMCP/compare/v0.34.0...v0.34.1) (2025-10-15)
 
 
