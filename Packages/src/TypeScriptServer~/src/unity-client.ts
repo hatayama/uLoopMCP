@@ -243,7 +243,9 @@ export class UnityClient {
         if (!currentSocket.destroyed) {
           currentSocket.destroy();
         }
-        this.socket = null;
+        if (this.socket === currentSocket) {
+          this.socket = null;
+        }
         reject(error);
       };
 
