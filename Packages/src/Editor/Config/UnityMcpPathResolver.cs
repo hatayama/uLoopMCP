@@ -1,5 +1,7 @@
+using System;
 using System.IO;
 using UnityEngine;
+using System.Linq; // Added for .Concat()
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -119,12 +121,104 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Gets the base root for configuration files.
+        /// When addRepositoryRoot is true and Git root differs, Git root is returned.
+        /// </summary>
+        private static string GetConfigurationRoot()
+        {
+            string projectRoot = GetProjectRoot();
+            bool useRepositoryRoot = McpEditorSettings.GetAddRepositoryRoot();
+
+            if (!useRepositoryRoot)
+            {
+                return projectRoot;
+            }
+
+            string gitRoot = GetGitRepositoryRoot();
+            if (!string.IsNullOrEmpty(gitRoot))
+            {
+                return gitRoot;
+            }
+
+            return projectRoot;
+        }
+
+        private static string CombineWithConfigurationRoot(params string[] paths)
+        {
+            string root = GetConfigurationRoot();
+            return Path.Combine(new[] { root }.Concat(paths).ToArray());
+        }
+
+        private static string _cachedGitRepositoryRoot;
+        private static bool _cachedGitRootComputed;
+        private static bool _cachedGitRootDiffers;
+        private static bool _cachedGitRootDifferenceComputed;
+
+        /// <summary>
+        /// Try to get the Git repository root directory.
+        /// Returns null when not found.
+        /// </summary>
+        public static string GetGitRepositoryRoot()
+        {
+            if (_cachedGitRootComputed)
+            {
+                return _cachedGitRepositoryRoot;
+            }
+
+            string projectRoot = GetProjectRoot();
+            string currentDirectory = projectRoot;
+            const int maxDepth = 10;
+            int depth = 0;
+
+            while (!string.IsNullOrEmpty(currentDirectory) && depth <= maxDepth)
+            {
+                string gitDirectoryPath = Path.Combine(currentDirectory, ".git");
+                if (Directory.Exists(gitDirectoryPath) || File.Exists(gitDirectoryPath))
+                {
+                    _cachedGitRepositoryRoot = currentDirectory;
+                    _cachedGitRootComputed = true;
+                    return _cachedGitRepositoryRoot;
+                }
+
+                string parentDirectory = Path.GetDirectoryName(currentDirectory);
+                if (string.IsNullOrEmpty(parentDirectory) || string.Equals(parentDirectory, currentDirectory, StringComparison.Ordinal))
+                {
+                    break;
+                }
+
+                currentDirectory = parentDirectory;
+                depth++;
+            }
+
+            _cachedGitRepositoryRoot = null;
+            _cachedGitRootComputed = true;
+            return null;
+        }
+
+        /// <summary>
+        /// Determines if Git repository root differs from Unity project root.
+        /// </summary>
+        public static bool GitRootDiffersFromProjectRoot()
+        {
+            if (_cachedGitRootDifferenceComputed)
+            {
+                return _cachedGitRootDiffers;
+            }
+
+            string projectRoot = GetProjectRoot();
+            string gitRoot = GetGitRepositoryRoot();
+
+            _cachedGitRootDiffers = !string.IsNullOrEmpty(gitRoot) && !string.Equals(gitRoot, projectRoot, StringComparison.Ordinal);
+            _cachedGitRootDifferenceComputed = true;
+            return _cachedGitRootDiffers;
+        }
+
+        /// <summary>
         /// Gets the path to .cursor/mcp.json in the project root.
         /// </summary>
         public static string GetMcpConfigPath()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, CURSOR_CONFIG_DIR, MCP_CONFIG_FILE);
+            return CombineWithConfigurationRoot(CURSOR_CONFIG_DIR, MCP_CONFIG_FILE);
         }
 
         /// <summary>
@@ -132,8 +226,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string GetClaudeCodeConfigPath()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, CLAUDE_CODE_CONFIG_FILE);
+            return CombineWithConfigurationRoot(CLAUDE_CODE_CONFIG_FILE);
         }
 
         /// <summary>
@@ -141,8 +234,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string GetVSCodeConfigPath()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, VSCODE_CONFIG_DIR, MCP_CONFIG_FILE);
+            return CombineWithConfigurationRoot(VSCODE_CONFIG_DIR, MCP_CONFIG_FILE);
         }
 
         /// <summary>
@@ -150,8 +242,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string GetGeminiCLIConfigPath()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, GEMINI_CONFIG_DIR, GEMINI_CONFIG_FILE);
+            return CombineWithConfigurationRoot(GEMINI_CONFIG_DIR, GEMINI_CONFIG_FILE);
         }
 
         /// <summary>
@@ -168,8 +259,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string GetMcpInspectorConfigPath()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, MCP_INSPECTOR_CONFIG_FILE);
+            return CombineWithConfigurationRoot(MCP_INSPECTOR_CONFIG_FILE);
         }
 
         /// <summary>
@@ -198,8 +288,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string GetCursorConfigDirectory()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, CURSOR_CONFIG_DIR);
+            return CombineWithConfigurationRoot(CURSOR_CONFIG_DIR);
         }
 
         /// <summary>
@@ -207,8 +296,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string GetVSCodeConfigDirectory()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, VSCODE_CONFIG_DIR);
+            return CombineWithConfigurationRoot(VSCODE_CONFIG_DIR);
         }
 
         /// <summary>
@@ -216,8 +304,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string GetGeminiConfigDirectory()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, GEMINI_CONFIG_DIR);
+            return CombineWithConfigurationRoot(GEMINI_CONFIG_DIR);
         }
 
         /// <summary>

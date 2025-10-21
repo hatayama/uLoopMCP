@@ -49,12 +49,14 @@ namespace io.github.hatayama.uLoopMCP
         public readonly IReadOnlyCollection<ConnectedClient> Clients;
         public readonly bool ShowFoldout;
         public readonly bool IsServerRunning;
+        public readonly bool ShowReconnectingUI;
 
         public ConnectedToolsData(IReadOnlyCollection<ConnectedClient> clients, bool showFoldout, bool isServerRunning, bool showReconnectingUI)
         {
             Clients = clients;
             ShowFoldout = showFoldout;
             IsServerRunning = isServerRunning;
+            ShowReconnectingUI = showReconnectingUI;
         }
     }
     
@@ -68,8 +70,11 @@ namespace io.github.hatayama.uLoopMCP
         public readonly bool HasPortMismatch;
         public readonly string ConfigurationError;
         public readonly bool IsUpdateNeeded;
+        public readonly bool AddRepositoryRoot;
+        public readonly bool SupportsRepositoryRootToggle;
+        public readonly bool ShowRepositoryRootToggle;
 
-        public EditorConfigData(McpEditorType selectedEditor, bool showFoldout, bool isServerRunning, int currentPort, bool isConfigured = false, bool hasPortMismatch = false, string configurationError = null, bool isUpdateNeeded = true)
+        public EditorConfigData(McpEditorType selectedEditor, bool showFoldout, bool isServerRunning, int currentPort, bool isConfigured = false, bool hasPortMismatch = false, string configurationError = null, bool isUpdateNeeded = true, bool addRepositoryRoot = false, bool supportsRepositoryRootToggle = false, bool showRepositoryRootToggle = false)
         {
             SelectedEditor = selectedEditor;
             ShowFoldout = showFoldout;
@@ -79,6 +84,9 @@ namespace io.github.hatayama.uLoopMCP
             HasPortMismatch = hasPortMismatch;
             ConfigurationError = configurationError;
             IsUpdateNeeded = isUpdateNeeded;
+            AddRepositoryRoot = addRepositoryRoot;
+            SupportsRepositoryRootToggle = supportsRepositoryRootToggle;
+            ShowRepositoryRootToggle = showRepositoryRootToggle;
         }
     }
 

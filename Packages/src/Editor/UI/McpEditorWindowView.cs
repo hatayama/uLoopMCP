@@ -175,7 +175,7 @@ namespace io.github.hatayama.uLoopMCP
             EditorGUILayout.Space();
         }
 
-        public void DrawEditorConfigSection(EditorConfigData data, Action<McpEditorType> editorChangeCallback, Action<string> configureCallback, Action<bool> foldoutCallback)
+        public void DrawEditorConfigSection(EditorConfigData data, Action<McpEditorType> editorChangeCallback, Action<string> configureCallback, Action<bool> foldoutCallback, Action<bool> repositoryRootToggleCallback)
         {
             EditorGUILayout.BeginVertical(CreateSectionBoxStyle());
             
@@ -201,6 +201,25 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 
                 EditorGUILayout.Space();
+
+                if (data.SupportsRepositoryRootToggle && data.ShowRepositoryRootToggle)
+                {
+                    EditorGUILayout.BeginHorizontal();
+                    bool newAddRepositoryRoot = EditorGUILayout.Toggle(data.AddRepositoryRoot, GUILayout.Width(20));
+                    GUIContent toggleLabel = new GUIContent("Add Repository Root", "ON にすると Git リポジトリルートで設定ファイルを生成します");
+                    if (GUILayout.Button(toggleLabel, EditorStyles.label, GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true)))
+                    {
+                        newAddRepositoryRoot = !data.AddRepositoryRoot;
+                    }
+
+                    if (newAddRepositoryRoot != data.AddRepositoryRoot)
+                    {
+                        repositoryRootToggleCallback?.Invoke(newAddRepositoryRoot);
+                    }
+                    EditorGUILayout.EndHorizontal();
+
+                    EditorGUILayout.Space();
+                }
                 
                 string editorName = GetEditorDisplayName(data.SelectedEditor);
                 
