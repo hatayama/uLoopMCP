@@ -7,7 +7,11 @@ import {
   DEFAULT_CLIENT_NAME,
 } from './constants.js';
 // Debug logging removed
-import { safeSetTimeout } from './utils/safe-timer.js';
+import { SafeTimer, safeSetTimeout, stopSafeTimer } from './utils/safe-timer.js';
+
+const createSafeTimeout = (callback: () => void, delay: number): SafeTimer => {
+  return safeSetTimeout(callback, delay);
+};
 import { ConnectionManager } from './connection-manager.js';
 import { MessageHandler } from './message-handler.js';
 import { VibeLogger } from './utils/vibe-logger.js';
@@ -150,20 +154,25 @@ export class UnityClient {
     }
 
     // Third check: ping test with timeout (only if socket state is good)
+    let timeoutTimer: SafeTimer | null = null;
+
     try {
-      // Add timeout to prevent hanging
       await Promise.race([
         this.ping(UNITY_CONNECTION.CONNECTION_TEST_MESSAGE),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Health check timeout')), 1000),
-        ),
+        new Promise<never>((_resolve, reject: (reason?: unknown) => void) => {
+          timeoutTimer = createSafeTimeout(() => {
+            reject(new Error('Health check timeout'));
+          }, 1000);
+        }),
       ]);
-      return true;
-    } catch (error) {
-      // Ping failed or timed out, but don't disconnect - just report unhealthy
-      // This prevents creating new connections during health checks
+    } catch (error: unknown) {
       return false;
+    } finally {
+      stopSafeTimer(timeoutTimer);
+      timeoutTimer = null;
     }
+
+    return true;
   }
 
   /**
@@ -221,55 +230,92 @@ export class UnityClient {
 
     return new Promise((resolve, reject) => {
       this.socket = new net.Socket();
+      const currentSocket: net.Socket = this.socket;
+      let connectionEstablished: boolean = false;
+      let promiseSettled: boolean = false;
 
-      this.socket.connect(this.port, this.host, () => {
+      const finalizeInitialFailure = (error: Error, logCode: string, logMessage: string): void => {
+        if (promiseSettled) {
+          return;
+        }
+        promiseSettled = true;
+        VibeLogger.logError(logCode, logMessage, { message: error.message });
+        if (!currentSocket.destroyed) {
+          currentSocket.destroy();
+        }
+        if (this.socket === currentSocket) {
+          this.socket = null;
+        }
+        reject(error);
+      };
+
+      currentSocket.connect(this.port, this.host, () => {
         this._connected = true;
+        connectionEstablished = true;
+        promiseSettled = true;
 
-        // Notify reconnect handlers (this will handle client name setting)
         this.reconnectHandlers.forEach((handler) => {
           try {
             handler();
           } catch (error) {
-            // Error in reconnect handler
+            VibeLogger.logError(
+              'unity_reconnect_handler_error',
+              'Unity reconnect handler threw an error',
+              {
+                message: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined,
+              },
+            );
           }
         });
 
         resolve();
       });
 
-      // Handle errors (both during connection and after establishment)
-      this.socket.on('error', (error) => {
+      currentSocket.on('error', (error: Error) => {
         this._connected = false;
+        if (!connectionEstablished) {
+          finalizeInitialFailure(
+            new Error(`Unity connection failed: ${error.message}`),
+            'unity_connect_attempt_failed',
+            'Unity socket error during connection attempt',
+          );
+          return;
+        }
+
         VibeLogger.logError('unity_socket_error', 'Unity socket error', {
           message: error.message,
         });
-        if (this.socket?.connecting) {
-          // Error during connection attempt
-          const err = new Error(`Unity connection failed: ${error.message}`);
-          this.socket.destroy();
-          this.socket = null;
-          reject(err);
-        } else {
-          // Error after connection was established
-          this.handleConnectionLoss();
+        this.handleConnectionLoss();
+      });
+
+      currentSocket.on('close', () => {
+        this._connected = false;
+        if (!connectionEstablished) {
+          finalizeInitialFailure(
+            new Error('Unity connection closed before being established'),
+            'unity_connect_closed_pre_handshake',
+            'Unity socket closed during connection attempt',
+          );
+          return;
         }
-      });
-
-      this.socket.on('close', () => {
-        this._connected = false;
         this.handleConnectionLoss();
       });
 
-      // Handle graceful end of connection
-      this.socket.on('end', () => {
+      currentSocket.on('end', () => {
         this._connected = false;
+        if (!connectionEstablished) {
+          finalizeInitialFailure(
+            new Error('Unity connection ended before being established'),
+            'unity_connect_end_pre_handshake',
+            'Unity socket ended during connection attempt',
+          );
+          return;
+        }
         this.handleConnectionLoss();
       });
 
-      // Handle incoming data (both notifications and responses)
-      this.socket.on('data', (data) => {
-        // Trace frame arrival for debugging reconnect storms (rate limited by log system)
-        // Handle incoming data as Buffer for proper Content-Length framing
+      currentSocket.on('data', (data: Buffer) => {
         this.messageHandler.handleIncomingData(data);
       });
     });
@@ -494,11 +540,11 @@ export class UnityClient {
       this.messageHandler.registerPendingRequest(
         request.id,
         (response) => {
-          timeoutTimer.stop(); // Clean up timer
+          stopSafeTimer(timeoutTimer); // Clean up timer
           resolve(response as { id: string; error?: { message: string }; result?: unknown });
         },
         (error) => {
-          timeoutTimer.stop(); // Clean up timer
+          stopSafeTimer(timeoutTimer); // Clean up timer
           reject(error);
         },
       );

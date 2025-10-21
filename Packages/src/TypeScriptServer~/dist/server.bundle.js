@@ -5623,6 +5623,12 @@ var SafeTimer = class _SafeTimer {
 function safeSetTimeout(callback, delay) {
   return new SafeTimer(callback, delay, false);
 }
+function stopSafeTimer(timer) {
+  if (!timer) {
+    return;
+  }
+  timer.stop();
+}
 
 // src/utils/vibe-logger.ts
 import * as fs from "fs";
@@ -6879,6 +6885,9 @@ var MessageHandler = class {
 };
 
 // src/unity-client.ts
+var createSafeTimeout = (callback, delay) => {
+  return safeSetTimeout(callback, delay);
+};
 var UnityClient = class _UnityClient {
   static MAX_COUNTER = 9999;
   static COUNTER_PADDING = 4;
@@ -6980,17 +6989,23 @@ var UnityClient = class _UnityClient {
       this._connected = false;
       return false;
     }
+    let timeoutTimer = null;
     try {
       await Promise.race([
         this.ping(UNITY_CONNECTION.CONNECTION_TEST_MESSAGE),
-        new Promise(
-          (_, reject) => setTimeout(() => reject(new Error("Health check timeout")), 1e3)
-        )
+        new Promise((_resolve, reject) => {
+          timeoutTimer = createSafeTimeout(() => {
+            reject(new Error("Health check timeout"));
+          }, 1e3);
+        })
       ]);
-      return true;
     } catch (error) {
       return false;
+    } finally {
+      stopSafeTimer(timeoutTimer);
+      timeoutTimer = null;
     }
+    return true;
   }
   /**
    * Ensure connection to Unity (singleton-safe reconnection)
@@ -7034,39 +7049,81 @@ var UnityClient = class _UnityClient {
     }
     return new Promise((resolve2, reject) => {
       this.socket = new net.Socket();
-      this.socket.connect(this.port, this.host, () => {
+      const currentSocket = this.socket;
+      let connectionEstablished = false;
+      let promiseSettled = false;
+      const finalizeInitialFailure = (error, logCode, logMessage) => {
+        if (promiseSettled) {
+          return;
+        }
+        promiseSettled = true;
+        VibeLogger.logError(logCode, logMessage, { message: error.message });
+        if (!currentSocket.destroyed) {
+          currentSocket.destroy();
+        }
+        this.socket = null;
+        reject(error);
+      };
+      currentSocket.connect(this.port, this.host, () => {
         this._connected = true;
+        connectionEstablished = true;
+        promiseSettled = true;
         this.reconnectHandlers.forEach((handler) => {
           try {
             handler();
           } catch (error) {
+            VibeLogger.logError(
+              "unity_reconnect_handler_error",
+              "Unity reconnect handler threw an error",
+              {
+                message: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : void 0
+              }
+            );
           }
         });
         resolve2();
       });
-      this.socket.on("error", (error) => {
+      currentSocket.on("error", (error) => {
         this._connected = false;
+        if (!connectionEstablished) {
+          finalizeInitialFailure(
+            new Error(`Unity connection failed: ${error.message}`),
+            "unity_connect_attempt_failed",
+            "Unity socket error during connection attempt"
+          );
+          return;
+        }
         VibeLogger.logError("unity_socket_error", "Unity socket error", {
           message: error.message
         });
-        if (this.socket?.connecting) {
-          const err = new Error(`Unity connection failed: ${error.message}`);
-          this.socket.destroy();
-          this.socket = null;
-          reject(err);
-        } else {
-          this.handleConnectionLoss();
+        this.handleConnectionLoss();
+      });
+      currentSocket.on("close", () => {
+        this._connected = false;
+        if (!connectionEstablished) {
+          finalizeInitialFailure(
+            new Error("Unity connection closed before being established"),
+            "unity_connect_closed_pre_handshake",
+            "Unity socket closed during connection attempt"
+          );
+          return;
         }
-      });
-      this.socket.on("close", () => {
-        this._connected = false;
         this.handleConnectionLoss();
       });
-      this.socket.on("end", () => {
+      currentSocket.on("end", () => {
         this._connected = false;
+        if (!connectionEstablished) {
+          finalizeInitialFailure(
+            new Error("Unity connection ended before being established"),
+            "unity_connect_end_pre_handshake",
+            "Unity socket ended during connection attempt"
+          );
+          return;
+        }
         this.handleConnectionLoss();
       });
-      this.socket.on("data", (data) => {
+      currentSocket.on("data", (data) => {
         this.messageHandler.handleIncomingData(data);
       });
     });
@@ -7223,11 +7280,11 @@ var UnityClient = class _UnityClient {
       this.messageHandler.registerPendingRequest(
         request.id,
         (response) => {
-          timeoutTimer.stop();
+          stopSafeTimer(timeoutTimer);
           resolve2(response);
         },
         (error) => {
-          timeoutTimer.stop();
+          stopSafeTimer(timeoutTimer);
           reject(error);
         }
       );
