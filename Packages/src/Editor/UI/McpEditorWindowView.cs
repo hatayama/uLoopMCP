@@ -417,7 +417,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             try
             {
-                bool useRepositoryRoot = McpEditorSettings.GetAddRepositoryRoot();
+                bool useRepositoryRoot = addRepositoryRoot;
                 string projectRoot = UnityMcpPathResolver.GetProjectRoot();
                 string gitRoot = UnityMcpPathResolver.GetGitRepositoryRoot();
                 string baseRoot = useRepositoryRoot

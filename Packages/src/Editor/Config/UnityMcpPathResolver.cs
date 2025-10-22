@@ -193,6 +193,17 @@ namespace io.github.hatayama.uLoopMCP
         private static bool _cachedGitRootDifferenceComputed;
 
         /// <summary>
+        /// Clears cached Git repository detection results. Call when toggling repository-root setting.
+        /// </summary>
+        public static void InvalidateGitRootCache()
+        {
+            _cachedGitRepositoryRoot = null;
+            _cachedGitRootComputed = false;
+            _cachedGitRootDiffers = false;
+            _cachedGitRootDifferenceComputed = false;
+        }
+
+        /// <summary>
         /// Try to get the Git repository root directory.
         /// Returns null when not found.
         /// </summary>
@@ -207,10 +218,10 @@ namespace io.github.hatayama.uLoopMCP
             {
                 string projectRoot = GetProjectRoot();
                 string currentDirectory = projectRoot;
-                const int maxDepth = 10;
+            const int maxDepth = 10;
                 int depth = 0;
 
-                while (!string.IsNullOrEmpty(currentDirectory) && depth <= maxDepth)
+            while (!string.IsNullOrEmpty(currentDirectory) && depth < maxDepth)
                 {
                     string gitDirectoryPath = Path.Combine(currentDirectory, ".git");
                     if (Directory.Exists(gitDirectoryPath) || File.Exists(gitDirectoryPath))
@@ -349,6 +360,7 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorType.McpInspector => Path.Combine(root, MCP_INSPECTOR_CONFIG_FILE),
                 McpEditorType.Windsurf => GetWindsurfConfigPath(),
                 McpEditorType.Codex => GetCodexConfigPath(),
+                _ => throw new ArgumentOutOfRangeException(nameof(editorType), editorType, null),
             };
         }
 

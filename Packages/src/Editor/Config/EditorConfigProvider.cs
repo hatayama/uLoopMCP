@@ -158,6 +158,7 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorType.Windsurf => visitor.VisitWindsurf(),
                 McpEditorType.Codex => visitor.VisitCodex(),
                 McpEditorType.McpInspector => visitor.VisitMcpInspector(),
+                _ => throw new ArgumentOutOfRangeException(nameof(editorType), editorType, null),
             };
         }
     }
