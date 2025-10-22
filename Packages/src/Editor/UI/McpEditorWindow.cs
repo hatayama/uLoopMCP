@@ -603,6 +603,7 @@ namespace io.github.hatayama.uLoopMCP
         private void UpdateAddRepositoryRoot(bool addRepositoryRoot)
         {
             _model.UpdateAddRepositoryRoot(addRepositoryRoot);
+            Repaint();
         }
 
         

@@ -321,6 +321,30 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Gets the configuration file path for the specified editor using an explicit base root.
+        /// For editors whose configs live under the project/repository root, the path is resolved under baseRoot.
+        /// For editors with home-directory configs (e.g., Windsurf, Codex), returns their standard home path.
+        /// </summary>
+        /// <param name="editorType">Editor type</param>
+        /// <param name="baseRoot">Base root directory (e.g., Git root or Unity project root)</param>
+        /// <returns>Absolute path to the configuration file</returns>
+        public static string GetConfigPathForRoot(McpEditorType editorType, string baseRoot)
+        {
+            string root = string.IsNullOrEmpty(baseRoot) ? GetProjectRoot() : baseRoot;
+
+            return editorType switch
+            {
+                McpEditorType.Cursor => Path.Combine(root, CURSOR_CONFIG_DIR, MCP_CONFIG_FILE),
+                McpEditorType.ClaudeCode => Path.Combine(root, CLAUDE_CODE_CONFIG_FILE),
+                McpEditorType.VSCode => Path.Combine(root, VSCODE_CONFIG_DIR, MCP_CONFIG_FILE),
+                McpEditorType.GeminiCLI => Path.Combine(root, GEMINI_CONFIG_DIR, GEMINI_CONFIG_FILE),
+                McpEditorType.McpInspector => Path.Combine(root, MCP_INSPECTOR_CONFIG_FILE),
+                McpEditorType.Windsurf => GetWindsurfConfigPath(),
+                McpEditorType.Codex => GetCodexConfigPath(),
+            };
+        }
+
+        /// <summary>
         /// Gets the path to the .cursor directory.
         /// </summary>
         public static string GetCursorConfigDirectory()
