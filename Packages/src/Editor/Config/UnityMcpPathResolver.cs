@@ -176,7 +176,8 @@ namespace io.github.hatayama.uLoopMCP
                 normalizedRoot += "/";
             }
 
-            if (normalizedPath.StartsWith(normalizedRoot, StringComparison.Ordinal))
+            // Use case-insensitive comparison to support Windows file systems
+            if (normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
             {
                 string relative = normalizedPath.Substring(normalizedRoot.Length);
                 // Ensure forward slashes
@@ -202,29 +203,36 @@ namespace io.github.hatayama.uLoopMCP
                 return _cachedGitRepositoryRoot;
             }
 
-            string projectRoot = GetProjectRoot();
-            string currentDirectory = projectRoot;
-            const int maxDepth = 10;
-            int depth = 0;
-
-            while (!string.IsNullOrEmpty(currentDirectory) && depth <= maxDepth)
+            try
             {
-                string gitDirectoryPath = Path.Combine(currentDirectory, ".git");
-                if (Directory.Exists(gitDirectoryPath) || File.Exists(gitDirectoryPath))
-                {
-                    _cachedGitRepositoryRoot = currentDirectory;
-                    _cachedGitRootComputed = true;
-                    return _cachedGitRepositoryRoot;
-                }
+                string projectRoot = GetProjectRoot();
+                string currentDirectory = projectRoot;
+                const int maxDepth = 10;
+                int depth = 0;
 
-                string parentDirectory = Path.GetDirectoryName(currentDirectory);
-                if (string.IsNullOrEmpty(parentDirectory) || string.Equals(parentDirectory, currentDirectory, StringComparison.Ordinal))
+                while (!string.IsNullOrEmpty(currentDirectory) && depth <= maxDepth)
                 {
-                    break;
-                }
+                    string gitDirectoryPath = Path.Combine(currentDirectory, ".git");
+                    if (Directory.Exists(gitDirectoryPath) || File.Exists(gitDirectoryPath))
+                    {
+                        _cachedGitRepositoryRoot = currentDirectory;
+                        _cachedGitRootComputed = true;
+                        return _cachedGitRepositoryRoot;
+                    }
 
-                currentDirectory = parentDirectory;
-                depth++;
+                    string parentDirectory = Path.GetDirectoryName(currentDirectory);
+                    if (string.IsNullOrEmpty(parentDirectory) || string.Equals(parentDirectory, currentDirectory, StringComparison.Ordinal))
+                    {
+                        break;
+                    }
+
+                    currentDirectory = parentDirectory;
+                    depth++;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                UnityEngine.Debug.LogWarning($"Failed to detect Git repository root: {ex.Message}");
             }
 
             _cachedGitRepositoryRoot = null;
