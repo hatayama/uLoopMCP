@@ -417,10 +417,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             try
             {
-                bool useRepositoryRoot = addRepositoryRoot;
                 string projectRoot = UnityMcpPathResolver.GetProjectRoot();
                 string gitRoot = UnityMcpPathResolver.GetGitRepositoryRoot();
-                string baseRoot = useRepositoryRoot
+                string baseRoot = addRepositoryRoot
                     ? (gitRoot ?? projectRoot)
                     : projectRoot;
 
