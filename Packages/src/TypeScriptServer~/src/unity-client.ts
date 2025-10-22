@@ -452,9 +452,7 @@ export class UnityClient {
   async executeTool(toolName: string, params: Record<string, unknown> = {}): Promise<unknown> {
     // Ensure connection before executing tool
     if (!this.connected) {
-      throw new Error(
-        'Not connected to Unity. Please wait for connection to be established. Note: If you just executed the compile tool, the Unity connection may be temporarily disconnected. Please wait a few seconds and try again.',
-      );
+      throw new Error(this.getOsSpecificReconnectMessage());
     }
 
     // Ensure client name is set (this completes the connection handshake)
@@ -484,6 +482,31 @@ export class UnityClient {
 
       throw error;
     }
+  }
+
+  /**
+   * Build an OS-specific guidance message for temporary disconnection after compile.
+   * Explicitly instructs how to wait before retrying without assuming a fixed duration.
+   */
+  private getOsSpecificReconnectMessage(): string {
+    const commonPrefix: string =
+      'Not connected to Unity. If you just executed the compile tool, Unity reconnects automatically after compilation finishes. This can take from several seconds to tens of seconds depending on project size. Wait before your next tool call, then retry once.';
+
+    const platform: string =
+      typeof process !== 'undefined' && typeof process.platform === 'string'
+        ? process.platform
+        : 'unknown';
+
+    if (platform === 'win32') {
+      return `${commonPrefix} Examples: PowerShell: Start-Sleep -Seconds <seconds>; cmd: timeout /T <seconds> /NOBREAK. Avoid repeated retries; increase <seconds> if needed.`;
+    }
+
+    if (platform === 'darwin' || platform === 'linux') {
+      return `${commonPrefix} Example: sleep <seconds>. Avoid repeated retries; increase <seconds> if needed.`;
+    }
+
+    // Fallback for other platforms
+    return `${commonPrefix} Wait a bit longer if needed before retrying. Avoid repeated retries.`;
   }
 
   private handleToolResponse(
