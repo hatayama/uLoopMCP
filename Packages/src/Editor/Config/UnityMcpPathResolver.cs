@@ -149,6 +149,43 @@ namespace io.github.hatayama.uLoopMCP
             return Path.Combine(new[] { root }.Concat(paths).ToArray());
         }
 
+        /// <summary>
+        /// Makes an absolute path relative to the current configuration root.
+        /// If the absolutePath is under the configuration root, returns relative path with '/' separators.
+        /// Otherwise returns the original absolutePath.
+        /// </summary>
+        public static string MakeRelativeToConfigurationRoot(string absolutePath)
+        {
+            if (string.IsNullOrEmpty(absolutePath))
+            {
+                return absolutePath;
+            }
+
+            string root = GetConfigurationRoot();
+            if (string.IsNullOrEmpty(root))
+            {
+                return absolutePath;
+            }
+
+            // Ensure both have consistent trailing separators for comparison
+            string normalizedRoot = root.Replace('\\', '/');
+            string normalizedPath = absolutePath.Replace('\\', '/');
+
+            if (!normalizedRoot.EndsWith("/"))
+            {
+                normalizedRoot += "/";
+            }
+
+            if (normalizedPath.StartsWith(normalizedRoot, StringComparison.Ordinal))
+            {
+                string relative = normalizedPath.Substring(normalizedRoot.Length);
+                // Ensure forward slashes
+                return relative.Replace('\\', '/');
+            }
+
+            return absolutePath;
+        }
+
         private static string _cachedGitRepositoryRoot;
         private static bool _cachedGitRootComputed;
         private static bool _cachedGitRootDiffers;
