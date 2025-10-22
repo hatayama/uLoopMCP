@@ -1,5 +1,7 @@
+using System;
 using System.IO;
 using UnityEngine;
+using System.Linq; // Added for .Concat()
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -119,12 +121,149 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Gets the base root for configuration files.
+        /// When addRepositoryRoot is true and Git root differs, Git root is returned.
+        /// </summary>
+        private static string GetConfigurationRoot()
+        {
+            string projectRoot = GetProjectRoot();
+            bool useRepositoryRoot = McpEditorSettings.GetAddRepositoryRoot();
+
+            if (!useRepositoryRoot)
+            {
+                return projectRoot;
+            }
+
+            string gitRoot = GetGitRepositoryRoot();
+            if (!string.IsNullOrEmpty(gitRoot))
+            {
+                return gitRoot;
+            }
+
+            return projectRoot;
+        }
+
+        private static string CombineWithConfigurationRoot(params string[] paths)
+        {
+            string root = GetConfigurationRoot();
+            return Path.Combine(new[] { root }.Concat(paths).ToArray());
+        }
+
+        /// <summary>
+        /// Makes an absolute path relative to the current configuration root.
+        /// If the absolutePath is under the configuration root, returns relative path with '/' separators.
+        /// Otherwise returns the original absolutePath.
+        /// </summary>
+        public static string MakeRelativeToConfigurationRoot(string absolutePath)
+        {
+            if (string.IsNullOrEmpty(absolutePath))
+            {
+                return absolutePath;
+            }
+
+            string root = GetConfigurationRoot();
+            if (string.IsNullOrEmpty(root))
+            {
+                return absolutePath;
+            }
+
+            // Ensure both have consistent trailing separators for comparison
+            string normalizedRoot = root.Replace('\\', '/');
+            string normalizedPath = absolutePath.Replace('\\', '/');
+
+            if (!normalizedRoot.EndsWith("/"))
+            {
+                normalizedRoot += "/";
+            }
+
+            // Use case-insensitive comparison to support Windows file systems
+            if (normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                string relative = normalizedPath.Substring(normalizedRoot.Length);
+                // Ensure forward slashes
+                return relative.Replace('\\', '/');
+            }
+
+            return absolutePath;
+        }
+
+        private static string _cachedGitRepositoryRoot;
+        private static bool _cachedGitRootComputed;
+        private static bool _cachedGitRootDiffers;
+        private static bool _cachedGitRootDifferenceComputed;
+
+        /// <summary>
+        /// Try to get the Git repository root directory.
+        /// Returns null when not found.
+        /// </summary>
+        public static string GetGitRepositoryRoot()
+        {
+            if (_cachedGitRootComputed)
+            {
+                return _cachedGitRepositoryRoot;
+            }
+
+            try
+            {
+                string projectRoot = GetProjectRoot();
+                string currentDirectory = projectRoot;
+                const int maxDepth = 10;
+                int depth = 0;
+
+                while (!string.IsNullOrEmpty(currentDirectory) && depth <= maxDepth)
+                {
+                    string gitDirectoryPath = Path.Combine(currentDirectory, ".git");
+                    if (Directory.Exists(gitDirectoryPath) || File.Exists(gitDirectoryPath))
+                    {
+                        _cachedGitRepositoryRoot = currentDirectory;
+                        _cachedGitRootComputed = true;
+                        return _cachedGitRepositoryRoot;
+                    }
+
+                    string parentDirectory = Path.GetDirectoryName(currentDirectory);
+                    if (string.IsNullOrEmpty(parentDirectory) || string.Equals(parentDirectory, currentDirectory, StringComparison.Ordinal))
+                    {
+                        break;
+                    }
+
+                    currentDirectory = parentDirectory;
+                    depth++;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                UnityEngine.Debug.LogWarning($"Failed to detect Git repository root: {ex.Message}");
+            }
+
+            _cachedGitRepositoryRoot = null;
+            _cachedGitRootComputed = true;
+            return null;
+        }
+
+        /// <summary>
+        /// Determines if Git repository root differs from Unity project root.
+        /// </summary>
+        public static bool GitRootDiffersFromProjectRoot()
+        {
+            if (_cachedGitRootDifferenceComputed)
+            {
+                return _cachedGitRootDiffers;
+            }
+
+            string projectRoot = GetProjectRoot();
+            string gitRoot = GetGitRepositoryRoot();
+
+            _cachedGitRootDiffers = !string.IsNullOrEmpty(gitRoot) && !string.Equals(gitRoot, projectRoot, StringComparison.Ordinal);
+            _cachedGitRootDifferenceComputed = true;
+            return _cachedGitRootDiffers;
+        }
+
+        /// <summary>
         /// Gets the path to .cursor/mcp.json in the project root.
         /// </summary>
         public static string GetMcpConfigPath()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, CURSOR_CONFIG_DIR, MCP_CONFIG_FILE);
+            return CombineWithConfigurationRoot(CURSOR_CONFIG_DIR, MCP_CONFIG_FILE);
         }
 
         /// <summary>
@@ -132,8 +271,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string GetClaudeCodeConfigPath()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, CLAUDE_CODE_CONFIG_FILE);
+            return CombineWithConfigurationRoot(CLAUDE_CODE_CONFIG_FILE);
         }
 
         /// <summary>
@@ -141,8 +279,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string GetVSCodeConfigPath()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, VSCODE_CONFIG_DIR, MCP_CONFIG_FILE);
+            return CombineWithConfigurationRoot(VSCODE_CONFIG_DIR, MCP_CONFIG_FILE);
         }
 
         /// <summary>
@@ -150,8 +287,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string GetGeminiCLIConfigPath()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, GEMINI_CONFIG_DIR, GEMINI_CONFIG_FILE);
+            return CombineWithConfigurationRoot(GEMINI_CONFIG_DIR, GEMINI_CONFIG_FILE);
         }
 
         /// <summary>
@@ -168,8 +304,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string GetMcpInspectorConfigPath()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, MCP_INSPECTOR_CONFIG_FILE);
+            return CombineWithConfigurationRoot(MCP_INSPECTOR_CONFIG_FILE);
         }
 
         /// <summary>
@@ -194,12 +329,35 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Gets the configuration file path for the specified editor using an explicit base root.
+        /// For editors whose configs live under the project/repository root, the path is resolved under baseRoot.
+        /// For editors with home-directory configs (e.g., Windsurf, Codex), returns their standard home path.
+        /// </summary>
+        /// <param name="editorType">Editor type</param>
+        /// <param name="baseRoot">Base root directory (e.g., Git root or Unity project root)</param>
+        /// <returns>Absolute path to the configuration file</returns>
+        public static string GetConfigPathForRoot(McpEditorType editorType, string baseRoot)
+        {
+            string root = string.IsNullOrEmpty(baseRoot) ? GetProjectRoot() : baseRoot;
+
+            return editorType switch
+            {
+                McpEditorType.Cursor => Path.Combine(root, CURSOR_CONFIG_DIR, MCP_CONFIG_FILE),
+                McpEditorType.ClaudeCode => Path.Combine(root, CLAUDE_CODE_CONFIG_FILE),
+                McpEditorType.VSCode => Path.Combine(root, VSCODE_CONFIG_DIR, MCP_CONFIG_FILE),
+                McpEditorType.GeminiCLI => Path.Combine(root, GEMINI_CONFIG_DIR, GEMINI_CONFIG_FILE),
+                McpEditorType.McpInspector => Path.Combine(root, MCP_INSPECTOR_CONFIG_FILE),
+                McpEditorType.Windsurf => GetWindsurfConfigPath(),
+                McpEditorType.Codex => GetCodexConfigPath(),
+            };
+        }
+
+        /// <summary>
         /// Gets the path to the .cursor directory.
         /// </summary>
         public static string GetCursorConfigDirectory()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, CURSOR_CONFIG_DIR);
+            return CombineWithConfigurationRoot(CURSOR_CONFIG_DIR);
         }
 
         /// <summary>
@@ -207,8 +365,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string GetVSCodeConfigDirectory()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, VSCODE_CONFIG_DIR);
+            return CombineWithConfigurationRoot(VSCODE_CONFIG_DIR);
         }
 
         /// <summary>
@@ -216,8 +373,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static string GetGeminiConfigDirectory()
         {
-            string projectRoot = GetProjectRoot();
-            return Path.Combine(projectRoot, GEMINI_CONFIG_DIR);
+            return CombineWithConfigurationRoot(GEMINI_CONFIG_DIR);
         }
 
         /// <summary>

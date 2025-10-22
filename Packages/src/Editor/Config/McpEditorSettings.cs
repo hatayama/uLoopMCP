@@ -46,6 +46,9 @@ namespace io.github.hatayama.uLoopMCP
         // Dynamic Code Security Settings
         public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Disabled;
         
+        // Repository Root Toggle
+        public bool addRepositoryRoot = false;
+        
         // Session State Settings (moved from McpSessionManager)
         public bool isServerRunning = false;
         public int serverPort = McpServerConfig.DEFAULT_PORT;
@@ -288,7 +291,25 @@ namespace io.github.hatayama.uLoopMCP
             McpEditorSettingsData newSettings = settings with { showSecuritySettings = showSecuritySettings };
             SaveSettings(newSettings);
         }
-
+        
+        /// <summary>
+        /// Gets the repository root usage flag.
+        /// </summary>
+        public static bool GetAddRepositoryRoot()
+        {
+            return GetSettings().addRepositoryRoot;
+        }
+        
+        /// <summary>
+        /// Sets the repository root usage flag.
+        /// </summary>
+        public static void SetAddRepositoryRoot(bool addRepositoryRoot)
+        {
+            McpEditorSettingsData settings = GetSettings();
+            McpEditorSettingsData newSettings = settings with { addRepositoryRoot = addRepositoryRoot };
+            SaveSettings(newSettings);
+        }
+        
         // Session State Settings Methods (moved from McpSessionManager)
 
         /// <summary>

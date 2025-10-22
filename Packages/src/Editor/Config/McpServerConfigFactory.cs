@@ -79,24 +79,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>The relative path from project root</returns>
         private static string ConvertToRelativePath(string absolutePath)
         {
-            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
-            
-            // Check if the path is within the project
-            if (absolutePath.StartsWith(projectRoot))
-            {
-                // Remove project root and convert to forward slashes
-                string relativePath = absolutePath.Substring(projectRoot.Length);
-                if (relativePath.StartsWith("\\") || relativePath.StartsWith("/"))
-                {
-                    relativePath = relativePath.Substring(1);
-                }
-                
-                // Convert backslashes to forward slashes for better compatibility
-                return relativePath.Replace('\\', '/');
-            }
-            
-            // If not within project, return as-is
-            return absolutePath;
+            return UnityMcpPathResolver.MakeRelativeToConfigurationRoot(absolutePath);
         }
 
         /// <summary>

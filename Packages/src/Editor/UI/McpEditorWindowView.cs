@@ -175,7 +175,7 @@ namespace io.github.hatayama.uLoopMCP
             EditorGUILayout.Space();
         }
 
-        public void DrawEditorConfigSection(EditorConfigData data, Action<McpEditorType> editorChangeCallback, Action<string> configureCallback, Action<bool> foldoutCallback)
+        public void DrawEditorConfigSection(EditorConfigData data, Action<McpEditorType> editorChangeCallback, Action<string> configureCallback, Action<bool> foldoutCallback, Action<bool> repositoryRootToggleCallback)
         {
             EditorGUILayout.BeginVertical(CreateSectionBoxStyle());
             
@@ -201,6 +201,25 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 
                 EditorGUILayout.Space();
+
+                if (data.SupportsRepositoryRootToggle && data.ShowRepositoryRootToggle)
+                {
+                    EditorGUILayout.BeginHorizontal();
+                    bool newAddRepositoryRoot = EditorGUILayout.Toggle(data.AddRepositoryRoot, GUILayout.Width(20));
+                    GUIContent toggleLabel = new GUIContent("Use Repository Root", "ON にすると Git リポジトリルートで設定ファイルを生成します");
+                    if (GUILayout.Button(toggleLabel, EditorStyles.label, GUILayout.MinWidth(150f), GUILayout.ExpandWidth(true)))
+                    {
+                        newAddRepositoryRoot = !data.AddRepositoryRoot;
+                    }
+
+                    if (newAddRepositoryRoot != data.AddRepositoryRoot)
+                    {
+                        repositoryRootToggleCallback?.Invoke(newAddRepositoryRoot);
+                    }
+                    EditorGUILayout.EndHorizontal();
+
+                    EditorGUILayout.Space();
+                }
                 
                 string editorName = GetEditorDisplayName(data.SelectedEditor);
                 
@@ -283,7 +302,7 @@ namespace io.github.hatayama.uLoopMCP
                 // Open settings file button
                 if (GUILayout.Button($"Open {editorName} Settings File"))
                 {
-                    OpenConfigurationFile(data.SelectedEditor);
+                    OpenConfigurationFile(data.SelectedEditor, data.AddRepositoryRoot);
                 }
             }
             
@@ -394,12 +413,21 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Open configuration file for the specified editor type
         /// </summary>
-        private void OpenConfigurationFile(McpEditorType editorType)
+        private void OpenConfigurationFile(McpEditorType editorType, bool addRepositoryRoot)
         {
             try
             {
-                string configPath = UnityMcpPathResolver.GetConfigPath(editorType);
-                if (System.IO.File.Exists(configPath))
+                bool useRepositoryRoot = McpEditorSettings.GetAddRepositoryRoot();
+                string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+                string gitRoot = UnityMcpPathResolver.GetGitRepositoryRoot();
+                string baseRoot = useRepositoryRoot
+                    ? (gitRoot ?? projectRoot)
+                    : projectRoot;
+
+                string configPath = UnityMcpPathResolver.GetConfigPathForRoot(editorType, baseRoot);
+                bool exists = System.IO.File.Exists(configPath);
+
+                if (exists)
                 {
                     EditorUtility.OpenWithDefaultApp(configPath);
                 }

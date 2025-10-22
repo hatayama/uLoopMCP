@@ -128,6 +128,15 @@ namespace io.github.hatayama.uLoopMCP
         private void LoadSavedSettings()
         {
             _model.LoadFromSettings();
+
+            bool gitRootDiffers = UnityMcpPathResolver.GitRootDiffersFromProjectRoot();
+            _model.UpdateSupportsRepositoryRootToggle(gitRootDiffers);
+            _model.UpdateShowRepositoryRootToggle(gitRootDiffers);
+
+            if (!gitRootDiffers && _model.UI.AddRepositoryRoot)
+            {
+                _model.UpdateAddRepositoryRoot(false);
+            }
         }
 
         /// <summary>
@@ -247,7 +256,8 @@ namespace io.github.hatayama.uLoopMCP
                 data: configData,
                 editorChangeCallback: UpdateSelectedEditorType,
                 configureCallback: (editor) => ConfigureEditor(),
-                foldoutCallback: UpdateShowLLMToolSettings);
+                foldoutCallback: UpdateShowLLMToolSettings,
+                repositoryRootToggleCallback: UpdateAddRepositoryRoot);
 
             SecuritySettingsData securityData = CreateSecuritySettingsData();
             _view.DrawSecuritySettings(
@@ -438,7 +448,18 @@ namespace io.github.hatayama.uLoopMCP
                 isUpdateNeeded = true; // If error occurs, assume update is needed
             }
 
-            return new EditorConfigData(_model.UI.SelectedEditorType, _model.UI.ShowLLMToolSettings, isServerRunning, currentPort, isConfigured, hasPortMismatch, configurationError, isUpdateNeeded);
+            return new EditorConfigData(
+                _model.UI.SelectedEditorType,
+                _model.UI.ShowLLMToolSettings,
+                isServerRunning,
+                currentPort,
+                isConfigured,
+                hasPortMismatch,
+                configurationError,
+                isUpdateNeeded,
+                _model.UI.AddRepositoryRoot,
+                _model.UI.SupportsRepositoryRootToggle,
+                _model.UI.ShowRepositoryRootToggle);
         }
 
         /// <summary>
@@ -574,6 +595,15 @@ namespace io.github.hatayama.uLoopMCP
         private void UpdateAllowThirdPartyTools(bool allow)
         {
             _model.UpdateAllowThirdPartyTools(allow);
+        }
+
+        /// <summary>
+        /// Update AddRepositoryRoot setting
+        /// </summary>
+        private void UpdateAddRepositoryRoot(bool addRepositoryRoot)
+        {
+            _model.UpdateAddRepositoryRoot(addRepositoryRoot);
+            Repaint();
         }
 
         
