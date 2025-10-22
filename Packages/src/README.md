@@ -5,6 +5,8 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/hatayama/uLoopMCP)  
 ![ClaudeCode](https://img.shields.io/badge/Claude_Code-555?logo=claude)
 ![Cursor](https://img.shields.io/badge/Cursor-111?logo=Cursor)
+![OpenAICodex](https://img.shields.io/badge/OpenAI_Codex-111?logo=openai)
+![GoogleGemini](https://img.shields.io/badge/Google_Gemini-111?logo=googlegemini)
 ![GitHubCopilot](https://img.shields.io/badge/GitHub_Copilot-111?logo=githubcopilot)
 ![Windsurf](https://img.shields.io/badge/Windsurf-111?logo=Windsurf)
 
