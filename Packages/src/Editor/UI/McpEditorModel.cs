@@ -348,6 +348,7 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle));
             McpEditorSettings.SetAddRepositoryRoot(addRepositoryRoot);
+            UnityMcpPathResolver.InvalidateGitRootCache();
         }
 
         /// <summary>
