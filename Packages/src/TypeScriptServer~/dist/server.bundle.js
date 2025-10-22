@@ -7251,7 +7251,7 @@ var UnityClient = class _UnityClient {
    */
   getOsSpecificReconnectMessage() {
     const commonPrefix = "Not connected to Unity. If you just executed the compile tool, Unity reconnects automatically after compilation finishes. This can take from several seconds to tens of seconds depending on project size. Wait before your next tool call, then retry once.";
-    const platform = process.platform;
+    const platform = typeof process !== "undefined" && typeof process.platform === "string" ? process.platform : "unknown";
     if (platform === "win32") {
       return `${commonPrefix} Examples: PowerShell: Start-Sleep -Seconds <seconds>; cmd: timeout /T <seconds> /NOBREAK. Avoid repeated retries; increase <seconds> if needed.`;
     }
