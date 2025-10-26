@@ -18,8 +18,12 @@ namespace io.github.hatayama.uLoopMCP
         
         [Description("Whether to include component information for each GameObject in the hierarchy")]
         public bool IncludeComponents { get; set; } = true;
-        
-        [Description("Maximum response size in KB before saving to file (default: 100KB)")]
-        public int MaxResponseSizeKB { get; set; } = 100;
+
+        // Advanced output options
+        [Description("Whether to include path information for nodes (default: false)")]
+        public bool IncludePaths { get; set; } = false;
+
+        [Description("Use LUT for components (auto|true|false)")]
+        public string UseComponentsLut { get; set; } = "auto";
     }
 }

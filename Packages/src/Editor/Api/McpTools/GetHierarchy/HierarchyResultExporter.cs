@@ -21,14 +21,14 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Export hierarchy results to JSON file
         /// </summary>
-        /// <param name="hierarchyNodes">List of hierarchy nodes to export</param>
+        /// <param name="groups">Scene-grouped hierarchy nodes to export</param>
         /// <param name="context">Context information about the hierarchy</param>
         /// <returns>Relative path to the exported file</returns>
-        public static string ExportHierarchyResults(List<HierarchyNodeNested> hierarchyNodes, HierarchyContext context)
+        public static string ExportHierarchyResults(List<SceneHierarchyGroup> groups, HierarchyContext context)
         {
-            if (hierarchyNodes == null || hierarchyNodes.Count == 0)
+            if (groups == null)
             {
-                throw new ArgumentException("Cannot export empty hierarchy results");
+                groups = new List<SceneHierarchyGroup>();
             }
             
             // Create export directory if it doesn't exist
@@ -41,11 +41,12 @@ namespace io.github.hatayama.uLoopMCP
             string filePath = Path.Combine(exportDir, filename);
             
             // Create export data structure
+            // Ensure property order: ExportTimestamp -> Context -> Hierarchy
             var exportData = new HierarchyExportData
             {
                 ExportTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                Hierarchy = hierarchyNodes,
-                Context = context
+                Context = context,
+                Hierarchy = groups
             };
             
             // Export to JSON using Newtonsoft.Json for proper serialization
@@ -53,7 +54,8 @@ namespace io.github.hatayama.uLoopMCP
             {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                 MaxDepth = McpServerConfig.DEFAULT_JSON_MAX_DEPTH,
-                Formatting = Formatting.Indented
+                Formatting = Formatting.Indented,
+                NullValueHandling = NullValueHandling.Ignore
             };
             string jsonContent = JsonConvert.SerializeObject(exportData, settings);
             File.WriteAllText(filePath, jsonContent);
@@ -69,8 +71,8 @@ namespace io.github.hatayama.uLoopMCP
         public class HierarchyExportData
         {
             public string ExportTimestamp;
-            public List<HierarchyNodeNested> Hierarchy;
             public HierarchyContext Context;
+            public List<SceneHierarchyGroup> Hierarchy;
         }
     }
 }

@@ -4,86 +4,200 @@ using System.Linq;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Serializer for converting hierarchy data to response format
+    /// Serializer for converting flat hierarchy nodes to scene-grouped nested structures
     /// Related classes:
-    /// - HierarchyNode: Flat hierarchy structure
-    /// - HierarchyNodeNested: Nested hierarchy structure
-    /// - GetHierarchyResponse: Response structure
+    /// - HierarchyNode: Flat hierarchy structure (collected by service)
+    /// - HierarchyNodeNested: Nested hierarchy structure (export model)
+    /// - SceneHierarchyGroup: Scene-grouped container with stats and LUTs (export model)
     /// </summary>
     public class HierarchySerializer
     {
-        /// <summary>
-        /// Serialize hierarchy nodes and context into GetHierarchyResponse
-        /// </summary>
-        public GetHierarchyResponse SerializeHierarchy(List<HierarchyNode> nodes, HierarchyContext context)
+        public HierarchySerializationResult BuildGroups(List<HierarchyNode> nodes, HierarchyContext context, HierarchySerializationOptions options)
         {
-            // Calculate actual statistics
+            if (nodes == null)
+            {
+                nodes = new List<HierarchyNode>();
+            }
+
             int nodeCount = nodes.Count;
             int maxDepth = nodes.Any() ? nodes.Max(n => n.depth) : 0;
-            
-            // Update context with actual values
+
             HierarchyContext updatedContext = new HierarchyContext(
                 context.sceneType,
                 context.sceneName,
                 nodeCount,
                 maxDepth
             );
-            
-            // Convert to nested structure
-            List<HierarchyNodeNested> nestedNodes = ConvertToNestedStructure(nodes);
-            
-            return new GetHierarchyResponse(nestedNodes, updatedContext);
+
+            // Group by scene
+            var groups = nodes
+                .GroupBy(n => n.sceneName)
+                .Select(g => BuildGroupForScene(g.Key ?? string.Empty, g.ToList(), options))
+                .ToList();
+
+            return new HierarchySerializationResult(groups, updatedContext);
         }
-        
-        /// <summary>
-        /// Convert flat hierarchy nodes to nested structure
-        /// </summary>
-        public List<HierarchyNodeNested> ConvertToNestedStructure(List<HierarchyNode> flatNodes)
+
+        private SceneHierarchyGroup BuildGroupForScene(string sceneName, List<HierarchyNode> sceneNodes, HierarchySerializationOptions options)
         {
-            if (flatNodes == null || flatNodes.Count == 0)
-            {
-                return new List<HierarchyNodeNested>();
-            }
-            
-            // Create dictionary for fast lookup
+            // Build nested structure per scene
             Dictionary<int, HierarchyNodeNested> nodeDict = new Dictionary<int, HierarchyNodeNested>();
-            
-            // First pass: create all nodes
-            foreach (HierarchyNode flatNode in flatNodes)
+
+            foreach (HierarchyNode flat in sceneNodes)
             {
-                HierarchyNodeNested nestedNode = new HierarchyNodeNested(
-                    flatNode.id,
-                    flatNode.name,
-                    flatNode.depth,
-                    flatNode.isActive,
-                    flatNode.components
+                HierarchyNodeNested nested = new HierarchyNodeNested(
+                    name: flat.name,
+                    isActive: flat.isActive,
+                    components: flat.components,
+                    children: null,
+                    siblingIndex: flat.siblingIndex,
+                    tag: flat.tag,
+                    layer: flat.layer
                 );
-                nodeDict[flatNode.id] = nestedNode;
+                nodeDict[flat.id] = nested;
             }
-            
-            // Second pass: build parent-child relationships
-            List<HierarchyNodeNested> rootNodes = new List<HierarchyNodeNested>();
-            
-            foreach (HierarchyNode flatNode in flatNodes)
+
+            List<HierarchyNodeNested> roots = new List<HierarchyNodeNested>();
+            foreach (HierarchyNode flat in sceneNodes)
             {
-                HierarchyNodeNested nestedNode = nodeDict[flatNode.id];
-                
-                if (flatNode.parent == null)
+                HierarchyNodeNested nested = nodeDict[flat.id];
+                if (flat.parent == null)
                 {
-                    // Root node
-                    rootNodes.Add(nestedNode);
+                    roots.Add(nested);
                 }
-                else
+                else if (nodeDict.TryGetValue(flat.parent.Value, out var parentNested))
                 {
-                    // Child node - add to parent's children list
-                    if (nodeDict.ContainsKey(flatNode.parent.Value))
+                    parentNested.children.Add(nested);
+                }
+            }
+
+            // Stats
+            int rootCount = roots.Count;
+            int groupNodeCount = sceneNodes.Count;
+            int groupMaxDepth = sceneNodes.Any() ? sceneNodes.Max(n => n.depth) : 0;
+            SceneHierarchyStats stats = new SceneHierarchyStats(rootCount, groupNodeCount, groupMaxDepth);
+
+            // Optional LUTs
+            List<string> componentsLut = null;
+            if (ShouldUseComponentsLut(options, sceneNodes))
+            {
+                componentsLut = BuildComponentsLutAndApply(sceneNodes, nodeDict);
+            }
+
+            if (options.IncludePaths)
+            {
+                // Assign direct string paths per node; no LUT
+                AssignStringPaths(roots);
+            }
+
+            return new SceneHierarchyGroup(sceneName, stats, roots, componentsLut);
+        }
+
+        private static bool ShouldUseComponentsLut(HierarchySerializationOptions options, List<HierarchyNode> sceneNodes)
+        {
+            if (options == null) return false;
+            if (options.UseComponentsLut == "true") return true;
+            if (options.UseComponentsLut == "false") return false;
+            // auto heuristic: high duplication of component names
+            List<string> all = new List<string>();
+            foreach (var n in sceneNodes)
+            {
+                if (n.components != null && n.components.Length > 0)
+                {
+                    all.AddRange(n.components);
+                }
+            }
+            if (all.Count < 50) return false;
+            int unique = all.Distinct().Count();
+            return unique * 2 < all.Count; // more than 50% duplicates
+        }
+
+        private static List<string> BuildComponentsLutAndApply(List<HierarchyNode> sceneNodes, Dictionary<int, HierarchyNodeNested> nodeDict)
+        {
+            Dictionary<string, int> lutIndex = new Dictionary<string, int>();
+            List<string> lut = new List<string>();
+
+            foreach (var flat in sceneNodes)
+            {
+                if (flat.components == null) continue;
+                int[] idx = new int[flat.components.Length];
+                for (int i = 0; i < flat.components.Length; i++)
+                {
+                    string comp = flat.components[i];
+                    if (!lutIndex.TryGetValue(comp, out int index))
                     {
-                        nodeDict[flatNode.parent.Value].children.Add(nestedNode);
+                        index = lut.Count;
+                        lutIndex[comp] = index;
+                        lut.Add(comp);
+                    }
+                    idx[i] = index;
+                }
+
+                // Replace on nested node: set componentsIdx and null components to reduce duplication
+                HierarchyNodeNested nested = nodeDict[flat.id];
+                try
+                {
+                    var fiIdx = typeof(HierarchyNodeNested).GetField("componentsIdx");
+                    if (fiIdx != null)
+                    {
+                        fiIdx.SetValue(nested, idx);
+                    }
+
+                    var fiComp = typeof(HierarchyNodeNested).GetField("components");
+                    if (fiComp != null)
+                    {
+                        fiComp.SetValue(nested, null);
                     }
                 }
+                catch { }
             }
-            
-            return rootNodes;
+
+            return lut;
+        }
+
+        private static void AssignStringPaths(List<HierarchyNodeNested> roots)
+        {
+            void Traverse(HierarchyNodeNested node, string parentPath)
+            {
+                string path = string.IsNullOrEmpty(parentPath) ? node.name : parentPath + "/" + node.name;
+                try
+                {
+                    var fi = typeof(HierarchyNodeNested).GetField("path");
+                    if (fi != null)
+                    {
+                        fi.SetValue(node, path);
+                    }
+                }
+                catch { }
+
+                foreach (var child in node.children)
+                {
+                    Traverse(child, path);
+                }
+            }
+
+            foreach (var root in roots)
+            {
+                Traverse(root, string.Empty);
+            }
+        }
+    }
+    
+        public class HierarchySerializationOptions
+    {
+        public bool IncludePaths { get; set; }
+            public string UseComponentsLut { get; set; } = "auto"; // auto|true|false
+    }
+
+    public class HierarchySerializationResult
+    {
+        public readonly List<SceneHierarchyGroup> Groups;
+        public readonly HierarchyContext Context;
+
+        public HierarchySerializationResult(List<SceneHierarchyGroup> groups, HierarchyContext context)
+        {
+            this.Groups = groups ?? new List<SceneHierarchyGroup>();
+            this.Context = context;
         }
     }
 }

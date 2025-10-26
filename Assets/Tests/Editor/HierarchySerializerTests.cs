@@ -14,26 +14,28 @@ namespace io.github.hatayama.uLoopMCP
         }
         
         [Test]
-        public void SerializeHierarchy_WithValidNodes_ReturnsCorrectResponse()
+        public void BuildGroups_WithValidNodes_ReturnsCorrectGroups()
         {
             // Arrange
             List<HierarchyNode> nodes = new()
             {
-                new(1, "Root", null, 0, true, new[] { "Transform" }),
-                new(2, "Child", 1, 1, true, new[] { "Transform", "MeshRenderer" })
+                new(1, "Root", null, 0, true, new[] { "Transform" }, "SceneA"),
+                new(2, "Child", 1, 1, true, new[] { "Transform", "MeshRenderer" }, "SceneA")
             };
             
             HierarchyContext context = new HierarchyContext("editor", "TestScene", 0, 0);
             
             // Act
-            GetHierarchyResponse response = serializer.SerializeHierarchy(nodes, context);
+            HierarchySerializationResult result = serializer.BuildGroups(nodes, context, new HierarchySerializationOptions());
             
             // Assert
-            Assert.That(response, Is.Not.Null);
-            Assert.That(response.hierarchy, Is.Not.Null);
-            Assert.That(response.hierarchy.Count, Is.EqualTo(1));
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Groups, Is.Not.Null);
+            Assert.That(result.Groups.Count, Is.EqualTo(1));
 
-            HierarchyNodeNested rootNode = response.hierarchy[0];
+            SceneHierarchyGroup group = result.Groups[0];
+            Assert.That(group.sceneName, Is.EqualTo("SceneA"));
+            HierarchyNodeNested rootNode = group.roots[0];
             Assert.That(rootNode.name, Is.EqualTo("Root"));
             Assert.That(rootNode.children.Count, Is.EqualTo(1));
 
@@ -41,31 +43,31 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(childNode.name, Is.EqualTo("Child"));
             Assert.That(childNode.children.Count, Is.EqualTo(0));
 
-            Assert.That(response.context, Is.Not.Null);
-            Assert.That(response.context.nodeCount, Is.EqualTo(2));
-            Assert.That(response.context.maxDepth, Is.EqualTo(1));
+            Assert.That(result.Context, Is.Not.Null);
+            Assert.That(result.Context.nodeCount, Is.EqualTo(2));
+            Assert.That(result.Context.maxDepth, Is.EqualTo(1));
         }
         
         [Test]
-        public void SerializeHierarchy_WithEmptyNodes_ReturnsEmptyResponse()
+        public void BuildGroups_WithEmptyNodes_ReturnsEmptyGroups()
         {
             // Arrange
             List<HierarchyNode> nodes = new List<HierarchyNode>();
             HierarchyContext context = new HierarchyContext("editor", "EmptyScene", 0, 0);
             
             // Act
-            GetHierarchyResponse response = serializer.SerializeHierarchy(nodes, context);
+            HierarchySerializationResult result = serializer.BuildGroups(nodes, context, new HierarchySerializationOptions());
             
             // Assert
-            Assert.That(response, Is.Not.Null);
-            Assert.That(response.hierarchy, Is.Not.Null);
-            Assert.That(response.hierarchy.Count, Is.EqualTo(0));
-            Assert.That(response.context.nodeCount, Is.EqualTo(0));
-            Assert.That(response.context.maxDepth, Is.EqualTo(0));
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Groups, Is.Not.Null);
+            Assert.That(result.Groups.Count, Is.EqualTo(0));
+            Assert.That(result.Context.nodeCount, Is.EqualTo(0));
+            Assert.That(result.Context.maxDepth, Is.EqualTo(0));
         }
         
         [Test]
-        public void SerializeHierarchy_CalculatesCorrectMaxDepth()
+        public void BuildGroups_CalculatesCorrectMaxDepth()
         {
             // Arrange
             List<HierarchyNode> nodes = new()
@@ -79,10 +81,10 @@ namespace io.github.hatayama.uLoopMCP
             HierarchyContext context = new HierarchyContext("editor", "DeepScene", 0, 0);
             
             // Act
-            GetHierarchyResponse response = serializer.SerializeHierarchy(nodes, context);
+            HierarchySerializationResult result = serializer.BuildGroups(nodes, context, new HierarchySerializationOptions());
             
             // Assert
-            Assert.That(response.context.maxDepth, Is.EqualTo(3));
+            Assert.That(result.Context.maxDepth, Is.EqualTo(3));
         }
     }
 }
