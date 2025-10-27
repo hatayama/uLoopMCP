@@ -167,10 +167,38 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             object awaiter = getAwaiter.Invoke(valueTask, null);
-            TaskCompletionSource<object> tcs = new TaskCompletionSource<object>();
-            MethodInfo onCompleted = awaiter.GetType().GetMethod("OnCompleted", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(Action) }, null);
-            MethodInfo unsafeOnCompleted = awaiter.GetType().GetMethod("UnsafeOnCompleted", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(Action) }, null);
-            MethodInfo getResult = awaiter.GetType().GetMethod("GetResult", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            Type awaiterType = awaiter.GetType();
+            TaskCompletionSource<object> tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            MethodInfo onCompleted = awaiterType.GetMethod("OnCompleted", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(Action) }, null);
+            MethodInfo unsafeOnCompleted = awaiterType.GetMethod("UnsafeOnCompleted", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(Action) }, null);
+            MethodInfo getResult = awaiterType.GetMethod("GetResult", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            PropertyInfo isCompletedProperty = awaiterType.GetProperty("IsCompleted", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic);
+
+            bool hasIsCompleted = false;
+            bool isCompleted = false;
+            if (isCompletedProperty != null)
+            {
+                try
+                {
+                    object isCompletedValue = isCompletedProperty.GetValue(awaiter);
+                    if (isCompletedValue is bool boolValue)
+                    {
+                        isCompleted = boolValue;
+                        hasIsCompleted = true;
+                    }
+                }
+                catch (TargetInvocationException tie)
+                {
+                    Exception inner = tie.InnerException ?? tie;
+                    tcs.TrySetException(inner);
+                    return tcs.Task;
+                }
+                catch (Exception ex)
+                {
+                    tcs.TrySetException(ex);
+                    return tcs.Task;
+                }
+            }
 
             Action cont = () =>
             {
@@ -193,6 +221,12 @@ namespace io.github.hatayama.uLoopMCP
                 }
             };
 
+            if (hasIsCompleted && isCompleted)
+            {
+                cont();
+                return tcs.Task;
+            }
+
             if (unsafeOnCompleted != null)
             {
                 unsafeOnCompleted.Invoke(awaiter, new object[] { cont });
@@ -203,7 +237,18 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                tcs.TrySetResult(null);
+                if (hasIsCompleted && !isCompleted)
+                {
+                    _ = Task.Run(cont);
+                }
+                else if (!hasIsCompleted)
+                {
+                    _ = Task.Run(cont);
+                }
+                else
+                {
+                    cont();
+                }
             }
 
             return tcs.Task;
@@ -227,10 +272,38 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             object awaiter = getAwaiter.Invoke(valueTaskT, null);
-            TaskCompletionSource<object> tcs = new TaskCompletionSource<object>();
-            MethodInfo onCompleted = awaiter.GetType().GetMethod("OnCompleted", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(Action) }, null);
-            MethodInfo unsafeOnCompleted = awaiter.GetType().GetMethod("UnsafeOnCompleted", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(Action) }, null);
-            MethodInfo getResult = awaiter.GetType().GetMethod("GetResult", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            Type awaiterType = awaiter.GetType();
+            TaskCompletionSource<object> tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            MethodInfo onCompleted = awaiterType.GetMethod("OnCompleted", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(Action) }, null);
+            MethodInfo unsafeOnCompleted = awaiterType.GetMethod("UnsafeOnCompleted", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(Action) }, null);
+            MethodInfo getResult = awaiterType.GetMethod("GetResult", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            PropertyInfo isCompletedProperty = awaiterType.GetProperty("IsCompleted", BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic);
+
+            bool hasIsCompleted = false;
+            bool isCompleted = false;
+            if (isCompletedProperty != null)
+            {
+                try
+                {
+                    object isCompletedValue = isCompletedProperty.GetValue(awaiter);
+                    if (isCompletedValue is bool boolValue)
+                    {
+                        isCompleted = boolValue;
+                        hasIsCompleted = true;
+                    }
+                }
+                catch (TargetInvocationException tie)
+                {
+                    Exception inner = tie.InnerException ?? tie;
+                    tcs.TrySetException(inner);
+                    return tcs.Task;
+                }
+                catch (Exception ex)
+                {
+                    tcs.TrySetException(ex);
+                    return tcs.Task;
+                }
+            }
 
             Action cont = () =>
             {
@@ -253,6 +326,12 @@ namespace io.github.hatayama.uLoopMCP
                 }
             };
 
+            if (hasIsCompleted && isCompleted)
+            {
+                cont();
+                return tcs.Task;
+            }
+
             if (unsafeOnCompleted != null)
             {
                 unsafeOnCompleted.Invoke(awaiter, new object[] { cont });
@@ -263,7 +342,18 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                tcs.TrySetResult(null);
+                if (hasIsCompleted && !isCompleted)
+                {
+                    _ = Task.Run(cont);
+                }
+                else if (!hasIsCompleted)
+                {
+                    _ = Task.Run(cont);
+                }
+                else
+                {
+                    cont();
+                }
             }
 
             return tcs.Task;

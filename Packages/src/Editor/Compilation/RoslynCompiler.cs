@@ -828,6 +828,19 @@ namespace io.github.hatayama.uLoopMCP
                     body = string.Join("\n", filtered);
                 }
 
+                bool hasTopLevelReturn = root.Members
+                    .OfType<GlobalStatementSyntax>()
+                    .SelectMany(gs => gs.Statement.DescendantNodesAndSelf().OfType<ReturnStatementSyntax>())
+                    .Any(rs => !rs.Ancestors().Any(ancestor =>
+                        ancestor is LocalFunctionStatementSyntax ||
+                        ancestor is AnonymousFunctionExpressionSyntax));
+                if (hasTopLevel && !hasTopLevelReturn)
+                {
+                    body = string.IsNullOrWhiteSpace(body)
+                        ? "return null;"
+                        : body + "\nreturn null;";
+                }
+
                 // Compose wrapped code
                 StringBuilder wrappedCode = new();
 
