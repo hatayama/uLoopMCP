@@ -8803,6 +8803,7 @@ var UnityEventHandler = class {
   isDevelopment;
   shuttingDown = false;
   isNotifying = false;
+  hasSentListChangedNotification = false;
   constructor(server2, unityClient, connectionManager) {
     this.server = server2;
     this.unityClient = unityClient;
@@ -8838,6 +8839,18 @@ var UnityEventHandler = class {
    * Send tools changed notification (with duplicate prevention)
    */
   sendToolsChangedNotification() {
+    if (this.hasSentListChangedNotification) {
+      if (this.isDevelopment) {
+        VibeLogger.logDebug(
+          "tools_notification_skipped_already_sent",
+          "sendToolsChangedNotification skipped: list_changed already sent",
+          void 0,
+          void 0,
+          "Subsequent list_changed notification suppressed"
+        );
+      }
+      return;
+    }
     if (this.isNotifying) {
       if (this.isDevelopment) {
         VibeLogger.logDebug(
@@ -8856,6 +8869,7 @@ var UnityEventHandler = class {
         method: NOTIFICATION_METHODS.TOOLS_LIST_CHANGED,
         params: {}
       });
+      this.hasSentListChangedNotification = true;
       if (this.isDevelopment) {
         VibeLogger.logInfo(
           "tools_notification_sent",
