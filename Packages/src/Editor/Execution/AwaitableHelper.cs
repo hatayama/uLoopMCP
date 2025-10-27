@@ -237,17 +237,13 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                if (hasIsCompleted && !isCompleted)
+                if (hasIsCompleted && isCompleted)
                 {
-                    _ = Task.Run(cont);
-                }
-                else if (!hasIsCompleted)
-                {
-                    _ = Task.Run(cont);
+                    cont();
                 }
                 else
                 {
-                    cont();
+                    _ = Task.Run(cont);
                 }
             }
 
@@ -342,17 +338,13 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                if (hasIsCompleted && !isCompleted)
+                if (hasIsCompleted && isCompleted)
                 {
-                    _ = Task.Run(cont);
-                }
-                else if (!hasIsCompleted)
-                {
-                    _ = Task.Run(cont);
+                    cont();
                 }
                 else
                 {
-                    cont();
+                    _ = Task.Run(cont);
                 }
             }
 
