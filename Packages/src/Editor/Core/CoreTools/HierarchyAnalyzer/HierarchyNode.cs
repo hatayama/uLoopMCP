@@ -39,10 +39,20 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public readonly string[] components;
         
+        // Additional optional metadata for grouping/ordering
+        public readonly int? siblingIndex;
+        public readonly string tag;
+        public readonly int? layer;
+        
+        /// <summary>
+        /// Scene name this GameObject belongs to
+        /// </summary>
+        public readonly string sceneName;
+        
         /// <summary>
         /// Constructor for HierarchyNode
         /// </summary>
-        public HierarchyNode(int id, string name, int? parent, int depth, bool isActive, string[] components)
+        public HierarchyNode(int id, string name, int? parent, int depth, bool isActive, string[] components, string sceneName = "", int? siblingIndex = null, string tag = null, int? layer = null)
         {
             this.id = id;
             this.name = name ?? string.Empty;
@@ -50,6 +60,10 @@ namespace io.github.hatayama.uLoopMCP
             this.depth = depth;
             this.isActive = isActive;
             this.components = components ?? Array.Empty<string>();
+            this.sceneName = sceneName ?? string.Empty;
+            this.siblingIndex = siblingIndex;
+            this.tag = tag;
+            this.layer = layer;
         }
     }
 }

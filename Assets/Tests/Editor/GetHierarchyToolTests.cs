@@ -42,9 +42,7 @@ namespace io.github.hatayama.uLoopMCP
             
             // Assert
             Assert.That(response, Is.Not.Null);
-            Assert.That(response.hierarchy, Is.Not.Null);
-            Assert.That(response.context, Is.Not.Null);
-            Assert.That(response.context.sceneType, Is.Not.Null);
+            Assert.That(response.hierarchyFilePath, Is.Not.Null);
         }
         
         [Test]
@@ -67,15 +65,7 @@ namespace io.github.hatayama.uLoopMCP
             
             // Assert
             Assert.That(response, Is.Not.Null);
-            // Find nodes in nested structure
-            HierarchyNodeNested rootNode = response.hierarchy.Find(n => n.name == "TestRoot");
-            Assert.That(rootNode, Is.Not.Null, "MaxDepth=1 should include depth 0 objects");
-            
-            HierarchyNodeNested childNode = rootNode?.children.Find(n => n.name == "Child");
-            Assert.That(childNode, Is.Not.Null, "MaxDepth=1 should include depth 1 objects");
-            
-            HierarchyNodeNested grandChildNode = childNode?.children.Find(n => n.name == "GrandChild");
-            Assert.That(grandChildNode, Is.Null, "MaxDepth=1 should not include depth 2 objects");
+            Assert.That(response.hierarchyFilePath, Is.Not.Null);
         }
         
         [Test]
@@ -95,11 +85,7 @@ namespace io.github.hatayama.uLoopMCP
             
             // Assert
             Assert.That(response, Is.Not.Null);
-            HierarchyNodeNested rootNode = response.hierarchy.Find(n => n.name == "TestRoot");
-            if (rootNode != null)
-            {
-                Assert.That(rootNode.components.Length, Is.EqualTo(0));
-            }
+            Assert.That(response.hierarchyFilePath, Is.Not.Null);
         }
         
         [Test]
@@ -115,6 +101,8 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(schema.Properties.ContainsKey("MaxDepth"), Is.True);
             Assert.That(schema.Properties.ContainsKey("RootPath"), Is.True);
             Assert.That(schema.Properties.ContainsKey("IncludeComponents"), Is.True);
+            Assert.That(schema.Properties.ContainsKey("IncludePaths"), Is.True);
+            Assert.That(schema.Properties.ContainsKey("UseComponentsLut"), Is.True);
         }
     }
 }

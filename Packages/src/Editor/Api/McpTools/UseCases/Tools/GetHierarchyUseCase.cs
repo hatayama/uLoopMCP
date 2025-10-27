@@ -46,40 +46,22 @@ namespace io.github.hatayama.uLoopMCP
                 cancellationToken.ThrowIfCancellationRequested();
                 
                 var nodes = _hierarchyService.GetHierarchyNodes(options);
-                var context = _hierarchyService.GetCurrentContext();
-                
-                // 2. Data conversion
+                HierarchyContext context = _hierarchyService.GetCurrentContext() ?? new HierarchyContext("editor", string.Empty, 0, 0);
+
+                // 2. Data conversion to scene-grouped structure
                 cancellationToken.ThrowIfCancellationRequested();
-                
-                var nestedNodes = _hierarchySerializer.ConvertToNestedStructure(nodes);
-                
-                // 3. Response size determination and file output
-                cancellationToken.ThrowIfCancellationRequested();
-                
-                GetHierarchyResponse nestedResponse = new GetHierarchyResponse(nestedNodes, context);
-                
-                // Calculate response size
-                var settings = new Newtonsoft.Json.JsonSerializerSettings
+                HierarchySerializationOptions serOptions = new HierarchySerializationOptions
                 {
-                    ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore,
-                    MaxDepth = McpServerConfig.DEFAULT_JSON_MAX_DEPTH
+                    IncludePaths = parameters.IncludePaths,
+                    UseComponentsLut = parameters.UseComponentsLut
                 };
-                string jsonString = Newtonsoft.Json.JsonConvert.SerializeObject(nestedResponse, Newtonsoft.Json.Formatting.None, settings);
-                int estimatedSizeBytes = System.Text.Encoding.UTF8.GetByteCount(jsonString);
-                int estimatedSizeKB = estimatedSizeBytes / 1024;
-                
-                // Save to file if size limit is exceeded
-                if (estimatedSizeKB >= parameters.MaxResponseSizeKB)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    
-                    string filePath = HierarchyResultExporter.ExportHierarchyResults(nestedNodes, context);
-                    return Task.FromResult(new GetHierarchyResponse(filePath, "auto_threshold", context));
-                }
-                else
-                {
-                    return Task.FromResult(nestedResponse);
-                }
+                HierarchySerializationResult result = _hierarchySerializer.BuildGroups(nodes, context, serOptions);
+
+                // 3. Always export to JSON
+                cancellationToken.ThrowIfCancellationRequested();
+                string filePath = HierarchyResultExporter.ExportHierarchyResults(result.Groups, result.Context);
+                string message = "Hierarchy data saved below. Open the JSON to read 'Context' and 'Hierarchy'.";
+                return Task.FromResult(new GetHierarchyResponse(filePath, message));
             }
             catch (System.OperationCanceledException)
             {

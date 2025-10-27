@@ -1,6 +1,10 @@
+using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
+using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -20,7 +24,9 @@ namespace io.github.hatayama.uLoopMCP
         public void TearDown()
         {
             if (testRoot != null)
+            {
                 Object.DestroyImmediate(testRoot);
+            }
         }
         
         [Test]
@@ -119,6 +125,110 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(rootNode.components, Contains.Item("Transform"));
         }
         
+        [Test]
+        public void GetHierarchyNodes_WithRootPathIncludingRootName_ReturnsChild()
+        {
+            // Arrange
+            GameObject child = new GameObject("ChildForRootPath");
+            child.transform.SetParent(testRoot.transform);
+            HierarchyOptions options = new HierarchyOptions
+            {
+                RootPath = testRoot.name + "/" + child.name
+            };
+
+            // Act
+            List<HierarchyNode> nodes = service.GetHierarchyNodes(options);
+
+            // Assert
+            HierarchyNode childNode = nodes.Find(n => n.name == child.name);
+            Assert.That(childNode, Is.Not.Null);
+            Assert.That(childNode.parent, Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator GetHierarchyNodes_InPrefabModeRootPathIncludingRootName_ReturnsChild()
+        {
+            string tempFolder = "Assets/Tests/Editor/Temp";
+            if (!AssetDatabase.IsValidFolder("Assets/Tests"))
+            {
+                AssetDatabase.CreateFolder("Assets", "Tests");
+            }
+
+            if (!AssetDatabase.IsValidFolder("Assets/Tests/Editor"))
+            {
+                AssetDatabase.CreateFolder("Assets/Tests", "Editor");
+            }
+
+            if (!AssetDatabase.IsValidFolder(tempFolder))
+            {
+                AssetDatabase.CreateFolder("Assets/Tests/Editor", "Temp");
+            }
+
+            string prefabPath = tempFolder + "/HierarchyServiceTests.prefab";
+            GameObject prefabRoot = new GameObject("PrefabRootForRootPath");
+            GameObject prefabChild = new GameObject("PrefabChildForRootPath");
+            prefabChild.transform.SetParent(prefabRoot.transform);
+            string prefabRootName = prefabRoot.name;
+            string prefabChildName = prefabChild.name;
+
+            GameObject savedPrefab = PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
+            Object.DestroyImmediate(prefabRoot);
+
+            PrefabStage stage = PrefabStageUtility.OpenPrefab(prefabPath);
+            yield return null;
+
+            PrefabStage currentStage = PrefabStageUtility.GetCurrentPrefabStage();
+            int waitCounter = 0;
+            while (currentStage == null && waitCounter < 30)
+            {
+                waitCounter++;
+                yield return null;
+                currentStage = PrefabStageUtility.GetCurrentPrefabStage();
+            }
+
+            Assert.That(currentStage, Is.Not.Null, "Prefab stage failed to open");
+
+            try
+            {
+                GameObject stageRoot = currentStage.prefabContentsRoot;
+                string stageRootName = stageRoot.name;
+                Transform childTransform = stageRoot.transform.Find(prefabChildName);
+                Assert.That(childTransform, Is.Not.Null);
+
+                HierarchyOptions options = new HierarchyOptions
+                {
+                    RootPath = stageRootName + "/" + prefabChildName
+                };
+
+                yield return null;
+
+                List<HierarchyNode> nodes = service.GetHierarchyNodes(options);
+ 
+                 HierarchyNode childNode = nodes.Find(n => n.name == prefabChildName);
+                Assert.That(childNode, Is.Not.Null);
+                Assert.That(childNode.parent, Is.Null);
+            }
+            finally
+            {
+                StageUtility.GoBackToPreviousStage();
+                AssetDatabase.DeleteAsset(prefabPath);
+                AssetDatabase.Refresh();
+                SavedPrefabCleanup(savedPrefab);
+            }
+
+            yield return null;
+        }
+
+        private static void SavedPrefabCleanup(GameObject savedPrefab)
+        {
+            if (savedPrefab == null)
+            {
+                return;
+            }
+
+            Object.DestroyImmediate(savedPrefab);
+        }
+
         [Test]
         public void GetCurrentContext_InEditor_ReturnsEditorContext()
         {
