@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.37.0](https://github.com/hatayama/uLoopMCP/compare/v0.36.0...v0.37.0) (2025-10-27)
+
+
+### Features
+
+* async-aware execute-dynamic-code pipeline ([#316](https://github.com/hatayama/uLoopMCP/issues/316)) ([2c699a9](https://github.com/hatayama/uLoopMCP/commit/2c699a93634e6f0371586bfb1408b7036c56191e))
+
 ## [0.36.0](https://github.com/hatayama/uLoopMCP/compare/v0.35.1...v0.36.0) (2025-10-27)
 
 
