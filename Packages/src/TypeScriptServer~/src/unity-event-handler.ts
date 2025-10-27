@@ -76,6 +76,8 @@ export class UnityEventHandler
    */
   sendToolsChangedNotification(): void {
     if (this.hasSentListChangedNotification) {
+      // BUG WORKAROUND: Cursor disconnects unexpectedly when list_changed fires multiple times
+      // Emit the notification only once to keep the connection stable
       if (this.isDevelopment) {
         VibeLogger.logDebug(
           'tools_notification_skipped_already_sent',
