@@ -19,6 +19,11 @@ namespace io.github.hatayama.uLoopMCP
                 nodes = new List<HierarchyNode>();
             }
 
+            if (options == null)
+            {
+                options = new HierarchySerializationOptions();
+            }
+
             int nodeCount = nodes.Count;
             int maxDepth = nodes.Any() ? nodes.Max(n => n.depth) : 0;
 
@@ -69,6 +74,10 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     parentNested.children.Add(nested);
                 }
+                else
+                {
+                    roots.Add(nested);
+                }
             }
 
             // Stats
@@ -117,7 +126,7 @@ namespace io.github.hatayama.uLoopMCP
             Dictionary<string, int> lutIndex = new Dictionary<string, int>();
             List<string> lut = new List<string>();
 
-            foreach (var flat in sceneNodes)
+            foreach (HierarchyNode flat in sceneNodes)
             {
                 if (flat.components == null) continue;
                 int[] idx = new int[flat.components.Length];
@@ -133,23 +142,9 @@ namespace io.github.hatayama.uLoopMCP
                     idx[i] = index;
                 }
 
-                // Replace on nested node: set componentsIdx and null components to reduce duplication
                 HierarchyNodeNested nested = nodeDict[flat.id];
-                try
-                {
-                    var fiIdx = typeof(HierarchyNodeNested).GetField("componentsIdx");
-                    if (fiIdx != null)
-                    {
-                        fiIdx.SetValue(nested, idx);
-                    }
-
-                    var fiComp = typeof(HierarchyNodeNested).GetField("components");
-                    if (fiComp != null)
-                    {
-                        fiComp.SetValue(nested, null);
-                    }
-                }
-                catch { }
+                nested.componentsIdx = idx;
+                nested.components = null;
             }
 
             return lut;
@@ -160,23 +155,15 @@ namespace io.github.hatayama.uLoopMCP
             void Traverse(HierarchyNodeNested node, string parentPath)
             {
                 string path = string.IsNullOrEmpty(parentPath) ? node.name : parentPath + "/" + node.name;
-                try
-                {
-                    var fi = typeof(HierarchyNodeNested).GetField("path");
-                    if (fi != null)
-                    {
-                        fi.SetValue(node, path);
-                    }
-                }
-                catch { }
+                node.path = path;
 
-                foreach (var child in node.children)
+                foreach (HierarchyNodeNested child in node.children)
                 {
                     Traverse(child, path);
                 }
             }
 
-            foreach (var root in roots)
+            foreach (HierarchyNodeNested root in roots)
             {
                 Traverse(root, string.Empty);
             }

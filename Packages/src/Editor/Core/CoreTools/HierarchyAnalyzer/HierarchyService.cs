@@ -97,15 +97,21 @@ namespace io.github.hatayama.uLoopMCP
                 GameObject prefabRoot = prefabStage.prefabContentsRoot;
                 if (!string.IsNullOrEmpty(rootPath))
                 {
-					// If rootPath points to the prefab root itself, match it directly
-					if (prefabRoot.name == rootPath)
-					{
-						return new[] { prefabRoot };
-					}
-                    Transform found = prefabRoot.transform.Find(rootPath);
+                    if (prefabRoot.name == rootPath)
+                    {
+                        return new[] { prefabRoot };
+                    }
+
+                    string localPath = NormalizeRootRelativePath(rootPath, prefabRoot.name);
+                    Transform found = string.IsNullOrEmpty(localPath)
+                        ? prefabRoot.transform
+                        : prefabRoot.transform.Find(localPath);
                     if (found != null)
+                    {
                         return new[] { found.gameObject };
-                    return new GameObject[0];
+                    }
+
+                    return System.Array.Empty<GameObject>();
                 }
                 return new[] { prefabRoot };
             }
@@ -124,21 +130,24 @@ namespace io.github.hatayama.uLoopMCP
                         continue;
                     }
 
-					GameObject[] roots = scene.GetRootGameObjects();
-					foreach (GameObject root in roots)
-					{
-						// If rootPath points to this scene's root GameObject, include it
-						if (root.name == rootPath)
-						{
-							results.Add(root);
-							continue;
-						}
-						Transform found = root.transform.Find(rootPath);
-						if (found != null)
-						{
-							results.Add(found.gameObject);
-						}
-					}
+                    GameObject[] roots = scene.GetRootGameObjects();
+                    foreach (GameObject root in roots)
+                    {
+                        if (root.name == rootPath)
+                        {
+                            results.Add(root);
+                            continue;
+                        }
+
+                        string localPath = NormalizeRootRelativePath(rootPath, root.name);
+                        Transform found = string.IsNullOrEmpty(localPath)
+                            ? root.transform
+                            : root.transform.Find(localPath);
+                        if (found != null)
+                        {
+                            results.Add(found.gameObject);
+                        }
+                    }
                 }
                 return results.ToArray();
             }
@@ -156,6 +165,32 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return results.ToArray();
+        }
+
+        private static string NormalizeRootRelativePath(string rootPath, string rootName)
+        {
+            if (string.IsNullOrEmpty(rootPath))
+            {
+                return string.Empty;
+            }
+
+            string trimmed = rootPath.TrimStart('/');
+            if (string.IsNullOrEmpty(trimmed))
+            {
+                return string.Empty;
+            }
+
+            if (trimmed.StartsWith(rootName + "/"))
+            {
+                return trimmed.Substring(rootName.Length + 1);
+            }
+
+            if (trimmed == rootName)
+            {
+                return string.Empty;
+            }
+
+            return trimmed;
         }
         
         private void TraverseHierarchy(GameObject obj, int? parentId, int depth, HierarchyOptions options, List<HierarchyNode> nodes)

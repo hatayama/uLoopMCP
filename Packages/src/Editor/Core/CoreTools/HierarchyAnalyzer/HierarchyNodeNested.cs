@@ -24,8 +24,8 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// List of component type names attached to this GameObject
         /// </summary>
-        public readonly string[] components;
-        public readonly int[] componentsIdx;
+        public string[] components;
+        public int[] componentsIdx;
         
         /// <summary>
         /// Child nodes directly nested under this node
@@ -37,7 +37,7 @@ namespace io.github.hatayama.uLoopMCP
         public readonly int? siblingIndex;
         public readonly string tag;
         public readonly int? layer;
-        public readonly string path;
+        public string path;
         
         /// <summary>
         /// Constructor for HierarchyNodeNested

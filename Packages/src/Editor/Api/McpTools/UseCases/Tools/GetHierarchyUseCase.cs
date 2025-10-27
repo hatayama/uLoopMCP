@@ -46,7 +46,7 @@ namespace io.github.hatayama.uLoopMCP
                 cancellationToken.ThrowIfCancellationRequested();
                 
                 var nodes = _hierarchyService.GetHierarchyNodes(options);
-                var context = _hierarchyService.GetCurrentContext();
+                HierarchyContext context = _hierarchyService.GetCurrentContext() ?? new HierarchyContext("editor", string.Empty, 0, 0);
 
                 // 2. Data conversion to scene-grouped structure
                 cancellationToken.ThrowIfCancellationRequested();
@@ -55,7 +55,7 @@ namespace io.github.hatayama.uLoopMCP
                     IncludePaths = parameters.IncludePaths,
                     UseComponentsLut = parameters.UseComponentsLut
                 };
-                var result = _hierarchySerializer.BuildGroups(nodes, context, serOptions);
+                HierarchySerializationResult result = _hierarchySerializer.BuildGroups(nodes, context, serOptions);
 
                 // 3. Always export to JSON
                 cancellationToken.ThrowIfCancellationRequested();
