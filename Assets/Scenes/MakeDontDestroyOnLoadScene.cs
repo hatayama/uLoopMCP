@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class MakeDontDestroryOnLoadScene : MonoBehaviour
+public class MakeDontDestroyOnLoadScene : MonoBehaviour
 {
     private void Start()
     {
