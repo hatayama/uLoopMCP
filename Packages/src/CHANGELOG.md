@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.36.0](https://github.com/hatayama/uLoopMCP/compare/v0.35.1...v0.36.0) (2025-10-27)
+
+
+### Features
+
+* improve hierarchy export and RootPath matching ([#314](https://github.com/hatayama/uLoopMCP/issues/314)) ([8be0e18](https://github.com/hatayama/uLoopMCP/commit/8be0e189ae6b60d78f97c3369ca6adf988b33efe))
+
 ## [0.35.1](https://github.com/hatayama/uLoopMCP/compare/v0.35.0...v0.35.1) (2025-10-22)
 
 
