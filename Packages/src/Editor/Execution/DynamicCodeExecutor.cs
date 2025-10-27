@@ -209,8 +209,49 @@ namespace io.github.hatayama.uLoopMCP
                     McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0);
             }
 
-            // Already switched to Main Thread via JsonRpcProcessor
-            return await Task.FromResult(ExecuteCode(code, className, parameters, cancellationToken, compileOnly));
+            string correlationId = McpConstants.GenerateCorrelationId();
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            try
+            {
+                // Phase 1: Security Validation
+                ExecutionResult securityResult = PerformSecurityValidation(code, correlationId, stopwatch);
+                if (!securityResult.Success) return securityResult;
+
+                // Phase 2: Compilation
+                if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
+                {
+                    return CreateSecurityBlockedResult(
+                        McpConstants.ERROR_COMPILATION_DISABLED_LEVEL0,
+                        McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0);
+                }
+                CompilationResult compilationResult = CompileCode(code, className, correlationId);
+                ExecutionResult compilationErrorResult = HandleCompilationResult(compilationResult, stopwatch);
+                if (compilationErrorResult != null) return compilationErrorResult;
+
+                // Phase 3: Check Compile-Only Mode
+                if (compileOnly)
+                {
+                    return CreateCompileOnlySuccessResult(compilationResult, correlationId, stopwatch);
+                }
+
+                // Phase 4: Execution (async via CommandRunner)
+                ExecutionContext context = new ExecutionContext
+                {
+                    CompiledAssembly = compilationResult.CompiledAssembly,
+                    Parameters = ConvertParametersToDict(parameters ?? new object[0]),
+                    CancellationToken = cancellationToken,
+                    TimeoutSeconds = 60
+                };
+
+                ExecutionResult executionResult = await _runner.ExecuteAsync(context).ConfigureAwait(false);
+                executionResult.ExecutionTime = stopwatch.Elapsed;
+                UpdateStatistics(executionResult, stopwatch.Elapsed);
+                return executionResult;
+            }
+            catch (Exception ex)
+            {
+                return HandleExecutionException(ex, correlationId, stopwatch);
+            }
         }
 
         private ExecutionResult PerformRuntimeSecurityCheck(string code)
