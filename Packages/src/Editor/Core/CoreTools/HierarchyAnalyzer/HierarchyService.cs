@@ -72,11 +72,17 @@ namespace io.github.hatayama.uLoopMCP
             System.Collections.Generic.List<string> names = new System.Collections.Generic.List<string>();
             for (int i = 0; i < count; i++)
             {
-                Scene s = SceneManager.GetSceneAt(i);
-                if (s.isLoaded)
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (scene.isLoaded)
                 {
-                    names.Add(s.name);
+                    names.Add(scene.name);
                 }
+            }
+
+            GameObject[] ddolRoots = GetDontDestroyOnLoadRootObjects();
+            if (ddolRoots.Length > 0 && !names.Contains("DontDestroyOnLoad"))
+            {
+                names.Add("DontDestroyOnLoad");
             }
 
             if (names.Count <= 1)
@@ -118,6 +124,7 @@ namespace io.github.hatayama.uLoopMCP
             
             // Normal scene mode: iterate all loaded scenes (additive included)
             List<GameObject> results = new List<GameObject>();
+            GameObject[] ddolRoots = GetDontDestroyOnLoadRootObjects();
 
             int sceneCount = SceneManager.sceneCount;
             if (!string.IsNullOrEmpty(rootPath))
@@ -131,24 +138,14 @@ namespace io.github.hatayama.uLoopMCP
                     }
 
                     GameObject[] roots = scene.GetRootGameObjects();
-                    foreach (GameObject root in roots)
-                    {
-                        if (root.name == rootPath)
-                        {
-                            results.Add(root);
-                            continue;
-                        }
-
-                        string localPath = NormalizeRootRelativePath(rootPath, root.name);
-                        Transform found = string.IsNullOrEmpty(localPath)
-                            ? root.transform
-                            : root.transform.Find(localPath);
-                        if (found != null)
-                        {
-                            results.Add(found.gameObject);
-                        }
-                    }
+                    AppendMatchesForSceneRoot(results, roots, rootPath);
                 }
+
+                if (ddolRoots.Length > 0)
+                {
+                    AppendMatchesForSceneRoot(results, ddolRoots, rootPath);
+                }
+
                 return results.ToArray();
             }
 
@@ -162,6 +159,11 @@ namespace io.github.hatayama.uLoopMCP
 
                 GameObject[] roots = scene.GetRootGameObjects();
                 results.AddRange(roots);
+            }
+
+            if (ddolRoots.Length > 0)
+            {
+                results.AddRange(ddolRoots);
             }
 
             return results.ToArray();
@@ -193,6 +195,99 @@ namespace io.github.hatayama.uLoopMCP
             return trimmed;
         }
         
+        private static void AppendMatchesForSceneRoot(System.Collections.Generic.List<GameObject> results, GameObject[] roots, string rootPath)
+        {
+            if (roots == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < roots.Length; i++)
+            {
+                GameObject root = roots[i];
+                if (root == null)
+                {
+                    continue;
+                }
+
+                if (root.name == rootPath)
+                {
+                    results.Add(root);
+                    continue;
+                }
+
+                string localPath = NormalizeRootRelativePath(rootPath, root.name);
+                if (string.IsNullOrEmpty(localPath))
+                {
+                    results.Add(root);
+                    continue;
+                }
+
+                Transform found = root.transform.Find(localPath);
+                if (found != null)
+                {
+                    results.Add(found.gameObject);
+                }
+            }
+        }
+
+        private static GameObject[] GetDontDestroyOnLoadRootObjects()
+        {
+            if (!Application.isPlaying)
+            {
+                return System.Array.Empty<GameObject>();
+            }
+
+            GameObject probe = null;
+            try
+            {
+                probe = new GameObject("__mcp_ddol_probe__");
+                UnityEngine.Object.DontDestroyOnLoad(probe);
+
+                Scene ddolScene = probe.scene;
+                if (!ddolScene.IsValid())
+                {
+                    return System.Array.Empty<GameObject>();
+                }
+
+                GameObject[] roots = ddolScene.GetRootGameObjects();
+                if (roots == null || roots.Length == 0)
+                {
+                    return System.Array.Empty<GameObject>();
+                }
+
+                System.Collections.Generic.List<GameObject> filtered = new System.Collections.Generic.List<GameObject>();
+                for (int i = 0; i < roots.Length; i++)
+                {
+                    GameObject root = roots[i];
+                    if (root == null || root == probe)
+                    {
+                        continue;
+                    }
+
+                    filtered.Add(root);
+                }
+
+                return filtered.ToArray();
+            }
+            finally
+            {
+#if UNITY_EDITOR
+                if (probe != null)
+                {
+                    if (Application.isPlaying)
+                    {
+                        UnityEngine.Object.Destroy(probe);
+                    }
+                    else
+                    {
+                        UnityEngine.Object.DestroyImmediate(probe);
+                    }
+                }
+#endif
+            }
+        }
+
         private void TraverseHierarchy(GameObject obj, int? parentId, int depth, HierarchyOptions options, List<HierarchyNode> nodes)
         {
             // Check depth limit
