@@ -135,6 +135,10 @@ Scope(s): org.nuget
 ```
 > 3. Package Managerウィンドウを開き、My RegistriesセクションのOpenUPMを選択。Microsoft.CodeAnalysis.CSharpをインストールします。
 
+**Async対応**:
+- スニペット内で await が利用可能です（Task / ValueTask / UniTask など awaitable 全般）
+- CancellationToken をツールに渡すと、キャンセルが末端まで伝播します
+
 **セキュリティレベル対応**: 3段階のセキュリティ制御を実装し、実行可能なコードを段階的に制限：
 
   - **Level 0 - Disabled（無効化）**

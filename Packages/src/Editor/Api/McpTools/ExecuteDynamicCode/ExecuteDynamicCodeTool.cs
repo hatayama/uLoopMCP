@@ -175,7 +175,7 @@ Need files/dirs? Run terminal commands.")]
                         looksLikeMissingReturn = executionResult.Logs.Any(l => l.Contains("CS0161") || l.Contains("CS0127") || l.Contains("must return a value"));
                     }
 
-                    if (looksLikeMissingReturn)
+                    if (looksLikeMissingReturn && string.IsNullOrEmpty(executionResult.UpdatedCode))
                     {
                         string codeWithReturn = AppendReturnIfMissing(originalCode);
                         ExecutionResult retryReturnResult = await _executor.ExecuteCodeAsync(

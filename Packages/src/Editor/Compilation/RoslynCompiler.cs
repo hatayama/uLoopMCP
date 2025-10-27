@@ -828,6 +828,19 @@ namespace io.github.hatayama.uLoopMCP
                     body = string.Join("\n", filtered);
                 }
 
+                bool hasTopLevelReturn = root.Members
+                    .OfType<GlobalStatementSyntax>()
+                    .SelectMany(gs => gs.Statement.DescendantNodesAndSelf().OfType<ReturnStatementSyntax>())
+                    .Any(rs => !rs.Ancestors().Any(ancestor =>
+                        ancestor is LocalFunctionStatementSyntax ||
+                        ancestor is AnonymousFunctionExpressionSyntax));
+                if (hasTopLevel && !hasTopLevelReturn)
+                {
+                    body = string.IsNullOrWhiteSpace(body)
+                        ? "return null;"
+                        : body + "\nreturn null;";
+                }
+
                 // Compose wrapped code
                 StringBuilder wrappedCode = new();
 
@@ -844,7 +857,7 @@ namespace io.github.hatayama.uLoopMCP
                 wrappedCode.AppendLine("{");
                 wrappedCode.AppendLine($"    public class {className}");
                 wrappedCode.AppendLine("    {");
-                wrappedCode.AppendLine("        public object Execute(System.Collections.Generic.Dictionary<string, object> parameters = null)");
+                wrappedCode.AppendLine("        public async System.Threading.Tasks.Task<object> ExecuteAsync(System.Collections.Generic.Dictionary<string, object> parameters = null, System.Threading.CancellationToken ct = default)");
                 wrappedCode.AppendLine("        {");
 
                 foreach (string line in body.Split(new char[] { '\n' }, StringSplitOptions.None))
@@ -852,6 +865,11 @@ namespace io.github.hatayama.uLoopMCP
                     wrappedCode.AppendLine($"            {line}");
                 }
 
+                wrappedCode.AppendLine("        }");
+                wrappedCode.AppendLine();
+                wrappedCode.AppendLine("        public object Execute(System.Collections.Generic.Dictionary<string, object> parameters = null)");
+                wrappedCode.AppendLine("        {");
+                wrappedCode.AppendLine("            return ExecuteAsync(parameters, default).GetAwaiter().GetResult();");
                 wrappedCode.AppendLine("        }");
                 wrappedCode.AppendLine("    }");
                 wrappedCode.AppendLine("}");
