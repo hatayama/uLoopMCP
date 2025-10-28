@@ -523,6 +523,9 @@ namespace io.github.hatayama.uLoopMCP
 
                 if (!started)
                 {
+                    // Ensure session reflects stopped state on failure
+                    McpEditorSettings.ClearServerSession();
+                    McpEditorSettings.ClearReconnectingFlags();
                     throw new InvalidOperationException("Failed to bind any port.");
                 }
 
