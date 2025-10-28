@@ -456,13 +456,13 @@ namespace io.github.hatayama.uLoopMCP
         private static bool IsStartupProtectionActive()
         {
             long nowTicks = DateTime.UtcNow.Ticks;
-            return nowTicks < startupProtectionUntilTicks;
+            return nowTicks < System.Threading.Volatile.Read(ref startupProtectionUntilTicks);
         }
 
         private static void ActivateStartupProtection(int milliseconds)
         {
             long untilTicks = DateTime.UtcNow.AddMilliseconds(milliseconds).Ticks;
-            startupProtectionUntilTicks = untilTicks;
+            System.Threading.Volatile.Write(ref startupProtectionUntilTicks, untilTicks);
             VibeLogger.LogInfo("startup_protection_active", $"window={milliseconds}ms");
         }
 
@@ -555,6 +555,7 @@ namespace io.github.hatayama.uLoopMCP
             while (true)
             {
                 VibeLogger.LogInfo("binding_attempt", $"port={port}");
+                McpBridgeServer server = null;
                 try
                 {
                     // Defensive: dispose any non-running stale instance before creating a new one
@@ -575,7 +576,7 @@ namespace io.github.hatayama.uLoopMCP
                         }
                     }
 
-                    McpBridgeServer server = new McpBridgeServer();
+                    server = new McpBridgeServer();
                     server.StartServer(port);
                     mcpServer = server;
                     VibeLogger.LogInfo("binding_success", $"port={port}");
@@ -583,6 +584,8 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 catch (Exception ex)
                 {
+                    // Ensure partially created server is cleaned up on failure
+                    try { server?.Dispose(); } catch { }
                     // Unwrap SocketException details if present
                     SocketException sockEx = ex as SocketException;
                     if (ex is InvalidOperationException && ex.InnerException is SocketException innerSock)
