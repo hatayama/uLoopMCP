@@ -9,12 +9,12 @@ When Unity crashes and restarts, multiple recovery entry points (static construc
 ### Solution
 
 1. **Unified Startup Entry Point**: Consolidate all recovery calls (Editor startup, domain reload, manual retry) through a single `StartRecoveryIfNeededAsync` method in `McpServerController`.
-2. **5-Second Port Reuse Retry**: Attempt to bind the original port for up to 5 seconds (250ms intervals) using `TimerDelay.Wait()` before falling back to the next available port.
+2. **5-second Port Reuse Retry**: Attempt to bind the original port for up to 5 seconds (250 ms intervals) using `TimerDelay.Wait()` before falling back to the next available port.
 3. **Concurrent Recovery Guard**: 
    - Acquire a `SemaphoreSlim(1,1)` lock to prevent simultaneous startups.
    - Ignore recovery requests if a server is already running (on any port).
    - Dispose old server instances before binding a new one to prevent socket leaks.
-4. **5-Second Startup Protection Window**: After successful recovery, suppress additional start requests for 5 seconds to allow system stabilization.
+4. **5-second Startup Protection Window**: After successful recovery, suppress additional start requests for 5 seconds to allow system stabilization.
 5. **Session Cleanup on Failure**: Clear session and reconnecting flags when recovery ultimately fails, preventing infinite retry loops.
 6. **Reconnecting Flag Management**: Clear reconnection UI flags on successful recovery and on session cleanup.
 
