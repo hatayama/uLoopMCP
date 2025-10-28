@@ -515,6 +515,10 @@ namespace io.github.hatayama.uLoopMCP
                     McpEditorSettings.SetServerPort(chosenPort);
                 }
 
+                // Clear reconnection-related flags on successful recovery
+                McpEditorSettings.ClearReconnectingFlags();
+                McpEditorSettings.ClearPostCompileReconnectingUI();
+
                 ActivateStartupProtection(5000);
             }
             finally
