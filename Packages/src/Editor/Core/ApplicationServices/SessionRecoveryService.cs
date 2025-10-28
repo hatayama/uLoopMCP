@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using System.Threading;
 using UnityEditor;
 
 namespace io.github.hatayama.uLoopMCP
@@ -40,40 +41,24 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorSettings.ClearAfterCompileFlag();
             }
 
-            // If server was running and is currently stopped
+            // If server was running and is currently stopped, delegate to centralized controller logic
             if (wasRunning && (currentServer == null || !currentServer.IsRunning))
             {
-                if (isAfterCompile)
+                bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
+                if (autoStartEnabled || isAfterCompile)
                 {
-                    // Restart immediately after compilation
-                    _ = RestoreServerAfterCompileAsync(savedPort).ContinueWith(task =>
+                    _ = McpServerController.StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None).ContinueWith(task =>
                     {
                         if (task.IsFaulted)
                         {
-                            VibeLogger.LogError("server_restore_failed", 
-                                $"Failed to restore server after compile: {task.Exception?.GetBaseException().Message}");
+                            VibeLogger.LogError("server_startup_restore_failed", 
+                                $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
                         }
                     }, TaskScheduler.FromCurrentSynchronizationContext());
                 }
                 else
                 {
-                    // Check auto-start settings for non-compile scenarios
-                    bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
-                    if (autoStartEnabled)
-                    {
-                        _ = RestoreServerOnStartupAsync(savedPort).ContinueWith(task =>
-                        {
-                            if (task.IsFaulted)
-                            {
-                                VibeLogger.LogError("server_startup_restore_failed", 
-                                    $"Failed to restore server on startup: {task.Exception?.GetBaseException().Message}");
-                            }
-                        }, TaskScheduler.FromCurrentSynchronizationContext());
-                    }
-                    else
-                    {
-                        McpEditorSettings.ClearServerSession();
-                    }
+                    McpEditorSettings.ClearServerSession();
                 }
             }
 
@@ -141,7 +126,7 @@ namespace io.github.hatayama.uLoopMCP
         private static async Task RestoreServerAfterCompileAsync(int port)
         {
             await EditorDelay.DelayFrame(1);
-            TryRestoreServerWithRetry(port, 0);
+            _ = McpServerController.StartRecoveryIfNeededAsync(port, true, CancellationToken.None);
         }
 
         /// <summary>
@@ -151,7 +136,7 @@ namespace io.github.hatayama.uLoopMCP
         private static async Task RestoreServerOnStartupAsync(int port)
         {
             await EditorDelay.DelayFrame(1);
-            TryRestoreServerWithRetry(port, 0);
+            _ = McpServerController.StartRecoveryIfNeededAsync(port, false, CancellationToken.None);
         }
 
         /// <summary>
@@ -162,7 +147,7 @@ namespace io.github.hatayama.uLoopMCP
         private static async Task RetryServerRestoreAsync(int port, int retryCount)
         {
             await EditorDelay.DelayFrame(5);
-            TryRestoreServerWithRetry(port, retryCount + 1);
+            _ = McpServerController.StartRecoveryIfNeededAsync(port, false, CancellationToken.None);
         }
 
         /// <summary>

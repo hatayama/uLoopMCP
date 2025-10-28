@@ -1,4 +1,7 @@
+using System;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Net.Sockets;
 using UnityEditor;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -16,6 +19,8 @@ namespace io.github.hatayama.uLoopMCP
     public static class McpServerController
     {
         private static McpBridgeServer mcpServer;
+        private static readonly SemaphoreSlim StartupSemaphore = new SemaphoreSlim(1, 1);
+        private static long startupProtectionUntilTicks = 0; // UTC ticks
 
         /// <summary>
         /// The current MCP server instance.
@@ -199,33 +204,25 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorSettings.ClearAfterCompileFlag();
             }
 
-            if (wasRunning && (mcpServer == null || !mcpServer.IsRunning))
+            if (!wasRunning)
             {
-                // If it's after a compilation, restart immediately (regardless of the Auto Start Server setting).
-                if (isAfterCompile)
-                {
-                    // Wait a short while before restarting immediately (to release TCP port).
-                    RestoreServerAfterCompileAsync(savedPort).Forget();
-                }
-                else
-                {
-                    // For non-compilation scenarios, such as Unity startup.
-                    // Check the Auto Start Server setting.
-                    bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
-
-                    if (autoStartEnabled)
-                    {
-                        // Wait for Unity Editor to be ready before auto-starting
-                        RestoreServerOnStartupAsync(savedPort).Forget();
-                    }
-                    else
-                    {
-                        // If Auto Start Server is off, do not start the server.
-                        // Clear SessionState (wait for the server to be started manually).
-                        McpEditorSettings.ClearServerSession();
-                    }
-                }
+                return;
             }
+
+            if (mcpServer != null && mcpServer.IsRunning)
+            {
+                return;
+            }
+
+            bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
+            if (!autoStartEnabled && !isAfterCompile)
+            {
+                McpEditorSettings.ClearServerSession();
+                return;
+            }
+
+            // Centralized, coalesced startup request
+            _ = StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None);
         }
 
         /// <summary>
@@ -376,8 +373,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Wait for Unity Editor to be ready before auto-starting
             await EditorDelay.DelayFrame(1);
-
-            TryRestoreServerWithRetry(port, 0);
+            _ = StartRecoveryIfNeededAsync(port, false, CancellationToken.None);
         }
 
         /// <summary>
@@ -387,9 +383,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Wait longer for port release before retry
             await EditorDelay.DelayFrame(5);
-
-            // Do not change the port number; retry with the same port
-            TryRestoreServerWithRetry(port, retryCount + 1);
+            _ = StartRecoveryIfNeededAsync(port, false, CancellationToken.None);
         }
 
         /// <summary>
@@ -457,6 +451,120 @@ namespace io.github.hatayama.uLoopMCP
 
             // Server configuration validation passed
             // Note: Port availability and system port conflicts are handled by FindAvailablePort
+        }
+
+        private static bool IsStartupProtectionActive()
+        {
+            long nowTicks = DateTime.UtcNow.Ticks;
+            return nowTicks < startupProtectionUntilTicks;
+        }
+
+        private static void ActivateStartupProtection(int milliseconds)
+        {
+            long untilTicks = DateTime.UtcNow.AddMilliseconds(milliseconds).Ticks;
+            startupProtectionUntilTicks = untilTicks;
+            VibeLogger.LogInfo("startup_protection_active", $"window={milliseconds}ms");
+        }
+
+        /// <summary>
+        /// Centralized, coalesced recovery start. Tries to reuse the same port for up to 5 seconds before falling back.
+        /// </summary>
+        public static async Task StartRecoveryIfNeededAsync(int savedPort, bool isAfterCompile, CancellationToken cancellationToken)
+        {
+            VibeLogger.LogInfo("startup_request", $"port={savedPort}");
+
+            if (IsStartupProtectionActive())
+            {
+                VibeLogger.LogInfo("server_start_ignored", "startup_protection_active");
+                return;
+            }
+
+            await StartupSemaphore.WaitAsync(cancellationToken);
+            try
+            {
+                if (mcpServer != null && mcpServer.IsRunning && mcpServer.Port == savedPort)
+                {
+                    VibeLogger.LogInfo("server_start_ignored", $"already_running port={savedPort}");
+                    return;
+                }
+
+                int chosenPort = savedPort;
+                bool started = await TryBindWithWaitAsync(chosenPort, 5000, 250, cancellationToken);
+
+                if (!started)
+                {
+                    int fallbackPort = NetworkUtility.FindAvailablePort(savedPort + 1);
+                    if (fallbackPort != savedPort)
+                    {
+                        VibeLogger.LogInfo("fallback_decision", $"start={savedPort} chosen={fallbackPort}");
+                    }
+                    chosenPort = fallbackPort;
+                    started = await TryBindWithWaitAsync(chosenPort, 0, 0, cancellationToken);
+                }
+
+                if (!started)
+                {
+                    throw new InvalidOperationException("Failed to bind any port.");
+                }
+
+                // Mark running and update settings
+                McpEditorSettings.SetIsServerRunning(true);
+                if (McpEditorSettings.GetServerPort() != chosenPort)
+                {
+                    // Defer aggressive external updates; only update internal setting here
+                    McpEditorSettings.SetServerPort(chosenPort);
+                }
+
+                ActivateStartupProtection(5000);
+            }
+            finally
+            {
+                StartupSemaphore.Release();
+            }
+        }
+
+        private static async Task<bool> TryBindWithWaitAsync(int port, int maxWaitMs, int stepMs, CancellationToken cancellationToken)
+        {
+            int remainingMs = maxWaitMs;
+            while (true)
+            {
+                VibeLogger.LogInfo("binding_attempt", $"port={port}");
+                try
+                {
+                    McpBridgeServer server = new McpBridgeServer();
+                    server.StartServer(port);
+                    mcpServer = server;
+                    VibeLogger.LogInfo("binding_success", $"port={port}");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    // Unwrap SocketException details if present
+                    SocketException sockEx = ex as SocketException;
+                    if (ex is InvalidOperationException && ex.InnerException is SocketException innerSock)
+                    {
+                        sockEx = innerSock;
+                    }
+
+                    if (sockEx != null)
+                    {
+                        VibeLogger.LogWarning("binding_failed", $"port={port} code={sockEx.SocketErrorCode} hresult={sockEx.HResult} native={sockEx.ErrorCode}");
+                    }
+                    else
+                    {
+                        VibeLogger.LogWarning("binding_failed", $"port={port} code=Unknown hresult={ex.HResult}");
+                    }
+
+                    if (remainingMs <= 0)
+                    {
+                        return false;
+                    }
+
+                    int delay = stepMs <= 0 ? remainingMs : Math.Min(stepMs, remainingMs);
+                    await TimerDelay.Wait(delay, cancellationToken);
+                    remainingMs -= delay;
+                }
+            }
         }
     }
 }
