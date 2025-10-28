@@ -126,7 +126,14 @@ namespace io.github.hatayama.uLoopMCP
         private static async Task RestoreServerAfterCompileAsync(int port)
         {
             await EditorDelay.DelayFrame(1);
-            _ = McpServerController.StartRecoveryIfNeededAsync(port, true, CancellationToken.None);
+            _ = McpServerController.StartRecoveryIfNeededAsync(port, true, CancellationToken.None).ContinueWith(task =>
+            {
+                if (task.IsFaulted)
+                {
+                    VibeLogger.LogError("server_startup_restore_failed",
+                        $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
+                }
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         /// <summary>
@@ -136,7 +143,14 @@ namespace io.github.hatayama.uLoopMCP
         private static async Task RestoreServerOnStartupAsync(int port)
         {
             await EditorDelay.DelayFrame(1);
-            _ = McpServerController.StartRecoveryIfNeededAsync(port, false, CancellationToken.None);
+            _ = McpServerController.StartRecoveryIfNeededAsync(port, false, CancellationToken.None).ContinueWith(task =>
+            {
+                if (task.IsFaulted)
+                {
+                    VibeLogger.LogError("server_startup_restore_failed",
+                        $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
+                }
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         /// <summary>
@@ -147,7 +161,14 @@ namespace io.github.hatayama.uLoopMCP
         private static async Task RetryServerRestoreAsync(int port, int retryCount)
         {
             await EditorDelay.DelayFrame(5);
-            _ = McpServerController.StartRecoveryIfNeededAsync(port, false, CancellationToken.None);
+            _ = McpServerController.StartRecoveryIfNeededAsync(port, false, CancellationToken.None).ContinueWith(task =>
+            {
+                if (task.IsFaulted)
+                {
+                    VibeLogger.LogError("server_startup_restore_failed",
+                        $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
+                }
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         /// <summary>

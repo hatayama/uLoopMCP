@@ -222,7 +222,14 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // Centralized, coalesced startup request
-            _ = StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None);
+            _ = StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None).ContinueWith(task =>
+            {
+                if (task.IsFaulted)
+                {
+                    VibeLogger.LogError("server_startup_restore_failed",
+                        $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
+                }
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         /// <summary>
@@ -373,7 +380,14 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Wait for Unity Editor to be ready before auto-starting
             await EditorDelay.DelayFrame(1);
-            _ = StartRecoveryIfNeededAsync(port, false, CancellationToken.None);
+            _ = StartRecoveryIfNeededAsync(port, false, CancellationToken.None).ContinueWith(task =>
+            {
+                if (task.IsFaulted)
+                {
+                    VibeLogger.LogError("server_startup_restore_failed",
+                        $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
+                }
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         /// <summary>
@@ -383,7 +397,14 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Wait longer for port release before retry
             await EditorDelay.DelayFrame(5);
-            _ = StartRecoveryIfNeededAsync(port, false, CancellationToken.None);
+            _ = StartRecoveryIfNeededAsync(port, false, CancellationToken.None).ContinueWith(task =>
+            {
+                if (task.IsFaulted)
+                {
+                    VibeLogger.LogError("server_startup_restore_failed",
+                        $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
+                }
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         /// <summary>
