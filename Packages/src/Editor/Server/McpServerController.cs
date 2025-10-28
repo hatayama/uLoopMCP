@@ -482,10 +482,29 @@ namespace io.github.hatayama.uLoopMCP
             await StartupSemaphore.WaitAsync(cancellationToken);
             try
             {
-                if (mcpServer != null && mcpServer.IsRunning && mcpServer.Port == savedPort)
+                // If any server is already running, ignore this request to prevent double-binding
+                if (mcpServer != null && mcpServer.IsRunning)
                 {
-                    VibeLogger.LogInfo("server_start_ignored", $"already_running port={savedPort}");
+                    VibeLogger.LogInfo("server_start_ignored", $"already_running port={mcpServer.Port}");
                     return;
+                }
+
+                // Ensure previous instance is fully disposed before trying to bind a new one
+                if (mcpServer != null)
+                {
+                    try
+                    {
+                        mcpServer.Dispose();
+                        VibeLogger.LogInfo("server_disposed_before_bind", "disposed previous server instance");
+                    }
+                    catch (Exception ex)
+                    {
+                        VibeLogger.LogWarning("server_dispose_failed", ex.Message);
+                    }
+                    finally
+                    {
+                        mcpServer = null;
+                    }
                 }
 
                 int chosenPort = savedPort;
@@ -535,6 +554,24 @@ namespace io.github.hatayama.uLoopMCP
                 VibeLogger.LogInfo("binding_attempt", $"port={port}");
                 try
                 {
+                    // Defensive: dispose any non-running stale instance before creating a new one
+                    if (mcpServer != null && !mcpServer.IsRunning)
+                    {
+                        try
+                        {
+                            mcpServer.Dispose();
+                            VibeLogger.LogInfo("server_disposed_before_bind", "disposed stale instance");
+                        }
+                        catch (Exception ex)
+                        {
+                            VibeLogger.LogWarning("server_dispose_failed", ex.Message);
+                        }
+                        finally
+                        {
+                            mcpServer = null;
+                        }
+                    }
+
                     McpBridgeServer server = new McpBridgeServer();
                     server.StartServer(port);
                     mcpServer = server;
