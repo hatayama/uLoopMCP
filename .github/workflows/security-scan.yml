@@ -80,7 +80,7 @@ jobs:
         fi
 
     - name: Upload SARIF results to GitHub
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       if: always() && hashFiles('security-results.sarif') != ''
       with:
         sarif_file: security-results.sarif
@@ -130,7 +130,7 @@ jobs:
         fi
 
     - name: Upload TypeScript SARIF results
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       if: always() && hashFiles('Packages/src/TypeScriptServer~/typescript-security.sarif') != ''
       with:
         sarif_file: Packages/src/TypeScriptServer~/typescript-security.sarif
