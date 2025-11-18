@@ -17,13 +17,26 @@
 AIによる開発サイクルを高速に回すことで、継続的な改善Loopを実現します。
 
 # コンセプト
-AIによるコーディングを可能な限り長時間自走させる事をコンセンプトに作りました。
-通常、Unityをコンパイルさせたり、Testを走らせたり、logをAIに伝える部分は人間がやる必要があります。その面倒をuLoopMCPが解決します。
+uLoopMCP は、「AI が Unity プロジェクトの実装をできるだけ人手を介さずに進められる」ことを目指して作られた MCP サーバーです。
+人間が手で行っていたコンパイル、Test Runner の実行、ログ確認、シーン編集などの作業を、LLM ツールからまとめて操作できるようにします。
+
+uLoopMCP のコアとなるコンセプトは次の 2 つです。
+
+1. **compile / run-tests / get-logs / clear-console などを組み合わせて、AI が自分でビルド・テスト・ログ解析を回し続けられる「自律開発ループ」を提供すること**
+2. **execute-dynamic-code や execute-menu-item などを使って、Unity Editor の操作（シーン構築、メニュー実行、オブジェクト操作など）まで AI に任せられること**
 
 # 特徴
-1. packageをinstallして、お使いのLLMツールに接続するボタンを押すだけで、すぐに使い始める事ができます。
-2. 簡単に機能拡張ができます。自分専用のmcp toolをすぐに作る事が可能です。(おそらくAIに頼めばすぐに作ってくれるはずです)
-3. コンテキストをなるべく消費しないようにするオプションを実装しています。 
+1. AI がコンパイル → テスト実行 → ログ解析 → 再修正までを繰り返せるよう、`compile` / `run-tests` / `get-logs` / `clear-console` などのツールをひとまとめに提供します。
+2. `execute-dynamic-code` を中心に、Unity Editor のメニュー実行、シーン探索、GameObject 操作などをコードから自在に自動化できます。
+3. Unity Package Manager からインストールし、お使いの LLM ツール（Cursor / Claude Code / GitHub Copilot / Windsurf など）と数クリックで接続できます。
+4. プロジェクト固有の MCP ツールを型安全に拡張しやすく、AI に実装を任せやすい設計になっています。
+5. 大量のログや階層情報はファイルに書き出すことで、LLM のコンテキスト消費を抑える工夫をしています。
+
+# ユースケース例
+- Unity プロジェクトの「コンパイルが通るまで」「テストが緑になるまで」を、AI に任せて自律的に回し続ける
+- 既存コードベースに対して、バグ修正やリファクタリングを AI に依頼し、`compile` / `run-tests` / `get-logs` で結果を検証させる
+- 大量の Prefab / GameObject を Unity Editor 上で AI に調査させ、パラメータの一括修正やシーン構造の整理を行う
+- チーム専用の MCP ツールを追加し、プロジェクト固有のチェックや自動修正を AI から呼び出せるようにする
 
 # ツールwindow
 <img width="350" alt="image" src="https://github.com/user-attachments/assets/b0cd0d46-096a-49a4-adcb-cfd30beece53" />
@@ -32,7 +45,17 @@ AIによるコーディングを可能な限り長時間自走させる事をコ
  - LLMツールの接続状況を把握できます
  - LLMツールの設定ボタンを押すことで、簡単にツールとの接続が可能です
 
+## クイックスタート
+1. Unity プロジェクトに uLoopMCP パッケージをインストールします（「インストール」セクションを参照）。
+2. Unity メニューから `Window > uLoopMCP` を開き、`Start Server` ボタンを押して MCP サーバーを起動します。
+3. Cursor / Claude Code / GitHub Copilot など、使用している LLM ツール側で uLoopMCP を MCP として有効化します。
+4. 例えば次のようにプロンプトすると、AI が自律的な開発ループを回し始めます。
+   - 「このプロジェクトのコンパイルが通るように直して、`compile` でエラーが 0 になるまで繰り返して」
+   - 「`run-tests` で `uLoopMCP.Tests.Editor` のテストを全部通すまで、実装とテストを更新して」
+   - 「`execute-dynamic-code` でサンプルシーンに Cube を 10 個並べて、カメラ位置も自動調整して」
+
 # 主要機能
+### 自律開発ループ系ツール
 #### 1. compile - コンパイルの実行
 AssetDatabase.Refresh()をした後、コンパイルして結果を返却します。内蔵のLinterでは発見できないエラー・警告を見つける事ができます。  
 差分コンパイルと強制全体コンパイルを選択できます。
@@ -70,6 +93,7 @@ Unity Test Runnerを実行し、テスト結果を取得します。FilterType�
 > PlayModeテスト実行の際、Domain Reloadは強制的にOFFにされます。(テスト終了後に元の設定に戻ります)  
 > この際、Static変数がリセットされない事に注意して下さい。
 
+### Unity Editor 自動化・探索ツール
 #### 4. clear-console - ログのクリーンアップ
 log検索時、ノイズのとなるlogをクリアする事ができます。
 ```

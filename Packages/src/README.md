@@ -14,18 +14,31 @@
     <img width="500" alt="uLoopMCP" src="https://github.com/user-attachments/assets/a8b53cca-5444-445d-aa39-9024d41763e6" />  
 </h1>     
 
-Control Unity Editor from various LLM tools.
+Let an AI agent compile, test, and operate your Unity project from popular LLM tools.
 
-Accelerates AI-driven development cycles to enable continuous improvement loops.
+Designed to keep AI-driven development loops running autonomously inside your existing Unity projects.
 
 # Concept
-This project was created with the concept of enabling AI-driven coding to run autonomously for as long as possible.
-Normally, humans need to handle tasks like compiling Unity, running tests, and communicating logs to AI. uLoopMCP solves this hassle.
+uLoopMCP is an MCP server designed so that **AI can drive your Unity project forward with minimal human intervention**.
+Tasks that humans typically handle manually—compiling, running the Test Runner, checking logs, and editing scenes in the Editor—are exposed as tools that LLMs can orchestrate.
+
+uLoopMCP is built around two core ideas:
+
+1. **Provide a “self-hosted development loop” where an AI can repeatedly compile, run tests, inspect logs, and fix issues using tools like `compile`, `run-tests`, `get-logs`, and `clear-console`.**
+2. **Allow AI to operate the Unity Editor itself—creating objects, calling menu items, and inspecting scenes—via tools like `execute-dynamic-code` and `execute-menu-item`.**
 
 # Features
-1. Simply install the package and press the button to connect to your LLM tool to start using it immediately.
-2. Easily extensible functionality. You can quickly create your own custom MCP tools. (AI should be able to create them for you quickly)
-3. Options are implemented to minimize context consumption.
+1. Bundle of tools to let AI run the full loop (compile → test → log analysis → fix → repeat) on a Unity project.
+2. `execute-dynamic-code` at the core, enabling rich Unity Editor automation: menu execution, scene exploration, GameObject manipulation, and more.
+3. Easy setup from Unity Package Manager and a few clicks to connect from LLM tools (Cursor, Claude Code, GitHub Copilot, Windsurf, etc.).
+4. Type-safe extension model for adding project-specific MCP tools that AI can implement and iterate on for you.
+5. Log and hierarchy data can be exported to files to avoid burning LLM context on large payloads.
+
+# Example Use Cases
+- Let an AI keep fixing your project until `compile` reports zero errors.
+- Ask the AI to implement a new feature plus tests, and use `run-tests` to keep iterating until the whole test suite is green.
+- Offload large-scale scene / prefab inspections to the AI, and have it adjust component parameters or scene structure via Editor automation.
+- Build team-specific MCP tools for custom checks and automated refactors, and call them from your LLM environment.
 
 # Tool Window
 <img width="350" alt="image" src="https://github.com/user-attachments/assets/b0cd0d46-096a-49a4-adcb-cfd30beece53" />
@@ -35,7 +48,17 @@ Normally, humans need to handle tasks like compiling Unity, running tests, and c
  - Provides visibility into LLM tool connection status
  - Enables easy connection to tools via the LLM tool settings button
 
+## Quickstart
+1. Install the uLoopMCP package into your Unity project (see the **Installation** section).
+2. In Unity, open `Window > uLoopMCP` and press the `Start Server` button to launch the MCP server.
+3. In your LLM tool (Cursor, Claude Code, GitHub Copilot, etc.), enable uLoopMCP as an MCP server.
+4. Start with prompts like:
+   - “Fix this project until `compile` reports no errors, using the `compile` tool as needed.”
+   - “Run tests in `uLoopMCP.Tests.Editor` with `run-tests` and keep updating the code until all tests pass.”
+   - “Use `execute-dynamic-code` to create a sample scene with 10 cubes and adjust the camera so all cubes are visible.”
+
 # Key Features
+### Development Loop Tools
 #### 1. compile - Execute Compilation
 Performs AssetDatabase.Refresh() and then compiles, returning the results. Can detect errors and warnings that built-in linters cannot find.  
 You can choose between incremental compilation and forced full compilation.
@@ -73,6 +96,7 @@ This is also a strategy to avoid consuming context.
 > During PlayMode test execution, Domain Reload is forcibly turned OFF. (Settings are restored after test completion)  
 > Note that static variables will not be reset during this period.
 
+### Unity Editor Automation & Discovery Tools
 #### 4. clear-console - Log Cleanup
 Clear logs that become noise during log searches.
 ```
