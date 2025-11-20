@@ -316,10 +316,6 @@ namespace io.github.hatayama.uLoopMCP
         private bool TryDrawEditorSelectionFilteringCodexForNonMac(McpEditorType currentEditor, Action<McpEditorType> editorChangeCallback)
         {
             McpEditorType[] availableEditors = Enum.GetValues(typeof(McpEditorType)).Cast<McpEditorType>().ToArray();
-            if (Application.platform != RuntimePlatform.OSXEditor)
-            {
-                availableEditors = availableEditors.Where(editor => editor != McpEditorType.Codex).ToArray();
-            }
 
             if (availableEditors.Length == 0)
             {
