@@ -14,18 +14,31 @@
     <img width="500" alt="uLoopMCP" src="https://github.com/user-attachments/assets/a8b53cca-5444-445d-aa39-9024d41763e6" />  
 </h1>     
 
-Control Unity Editor from various LLM tools.
+Let an AI agent compile, test, and operate your Unity project from popular LLM tools.
 
-Accelerates AI-driven development cycles to enable continuous improvement loops.
+Designed to keep AI-driven development loops running autonomously inside your existing Unity projects.
 
 # Concept
-This project was created with the concept of enabling AI-driven coding to run autonomously for as long as possible.
-Normally, humans need to handle tasks like compiling Unity, running tests, and communicating logs to AI. uLoopMCP solves this hassle.
+uLoopMCP is an MCP server designed so that **AI can drive your Unity project forward with minimal human intervention**.
+Tasks that humans typically handle manually—compiling, running the Test Runner, checking logs, and editing scenes in the Editor—are exposed as tools that LLMs can orchestrate.
+
+uLoopMCP is built around two core ideas:
+
+1. **Provide a “self-hosted development loop” where an AI can repeatedly compile, run tests, inspect logs, and fix issues using tools like `compile`, `run-tests`, `get-logs`, and `clear-console`.**
+2. **Allow AI to operate the Unity Editor itself—creating objects, calling menu items, and inspecting scenes—via tools like `execute-dynamic-code` and `execute-menu-item`.**
 
 # Features
-1. Simply install the package and press the button to connect to your LLM tool to start using it immediately.
-2. Easily extensible functionality. You can quickly create your own custom MCP tools. (AI should be able to create them for you quickly)
-3. Options are implemented to minimize context consumption.
+1. Bundle of tools to let AI run the full loop (compile → test → log analysis → fix → repeat) on a Unity project.
+2. `execute-dynamic-code` at the core, enabling rich Unity Editor automation: menu execution, scene exploration, GameObject manipulation, and more.
+3. Easy setup from Unity Package Manager and a few clicks to connect from LLM tools (Cursor, Claude Code, GitHub Copilot, Windsurf, etc.).
+4. Type-safe extension model for adding project-specific MCP tools that AI can implement and iterate on for you.
+5. Log and hierarchy data can be exported to files to avoid burning LLM context on large payloads.
+
+# Example Use Cases
+- Let an AI keep fixing your project until `compile` reports zero errors.
+- Ask the AI to implement a new feature plus tests, and use `run-tests` to keep iterating until the whole test suite is green.
+- Offload large-scale scene / prefab inspections to the AI, and have it adjust component parameters or scene structure via Editor automation.
+- Build team-specific MCP tools for custom checks and automated refactors, and call them from your LLM environment.
 
 # Tool Window
 <img width="350" alt="image" src="https://github.com/user-attachments/assets/b0cd0d46-096a-49a4-adcb-cfd30beece53" />
@@ -35,7 +48,20 @@ Normally, humans need to handle tasks like compiling Unity, running tests, and c
  - Provides visibility into LLM tool connection status
  - Enables easy connection to tools via the LLM tool settings button
 
+## Quickstart
+1. Install the uLoopMCP package into your Unity project.
+   - In Unity Package Manager, choose “Add package from git URL” and use:  
+     `https://github.com/hatayama/uLoopMCP.git?path=/Packages/src`
+   - Alternatively, you can use the OpenUPM scoped registry (see the [Installation](#installation) section for details).
+2. In Unity, open `Window > uLoopMCP` and press the `Start Server` button to launch the MCP server.
+3. In your LLM tool (Cursor, Claude Code, GitHub Copilot, etc.), enable uLoopMCP as an MCP server.
+4. For example, if you give instructions like:
+   - “Fix this project until `compile` reports no errors, using the `compile` tool as needed.”
+   - “Run tests in `uLoopMCP.Tests.Editor` with `run-tests` and keep updating the code until all tests pass.”
+   - “Use `execute-dynamic-code` to create a sample scene with 10 cubes and adjust the camera so all cubes are visible.”
+
 # Key Features
+### Development Loop Tools
 #### 1. compile - Execute Compilation
 Performs AssetDatabase.Refresh() and then compiles, returning the results. Can detect errors and warnings that built-in linters cannot find.  
 You can choose between incremental compilation and forced full compilation.
@@ -73,6 +99,7 @@ This is also a strategy to avoid consuming context.
 > During PlayMode test execution, Domain Reload is forcibly turned OFF. (Settings are restored after test completion)  
 > Note that static variables will not be reset during this period.
 
+### Unity Editor Automation & Discovery Tools
 #### 4. clear-console - Log Cleanup
 Clear logs that become noise during log searches.
 ```
@@ -100,8 +127,7 @@ Retrieve menu items defined with [MenuItem("xxx")] attribute. Can filter by stri
 #### 8. execute-menu-item - Execute Menu Items
 Execute menu items defined with [MenuItem("xxx")] attribute.
 ```
-→ Have AI generate test program
-→ execute-menu-item (MenuItemPath: "Tools/xxx") to execute generated test program
+→ Execute project-specific tools
 → Check results with get-logs
 ```
 
@@ -114,10 +140,10 @@ Retrieve objects and examine component parameters.
 
 #### 10. get-hierarchy - Analyze Scene Structure
 Retrieve information about the currently active Hierarchy in nested JSON format. Works at runtime as well.
-**Automatic File Export**: Large hierarchies (>100KB) are automatically saved to `{project_root}/uLoopMCPOutputs/HierarchyResults/` directory to minimize token consumption.
+**Automatic File Export**: Retrieved hierarchy data is always saved as JSON in `{project_root}/uLoopMCPOutputs/HierarchyResults/` directory. The MCP response only returns the file path, minimizing token consumption even for large datasets.
 ```
 → Understand parent-child relationships between GameObjects, discover and fix structural issues
-→ For large scenes, hierarchy data is saved to file and path is returned instead of raw JSON
+→ Regardless of scene size, hierarchy data is saved to a file and the path is returned instead of raw JSON
 ```
 
 #### 11. execute-dynamic-code - Dynamic C# Code Execution
@@ -139,6 +165,25 @@ Scope(s): org.nuget
 ```
 
 > 3. Open the Package Manager window, select OpenUPM in the My Registries section, and install Microsoft.CodeAnalysis.CSharp.
+
+<details>
+<summary>View Microsoft.CodeAnalysis.CSharp installation steps</summary>
+
+**Installation steps (via OpenUPM scoped registry, recommended)**  
+Use a scoped registry in Unity Package Manager:
+
+1. Open Project Settings window and go to the Package Manager page  
+2. Add the following entry to the Scoped Registries list:  
+
+```
+Name: OpenUPM
+URL: https://package.openupm.com
+Scope(s): org.nuget
+```
+
+3. Open the Package Manager window, select OpenUPM in the My Registries section, and install `Microsoft.CodeAnalysis.CSharp`.
+
+</details>
 
 Async support:
 - You can write await in your snippet (Task/ValueTask/UniTask and any awaitable type)
