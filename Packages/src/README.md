@@ -151,26 +151,13 @@ Execute C# code dynamically within Unity Editor.
 
 > **⚠️ Important Prerequisites**  
 > To use this tool, you must install the `Microsoft.CodeAnalysis.CSharp` package using [OpenUPM NuGet](https://openupm.com/nuget/).
-> 
-> **Installation Instructions (Recommended: via OpenUPM Scoped Registry)**
-> 
-> Using Scoped registry in Unity Package Manager
-> 1. Open Project Settings window and go to the Package Manager page
-> 2. Add the following entry to the Scoped Registries list:
-
-```yaml
-Name: OpenUPM
-URL: https://package.openupm.com
-Scope(s): org.nuget
-```
-
-> 3. Open the Package Manager window, select OpenUPM in the My Registries section, and install Microsoft.CodeAnalysis.CSharp.
 
 <details>
 <summary>View Microsoft.CodeAnalysis.CSharp installation steps</summary>
 
-**Installation steps (via OpenUPM scoped registry, recommended)**  
-Use a scoped registry in Unity Package Manager:
+**Installation steps:**  
+
+Use a scoped registry in Unity Package Manager via OpenUPM (recommended).
 
 1. Open Project Settings window and go to the Package Manager page  
 2. Add the following entry to the Scoped Registries list:  
