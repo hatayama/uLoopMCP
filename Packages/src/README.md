@@ -166,6 +166,25 @@ Scope(s): org.nuget
 
 > 3. Open the Package Manager window, select OpenUPM in the My Registries section, and install Microsoft.CodeAnalysis.CSharp.
 
+<details>
+<summary>View Microsoft.CodeAnalysis.CSharp installation steps</summary>
+
+**Installation steps (via OpenUPM scoped registry, recommended)**  
+Use a scoped registry in Unity Package Manager:
+
+1. Open Project Settings window and go to the Package Manager page  
+2. Add the following entry to the Scoped Registries list:  
+
+```
+Name: OpenUPM
+URL: https://package.openupm.com
+Scope(s): org.nuget
+```
+
+3. Open the Package Manager window, select OpenUPM in the My Registries section, and install `Microsoft.CodeAnalysis.CSharp`.
+
+</details>
+
 Async support:
 - You can write await in your snippet (Task/ValueTask/UniTask and any awaitable type)
 - Cancellation is propagated when you pass a CancellationToken to the tool
