@@ -12,7 +12,7 @@
 
 <h1 align="center">
     <img width="500" alt="uLoopMCP" src="https://github.com/user-attachments/assets/a8b53cca-5444-445d-aa39-9024d41763e6" />  
-</h1>     
+</h1>
 
 Let an AI agent compile, test, and operate your Unity project from popular LLM tools.
 
@@ -41,8 +41,7 @@ uLoopMCP is built around two core ideas:
 - Build team-specific MCP tools for custom checks and automated refactors, and call them from your LLM environment.
 
 # Tool Window
-<img width="350" alt="image" src="https://github.com/user-attachments/assets/b0cd0d46-096a-49a4-adcb-cfd30beece53" />
-
+<img width="308" height="401" src="https://github.com/user-attachments/assets/a6beb597-363d-4816-9286-e8bdba7e4b5c" />
 
 - Manages and monitors server status
 - Provides visibility into LLM tool connection status
@@ -517,7 +516,7 @@ All tools automatically include the following timing information:
 3. IDE Connection Verification
   - For example, with Cursor, check the Tools & Integrations in the settings page and find uLoopMCP. Click the toggle to enable MCP. If a red circle appears, restart Cursor.
 
-<img width="545" height="481" alt="image" src="https://github.com/user-attachments/assets/2497f85d-1964-4667-92fc-a9e33a946206" />
+<img width="657" height="399" alt="image" src="https://github.com/user-attachments/assets/5137491d-0396-482f-b695-6700043b3f69" />
 
 > [!WARNING]  
 > **About Codex / Windsurf**  
