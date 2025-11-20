@@ -49,10 +49,13 @@ uLoopMCP is built around two core ideas:
  - Enables easy connection to tools via the LLM tool settings button
 
 ## Quickstart
-1. Install the uLoopMCP package into your Unity project (see the **Installation** section).
+1. Install the uLoopMCP package into your Unity project.
+   - In Unity Package Manager, choose “Add package from git URL” and use:  
+     `https://github.com/hatayama/uLoopMCP.git?path=/Packages/src`
+   - Alternatively, you can use the OpenUPM scoped registry (see the [Installation](#installation) section for details).
 2. In Unity, open `Window > uLoopMCP` and press the `Start Server` button to launch the MCP server.
 3. In your LLM tool (Cursor, Claude Code, GitHub Copilot, etc.), enable uLoopMCP as an MCP server.
-4. Start with prompts like:
+4. For example, if you give instructions like:
    - “Fix this project until `compile` reports no errors, using the `compile` tool as needed.”
    - “Run tests in `uLoopMCP.Tests.Editor` with `run-tests` and keep updating the code until all tests pass.”
    - “Use `execute-dynamic-code` to create a sample scene with 10 cubes and adjust the camera so all cubes are visible.”
@@ -124,8 +127,7 @@ Retrieve menu items defined with [MenuItem("xxx")] attribute. Can filter by stri
 #### 8. execute-menu-item - Execute Menu Items
 Execute menu items defined with [MenuItem("xxx")] attribute.
 ```
-→ Have AI generate test program
-→ execute-menu-item (MenuItemPath: "Tools/xxx") to execute generated test program
+→ Execute project-specific tools
 → Check results with get-logs
 ```
 
@@ -138,10 +140,10 @@ Retrieve objects and examine component parameters.
 
 #### 10. get-hierarchy - Analyze Scene Structure
 Retrieve information about the currently active Hierarchy in nested JSON format. Works at runtime as well.
-**Automatic File Export**: Large hierarchies (>100KB) are automatically saved to `{project_root}/uLoopMCPOutputs/HierarchyResults/` directory to minimize token consumption.
+**Automatic File Export**: Retrieved hierarchy data is always saved as JSON in `{project_root}/uLoopMCPOutputs/HierarchyResults/` directory. The MCP response only returns the file path, minimizing token consumption even for large datasets.
 ```
 → Understand parent-child relationships between GameObjects, discover and fix structural issues
-→ For large scenes, hierarchy data is saved to file and path is returned instead of raw JSON
+→ Regardless of scene size, hierarchy data is saved to a file and the path is returned instead of raw JSON
 ```
 
 #### 11. execute-dynamic-code - Dynamic C# Code Execution
