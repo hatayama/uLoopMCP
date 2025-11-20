@@ -41,7 +41,7 @@ uLoopMCPのコアとなるコンセプトは次の2つです。
 - チーム専用のMCPツールを追加し、プロジェクト固有のチェックや自動修正をAIから呼び出せるようにする
 
 # ツールwindow
-<img width="350" alt="image" src="https://github.com/user-attachments/assets/b0cd0d46-096a-49a4-adcb-cfd30beece53" />
+<img width="308" height="401" src="https://github.com/user-attachments/assets/a6beb597-363d-4816-9286-e8bdba7e4b5c" />
 
 - サーバーの状態を管理・モニターします
 - LLMツールの接続状況を把握できます
@@ -510,9 +510,9 @@ Scope(s): org.nuget
 <img width="335" alt="image" src="https://github.com/user-attachments/assets/25f1f4f9-e3c8-40a5-a2f3-903f9ed5f45b" />
 
 4. IDE接続確認
-  - 例えばCursorの場合、設定ページのTools & Integrationsを確認し、uLoopMCPを見つけてください。トグルをクリックしてMCPを有効にします。赤い円が表示される場合は、Cursorを再起動してください。  
+  - 例えばCursorの場合、設定ページのTools & MCPを確認し、uLoopMCPを見つけてください。トグルをクリックしてMCPを有効にします。赤い円が表示される場合は、Cursorを再起動してください。  
 
-<img width="545" height="481" alt="image" src="https://github.com/user-attachments/assets/2497f85d-1964-4667-92fc-a9e33a946206" />
+<img width="657" height="399" alt="image" src="https://github.com/user-attachments/assets/5137491d-0396-482f-b695-6700043b3f69" />
 
 > [!WARNING]  
 > **Codex / Windsurfについて**  

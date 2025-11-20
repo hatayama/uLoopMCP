@@ -12,7 +12,7 @@
 
 <h1 align="center">
     <img width="500" alt="uLoopMCP" src="https://github.com/user-attachments/assets/a8b53cca-5444-445d-aa39-9024d41763e6" />  
-</h1>     
+</h1>
 
 Let an AI agent compile, test, and operate your Unity project from popular LLM tools.
 
@@ -41,8 +41,7 @@ uLoopMCP is built around two core ideas:
 - Build team-specific MCP tools for custom checks and automated refactors, and call them from your LLM environment.
 
 # Tool Window
-<img width="350" alt="image" src="https://github.com/user-attachments/assets/b0cd0d46-096a-49a4-adcb-cfd30beece53" />
-
+<img width="308" height="401" src="https://github.com/user-attachments/assets/a6beb597-363d-4816-9286-e8bdba7e4b5c" />
 
 - Manages and monitors server status
 - Provides visibility into LLM tool connection status
@@ -151,26 +150,13 @@ Execute C# code dynamically within Unity Editor.
 
 > **⚠️ Important Prerequisites**  
 > To use this tool, you must install the `Microsoft.CodeAnalysis.CSharp` package using [OpenUPM NuGet](https://openupm.com/nuget/).
-> 
-> **Installation Instructions (Recommended: via OpenUPM Scoped Registry)**
-> 
-> Using Scoped registry in Unity Package Manager
-> 1. Open Project Settings window and go to the Package Manager page
-> 2. Add the following entry to the Scoped Registries list:
-
-```yaml
-Name: OpenUPM
-URL: https://package.openupm.com
-Scope(s): org.nuget
-```
-
-> 3. Open the Package Manager window, select OpenUPM in the My Registries section, and install Microsoft.CodeAnalysis.CSharp.
 
 <details>
 <summary>View Microsoft.CodeAnalysis.CSharp installation steps</summary>
 
-**Installation steps (via OpenUPM scoped registry, recommended)**  
-Use a scoped registry in Unity Package Manager:
+**Installation steps:**  
+
+Use a scoped registry in Unity Package Manager via OpenUPM (recommended).
 
 1. Open Project Settings window and go to the Package Manager page  
 2. Add the following entry to the Scoped Registries list:  
@@ -528,9 +514,9 @@ All tools automatically include the following timing information:
 <img width="335" alt="image" src="https://github.com/user-attachments/assets/25f1f4f9-e3c8-40a5-a2f3-903f9ed5f45b" />
 
 3. IDE Connection Verification
-  - For example, with Cursor, check the Tools & Integrations in the settings page and find uLoopMCP. Click the toggle to enable MCP. If a red circle appears, restart Cursor.
+  - For example, with Cursor, check the Tools & MCP in the settings page and find uLoopMCP. Click the toggle to enable MCP. If a red circle appears, restart Cursor.
 
-<img width="545" height="481" alt="image" src="https://github.com/user-attachments/assets/2497f85d-1964-4667-92fc-a9e33a946206" />
+<img width="657" height="399" alt="image" src="https://github.com/user-attachments/assets/5137491d-0396-482f-b695-6700043b3f69" />
 
 > [!WARNING]  
 > **About Codex / Windsurf**  
