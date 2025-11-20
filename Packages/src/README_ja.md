@@ -41,21 +41,21 @@ uLoopMCP のコアとなるコンセプトは次の 2 つです。
 # ツールwindow
 <img width="350" alt="image" src="https://github.com/user-attachments/assets/b0cd0d46-096a-49a4-adcb-cfd30beece53" />
 
- - サーバーの状態を管理・モニターします
- - LLMツールの接続状況を把握できます
- - LLMツールの設定ボタンを押すことで、簡単にツールとの接続が可能です
+- サーバーの状態を管理・モニターします
+- LLMツールの接続状況を把握できます
+- LLMツールの設定ボタンを押すことで、簡単にツールとの接続が可能です
 
 ## クイックスタート
 1. Unity プロジェクトに uLoopMCP パッケージをインストールします。
-   - Unity Package Manager の「Add package from git URL」で以下を指定します：  
-     `https://github.com/hatayama/uLoopMCP.git?path=/Packages/src`
-   - あるいは OpenUPM の Scoped Registry 経由でも利用できます。（詳しくは [インストール](#インストール) セクションを参照）。
+  - Unity Package Manager の「Add package from git URL」で以下を指定します：  
+    `https://github.com/hatayama/uLoopMCP.git?path=/Packages/src`
+  - あるいは OpenUPM の Scoped Registry 経由でも利用できます。（詳しくは [インストール](#インストール) セクションを参照）。
 2. Unity メニューから `Window > uLoopMCP` を開き、`Start Server` ボタンを押して MCP サーバーを起動します。
 3. Cursor / Claude Code / GitHub Copilot など、使用している LLM ツール側で uLoopMCP を MCP として有効化します。
 4. 例えば次のように指示すると、AIが自律的な開発ループを回し始めます。
-   - 「このプロジェクトのコンパイルが通るように直して、`compile` でエラーが 0 になるまで繰り返して」
-   - 「`run-tests` で `uLoopMCP.Tests.Editor` のテストを全部通すまで、実装とテストを更新して」
-   - 「`execute-dynamic-code` でサンプルシーンに Cube を 10 個並べて、カメラ位置も自動調整して」
+  - 「このプロジェクトのコンパイルが通るように直して、`compile` でエラーが 0 になるまで繰り返して」
+  - 「`run-tests` で `uLoopMCP.Tests.Editor` のテストを全部通すまで、実装とテストを更新して」
+  - 「`execute-dynamic-code` でサンプルシーンに Cube を 10 個並べて、カメラ位置も自動調整して」
 
 # 主要機能
 ### 自律開発ループ系ツール
@@ -138,7 +138,7 @@ UnitySearchが提供する検索プロバイダーを取得します
 #### 10. get-hierarchy - シーン構造の解析
 現在アクティブなHierarchyの情報をネストされたJSON形式で取得します。ランタイムでも動作します。
 **自動ファイル出力**: 取得したHierarchyは常に`{project_root}/uLoopMCPOutputs/HierarchyResults/`ディレクトリにJSONとして保存されます。MCPレスポンスにはファイルパスのみが返るため、大量データでもトークン消費を最小限に抑えられます。
-```
+```text
 → GameObject間の親子関係を理解。構造的な問題を発見・修正
 → シーンの規模にかかわらず、Hierarchyデータはファイルに保存され、生のJSONの代わりにパスが返されます
 ```
@@ -158,8 +158,8 @@ OpenUPM経由（推奨）で、Unity Package Manager の Scoped Registry を使�
 
 1. Project Settingsウィンドウを開き、Package Managerページに移動  
 2. Scoped Registriesリストに以下のエントリを追加：  
-
-```
+ 
+```yaml
 Name: OpenUPM
 URL: https://package.openupm.com
 Scope(s): org.nuget

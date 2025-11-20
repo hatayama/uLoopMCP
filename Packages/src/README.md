@@ -44,24 +44,24 @@ uLoopMCP is built around two core ideas:
 <img width="350" alt="image" src="https://github.com/user-attachments/assets/b0cd0d46-096a-49a4-adcb-cfd30beece53" />
 
 
- - Manages and monitors server status
- - Provides visibility into LLM tool connection status
- - Enables easy connection to tools via the LLM tool settings button
+- Manages and monitors server status
+- Provides visibility into LLM tool connection status
+- Enables easy connection to tools via the LLM tool settings button
 
 ## Quickstart
 1. Install the uLoopMCP package into your Unity project.
-   - In Unity Package Manager, choose “Add package from git URL” and use:  
-     `https://github.com/hatayama/uLoopMCP.git?path=/Packages/src`
-   - Alternatively, you can use the OpenUPM scoped registry (see the [Installation](#installation) section for details).
+  - In Unity Package Manager, choose “Add package from git URL” and use:  
+    `https://github.com/hatayama/uLoopMCP.git?path=/Packages/src`
+  - Alternatively, you can use the OpenUPM scoped registry (see the [Installation](#installation) section for details).
 2. In Unity, open `Window > uLoopMCP` and press the `Start Server` button to launch the MCP server.
 3. In your LLM tool (Cursor, Claude Code, GitHub Copilot, etc.), enable uLoopMCP as an MCP server.
 4. For example, if you give instructions like:
-   - “Fix this project until `compile` reports no errors, using the `compile` tool as needed.”
-   - “Run tests in `uLoopMCP.Tests.Editor` with `run-tests` and keep updating the code until all tests pass.”
-   - “Use `execute-dynamic-code` to create a sample scene with 10 cubes and adjust the camera so all cubes are visible.”
+  - “Fix this project until `compile` reports no errors, using the `compile` tool as needed.”
+  - “Run tests in `uLoopMCP.Tests.Editor` with `run-tests` and keep updating the code until all tests pass.”
+  - “Use `execute-dynamic-code` to create a sample scene with 10 cubes and adjust the camera so all cubes are visible.”
 
 # Key Features
-### Development Loop Tools
+## Development Loop Tools
 #### 1. compile - Execute Compilation
 Performs AssetDatabase.Refresh() and then compiles, returning the results. Can detect errors and warnings that built-in linters cannot find.  
 You can choose between incremental compilation and forced full compilation.
@@ -141,7 +141,7 @@ Retrieve objects and examine component parameters.
 #### 10. get-hierarchy - Analyze Scene Structure
 Retrieve information about the currently active Hierarchy in nested JSON format. Works at runtime as well.
 **Automatic File Export**: Retrieved hierarchy data is always saved as JSON in `{project_root}/uLoopMCPOutputs/HierarchyResults/` directory. The MCP response only returns the file path, minimizing token consumption even for large datasets.
-```
+```text
 → Understand parent-child relationships between GameObjects, discover and fix structural issues
 → Regardless of scene size, hierarchy data is saved to a file and the path is returned instead of raw JSON
 ```
@@ -158,7 +158,7 @@ Execute C# code dynamically within Unity Editor.
 > 1. Open Project Settings window and go to the Package Manager page
 > 2. Add the following entry to the Scoped Registries list:
 
-```
+```yaml
 Name: OpenUPM
 URL: https://package.openupm.com
 Scope(s): org.nuget
@@ -175,7 +175,7 @@ Use a scoped registry in Unity Package Manager:
 1. Open Project Settings window and go to the Package Manager page  
 2. Add the following entry to the Scoped Registries list:  
 
-```
+```yaml
 Name: OpenUPM
 URL: https://package.openupm.com
 Scope(s): org.nuget
