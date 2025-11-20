@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.37.2](https://github.com/hatayama/uLoopMCP/compare/v0.37.1...v0.37.2) (2025-11-19)
+
+
+### Bug Fixes
+
+* resolve Cursor MCP server path relative to configuration root ([#327](https://github.com/hatayama/uLoopMCP/issues/327)) ([95bda03](https://github.com/hatayama/uLoopMCP/commit/95bda03baa83774220efe1801b3813850d2a0b6d))
+
 ## [0.37.1](https://github.com/hatayama/uLoopMCP/compare/v0.37.0...v0.37.1) (2025-10-28)
 
 

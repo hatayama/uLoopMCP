@@ -59,9 +59,14 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>The processed server path</returns>
         private static string GetServerPathForEditor(string serverPath, McpEditorType editorType)
         {
-            // Desktop editors (Cursor, VSCode, Windsurf, Codex) require absolute path for proper connection
-            if (editorType == McpEditorType.Cursor || 
-                editorType == McpEditorType.VSCode || 
+            // Cursor uses a path relative to the configuration root (Unity project root or Git root)
+            if (editorType == McpEditorType.Cursor)
+            {
+                return UnityMcpPathResolver.MakeRelativeToConfigurationRoot(serverPath);
+            }
+
+            // Desktop editors (VSCode, Windsurf, Codex) require absolute path for proper connection
+            if (editorType == McpEditorType.VSCode || 
                 editorType == McpEditorType.Windsurf ||
                 editorType == McpEditorType.Codex)
             {

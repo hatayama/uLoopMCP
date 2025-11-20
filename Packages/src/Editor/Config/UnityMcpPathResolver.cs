@@ -1,7 +1,7 @@
 using System;
 using System.IO;
-using UnityEngine;
 using System.Linq; // Added for .Concat()
+using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -68,9 +68,10 @@ namespace io.github.hatayama.uLoopMCP
     /// - Windsurf: "uLoopMCP-{port}" (includes port number)
     /// - Other editors: "uLoopMCP" (no port number)
     /// 
-    /// #### Server Path Format:
-    /// - Desktop editors (Cursor, VSCode, Windsurf): Absolute path
-    /// - CLI editors (Claude Code, Gemini CLI): Relative path from project root
+        /// #### Server Path Format:
+        /// - Cursor: Path relative to the configuration root (Unity project root or Git root)
+        /// - Desktop editors (VSCode, Windsurf, Codex): Absolute path
+        /// - CLI editors (Claude Code, Gemini CLI): Relative path from configuration root (project/Git root)
     /// 
     /// #### Environment Variables:
     /// ```json
@@ -154,6 +155,8 @@ namespace io.github.hatayama.uLoopMCP
         /// If the absolutePath is under the configuration root, returns relative path with '/' separators.
         /// Otherwise returns the original absolutePath.
         /// </summary>
+        /// <param name="absolutePath">The absolute path to convert.</param>
+        /// <returns>Path relative to configuration root or the original absolute path.</returns>
         public static string MakeRelativeToConfigurationRoot(string absolutePath)
         {
             if (string.IsNullOrEmpty(absolutePath))
@@ -167,24 +170,42 @@ namespace io.github.hatayama.uLoopMCP
                 return absolutePath;
             }
 
-            // Ensure both have consistent trailing separators for comparison
-            string normalizedRoot = root.Replace('\\', '/');
-            string normalizedPath = absolutePath.Replace('\\', '/');
+            string normalizedRoot = NormalizeDirectoryPath(root);
+            string normalizedPath = NormalizePath(absolutePath);
 
-            if (!normalizedRoot.EndsWith("/"))
+            if (!normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
             {
-                normalizedRoot += "/";
+                return absolutePath;
             }
 
-            // Use case-insensitive comparison to support Windows file systems
-            if (normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+            string relative = normalizedPath.Substring(normalizedRoot.Length);
+            return relative.Replace('\\', '/');
+        }
+
+        /// <summary>
+        /// Normalizes a directory path to use forward slashes and ensures it ends with a slash.
+        /// </summary>
+        /// <param name="path">The directory path to normalize.</param>
+        /// <returns>Normalized directory path ending with '/'.</returns>
+        private static string NormalizeDirectoryPath(string path)
+        {
+            string normalized = path.Replace('\\', '/');
+            if (!normalized.EndsWith("/"))
             {
-                string relative = normalizedPath.Substring(normalizedRoot.Length);
-                // Ensure forward slashes
-                return relative.Replace('\\', '/');
+                normalized += "/";
             }
 
-            return absolutePath;
+            return normalized;
+        }
+
+        /// <summary>
+        /// Normalizes a file system path to use forward slashes.
+        /// </summary>
+        /// <param name="path">The path to normalize.</param>
+        /// <returns>Normalized path with forward slashes.</returns>
+        private static string NormalizePath(string path)
+        {
+            return path.Replace('\\', '/');
         }
 
         private static string _cachedGitRepositoryRoot;
