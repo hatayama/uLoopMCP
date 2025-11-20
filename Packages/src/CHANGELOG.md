@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.38.0](https://github.com/hatayama/uLoopMCP/compare/v0.37.2...v0.38.0) (2025-11-20)
+
+
+### Features
+
+* Enable Codex configuration on Windows ([#331](https://github.com/hatayama/uLoopMCP/issues/331)) ([1ece6d7](https://github.com/hatayama/uLoopMCP/commit/1ece6d7f1035a16d8df7ba9dc147a87085c664b6))
+
 ## [0.37.2](https://github.com/hatayama/uLoopMCP/compare/v0.37.1...v0.37.2) (2025-11-19)
 
 
