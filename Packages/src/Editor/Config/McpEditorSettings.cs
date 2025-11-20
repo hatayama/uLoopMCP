@@ -27,7 +27,7 @@ namespace io.github.hatayama.uLoopMCP
     public record McpEditorSettingsData
     {
         public int customPort = McpServerConfig.DEFAULT_PORT;
-        public bool autoStartServer = false;
+        public bool autoStartServer = true;
         public bool showDeveloperTools = false;
         public bool enableMcpLogs = false;
         public bool enableCommunicationLogs = false;
