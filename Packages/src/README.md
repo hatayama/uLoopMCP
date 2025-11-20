@@ -533,8 +533,8 @@ All tools automatically include the following timing information:
 <img width="545" height="481" alt="image" src="https://github.com/user-attachments/assets/2497f85d-1964-4667-92fc-a9e33a946206" />
 
 > [!WARNING]  
-> **About Codex**  
-> Currently supported on macOS only. Not available on Windows. Also, project-level configuration is not supported; only a global configuration is available.
+> **About Codex / Windsurf**  
+> Project-level configuration is not supported; only a global configuration is available.
 
 <details>
 <summary>Manual Setup (Usually Unnecessary)</summary>
