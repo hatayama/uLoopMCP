@@ -54,7 +54,7 @@ uLoopMCP is built around two core ideas:
     `https://github.com/hatayama/uLoopMCP.git?path=/Packages/src`
   - Alternatively, you can use the OpenUPM scoped registry (see the [Installation](#installation) section for details).
 2. In Unity, open `Window > uLoopMCP` and press the `Start Server` button to launch the MCP server.
-3. In your LLM tool (Cursor, Claude Code, GitHub Copilot, etc.), enable uLoopMCP as an MCP server.
+3. In your LLM tool (Cursor, Claude Code, Codex, Gemini, etc.), enable uLoopMCP as an MCP server.
 4. For example, if you give instructions like:
   - “Fix this project until `compile` reports no errors, using the `compile` tool as needed.”
   - “Run tests in `uLoopMCP.Tests.Editor` with `run-tests` and keep updating the code until all tests pass.”
@@ -533,8 +533,8 @@ All tools automatically include the following timing information:
 <img width="545" height="481" alt="image" src="https://github.com/user-attachments/assets/2497f85d-1964-4667-92fc-a9e33a946206" />
 
 > [!WARNING]  
-> **About Codex**  
-> Currently supported on macOS only. Not available on Windows. Also, project-level configuration is not supported; only a global configuration is available.
+> **About Codex / Windsurf**  
+> Project-level configuration is not supported; only a global configuration is available.
 
 <details>
 <summary>Manual Setup (Usually Unnecessary)</summary>

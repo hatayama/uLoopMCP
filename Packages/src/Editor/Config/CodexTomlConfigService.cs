@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Codex (~/.codex/config.toml) 向けの設定サービス（TOML 文字列ベース）。
+    /// Configuration service for Codex (~/.codex/config.toml), TOML string-based.
     /// </summary>
     public sealed class CodexTomlConfigService : IMcpConfigService
     {
@@ -16,7 +16,7 @@ namespace io.github.hatayama.uLoopMCP
             @"(?ms)^\[mcp_servers\.[^\]]+\]\s*.*?(?=^\[|\z)",
             RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly Regex Arg0Regex = new Regex(
-            @"(?ms)^\[mcp_servers\.uLoopMCP\].*?^\s*args\s*=\s*\[\s*""(?<arg0>[^""\r\n]+)""",
+            @"(?ms)^\[mcp_servers\.uLoopMCP\].*?^\s*args\s*=\s*\[\s*(['""])(?<arg0>[^'""]+)\1",
             RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly Regex PortRegex = new Regex(
             @"env\s*=\s*\{[^}]*""UNITY_TCP_PORT""\s*=\s*['""]?(?<port>\d+)['""]?",
@@ -24,7 +24,7 @@ namespace io.github.hatayama.uLoopMCP
 
         // Inner-scope regexes for parsing within the matched uLoopMCP section
         private static readonly Regex Arg0InnerRegex = new Regex(
-            @"(?m)^\s*args\s*=\s*\[\s*""(?<arg0>[^""\r\n]+)""",
+            @"(?m)^\s*args\s*=\s*\[\s*(['""])(?<arg0>[^'""]+)\1",
             RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly Regex PortInnerRegex = new Regex(
             @"(?m)^\s*env\s*=\s*\{[^\}]*""UNITY_TCP_PORT""\s*=\s*['""]?(?<port>\d+)['""]?",
@@ -52,10 +52,14 @@ namespace io.github.hatayama.uLoopMCP
 
             string expectedArg0 = UnityMcpPathResolver.GetTypeScriptServerPath();
             if (string.IsNullOrEmpty(expectedArg0) || !File.Exists(expectedArg0)) return false;
+            // PowerShell workflow: no conversion required (use Windows path as-is)
+            
             (string arg0, int? existingPort) = ReadCurrentValues(content);
             if (string.IsNullOrEmpty(arg0) || existingPort == null) return true;
 
-            if (arg0 != expectedArg0 || existingPort.Value != port) return true;
+            string normalizedArg0 = NormalizeForCompare(arg0);
+            string normalizedExpected = NormalizeForCompare(expectedArg0);
+            if (!string.Equals(normalizedArg0, normalizedExpected, System.StringComparison.OrdinalIgnoreCase) || existingPort.Value != port) return true;
 
             // When compiled with ULOOPMCP_DEBUG, require debug env flags to be present
 #if ULOOPMCP_DEBUG
@@ -83,6 +87,8 @@ namespace io.github.hatayama.uLoopMCP
             {
                 throw new System.InvalidOperationException("TypeScript server bundle path not found.");
             }
+            // PowerShell workflow: no conversion required (use Windows path as-is)
+            
             string block = BuildBlock(port, serverPath);
 
             string result;
@@ -183,11 +189,12 @@ namespace io.github.hatayama.uLoopMCP
 
         private static string BuildBlock(int port, string serverAbsolutePath)
         {
-            string escapedPath = serverAbsolutePath.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            // Use single-quoted TOML literal string for args so backslashes don't need escaping
+            string literalPath = serverAbsolutePath.Replace("'", "''");
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("[mcp_servers.uLoopMCP]");
             sb.AppendLine("command = \"node\"");
-            sb.Append("args = [\"").Append(escapedPath).AppendLine("\"]");
+            sb.Append("args = ['").Append(literalPath).AppendLine("']");
             System.Text.StringBuilder envLine = new System.Text.StringBuilder();
             envLine.Append("env = { \"UNITY_TCP_PORT\" = \"").Append(port.ToString()).Append("\"");
 #if ULOOPMCP_DEBUG
@@ -196,6 +203,13 @@ namespace io.github.hatayama.uLoopMCP
             envLine.AppendLine(" }");
             sb.Append(envLine.ToString());
             return sb.ToString();
+        }
+
+        private static string NormalizeForCompare(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return path;
+            // Normalize to forward slashes for comparison (single-quoted TOML writes raw backslashes)
+            return path.Replace('\\', '/');
         }
 
         private static string UpdateSectionWithDevelopmentSettings(string sectionText, int port, bool developmentMode, bool enableMcpLogs)
