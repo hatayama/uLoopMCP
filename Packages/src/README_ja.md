@@ -5,6 +5,8 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/hatayama/uLoopMCP)  
 ![ClaudeCode](https://img.shields.io/badge/Claude_Code-555?logo=claude)
 ![Cursor](https://img.shields.io/badge/Cursor-111?logo=Cursor)
+![OpenAICodex](https://img.shields.io/badge/OpenAI_Codex-111?logo=openai)
+![GoogleGemini](https://img.shields.io/badge/Google_Gemini-111?logo=googlegemini)
 ![GitHubCopilot](https://img.shields.io/badge/GitHub_Copilot-111?logo=githubcopilot)
 ![Windsurf](https://img.shields.io/badge/Windsurf-111?logo=Windsurf)
 
@@ -20,15 +22,15 @@ AIによる開発サイクルを高速に回すことで、継続的な改善Loo
 uLoopMCPは、「AIがUnityプロジェクトの実装をできるだけ人手を介さずに進められる」ことを目指して作られた MCP サーバーです。
 人間が手で行っていたコンパイル、Test Runner の実行、ログ確認、シーン編集などの作業を、LLM ツールからまとめて操作できるようにします。
 
-uLoopMCP のコアとなるコンセプトは次の 2 つです。
+uLoopMCPのコアとなるコンセプトは次の2つです。
 
-1. **compile / run-tests / get-logs / clear-console などを組み合わせて、AI が自分でビルド・テスト・ログ解析を回し続けられる「自律開発ループ」を提供すること**
-2. **execute-dynamic-code や execute-menu-item などを使って、Unity Editor の操作（シーン構築、メニュー実行、オブジェクト操作など）まで AI に任せられること**
+1. **compile / run-tests / get-logs / clear-console などを組み合わせて、AIが自分でビルド・テスト・ログ解析を回し続けられる「自律開発ループ」を提供すること**
+2. **execute-dynamic-code や execute-menu-item などを使って、Unity Editorの操作（シーン構築、メニュー実行、オブジェクト操作など）まで AIに任せられること**
 
 # 特徴
 1. AI がコンパイル → テスト実行 → ログ解析 → 再修正までを繰り返せるよう、`compile` / `run-tests` / `get-logs` / `clear-console` などのツールをひとまとめに提供します。
 2. `execute-dynamic-code` を中心に、Unity Editor のメニュー実行、シーン探索、GameObject 操作などをコードから自在に自動化できます。
-3. Unity Package Manager からインストールし、お使いの LLM ツール（Cursor / Claude Code / GitHub Copilot / Windsurf など）と数クリックで接続できます。
+3. Unity Package Manager からインストールし、お使いの LLM ツール（Cursor / Claude Code / Codex / Gemini など）と数クリックで接続できます。
 4. プロジェクト固有の MCP ツールを型安全に拡張しやすく、AI に実装を任せやすい設計になっています。
 5. 大量のログや階層情報はファイルに書き出すことで、LLM のコンテキスト消費を抑える工夫をしています。
 

@@ -54,7 +54,7 @@ uLoopMCP is built around two core ideas:
     `https://github.com/hatayama/uLoopMCP.git?path=/Packages/src`
   - Alternatively, you can use the OpenUPM scoped registry (see the [Installation](#installation) section for details).
 2. In Unity, open `Window > uLoopMCP` and press the `Start Server` button to launch the MCP server.
-3. In your LLM tool (Cursor, Claude Code, GitHub Copilot, etc.), enable uLoopMCP as an MCP server.
+3. In your LLM tool (Cursor, Claude Code, Codex, Gemini, etc.), enable uLoopMCP as an MCP server.
 4. For example, if you give instructions like:
   - “Fix this project until `compile` reports no errors, using the `compile` tool as needed.”
   - “Run tests in `uLoopMCP.Tests.Editor` with `run-tests` and keep updating the code until all tests pass.”
