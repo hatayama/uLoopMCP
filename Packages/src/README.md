@@ -145,7 +145,15 @@ Retrieve information about the currently active Hierarchy in nested JSON format.
 → Regardless of scene size, hierarchy data is saved to a file and the path is returned instead of raw JSON
 ```
 
-#### 11. execute-dynamic-code - Dynamic C# Code Execution
+#### 11. focus-window - Bring Unity Editor Window to Front
+Ensures the Unity Editor window associated with the active MCP session becomes the foreground application on macOS or Windows.  
+Great for keeping visual feedback in sync after other apps steal focus.
+```
+→ focus-window
+→ Unity Editor window is brought to the front (macOS: AppleScript, Windows: user32.dll)
+```
+
+#### 12. execute-dynamic-code - Dynamic C# Code Execution
 Execute C# code dynamically within Unity Editor.
 
 > **⚠️ Important Prerequisites**  
