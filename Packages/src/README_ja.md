@@ -148,7 +148,7 @@ UnitySearchが提供する検索プロバイダーを取得します
 #### 11. focus-window - Unity Editorウィンドウを前面化（macOS専用）
 macOS Editor上で、現在MCP接続中の Unity Editor ウィンドウを最前面に表示させます。  
 他アプリにフォーカスが奪われた後でも、視覚的なフィードバックをすぐ確認できます。（Windows / Linuxでは利用できません）
-```
+```text
 → focus-window
 → Unity Editor ウィンドウを最前面へ（macOS: AppleScript + osascript）
 ```
