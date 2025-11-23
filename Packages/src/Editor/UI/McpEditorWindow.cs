@@ -163,27 +163,31 @@ namespace io.github.hatayama.uLoopMCP
 
             // Grace period is already started in OnEnable() if needed
 
-            // Determine if server should be started automatically
-            bool shouldStartAutomatically = isAfterCompile || _model.UI.AutoStartServer;
+            // After compile, rely on centralized recovery (McpServerController.StartRecoveryIfNeededAsync).
+            // EditorWindow does not auto-start the server; it only updates UI state and port display.
+            if (isAfterCompile)
+            {
+                McpEditorSettings.ClearAfterCompileFlag();
+
+                // Use saved port number for UI only
+                int savedPort = McpEditorSettings.GetServerPort();
+                bool portNeedsUpdate = savedPort != _model.UI.CustomPort;
+
+                if (portNeedsUpdate)
+                {
+                    _model.UpdateCustomPort(savedPort);
+                }
+
+                return;
+            }
+
+            // Determine if server should be started automatically (normal auto-start, not after-compile)
+            bool shouldStartAutomatically = _model.UI.AutoStartServer;
             bool serverNotRunning = !McpServerController.IsServerRunning;
             bool shouldStartServer = shouldStartAutomatically && serverNotRunning;
 
             if (shouldStartServer)
             {
-                if (isAfterCompile)
-                {
-                    McpEditorSettings.ClearAfterCompileFlag();
-
-                    // Use saved port number
-                    int savedPort = McpEditorSettings.GetServerPort();
-                    bool portNeedsUpdate = savedPort != _model.UI.CustomPort;
-
-                    if (portNeedsUpdate)
-                    {
-                        _model.UpdateCustomPort(savedPort);
-                    }
-                }
-
                 _serverOperations.StartServerInternal();
             }
         }
@@ -328,7 +332,7 @@ namespace io.github.hatayama.uLoopMCP
                 else if (NetworkUtility.IsPortInUse(requestedPort))
                 {
                     hasPortWarning = true;
-                    portWarningMessage = $"Port {requestedPort} is already in use. Server will automatically find an available port when started.";
+                    portWarningMessage = $"Port {requestedPort} is already in use. Please choose a different port or stop the other process using this port.";
                 }
             }
 

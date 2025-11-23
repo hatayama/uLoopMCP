@@ -233,7 +233,8 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Executes server recovery with retries.
+        /// Executes server recovery with retries on the original port.
+        /// Does not change the port number; only attempts recovery on the specified port.
         /// </summary>
         private static void TryRestoreServerWithRetry(int port, int retryCount)
         {
@@ -248,14 +249,15 @@ namespace io.github.hatayama.uLoopMCP
                     mcpServer = null;
                 }
 
-                // Find available port starting from the requested port
-                int availablePort = FindAvailablePort(port);
-
+                // Try to start server on the requested port only
                 mcpServer = new McpBridgeServer();
-                mcpServer.StartServer(availablePort);
+                mcpServer.StartServer(port);
 
-                // Update settings with the actual port used
-                McpEditorSettings.SetServerPort(availablePort);
+                // Update settings with the actual port used (same as requested)
+                if (McpEditorSettings.GetServerPort() != port)
+                {
+                    McpEditorSettings.SetServerPort(port);
+                }
 
                 // Clear server-side reconnecting flag on successful restoration
                 // NOTE: Do NOT clear UI display flag here - let it be cleared by timeout or client connection
@@ -363,7 +365,8 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Restore server after compilation with frame delay
+        /// Restore server after compilation with frame delay.
+        /// Currently kept as a helper; recovery logic is unified in StartRecoveryIfNeededAsync.
         /// </summary>
         private static async Task RestoreServerAfterCompileAsync(int port)
         {
@@ -391,20 +394,13 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Retry server restore with frame delay
+        /// Retry server restore with frame delay on the same port.
         /// </summary>
         private static async Task RetryServerRestoreAsync(int port, int retryCount)
         {
             // Wait longer for port release before retry
             await EditorDelay.DelayFrame(5);
-            _ = StartRecoveryIfNeededAsync(port, false, CancellationToken.None).ContinueWith(task =>
-            {
-                if (task.IsFaulted)
-                {
-                    VibeLogger.LogError("server_startup_restore_failed",
-                        $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
-                }
-            }, TaskScheduler.FromCurrentSynchronizationContext());
+            TryRestoreServerWithRetry(port, retryCount + 1);
         }
 
         /// <summary>
@@ -488,7 +484,8 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Centralized, coalesced recovery start. Tries to reuse the same port for up to 5 seconds before falling back.
+        /// Centralized, coalesced recovery start.
+        /// Attempts recovery on the specified port for up to 5 seconds without changing the port number.
         /// </summary>
         public static async Task StartRecoveryIfNeededAsync(int savedPort, bool isAfterCompile, CancellationToken cancellationToken)
         {
@@ -533,21 +530,10 @@ namespace io.github.hatayama.uLoopMCP
 
                 if (!started)
                 {
-                    int fallbackPort = NetworkUtility.FindAvailablePort(savedPort + 1);
-                    if (fallbackPort != savedPort)
-                    {
-                        VibeLogger.LogInfo("fallback_decision", $"start={savedPort} chosen={fallbackPort}");
-                    }
-                    chosenPort = fallbackPort;
-                    started = await TryBindWithWaitAsync(chosenPort, 0, 0, cancellationToken);
-                }
-
-                if (!started)
-                {
                     // Ensure session reflects stopped state on failure
                     McpEditorSettings.ClearServerSession();
                     McpEditorSettings.ClearReconnectingFlags();
-                    throw new InvalidOperationException("Failed to bind any port.");
+                    throw new InvalidOperationException($"Failed to bind port {savedPort} during server recovery.");
                 }
 
                 // Mark running and update settings
