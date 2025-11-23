@@ -145,7 +145,15 @@ UnitySearchが提供する検索プロバイダーを取得します
 → シーンの規模にかかわらず、Hierarchyデータはファイルに保存され、生のJSONの代わりにパスが返されます
 ```
 
-#### 11. execute-dynamic-code - 動的C#コード実行
+#### 11. focus-window - Unity Editorウィンドウを前面化（macOS専用）
+macOS Editor上で、現在MCP接続中の Unity Editor ウィンドウを最前面に表示させます。  
+他アプリにフォーカスが奪われた後でも、視覚的なフィードバックをすぐ確認できます。（Windows / Linuxでは利用できません）
+```text
+→ focus-window
+→ Unity Editor ウィンドウを最前面へ（macOS: AppleScript + osascript）
+```
+
+#### 12. execute-dynamic-code - 動的C#コード実行
 Unity Editor内で動的にC#コードを実行します。
 
 > **⚠️ 重要な前提条件**  
