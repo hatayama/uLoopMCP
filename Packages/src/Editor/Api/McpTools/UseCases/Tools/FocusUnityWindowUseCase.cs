@@ -1,6 +1,7 @@
+#if UNITY_EDITOR_OSX
+
 using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -9,22 +10,11 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Use case responsible for bringing the currently connected Unity Editor window to the foreground.
-    /// macOS leverages AppleScript via osascript, while Windows uses the Win32 user32.dll APIs.
+    /// Available only on macOS Editor builds.
     /// </summary>
     public class FocusUnityWindowUseCase : AbstractUseCase<FocusUnityWindowSchema, FocusUnityWindowResponse>
     {
-        private const string MacNotSupportedMessage = "Failed to bring Unity to front on macOS";
-        private const string WindowsNotSupportedMessage = "Failed to bring Unity to front on Windows";
-        private const int SwRestore = 9;
-
-        [DllImport("user32.dll")]
-        private static extern bool SetForegroundWindow(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-        [DllImport("user32.dll")]
-        private static extern bool IsIconic(IntPtr hWnd);
+        private const string MacFailureMessage = "Failed to bring Unity to front on macOS";
 
         /// <inheritdoc />
         public override Task<FocusUnityWindowResponse> ExecuteAsync(
@@ -38,20 +28,15 @@ namespace io.github.hatayama.uLoopMCP
                 throw new ArgumentNullException(nameof(parameters));
             }
 
-            if (Application.platform == RuntimePlatform.OSXEditor)
+            if (Application.platform != RuntimePlatform.OSXEditor)
             {
-                return FocusOnMacAsync(cancellationToken);
+                FocusUnityWindowResponse unsupportedResponse = new FocusUnityWindowResponse(
+                    "Focusing Unity window is only supported on macOS Editor.",
+                    $"Unsupported platform: {Application.platform}");
+                return Task.FromResult(unsupportedResponse);
             }
 
-            if (Application.platform == RuntimePlatform.WindowsEditor)
-            {
-                return Task.FromResult(FocusOnWindows());
-            }
-
-            FocusUnityWindowResponse unsupportedResponse = new FocusUnityWindowResponse(
-                "Focusing Unity window is only supported on macOS or Windows editors.",
-                $"Unsupported platform: {Application.platform}");
-            return Task.FromResult(unsupportedResponse);
+            return FocusOnMacAsync(cancellationToken);
         }
 
         private static Task<FocusUnityWindowResponse> FocusOnMacAsync(CancellationToken cancellationToken)
@@ -77,7 +62,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     if (osascriptProcess == null)
                     {
-                        return Task.FromResult(CreateFailureResponse(MacNotSupportedMessage, "Failed to start osascript process."));
+                        return Task.FromResult(CreateFailureResponse("Failed to start osascript process."));
                     }
 
                     osascriptProcess.WaitForExit();
@@ -93,43 +78,12 @@ namespace io.github.hatayama.uLoopMCP
                         errorMessage = $"osascript exited with code {osascriptProcess.ExitCode}.";
                     }
 
-                    return Task.FromResult(CreateFailureResponse(MacNotSupportedMessage, errorMessage.Trim()));
+                    return Task.FromResult(CreateFailureResponse(errorMessage.Trim()));
                 }
             }
             catch (Exception ex)
             {
-                return Task.FromResult(CreateFailureResponse(MacNotSupportedMessage, ex.Message));
-            }
-        }
-
-        private static FocusUnityWindowResponse FocusOnWindows()
-        {
-            try
-            {
-                Process currentProcess = Process.GetCurrentProcess();
-                IntPtr windowHandle = currentProcess.MainWindowHandle;
-                if (windowHandle == IntPtr.Zero)
-                {
-                    return CreateFailureResponse(WindowsNotSupportedMessage, "Unity main window handle is not available.");
-                }
-
-                bool isMinimized = IsIconic(windowHandle);
-                if (isMinimized)
-                {
-                    ShowWindow(windowHandle, SwRestore);
-                }
-
-                bool broughtToFront = SetForegroundWindow(windowHandle);
-                if (!broughtToFront)
-                {
-                    return CreateFailureResponse(WindowsNotSupportedMessage, "SetForegroundWindow returned false.");
-                }
-
-                return new FocusUnityWindowResponse("Unity window is now frontmost on Windows.");
-            }
-            catch (Exception ex)
-            {
-                return CreateFailureResponse(WindowsNotSupportedMessage, ex.Message);
+                return Task.FromResult(CreateFailureResponse(ex.Message));
             }
         }
 
@@ -138,10 +92,11 @@ namespace io.github.hatayama.uLoopMCP
             return $"tell application \"System Events\" to set frontmost of (first process whose unix id is {pid}) to true";
         }
 
-        private static FocusUnityWindowResponse CreateFailureResponse(string message, string error)
+        private static FocusUnityWindowResponse CreateFailureResponse(string error)
         {
-            return new FocusUnityWindowResponse(message, error);
+            return new FocusUnityWindowResponse(MacFailureMessage, error);
         }
     }
 }
 
+#endif

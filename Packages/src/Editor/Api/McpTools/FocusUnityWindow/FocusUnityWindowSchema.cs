@@ -1,3 +1,5 @@
+#if UNITY_EDITOR_OSX
+
 using System.ComponentModel;
 
 namespace io.github.hatayama.uLoopMCP
@@ -21,4 +23,6 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 }
+
+#endif
 
