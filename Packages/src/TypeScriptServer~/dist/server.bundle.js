@@ -7238,7 +7238,7 @@ var UnityClient = class _UnityClient {
     const timeoutMs = TIMEOUTS.NETWORK;
     try {
       const response = await this.sendRequest(request, timeoutMs);
-      return this.handleToolResponse(response, toolName);
+      return this.handleToolResponse(response);
     } catch (error) {
       if (error instanceof Error && error.message.includes("timed out")) {
       }
@@ -7250,7 +7250,7 @@ var UnityClient = class _UnityClient {
    * Explicitly instructs how to wait before retrying without assuming a fixed duration.
    */
   getOsSpecificReconnectMessage() {
-    const commonPrefix = "Not connected to Unity. If you just executed the compile tool, Unity reconnects automatically after compilation finishes. This can take from several seconds to tens of seconds depending on project size. Wait before your next tool call, then retry once.";
+    const commonPrefix = "Connection to Unity is temporarily broken. This is an expected state right after compilation. Do not report it as a persistent disconnection for now. Retry the same tool every 3-5 seconds (e.g., sleep <seconds>), and continue to increase the wait time as needed, up to a maximum of 1 minute. Only treat it as a real disconnection if it still fails after 1 minute has passed.";
     const platform = typeof process !== "undefined" && typeof process.platform === "string" ? process.platform : "unknown";
     if (platform === "win32") {
       return `${commonPrefix} Examples: PowerShell: Start-Sleep -Seconds <seconds>; cmd: timeout /T <seconds> /NOBREAK. Avoid repeated retries; increase <seconds> if needed.`;
@@ -7260,9 +7260,9 @@ var UnityClient = class _UnityClient {
     }
     return `${commonPrefix} Wait a bit longer if needed before retrying. Avoid repeated retries.`;
   }
-  handleToolResponse(response, toolName) {
+  handleToolResponse(response) {
     if (response.error) {
-      throw new Error(`Failed to execute tool '${toolName}': ${response.error.message}`);
+      throw new Error(response.error.message);
     }
     return response.result;
   }
@@ -8089,9 +8089,10 @@ var DynamicUnityCommandTool = class extends BaseTool {
       content: [
         {
           type: "text",
-          text: `Failed to execute tool '${this.toolName}': ${errorMessage}`
+          text: errorMessage
         }
-      ]
+      ],
+      isError: true
     };
   }
 };

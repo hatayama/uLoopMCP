@@ -473,7 +473,7 @@ export class UnityClient {
     try {
       const response = await this.sendRequest(request, timeoutMs);
 
-      return this.handleToolResponse(response, toolName);
+      return this.handleToolResponse(response);
     } catch (error) {
       // Log timeout details to file for debugging in production
       if (error instanceof Error && error.message.includes('timed out')) {
@@ -490,7 +490,7 @@ export class UnityClient {
    */
   private getOsSpecificReconnectMessage(): string {
     const commonPrefix: string =
-      'Not connected to Unity. If you just executed the compile tool, Unity reconnects automatically after compilation finishes. This can take from several seconds to tens of seconds depending on project size. Wait before your next tool call, then retry once.';
+      'Connection to Unity is temporarily broken. This is an expected state right after compilation. Do not report it as a persistent disconnection for now. Retry the same tool every 3-5 seconds (e.g., sleep <seconds>), and continue to increase the wait time as needed, up to a maximum of 1 minute. Only treat it as a real disconnection if it still fails after 1 minute has passed.';
 
     const platform: string =
       typeof process !== 'undefined' && typeof process.platform === 'string'
@@ -509,12 +509,9 @@ export class UnityClient {
     return `${commonPrefix} Wait a bit longer if needed before retrying. Avoid repeated retries.`;
   }
 
-  private handleToolResponse(
-    response: { error?: { message: string }; result?: unknown },
-    toolName: string,
-  ): unknown {
+  private handleToolResponse(response: { error?: { message: string }; result?: unknown }): unknown {
     if (response.error) {
-      throw new Error(`Failed to execute tool '${toolName}': ${response.error.message}`);
+      throw new Error(response.error.message);
     }
 
     return response.result;

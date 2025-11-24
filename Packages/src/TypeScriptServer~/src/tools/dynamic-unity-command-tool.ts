@@ -204,9 +204,10 @@ export class DynamicUnityCommandTool extends BaseTool {
       content: [
         {
           type: 'text',
-          text: `Failed to execute tool '${this.toolName}': ${errorMessage}`,
+          text: errorMessage,
         },
       ],
+      isError: true,
     };
   }
 }
