@@ -1,4 +1,4 @@
-#if UNITY_EDITOR_OSX
+#if UNITY_EDITOR_OSX || UNITY_EDITOR_WIN
 
 using System.ComponentModel;
 
