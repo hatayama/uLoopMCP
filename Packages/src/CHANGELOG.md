@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.40.0](https://github.com/hatayama/uLoopMCP/compare/v0.39.0...v0.40.0) (2025-11-24)
+
+
+### Features
+
+* Add Windows support for focus-window tool ([#338](https://github.com/hatayama/uLoopMCP/issues/338)) ([101267d](https://github.com/hatayama/uLoopMCP/commit/101267dcb594e8324bdea3c88c2163a9e5627561))
+
+
+### Bug Fixes
+
+* Improve error handling and simplify tool response messages ([#340](https://github.com/hatayama/uLoopMCP/issues/340)) ([a3c6dd2](https://github.com/hatayama/uLoopMCP/commit/a3c6dd2740bfd07c2b0a8adfbc0f4467de02374e))
+
 ## [0.39.0](https://github.com/hatayama/uLoopMCP/compare/v0.38.0...v0.39.0) (2025-11-23)
 
 
