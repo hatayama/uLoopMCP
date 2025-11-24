@@ -37,6 +37,7 @@ uLoopMCPのコアとなるコンセプトは次の2つです。
 # ユースケース例
 - Unity プロジェクトの「コンパイルが通るまで」「テストが緑になるまで」を、AI に任せて自律的に回し続ける
 - 既存コードベースに対して、バグ修正やリファクタリングをAIに依頼し、`compile` / `run-tests` / `get-logs` で結果を検証させる
+- 検証完了後、`execute-menu-item` または `execute-dynamic-code` でPlay Modeに入り、`focus-window` でUnity Editorを最前面に表示させる
 - 大量のPrefab / GameObjectをUnity Editor上でAIに調査させ、パラメータの一括修正やシーン構造の整理を行う
 - チーム専用のMCPツールを追加し、プロジェクト固有のチェックや自動修正をAIから呼び出せるようにする
 
@@ -145,13 +146,9 @@ UnitySearchが提供する検索プロバイダーを取得します
 → シーンの規模にかかわらず、Hierarchyデータはファイルに保存され、生のJSONの代わりにパスが返されます
 ```
 
-#### 11. focus-window - Unity Editorウィンドウを前面化（macOS専用）
-macOS Editor上で、現在MCP接続中の Unity Editor ウィンドウを最前面に表示させます。  
-他アプリにフォーカスが奪われた後でも、視覚的なフィードバックをすぐ確認できます。（Windows / Linuxでは利用できません）
-```text
-→ focus-window
-→ Unity Editor ウィンドウを最前面へ（macOS: AppleScript + osascript）
-```
+#### 11. focus-window - Unity Editorウィンドウを前面化（macOS / Windows対応）
+macOS / Windows Editor上で、現在MCP接続中の Unity Editor ウィンドウを最前面に表示させます。  
+他アプリにフォーカスが奪われた後でも、視覚的なフィードバックをすぐ確認できます。（Linuxは未対応）
 
 #### 12. execute-dynamic-code - 動的C#コード実行
 Unity Editor内で動的にC#コードを実行します。

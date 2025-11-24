@@ -37,6 +37,7 @@ uLoopMCP is built around two core ideas:
 # Example Use Cases
 - Let an AI keep fixing your project until `compile` reports zero errors.
 - Ask the AI to implement a new feature plus tests, and use `run-tests` to keep iterating until the whole test suite is green.
+- After verification, enter Play Mode using `execute-menu-item` or `execute-dynamic-code`, then bring Unity Editor to the foreground with `focus-window`
 - Offload large-scale scene / prefab inspections to the AI, and have it adjust component parameters or scene structure via Editor automation.
 - Build team-specific MCP tools for custom checks and automated refactors, and call them from your LLM environment.
 
@@ -145,13 +146,9 @@ Retrieve information about the currently active Hierarchy in nested JSON format.
 → Regardless of scene size, hierarchy data is saved to a file and the path is returned instead of raw JSON
 ```
 
-#### 11. focus-window - Bring Unity Editor Window to Front (macOS only)
-Ensures the Unity Editor window associated with the active MCP session becomes the foreground application on macOS Editor builds.  
-Great for keeping visual feedback in sync after other apps steal focus. (Windows/Linux are currently unsupported.)
-```text
-→ focus-window
-→ Unity Editor window is brought to the front (macOS: AppleScript + osascript)
-```
+#### 11. focus-window - Bring Unity Editor Window to Front (macOS & Windows)
+Ensures the Unity Editor window associated with the active MCP session becomes the foreground application on macOS and Windows Editor builds.  
+Great for keeping visual feedback in sync after other apps steal focus. (Linux is currently unsupported.)
 
 #### 12. execute-dynamic-code - Dynamic C# Code Execution
 Execute C# code dynamically within Unity Editor.
