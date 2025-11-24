@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.39.0](https://github.com/hatayama/uLoopMCP/compare/v0.38.0...v0.39.0) (2025-11-23)
+
+
+### Features
+
+* add macOS focus-window MCP tool ([#337](https://github.com/hatayama/uLoopMCP/issues/337)) ([0fc217a](https://github.com/hatayama/uLoopMCP/commit/0fc217af20447b1798c12ff4d2a55c6ebe8df016))
+
+
+### Bug Fixes
+
+* keep TCP port stable after crash recovery ([#335](https://github.com/hatayama/uLoopMCP/issues/335)) ([e2df9cf](https://github.com/hatayama/uLoopMCP/commit/e2df9cf348e9a8e1eba33e18654575740b120a94))
+* revert Cursor MCP server path change from [#327](https://github.com/hatayama/uLoopMCP/issues/327) ([#336](https://github.com/hatayama/uLoopMCP/issues/336)) ([a01515a](https://github.com/hatayama/uLoopMCP/commit/a01515a63492fb77fee0d210e98b3f0d83fbb59b))
+* Update README docs and enable auto-start server by default ([#333](https://github.com/hatayama/uLoopMCP/issues/333)) ([d688872](https://github.com/hatayama/uLoopMCP/commit/d688872de1e0ea14b503c187add63ce6a9f4fa2b))
+
 ## [0.38.0](https://github.com/hatayama/uLoopMCP/compare/v0.37.2...v0.38.0) (2025-11-20)
 
 
