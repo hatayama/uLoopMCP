@@ -490,7 +490,7 @@ export class UnityClient {
    */
   private getOsSpecificReconnectMessage(): string {
     const commonPrefix: string =
-      'Connection to Unity is temporarily broken. This is an expected state right after compilation. Do not report it as a persistent disconnection for now. Retry the same tool every 3-5 seconds (e.g., sleep <seconds>), and continue to increase the wait time as needed, up to a maximum of 1 minute. Only treat it as a real disconnection if it still fails after 1 minute has passed.';
+      'A temporary disconnection from Unity has occurred. This is normal immediately after compilation. At this stage, do not report this as a persistent disconnection. Try retrying with the same tool every 3-5 seconds (e.g., sleep <seconds>), gradually increasing the wait time as needed. As a guideline, only treat it as a genuine disconnection if the connection remains unrecoverable after 1 minute or if the connection fails to establish beyond the user-specified wait time of 1 minute or more. Example: sleep <seconds>. Avoid repeated retries, and gradually increase <seconds> as needed.';
 
     const platform: string =
       typeof process !== 'undefined' && typeof process.platform === 'string'
