@@ -275,6 +275,5 @@ All tools automatically include the following timing information:
 ## Related Documentation
 
 - [Main README](README.md) - Project overview and setup
-- [Architecture Documentation](Editor/ARCHITECTURE.md) - Technical architecture details
-- [TypeScript Server Architecture](TypeScriptServer~/ARCHITECTURE.md) - TypeScript server implementation
+- [Architecture Documentation](ARCHITECTURE.md) - Technical architecture details
 - [Changelog](CHANGELOG.md) - Version history and updates
