@@ -7226,7 +7226,7 @@ var UnityClient = class _UnityClient {
    */
   async executeTool(toolName, params = {}) {
     if (!this.connected) {
-      throw new Error(this.getOsSpecificReconnectMessage());
+      return this.getOsSpecificReconnectMessage();
     }
     await this.setClientName();
     const request = {

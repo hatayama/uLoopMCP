@@ -450,9 +450,9 @@ export class UnityClient {
    * Execute any Unity tool dynamically
    */
   async executeTool(toolName: string, params: Record<string, unknown> = {}): Promise<unknown> {
-    // Ensure connection before executing tool
+    // Return guidance message as success response when temporarily disconnected
     if (!this.connected) {
-      throw new Error(this.getOsSpecificReconnectMessage());
+      return this.getOsSpecificReconnectMessage();
     }
 
     // Ensure client name is set (this completes the connection handshake)
