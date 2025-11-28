@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.40.1](https://github.com/hatayama/uLoopMCP/compare/v0.40.0...v0.40.1) (2025-11-28)
+
+
+### Bug Fixes
+
+* Improve temporary disconnection handling for better LLM interaction ([#343](https://github.com/hatayama/uLoopMCP/issues/343)) ([80dc21a](https://github.com/hatayama/uLoopMCP/commit/80dc21aa235517850387b4572bef45f3f27056e6))
+
 ## [0.40.0](https://github.com/hatayama/uLoopMCP/compare/v0.39.0...v0.40.0) (2025-11-24)
 
 
