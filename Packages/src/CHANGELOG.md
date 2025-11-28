@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.40.2](https://github.com/hatayama/uLoopMCP/compare/v0.40.1...v0.40.2) (2025-11-28)
+
+
+### Bug Fixes
+
+* Add Directory.Exists check before creating config directory ([#345](https://github.com/hatayama/uLoopMCP/issues/345)) ([ac14c61](https://github.com/hatayama/uLoopMCP/commit/ac14c61f4da976398e9855b398f8eabb57534bfa))
+
 ## [0.40.1](https://github.com/hatayama/uLoopMCP/compare/v0.40.0...v0.40.1) (2025-11-28)
 
 
