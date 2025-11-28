@@ -485,12 +485,11 @@ export class UnityClient {
   }
 
   /**
-   * Build an OS-specific guidance message for temporary disconnection after compile.
-   * Explicitly instructs how to wait before retrying without assuming a fixed duration.
+   * Build a guidance message for temporary disconnection after compile.
    */
   private getOsSpecificReconnectMessage(): string {
-    const commonPrefix: string =
-      'A temporary disconnection from Unity has occurred. This is normal immediately after compilation. At this stage, do not report this as a persistent disconnection. Try retrying with the same tool every 3-5 seconds (e.g., sleep <seconds>), gradually increasing the wait time as needed. As a guideline, only treat it as a genuine disconnection if the connection remains unrecoverable after 1 minute or if the connection fails to establish beyond the user-specified wait time of 1 minute or more. Example: sleep <seconds>. Avoid repeated retries, and gradually increase <seconds> as needed.';
+    const baseMessage: string =
+      'Waiting for Unity to be ready (normal during compilation). Wait 3 seconds then retry. If still not ready after several attempts, increase wait time (5 → 10 seconds). Report as error only after 1+ minute of failures.';
 
     const platform: string =
       typeof process !== 'undefined' && typeof process.platform === 'string'
@@ -498,15 +497,10 @@ export class UnityClient {
         : 'unknown';
 
     if (platform === 'win32') {
-      return `${commonPrefix} Examples: PowerShell: Start-Sleep -Seconds <seconds>; cmd: timeout /T <seconds> /NOBREAK. Avoid repeated retries; increase <seconds> if needed.`;
+      return `${baseMessage} Example: Start-Sleep -Seconds 3`;
     }
 
-    if (platform === 'darwin' || platform === 'linux') {
-      return `${commonPrefix} Example: sleep <seconds>. Avoid repeated retries; increase <seconds> if needed.`;
-    }
-
-    // Fallback for other platforms
-    return `${commonPrefix} Wait a bit longer if needed before retrying. Avoid repeated retries.`;
+    return `${baseMessage} Example: sleep 3`;
   }
 
   private handleToolResponse(response: { error?: { message: string }; result?: unknown }): unknown {
