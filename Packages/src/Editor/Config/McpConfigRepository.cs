@@ -34,10 +34,12 @@ namespace io.github.hatayama.uLoopMCP
         public void CreateConfigDirectory(string configPath)
         {
             string configDir = Path.GetDirectoryName(configPath);
-            if (!string.IsNullOrEmpty(configDir))
+            if (string.IsNullOrEmpty(configDir) || Directory.Exists(configDir))
             {
-                Directory.CreateDirectory(configDir);
+                return;
             }
+
+            Directory.CreateDirectory(configDir);
         }
 
         /// <summary>
