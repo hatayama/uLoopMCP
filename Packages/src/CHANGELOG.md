@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.41.0](https://github.com/hatayama/uLoopMCP/compare/v0.40.2...v0.41.0) (2025-11-29)
+
+
+### Features
+
+* Add MCP configuration auto-update utility before server startup ([#349](https://github.com/hatayama/uLoopMCP/issues/349)) ([1d510d1](https://github.com/hatayama/uLoopMCP/commit/1d510d1d6648a4430414041cddc8326626c7112e))
+
+
+### Bug Fixes
+
+* Auto Configuration File Path Updates During Auto Start Server Recovery ([#351](https://github.com/hatayama/uLoopMCP/issues/351)) ([013478f](https://github.com/hatayama/uLoopMCP/commit/013478f210550c69d25589a3531c08f805440d22))
+
 ## [0.40.2](https://github.com/hatayama/uLoopMCP/compare/v0.40.1...v0.40.2) (2025-11-28)
 
 
