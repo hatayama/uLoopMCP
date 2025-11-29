@@ -525,6 +525,10 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }
 
+                // Auto-update configuration files before starting server
+                // This ensures paths are updated after package updates
+                McpConfigAutoUpdater.UpdateAllConfiguredEditors(savedPort);
+
                 int chosenPort = savedPort;
                 bool started = await TryBindWithWaitAsync(chosenPort, 5000, 250, cancellationToken);
 
