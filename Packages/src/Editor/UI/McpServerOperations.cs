@@ -86,9 +86,13 @@ namespace io.github.hatayama.uLoopMCP
 
             // Note: Port conflict check is now handled by McpServerController.StartServer
             // which automatically finds an available port and logs appropriate warnings
-            
+
             try
             {
+                // Auto-update configuration files before starting server
+                // This ensures paths are updated after package updates
+                McpConfigAutoUpdater.UpdateAllConfiguredEditors(currentPort);
+
                 McpServerController.StartServer(currentPort);
 
                 // Refresh server event subscriptions after successful start
