@@ -527,7 +527,16 @@ namespace io.github.hatayama.uLoopMCP
 
                 // Auto-update configuration files before starting server
                 // This ensures paths are updated after package updates
-                McpConfigAutoUpdater.UpdateAllConfiguredEditors(savedPort);
+                try
+                {
+                    McpConfigAutoUpdater.UpdateAllConfiguredEditors(savedPort);
+                }
+                catch (Exception ex)
+                {
+                    VibeLogger.LogWarning("config_auto_update_failed", $"Failed to auto-update configurations: {ex.Message}");
+                    Debug.LogError($"[uLoopMCP] Failed to auto-update configurations: {ex.Message}");
+                    // Continue with server startup even if config update fails
+                }
 
                 int chosenPort = savedPort;
                 bool started = await TryBindWithWaitAsync(chosenPort, 5000, 250, cancellationToken);
