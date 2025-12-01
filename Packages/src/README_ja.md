@@ -46,12 +46,14 @@ uLoopMCPのコアとなるコンセプトは次の2つです。
     `https://github.com/hatayama/uLoopMCP.git?path=/Packages/src`
   - あるいは OpenUPM の Scoped Registry 経由でも利用できます。（詳しくは [インストール](#インストール) セクションを参照）。
 2. Unity メニューから `Window > uLoopMCP` を開き、`Start Server` ボタンを押して MCP サーバーを起動します。
-   <img width="308" height="401" src="https://github.com/user-attachments/assets/a6beb597-363d-4816-9286-e8bdba7e4b5c" />
-   - サーバーの状態を管理・モニターします
-   - LLMツールの接続状況を把握できます
-   - LLMツールの設定ボタンを押すことで、簡単にツールとの接続が可能です
-3. Cursor / Claude Code / GitHub Copilot など、使用している LLM ツール側で uLoopMCP を MCP として有効化します。
-4. 例えば次のように指示すると、AIが自律的な開発ループを回し始めます。
+
+<div align="center">
+<img width="800" height="495" alt="uloopmcp" src="https://github.com/user-attachments/assets/08053248-7f0c-4618-8d1f-7e0560341548" />
+</div>
+
+3. LLM Tool Settingsで接続対象となるツールをプルダウンから選択し、"Configure {Tool name}" ボタンを押します。  
+4. Cursor / Claude Code / GitHub Copilot など、使用している LLM ツール側で uLoopMCP を MCP として有効化します。  
+5. 例えば次のように指示すると、AIが自律的な開発ループを回し始めます。  
   - 「このプロジェクトのコンパイルが通るように直して、`compile` でエラーが 0 になるまで繰り返して」
   - 「`run-tests` で `uLoopMCP.Tests.Editor` のテストを全部通すまで、実装とテストを更新して」
   - 「`execute-dynamic-code` でサンプルシーンに Cube を 10 個並べて、カメラ位置も自動調整して」

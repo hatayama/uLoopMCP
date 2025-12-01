@@ -46,12 +46,13 @@ uLoopMCP is built around two core ideas:
     `https://github.com/hatayama/uLoopMCP.git?path=/Packages/src`
   - Alternatively, you can use the OpenUPM scoped registry (see the [Installation](#installation) section for details).
 2. In Unity, open `Window > uLoopMCP` and press the `Start Server` button to launch the MCP server.
-   <img width="308" height="401" src="https://github.com/user-attachments/assets/a6beb597-363d-4816-9286-e8bdba7e4b5c" />
-   - Manages and monitors server status
-   - Provides visibility into LLM tool connection status
-   - Enables easy connection to tools via the LLM tool settings button
-3. In your LLM tool (Cursor, Claude Code, Codex, Gemini, etc.), enable uLoopMCP as an MCP server.
-4. For example, if you give instructions like:
+<div align="center">
+<img width="800" height="495" alt="uloopmcp" src="https://github.com/user-attachments/assets/08053248-7f0c-4618-8d1f-7e0560341548" />
+</div>
+
+3. Select your target tool from the dropdown in LLM Tool Settings, then press the "Configure {Tool name}" button.
+4. In your LLM tool (Cursor, Claude Code, Codex, Gemini, etc.), enable uLoopMCP as an MCP server.
+5. For example, if you give instructions like the following, the AI will start running an autonomous development loop:
   - “Fix this project until `compile` reports no errors, using the `compile` tool as needed.”
   - “Run tests in `uLoopMCP.Tests.Editor` with `run-tests` and keep updating the code until all tests pass.”
   - “Use `execute-dynamic-code` to create a sample scene with 10 cubes and adjust the camera so all cubes are visible.”
