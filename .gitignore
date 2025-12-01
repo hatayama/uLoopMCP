@@ -108,13 +108,10 @@ yarn-error.log*
 .yarn-integrity
 
 # TypeScript Server (exclude development builds, commit only production builds)
-Packages/*/TypeScriptServer/node_modules/
-Packages/*/TypeScriptServer/dist/
-Packages/*/TypeScriptServer/.tsbuildinfo
+Packages/src/TypeScriptServer~/node_modules/
+Packages/src/TypeScriptServer~/.tsbuildinfo
 # Keep dist/server.bundle.js (production bundle)
-!Packages/*/TypeScriptServer/dist/server.bundle.js
-!Packages/*/TypeScriptServer/dist/server.bundle.js.meta
-!Packages/src/TypeScriptServer~/**
+!Packages/src/TypeScriptServer~/dist/server.bundle.js
 
 # Source maps (generated at build time, not needed in version control)
 *.map
