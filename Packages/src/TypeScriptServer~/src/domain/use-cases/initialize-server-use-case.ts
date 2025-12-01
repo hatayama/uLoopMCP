@@ -68,9 +68,10 @@ function getPackageVersion(): string {
  * 3. Initialize Unity connection and tools
  * 4. Return server capabilities and tool list
  */
-export class InitializeServerUseCase
-  implements UseCase<InitializeServerRequest, InitializeServerResponse>
-{
+export class InitializeServerUseCase implements UseCase<
+  InitializeServerRequest,
+  InitializeServerResponse
+> {
   private connectionService: IConnectionService;
   private toolService: IToolQueryService;
   private toolManagementService: IToolManagementService;

@@ -6,9 +6,15 @@ namespace io.github.hatayama.uLoopMCP
     public static class McpServerConfig
     {
         /// <summary>
-        /// Default port number.
+        /// Default TCP port number for Unity-TypeScript communication.
+        /// Note: This is no longer used as TCP port is now auto-assigned.
         /// </summary>
         public const int DEFAULT_PORT = 8700;
+
+        /// <summary>
+        /// Default HTTP port number for MCP client connections.
+        /// </summary>
+        public const int DEFAULT_HTTP_PORT = 9700;
         
         /// <summary>
         /// Buffer size for TCP/IP communication.

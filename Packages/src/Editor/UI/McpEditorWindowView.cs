@@ -90,9 +90,9 @@ namespace io.github.hatayama.uLoopMCP
                 alignment = TextAnchor.MiddleRight,
                 contentOffset = new Vector2(0, 0)
             };
-            int newPort = EditorGUILayout.IntField(data.CustomPort, rightAlignedTextField, GUILayout.Width(50f));
+            int newPort = EditorGUILayout.IntField(data.HttpPort, rightAlignedTextField, GUILayout.Width(50f));
             EditorGUILayout.EndHorizontal();
-            if (newPort != data.CustomPort)
+            if (newPort != data.HttpPort)
             {
                 try
                 {

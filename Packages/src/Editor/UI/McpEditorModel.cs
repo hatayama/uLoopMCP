@@ -49,9 +49,9 @@ namespace io.github.hatayama.uLoopMCP
         public void LoadFromSettings()
         {
             McpEditorSettingsData settings = McpEditorSettings.GetSettings();
-            
+
             UpdateUIState(ui => new UIState(
-                customPort: settings.customPort,
+                httpPort: settings.httpPort,
                 autoStartServer: settings.autoStartServer,
                 showLLMToolSettings: ui.ShowLLMToolSettings,
                 showConnectedTools: ui.ShowConnectedTools,
@@ -69,7 +69,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void SaveToSettings()
         {
-            McpEditorSettings.SetCustomPort(UI.CustomPort);
+            McpEditorSettings.SetHttpPort(UI.HttpPort);
             McpEditorSettings.SetAutoStartServer(UI.AutoStartServer);
 
         }
@@ -82,7 +82,7 @@ namespace io.github.hatayama.uLoopMCP
             McpEditorType selectedEditor = McpEditorSettings.GetSelectedEditorType();
 
             UpdateUIState(ui => new UIState(
-                customPort: ui.CustomPort,
+                httpPort: ui.HttpPort,
                 autoStartServer: ui.AutoStartServer,
                 showLLMToolSettings: ui.ShowLLMToolSettings,
                 showConnectedTools: ui.ShowConnectedTools,
@@ -180,7 +180,7 @@ namespace io.github.hatayama.uLoopMCP
         public void UpdateAutoStartServer(bool autoStart)
         {
             UpdateUIState(ui => new UIState(
-                customPort: ui.CustomPort,
+                httpPort: ui.HttpPort,
                 autoStartServer: autoStart,
                 showLLMToolSettings: ui.ShowLLMToolSettings,
                 showConnectedTools: ui.ShowConnectedTools,
@@ -194,12 +194,12 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Update CustomPort setting with persistence
+        /// Update HttpPort setting with persistence
         /// </summary>
-        public void UpdateCustomPort(int port)
+        public void UpdateHttpPort(int port)
         {
             UpdateUIState(ui => new UIState(
-                customPort: port,
+                httpPort: port,
                 autoStartServer: ui.AutoStartServer,
                 showLLMToolSettings: ui.ShowLLMToolSettings,
                 showConnectedTools: ui.ShowConnectedTools,
@@ -209,7 +209,7 @@ namespace io.github.hatayama.uLoopMCP
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle));
-            McpEditorSettings.SetCustomPort(port);
+            McpEditorSettings.SetHttpPort(port);
 
             // Automatically update all configured MCP editor settings with new port
             McpPortChangeUpdater.UpdateAllConfigurationsForPortChange(port, "UI port change");
@@ -221,7 +221,7 @@ namespace io.github.hatayama.uLoopMCP
         public void UpdateShowConnectedTools(bool show)
         {
             UpdateUIState(ui => new UIState(
-                customPort: ui.CustomPort,
+                httpPort: ui.HttpPort,
                 autoStartServer: ui.AutoStartServer,
                 showLLMToolSettings: ui.ShowLLMToolSettings,
                 showConnectedTools: show,
@@ -239,7 +239,7 @@ namespace io.github.hatayama.uLoopMCP
         public void UpdateShowLLMToolSettings(bool show)
         {
             UpdateUIState(ui => new UIState(
-                customPort: ui.CustomPort,
+                httpPort: ui.HttpPort,
                 autoStartServer: ui.AutoStartServer,
                 showLLMToolSettings: show,
                 showConnectedTools: ui.ShowConnectedTools,
@@ -257,7 +257,7 @@ namespace io.github.hatayama.uLoopMCP
         public void UpdateSelectedEditorType(McpEditorType type)
         {
             UpdateUIState(ui => new UIState(
-                customPort: ui.CustomPort,
+                httpPort: ui.HttpPort,
                 autoStartServer: ui.AutoStartServer,
                 showLLMToolSettings: ui.ShowLLMToolSettings,
                 showConnectedTools: ui.ShowConnectedTools,
@@ -276,7 +276,7 @@ namespace io.github.hatayama.uLoopMCP
         public void UpdateMainScrollPosition(Vector2 position)
         {
             UpdateUIState(ui => new UIState(
-                customPort: ui.CustomPort,
+                httpPort: ui.HttpPort,
                 autoStartServer: ui.AutoStartServer,
                 showLLMToolSettings: ui.ShowLLMToolSettings,
                 showConnectedTools: ui.ShowConnectedTools,
@@ -294,7 +294,7 @@ namespace io.github.hatayama.uLoopMCP
         public void UpdateShowSecuritySettings(bool show)
         {
             UpdateUIState(ui => new UIState(
-                customPort: ui.CustomPort,
+                httpPort: ui.HttpPort,
                 autoStartServer: ui.AutoStartServer,
                 showLLMToolSettings: ui.ShowLLMToolSettings,
                 showConnectedTools: ui.ShowConnectedTools,
@@ -337,7 +337,7 @@ namespace io.github.hatayama.uLoopMCP
         public void UpdateAddRepositoryRoot(bool addRepositoryRoot)
         {
             UpdateUIState(ui => new UIState(
-                customPort: ui.CustomPort,
+                httpPort: ui.HttpPort,
                 autoStartServer: ui.AutoStartServer,
                 showLLMToolSettings: ui.ShowLLMToolSettings,
                 showConnectedTools: ui.ShowConnectedTools,
@@ -357,7 +357,7 @@ namespace io.github.hatayama.uLoopMCP
         public void UpdateSupportsRepositoryRootToggle(bool supportsToggle)
         {
             UpdateUIState(ui => new UIState(
-                customPort: ui.CustomPort,
+                httpPort: ui.HttpPort,
                 autoStartServer: ui.AutoStartServer,
                 showLLMToolSettings: ui.ShowLLMToolSettings,
                 showConnectedTools: ui.ShowConnectedTools,
@@ -375,7 +375,7 @@ namespace io.github.hatayama.uLoopMCP
         public void UpdateShowRepositoryRootToggle(bool showToggle)
         {
             UpdateUIState(ui => new UIState(
-                customPort: ui.CustomPort,
+                httpPort: ui.HttpPort,
                 autoStartServer: ui.AutoStartServer,
                 showLLMToolSettings: ui.ShowLLMToolSettings,
                 showConnectedTools: ui.ShowConnectedTools,

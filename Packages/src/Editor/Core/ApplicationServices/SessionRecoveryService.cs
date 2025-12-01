@@ -82,15 +82,12 @@ namespace io.github.hatayama.uLoopMCP
                     currentServer.Dispose();
                 }
 
-                // Find available port
-                int availablePort = NetworkUtility.FindAvailablePort(port);
+                // Start new server (TCP port is auto-assigned by OS)
+                McpBridgeServer newServer = new McpBridgeServer();
+                newServer.StartServer();
 
-                // Start new server
-                var newServer = new McpBridgeServer();
-                newServer.StartServer(availablePort);
-
-                // Update session state
-                                McpEditorSettings.SetServerPort(availablePort);
+                // Update session state with the auto-assigned port
+                McpEditorSettings.SetServerPort(newServer.Port);
                 McpEditorSettings.SetIsReconnecting(false);
 
                 return ValidationResult.Success();

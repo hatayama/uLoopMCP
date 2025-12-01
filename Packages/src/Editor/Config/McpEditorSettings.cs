@@ -26,7 +26,7 @@ namespace io.github.hatayama.uLoopMCP
     [Serializable]
     public record McpEditorSettingsData
     {
-        public int customPort = McpServerConfig.DEFAULT_PORT;
+        public int httpPort = McpServerConfig.DEFAULT_HTTP_PORT;
         public bool autoStartServer = true;
         public bool showDeveloperTools = false;
         public bool enableMcpLogs = false;
@@ -125,20 +125,20 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Gets the custom port number.
+        /// Gets the HTTP port number for MCP client connections.
         /// </summary>
-        public static int GetCustomPort()
+        public static int GetHttpPort()
         {
-            return GetSettings().customPort;
+            return GetSettings().httpPort;
         }
 
         /// <summary>
-        /// Saves the custom port number.
+        /// Saves the HTTP port number for MCP client connections.
         /// </summary>
-        public static void SetCustomPort(int port)
+        public static void SetHttpPort(int port)
         {
             McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData updatedSettings = settings with { customPort = port };
+            McpEditorSettingsData updatedSettings = settings with { httpPort = port };
             SaveSettings(updatedSettings);
         }
 

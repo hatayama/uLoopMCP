@@ -171,11 +171,11 @@ namespace io.github.hatayama.uLoopMCP
 
                 // Use saved port number for UI only
                 int savedPort = McpEditorSettings.GetServerPort();
-                bool portNeedsUpdate = savedPort != _model.UI.CustomPort;
+                bool portNeedsUpdate = savedPort != _model.UI.HttpPort;
 
                 if (portNeedsUpdate)
                 {
-                    _model.UpdateCustomPort(savedPort);
+                    _model.UpdateHttpPort(savedPort);
                 }
 
                 return;
@@ -248,7 +248,7 @@ namespace io.github.hatayama.uLoopMCP
                 data: controlsData,
                 toggleServerCallback: ToggleServer,
                 autoStartCallback: UpdateAutoStartServer,
-                portChangeCallback: UpdateCustomPort);
+                portChangeCallback: UpdateHttpPort);
 
             ConnectedToolsData toolsData = CreateConnectedToolsData();
             _view.DrawConnectedToolsSection(
@@ -285,11 +285,11 @@ namespace io.github.hatayama.uLoopMCP
             if (serverIsRunning)
             {
                 int actualServerPort = McpServerController.ServerPort;
-                bool portMismatch = _model.UI.CustomPort != actualServerPort;
+                bool portMismatch = _model.UI.HttpPort != actualServerPort;
 
                 if (portMismatch)
                 {
-                    _model.UpdateCustomPort(actualServerPort);
+                    _model.UpdateHttpPort(actualServerPort);
                 }
             }
         }
@@ -320,7 +320,7 @@ namespace io.github.hatayama.uLoopMCP
             if (!isRunning)
             {
                 // Check if requested port is valid and available
-                int requestedPort = _model.UI.CustomPort;
+                int requestedPort = _model.UI.HttpPort;
 
                 // First check if port is valid
                 if (!McpPortValidator.ValidatePort(requestedPort))
@@ -336,7 +336,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            return new ServerControlsData(_model.UI.CustomPort, _model.UI.AutoStartServer, isRunning, !isRunning, hasPortWarning, portWarningMessage);
+            return new ServerControlsData(_model.UI.HttpPort, _model.UI.AutoStartServer, isRunning, !isRunning, hasPortWarning, portWarningMessage);
         }
 
         /// <summary>
@@ -438,12 +438,12 @@ namespace io.github.hatayama.uLoopMCP
                     else
                     {
                         // When server is not running, check if UI port matches configured port
-                        hasPortMismatch = _model.UI.CustomPort != configuredPort;
+                        hasPortMismatch = _model.UI.HttpPort != configuredPort;
                     }
                 }
 
                 // Check if update is needed
-                int portToCheck = isServerRunning ? currentPort : _model.UI.CustomPort;
+                int portToCheck = isServerRunning ? currentPort : _model.UI.HttpPort;
                 isUpdateNeeded = configService.IsUpdateNeeded(portToCheck);
             }
             catch (Exception ex)
@@ -485,7 +485,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             IMcpConfigService configService = GetConfigService(_model.UI.SelectedEditorType);
             bool isServerRunning = McpServerController.IsServerRunning;
-            int portToUse = isServerRunning ? McpServerController.ServerPort : _model.UI.CustomPort;
+            int portToUse = isServerRunning ? McpServerController.ServerPort : _model.UI.HttpPort;
 
             configService.AutoConfigure(portToUse);
             Repaint();
@@ -530,11 +530,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Update CustomPort setting with persistence
+        /// Update HttpPort setting with persistence
         /// </summary>
-        private void UpdateCustomPort(int port)
+        private void UpdateHttpPort(int port)
         {
-            _model.UpdateCustomPort(port);
+            _model.UpdateHttpPort(port);
         }
 
         /// <summary>

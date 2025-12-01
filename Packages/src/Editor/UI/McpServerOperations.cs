@@ -57,7 +57,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>True if successful</returns>
         private bool ValidatePortAndStartServer(bool showErrorDialogs)
         {
-            int currentPort = _model.UI.CustomPort;
+            int currentPort = _model.UI.HttpPort;
             
             // Validate port range
             bool portInValidRange = currentPort >= McpServerConfig.MIN_PORT_NUMBER && 

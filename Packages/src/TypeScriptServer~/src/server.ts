@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   InitializeRequestSchema,
   InitializeResult,
 } from '@modelcontextprotocol/sdk/types.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { UnityClient } from './unity-client.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 import { UnityDiscovery } from './unity-discovery.js';
@@ -22,6 +22,7 @@ import {
   MCP_SERVER_NAME,
   TOOLS_LIST_CHANGED_CAPABILITY,
 } from './constants.js';
+import { McpHttpServer } from './http-server.js';
 import packageJson from '../package.json' assert { type: 'json' };
 
 /**
@@ -287,13 +288,38 @@ class UnityMcpServer {
       }
     });
 
-    if (this.isDevelopment) {
-      // Server starting with unified discovery service
+    // Get HTTP port from environment variable (set by Unity)
+    const httpPortStr = process.env.MCP_HTTP_PORT;
+    if (!httpPortStr) {
+      throw new Error('MCP_HTTP_PORT environment variable is required but not set');
+    }
+    const httpPort = parseInt(httpPortStr, 10);
+    if (isNaN(httpPort) || httpPort <= 0 || httpPort > 65535) {
+      throw new Error(`Invalid MCP_HTTP_PORT value: ${httpPortStr}`);
     }
 
-    // Connect to MCP transport last - wait for client name before connecting to Unity
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
+    VibeLogger.logInfo('mcp_server_starting', 'Starting MCP HTTP server', {
+      http_port: httpPort,
+      is_development: this.isDevelopment,
+    });
+
+    // Create and start HTTP server
+    const httpServer = new McpHttpServer({ port: httpPort });
+
+    // Set callback to connect each new transport to the MCP server
+    httpServer.setTransportCreatedCallback(async (transport: StreamableHTTPServerTransport) => {
+      await this.server.connect(transport);
+    });
+
+    // Start HTTP server
+    await httpServer.start();
+
+    // Store reference for graceful shutdown
+    this.eventHandler.setHttpServer(httpServer);
+
+    VibeLogger.logInfo('mcp_server_started', 'MCP HTTP server started successfully', {
+      http_port: httpPort,
+    });
   }
 }
 

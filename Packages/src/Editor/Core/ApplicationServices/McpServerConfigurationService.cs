@@ -47,7 +47,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             try
             {
-                int actualPort = requestedPort == -1 ? McpEditorSettings.GetCustomPort() : requestedPort;
+                int actualPort = requestedPort == -1 ? McpEditorSettings.GetHttpPort() : requestedPort;
                 
                 // Validate the resolved port
                 var validation = ValidateConfiguration(actualPort);

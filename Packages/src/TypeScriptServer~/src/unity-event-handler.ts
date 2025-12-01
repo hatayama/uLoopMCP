@@ -6,6 +6,7 @@ import { VibeLogger } from './utils/vibe-logger.js';
 import { IUnityEventService } from './application/interfaces/unity-event-service.js';
 import { INotificationService } from './application/interfaces/notification-service.js';
 import { IProcessControlService } from './application/interfaces/process-control-service.js';
+import { McpHttpServer } from './http-server.js';
 
 /**
  * Unity Event Handler - Manages Unity notifications and event processing
@@ -31,6 +32,7 @@ export class UnityEventHandler
   private server: Server;
   private unityClient: UnityClient;
   private connectionManager: UnityConnectionManager;
+  private httpServer: McpHttpServer | null = null;
   private readonly isDevelopment: boolean;
   private shuttingDown: boolean = false;
   private isNotifying: boolean = false;
@@ -41,6 +43,13 @@ export class UnityEventHandler
     this.unityClient = unityClient;
     this.connectionManager = connectionManager;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+  }
+
+  /**
+   * Set the HTTP server reference for graceful shutdown
+   */
+  setHttpServer(httpServer: McpHttpServer): void {
+    this.httpServer = httpServer;
   }
 
   /**
@@ -172,30 +181,8 @@ export class UnityEventHandler
       this.gracefulShutdown();
     });
 
-    // Handle stdin close (when parent process disconnects)
-    // BUG FIX: Added STDIN monitoring to detect when Cursor/parent MCP client disconnects
-    // This prevents orphaned Node processes from remaining after IDE shutdown
-    process.stdin.on('close', () => {
-      VibeLogger.logInfo(
-        'stdin_closed',
-        'STDIN closed, shutting down...',
-        undefined,
-        undefined,
-        'Parent process disconnected, preventing orphaned process',
-      );
-      this.gracefulShutdown();
-    });
-
-    process.stdin.on('end', () => {
-      VibeLogger.logInfo(
-        'stdin_ended',
-        'STDIN ended, shutting down...',
-        undefined,
-        undefined,
-        'STDIN stream ended, initiating graceful shutdown',
-      );
-      this.gracefulShutdown();
-    });
+    // NOTE: stdin monitoring removed because we now use HTTP transport instead of stdio
+    // HTTP connections are managed by McpHttpServer and sessions are cleaned up there
 
     // Handle uncaught exceptions
     // BUG FIX: Added comprehensive error handling to prevent hanging processes
@@ -241,34 +228,49 @@ export class UnityEventHandler
       'Initiating graceful shutdown process',
     );
 
-    try {
-      // Disconnect from Unity and stop all intervals
-      // BUG FIX: Ensure polling intervals are stopped to prevent hanging event loop
-      this.connectionManager.disconnect();
+    // Use async IIFE for cleanup
+    void (async (): Promise<void> => {
+      try {
+        // Stop HTTP server first
+        if (this.httpServer) {
+          VibeLogger.logInfo(
+            'http_server_stopping',
+            'Stopping HTTP server...',
+            undefined,
+            undefined,
+            'Shutting down MCP HTTP server',
+          );
+          await this.httpServer.stop();
+        }
 
-      // Clear any remaining timers to ensure clean exit
-      // BUG FIX: Force garbage collection if available to clean up lingering references
-      if (global.gc) {
-        global.gc();
+        // Disconnect from Unity and stop all intervals
+        // BUG FIX: Ensure polling intervals are stopped to prevent hanging event loop
+        this.connectionManager.disconnect();
+
+        // Clear any remaining timers to ensure clean exit
+        // BUG FIX: Force garbage collection if available to clean up lingering references
+        if (global.gc) {
+          global.gc();
+        }
+      } catch (error) {
+        VibeLogger.logError(
+          'cleanup_error',
+          'Error during cleanup',
+          { error: error instanceof Error ? error.message : String(error) },
+          undefined,
+          'Error occurred during graceful shutdown cleanup',
+        );
       }
-    } catch (error) {
-      VibeLogger.logError(
-        'cleanup_error',
-        'Error during cleanup',
-        { error: error instanceof Error ? error.message : String(error) },
-        undefined,
-        'Error occurred during graceful shutdown cleanup',
-      );
-    }
 
-    VibeLogger.logInfo(
-      'graceful_shutdown_complete',
-      'Graceful shutdown completed',
-      undefined,
-      undefined,
-      'All cleanup completed, process will exit',
-    );
-    process.exit(0);
+      VibeLogger.logInfo(
+        'graceful_shutdown_complete',
+        'Graceful shutdown completed',
+        undefined,
+        undefined,
+        'All cleanup completed, process will exit',
+      );
+      process.exit(0);
+    })();
   }
 
   /**

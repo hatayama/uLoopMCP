@@ -35,7 +35,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// The server's port number.
         /// </summary>
-        public static int ServerPort => mcpServer?.Port ?? McpEditorSettings.GetCustomPort();
+        public static int ServerPort => mcpServer?.Port ?? McpEditorSettings.GetHttpPort();
 
         static McpServerController()
         {
@@ -60,8 +60,8 @@ namespace io.github.hatayama.uLoopMCP
         /// Starts the server.
         /// </summary>
         /// <param name="port">
-        /// The port number to bind to. Use -1 to fall back to the saved custom port
-        /// from <see cref="McpEditorSettings.GetCustomPort"/>. Defaults to -1.
+        /// The port number to bind to. Use -1 to fall back to the saved HTTP port
+        /// from <see cref="McpEditorSettings.GetHttpPort"/>. Defaults to -1.
         /// </param>
         public static async void StartServer(int port = -1)
         {
@@ -233,10 +233,10 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Executes server recovery with retries on the original port.
-        /// Does not change the port number; only attempts recovery on the specified port.
+        /// Executes server recovery with retries.
+        /// TCP port is auto-assigned by OS on each attempt.
         /// </summary>
-        private static void TryRestoreServerWithRetry(int port, int retryCount)
+        private static void TryRestoreServerWithRetry(int retryCount)
         {
             const int maxRetries = 3;
 
@@ -249,15 +249,12 @@ namespace io.github.hatayama.uLoopMCP
                     mcpServer = null;
                 }
 
-                // Try to start server on the requested port only
+                // Start server with auto-assigned TCP port
                 mcpServer = new McpBridgeServer();
-                mcpServer.StartServer(port);
+                mcpServer.StartServer();
 
-                // Update settings with the actual port used (same as requested)
-                if (McpEditorSettings.GetServerPort() != port)
-                {
-                    McpEditorSettings.SetServerPort(port);
-                }
+                // Update settings with the auto-assigned port
+                McpEditorSettings.SetServerPort(mcpServer.Port);
 
                 // Clear server-side reconnecting flag on successful restoration
                 // NOTE: Do NOT clear UI display flag here - let it be cleared by timeout or client connection
@@ -270,8 +267,8 @@ namespace io.github.hatayama.uLoopMCP
                 // If the maximum number of retries has not been reached, try again.
                 if (retryCount < maxRetries)
                 {
-                    // Wait for port release before retry
-                    RetryServerRestoreAsync(port, retryCount).Forget();
+                    // Wait before retry
+                    RetryServerRestoreAsync(retryCount).Forget();
                 }
                 else
                 {
@@ -368,12 +365,12 @@ namespace io.github.hatayama.uLoopMCP
         /// Restore server after compilation with frame delay.
         /// Currently kept as a helper; recovery logic is unified in StartRecoveryIfNeededAsync.
         /// </summary>
-        private static async Task RestoreServerAfterCompileAsync(int port)
+        private static async Task RestoreServerAfterCompileAsync()
         {
             // Wait a short while for timing adjustment (TCP port release)
             await EditorDelay.DelayFrame(1);
 
-            TryRestoreServerWithRetry(port, 0);
+            TryRestoreServerWithRetry(0);
         }
 
         /// <summary>
@@ -394,13 +391,13 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Retry server restore with frame delay on the same port.
+        /// Retry server restore with frame delay.
         /// </summary>
-        private static async Task RetryServerRestoreAsync(int port, int retryCount)
+        private static async Task RetryServerRestoreAsync(int retryCount)
         {
-            // Wait longer for port release before retry
+            // Wait longer before retry
             await EditorDelay.DelayFrame(5);
-            TryRestoreServerWithRetry(port, retryCount + 1);
+            TryRestoreServerWithRetry(retryCount + 1);
         }
 
         /// <summary>
@@ -538,24 +535,19 @@ namespace io.github.hatayama.uLoopMCP
                     // Continue with server startup even if config update fails
                 }
 
-                int chosenPort = savedPort;
-                bool started = await TryBindWithWaitAsync(chosenPort, 5000, 250, cancellationToken);
+                bool started = await TryBindWithWaitAsync(5000, 250, cancellationToken);
 
                 if (!started)
                 {
                     // Ensure session reflects stopped state on failure
                     McpEditorSettings.ClearServerSession();
                     McpEditorSettings.ClearReconnectingFlags();
-                    throw new InvalidOperationException($"Failed to bind port {savedPort} during server recovery.");
+                    throw new InvalidOperationException("Failed to start TCP server during recovery.");
                 }
 
-                // Mark running and update settings
+                // Mark running and update settings with auto-assigned port
                 McpEditorSettings.SetIsServerRunning(true);
-                if (McpEditorSettings.GetServerPort() != chosenPort)
-                {
-                    // Defer aggressive external updates; only update internal setting here
-                    McpEditorSettings.SetServerPort(chosenPort);
-                }
+                McpEditorSettings.SetServerPort(mcpServer.Port);
 
                 // Clear reconnection-related flags on successful recovery
                 McpEditorSettings.ClearReconnectingFlags();
@@ -569,12 +561,16 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private static async Task<bool> TryBindWithWaitAsync(int port, int maxWaitMs, int stepMs, CancellationToken cancellationToken)
+        /// <summary>
+        /// Attempts to start TCP server with auto-assigned port.
+        /// Retries on failure up to maxWaitMs with stepMs intervals.
+        /// </summary>
+        private static async Task<bool> TryBindWithWaitAsync(int maxWaitMs, int stepMs, CancellationToken cancellationToken)
         {
             int remainingMs = maxWaitMs;
             while (true)
             {
-                VibeLogger.LogInfo("binding_attempt", $"port={port}");
+                VibeLogger.LogInfo("binding_attempt", "auto_port");
                 McpBridgeServer server = null;
                 try
                 {
@@ -597,9 +593,9 @@ namespace io.github.hatayama.uLoopMCP
                     }
 
                     server = new McpBridgeServer();
-                    server.StartServer(port);
+                    server.StartServer();
                     mcpServer = server;
-                    VibeLogger.LogInfo("binding_success", $"port={port}");
+                    VibeLogger.LogInfo("binding_success", $"port={server.Port}");
                     return true;
                 }
                 catch (Exception ex)
@@ -615,11 +611,11 @@ namespace io.github.hatayama.uLoopMCP
 
                     if (sockEx != null)
                     {
-                        VibeLogger.LogWarning("binding_failed", $"port={port} code={sockEx.SocketErrorCode} hresult={sockEx.HResult} native={sockEx.ErrorCode}");
+                        VibeLogger.LogWarning("binding_failed", $"code={sockEx.SocketErrorCode} hresult={sockEx.HResult} native={sockEx.ErrorCode}");
                     }
                     else
                     {
-                        VibeLogger.LogWarning("binding_failed", $"port={port} code=Unknown hresult={ex.HResult}");
+                        VibeLogger.LogWarning("binding_failed", $"code=Unknown hresult={ex.HResult}");
                     }
 
                     if (remainingMs <= 0)

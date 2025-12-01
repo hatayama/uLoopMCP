@@ -18,7 +18,7 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public record UIState
     {
-        public int CustomPort { get; }
+        public int HttpPort { get; }
         public bool AutoStartServer { get; }
         public bool ShowLLMToolSettings { get; }
         public bool ShowConnectedTools { get; }
@@ -30,7 +30,7 @@ namespace io.github.hatayama.uLoopMCP
         public bool ShowRepositoryRootToggle { get; }
 
         public UIState(
-            int customPort = McpServerConfig.DEFAULT_PORT,
+            int httpPort = McpServerConfig.DEFAULT_HTTP_PORT,
             bool autoStartServer = false,
             bool showLLMToolSettings = true,
             bool showConnectedTools = true,
@@ -41,7 +41,7 @@ namespace io.github.hatayama.uLoopMCP
             bool supportsRepositoryRootToggle = false,
             bool showRepositoryRootToggle = false)
         {
-            CustomPort = customPort;
+            HttpPort = httpPort;
             AutoStartServer = autoStartServer;
             ShowLLMToolSettings = showLLMToolSettings;
             ShowConnectedTools = showConnectedTools;

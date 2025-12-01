@@ -92,9 +92,10 @@ namespace io.github.hatayama.uLoopMCP
         public bool IsRunning => _isRunning;
         
         /// <summary>
-        /// The server's port number.
+        /// The TCP port number for Unity-TypeScript communication.
+        /// Automatically assigned by OS when server starts.
         /// </summary>
-        public int Port { get; private set; } = McpEditorSettings.GetCustomPort();
+        public int Port { get; private set; }
         
         /// <summary>
         /// Event on client connection.
@@ -166,26 +167,27 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Starts the server.
+        /// Starts the server with automatic port allocation.
+        /// TCP port is automatically assigned by the OS to avoid conflicts.
         /// </summary>
-        /// <param name="port">
-        /// The port number to bind to. Use -1 to fall back to the saved custom port
-        /// from <see cref="McpEditorSettings.GetCustomPort"/>. Defaults to -1.
-        /// </param>
-        public void StartServer(int port = -1)
+        public void StartServer()
         {
             if (_isRunning)
             {
                 return;
             }
 
-            Port = port == -1 ? McpEditorSettings.GetCustomPort() : port;
             _cancellationTokenSource = new CancellationTokenSource();
-            
+
             try
             {
-                _tcpListener = new TcpListener(IPAddress.Loopback, Port);
+                // Use port 0 to let OS automatically assign an available port
+                _tcpListener = new TcpListener(IPAddress.Loopback, 0);
                 _tcpListener.Start();
+
+                // Get the actual port assigned by OS
+                Port = ((IPEndPoint)_tcpListener.LocalEndpoint).Port;
+
                 _isRunning = true;
                 
                 _serverTask = Task.Run(() => ServerLoopAsync(_cancellationTokenSource.Token));
@@ -194,10 +196,10 @@ namespace io.github.hatayama.uLoopMCP
                 OnServerStarted?.Invoke();
                 
             }
-            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
+            catch (SocketException ex)
             {
                 _isRunning = false;
-                string errorMessage = $"Port {Port} is already in use. Please choose a different port.";
+                string errorMessage = $"Failed to start TCP server: {ex.Message}";
                 OnError?.Invoke(errorMessage);
                 throw new InvalidOperationException(errorMessage, ex);
             }

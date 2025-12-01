@@ -5,7 +5,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// UseCase responsible for temporal cohesion of server initialization processing
-    /// Processing sequence: 1. Configuration validation, 2. Port allocation, 3. Server startup, 4. State update
+    /// Processing sequence: 1. Security validation, 2. HTTP port validation, 3. TCP server startup (auto port), 4. State update
     /// Related classes: McpServerConfigurationService, PortAllocationService, McpServerStartupService, SecurityValidationService
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
@@ -39,6 +39,7 @@ namespace io.github.hatayama.uLoopMCP
             _startupService = startupService ?? throw new System.ArgumentNullException(nameof(startupService));
             _notificationService = notificationService ?? throw new System.ArgumentNullException(nameof(notificationService));
         }
+
         /// <summary>
         /// Execute server initialization processing
         /// </summary>
@@ -47,33 +48,13 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Initialization result</returns>
         public override Task<ServerInitializationResponse> ExecuteAsync(ServerInitializationSchema parameters, CancellationToken cancellationToken)
         {
-            var response = new ServerInitializationResponse();
-            var startTime = System.DateTime.UtcNow;
+            ServerInitializationResponse response = new();
+            System.DateTime startTime = System.DateTime.UtcNow;
 
             try
             {
-                // 1. Configuration validation - McpServerConfigurationService
-                var portResult = _configService.ResolvePort(parameters.Port);
-                if (!portResult.Success)
-                {
-                    response.Success = false;
-                    response.Message = portResult.ErrorMessage;
-                    return Task.FromResult(response);
-                }
-                int actualPort = portResult.Data;
-
-                var validationResult = _configService.ValidateConfiguration(actualPort);
-                if (!validationResult.Success)
-                {
-                    _notificationService.ShowInvalidPortDialog(actualPort);
-                    
-                    response.Success = false;
-                    response.Message = validationResult.ErrorMessage;
-                    return Task.FromResult(response);
-                }
-
-                // 2. Security validation - SecurityValidationService
-                var editorStateValidation = _securityService.ValidateEditorState();
+                // 1. Security validation - SecurityValidationService
+                ValidationResult editorStateValidation = _securityService.ValidateEditorState();
                 if (!editorStateValidation.IsValid)
                 {
                     response.Success = false;
@@ -81,7 +62,18 @@ namespace io.github.hatayama.uLoopMCP
                     return Task.FromResult(response);
                 }
 
-                var portSecurityValidation = _securityService.ValidatePortSecurity(actualPort);
+                // 2. HTTP port validation (for MCP client connections)
+                int httpPort = McpEditorSettings.GetHttpPort();
+                ServiceResult<bool> validationResult = _configService.ValidateConfiguration(httpPort);
+                if (!validationResult.Success)
+                {
+                    _notificationService.ShowInvalidPortDialog(httpPort);
+                    response.Success = false;
+                    response.Message = validationResult.ErrorMessage;
+                    return Task.FromResult(response);
+                }
+
+                ValidationResult portSecurityValidation = _securityService.ValidatePortSecurity(httpPort);
                 if (!portSecurityValidation.IsValid)
                 {
                     response.Success = false;
@@ -89,30 +81,32 @@ namespace io.github.hatayama.uLoopMCP
                     return Task.FromResult(response);
                 }
 
-                // 3. Port allocation - PortAllocationService
-                var availablePortResult = _portService.FindAvailablePort(actualPort);
+                // 3. HTTP port availability check
+                ServiceResult<int> availablePortResult = _portService.FindAvailablePort(httpPort);
                 if (!availablePortResult.Success)
                 {
                     response.Success = false;
                     response.Message = availablePortResult.ErrorMessage;
                     return Task.FromResult(response);
                 }
-                int availablePort = availablePortResult.Data;
+                int availableHttpPort = availablePortResult.Data;
 
-                // Handle port conflict
-                if (availablePort != actualPort)
+                // Handle HTTP port conflict
+                if (availableHttpPort != httpPort)
                 {
-                    var conflictResult = _portService.HandlePortConflict(actualPort, availablePort);
+                    ServiceResult<bool> conflictResult = _portService.HandlePortConflict(httpPort, availableHttpPort);
                     if (!conflictResult.Success || !conflictResult.Data)
                     {
                         response.Success = false;
                         response.Message = "Port conflict resolution cancelled by user";
                         return Task.FromResult(response);
                     }
+                    // Update HTTP port setting if user accepted alternative
+                    McpEditorSettings.SetHttpPort(availableHttpPort);
                 }
 
-                // 4. Server startup - McpServerStartupService
-                var serverResult = _startupService.StartServer(availablePort);
+                // 4. TCP Server startup (auto port allocation by OS)
+                ServiceResult<McpBridgeServer> serverResult = _startupService.StartServer();
                 if (!serverResult.Success)
                 {
                     response.Success = false;
@@ -120,9 +114,10 @@ namespace io.github.hatayama.uLoopMCP
                     return Task.FromResult(response);
                 }
                 McpBridgeServer serverInstance = serverResult.Data;
+                int tcpPort = serverInstance.Port;
 
-                // 5. Session state update
-                var sessionUpdateResult = _startupService.UpdateSessionState(true, availablePort);
+                // 5. Session state update (store TCP port for reference)
+                ServiceResult<bool> sessionUpdateResult = _startupService.UpdateSessionState(true, tcpPort);
                 if (!sessionUpdateResult.Success)
                 {
                     response.Success = false;
@@ -132,10 +127,10 @@ namespace io.github.hatayama.uLoopMCP
 
                 // Success response
                 response.Success = true;
-                response.ServerPort = availablePort;
+                response.ServerPort = tcpPort;
                 response.IsRunning = true;
                 response.ServerInstance = serverInstance;
-                response.Message = "Server initialization completed successfully";
+                response.Message = $"Server initialized. TCP port: {tcpPort}, HTTP port: {availableHttpPort}";
 
                 return Task.FromResult(response);
             }
@@ -143,7 +138,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 // Log the full exception for debugging
                 UnityEngine.Debug.LogError($"Server initialization failed: {ex}");
-                
+
                 response.Success = false;
                 response.Message = "Server initialization failed. Please check the logs for details.";
                 return Task.FromResult(response);
