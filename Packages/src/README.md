@@ -50,8 +50,9 @@ uLoopMCP is built around two core ideas:
    - Manages and monitors server status
    - Provides visibility into LLM tool connection status
    - Enables easy connection to tools via the LLM tool settings button
-3. In your LLM tool (Cursor, Claude Code, Codex, Gemini, etc.), enable uLoopMCP as an MCP server.
-4. For example, if you give instructions like:
+3. Select your target tool from the dropdown in LLM Tool Settings, then press the "Configure {Tool name}" button.
+4. In your LLM tool (Cursor, Claude Code, Codex, Gemini, etc.), enable uLoopMCP as an MCP server.
+5. For example, if you give instructions like:
   - “Fix this project until `compile` reports no errors, using the `compile` tool as needed.”
   - “Run tests in `uLoopMCP.Tests.Editor` with `run-tests` and keep updating the code until all tests pass.”
   - “Use `execute-dynamic-code` to create a sample scene with 10 cubes and adjust the camera so all cubes are visible.”
