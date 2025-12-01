@@ -5,12 +5,14 @@
     "sourceType": "module",
     "project": "./tsconfig.json"
   },
-  "plugins": ["security"],
+  "plugins": ["security", "prettier"],
+  "extends": ["prettier", "plugin:prettier/recommended"],
   "env": {
     "node": true,
     "es2022": true
   },
   "rules": {
+    "prettier/prettier": "error",
     "security/detect-eval-with-expression": "error",
     "security/detect-non-literal-fs-filename": "warn",
     "security/detect-non-literal-regexp": "warn", 
