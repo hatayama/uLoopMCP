@@ -51,12 +51,9 @@ uLoopMCPのコアとなるコンセプトは次の2つです。
 <img width="800" height="495" alt="uloopmcp" src="https://github.com/user-attachments/assets/08053248-7f0c-4618-8d1f-7e0560341548" />
 </div>
 
-   - サーバーの状態を管理・モニターします
-   - LLMツールの接続状況を把握できます
-   - LLMツールの設定ボタンを押すことで、簡単にツールとの接続が可能です
-3. LLM Tool Settingsで接続対象となるツールをプルダウンから選択し、"Configure {Tool name}" ボタンを押します。
-4. Cursor / Claude Code / GitHub Copilot など、使用している LLM ツール側で uLoopMCP を MCP として有効化します。
-5. 例えば次のように指示すると、AIが自律的な開発ループを回し始めます。
+3. LLM Tool Settingsで接続対象となるツールをプルダウンから選択し、"Configure {Tool name}" ボタンを押します。  
+4. Cursor / Claude Code / GitHub Copilot など、使用している LLM ツール側で uLoopMCP を MCP として有効化します。  
+5. 例えば次のように指示すると、AIが自律的な開発ループを回し始めます。  
   - 「このプロジェクトのコンパイルが通るように直して、`compile` でエラーが 0 になるまで繰り返して」
   - 「`run-tests` で `uLoopMCP.Tests.Editor` のテストを全部通すまで、実装とテストを更新して」
   - 「`execute-dynamic-code` でサンプルシーンに Cube を 10 個並べて、カメラ位置も自動調整して」
