@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.41.1](https://github.com/hatayama/uLoopMCP/compare/v0.41.0...v0.41.1) (2025-12-01)
+
+
+### Bug Fixes
+
+* improve disconnected messages based on Unity shutdown reason ([#353](https://github.com/hatayama/uLoopMCP/issues/353)) ([d23034e](https://github.com/hatayama/uLoopMCP/commit/d23034e7eb19b516af54123f846d8739c6856ff1))
+
 ## [0.41.0](https://github.com/hatayama/uLoopMCP/compare/v0.40.2...v0.41.0) (2025-11-29)
 
 
