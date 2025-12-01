@@ -1,8 +1,7 @@
 [日本語](/Packages/src/README_ja.md)
 
 [![Unity](https://img.shields.io/badge/Unity-2022.3+-red.svg)](https://unity3d.com/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/hatayama/uLoopMCP)  
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)<br>
 ![ClaudeCode](https://img.shields.io/badge/Claude_Code-555?logo=claude)
 ![Cursor](https://img.shields.io/badge/Cursor-111?logo=Cursor)
 ![OpenAICodex](https://img.shields.io/badge/OpenAI_Codex-111?logo=openai)
