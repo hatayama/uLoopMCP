@@ -34,10 +34,10 @@ uLoopMCP is built around two core ideas:
 5. Log and hierarchy data can be exported to files to avoid burning LLM context on large payloads.
 
 # Example Use Cases
-- Let an AI keep fixing your project until `compile` reports zero errors.
-- Ask the AI to implement a new feature plus tests, and use `run-tests` to keep iterating until the whole test suite is green.
-- After verification, enter Play Mode using `execute-menu-item` or `execute-dynamic-code`, then bring Unity Editor to the foreground with `focus-window`
-- Offload large-scale scene / prefab inspections to the AI, and have it adjust component parameters or scene structure via Editor automation.
+- Let an AI keep fixing your project until compilation passes and all tests go green.
+- Ask the AI to fix bugs or refactor existing code, and verify results using `compile` / `test runner execution` / `log retrieval`.
+- After verification, enter Play Mode using `MenuItem execution` or `compile-free C# code execution`, then bring Unity Editor to the foreground with `Unity window focus`.
+- Have the AI inspect large numbers of Prefabs / GameObjects using `Hierarchy inspection`, `Unity Search`, and `compile-free C# code execution` for bulk parameter adjustments or scene structure organization.
 - Build team-specific MCP tools for custom checks and automated refactors, and call them from your LLM environment.
 
 ## Quickstart

@@ -35,9 +35,9 @@ uLoopMCPのコアとなるコンセプトは次の2つです。
 
 # ユースケース例
 - Unity プロジェクトの「コンパイルが通るまで」「テストが緑になるまで」を、AI に任せて自律的に回し続ける
-- 既存コードベースに対して、バグ修正やリファクタリングをAIに依頼し、`compile` / `run-tests` / `get-logs` で結果を検証させる
-- 検証完了後、`execute-menu-item` または `execute-dynamic-code` でPlay Modeに入り、`focus-window` でUnity Editorを最前面に表示させる
-- 大量のPrefab / GameObjectをUnity Editor上でAIに調査させ、パラメータの一括修正やシーン構造の整理を行う
+- 既存コードベースに対して、バグ修正やリファクタリングをAIに依頼し、`compile` / `test runnerの実行` / `log取得` で結果を検証させる
+- 検証完了後、`MenuItemの実行` または `コンパイル不要のC#コード実行` でPlay Modeに入り、`Unityウィンドウフォーカス機能` でUnity Editorを最前面に表示させる
+- 大量のPrefab / GameObjectを`Hierarchy調査機能`・`Unity Search`・`コンパイル不要のC#コード実行`でAIに調査させ、パラメータの一括修正やシーン構造の整理を行う
 - チーム専用のMCPツールを追加し、プロジェクト固有のチェックや自動修正をAIから呼び出せるようにする
 
 ## クイックスタート
