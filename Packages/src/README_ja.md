@@ -1,8 +1,7 @@
 [English](/Packages/src/README.md)
 
 [![Unity](https://img.shields.io/badge/Unity-2022.3+-red.svg)](https://unity3d.com/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/hatayama/uLoopMCP)  
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)<br>
 ![ClaudeCode](https://img.shields.io/badge/Claude_Code-555?logo=claude)
 ![Cursor](https://img.shields.io/badge/Cursor-111?logo=Cursor)
 ![OpenAICodex](https://img.shields.io/badge/OpenAI_Codex-111?logo=openai)
@@ -41,19 +40,16 @@ uLoopMCPのコアとなるコンセプトは次の2つです。
 - 大量のPrefab / GameObjectをUnity Editor上でAIに調査させ、パラメータの一括修正やシーン構造の整理を行う
 - チーム専用のMCPツールを追加し、プロジェクト固有のチェックや自動修正をAIから呼び出せるようにする
 
-# ツールwindow
-<img width="308" height="401" src="https://github.com/user-attachments/assets/a6beb597-363d-4816-9286-e8bdba7e4b5c" />
-
-- サーバーの状態を管理・モニターします
-- LLMツールの接続状況を把握できます
-- LLMツールの設定ボタンを押すことで、簡単にツールとの接続が可能です
-
 ## クイックスタート
 1. Unity プロジェクトに uLoopMCP パッケージをインストールします。
   - Unity Package Manager の「Add package from git URL」で以下を指定します：  
     `https://github.com/hatayama/uLoopMCP.git?path=/Packages/src`
   - あるいは OpenUPM の Scoped Registry 経由でも利用できます。（詳しくは [インストール](#インストール) セクションを参照）。
 2. Unity メニューから `Window > uLoopMCP` を開き、`Start Server` ボタンを押して MCP サーバーを起動します。
+   <img width="308" height="401" src="https://github.com/user-attachments/assets/a6beb597-363d-4816-9286-e8bdba7e4b5c" />
+   - サーバーの状態を管理・モニターします
+   - LLMツールの接続状況を把握できます
+   - LLMツールの設定ボタンを押すことで、簡単にツールとの接続が可能です
 3. Cursor / Claude Code / GitHub Copilot など、使用している LLM ツール側で uLoopMCP を MCP として有効化します。
 4. 例えば次のように指示すると、AIが自律的な開発ループを回し始めます。
   - 「このプロジェクトのコンパイルが通るように直して、`compile` でエラーが 0 になるまで繰り返して」

@@ -1,8 +1,7 @@
 [日本語](/Packages/src/README_ja.md)
 
 [![Unity](https://img.shields.io/badge/Unity-2022.3+-red.svg)](https://unity3d.com/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/hatayama/uLoopMCP)  
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)<br>
 ![ClaudeCode](https://img.shields.io/badge/Claude_Code-555?logo=claude)
 ![Cursor](https://img.shields.io/badge/Cursor-111?logo=Cursor)
 ![OpenAICodex](https://img.shields.io/badge/OpenAI_Codex-111?logo=openai)
@@ -41,19 +40,16 @@ uLoopMCP is built around two core ideas:
 - Offload large-scale scene / prefab inspections to the AI, and have it adjust component parameters or scene structure via Editor automation.
 - Build team-specific MCP tools for custom checks and automated refactors, and call them from your LLM environment.
 
-# Tool Window
-<img width="308" height="401" src="https://github.com/user-attachments/assets/a6beb597-363d-4816-9286-e8bdba7e4b5c" />
-
-- Manages and monitors server status
-- Provides visibility into LLM tool connection status
-- Enables easy connection to tools via the LLM tool settings button
-
 ## Quickstart
 1. Install the uLoopMCP package into your Unity project.
-  - In Unity Package Manager, choose “Add package from git URL” and use:  
+  - In Unity Package Manager, choose "Add package from git URL" and use:  
     `https://github.com/hatayama/uLoopMCP.git?path=/Packages/src`
   - Alternatively, you can use the OpenUPM scoped registry (see the [Installation](#installation) section for details).
 2. In Unity, open `Window > uLoopMCP` and press the `Start Server` button to launch the MCP server.
+   <img width="308" height="401" src="https://github.com/user-attachments/assets/a6beb597-363d-4816-9286-e8bdba7e4b5c" />
+   - Manages and monitors server status
+   - Provides visibility into LLM tool connection status
+   - Enables easy connection to tools via the LLM tool settings button
 3. In your LLM tool (Cursor, Claude Code, Codex, Gemini, etc.), enable uLoopMCP as an MCP server.
 4. For example, if you give instructions like:
   - “Fix this project until `compile` reports no errors, using the `compile` tool as needed.”
