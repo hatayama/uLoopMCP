@@ -107,26 +107,27 @@ yarn-error.log*
 .npm
 .yarn-integrity
 
-# TypeScript Server (開発用ビルドは除外、本番ビルドのみコミット)
+# TypeScript Server (exclude development builds, commit only production builds)
 Packages/*/TypeScriptServer/node_modules/
 Packages/*/TypeScriptServer/dist/
 Packages/*/TypeScriptServer/.tsbuildinfo
 # Keep dist/server.bundle.js (production bundle)
 !Packages/*/TypeScriptServer/dist/server.bundle.js
 !Packages/*/TypeScriptServer/dist/server.bundle.js.meta
+!Packages/src/TypeScriptServer~/**
 
 # Source maps (generated at build time, not needed in version control)
 *.map
 Packages/*/TypeScriptServer/dist/*.map
 
-# 環境設定ファイル
+# Environment configuration files
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# ログファイル
+# Log files
 *.log
 uLoopMCPOutputs/
 
@@ -143,12 +144,12 @@ coverage/
 # ESLint cache
 .eslintcache
 
-# セキュリティスキャン結果
+# Security scan results
 security-results.sarif
 *.sarif
 *security-results*
 
-# ESLint結果
+# ESLint results
 eslint-results.json
 eslint-results.xml
 
