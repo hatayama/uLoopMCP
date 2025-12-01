@@ -33,7 +33,16 @@ export const TOOLS_LIST_CHANGED_CAPABILITY = true;
 // MCP Notification methods
 export const NOTIFICATION_METHODS = {
   TOOLS_LIST_CHANGED: 'notifications/tools/list_changed',
+  SERVER_SHUTDOWN: 'notifications/server/shutdown',
 } as const;
+
+// Server shutdown reason (must match Unity side ServerShutdownReason enum)
+export const ServerShutdownReason = {
+  DOMAIN_RELOAD: 'DomainReload',
+  EDITOR_QUIT: 'EditorQuit',
+} as const;
+
+export type ServerShutdownReason = (typeof ServerShutdownReason)[keyof typeof ServerShutdownReason];
 
 // Unity connection configuration
 export const UNITY_CONNECTION = {

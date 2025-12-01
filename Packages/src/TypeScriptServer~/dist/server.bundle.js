@@ -4030,14 +4030,14 @@ var ostring = () => stringType().optional();
 var onumber = () => numberType().optional();
 var oboolean = () => booleanType().optional();
 var coerce = {
-  string: (arg) => ZodString.create({ ...arg, coerce: true }),
-  number: (arg) => ZodNumber.create({ ...arg, coerce: true }),
-  boolean: (arg) => ZodBoolean.create({
+  string: ((arg) => ZodString.create({ ...arg, coerce: true })),
+  number: ((arg) => ZodNumber.create({ ...arg, coerce: true })),
+  boolean: ((arg) => ZodBoolean.create({
     ...arg,
     coerce: true
-  }),
-  bigint: (arg) => ZodBigInt.create({ ...arg, coerce: true }),
-  date: (arg) => ZodDate.create({ ...arg, coerce: true })
+  })),
+  bigint: ((arg) => ZodBigInt.create({ ...arg, coerce: true })),
+  date: ((arg) => ZodDate.create({ ...arg, coerce: true }))
 };
 var NEVER = INVALID;
 
@@ -5481,7 +5481,12 @@ var MCP_PROTOCOL_VERSION = "2024-11-05";
 var MCP_SERVER_NAME = "uloopmcp-server";
 var TOOLS_LIST_CHANGED_CAPABILITY = true;
 var NOTIFICATION_METHODS = {
-  TOOLS_LIST_CHANGED: "notifications/tools/list_changed"
+  TOOLS_LIST_CHANGED: "notifications/tools/list_changed",
+  SERVER_SHUTDOWN: "notifications/server/shutdown"
+};
+var ServerShutdownReason = {
+  DOMAIN_RELOAD: "DomainReload",
+  EDITOR_QUIT: "EditorQuit"
 };
 var UNITY_CONNECTION = {
   DEFAULT_PORT: "8700",
@@ -6908,6 +6913,8 @@ var UnityClient = class _UnityClient {
   storedClientName = null;
   isConnecting = false;
   connectingPromise = null;
+  hasEverConnected = false;
+  shutdownReason = null;
   constructor() {
     const unityTcpPort = process.env.UNITY_TCP_PORT;
     if (!unityTcpPort) {
@@ -6964,6 +6971,19 @@ var UnityClient = class _UnityClient {
    */
   offNotification(method) {
     this.messageHandler.offNotification(method);
+  }
+  /**
+   * Set shutdown reason received from Unity server
+   * @param reason The reason for server shutdown
+   */
+  setShutdownReason(reason) {
+    this.shutdownReason = reason;
+  }
+  /**
+   * Get whether the client has ever connected successfully
+   */
+  getHasEverConnected() {
+    return this.hasEverConnected;
   }
   /**
    * Register reconnect handler
@@ -7068,6 +7088,8 @@ var UnityClient = class _UnityClient {
       };
       currentSocket.connect(this.port, this.host, () => {
         this._connected = true;
+        this.hasEverConnected = true;
+        this.shutdownReason = null;
         connectionEstablished = true;
         promiseSettled = true;
         this.reconnectHandlers.forEach((handler) => {
@@ -7226,6 +7248,12 @@ var UnityClient = class _UnityClient {
    */
   async executeTool(toolName, params = {}) {
     if (!this.connected) {
+      if (!this.hasEverConnected) {
+        throw new Error(this.getServerNotRunningMessage());
+      }
+      if (this.shutdownReason === ServerShutdownReason.EDITOR_QUIT) {
+        throw new Error(this.getServerNotRunningMessage());
+      }
       return this.getOsSpecificReconnectMessage();
     }
     await this.setClientName();
@@ -7250,11 +7278,17 @@ var UnityClient = class _UnityClient {
    */
   getOsSpecificReconnectMessage() {
     const baseMessage = "Waiting for Unity to be ready (normal during compilation). Wait 3 seconds then retry. If still not ready after several attempts, increase wait time (5 \u2192 10 seconds). Report as error only after 1+ minute of failures.";
-    const platform = typeof process !== "undefined" && typeof process.platform === "string" ? process.platform : "unknown";
+    const platform = process.platform;
     if (platform === "win32") {
       return `${baseMessage} Example: Start-Sleep -Seconds 3`;
     }
     return `${baseMessage} Example: sleep 3`;
+  }
+  /**
+   * Build an error message for when Unity server is not running.
+   */
+  getServerNotRunningMessage() {
+    return "Unity server is not running. Please start Unity Editor and ensure uLoopMCP package is properly installed. If Unity is already running, check Window > uLoopMCP > Server Status.";
   }
   handleToolResponse(response) {
     if (response.error) {
@@ -8811,7 +8845,7 @@ var UnityEventHandler = class {
    * Setup Unity event listener for automatic tool updates
    */
   setupUnityEventListener(onToolsChanged) {
-    this.unityClient.onNotification("notifications/tools/list_changed", (_params) => {
+    this.unityClient.onNotification(NOTIFICATION_METHODS.TOOLS_LIST_CHANGED, (_params) => {
       VibeLogger.logInfo(
         "unity_notification_received",
         "Unity notification received: notifications/tools/list_changed",
@@ -8830,6 +8864,18 @@ var UnityEventHandler = class {
           "Error occurred while processing Unity tool list change notification"
         );
       }
+    });
+    this.unityClient.onNotification(NOTIFICATION_METHODS.SERVER_SHUTDOWN, (params) => {
+      const shutdownParams = params;
+      const reason = shutdownParams.reason === ServerShutdownReason.DOMAIN_RELOAD ? ServerShutdownReason.DOMAIN_RELOAD : ServerShutdownReason.EDITOR_QUIT;
+      VibeLogger.logInfo(
+        "unity_shutdown_notification",
+        `Unity server shutdown notification received: ${reason}`,
+        { reason },
+        void 0,
+        `Unity server is shutting down due to ${reason}`
+      );
+      this.unityClient.setShutdownReason(reason);
     });
   }
   /**

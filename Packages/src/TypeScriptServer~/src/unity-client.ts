@@ -5,6 +5,7 @@ import {
   TIMEOUTS,
   ERROR_MESSAGES,
   DEFAULT_CLIENT_NAME,
+  ServerShutdownReason,
 } from './constants.js';
 // Debug logging removed
 import { SafeTimer, safeSetTimeout, stopSafeTimer } from './utils/safe-timer.js';
@@ -54,6 +55,8 @@ export class UnityClient {
   private storedClientName: string | null = null;
   private isConnecting: boolean = false;
   private connectingPromise: Promise<void> | null = null;
+  private hasEverConnected: boolean = false;
+  private shutdownReason: ServerShutdownReason | null = null;
 
   private constructor() {
     const unityTcpPort: string | undefined = process.env.UNITY_TCP_PORT;
@@ -121,6 +124,21 @@ export class UnityClient {
    */
   offNotification(method: string): void {
     this.messageHandler.offNotification(method);
+  }
+
+  /**
+   * Set shutdown reason received from Unity server
+   * @param reason The reason for server shutdown
+   */
+  setShutdownReason(reason: ServerShutdownReason): void {
+    this.shutdownReason = reason;
+  }
+
+  /**
+   * Get whether the client has ever connected successfully
+   */
+  getHasEverConnected(): boolean {
+    return this.hasEverConnected;
   }
 
   /**
@@ -251,6 +269,8 @@ export class UnityClient {
 
       currentSocket.connect(this.port, this.host, () => {
         this._connected = true;
+        this.hasEverConnected = true;
+        this.shutdownReason = null; // Reset shutdown reason on successful connection
         connectionEstablished = true;
         promiseSettled = true;
 
@@ -450,8 +470,17 @@ export class UnityClient {
    * Execute any Unity tool dynamically
    */
   async executeTool(toolName: string, params: Record<string, unknown> = {}): Promise<unknown> {
-    // Return guidance message as success response when temporarily disconnected
+    // Handle disconnected state with appropriate message
     if (!this.connected) {
+      // Server never started → error
+      if (!this.hasEverConnected) {
+        throw new Error(this.getServerNotRunningMessage());
+      }
+      // Editor quit (shutdown notification received with EditorQuit reason) → error
+      if (this.shutdownReason === ServerShutdownReason.EDITOR_QUIT) {
+        throw new Error(this.getServerNotRunningMessage());
+      }
+      // Domain reload or compilation in progress → guidance message as success response
       return this.getOsSpecificReconnectMessage();
     }
 
@@ -491,16 +520,20 @@ export class UnityClient {
     const baseMessage: string =
       'Waiting for Unity to be ready (normal during compilation). Wait 3 seconds then retry. If still not ready after several attempts, increase wait time (5 → 10 seconds). Report as error only after 1+ minute of failures.';
 
-    const platform: string =
-      typeof process !== 'undefined' && typeof process.platform === 'string'
-        ? process.platform
-        : 'unknown';
+    const platform: string = process.platform;
 
     if (platform === 'win32') {
       return `${baseMessage} Example: Start-Sleep -Seconds 3`;
     }
 
     return `${baseMessage} Example: sleep 3`;
+  }
+
+  /**
+   * Build an error message for when Unity server is not running.
+   */
+  private getServerNotRunningMessage(): string {
+    return 'Unity server is not running. Please start Unity Editor and ensure uLoopMCP package is properly installed. If Unity is already running, check Window > uLoopMCP > Server Status.';
   }
 
   private handleToolResponse(response: { error?: { message: string }; result?: unknown }): unknown {

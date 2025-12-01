@@ -20,7 +20,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Gets or sets an error description, populated only when <see cref="Success"/> is false.
         /// </summary>
-        public string? ErrorMessage { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
 
         /// <summary>
         /// Initializes a successful response.
@@ -29,7 +29,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             Success = true;
             Message = message;
-            ErrorMessage = null;
+            ErrorMessage = string.Empty;
         }
 
         /// <summary>
