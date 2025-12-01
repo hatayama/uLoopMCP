@@ -46,7 +46,11 @@ uLoopMCPのコアとなるコンセプトは次の2つです。
     `https://github.com/hatayama/uLoopMCP.git?path=/Packages/src`
   - あるいは OpenUPM の Scoped Registry 経由でも利用できます。（詳しくは [インストール](#インストール) セクションを参照）。
 2. Unity メニューから `Window > uLoopMCP` を開き、`Start Server` ボタンを押して MCP サーバーを起動します。
-   <img width="308" height="401" src="https://github.com/user-attachments/assets/a6beb597-363d-4816-9286-e8bdba7e4b5c" />
+
+<div align="center">
+<img width="800" height="495" alt="uloopmcp" src="https://github.com/user-attachments/assets/08053248-7f0c-4618-8d1f-7e0560341548" />
+</div>
+
    - サーバーの状態を管理・モニターします
    - LLMツールの接続状況を把握できます
    - LLMツールの設定ボタンを押すことで、簡単にツールとの接続が可能です
