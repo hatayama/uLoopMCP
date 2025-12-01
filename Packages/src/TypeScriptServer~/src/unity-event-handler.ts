@@ -1,7 +1,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { UnityClient } from './unity-client.js';
 import { UnityConnectionManager } from './unity-connection-manager.js';
-import { ENVIRONMENT, NOTIFICATION_METHODS } from './constants.js';
+import { ENVIRONMENT, NOTIFICATION_METHODS, ServerShutdownReason } from './constants.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 import { IUnityEventService } from './application/interfaces/unity-event-service.js';
 import { INotificationService } from './application/interfaces/notification-service.js';
@@ -48,7 +48,7 @@ export class UnityEventHandler
    */
   setupUnityEventListener(onToolsChanged: () => Promise<void>): void {
     // Listen for MCP standard notifications from Unity
-    this.unityClient.onNotification('notifications/tools/list_changed', (_params: unknown) => {
+    this.unityClient.onNotification(NOTIFICATION_METHODS.TOOLS_LIST_CHANGED, (_params: unknown) => {
       VibeLogger.logInfo(
         'unity_notification_received',
         'Unity notification received: notifications/tools/list_changed',
@@ -68,6 +68,26 @@ export class UnityEventHandler
           'Error occurred while processing Unity tool list change notification',
         );
       }
+    });
+
+    // Listen for server shutdown notifications from Unity
+    this.unityClient.onNotification(NOTIFICATION_METHODS.SERVER_SHUTDOWN, (params: unknown) => {
+      const shutdownParams = params as { reason?: string };
+      const reason: ServerShutdownReason =
+        shutdownParams.reason === ServerShutdownReason.DOMAIN_RELOAD
+          ? ServerShutdownReason.DOMAIN_RELOAD
+          : ServerShutdownReason.EDITOR_QUIT;
+
+      VibeLogger.logInfo(
+        'unity_shutdown_notification',
+        `Unity server shutdown notification received: ${reason}`,
+        { reason },
+        undefined,
+        `Unity server is shutting down due to ${reason}`,
+      );
+
+      // Store shutdown reason in UnityClient for message differentiation
+      this.unityClient.setShutdownReason(reason);
     });
   }
 

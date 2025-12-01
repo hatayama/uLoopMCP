@@ -220,11 +220,20 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            // Determine shutdown reason based on domain reload state
+            ServerShutdownReason shutdownReason = McpEditorSettings.GetIsDomainReloadInProgress()
+                ? ServerShutdownReason.DomainReload
+                : ServerShutdownReason.EditorQuit;
+
+            // Send shutdown notification to all connected clients BEFORE disconnecting
+            // This allows TypeScript side to differentiate between temporary and permanent shutdown
+            SendShutdownNotification(shutdownReason);
+
             // Notify that server is stopping
             OnServerStopping?.Invoke();
-            
+
             _isRunning = false;
-            
+
             // Explicitly disconnect all connected clients before stopping the server
             DisconnectAllClients();
             
@@ -533,8 +542,55 @@ namespace io.github.hatayama.uLoopMCP
             // Frame the notification with Content-Length header
             string framedNotification = CreateContentLengthFrame(notificationJson);
             byte[] notificationData = Encoding.UTF8.GetBytes(framedNotification);
-            
+
             SendNotificationDataAsync(notificationData).Forget();
+        }
+
+        /// <summary>
+        /// Sends a shutdown notification to all connected clients.
+        /// This should be called before disconnecting clients so TypeScript side can
+        /// differentiate between domain reload (temporary) and editor quit (permanent).
+        /// </summary>
+        /// <param name="reason">The reason for server shutdown</param>
+        public void SendShutdownNotification(ServerShutdownReason reason)
+        {
+            if (_connectedClients.IsEmpty)
+            {
+                return;
+            }
+
+            // Create JSON-RPC 2.0 notification with shutdown reason
+            string notificationJson = $"{{\"jsonrpc\":\"2.0\",\"method\":\"notifications/server/shutdown\",\"params\":{{\"reason\":\"{reason}\"}}}}";
+
+            // Frame the notification with Content-Length header
+            string framedNotification = CreateContentLengthFrame(notificationJson);
+            byte[] notificationData = Encoding.UTF8.GetBytes(framedNotification);
+
+            // Send synchronously to ensure it's sent before connection closes
+            SendNotificationDataSync(notificationData);
+        }
+
+        /// <summary>
+        /// Send notification data to all connected clients synchronously.
+        /// Used for shutdown notifications to ensure delivery before connection closes.
+        /// </summary>
+        private void SendNotificationDataSync(byte[] notificationData)
+        {
+            foreach (KeyValuePair<string, ConnectedClient> client in _connectedClients)
+            {
+                try
+                {
+                    if (client.Value.Stream?.CanWrite == true)
+                    {
+                        client.Value.Stream.Write(notificationData, 0, notificationData.Length);
+                        client.Value.Stream.Flush();
+                    }
+                }
+                catch (Exception)
+                {
+                    // Ignore errors during shutdown notification - client may already be disconnected
+                }
+            }
         }
 
         /// <summary>
