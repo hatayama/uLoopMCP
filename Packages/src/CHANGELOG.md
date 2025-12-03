@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.41.2](https://github.com/hatayama/uLoopMCP/compare/v0.41.1...v0.41.2) (2025-12-03)
+
+
+### Bug Fixes
+
+* Enhance supply chain security and dependency management ([#361](https://github.com/hatayama/uLoopMCP/issues/361)) ([1cb2165](https://github.com/hatayama/uLoopMCP/commit/1cb2165abbb9f118801cac8165fce615e8e8ba83))
+* Remove package.json from bundle, use version.ts instead ([#368](https://github.com/hatayama/uLoopMCP/issues/368)) ([9140378](https://github.com/hatayama/uLoopMCP/commit/91403785da4e1ee92ffb857b5b251d24caf5683a))
+
 ## [0.41.1](https://github.com/hatayama/uLoopMCP/compare/v0.41.0...v0.41.1) (2025-12-01)
 
 
