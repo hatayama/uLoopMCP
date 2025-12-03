@@ -22,7 +22,7 @@ import {
   MCP_SERVER_NAME,
   TOOLS_LIST_CHANGED_CAPABILITY,
 } from './constants.js';
-import packageJson from '../package.json' assert { type: 'json' };
+import { VERSION } from './version.js';
 
 /**
  * Unity MCP Server - Bridge between MCP protocol and Unity Editor
@@ -56,7 +56,7 @@ class UnityMcpServer {
     this.server = new Server(
       {
         name: MCP_SERVER_NAME,
-        version: packageJson.version,
+        version: VERSION,
       },
       {
         capabilities: {
@@ -119,7 +119,7 @@ class UnityMcpServer {
         },
         serverInfo: {
           name: MCP_SERVER_NAME,
-          version: packageJson.version,
+          version: VERSION,
         },
         tools,
       };
@@ -143,7 +143,7 @@ class UnityMcpServer {
         },
         serverInfo: {
           name: MCP_SERVER_NAME,
-          version: packageJson.version,
+          version: VERSION,
         },
         tools: [],
       };
@@ -211,7 +211,7 @@ class UnityMcpServer {
         },
         serverInfo: {
           name: MCP_SERVER_NAME,
-          version: packageJson.version,
+          version: VERSION,
         },
       };
     });
