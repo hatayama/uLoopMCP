@@ -14,3 +14,27 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "googleapis/release-please-action"
         update-types: ["version-update:semver-major"]
+
+  # TypeScript Server npm packages security updates
+  - package-ecosystem: "npm"
+    directory: "/Packages/src/TypeScriptServer~"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
+      - "security"
+    # Group minor/patch updates to reduce PR noise
+    groups:
+      dev-dependencies:
+        patterns:
+          - "@types/*"
+          - "eslint*"
+          - "prettier*"
+          - "typescript"
+          - "jest*"
+          - "ts-jest"
+        update-types:
+          - "minor"
+          - "patch"

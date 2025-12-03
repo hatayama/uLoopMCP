@@ -115,7 +115,7 @@ jobs:
 
     - name: Install dependencies
       working-directory: Packages/src/TypeScriptServer~
-      run: npm ci
+      run: npm ci --ignore-scripts
 
     - name: Run TypeScript security-only check
       working-directory: Packages/src/TypeScriptServer~
@@ -135,3 +135,39 @@ jobs:
       with:
         sarif_file: Packages/src/TypeScriptServer~/typescript-security.sarif
         category: "ESLint-Security"
+
+  npm-supply-chain-security:
+    name: NPM Supply Chain Security
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: '18'
+
+    - name: Run npm audit
+      working-directory: Packages/src/TypeScriptServer~
+      run: |
+        echo "Running npm audit for security vulnerabilities..."
+        npm audit --audit-level=moderate || {
+          echo "::warning::npm audit found vulnerabilities. Review and update dependencies."
+          exit 1
+        }
+
+    - name: Install lockfile-lint
+      run: npm install -g lockfile-lint
+
+    - name: Run lockfile-lint
+      working-directory: Packages/src/TypeScriptServer~
+      run: |
+        echo "Validating package-lock.json integrity..."
+        lockfile-lint \
+          --path package-lock.json \
+          --type npm \
+          --validate-https \
+          --allowed-hosts npm \
+          --allowed-schemes "https:" "git+https:"
