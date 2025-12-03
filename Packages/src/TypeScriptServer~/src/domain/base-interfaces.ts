@@ -38,6 +38,7 @@ export interface UseCase<TRequest, TResponse> {
  * - ステートレスな動作
  * - インフラストラクチャ層への委譲
  */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- Marker interface for type safety
 export interface ApplicationService {
   // 各アプリケーションサービスは具体的なメソッドを定義する
   // このインターフェースは型安全性を保証するためのマーカーインターフェース

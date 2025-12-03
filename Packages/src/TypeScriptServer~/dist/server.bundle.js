@@ -4030,14 +4030,14 @@ var ostring = () => stringType().optional();
 var onumber = () => numberType().optional();
 var oboolean = () => booleanType().optional();
 var coerce = {
-  string: (arg) => ZodString.create({ ...arg, coerce: true }),
-  number: (arg) => ZodNumber.create({ ...arg, coerce: true }),
-  boolean: (arg) => ZodBoolean.create({
+  string: ((arg) => ZodString.create({ ...arg, coerce: true })),
+  number: ((arg) => ZodNumber.create({ ...arg, coerce: true })),
+  boolean: ((arg) => ZodBoolean.create({
     ...arg,
     coerce: true
-  }),
-  bigint: (arg) => ZodBigInt.create({ ...arg, coerce: true }),
-  date: (arg) => ZodDate.create({ ...arg, coerce: true })
+  })),
+  bigint: ((arg) => ZodBigInt.create({ ...arg, coerce: true })),
+  date: ((arg) => ZodDate.create({ ...arg, coerce: true }))
 };
 var NEVER = INVALID;
 
@@ -5844,7 +5844,7 @@ var VibeLogger = class _VibeLogger {
       }
       const emergencyLog = JSON.stringify(emergencyEntry) + "\n";
       fs.appendFileSync(emergencyLogPath, emergencyLog);
-    } catch (error) {
+    } catch {
     }
   }
   /**
@@ -5922,7 +5922,7 @@ var VibeLogger = class _VibeLogger {
         return false;
       }
       return fs.existsSync(absolutePath);
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -6121,7 +6121,7 @@ var VibeLogger = class _VibeLogger {
     }
     try {
       return JSON.parse(JSON.stringify(context));
-    } catch (error) {
+    } catch {
       return {
         error: "Failed to serialize context",
         original_type: typeof context,
@@ -6621,7 +6621,7 @@ var DynamicBuffer = class _DynamicBuffer {
         frame: extractionResult.jsonContent,
         extracted: true
       };
-    } catch (error) {
+    } catch {
       return { frame: null, extracted: false };
     }
   }
@@ -7019,7 +7019,7 @@ var UnityClient = class _UnityClient {
           }, 1e3);
         })
       ]);
-    } catch (error) {
+    } catch {
       return false;
     } finally {
       stopSafeTimer(timeoutTimer);
@@ -7037,7 +7037,7 @@ var UnityClient = class _UnityClient {
         if (await this.testConnection()) {
           return;
         }
-      } catch (error) {
+      } catch {
       }
     }
     if (this.connectingPromise) {
@@ -7184,7 +7184,7 @@ var UnityClient = class _UnityClient {
       const response = await this.sendRequest(request);
       if (response.error) {
       }
-    } catch (error) {
+    } catch {
     }
   }
   /**
@@ -7330,7 +7330,7 @@ var UnityClient = class _UnityClient {
         },
         (error) => {
           stopSafeTimer(timeoutTimer);
-          reject(error);
+          reject(error instanceof Error ? error : new Error(String(error)));
         }
       );
       const requestStr = this.messageHandler.createRequest(
@@ -7681,7 +7681,7 @@ var UnityDiscovery = class _UnityDiscovery {
         )
       ]);
       return healthCheck;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -7877,7 +7877,7 @@ var UnityConnectionManager = class {
         await onConnectionEstablished();
       }
       this.unityDiscovery.stop();
-    } catch (error) {
+    } catch {
     }
   }
   /**
@@ -8022,11 +8022,11 @@ var DynamicUnityCommandTool = class extends BaseTool {
     const propertiesObj = parameterSchema[PARAMETER_SCHEMA.PROPERTIES_PROPERTY];
     for (const [propName, propInfo] of Object.entries(propertiesObj)) {
       const info = propInfo;
+      const typeValue = info[PARAMETER_SCHEMA.TYPE_PROPERTY];
+      const descriptionValue = info[PARAMETER_SCHEMA.DESCRIPTION_PROPERTY];
       const property = {
-        type: this.convertType(String(info[PARAMETER_SCHEMA.TYPE_PROPERTY] || "string")),
-        description: String(
-          info[PARAMETER_SCHEMA.DESCRIPTION_PROPERTY] || `Parameter: ${propName}`
-        )
+        type: this.convertType(typeof typeValue === "string" ? typeValue : "string"),
+        description: typeof descriptionValue === "string" ? descriptionValue : `Parameter: ${propName}`
       };
       const defaultValue = info[PARAMETER_SCHEMA.DEFAULT_VALUE_PROPERTY];
       if (defaultValue !== void 0 && defaultValue !== null) {
@@ -8998,11 +8998,11 @@ var UnityEventHandler = class {
       );
       this.gracefulShutdown();
     });
-    process.on("unhandledRejection", (reason, promise) => {
+    process.on("unhandledRejection", (reason, _promise) => {
       VibeLogger.logError(
         "unhandled_rejection",
         "Unhandled promise rejection",
-        { reason: String(reason), promise: String(promise) },
+        { reason: String(reason) },
         void 0,
         "Unhandled promise rejection occurred, shutting down safely"
       );

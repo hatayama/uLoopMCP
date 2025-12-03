@@ -86,7 +86,7 @@ export class McpHttpServer {
         }
         try {
           resolve(JSON.parse(body));
-        } catch (error) {
+        } catch {
           reject(new Error('Invalid JSON'));
         }
       });
@@ -326,7 +326,7 @@ export class McpHttpServer {
           resolve();
         });
       } catch (error) {
-        reject(error);
+        reject(error instanceof Error ? error : new Error(String(error)));
       }
     });
   }

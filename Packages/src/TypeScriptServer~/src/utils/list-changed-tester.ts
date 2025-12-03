@@ -91,7 +91,7 @@ export class NotificationTester {
       });
 
       // Sending notification: notifications/tools/list_changed
-    } catch (error) {
+    } catch {
       // Failed to send notification
     }
   }

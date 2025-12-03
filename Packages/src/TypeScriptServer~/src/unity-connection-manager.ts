@@ -104,7 +104,7 @@ export class UnityConnectionManager {
 
       // Stop discovery after successful connection
       this.unityDiscovery.stop();
-    } catch (error) {
+    } catch {
       // Failed to handle Unity discovery
     }
   }
@@ -121,7 +121,6 @@ export class UnityConnectionManager {
 
     // Setup discovery callback
     this.unityDiscovery.setOnDiscoveredCallback(async (_port: number) => {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       await this.handleUnityDiscovered(onConnectionEstablished);
     });
 

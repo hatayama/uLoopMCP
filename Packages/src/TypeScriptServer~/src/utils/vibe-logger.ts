@@ -261,7 +261,7 @@ export class VibeLogger {
       // SECURITY: Path validated with validateWithin() above - safe from path traversal
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- Path sanitized by validateWithin()
       fs.appendFileSync(emergencyLogPath, emergencyLog);
-    } catch (error) {
+    } catch {
       // Silent failure to prevent MCP protocol interference
       // If even emergency logging fails, we cannot do anything more
     }
@@ -374,10 +374,9 @@ export class VibeLogger {
         return false;
       }
 
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- Path sanitized by validateWithin()
       return fs.existsSync(absolutePath);
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -401,7 +400,6 @@ export class VibeLogger {
         throw new Error('Log directory path escapes project root');
       }
 
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- Path sanitized by validateWithin()
       fs.mkdirSync(absoluteLogDir, { recursive: true });
     }
@@ -486,7 +484,7 @@ export class VibeLogger {
     for (let retry = 0; retry < maxRetries; retry++) {
       try {
         // Use fs.promises.open for safer file handling
-        // eslint-disable-next-line security/detect-non-literal-fs-filename -- Path sanitized by validateWithin()
+
         // eslint-disable-next-line security/detect-non-literal-fs-filename
         const fileHandle = await fs.promises.open(absoluteFilePath, 'a');
         try {
@@ -568,7 +566,7 @@ export class VibeLogger {
       const jsonLog = JSON.stringify(fallbackEntry) + '\n';
 
       // Use fs.promises.open for safer file writing
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- Path sanitized by validateWithin()
+
       // eslint-disable-next-line security/detect-non-literal-fs-filename
       const fileHandle = await fs.promises.open(safeFallbackPath, 'a');
       try {
@@ -650,7 +648,7 @@ export class VibeLogger {
 
     try {
       return JSON.parse(JSON.stringify(context));
-    } catch (error) {
+    } catch {
       return {
         error: 'Failed to serialize context',
         original_type: typeof context,
