@@ -9056,92 +9056,8 @@ var UnityEventHandler = class {
   }
 };
 
-// package.json
-var package_default = {
-  name: "uloopmcp-server",
-  version: "0.30.1",
-  description: "TypeScript MCP Server for Unity-Cursor integration",
-  main: "dist/server.bundle.js",
-  type: "module",
-  scripts: {
-    prepare: "husky",
-    build: "npm run build:bundle",
-    "build:bundle": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap",
-    "build:production": "cross-env ULOOPMCP_PRODUCTION=true NODE_ENV=production esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap",
-    dev: "cross-env NODE_ENV=development npm run build:bundle && cross-env NODE_ENV=development NODE_OPTIONS=--enable-source-maps node dist/server.bundle.js",
-    "dev:watch": "cross-env NODE_ENV=development esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap --watch",
-    start: "cross-env NODE_OPTIONS=--enable-source-maps node dist/server.bundle.js",
-    "start:production": "cross-env ULOOPMCP_PRODUCTION=true NODE_OPTIONS=--enable-source-maps node dist/server.bundle.js",
-    "start:dev": "cross-env NODE_ENV=development NODE_OPTIONS=--enable-source-maps node dist/server.bundle.js",
-    lint: "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
-    "security:check": "eslint src --ext .ts",
-    "security:fix": "eslint src --ext .ts --fix",
-    "security:only": "eslint src --ext .ts --config .eslintrc.security.json",
-    "security:sarif": "eslint src --ext .ts -f @microsoft/eslint-formatter-sarif -o security-results.sarif",
-    "security:sarif-only": "eslint src --ext .ts --config .eslintrc.security.json -f @microsoft/eslint-formatter-sarif -o typescript-security.sarif --max-warnings 0",
-    format: "prettier --write src/**/*.ts",
-    "format:check": "prettier --check src/**/*.ts",
-    "lint:check": "npm run lint && npm run format:check",
-    test: "jest",
-    "test:mcp": "tsx src/tools/__tests__/test-runner.ts",
-    "test:integration": "tsx src/tools/__tests__/integration-test.ts",
-    "test:watch": "jest --watch",
-    validate: "npm run test:integration && echo 'Integration tests passed - safe to deploy'",
-    deploy: "npm run validate && npm run build",
-    "debug:compile": "tsx debug/compile-check.ts",
-    "debug:logs": "tsx debug/logs-fetch.ts",
-    "debug:connection": "tsx debug/connection-check.ts",
-    "debug:all-logs": "tsx debug/all-logs-fetch.ts",
-    "debug:compile-detailed": "tsx debug/compile-detailed.ts",
-    "debug:connection-survival": "tsx debug/connection-survival.ts",
-    "debug:domain-reload-timing": "tsx debug/domain-reload-timing.ts",
-    "debug:event-test": "tsx debug/event-test.ts",
-    "debug:notification-test": "tsx debug/notification-test.ts",
-    prepublishOnly: "npm run build",
-    postinstall: "npm run build"
-  },
-  "lint-staged": {
-    "src/**/*.{ts,js}": [
-      "eslint --fix",
-      "prettier --write"
-    ]
-  },
-  keywords: [
-    "mcp",
-    "unity",
-    "cursor",
-    "typescript"
-  ],
-  author: "hatayama",
-  license: "MIT",
-  dependencies: {
-    "@modelcontextprotocol/sdk": "1.12.2",
-    uuid: "11.1.0",
-    zod: "3.25.64"
-  },
-  devDependencies: {
-    "@microsoft/eslint-formatter-sarif": "3.1.0",
-    "@types/jest": "29.5.14",
-    "@types/uuid": "10.0.0",
-    "@types/node": "20.19.0",
-    "@typescript-eslint/eslint-plugin": "7.18.0",
-    "@typescript-eslint/parser": "7.18.0",
-    "cross-env": "10.0.0",
-    esbuild: "0.25.6",
-    eslint: "8.57.1",
-    "eslint-config-prettier": "9.1.0",
-    "eslint-plugin-prettier": "5.2.1",
-    "eslint-plugin-security": "3.0.1",
-    husky: "9.1.7",
-    jest: "30.0.0",
-    "lint-staged": "15.0.0",
-    prettier: "3.5.0",
-    "ts-jest": "29.4.0",
-    tsx: "4.20.3",
-    typescript: "5.8.3"
-  }
-};
+// src/version.ts
+var VERSION = "0.30.1";
 
 // src/server.ts
 var UnityMcpServer = class {
@@ -9159,7 +9075,7 @@ var UnityMcpServer = class {
     this.server = new Server(
       {
         name: MCP_SERVER_NAME,
-        version: package_default.version
+        version: VERSION
       },
       {
         capabilities: {
@@ -9206,7 +9122,7 @@ var UnityMcpServer = class {
         },
         serverInfo: {
           name: MCP_SERVER_NAME,
-          version: package_default.version
+          version: VERSION
         },
         tools
       };
@@ -9230,7 +9146,7 @@ var UnityMcpServer = class {
         },
         serverInfo: {
           name: MCP_SERVER_NAME,
-          version: package_default.version
+          version: VERSION
         },
         tools: []
       };
@@ -9278,7 +9194,7 @@ var UnityMcpServer = class {
         },
         serverInfo: {
           name: MCP_SERVER_NAME,
-          version: package_default.version
+          version: VERSION
         }
       };
     });
