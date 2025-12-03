@@ -115,7 +115,7 @@ jobs:
 
     - name: Install dependencies
       working-directory: Packages/src/TypeScriptServer~
-      run: npm ci --ignore-scripts
+      run: npm ci
 
     - name: Run TypeScript security-only check
       working-directory: Packages/src/TypeScriptServer~

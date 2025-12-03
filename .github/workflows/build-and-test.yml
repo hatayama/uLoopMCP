@@ -31,7 +31,7 @@ jobs:
       working-directory: Packages/src/TypeScriptServer~
       run: |
         echo "Installing dependencies (node_modules will be created temporarily)..."
-        npm ci --ignore-scripts
+        npm ci
         echo "Dependencies installed successfully"
         
     - name: Build TypeScript Server
