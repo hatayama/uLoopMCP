@@ -27,8 +27,6 @@ export interface McpHttpServerConfig {
   port: number;
   /** Whether to enable session management (default: true) */
   enableSessions?: boolean;
-  /** Session timeout in milliseconds (default: 30 minutes) */
-  sessionTimeoutMs?: number;
 }
 
 /**
@@ -50,7 +48,6 @@ export class McpHttpServer {
     this.config = {
       port: config.port,
       enableSessions: config.enableSessions ?? true,
-      sessionTimeoutMs: config.sessionTimeoutMs ?? 30 * 60 * 1000, // 30 minutes
     };
   }
 
@@ -65,12 +62,21 @@ export class McpHttpServer {
   }
 
   /**
-   * Parse JSON body from request
+   * Parse JSON body from request with size limit to prevent memory exhaustion
+   * @param req - The incoming HTTP request
+   * @returns Parsed JSON body
    */
   private async parseJsonBody(req: IncomingMessage): Promise<unknown> {
+    const MAX_BODY_SIZE = 1024 * 1024; // 1MB limit
+
     return new Promise((resolve, reject) => {
       let body = '';
       req.on('data', (chunk: Buffer) => {
+        if (body.length + chunk.length > MAX_BODY_SIZE) {
+          req.destroy();
+          reject(new Error('Request body too large'));
+          return;
+        }
         body += chunk.toString();
       });
       req.on('end', () => {
