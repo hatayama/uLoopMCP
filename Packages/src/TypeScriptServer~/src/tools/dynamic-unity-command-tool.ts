@@ -79,11 +79,13 @@ export class DynamicUnityCommandTool extends BaseTool {
     for (const [propName, propInfo] of Object.entries(propertiesObj)) {
       const info = propInfo;
 
+      const typeValue = info[PARAMETER_SCHEMA.TYPE_PROPERTY];
+      const descriptionValue = info[PARAMETER_SCHEMA.DESCRIPTION_PROPERTY];
+
       const property: JsonSchemaProperty = {
-        type: this.convertType(String(info[PARAMETER_SCHEMA.TYPE_PROPERTY] || 'string')),
-        description: String(
-          info[PARAMETER_SCHEMA.DESCRIPTION_PROPERTY] || `Parameter: ${propName}`,
-        ),
+        type: this.convertType(typeof typeValue === 'string' ? typeValue : 'string'),
+        description:
+          typeof descriptionValue === 'string' ? descriptionValue : `Parameter: ${propName}`,
       };
 
       // Add default value if provided

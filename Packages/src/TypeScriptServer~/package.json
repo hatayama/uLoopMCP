@@ -14,13 +14,11 @@
     "start": "cross-env NODE_OPTIONS=--enable-source-maps node dist/server.bundle.js",
     "start:production": "cross-env ULOOPMCP_PRODUCTION=true NODE_OPTIONS=--enable-source-maps node dist/server.bundle.js",
     "start:dev": "cross-env NODE_ENV=development NODE_OPTIONS=--enable-source-maps node dist/server.bundle.js",
-    "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
-    "security:check": "eslint src --ext .ts",
-    "security:fix": "eslint src --ext .ts --fix",
-    "security:only": "eslint src --ext .ts --config .eslintrc.security.json",
-    "security:sarif": "eslint src --ext .ts -f @microsoft/eslint-formatter-sarif -o security-results.sarif",
-    "security:sarif-only": "eslint src --ext .ts --config .eslintrc.security.json -f @microsoft/eslint-formatter-sarif -o typescript-security.sarif --max-warnings 0",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "security:check": "eslint src",
+    "security:fix": "eslint src --fix",
+    "security:sarif": "eslint src -f @microsoft/eslint-formatter-sarif -o typescript-security.sarif",
     "format": "prettier --write src/**/*.ts",
     "format:check": "prettier --check src/**/*.ts",
     "lint:check": "npm run lint && npm run format:check",
@@ -62,16 +60,14 @@
     "zod": "3.25.64"
   },
   "devDependencies": {
+    "@eslint/js": "9.39.1",
     "@microsoft/eslint-formatter-sarif": "3.1.0",
     "@types/jest": "30.0.0",
     "@types/uuid": "10.0.0",
     "@types/node": "20.19.0",
-    "@typescript-eslint/eslint-plugin": "7.18.0",
-    "@typescript-eslint/parser": "7.18.0",
     "cross-env": "10.0.0",
     "esbuild": "0.27.0",
-    "eslint": "8.57.1",
-    "eslint-config-prettier": "9.1.0",
+    "eslint": "9.39.1",
     "eslint-plugin-prettier": "5.5.4",
     "eslint-plugin-security": "3.0.1",
     "husky": "9.1.7",
@@ -80,6 +76,7 @@
     "prettier": "3.7.4",
     "ts-jest": "29.4.6",
     "tsx": "4.20.3",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.48.1"
   }
 }

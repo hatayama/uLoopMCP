@@ -88,7 +88,7 @@ export class DynamicBuffer {
         frame: extractionResult.jsonContent,
         extracted: true,
       };
-    } catch (error) {
+    } catch {
       // Error extracting frame from buffer
       return { frame: null, extracted: false };
     }

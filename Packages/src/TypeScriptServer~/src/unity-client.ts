@@ -183,7 +183,7 @@ export class UnityClient {
           }, 1000);
         }),
       ]);
-    } catch (error: unknown) {
+    } catch {
       return false;
     } finally {
       stopSafeTimer(timeoutTimer);
@@ -204,7 +204,7 @@ export class UnityClient {
         if (await this.testConnection()) {
           return;
         }
-      } catch (error) {
+      } catch {
         // Health check failed - need to reconnect
       }
     }
@@ -382,7 +382,7 @@ export class UnityClient {
       if (response.error) {
         // Failed to set client name
       }
-    } catch (error) {
+    } catch {
       // Error setting client name
     }
   }
@@ -592,7 +592,7 @@ export class UnityClient {
         },
         (error) => {
           stopSafeTimer(timeoutTimer); // Clean up timer
-          reject(error);
+          reject(error instanceof Error ? error : new Error(String(error)));
         },
       );
 

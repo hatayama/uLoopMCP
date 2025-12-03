@@ -346,7 +346,7 @@ export class UnityDiscovery {
         ),
       ]);
       return healthCheck;
-    } catch (error) {
+    } catch {
       // Return false on any error or timeout
       return false;
     }

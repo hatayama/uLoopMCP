@@ -230,11 +230,11 @@ export class UnityEventHandler
       this.gracefulShutdown();
     });
 
-    process.on('unhandledRejection', (reason, promise) => {
+    process.on('unhandledRejection', (reason, _promise) => {
       VibeLogger.logError(
         'unhandled_rejection',
         'Unhandled promise rejection',
-        { reason: String(reason), promise: String(promise) },
+        { reason: String(reason) },
         undefined,
         'Unhandled promise rejection occurred, shutting down safely',
       );
