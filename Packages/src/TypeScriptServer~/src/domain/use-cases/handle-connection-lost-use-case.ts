@@ -36,10 +36,9 @@ import { IDiscoveryService } from '../../application/interfaces/discovery-servic
  * 4. Setup reconnection monitoring
  * 5. Return connection status for monitoring
  */
-export class HandleConnectionLostUseCase implements UseCase<
-  HandleConnectionRequest,
-  HandleConnectionResponse
-> {
+export class HandleConnectionLostUseCase
+  implements UseCase<HandleConnectionRequest, HandleConnectionResponse>
+{
   private connectionService: IConnectionService;
   private toolManagementService: IToolManagementService;
   private discoveryService: IDiscoveryService;

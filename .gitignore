@@ -110,12 +110,11 @@ yarn-error.log*
 # TypeScript Server (exclude development builds, commit only production builds)
 Packages/src/TypeScriptServer~/node_modules/
 Packages/src/TypeScriptServer~/.tsbuildinfo
-# Keep dist/server.bundle.js (production bundle)
+# Ignore all dist files first, then un-ignore only the production bundle
+# Note: Use dist/* (contents) instead of dist/ (directory) to allow negation patterns to work
+Packages/src/TypeScriptServer~/dist/*
 !Packages/src/TypeScriptServer~/dist/server.bundle.js
-
-# Source maps (generated at build time, not needed in version control)
-*.map
-Packages/*/TypeScriptServer/dist/*.map
+!Packages/src/TypeScriptServer~/dist/server.bundle.js.map
 
 # Environment configuration files
 .env
