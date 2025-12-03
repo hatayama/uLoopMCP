@@ -33,10 +33,9 @@ import { NOTIFICATION_METHODS } from '../../constants.js';
  * 4. Handle notification errors gracefully
  * 5. Return notification status
  */
-export class ProcessNotificationUseCase implements UseCase<
-  ProcessNotificationRequest,
-  ProcessNotificationResponse
-> {
+export class ProcessNotificationUseCase
+  implements UseCase<ProcessNotificationRequest, ProcessNotificationResponse>
+{
   private notificationService: INotificationService;
   private isNotifying: boolean = false;
 
