@@ -111,7 +111,8 @@ yarn-error.log*
 Packages/src/TypeScriptServer~/node_modules/
 Packages/src/TypeScriptServer~/.tsbuildinfo
 # Ignore all dist files first, then un-ignore only the production bundle
-Packages/src/TypeScriptServer~/dist/
+# Note: Use dist/* (contents) instead of dist/ (directory) to allow negation patterns to work
+Packages/src/TypeScriptServer~/dist/*
 !Packages/src/TypeScriptServer~/dist/server.bundle.js
 !Packages/src/TypeScriptServer~/dist/server.bundle.js.map
 
