@@ -1,0 +1,24 @@
+{
+  "name": "streamable-http-sample",
+  "version": "1.0.0",
+  "description": "Minimal Streamable HTTP MCP Server sample",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --outDir /tmp/streamable-http-sample/dist",
+    "start": "node /tmp/streamable-http-sample/dist/server.js",
+    "dev": "npx tsx src/server.ts",
+    "dev:proxy": "npx tsx src/proxy.ts",
+    "dev:with-proxy": "npx tsx src/proxy.ts & npx tsx src/server.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.12.2",
+    "express": "^4.21.0",
+    "zod": "^3.25.64"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^20.19.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.3"
+  }
+}
