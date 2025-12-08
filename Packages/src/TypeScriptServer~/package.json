@@ -55,7 +55,7 @@
   "author": "hatayama",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.12.2",
+    "@modelcontextprotocol/sdk": "1.24.3",
     "uuid": "11.1.0",
     "zod": "3.25.64"
   },
