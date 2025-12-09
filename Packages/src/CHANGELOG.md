@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.41.3](https://github.com/hatayama/uLoopMCP/compare/v0.41.2...v0.41.3) (2025-12-09)
+
+
+### Bug Fixes
+
+* prevent Cursor MCP disconnection by fixing initialization race conditions ([#376](https://github.com/hatayama/uLoopMCP/issues/376)) ([220e553](https://github.com/hatayama/uLoopMCP/commit/220e5532561fc9ac0b6e5d843af5c08da8d305b3))
+
 ## [0.41.2](https://github.com/hatayama/uLoopMCP/compare/v0.41.1...v0.41.2) (2025-12-03)
 
 
