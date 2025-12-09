@@ -8868,6 +8868,7 @@ var UnityEventHandler = class {
   /**
    * Called when MCP initialization is completed
    * Sends any pending notifications that were queued during initialization
+   * and resets the duplicate prevention flag to allow future Unity reconnection notifications
    */
   onInitializationCompleted() {
     this.isInitializationCompleted = true;
@@ -8875,6 +8876,7 @@ var UnityEventHandler = class {
       this.pendingToolsChangedNotification = false;
       this.sendToolsChangedNotification();
     }
+    this.hasSentListChangedNotification = false;
   }
   /**
    * Setup Unity event listener for automatic tool updates
@@ -8915,6 +8917,11 @@ var UnityEventHandler = class {
   }
   /**
    * Send tools changed notification (with duplicate prevention and initialization check)
+   *
+   * Notification timing rules:
+   * 1. Before initialization completed: queue the notification
+   * 2. During initialization (first notification): send only once to avoid Cursor disconnect bug
+   * 3. After initialization (Unity reconnection): always allow notification
    */
   sendToolsChangedNotification() {
     if (!this.isInitializationCompleted) {
@@ -9223,6 +9230,7 @@ var UnityMcpServer = class {
       );
       this.unityDiscovery.start();
       this.initializationState = "completed";
+      this.eventHandler.onInitializationCompleted();
       return this.createInitializeResult();
     }
   }

@@ -188,6 +188,10 @@ class UnityMcpServer {
       // Mark initialization as completed even on failure (to allow retries)
       this.initializationState = 'completed';
 
+      // Notify event handler that initialization is complete (even on failure)
+      // This allows future Unity reconnection notifications to be sent
+      this.eventHandler.onInitializationCompleted();
+
       return this.createInitializeResult();
     }
   }

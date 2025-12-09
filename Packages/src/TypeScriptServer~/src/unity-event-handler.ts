@@ -48,6 +48,7 @@ export class UnityEventHandler
   /**
    * Called when MCP initialization is completed
    * Sends any pending notifications that were queued during initialization
+   * and resets the duplicate prevention flag to allow future Unity reconnection notifications
    */
   onInitializationCompleted(): void {
     this.isInitializationCompleted = true;
@@ -56,6 +57,10 @@ export class UnityEventHandler
       this.pendingToolsChangedNotification = false;
       this.sendToolsChangedNotification();
     }
+
+    // Reset the flag after initialization to allow future Unity reconnection notifications.
+    // The flag's purpose is only to prevent duplicate notifications during initialization.
+    this.hasSentListChangedNotification = false;
   }
 
   /**
@@ -108,6 +113,11 @@ export class UnityEventHandler
 
   /**
    * Send tools changed notification (with duplicate prevention and initialization check)
+   *
+   * Notification timing rules:
+   * 1. Before initialization completed: queue the notification
+   * 2. During initialization (first notification): send only once to avoid Cursor disconnect bug
+   * 3. After initialization (Unity reconnection): always allow notification
    */
   sendToolsChangedNotification(): void {
     // Queue notification if initialization is not yet completed
@@ -125,9 +135,11 @@ export class UnityEventHandler
       return;
     }
 
+    // hasSentListChangedNotification only blocks duplicate notifications during initialization.
+    // After initialization completed, this flag is reset by onInitializationCompleted().
     if (this.hasSentListChangedNotification) {
       // BUG WORKAROUND: Cursor disconnects unexpectedly when list_changed fires multiple times
-      // Emit the notification only once to keep the connection stable
+      // during initialization. This flag prevents that.
       if (this.isDevelopment) {
         VibeLogger.logDebug(
           'tools_notification_skipped_already_sent',
