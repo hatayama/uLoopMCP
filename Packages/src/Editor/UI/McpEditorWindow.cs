@@ -182,9 +182,11 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // Determine if server should be started automatically (normal auto-start, not after-compile)
+            // Skip auto-start if recovery is in progress to avoid conflicting with StartRecoveryIfNeededAsync
             bool shouldStartAutomatically = _model.UI.AutoStartServer;
             bool serverNotRunning = !McpServerController.IsServerRunning;
-            bool shouldStartServer = shouldStartAutomatically && serverNotRunning;
+            bool isRecoveryInProgress = McpServerController.IsStartupProtectionActive();
+            bool shouldStartServer = shouldStartAutomatically && serverNotRunning && !isRecoveryInProgress;
 
             if (shouldStartServer)
             {

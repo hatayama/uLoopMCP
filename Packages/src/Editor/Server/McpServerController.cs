@@ -470,7 +470,7 @@ namespace io.github.hatayama.uLoopMCP
             // Note: Port availability and system port conflicts are handled by FindAvailablePort
         }
 
-        private static bool IsStartupProtectionActive()
+        public static bool IsStartupProtectionActive()
         {
             long nowTicks = DateTime.UtcNow.Ticks;
             return nowTicks < System.Threading.Volatile.Read(ref startupProtectionUntilTicks);
