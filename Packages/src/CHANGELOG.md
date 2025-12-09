@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.41.4](https://github.com/hatayama/uLoopMCP/compare/v0.41.3...v0.41.4) (2025-12-09)
+
+
+### Bug Fixes
+
+* support Unity 6.3+ reference assembly path structure ([#378](https://github.com/hatayama/uLoopMCP/issues/378)) ([6d2ad25](https://github.com/hatayama/uLoopMCP/commit/6d2ad25255366df17e61b9ec09e6b6dfefb8527f))
+
 ## [0.41.3](https://github.com/hatayama/uLoopMCP/compare/v0.41.2...v0.41.3) (2025-12-09)
 
 
