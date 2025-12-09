@@ -89,7 +89,15 @@ export class McpKeepaliveService {
     }
 
     try {
-      await this.server.ping();
+      await Promise.race([
+        this.server.ping(),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`Keepalive ping timed out after ${KEEPALIVE.TIMEOUT_MS} ms`)),
+            KEEPALIVE.TIMEOUT_MS,
+          ),
+        ),
+      ]);
       this.consecutiveFailures = 0;
 
       if (this.isDevelopment) {
