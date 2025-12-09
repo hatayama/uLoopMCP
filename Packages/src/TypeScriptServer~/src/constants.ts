@@ -143,3 +143,12 @@ export const OUTPUT_DIRECTORIES = {
 
 // Connection lost debounce configuration
 export const CONNECTION_LOST_DEBOUNCE_MS = 500;
+
+// MCP Keepalive configuration
+// Prevents Cursor's idle timeout by sending periodic pings to the client
+export const KEEPALIVE = {
+  ENABLED: true,
+  INTERVAL_MS: 30000, // 30 seconds - shorter than Cursor's idle timeout
+  TIMEOUT_MS: 5000, // Ping response timeout
+  MAX_CONSECUTIVE_FAILURES: 3, // Stop keepalive after 3 consecutive failures
+} as const;

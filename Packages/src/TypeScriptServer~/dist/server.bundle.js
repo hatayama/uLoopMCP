@@ -5538,6 +5538,15 @@ var OUTPUT_DIRECTORIES = {
   VIBE_LOGS: "VibeLogs"
 };
 var CONNECTION_LOST_DEBOUNCE_MS = 500;
+var KEEPALIVE = {
+  ENABLED: true,
+  INTERVAL_MS: 3e4,
+  // 30 seconds - shorter than Cursor's idle timeout
+  TIMEOUT_MS: 5e3,
+  // Ping response timeout
+  MAX_CONSECUTIVE_FAILURES: 3
+  // Stop keepalive after 3 consecutive failures
+};
 
 // src/utils/safe-timer.ts
 var SafeTimer = class _SafeTimer {
@@ -8849,16 +8858,18 @@ var UnityEventHandler = class {
   server;
   unityClient;
   connectionManager;
+  keepaliveService;
   isDevelopment;
   shuttingDown = false;
   isNotifying = false;
   hasSentListChangedNotification = false;
   isInitializationCompleted = false;
   pendingToolsChangedNotification = false;
-  constructor(server2, unityClient, connectionManager) {
+  constructor(server2, unityClient, connectionManager, keepaliveService) {
     this.server = server2;
     this.unityClient = unityClient;
     this.connectionManager = connectionManager;
+    this.keepaliveService = keepaliveService;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
   }
   /**
@@ -9079,6 +9090,7 @@ var UnityEventHandler = class {
       "Initiating graceful shutdown process"
     );
     try {
+      this.keepaliveService.stop();
       this.connectionManager.disconnect();
       if (global.gc) {
         global.gc();
@@ -9109,6 +9121,139 @@ var UnityEventHandler = class {
   }
 };
 
+// src/mcp-keepalive-service.ts
+var McpKeepaliveService = class {
+  keepaliveInterval = null;
+  server;
+  consecutiveFailures = 0;
+  isRunning = false;
+  isDevelopment;
+  constructor(server2) {
+    this.server = server2;
+    this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+  }
+  /**
+   * Start the keepalive service
+   * Should be called after MCP initialization is complete
+   */
+  start() {
+    if (!KEEPALIVE.ENABLED) {
+      if (this.isDevelopment) {
+        VibeLogger.logDebug(
+          "keepalive_disabled",
+          "Keepalive is disabled in configuration",
+          void 0,
+          void 0,
+          "Keepalive service will not start"
+        );
+      }
+      return;
+    }
+    if (this.isRunning) {
+      if (this.isDevelopment) {
+        VibeLogger.logDebug(
+          "keepalive_already_running",
+          "Keepalive service is already running",
+          void 0,
+          void 0,
+          "Ignoring duplicate start request"
+        );
+      }
+      return;
+    }
+    this.isRunning = true;
+    this.consecutiveFailures = 0;
+    VibeLogger.logInfo(
+      "keepalive_started",
+      "Keepalive service started",
+      { interval_ms: KEEPALIVE.INTERVAL_MS },
+      void 0,
+      "Will send periodic pings to prevent Cursor idle timeout"
+    );
+    this.keepaliveInterval = setInterval(() => {
+      void this.sendPing();
+    }, KEEPALIVE.INTERVAL_MS);
+  }
+  /**
+   * Send a ping to the MCP client
+   */
+  async sendPing() {
+    if (!this.isRunning) {
+      return;
+    }
+    try {
+      await Promise.race([
+        this.server.ping(),
+        new Promise(
+          (_, reject) => setTimeout(
+            () => reject(new Error(`Keepalive ping timed out after ${KEEPALIVE.TIMEOUT_MS} ms`)),
+            KEEPALIVE.TIMEOUT_MS
+          )
+        )
+      ]);
+      this.consecutiveFailures = 0;
+      if (this.isDevelopment) {
+        VibeLogger.logDebug(
+          "keepalive_ping_success",
+          "Keepalive ping succeeded",
+          void 0,
+          void 0,
+          "Connection is alive"
+        );
+      }
+    } catch (error) {
+      this.consecutiveFailures++;
+      VibeLogger.logError(
+        "keepalive_ping_failed",
+        "Keepalive ping failed",
+        {
+          error: error instanceof Error ? error.message : String(error),
+          consecutive_failures: this.consecutiveFailures,
+          max_failures: KEEPALIVE.MAX_CONSECUTIVE_FAILURES
+        },
+        void 0,
+        "Ping to MCP client failed"
+      );
+      if (this.consecutiveFailures >= KEEPALIVE.MAX_CONSECUTIVE_FAILURES) {
+        VibeLogger.logError(
+          "keepalive_stopped_max_failures",
+          "Keepalive stopped due to max consecutive failures",
+          { consecutive_failures: this.consecutiveFailures },
+          void 0,
+          "Connection may be lost - stopping keepalive to prevent log spam"
+        );
+        this.stop();
+      }
+    }
+  }
+  /**
+   * Stop the keepalive service
+   */
+  stop() {
+    if (!this.isRunning) {
+      return;
+    }
+    this.isRunning = false;
+    if (this.keepaliveInterval) {
+      clearInterval(this.keepaliveInterval);
+      this.keepaliveInterval = null;
+    }
+    VibeLogger.logInfo(
+      "keepalive_stopped",
+      "Keepalive service stopped",
+      void 0,
+      void 0,
+      "Keepalive pings will no longer be sent"
+    );
+  }
+  /**
+   * Check if the keepalive service is running
+   */
+  isActive() {
+    return this.isRunning;
+  }
+};
+
 // src/version.ts
 var VERSION = "0.30.1";
 
@@ -9124,6 +9269,7 @@ var UnityMcpServer = class {
   toolManager;
   clientCompatibility;
   eventHandler;
+  keepaliveService;
   constructor() {
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
     this.server = new Server(
@@ -9145,10 +9291,12 @@ var UnityMcpServer = class {
     this.toolManager = new UnityToolManager(this.unityClient);
     this.toolManager.setConnectionManager(this.connectionManager);
     this.clientCompatibility = new McpClientCompatibility(this.unityClient);
+    this.keepaliveService = new McpKeepaliveService(this.server);
     this.eventHandler = new UnityEventHandler(
       this.server,
       this.unityClient,
-      this.connectionManager
+      this.connectionManager,
+      this.keepaliveService
     );
     this.connectionManager.setupReconnectionCallback(async () => {
       await this.toolManager.refreshDynamicToolsSafe(() => {
@@ -9217,6 +9365,7 @@ var UnityMcpServer = class {
       await this.toolManager.initializeDynamicTools();
       this.initializationState = "completed";
       this.eventHandler.onInitializationCompleted();
+      this.keepaliveService.start();
       return this.createInitializeResult();
     } catch (error) {
       VibeLogger.logError(
@@ -9229,6 +9378,7 @@ var UnityMcpServer = class {
       this.unityDiscovery.start();
       this.initializationState = "completed";
       this.eventHandler.onInitializationCompleted();
+      this.keepaliveService.start();
       return this.createInitializeResult();
     }
   }

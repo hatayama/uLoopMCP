@@ -1,6 +1,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { UnityClient } from './unity-client.js';
 import { UnityConnectionManager } from './unity-connection-manager.js';
+import { McpKeepaliveService } from './mcp-keepalive-service.js';
 import { ENVIRONMENT, NOTIFICATION_METHODS, ServerShutdownReason } from './constants.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 import { IUnityEventService } from './application/interfaces/unity-event-service.js';
@@ -18,6 +19,7 @@ import { IProcessControlService } from './application/interfaces/process-control
  * - UnityConnectionManager: Manages Unity connection
  * - Server: MCP server instance for sending notifications
  * - UnityMcpServer: Main server class that uses this handler
+ * - McpKeepaliveService: Keepalive service for preventing Cursor idle timeout
  *
  * Key features:
  * - tools_changed notification sending
@@ -31,6 +33,7 @@ export class UnityEventHandler
   private server: Server;
   private unityClient: UnityClient;
   private connectionManager: UnityConnectionManager;
+  private keepaliveService: McpKeepaliveService;
   private readonly isDevelopment: boolean;
   private shuttingDown: boolean = false;
   private isNotifying: boolean = false;
@@ -38,10 +41,16 @@ export class UnityEventHandler
   private isInitializationCompleted: boolean = false;
   private pendingToolsChangedNotification: boolean = false;
 
-  constructor(server: Server, unityClient: UnityClient, connectionManager: UnityConnectionManager) {
+  constructor(
+    server: Server,
+    unityClient: UnityClient,
+    connectionManager: UnityConnectionManager,
+    keepaliveService: McpKeepaliveService,
+  ) {
     this.server = server;
     this.unityClient = unityClient;
     this.connectionManager = connectionManager;
+    this.keepaliveService = keepaliveService;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
   }
 
@@ -304,12 +313,13 @@ export class UnityEventHandler
     );
 
     try {
+      // Stop keepalive service first
+      this.keepaliveService.stop();
+
       // Disconnect from Unity and stop all intervals
-      // BUG FIX: Ensure polling intervals are stopped to prevent hanging event loop
       this.connectionManager.disconnect();
 
       // Clear any remaining timers to ensure clean exit
-      // BUG FIX: Force garbage collection if available to clean up lingering references
       if (global.gc) {
         global.gc();
       }

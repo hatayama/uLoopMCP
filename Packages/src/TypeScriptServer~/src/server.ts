@@ -15,6 +15,7 @@ import { UnityConnectionManager } from './unity-connection-manager.js';
 import { UnityToolManager } from './unity-tool-manager.js';
 import { McpClientCompatibility } from './mcp-client-compatibility.js';
 import { UnityEventHandler } from './unity-event-handler.js';
+import { McpKeepaliveService } from './mcp-keepalive-service.js';
 import { ToolResponse } from './types/tool-types.js';
 import {
   ENVIRONMENT,
@@ -54,6 +55,7 @@ class UnityMcpServer {
   private toolManager: UnityToolManager;
   private clientCompatibility: McpClientCompatibility;
   private eventHandler: UnityEventHandler;
+  private keepaliveService: McpKeepaliveService;
 
   constructor() {
     // Simple environment variable check
@@ -87,11 +89,15 @@ class UnityMcpServer {
     // Initialize MCP client compatibility manager
     this.clientCompatibility = new McpClientCompatibility(this.unityClient);
 
+    // Initialize MCP keepalive service
+    this.keepaliveService = new McpKeepaliveService(this.server);
+
     // Initialize Unity event handler
     this.eventHandler = new UnityEventHandler(
       this.server,
       this.unityClient,
       this.connectionManager,
+      this.keepaliveService,
     );
 
     // Setup reconnection callback for tool refresh
@@ -173,6 +179,9 @@ class UnityMcpServer {
       // Notify event handler that initialization is complete
       this.eventHandler.onInitializationCompleted();
 
+      // Start keepalive service to prevent Cursor idle timeout
+      this.keepaliveService.start();
+
       return this.createInitializeResult();
     } catch (error) {
       VibeLogger.logError(
@@ -191,6 +200,9 @@ class UnityMcpServer {
       // Notify event handler that initialization is complete (even on failure)
       // This allows future Unity reconnection notifications to be sent
       this.eventHandler.onInitializationCompleted();
+
+      // Start keepalive service even on failure to prevent Cursor idle timeout
+      this.keepaliveService.start();
 
       return this.createInitializeResult();
     }
