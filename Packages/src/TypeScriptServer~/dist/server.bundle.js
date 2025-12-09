@@ -7838,7 +7838,6 @@ var UnityConnectionManager = class {
   isDevelopment;
   isInitialized = false;
   isReconnecting = false;
-  initializingPromise = null;
   constructor(unityClient) {
     this.unityClient = unityClient;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
@@ -7904,9 +7903,6 @@ var UnityConnectionManager = class {
    */
   initialize(onConnectionEstablished) {
     if (this.isInitialized) {
-      return;
-    }
-    if (this.initializingPromise) {
       return;
     }
     this.isInitialized = true;
