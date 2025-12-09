@@ -352,22 +352,40 @@ namespace io.github.hatayama.uLoopMCP
             return contentsPath;
         }
 
+        /// <summary>
+        /// Get the base path for scripting-related assemblies.
+        /// Unity 6.3+ moved assemblies to Contents/Resources/Scripting/, while earlier versions use Contents/ directly.
+        /// See: https://github.com/hatayama/uLoopMCP/issues/370
+        /// </summary>
+        private string GetScriptingBasePath(string contentsPath)
+        {
+            string scriptingPath = Path.Combine(contentsPath, "Resources", "Scripting");
+            if (Directory.Exists(scriptingPath))
+            {
+                return scriptingPath;
+            }
+            return contentsPath;
+        }
+
         private List<string> BuildSearchPaths(string contentsPath)
         {
             List<string> searchPaths = new();
 
+            // Unity 6.3+ uses Contents/Resources/Scripting/, earlier versions use Contents/ directly
+            string scriptingBase = GetScriptingBasePath(contentsPath);
+
             // .NET Framework 4.x reference assemblies (use only when NetStandard 2.1 is unavailable)
-            string monoApi = Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "4.7.1-api");
+            string monoApi = Path.Combine(scriptingBase, "MonoBleedingEdge", "lib", "mono", "4.7.1-api");
             string monoFacades = Path.Combine(monoApi, "Facades");
-            string monoUnityjit = Path.Combine(contentsPath, "MonoBleedingEdge", "lib", "mono", "unityjit-macos");
+            string monoUnityjit = Path.Combine(scriptingBase, "MonoBleedingEdge", "lib", "mono", "unityjit-macos");
 
             // .NET Standard reference assemblies
-            string netStandard21 = Path.Combine(contentsPath, "NetStandard", "ref", "2.1.0");
-            string netStandard20 = Path.Combine(contentsPath, "NetStandard", "ref", "2.0.0");
-            string netStandardCompat = Path.Combine(contentsPath, "NetStandard", "compat", "shims", "net472");
+            string netStandard21 = Path.Combine(scriptingBase, "NetStandard", "ref", "2.1.0");
+            string netStandard20 = Path.Combine(scriptingBase, "NetStandard", "ref", "2.0.0");
+            string netStandardCompat = Path.Combine(scriptingBase, "NetStandard", "compat", "shims", "net472");
 
             // Unity Managed assemblies
-            string managed = Path.Combine(contentsPath, "Managed");
+            string managed = Path.Combine(scriptingBase, "Managed");
             string unityEngine = Path.Combine(managed, "UnityEngine");
             string unityEditor = Path.Combine(managed, "UnityEditor");
 
