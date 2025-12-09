@@ -168,6 +168,5 @@ jobs:
         lockfile-lint \
           --path package-lock.json \
           --type npm \
-          --validate-https \
           --allowed-hosts npm \
           --allowed-schemes "https:" "git+https:"
