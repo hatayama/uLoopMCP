@@ -1,4 +1,4 @@
-import { POLLING } from './constants.js';
+import { CONNECTION_LOST_DEBOUNCE_MS, POLLING } from './constants.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 import { UnityClient } from './unity-client.js';
 
@@ -22,6 +22,7 @@ export class UnityDiscovery {
   private isDiscovering: boolean = false;
   private isDevelopment: boolean = false;
   private discoveryAttemptCount: number = 0;
+  private lastConnectionLostTime: number = 0;
 
   // Singleton pattern to prevent multiple instances
   private static instance: UnityDiscovery | null = null;
@@ -443,8 +444,27 @@ export class UnityDiscovery {
 
   /**
    * Handle connection lost event (called by UnityClient)
+   * Includes debounce to prevent rapid repeated handling
    */
   handleConnectionLost(): void {
+    const now = Date.now();
+
+    // Debounce: ignore if called too soon after the last connection lost event
+    if (now - this.lastConnectionLostTime < CONNECTION_LOST_DEBOUNCE_MS) {
+      VibeLogger.logDebug(
+        'unity_discovery_connection_lost_debounced',
+        'Connection lost event debounced',
+        {
+          time_since_last_ms: now - this.lastConnectionLostTime,
+          debounce_threshold_ms: CONNECTION_LOST_DEBOUNCE_MS,
+        },
+        undefined,
+        'Ignoring rapid connection lost event to prevent flooding',
+      );
+      return;
+    }
+
+    this.lastConnectionLostTime = now;
     const correlationId = VibeLogger.generateCorrelationId();
 
     VibeLogger.logInfo(

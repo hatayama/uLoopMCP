@@ -35,12 +35,27 @@ export class UnityEventHandler
   private shuttingDown: boolean = false;
   private isNotifying: boolean = false;
   private hasSentListChangedNotification: boolean = false;
+  private isInitializationCompleted: boolean = false;
+  private pendingToolsChangedNotification: boolean = false;
 
   constructor(server: Server, unityClient: UnityClient, connectionManager: UnityConnectionManager) {
     this.server = server;
     this.unityClient = unityClient;
     this.connectionManager = connectionManager;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+  }
+
+  /**
+   * Called when MCP initialization is completed
+   * Sends any pending notifications that were queued during initialization
+   */
+  onInitializationCompleted(): void {
+    this.isInitializationCompleted = true;
+
+    if (this.pendingToolsChangedNotification) {
+      this.pendingToolsChangedNotification = false;
+      this.sendToolsChangedNotification();
+    }
   }
 
   /**
@@ -92,9 +107,24 @@ export class UnityEventHandler
   }
 
   /**
-   * Send tools changed notification (with duplicate prevention)
+   * Send tools changed notification (with duplicate prevention and initialization check)
    */
   sendToolsChangedNotification(): void {
+    // Queue notification if initialization is not yet completed
+    if (!this.isInitializationCompleted) {
+      this.pendingToolsChangedNotification = true;
+      if (this.isDevelopment) {
+        VibeLogger.logDebug(
+          'tools_notification_queued',
+          'sendToolsChangedNotification queued: initialization not completed',
+          undefined,
+          undefined,
+          'Notification will be sent after initialization completes',
+        );
+      }
+      return;
+    }
+
     if (this.hasSentListChangedNotification) {
       // BUG WORKAROUND: Cursor disconnects unexpectedly when list_changed fires multiple times
       // Emit the notification only once to keep the connection stable

@@ -24,6 +24,7 @@ export class UnityConnectionManager {
   private readonly isDevelopment: boolean;
   private isInitialized: boolean = false;
   private isReconnecting: boolean = false;
+  private initializingPromise: Promise<void> | null = null;
 
   constructor(unityClient: UnityClient) {
     this.unityClient = unityClient;
@@ -110,10 +111,16 @@ export class UnityConnectionManager {
   }
 
   /**
-   * Initialize connection manager
+   * Initialize connection manager with guard against concurrent initialization
    */
   initialize(onConnectionEstablished?: () => Promise<void>): void {
+    // Guard: already initialized
     if (this.isInitialized) {
+      return;
+    }
+
+    // Guard: initialization in progress (prevents race condition)
+    if (this.initializingPromise) {
       return;
     }
 
