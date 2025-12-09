@@ -5537,6 +5537,7 @@ var OUTPUT_DIRECTORIES = {
   ROOT: "uLoopMCPOutputs",
   VIBE_LOGS: "VibeLogs"
 };
+var CONNECTION_LOST_DEBOUNCE_MS = 500;
 
 // src/utils/safe-timer.ts
 var SafeTimer = class _SafeTimer {
@@ -7422,6 +7423,7 @@ var UnityDiscovery = class _UnityDiscovery {
   isDiscovering = false;
   isDevelopment = false;
   discoveryAttemptCount = 0;
+  lastConnectionLostTime = 0;
   // Singleton pattern to prevent multiple instances
   static instance = null;
   static activeTimerCount = 0;
@@ -7762,8 +7764,24 @@ var UnityDiscovery = class _UnityDiscovery {
   }
   /**
    * Handle connection lost event (called by UnityClient)
+   * Includes debounce to prevent rapid repeated handling
    */
   handleConnectionLost() {
+    const now = Date.now();
+    if (now - this.lastConnectionLostTime < CONNECTION_LOST_DEBOUNCE_MS) {
+      VibeLogger.logDebug(
+        "unity_discovery_connection_lost_debounced",
+        "Connection lost event debounced",
+        {
+          time_since_last_ms: now - this.lastConnectionLostTime,
+          debounce_threshold_ms: CONNECTION_LOST_DEBOUNCE_MS
+        },
+        void 0,
+        "Ignoring rapid connection lost event to prevent flooding"
+      );
+      return;
+    }
+    this.lastConnectionLostTime = now;
     const correlationId = VibeLogger.generateCorrelationId();
     VibeLogger.logInfo(
       "unity_discovery_connection_lost_handler",
@@ -7881,7 +7899,7 @@ var UnityConnectionManager = class {
     }
   }
   /**
-   * Initialize connection manager
+   * Initialize connection manager with guard against concurrent initialization
    */
   initialize(onConnectionEstablished) {
     if (this.isInitialized) {
@@ -8835,11 +8853,25 @@ var UnityEventHandler = class {
   shuttingDown = false;
   isNotifying = false;
   hasSentListChangedNotification = false;
+  isInitializationCompleted = false;
+  pendingToolsChangedNotification = false;
   constructor(server2, unityClient, connectionManager) {
     this.server = server2;
     this.unityClient = unityClient;
     this.connectionManager = connectionManager;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+  }
+  /**
+   * Called when MCP initialization is completed
+   * Sends any pending notifications that were queued during initialization
+   */
+  onInitializationCompleted() {
+    this.isInitializationCompleted = true;
+    this.hasSentListChangedNotification = false;
+    if (this.pendingToolsChangedNotification) {
+      this.pendingToolsChangedNotification = false;
+      this.sendToolsChangedNotification();
+    }
   }
   /**
    * Setup Unity event listener for automatic tool updates
@@ -8879,9 +8911,30 @@ var UnityEventHandler = class {
     });
   }
   /**
-   * Send tools changed notification (with duplicate prevention)
+   * Send tools changed notification (with duplicate prevention and initialization check)
+   *
+   * BUG WORKAROUND: Cursor disconnects when list_changed fires multiple times.
+   * Therefore, list_changed is sent only ONCE per MCP server lifetime.
+   *
+   * Notification timing rules:
+   * 1. Before initialization completed: queue the notification
+   * 2. After initialization completed: send queued notification (first and only time)
+   * 3. Subsequent calls: blocked by hasSentListChangedNotification flag
    */
   sendToolsChangedNotification() {
+    if (!this.isInitializationCompleted) {
+      this.pendingToolsChangedNotification = true;
+      if (this.isDevelopment) {
+        VibeLogger.logDebug(
+          "tools_notification_queued",
+          "sendToolsChangedNotification queued: initialization not completed",
+          void 0,
+          void 0,
+          "Notification will be sent after initialization completes"
+        );
+      }
+      return;
+    }
     if (this.hasSentListChangedNotification) {
       if (this.isDevelopment) {
         VibeLogger.logDebug(
@@ -9064,7 +9117,8 @@ var UnityMcpServer = class {
   server;
   unityClient;
   isDevelopment;
-  isInitialized = false;
+  initializationState = "not_started";
+  initializingPromise = null;
   unityDiscovery;
   connectionManager;
   toolManager;
@@ -9153,13 +9207,18 @@ var UnityMcpServer = class {
     }
   }
   /**
-   * Initialize client asynchronously (for list_changed supported clients)
+   * Initialize client asynchronously and return InitializeResult (for list_changed supported clients)
+   * Returns a Promise that resolves when initialization is complete
    */
-  initializeAsyncClient(clientName) {
-    void this.clientCompatibility.initializeClient(clientName);
-    this.toolManager.setClientName(clientName);
-    void this.toolManager.initializeDynamicTools().then(() => {
-    }).catch((error) => {
+  async initializeAsyncClientAndReturn(clientName) {
+    try {
+      await this.clientCompatibility.initializeClient(clientName);
+      this.toolManager.setClientName(clientName);
+      await this.toolManager.initializeDynamicTools();
+      this.initializationState = "completed";
+      this.eventHandler.onInitializationCompleted();
+      return this.createInitializeResult();
+    } catch (error) {
       VibeLogger.logError(
         "mcp_unity_connection_init_failed",
         "Unity connection initialization failed",
@@ -9168,7 +9227,27 @@ var UnityMcpServer = class {
         "Unity connection could not be established - check Unity MCP bridge"
       );
       this.unityDiscovery.start();
-    });
+      this.initializationState = "completed";
+      this.eventHandler.onInitializationCompleted();
+      return this.createInitializeResult();
+    }
+  }
+  /**
+   * Create InitializeResult object
+   */
+  createInitializeResult() {
+    return {
+      protocolVersion: MCP_PROTOCOL_VERSION,
+      capabilities: {
+        tools: {
+          listChanged: TOOLS_LIST_CHANGED_CAPABILITY
+        }
+      },
+      serverInfo: {
+        name: MCP_SERVER_NAME,
+        version: VERSION
+      }
+    };
   }
   setupHandlers() {
     this.server.setRequestHandler(InitializeRequestSchema, async (request) => {
@@ -9177,26 +9256,21 @@ var UnityMcpServer = class {
       if (clientName) {
         this.clientCompatibility.setupClientCompatibility(clientName);
       }
-      if (!this.isInitialized) {
-        this.isInitialized = true;
-        if (this.clientCompatibility.isListChangedUnsupported(clientName)) {
-          return this.initializeSyncClient(clientName);
-        } else {
-          this.initializeAsyncClient(clientName);
-        }
+      if (this.initializationState === "initializing" && this.initializingPromise) {
+        return this.initializingPromise;
       }
-      return {
-        protocolVersion: MCP_PROTOCOL_VERSION,
-        capabilities: {
-          tools: {
-            listChanged: TOOLS_LIST_CHANGED_CAPABILITY
-          }
-        },
-        serverInfo: {
-          name: MCP_SERVER_NAME,
-          version: VERSION
-        }
-      };
+      if (this.initializationState === "completed") {
+        return this.createInitializeResult();
+      }
+      this.initializationState = "initializing";
+      if (this.clientCompatibility.isListChangedUnsupported(clientName)) {
+        const result = await this.initializeSyncClient(clientName);
+        this.initializationState = "completed";
+        return result;
+      } else {
+        this.initializingPromise = this.initializeAsyncClientAndReturn(clientName);
+        return this.initializingPromise;
+      }
     });
     this.server.setRequestHandler(ListToolsRequestSchema, () => {
       const tools = this.toolManager.getAllTools();

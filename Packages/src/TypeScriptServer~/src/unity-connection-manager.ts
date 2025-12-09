@@ -110,9 +110,10 @@ export class UnityConnectionManager {
   }
 
   /**
-   * Initialize connection manager
+   * Initialize connection manager with guard against concurrent initialization
    */
   initialize(onConnectionEstablished?: () => Promise<void>): void {
+    // Guard: already initialized
     if (this.isInitialized) {
       return;
     }

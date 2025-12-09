@@ -38,11 +38,17 @@ import { VERSION } from './version.js';
  * - DynamicUnityCommandTool: Dynamically creates tools based on Unity tools
  * - @modelcontextprotocol/sdk/server: The core MCP server implementation
  */
+/**
+ * Initialization state for managing concurrent initialization requests
+ */
+type InitializationState = 'not_started' | 'initializing' | 'completed';
+
 class UnityMcpServer {
   private server: Server;
   private unityClient: UnityClient;
   private readonly isDevelopment: boolean;
-  private isInitialized: boolean = false;
+  private initializationState: InitializationState = 'not_started';
+  private initializingPromise: Promise<InitializeResult> | null = null;
   private unityDiscovery: UnityDiscovery;
   private connectionManager: UnityConnectionManager;
   private toolManager: UnityToolManager;
@@ -151,28 +157,61 @@ class UnityMcpServer {
   }
 
   /**
-   * Initialize client asynchronously (for list_changed supported clients)
+   * Initialize client asynchronously and return InitializeResult (for list_changed supported clients)
+   * Returns a Promise that resolves when initialization is complete
    */
-  private initializeAsyncClient(clientName: string): void {
-    // Start Unity connection initialization in background
-    void this.clientCompatibility.initializeClient(clientName);
-    this.toolManager.setClientName(clientName);
-    void this.toolManager
-      .initializeDynamicTools()
-      .then(() => {
-        // Unity connection established successfully
-      })
-      .catch((error) => {
-        VibeLogger.logError(
-          'mcp_unity_connection_init_failed',
-          'Unity connection initialization failed',
-          { error_message: error instanceof Error ? error.message : String(error) },
-          undefined,
-          'Unity connection could not be established - check Unity MCP bridge',
-        );
-        // Start Unity discovery to retry connection (singleton pattern prevents duplicates)
-        this.unityDiscovery.start();
-      });
+  private async initializeAsyncClientAndReturn(clientName: string): Promise<InitializeResult> {
+    try {
+      // Start Unity connection initialization
+      await this.clientCompatibility.initializeClient(clientName);
+      this.toolManager.setClientName(clientName);
+      await this.toolManager.initializeDynamicTools();
+
+      // Mark initialization as completed
+      this.initializationState = 'completed';
+
+      // Notify event handler that initialization is complete
+      this.eventHandler.onInitializationCompleted();
+
+      return this.createInitializeResult();
+    } catch (error) {
+      VibeLogger.logError(
+        'mcp_unity_connection_init_failed',
+        'Unity connection initialization failed',
+        { error_message: error instanceof Error ? error.message : String(error) },
+        undefined,
+        'Unity connection could not be established - check Unity MCP bridge',
+      );
+      // Start Unity discovery to retry connection (singleton pattern prevents duplicates)
+      this.unityDiscovery.start();
+
+      // Mark initialization as completed even on failure (to allow retries)
+      this.initializationState = 'completed';
+
+      // Notify event handler that initialization is complete (even on failure)
+      // This allows future Unity reconnection notifications to be sent
+      this.eventHandler.onInitializationCompleted();
+
+      return this.createInitializeResult();
+    }
+  }
+
+  /**
+   * Create InitializeResult object
+   */
+  private createInitializeResult(): InitializeResult {
+    return {
+      protocolVersion: MCP_PROTOCOL_VERSION,
+      capabilities: {
+        tools: {
+          listChanged: TOOLS_LIST_CHANGED_CAPABILITY,
+        },
+      },
+      serverInfo: {
+        name: MCP_SERVER_NAME,
+        version: VERSION,
+      },
+    };
   }
 
   private setupHandlers(): void {
@@ -181,39 +220,33 @@ class UnityMcpServer {
       const clientInfo = request.params?.clientInfo;
       const clientName = clientInfo?.name || '';
 
-      // Debug logging for client name detection
-
       if (clientName) {
         this.clientCompatibility.setupClientCompatibility(clientName);
       }
 
-      // Initialize Unity connection after receiving client name
-      if (!this.isInitialized) {
-        this.isInitialized = true;
-
-        if (this.clientCompatibility.isListChangedUnsupported(clientName)) {
-          // list_changed unsupported client: wait for Unity connection
-          // Sync initialization for list_changed unsupported client
-          return this.initializeSyncClient(clientName);
-        } else {
-          // list_changed supported client: asynchronous approach
-          // Async initialization for list_changed supported client
-          this.initializeAsyncClient(clientName);
-        }
+      // If initialization is in progress, return the same Promise (Mutex pattern)
+      if (this.initializationState === 'initializing' && this.initializingPromise) {
+        return this.initializingPromise;
       }
 
-      return {
-        protocolVersion: MCP_PROTOCOL_VERSION,
-        capabilities: {
-          tools: {
-            listChanged: TOOLS_LIST_CHANGED_CAPABILITY,
-          },
-        },
-        serverInfo: {
-          name: MCP_SERVER_NAME,
-          version: VERSION,
-        },
-      };
+      // If initialization is completed, return result immediately
+      if (this.initializationState === 'completed') {
+        return this.createInitializeResult();
+      }
+
+      // Start initialization
+      this.initializationState = 'initializing';
+
+      if (this.clientCompatibility.isListChangedUnsupported(clientName)) {
+        // list_changed unsupported client: wait for Unity connection
+        const result = await this.initializeSyncClient(clientName);
+        this.initializationState = 'completed';
+        return result;
+      } else {
+        // list_changed supported client: asynchronous approach with Promise tracking
+        this.initializingPromise = this.initializeAsyncClientAndReturn(clientName);
+        return this.initializingPromise;
+      }
     });
 
     // Provide tool list

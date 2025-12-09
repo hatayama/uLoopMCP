@@ -140,3 +140,6 @@ export const OUTPUT_DIRECTORIES = {
   ROOT: 'uLoopMCPOutputs',
   VIBE_LOGS: 'VibeLogs',
 } as const;
+
+// Connection lost debounce configuration
+export const CONNECTION_LOST_DEBOUNCE_MS = 500;
