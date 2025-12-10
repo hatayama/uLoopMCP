@@ -46,11 +46,5 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         [Description("Whether to save test results as XML file. Test results are saved to external files to avoid massive token consumption when returning results directly. Please read the file if you need detailed test results.")]
         public bool SaveXml { get; set; } = false;
-
-        /// <summary>
-        /// Timeout for test execution in seconds (default: 60 seconds for EditMode, 120 seconds for PlayMode)
-        /// </summary>
-        [Description("Timeout for test execution in seconds (default: 30 seconds)")]
-        public override int TimeoutSeconds { get; set; } = 30;
     }
 } 

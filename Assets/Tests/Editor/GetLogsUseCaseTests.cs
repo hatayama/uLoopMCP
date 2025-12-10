@@ -51,7 +51,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogType = McpLogType.All,
                 MaxCount = 100,
-                TimeoutSeconds = 10
             };
 
             // Act
@@ -88,7 +87,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogType = McpLogType.Error,
                 MaxCount = 100,
-                TimeoutSeconds = 5
             };
 
             // Act
@@ -137,7 +135,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogType = McpLogType.Warning,
                 MaxCount = 100,
-                TimeoutSeconds = 5
             };
 
             // Act
@@ -180,7 +177,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogType = McpLogType.Log,
                 MaxCount = 100,
-                TimeoutSeconds = 5
             };
 
             // Act
@@ -220,7 +216,6 @@ namespace io.github.hatayama.uLoopMCP
                 SearchText = "XYZ123",
                 UseRegex = false,
                 MaxCount = 100,
-                TimeoutSeconds = 5
             };
 
             // Act
@@ -259,7 +254,6 @@ namespace io.github.hatayama.uLoopMCP
                 SearchText = @"Test\d+",
                 UseRegex = true,
                 MaxCount = 100,
-                TimeoutSeconds = 5
             };
 
             // Act
@@ -298,7 +292,6 @@ namespace io.github.hatayama.uLoopMCP
                 LogType = McpLogType.Error,
                 IncludeStackTrace = true,
                 MaxCount = 10,
-                TimeoutSeconds = 5
             };
 
             // Act
@@ -322,7 +315,6 @@ namespace io.github.hatayama.uLoopMCP
                 LogType = McpLogType.Error,
                 IncludeStackTrace = false,
                 MaxCount = 10,
-                TimeoutSeconds = 5
             };
 
             // Act
@@ -359,7 +351,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogType = McpLogType.All,
                 MaxCount = 0,
-                TimeoutSeconds = 5
             };
 
             // Act
@@ -389,7 +380,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogType = McpLogType.All,
                 MaxCount = 1,
-                TimeoutSeconds = 5
             };
 
             // Act
@@ -419,7 +409,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogType = McpLogType.All,
                 MaxCount = int.MaxValue,
-                TimeoutSeconds = 5
             };
 
             // Act
@@ -445,7 +434,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogType = McpLogType.All,
                 MaxCount = -1,
-                TimeoutSeconds = 5
             };
 
             // Act
@@ -490,7 +478,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogType = "InvalidType",
                 MaxCount = 10,
-                TimeoutSeconds = 5
             };
 
             // Act
@@ -514,7 +501,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogType = McpLogType.All,
                 MaxCount = 100,
-                TimeoutSeconds = 5
             };
             
             // Cancel immediately
@@ -543,7 +529,6 @@ namespace io.github.hatayama.uLoopMCP
                 SearchText = "[invalid(regex",  // Invalid regex pattern
                 UseRegex = true,
                 MaxCount = 10,
-                TimeoutSeconds = 5
             };
 
             // Act
@@ -606,7 +591,6 @@ namespace io.github.hatayama.uLoopMCP
                 SearchInStackTrace = false,
                 MaxCount = 5,
                 IncludeStackTrace = false,
-                TimeoutSeconds = 5
             };
 
             // Act
@@ -657,7 +641,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogType = McpLogType.All,
                 MaxCount = 50,  // Limit to 50
-                TimeoutSeconds = 5
             };
 
             // Act

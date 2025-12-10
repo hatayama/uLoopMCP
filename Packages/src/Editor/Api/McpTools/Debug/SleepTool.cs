@@ -34,12 +34,11 @@ namespace io.github.hatayama.uLoopMCP
                 actualSleepSeconds = i + 1;
             }
             
-            return new SleepResponse 
-            { 
+            return new SleepResponse
+            {
                 Message = $"Successfully slept for {actualSleepSeconds} seconds",
                 ActualSleepSeconds = actualSleepSeconds,
-                WasCancelled = false,
-                AppliedTimeoutSeconds = parameters.TimeoutSeconds
+                WasCancelled = false
             };
         }
     }

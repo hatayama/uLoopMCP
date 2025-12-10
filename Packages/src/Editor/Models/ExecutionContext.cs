@@ -6,7 +6,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Execution Context
-    /// 
+    ///
     /// Related Class: CommandRunner
     /// </summary>
     public class ExecutionContext
@@ -19,8 +19,5 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>Cancellation Token</summary>
         public CancellationToken CancellationToken { get; set; }
-
-        /// <summary>Timeout in Seconds</summary>
-        public int TimeoutSeconds { get; set; } = 60;
     }
 }

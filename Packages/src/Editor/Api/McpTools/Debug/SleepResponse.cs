@@ -13,20 +13,15 @@ namespace io.github.hatayama.uLoopMCP
         /// Message indicating the result of the sleep operation
         /// </summary>
         public string Message { get; set; }
-        
+
         /// <summary>
         /// Actual number of seconds the tool slept before completion or timeout
         /// </summary>
         public int ActualSleepSeconds { get; set; }
-        
+
         /// <summary>
         /// Indicates whether the operation completed successfully or was cancelled
         /// </summary>
         public bool WasCancelled { get; set; }
-        
-        /// <summary>
-        /// The timeout value that was applied during execution
-        /// </summary>
-        public int AppliedTimeoutSeconds { get; set; }
     }
 }

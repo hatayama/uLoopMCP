@@ -49,30 +49,19 @@ namespace io.github.hatayama.uLoopMCP
             // Convert JToken to strongly typed Schema
             TSchema parameters = ConvertToSchema(paramsToken);
 
-            // Create CancellationTokenSource with timeout from parameters
-            using (CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(parameters.TimeoutSeconds)))
+            // Execute with type-safe parameters
+            TResponse response = await ExecuteAsync(parameters, CancellationToken.None);
+
+            DateTime endTime = DateTime.UtcNow;
+
+            // Set timing information if response inherits from BaseToolResponse
+            if (response is BaseToolResponse baseResponse)
             {
-                try
-                {
-                    // Execute with type-safe parameters and cancellation token
-                    TResponse response = await ExecuteAsync(parameters, cts.Token);
-
-                    DateTime endTime = DateTime.UtcNow;
-
-                    // Set timing information if response inherits from BaseToolResponse
-                    if (response is BaseToolResponse baseResponse)
-                    {
-                        baseResponse.SetTimingInfo(startTime, endTime);
-                    }
-
-                    // Return as BaseToolResponse for IUnityTool interface compatibility
-                    return response;
-                }
-                catch (OperationCanceledException)
-                {
-                    throw new TimeoutException($"Tool {ToolName} timed out after {parameters.TimeoutSeconds} seconds");
-                }
+                baseResponse.SetTimingInfo(startTime, endTime);
             }
+
+            // Return as BaseToolResponse for IUnityTool interface compatibility
+            return response;
         }
 
         /// <summary>

@@ -45,10 +45,8 @@ namespace io.github.hatayama.uLoopMCP
 
         private CancellationTokenSource CreateCombinedCancellationTokenSource(ExecutionContext context)
         {
-            CancellationTokenSource timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(context.TimeoutSeconds));
             return CancellationTokenSource.CreateLinkedTokenSource(
                 _cancellationTokenSource.Token,
-                timeoutCts.Token,
                 context.CancellationToken
             );
         }
