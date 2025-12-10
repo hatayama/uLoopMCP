@@ -4,17 +4,19 @@ using UnityEngine;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Utility class to resolve the absolute path to the Node.js executable.
-    /// Uses 'which node' on macOS/Linux and 'where node' on Windows.
+    /// Utility class to verify Node.js availability on the system.
+    /// Uses 'node -v' to check if Node.js is accessible via PATH.
     /// </summary>
     public static class NodePathResolver
     {
         private static string _cachedNodePath;
         private static bool _cacheInitialized;
 
+        private const int PROCESS_TIMEOUT_MS = 5000;
+
         /// <summary>
-        /// Gets the absolute path to the Node.js executable.
-        /// Returns null if Node.js is not found.
+        /// Gets the Node.js command name if available on PATH.
+        /// Returns "node" if available, null if Node.js is not found.
         /// </summary>
         public static string GetNodeExecutablePath()
         {
@@ -62,14 +64,27 @@ namespace io.github.hatayama.uLoopMCP
                 CreateNoWindow = true
             };
 
-            Process process = Process.Start(startInfo);
-            string output = process.StandardOutput.ReadToEnd().Trim();
-            process.WaitForExit();
-
-            // node -v returns something like "v20.10.0"
-            if (process.ExitCode == 0 && output.StartsWith("v"))
+            using (Process process = Process.Start(startInfo))
             {
-                return McpConstants.NODE_COMMAND;
+                if (process == null)
+                {
+                    return null;
+                }
+
+                string output = process.StandardOutput.ReadToEnd().Trim();
+                process.StandardError.ReadToEnd();
+
+                if (!process.WaitForExit(PROCESS_TIMEOUT_MS))
+                {
+                    process.Kill();
+                    return null;
+                }
+
+                // node -v returns something like "v20.10.0"
+                if (process.ExitCode == 0 && output.StartsWith("v"))
+                {
+                    return McpConstants.NODE_COMMAND;
+                }
             }
 
             return null;

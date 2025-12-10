@@ -44,8 +44,15 @@ namespace io.github.hatayama.uLoopMCP
 #endif
             };
 
+            string nodePath = NodePathResolver.GetNodeExecutablePath();
+            if (string.IsNullOrEmpty(nodePath))
+            {
+                throw new System.InvalidOperationException(
+                    "Node.js is not available. Ensure Node.js is installed and accessible via PATH.");
+            }
+
             return new McpServerConfigData(
-                command: NodePathResolver.GetNodeExecutablePath(),
+                command: nodePath,
                 args: new[] { finalServerPath },
                 env: env
             );
@@ -110,8 +117,15 @@ namespace io.github.hatayama.uLoopMCP
 #endif
             };
             
+            string nodePath = NodePathResolver.GetNodeExecutablePath();
+            if (string.IsNullOrEmpty(nodePath))
+            {
+                throw new System.InvalidOperationException(
+                    "Node.js is not available. Ensure Node.js is installed and accessible via PATH.");
+            }
+
             return new McpServerConfigData(
-                command: NodePathResolver.GetNodeExecutablePath(),
+                command: nodePath,
                 args: new[] { serverPath },
                 env: env
             );
