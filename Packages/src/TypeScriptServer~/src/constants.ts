@@ -152,3 +152,11 @@ export const KEEPALIVE = {
   TIMEOUT_MS: 5000, // Ping response timeout
   MAX_CONSECUTIVE_FAILURES: 3, // Stop keepalive after 3 consecutive failures
 } as const;
+
+// Connection recovery configuration
+// Detects stuck states where connected=false persists despite Unity running
+export const CONNECTION_RECOVERY = {
+  STUCK_THRESHOLD_MS: 60000, // 60 seconds - if disconnected longer than this, consider stuck
+  FORCE_RECONNECT_DELAY_MS: 2000, // Delay before force reconnection attempt
+  MAX_FORCE_RECONNECT_ATTEMPTS: 3, // Maximum number of force reconnection attempts per stuck detection
+} as const;

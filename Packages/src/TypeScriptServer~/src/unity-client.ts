@@ -6,6 +6,7 @@ import {
   ERROR_MESSAGES,
   DEFAULT_CLIENT_NAME,
   ServerShutdownReason,
+  CONNECTION_RECOVERY,
 } from './constants.js';
 // Debug logging removed
 import { SafeTimer, safeSetTimeout, stopSafeTimer } from './utils/safe-timer.js';
@@ -22,6 +23,7 @@ import { VibeLogger } from './utils/vibe-logger.js';
  */
 interface UnityDiscovery {
   handleConnectionLost(): void;
+  forceImmediateReconnection(): Promise<boolean>;
 }
 
 /**
@@ -57,6 +59,9 @@ export class UnityClient {
   private connectingPromise: Promise<void> | null = null;
   private hasEverConnected: boolean = false;
   private shutdownReason: ServerShutdownReason | null = null;
+  // Stuck detection: tracks when connection was last successful
+  private lastSuccessfulConnectionTime: number = 0;
+  private forceReconnectAttempts: number = 0;
 
   private constructor() {
     const unityTcpPort: string | undefined = process.env.UNITY_TCP_PORT;
@@ -271,6 +276,8 @@ export class UnityClient {
         this._connected = true;
         this.hasEverConnected = true;
         this.shutdownReason = null; // Reset shutdown reason on successful connection
+        this.lastSuccessfulConnectionTime = Date.now(); // Track connection success time
+        this.forceReconnectAttempts = 0; // Reset force reconnect counter on success
         connectionEstablished = true;
         promiseSettled = true;
 
@@ -480,6 +487,10 @@ export class UnityClient {
       if (this.shutdownReason === ServerShutdownReason.EDITOR_QUIT) {
         throw new Error(this.getServerNotRunningMessage());
       }
+
+      // Stuck detection: if disconnected for too long, attempt force reconnection
+      await this.detectAndRecoverFromStuckState();
+
       // Domain reload or compilation in progress → guidance message as success response
       return this.getOsSpecificReconnectMessage();
     }
@@ -645,6 +656,67 @@ export class UnityClient {
     // Delegate to UnityDiscovery for unified connection management
     if (this.unityDiscovery) {
       this.unityDiscovery.handleConnectionLost();
+    }
+  }
+
+  /**
+   * Detect stuck state and attempt recovery
+   * Called when executeTool() finds connected=false
+   */
+  private async detectAndRecoverFromStuckState(): Promise<void> {
+    const timeSinceLastConnection: number = Date.now() - this.lastSuccessfulConnectionTime;
+
+    // Only attempt recovery if we've been disconnected longer than threshold
+    // and haven't exceeded max attempts
+    if (
+      this.hasEverConnected &&
+      this.lastSuccessfulConnectionTime > 0 &&
+      timeSinceLastConnection > CONNECTION_RECOVERY.STUCK_THRESHOLD_MS &&
+      this.forceReconnectAttempts < CONNECTION_RECOVERY.MAX_FORCE_RECONNECT_ATTEMPTS
+    ) {
+      this.forceReconnectAttempts++;
+
+      VibeLogger.logWarning(
+        'unity_client_stuck_detected',
+        'Stuck state detected - attempting force reconnection',
+        {
+          time_since_last_connection_ms: timeSinceLastConnection,
+          stuck_threshold_ms: CONNECTION_RECOVERY.STUCK_THRESHOLD_MS,
+          force_reconnect_attempt: this.forceReconnectAttempts,
+          max_attempts: CONNECTION_RECOVERY.MAX_FORCE_RECONNECT_ATTEMPTS,
+        },
+        undefined,
+        'Connection has been disconnected for too long despite Unity likely running',
+        'Attempting force reconnection to recover from stuck state',
+      );
+
+      // Attempt force reconnection via UnityDiscovery
+      if (this.unityDiscovery) {
+        const recovered: boolean = await this.unityDiscovery.forceImmediateReconnection();
+        if (recovered) {
+          VibeLogger.logInfo(
+            'unity_client_stuck_recovered',
+            'Successfully recovered from stuck state',
+            {
+              force_reconnect_attempt: this.forceReconnectAttempts,
+            },
+            undefined,
+            'Force reconnection succeeded',
+          );
+          this.forceReconnectAttempts = 0; // Reset on successful recovery
+        } else {
+          VibeLogger.logWarning(
+            'unity_client_stuck_recovery_failed',
+            'Force reconnection attempt failed',
+            {
+              force_reconnect_attempt: this.forceReconnectAttempts,
+              max_attempts: CONNECTION_RECOVERY.MAX_FORCE_RECONNECT_ATTEMPTS,
+            },
+            undefined,
+            'Will retry on next tool execution if threshold not exceeded',
+          );
+        }
+      }
     }
   }
 

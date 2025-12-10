@@ -443,6 +443,60 @@ export class UnityDiscovery {
   }
 
   /**
+   * Force immediate reconnection for stuck state recovery
+   * More aggressive than forceDiscovery - clears all state and attempts immediate connect
+   */
+  async forceImmediateReconnection(): Promise<boolean> {
+    const correlationId: string = VibeLogger.generateCorrelationId();
+
+    VibeLogger.logWarning(
+      'unity_discovery_force_immediate_reconnection',
+      'Force immediate reconnection triggered for stuck state recovery',
+      {
+        is_currently_connected: this.unityClient.connected,
+        is_discovering: this.isDiscovering,
+        has_discovery_interval: this.discoveryInterval !== null,
+        discovery_attempt_count: this.discoveryAttemptCount,
+      },
+      correlationId,
+      'Attempting aggressive recovery from stuck state',
+      'This is triggered when connection has been down for longer than the stuck threshold',
+    );
+
+    // Stop any existing discovery
+    this.stop();
+
+    // Force reset all discovery state
+    this.isDiscovering = false;
+    this.discoveryAttemptCount = 0;
+    this.lastConnectionLostTime = 0; // Clear debounce to allow immediate action
+
+    // Attempt immediate discovery and connection
+    await this.unifiedDiscoveryAndConnectionCheck();
+
+    const isConnected: boolean = this.unityClient.connected;
+
+    VibeLogger.logInfo(
+      'unity_discovery_force_immediate_reconnection_result',
+      `Force immediate reconnection ${isConnected ? 'succeeded' : 'failed'}`,
+      {
+        is_connected: isConnected,
+      },
+      correlationId,
+      isConnected
+        ? 'Successfully recovered connection'
+        : 'Failed to recover connection - will retry on next tool execution',
+    );
+
+    // If still not connected, restart regular discovery polling
+    if (!isConnected) {
+      this.start();
+    }
+
+    return isConnected;
+  }
+
+  /**
    * Handle connection lost event (called by UnityClient)
    * Includes debounce to prevent rapid repeated handling
    */
