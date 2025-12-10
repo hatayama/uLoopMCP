@@ -439,17 +439,76 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Gets the path to the TypeScript server.
-        /// Supports both installation via Package Manager and local development.
+        /// Priority: 1. Local development, 2. Fixed path (Library/uLoopMCP), 3. Package path via Unity API, 4. PackageCache (fallback)
         /// </summary>
         public static string GetTypeScriptServerPath()
         {
-            string packageBasePath = GetPackageBasePath();
-            if (string.IsNullOrEmpty(packageBasePath))
+            string projectRoot = GetProjectRoot();
+
+            // 1. Local development path (Packages/src) - highest priority for developers
+            string localPath = Path.Combine(projectRoot, McpConstants.PACKAGES_DIR, McpConstants.SRC_DIR);
+            string localServerPath = BuildTypeScriptServerPath(localPath);
+            if (File.Exists(localServerPath))
             {
-                return string.Empty;
+                return localServerPath;
             }
-            
-            return BuildTypeScriptServerPath(packageBasePath);
+
+            // 2. Fixed path in Library - stable path for mcp.json
+            string fixedPath = Path.Combine(
+                projectRoot,
+                McpConstants.LIBRARY_DIR,
+                McpConstants.ULOOPMCP_DIR,
+                McpConstants.SERVER_BUNDLE_FILE
+            );
+            if (File.Exists(fixedPath))
+            {
+                return fixedPath;
+            }
+
+            // 3. Package path via Unity Package Manager API (supports submodules and local packages)
+            string packagePath = GetPackagePathViaUnityApi();
+            if (!string.IsNullOrEmpty(packagePath))
+            {
+                string serverPath = BuildTypeScriptServerPath(packagePath);
+                if (File.Exists(serverPath))
+                {
+                    return serverPath;
+                }
+            }
+
+            // 4. PackageCache - fallback for initial setup before ServerBundleCopier runs
+            string packageCacheDir = Path.Combine(projectRoot, McpConstants.LIBRARY_DIR, McpConstants.PACKAGE_CACHE_DIR);
+            if (Directory.Exists(packageCacheDir))
+            {
+                string[] packageDirs = Directory.GetDirectories(packageCacheDir, McpConstants.PACKAGE_NAME_PATTERN);
+                foreach (string packageDir in packageDirs)
+                {
+                    string serverPath = BuildTypeScriptServerPath(packageDir);
+                    if (File.Exists(serverPath))
+                    {
+                        return serverPath;
+                    }
+                }
+            }
+
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Gets the package path using Unity Package Manager API.
+        /// Supports local packages referenced via file: protocol (e.g., submodules).
+        /// </summary>
+        private static string GetPackagePathViaUnityApi()
+        {
+            UnityEditor.PackageManager.PackageInfo packageInfo =
+                UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(UnityMcpPathResolver).Assembly);
+
+            if (packageInfo != null && !string.IsNullOrEmpty(packageInfo.resolvedPath))
+            {
+                return packageInfo.resolvedPath;
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -459,7 +518,7 @@ namespace io.github.hatayama.uLoopMCP
         public static string GetPackageBasePath()
         {
             string projectRoot = GetProjectRoot();
-            
+
             // 1. First, check the path for local development (Packages/src).
             string localPath = Path.Combine(projectRoot, McpConstants.PACKAGES_DIR, McpConstants.SRC_DIR);
             string localServerPath = BuildTypeScriptServerPath(localPath);
@@ -468,14 +527,14 @@ namespace io.github.hatayama.uLoopMCP
                 // Using local package path
                 return localPath;
             }
-            
+
             // 2. Search for the path when installed via Package Manager.
             string packageCacheDir = Path.Combine(projectRoot, McpConstants.LIBRARY_DIR, McpConstants.PACKAGE_CACHE_DIR);
             if (Directory.Exists(packageCacheDir))
             {
                 // Search for directories starting with io.github.hatayama.uloopmcp@.
                 string[] packageDirs = Directory.GetDirectories(packageCacheDir, McpConstants.PACKAGE_NAME_PATTERN);
-                
+
                 foreach (string packageDir in packageDirs)
                 {
                     string serverPath = BuildTypeScriptServerPath(packageDir);
@@ -486,9 +545,9 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }
             }
-            
+
             // 3. If neither is found, return the local path (with an error log).
-            
+
             return localPath;
         }
 

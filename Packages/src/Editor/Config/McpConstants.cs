@@ -75,6 +75,7 @@ namespace io.github.hatayama.uLoopMCP
         public const string LIBRARY_DIR = "Library";
         public const string PACKAGE_CACHE_DIR = "PackageCache";
         public const string PACKAGE_NAME_PATTERN = "io.github.hatayama.uloopmcp@*";
+        public const string ULOOPMCP_DIR = "uLoopMCP";
         
         // File output directories
         public const string OUTPUT_ROOT_DIR = "uLoopMCPOutputs";
