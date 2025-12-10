@@ -226,11 +226,22 @@ export class MessageHandler {
   }
 
   /**
-   * Clear all pending requests (used during disconnect)
+   * Clear all pending requests with rejection (used during permanent disconnect)
    */
   clearPendingRequests(reason: string): void {
     for (const [, pending] of this.pendingRequests) {
       pending.reject(new Error(reason));
+    }
+    this.pendingRequests.clear();
+  }
+
+  /**
+   * Clear all pending requests with resolution (used during temporary disconnect)
+   * Returns success message instead of error, allowing AI to understand reconnection is possible
+   */
+  clearPendingRequestsWithSuccess(message: string): void {
+    for (const [, pending] of this.pendingRequests) {
+      pending.resolve(message);
     }
     this.pendingRequests.clear();
   }

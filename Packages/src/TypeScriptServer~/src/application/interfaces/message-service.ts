@@ -55,11 +55,19 @@ export interface IMessageService extends ApplicationService {
   ): void;
 
   /**
-   * Clear all pending requests
+   * Clear all pending requests with rejection (error)
    *
    * @param reason Reason for clearing (used in error messages)
    */
   clearPendingRequests(reason: string): void;
+
+  /**
+   * Clear all pending requests with resolution (success)
+   * Used when connection is temporarily lost but will recover (e.g., domain reload)
+   *
+   * @param message Success message to return to pending requests
+   */
+  clearPendingRequestsWithSuccess(message: string): void;
 
   /**
    * Register notification handler for specific method

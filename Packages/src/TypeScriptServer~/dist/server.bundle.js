@@ -6872,11 +6872,21 @@ var MessageHandler = class {
     }
   }
   /**
-   * Clear all pending requests (used during disconnect)
+   * Clear all pending requests with rejection (used during permanent disconnect)
    */
   clearPendingRequests(reason) {
     for (const [, pending] of this.pendingRequests) {
       pending.reject(new Error(reason));
+    }
+    this.pendingRequests.clear();
+  }
+  /**
+   * Clear all pending requests with resolution (used during temporary disconnect)
+   * Returns success message instead of error, allowing AI to understand reconnection is possible
+   */
+  clearPendingRequestsWithSuccess(message) {
+    for (const [, pending] of this.pendingRequests) {
+      pending.resolve(message);
     }
     this.pendingRequests.clear();
   }
@@ -7376,7 +7386,11 @@ var UnityClient = class _UnityClient {
    */
   disconnect() {
     this.connectionManager.stopPolling();
-    this.messageHandler.clearPendingRequests("Connection closed");
+    if (this.shutdownReason === ServerShutdownReason.EDITOR_QUIT) {
+      this.messageHandler.clearPendingRequests(this.getServerNotRunningMessage());
+    } else {
+      this.messageHandler.clearPendingRequestsWithSuccess(this.getOsSpecificReconnectMessage());
+    }
     this.messageHandler.clearBuffer();
     this.requestIdCounter = 0;
     if (this.socket) {

@@ -631,7 +631,11 @@ export class UnityClient {
 
     // Clean up all pending requests and their timers
     // CRITICAL: This prevents orphaned processes by ensuring all setTimeout timers are cleared
-    this.messageHandler.clearPendingRequests('Connection closed');
+    if (this.shutdownReason === ServerShutdownReason.EDITOR_QUIT) {
+      this.messageHandler.clearPendingRequests(this.getServerNotRunningMessage());
+    } else {
+      this.messageHandler.clearPendingRequestsWithSuccess(this.getOsSpecificReconnectMessage());
+    }
 
     // Clear the Content-Length framing buffer
     this.messageHandler.clearBuffer();
