@@ -1,6 +1,7 @@
 import { UnityClient } from './unity-client.js';
 import { UnityDiscovery } from './unity-discovery.js';
-import { ENVIRONMENT } from './constants.js';
+import { ENVIRONMENT, CONNECTION_RECOVERY } from './constants.js';
+import { VibeLogger } from './utils/vibe-logger.js';
 
 /**
  * Unity Connection Manager - Manages Unity connection and discovery functionality
@@ -104,9 +105,41 @@ export class UnityConnectionManager {
 
       // Stop discovery after successful connection
       this.unityDiscovery.stop();
-    } catch {
-      // Failed to handle Unity discovery
+    } catch (error) {
+      // Log the error instead of silently swallowing it
+      VibeLogger.logError(
+        'unity_connection_manager_discovery_failed',
+        'Failed to establish connection after Unity discovery',
+        {
+          error_message: error instanceof Error ? error.message : String(error),
+        },
+        undefined,
+        'Discovery found Unity but connection establishment failed',
+        'Will retry discovery to attempt recovery',
+      );
+
+      // Schedule retry discovery to attempt recovery
+      this.scheduleRetryDiscovery();
     }
+  }
+
+  /**
+   * Schedule retry discovery after connection failure
+   */
+  private scheduleRetryDiscovery(): void {
+    setTimeout(() => {
+      if (!this.unityClient.connected) {
+        VibeLogger.logInfo(
+          'unity_connection_manager_retry_discovery',
+          'Retrying discovery after connection failure',
+          undefined,
+          undefined,
+          'Restarting discovery to recover from failed connection attempt',
+        );
+        // Trigger connection lost handling which will restart discovery
+        this.unityDiscovery.handleConnectionLost();
+      }
+    }, CONNECTION_RECOVERY.FORCE_RECONNECT_DELAY_MS);
   }
 
   /**

@@ -1,6 +1,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { VibeLogger } from './utils/vibe-logger.js';
 import { KEEPALIVE, ENVIRONMENT } from './constants.js';
+import { UnityClient } from './unity-client.js';
 
 /**
  * MCP Keepalive Service - Prevents Cursor's idle timeout by sending periodic pings
@@ -24,6 +25,7 @@ import { KEEPALIVE, ENVIRONMENT } from './constants.js';
 export class McpKeepaliveService {
   private keepaliveInterval: NodeJS.Timeout | null = null;
   private server: Server;
+  private unityClient: UnityClient | null = null;
   private consecutiveFailures: number = 0;
   private isRunning: boolean = false;
   private readonly isDevelopment: boolean;
@@ -31,6 +33,13 @@ export class McpKeepaliveService {
   constructor(server: Server) {
     this.server = server;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+  }
+
+  /**
+   * Set UnityClient reference for diagnostic logging
+   */
+  setUnityClient(unityClient: UnityClient): void {
+    this.unityClient = unityClient;
   }
 
   /**
@@ -112,6 +121,9 @@ export class McpKeepaliveService {
     } catch (error) {
       this.consecutiveFailures++;
 
+      // Include Unity connection state for diagnosis of Problem 2 (MCP OFF issue)
+      const unityConnected: boolean | string = this.unityClient?.connected ?? 'unknown';
+
       VibeLogger.logError(
         'keepalive_ping_failed',
         'Keepalive ping failed',
@@ -119,18 +131,24 @@ export class McpKeepaliveService {
           error: error instanceof Error ? error.message : String(error),
           consecutive_failures: this.consecutiveFailures,
           max_failures: KEEPALIVE.MAX_CONSECUTIVE_FAILURES,
+          unity_connected: unityConnected,
         },
         undefined,
         'Ping to MCP client failed',
+        'If Unity is also disconnected, this may indicate a broader connection issue',
       );
 
       if (this.consecutiveFailures >= KEEPALIVE.MAX_CONSECUTIVE_FAILURES) {
         VibeLogger.logError(
           'keepalive_stopped_max_failures',
           'Keepalive stopped due to max consecutive failures',
-          { consecutive_failures: this.consecutiveFailures },
+          {
+            consecutive_failures: this.consecutiveFailures,
+            unity_connected: unityConnected,
+          },
           undefined,
           'Connection may be lost - stopping keepalive to prevent log spam',
+          'Check Unity connection status and MCP client (Cursor) state',
         );
         this.stop();
       }

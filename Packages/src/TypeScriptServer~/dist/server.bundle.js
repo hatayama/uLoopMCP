@@ -5547,6 +5547,14 @@ var KEEPALIVE = {
   MAX_CONSECUTIVE_FAILURES: 3
   // Stop keepalive after 3 consecutive failures
 };
+var CONNECTION_RECOVERY = {
+  STUCK_THRESHOLD_MS: 6e4,
+  // 60 seconds - if disconnected longer than this, consider stuck
+  FORCE_RECONNECT_DELAY_MS: 2e3,
+  // Delay before force reconnection attempt
+  MAX_FORCE_RECONNECT_ATTEMPTS: 3
+  // Maximum number of force reconnection attempts per stuck detection
+};
 
 // src/utils/safe-timer.ts
 var SafeTimer = class _SafeTimer {
@@ -6925,6 +6933,9 @@ var UnityClient = class _UnityClient {
   connectingPromise = null;
   hasEverConnected = false;
   shutdownReason = null;
+  // Stuck detection: tracks when connection was last successful
+  lastSuccessfulConnectionTime = 0;
+  forceReconnectAttempts = 0;
   constructor() {
     const unityTcpPort = process.env.UNITY_TCP_PORT;
     if (!unityTcpPort) {
@@ -7100,6 +7111,8 @@ var UnityClient = class _UnityClient {
         this._connected = true;
         this.hasEverConnected = true;
         this.shutdownReason = null;
+        this.lastSuccessfulConnectionTime = Date.now();
+        this.forceReconnectAttempts = 0;
         connectionEstablished = true;
         promiseSettled = true;
         this.reconnectHandlers.forEach((handler) => {
@@ -7264,6 +7277,7 @@ var UnityClient = class _UnityClient {
       if (this.shutdownReason === ServerShutdownReason.EDITOR_QUIT) {
         throw new Error(this.getServerNotRunningMessage());
       }
+      await this.detectAndRecoverFromStuckState();
       return this.getOsSpecificReconnectMessage();
     }
     await this.setClientName();
@@ -7378,6 +7392,55 @@ var UnityClient = class _UnityClient {
     this.connectionManager.triggerConnectionLost();
     if (this.unityDiscovery) {
       this.unityDiscovery.handleConnectionLost();
+    }
+  }
+  /**
+   * Detect stuck state and attempt recovery
+   * Called when executeTool() finds connected=false
+   */
+  async detectAndRecoverFromStuckState() {
+    const timeSinceLastConnection = Date.now() - this.lastSuccessfulConnectionTime;
+    if (this.hasEverConnected && this.lastSuccessfulConnectionTime > 0 && timeSinceLastConnection > CONNECTION_RECOVERY.STUCK_THRESHOLD_MS && this.forceReconnectAttempts < CONNECTION_RECOVERY.MAX_FORCE_RECONNECT_ATTEMPTS) {
+      this.forceReconnectAttempts++;
+      VibeLogger.logWarning(
+        "unity_client_stuck_detected",
+        "Stuck state detected - attempting force reconnection",
+        {
+          time_since_last_connection_ms: timeSinceLastConnection,
+          stuck_threshold_ms: CONNECTION_RECOVERY.STUCK_THRESHOLD_MS,
+          force_reconnect_attempt: this.forceReconnectAttempts,
+          max_attempts: CONNECTION_RECOVERY.MAX_FORCE_RECONNECT_ATTEMPTS
+        },
+        void 0,
+        "Connection has been disconnected for too long despite Unity likely running",
+        "Attempting force reconnection to recover from stuck state"
+      );
+      if (this.unityDiscovery) {
+        const recovered = await this.unityDiscovery.forceImmediateReconnection();
+        if (recovered) {
+          VibeLogger.logInfo(
+            "unity_client_stuck_recovered",
+            "Successfully recovered from stuck state",
+            {
+              force_reconnect_attempt: this.forceReconnectAttempts
+            },
+            void 0,
+            "Force reconnection succeeded"
+          );
+          this.forceReconnectAttempts = 0;
+        } else {
+          VibeLogger.logWarning(
+            "unity_client_stuck_recovery_failed",
+            "Force reconnection attempt failed",
+            {
+              force_reconnect_attempt: this.forceReconnectAttempts,
+              max_attempts: CONNECTION_RECOVERY.MAX_FORCE_RECONNECT_ATTEMPTS
+            },
+            void 0,
+            "Will retry on next tool execution if threshold not exceeded"
+          );
+        }
+      }
     }
   }
   /**
@@ -7772,6 +7835,45 @@ var UnityDiscovery = class _UnityDiscovery {
     return this.unityClient.connected;
   }
   /**
+   * Force immediate reconnection for stuck state recovery
+   * More aggressive than forceDiscovery - clears all state and attempts immediate connect
+   */
+  async forceImmediateReconnection() {
+    const correlationId = VibeLogger.generateCorrelationId();
+    VibeLogger.logWarning(
+      "unity_discovery_force_immediate_reconnection",
+      "Force immediate reconnection triggered for stuck state recovery",
+      {
+        is_currently_connected: this.unityClient.connected,
+        is_discovering: this.isDiscovering,
+        has_discovery_interval: this.discoveryInterval !== null,
+        discovery_attempt_count: this.discoveryAttemptCount
+      },
+      correlationId,
+      "Attempting aggressive recovery from stuck state",
+      "This is triggered when connection has been down for longer than the stuck threshold"
+    );
+    this.stop();
+    this.isDiscovering = false;
+    this.discoveryAttemptCount = 0;
+    this.lastConnectionLostTime = 0;
+    await this.unifiedDiscoveryAndConnectionCheck();
+    const isConnected = this.unityClient.connected;
+    VibeLogger.logInfo(
+      "unity_discovery_force_immediate_reconnection_result",
+      `Force immediate reconnection ${isConnected ? "succeeded" : "failed"}`,
+      {
+        is_connected: isConnected
+      },
+      correlationId,
+      isConnected ? "Successfully recovered connection" : "Failed to recover connection - will retry on next tool execution"
+    );
+    if (!isConnected) {
+      this.start();
+    }
+    return isConnected;
+  }
+  /**
    * Handle connection lost event (called by UnityClient)
    * Includes debounce to prevent rapid repeated handling
    */
@@ -7904,8 +8006,36 @@ var UnityConnectionManager = class {
         await onConnectionEstablished();
       }
       this.unityDiscovery.stop();
-    } catch {
+    } catch (error) {
+      VibeLogger.logError(
+        "unity_connection_manager_discovery_failed",
+        "Failed to establish connection after Unity discovery",
+        {
+          error_message: error instanceof Error ? error.message : String(error)
+        },
+        void 0,
+        "Discovery found Unity but connection establishment failed",
+        "Will retry discovery to attempt recovery"
+      );
+      this.scheduleRetryDiscovery();
     }
+  }
+  /**
+   * Schedule retry discovery after connection failure
+   */
+  scheduleRetryDiscovery() {
+    setTimeout(() => {
+      if (!this.unityClient.connected) {
+        VibeLogger.logInfo(
+          "unity_connection_manager_retry_discovery",
+          "Retrying discovery after connection failure",
+          void 0,
+          void 0,
+          "Restarting discovery to recover from failed connection attempt"
+        );
+        this.unityDiscovery.handleConnectionLost();
+      }
+    }, CONNECTION_RECOVERY.FORCE_RECONNECT_DELAY_MS);
   }
   /**
    * Initialize connection manager with guard against concurrent initialization
@@ -9125,12 +9255,19 @@ var UnityEventHandler = class {
 var McpKeepaliveService = class {
   keepaliveInterval = null;
   server;
+  unityClient = null;
   consecutiveFailures = 0;
   isRunning = false;
   isDevelopment;
   constructor(server2) {
     this.server = server2;
     this.isDevelopment = process.env.NODE_ENV === ENVIRONMENT.NODE_ENV_DEVELOPMENT;
+  }
+  /**
+   * Set UnityClient reference for diagnostic logging
+   */
+  setUnityClient(unityClient) {
+    this.unityClient = unityClient;
   }
   /**
    * Start the keepalive service
@@ -9203,24 +9340,31 @@ var McpKeepaliveService = class {
       }
     } catch (error) {
       this.consecutiveFailures++;
+      const unityConnected = this.unityClient?.connected ?? "unknown";
       VibeLogger.logError(
         "keepalive_ping_failed",
         "Keepalive ping failed",
         {
           error: error instanceof Error ? error.message : String(error),
           consecutive_failures: this.consecutiveFailures,
-          max_failures: KEEPALIVE.MAX_CONSECUTIVE_FAILURES
+          max_failures: KEEPALIVE.MAX_CONSECUTIVE_FAILURES,
+          unity_connected: unityConnected
         },
         void 0,
-        "Ping to MCP client failed"
+        "Ping to MCP client failed",
+        "If Unity is also disconnected, this may indicate a broader connection issue"
       );
       if (this.consecutiveFailures >= KEEPALIVE.MAX_CONSECUTIVE_FAILURES) {
         VibeLogger.logError(
           "keepalive_stopped_max_failures",
           "Keepalive stopped due to max consecutive failures",
-          { consecutive_failures: this.consecutiveFailures },
+          {
+            consecutive_failures: this.consecutiveFailures,
+            unity_connected: unityConnected
+          },
           void 0,
-          "Connection may be lost - stopping keepalive to prevent log spam"
+          "Connection may be lost - stopping keepalive to prevent log spam",
+          "Check Unity connection status and MCP client (Cursor) state"
         );
         this.stop();
       }
