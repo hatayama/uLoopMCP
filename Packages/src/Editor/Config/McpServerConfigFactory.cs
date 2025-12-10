@@ -45,7 +45,7 @@ namespace io.github.hatayama.uLoopMCP
             };
 
             return new McpServerConfigData(
-                command: McpConstants.NODE_COMMAND,
+                command: NodePathResolver.GetNodeExecutablePath(),
                 args: new[] { finalServerPath },
                 env: env
             );
@@ -111,7 +111,7 @@ namespace io.github.hatayama.uLoopMCP
             };
             
             return new McpServerConfigData(
-                command: McpConstants.NODE_COMMAND,
+                command: NodePathResolver.GetNodeExecutablePath(),
                 args: new[] { serverPath },
                 env: env
             );
