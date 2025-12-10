@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.43.0](https://github.com/hatayama/uLoopMCP/compare/v0.42.1...v0.43.0) (2025-12-10)
+
+
+### Features
+
+* prevent Cursor MCP disconnection on package updates with stable server path ([#386](https://github.com/hatayama/uLoopMCP/issues/386)) ([171a1a9](https://github.com/hatayama/uLoopMCP/commit/171a1a9d836302b649dd9c7a9e5cfac48f58ce61))
+* return success message for pending requests on temporary disconnect ([#392](https://github.com/hatayama/uLoopMCP/issues/392)) ([b2bfa6d](https://github.com/hatayama/uLoopMCP/commit/b2bfa6d497a86f9809e88ff70282de640f1ac4c8))
+* skip server auto-start on first launch ([#390](https://github.com/hatayama/uLoopMCP/issues/390)) ([3b320eb](https://github.com/hatayama/uLoopMCP/commit/3b320eb8cad2c540e50f041a846431714ea03be9))
+* verify Node.js availability before MCP configuration ([#388](https://github.com/hatayama/uLoopMCP/issues/388)) ([3bf2c29](https://github.com/hatayama/uLoopMCP/commit/3bf2c29208bac74820ce48bc61df4b7cd08a5181))
+
+
+### Bug Fixes
+
+* recover from stuck connection state after long-term operation ([#389](https://github.com/hatayama/uLoopMCP/issues/389)) ([1244a5d](https://github.com/hatayama/uLoopMCP/commit/1244a5d7d108b08d0e78c210e58cbebf26506e49))
+
 ## [0.42.1](https://github.com/hatayama/uLoopMCP/compare/v0.42.0...v0.42.1) (2025-12-09)
 
 
