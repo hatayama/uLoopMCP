@@ -54,7 +54,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Gets the source path of server.bundle.js from PackageCache or local development.
+        /// Gets the source path of server.bundle.js from local development, submodule, or PackageCache.
         /// </summary>
         private static string GetSourceServerBundlePath()
         {
@@ -74,7 +74,23 @@ namespace io.github.hatayama.uLoopMCP
                 return localPath;
             }
 
-            // 2. Search in PackageCache
+            // 2. Check package path via Unity Package Manager API (supports submodules)
+            string packagePath = GetPackagePathViaUnityApi();
+            if (!string.IsNullOrEmpty(packagePath))
+            {
+                string serverPath = Path.Combine(
+                    packagePath,
+                    McpConstants.TYPESCRIPT_SERVER_DIR,
+                    McpConstants.DIST_DIR,
+                    McpConstants.SERVER_BUNDLE_FILE
+                );
+                if (File.Exists(serverPath))
+                {
+                    return serverPath;
+                }
+            }
+
+            // 3. Search in PackageCache
             string packageCacheDir = Path.Combine(
                 projectRoot,
                 McpConstants.LIBRARY_DIR,
@@ -96,6 +112,23 @@ namespace io.github.hatayama.uLoopMCP
                         return serverPath;
                     }
                 }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gets the package path using Unity Package Manager API.
+        /// Supports local packages referenced via file: protocol (e.g., submodules).
+        /// </summary>
+        private static string GetPackagePathViaUnityApi()
+        {
+            UnityEditor.PackageManager.PackageInfo packageInfo =
+                UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(ServerBundleCopier).Assembly);
+
+            if (packageInfo != null && !string.IsNullOrEmpty(packageInfo.resolvedPath))
+            {
+                return packageInfo.resolvedPath;
             }
 
             return null;
