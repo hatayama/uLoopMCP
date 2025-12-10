@@ -241,7 +241,7 @@ export class MessageHandler {
    */
   clearPendingRequestsWithSuccess(message: string): void {
     for (const [, pending] of this.pendingRequests) {
-      pending.resolve(message);
+      pending.resolve({ result: message });
     }
     this.pendingRequests.clear();
   }

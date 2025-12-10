@@ -6886,7 +6886,7 @@ var MessageHandler = class {
    */
   clearPendingRequestsWithSuccess(message) {
     for (const [, pending] of this.pendingRequests) {
-      pending.resolve(message);
+      pending.resolve({ result: message });
     }
     this.pendingRequests.clear();
   }
