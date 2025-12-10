@@ -88,7 +88,18 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="port">The port number to use.</param>
         public void AutoConfigure(int port)
         {
-            
+            if (!NodePathResolver.IsNodeAvailable())
+            {
+                UnityEditor.EditorUtility.DisplayDialog(
+                    "Node.js Not Found",
+                    "Node.js is not installed or PATH is not configured.\n\n" +
+                    "To verify, run 'node -v' in your terminal.\n\n" +
+                    "You can download Node.js from: https://nodejs.org/",
+                    "OK"
+                );
+                return;
+            }
+
             string configPath = UnityMcpPathResolver.GetConfigPath(_editorType);
             
             // Create the settings directory (only if necessary).
