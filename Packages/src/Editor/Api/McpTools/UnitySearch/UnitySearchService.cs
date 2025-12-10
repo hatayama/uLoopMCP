@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.Search;
@@ -102,37 +101,16 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static async Task<List<SearchItem>> ExecuteUnitySearchAsync(SearchContext context, UnitySearchSchema schema)
         {
-            ValidateTimeout(schema.TimeoutSeconds);
-
             TaskCompletionSource<List<SearchItem>> completionSource = CreateCompletionSource();
             SearchResultCollector collector = new SearchResultCollector();
-            TimeoutGuard timeoutGuard = TimeoutGuard.Create(schema.TimeoutSeconds);
 
             SearchService.Request(
                 context,
-                (ctx, items) => HandleSearchCallback(items, collector, completionSource, timeoutGuard.Token),
+                (ctx, items) => HandleSearchCallback(items, collector, completionSource),
                 ConvertSearchFlags(schema.SearchFlags));
 
-            timeoutGuard.RegisterTimeout(() => TryCompleteWithTimeout(completionSource, schema.TimeoutSeconds));
-
-            try
-            {
-                List<SearchItem> results = await completionSource.Task.ConfigureAwait(false);
-                return results;
-            }
-            finally
-            {
-                timeoutGuard.Dispose();
-            }
-        }
-
-        private static void ValidateTimeout(int timeoutSeconds)
-        {
-            if (timeoutSeconds < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(timeoutSeconds),
-                    "Timeout must be greater than or equal to zero");
-            }
+            List<SearchItem> results = await completionSource.Task.ConfigureAwait(false);
+            return results;
         }
 
         private static TaskCompletionSource<List<SearchItem>> CreateCompletionSource()
@@ -145,14 +123,8 @@ namespace io.github.hatayama.uLoopMCP
         private static void HandleSearchCallback(
             IList<SearchItem> items,
             SearchResultCollector collector,
-            TaskCompletionSource<List<SearchItem>> completionSource,
-            CancellationToken timeoutToken)
+            TaskCompletionSource<List<SearchItem>> completionSource)
         {
-            if (timeoutToken.IsCancellationRequested)
-            {
-                return;
-            }
-
             try
             {
                 List<SearchItem> snapshot = collector.TryCollect(items);
@@ -165,15 +137,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 completionSource.TrySetException(ex);
             }
-        }
-
-        private static void TryCompleteWithTimeout(
-            TaskCompletionSource<List<SearchItem>> completionSource,
-            int timeoutSeconds)
-        {
-            TimeoutException timeoutException = new TimeoutException(
-                $"Search timed out after {timeoutSeconds} seconds");
-            completionSource.TrySetException(timeoutException);
         }
 
         private sealed class SearchResultCollector
@@ -199,48 +162,6 @@ namespace io.github.hatayama.uLoopMCP
                     isHandled = true;
                     return new List<SearchItem>(items);
                 }
-            }
-        }
-
-        private sealed class TimeoutGuard : IDisposable
-        {
-            private readonly CancellationTokenSource source;
-
-            private TimeoutGuard(CancellationTokenSource source)
-            {
-                this.source = source;
-            }
-
-            public CancellationToken Token => source.Token;
-
-            public static TimeoutGuard Create(int timeoutSeconds)
-            {
-                CancellationTokenSource createdSource = new CancellationTokenSource();
-                TimeoutGuard guard = new TimeoutGuard(createdSource);
-
-                if (timeoutSeconds == 0)
-                {
-                    guard.source.Cancel();
-                    return guard;
-                }
-
-                if (timeoutSeconds > 0)
-                {
-                    TimeSpan timeoutSpan = TimeSpan.FromSeconds(timeoutSeconds);
-                    guard.source.CancelAfter(timeoutSpan);
-                }
-
-                return guard;
-            }
-
-            public void RegisterTimeout(Action onTimeout)
-            {
-                source.Token.Register(onTimeout);
-            }
-
-            public void Dispose()
-            {
-                source.Dispose();
             }
         }
 

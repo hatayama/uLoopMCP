@@ -239,8 +239,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     CompiledAssembly = compilationResult.CompiledAssembly,
                     Parameters = ConvertParametersToDict(parameters ?? new object[0]),
-                    CancellationToken = cancellationToken,
-                    TimeoutSeconds = 60
+                    CancellationToken = cancellationToken
                 };
 
                 ExecutionResult executionResult = await _runner.ExecuteAsync(context).ConfigureAwait(false);
