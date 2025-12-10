@@ -74,10 +74,18 @@ namespace io.github.hatayama.uLoopMCP
     public static class McpEditorSettings
     {
         private const string ROSLYN_SYMBOL = "ULOOPMCP_HAS_ROSLYN";
-        
+
         private static string SettingsFilePath => Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
 
         private static McpEditorSettingsData _cachedSettings;
+
+        // Settings file was newly created during this session (first launch detection)
+        private static bool _isFirstLaunch;
+
+        /// <summary>
+        /// Whether this is the first launch (settings file was newly created).
+        /// </summary>
+        public static bool IsFirstLaunch => _isFirstLaunch;
 
         /// <summary>
         /// Gets the settings data.
@@ -821,22 +829,24 @@ namespace io.github.hatayama.uLoopMCP
                     {
                         throw new SecurityException("Settings file exceeds size limit");
                     }
-                    
+
                     string json = File.ReadAllText(SettingsFilePath);
-                    
+
                     // Security: Validate JSON content
                     if (string.IsNullOrWhiteSpace(json))
                     {
                         throw new InvalidDataException("Settings file contains invalid JSON content");
                     }
-                    
+
                     _cachedSettings = JsonUtility.FromJson<McpEditorSettingsData>(json);
+                    _isFirstLaunch = false;
                 }
                 else
                 {
                     // Create default settings.
                     _cachedSettings = new McpEditorSettingsData();
                     SaveSettings(_cachedSettings);
+                    _isFirstLaunch = true;
                 }
             }
             catch (Exception ex)
