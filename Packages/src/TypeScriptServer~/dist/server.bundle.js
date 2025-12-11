@@ -5505,8 +5505,8 @@ var PARAMETER_SCHEMA = {
   REQUIRED_PROPERTY: "Required"
 };
 var TIMEOUTS = {
-  NETWORK: 12e4
-  // 2分 - ネットワークレベルのタイムアウト（Unity側のタイムアウトより長く設定）
+  NETWORK: 3e5
+  // 5 minutes - Network-level timeout (accounts for Roslyn initialization after Domain Reload)
 };
 var DEFAULT_CLIENT_NAME = "";
 var ENVIRONMENT = {
@@ -5516,7 +5516,7 @@ var ENVIRONMENT = {
 var ERROR_MESSAGES = {
   NOT_CONNECTED: "Unity MCP Bridge is not connected",
   CONNECTION_FAILED: "Unity connection failed",
-  TIMEOUT: "timeout",
+  TIMEOUT: "timed out waiting for Unity response (uLoopMCP). Unity may be busy with compilation or Roslyn initialization. Wait 10-30 seconds and retry.",
   INVALID_RESPONSE: "Invalid response from Unity"
 };
 var POLLING = {

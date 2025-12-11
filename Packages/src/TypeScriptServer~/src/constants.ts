@@ -68,7 +68,7 @@ export const PARAMETER_SCHEMA = {
 
 // Timeout configuration (milliseconds)
 export const TIMEOUTS = {
-  NETWORK: 120000, // 2分 - ネットワークレベルのタイムアウト（Unity側のタイムアウトより長く設定）
+  NETWORK: 300000, // 5 minutes - Network-level timeout (accounts for Roslyn initialization after Domain Reload)
 } as const;
 
 // Log configuration
@@ -112,7 +112,8 @@ export const ENVIRONMENT = {
 export const ERROR_MESSAGES = {
   NOT_CONNECTED: 'Unity MCP Bridge is not connected',
   CONNECTION_FAILED: 'Unity connection failed',
-  TIMEOUT: 'timeout',
+  TIMEOUT:
+    'timed out waiting for Unity response (uLoopMCP). Unity may be busy with compilation or Roslyn initialization. Wait 10-30 seconds and retry.',
   INVALID_RESPONSE: 'Invalid response from Unity',
 } as const;
 
