@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.43.2](https://github.com/hatayama/uLoopMCP/compare/v0.43.1...v0.43.2) (2025-12-11)
+
+
+### Bug Fixes
+
+* detect Unity project root dynamically for VibeLogger ([dd5568c](https://github.com/hatayama/uLoopMCP/commit/dd5568c9189f47d1d1b67d668867ea6095fa154e))
+* support Node.js detection for nvm and other version managers ([#398](https://github.com/hatayama/uLoopMCP/issues/398)) ([96c71c9](https://github.com/hatayama/uLoopMCP/commit/96c71c971ee1fa1137cedf7dc9b7cf34ea2020fb))
+
 ## [0.43.1](https://github.com/hatayama/uLoopMCP/compare/v0.43.0...v0.43.1) (2025-12-11)
 
 
