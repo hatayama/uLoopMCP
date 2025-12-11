@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.43.3](https://github.com/hatayama/uLoopMCP/compare/v0.43.2...v0.43.3) (2025-12-11)
+
+
+### Bug Fixes
+
+* use portable "node" command instead of full path in mcp.json ([#399](https://github.com/hatayama/uLoopMCP/issues/399)) ([f3d9cb7](https://github.com/hatayama/uLoopMCP/commit/f3d9cb7e459f0561440aff522a0e1d9a2991eea5))
+
 ## [0.43.2](https://github.com/hatayama/uLoopMCP/compare/v0.43.1...v0.43.2) (2025-12-11)
 
 
