@@ -6906,6 +6906,12 @@ var MessageHandler = class {
     this.pendingRequests.clear();
   }
   /**
+   * Remove a specific pending request (used for individual timeout)
+   */
+  removePendingRequest(requestId) {
+    this.pendingRequests.delete(requestId);
+  }
+  /**
    * Create JSON-RPC request with Content-Length framing
    */
   createRequest(method, params, id) {
@@ -7368,7 +7374,7 @@ var UnityClient = class _UnityClient {
     return new Promise((resolve2, reject) => {
       const timeout_duration = timeoutMs || TIMEOUTS.NETWORK;
       const timeoutTimer = safeSetTimeout(() => {
-        this.messageHandler.clearPendingRequests(`Request ${ERROR_MESSAGES.TIMEOUT}`);
+        this.messageHandler.removePendingRequest(request.id);
         reject(new Error(`Request ${ERROR_MESSAGES.TIMEOUT}`));
       }, timeout_duration);
       this.messageHandler.registerPendingRequest(

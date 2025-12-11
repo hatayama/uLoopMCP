@@ -70,6 +70,13 @@ export interface IMessageService extends ApplicationService {
   clearPendingRequestsWithSuccess(message: string): void;
 
   /**
+   * Remove a specific pending request (used for individual timeout)
+   *
+   * @param requestId The request ID to remove
+   */
+  removePendingRequest(requestId: string): void;
+
+  /**
    * Register notification handler for specific method
    *
    * @param method Method name
