@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.43.5](https://github.com/hatayama/uLoopMCP/compare/v0.43.4...v0.43.5) (2025-12-11)
+
+
+### Bug Fixes
+
+* wait for initialization before returning tools in list_tools handler ([#403](https://github.com/hatayama/uLoopMCP/issues/403)) ([4d15b0e](https://github.com/hatayama/uLoopMCP/commit/4d15b0e8d9fae89ab3c9155a41b25253f184a0b9))
+
 ## [0.43.4](https://github.com/hatayama/uLoopMCP/compare/v0.43.3...v0.43.4) (2025-12-11)
 
 
