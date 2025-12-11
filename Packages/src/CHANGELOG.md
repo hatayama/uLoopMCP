@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.43.4](https://github.com/hatayama/uLoopMCP/compare/v0.43.3...v0.43.4) (2025-12-11)
+
+
+### Bug Fixes
+
+* prevent timeout from affecting unrelated pending requests ([#401](https://github.com/hatayama/uLoopMCP/issues/401)) ([2a533fc](https://github.com/hatayama/uLoopMCP/commit/2a533fc8627d523b3c49ac133d2761aeb9219cf0))
+
 ## [0.43.3](https://github.com/hatayama/uLoopMCP/compare/v0.43.2...v0.43.3) (2025-12-11)
 
 
