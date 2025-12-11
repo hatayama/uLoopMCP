@@ -9601,7 +9601,10 @@ var UnityMcpServer = class {
         return this.initializingPromise;
       }
     });
-    this.server.setRequestHandler(ListToolsRequestSchema, () => {
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      if (this.initializingPromise) {
+        await this.initializingPromise;
+      }
       const tools = this.toolManager.getAllTools();
       return { tools };
     });

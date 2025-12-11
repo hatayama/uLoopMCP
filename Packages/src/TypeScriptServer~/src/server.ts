@@ -262,10 +262,14 @@ class UnityMcpServer {
     });
 
     // Provide tool list
-    this.server.setRequestHandler(ListToolsRequestSchema, () => {
-      const tools = this.toolManager.getAllTools();
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      // Wait for initialization to complete before returning tools
+      // This prevents race condition where list_tools is called before tools are loaded
+      if (this.initializingPromise) {
+        await this.initializingPromise;
+      }
 
-      // Providing tools to client
+      const tools = this.toolManager.getAllTools();
       return { tools };
     });
 
