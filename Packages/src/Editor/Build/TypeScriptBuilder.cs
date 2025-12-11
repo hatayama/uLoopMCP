@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections.Generic;
 using System.IO;
 using SystemDiagnostics = System.Diagnostics;
 
@@ -10,24 +9,9 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class TypeScriptBuilder
     {
-        // npm command constants
         private const string NPM_COMMAND_CI = "ci";
         private const string NPM_COMMAND_BUILD_BUNDLE = "run build:bundle";
         private const string NPM_COMMAND_INSTALL = "install";
-        
-        // Common Node.js paths
-        private static readonly string[] COMMON_NODE_PATHS = {
-            "/usr/local/bin",
-            "/opt/homebrew/bin",
-            "/usr/bin"
-        };
-        
-        // Possible npm paths
-        private static readonly string[] POSSIBLE_NPM_PATHS = {
-            "/usr/local/bin/npm", // When installed via Homebrew
-            "/opt/homebrew/bin/npm", // Homebrew on Apple Silicon Mac
-            "/usr/bin/npm" // System installation
-        };
         
         /// <summary>
         /// Callback for build completion
@@ -152,87 +136,19 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Get npm path (macOS compatible)
+        /// Get npm path using NodeEnvironmentResolver
         /// </summary>
         private string GetNpmPath()
         {
             Debug.Log("Searching for npm command...");
-            
-            // First, search for npm using which command
-            try
+
+            string npmPath = NodeEnvironmentResolver.FindNpmPath();
+            if (!string.IsNullOrEmpty(npmPath))
             {
-                SystemDiagnostics.ProcessStartInfo whichInfo = new SystemDiagnostics.ProcessStartInfo
-                {
-                    FileName = "which",
-                    Arguments = "npm",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
-                
-                using (SystemDiagnostics.Process whichProcess = SystemDiagnostics.Process.Start(whichInfo))
-                {
-                    if (whichProcess == null)
-                    {
-                        Debug.LogError("Failed to start 'which npm' process");
-                        return string.Empty;
-                    }
-                    
-                    string whichOutput = whichProcess.StandardOutput.ReadToEnd().Trim();
-                    string whichError = whichProcess.StandardError.ReadToEnd().Trim();
-                    whichProcess.WaitForExit();
-                    
-                    Debug.Log($"which npm output: '{whichOutput}', error: '{whichError}', exit code: {whichProcess.ExitCode}");
-                    
-                    if (whichProcess.ExitCode == 0 && !string.IsNullOrEmpty(whichOutput))
-                    {
-                        Debug.Log($"Found npm via which command: {whichOutput}");
-                        return whichOutput;
-                    }
-                }
+                Debug.Log($"Found npm at: {npmPath}");
+                return npmPath;
             }
-            catch (System.Exception ex)
-            {
-                Debug.LogWarning($"Failed to run which command for npm detection: {ex.Message}");
-                // This is expected to fail on some systems, so we continue with fallback detection
-            }
-            
-            // If not found with which, try common paths
-            List<string> possiblePaths = new List<string>(POSSIBLE_NPM_PATHS);
-            possiblePaths.Add(Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), ".nvm/versions/node/*/bin/npm")); // nvm
-            
-            foreach (string path in possiblePaths)
-            {
-                if (path.Contains("*"))
-                {
-                    // For nvm paths, expand and search
-                    string nvmBasePath = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), ".nvm/versions/node");
-                    if (Directory.Exists(nvmBasePath))
-                    {
-                        string[] nodeDirs = Directory.GetDirectories(nvmBasePath);
-                        foreach (string nodeDir in nodeDirs)
-                        {
-                            string nvmNpmPath = Path.Combine(nodeDir, "bin", "npm");
-                            if (File.Exists(nvmNpmPath))
-                            {
-                                return nvmNpmPath;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    Debug.Log($"Checking npm path: {path}");
-                    // Check path directly
-                    if (File.Exists(path))
-                    {
-                        Debug.Log($"Found npm at: {path}");
-                        return path;
-                    }
-                }
-            }
-            
+
             Debug.LogError("npm command not found in any of the expected locations");
             return null;
         }
@@ -242,53 +158,8 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void SetupEnvironmentPath(SystemDiagnostics.ProcessStartInfo startInfo, string npmPath)
         {
-            // Infer node path from npm directory
-            string npmDir = Path.GetDirectoryName(npmPath);
-            
-            // Get current PATH environment variable
-            string currentPath = System.Environment.GetEnvironmentVariable("PATH") ?? "";
-            
-            // List of paths to add
-            List<string> additionalPaths = new List<string>();
-            
-            // Add same directory as npm
-            if (!string.IsNullOrEmpty(npmDir))
-            {
-                additionalPaths.Add(npmDir);
-            }
-            
-            // Add common Node.js paths
-            
-            foreach (string path in COMMON_NODE_PATHS)
-            {
-                if (Directory.Exists(path) && !additionalPaths.Contains(path))
-                {
-                    additionalPaths.Add(path);
-                }
-            }
-            
-            // Also add nvm paths
-            string nvmBasePath = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), ".nvm/versions/node");
-            if (Directory.Exists(nvmBasePath))
-            {
-                string[] nodeDirs = Directory.GetDirectories(nvmBasePath);
-                foreach (string nodeDir in nodeDirs)
-                {
-                    string binPath = Path.Combine(nodeDir, "bin");
-                    if (Directory.Exists(binPath) && !additionalPaths.Contains(binPath))
-                    {
-                        additionalPaths.Add(binPath);
-                    }
-                }
-            }
-            
-            // Build new PATH
-            string newPath = string.Join(":", additionalPaths) + ":" + currentPath;
-            
-            // Set environment variables
-            startInfo.EnvironmentVariables["PATH"] = newPath;
-            
-            Debug.Log($"Updated PATH for npm process: {newPath}");
+            NodeEnvironmentResolver.SetupEnvironmentPath(startInfo, npmPath);
+            Debug.Log($"Updated PATH for npm process");
         }
 
         private void RunCommand(string command, string arguments, string workingDirectory)

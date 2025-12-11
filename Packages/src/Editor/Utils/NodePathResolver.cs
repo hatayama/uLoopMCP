@@ -5,7 +5,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Utility class to verify Node.js availability on the system.
-    /// Uses 'node -v' to check if Node.js is accessible via PATH.
+    /// Uses NodeEnvironmentResolver for detection with fallback strategy.
     /// </summary>
     public static class NodePathResolver
     {
@@ -15,8 +15,8 @@ namespace io.github.hatayama.uLoopMCP
         private const int PROCESS_TIMEOUT_MS = 5000;
 
         /// <summary>
-        /// Gets the Node.js command name if available on PATH.
-        /// Returns "node" if available, null if Node.js is not found.
+        /// Gets the Node.js executable path if available.
+        /// Returns full path to node executable, or null if not found.
         /// </summary>
         public static string GetNodeExecutablePath()
         {
@@ -40,18 +40,34 @@ namespace io.github.hatayama.uLoopMCP
 
         private static string ResolveNodePath()
         {
+            string nodePath = NodeEnvironmentResolver.FindNodePath();
+            if (string.IsNullOrEmpty(nodePath))
+            {
+                return null;
+            }
+
+            if (ValidateNodeExecutable(nodePath))
+            {
+                return nodePath;
+            }
+
+            return null;
+        }
+
+        private static bool ValidateNodeExecutable(string nodePath)
+        {
             string command;
             string arguments;
 
             if (Application.platform == RuntimePlatform.WindowsEditor)
             {
                 command = "cmd.exe";
-                arguments = "/c node -v";
+                arguments = $"/c \"{nodePath}\" -v";
             }
             else
             {
-                command = "/bin/bash";
-                arguments = "-c \"node -v\"";
+                command = nodePath;
+                arguments = "-v";
             }
 
             ProcessStartInfo startInfo = new ProcessStartInfo
@@ -68,7 +84,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (process == null)
                 {
-                    return null;
+                    return false;
                 }
 
                 string output = process.StandardOutput.ReadToEnd().Trim();
@@ -77,17 +93,11 @@ namespace io.github.hatayama.uLoopMCP
                 if (!process.WaitForExit(PROCESS_TIMEOUT_MS))
                 {
                     process.Kill();
-                    return null;
+                    return false;
                 }
 
-                // node -v returns something like "v20.10.0"
-                if (process.ExitCode == 0 && output.StartsWith("v"))
-                {
-                    return McpConstants.NODE_COMMAND;
-                }
+                return process.ExitCode == 0 && output.StartsWith("v");
             }
-
-            return null;
         }
 
         /// <summary>
