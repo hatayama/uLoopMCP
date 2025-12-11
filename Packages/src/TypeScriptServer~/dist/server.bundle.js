@@ -5711,11 +5711,7 @@ var v4_default = v4;
 
 // src/utils/vibe-logger.ts
 var VibeLogger = class _VibeLogger {
-  // Navigate from TypeScriptServer~ to project root: ../../../
-  static PROJECT_ROOT = path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    "../../../.."
-  );
+  static PROJECT_ROOT = _VibeLogger.findUnityProjectRoot();
   static LOG_DIRECTORY = path.join(
     _VibeLogger.PROJECT_ROOT,
     OUTPUT_DIRECTORIES.ROOT,
@@ -6200,6 +6196,25 @@ var VibeLogger = class _VibeLogger {
       cleanedLines.push(line);
     }
     return cleanedLines.join("\n").trim();
+  }
+  /**
+   * Find Unity project root by searching for Assets folder
+   * Traverses parent directories from bundle location until Assets folder is found
+   */
+  static findUnityProjectRoot() {
+    let currentDir = path.dirname(fileURLToPath(import.meta.url));
+    for (let i = 0; i < 20; i++) {
+      const assetsPath = path.join(currentDir, "Assets");
+      if (fs.existsSync(assetsPath) && fs.statSync(assetsPath).isDirectory()) {
+        return currentDir;
+      }
+      const parentDir = path.dirname(currentDir);
+      if (parentDir === currentDir) {
+        break;
+      }
+      currentDir = parentDir;
+    }
+    return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
   }
 };
 

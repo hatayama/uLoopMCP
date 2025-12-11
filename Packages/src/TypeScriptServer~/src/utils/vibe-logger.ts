@@ -46,11 +46,7 @@ export interface EnvironmentInfo {
 }
 
 export class VibeLogger {
-  // Navigate from TypeScriptServer~ to project root: ../../../
-  private static readonly PROJECT_ROOT = path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    '../../../..',
-  );
+  private static readonly PROJECT_ROOT = VibeLogger.findUnityProjectRoot();
   private static readonly LOG_DIRECTORY = path.join(
     VibeLogger.PROJECT_ROOT,
     OUTPUT_DIRECTORIES.ROOT,
@@ -721,6 +717,29 @@ export class VibeLogger {
     }
 
     return cleanedLines.join('\n').trim();
+  }
+
+  /**
+   * Find Unity project root by searching for Assets folder
+   * Traverses parent directories from bundle location until Assets folder is found
+   */
+  private static findUnityProjectRoot(): string {
+    let currentDir: string = path.dirname(fileURLToPath(import.meta.url));
+
+    for (let i = 0; i < 20; i++) {
+      const assetsPath: string = path.join(currentDir, 'Assets');
+      if (fs.existsSync(assetsPath) && fs.statSync(assetsPath).isDirectory()) {
+        return currentDir;
+      }
+
+      const parentDir: string = path.dirname(currentDir);
+      if (parentDir === currentDir) {
+        break;
+      }
+      currentDir = parentDir;
+    }
+
+    return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
   }
 }
 
