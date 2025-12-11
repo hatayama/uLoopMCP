@@ -589,8 +589,8 @@ export class UnityClient {
 
       // Use SafeTimer for automatic cleanup to prevent orphaned processes
       const timeoutTimer = safeSetTimeout(() => {
-        // Network timeout occurred
-        this.messageHandler.clearPendingRequests(`Request ${ERROR_MESSAGES.TIMEOUT}`);
+        // Network timeout occurred - only reject THIS request, not all pending requests
+        this.messageHandler.removePendingRequest(request.id);
         reject(new Error(`Request ${ERROR_MESSAGES.TIMEOUT}`));
       }, timeout_duration);
 

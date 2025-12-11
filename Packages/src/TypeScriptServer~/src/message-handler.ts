@@ -247,6 +247,13 @@ export class MessageHandler {
   }
 
   /**
+   * Remove a specific pending request (used for individual timeout)
+   */
+  removePendingRequest(requestId: string): void {
+    this.pendingRequests.delete(requestId);
+  }
+
+  /**
    * Create JSON-RPC request with Content-Length framing
    */
   createRequest(method: string, params: Record<string, unknown>, id: string): string {
