@@ -8,7 +8,6 @@ import {
   ServerShutdownReason,
   CONNECTION_RECOVERY,
 } from './constants.js';
-// Debug logging removed
 import { SafeTimer, safeSetTimeout, stopSafeTimer } from './utils/safe-timer.js';
 
 const createSafeTimeout = (callback: () => void, delay: number): SafeTimer => {
@@ -93,7 +92,7 @@ export class UnityClient {
    */
   static resetInstance(): void {
     if (UnityClient.instance) {
-      UnityClient.instance.disconnect();
+      UnityClient.instance.handlePermanentDisconnect('manual_reset');
       UnityClient.instance.storedClientName = null;
       UnityClient.instance = null;
     }
@@ -256,6 +255,21 @@ export class UnityClient {
       const currentSocket: net.Socket = this.socket;
       let connectionEstablished: boolean = false;
       let promiseSettled: boolean = false;
+      let connectionLossHandled: boolean = false;
+
+      // Deduplicate connection-loss handling: error→close, end→close can fire multiple events
+      // Also ignores events from stale sockets after intentional disconnect/reconnect
+      const handleConnectionLossOnce = (): void => {
+        if (connectionLossHandled) {
+          return;
+        }
+        if (this.socket !== currentSocket) {
+          return;
+        }
+        connectionLossHandled = true;
+        this.socket = null;
+        this.handleConnectionLoss();
+      };
 
       const finalizeInitialFailure = (error: Error, logCode: string, logMessage: string): void => {
         if (promiseSettled) {
@@ -301,6 +315,10 @@ export class UnityClient {
 
       currentSocket.on('error', (error: Error) => {
         this._connected = false;
+        // Destroy socket on error to avoid half-open state
+        if (!currentSocket.destroyed) {
+          currentSocket.destroy();
+        }
         if (!connectionEstablished) {
           finalizeInitialFailure(
             new Error(`Unity connection failed: ${error.message}`),
@@ -313,7 +331,7 @@ export class UnityClient {
         VibeLogger.logError('unity_socket_error', 'Unity socket error', {
           message: error.message,
         });
-        this.handleConnectionLoss();
+        handleConnectionLossOnce();
       });
 
       currentSocket.on('close', () => {
@@ -326,7 +344,7 @@ export class UnityClient {
           );
           return;
         }
-        this.handleConnectionLoss();
+        handleConnectionLossOnce();
       });
 
       currentSocket.on('end', () => {
@@ -339,7 +357,7 @@ export class UnityClient {
           );
           return;
         }
-        this.handleConnectionLoss();
+        handleConnectionLossOnce();
       });
 
       currentSocket.on('data', (data: Buffer) => {
@@ -584,11 +602,31 @@ export class UnityClient {
     timeoutMs?: number,
   ): Promise<{ id: string; error?: { message: string }; result?: unknown }> {
     return new Promise((resolve, reject) => {
+      if (!this.socket || this.socket.destroyed || !this.connected) {
+        reject(new Error(ERROR_MESSAGES.NOT_CONNECTED));
+        return;
+      }
+
       // Use provided timeout or default to NETWORK timeout
       const timeout_duration = timeoutMs || TIMEOUTS.NETWORK;
 
       // Use SafeTimer for automatic cleanup to prevent orphaned processes
       const timeoutTimer = safeSetTimeout(() => {
+        VibeLogger.logWarning(
+          'request_timeout_fired',
+          'Request timed out waiting for Unity response',
+          {
+            request_id: request.id,
+            method: request.method,
+            timeout_ms: timeout_duration,
+          },
+          undefined,
+          'Unity may be frozen in the background',
+        );
+
+        // Try to bring Unity window to foreground (fire-and-forget)
+        this.tryFocusUnityWindow();
+
         // Network timeout occurred - only reject THIS request, not all pending requests
         this.messageHandler.removePendingRequest(request.id);
         reject(new Error(`Request ${ERROR_MESSAGES.TIMEOUT}`));
@@ -598,11 +636,11 @@ export class UnityClient {
       this.messageHandler.registerPendingRequest(
         request.id,
         (response) => {
-          stopSafeTimer(timeoutTimer); // Clean up timer
+          stopSafeTimer(timeoutTimer);
           resolve(response as { id: string; error?: { message: string }; result?: unknown });
         },
         (error) => {
-          stopSafeTimer(timeoutTimer); // Clean up timer
+          stopSafeTimer(timeoutTimer);
           reject(error instanceof Error ? error : new Error(String(error)));
         },
       );
@@ -620,28 +658,14 @@ export class UnityClient {
   }
 
   /**
-   * Disconnect
+   * Disconnect socket only (does NOT clear pending requests)
    *
-   * IMPORTANT: Always clean up timers when disconnecting!
-   * Failure to properly clean up timers can cause orphaned processes
-   * that prevent Node.js from exiting gracefully.
+   * Pending requests are managed separately - they have their own 3-minute timeout.
+   * Use handlePermanentDisconnect() when you need to clear pending requests.
    */
   disconnect(): void {
-    this.connectionManager.stopPolling(); // Stop polling when manually disconnecting
-
-    // Clean up all pending requests and their timers
-    // CRITICAL: This prevents orphaned processes by ensuring all setTimeout timers are cleared
-    if (this.shutdownReason === ServerShutdownReason.EDITOR_QUIT) {
-      this.messageHandler.clearPendingRequests(this.getServerNotRunningMessage());
-    } else {
-      this.messageHandler.clearPendingRequestsWithSuccess(this.getOsSpecificReconnectMessage());
-    }
-
-    // Clear the Content-Length framing buffer
+    this.connectionManager.stopPolling();
     this.messageHandler.clearBuffer();
-
-    // Reset request ID counter to prevent ID conflicts on reconnection
-    this.requestIdCounter = 0;
 
     if (this.socket) {
       this.socket.destroy();
@@ -651,9 +675,39 @@ export class UnityClient {
   }
 
   /**
+   * Handle permanent disconnection (Unity shutdown, manual reset, etc.)
+   *
+   * This clears all pending requests AND disconnects the socket.
+   * Use this when you know requests can never be fulfilled.
+   */
+  private handlePermanentDisconnect(reason: 'editor_quit' | 'manual_reset'): void {
+    if (reason === 'editor_quit') {
+      this.messageHandler.clearPendingRequests(this.getServerNotRunningMessage());
+    } else {
+      this.messageHandler.clearPendingRequestsWithSuccess(this.getOsSpecificReconnectMessage());
+    }
+    this.requestIdCounter = 0;
+
+    this.disconnect();
+  }
+
+  /**
    * Handle connection loss by delegating to UnityDiscovery
+   *
+   * When socket closes, pending requests will never get responses,
+   * so we must clear them immediately (not wait for 5-minute timeout).
    */
   private handleConnectionLoss(): void {
+    // Clear pending requests - they will never get responses on the closed socket
+    if (this.shutdownReason === ServerShutdownReason.EDITOR_QUIT) {
+      // Unity quit permanently → error
+      this.messageHandler.clearPendingRequests(this.getServerNotRunningMessage());
+    } else {
+      // Domain Reload or other temporary disconnect → success with guidance
+      this.messageHandler.clearPendingRequestsWithSuccess(this.getOsSpecificReconnectMessage());
+    }
+    this.requestIdCounter = 0;
+
     // Trigger ConnectionManager callback for backward compatibility
     this.connectionManager.triggerConnectionLost();
 
@@ -661,6 +715,39 @@ export class UnityClient {
     if (this.unityDiscovery) {
       this.unityDiscovery.handleConnectionLost();
     }
+  }
+
+  /**
+   * Try to bring Unity window to foreground (fire-and-forget)
+   * Called when a request times out - Unity may be frozen in background
+   */
+  private tryFocusUnityWindow(): void {
+    if (!this.socket || this.socket.destroyed) {
+      return;
+    }
+
+    // Use notification (no id) instead of request to avoid "unknown_request_response" warnings
+    const focusNotification = this.messageHandler.createNotification('focus-window', {});
+
+    this.socket.write(focusNotification, (error) => {
+      if (error) {
+        VibeLogger.logDebug(
+          'focus_window_failed',
+          'Failed to send focus-window notification',
+          { error: error.message },
+          undefined,
+          'Could not bring Unity to foreground',
+        );
+      } else {
+        VibeLogger.logInfo(
+          'focus_window_sent',
+          'Sent focus-window notification to bring Unity to foreground',
+          undefined,
+          undefined,
+          'Attempting to bring Unity window to foreground after timeout',
+        );
+      }
+    });
   }
 
   /**
