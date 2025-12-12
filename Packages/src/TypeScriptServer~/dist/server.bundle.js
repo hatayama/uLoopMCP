@@ -7166,6 +7166,18 @@ var UnityClient = class _UnityClient {
       const currentSocket = this.socket;
       let connectionEstablished = false;
       let promiseSettled = false;
+      let connectionLossHandled = false;
+      const handleConnectionLossOnce = () => {
+        if (connectionLossHandled) {
+          return;
+        }
+        if (this.socket !== currentSocket) {
+          return;
+        }
+        connectionLossHandled = true;
+        this.socket = null;
+        this.handleConnectionLoss();
+      };
       const finalizeInitialFailure = (error, logCode, logMessage) => {
         if (promiseSettled) {
           return;
@@ -7220,7 +7232,7 @@ var UnityClient = class _UnityClient {
         VibeLogger.logError("unity_socket_error", "Unity socket error", {
           message: error.message
         });
-        this.handleConnectionLoss();
+        handleConnectionLossOnce();
       });
       currentSocket.on("close", () => {
         this._connected = false;
@@ -7232,7 +7244,7 @@ var UnityClient = class _UnityClient {
           );
           return;
         }
-        this.handleConnectionLoss();
+        handleConnectionLossOnce();
       });
       currentSocket.on("end", () => {
         this._connected = false;
@@ -7244,7 +7256,7 @@ var UnityClient = class _UnityClient {
           );
           return;
         }
-        this.handleConnectionLoss();
+        handleConnectionLossOnce();
       });
       currentSocket.on("data", (data) => {
         this.messageHandler.handleIncomingData(data);

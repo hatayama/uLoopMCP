@@ -255,6 +255,21 @@ export class UnityClient {
       const currentSocket: net.Socket = this.socket;
       let connectionEstablished: boolean = false;
       let promiseSettled: boolean = false;
+      let connectionLossHandled: boolean = false;
+
+      // Deduplicate connection-loss handling: error→close, end→close can fire multiple events
+      // Also ignores events from stale sockets after intentional disconnect/reconnect
+      const handleConnectionLossOnce = (): void => {
+        if (connectionLossHandled) {
+          return;
+        }
+        if (this.socket !== currentSocket) {
+          return;
+        }
+        connectionLossHandled = true;
+        this.socket = null;
+        this.handleConnectionLoss();
+      };
 
       const finalizeInitialFailure = (error: Error, logCode: string, logMessage: string): void => {
         if (promiseSettled) {
@@ -316,7 +331,7 @@ export class UnityClient {
         VibeLogger.logError('unity_socket_error', 'Unity socket error', {
           message: error.message,
         });
-        this.handleConnectionLoss();
+        handleConnectionLossOnce();
       });
 
       currentSocket.on('close', () => {
@@ -329,7 +344,7 @@ export class UnityClient {
           );
           return;
         }
-        this.handleConnectionLoss();
+        handleConnectionLossOnce();
       });
 
       currentSocket.on('end', () => {
@@ -342,7 +357,7 @@ export class UnityClient {
           );
           return;
         }
-        this.handleConnectionLoss();
+        handleConnectionLossOnce();
       });
 
       currentSocket.on('data', (data: Buffer) => {
