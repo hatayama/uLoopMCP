@@ -229,6 +229,23 @@ export class MessageHandler {
    * Clear all pending requests with rejection (used during permanent disconnect)
    */
   clearPendingRequests(reason: string): void {
+    const requestIds = Array.from(this.pendingRequests.keys());
+    const pendingCount = this.pendingRequests.size;
+
+    if (pendingCount > 0) {
+      VibeLogger.logWarning(
+        'pending_requests_clearing_with_rejection',
+        'Clearing all pending requests with rejection',
+        {
+          pending_count: pendingCount,
+          request_ids: requestIds,
+          reason: reason,
+        },
+        undefined,
+        'Connection permanently lost - rejecting all pending requests',
+      );
+    }
+
     for (const [, pending] of this.pendingRequests) {
       pending.reject(new Error(reason));
     }
@@ -240,6 +257,23 @@ export class MessageHandler {
    * Returns success message instead of error, allowing AI to understand reconnection is possible
    */
   clearPendingRequestsWithSuccess(message: string): void {
+    const requestIds = Array.from(this.pendingRequests.keys());
+    const pendingCount = this.pendingRequests.size;
+
+    if (pendingCount > 0) {
+      VibeLogger.logInfo(
+        'pending_requests_clearing_with_success',
+        'Clearing all pending requests with success (temporary disconnect)',
+        {
+          pending_count: pendingCount,
+          request_ids: requestIds,
+          message: message,
+        },
+        undefined,
+        'Temporary disconnect - resolving pending requests with guidance message',
+      );
+    }
+
     for (const [, pending] of this.pendingRequests) {
       pending.resolve({ result: message });
     }
