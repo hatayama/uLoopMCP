@@ -300,6 +300,10 @@ export class UnityClient {
 
       currentSocket.on('error', (error: Error) => {
         this._connected = false;
+        // Destroy socket on error to avoid half-open state
+        if (!currentSocket.destroyed) {
+          currentSocket.destroy();
+        }
         if (!connectionEstablished) {
           finalizeInitialFailure(
             new Error(`Unity connection failed: ${error.message}`),
@@ -583,6 +587,11 @@ export class UnityClient {
     timeoutMs?: number,
   ): Promise<{ id: string; error?: { message: string }; result?: unknown }> {
     return new Promise((resolve, reject) => {
+      if (!this.socket || this.socket.destroyed || !this.connected) {
+        reject(new Error(ERROR_MESSAGES.NOT_CONNECTED));
+        return;
+      }
+
       // Use provided timeout or default to NETWORK timeout
       const timeout_duration = timeoutMs || TIMEOUTS.NETWORK;
 
@@ -702,13 +711,14 @@ export class UnityClient {
       return;
     }
 
-    const focusRequest = this.messageHandler.createRequest('focus-window', {}, this.generateId());
+    // Use notification (no id) instead of request to avoid "unknown_request_response" warnings
+    const focusNotification = this.messageHandler.createNotification('focus-window', {});
 
-    this.socket.write(focusRequest, (error) => {
+    this.socket.write(focusNotification, (error) => {
       if (error) {
         VibeLogger.logDebug(
           'focus_window_failed',
-          'Failed to send focus-window request',
+          'Failed to send focus-window notification',
           { error: error.message },
           undefined,
           'Could not bring Unity to foreground',
@@ -716,7 +726,7 @@ export class UnityClient {
       } else {
         VibeLogger.logInfo(
           'focus_window_sent',
-          'Sent focus-window request to bring Unity to foreground',
+          'Sent focus-window notification to bring Unity to foreground',
           undefined,
           undefined,
           'Attempting to bring Unity window to foreground after timeout',

@@ -274,8 +274,8 @@ export class MessageHandler {
       );
     }
 
-    for (const [, pending] of this.pendingRequests) {
-      pending.resolve({ result: message });
+    for (const [id, pending] of this.pendingRequests) {
+      pending.resolve({ id, result: message });
     }
     this.pendingRequests.clear();
   }
@@ -298,6 +298,19 @@ export class MessageHandler {
       params,
     };
     const jsonContent = JSON.stringify(request);
+    return ContentLengthFramer.createFrame(jsonContent);
+  }
+
+  /**
+   * Create JSON-RPC notification with Content-Length framing (no id = fire-and-forget)
+   */
+  createNotification(method: string, params: Record<string, unknown>): string {
+    const notification = {
+      jsonrpc: JSONRPC.VERSION,
+      method,
+      params,
+    };
+    const jsonContent = JSON.stringify(notification);
     return ContentLengthFramer.createFrame(jsonContent);
   }
 

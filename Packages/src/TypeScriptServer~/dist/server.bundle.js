@@ -6930,8 +6930,8 @@ var MessageHandler = class {
         "Temporary disconnect - resolving pending requests with guidance message"
       );
     }
-    for (const [, pending] of this.pendingRequests) {
-      pending.resolve({ result: message });
+    for (const [id, pending] of this.pendingRequests) {
+      pending.resolve({ id, result: message });
     }
     this.pendingRequests.clear();
   }
@@ -6952,6 +6952,18 @@ var MessageHandler = class {
       params
     };
     const jsonContent = JSON.stringify(request);
+    return ContentLengthFramer.createFrame(jsonContent);
+  }
+  /**
+   * Create JSON-RPC notification with Content-Length framing (no id = fire-and-forget)
+   */
+  createNotification(method, params) {
+    const notification = {
+      jsonrpc: JSONRPC.VERSION,
+      method,
+      params
+    };
+    const jsonContent = JSON.stringify(notification);
     return ContentLengthFramer.createFrame(jsonContent);
   }
   /**
@@ -7194,6 +7206,9 @@ var UnityClient = class _UnityClient {
       });
       currentSocket.on("error", (error) => {
         this._connected = false;
+        if (!currentSocket.destroyed) {
+          currentSocket.destroy();
+        }
         if (!connectionEstablished) {
           finalizeInitialFailure(
             new Error(`Unity connection failed: ${error.message}`),
@@ -7402,6 +7417,10 @@ var UnityClient = class _UnityClient {
    */
   async sendRequest(request, timeoutMs) {
     return new Promise((resolve2, reject) => {
+      if (!this.socket || this.socket.destroyed || !this.connected) {
+        reject(new Error(ERROR_MESSAGES.NOT_CONNECTED));
+        return;
+      }
       const timeout_duration = timeoutMs || TIMEOUTS.NETWORK;
       const timeoutTimer = safeSetTimeout(() => {
         VibeLogger.logWarning(
@@ -7496,12 +7515,12 @@ var UnityClient = class _UnityClient {
     if (!this.socket || this.socket.destroyed) {
       return;
     }
-    const focusRequest = this.messageHandler.createRequest("focus-window", {}, this.generateId());
-    this.socket.write(focusRequest, (error) => {
+    const focusNotification = this.messageHandler.createNotification("focus-window", {});
+    this.socket.write(focusNotification, (error) => {
       if (error) {
         VibeLogger.logDebug(
           "focus_window_failed",
-          "Failed to send focus-window request",
+          "Failed to send focus-window notification",
           { error: error.message },
           void 0,
           "Could not bring Unity to foreground"
@@ -7509,7 +7528,7 @@ var UnityClient = class _UnityClient {
       } else {
         VibeLogger.logInfo(
           "focus_window_sent",
-          "Sent focus-window request to bring Unity to foreground",
+          "Sent focus-window notification to bring Unity to foreground",
           void 0,
           void 0,
           "Attempting to bring Unity window to foreground after timeout"
