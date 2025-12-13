@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.43.8](https://github.com/hatayama/uLoopMCP/compare/v0.43.7...v0.43.8) (2025-12-13)
+
+
+### Bug Fixes
+
+* remove ping-based health checks to prevent false positives during Domain Reload ([#410](https://github.com/hatayama/uLoopMCP/issues/410)) ([4ec243e](https://github.com/hatayama/uLoopMCP/commit/4ec243e7821693128c9bb43c439f5a834c770666))
+
 ## [0.43.7](https://github.com/hatayama/uLoopMCP/compare/v0.43.6...v0.43.7) (2025-12-13)
 
 
