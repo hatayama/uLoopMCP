@@ -12,7 +12,9 @@ import { safeSetTimeout, stopSafeTimer } from './utils/safe-timer.js';
 import { ConnectionManager } from './connection-manager.js';
 import { MessageHandler } from './message-handler.js';
 import { VibeLogger } from './utils/vibe-logger.js';
-import { focusAnyUnityWindow } from './utils/unity-window-focus.js';
+import { focusUnityWindowByProjectPath } from './utils/unity-window-focus.js';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 
 /**
  * Unity client interface for external dependencies
@@ -680,13 +682,17 @@ export class UnityClient {
    * instead of socket notification, so it works even during Domain Reload.
    */
   private tryFocusUnityWindow(): void {
-    // Fire-and-forget: use OS-level focus which works even when Unity server is down
-    void focusAnyUnityWindow().then((result) => {
+    // Derive project path from bundle location: Library/uLoopMCP/server.bundle.js -> project root
+    const currentFile = fileURLToPath(import.meta.url);
+    const projectPath = resolve(dirname(currentFile), '..', '..');
+
+    // Fire-and-forget: focus the Unity that matches this project
+    void focusUnityWindowByProjectPath(projectPath).then((result) => {
       if (result.success) {
         VibeLogger.logInfo(
           'focus_window_success',
           'Brought Unity window to foreground via OS command',
-          undefined,
+          { project_path: projectPath },
           undefined,
           'Successfully focused Unity window after timeout',
         );
@@ -694,7 +700,7 @@ export class UnityClient {
         VibeLogger.logDebug(
           'focus_window_failed',
           'Failed to bring Unity window to foreground',
-          { message: result.message },
+          { message: result.message, project_path: projectPath },
           undefined,
           'Could not focus Unity window - may not be running',
         );

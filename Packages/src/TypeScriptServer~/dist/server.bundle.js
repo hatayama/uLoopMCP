@@ -5076,7 +5076,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken } = options !== null && options !== void 0 ? options : {};
-    return new Promise((resolve3, reject) => {
+    return new Promise((resolve4, reject) => {
       var _a, _b, _c, _d, _e, _f;
       if (!this._transport) {
         reject(new Error("Not connected"));
@@ -5127,7 +5127,7 @@ var Protocol = class {
         }
         try {
           const result = resultSchema.parse(response.result);
-          resolve3(result);
+          resolve4(result);
         } catch (error) {
           reject(error);
         }
@@ -5462,12 +5462,12 @@ var StdioServerTransport = class {
     (_a = this.onclose) === null || _a === void 0 ? void 0 : _a.call(this);
   }
   send(message) {
-    return new Promise((resolve3) => {
+    return new Promise((resolve4) => {
       const json = serializeMessage(message);
       if (this._stdout.write(json)) {
-        resolve3();
+        resolve4();
       } else {
-        this._stdout.once("drain", resolve3);
+        this._stdout.once("drain", resolve4);
       }
     });
   }
@@ -6111,7 +6111,7 @@ var VibeLogger = class _VibeLogger {
    * Asynchronous sleep function for retry delays
    */
   static async sleep(ms) {
-    return new Promise((resolve3) => setTimeout(resolve3, ms));
+    return new Promise((resolve4) => setTimeout(resolve4, ms));
   }
   /**
    * Get current environment information
@@ -6793,8 +6793,8 @@ var MessageHandler = class {
   /**
    * Register a pending request
    */
-  registerPendingRequest(id, resolve3, reject) {
-    this.pendingRequests.set(id, { resolve: resolve3, reject, timestamp: Date.now() });
+  registerPendingRequest(id, resolve4, reject) {
+    this.pendingRequests.set(id, { resolve: resolve4, reject, timestamp: Date.now() });
   }
   /**
    * Handle incoming data from Unity using Content-Length framing
@@ -7002,6 +7002,12 @@ var normalizePath = (target) => {
   }
   return trimmed;
 };
+var toComparablePath = (value) => {
+  return value.replace(/\\/g, "/").toLowerCase();
+};
+var pathsEqual = (left, right) => {
+  return toComparablePath(normalizePath(left)) === toComparablePath(normalizePath(right));
+};
 var extractProjectPath = (command) => {
   const match = command.match(PROJECT_PATH_PATTERN);
   if (!match) {
@@ -7135,6 +7141,11 @@ async function listUnityProcesses() {
   }
   return [];
 }
+async function findUnityProcessByProjectPath(projectPath) {
+  const normalizedTarget = normalizePath(projectPath);
+  const processes = await listUnityProcesses();
+  return processes.find((candidate) => pathsEqual(candidate.projectPath, normalizedTarget));
+}
 async function focusUnityWindowMac(pid) {
   const script = `tell application "System Events" to set frontmost of (first process whose unix id is ${pid}) to true`;
   try {
@@ -7182,19 +7193,20 @@ async function focusUnityWindowByPid(pid) {
   }
   return { success: false, message: `Unsupported platform: ${process.platform}` };
 }
-async function focusAnyUnityWindow() {
-  const processes = await listUnityProcesses();
-  if (processes.length === 0) {
-    return { success: false, message: "No running Unity processes found" };
+async function focusUnityWindowByProjectPath(projectPath) {
+  const processInfo = await findUnityProcessByProjectPath(projectPath);
+  if (!processInfo) {
+    return {
+      success: false,
+      message: `No Unity process found for project: ${projectPath}`
+    };
   }
-  const firstProcess = processes[0];
-  if (!firstProcess) {
-    return { success: false, message: "No running Unity processes found" };
-  }
-  return await focusUnityWindowByPid(firstProcess.pid);
+  return await focusUnityWindowByPid(processInfo.pid);
 }
 
 // src/unity-client.ts
+import { fileURLToPath as fileURLToPath2 } from "url";
+import { dirname as dirname2, resolve as resolve3 } from "path";
 var UnityClient = class _UnityClient {
   static MAX_COUNTER = 9999;
   static COUNTER_PADDING = 4;
@@ -7358,7 +7370,7 @@ var UnityClient = class _UnityClient {
     if (this._connected && this.socket && !this.socket.destroyed) {
       return;
     }
-    return new Promise((resolve3, reject) => {
+    return new Promise((resolve4, reject) => {
       this.socket = new net.Socket();
       const currentSocket = this.socket;
       let connectionEstablished = false;
@@ -7411,7 +7423,7 @@ var UnityClient = class _UnityClient {
             );
           }
         });
-        resolve3();
+        resolve4();
       });
       currentSocket.on("error", (error) => {
         this._connected = false;
@@ -7603,7 +7615,7 @@ var UnityClient = class _UnityClient {
    * Send request and wait for response
    */
   async sendRequest(request, timeoutMs) {
-    return new Promise((resolve3, reject) => {
+    return new Promise((resolve4, reject) => {
       if (!this.socket || this.socket.destroyed || !this.connected) {
         reject(new Error(ERROR_MESSAGES.NOT_CONNECTED));
         return;
@@ -7630,7 +7642,7 @@ var UnityClient = class _UnityClient {
         request.id,
         (response) => {
           stopSafeTimer(timeoutTimer);
-          resolve3(response);
+          resolve4(response);
         },
         (error) => {
           stopSafeTimer(timeoutTimer);
@@ -7703,12 +7715,14 @@ var UnityClient = class _UnityClient {
    * instead of socket notification, so it works even during Domain Reload.
    */
   tryFocusUnityWindow() {
-    void focusAnyUnityWindow().then((result) => {
+    const currentFile = fileURLToPath2(import.meta.url);
+    const projectPath = resolve3(dirname2(currentFile), "..", "..");
+    void focusUnityWindowByProjectPath(projectPath).then((result) => {
       if (result.success) {
         VibeLogger.logInfo(
           "focus_window_success",
           "Brought Unity window to foreground via OS command",
-          void 0,
+          { project_path: projectPath },
           void 0,
           "Successfully focused Unity window after timeout"
         );
@@ -7716,7 +7730,7 @@ var UnityClient = class _UnityClient {
         VibeLogger.logDebug(
           "focus_window_failed",
           "Failed to bring Unity window to foreground",
-          { message: result.message },
+          { message: result.message, project_path: projectPath },
           void 0,
           "Could not focus Unity window - may not be running"
         );
@@ -7795,21 +7809,21 @@ var UnityClient = class _UnityClient {
    * Performs low-level TCP connection test with short timeout
    */
   static async isUnityAvailable(port) {
-    return new Promise((resolve3) => {
+    return new Promise((resolve4) => {
       const socket = new net.Socket();
       const timeout = 500;
       const timer = setTimeout(() => {
         socket.destroy();
-        resolve3(false);
+        resolve4(false);
       }, timeout);
       socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
         clearTimeout(timer);
         socket.destroy();
-        resolve3(true);
+        resolve4(true);
       });
       socket.on("error", () => {
         clearTimeout(timer);
-        resolve3(false);
+        resolve4(false);
       });
     });
   }
@@ -8290,14 +8304,14 @@ var UnityConnectionManager = class {
    * Wait for Unity connection with timeout
    */
   async waitForUnityConnectionWithTimeout(timeoutMs) {
-    return new Promise((resolve3, reject) => {
+    return new Promise((resolve4, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error(`Unity connection timeout after ${timeoutMs}ms`));
       }, timeoutMs);
       const checkConnection = () => {
         if (this.unityClient.connected) {
           clearTimeout(timeout);
-          resolve3();
+          resolve4();
           return;
         }
         if (this.isInitialized) {
@@ -8305,7 +8319,7 @@ var UnityConnectionManager = class {
             if (this.unityClient.connected) {
               clearTimeout(timeout);
               clearInterval(connectionInterval);
-              resolve3();
+              resolve4();
             }
           }, 100);
           return;
@@ -8313,7 +8327,7 @@ var UnityConnectionManager = class {
         this.initialize(() => {
           return new Promise((resolveCallback) => {
             clearTimeout(timeout);
-            resolve3();
+            resolve4();
             resolveCallback();
           });
         });
