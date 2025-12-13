@@ -5505,8 +5505,11 @@ var PARAMETER_SCHEMA = {
   REQUIRED_PROPERTY: "Required"
 };
 var TIMEOUTS = {
-  NETWORK: 18e4
+  NETWORK: 18e4,
   // 3 minutes - Network-level timeout (accounts for Roslyn initialization after Domain Reload)
+  // Domain Reload can take 2+ minutes for large projects. Using same timeout as NETWORK for consistency.
+  CONNECTION_WAIT: 18e4
+  // 3 minutes - Timeout for waiting Unity connection to be established
 };
 var DEFAULT_CLIENT_NAME = "";
 var ENVIRONMENT = {
@@ -8657,7 +8660,7 @@ var RefreshToolsUseCase = class {
         "Unity connection required for tool refresh after domain reload"
       );
       try {
-        await this.connectionService.ensureConnected(1e4);
+        await this.connectionService.ensureConnected(TIMEOUTS.CONNECTION_WAIT);
       } catch (error) {
         const domainError = ErrorConverter.convertToDomainError(
           error,
@@ -9567,7 +9570,7 @@ var UnityMcpServer = class {
     try {
       await this.clientCompatibility.initializeClient(clientName);
       this.toolManager.setClientName(clientName);
-      await this.connectionManager.waitForUnityConnectionWithTimeout(1e4);
+      await this.connectionManager.waitForUnityConnectionWithTimeout(TIMEOUTS.CONNECTION_WAIT);
       const tools = await this.toolManager.getToolsFromUnity();
       return {
         protocolVersion: MCP_PROTOCOL_VERSION,

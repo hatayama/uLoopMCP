@@ -77,6 +77,8 @@ export const PARAMETER_SCHEMA = {
 // Timeout configuration (milliseconds)
 export const TIMEOUTS = {
   NETWORK: 180000, // 3 minutes - Network-level timeout (accounts for Roslyn initialization after Domain Reload)
+  // Domain Reload can take 2+ minutes for large projects. Using same timeout as NETWORK for consistency.
+  CONNECTION_WAIT: 180000, // 3 minutes - Timeout for waiting Unity connection to be established
 } as const;
 
 // Log configuration

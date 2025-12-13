@@ -23,6 +23,7 @@ import { DomainTool } from '../models/domain-tool.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { TIMEOUTS } from '../../constants.js';
 
 // MCP Protocol constants
 const MCP_PROTOCOL_VERSION = '2024-11-05';
@@ -205,7 +206,7 @@ export class InitializeServerUseCase implements UseCase<
       this.toolManagementService.setClientName(clientName);
 
       // Wait for Unity connection with timeout
-      await this.connectionService.ensureConnected(10000);
+      await this.connectionService.ensureConnected(TIMEOUTS.CONNECTION_WAIT);
 
       // Get tools from Unity
       const tools = this.toolService.getAllTools();
