@@ -563,6 +563,9 @@ export class UnityClient {
 
       // Use SafeTimer for automatic cleanup to prevent orphaned processes
       const timeoutTimer = safeSetTimeout(() => {
+        // Clean up timer from registry to prevent memory leaks
+        stopSafeTimer(timeoutTimer);
+
         VibeLogger.logWarning(
           'request_timeout_fired',
           'Request timed out waiting for Unity response',

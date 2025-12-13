@@ -7396,6 +7396,7 @@ var UnityClient = class _UnityClient {
       }
       const timeout_duration = timeoutMs || TIMEOUTS.NETWORK;
       const timeoutTimer = safeSetTimeout(() => {
+        stopSafeTimer(timeoutTimer);
         VibeLogger.logWarning(
           "request_timeout_fired",
           "Request timed out waiting for Unity response",
