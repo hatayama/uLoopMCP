@@ -112,10 +112,52 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Process notification (fire-and-forget)
+        ///
+        /// Note: Notifications are one-way messages without response.
+        /// Currently handles:
+        /// - focus-window: Brings Unity Editor window to foreground (used after request timeout)
         /// </summary>
         private static void ProcessNotification(JsonRpcRequest request)
         {
-            // Process notification silently
+            if (string.IsNullOrEmpty(request.Method))
+            {
+                return;
+            }
+
+            switch (request.Method)
+            {
+                case "focus-window":
+                    HandleFocusWindowNotification();
+                    break;
+                default:
+                    // Unknown notification - ignore silently
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Handle focus-window notification by bringing Unity to foreground
+        /// Fire-and-forget - no response needed
+        /// </summary>
+        private static void HandleFocusWindowNotification()
+        {
+#if UNITY_EDITOR_OSX || UNITY_EDITOR_WIN
+            // Fire-and-forget async execution
+            Task.Run(async () =>
+            {
+                try
+                {
+                    FocusUnityWindowUseCase useCase = new FocusUnityWindowUseCase();
+                    FocusUnityWindowSchema schema = new FocusUnityWindowSchema();
+                    await useCase.ExecuteAsync(schema, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't throw - this is fire-and-forget
+                    UnityEngine.Debug.LogWarning($"[JsonRpcProcessor] focus-window notification failed: {ex.Message}");
+                }
+            });
+#endif
         }
 
         /// <summary>

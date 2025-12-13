@@ -205,13 +205,11 @@ export class UnityConnectionManager {
 
   /**
    * Test connection (validate connection state)
+   *
+   * Note: Lightweight socket state check only (no ping).
    */
-  async testConnection(): Promise<boolean> {
-    try {
-      return await this.unityClient.testConnection();
-    } catch {
-      return false;
-    }
+  testConnection(): boolean {
+    return this.unityClient.testConnection();
   }
 
   /**

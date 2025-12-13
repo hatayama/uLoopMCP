@@ -76,6 +76,14 @@ export class UnityEventHandler
    */
   setupUnityEventListener(onToolsChanged: () => Promise<void>): void {
     // Listen for MCP standard notifications from Unity
+    //
+    // Note: tools/list_changed serves dual purposes in this project:
+    // 1. Original MCP purpose: Notify that available tools have changed
+    // 2. uLoopMCP additional purpose: Signal that Unity is ready after Domain Reload
+    //
+    // After Domain Reload, Unity sends this notification once initialization is complete
+    // (~16 seconds after server restart). This tells TypeScript that Unity can now
+    // reliably process requests. See constants.ts for more details.
     this.unityClient.onNotification(NOTIFICATION_METHODS.TOOLS_LIST_CHANGED, (_params: unknown) => {
       VibeLogger.logInfo(
         'unity_notification_received',

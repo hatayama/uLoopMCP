@@ -6981,9 +6981,6 @@ var MessageHandler = class {
 };
 
 // src/unity-client.ts
-var createSafeTimeout = (callback, delay) => {
-  return safeSetTimeout(callback, delay);
-};
 var UnityClient = class _UnityClient {
   static MAX_COUNTER = 9999;
   static COUNTER_PADDING = 4;
@@ -7094,30 +7091,19 @@ var UnityClient = class _UnityClient {
   /**
    * Lightweight connection health check
    * Tests socket state without creating new connections
+   *
+   * Note: Previously included a ping test, but it was removed because:
+   * - During Domain Reload, Unity server restarts and takes ~16 seconds to initialize
+   * - The 1-second ping timeout caused false positives (appeared disconnected when Unity was just initializing)
+   * - Socket state check is sufficient; actual request timeouts (3 min) handle truly unresponsive Unity
    */
-  async testConnection() {
+  testConnection() {
     if (!this._connected || this.socket === null || this.socket.destroyed) {
       return false;
     }
     if (!this.socket.readable || !this.socket.writable) {
       this._connected = false;
       return false;
-    }
-    let timeoutTimer = null;
-    try {
-      await Promise.race([
-        this.ping(UNITY_CONNECTION.CONNECTION_TEST_MESSAGE),
-        new Promise((_resolve, reject) => {
-          timeoutTimer = createSafeTimeout(() => {
-            reject(new Error("Health check timeout"));
-          }, 1e3);
-        })
-      ]);
-    } catch {
-      return false;
-    } finally {
-      stopSafeTimer(timeoutTimer);
-      timeoutTimer = null;
     }
     return true;
   }
@@ -7127,11 +7113,8 @@ var UnityClient = class _UnityClient {
    */
   async ensureConnected() {
     if (this._connected && this.socket && !this.socket.destroyed) {
-      try {
-        if (await this.testConnection()) {
-          return;
-        }
-      } catch {
+      if (this.testConnection()) {
+        return;
       }
     }
     if (this.connectingPromise) {
@@ -7297,28 +7280,6 @@ var UnityClient = class _UnityClient {
       }
     } catch {
     }
-  }
-  /**
-   * Send ping to Unity
-   */
-  async ping(message) {
-    if (!this.connected) {
-      throw new Error("Not connected to Unity");
-    }
-    const request = {
-      jsonrpc: JSONRPC.VERSION,
-      id: this.generateId(),
-      method: "ping",
-      params: {
-        Message: message
-        // Updated to match PingSchema property name
-      }
-    };
-    const response = await this.sendRequest(request, 1e3);
-    if (response.error) {
-      throw new Error(`Unity error: ${response.error.message}`);
-    }
-    return response.result || { Message: "Unity pong" };
   }
   /**
    * Get available tools from Unity
@@ -7790,7 +7751,7 @@ var UnityDiscovery = class _UnityDiscovery {
     }
     this.logDiscoveryCycleStart(correlationId);
     try {
-      const shouldContinueDiscovery = await this.handleConnectionHealthCheck(correlationId);
+      const shouldContinueDiscovery = this.handleConnectionHealthCheck(correlationId);
       if (!shouldContinueDiscovery) {
         return;
       }
@@ -7841,10 +7802,13 @@ var UnityDiscovery = class _UnityDiscovery {
   }
   /**
    * Handle connection health check and determine if discovery should continue
+   *
+   * Note: Uses lightweight socket state check only (no ping).
+   * This avoids false positives during Domain Reload when Unity is initializing.
    */
-  async handleConnectionHealthCheck(correlationId) {
+  handleConnectionHealthCheck(correlationId) {
     if (this.unityClient.connected) {
-      const isConnectionHealthy = await this.checkConnectionHealth();
+      const isConnectionHealthy = this.checkConnectionHealth();
       if (isConnectionHealthy) {
         VibeLogger.logInfo(
           "unity_discovery_connection_healthy",
@@ -7857,11 +7821,10 @@ var UnityDiscovery = class _UnityDiscovery {
       } else {
         VibeLogger.logWarning(
           "unity_discovery_connection_unhealthy",
-          "Connection appears unhealthy - continuing discovery without assuming loss",
+          "Connection appears unhealthy - continuing discovery",
           { connection_healthy: false },
           correlationId,
-          "Connection health check failed. Will continue discovery but not assume complete loss.",
-          "Connection may recover on next cycle. Monitor for persistent issues."
+          "Socket state check failed. Will continue discovery."
         );
       }
     }
@@ -7898,20 +7861,14 @@ var UnityDiscovery = class _UnityDiscovery {
     this.isDiscovering = false;
   }
   /**
-   * Check if the current connection is healthy with timeout protection
+   * Check if the current connection is healthy
+   *
+   * Note: This is a lightweight socket state check only (no ping).
+   * Previously included a 1-second ping timeout, but it caused false positives
+   * during Domain Reload when Unity is still initializing (~16 seconds).
    */
-  async checkConnectionHealth() {
-    try {
-      const healthCheck = await Promise.race([
-        this.unityClient.testConnection(),
-        new Promise(
-          (_, reject) => setTimeout(() => reject(new Error("Connection health check timeout")), 1e3)
-        )
-      ]);
-      return healthCheck;
-    } catch {
-      return false;
-    }
+  checkConnectionHealth() {
+    return this.unityClient.testConnection();
   }
   /**
    * Discover Unity by checking specified port
@@ -8237,13 +8194,11 @@ var UnityConnectionManager = class {
   }
   /**
    * Test connection (validate connection state)
+   *
+   * Note: Lightweight socket state check only (no ping).
    */
-  async testConnection() {
-    try {
-      return await this.unityClient.testConnection();
-    } catch {
-      return false;
-    }
+  testConnection() {
+    return this.unityClient.testConnection();
   }
   /**
    * Disconnect from Unity

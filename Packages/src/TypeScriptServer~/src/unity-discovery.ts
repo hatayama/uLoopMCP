@@ -203,8 +203,8 @@ export class UnityDiscovery {
     this.logDiscoveryCycleStart(correlationId);
 
     try {
-      // Check connection health if already connected
-      const shouldContinueDiscovery = await this.handleConnectionHealthCheck(correlationId);
+      // Check connection health if already connected (lightweight socket state check)
+      const shouldContinueDiscovery = this.handleConnectionHealthCheck(correlationId);
       if (!shouldContinueDiscovery) {
         return;
       }
@@ -265,11 +265,14 @@ export class UnityDiscovery {
 
   /**
    * Handle connection health check and determine if discovery should continue
+   *
+   * Note: Uses lightweight socket state check only (no ping).
+   * This avoids false positives during Domain Reload when Unity is initializing.
    */
-  private async handleConnectionHealthCheck(correlationId: string): Promise<boolean> {
-    // If already connected, check connection health (lightweight)
+  private handleConnectionHealthCheck(correlationId: string): boolean {
+    // If already connected, check connection health (lightweight socket state only)
     if (this.unityClient.connected) {
-      const isConnectionHealthy = await this.checkConnectionHealth();
+      const isConnectionHealthy = this.checkConnectionHealth();
 
       if (isConnectionHealthy) {
         // Connection is healthy - stop discovery
@@ -282,19 +285,14 @@ export class UnityDiscovery {
         this.stop();
         return false; // Don't continue discovery
       } else {
-        // Connection might be temporarily unhealthy
-        // Don't immediately assume it's lost - give it time to recover
+        // Socket state indicates connection lost
         VibeLogger.logWarning(
           'unity_discovery_connection_unhealthy',
-          'Connection appears unhealthy - continuing discovery without assuming loss',
+          'Connection appears unhealthy - continuing discovery',
           { connection_healthy: false },
           correlationId,
-          'Connection health check failed. Will continue discovery but not assume complete loss.',
-          'Connection may recover on next cycle. Monitor for persistent issues.',
+          'Socket state check failed. Will continue discovery.',
         );
-
-        // Don't trigger connection lost callback immediately
-        // Let discovery continue and see if connection recovers
       }
     }
     return true; // Continue discovery
@@ -335,22 +333,14 @@ export class UnityDiscovery {
   }
 
   /**
-   * Check if the current connection is healthy with timeout protection
+   * Check if the current connection is healthy
+   *
+   * Note: This is a lightweight socket state check only (no ping).
+   * Previously included a 1-second ping timeout, but it caused false positives
+   * during Domain Reload when Unity is still initializing (~16 seconds).
    */
-  private async checkConnectionHealth(): Promise<boolean> {
-    try {
-      // Add an additional timeout layer to prevent hanging
-      const healthCheck = await Promise.race([
-        this.unityClient.testConnection(),
-        new Promise<boolean>((_, reject) =>
-          setTimeout(() => reject(new Error('Connection health check timeout')), 1000),
-        ),
-      ]);
-      return healthCheck;
-    } catch {
-      // Return false on any error or timeout
-      return false;
-    }
+  private checkConnectionHealth(): boolean {
+    return this.unityClient.testConnection();
   }
 
   /**
