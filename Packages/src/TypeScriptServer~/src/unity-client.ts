@@ -12,6 +12,7 @@ import { safeSetTimeout, stopSafeTimer } from './utils/safe-timer.js';
 import { ConnectionManager } from './connection-manager.js';
 import { MessageHandler } from './message-handler.js';
 import { VibeLogger } from './utils/vibe-logger.js';
+import { focusAnyUnityWindow } from './utils/unity-window-focus.js';
 
 /**
  * Unity client interface for external dependencies
@@ -674,31 +675,28 @@ export class UnityClient {
   /**
    * Try to bring Unity window to foreground (fire-and-forget)
    * Called when a request times out - Unity may be frozen in background
+   *
+   * Uses OS-level commands (osascript on macOS, PowerShell on Windows)
+   * instead of socket notification, so it works even during Domain Reload.
    */
   private tryFocusUnityWindow(): void {
-    if (!this.socket || this.socket.destroyed) {
-      return;
-    }
-
-    // Use notification (no id) instead of request to avoid "unknown_request_response" warnings
-    const focusNotification = this.messageHandler.createNotification('focus-window', {});
-
-    this.socket.write(focusNotification, (error) => {
-      if (error) {
-        VibeLogger.logDebug(
-          'focus_window_failed',
-          'Failed to send focus-window notification',
-          { error: error.message },
+    // Fire-and-forget: use OS-level focus which works even when Unity server is down
+    void focusAnyUnityWindow().then((result) => {
+      if (result.success) {
+        VibeLogger.logInfo(
+          'focus_window_success',
+          'Brought Unity window to foreground via OS command',
           undefined,
-          'Could not bring Unity to foreground',
+          undefined,
+          'Successfully focused Unity window after timeout',
         );
       } else {
-        VibeLogger.logInfo(
-          'focus_window_sent',
-          'Sent focus-window notification to bring Unity to foreground',
+        VibeLogger.logDebug(
+          'focus_window_failed',
+          'Failed to bring Unity window to foreground',
+          { message: result.message },
           undefined,
-          undefined,
-          'Attempting to bring Unity window to foreground after timeout',
+          'Could not focus Unity window - may not be running',
         );
       }
     });
