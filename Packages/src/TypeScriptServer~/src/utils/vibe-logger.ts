@@ -728,6 +728,7 @@ export class VibeLogger {
 
     for (let i = 0; i < 20; i++) {
       const assetsPath: string = path.join(currentDir, 'Assets');
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- Safe: path is constructed from module's own directory, only traverses upward
       if (fs.existsSync(assetsPath) && fs.statSync(assetsPath).isDirectory()) {
         return currentDir;
       }
