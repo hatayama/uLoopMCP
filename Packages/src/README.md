@@ -412,7 +412,6 @@ public class MyCustomTool : AbstractUnityTool<MyCustomSchema, MyCustomResponse>
 
 > [!IMPORTANT]  
 > **Important Notes**:
-> - **Timeout Handling**: All tools inherit `TimeoutSeconds` parameter from `BaseToolSchema`. Implement `cancellationToken.ThrowIfCancellationRequested()` checks in long-running operations to ensure proper timeout behavior.
 > - **Thread Safety**: Tools execute on Unity's main thread, so Unity API calls are safe without additional synchronization.
 
 Please also refer to [Custom Tool Samples](/Assets/Editor/CustomToolSamples).
@@ -425,19 +424,6 @@ Please also refer to [Custom Tool Samples](/Assets/Editor/CustomToolSamples).
 > 
 > The `run-tests`, `unity-search`, and `get-hierarchy` tools can save results to the `{project_root}/uLoopMCPOutputs/` directory to avoid massive token consumption when dealing with large datasets.
 > **Recommendation**: Add `uLoopMCPOutputs/` to `.gitignore` to exclude from version control.
-
-> [!TIP]
-> **Automatic MCP Execution in Cursor**  
-> 
-> By default, Cursor requires user permission when executing MCP.
-> To disable this, go to Cursor Settings > Chat > MCP Tools Protection and turn it Off.
-> Note that this cannot be controlled per MCP type or tool, so all MCPs will no longer require permission. This is a security tradeoff, so please configure it with that in mind.
-
-> [!WARNING]
-> **Windows Claude Code**  
-> 
-> When using Claude Code on Windows, version 1.0.51 or higher is recommended. (Git for Windows is required)  
-> Please refer to [Claude Code CHANGELOG](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md).
 
 ## License
 MIT License
