@@ -5076,7 +5076,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken } = options !== null && options !== void 0 ? options : {};
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve3, reject) => {
       var _a, _b, _c, _d, _e, _f;
       if (!this._transport) {
         reject(new Error("Not connected"));
@@ -5127,7 +5127,7 @@ var Protocol = class {
         }
         try {
           const result = resultSchema.parse(response.result);
-          resolve2(result);
+          resolve3(result);
         } catch (error) {
           reject(error);
         }
@@ -5462,12 +5462,12 @@ var StdioServerTransport = class {
     (_a = this.onclose) === null || _a === void 0 ? void 0 : _a.call(this);
   }
   send(message) {
-    return new Promise((resolve2) => {
+    return new Promise((resolve3) => {
       const json = serializeMessage(message);
       if (this._stdout.write(json)) {
-        resolve2();
+        resolve3();
       } else {
-        this._stdout.once("drain", resolve2);
+        this._stdout.once("drain", resolve3);
       }
     });
   }
@@ -5505,8 +5505,11 @@ var PARAMETER_SCHEMA = {
   REQUIRED_PROPERTY: "Required"
 };
 var TIMEOUTS = {
-  NETWORK: 18e4
+  NETWORK: 18e4,
   // 3 minutes - Network-level timeout (accounts for Roslyn initialization after Domain Reload)
+  // Domain Reload can take 2+ minutes for large projects. Using same timeout as NETWORK for consistency.
+  CONNECTION_WAIT: 18e4
+  // 3 minutes - Timeout for waiting Unity connection to be established
 };
 var DEFAULT_CLIENT_NAME = "";
 var ENVIRONMENT = {
@@ -6108,7 +6111,7 @@ var VibeLogger = class _VibeLogger {
    * Asynchronous sleep function for retry delays
    */
   static async sleep(ms) {
-    return new Promise((resolve2) => setTimeout(resolve2, ms));
+    return new Promise((resolve3) => setTimeout(resolve3, ms));
   }
   /**
    * Get current environment information
@@ -6790,8 +6793,8 @@ var MessageHandler = class {
   /**
    * Register a pending request
    */
-  registerPendingRequest(id, resolve2, reject) {
-    this.pendingRequests.set(id, { resolve: resolve2, reject, timestamp: Date.now() });
+  registerPendingRequest(id, resolve3, reject) {
+    this.pendingRequests.set(id, { resolve: resolve3, reject, timestamp: Date.now() });
   }
   /**
    * Handle incoming data from Unity using Content-Length framing
@@ -6980,10 +6983,218 @@ var MessageHandler = class {
   }
 };
 
-// src/unity-client.ts
-var createSafeTimeout = (callback, delay) => {
-  return safeSetTimeout(callback, delay);
+// src/utils/unity-window-focus.ts
+import { execFile } from "node:child_process";
+import { resolve as resolve2 } from "node:path";
+import { promisify } from "node:util";
+var execFileAsync = promisify(execFile);
+var UNITY_EXECUTABLE_PATTERN_MAC = /Unity\.app\/Contents\/MacOS\/Unity/i;
+var UNITY_EXECUTABLE_PATTERN_WINDOWS = /Unity\.exe/i;
+var PROJECT_PATH_PATTERN = /-(?:projectPath|projectpath)(?:=|\s+)("[^"]+"|'[^']+'|[^\s"']+)/i;
+var PROCESS_LIST_COMMAND_MAC = "ps";
+var PROCESS_LIST_ARGS_MAC = ["-axo", "pid=,command=", "-ww"];
+var WINDOWS_POWERSHELL = "powershell";
+var normalizePath = (target) => {
+  const resolvedPath = resolve2(target);
+  let trimmed = resolvedPath;
+  while (trimmed.length > 1 && (trimmed.endsWith("/") || trimmed.endsWith("\\"))) {
+    trimmed = trimmed.slice(0, -1);
+  }
+  return trimmed;
 };
+var extractProjectPath = (command) => {
+  const match = command.match(PROJECT_PATH_PATTERN);
+  if (!match) {
+    return void 0;
+  }
+  const raw = match[1];
+  if (!raw) {
+    return void 0;
+  }
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    return trimmed.slice(1, -1);
+  }
+  if (trimmed.startsWith("'") && trimmed.endsWith("'")) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+};
+var isUnityAuxiliaryProcess = (command) => {
+  const normalizedCommand = command.toLowerCase();
+  if (normalizedCommand.includes("-batchmode")) {
+    return true;
+  }
+  return normalizedCommand.includes("assetimportworker");
+};
+async function listUnityProcessesMac() {
+  let stdout = "";
+  try {
+    const result = await execFileAsync(PROCESS_LIST_COMMAND_MAC, PROCESS_LIST_ARGS_MAC);
+    stdout = result.stdout;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    VibeLogger.logDebug(
+      "unity_process_list_failed",
+      `Failed to retrieve Unity process list: ${message}`,
+      { platform: "darwin" }
+    );
+    return [];
+  }
+  const lines = stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+  const processes = [];
+  for (const line of lines) {
+    const match = line.match(/^(\d+)\s+(.*)$/);
+    if (!match) {
+      continue;
+    }
+    const pidValue = Number.parseInt(match[1] ?? "", 10);
+    if (!Number.isFinite(pidValue)) {
+      continue;
+    }
+    const command = match[2] ?? "";
+    if (!UNITY_EXECUTABLE_PATTERN_MAC.test(command)) {
+      continue;
+    }
+    if (isUnityAuxiliaryProcess(command)) {
+      continue;
+    }
+    const projectArgument = extractProjectPath(command);
+    if (!projectArgument) {
+      continue;
+    }
+    processes.push({
+      pid: pidValue,
+      projectPath: normalizePath(projectArgument)
+    });
+  }
+  return processes;
+}
+async function listUnityProcessesWindows() {
+  const scriptLines = [
+    "$ErrorActionPreference = 'Stop'",
+    `$processes = Get-CimInstance Win32_Process -Filter "Name = 'Unity.exe'" | Where-Object { $_.CommandLine }`,
+    "foreach ($process in $processes) {",
+    `  $commandLine = $process.CommandLine -replace "\`r", ' ' -replace "\`n", ' '`,
+    '  Write-Output ("{0}|{1}" -f $process.ProcessId, $commandLine)',
+    "}"
+  ];
+  let stdout = "";
+  try {
+    const result = await execFileAsync(WINDOWS_POWERSHELL, [
+      "-NoProfile",
+      "-Command",
+      scriptLines.join("\n")
+    ]);
+    stdout = result.stdout ?? "";
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    VibeLogger.logDebug(
+      "unity_process_list_failed",
+      `Failed to retrieve Unity process list on Windows: ${message}`,
+      { platform: "win32" }
+    );
+    return [];
+  }
+  const lines = stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+  const processes = [];
+  for (const line of lines) {
+    const delimiterIndex = line.indexOf("|");
+    if (delimiterIndex < 0) {
+      continue;
+    }
+    const pidText = line.slice(0, delimiterIndex).trim();
+    const command = line.slice(delimiterIndex + 1).trim();
+    const pidValue = Number.parseInt(pidText, 10);
+    if (!Number.isFinite(pidValue)) {
+      continue;
+    }
+    if (!UNITY_EXECUTABLE_PATTERN_WINDOWS.test(command)) {
+      continue;
+    }
+    if (isUnityAuxiliaryProcess(command)) {
+      continue;
+    }
+    const projectArgument = extractProjectPath(command);
+    if (!projectArgument) {
+      continue;
+    }
+    processes.push({
+      pid: pidValue,
+      projectPath: normalizePath(projectArgument)
+    });
+  }
+  return processes;
+}
+async function listUnityProcesses() {
+  if (process.platform === "darwin") {
+    return await listUnityProcessesMac();
+  }
+  if (process.platform === "win32") {
+    return await listUnityProcessesWindows();
+  }
+  return [];
+}
+async function focusUnityWindowMac(pid) {
+  const script = `tell application "System Events" to set frontmost of (first process whose unix id is ${pid}) to true`;
+  try {
+    await execFileAsync("osascript", ["-e", script]);
+    return { success: true, message: `Focused Unity window (PID: ${pid})` };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, message: `Failed to focus Unity window: ${message}` };
+  }
+}
+async function focusUnityWindowWindows(pid) {
+  const addTypeLines = [
+    'Add-Type -TypeDefinition @"',
+    "using System;",
+    "using System.Runtime.InteropServices;",
+    "public static class Win32Interop {",
+    '  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);',
+    '  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);',
+    "}",
+    '"@'
+  ];
+  const scriptLines = [
+    "$ErrorActionPreference = 'Stop'",
+    ...addTypeLines,
+    `try { $process = Get-Process -Id ${pid} -ErrorAction Stop } catch { exit 1 }`,
+    "$handle = $process.MainWindowHandle",
+    "if ($handle -eq 0) { exit 1 }",
+    "[Win32Interop]::ShowWindowAsync($handle, 9) | Out-Null",
+    "[Win32Interop]::SetForegroundWindow($handle) | Out-Null"
+  ];
+  try {
+    await execFileAsync(WINDOWS_POWERSHELL, ["-NoProfile", "-Command", scriptLines.join("\n")]);
+    return { success: true, message: `Focused Unity window (PID: ${pid})` };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, message: `Failed to focus Unity window on Windows: ${message}` };
+  }
+}
+async function focusUnityWindowByPid(pid) {
+  if (process.platform === "darwin") {
+    return await focusUnityWindowMac(pid);
+  }
+  if (process.platform === "win32") {
+    return await focusUnityWindowWindows(pid);
+  }
+  return { success: false, message: `Unsupported platform: ${process.platform}` };
+}
+async function focusAnyUnityWindow() {
+  const processes = await listUnityProcesses();
+  if (processes.length === 0) {
+    return { success: false, message: "No running Unity processes found" };
+  }
+  const firstProcess = processes[0];
+  if (!firstProcess) {
+    return { success: false, message: "No running Unity processes found" };
+  }
+  return await focusUnityWindowByPid(firstProcess.pid);
+}
+
+// src/unity-client.ts
 var UnityClient = class _UnityClient {
   static MAX_COUNTER = 9999;
   static COUNTER_PADDING = 4;
@@ -7094,30 +7305,19 @@ var UnityClient = class _UnityClient {
   /**
    * Lightweight connection health check
    * Tests socket state without creating new connections
+   *
+   * Note: Previously included a ping test, but it was removed because:
+   * - During Domain Reload, Unity server restarts and takes ~16 seconds to initialize
+   * - The 1-second ping timeout caused false positives (appeared disconnected when Unity was just initializing)
+   * - Socket state check is sufficient; actual request timeouts (3 min) handle truly unresponsive Unity
    */
-  async testConnection() {
+  testConnection() {
     if (!this._connected || this.socket === null || this.socket.destroyed) {
       return false;
     }
     if (!this.socket.readable || !this.socket.writable) {
       this._connected = false;
       return false;
-    }
-    let timeoutTimer = null;
-    try {
-      await Promise.race([
-        this.ping(UNITY_CONNECTION.CONNECTION_TEST_MESSAGE),
-        new Promise((_resolve, reject) => {
-          timeoutTimer = createSafeTimeout(() => {
-            reject(new Error("Health check timeout"));
-          }, 1e3);
-        })
-      ]);
-    } catch {
-      return false;
-    } finally {
-      stopSafeTimer(timeoutTimer);
-      timeoutTimer = null;
     }
     return true;
   }
@@ -7127,11 +7327,8 @@ var UnityClient = class _UnityClient {
    */
   async ensureConnected() {
     if (this._connected && this.socket && !this.socket.destroyed) {
-      try {
-        if (await this.testConnection()) {
-          return;
-        }
-      } catch {
+      if (this.testConnection()) {
+        return;
       }
     }
     if (this.connectingPromise) {
@@ -7161,7 +7358,7 @@ var UnityClient = class _UnityClient {
     if (this._connected && this.socket && !this.socket.destroyed) {
       return;
     }
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve3, reject) => {
       this.socket = new net.Socket();
       const currentSocket = this.socket;
       let connectionEstablished = false;
@@ -7214,7 +7411,7 @@ var UnityClient = class _UnityClient {
             );
           }
         });
-        resolve2();
+        resolve3();
       });
       currentSocket.on("error", (error) => {
         this._connected = false;
@@ -7297,28 +7494,6 @@ var UnityClient = class _UnityClient {
       }
     } catch {
     }
-  }
-  /**
-   * Send ping to Unity
-   */
-  async ping(message) {
-    if (!this.connected) {
-      throw new Error("Not connected to Unity");
-    }
-    const request = {
-      jsonrpc: JSONRPC.VERSION,
-      id: this.generateId(),
-      method: "ping",
-      params: {
-        Message: message
-        // Updated to match PingSchema property name
-      }
-    };
-    const response = await this.sendRequest(request, 1e3);
-    if (response.error) {
-      throw new Error(`Unity error: ${response.error.message}`);
-    }
-    return response.result || { Message: "Unity pong" };
   }
   /**
    * Get available tools from Unity
@@ -7428,13 +7603,14 @@ var UnityClient = class _UnityClient {
    * Send request and wait for response
    */
   async sendRequest(request, timeoutMs) {
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve3, reject) => {
       if (!this.socket || this.socket.destroyed || !this.connected) {
         reject(new Error(ERROR_MESSAGES.NOT_CONNECTED));
         return;
       }
       const timeout_duration = timeoutMs || TIMEOUTS.NETWORK;
       const timeoutTimer = safeSetTimeout(() => {
+        stopSafeTimer(timeoutTimer);
         VibeLogger.logWarning(
           "request_timeout_fired",
           "Request timed out waiting for Unity response",
@@ -7454,7 +7630,7 @@ var UnityClient = class _UnityClient {
         request.id,
         (response) => {
           stopSafeTimer(timeoutTimer);
-          resolve2(response);
+          resolve3(response);
         },
         (error) => {
           stopSafeTimer(timeoutTimer);
@@ -7522,28 +7698,27 @@ var UnityClient = class _UnityClient {
   /**
    * Try to bring Unity window to foreground (fire-and-forget)
    * Called when a request times out - Unity may be frozen in background
+   *
+   * Uses OS-level commands (osascript on macOS, PowerShell on Windows)
+   * instead of socket notification, so it works even during Domain Reload.
    */
   tryFocusUnityWindow() {
-    if (!this.socket || this.socket.destroyed) {
-      return;
-    }
-    const focusNotification = this.messageHandler.createNotification("focus-window", {});
-    this.socket.write(focusNotification, (error) => {
-      if (error) {
-        VibeLogger.logDebug(
-          "focus_window_failed",
-          "Failed to send focus-window notification",
-          { error: error.message },
+    void focusAnyUnityWindow().then((result) => {
+      if (result.success) {
+        VibeLogger.logInfo(
+          "focus_window_success",
+          "Brought Unity window to foreground via OS command",
           void 0,
-          "Could not bring Unity to foreground"
+          void 0,
+          "Successfully focused Unity window after timeout"
         );
       } else {
-        VibeLogger.logInfo(
-          "focus_window_sent",
-          "Sent focus-window notification to bring Unity to foreground",
+        VibeLogger.logDebug(
+          "focus_window_failed",
+          "Failed to bring Unity window to foreground",
+          { message: result.message },
           void 0,
-          void 0,
-          "Attempting to bring Unity window to foreground after timeout"
+          "Could not focus Unity window - may not be running"
         );
       }
     });
@@ -7620,21 +7795,21 @@ var UnityClient = class _UnityClient {
    * Performs low-level TCP connection test with short timeout
    */
   static async isUnityAvailable(port) {
-    return new Promise((resolve2) => {
+    return new Promise((resolve3) => {
       const socket = new net.Socket();
       const timeout = 500;
       const timer = setTimeout(() => {
         socket.destroy();
-        resolve2(false);
+        resolve3(false);
       }, timeout);
       socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
         clearTimeout(timer);
         socket.destroy();
-        resolve2(true);
+        resolve3(true);
       });
       socket.on("error", () => {
         clearTimeout(timer);
-        resolve2(false);
+        resolve3(false);
       });
     });
   }
@@ -7790,7 +7965,7 @@ var UnityDiscovery = class _UnityDiscovery {
     }
     this.logDiscoveryCycleStart(correlationId);
     try {
-      const shouldContinueDiscovery = await this.handleConnectionHealthCheck(correlationId);
+      const shouldContinueDiscovery = this.handleConnectionHealthCheck(correlationId);
       if (!shouldContinueDiscovery) {
         return;
       }
@@ -7841,10 +8016,13 @@ var UnityDiscovery = class _UnityDiscovery {
   }
   /**
    * Handle connection health check and determine if discovery should continue
+   *
+   * Note: Uses lightweight socket state check only (no ping).
+   * This avoids false positives during Domain Reload when Unity is initializing.
    */
-  async handleConnectionHealthCheck(correlationId) {
+  handleConnectionHealthCheck(correlationId) {
     if (this.unityClient.connected) {
-      const isConnectionHealthy = await this.checkConnectionHealth();
+      const isConnectionHealthy = this.checkConnectionHealth();
       if (isConnectionHealthy) {
         VibeLogger.logInfo(
           "unity_discovery_connection_healthy",
@@ -7857,11 +8035,10 @@ var UnityDiscovery = class _UnityDiscovery {
       } else {
         VibeLogger.logWarning(
           "unity_discovery_connection_unhealthy",
-          "Connection appears unhealthy - continuing discovery without assuming loss",
+          "Connection appears unhealthy - continuing discovery",
           { connection_healthy: false },
           correlationId,
-          "Connection health check failed. Will continue discovery but not assume complete loss.",
-          "Connection may recover on next cycle. Monitor for persistent issues."
+          "Socket state check failed. Will continue discovery."
         );
       }
     }
@@ -7898,20 +8075,14 @@ var UnityDiscovery = class _UnityDiscovery {
     this.isDiscovering = false;
   }
   /**
-   * Check if the current connection is healthy with timeout protection
+   * Check if the current connection is healthy
+   *
+   * Note: This is a lightweight socket state check only (no ping).
+   * Previously included a 1-second ping timeout, but it caused false positives
+   * during Domain Reload when Unity is still initializing (~16 seconds).
    */
-  async checkConnectionHealth() {
-    try {
-      const healthCheck = await Promise.race([
-        this.unityClient.testConnection(),
-        new Promise(
-          (_, reject) => setTimeout(() => reject(new Error("Connection health check timeout")), 1e3)
-        )
-      ]);
-      return healthCheck;
-    } catch {
-      return false;
-    }
+  checkConnectionHealth() {
+    return this.unityClient.testConnection();
   }
   /**
    * Discover Unity by checking specified port
@@ -8119,14 +8290,14 @@ var UnityConnectionManager = class {
    * Wait for Unity connection with timeout
    */
   async waitForUnityConnectionWithTimeout(timeoutMs) {
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve3, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error(`Unity connection timeout after ${timeoutMs}ms`));
       }, timeoutMs);
       const checkConnection = () => {
         if (this.unityClient.connected) {
           clearTimeout(timeout);
-          resolve2();
+          resolve3();
           return;
         }
         if (this.isInitialized) {
@@ -8134,7 +8305,7 @@ var UnityConnectionManager = class {
             if (this.unityClient.connected) {
               clearTimeout(timeout);
               clearInterval(connectionInterval);
-              resolve2();
+              resolve3();
             }
           }, 100);
           return;
@@ -8142,7 +8313,7 @@ var UnityConnectionManager = class {
         this.initialize(() => {
           return new Promise((resolveCallback) => {
             clearTimeout(timeout);
-            resolve2();
+            resolve3();
             resolveCallback();
           });
         });
@@ -8237,13 +8408,11 @@ var UnityConnectionManager = class {
   }
   /**
    * Test connection (validate connection state)
+   *
+   * Note: Lightweight socket state check only (no ping).
    */
-  async testConnection() {
-    try {
-      return await this.unityClient.testConnection();
-    } catch {
-      return false;
-    }
+  testConnection() {
+    return this.unityClient.testConnection();
   }
   /**
    * Disconnect from Unity
@@ -8701,7 +8870,7 @@ var RefreshToolsUseCase = class {
         "Unity connection required for tool refresh after domain reload"
       );
       try {
-        await this.connectionService.ensureConnected(1e4);
+        await this.connectionService.ensureConnected(TIMEOUTS.CONNECTION_WAIT);
       } catch (error) {
         const domainError = ErrorConverter.convertToDomainError(
           error,
@@ -9611,7 +9780,7 @@ var UnityMcpServer = class {
     try {
       await this.clientCompatibility.initializeClient(clientName);
       this.toolManager.setClientName(clientName);
-      await this.connectionManager.waitForUnityConnectionWithTimeout(1e4);
+      await this.connectionManager.waitForUnityConnectionWithTimeout(TIMEOUTS.CONNECTION_WAIT);
       const tools = await this.toolManager.getToolsFromUnity();
       return {
         protocolVersion: MCP_PROTOCOL_VERSION,

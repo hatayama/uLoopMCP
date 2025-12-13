@@ -22,6 +22,7 @@ import {
   MCP_PROTOCOL_VERSION,
   MCP_SERVER_NAME,
   TOOLS_LIST_CHANGED_CAPABILITY,
+  TIMEOUTS,
 } from './constants.js';
 import { VERSION } from './version.js';
 
@@ -118,7 +119,7 @@ class UnityMcpServer {
     try {
       await this.clientCompatibility.initializeClient(clientName);
       this.toolManager.setClientName(clientName);
-      await this.connectionManager.waitForUnityConnectionWithTimeout(10000);
+      await this.connectionManager.waitForUnityConnectionWithTimeout(TIMEOUTS.CONNECTION_WAIT);
       const tools = await this.toolManager.getToolsFromUnity();
 
       // Returning tools for client

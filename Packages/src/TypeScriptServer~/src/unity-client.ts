@@ -8,14 +8,11 @@ import {
   ServerShutdownReason,
   CONNECTION_RECOVERY,
 } from './constants.js';
-import { SafeTimer, safeSetTimeout, stopSafeTimer } from './utils/safe-timer.js';
-
-const createSafeTimeout = (callback: () => void, delay: number): SafeTimer => {
-  return safeSetTimeout(callback, delay);
-};
+import { safeSetTimeout, stopSafeTimer } from './utils/safe-timer.js';
 import { ConnectionManager } from './connection-manager.js';
 import { MessageHandler } from './message-handler.js';
 import { VibeLogger } from './utils/vibe-logger.js';
+import { focusAnyUnityWindow } from './utils/unity-window-focus.js';
 
 /**
  * Unity client interface for external dependencies
@@ -162,8 +159,13 @@ export class UnityClient {
   /**
    * Lightweight connection health check
    * Tests socket state without creating new connections
+   *
+   * Note: Previously included a ping test, but it was removed because:
+   * - During Domain Reload, Unity server restarts and takes ~16 seconds to initialize
+   * - The 1-second ping timeout caused false positives (appeared disconnected when Unity was just initializing)
+   * - Socket state check is sufficient; actual request timeouts (3 min) handle truly unresponsive Unity
    */
-  async testConnection(): Promise<boolean> {
+  testConnection(): boolean {
     // First check: basic connection state (lightweight)
     if (!this._connected || this.socket === null || this.socket.destroyed) {
       return false;
@@ -173,25 +175,6 @@ export class UnityClient {
     if (!this.socket.readable || !this.socket.writable) {
       this._connected = false;
       return false;
-    }
-
-    // Third check: ping test with timeout (only if socket state is good)
-    let timeoutTimer: SafeTimer | null = null;
-
-    try {
-      await Promise.race([
-        this.ping(UNITY_CONNECTION.CONNECTION_TEST_MESSAGE),
-        new Promise<never>((_resolve, reject: (reason?: unknown) => void) => {
-          timeoutTimer = createSafeTimeout(() => {
-            reject(new Error('Health check timeout'));
-          }, 1000);
-        }),
-      ]);
-    } catch {
-      return false;
-    } finally {
-      stopSafeTimer(timeoutTimer);
-      timeoutTimer = null;
     }
 
     return true;
@@ -204,12 +187,8 @@ export class UnityClient {
   async ensureConnected(): Promise<void> {
     // If already connected and healthy, return immediately
     if (this._connected && this.socket && !this.socket.destroyed) {
-      try {
-        if (await this.testConnection()) {
-          return;
-        }
-      } catch {
-        // Health check failed - need to reconnect
+      if (this.testConnection()) {
+        return;
       }
     }
 
@@ -413,33 +392,6 @@ export class UnityClient {
   }
 
   /**
-   * Send ping to Unity
-   */
-  async ping(message: string): Promise<unknown> {
-    if (!this.connected) {
-      throw new Error('Not connected to Unity');
-    }
-
-    const request = {
-      jsonrpc: JSONRPC.VERSION,
-      id: this.generateId(),
-      method: 'ping',
-      params: {
-        Message: message, // Updated to match PingSchema property name
-      },
-    };
-
-    const response = await this.sendRequest(request, 1000); // 1秒でタイムアウト
-
-    if (response.error) {
-      throw new Error(`Unity error: ${response.error.message}`);
-    }
-
-    // Return the full response object (now includes timing information)
-    return response.result || { Message: 'Unity pong' };
-  }
-
-  /**
    * Get available tools from Unity
    */
   async getAvailableTools(): Promise<string[]> {
@@ -612,6 +564,9 @@ export class UnityClient {
 
       // Use SafeTimer for automatic cleanup to prevent orphaned processes
       const timeoutTimer = safeSetTimeout(() => {
+        // Clean up timer from registry to prevent memory leaks
+        stopSafeTimer(timeoutTimer);
+
         VibeLogger.logWarning(
           'request_timeout_fired',
           'Request timed out waiting for Unity response',
@@ -720,31 +675,28 @@ export class UnityClient {
   /**
    * Try to bring Unity window to foreground (fire-and-forget)
    * Called when a request times out - Unity may be frozen in background
+   *
+   * Uses OS-level commands (osascript on macOS, PowerShell on Windows)
+   * instead of socket notification, so it works even during Domain Reload.
    */
   private tryFocusUnityWindow(): void {
-    if (!this.socket || this.socket.destroyed) {
-      return;
-    }
-
-    // Use notification (no id) instead of request to avoid "unknown_request_response" warnings
-    const focusNotification = this.messageHandler.createNotification('focus-window', {});
-
-    this.socket.write(focusNotification, (error) => {
-      if (error) {
-        VibeLogger.logDebug(
-          'focus_window_failed',
-          'Failed to send focus-window notification',
-          { error: error.message },
+    // Fire-and-forget: use OS-level focus which works even when Unity server is down
+    void focusAnyUnityWindow().then((result) => {
+      if (result.success) {
+        VibeLogger.logInfo(
+          'focus_window_success',
+          'Brought Unity window to foreground via OS command',
           undefined,
-          'Could not bring Unity to foreground',
+          undefined,
+          'Successfully focused Unity window after timeout',
         );
       } else {
-        VibeLogger.logInfo(
-          'focus_window_sent',
-          'Sent focus-window notification to bring Unity to foreground',
+        VibeLogger.logDebug(
+          'focus_window_failed',
+          'Failed to bring Unity window to foreground',
+          { message: result.message },
           undefined,
-          undefined,
-          'Attempting to bring Unity window to foreground after timeout',
+          'Could not focus Unity window - may not be running',
         );
       }
     });

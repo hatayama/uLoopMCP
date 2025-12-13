@@ -14,6 +14,16 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Send tool change notification to clients
         /// </summary>
+        /// <remarks>
+        /// This notification serves dual purposes in this project:
+        /// 1. Original MCP purpose: Notify that available tools have changed
+        /// 2. uLoopMCP additional purpose: Signal that Unity is ready after Domain Reload
+        ///
+        /// After Domain Reload completes, this notification is sent to indicate Unity
+        /// has finished initialization and can reliably process requests. TypeScript side
+        /// uses this as a "Unity ready" signal. The name doesn't perfectly match this
+        /// secondary purpose, but it avoids adding custom notification complexity.
+        /// </remarks>
         public static void SendToolsChangedNotification()
         {
             McpBridgeServer currentServer = McpServerController.CurrentServer;

@@ -46,9 +46,12 @@ export interface IConnectionService extends ApplicationService {
   /**
    * Test connection (validate connection state)
    *
-   * @returns true if connection is valid
+   * Note: This is a lightweight socket state check only.
+   * Previously included ping test, but removed to avoid false positives during Domain Reload.
+   *
+   * @returns true if connection is valid (socket connected and readable/writable)
    */
-  testConnection(): Promise<boolean>;
+  testConnection(): boolean;
 
   /**
    * Setup reconnection callback

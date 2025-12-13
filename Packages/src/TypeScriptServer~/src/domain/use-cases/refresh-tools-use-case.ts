@@ -18,6 +18,7 @@ import { VibeLogger } from '../../utils/vibe-logger.js';
 import { ErrorConverter } from '../../application/error-converter.js';
 import { IConnectionService } from '../../application/interfaces/connection-service.js';
 import { IToolManagementService } from '../../application/interfaces/tool-management-service.js';
+import { TIMEOUTS } from '../../constants.js';
 import { IToolQueryService } from '../../application/interfaces/tool-query-service.js';
 
 /**
@@ -116,7 +117,7 @@ export class RefreshToolsUseCase implements UseCase<RefreshToolsRequest, Refresh
       );
 
       try {
-        await this.connectionService.ensureConnected(10000);
+        await this.connectionService.ensureConnected(TIMEOUTS.CONNECTION_WAIT);
       } catch (error) {
         // Use ErrorConverter for consistent error handling
         const domainError = ErrorConverter.convertToDomainError(

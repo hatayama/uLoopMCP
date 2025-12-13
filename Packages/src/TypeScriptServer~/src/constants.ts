@@ -31,6 +31,14 @@ export const MCP_SERVER_NAME = 'uloopmcp-server';
 export const TOOLS_LIST_CHANGED_CAPABILITY = true;
 
 // MCP Notification methods
+//
+// Note on TOOLS_LIST_CHANGED:
+// This is an MCP standard notification for tool list changes.
+// In this project, it also serves as a "Unity ready" signal after Domain Reload.
+// When Unity completes Domain Reload and finishes initialization (~16 seconds),
+// it sends this notification. TypeScript side uses it to confirm Unity is ready
+// to process requests. The name doesn't perfectly match this secondary purpose,
+// but it works and avoids adding custom notification complexity.
 export const NOTIFICATION_METHODS = {
   TOOLS_LIST_CHANGED: 'notifications/tools/list_changed',
   SERVER_SHUTDOWN: 'notifications/server/shutdown',
@@ -69,6 +77,8 @@ export const PARAMETER_SCHEMA = {
 // Timeout configuration (milliseconds)
 export const TIMEOUTS = {
   NETWORK: 180000, // 3 minutes - Network-level timeout (accounts for Roslyn initialization after Domain Reload)
+  // Domain Reload can take 2+ minutes for large projects. Using same timeout as NETWORK for consistency.
+  CONNECTION_WAIT: 180000, // 3 minutes - Timeout for waiting Unity connection to be established
 } as const;
 
 // Log configuration
