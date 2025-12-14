@@ -2,6 +2,6 @@
  * Server version
  *
  * This file exists to avoid bundling the entire package.json into the server bundle.
- * Keep this in sync with package.json version.
+ * This version is automatically updated by release-please.
  */
-export const VERSION = '0.30.1';
+export const VERSION = '0.43.9'; // x-release-please-version

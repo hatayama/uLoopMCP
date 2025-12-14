@@ -4,7 +4,16 @@
       "release-type": "node",
       "include-v-in-tag": true,
       "extra-files": [
-        "TypeScriptServer~/package.json"
+        {
+          "type": "json",
+          "path": "Packages/src/TypeScriptServer~/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "generic",
+          "path": "Packages/src/TypeScriptServer~/src/version.ts",
+          "glob": "Packages/src/TypeScriptServer~/src/version.ts"
+        }
       ]
     }
   }
