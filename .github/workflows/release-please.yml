@@ -58,11 +58,12 @@ jobs:
         if: ${{ steps.release.outputs.pr }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ fromJson(steps.release.outputs.pr).number }}
         run: |
-          echo "🔄 Release PR #${{ steps.release.outputs.pr }} detected, rebuilding bundle..."
+          echo "🔄 Release PR #${PR_NUMBER} detected, rebuilding bundle..."
           
           # Checkout the PR branch
-          gh pr checkout ${{ steps.release.outputs.pr }}
+          gh pr checkout "${PR_NUMBER}"
           
           # Build the bundle
           cd Packages/src/TypeScriptServer~
