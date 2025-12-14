@@ -102,7 +102,7 @@ src/
 ## Setup
 
 ### Prerequisites
-- Node.js 18 or higher
+- Node.js 22 or higher
 - Unity 2020.3 or higher
 - Unity MCP Bridge package installed.
 
