@@ -40,11 +40,8 @@ jobs:
 
       # ── Execute release-please ───────────────────────────
       - name: 🚀 Run release‑please
-        uses: googleapis/release-please-action@v3
+        uses: googleapis/release-please-action@v4
         with:
-          path: Packages/src
-          release-type: node
-          package-name: "io.github.hatayama.uloopmcp"
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
           token: ${{ secrets.GITHUB_TOKEN }}
-          extra-files: |
-            TypeScriptServer~/package.json

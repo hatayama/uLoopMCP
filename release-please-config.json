@@ -4,7 +4,11 @@
       "release-type": "node",
       "include-v-in-tag": true,
       "extra-files": [
-        "TypeScriptServer~/package.json"
+        {
+          "type": "json",
+          "path": "TypeScriptServer~/package.json",
+          "jsonpath": "$.version"
+        }
       ]
     }
   }
