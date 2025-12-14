@@ -290,7 +290,7 @@ For detailed specifications of all tools (parameters, responses, examples), see 
 > The following software is required
 >
 > - **Unity 2022.3 or later**
-> - **Node.js 18.0 or later** - Required for MCP server execution
+> - **Node.js 22.0 or later** - Required for MCP server execution
 > - Install Node.js from [here](https://nodejs.org/en/download)
 
 ### Via Unity Package Manager

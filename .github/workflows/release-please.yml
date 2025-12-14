@@ -40,8 +40,43 @@ jobs:
 
       # ── Execute release-please ───────────────────────────
       - name: 🚀 Run release‑please
+        id: release
         uses: googleapis/release-please-action@v4
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Rebuild TypeScript bundle when Release PR is created/updated ──
+      - name: 🔧 Setup Node.js for bundle rebuild
+        if: ${{ steps.release.outputs.pr }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: 📦 Rebuild TypeScript bundle for Release PR
+        if: ${{ steps.release.outputs.pr }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔄 Release PR #${{ steps.release.outputs.pr }} detected, rebuilding bundle..."
+          
+          # Checkout the PR branch
+          gh pr checkout ${{ steps.release.outputs.pr }}
+          
+          # Build the bundle
+          cd Packages/src/TypeScriptServer~
+          npm ci
+          npm run build
+          
+          # Commit and push if bundle changed
+          git add dist/server.bundle.js dist/server.bundle.js.map
+          if git diff --cached --quiet; then
+            echo "✅ No changes to bundle, skipping commit"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore: rebuild server.bundle.js for release"
+            git push
+            echo "✅ Bundle rebuilt and pushed to PR"
+          fi

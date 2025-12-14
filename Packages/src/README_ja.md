@@ -289,7 +289,7 @@ Scope(s): org.nuget
 > 以下のソフトウェアが必須です
 > 
 > - **Unity 2022.3以上**
-> - **Node.js 18.0以上** - MCPサーバー実行に必要
+> - **Node.js 22.0以上** - MCPサーバー実行に必要
 > - Node.jsを[こちら](https://nodejs.org/en/download)からインストールしてください
 
 ### Unity Package Manager経由
