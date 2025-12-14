@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.43.11](https://github.com/hatayama/uLoopMCP/compare/v0.43.10...v0.43.11) (2025-12-14)
+
+
+### Bug Fixes
+
+* auto-rebuild server.bundle.js on release and upgrade Node.js to v22 ([#424](https://github.com/hatayama/uLoopMCP/issues/424)) ([24f26ff](https://github.com/hatayama/uLoopMCP/commit/24f26ff8a2732f43dd19ceaa73f85b39cee95e32))
+
 ## [0.43.10](https://github.com/hatayama/uLoopMCP/compare/v0.43.9...v0.43.10) (2025-12-14)
 
 
