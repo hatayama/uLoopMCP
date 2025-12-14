@@ -4,4 +4,4 @@
  * This file exists to avoid bundling the entire package.json into the server bundle.
  * This version is automatically updated by release-please.
  */
-export const VERSION = '0.43.9'; // x-release-please-version
+export const VERSION = '0.1.1'; // x-release-please-version
