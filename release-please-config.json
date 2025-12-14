@@ -3,6 +3,7 @@
     "Packages/src": {
       "release-type": "node",
       "include-v-in-tag": true,
+      "include-component-in-tag": false,
       "extra-files": [
         {
           "type": "json",
