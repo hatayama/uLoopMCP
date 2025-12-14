@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.43.10](https://github.com/hatayama/uLoopMCP/compare/v0.43.9...v0.43.10) (2025-12-14)
+
+
+### Bug Fixes
+
+* configure release-please v4 to sync TypeScript version ([#416](https://github.com/hatayama/uLoopMCP/issues/416)) ([11b0951](https://github.com/hatayama/uLoopMCP/commit/11b09512c678ebedcbd5e0ef19db71260741a905))
+* use generic type for TypeScript package.json version sync ([#420](https://github.com/hatayama/uLoopMCP/issues/420)) ([786b57c](https://github.com/hatayama/uLoopMCP/commit/786b57c86007d5be2b274310cd1f1f0fb65d1192))
+
 ## [0.43.9](https://github.com/hatayama/uLoopMCP/compare/v0.43.8...v0.43.9) (2025-12-13)
 
 
