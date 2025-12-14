@@ -7,7 +7,7 @@
       "extra-files": [
         {
           "type": "json",
-          "path": "Packages/src/TypeScriptServer~/package.json",
+          "path": "TypeScriptServer~/package.json",
           "jsonpath": "$.version"
         },
         {
