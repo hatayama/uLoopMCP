@@ -6,9 +6,9 @@
       "include-component-in-tag": false,
       "extra-files": [
         {
-          "type": "json",
+          "type": "generic",
           "path": "Packages/src/TypeScriptServer~/package.json",
-          "jsonpath": "$.version"
+          "glob": "Packages/src/TypeScriptServer~/package.json"
         },
         {
           "type": "generic",

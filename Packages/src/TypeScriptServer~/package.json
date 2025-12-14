@@ -1,6 +1,7 @@
 {
   "name": "uloopmcp-server",
   "version": "0.43.9",
+  "//version": "x-release-please-version",
   "description": "TypeScript MCP Server for Unity-Cursor integration",
   "main": "dist/server.bundle.js",
   "type": "module",
