@@ -85,8 +85,6 @@ crashlytics-build.properties
 .claude
 .gemini
 .kiro
-CLAUDE.md
-GEMINI.md
 .mcp.json
 .inspector.mcp.json
 .serena
@@ -160,7 +158,3 @@ eslint-results.xml
 
 # Yarn Integrity file
 .yarn-integrity
-
-requirements/
-
-AGENTS.md
