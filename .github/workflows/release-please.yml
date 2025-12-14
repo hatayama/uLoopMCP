@@ -58,8 +58,10 @@ jobs:
         if: ${{ steps.release.outputs.pr }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ fromJson(steps.release.outputs.pr).number }}
+          PR_JSON: ${{ steps.release.outputs.pr }}
         run: |
+          # Extract PR number from JSON using jq
+          PR_NUMBER=$(echo "${PR_JSON}" | jq -r '.number')
           echo "🔄 Release PR #${PR_NUMBER} detected, rebuilding bundle..."
           
           # Checkout the PR branch
