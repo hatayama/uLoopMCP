@@ -8,6 +8,11 @@
           "type": "json",
           "path": "TypeScriptServer~/package.json",
           "jsonpath": "$.version"
+        },
+        {
+          "type": "generic",
+          "path": "TypeScriptServer~/src/version.ts",
+          "glob": "TypeScriptServer~/src/version.ts"
         }
       ]
     }
