@@ -26,6 +26,8 @@ uLoopMCPのコアとなるコンセプトは次の2つです。
 1. **compile / run-tests / get-logs / clear-console などを組み合わせて、AIが自分でビルド・テスト・ログ解析を回し続けられる「自律開発ループ」を提供すること**
 2. **execute-dynamic-code や execute-menu-item などを使って、Unity Editorの操作（シーン構築、メニュー実行、オブジェクト操作など）まで AIに任せられること**
 
+https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
+
 # 特徴
 1. AI がコンパイル → テスト実行 → ログ解析 → 再修正までを繰り返せるよう、`compile` / `run-tests` / `get-logs` / `clear-console` などのツールをひとまとめに提供します。
 2. `execute-dynamic-code` を中心に、Unity Editor のメニュー実行、シーン探索、GameObject 操作などをコードから自在に自動化できます。
@@ -39,6 +41,7 @@ uLoopMCPのコアとなるコンセプトは次の2つです。
 - 検証完了後、`MenuItemの実行` または `コンパイル不要のC#コード実行` でPlay Modeに入り、`Unityウィンドウフォーカス機能` でUnity Editorを最前面に表示させる
 - 大量のPrefab / GameObjectを`Hierarchy調査機能`・`Unity Search`・`コンパイル不要のC#コード実行`でAIに調査させ、パラメータの一括修正やシーン構造の整理を行う
 - チーム専用のMCPツールを追加し、プロジェクト固有のチェックや自動修正をAIから呼び出せるようにする
+
 
 ## クイックスタート
 1. Unity プロジェクトに uLoopMCP パッケージをインストールします。
