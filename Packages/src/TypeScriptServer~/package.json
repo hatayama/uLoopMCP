@@ -65,7 +65,7 @@
     "@microsoft/eslint-formatter-sarif": "3.1.0",
     "@types/jest": "30.0.0",
     "@types/uuid": "10.0.0",
-    "@types/node": "20.19.0",
+    "@types/node": "25.0.2",
     "cross-env": "10.1.0",
     "esbuild": "0.27.1",
     "eslint": "9.39.1",
