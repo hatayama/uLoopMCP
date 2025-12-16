@@ -26,6 +26,8 @@ uLoopMCP is built around two core ideas:
 1. **Provide a “self-hosted development loop” where an AI can repeatedly compile, run tests, inspect logs, and fix issues using tools like `compile`, `run-tests`, `get-logs`, and `clear-console`.**
 2. **Allow AI to operate the Unity Editor itself—creating objects, calling menu items, and inspecting scenes—via tools like `execute-dynamic-code` and `execute-menu-item`.**
 
+https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
+
 # Features
 1. Bundle of tools to let AI run the full loop (compile → test → log analysis → fix → repeat) on a Unity project.
 2. `execute-dynamic-code` at the core, enabling rich Unity Editor automation: menu execution, scene exploration, GameObject manipulation, and more.
