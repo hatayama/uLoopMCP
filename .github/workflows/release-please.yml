@@ -15,6 +15,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  id-token: write  # Required for npm provenance
 
 jobs:
   release:
@@ -100,5 +101,5 @@ jobs:
           cd Packages/src/TypeScriptServer~
           npm ci
           npm run build
-          npm publish --access public
-          echo "✅ Published to npm"
+          npm publish --access public --provenance
+          echo "✅ Published to npm with provenance"
