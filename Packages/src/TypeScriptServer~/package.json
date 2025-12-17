@@ -4,11 +4,15 @@
   "//version": "x-release-please-version",
   "description": "TypeScript MCP Server for Unity-Cursor integration",
   "main": "dist/server.bundle.js",
+  "bin": {
+    "uloop": "./dist/cli.bundle.cjs"
+  },
   "type": "module",
   "scripts": {
     "prepare": "husky",
-    "build": "npm run build:bundle",
+    "build": "npm run build:bundle && npm run build:cli",
     "build:bundle": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap",
+    "build:cli": "esbuild src/cli/cli.ts --bundle --platform=node --format=cjs --outfile=dist/cli.bundle.cjs --sourcemap --banner:js='#!/usr/bin/env node'",
     "build:production": "cross-env ULOOPMCP_PRODUCTION=true NODE_ENV=production esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap",
     "dev": "cross-env NODE_ENV=development npm run build:bundle && cross-env NODE_ENV=development NODE_OPTIONS=--enable-source-maps node dist/server.bundle.js",
     "dev:watch": "cross-env NODE_ENV=development esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap --watch",
@@ -24,6 +28,7 @@
     "format:check": "prettier --check src/**/*.ts",
     "lint:check": "npm run lint && npm run format:check",
     "test": "jest",
+    "test:cli": "jest src/cli/__tests__ --testTimeout=60000 --runInBand",
     "test:mcp": "tsx src/tools/__tests__/test-runner.ts",
     "test:integration": "tsx src/tools/__tests__/integration-test.ts",
     "test:watch": "jest --watch",
@@ -57,6 +62,7 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.24.3",
+    "commander": "^14.0.2",
     "uuid": "13.0.0",
     "zod": "4.2.0"
   },
