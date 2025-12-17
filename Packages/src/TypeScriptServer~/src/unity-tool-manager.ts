@@ -351,7 +351,7 @@ export class UnityToolManager
    */
   private convertToMcpSchema(inputSchema: unknown): {
     type: 'object';
-    properties?: Record<string, unknown>;
+    properties?: Record<string, object>;
     required?: string[];
   } {
     if (!inputSchema || typeof inputSchema !== 'object') {
@@ -361,16 +361,28 @@ export class UnityToolManager
     const schema = inputSchema as Record<string, unknown>;
     const result: {
       type: 'object';
-      properties?: Record<string, unknown>;
+      properties?: Record<string, object>;
       required?: string[];
     } = { type: 'object' };
 
     if (schema.properties && typeof schema.properties === 'object') {
-      result.properties = schema.properties as Record<string, unknown>;
+      const rawProperties = schema.properties as Record<string, unknown>;
+      const safePropertyEntries: Array<[string, object]> = [];
+      for (const [key, value] of Object.entries(rawProperties)) {
+        if (value && typeof value === 'object') {
+          safePropertyEntries.push([key, value]);
+        }
+      }
+      if (safePropertyEntries.length > 0) {
+        result.properties = Object.fromEntries(safePropertyEntries);
+      }
     }
 
     if (Array.isArray(schema.required)) {
-      result.required = schema.required as string[];
+      const required = schema.required.filter((x: unknown): x is string => typeof x === 'string');
+      if (required.length > 0) {
+        result.required = required;
+      }
     }
 
     return result;
