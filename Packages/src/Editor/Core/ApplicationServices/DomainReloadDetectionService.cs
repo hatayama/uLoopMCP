@@ -1,3 +1,4 @@
+using System.IO;
 using UnityEditor;
 
 namespace io.github.hatayama.uLoopMCP
@@ -10,6 +11,10 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class DomainReloadDetectionService
     {
+        private const string LOCK_FILE_NAME = "domainreload.lock";
+
+        private static string LockFilePath => Path.Combine(UnityEngine.Application.dataPath, "..", "Temp", LOCK_FILE_NAME);
+
         /// <summary>
         /// Execute Domain Reload start processing
         /// </summary>
@@ -18,7 +23,9 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="serverPort">Server port number</param>
         public static void StartDomainReload(string correlationId, bool serverIsRunning, int? serverPort)
         {
-                        
+            // Create lock file for external process detection (e.g., CLI tools)
+            CreateLockFile();
+
             // Set Domain Reload in progress flag
             McpEditorSettings.SetIsDomainReloadInProgress(true);
 
@@ -52,7 +59,9 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="correlationId">Tracking ID for related operations</param>
         public static void CompleteDomainReload(string correlationId)
         {
-                        
+            // Delete lock file for external process detection
+            DeleteLockFile();
+
             // Clear Domain Reload completion flag
             McpEditorSettings.ClearDomainReloadFlag();
 
@@ -90,6 +99,45 @@ namespace io.github.hatayama.uLoopMCP
         public static bool IsAfterCompile()
         {
             return McpEditorSettings.GetIsAfterCompile();
+        }
+
+        /// <summary>
+        /// Create lock file to signal Domain Reload in progress.
+        /// External processes (e.g., CLI) can check this file to detect Domain Reload state.
+        /// </summary>
+        private static void CreateLockFile()
+        {
+            string lockPath = LockFilePath;
+            string tempDir = Path.GetDirectoryName(lockPath);
+
+            if (!Directory.Exists(tempDir))
+            {
+                return;
+            }
+
+            File.WriteAllText(lockPath, System.DateTime.UtcNow.ToString("o"));
+        }
+
+        /// <summary>
+        /// Delete lock file to signal Domain Reload completion.
+        /// </summary>
+        public static void DeleteLockFile()
+        {
+            string lockPath = LockFilePath;
+            if (File.Exists(lockPath))
+            {
+                File.Delete(lockPath);
+            }
+        }
+
+        /// <summary>
+        /// Check if Domain Reload lock file exists.
+        /// Used by external processes to detect Domain Reload state.
+        /// </summary>
+        /// <returns>True if lock file exists</returns>
+        public static bool IsLockFilePresent()
+        {
+            return File.Exists(LockFilePath);
         }
     }
 }

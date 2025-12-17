@@ -489,6 +489,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static async Task StartRecoveryIfNeededAsync(int savedPort, bool isAfterCompile, CancellationToken cancellationToken)
         {
+            // Ensure lock file is cleaned up on server startup (handles crash recovery)
+            DomainReloadDetectionService.DeleteLockFile();
+
             VibeLogger.LogInfo("startup_request", $"port={savedPort}");
 
             if (IsStartupProtectionActive())

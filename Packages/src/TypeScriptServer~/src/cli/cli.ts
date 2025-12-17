@@ -3,6 +3,8 @@
  * Provides direct Unity communication without MCP server.
  */
 
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { Command } from 'commander';
 import { executeToolCommand, listAvailableTools, GlobalOptions } from './execute-tool.js';
 import { pascalToKebabCase, kebabToPascalCase } from './arg-parser.js';
@@ -289,6 +291,11 @@ function extractGlobalOptions(options: Record<string, unknown>): GlobalOptions {
   };
 }
 
+function isDomainReloadLockFilePresent(): boolean {
+  const lockPath = join(process.cwd(), 'Temp', 'domainreload.lock');
+  return existsSync(lockPath);
+}
+
 async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
   try {
     await fn();
@@ -296,8 +303,13 @@ async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
     const message = error instanceof Error ? error.message : String(error);
 
     if (message.includes('ECONNREFUSED')) {
-      console.error('\x1b[31mError: Cannot connect to Unity.\x1b[0m');
-      console.error('Make sure Unity is running with uLoopMCP installed.');
+      if (isDomainReloadLockFilePresent()) {
+        console.error('\x1b[33m⏳ Unity is reloading (Domain Reload in progress).\x1b[0m');
+        console.error('Please wait a moment and try again.');
+      } else {
+        console.error('\x1b[31mError: Cannot connect to Unity.\x1b[0m');
+        console.error('Make sure Unity is running with uLoopMCP installed.');
+      }
       process.exit(1);
     }
 
