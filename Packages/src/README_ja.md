@@ -245,9 +245,15 @@ Scope(s): org.nuget
 <img width="335" alt="image" src="https://github.com/user-attachments/assets/25f1f4f9-e3c8-40a5-a2f3-903f9ed5f45b" />
 
 4. IDE接続確認
-  - 例えばCursorの場合、設定ページのTools & MCPを確認し、uLoopMCPを見つけてください。トグルをクリックしてMCPを有効にします。赤い円が表示される場合は、Cursorを再起動してください。  
+  - 例えばCursorの場合、設定ページのTools & MCPを確認し、uLoopMCPを見つけてください。トグルをクリックしてMCPを有効にします。
 
 <img width="657" height="399" alt="image" src="https://github.com/user-attachments/assets/5137491d-0396-482f-b695-6700043b3f69" />
+
+> [!WARNING]  
+> **Cursor側の既知バグについて**  
+> 初回設定時やポート番号変更時など、`.cursor/mcp.json` が更新された直後に、Cursor側のMCP接続処理が60秒後にタイムアウトで失敗することがあります。  
+> これはCursor本体のバグであり、現在[Issue#3887](https://github.com/cursor/cursor/issues/3887)に報告済みで修正を待っている状態です。 
+> **回避策**: Cursorの Tools & MCP で対象MCPのトグルを off → on に切り替えると復旧します。それでも直らない場合はCursorを再起動してください。
 
 > [!WARNING]  
 > **Codex / Windsurfについて**  
