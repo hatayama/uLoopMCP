@@ -1,3 +1,8 @@
 #!/usr/bin/env sh
-cd Packages/src/.TypeScriptServer
+cd Packages/src/TypeScriptServer~
 npx lint-staged
+
+changed_ts_files="$(git diff --cached --name-only --diff-filter=ACM | grep -E '^Packages/src/TypeScriptServer~/src/.*\.(ts|tsx)$' || true)"
+if [ -n "$changed_ts_files" ]; then
+  npx tsc --noEmit
+fi
