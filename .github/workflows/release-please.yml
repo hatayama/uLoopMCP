@@ -73,13 +73,32 @@ jobs:
           npm run build
           
           # Commit and push if bundle changed
-          git add dist/server.bundle.js dist/server.bundle.js.map
+          git add dist/server.bundle.js dist/server.bundle.js.map dist/cli.bundle.cjs dist/cli.bundle.cjs.map
           if git diff --cached --quiet; then
             echo "✅ No changes to bundle, skipping commit"
           else
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -m "chore: rebuild server.bundle.js for release"
+            git commit -m "chore: rebuild bundles for release"
             git push
-            echo "✅ Bundle rebuilt and pushed to PR"
+            echo "✅ Bundles rebuilt and pushed to PR"
           fi
+
+      # ── Publish to npm when release is created ──────────────────
+      - name: 🔧 Setup Node.js for npm publish
+        if: ${{ steps.release.outputs.release_created }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 📦 Publish to npm
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd Packages/src/TypeScriptServer~
+          npm ci
+          npm run build
+          npm publish --access public
+          echo "✅ Published to npm"

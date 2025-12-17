@@ -1,8 +1,8 @@
 {
-  "name": "uloopmcp-server",
+  "name": "uloop-cli",
   "version": "0.43.11",
   "//version": "x-release-please-version",
-  "description": "TypeScript MCP Server for Unity-Cursor integration",
+  "description": "CLI tool for Unity Editor communication via uLoopMCP",
   "main": "dist/server.bundle.js",
   "bin": {
     "uloop": "./dist/cli.bundle.cjs"
