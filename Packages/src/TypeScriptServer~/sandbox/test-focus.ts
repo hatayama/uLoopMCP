@@ -1,17 +1,16 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
 /**
  * Test script for Unity window focus functionality
  * Usage:
- *   node dist/test-focus.js                    # Focus any Unity
- *   node dist/test-focus.js /path/to/project   # Focus specific project's Unity
+ *   npx tsx sandbox/test-focus.ts                    # Focus any Unity
+ *   npx tsx sandbox/test-focus.ts /path/to/project   # Focus specific project's Unity
  */
 
 import {
   focusAnyUnityWindow,
   focusUnityWindowByProjectPath,
   listUnityProcesses,
-} from './utils/unity-window-focus.js';
+} from '../src/utils/unity-window-focus.js';
 
 async function main(): Promise<void> {
   const targetProject = process.argv[2];
