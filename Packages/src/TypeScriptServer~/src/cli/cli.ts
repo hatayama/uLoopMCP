@@ -4,8 +4,9 @@
  * Commands are dynamically registered from tools.json cache.
  */
 
-import { existsSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readFileSync, appendFileSync } from 'fs';
+import { join, basename } from 'path';
+import { homedir } from 'os';
 import { Command } from 'commander';
 import {
   executeToolCommand,
@@ -40,7 +41,6 @@ program
   .command('list')
   .description('List all available tools from Unity')
   .option('-p, --port <port>', 'Unity TCP port')
-  .option('--json', 'Output as JSON')
   .action(async (options: CliOptions) => {
     await runWithErrorHandling(() => listAvailableTools(options));
   });
@@ -55,10 +55,10 @@ program
 
 program
   .command('completion')
-  .description('Output shell completion script')
-  .argument('<shell>', 'Shell type (bash or zsh)')
-  .action((shell: string) => {
-    outputCompletionScript(shell);
+  .description('Setup shell completion (auto-detects shell from $SHELL)')
+  .option('--install', 'Install completion to shell config file')
+  .action((options: { install?: boolean }) => {
+    handleCompletion(options.install ?? false);
   });
 
 // Load tools from cache and register commands dynamically
@@ -88,7 +88,6 @@ function registerToolCommand(tool: ToolDefinition): void {
 
   // Add global options
   cmd.option('-p, --port <port>', 'Unity TCP port');
-  cmd.option('--json', 'Output as JSON');
 
   cmd.action(async (options: CliOptions) => {
     const params = buildParams(options, properties);
@@ -169,7 +168,6 @@ function convertValue(value: unknown, propInfo: ToolProperty): unknown {
 function extractGlobalOptions(options: Record<string, unknown>): GlobalOptions {
   return {
     port: options['port'] as string | undefined,
-    json: options['json'] as boolean | undefined,
   };
 }
 
@@ -201,45 +199,105 @@ async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
 }
 
 /**
- * Output shell completion script.
+ * Detect shell type from $SHELL environment variable.
  */
-function outputCompletionScript(shell: string): void {
-  if (shell === 'bash') {
-    console.log(`# uloop bash completion
-# Add to ~/.bashrc: eval "$(uloop completion bash)"
+function detectShell(): 'bash' | 'zsh' | null {
+  const shell = process.env['SHELL'] || '';
+  const shellName = basename(shell);
+  if (shellName === 'zsh') {
+    return 'zsh';
+  }
+  if (shellName === 'bash') {
+    return 'bash';
+  }
+  return null;
+}
 
+/**
+ * Get shell config file path.
+ */
+function getShellConfigPath(shell: 'bash' | 'zsh'): string {
+  const home = homedir();
+  return shell === 'zsh' ? join(home, '.zshrc') : join(home, '.bashrc');
+}
+
+/**
+ * Get completion script for a shell.
+ */
+function getCompletionScript(shell: 'bash' | 'zsh'): string {
+  if (shell === 'bash') {
+    return `# uloop bash completion
 _uloop_completions() {
   local cur="\${COMP_WORDS[COMP_CWORD]}"
+  local cmd="\${COMP_WORDS[1]}"
 
   if [[ \${COMP_CWORD} -eq 1 ]]; then
     COMPREPLY=($(compgen -W "$(uloop --list-commands 2>/dev/null)" -- "\${cur}"))
-  elif [[ \${cur} == -* ]]; then
-    local cmd="\${COMP_WORDS[1]}"
+  elif [[ \${COMP_CWORD} -ge 2 ]]; then
     COMPREPLY=($(compgen -W "$(uloop --list-options \${cmd} 2>/dev/null)" -- "\${cur}"))
   fi
 }
-complete -F _uloop_completions uloop`);
-  } else if (shell === 'zsh') {
-    console.log(`# uloop zsh completion
-# Add to ~/.zshrc: eval "$(uloop completion zsh)"
+complete -F _uloop_completions uloop`;
+  }
 
+  /* eslint-disable no-useless-escape */
+  return `# uloop zsh completion
 _uloop() {
   local -a commands
   local -a options
+  local -a used_options
 
   if (( CURRENT == 2 )); then
     commands=(\${(f)"$(uloop --list-commands 2>/dev/null)"})
     _describe 'command' commands
-  elif [[ \${words[CURRENT]} == -* ]]; then
+  elif (( CURRENT >= 3 )); then
     options=(\${(f)"$(uloop --list-options \${words[2]} 2>/dev/null)"})
+    used_options=(\${words:2})
+    for opt in \${used_options}; do
+      options=(\${options:#\$opt})
+    done
     _describe 'option' options
   fi
 }
-compdef _uloop uloop`);
-  } else {
-    console.error(`Unknown shell: ${shell}. Supported: bash, zsh`);
+compdef _uloop uloop`;
+  /* eslint-enable no-useless-escape */
+}
+
+/**
+ * Handle completion command.
+ */
+function handleCompletion(install: boolean): void {
+  const shell = detectShell();
+  if (!shell) {
+    console.error('Could not detect shell from $SHELL. Supported: bash, zsh');
     process.exit(1);
   }
+
+  const script = getCompletionScript(shell);
+
+  if (!install) {
+    console.log(script);
+    return;
+  }
+
+  // Install to shell config file
+  const configPath = getShellConfigPath(shell);
+  const evalLine = 'eval "$(uloop completion)"';
+
+  // Check if already installed
+  if (existsSync(configPath)) {
+    const content = readFileSync(configPath, 'utf-8');
+    if (content.includes('uloop completion')) {
+      console.log(`Completion already installed in ${configPath}`);
+      return;
+    }
+  }
+
+  // Append to config file
+  const lineToAdd = `\n# uloop CLI completion\n${evalLine}\n`;
+  appendFileSync(configPath, lineToAdd, 'utf-8');
+  console.log(`Completion installed to ${configPath}`);
+  console.log(`Run 'source ${configPath}' or restart your shell to enable completion.`);
 }
 
 /**
@@ -270,30 +328,19 @@ function handleCompletionOptions(): boolean {
  * List options for a specific command.
  */
 function listOptionsForCommand(cmdName: string): void {
-  const globalOptions = ['--port', '--json', '--help'];
-
-  // Built-in commands
-  if (cmdName === 'list') {
-    console.log(globalOptions.join('\n'));
-    return;
-  }
-  if (cmdName === 'sync') {
-    console.log(['--port', '--help'].join('\n'));
-    return;
-  }
-  if (cmdName === 'completion') {
-    console.log('--help');
+  // Built-in commands have no tool-specific options
+  if (cmdName === 'list' || cmdName === 'sync' || cmdName === 'completion') {
     return;
   }
 
-  // Tool commands
+  // Tool commands - only output tool-specific options
   const tools = loadToolsCache();
   const tool = tools.tools.find((t) => t.name === cmdName);
   if (!tool) {
     return;
   }
 
-  const options = [...globalOptions];
+  const options: string[] = [];
   for (const propName of Object.keys(tool.inputSchema.properties)) {
     const kebabName = pascalToKebabCase(propName);
     options.push(`--${kebabName}`);

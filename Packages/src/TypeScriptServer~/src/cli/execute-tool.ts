@@ -5,12 +5,10 @@
 
 import { DirectUnityClient } from './direct-unity-client.js';
 import { resolveUnityPort } from './port-resolver.js';
-import { formatOutput } from './output-formatter.js';
 import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './tool-cache.js';
 
 export interface GlobalOptions {
   port?: string;
-  json?: boolean;
 }
 
 export async function executeToolCommand(
@@ -28,11 +26,8 @@ export async function executeToolCommand(
 
     const result = await client.sendRequest(toolName, params);
 
-    if (globalOptions.json) {
-      console.log(JSON.stringify(result, null, 2));
-    } else {
-      formatOutput(toolName, result);
-    }
+    // Always output JSON to match MCP response format
+    console.log(JSON.stringify(result, null, 2));
   } finally {
     client.disconnect();
   }
@@ -51,16 +46,8 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
       tools: Array<{ name: string; description: string }>;
     }>('tools/list', {});
 
-    if (globalOptions.json) {
-      console.log(JSON.stringify(result, null, 2));
-      return;
-    }
-
-    console.log('Available tools:\n');
-    for (const tool of result.tools) {
-      const name = tool.name.padEnd(25);
-      console.log(`  ${name} ${tool.description}`);
-    }
+    // Always output JSON to match MCP response format
+    console.log(JSON.stringify(result, null, 2));
   } finally {
     client.disconnect();
   }

@@ -42,7 +42,7 @@ function runCli(args: string): { stdout: string; stderr: string; exitCode: numbe
 }
 
 function runCliJson<T>(args: string): T {
-  const { stdout, stderr, exitCode } = runCli(`${args} --json`);
+  const { stdout, stderr, exitCode } = runCli(args);
   if (exitCode !== 0) {
     throw new Error(`CLI failed with exit code ${exitCode}: ${stderr || stdout}`);
   }
@@ -72,33 +72,98 @@ describe('CLI E2E Tests (requires running Unity)', () => {
   });
 
   describe('get-logs', () => {
-    it('should retrieve logs', () => {
-      const result = runCliJson<{ TotalCount: number; Logs: unknown[] }>('get-logs');
+    const TEST_LOG_MENU_PATH = 'uLoopMCP/Debug/LogGetter Tests/Output Test Logs';
 
-      expect(typeof result.TotalCount).toBe('number');
+    function setupTestLogs(): void {
+      runCli('clear-console');
+      runCli(`execute-menu-item --menu-item-path "${TEST_LOG_MENU_PATH}"`);
+    }
+
+    it('should retrieve test logs after executing Output Test Logs menu item', () => {
+      setupTestLogs();
+
+      const result = runCliJson<{ TotalCount: number; Logs: Array<{ Message: string }> }>(
+        'get-logs',
+      );
+
+      expect(result.TotalCount).toBeGreaterThan(0);
       expect(Array.isArray(result.Logs)).toBe(true);
+
+      // Verify specific test log messages exist
+      const messages = result.Logs.map((log) => log.Message);
+      expect(messages.some((m) => m.includes('This is a normal log'))).toBe(true);
+      expect(messages.some((m) => m.includes('LogGetter test complete'))).toBe(true);
     });
 
     it('should respect --max-count option', () => {
+      setupTestLogs();
+
       const result = runCliJson<{ Logs: unknown[] }>('get-logs --max-count 3');
 
       expect(result.Logs.length).toBeLessThanOrEqual(3);
     });
 
-    it('should filter by log type', () => {
-      const result = runCliJson<{ Logs: Array<{ Type: string }> }>('get-logs --log-type Error');
+    it('should filter by log type Warning', () => {
+      setupTestLogs();
 
+      const result = runCliJson<{ Logs: Array<{ Type: string; Message: string }> }>(
+        'get-logs --log-type Warning',
+      );
+
+      expect(result.Logs.length).toBeGreaterThan(0);
+      for (const log of result.Logs) {
+        expect(log.Type).toBe('Warning');
+      }
+      // Verify test warning log exists
+      const messages = result.Logs.map((log) => log.Message);
+      expect(messages.some((m) => m.includes('This is a warning log'))).toBe(true);
+    });
+
+    it('should filter by log type Error', () => {
+      setupTestLogs();
+
+      const result = runCliJson<{ Logs: Array<{ Type: string; Message: string }> }>(
+        'get-logs --log-type Error',
+      );
+
+      expect(result.Logs.length).toBeGreaterThan(0);
       for (const log of result.Logs) {
         expect(log.Type).toBe('Error');
+      }
+      // Verify test error log exists
+      const messages = result.Logs.map((log) => log.Message);
+      expect(messages.some((m) => m.includes('This is an error log'))).toBe(true);
+    });
+
+    it('should search logs by text', () => {
+      setupTestLogs();
+
+      const result = runCliJson<{ Logs: Array<{ Message: string }> }>(
+        'get-logs --search-text "LogGetter test complete"',
+      );
+
+      expect(result.Logs.length).toBeGreaterThan(0);
+      for (const log of result.Logs) {
+        expect(log.Message).toContain('LogGetter test complete');
       }
     });
   });
 
   describe('clear-console', () => {
-    it('should clear console', () => {
-      const result = runCliJson<{ Success: boolean }>('clear-console');
+    const TEST_LOG_MENU_PATH = 'uLoopMCP/Debug/LogGetter Tests/Output Test Logs';
 
+    it('should clear console and verify logs are empty', () => {
+      // First output some logs
+      runCli(`execute-menu-item --menu-item-path "${TEST_LOG_MENU_PATH}"`);
+
+      // Clear console
+      const result = runCliJson<{ Success: boolean }>('clear-console');
       expect(result.Success).toBe(true);
+
+      // Verify logs are cleared
+      const logsAfterClear = runCliJson<{ TotalCount: number; Logs: unknown[] }>('get-logs');
+      expect(logsAfterClear.TotalCount).toBe(0);
+      expect(logsAfterClear.Logs.length).toBe(0);
     });
   });
 
@@ -138,6 +203,29 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       for (const item of result.MenuItems) {
         expect(item.Path.toLowerCase()).toContain('gameobject');
       }
+    });
+  });
+
+  describe('execute-menu-item', () => {
+    const TEST_LOG_MENU_PATH = 'uLoopMCP/Debug/LogGetter Tests/Output Test Logs';
+
+    it('should execute menu item and verify logs are output', () => {
+      // Clear console first
+      runCli('clear-console');
+
+      // Execute menu item
+      const result = runCliJson<{ Success: boolean; MenuItemPath: string }>(
+        `execute-menu-item --menu-item-path "${TEST_LOG_MENU_PATH}"`,
+      );
+
+      expect(result.Success).toBe(true);
+      expect(result.MenuItemPath).toBe(TEST_LOG_MENU_PATH);
+
+      // Verify logs were output
+      const logs = runCliJson<{ TotalCount: number; Logs: Array<{ Message: string }> }>('get-logs');
+      expect(logs.TotalCount).toBeGreaterThan(0);
+      const messages = logs.Logs.map((log) => log.Message);
+      expect(messages.some((m) => m.includes('LogGetter test complete'))).toBe(true);
     });
   });
 

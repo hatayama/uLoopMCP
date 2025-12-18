@@ -61,7 +61,7 @@
             "type": "string",
             "description": "Test mode",
             "enum": ["EditMode", "PlayMode"],
-            "default": "PlayMode"
+            "default": "EditMode"
           },
           "FilterType": {
             "type": "string",
