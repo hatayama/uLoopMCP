@@ -164,7 +164,14 @@ namespace io.github.hatayama.uLoopMCP
             Task recoveryTask = McpServerController.RecoveryTask;
             if (recoveryTask != null && !recoveryTask.IsCompleted)
             {
-                await recoveryTask;
+                try
+                {
+                    await recoveryTask;
+                }
+                catch (Exception ex)
+                {
+                    VibeLogger.LogWarning("recovery_task_failed", ex.Message);
+                }
             }
 
             // Check if after compilation
