@@ -3,6 +3,7 @@ using UnityEditor;
 using System.Linq;
 using System.Collections.Generic;
 using System;
+using System.Threading.Tasks;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -150,13 +151,28 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Handle post-compile mode initialization and auto-start logic
         /// </summary>
-        private void HandlePostCompileMode()
+        private async void HandlePostCompileMode()
         {
             // Enable post-compile mode after domain reload
             _model.EnablePostCompileMode();
 
             // Clear reconnecting UI flag on domain reload to ensure proper state
             McpEditorSettings.SetShowReconnectingUI(false);
+
+            // Wait for any ongoing recovery to complete before making auto-start decisions
+            // This prevents race conditions between McpServerController and McpEditorWindow
+            Task recoveryTask = McpServerController.RecoveryTask;
+            if (recoveryTask != null && !recoveryTask.IsCompleted)
+            {
+                try
+                {
+                    await recoveryTask;
+                }
+                catch (Exception ex)
+                {
+                    VibeLogger.LogWarning("recovery_task_failed", ex.Message);
+                }
+            }
 
             // Check if after compilation
             bool isAfterCompile = McpEditorSettings.GetIsAfterCompile();
