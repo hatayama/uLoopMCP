@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.43.12](https://github.com/hatayama/uLoopMCP/compare/v0.43.11...v0.43.12) (2025-12-18)
+
+
+### Bug Fixes
+
+* prevent false port conflict dialog by awaiting recovery task ([#441](https://github.com/hatayama/uLoopMCP/issues/441)) ([75512a2](https://github.com/hatayama/uLoopMCP/commit/75512a219f10f3c64bf62e3545ddef8a15578389))
+
 ## [0.43.11](https://github.com/hatayama/uLoopMCP/compare/v0.43.10...v0.43.11) (2025-12-14)
 
 
