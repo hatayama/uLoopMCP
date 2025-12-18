@@ -221,6 +221,9 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            // Block other startup paths (e.g., McpEditorWindow.HandlePostCompileMode) during recovery
+            ActivateStartupProtection(5000);
+
             // Centralized, coalesced startup request
             _ = StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None).ContinueWith(task =>
             {
