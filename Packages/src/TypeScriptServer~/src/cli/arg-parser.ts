@@ -94,7 +94,7 @@ function convertValue(value: unknown, type: string): unknown {
         return value;
       }
       if (typeof value === 'number' || typeof value === 'boolean') {
-        return JSON.stringify(value);
+        return String(value);
       }
       return JSON.stringify(value);
 

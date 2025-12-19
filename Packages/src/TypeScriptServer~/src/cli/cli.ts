@@ -158,11 +158,19 @@ function convertValue(value: unknown, propInfo: ToolProperty): unknown {
   }
 
   if (lowerType === 'integer' && typeof value === 'string') {
-    return parseInt(value, 10);
+    const parsed = parseInt(value, 10);
+    if (isNaN(parsed)) {
+      throw new Error(`Invalid integer value: ${value}`);
+    }
+    return parsed;
   }
 
   if (lowerType === 'number' && typeof value === 'string') {
-    return parseFloat(value);
+    const parsed = parseFloat(value);
+    if (isNaN(parsed)) {
+      throw new Error(`Invalid number value: ${value}`);
+    }
+    return parsed;
   }
 
   return value;
@@ -311,7 +319,7 @@ function handleCompletionOptions(): boolean {
 
   if (args.includes('--list-commands')) {
     const tools = loadToolsCache();
-    const builtinCommands = ['list', 'sync', 'completion'];
+    const builtinCommands = ['list', 'sync', 'completion', 'skills'];
     const allCommands = [...builtinCommands, ...tools.tools.map((t) => t.name)];
     console.log(allCommands.join('\n'));
     return true;

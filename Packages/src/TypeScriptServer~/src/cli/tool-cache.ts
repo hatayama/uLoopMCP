@@ -58,8 +58,12 @@ export function loadToolsCache(): ToolsCache {
   const cachePath = getCachePath();
 
   if (existsSync(cachePath)) {
-    const content = readFileSync(cachePath, 'utf-8');
-    return JSON.parse(content) as ToolsCache;
+    try {
+      const content = readFileSync(cachePath, 'utf-8');
+      return JSON.parse(content) as ToolsCache;
+    } catch {
+      return getDefaultTools();
+    }
   }
 
   return getDefaultTools();

@@ -36,7 +36,12 @@ async function readPortFromSettings(): Promise<number | null> {
     return null;
   }
 
-  const settings = JSON.parse(content) as UnityMcpSettings;
+  let settings: UnityMcpSettings;
+  try {
+    settings = JSON.parse(content) as UnityMcpSettings;
+  } catch {
+    return null;
+  }
 
   if (typeof settings.serverPort === 'number') {
     return settings.serverPort;

@@ -17,7 +17,14 @@ export async function executeToolCommand(
   params: Record<string, unknown>,
   globalOptions: GlobalOptions,
 ): Promise<void> {
-  const portNumber = globalOptions.port ? parseInt(globalOptions.port, 10) : undefined;
+  let portNumber: number | undefined;
+  if (globalOptions.port) {
+    const parsed = parseInt(globalOptions.port, 10);
+    if (isNaN(parsed)) {
+      throw new Error(`Invalid port number: ${globalOptions.port}`);
+    }
+    portNumber = parsed;
+  }
   const port = await resolveUnityPort(portNumber);
 
   const client = new DirectUnityClient(port);
@@ -35,7 +42,14 @@ export async function executeToolCommand(
 }
 
 export async function listAvailableTools(globalOptions: GlobalOptions): Promise<void> {
-  const portNumber = globalOptions.port ? parseInt(globalOptions.port, 10) : undefined;
+  let portNumber: number | undefined;
+  if (globalOptions.port) {
+    const parsed = parseInt(globalOptions.port, 10);
+    if (isNaN(parsed)) {
+      throw new Error(`Invalid port number: ${globalOptions.port}`);
+    }
+    portNumber = parsed;
+  }
   const port = await resolveUnityPort(portNumber);
 
   const client = new DirectUnityClient(port);
@@ -46,6 +60,10 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
     const result = await client.sendRequest<{
       Tools: Array<{ name: string; description: string }>;
     }>('get-tool-details', { IncludeDevelopmentOnly: false });
+
+    if (!result.Tools || !Array.isArray(result.Tools)) {
+      throw new Error('Unexpected response from Unity: missing Tools array');
+    }
 
     for (const tool of result.Tools) {
       console.log(`  - ${tool.name}`);
@@ -87,7 +105,14 @@ function convertProperties(
 }
 
 export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
-  const portNumber = globalOptions.port ? parseInt(globalOptions.port, 10) : undefined;
+  let portNumber: number | undefined;
+  if (globalOptions.port) {
+    const parsed = parseInt(globalOptions.port, 10);
+    if (isNaN(parsed)) {
+      throw new Error(`Invalid port number: ${globalOptions.port}`);
+    }
+    portNumber = parsed;
+  }
   const port = await resolveUnityPort(portNumber);
 
   const client = new DirectUnityClient(port);
@@ -98,6 +123,10 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
     const result = await client.sendRequest<{
       Tools: UnityToolInfo[];
     }>('get-tool-details', { IncludeDevelopmentOnly: false });
+
+    if (!result.Tools || !Array.isArray(result.Tools)) {
+      throw new Error('Unexpected response from Unity: missing Tools array');
+    }
 
     const cache: ToolsCache = {
       version: VERSION,
