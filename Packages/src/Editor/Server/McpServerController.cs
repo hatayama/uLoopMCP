@@ -21,6 +21,7 @@ namespace io.github.hatayama.uLoopMCP
         private static McpBridgeServer mcpServer;
         private static readonly SemaphoreSlim StartupSemaphore = new SemaphoreSlim(1, 1);
         private static long startupProtectionUntilTicks = 0; // UTC ticks
+        private static Task _currentRecoveryTask;
 
         /// <summary>
         /// The current MCP server instance.
@@ -36,6 +37,11 @@ namespace io.github.hatayama.uLoopMCP
         /// The server's port number.
         /// </summary>
         public static int ServerPort => mcpServer?.Port ?? McpEditorSettings.GetCustomPort();
+
+        /// <summary>
+        /// Current recovery task. Can be awaited by other components to ensure recovery completes first.
+        /// </summary>
+        public static Task RecoveryTask => _currentRecoveryTask;
 
         static McpServerController()
         {
@@ -222,8 +228,11 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // Centralized, coalesced startup request
-            _ = StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None).ContinueWith(task =>
+            // Store the task so McpEditorWindow can await it to prevent race conditions
+            _currentRecoveryTask = StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None);
+            _ = _currentRecoveryTask.ContinueWith(task =>
             {
+                _currentRecoveryTask = null;
                 if (task.IsFaulted)
                 {
                     VibeLogger.LogError("server_startup_restore_failed",
