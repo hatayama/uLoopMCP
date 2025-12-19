@@ -69,30 +69,23 @@ jobs:
           # Checkout the PR branch
           gh pr checkout "${PR_NUMBER}"
 
-          # Build TypeScript Server bundle
+          # Build TypeScript Server bundle (CLI is built during npm publish, not committed)
           echo "📦 Building TypeScript Server..."
           cd Packages/src/TypeScriptServer~
           npm ci
           npm run build
           cd ../../..
 
-          # Build CLI bundle
-          echo "📦 Building CLI..."
-          cd Packages/src/Cli~
-          npm ci
-          npm run build
-          cd ../../..
-
-          # Commit and push if bundles changed
+          # Commit and push if bundle changed
           git add Packages/src/TypeScriptServer~/dist/server.bundle.js Packages/src/TypeScriptServer~/dist/server.bundle.js.map
           if git diff --cached --quiet; then
-            echo "✅ No changes to bundles, skipping commit"
+            echo "✅ No changes to bundle, skipping commit"
           else
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -m "chore: rebuild bundles for release"
+            git commit -m "chore: rebuild server bundle for release"
             git push
-            echo "✅ Bundles rebuilt and pushed to PR"
+            echo "✅ Server bundle rebuilt and pushed to PR"
           fi
 
       # ── Publish to npm when release is created ──────────────────
