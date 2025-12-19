@@ -12,13 +12,23 @@
         },
         {
           "type": "json",
-          "path": "TypeScriptServer~/src/cli/default-tools.json",
+          "path": "Cli~/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "Cli~/src/default-tools.json",
           "jsonpath": "$.version"
         },
         {
           "type": "generic",
           "path": "Packages/src/TypeScriptServer~/src/version.ts",
           "glob": "Packages/src/TypeScriptServer~/src/version.ts"
+        },
+        {
+          "type": "generic",
+          "path": "Packages/src/Cli~/src/version.ts",
+          "glob": "Packages/src/Cli~/src/version.ts"
         }
       ]
     }

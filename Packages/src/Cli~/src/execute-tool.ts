@@ -6,7 +6,7 @@
 import { DirectUnityClient } from './direct-unity-client.js';
 import { resolveUnityPort } from './port-resolver.js';
 import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './tool-cache.js';
-import { VERSION } from '../version.js';
+import { VERSION } from './version.js';
 
 export interface GlobalOptions {
   port?: string;

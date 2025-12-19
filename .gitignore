@@ -101,21 +101,21 @@ Packages/src/Docs/**
 **/.uloop/
 
 # Node.js / TypeScript
-node_modules/
+**/node_modules/
+**/.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .npm
 .yarn-integrity
 
-# TypeScript Server (exclude development builds, commit only production builds)
-Packages/src/TypeScriptServer~/node_modules/
-Packages/src/TypeScriptServer~/.tsbuildinfo
-# Ignore all dist files first, then un-ignore only the production bundle
-# Note: Use dist/* (contents) instead of dist/ (directory) to allow negation patterns to work
+# TypeScript Server (exclude development builds, commit only production bundle)
 Packages/src/TypeScriptServer~/dist/*
 !Packages/src/TypeScriptServer~/dist/server.bundle.js
 !Packages/src/TypeScriptServer~/dist/server.bundle.js.map
+
+# CLI (published to npm separately, dist not committed)
+Packages/src/Cli~/dist/
 
 # Environment configuration files
 .env
