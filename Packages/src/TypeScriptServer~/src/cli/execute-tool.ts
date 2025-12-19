@@ -44,11 +44,12 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
     await client.connect();
 
     const result = await client.sendRequest<{
-      tools: Array<{ name: string; description: string }>;
-    }>('tools/list', {});
+      Tools: Array<{ name: string; description: string }>;
+    }>('get-tool-details', { IncludeDevelopmentOnly: false });
 
-    // Always output JSON to match MCP response format
-    console.log(JSON.stringify(result, null, 2));
+    for (const tool of result.Tools) {
+      console.log(`  - ${tool.name}`);
+    }
   } finally {
     client.disconnect();
   }
@@ -57,11 +58,32 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
 interface UnityToolInfo {
   name: string;
   description: string;
-  inputSchema: {
-    type: string;
-    properties: Record<string, unknown>;
-    required?: string[];
+  parameterSchema: {
+    Properties: Record<string, UnityPropertyInfo>;
+    Required?: string[];
   };
+}
+
+interface UnityPropertyInfo {
+  Type: string;
+  Description?: string;
+  DefaultValue?: unknown;
+  Enum?: string[] | null;
+}
+
+function convertProperties(
+  unityProps: Record<string, UnityPropertyInfo>,
+): Record<string, ToolDefinition['inputSchema']['properties'][string]> {
+  const result: Record<string, ToolDefinition['inputSchema']['properties'][string]> = {};
+  for (const [key, prop] of Object.entries(unityProps)) {
+    result[key] = {
+      type: prop.Type?.toLowerCase() ?? 'string',
+      description: prop.Description,
+      default: prop.DefaultValue,
+      enum: prop.Enum ?? undefined,
+    };
+  }
+  return result;
 }
 
 export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
@@ -74,22 +96,19 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
     await client.connect();
 
     const result = await client.sendRequest<{
-      tools: UnityToolInfo[];
-    }>('tools/list', {});
+      Tools: UnityToolInfo[];
+    }>('get-tool-details', { IncludeDevelopmentOnly: false });
 
     const cache: ToolsCache = {
       version: VERSION,
       updatedAt: new Date().toISOString(),
-      tools: result.tools.map((tool) => ({
+      tools: result.Tools.map((tool) => ({
         name: tool.name,
         description: tool.description,
         inputSchema: {
-          type: tool.inputSchema.type || 'object',
-          properties: tool.inputSchema.properties as Record<
-            string,
-            ToolDefinition['inputSchema']['properties'][string]
-          >,
-          required: tool.inputSchema.required,
+          type: 'object',
+          properties: convertProperties(tool.parameterSchema.Properties),
+          required: tool.parameterSchema.Required,
         },
       })),
     };
