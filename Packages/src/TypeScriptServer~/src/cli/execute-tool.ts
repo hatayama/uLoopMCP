@@ -6,6 +6,7 @@
 import { DirectUnityClient } from './direct-unity-client.js';
 import { resolveUnityPort } from './port-resolver.js';
 import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './tool-cache.js';
+import { VERSION } from '../version.js';
 
 export interface GlobalOptions {
   port?: string;
@@ -77,7 +78,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
     }>('tools/list', {});
 
     const cache: ToolsCache = {
-      version: '0.43.11',
+      version: VERSION,
       updatedAt: new Date().toISOString(),
       tools: result.tools.map((tool) => ({
         name: tool.name,

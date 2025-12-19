@@ -17,8 +17,7 @@ import {
 import { loadToolsCache, ToolDefinition, ToolProperty } from './tool-cache.js';
 import { pascalToKebabCase } from './arg-parser.js';
 import { registerSkillsCommand } from './skills/skills-command.js';
-
-const VERSION = '0.43.11';
+import { VERSION } from '../version.js';
 
 interface CliOptions extends GlobalOptions {
   [key: string]: unknown;

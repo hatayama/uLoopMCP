@@ -11,6 +11,11 @@
           "jsonpath": "$.version"
         },
         {
+          "type": "json",
+          "path": "TypeScriptServer~/src/cli/default-tools.json",
+          "jsonpath": "$.version"
+        },
+        {
           "type": "generic",
           "path": "Packages/src/TypeScriptServer~/src/version.ts",
           "glob": "Packages/src/TypeScriptServer~/src/version.ts"
