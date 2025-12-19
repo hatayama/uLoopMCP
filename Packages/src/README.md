@@ -34,6 +34,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 3. Easy setup from Unity Package Manager and a few clicks to connect from LLM tools (Cursor, Claude Code, GitHub Copilot, Windsurf, etc.).
 4. Type-safe extension model for adding project-specific MCP tools that AI can implement and iterate on for you.
 5. Log and hierarchy data can be exported to files to avoid burning LLM context on large payloads.
+6. **[Beta]** Standalone CLI tool `uloop` for direct Unity control from your terminal without MCP configuration, with bundled [skills](https://agentskills.io/home) for LLM Agents. ([Details](#cli-tool-uloop))
 
 # Example Use Cases
 - Let an AI keep fixing your project until compilation passes and all tests go green.

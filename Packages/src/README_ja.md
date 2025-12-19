@@ -34,6 +34,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 3. Unity Package Manager からインストールし、お使いの LLM ツール（Cursor / Claude Code / Codex / Gemini など）と数クリックで接続できます。
 4. プロジェクト固有の MCP ツールを型安全に拡張しやすく、AI に実装を任せやすい設計になっています。
 5. 大量のログや階層情報はファイルに書き出すことで、LLM のコンテキスト消費を抑える工夫をしています。
+6. **【β版】** スタンドアロン CLI ツール `uloop` を提供。MCP設定不要でターミナルから直接 Unity を操作でき、LLM Agent 向けの [Skills](https://agentskills.io/home) も同梱しています。（[詳細](#cli-ツール-uloop)）
 
 # ユースケース例
 - Unity プロジェクトの「コンパイルが通るまで」「テストが緑になるまで」を、AI に任せて自律的に回し続ける
