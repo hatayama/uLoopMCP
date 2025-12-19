@@ -12,7 +12,7 @@
     "prepare": "husky",
     "build": "npm run build:bundle && npm run build:cli",
     "build:bundle": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap",
-    "build:cli": "esbuild src/cli/cli.ts --bundle --platform=node --format=cjs --outfile=dist/cli.bundle.cjs --sourcemap --banner:js='#!/usr/bin/env node'",
+    "build:cli": "esbuild src/cli/cli.ts --bundle --platform=node --format=cjs --outfile=dist/cli.bundle.cjs --sourcemap --banner:js='#!/usr/bin/env node' --loader:.md=text",
     "build:production": "cross-env ULOOPMCP_PRODUCTION=true NODE_ENV=production esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap",
     "dev": "cross-env NODE_ENV=development npm run build:bundle && cross-env NODE_ENV=development NODE_OPTIONS=--enable-source-maps node dist/server.bundle.js",
     "dev:watch": "cross-env NODE_ENV=development esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.bundle.js --external:fs --external:path --external:net --external:os --sourcemap --watch",

@@ -16,6 +16,7 @@ import {
 } from './execute-tool.js';
 import { loadToolsCache, ToolDefinition, ToolProperty } from './tool-cache.js';
 import { pascalToKebabCase } from './arg-parser.js';
+import { registerSkillsCommand } from './skills/skills-command.js';
 
 const VERSION = '0.43.11';
 
@@ -60,6 +61,9 @@ program
   .action((options: { install?: boolean }) => {
     handleCompletion(options.install ?? false);
   });
+
+// Register skills subcommand
+registerSkillsCommand(program);
 
 // Load tools from cache and register commands dynamically
 const toolsCache = loadToolsCache();
