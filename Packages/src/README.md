@@ -339,7 +339,7 @@ uloop completion
 
 ### Claude Code Skills
 
-The CLI comes with 15 bundled skills for Claude Code.
+The CLI comes with 13 bundled skills for LLM Agents.
 
 ```bash
 # List bundled skills

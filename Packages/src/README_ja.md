@@ -339,7 +339,7 @@ uloop completion
 
 ### Claude Code Skills
 
-CLIには、Claude Codeで使用できる15個のスキルがバンドルされています。
+CLIには、LLM Agentで使用できる13個のスキルがバンドルされています。
 
 ```bash
 # バンドルされたスキルを一覧表示

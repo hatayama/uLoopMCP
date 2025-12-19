@@ -16,8 +16,6 @@ import findGameObjectsSkill from './skill-definitions/uloop-find-game-objects/SK
 import captureGameviewSkill from './skill-definitions/uloop-capture-gameview/SKILL.md';
 import executeDynamicCodeSkill from './skill-definitions/uloop-execute-dynamic-code/SKILL.md';
 import getProviderDetailsSkill from './skill-definitions/uloop-get-provider-details/SKILL.md';
-import getProjectInfoSkill from './skill-definitions/uloop-get-project-info/SKILL.md';
-import getVersionSkill from './skill-definitions/uloop-get-version/SKILL.md';
 
 export interface BundledSkill {
   name: string;
@@ -59,12 +57,6 @@ export const BUNDLED_SKILLS: BundledSkill[] = [
     dirName: 'uloop-get-provider-details',
     content: getProviderDetailsSkill,
   },
-  {
-    name: 'uloop-get-project-info',
-    dirName: 'uloop-get-project-info',
-    content: getProjectInfoSkill,
-  },
-  { name: 'uloop-get-version', dirName: 'uloop-get-version', content: getVersionSkill },
 ];
 
 export function getBundledSkillByName(name: string): BundledSkill | undefined {
