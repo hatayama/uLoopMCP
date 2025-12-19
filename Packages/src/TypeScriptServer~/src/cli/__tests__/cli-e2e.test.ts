@@ -283,6 +283,28 @@ describe('CLI E2E Tests (requires running Unity)', () => {
     });
   });
 
+  describe('list', () => {
+    it('should list available tools', () => {
+      const { stdout, exitCode } = runCli('list');
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('- compile');
+      expect(stdout).toContain('- get-logs');
+      expect(stdout).toContain('- get-hierarchy');
+    });
+  });
+
+  describe('sync', () => {
+    it('should sync tools from Unity', () => {
+      const { stdout, exitCode } = runCli('sync');
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('Synced');
+      expect(stdout).toContain('tools to');
+      expect(stdout).toContain('.uloop/tools.json');
+    });
+  });
+
   describe('error handling', () => {
     it('should handle unknown commands gracefully', () => {
       const { exitCode } = runCli('unknown-command');
