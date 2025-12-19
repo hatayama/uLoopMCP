@@ -10,9 +10,9 @@
 import { execSync, ExecSyncOptionsWithStringEncoding } from 'child_process';
 import { join } from 'path';
 
-const CLI_PATH = join(__dirname, '../../..', 'dist/cli.bundle.cjs');
+const CLI_PATH = join(__dirname, '../..', 'dist/cli.bundle.cjs');
 
-const UNITY_PROJECT_ROOT = join(__dirname, '../../../../../..');
+const UNITY_PROJECT_ROOT = join(__dirname, '../../../../..');
 
 const EXEC_OPTIONS: ExecSyncOptionsWithStringEncoding = {
   encoding: 'utf-8',

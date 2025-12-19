@@ -7,6 +7,7 @@
 import { existsSync, readFileSync, appendFileSync } from 'fs';
 import { join, basename } from 'path';
 import { homedir } from 'os';
+import { spawn } from 'child_process';
 import { Command } from 'commander';
 import {
   executeToolCommand,
@@ -28,7 +29,7 @@ const program = new Command();
 program
   .name('uloop')
   .description('Unity MCP CLI - Direct communication with Unity Editor')
-  .version(VERSION);
+  .version(VERSION, '-v, --version', 'Output the version number');
 
 // --list-commands: Output command names for shell completion
 program.option('--list-commands', 'List all command names (for shell completion)');
@@ -59,6 +60,13 @@ program
   .option('--install', 'Install completion to shell config file')
   .action((options: { install?: boolean }) => {
     handleCompletion(options.install ?? false);
+  });
+
+program
+  .command('update')
+  .description('Update uloop CLI to the latest version')
+  .action(() => {
+    updateCli();
   });
 
 // Register skills subcommand
@@ -275,6 +283,39 @@ compdef _uloop uloop`;
 }
 
 /**
+ * Update uloop CLI to the latest version using npm.
+ */
+function updateCli(): void {
+  // eslint-disable-next-line no-console
+  console.log('Updating uloop-cli to the latest version...');
+
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const child = spawn(npmCommand, ['install', '-g', 'uloop-cli@latest'], {
+    stdio: 'inherit',
+    shell: true,
+  });
+
+  child.on('close', (code) => {
+    if (code === 0) {
+      // eslint-disable-next-line no-console
+      console.log('\n✅ uloop-cli has been updated successfully!');
+      // eslint-disable-next-line no-console
+      console.log('Run "uloop --version" to check the new version.');
+    } else {
+      // eslint-disable-next-line no-console
+      console.error(`\n❌ Update failed with exit code ${code}`);
+      process.exit(1);
+    }
+  });
+
+  child.on('error', (err) => {
+    // eslint-disable-next-line no-console
+    console.error(`❌ Failed to run npm: ${err.message}`);
+    process.exit(1);
+  });
+}
+
+/**
  * Handle completion command.
  */
 function handleCompletion(install: boolean): void {
@@ -319,7 +360,7 @@ function handleCompletionOptions(): boolean {
 
   if (args.includes('--list-commands')) {
     const tools = loadToolsCache();
-    const builtinCommands = ['list', 'sync', 'completion', 'skills'];
+    const builtinCommands = ['list', 'sync', 'completion', 'update', 'skills'];
     const allCommands = [...builtinCommands, ...tools.tools.map((t) => t.name)];
     console.log(allCommands.join('\n'));
     return true;
@@ -340,7 +381,12 @@ function handleCompletionOptions(): boolean {
  */
 function listOptionsForCommand(cmdName: string): void {
   // Built-in commands have no tool-specific options
-  if (cmdName === 'list' || cmdName === 'sync' || cmdName === 'completion') {
+  if (
+    cmdName === 'list' ||
+    cmdName === 'sync' ||
+    cmdName === 'completion' ||
+    cmdName === 'update'
+  ) {
     return;
   }
 
