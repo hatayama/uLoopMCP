@@ -309,9 +309,6 @@ npm install -g uloop-cli
 # 利用可能なツール一覧を取得
 uloop list
 
-# ツール定義をUnityから同期
-uloop sync
-
 # コンパイルを実行
 uloop compile
 
@@ -322,7 +319,7 @@ uloop get-logs --max-count 10
 uloop run-tests --filter-type all
 
 # 動的コードを実行
-uloop execute-dynamic-code --code "Debug.Log(\"Hello from CLI!\");"
+uloop execute-dynamic-code --code 'using UnityEngine; Debug.Log("Hello from CLI!");'
 ```
 
 ### シェル補完

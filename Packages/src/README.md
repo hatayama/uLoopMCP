@@ -309,9 +309,6 @@ npm install -g uloop-cli
 # List available tools
 uloop list
 
-# Sync tool definitions from Unity
-uloop sync
-
 # Execute compilation
 uloop compile
 
@@ -322,7 +319,7 @@ uloop get-logs --max-count 10
 uloop run-tests --filter-type all
 
 # Execute dynamic code
-uloop execute-dynamic-code --code "Debug.Log(\"Hello from CLI!\");"
+uloop execute-dynamic-code --code 'using UnityEngine; Debug.Log("Hello from CLI!");'
 ```
 
 ### Shell Completion
