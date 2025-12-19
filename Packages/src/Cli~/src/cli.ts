@@ -97,11 +97,27 @@ function registerToolCommand(tool: ToolDefinition): void {
     }
   }
 
+  // Add --code-base64 option for execute-dynamic-code command
+  if (tool.name === 'execute-dynamic-code') {
+    cmd.option(
+      '--code-base64 <base64>',
+      'Base64 encoded code (alternative to --code for shell escaping issues)',
+    );
+  }
+
   // Add global options
   cmd.option('-p, --port <port>', 'Unity TCP port');
 
   cmd.action(async (options: CliOptions) => {
     const params = buildParams(options, properties);
+
+    // Handle --code-base64 for execute-dynamic-code
+    if (tool.name === 'execute-dynamic-code' && options['codeBase64']) {
+      const base64Code = options['codeBase64'] as string;
+      const decodedCode = Buffer.from(base64Code, 'base64').toString('utf-8');
+      params['Code'] = decodedCode;
+    }
+
     await runWithErrorHandling(() =>
       executeToolCommand(tool.name, params, extractGlobalOptions(options)),
     );
