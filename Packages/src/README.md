@@ -292,9 +292,87 @@ For detailed specifications of all tools (parameters, responses, examples), see 
 > [!NOTE]
 > Multiple Unity instances can be supported by changing port numbers. uLoopMCP automatically assigns unused ports when starting up.
 
+## CLI Tool (uloop)
+
+uLoopMCP includes a standalone CLI tool `uloop` that can communicate directly with the Unity Editor without going through the MCP server.
+
+### CLI Installation
+
+```bash
+npm install -g uloop-cli
+```
+
+### Basic Usage
+
+```bash
+# List available tools
+uloop list
+
+# Sync tool definitions from Unity
+uloop sync
+
+# Execute compilation
+uloop compile
+
+# Get logs
+uloop get-logs --max-count 10
+
+# Run tests
+uloop run-tests --filter-type all
+
+# Execute dynamic code
+uloop execute-dynamic-code --code "Debug.Log(\"Hello from CLI!\");"
+```
+
+### Shell Completion
+
+You can install Bash/Zsh completion:
+
+```bash
+# Add completion script to shell config
+uloop completion --install
+
+# Or check manually
+uloop completion
+```
+
+### Claude Code Skills
+
+The CLI comes with 15 bundled skills for Claude Code.
+
+```bash
+# List bundled skills
+uloop skills list
+
+# Install all skills to project (.claude/skills/)
+uloop skills install
+
+# Install globally (~/.claude/skills/)
+uloop skills install --global
+
+# Install a specific skill
+uloop skills install uloop-compile
+
+# Uninstall skills
+uloop skills uninstall
+```
+
+After installation, Claude Code will recognize skills like `/uloop-compile`, `/uloop-get-logs`, etc., and use them at appropriate times.
+
+### Port Specification
+
+When using multiple Unity instances, you can specify the port:
+
+```bash
+uloop compile --port 8701
+```
+
+> [!NOTE]
+> When using the CLI, MCP configuration on the LLM tool side is not required. As long as the server is running in the uLoopMCP Window, you can operate Unity directly from the CLI.
+
 ## Installation
 
-> [!WARNING]  
+> [!WARNING]
 > The following software is required
 >
 > - **Unity 2022.3 or later**

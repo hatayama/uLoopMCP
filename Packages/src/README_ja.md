@@ -292,9 +292,87 @@ Scope(s): org.nuget
 > [!NOTE]
 > ポート番号を変更することで複数のUnityインスタンスをサポートできます。uLoopMCP起動時に自動的に使われていないportが割り当てられます。
 
+## CLI ツール (uloop)
+
+uLoopMCPには、MCPサーバーを介さずにUnity Editorと直接通信できるスタンドアロンCLIツール `uloop` が付属しています。
+
+### CLIのインストール
+
+```bash
+npm install -g uloop-cli
+```
+
+### 基本的な使い方
+
+```bash
+# 利用可能なツール一覧を取得
+uloop list
+
+# ツール定義をUnityから同期
+uloop sync
+
+# コンパイルを実行
+uloop compile
+
+# ログを取得
+uloop get-logs --max-count 10
+
+# テストを実行
+uloop run-tests --filter-type all
+
+# 動的コードを実行
+uloop execute-dynamic-code --code "Debug.Log(\"Hello from CLI!\");"
+```
+
+### シェル補完
+
+Bash/Zsh の補完機能をインストールできます：
+
+```bash
+# 補完スクリプトをシェル設定に追加
+uloop completion --install
+
+# または手動で確認
+uloop completion
+```
+
+### Claude Code Skills
+
+CLIには、Claude Codeで使用できる15個のスキルがバンドルされています。
+
+```bash
+# バンドルされたスキルを一覧表示
+uloop skills list
+
+# 全スキルをプロジェクトにインストール (.claude/skills/)
+uloop skills install
+
+# グローバルにインストール (~/.claude/skills/)
+uloop skills install --global
+
+# 特定のスキルをインストール
+uloop skills install uloop-compile
+
+# スキルをアンインストール
+uloop skills uninstall
+```
+
+インストール後、Claude Codeは `/uloop-compile`、`/uloop-get-logs` などのスキルを認識し、適切なタイミングで使用できるようになります。
+
+### ポート指定
+
+複数のUnityインスタンスを使用している場合、ポートを指定できます：
+
+```bash
+uloop compile --port 8701
+```
+
+> [!NOTE]
+> CLIを使う場合、LLMツール側のMCP設定は不要です。uLoopMCP Windowでサーバーを起動していれば、直接CLIからUnityを操作できます。
+
 ## インストール
 
-> [!WARNING]  
+> [!WARNING]
 > 以下のソフトウェアが必須です
 > 
 > - **Unity 2022.3以上**
