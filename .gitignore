@@ -97,6 +97,9 @@ working-notes**
 memo.md
 Packages/src/Docs/**
 
+# uloop CLI cache
+**/.uloop/
+
 # Node.js / TypeScript
 node_modules/
 npm-debug.log*
