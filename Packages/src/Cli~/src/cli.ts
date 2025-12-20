@@ -4,7 +4,7 @@
  * Commands are dynamically registered from tools.json cache.
  */
 
-import { existsSync, readFileSync, appendFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join, basename } from 'path';
 import { homedir } from 'os';
 import { spawn } from 'child_process';
@@ -364,16 +364,10 @@ function handleCompletion(install: boolean, shellOverride?: string): void {
 
   if (shellOverride) {
     const normalized = shellOverride.toLowerCase();
-    if (
-      normalized === 'bash' ||
-      normalized === 'zsh' ||
-      normalized === 'powershell'
-    ) {
+    if (normalized === 'bash' || normalized === 'zsh' || normalized === 'powershell') {
       shell = normalized;
     } else {
-      console.error(
-        `Unknown shell: ${shellOverride}. Supported: bash, zsh, powershell`,
-      );
+      console.error(`Unknown shell: ${shellOverride}. Supported: bash, zsh, powershell`);
       process.exit(1);
     }
   } else {
@@ -381,9 +375,7 @@ function handleCompletion(install: boolean, shellOverride?: string): void {
   }
 
   if (!shell) {
-    console.error(
-      'Could not detect shell. Use --shell option: bash, zsh, or powershell',
-    );
+    console.error('Could not detect shell. Use --shell option: bash, zsh, or powershell');
     process.exit(1);
   }
 
@@ -397,28 +389,35 @@ function handleCompletion(install: boolean, shellOverride?: string): void {
   // Install to shell config file
   const configPath = getShellConfigPath(shell);
 
-  // Check if already installed
+  // Remove existing uloop completion and add new one
+  let content = '';
   if (existsSync(configPath)) {
-    const content = readFileSync(configPath, 'utf-8');
-    if (content.includes('uloop')) {
-      console.log(`Completion already installed in ${configPath}`);
-      return;
-    }
+    content = readFileSync(configPath, 'utf-8');
+    // Remove existing uloop completion block using markers
+    content = content.replace(
+      /\n?# >>> uloop completion >>>[\s\S]*?# <<< uloop completion <<<\n?/g,
+      '',
+    );
   }
 
-  // Different install method for PowerShell vs Unix shells
+  // Add new completion with markers
+  const startMarker = '# >>> uloop completion >>>';
+  const endMarker = '# <<< uloop completion <<<';
+
   if (shell === 'powershell') {
-    // For PowerShell, write the script directly to profile
-    const lineToAdd = `\n${script}\n`;
-    appendFileSync(configPath, lineToAdd, 'utf-8');
-    console.log(`Completion installed to ${configPath}`);
+    const lineToAdd = `\n${startMarker}\n${script}\n${endMarker}\n`;
+    writeFileSync(configPath, content + lineToAdd, 'utf-8');
+  } else {
+    // Include --shell option to ensure correct shell detection
+    const evalLine = `eval "$(uloop completion --shell ${shell})"`;
+    const lineToAdd = `\n${startMarker}\n${evalLine}\n${endMarker}\n`;
+    writeFileSync(configPath, content + lineToAdd, 'utf-8');
+  }
+
+  console.log(`Completion installed to ${configPath}`);
+  if (shell === 'powershell') {
     console.log('Restart PowerShell to enable completion.');
   } else {
-    // For bash/zsh, use eval
-    const evalLine = 'eval "$(uloop completion)"';
-    const lineToAdd = `\n# uloop CLI completion\n${evalLine}\n`;
-    appendFileSync(configPath, lineToAdd, 'utf-8');
-    console.log(`Completion installed to ${configPath}`);
     console.log(`Run 'source ${configPath}' or restart your shell to enable completion.`);
   }
 }
