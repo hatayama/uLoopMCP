@@ -10,7 +10,7 @@ A CLI tool for communicating with Unity Editor. Completely independent from the 
 
 ## Directory Structure
 
-```
+```text
 src/
 ├── cli.ts                 # Entry point (commander.js)
 ├── version.ts             # Version management (auto-updated by release-please)

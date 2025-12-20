@@ -4,8 +4,8 @@
  * Commands are dynamically registered from tools.json cache.
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { join, basename } from 'path';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { join, basename, dirname } from 'path';
 import { homedir } from 'os';
 import { spawn } from 'child_process';
 import { Command } from 'commander';
@@ -23,6 +23,8 @@ import { VERSION } from './version.js';
 interface CliOptions extends GlobalOptions {
   [key: string]: unknown;
 }
+
+const BUILTIN_COMMANDS = ['list', 'sync', 'completion', 'update', 'skills'] as const;
 
 const program = new Command();
 
@@ -389,6 +391,12 @@ function handleCompletion(install: boolean, shellOverride?: string): void {
   // Install to shell config file
   const configPath = getShellConfigPath(shell);
 
+  // PowerShell profile directory may not exist on fresh installations
+  const configDir = dirname(configPath);
+  if (!existsSync(configDir)) {
+    mkdirSync(configDir, { recursive: true });
+  }
+
   // Remove existing uloop completion and add new one
   let content = '';
   if (existsSync(configPath)) {
@@ -430,8 +438,7 @@ function handleCompletionOptions(): boolean {
 
   if (args.includes('--list-commands')) {
     const tools = loadToolsCache();
-    const builtinCommands = ['list', 'sync', 'completion', 'update', 'skills'];
-    const allCommands = [...builtinCommands, ...tools.tools.map((t) => t.name)];
+    const allCommands = [...BUILTIN_COMMANDS, ...tools.tools.map((t) => t.name)];
     console.log(allCommands.join('\n'));
     return true;
   }
@@ -451,12 +458,7 @@ function handleCompletionOptions(): boolean {
  */
 function listOptionsForCommand(cmdName: string): void {
   // Built-in commands have no tool-specific options
-  if (
-    cmdName === 'list' ||
-    cmdName === 'sync' ||
-    cmdName === 'completion' ||
-    cmdName === 'update'
-  ) {
+  if (BUILTIN_COMMANDS.includes(cmdName as (typeof BUILTIN_COMMANDS)[number])) {
     return;
   }
 
