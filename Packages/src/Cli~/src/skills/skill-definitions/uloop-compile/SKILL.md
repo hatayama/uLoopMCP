@@ -1,6 +1,6 @@
 ---
 name: uloop-compile
-description: Compile Unity project via uloop CLI. Use when you need to verify C# code compiles successfully after editing Unity scripts, before running tests, or to check for compile errors/warnings.
+description: Compile Unity project via uloop CLI. Use when you need to: (1) Verify C# code compiles successfully after editing scripts, (2) Check for compile errors or warnings, (3) Validate script changes before running tests.
 ---
 
 # uloop compile

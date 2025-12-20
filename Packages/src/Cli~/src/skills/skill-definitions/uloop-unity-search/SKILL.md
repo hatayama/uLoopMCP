@@ -1,6 +1,6 @@
 ---
 name: uloop-unity-search
-description: Search Unity project via uloop CLI. Use when you need to find assets, scenes, prefabs, scripts, or any project resources using Unity's search system.
+description: Search Unity project via uloop CLI. Use when you need to: (1) Find assets by name or type (scenes, prefabs, scripts, materials), (2) Search for project resources using Unity's search system, (3) Locate files within the Unity project.
 ---
 
 # uloop unity-search

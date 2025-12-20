@@ -1,6 +1,6 @@
 ---
 name: uloop-focus-window
-description: Bring Unity Editor window to front via uloop CLI. Use when you need to focus Unity Editor before capturing screenshots, checking visual state, or ensuring Unity is visible.
+description: Bring Unity Editor window to front via uloop CLI. Use when you need to: (1) Focus Unity Editor before capturing screenshots, (2) Ensure Unity window is visible for visual checks, (3) Bring Unity to foreground for user interaction.
 ---
 
 # uloop focus-window

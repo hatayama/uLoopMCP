@@ -1,6 +1,6 @@
 ---
 name: uloop-capture-gameview
-description: Capture Unity Game View as PNG via uloop CLI. Use when you need to take a screenshot of the Game View, capture visual state for debugging, or save game output as an image.
+description: Capture Unity Game View as PNG via uloop CLI. Use when you need to: (1) Take a screenshot of the current Game View, (2) Capture visual state for debugging or verification, (3) Save game output as an image file.
 ---
 
 # uloop capture-gameview

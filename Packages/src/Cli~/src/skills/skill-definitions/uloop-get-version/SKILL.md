@@ -1,6 +1,6 @@
 ---
 name: uloop-get-version
-description: Get uLoopMCP version information via uloop CLI. Use when you need to check uLoopMCP package version, verify installation, or troubleshoot version compatibility.
+description: Get uLoopMCP version information via uloop CLI. Use when you need to: (1) Check uLoopMCP package version, (2) Verify installation is working correctly, (3) Troubleshoot version compatibility issues.
 ---
 
 # uloop get-version
