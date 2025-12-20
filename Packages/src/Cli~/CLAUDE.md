@@ -1,61 +1,61 @@
 # uloop CLI
 
-Unity Editor と通信するためのCLIツール。MCPサーバー（TypeScriptServer~）とは完全に独立。
+A CLI tool for communicating with Unity Editor. Completely independent from the MCP server (TypeScriptServer~).
 
-## アーキテクチャ
+## Architecture
 
-- **TypeScriptServer~への依存: ゼロ**
-- Unityとの通信は `direct-unity-client.ts` で直接TCP接続
-- MCPサーバーを経由せず、Unity TCPサーバーと直接やり取り
+- **Zero dependency on TypeScriptServer~**
+- Communicates with Unity directly via TCP connection in `direct-unity-client.ts`
+- Interacts directly with Unity TCP server without going through MCP server
 
-## ディレクトリ構造
+## Directory Structure
 
 ```
 src/
-├── cli.ts                 # エントリーポイント（commander.js）
-├── version.ts             # バージョン管理（release-pleaseで自動更新）
-├── execute-tool.ts        # ツール実行ロジック
-├── direct-unity-client.ts # Unity TCP直接通信
-├── simple-framer.ts       # TCPフレーミング
-├── port-resolver.ts       # ポート検出
-├── tool-cache.ts          # ツールキャッシュ（.uloop/tools.json）
-├── arg-parser.ts          # 引数パース
-├── default-tools.json     # デフォルトツール定義
-├── skills/                # Claude Code スキル機能
+├── cli.ts                 # Entry point (commander.js)
+├── version.ts             # Version management (auto-updated by release-please)
+├── execute-tool.ts        # Tool execution logic
+├── direct-unity-client.ts # Direct Unity TCP communication
+├── simple-framer.ts       # TCP framing
+├── port-resolver.ts       # Port detection
+├── tool-cache.ts          # Tool cache (.uloop/tools.json)
+├── arg-parser.ts          # Argument parsing
+├── default-tools.json     # Default tool definitions
+├── skills/                # Claude Code skills feature
 │   ├── skills-command.ts
 │   ├── skills-manager.ts
 │   ├── bundled-skills.ts
-│   └── skill-definitions/ # 13個のスキル定義（.md）
+│   └── skill-definitions/ # 13 skill definitions (.md)
 └── __tests__/
-    └── cli-e2e.test.ts    # E2Eテスト
+    └── cli-e2e.test.ts    # E2E tests
 ```
 
-## ビルド
+## Build
 
 ```bash
-npm run build    # dist/cli.bundle.cjs を生成
-npm run lint     # ESLint実行
+npm run build    # Generates dist/cli.bundle.cjs
+npm run lint     # Run ESLint
 ```
 
-## E2Eテスト
+## E2E Tests
 
-E2Eテストは実際にUnity Editorと通信するため、以下の前提条件が必要：
+E2E tests communicate with actual Unity Editor, so the following prerequisites are required:
 
-1. Unity Editorが起動していること
-2. uLoopMCPパッケージがインストールされていること
-3. CLIがビルド済みであること（`npm run build`）
+1. Unity Editor must be running
+2. uLoopMCP package must be installed
+3. CLI must be built (`npm run build`)
 
 ```bash
-npm run test:cli # E2Eテスト実行（Unity起動必須）
+npm run test:cli # Run E2E tests (Unity must be running)
 ```
 
-## npm公開
+## npm Publishing
 
-このディレクトリが `uloop-cli` パッケージとしてnpmに公開される。
-バージョンは `Packages/src/package.json` と同期（release-pleaseで管理）。
+This directory is published to npm as the `uloop-cli` package.
+Version is synchronized with `Packages/src/package.json` (managed by release-please).
 
-## 注意事項
+## Notes
 
-- `version.ts` はTypeScriptServer~のものとは別ファイル（コピーではない）
-- ビルド成果物 `dist/cli.bundle.cjs` は `.gitignore` で除外
-- `node_modules/` も `.gitignore` で除外
+- `version.ts` is a separate file from TypeScriptServer~ (not a copy)
+- Build artifact `dist/cli.bundle.cjs` is excluded via `.gitignore`
+- `node_modules/` is also excluded via `.gitignore`
