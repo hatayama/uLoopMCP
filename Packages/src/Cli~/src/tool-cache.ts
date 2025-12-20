@@ -6,6 +6,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import defaultToolsData from './default-tools.json';
+import { findUnityProjectRoot } from './project-root.js';
 
 export interface ToolProperty {
   type: string;
@@ -37,7 +38,11 @@ const CACHE_DIR = '.uloop';
 const CACHE_FILE = 'tools.json';
 
 function getCacheDir(): string {
-  return join(process.cwd(), CACHE_DIR);
+  const projectRoot = findUnityProjectRoot();
+  if (projectRoot === null) {
+    return join(process.cwd(), CACHE_DIR);
+  }
+  return join(projectRoot, CACHE_DIR);
 }
 
 function getCachePath(): string {

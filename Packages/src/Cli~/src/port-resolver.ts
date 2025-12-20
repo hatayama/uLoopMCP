@@ -5,6 +5,7 @@
 
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { findUnityProjectRoot } from './project-root.js';
 
 const DEFAULT_PORT = 8700;
 
@@ -27,7 +28,11 @@ export async function resolveUnityPort(explicitPort?: number): Promise<number> {
 }
 
 async function readPortFromSettings(): Promise<number | null> {
-  const settingsPath = join(process.cwd(), 'UserSettings/UnityMcpSettings.json');
+  const projectRoot = findUnityProjectRoot();
+  if (projectRoot === null) {
+    return null;
+  }
+  const settingsPath = join(projectRoot, 'UserSettings/UnityMcpSettings.json');
 
   let content: string;
   try {
