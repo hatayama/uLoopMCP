@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.44.2](https://github.com/hatayama/uLoopMCP/compare/v0.44.1...v0.44.2) (2025-12-20)
+
+
+### Bug Fixes
+
+* **cli:** trigger release for npm publish workflow fix ([#448](https://github.com/hatayama/uLoopMCP/issues/448)) ([9603e9f](https://github.com/hatayama/uLoopMCP/commit/9603e9f9f168fd0d23b503c64689b815774c0240))
+
 ## [0.44.1](https://github.com/hatayama/uLoopMCP/compare/v0.44.0...v0.44.1) (2025-12-20)
 
 
