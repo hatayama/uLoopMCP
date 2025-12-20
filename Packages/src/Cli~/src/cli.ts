@@ -97,32 +97,17 @@ function registerToolCommand(tool: ToolDefinition): void {
     }
   }
 
-  // Add --code-base64 and --stdin options for execute-dynamic-code command
-  if (tool.name === 'execute-dynamic-code') {
-    cmd.option(
-      '--code-base64 <base64>',
-      'Base64 encoded code (alternative to --code for shell escaping issues)',
-    );
-    cmd.option('--stdin', 'Read code from standard input');
-  }
-
   // Add global options
   cmd.option('-p, --port <port>', 'Unity TCP port');
 
   cmd.action(async (options: CliOptions) => {
     const params = buildParams(options, properties);
 
-    // Handle --stdin for execute-dynamic-code
-    if (tool.name === 'execute-dynamic-code' && options['stdin']) {
-      const stdinCode = await readStdin();
-      params['Code'] = stdinCode;
-    }
-
-    // Handle --code-base64 for execute-dynamic-code
-    if (tool.name === 'execute-dynamic-code' && options['codeBase64']) {
-      const base64Code = options['codeBase64'] as string;
-      const decodedCode = Buffer.from(base64Code, 'base64').toString('utf-8');
-      params['Code'] = decodedCode;
+    // Handle backtick to double-quote conversion for execute-dynamic-code
+    // This allows: --code "Debug.Log(`Hello`)" instead of escaping quotes
+    if (tool.name === 'execute-dynamic-code' && params['Code']) {
+      const code = params['Code'] as string;
+      params['Code'] = code.replace(/`([^`]*)`/g, '"$1"');
     }
 
     await runWithErrorHandling(() =>
@@ -211,25 +196,6 @@ function extractGlobalOptions(options: Record<string, unknown>): GlobalOptions {
   return {
     port: options['port'] as string | undefined,
   };
-}
-
-/**
- * Read code from standard input.
- */
-function readStdin(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let data = '';
-    process.stdin.setEncoding('utf-8');
-    process.stdin.on('data', (chunk) => {
-      data += chunk;
-    });
-    process.stdin.on('end', () => {
-      resolve(data);
-    });
-    process.stdin.on('error', (err) => {
-      reject(err);
-    });
-  });
 }
 
 function isDomainReloadLockFilePresent(): boolean {

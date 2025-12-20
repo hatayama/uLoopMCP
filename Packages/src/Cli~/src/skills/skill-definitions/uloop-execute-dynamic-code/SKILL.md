@@ -32,6 +32,42 @@ var x = Mathf.PI;
 return x;
 ```
 
+## IMPORTANT: String Literals (OS/Shell-specific)
+
+The CLI converts backticks to double quotes: `` `Hello` `` becomes `"Hello"`.
+
+### Mac (bash/zsh)
+
+Use single quotes to wrap, double quotes inside:
+
+```bash
+uloop execute-dynamic-code --code 'Debug.Log("Hello World");'
+```
+
+### Windows (MINGW64 / Git Bash / cmd)
+
+Use backticks for C# strings:
+
+```bash
+uloop execute-dynamic-code --code "Debug.Log(\`Hello World\`);"
+```
+
+### Windows (PowerShell)
+
+Use `""` for C# strings:
+
+```powershell
+uloop execute-dynamic-code --code 'Debug.Log(""Hello World"");'
+```
+
+### Summary
+
+| OS | Shell | Method |
+|----|-------|--------|
+| Mac | bash/zsh | `'Debug.Log("Hello");'` |
+| Windows | MINGW64/Git Bash/cmd | `` Debug.Log(`Hello`) `` |
+| Windows | PowerShell | `Debug.Log(""Hello"")` |
+
 ## Allowed Operations
 
 - Prefab/material wiring (PrefabUtility)
@@ -47,15 +83,52 @@ return x;
 
 ## Examples
 
+### Mac (bash/zsh)
+
+```bash
+# Get selected GameObject name
+uloop execute-dynamic-code --code 'return Selection.activeGameObject?.name;'
+
+# Create empty GameObject
+uloop execute-dynamic-code --code 'new GameObject("MyObject");'
+
+# Log a message
+uloop execute-dynamic-code --code 'UnityEngine.Debug.Log("Hello from CLI");'
+
+# Add component to selected
+uloop execute-dynamic-code --code 'Selection.activeGameObject.AddComponent<Rigidbody>();'
+```
+
+### Windows (MINGW64 / Git Bash / cmd)
+
 ```bash
 # Get selected GameObject name
 uloop execute-dynamic-code --code "return Selection.activeGameObject?.name;"
 
-# Create empty GameObject
-uloop execute-dynamic-code --code "new GameObject(\"MyObject\");"
+# Create empty GameObject (use backticks)
+uloop execute-dynamic-code --code "new GameObject(\`MyObject\`);"
+
+# Log a message (use backticks)
+uloop execute-dynamic-code --code "UnityEngine.Debug.Log(\`Hello from CLI\`);"
 
 # Add component to selected
 uloop execute-dynamic-code --code "Selection.activeGameObject.AddComponent<Rigidbody>();"
+```
+
+### Windows (PowerShell)
+
+```powershell
+# Get selected GameObject name
+uloop execute-dynamic-code --code 'return Selection.activeGameObject?.name;'
+
+# Create empty GameObject (use "")
+uloop execute-dynamic-code --code 'new GameObject(""MyObject"");'
+
+# Log a message (use "")
+uloop execute-dynamic-code --code 'UnityEngine.Debug.Log(""Hello from CLI"");'
+
+# Add component to selected
+uloop execute-dynamic-code --code 'Selection.activeGameObject.AddComponent<Rigidbody>();'
 ```
 
 ## Output
