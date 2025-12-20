@@ -103,11 +103,11 @@ function registerToolCommand(tool: ToolDefinition): void {
   cmd.action(async (options: CliOptions) => {
     const params = buildParams(options, properties);
 
-    // Handle backtick to double-quote conversion for execute-dynamic-code
-    // This allows: --code "Debug.Log(`Hello`)" instead of escaping quotes
+    // Unescape \! to ! for execute-dynamic-code
+    // Some shells (e.g., Claude Code's bash wrapper) escape ! as \!
     if (tool.name === 'execute-dynamic-code' && params['Code']) {
       const code = params['Code'] as string;
-      params['Code'] = code.replace(/`([^`]*)`/g, '"$1"');
+      params['Code'] = code.replace(/\\!/g, '!');
     }
 
     await runWithErrorHandling(() =>

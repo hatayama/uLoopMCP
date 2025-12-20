@@ -10,7 +10,7 @@ Execute C# code dynamically in Unity Editor.
 ## Usage
 
 ```bash
-uloop execute-dynamic-code --code "<c# code>"
+uloop execute-dynamic-code --code '<c# code>'
 ```
 
 ## Parameters
@@ -32,30 +32,12 @@ var x = Mathf.PI;
 return x;
 ```
 
-## IMPORTANT: String Literals (Shell-specific)
-
-### bash / zsh / MINGW64 / Git Bash
-
-Use single quotes to wrap, double quotes inside:
-
-```bash
-uloop execute-dynamic-code --code 'Debug.Log("Hello World");'
-```
-
-### Windows PowerShell
-
-Use `""` for C# strings:
-
-```powershell
-uloop execute-dynamic-code --code 'Debug.Log(""Hello World"");'
-```
-
-### Summary
+## String Literals (Shell-specific)
 
 | Shell | Method |
 |-------|--------|
-| bash/zsh/MINGW64/Git Bash | `'Debug.Log("Hello");'` |
-| PowerShell | `'Debug.Log(""Hello"");'` |
+| bash/zsh/MINGW64/Git Bash | `'Debug.Log("Hello!");'` |
+| PowerShell | `'Debug.Log(""Hello!"");'` |
 
 ## Allowed Operations
 
@@ -75,33 +57,17 @@ uloop execute-dynamic-code --code 'Debug.Log(""Hello World"");'
 ### bash / zsh / MINGW64 / Git Bash
 
 ```bash
-# Get selected GameObject name
 uloop execute-dynamic-code --code 'return Selection.activeGameObject?.name;'
-
-# Create empty GameObject
 uloop execute-dynamic-code --code 'new GameObject("MyObject");'
-
-# Log a message
-uloop execute-dynamic-code --code 'UnityEngine.Debug.Log("Hello from CLI");'
-
-# Add component to selected
-uloop execute-dynamic-code --code 'Selection.activeGameObject.AddComponent<Rigidbody>();'
+uloop execute-dynamic-code --code 'UnityEngine.Debug.Log("Hello from CLI!");'
 ```
 
-### Windows PowerShell
+### PowerShell
 
 ```powershell
-# Get selected GameObject name
 uloop execute-dynamic-code --code 'return Selection.activeGameObject?.name;'
-
-# Create empty GameObject (use "")
 uloop execute-dynamic-code --code 'new GameObject(""MyObject"");'
-
-# Log a message (use "")
-uloop execute-dynamic-code --code 'UnityEngine.Debug.Log(""Hello from CLI"");'
-
-# Add component to selected
-uloop execute-dynamic-code --code 'Selection.activeGameObject.AddComponent<Rigidbody>();'
+uloop execute-dynamic-code --code 'UnityEngine.Debug.Log(""Hello from CLI!"");'
 ```
 
 ## Output
