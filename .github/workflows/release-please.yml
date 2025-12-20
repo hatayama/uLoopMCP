@@ -114,11 +114,10 @@ jobs:
 
       - name: 📦 Publish CLI to npm
         if: ${{ steps.check_npm.outputs.needs_publish == 'true' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd Packages/src/Cli~
           npm ci
           npm run build
+          # Uses OIDC trusted publishing - no NPM_TOKEN needed
           npm publish --access public --provenance
           echo "✅ CLI v${{ steps.check_npm.outputs.cli_version }} published to npm with provenance"
