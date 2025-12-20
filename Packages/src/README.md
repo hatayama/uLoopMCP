@@ -34,7 +34,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 3. Easy setup from Unity Package Manager and a few clicks to connect from LLM tools (Cursor, Claude Code, GitHub Copilot, Windsurf, etc.).
 4. Type-safe extension model for adding project-specific MCP tools that AI can implement and iterate on for you.
 5. Log and hierarchy data can be exported to files to avoid burning LLM context on large payloads.
-6. **[Beta]** Standalone CLI tool `uloop` for direct Unity control from your terminal without MCP configuration, with bundled [skills](https://agentskills.io/home) for LLM Agents. ([Details](#cli-tool-uloop))
+6. Standalone CLI tool `uloop` provided. **No MCP configuration required—just install Skills and Claude Code will automatically operate Unity**. 13 bundled Skills enable Claude Code to handle compilation, test execution, log retrieval, and more. ([Details](#cli-tool-uloop))
 
 # Example Use Cases
 - Let an AI keep fixing your project until compilation passes and all tests go green.
@@ -295,15 +295,65 @@ For detailed specifications of all tools (parameters, responses, examples), see 
 
 ## CLI Tool (uloop)
 
-uLoopMCP includes a standalone CLI tool `uloop` that can communicate directly with the Unity Editor without going through the MCP server.
+uLoopMCP includes a standalone CLI tool `uloop`.
 
-### CLI Installation
+**The key advantage of this CLI is that LLM tools can operate Unity without any MCP configuration.**
+Just install the 13 bundled Skills, and Skills-compatible LLM tools (such as Claude Code) will automatically integrate with Unity.
 
+### Quick Start
+
+**Step 1: Install the CLI**
 ```bash
 npm install -g uloop-cli
 ```
 
-### Basic Usage
+**Step 2: Install Skills**
+```bash
+# Install to project (recommended)
+uloop skills install
+
+# Or install globally
+uloop skills install --global
+```
+
+That's it! Claude Code will automatically recognize skills like `/uloop-compile`, `/uloop-get-logs`, and use them at the right time.
+
+### About Skills
+
+After installing Skills, Claude Code can automatically handle instructions like these:
+
+| Your Instruction | Skill Used by Claude Code |
+|---|---|
+| "Fix the compile errors" | `/uloop-compile` |
+| "Run the tests and tell me why they failed" | `/uloop-run-tests` + `/uloop-get-logs` |
+| "Check the scene hierarchy" | `/uloop-get-hierarchy` |
+| "Search for prefabs" | `/uloop-unity-search` |
+
+> [!TIP]
+> **No MCP configuration required!** As long as the server is running in the uLoopMCP Window, Claude Code communicates directly with Unity through Skills.
+
+<details>
+<summary>All 13 Bundled Skills</summary>
+
+- `/uloop-compile` - Execute compilation
+- `/uloop-get-logs` - Get console logs
+- `/uloop-run-tests` - Run tests
+- `/uloop-clear-console` - Clear console
+- `/uloop-focus-window` - Bring Unity Editor to front
+- `/uloop-get-hierarchy` - Get scene hierarchy
+- `/uloop-unity-search` - Unity Search
+- `/uloop-get-menu-items` - Get menu items
+- `/uloop-execute-menu-item` - Execute menu item
+- `/uloop-find-game-objects` - Find GameObjects
+- `/uloop-capture-gameview` - Capture Game View
+- `/uloop-execute-dynamic-code` - Execute dynamic C# code
+- `/uloop-get-provider-details` - Get search provider details
+
+</details>
+
+### Direct CLI Usage (Advanced)
+
+You can also call the CLI directly without using Skills:
 
 ```bash
 # List available tools
@@ -338,39 +388,18 @@ uloop completion --shell powershell --install
 uloop completion
 ```
 
-### Claude Code Skills
-
-The CLI comes with 13 bundled skills for LLM Agents.
-
-```bash
-# List bundled skills
-uloop skills list
-
-# Install all skills to project (.claude/skills/)
-uloop skills install
-
-# Install globally (~/.claude/skills/)
-uloop skills install --global
-
-# Install a specific skill
-uloop skills install uloop-compile
-
-# Uninstall skills
-uloop skills uninstall
-```
-
-After installation, Claude Code will recognize skills like `/uloop-compile`, `/uloop-get-logs`, etc., and use them at appropriate times.
-
 ### Port Specification
 
-When using multiple Unity instances, you can specify the port:
+If `--port` is omitted, the port configured for the project is automatically selected.
+
+By explicitly specifying the `--port` option, a single LLM tool can operate multiple Unity instances:
 
 ```bash
-uloop compile --port 8701
+uloop compile --port {target-port}
 ```
 
 > [!NOTE]
-> When using the CLI, MCP configuration on the LLM tool side is not required. As long as the server is running in the uLoopMCP Window, you can operate Unity directly from the CLI.
+> You can find the port number in each Unity's uLoopMCP Window.
 
 ## Installation
 
