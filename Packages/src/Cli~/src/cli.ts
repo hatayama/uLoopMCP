@@ -19,6 +19,7 @@ import { loadToolsCache, ToolDefinition, ToolProperty } from './tool-cache.js';
 import { pascalToKebabCase } from './arg-parser.js';
 import { registerSkillsCommand } from './skills/skills-command.js';
 import { VERSION } from './version.js';
+import { findUnityProjectRoot } from './project-root.js';
 
 interface CliOptions extends GlobalOptions {
   [key: string]: unknown;
@@ -202,7 +203,11 @@ function extractGlobalOptions(options: Record<string, unknown>): GlobalOptions {
 }
 
 function isDomainReloadLockFilePresent(): boolean {
-  const lockPath = join(process.cwd(), 'Temp', 'domainreload.lock');
+  const projectRoot = findUnityProjectRoot();
+  if (projectRoot === null) {
+    return false;
+  }
+  const lockPath = join(projectRoot, 'Temp', 'domainreload.lock');
   return existsSync(lockPath);
 }
 
