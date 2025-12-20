@@ -1,5 +1,5 @@
 {
-  "version": "0.43.11",
+  "version": "0.44.0",
   "tools": [
     {
       "name": "compile",
@@ -23,7 +23,12 @@
           "LogType": {
             "type": "string",
             "description": "Log type filter",
-            "enum": ["Error", "Warning", "Log", "All"],
+            "enum": [
+              "Error",
+              "Warning",
+              "Log",
+              "All"
+            ],
             "default": "All"
           },
           "MaxCount": {
@@ -60,13 +65,21 @@
           "TestMode": {
             "type": "string",
             "description": "Test mode",
-            "enum": ["EditMode", "PlayMode"],
+            "enum": [
+              "EditMode",
+              "PlayMode"
+            ],
             "default": "EditMode"
           },
           "FilterType": {
             "type": "string",
             "description": "Filter type",
-            "enum": ["all", "exact", "regex", "assembly"],
+            "enum": [
+              "all",
+              "exact",
+              "regex",
+              "assembly"
+            ],
             "default": "all"
           },
           "FilterValue": {
@@ -175,7 +188,11 @@
           "FilterType": {
             "type": "string",
             "description": "Filter type",
-            "enum": ["contains", "exact", "startswith"],
+            "enum": [
+              "contains",
+              "exact",
+              "startswith"
+            ],
             "default": "contains"
           },
           "MaxCount": {
@@ -221,7 +238,12 @@
           "SearchMode": {
             "type": "string",
             "description": "Search mode",
-            "enum": ["Exact", "Path", "Regex", "Contains"],
+            "enum": [
+              "Exact",
+              "Path",
+              "Regex",
+              "Contains"
+            ],
             "default": "Contains"
           },
           "RequiredComponents": {
