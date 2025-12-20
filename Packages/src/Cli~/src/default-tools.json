@@ -1,0 +1,333 @@
+{
+  "version": "0.43.11",
+  "tools": [
+    {
+      "name": "compile",
+      "description": "Execute Unity project compilation",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ForceRecompile": {
+            "type": "boolean",
+            "description": "Force full recompilation"
+          }
+        }
+      }
+    },
+    {
+      "name": "get-logs",
+      "description": "Retrieve logs from Unity Console",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "LogType": {
+            "type": "string",
+            "description": "Log type filter",
+            "enum": ["Error", "Warning", "Log", "All"],
+            "default": "All"
+          },
+          "MaxCount": {
+            "type": "integer",
+            "description": "Maximum number of logs to retrieve",
+            "default": 100
+          },
+          "SearchText": {
+            "type": "string",
+            "description": "Text to search within logs"
+          },
+          "IncludeStackTrace": {
+            "type": "boolean",
+            "description": "Include stack trace in output",
+            "default": true
+          },
+          "UseRegex": {
+            "type": "boolean",
+            "description": "Use regex for search"
+          },
+          "SearchInStackTrace": {
+            "type": "boolean",
+            "description": "Search within stack trace"
+          }
+        }
+      }
+    },
+    {
+      "name": "run-tests",
+      "description": "Execute Unity Test Runner",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "TestMode": {
+            "type": "string",
+            "description": "Test mode",
+            "enum": ["EditMode", "PlayMode"],
+            "default": "EditMode"
+          },
+          "FilterType": {
+            "type": "string",
+            "description": "Filter type",
+            "enum": ["all", "exact", "regex", "assembly"],
+            "default": "all"
+          },
+          "FilterValue": {
+            "type": "string",
+            "description": "Filter value"
+          },
+          "SaveXml": {
+            "type": "boolean",
+            "description": "Save test results as XML"
+          }
+        }
+      }
+    },
+    {
+      "name": "clear-console",
+      "description": "Clear Unity console logs",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "AddConfirmationMessage": {
+            "type": "boolean",
+            "description": "Add confirmation message after clearing"
+          }
+        }
+      }
+    },
+    {
+      "name": "focus-window",
+      "description": "Bring Unity Editor window to front",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "get-hierarchy",
+      "description": "Get Unity Hierarchy structure",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "RootPath": {
+            "type": "string",
+            "description": "Root GameObject path"
+          },
+          "MaxDepth": {
+            "type": "integer",
+            "description": "Maximum depth (-1 for unlimited)",
+            "default": -1
+          },
+          "IncludeComponents": {
+            "type": "boolean",
+            "description": "Include component information",
+            "default": true
+          },
+          "IncludeInactive": {
+            "type": "boolean",
+            "description": "Include inactive GameObjects",
+            "default": true
+          },
+          "IncludePaths": {
+            "type": "boolean",
+            "description": "Include path information"
+          }
+        }
+      }
+    },
+    {
+      "name": "unity-search",
+      "description": "Search Unity project",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "SearchQuery": {
+            "type": "string",
+            "description": "Search query"
+          },
+          "Providers": {
+            "type": "array",
+            "description": "Search providers",
+            "items": {
+              "type": "string"
+            }
+          },
+          "MaxResults": {
+            "type": "integer",
+            "description": "Maximum number of results",
+            "default": 50
+          },
+          "SaveToFile": {
+            "type": "boolean",
+            "description": "Save results to file"
+          }
+        }
+      }
+    },
+    {
+      "name": "get-menu-items",
+      "description": "Retrieve Unity MenuItems",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "FilterText": {
+            "type": "string",
+            "description": "Filter text"
+          },
+          "FilterType": {
+            "type": "string",
+            "description": "Filter type",
+            "enum": ["contains", "exact", "startswith"],
+            "default": "contains"
+          },
+          "MaxCount": {
+            "type": "integer",
+            "description": "Maximum number of items",
+            "default": 200
+          },
+          "IncludeValidation": {
+            "type": "boolean",
+            "description": "Include validation functions"
+          }
+        }
+      }
+    },
+    {
+      "name": "execute-menu-item",
+      "description": "Execute Unity MenuItem",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "MenuItemPath": {
+            "type": "string",
+            "description": "Menu item path (e.g., \"GameObject/Create Empty\")"
+          },
+          "UseReflectionFallback": {
+            "type": "boolean",
+            "description": "Use reflection fallback",
+            "default": true
+          }
+        }
+      }
+    },
+    {
+      "name": "find-game-objects",
+      "description": "Find GameObjects with search criteria",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "NamePattern": {
+            "type": "string",
+            "description": "Name pattern to search"
+          },
+          "SearchMode": {
+            "type": "string",
+            "description": "Search mode",
+            "enum": ["Exact", "Path", "Regex", "Contains"],
+            "default": "Contains"
+          },
+          "RequiredComponents": {
+            "type": "array",
+            "description": "Required components",
+            "items": {
+              "type": "string"
+            }
+          },
+          "Tag": {
+            "type": "string",
+            "description": "Tag filter"
+          },
+          "Layer": {
+            "type": "string",
+            "description": "Layer filter"
+          },
+          "MaxResults": {
+            "type": "integer",
+            "description": "Maximum number of results",
+            "default": 20
+          },
+          "IncludeInactive": {
+            "type": "boolean",
+            "description": "Include inactive GameObjects"
+          }
+        }
+      }
+    },
+    {
+      "name": "capture-gameview",
+      "description": "Capture Unity Game View as PNG",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ResolutionScale": {
+            "type": "number",
+            "description": "Resolution scale (0.1 to 1.0)",
+            "default": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "execute-dynamic-code",
+      "description": "Execute C# code in Unity Editor",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "Code": {
+            "type": "string",
+            "description": "C# code to execute"
+          },
+          "CompileOnly": {
+            "type": "boolean",
+            "description": "Compile only without execution"
+          },
+          "AutoQualifyUnityTypesOnce": {
+            "type": "boolean",
+            "description": "Auto-qualify Unity types"
+          }
+        }
+      }
+    },
+    {
+      "name": "get-provider-details",
+      "description": "Get Unity Search provider details",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ProviderId": {
+            "type": "string",
+            "description": "Specific provider ID"
+          },
+          "ActiveOnly": {
+            "type": "boolean",
+            "description": "Only active providers"
+          },
+          "IncludeDescriptions": {
+            "type": "boolean",
+            "description": "Include descriptions",
+            "default": true
+          },
+          "SortByPriority": {
+            "type": "boolean",
+            "description": "Sort by priority",
+            "default": true
+          }
+        }
+      }
+    },
+    {
+      "name": "get-project-info",
+      "description": "Get Unity project information",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "get-version",
+      "description": "Get uLoopMCP version information",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ]
+}

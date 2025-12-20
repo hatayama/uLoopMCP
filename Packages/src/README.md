@@ -34,6 +34,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 3. Easy setup from Unity Package Manager and a few clicks to connect from LLM tools (Cursor, Claude Code, GitHub Copilot, Windsurf, etc.).
 4. Type-safe extension model for adding project-specific MCP tools that AI can implement and iterate on for you.
 5. Log and hierarchy data can be exported to files to avoid burning LLM context on large payloads.
+6. Standalone CLI tool `uloop` provided. **No MCP configuration required—just install Skills and Claude Code will automatically operate Unity**. 13 bundled Skills enable Claude Code to handle compilation, test execution, log retrieval, and more. ([Details](#cli-tool-uloop))
 
 # Example Use Cases
 - Let an AI keep fixing your project until compilation passes and all tests go green.
@@ -292,9 +293,117 @@ For detailed specifications of all tools (parameters, responses, examples), see 
 > [!NOTE]
 > Multiple Unity instances can be supported by changing port numbers. uLoopMCP automatically assigns unused ports when starting up.
 
+## CLI Tool (uloop)
+
+uLoopMCP includes a standalone CLI tool `uloop`.
+
+**The key advantage of this CLI is that LLM tools can operate Unity without any MCP configuration.**
+Just install the 13 bundled Skills, and Skills-compatible LLM tools (such as Claude Code) will automatically integrate with Unity.
+
+### Quick Start
+
+**Step 1: Install the CLI**
+```bash
+npm install -g uloop-cli
+```
+
+**Step 2: Install Skills**
+```bash
+# Install to project (recommended)
+uloop skills install
+
+# Or install globally
+uloop skills install --global
+```
+
+That's it! Claude Code will automatically recognize skills like `/uloop-compile`, `/uloop-get-logs`, and use them at the right time.
+
+### About Skills
+
+After installing Skills, Claude Code can automatically handle instructions like these:
+
+| Your Instruction | Skill Used by Claude Code |
+|---|---|
+| "Fix the compile errors" | `/uloop-compile` |
+| "Run the tests and tell me why they failed" | `/uloop-run-tests` + `/uloop-get-logs` |
+| "Check the scene hierarchy" | `/uloop-get-hierarchy` |
+| "Search for prefabs" | `/uloop-unity-search` |
+
+> [!TIP]
+> **No MCP configuration required!** As long as the server is running in the uLoopMCP Window, Claude Code communicates directly with Unity through Skills.
+
+<details>
+<summary>All 13 Bundled Skills</summary>
+
+- `/uloop-compile` - Execute compilation
+- `/uloop-get-logs` - Get console logs
+- `/uloop-run-tests` - Run tests
+- `/uloop-clear-console` - Clear console
+- `/uloop-focus-window` - Bring Unity Editor to front
+- `/uloop-get-hierarchy` - Get scene hierarchy
+- `/uloop-unity-search` - Unity Search
+- `/uloop-get-menu-items` - Get menu items
+- `/uloop-execute-menu-item` - Execute menu item
+- `/uloop-find-game-objects` - Find GameObjects
+- `/uloop-capture-gameview` - Capture Game View
+- `/uloop-execute-dynamic-code` - Execute dynamic C# code
+- `/uloop-get-provider-details` - Get search provider details
+
+</details>
+
+### Direct CLI Usage (Advanced)
+
+You can also call the CLI directly without using Skills:
+
+```bash
+# List available tools
+uloop list
+
+# Execute compilation
+uloop compile
+
+# Get logs
+uloop get-logs --max-count 10
+
+# Run tests
+uloop run-tests --filter-type all
+
+# Execute dynamic code
+uloop execute-dynamic-code --code 'using UnityEngine; Debug.Log("Hello from CLI!");'
+```
+
+### Shell Completion
+
+You can install Bash/Zsh/PowerShell completion:
+
+```bash
+# Add completion script to shell config (auto-detects shell)
+uloop completion --install
+
+# Explicitly specify shell (when auto-detection fails, e.g., MINGW64)
+uloop completion --shell bash --install
+uloop completion --shell powershell --install
+
+# Check completion script
+uloop completion
+```
+
+### Port Specification
+
+If `--port` is omitted, the port configured for the project is automatically selected.
+
+By explicitly specifying the `--port` option, a single LLM tool can operate multiple Unity instances:
+
+```bash
+uloop compile --port {target-port}
+```
+
+> [!NOTE]
+> You can find the port number in each Unity's uLoopMCP Window.
+
 ## Installation
 
-> [!WARNING]  
+> [!WARNING]
 > The following software is required
 >
 > - **Unity 2022.3 or later**

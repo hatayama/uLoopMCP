@@ -34,6 +34,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 3. Unity Package Manager からインストールし、お使いの LLM ツール（Cursor / Claude Code / Codex / Gemini など）と数クリックで接続できます。
 4. プロジェクト固有の MCP ツールを型安全に拡張しやすく、AI に実装を任せやすい設計になっています。
 5. 大量のログや階層情報はファイルに書き出すことで、LLM のコンテキスト消費を抑える工夫をしています。
+6. スタンドアロン CLI ツール `uloop` を提供。**MCP設定不要で、Skills をインストールするだけで Claude Code が自動的に Unity を操作できます**。13個のバンドルされた Skills により、コンパイル・テスト実行・ログ取得などをClaude Codeに任せられます。（[詳細](#cli-ツール-uloop)）
 
 # ユースケース例
 - Unity プロジェクトの「コンパイルが通るまで」「テストが緑になるまで」を、AI に任せて自律的に回し続ける
@@ -292,9 +293,117 @@ Scope(s): org.nuget
 > [!NOTE]
 > ポート番号を変更することで複数のUnityインスタンスをサポートできます。uLoopMCP起動時に自動的に使われていないportが割り当てられます。
 
+## CLI ツール (uloop)
+
+uLoopMCPには、スタンドアロンCLIツール `uloop` が付属しています。
+
+**このCLIの最大の特徴は、MCP設定なしでLLMツールからUnityを操作できること**です。
+13個のバンドルされたSkillsをインストールするだけで、Skills対応のLLMツール（Claude Codeなど）が自動的にUnityと連携します。
+
+### クイックスタート
+
+**ステップ1: CLIのインストール**
+```bash
+npm install -g uloop-cli
+```
+
+**ステップ2: Skillsのインストール**
+```bash
+# プロジェクトにインストール（推奨）
+uloop skills install
+
+# または、グローバルにインストール
+uloop skills install --global
+```
+
+これで完了です！Claude Codeが `/uloop-compile`、`/uloop-get-logs` などのスキルを自動認識し、適切なタイミングで使用してくれます。
+
+### Skills について
+
+Skillsをインストールすると、Claude Codeが以下のような指示に自動で対応できるようになります：
+
+| あなたの指示 | Claude Codeが使うSkill |
+|---|---|
+| 「コンパイルエラーを直して」 | `/uloop-compile` |
+| 「テストを実行して失敗原因を教えて」 | `/uloop-run-tests` + `/uloop-get-logs` |
+| 「シーンの階層構造を確認して」 | `/uloop-get-hierarchy` |
+| 「Prefabを検索して」 | `/uloop-unity-search` |
+
+> [!TIP]
+> **MCP設定は不要です！** uLoopMCP Windowでサーバーを起動していれば、Skillsを通じてClaude Codeが直接Unityと通信します。
+
+<details>
+<summary>バンドルされている全13個のSkills一覧</summary>
+
+- `/uloop-compile` - コンパイルの実行
+- `/uloop-get-logs` - Consoleログの取得
+- `/uloop-run-tests` - テストの実行
+- `/uloop-clear-console` - Consoleのクリア
+- `/uloop-focus-window` - Unity Editorを前面に表示
+- `/uloop-get-hierarchy` - シーン階層の取得
+- `/uloop-unity-search` - Unity Search検索
+- `/uloop-get-menu-items` - メニュー項目の取得
+- `/uloop-execute-menu-item` - メニュー項目の実行
+- `/uloop-find-game-objects` - GameObject検索
+- `/uloop-capture-gameview` - Game Viewのキャプチャ
+- `/uloop-execute-dynamic-code` - 動的C#コード実行
+- `/uloop-get-provider-details` - 検索プロバイダー詳細
+
+</details>
+
+### CLIの直接利用（上級者向け）
+
+Skillsを使わずにCLIを直接呼び出すこともできます：
+
+```bash
+# 利用可能なツール一覧を取得
+uloop list
+
+# コンパイルを実行
+uloop compile
+
+# ログを取得
+uloop get-logs --max-count 10
+
+# テストを実行
+uloop run-tests --filter-type all
+
+# 動的コードを実行
+uloop execute-dynamic-code --code 'using UnityEngine; Debug.Log("Hello from CLI!");'
+```
+
+### シェル補完
+
+Bash/Zsh/PowerShell の補完機能をインストールできます：
+
+```bash
+# 補完スクリプトをシェル設定に追加（シェル自動検出）
+uloop completion --install
+
+# シェルを明示的に指定（MINGW64等で自動検出が失敗する場合）
+uloop completion --shell bash --install
+uloop completion --shell powershell --install
+
+# 補完スクリプトを確認
+uloop completion
+```
+
+### ポート指定
+
+`--port` を省略した場合は、プロジェクトで設定されたポートが自動選択されます。
+
+`--port` オプションを明示的に指定すると、一つのLLMツールから複数のUnityインスタンスを操作できます：
+
+```bash
+uloop compile --port {target-port}
+```
+
+> [!NOTE]
+> ポート番号は各Unityの uLoopMCP Window で確認できます。
+
 ## インストール
 
-> [!WARNING]  
+> [!WARNING]
 > 以下のソフトウェアが必須です
 > 
 > - **Unity 2022.3以上**

@@ -2,7 +2,8 @@
   "name": "uloopmcp-server",
   "version": "0.43.12",
   "//version": "x-release-please-version",
-  "description": "TypeScript MCP Server for Unity-Cursor integration",
+  "description": "TypeScript MCP Server for Unity Editor integration",
+  "private": true,
   "main": "dist/server.bundle.js",
   "type": "module",
   "scripts": {
@@ -38,7 +39,6 @@
     "debug:domain-reload-timing": "tsx debug/domain-reload-timing.ts",
     "debug:event-test": "tsx debug/event-test.ts",
     "debug:notification-test": "tsx debug/notification-test.ts",
-    "prepublishOnly": "npm run build",
     "postinstall": "npm run build"
   },
   "lint-staged": {
@@ -55,6 +55,15 @@
   ],
   "author": "hatayama",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hatayama/uLoopMCP.git",
+    "directory": "Packages/src/TypeScriptServer~"
+  },
+  "bugs": {
+    "url": "https://github.com/hatayama/uLoopMCP/issues"
+  },
+  "homepage": "https://github.com/hatayama/uLoopMCP#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.24.3",
     "uuid": "13.0.0",

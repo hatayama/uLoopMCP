@@ -1,0 +1,61 @@
+{
+  "name": "uloop-cli",
+  "version": "0.43.12",
+  "//version": "x-release-please-version",
+  "description": "CLI tool for Unity Editor communication via uLoopMCP",
+  "main": "dist/cli.bundle.cjs",
+  "bin": {
+    "uloop": "./dist/cli.bundle.cjs"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/cli.ts --bundle --platform=node --format=cjs --outfile=dist/cli.bundle.cjs --sourcemap --banner:js='#!/usr/bin/env node' --loader:.md=text",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write src/**/*.ts",
+    "format:check": "prettier --check src/**/*.ts",
+    "test:cli": "jest src/__tests__ --testTimeout=60000 --runInBand"
+  },
+  "keywords": [
+    "cli",
+    "unity",
+    "mcp",
+    "uloop"
+  ],
+  "author": "hatayama",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hatayama/uLoopMCP.git",
+    "directory": "Packages/src/Cli~"
+  },
+  "bugs": {
+    "url": "https://github.com/hatayama/uLoopMCP/issues"
+  },
+  "homepage": "https://github.com/hatayama/uLoopMCP#readme",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "commander": "^14.0.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.2",
+    "@types/jest": "30.0.0",
+    "@types/node": "25.0.2",
+    "esbuild": "0.27.1",
+    "eslint": "9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "5.5.4",
+    "eslint-plugin-security": "3.0.1",
+    "jest": "30.2.0",
+    "prettier": "3.7.4",
+    "ts-jest": "29.4.6",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.49.0"
+  }
+}

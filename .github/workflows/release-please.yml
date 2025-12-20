@@ -15,6 +15,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  id-token: write  # Required for npm provenance
 
 jobs:
   release:
@@ -36,7 +37,8 @@ jobs:
       - name: 🧪 Sanity check
         run: |
           test -f Packages/src/package.json && echo "✅ Unity package.json OK"
-          test -f Packages/src/TypeScriptServer~/package.json && echo "✅ TypeScript package.json OK"
+          test -f Packages/src/TypeScriptServer~/package.json && echo "✅ TypeScript Server package.json OK"
+          test -f Packages/src/Cli~/package.json && echo "✅ CLI package.json OK"
 
       # ── Execute release-please ───────────────────────────
       - name: 🚀 Run release‑please
@@ -47,14 +49,14 @@ jobs:
           manifest-file: .release-please-manifest.json
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── Rebuild TypeScript bundle when Release PR is created/updated ──
+      # ── Rebuild bundles when Release PR is created/updated ──
       - name: 🔧 Setup Node.js for bundle rebuild
         if: ${{ steps.release.outputs.pr }}
         uses: actions/setup-node@v6
         with:
           node-version: '22'
 
-      - name: 📦 Rebuild TypeScript bundle for Release PR
+      - name: 📦 Rebuild bundles for Release PR
         if: ${{ steps.release.outputs.pr }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -62,24 +64,45 @@ jobs:
         run: |
           # Extract PR number from JSON using jq
           PR_NUMBER=$(echo "${PR_JSON}" | jq -r '.number')
-          echo "🔄 Release PR #${PR_NUMBER} detected, rebuilding bundle..."
-          
+          echo "🔄 Release PR #${PR_NUMBER} detected, rebuilding bundles..."
+
           # Checkout the PR branch
           gh pr checkout "${PR_NUMBER}"
-          
-          # Build the bundle
+
+          # Build TypeScript Server bundle (CLI is built during npm publish, not committed)
+          echo "📦 Building TypeScript Server..."
           cd Packages/src/TypeScriptServer~
           npm ci
           npm run build
-          
+          cd ../../..
+
           # Commit and push if bundle changed
-          git add dist/server.bundle.js dist/server.bundle.js.map
+          git add Packages/src/TypeScriptServer~/dist/server.bundle.js Packages/src/TypeScriptServer~/dist/server.bundle.js.map
           if git diff --cached --quiet; then
             echo "✅ No changes to bundle, skipping commit"
           else
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -m "chore: rebuild server.bundle.js for release"
+            git commit -m "chore: rebuild server bundle for release"
             git push
-            echo "✅ Bundle rebuilt and pushed to PR"
+            echo "✅ Server bundle rebuilt and pushed to PR"
           fi
+
+      # ── Publish to npm when release is created ──────────────────
+      - name: 🔧 Setup Node.js for npm publish
+        if: ${{ steps.release.outputs.release_created }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 📦 Publish CLI to npm
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd Packages/src/Cli~
+          npm ci
+          npm run build
+          npm publish --access public --provenance
+          echo "✅ CLI published to npm with provenance"
