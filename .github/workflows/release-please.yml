@@ -89,15 +89,31 @@ jobs:
           fi
 
       # ── Publish to npm when release is created ──────────────────
+      - name: 🔍 Check if npm publish needed
+        id: check_npm
+        run: |
+          # Get version from CLI package.json
+          CLI_VERSION=$(jq -r '.version' Packages/src/Cli~/package.json)
+          echo "cli_version=${CLI_VERSION}" >> $GITHUB_OUTPUT
+
+          # Check if this version exists on npm
+          if npm view "uloop-cli@${CLI_VERSION}" version 2>/dev/null; then
+            echo "Version ${CLI_VERSION} already published to npm"
+            echo "needs_publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version ${CLI_VERSION} not found on npm, will publish"
+            echo "needs_publish=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: 🔧 Setup Node.js for npm publish
-        if: ${{ steps.release.outputs.release_created }}
+        if: ${{ steps.check_npm.outputs.needs_publish == 'true' }}
         uses: actions/setup-node@v6
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
       - name: 📦 Publish CLI to npm
-        if: ${{ steps.release.outputs.release_created }}
+        if: ${{ steps.check_npm.outputs.needs_publish == 'true' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -105,4 +121,4 @@ jobs:
           npm ci
           npm run build
           npm publish --access public --provenance
-          echo "✅ CLI published to npm with provenance"
+          echo "✅ CLI v${{ steps.check_npm.outputs.cli_version }} published to npm with provenance"
