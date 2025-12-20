@@ -56,10 +56,11 @@ program
 
 program
   .command('completion')
-  .description('Setup shell completion (auto-detects shell from $SHELL)')
+  .description('Setup shell completion')
   .option('--install', 'Install completion to shell config file')
-  .action((options: { install?: boolean }) => {
-    handleCompletion(options.install ?? false);
+  .option('--shell <type>', 'Shell type: bash, zsh, or powershell')
+  .action((options: { install?: boolean; shell?: string }) => {
+    handleCompletion(options.install ?? false, options.shell);
   });
 
 program
@@ -226,32 +227,46 @@ async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
 }
 
 /**
- * Detect shell type from $SHELL environment variable.
+ * Detect shell type from environment.
  */
-function detectShell(): 'bash' | 'zsh' | null {
+function detectShell(): 'bash' | 'zsh' | 'powershell' | null {
+  // Check $SHELL first (works for bash/zsh including MINGW64)
   const shell = process.env['SHELL'] || '';
-  const shellName = basename(shell);
+  const shellName = basename(shell).replace(/\.exe$/i, ''); // Remove .exe for Windows
   if (shellName === 'zsh') {
     return 'zsh';
   }
   if (shellName === 'bash') {
     return 'bash';
   }
+
+  // Check for PowerShell (only if $SHELL is not set)
+  if (process.env['PSModulePath']) {
+    return 'powershell';
+  }
+
   return null;
 }
 
 /**
  * Get shell config file path.
  */
-function getShellConfigPath(shell: 'bash' | 'zsh'): string {
+function getShellConfigPath(shell: 'bash' | 'zsh' | 'powershell'): string {
   const home = homedir();
-  return shell === 'zsh' ? join(home, '.zshrc') : join(home, '.bashrc');
+  if (shell === 'zsh') {
+    return join(home, '.zshrc');
+  }
+  if (shell === 'powershell') {
+    // PowerShell profile path
+    return join(home, 'Documents', 'WindowsPowerShell', 'Microsoft.PowerShell_profile.ps1');
+  }
+  return join(home, '.bashrc');
 }
 
 /**
  * Get completion script for a shell.
  */
-function getCompletionScript(shell: 'bash' | 'zsh'): string {
+function getCompletionScript(shell: 'bash' | 'zsh' | 'powershell'): string {
   if (shell === 'bash') {
     return `# uloop bash completion
 _uloop_completions() {
@@ -265,6 +280,24 @@ _uloop_completions() {
   fi
 }
 complete -F _uloop_completions uloop`;
+  }
+
+  if (shell === 'powershell') {
+    return `# uloop PowerShell completion
+Register-ArgumentCompleter -Native -CommandName uloop -ScriptBlock {
+  param($wordToComplete, $commandAst, $cursorPosition)
+  $commands = $commandAst.CommandElements
+  if ($commands.Count -eq 1) {
+    uloop --list-commands 2>$null | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+      [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+    }
+  } elseif ($commands.Count -ge 2) {
+    $cmd = $commands[1].ToString()
+    uloop --list-options $cmd 2>$null | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+      [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+    }
+  }
+}`;
   }
 
   /* eslint-disable no-useless-escape */
@@ -326,10 +359,31 @@ function updateCli(): void {
 /**
  * Handle completion command.
  */
-function handleCompletion(install: boolean): void {
-  const shell = detectShell();
+function handleCompletion(install: boolean, shellOverride?: string): void {
+  let shell: 'bash' | 'zsh' | 'powershell' | null;
+
+  if (shellOverride) {
+    const normalized = shellOverride.toLowerCase();
+    if (
+      normalized === 'bash' ||
+      normalized === 'zsh' ||
+      normalized === 'powershell'
+    ) {
+      shell = normalized;
+    } else {
+      console.error(
+        `Unknown shell: ${shellOverride}. Supported: bash, zsh, powershell`,
+      );
+      process.exit(1);
+    }
+  } else {
+    shell = detectShell();
+  }
+
   if (!shell) {
-    console.error('Could not detect shell from $SHELL. Supported: bash, zsh');
+    console.error(
+      'Could not detect shell. Use --shell option: bash, zsh, or powershell',
+    );
     process.exit(1);
   }
 
@@ -342,22 +396,31 @@ function handleCompletion(install: boolean): void {
 
   // Install to shell config file
   const configPath = getShellConfigPath(shell);
-  const evalLine = 'eval "$(uloop completion)"';
 
   // Check if already installed
   if (existsSync(configPath)) {
     const content = readFileSync(configPath, 'utf-8');
-    if (content.includes('uloop completion')) {
+    if (content.includes('uloop')) {
       console.log(`Completion already installed in ${configPath}`);
       return;
     }
   }
 
-  // Append to config file
-  const lineToAdd = `\n# uloop CLI completion\n${evalLine}\n`;
-  appendFileSync(configPath, lineToAdd, 'utf-8');
-  console.log(`Completion installed to ${configPath}`);
-  console.log(`Run 'source ${configPath}' or restart your shell to enable completion.`);
+  // Different install method for PowerShell vs Unix shells
+  if (shell === 'powershell') {
+    // For PowerShell, write the script directly to profile
+    const lineToAdd = `\n${script}\n`;
+    appendFileSync(configPath, lineToAdd, 'utf-8');
+    console.log(`Completion installed to ${configPath}`);
+    console.log('Restart PowerShell to enable completion.');
+  } else {
+    // For bash/zsh, use eval
+    const evalLine = 'eval "$(uloop completion)"';
+    const lineToAdd = `\n# uloop CLI completion\n${evalLine}\n`;
+    appendFileSync(configPath, lineToAdd, 'utf-8');
+    console.log(`Completion installed to ${configPath}`);
+    console.log(`Run 'source ${configPath}' or restart your shell to enable completion.`);
+  }
 }
 
 /**
