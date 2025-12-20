@@ -110,6 +110,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: 📦 Publish CLI to npm
         if: ${{ steps.check_npm.outputs.needs_publish == 'true' }}
@@ -117,6 +118,8 @@ jobs:
           cd Packages/src/Cli~
           npm ci
           npm run build
-          # Uses OIDC trusted publishing (no .npmrc or token needed)
-          npm publish --access public --provenance --registry https://registry.npmjs.org
+          npm install -g npm@latest
+          echo "📋 npm version: $(npm --version)"
+          # Uses OIDC trusted publishing - npm automatically detects OIDC environment
+          npm publish --access public --provenance
           echo "✅ CLI v${{ steps.check_npm.outputs.cli_version }} published to npm with provenance"
