@@ -324,13 +324,17 @@ uloop execute-dynamic-code --code 'using UnityEngine; Debug.Log("Hello from CLI!
 
 ### Shell Completion
 
-You can install Bash/Zsh completion:
+You can install Bash/Zsh/PowerShell completion:
 
 ```bash
-# Add completion script to shell config
+# Add completion script to shell config (auto-detects shell)
 uloop completion --install
 
-# Or check manually
+# Explicitly specify shell (when auto-detection fails, e.g., MINGW64)
+uloop completion --shell bash --install
+uloop completion --shell powershell --install
+
+# Check completion script
 uloop completion
 ```
 

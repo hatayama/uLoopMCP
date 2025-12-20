@@ -324,13 +324,17 @@ uloop execute-dynamic-code --code 'using UnityEngine; Debug.Log("Hello from CLI!
 
 ### シェル補完
 
-Bash/Zsh の補完機能をインストールできます：
+Bash/Zsh/PowerShell の補完機能をインストールできます：
 
 ```bash
-# 補完スクリプトをシェル設定に追加
+# 補完スクリプトをシェル設定に追加（シェル自動検出）
 uloop completion --install
 
-# または手動で確認
+# シェルを明示的に指定（MINGW64等で自動検出が失敗する場合）
+uloop completion --shell bash --install
+uloop completion --shell powershell --install
+
+# 補完スクリプトを確認
 uloop completion
 ```
 
