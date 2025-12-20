@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.44.0](https://github.com/hatayama/uLoopMCP/compare/v0.43.12...v0.44.0) (2025-12-20)
+
+
+### Features
+
+* add standalone uloop CLI with shell completion and bundled skills ([#443](https://github.com/hatayama/uLoopMCP/issues/443)) ([34f01cb](https://github.com/hatayama/uLoopMCP/commit/34f01cb1f243fc88900aef40a75cd60f36437173))
+
 ## [0.43.12](https://github.com/hatayama/uLoopMCP/compare/v0.43.11...v0.43.12) (2025-12-18)
 
 
