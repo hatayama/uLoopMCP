@@ -11,6 +11,7 @@ import { DirectUnityClient } from './direct-unity-client.js';
 import { resolveUnityPort } from './port-resolver.js';
 import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './tool-cache.js';
 import { VERSION } from './version.js';
+import { createSpinner } from './spinner.js';
 
 /**
  * Suppress stdin echo during async operation to prevent escape sequences from being displayed.
@@ -59,15 +60,19 @@ export async function executeToolCommand(
 
   const client = new DirectUnityClient(port);
   const restoreStdin = suppressStdinEcho();
+  const spinner = createSpinner('Connecting to Unity...');
 
   try {
     await client.connect();
 
+    spinner.update(`Executing ${toolName}...`);
     const result = await client.sendRequest(toolName, params);
 
+    spinner.stop();
     // Always output JSON to match MCP response format
     console.log(JSON.stringify(result, null, 2));
   } finally {
+    spinner.stop();
     restoreStdin();
     client.disconnect();
   }
@@ -86,14 +91,17 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
 
   const client = new DirectUnityClient(port);
   const restoreStdin = suppressStdinEcho();
+  const spinner = createSpinner('Connecting to Unity...');
 
   try {
     await client.connect();
 
+    spinner.update('Fetching tool list...');
     const result = await client.sendRequest<{
       Tools: Array<{ name: string; description: string }>;
     }>('get-tool-details', { IncludeDevelopmentOnly: false });
 
+    spinner.stop();
     if (!result.Tools || !Array.isArray(result.Tools)) {
       throw new Error('Unexpected response from Unity: missing Tools array');
     }
@@ -102,6 +110,7 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
       console.log(`  - ${tool.name}`);
     }
   } finally {
+    spinner.stop();
     restoreStdin();
     client.disconnect();
   }
@@ -151,14 +160,17 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
 
   const client = new DirectUnityClient(port);
   const restoreStdin = suppressStdinEcho();
+  const spinner = createSpinner('Connecting to Unity...');
 
   try {
     await client.connect();
 
+    spinner.update('Syncing tools...');
     const result = await client.sendRequest<{
       Tools: UnityToolInfo[];
     }>('get-tool-details', { IncludeDevelopmentOnly: false });
 
+    spinner.stop();
     if (!result.Tools || !Array.isArray(result.Tools)) {
       throw new Error('Unexpected response from Unity: missing Tools array');
     }
@@ -185,6 +197,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
       console.log(`  - ${tool.name}`);
     }
   } finally {
+    spinner.stop();
     restoreStdin();
     client.disconnect();
   }
