@@ -211,6 +211,15 @@ function isDomainReloadLockFilePresent(): boolean {
   return existsSync(lockPath);
 }
 
+function isCompilingLockFilePresent(): boolean {
+  const projectRoot = findUnityProjectRoot();
+  if (projectRoot === null) {
+    return false;
+  }
+  const lockPath = join(projectRoot, 'Temp', 'compiling.lock');
+  return existsSync(lockPath);
+}
+
 async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
   try {
     await fn();
@@ -218,7 +227,10 @@ async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
     const message = error instanceof Error ? error.message : String(error);
 
     if (message.includes('ECONNREFUSED')) {
-      if (isDomainReloadLockFilePresent()) {
+      if (isCompilingLockFilePresent()) {
+        console.error('\x1b[33m⏳ Unity is compiling scripts.\x1b[0m');
+        console.error('Please wait for compilation to finish and try again.');
+      } else if (isDomainReloadLockFilePresent()) {
         console.error('\x1b[33m⏳ Unity is reloading (Domain Reload in progress).\x1b[0m');
         console.error('Please wait a moment and try again.');
       } else {
