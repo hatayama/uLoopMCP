@@ -34,7 +34,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 3. Easy setup from Unity Package Manager and a few clicks to connect from LLM tools (Cursor, Claude Code, GitHub Copilot, Windsurf, etc.).
 4. Type-safe extension model for adding project-specific MCP tools that AI can implement and iterate on for you.
 5. Log and hierarchy data can be exported to files to avoid burning LLM context on large payloads.
-6. Standalone CLI tool `uloop` provided. **No MCP configuration required—just install Skills and Claude Code will automatically operate Unity**. 13 bundled Skills enable Claude Code to handle compilation, test execution, log retrieval, and more. ([Details](#cli-tool-uloop))
+6. Standalone CLI tool `uloop` provided. **No MCP configuration required—just install Skills and LLM tools will automatically operate Unity**. 13 bundled Skills enable LLM tools to handle compilation, test execution, log retrieval, and more. ([Details](#cli-tool-uloop))
 
 # Example Use Cases
 - Let an AI keep fixing your project until compilation passes and all tests go green.
@@ -297,8 +297,16 @@ For detailed specifications of all tools (parameters, responses, examples), see 
 
 uLoopMCP includes a standalone CLI tool `uloop`.
 
-**The key advantage of this CLI is that LLM tools can operate Unity without any MCP configuration.**
-Just install the 13 bundled Skills, and Skills-compatible LLM tools (such as Claude Code) will automatically integrate with Unity.
+> **💡 CLI and MCP Relationship**
+> CLI and MCP provide the same functionality. You can use either to perform the same operations.
+
+**Benefits of CLI:**
+- **Works with Skills**: Automatically invoked by Skills-compatible LLM tools
+- **No MCP configuration required**: No need to edit MCP configuration files
+- **Multiple Unity instances**: Operate multiple Unity instances from a single AI Agent using `--port`
+- **Context-efficient**: Unlike MCP, does not consume LLM context
+
+Just install the 13 bundled Skills, and Skills-compatible LLM tools will automatically integrate with Unity.
 
 ### Quick Start
 
@@ -316,13 +324,13 @@ uloop skills install
 uloop skills install --global
 ```
 
-That's it! Claude Code will automatically recognize skills like `/uloop-compile`, `/uloop-get-logs`, and use them at the right time.
+That's it! Skills-compatible LLM tools will automatically recognize skills like `/uloop-compile`, `/uloop-get-logs`, and use them at the right time.
 
 ### About Skills
 
-After installing Skills, Claude Code can automatically handle instructions like these:
+After installing Skills, LLM tools can automatically handle instructions like these:
 
-| Your Instruction | Skill Used by Claude Code |
+| Your Instruction | Skill Used by LLM Tools |
 |---|---|
 | "Fix the compile errors" | `/uloop-compile` |
 | "Run the tests and tell me why they failed" | `/uloop-run-tests` + `/uloop-get-logs` |
@@ -330,7 +338,7 @@ After installing Skills, Claude Code can automatically handle instructions like 
 | "Search for prefabs" | `/uloop-unity-search` |
 
 > [!TIP]
-> **No MCP configuration required!** As long as the server is running in the uLoopMCP Window, Claude Code communicates directly with Unity through Skills.
+> **No MCP configuration required!** As long as the server is running in the uLoopMCP Window, LLM tools communicate directly with Unity through Skills.
 
 <details>
 <summary>All 13 Bundled Skills</summary>

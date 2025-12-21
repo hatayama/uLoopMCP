@@ -1,0 +1,34 @@
+/**
+ * Target configuration for multi-AI tool support.
+ * Supports Claude Code and Codex CLI, with extensibility for future targets.
+ */
+
+export type TargetId = 'claude' | 'codex';
+
+export interface TargetConfig {
+  id: TargetId;
+  displayName: string;
+  projectDir: string;
+  skillFileName: string;
+}
+
+export const TARGET_CONFIGS: Record<TargetId, TargetConfig> = {
+  claude: {
+    id: 'claude',
+    displayName: 'Claude Code',
+    projectDir: '.claude',
+    skillFileName: 'SKILL.md',
+  },
+  codex: {
+    id: 'codex',
+    displayName: 'Codex CLI',
+    projectDir: '.codex',
+    skillFileName: 'SKILL.md',
+  },
+};
+
+export const ALL_TARGET_IDS: TargetId[] = ['claude', 'codex'];
+
+export function getTargetConfig(id: TargetId): TargetConfig {
+  return TARGET_CONFIGS[id];
+}

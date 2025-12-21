@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { BUNDLED_SKILLS, BundledSkill } from './bundled-skills.js';
+import { TargetConfig } from './target-config.js';
 
 export type SkillStatus = 'installed' | 'not_installed' | 'outdated';
 
@@ -18,26 +19,26 @@ export interface SkillInfo {
   path?: string;
 }
 
-function getGlobalSkillsDir(): string {
-  return join(homedir(), '.claude', 'skills');
+function getGlobalSkillsDir(target: TargetConfig): string {
+  return join(homedir(), target.projectDir, 'skills');
 }
 
-function getProjectSkillsDir(): string {
-  return join(process.cwd(), '.claude', 'skills');
+function getProjectSkillsDir(target: TargetConfig): string {
+  return join(process.cwd(), target.projectDir, 'skills');
 }
 
-function getSkillPath(skillDirName: string, global: boolean): string {
-  const baseDir = global ? getGlobalSkillsDir() : getProjectSkillsDir();
-  return join(baseDir, skillDirName, 'SKILL.md');
+function getSkillPath(skillDirName: string, target: TargetConfig, global: boolean): string {
+  const baseDir = global ? getGlobalSkillsDir(target) : getProjectSkillsDir(target);
+  return join(baseDir, skillDirName, target.skillFileName);
 }
 
-function isSkillInstalled(skill: BundledSkill, global: boolean): boolean {
-  const skillPath = getSkillPath(skill.dirName, global);
+function isSkillInstalled(skill: BundledSkill, target: TargetConfig, global: boolean): boolean {
+  const skillPath = getSkillPath(skill.dirName, target, global);
   return existsSync(skillPath);
 }
 
-function isSkillOutdated(skill: BundledSkill, global: boolean): boolean {
-  const skillPath = getSkillPath(skill.dirName, global);
+function isSkillOutdated(skill: BundledSkill, target: TargetConfig, global: boolean): boolean {
+  const skillPath = getSkillPath(skill.dirName, target, global);
   if (!existsSync(skillPath)) {
     return false;
   }
@@ -45,35 +46,45 @@ function isSkillOutdated(skill: BundledSkill, global: boolean): boolean {
   return installedContent !== skill.content;
 }
 
-export function getSkillStatus(skill: BundledSkill, global: boolean): SkillStatus {
-  if (!isSkillInstalled(skill, global)) {
+export function getSkillStatus(
+  skill: BundledSkill,
+  target: TargetConfig,
+  global: boolean,
+): SkillStatus {
+  if (!isSkillInstalled(skill, target, global)) {
     return 'not_installed';
   }
-  if (isSkillOutdated(skill, global)) {
+  if (isSkillOutdated(skill, target, global)) {
     return 'outdated';
   }
   return 'installed';
 }
 
-export function getAllSkillStatuses(global: boolean): SkillInfo[] {
+export function getAllSkillStatuses(target: TargetConfig, global: boolean): SkillInfo[] {
   return BUNDLED_SKILLS.map((skill) => ({
     name: skill.name,
-    status: getSkillStatus(skill, global),
-    path: isSkillInstalled(skill, global) ? getSkillPath(skill.dirName, global) : undefined,
+    status: getSkillStatus(skill, target, global),
+    path: isSkillInstalled(skill, target, global)
+      ? getSkillPath(skill.dirName, target, global)
+      : undefined,
   }));
 }
 
-export function installSkill(skill: BundledSkill, global: boolean): void {
-  const baseDir = global ? getGlobalSkillsDir() : getProjectSkillsDir();
+export function installSkill(skill: BundledSkill, target: TargetConfig, global: boolean): void {
+  const baseDir = global ? getGlobalSkillsDir(target) : getProjectSkillsDir(target);
   const skillDir = join(baseDir, skill.dirName);
-  const skillPath = join(skillDir, 'SKILL.md');
+  const skillPath = join(skillDir, target.skillFileName);
 
   mkdirSync(skillDir, { recursive: true });
   writeFileSync(skillPath, skill.content, 'utf-8');
 }
 
-export function uninstallSkill(skill: BundledSkill, global: boolean): boolean {
-  const baseDir = global ? getGlobalSkillsDir() : getProjectSkillsDir();
+export function uninstallSkill(
+  skill: BundledSkill,
+  target: TargetConfig,
+  global: boolean,
+): boolean {
+  const baseDir = global ? getGlobalSkillsDir(target) : getProjectSkillsDir(target);
   const skillDir = join(baseDir, skill.dirName);
 
   if (!existsSync(skillDir)) {
@@ -90,17 +101,17 @@ export interface InstallResult {
   skipped: number;
 }
 
-export function installAllSkills(global: boolean): InstallResult {
+export function installAllSkills(target: TargetConfig, global: boolean): InstallResult {
   const result: InstallResult = { installed: 0, updated: 0, skipped: 0 };
 
   for (const skill of BUNDLED_SKILLS) {
-    const status = getSkillStatus(skill, global);
+    const status = getSkillStatus(skill, target, global);
 
     if (status === 'not_installed') {
-      installSkill(skill, global);
+      installSkill(skill, target, global);
       result.installed++;
     } else if (status === 'outdated') {
-      installSkill(skill, global);
+      installSkill(skill, target, global);
       result.updated++;
     } else {
       result.skipped++;
@@ -115,11 +126,11 @@ export interface UninstallResult {
   notFound: number;
 }
 
-export function uninstallAllSkills(global: boolean): UninstallResult {
+export function uninstallAllSkills(target: TargetConfig, global: boolean): UninstallResult {
   const result: UninstallResult = { removed: 0, notFound: 0 };
 
   for (const skill of BUNDLED_SKILLS) {
-    if (uninstallSkill(skill, global)) {
+    if (uninstallSkill(skill, target, global)) {
       result.removed++;
     } else {
       result.notFound++;
@@ -129,8 +140,8 @@ export function uninstallAllSkills(global: boolean): UninstallResult {
   return result;
 }
 
-export function getInstallDir(global: boolean): string {
-  return global ? getGlobalSkillsDir() : getProjectSkillsDir();
+export function getInstallDir(target: TargetConfig, global: boolean): string {
+  return global ? getGlobalSkillsDir(target) : getProjectSkillsDir(target);
 }
 
 export function getTotalSkillCount(): number {
