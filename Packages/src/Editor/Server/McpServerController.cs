@@ -79,6 +79,9 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static async Task StartServerWithUseCaseAsync(int port)
         {
+            // Signal server is starting for CLI detection
+            ServerStartingLockService.CreateLockFile();
+
             // Always stop the existing server first (to release the port)
             if (mcpServer != null)
             {
@@ -501,6 +504,7 @@ namespace io.github.hatayama.uLoopMCP
             // Ensure lock files are cleaned up on server startup (handles crash recovery)
             DomainReloadDetectionService.DeleteLockFile();
             CompilationLockService.DeleteLockFile();
+            ServerStartingLockService.DeleteLockFile();
 
             VibeLogger.LogInfo("startup_request", $"port={savedPort}");
 

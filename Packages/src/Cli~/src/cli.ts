@@ -224,6 +224,15 @@ function isCompilingLockFilePresent(): boolean {
   return existsSync(lockPath);
 }
 
+function isServerStartingLockFilePresent(): boolean {
+  const projectRoot = findUnityProjectRoot();
+  if (projectRoot === null) {
+    return false;
+  }
+  const lockPath = join(projectRoot, 'Temp', 'serverstarting.lock');
+  return existsSync(lockPath);
+}
+
 async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
   try {
     await fn();
@@ -236,6 +245,9 @@ async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
         console.error('Please wait for compilation to finish and try again.');
       } else if (isDomainReloadLockFilePresent()) {
         console.error('\x1b[33m⏳ Unity is reloading (Domain Reload in progress).\x1b[0m');
+        console.error('Please wait a moment and try again.');
+      } else if (isServerStartingLockFilePresent()) {
+        console.error('\x1b[33m⏳ Unity server is starting.\x1b[0m');
         console.error('Please wait a moment and try again.');
       } else {
         console.error('\x1b[31mError: Cannot connect to Unity.\x1b[0m');

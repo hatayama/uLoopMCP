@@ -189,7 +189,10 @@ namespace io.github.hatayama.uLoopMCP
                 _isRunning = true;
                 
                 _serverTask = Task.Run(() => ServerLoopAsync(_cancellationTokenSource.Token));
-                
+
+                // Server is now ready to accept connections
+                ServerStartingLockService.DeleteLockFile();
+
                 // Notify that server has started
                 OnServerStarted?.Invoke();
                 
