@@ -34,7 +34,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 3. Unity Package Manager からインストールし、お使いの LLM ツール（Cursor / Claude Code / Codex / Gemini など）と数クリックで接続できます。
 4. プロジェクト固有の MCP ツールを型安全に拡張しやすく、AI に実装を任せやすい設計になっています。
 5. 大量のログや階層情報はファイルに書き出すことで、LLM のコンテキスト消費を抑える工夫をしています。
-6. スタンドアロン CLI ツール `uloop` を提供。**MCP設定不要で、Skills をインストールするだけで Claude Code が自動的に Unity を操作できます**。13個のバンドルされた Skills により、コンパイル・テスト実行・ログ取得などをClaude Codeに任せられます。（[詳細](#cli-ツール-uloop)）
+6. スタンドアロン CLI ツール `uloop` を提供。**MCP設定不要で、Skills をインストールするだけで LLM ツールが自動的に Unity を操作できます**。13個のバンドルされた Skills により、コンパイル・テスト実行・ログ取得などをLLMツールに任せられます。（[詳細](#cli-ツール-uloop)）
 
 # ユースケース例
 - Unity プロジェクトの「コンパイルが通るまで」「テストが緑になるまで」を、AI に任せて自律的に回し続ける
@@ -297,8 +297,16 @@ Scope(s): org.nuget
 
 uLoopMCPには、スタンドアロンCLIツール `uloop` が付属しています。
 
-**このCLIの最大の特徴は、MCP設定なしでLLMツールからUnityを操作できること**です。
-13個のバンドルされたSkillsをインストールするだけで、Skills対応のLLMツール（Claude Codeなど）が自動的にUnityと連携します。
+> **💡 CLIとMCPの関係**
+> CLIとMCPは同じ機能を提供します。どちらを使っても同じ操作が可能です。
+
+**CLIのメリット:**
+- **Skills と併用**: Skills 対応のLLMツールから自動的に呼び出される
+- **MCP設定不要**: 面倒なMCP設定ファイルの編集が不要
+- **複数Unityの操作**: 1つのAI Agentから `--port` 指定で複数のUnityインスタンスを操作可能
+- **コンテキスト節約**: MCPと違い、LLMのコンテキストを消費しない
+
+13個のバンドルされたSkillsをインストールするだけで、Skills対応のLLMツールが自動的にUnityと連携します。
 
 ### クイックスタート
 
@@ -316,13 +324,13 @@ uloop skills install
 uloop skills install --global
 ```
 
-これで完了です！Claude Codeが `/uloop-compile`、`/uloop-get-logs` などのスキルを自動認識し、適切なタイミングで使用してくれます。
+これで完了です！Skills対応のLLMツールが `/uloop-compile`、`/uloop-get-logs` などのスキルを自動認識し、適切なタイミングで使用してくれます。
 
 ### Skills について
 
-Skillsをインストールすると、Claude Codeが以下のような指示に自動で対応できるようになります：
+Skillsをインストールすると、LLMツールが以下のような指示に自動で対応できるようになります：
 
-| あなたの指示 | Claude Codeが使うSkill |
+| あなたの指示 | LLMツールが使うSkill |
 |---|---|
 | 「コンパイルエラーを直して」 | `/uloop-compile` |
 | 「テストを実行して失敗原因を教えて」 | `/uloop-run-tests` + `/uloop-get-logs` |
@@ -330,7 +338,7 @@ Skillsをインストールすると、Claude Codeが以下のような指示に
 | 「Prefabを検索して」 | `/uloop-unity-search` |
 
 > [!TIP]
-> **MCP設定は不要です！** uLoopMCP Windowでサーバーを起動していれば、Skillsを通じてClaude Codeが直接Unityと通信します。
+> **MCP設定は不要です！** uLoopMCP Windowでサーバーを起動していれば、Skillsを通じてLLMツールが直接Unityと通信します。
 
 <details>
 <summary>バンドルされている全13個のSkills一覧</summary>
