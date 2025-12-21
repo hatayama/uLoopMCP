@@ -3,6 +3,9 @@
  * Establishes one-shot TCP connections to Unity without going through MCP server.
  */
 
+// Non-null assertions are used after TCP frame parsing where data existence is guaranteed by protocol
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+
 import * as net from 'net';
 import { createFrame, parseFrameFromBuffer, extractFrameFromBuffer } from './simple-framer.js';
 

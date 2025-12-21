@@ -2,6 +2,9 @@
  * Skills manager for installing/uninstalling/listing uloop skills.
  */
 
+// File paths are constructed from home directory and skill names, not from untrusted user input
+/* eslint-disable security/detect-non-literal-fs-filename */
+
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';

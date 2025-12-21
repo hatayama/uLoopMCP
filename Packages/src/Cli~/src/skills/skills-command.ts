@@ -2,6 +2,9 @@
  * CLI command definitions for skills management.
  */
 
+// CLI commands output to console by design
+/* eslint-disable no-console */
+
 import { Command } from 'commander';
 import {
   getAllSkillStatuses,

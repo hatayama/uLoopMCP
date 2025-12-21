@@ -9,8 +9,28 @@ namespace io.github.hatayama.uLoopMCP
     /// Related classes: McpSessionManager, McpServerController
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - Application Service Layer (Single Function Implementation)
     /// </summary>
+    [InitializeOnLoad]
     public static class DomainReloadDetectionService
     {
+        static DomainReloadDetectionService()
+        {
+            AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+            AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
+        }
+
+        private static void OnBeforeAssemblyReload()
+        {
+            UnityEngine.Debug.Log("[DomainReloadDetectionService] Before assembly reload, creating lock file");
+            CreateLockFile();
+        }
+
+        private static void OnAfterAssemblyReload()
+        {
+            // Lock file is deleted by McpBridgeServer when server startup completes
+            // to avoid a gap between domain reload end and server ready
+            UnityEngine.Debug.Log("[DomainReloadDetectionService] After assembly reload (lock file deleted when server ready)");
+        }
+
         private const string LOCK_FILE_NAME = "domainreload.lock";
 
         private static string LockFilePath => Path.Combine(UnityEngine.Application.dataPath, "..", "Temp", LOCK_FILE_NAME);
@@ -59,8 +79,8 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="correlationId">Tracking ID for related operations</param>
         public static void CompleteDomainReload(string correlationId)
         {
-            // Delete lock file for external process detection
-            DeleteLockFile();
+            // Lock file is deleted by McpBridgeServer when server startup completes
+            // to avoid a gap between domain reload completion and server ready
 
             // Clear Domain Reload completion flag
             McpEditorSettings.ClearDomainReloadFlag();
@@ -101,10 +121,6 @@ namespace io.github.hatayama.uLoopMCP
             return McpEditorSettings.GetIsAfterCompile();
         }
 
-        /// <summary>
-        /// Create lock file to signal Domain Reload in progress.
-        /// External processes (e.g., CLI) can check this file to detect Domain Reload state.
-        /// </summary>
         private static void CreateLockFile()
         {
             string lockPath = LockFilePath;

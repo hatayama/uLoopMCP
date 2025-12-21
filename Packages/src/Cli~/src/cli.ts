@@ -4,7 +4,11 @@
  * Commands are dynamically registered from tools.json cache.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+// CLI tools output to console by design, file paths are constructed from trusted sources (project root detection),
+// and object keys come from tool definitions which are internal trusted data
+/* eslint-disable no-console, security/detect-non-literal-fs-filename, security/detect-object-injection */
+
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
 import { join, basename, dirname } from 'path';
 import { homedir } from 'os';
 import { spawn } from 'child_process';
@@ -25,7 +29,7 @@ interface CliOptions extends GlobalOptions {
   [key: string]: unknown;
 }
 
-const BUILTIN_COMMANDS = ['list', 'sync', 'completion', 'update', 'skills'] as const;
+const BUILTIN_COMMANDS = ['list', 'sync', 'completion', 'update', 'fix', 'skills'] as const;
 
 const program = new Command();
 
@@ -71,6 +75,13 @@ program
   .description('Update uloop CLI to the latest version')
   .action(() => {
     updateCli();
+  });
+
+program
+  .command('fix')
+  .description('Clean up stale lock files that may prevent CLI from connecting')
+  .action(() => {
+    cleanupLockFiles();
   });
 
 // Register skills subcommand
@@ -202,29 +213,39 @@ function extractGlobalOptions(options: Record<string, unknown>): GlobalOptions {
   };
 }
 
-function isDomainReloadLockFilePresent(): boolean {
-  const projectRoot = findUnityProjectRoot();
-  if (projectRoot === null) {
-    return false;
-  }
-  const lockPath = join(projectRoot, 'Temp', 'domainreload.lock');
-  return existsSync(lockPath);
-}
-
 async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
   try {
     await fn();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
+    if (message === 'UNITY_COMPILING') {
+      console.error('\x1b[33m⏳ Unity is compiling scripts.\x1b[0m');
+      console.error('Please wait for compilation to finish and try again.');
+      process.exit(1);
+    }
+
+    if (message === 'UNITY_DOMAIN_RELOAD') {
+      console.error('\x1b[33m⏳ Unity is reloading (Domain Reload in progress).\x1b[0m');
+      console.error('Please wait a moment and try again.');
+      process.exit(1);
+    }
+
+    if (message === 'UNITY_SERVER_STARTING') {
+      console.error('\x1b[33m⏳ Unity server is starting.\x1b[0m');
+      console.error('Please wait a moment and try again.');
+      process.exit(1);
+    }
+
+    if (message === 'UNITY_NO_RESPONSE') {
+      console.error('\x1b[33m⏳ Unity is busy (no response received).\x1b[0m');
+      console.error('Unity may be compiling, reloading, or starting. Please wait and try again.');
+      process.exit(1);
+    }
+
     if (message.includes('ECONNREFUSED')) {
-      if (isDomainReloadLockFilePresent()) {
-        console.error('\x1b[33m⏳ Unity is reloading (Domain Reload in progress).\x1b[0m');
-        console.error('Please wait a moment and try again.');
-      } else {
-        console.error('\x1b[31mError: Cannot connect to Unity.\x1b[0m');
-        console.error('Make sure Unity is running with uLoopMCP installed.');
-      }
+      console.error('\x1b[31mError: Cannot connect to Unity.\x1b[0m');
+      console.error('Make sure Unity is running with uLoopMCP installed.');
       process.exit(1);
     }
 
@@ -334,7 +355,6 @@ compdef _uloop uloop`;
  * Update uloop CLI to the latest version using npm.
  */
 function updateCli(): void {
-  // eslint-disable-next-line no-console
   console.log('Updating uloop-cli to the latest version...');
 
   const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
@@ -345,22 +365,49 @@ function updateCli(): void {
 
   child.on('close', (code) => {
     if (code === 0) {
-      // eslint-disable-next-line no-console
       console.log('\n✅ uloop-cli has been updated successfully!');
-      // eslint-disable-next-line no-console
       console.log('Run "uloop --version" to check the new version.');
     } else {
-      // eslint-disable-next-line no-console
       console.error(`\n❌ Update failed with exit code ${code}`);
       process.exit(1);
     }
   });
 
   child.on('error', (err) => {
-    // eslint-disable-next-line no-console
     console.error(`❌ Failed to run npm: ${err.message}`);
     process.exit(1);
   });
+}
+
+const LOCK_FILES = ['compiling.lock', 'domainreload.lock', 'serverstarting.lock'] as const;
+
+/**
+ * Clean up stale lock files that may prevent CLI from connecting to Unity.
+ */
+function cleanupLockFiles(): void {
+  const projectRoot = findUnityProjectRoot();
+  if (projectRoot === null) {
+    console.error('Could not find Unity project root.');
+    process.exit(1);
+  }
+
+  const tempDir = join(projectRoot, 'Temp');
+  let cleaned = 0;
+
+  for (const lockFile of LOCK_FILES) {
+    const lockPath = join(tempDir, lockFile);
+    if (existsSync(lockPath)) {
+      unlinkSync(lockPath);
+      console.log(`Removed: ${lockFile}`);
+      cleaned++;
+    }
+  }
+
+  if (cleaned === 0) {
+    console.log('No lock files found.');
+  } else {
+    console.log(`\n✅ Cleaned up ${cleaned} lock file(s).`);
+  }
 }
 
 /**
