@@ -6,10 +6,37 @@
 // CLI tools output to console by design, and object keys come from Unity tool responses which are trusted
 /* eslint-disable no-console, security/detect-object-injection */
 
+import * as readline from 'readline';
 import { DirectUnityClient } from './direct-unity-client.js';
 import { resolveUnityPort } from './port-resolver.js';
 import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './tool-cache.js';
 import { VERSION } from './version.js';
+
+/**
+ * Suppress stdin echo during async operation to prevent escape sequences from being displayed.
+ * Returns a cleanup function to restore stdin state.
+ */
+function suppressStdinEcho(): () => void {
+  if (!process.stdin.isTTY) {
+    return () => {};
+  }
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: false,
+  });
+
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  process.stdin.on('data', () => {});
+
+  return () => {
+    process.stdin.setRawMode(false);
+    process.stdin.pause();
+    rl.close();
+  };
+}
 
 export interface GlobalOptions {
   port?: string;
@@ -31,6 +58,7 @@ export async function executeToolCommand(
   const port = await resolveUnityPort(portNumber);
 
   const client = new DirectUnityClient(port);
+  const restoreStdin = suppressStdinEcho();
 
   try {
     await client.connect();
@@ -40,6 +68,7 @@ export async function executeToolCommand(
     // Always output JSON to match MCP response format
     console.log(JSON.stringify(result, null, 2));
   } finally {
+    restoreStdin();
     client.disconnect();
   }
 }
@@ -56,6 +85,7 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
   const port = await resolveUnityPort(portNumber);
 
   const client = new DirectUnityClient(port);
+  const restoreStdin = suppressStdinEcho();
 
   try {
     await client.connect();
@@ -72,6 +102,7 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
       console.log(`  - ${tool.name}`);
     }
   } finally {
+    restoreStdin();
     client.disconnect();
   }
 }
@@ -119,6 +150,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
   const port = await resolveUnityPort(portNumber);
 
   const client = new DirectUnityClient(port);
+  const restoreStdin = suppressStdinEcho();
 
   try {
     await client.connect();
@@ -153,6 +185,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
       console.log(`  - ${tool.name}`);
     }
   } finally {
+    restoreStdin();
     client.disconnect();
   }
 }
