@@ -13,53 +13,110 @@ import {
   getInstallDir,
   getTotalSkillCount,
 } from './skills-manager.js';
+import { TargetConfig, ALL_TARGET_IDS, getTargetConfig } from './target-config.js';
+
+interface SkillsOptions {
+  global?: boolean;
+  claude?: boolean;
+  codex?: boolean;
+}
 
 export function registerSkillsCommand(program: Command): void {
-  const skillsCmd = program.command('skills').description('Manage uloop skills for Claude Code');
+  const skillsCmd = program
+    .command('skills')
+    .description('Manage uloop skills for AI coding tools');
 
   skillsCmd
     .command('list')
     .description('List all uloop skills and their installation status')
-    .option('-g, --global', 'Check global installation (~/.claude/skills/)')
-    .action((options: { global?: boolean }) => {
-      listSkills(options.global ?? false);
+    .option('-g, --global', 'Check global installation')
+    .option('--claude', 'Check Claude Code installation')
+    .option('--codex', 'Check Codex CLI installation')
+    .action((options: SkillsOptions) => {
+      const targets = resolveTargets(options);
+      const global = options.global ?? false;
+      listSkills(targets, global);
     });
 
   skillsCmd
     .command('install')
     .description('Install all uloop skills')
-    .option('-g, --global', 'Install to global location (~/.claude/skills/)')
-    .action((options: { global?: boolean }) => {
-      installSkills(options.global ?? false);
+    .option('-g, --global', 'Install to global location')
+    .option('--claude', 'Install to Claude Code')
+    .option('--codex', 'Install to Codex CLI')
+    .action((options: SkillsOptions) => {
+      const targets = resolveTargets(options);
+      if (targets.length === 0) {
+        showTargetGuidance('install');
+        return;
+      }
+      installSkills(targets, options.global ?? false);
     });
 
   skillsCmd
     .command('uninstall')
     .description('Uninstall all uloop skills')
-    .option('-g, --global', 'Uninstall from global location (~/.claude/skills/)')
-    .action((options: { global?: boolean }) => {
-      uninstallSkills(options.global ?? false);
+    .option('-g, --global', 'Uninstall from global location')
+    .option('--claude', 'Uninstall from Claude Code')
+    .option('--codex', 'Uninstall from Codex CLI')
+    .action((options: SkillsOptions) => {
+      const targets = resolveTargets(options);
+      if (targets.length === 0) {
+        showTargetGuidance('uninstall');
+        return;
+      }
+      uninstallSkills(targets, options.global ?? false);
     });
 }
 
-function listSkills(global: boolean): void {
-  const location = global ? 'Global' : 'Project';
-  const dir = getInstallDir(global);
+function resolveTargets(options: SkillsOptions): TargetConfig[] {
+  const targets: TargetConfig[] = [];
+  if (options.claude) {
+    targets.push(getTargetConfig('claude'));
+  }
+  if (options.codex) {
+    targets.push(getTargetConfig('codex'));
+  }
+  return targets;
+}
 
-  console.log(`\nuloop Skills Status (${location}):`);
-  console.log(`Location: ${dir}`);
-  console.log('='.repeat(50));
+function showTargetGuidance(command: string): void {
+  console.log(`\nPlease specify a target for '${command}':`);
+  console.log('');
+  console.log('  --claude   Claude Code (.claude/skills/)');
+  console.log('  --codex    Codex CLI (.codex/skills/)');
+  console.log('');
+  console.log('Examples:');
+  console.log(`  uloop skills ${command} --claude`);
+  console.log(`  uloop skills ${command} --codex --global`);
+  console.log(`  uloop skills ${command} --claude --codex`);
+}
+
+function listSkills(targets: TargetConfig[], global: boolean): void {
+  const location = global ? 'Global' : 'Project';
+  const targetConfigs = targets.length > 0 ? targets : ALL_TARGET_IDS.map(getTargetConfig);
+
+  console.log(`\nuloop Skills Status:`);
   console.log('');
 
-  const statuses = getAllSkillStatuses(global);
+  for (const target of targetConfigs) {
+    const dir = getInstallDir(target, global);
 
-  for (const skill of statuses) {
-    const icon = getStatusIcon(skill.status);
-    const statusText = getStatusText(skill.status);
-    console.log(`  ${icon} ${skill.name} (${statusText})`);
+    console.log(`${target.displayName} (${location}):`);
+    console.log(`Location: ${dir}`);
+    console.log('='.repeat(50));
+
+    const statuses = getAllSkillStatuses(target, global);
+
+    for (const skill of statuses) {
+      const icon = getStatusIcon(skill.status);
+      const statusText = getStatusText(skill.status);
+      console.log(`  ${icon} ${skill.name} (${statusText})`);
+    }
+
+    console.log('');
   }
 
-  console.log('');
   console.log(`Total: ${getTotalSkillCount()} bundled skills`);
 }
 
@@ -89,33 +146,39 @@ function getStatusText(status: string): string {
   }
 }
 
-function installSkills(global: boolean): void {
+function installSkills(targets: TargetConfig[], global: boolean): void {
   const location = global ? 'global' : 'project';
-  const dir = getInstallDir(global);
 
   console.log(`\nInstalling uloop skills (${location})...`);
   console.log('');
 
-  const result = installAllSkills(global);
+  for (const target of targets) {
+    const dir = getInstallDir(target, global);
+    const result = installAllSkills(target, global);
 
-  console.log(`\x1b[32m✓\x1b[0m Installed: ${result.installed}`);
-  console.log(`\x1b[33m↑\x1b[0m Updated: ${result.updated}`);
-  console.log(`\x1b[90m-\x1b[0m Skipped (up-to-date): ${result.skipped}`);
-  console.log('');
-  console.log(`Skills installed to ${dir}`);
+    console.log(`${target.displayName}:`);
+    console.log(`  \x1b[32m✓\x1b[0m Installed: ${result.installed}`);
+    console.log(`  \x1b[33m↑\x1b[0m Updated: ${result.updated}`);
+    console.log(`  \x1b[90m-\x1b[0m Skipped (up-to-date): ${result.skipped}`);
+    console.log(`  Location: ${dir}`);
+    console.log('');
+  }
 }
 
-function uninstallSkills(global: boolean): void {
+function uninstallSkills(targets: TargetConfig[], global: boolean): void {
   const location = global ? 'global' : 'project';
-  const dir = getInstallDir(global);
 
   console.log(`\nUninstalling uloop skills (${location})...`);
   console.log('');
 
-  const result = uninstallAllSkills(global);
+  for (const target of targets) {
+    const dir = getInstallDir(target, global);
+    const result = uninstallAllSkills(target, global);
 
-  console.log(`\x1b[31m✗\x1b[0m Removed: ${result.removed}`);
-  console.log(`\x1b[90m-\x1b[0m Not found: ${result.notFound}`);
-  console.log('');
-  console.log(`Skills removed from ${dir}`);
+    console.log(`${target.displayName}:`);
+    console.log(`  \x1b[31m✗\x1b[0m Removed: ${result.removed}`);
+    console.log(`  \x1b[90m-\x1b[0m Not found: ${result.notFound}`);
+    console.log(`  Location: ${dir}`);
+    console.log('');
+  }
 }
