@@ -270,6 +270,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
 
       spinner.stop();
       if (!result.Tools || !Array.isArray(result.Tools)) {
+        restoreStdin();
         throw new Error('Unexpected response from Unity: missing Tools array');
       }
 
