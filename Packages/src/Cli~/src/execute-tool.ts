@@ -34,9 +34,17 @@ function suppressStdinEcho(): () => void {
 
   process.stdin.setRawMode(true);
   process.stdin.resume();
-  process.stdin.on('data', () => {});
+
+  const onData = (data: Buffer): void => {
+    // Ctrl+C (0x03) should trigger process exit
+    if (data[0] === 0x03) {
+      process.exit(130);
+    }
+  };
+  process.stdin.on('data', onData);
 
   return () => {
+    process.stdin.off('data', onData);
     process.stdin.setRawMode(false);
     process.stdin.pause();
     rl.close();
