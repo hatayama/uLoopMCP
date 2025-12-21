@@ -4,6 +4,10 @@
  * Commands are dynamically registered from tools.json cache.
  */
 
+// CLI tools output to console by design, file paths are constructed from trusted sources (project root detection),
+// and object keys come from tool definitions which are internal trusted data
+/* eslint-disable no-console, security/detect-non-literal-fs-filename, security/detect-object-injection */
+
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join, basename, dirname } from 'path';
 import { homedir } from 'os';
@@ -346,7 +350,6 @@ compdef _uloop uloop`;
  * Update uloop CLI to the latest version using npm.
  */
 function updateCli(): void {
-  // eslint-disable-next-line no-console
   console.log('Updating uloop-cli to the latest version...');
 
   const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
@@ -357,19 +360,15 @@ function updateCli(): void {
 
   child.on('close', (code) => {
     if (code === 0) {
-      // eslint-disable-next-line no-console
       console.log('\n✅ uloop-cli has been updated successfully!');
-      // eslint-disable-next-line no-console
       console.log('Run "uloop --version" to check the new version.');
     } else {
-      // eslint-disable-next-line no-console
       console.error(`\n❌ Update failed with exit code ${code}`);
       process.exit(1);
     }
   });
 
   child.on('error', (err) => {
-    // eslint-disable-next-line no-console
     console.error(`❌ Failed to run npm: ${err.message}`);
     process.exit(1);
   });

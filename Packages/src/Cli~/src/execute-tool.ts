@@ -3,6 +3,9 @@
  * Handles dynamic tool execution by connecting to Unity and sending requests.
  */
 
+// CLI tools output to console by design, and object keys come from Unity tool responses which are trusted
+/* eslint-disable no-console, security/detect-object-injection */
+
 import { DirectUnityClient } from './direct-unity-client.js';
 import { resolveUnityPort } from './port-resolver.js';
 import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './tool-cache.js';

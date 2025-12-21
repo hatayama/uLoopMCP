@@ -3,6 +3,9 @@
  * Resolves Unity server port from various sources.
  */
 
+// File paths are constructed from Unity project root detection, not from user input
+/* eslint-disable security/detect-non-literal-fs-filename */
+
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { findUnityProjectRoot } from './project-root.js';

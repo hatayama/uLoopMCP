@@ -3,6 +3,9 @@
  * Searches upward from current directory to find Unity project markers.
  */
 
+// Path traversal is intentional for finding Unity project root by walking up directory tree
+/* eslint-disable security/detect-non-literal-fs-filename */
+
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
 

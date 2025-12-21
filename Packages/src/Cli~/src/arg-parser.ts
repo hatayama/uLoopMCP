@@ -3,6 +3,9 @@
  * Converts CLI options to Unity tool parameters.
  */
 
+// Object keys come from tool schema definitions which are internal trusted data
+/* eslint-disable security/detect-object-injection */
+
 export interface ToolParameter {
   Type: string;
   Description: string;

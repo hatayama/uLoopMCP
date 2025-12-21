@@ -3,6 +3,9 @@
  * Handles loading/saving tool definitions from .uloop/tools.json cache.
  */
 
+// File paths are constructed from Unity project root, not from untrusted user input
+/* eslint-disable security/detect-non-literal-fs-filename */
+
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import defaultToolsData from './default-tools.json';
