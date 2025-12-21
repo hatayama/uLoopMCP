@@ -55,6 +55,21 @@ export interface GlobalOptions {
   port?: string;
 }
 
+const RETRY_DELAY_MS = 500;
+const MAX_RETRIES = 3;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const message = error.message;
+  return message.includes('ECONNREFUSED') || message === 'UNITY_NO_RESPONSE';
+}
+
 /**
  * Check if Unity is in a busy state (compiling, reloading, or server starting).
  * Throws an error with appropriate message if busy.
@@ -86,8 +101,6 @@ export async function executeToolCommand(
   params: Record<string, unknown>,
   globalOptions: GlobalOptions,
 ): Promise<void> {
-  checkUnityBusyState();
-
   let portNumber: number | undefined;
   if (globalOptions.port) {
     const parsed = parseInt(globalOptions.port, 10);
@@ -98,34 +111,49 @@ export async function executeToolCommand(
   }
   const port = await resolveUnityPort(portNumber);
 
-  const client = new DirectUnityClient(port);
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
 
-  try {
-    await client.connect();
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    checkUnityBusyState();
 
-    spinner.update(`Executing ${toolName}...`);
-    const result = await client.sendRequest(toolName, params);
+    const client = new DirectUnityClient(port);
+    try {
+      await client.connect();
 
-    spinner.stop();
+      spinner.update(`Executing ${toolName}...`);
+      const result = await client.sendRequest(toolName, params);
 
-    if (result === undefined || result === null) {
-      throw new Error('UNITY_NO_RESPONSE');
+      if (result === undefined || result === null) {
+        throw new Error('UNITY_NO_RESPONSE');
+      }
+
+      // Success - stop spinner and output result
+      spinner.stop();
+      restoreStdin();
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    } catch (error) {
+      lastError = error;
+      client.disconnect();
+
+      if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
+        break;
+      }
+      spinner.update('Retrying connection...');
+      await sleep(RETRY_DELAY_MS);
+    } finally {
+      client.disconnect();
     }
-
-    // Always output JSON to match MCP response format
-    console.log(JSON.stringify(result, null, 2));
-  } finally {
-    spinner.stop();
-    restoreStdin();
-    client.disconnect();
   }
+
+  spinner.stop();
+  restoreStdin();
+  throw lastError;
 }
 
 export async function listAvailableTools(globalOptions: GlobalOptions): Promise<void> {
-  checkUnityBusyState();
-
   let portNumber: number | undefined;
   if (globalOptions.port) {
     const parsed = parseInt(globalOptions.port, 10);
@@ -136,31 +164,50 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
   }
   const port = await resolveUnityPort(portNumber);
 
-  const client = new DirectUnityClient(port);
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
 
-  try {
-    await client.connect();
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    checkUnityBusyState();
 
-    spinner.update('Fetching tool list...');
-    const result = await client.sendRequest<{
-      Tools: Array<{ name: string; description: string }>;
-    }>('get-tool-details', { IncludeDevelopmentOnly: false });
+    const client = new DirectUnityClient(port);
+    try {
+      await client.connect();
 
-    spinner.stop();
-    if (!result.Tools || !Array.isArray(result.Tools)) {
-      throw new Error('Unexpected response from Unity: missing Tools array');
+      spinner.update('Fetching tool list...');
+      const result = await client.sendRequest<{
+        Tools: Array<{ name: string; description: string }>;
+      }>('get-tool-details', { IncludeDevelopmentOnly: false });
+
+      if (!result.Tools || !Array.isArray(result.Tools)) {
+        throw new Error('Unexpected response from Unity: missing Tools array');
+      }
+
+      // Success - stop spinner and output result
+      spinner.stop();
+      restoreStdin();
+      for (const tool of result.Tools) {
+        console.log(`  - ${tool.name}`);
+      }
+      return;
+    } catch (error) {
+      lastError = error;
+      client.disconnect();
+
+      if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
+        break;
+      }
+      spinner.update('Retrying connection...');
+      await sleep(RETRY_DELAY_MS);
+    } finally {
+      client.disconnect();
     }
-
-    for (const tool of result.Tools) {
-      console.log(`  - ${tool.name}`);
-    }
-  } finally {
-    spinner.stop();
-    restoreStdin();
-    client.disconnect();
   }
+
+  spinner.stop();
+  restoreStdin();
+  throw lastError;
 }
 
 interface UnityToolInfo {
@@ -195,8 +242,6 @@ function convertProperties(
 }
 
 export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
-  checkUnityBusyState();
-
   let portNumber: number | undefined;
   if (globalOptions.port) {
     const parsed = parseInt(globalOptions.port, 10);
@@ -207,47 +252,65 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
   }
   const port = await resolveUnityPort(portNumber);
 
-  const client = new DirectUnityClient(port);
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
 
-  try {
-    await client.connect();
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    checkUnityBusyState();
 
-    spinner.update('Syncing tools...');
-    const result = await client.sendRequest<{
-      Tools: UnityToolInfo[];
-    }>('get-tool-details', { IncludeDevelopmentOnly: false });
+    const client = new DirectUnityClient(port);
+    try {
+      await client.connect();
 
-    spinner.stop();
-    if (!result.Tools || !Array.isArray(result.Tools)) {
-      throw new Error('Unexpected response from Unity: missing Tools array');
+      spinner.update('Syncing tools...');
+      const result = await client.sendRequest<{
+        Tools: UnityToolInfo[];
+      }>('get-tool-details', { IncludeDevelopmentOnly: false });
+
+      spinner.stop();
+      if (!result.Tools || !Array.isArray(result.Tools)) {
+        throw new Error('Unexpected response from Unity: missing Tools array');
+      }
+
+      const cache: ToolsCache = {
+        version: VERSION,
+        updatedAt: new Date().toISOString(),
+        tools: result.Tools.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          inputSchema: {
+            type: 'object',
+            properties: convertProperties(tool.parameterSchema.Properties),
+            required: tool.parameterSchema.Required,
+          },
+        })),
+      };
+
+      saveToolsCache(cache);
+
+      console.log(`Synced ${cache.tools.length} tools to ${getCacheFilePath()}`);
+      console.log('\nTools:');
+      for (const tool of cache.tools) {
+        console.log(`  - ${tool.name}`);
+      }
+      restoreStdin();
+      return;
+    } catch (error) {
+      lastError = error;
+      client.disconnect();
+
+      if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
+        break;
+      }
+      spinner.update('Retrying connection...');
+      await sleep(RETRY_DELAY_MS);
+    } finally {
+      client.disconnect();
     }
-
-    const cache: ToolsCache = {
-      version: VERSION,
-      updatedAt: new Date().toISOString(),
-      tools: result.Tools.map((tool) => ({
-        name: tool.name,
-        description: tool.description,
-        inputSchema: {
-          type: 'object',
-          properties: convertProperties(tool.parameterSchema.Properties),
-          required: tool.parameterSchema.Required,
-        },
-      })),
-    };
-
-    saveToolsCache(cache);
-
-    console.log(`Synced ${cache.tools.length} tools to ${getCacheFilePath()}`);
-    console.log('\nTools:');
-    for (const tool of cache.tools) {
-      console.log(`  - ${tool.name}`);
-    }
-  } finally {
-    spinner.stop();
-    restoreStdin();
-    client.disconnect();
   }
+
+  spinner.stop();
+  restoreStdin();
+  throw lastError;
 }

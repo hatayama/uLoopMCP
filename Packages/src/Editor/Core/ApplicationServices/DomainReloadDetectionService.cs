@@ -26,8 +26,9 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void OnAfterAssemblyReload()
         {
-            UnityEngine.Debug.Log("[DomainReloadDetectionService] After assembly reload, deleting lock file");
-            DeleteLockFile();
+            // Lock file is deleted by McpBridgeServer when server startup completes
+            // to avoid a gap between domain reload end and server ready
+            UnityEngine.Debug.Log("[DomainReloadDetectionService] After assembly reload (lock file deleted when server ready)");
         }
 
         private const string LOCK_FILE_NAME = "domainreload.lock";
@@ -78,8 +79,8 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="correlationId">Tracking ID for related operations</param>
         public static void CompleteDomainReload(string correlationId)
         {
-            // Delete lock file for external process detection
-            DeleteLockFile();
+            // Lock file is deleted by McpBridgeServer when server startup completes
+            // to avoid a gap between domain reload completion and server ready
 
             // Clear Domain Reload completion flag
             McpEditorSettings.ClearDomainReloadFlag();
