@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.45.0](https://github.com/hatayama/uLoopMCP/compare/v0.44.2...v0.45.0) (2025-12-21)
+
+
+### Features
+
+* **cli:** add multi-target support for skills command ([#455](https://github.com/hatayama/uLoopMCP/issues/455)) ([9f7e8ab](https://github.com/hatayama/uLoopMCP/commit/9f7e8abd3c8780d7685a73e466de1b871b52d50f))
+* **cli:** improve error messages and UX during Unity busy states ([#453](https://github.com/hatayama/uLoopMCP/issues/453)) ([2927553](https://github.com/hatayama/uLoopMCP/commit/2927553e0f5143a6fb16b1197c767297219973a0))
+
 ## [0.44.2](https://github.com/hatayama/uLoopMCP/compare/v0.44.1...v0.44.2) (2025-12-20)
 
 
