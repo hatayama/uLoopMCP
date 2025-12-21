@@ -35,3 +35,13 @@ Returns JSON:
 - `Success`: boolean
 - `ErrorCount`: number
 - `WarningCount`: number
+
+## Troubleshooting
+
+If CLI hangs or shows "Unity is busy" errors after compilation, stale lock files may be preventing connection. Run the following to clean them up:
+
+```bash
+uloop fix
+```
+
+This removes any leftover lock files (`compiling.lock`, `domainreload.lock`, `serverstarting.lock`) from the Unity project's Temp directory.

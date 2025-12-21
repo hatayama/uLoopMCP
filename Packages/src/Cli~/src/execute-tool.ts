@@ -3,15 +3,19 @@
  * Handles dynamic tool execution by connecting to Unity and sending requests.
  */
 
-// CLI tools output to console by design, and object keys come from Unity tool responses which are trusted
-/* eslint-disable no-console, security/detect-object-injection */
+// CLI tools output to console by design, object keys come from Unity tool responses which are trusted,
+// and lock file paths are constructed from trusted project root detection
+/* eslint-disable no-console, security/detect-object-injection, security/detect-non-literal-fs-filename */
 
 import * as readline from 'readline';
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { DirectUnityClient } from './direct-unity-client.js';
 import { resolveUnityPort } from './port-resolver.js';
 import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './tool-cache.js';
 import { VERSION } from './version.js';
 import { createSpinner } from './spinner.js';
+import { findUnityProjectRoot } from './project-root.js';
 
 /**
  * Suppress stdin echo during async operation to prevent escape sequences from being displayed.
@@ -43,11 +47,39 @@ export interface GlobalOptions {
   port?: string;
 }
 
+/**
+ * Check if Unity is in a busy state (compiling, reloading, or server starting).
+ * Throws an error with appropriate message if busy.
+ */
+function checkUnityBusyState(): void {
+  const projectRoot = findUnityProjectRoot();
+  if (projectRoot === null) {
+    return;
+  }
+
+  const compilingLock = join(projectRoot, 'Temp', 'compiling.lock');
+  if (existsSync(compilingLock)) {
+    throw new Error('UNITY_COMPILING');
+  }
+
+  const domainReloadLock = join(projectRoot, 'Temp', 'domainreload.lock');
+  if (existsSync(domainReloadLock)) {
+    throw new Error('UNITY_DOMAIN_RELOAD');
+  }
+
+  const serverStartingLock = join(projectRoot, 'Temp', 'serverstarting.lock');
+  if (existsSync(serverStartingLock)) {
+    throw new Error('UNITY_SERVER_STARTING');
+  }
+}
+
 export async function executeToolCommand(
   toolName: string,
   params: Record<string, unknown>,
   globalOptions: GlobalOptions,
 ): Promise<void> {
+  checkUnityBusyState();
+
   let portNumber: number | undefined;
   if (globalOptions.port) {
     const parsed = parseInt(globalOptions.port, 10);
@@ -69,6 +101,11 @@ export async function executeToolCommand(
     const result = await client.sendRequest(toolName, params);
 
     spinner.stop();
+
+    if (result === undefined || result === null) {
+      throw new Error('UNITY_NO_RESPONSE');
+    }
+
     // Always output JSON to match MCP response format
     console.log(JSON.stringify(result, null, 2));
   } finally {
@@ -79,6 +116,8 @@ export async function executeToolCommand(
 }
 
 export async function listAvailableTools(globalOptions: GlobalOptions): Promise<void> {
+  checkUnityBusyState();
+
   let portNumber: number | undefined;
   if (globalOptions.port) {
     const parsed = parseInt(globalOptions.port, 10);
@@ -148,6 +187,8 @@ function convertProperties(
 }
 
 export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
+  checkUnityBusyState();
+
   let portNumber: number | undefined;
   if (globalOptions.port) {
     const parsed = parseInt(globalOptions.port, 10);

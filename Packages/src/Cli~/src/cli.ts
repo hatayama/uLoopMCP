@@ -8,7 +8,7 @@
 // and object keys come from tool definitions which are internal trusted data
 /* eslint-disable no-console, security/detect-non-literal-fs-filename, security/detect-object-injection */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
 import { join, basename, dirname } from 'path';
 import { homedir } from 'os';
 import { spawn } from 'child_process';
@@ -29,7 +29,7 @@ interface CliOptions extends GlobalOptions {
   [key: string]: unknown;
 }
 
-const BUILTIN_COMMANDS = ['list', 'sync', 'completion', 'update', 'skills'] as const;
+const BUILTIN_COMMANDS = ['list', 'sync', 'completion', 'update', 'fix', 'skills'] as const;
 
 const program = new Command();
 
@@ -75,6 +75,13 @@ program
   .description('Update uloop CLI to the latest version')
   .action(() => {
     updateCli();
+  });
+
+program
+  .command('fix')
+  .description('Clean up stale lock files that may prevent CLI from connecting')
+  .action(() => {
+    cleanupLockFiles();
   });
 
 // Register skills subcommand
@@ -206,53 +213,39 @@ function extractGlobalOptions(options: Record<string, unknown>): GlobalOptions {
   };
 }
 
-function isDomainReloadLockFilePresent(): boolean {
-  const projectRoot = findUnityProjectRoot();
-  if (projectRoot === null) {
-    return false;
-  }
-  const lockPath = join(projectRoot, 'Temp', 'domainreload.lock');
-  return existsSync(lockPath);
-}
-
-function isCompilingLockFilePresent(): boolean {
-  const projectRoot = findUnityProjectRoot();
-  if (projectRoot === null) {
-    return false;
-  }
-  const lockPath = join(projectRoot, 'Temp', 'compiling.lock');
-  return existsSync(lockPath);
-}
-
-function isServerStartingLockFilePresent(): boolean {
-  const projectRoot = findUnityProjectRoot();
-  if (projectRoot === null) {
-    return false;
-  }
-  const lockPath = join(projectRoot, 'Temp', 'serverstarting.lock');
-  return existsSync(lockPath);
-}
-
 async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
   try {
     await fn();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
+    if (message === 'UNITY_COMPILING') {
+      console.error('\x1b[33m⏳ Unity is compiling scripts.\x1b[0m');
+      console.error('Please wait for compilation to finish and try again.');
+      process.exit(1);
+    }
+
+    if (message === 'UNITY_DOMAIN_RELOAD') {
+      console.error('\x1b[33m⏳ Unity is reloading (Domain Reload in progress).\x1b[0m');
+      console.error('Please wait a moment and try again.');
+      process.exit(1);
+    }
+
+    if (message === 'UNITY_SERVER_STARTING') {
+      console.error('\x1b[33m⏳ Unity server is starting.\x1b[0m');
+      console.error('Please wait a moment and try again.');
+      process.exit(1);
+    }
+
+    if (message === 'UNITY_NO_RESPONSE') {
+      console.error('\x1b[33m⏳ Unity is busy (no response received).\x1b[0m');
+      console.error('Unity may be compiling, reloading, or starting. Please wait and try again.');
+      process.exit(1);
+    }
+
     if (message.includes('ECONNREFUSED')) {
-      if (isCompilingLockFilePresent()) {
-        console.error('\x1b[33m⏳ Unity is compiling scripts.\x1b[0m');
-        console.error('Please wait for compilation to finish and try again.');
-      } else if (isDomainReloadLockFilePresent()) {
-        console.error('\x1b[33m⏳ Unity is reloading (Domain Reload in progress).\x1b[0m');
-        console.error('Please wait a moment and try again.');
-      } else if (isServerStartingLockFilePresent()) {
-        console.error('\x1b[33m⏳ Unity server is starting.\x1b[0m');
-        console.error('Please wait a moment and try again.');
-      } else {
-        console.error('\x1b[31mError: Cannot connect to Unity.\x1b[0m');
-        console.error('Make sure Unity is running with uLoopMCP installed.');
-      }
+      console.error('\x1b[31mError: Cannot connect to Unity.\x1b[0m');
+      console.error('Make sure Unity is running with uLoopMCP installed.');
       process.exit(1);
     }
 
@@ -384,6 +377,37 @@ function updateCli(): void {
     console.error(`❌ Failed to run npm: ${err.message}`);
     process.exit(1);
   });
+}
+
+const LOCK_FILES = ['compiling.lock', 'domainreload.lock', 'serverstarting.lock'] as const;
+
+/**
+ * Clean up stale lock files that may prevent CLI from connecting to Unity.
+ */
+function cleanupLockFiles(): void {
+  const projectRoot = findUnityProjectRoot();
+  if (projectRoot === null) {
+    console.error('Could not find Unity project root.');
+    process.exit(1);
+  }
+
+  const tempDir = join(projectRoot, 'Temp');
+  let cleaned = 0;
+
+  for (const lockFile of LOCK_FILES) {
+    const lockPath = join(tempDir, lockFile);
+    if (existsSync(lockPath)) {
+      unlinkSync(lockPath);
+      console.log(`Removed: ${lockFile}`);
+      cleaned++;
+    }
+  }
+
+  if (cleaned === 0) {
+    console.log('No lock files found.');
+  } else {
+    console.log(`\n✅ Cleaned up ${cleaned} lock file(s).`);
+  }
 }
 
 /**
