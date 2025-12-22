@@ -6,7 +6,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     public class ControlPlayModeUseCase : AbstractUseCase<ControlPlayModeSchema, ControlPlayModeResponse>
     {
-        public override async Task<ControlPlayModeResponse> ExecuteAsync(ControlPlayModeSchema parameters, CancellationToken cancellationToken)
+        public override Task<ControlPlayModeResponse> ExecuteAsync(ControlPlayModeSchema parameters, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -24,9 +24,11 @@ namespace io.github.hatayama.uLoopMCP
                     if (wasPaused)
                     {
                         EditorApplication.isPaused = false;
-                        await EditorDelay.DelayFrame(1, cancellationToken);
                     }
-                    EditorApplication.isPlaying = true;
+                    if (!EditorApplication.isPlaying)
+                    {
+                        EditorApplication.isPlaying = true;
+                    }
                     message = wasPaused ? "Play mode resumed" : "Play mode started";
                     break;
 
@@ -34,9 +36,11 @@ namespace io.github.hatayama.uLoopMCP
                     if (wasPaused)
                     {
                         EditorApplication.isPaused = false;
-                        await EditorDelay.DelayFrame(1, cancellationToken);
                     }
-                    EditorApplication.isPlaying = false;
+                    if (EditorApplication.isPlaying)
+                    {
+                        EditorApplication.isPlaying = false;
+                    }
                     message = "Play mode stopped";
                     break;
 
@@ -57,7 +61,7 @@ namespace io.github.hatayama.uLoopMCP
                 Message = message
             };
 
-            return response;
+            return Task.FromResult(response);
         }
     }
 }

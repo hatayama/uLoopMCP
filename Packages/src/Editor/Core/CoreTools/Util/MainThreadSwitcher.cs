@@ -59,7 +59,15 @@ namespace io.github.hatayama.uLoopMCP
         {
             while (_continuationQueue.TryDequeue(out Action continuation))
             {
-                continuation?.Invoke();
+                try
+                {
+                    continuation?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    // Continuations are external code; catch exceptions to prevent queue disruption
+                    UnityEngine.Debug.LogException(ex);
+                }
             }
         }
 
