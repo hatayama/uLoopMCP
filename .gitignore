@@ -82,7 +82,7 @@ crashlytics-build.properties
 
 # AI
 .cursor
-.claude
+.claude/settings.local.json
 .gemini
 .kiro
 .mcp.json
