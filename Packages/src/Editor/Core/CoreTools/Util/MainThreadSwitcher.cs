@@ -1,7 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using System.Threading.Tasks;
 using UnityEditor;
 
 namespace io.github.hatayama.uLoopMCP
@@ -19,14 +19,17 @@ namespace io.github.hatayama.uLoopMCP
         PreLateUpdate = 5,
         PostLateUpdate = 6
     }
+
     /// <summary>
     /// A class that provides functionality equivalent to UniTask's SwitchToMainThread.
-    /// Handles switching to the main thread.
+    /// Handles switching to the main thread using EditorApplication.update.
+    /// Reference: https://github.com/Cysharp/UniTask - PlayerLoopHelper implementation
     /// </summary>
+    [InitializeOnLoad]
     public static class MainThreadSwitcher
     {
         private static int _mainThreadId;
-        private static SynchronizationContext _unitySynchronizationContext;
+        private static readonly ConcurrentQueue<Action> _continuationQueue = new();
         
         /// <summary>
         /// Gets the ID of the main thread.
@@ -38,22 +41,48 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static bool IsMainThread => Thread.CurrentThread.ManagedThreadId == _mainThreadId;
 
-        /// <summary>
-        /// Gets the UnitySynchronizationContext.
-        /// </summary>
-        public static SynchronizationContext UnitySynchronizationContext => _unitySynchronizationContext;
+        static MainThreadSwitcher()
+        {
+            Initialize();
+        }
 
         [InitializeOnLoadMethod]
         static void Initialize()
         {
-            // Record the main thread ID and SynchronizationContext.
             _mainThreadId = Thread.CurrentThread.ManagedThreadId;
-            _unitySynchronizationContext = SynchronizationContext.Current;
+            
+            EditorApplication.update -= ProcessContinuationQueue;
+            EditorApplication.update += ProcessContinuationQueue;
+        }
+
+        private static void ProcessContinuationQueue()
+        {
+            while (_continuationQueue.TryDequeue(out Action continuation))
+            {
+                try
+                {
+                    continuation?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    // Continuations are external code; catch exceptions to prevent queue disruption
+                    UnityEngine.Debug.LogException(ex);
+                }
+            }
         }
 
         /// <summary>
-        /// Switches to the main thread (SynchronizationContext version).
+        /// Add a continuation to the queue to be executed on the main thread.
         /// </summary>
+        internal static void AddContinuation(Action continuation)
+        {
+            if (continuation == null)
+            {
+                return;
+            }
+            _continuationQueue.Enqueue(continuation);
+        }
+
         public static SwitchToMainThreadAwaitable SwitchToMainThread()
         {
             return new SwitchToMainThreadAwaitable(CancellationToken.None);
@@ -85,17 +114,10 @@ namespace io.github.hatayama.uLoopMCP
             return new SwitchToMainThreadAwaitable(cancellationToken);
         }
 
-        /// <summary>
-        /// Switches to the main thread (EditorApplication.delayCall version).
-        /// </summary>
-        public static SwitchToMainThreadDelayCallAwaitable SwitchToMainThreadDelayCall()
-        {
-            return new SwitchToMainThreadDelayCallAwaitable();
-        }
     }
 
     /// <summary>
-    /// An awaitable for switching to the main thread using SynchronizationContext.
+    /// An awaitable for switching to the main thread using EditorApplication.update queue.
     /// </summary>
     public struct SwitchToMainThreadAwaitable
     {
@@ -141,45 +163,9 @@ namespace io.github.hatayama.uLoopMCP
                     return;
                 }
 
-                // Prioritize using the saved UnitySynchronizationContext.
-                if (MainThreadSwitcher.UnitySynchronizationContext != null)
-                {
-                    MainThreadSwitcher.UnitySynchronizationContext.Post(_ => continuation(), null);
-                }
-                else
-                {
-                    // Fallback: Use EditorApplication.delayCall.
-                    EditorApplication.delayCall += () => continuation();
-                }
+                MainThreadSwitcher.AddContinuation(continuation);
             }
         }
     }
 
-    /// <summary>
-    /// An awaitable for switching to the main thread using EditorApplication.delayCall.
-    /// </summary>
-    public struct SwitchToMainThreadDelayCallAwaitable
-    {
-        public Awaiter GetAwaiter() => new();
-
-        public struct Awaiter : INotifyCompletion
-        {
-            public bool IsCompleted => MainThreadSwitcher.IsMainThread;
-
-            public void GetResult() { }
-
-            public void OnCompleted(Action continuation)
-            {
-                if (MainThreadSwitcher.IsMainThread)
-                {
-                    continuation();
-                    return;
-                }
-
-                // Execute on the main thread using EditorApplication.delayCall.
-                EditorApplication.delayCall += () => continuation();
-            }
-        }
-    }
-
-} 
+}
