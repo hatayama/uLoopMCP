@@ -14,6 +14,11 @@ namespace io.github.hatayama.uLoopMCP
         public long ExecutionTimeMs { get; set; }
 
         /// <summary>
+        /// uLoopMCP server version for CLI version compatibility check
+        /// </summary>
+        public string ULoopServerVersion => McpVersion.VERSION;
+
+        /// <summary>
         /// Set timing information automatically
         /// </summary>
         public void SetTimingInfo(DateTime startTime, DateTime endTime)
