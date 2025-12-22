@@ -274,11 +274,20 @@
       }
     },
     {
-      "name": "capture-gameview",
-      "description": "Capture Unity Game View as PNG",
+      "name": "capture-unity-window",
+      "description": "Capture Unity Editor windows (Game View, Scene View, Prefab view) as PNG",
       "inputSchema": {
         "type": "object",
         "properties": {
+          "Target": {
+            "type": "string",
+            "description": "Target window to capture",
+            "enum": [
+              "GameView",
+              "SceneView"
+            ],
+            "default": "GameView"
+          },
           "ResolutionScale": {
             "type": "number",
             "description": "Resolution scale (0.1 to 1.0)",
