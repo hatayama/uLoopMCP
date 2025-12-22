@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.45.1](https://github.com/hatayama/uLoopMCP/compare/v0.45.0...v0.45.1) (2025-12-22)
+
+
+### Bug Fixes
+
+* **cli:** improve skills command guidance message ([#456](https://github.com/hatayama/uLoopMCP/issues/456)) ([baa0282](https://github.com/hatayama/uLoopMCP/commit/baa0282cdf77a0feebe89fdf88a41a3c7e3e5305))
+
 ## [0.45.0](https://github.com/hatayama/uLoopMCP/compare/v0.44.2...v0.45.0) (2025-12-21)
 
 
