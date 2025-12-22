@@ -9,7 +9,8 @@
   },
   "type": "module",
   "scripts": {
-    "build": "esbuild src/cli.ts --bundle --platform=node --format=cjs --outfile=dist/cli.bundle.cjs --sourcemap --banner:js='#!/usr/bin/env node' --loader:.md=text",
+    "generate-skills": "npx tsx scripts/generate-bundled-skills.ts",
+    "build": "npm run generate-skills && esbuild src/cli.ts --bundle --platform=node --format=cjs --outfile=dist/cli.bundle.cjs --sourcemap --banner:js='#!/usr/bin/env node' --loader:.md=text",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "format": "prettier --write src/**/*.ts",
@@ -46,6 +47,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",
+    "tsx": "4.19.0",
     "@types/jest": "30.0.0",
     "@types/node": "25.0.2",
     "@types/semver": "^7.7.1",
