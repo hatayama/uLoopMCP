@@ -88,33 +88,22 @@ jobs:
             echo "✅ Server bundle rebuilt and pushed to PR"
           fi
 
-      # ── Publish to npm when release is created ──────────────────
-      - name: 🔍 Check if npm publish needed
-        id: check_npm
-        run: |
-          # Get version from CLI package.json
-          CLI_VERSION=$(jq -r '.version' Packages/src/Cli~/package.json)
-          echo "cli_version=${CLI_VERSION}" >> $GITHUB_OUTPUT
-
-          # Check if this version exists on npm
-          if npm view "uloop-cli@${CLI_VERSION}" version 2>/dev/null; then
-            echo "Version ${CLI_VERSION} already published to npm"
-            echo "needs_publish=false" >> $GITHUB_OUTPUT
-          else
-            echo "Version ${CLI_VERSION} not found on npm, will publish"
-            echo "needs_publish=true" >> $GITHUB_OUTPUT
-          fi
-
+      # ── Publish to npm ONLY when release is created ──────────────────
+      # This ensures npm publish happens only after Release PR is merged,
+      # not on every push to main (which caused version mismatch issues)
       - name: 🔧 Setup Node.js for npm publish
-        if: ${{ steps.check_npm.outputs.needs_publish == 'true' }}
+        if: ${{ steps.release.outputs.release_created == 'true' }}
         uses: actions/setup-node@v6
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
       - name: 📦 Publish CLI to npm
-        if: ${{ steps.check_npm.outputs.needs_publish == 'true' }}
+        if: ${{ steps.release.outputs.release_created == 'true' }}
         run: |
+          CLI_VERSION=$(jq -r '.version' Packages/src/Cli~/package.json)
+          echo "📋 Publishing CLI v${CLI_VERSION} to npm..."
+
           cd Packages/src/Cli~
           npm ci
           npm run build
@@ -122,4 +111,4 @@ jobs:
           echo "📋 npm version: $(npm --version)"
           # Uses OIDC trusted publishing - npm automatically detects OIDC environment
           npm publish --access public --provenance
-          echo "✅ CLI v${{ steps.check_npm.outputs.cli_version }} published to npm with provenance"
+          echo "✅ CLI v${CLI_VERSION} published to npm with provenance"

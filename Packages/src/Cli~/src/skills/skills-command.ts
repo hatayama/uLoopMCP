@@ -81,10 +81,14 @@ function resolveTargets(options: SkillsOptions): TargetConfig[] {
 }
 
 function showTargetGuidance(command: string): void {
-  console.log(`\nPlease specify a target for '${command}':`);
+  console.log(`\nPlease specify at least one target for '${command}':`);
   console.log('');
+  console.log('Available targets:');
   console.log('  --claude   Claude Code (.claude/skills/)');
   console.log('  --codex    Codex CLI (.codex/skills/)');
+  console.log('');
+  console.log('Options:');
+  console.log('  -g, --global   Use global location (~/.claude/ or ~/.codex/)');
   console.log('');
   console.log('Examples:');
   console.log(`  uloop skills ${command} --claude`);
