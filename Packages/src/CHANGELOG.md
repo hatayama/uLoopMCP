@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.46.0](https://github.com/hatayama/uLoopMCP/compare/v0.45.2...v0.46.0) (2025-12-22)
+
+
+### Features
+
+* add CLI-Unity version mismatch detection ([#466](https://github.com/hatayama/uLoopMCP/issues/466)) ([df1a92f](https://github.com/hatayama/uLoopMCP/commit/df1a92f70bbf45ba6a37914cbb2f18997bad4af9))
+
 ## [0.45.2](https://github.com/hatayama/uLoopMCP/compare/v0.45.1...v0.45.2) (2025-12-22)
 
 
