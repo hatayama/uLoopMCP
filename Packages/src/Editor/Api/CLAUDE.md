@@ -305,6 +305,40 @@ This will:
 2. Regenerate `bundled-skills.ts` from SKILL.md files
 3. Bundle the CLI with esbuild
 
+### Step 10: Sync CLI with Unity
+
+The CLI uses a cache file (`.uloop/tools.json`) for tool definitions. After adding a new tool, you need to sync with Unity:
+
+```bash
+uloop sync
+```
+
+**Output:**
+```
+Synced 17 tools to /path/to/project/.uloop/tools.json
+
+Tools:
+  - capture-unity-window
+  - clear-console
+  - compile
+  ...
+```
+
+**How tool loading works:**
+1. CLI checks for `.uloop/tools.json` (cache file)
+2. If cache exists, uses cached tool definitions
+3. If cache doesn't exist, falls back to `default-tools.json` (bundled with npm package)
+
+**When to sync:**
+- After adding/modifying MCP tools in Unity
+- After updating uLoopMCP version
+- If CLI commands don't match Unity tools
+
+**Alternative:** Delete the cache file to force using `default-tools.json`:
+```bash
+rm .uloop/tools.json
+```
+
 ## Naming Conventions
 
 | Item | Convention | Example |
