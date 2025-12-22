@@ -10,6 +10,7 @@
 import * as readline from 'readline';
 import { existsSync } from 'fs';
 import { join } from 'path';
+import * as semver from 'semver';
 import { DirectUnityClient } from './direct-unity-client.js';
 import { resolveUnityPort } from './port-resolver.js';
 import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './tool-cache.js';
@@ -71,11 +72,27 @@ function isRetryableError(error: unknown): boolean {
 }
 
 /**
+ * Compare two semantic versions safely.
+ * Returns true if v1 < v2, false otherwise.
+ * Falls back to string comparison if versions are invalid.
+ */
+function isVersionOlder(v1: string, v2: string): boolean {
+  const parsed1 = semver.valid(v1);
+  const parsed2 = semver.valid(v2);
+
+  if (parsed1 && parsed2) {
+    return semver.lt(parsed1, parsed2);
+  }
+
+  return v1 < v2;
+}
+
+/**
  * Print version mismatch warning to stderr.
  * Does not block execution - just warns the user.
  */
 function printVersionWarning(cliVersion: string, serverVersion: string): void {
-  const isCliOlder = cliVersion < serverVersion;
+  const isCliOlder = isVersionOlder(cliVersion, serverVersion);
   const updateCommand = isCliOlder
     ? `npm install -g uloop-cli@${serverVersion}`
     : `Update uLoopMCP package to ${cliVersion} via Unity Package Manager`;

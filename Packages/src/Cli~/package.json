@@ -41,12 +41,14 @@
     "provenance": true
   },
   "dependencies": {
-    "commander": "^14.0.2"
+    "commander": "^14.0.2",
+    "semver": "^7.7.3"
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",
     "@types/jest": "30.0.0",
     "@types/node": "25.0.2",
+    "@types/semver": "^7.7.1",
     "esbuild": "0.27.1",
     "eslint": "9.39.2",
     "eslint-config-prettier": "^10.1.8",
