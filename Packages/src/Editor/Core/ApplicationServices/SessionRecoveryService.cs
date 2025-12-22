@@ -26,11 +26,9 @@ namespace io.github.hatayama.uLoopMCP
 
             // If server is already running
             McpBridgeServer currentServer = McpServerController.CurrentServer;
-            UnityEngine.Debug.Log($"[SessionRecoveryService] RestoreServerStateIfNeeded: currentServer={currentServer != null}, IsRunning={currentServer?.IsRunning}, wasRunning={wasRunning}, autoStart={McpEditorSettings.GetAutoStartServer()}");
             if (currentServer?.IsRunning == true)
             {
                 // Server is running, clean up lock files
-                UnityEngine.Debug.Log("[SessionRecoveryService] Server already running, cleaning up lock files");
                 CompilationLockService.DeleteLockFile();
                 DomainReloadDetectionService.DeleteLockFile();
                 ServerStartingLockService.DeleteLockFile();

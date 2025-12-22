@@ -10,6 +10,7 @@
 import * as readline from 'readline';
 import { existsSync } from 'fs';
 import { join } from 'path';
+import * as semver from 'semver';
 import { DirectUnityClient } from './direct-unity-client.js';
 import { resolveUnityPort } from './port-resolver.js';
 import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './tool-cache.js';
@@ -71,6 +72,52 @@ function isRetryableError(error: unknown): boolean {
 }
 
 /**
+ * Compare two semantic versions safely.
+ * Returns true if v1 < v2, false otherwise.
+ * Falls back to string comparison if versions are invalid.
+ */
+function isVersionOlder(v1: string, v2: string): boolean {
+  const parsed1 = semver.valid(v1);
+  const parsed2 = semver.valid(v2);
+
+  if (parsed1 && parsed2) {
+    return semver.lt(parsed1, parsed2);
+  }
+
+  return v1 < v2;
+}
+
+/**
+ * Print version mismatch warning to stderr.
+ * Does not block execution - just warns the user.
+ */
+function printVersionWarning(cliVersion: string, serverVersion: string): void {
+  const isCliOlder = isVersionOlder(cliVersion, serverVersion);
+  const updateCommand = isCliOlder
+    ? `npm install -g uloop-cli@${serverVersion}`
+    : `Update uLoopMCP package to ${cliVersion} via Unity Package Manager`;
+
+  console.error('\x1b[33m⚠️ Version mismatch detected!\x1b[0m');
+  console.error(`   uloop-cli version:    ${cliVersion}`);
+  console.error(`   uloop server version: ${serverVersion}`);
+  console.error('');
+  console.error('   This may cause unexpected behavior or errors.');
+  console.error('');
+  console.error(`   ${isCliOlder ? 'To update CLI:' : 'To update server:'} ${updateCommand}`);
+  console.error('');
+}
+
+/**
+ * Check server version from response and print warning if mismatched.
+ */
+function checkServerVersion(result: Record<string, unknown>): void {
+  const serverVersion = result['ULoopServerVersion'] as string | undefined;
+  if (serverVersion && serverVersion !== VERSION) {
+    printVersionWarning(VERSION, serverVersion);
+  }
+}
+
+/**
  * Check if Unity is in a busy state (compiling, reloading, or server starting).
  * Throws an error with appropriate message if busy.
  */
@@ -123,7 +170,7 @@ export async function executeToolCommand(
       await client.connect();
 
       spinner.update(`Executing ${toolName}...`);
-      const result = await client.sendRequest(toolName, params);
+      const result = await client.sendRequest<Record<string, unknown>>(toolName, params);
 
       if (result === undefined || result === null) {
         throw new Error('UNITY_NO_RESPONSE');
@@ -132,6 +179,10 @@ export async function executeToolCommand(
       // Success - stop spinner and output result
       spinner.stop();
       restoreStdin();
+
+      // Check server version and warn if mismatched
+      checkServerVersion(result);
+
       console.log(JSON.stringify(result, null, 2));
       return;
     } catch (error) {

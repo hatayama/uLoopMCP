@@ -29,6 +29,11 @@
           "type": "generic",
           "path": "Packages/src/Cli~/src/version.ts",
           "glob": "Packages/src/Cli~/src/version.ts"
+        },
+        {
+          "type": "generic",
+          "path": "Packages/src/Editor/Config/McpVersion.cs",
+          "glob": "Packages/src/Editor/Config/McpVersion.cs"
         }
       ]
     }
