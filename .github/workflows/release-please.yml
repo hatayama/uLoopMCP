@@ -92,14 +92,14 @@ jobs:
       # This ensures npm publish happens only after Release PR is merged,
       # not on every push to main (which caused version mismatch issues)
       - name: 🔧 Setup Node.js for npm publish
-        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        if: ${{ steps.release.outputs.release_created == 'true' }}
         uses: actions/setup-node@v6
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
       - name: 📦 Publish CLI to npm
-        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        if: ${{ steps.release.outputs.release_created == 'true' }}
         run: |
           CLI_VERSION=$(jq -r '.version' Packages/src/Cli~/package.json)
           echo "📋 Publishing CLI v${CLI_VERSION} to npm..."
