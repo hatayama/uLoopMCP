@@ -10,6 +10,7 @@
 import captureGameviewSkill from './skill-definitions/uloop-capture-gameview/SKILL.md';
 import clearConsoleSkill from './skill-definitions/uloop-clear-console/SKILL.md';
 import compileSkill from './skill-definitions/uloop-compile/SKILL.md';
+import controlPlayModeSkill from './skill-definitions/uloop-control-play-mode/SKILL.md';
 import executeDynamicCodeSkill from './skill-definitions/uloop-execute-dynamic-code/SKILL.md';
 import executeMenuItemSkill from './skill-definitions/uloop-execute-menu-item/SKILL.md';
 import findGameObjectsSkill from './skill-definitions/uloop-find-game-objects/SKILL.md';
@@ -42,6 +43,11 @@ export const BUNDLED_SKILLS: BundledSkill[] = [
     name: 'uloop-compile',
     dirName: 'uloop-compile',
     content: compileSkill,
+  },
+  {
+    name: 'uloop-control-play-mode',
+    dirName: 'uloop-control-play-mode',
+    content: controlPlayModeSkill,
   },
   {
     name: 'uloop-execute-dynamic-code',
