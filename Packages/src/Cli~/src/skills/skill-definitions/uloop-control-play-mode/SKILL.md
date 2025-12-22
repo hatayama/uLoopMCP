@@ -41,7 +41,7 @@ Returns JSON with the current play mode state:
 
 ## Notes
 
-- Play action starts the game in the Unity Editor
+- Play action starts the game in the Unity Editor (also resumes from pause)
 - Stop action exits play mode and returns to edit mode
 - Pause action pauses the game while remaining in play mode
 - Useful for automated testing workflows
