@@ -25,13 +25,11 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void OnCompilationStarted(object context)
         {
-            UnityEngine.Debug.Log("[CompilationLockService] Compilation started, creating lock file");
             CreateLockFile();
         }
 
         private static void OnCompilationFinished(object context)
         {
-            UnityEngine.Debug.Log("[CompilationLockService] Compilation finished, deleting lock file");
             DeleteLockFile();
         }
 

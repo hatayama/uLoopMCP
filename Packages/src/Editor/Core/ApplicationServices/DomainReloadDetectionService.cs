@@ -20,7 +20,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void OnBeforeAssemblyReload()
         {
-            UnityEngine.Debug.Log("[DomainReloadDetectionService] Before assembly reload, creating lock file");
             CreateLockFile();
         }
 
@@ -28,7 +27,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Lock file is deleted by McpBridgeServer when server startup completes
             // to avoid a gap between domain reload end and server ready
-            UnityEngine.Debug.Log("[DomainReloadDetectionService] After assembly reload (lock file deleted when server ready)");
         }
 
         private const string LOCK_FILE_NAME = "domainreload.lock";

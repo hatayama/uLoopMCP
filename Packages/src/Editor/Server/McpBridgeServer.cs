@@ -191,7 +191,6 @@ namespace io.github.hatayama.uLoopMCP
                 _serverTask = Task.Run(() => ServerLoopAsync(_cancellationTokenSource.Token));
 
                 // Server is now ready to accept connections - clean up all lock files
-                UnityEngine.Debug.Log("[McpBridgeServer] Server ready, cleaning up all lock files");
                 CompilationLockService.DeleteLockFile();
                 DomainReloadDetectionService.DeleteLockFile();
                 ServerStartingLockService.DeleteLockFile();
