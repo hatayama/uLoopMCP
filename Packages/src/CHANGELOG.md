@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.45.2](https://github.com/hatayama/uLoopMCP/compare/v0.45.1...v0.45.2) (2025-12-22)
+
+
+### Miscellaneous Chores
+
+* force release 0.45.2 ([b6f7596](https://github.com/hatayama/uLoopMCP/commit/b6f75966841ba77902ee65c87fa4cc68efe1821b))
+
 ## [0.45.1](https://github.com/hatayama/uLoopMCP/compare/v0.45.0...v0.45.1) (2025-12-22)
 
 
