@@ -145,6 +145,10 @@ namespace io.github.hatayama.uLoopMCP
         private void SaveTextureAsPng(Texture2D texture, string fullPath)
         {
             byte[] pngData = texture.EncodeToPNG();
+            if (pngData == null)
+            {
+                throw new InvalidOperationException($"Failed to encode texture to PNG. Format: {texture.format}, Size: {texture.width}x{texture.height}");
+            }
             File.WriteAllBytes(fullPath, pngData);
         }
     }
