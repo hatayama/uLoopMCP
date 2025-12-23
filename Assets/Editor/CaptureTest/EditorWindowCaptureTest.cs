@@ -55,6 +55,11 @@ namespace io.github.hatayama.uLoopMCP
                 _lastResult = "Open windows:\n" + string.Join("\n", names);
             }
 
+            if (GUILayout.Button("Open Output Folder"))
+            {
+                OpenOutputFolder();
+            }
+
             GUILayout.Space(10);
             GUILayout.Label("Result:", EditorStyles.boldLabel);
             EditorGUILayout.TextArea(_lastResult, GUILayout.Height(100));
@@ -147,6 +152,21 @@ namespace io.github.hatayama.uLoopMCP
             {
                 DestroyImmediate(_previewTexture);
             }
+        }
+
+        /// <summary>
+        /// Open the output folder in the default file browser using file:// URI.
+        /// </summary>
+        private void OpenOutputFolder()
+        {
+            string outputDir = Path.Combine(Application.dataPath.Replace("/Assets", ""), "uLoopMCPOutputs", "UnityWindowCaptures");
+            if (!Directory.Exists(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+            }
+
+            string fileUri = "file:///" + outputDir.Replace("\\", "/");
+            Application.OpenURL(fileUri);
         }
     }
 }
