@@ -7,7 +7,7 @@
  * To exclude a skill from bundling, add `internal: true` to its frontmatter.
  */
 
-import captureGameviewSkill from './skill-definitions/uloop-capture-gameview/SKILL.md';
+import captureUnityWindowSkill from './skill-definitions/uloop-capture-unity-window/SKILL.md';
 import clearConsoleSkill from './skill-definitions/uloop-clear-console/SKILL.md';
 import compileSkill from './skill-definitions/uloop-compile/SKILL.md';
 import controlPlayModeSkill from './skill-definitions/uloop-control-play-mode/SKILL.md';
@@ -30,9 +30,9 @@ export interface BundledSkill {
 
 export const BUNDLED_SKILLS: BundledSkill[] = [
   {
-    name: 'uloop-capture-gameview',
-    dirName: 'uloop-capture-gameview',
-    content: captureGameviewSkill,
+    name: 'uloop-capture-unity-window',
+    dirName: 'uloop-capture-unity-window',
+    content: captureUnityWindowSkill,
   },
   {
     name: 'uloop-clear-console',

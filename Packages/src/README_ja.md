@@ -34,7 +34,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 3. Unity Package Manager からインストールし、お使いの LLM ツール（Cursor / Claude Code / Codex / Gemini など）と数クリックで接続できます。
 4. プロジェクト固有の MCP ツールを型安全に拡張しやすく、AI に実装を任せやすい設計になっています。
 5. 大量のログや階層情報はファイルに書き出すことで、LLM のコンテキスト消費を抑える工夫をしています。
-6. スタンドアロン CLI ツール `uloop` を提供。**MCP設定不要で、Skills をインストールするだけで LLM ツールが自動的に Unity を操作できます**。13個のバンドルされた Skills により、コンパイル・テスト実行・ログ取得などをLLMツールに任せられます。（[詳細](#cli-ツール-uloop)）
+6. スタンドアロン CLI ツール `uloop` を提供。**MCP設定不要で、Skills をインストールするだけで LLM ツールが自動的に Unity を操作できます**。15個のバンドルされた Skills により、コンパイル・テスト実行・ログ取得などをLLMツールに任せられます。（[詳細](#cli-ツール-uloop)）
 
 # ユースケース例
 - Unity プロジェクトの「コンパイルが通るまで」「テストが緑になるまで」を、AI に任せて自律的に回し続ける
@@ -152,7 +152,25 @@ UnitySearchが提供する検索プロバイダーを取得します
 macOS / Windows Editor上で、現在MCP接続中の Unity Editor ウィンドウを最前面に表示させます。  
 他アプリにフォーカスが奪われた後でも、視覚的なフィードバックをすぐ確認できます。（Linuxは未対応）
 
-#### 12. execute-dynamic-code - 動的C#コード実行
+#### 12. capture-unity-window - EditorWindowのキャプチャ
+任意のEditorWindowをPNG画像としてキャプチャします。ウィンドウ名（タイトルバーに表示されている文字列）を指定してキャプチャできます。
+同じ種類のウィンドウが複数開いている場合（例：Inspectorを3つ開いている場合）、すべてのウィンドウを連番で保存します。
+```
+→ capture-unity-window (WindowName: "Console")
+→ Console画面の状態をPNGで保存
+→ AIに視覚的なフィードバックを提供
+```
+
+#### 13. control-play-mode - Play Modeの制御
+Unity EditorのPlay Modeを制御します。Play（再生開始/一時停止解除）、Stop（停止）、Pause（一時停止）の3つのアクションを実行できます。
+```
+→ control-play-mode (Action: Play)
+→ Play Modeを開始してゲームの動作を確認
+→ control-play-mode (Action: Pause)
+→ 一時停止して状態を確認
+```
+
+#### 14. execute-dynamic-code - 動的C#コード実行
 Unity Editor内で動的にC#コードを実行します。
 
 > **⚠️ 重要な前提条件**  
@@ -306,7 +324,7 @@ uLoopMCPには、スタンドアロンCLIツール `uloop` が付属していま
 - **複数Unityの操作**: 1つのAI Agentから `--port` 指定で複数のUnityインスタンスを操作可能
 - **コンテキスト節約**: MCPと違い、LLMのコンテキストを消費しない
 
-13個のバンドルされたSkillsをインストールするだけで、Skills対応のLLMツールが自動的にUnityと連携します。
+15個のバンドルされたSkillsをインストールするだけで、Skills対応のLLMツールが自動的にUnityと連携します。
 
 ### クイックスタート
 
@@ -341,7 +359,7 @@ Skillsをインストールすると、LLMツールが以下のような指示�
 > **MCP設定は不要です！** uLoopMCP Windowでサーバーを起動していれば、Skillsを通じてLLMツールが直接Unityと通信します。
 
 <details>
-<summary>バンドルされている全13個のSkills一覧</summary>
+<summary>バンドルされている全15個のSkills一覧</summary>
 
 - `/uloop-compile` - コンパイルの実行
 - `/uloop-get-logs` - Consoleログの取得
@@ -353,9 +371,11 @@ Skillsをインストールすると、LLMツールが以下のような指示�
 - `/uloop-get-menu-items` - メニュー項目の取得
 - `/uloop-execute-menu-item` - メニュー項目の実行
 - `/uloop-find-game-objects` - GameObject検索
-- `/uloop-capture-gameview` - Game Viewのキャプチャ
+- `/uloop-capture-unity-window` - EditorWindowのキャプチャ
+- `/uloop-control-play-mode` - Play Modeの制御
 - `/uloop-execute-dynamic-code` - 動的C#コード実行
 - `/uloop-get-provider-details` - 検索プロバイダー詳細
+- `/uloop-get-project-info` - プロジェクト情報の取得
 
 </details>
 
