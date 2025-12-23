@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
-using UnityEditorInternal;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
@@ -14,47 +13,16 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class EditorWindowCaptureUtility
     {
-        // Shortcut mapping for common window names to their internal Unity types.
-        // Windows not in this list can still be found by title matching in FindWindowByName.
-        private static readonly Dictionary<string, string> WindowTypeMapping = new()
-        {
-            { "game", "UnityEditor.GameView" },
-            { "scene", "UnityEditor.SceneView" },
-            { "console", "UnityEditor.ConsoleWindow" },
-            { "inspector", "UnityEditor.InspectorWindow" },
-            { "project", "UnityEditor.ProjectBrowser" },
-            { "hierarchy", "UnityEditor.SceneHierarchyWindow" },
-            { "animation", "UnityEditor.AnimationWindow" },
-            { "animator", "UnityEditor.Graphs.AnimatorControllerTool" },
-            { "profiler", "UnityEditor.ProfilerWindow" },
-            { "audio mixer", "UnityEditor.Audio.AudioMixerWindow" },
-        };
-
         /// <summary>
-        /// Find all EditorWindows matching the given name.
+        /// Find all EditorWindows matching the given name (title bar text).
         /// </summary>
-        /// <param name="windowName">Window name (e.g., "Console", "Inspector")</param>
+        /// <param name="windowName">Window name displayed in the title bar (e.g., "Console", "Inspector")</param>
         /// <returns>Array of matching EditorWindows (empty if none found)</returns>
         public static EditorWindow[] FindWindowsByName(string windowName)
         {
             if (string.IsNullOrEmpty(windowName))
             {
                 return Array.Empty<EditorWindow>();
-            }
-
-            string lowerName = windowName.ToLowerInvariant();
-
-            if (WindowTypeMapping.TryGetValue(lowerName, out string typeName))
-            {
-                Type windowType = typeof(EditorWindow).Assembly.GetType(typeName);
-                if (windowType != null)
-                {
-                    EditorWindow[] windows = Resources.FindObjectsOfTypeAll(windowType) as EditorWindow[];
-                    if (windows != null && windows.Length > 0)
-                    {
-                        return windows;
-                    }
-                }
             }
 
             List<EditorWindow> matchingWindows = new List<EditorWindow>();
@@ -94,7 +62,7 @@ namespace io.github.hatayama.uLoopMCP
 
             window.ShowTab();
             window.Focus();
-            await TimerDelay.Wait(1, ct);
+            await EditorDelay.DelayFrame(2, ct);
             return CaptureWindowInternal(window, resolutionScale);
         }
 

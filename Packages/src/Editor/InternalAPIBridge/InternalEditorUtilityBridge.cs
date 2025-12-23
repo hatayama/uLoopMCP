@@ -48,8 +48,8 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            // Linear色空間の場合、sRGB書き込みを無効化したRenderTextureを使用
-            // これにより、BlitSceneViewCapture.matの二重ガンマ変換を防ぐ
+            // When in Linear color space, use a RenderTexture with sRGB write disabled
+            // to prevent double gamma correction from BlitSceneViewCapture.mat
             RenderTextureDescriptor descriptor = rt.descriptor;
             if (QualitySettings.activeColorSpace == ColorSpace.Linear)
             {
