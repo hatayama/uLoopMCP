@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.48.1](https://github.com/hatayama/uLoopMCP/compare/v0.48.0...v0.48.1) (2025-12-23)
+
+
+### Bug Fixes
+
+* improve capture-unity-window quality and simplify code ([#473](https://github.com/hatayama/uLoopMCP/issues/473)) ([71debb4](https://github.com/hatayama/uLoopMCP/commit/71debb4477f321400526c2f8ffb2d94411b53a3d))
+
 ## [0.48.0](https://github.com/hatayama/uLoopMCP/compare/v0.47.0...v0.48.0) (2025-12-23)
 
 
