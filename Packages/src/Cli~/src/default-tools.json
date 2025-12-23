@@ -275,18 +275,14 @@
     },
     {
       "name": "capture-unity-window",
-      "description": "Capture Unity Editor windows (Game View, Scene View, Prefab view) as PNG",
+      "description": "Capture Unity EditorWindow and save as PNG image",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "Target": {
+          "WindowName": {
             "type": "string",
-            "description": "Target window to capture",
-            "enum": [
-              "GameView",
-              "SceneView"
-            ],
-            "default": "GameView"
+            "description": "Window name to capture (e.g., 'Game', 'Scene', 'Console', 'Inspector', 'Project', 'Hierarchy')",
+            "default": "Game"
           },
           "ResolutionScale": {
             "type": "number",
@@ -358,6 +354,25 @@
       "inputSchema": {
         "type": "object",
         "properties": {}
+      }
+    },
+    {
+      "name": "control-play-mode",
+      "description": "Control Unity Editor play mode (play/stop/pause)",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "Action": {
+            "type": "string",
+            "description": "Action to perform: Play - Start play mode, Stop - Stop play mode, Pause - Pause play mode",
+            "enum": [
+              "Play",
+              "Stop",
+              "Pause"
+            ],
+            "default": "Play"
+          }
+        }
       }
     }
   ]
