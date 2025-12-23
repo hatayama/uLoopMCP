@@ -100,7 +100,13 @@ namespace io.github.hatayama.uLoopMCP
                 return null;
             }
 
-            RenderTexture rt = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32);
+            // Linear色空間の場合、sRGBフラグを無効化して二重ガンマ変換を防ぐ
+            RenderTextureDescriptor descriptor = new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 24);
+            if (QualitySettings.activeColorSpace == ColorSpace.Linear)
+            {
+                descriptor.sRGB = false;
+            }
+            RenderTexture rt = RenderTexture.GetTemporary(descriptor);
 
             InternalEditorUtilityBridge.CaptureEditorWindow(window, rt);
 

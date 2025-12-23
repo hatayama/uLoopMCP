@@ -48,7 +48,14 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            RenderTexture temporary = RenderTexture.GetTemporary(rt.descriptor);
+            // Linear色空間の場合、sRGB書き込みを無効化したRenderTextureを使用
+            // これにより、BlitSceneViewCapture.matの二重ガンマ変換を防ぐ
+            RenderTextureDescriptor descriptor = rt.descriptor;
+            if (QualitySettings.activeColorSpace == ColorSpace.Linear)
+            {
+                descriptor.sRGB = false;
+            }
+            RenderTexture temporary = RenderTexture.GetTemporary(descriptor);
 
             float scale = EditorGUIUtility.pixelsPerPoint;
             Rect rect = new Rect(0.0f, 0.0f, window.position.width * scale, window.position.height * scale);
