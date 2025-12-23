@@ -40,15 +40,12 @@ namespace io.github.hatayama.uLoopMCP
 
         private static string ResolveNodePath()
         {
-            string nodePath = NodeEnvironmentResolver.FindNodePath();
-            if (string.IsNullOrEmpty(nodePath))
+            foreach (string nodePath in NodeEnvironmentResolver.FindAllNodePaths())
             {
-                return null;
-            }
-
-            if (ValidateNodeExecutable(nodePath))
-            {
-                return nodePath;
+                if (ValidateNodeExecutable(nodePath))
+                {
+                    return nodePath;
+                }
             }
 
             return null;

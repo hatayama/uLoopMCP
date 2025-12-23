@@ -41,6 +41,20 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Enumerates all candidate Node.js executable paths.
+        /// Order: which command -> common paths -> version manager paths
+        /// </summary>
+        public static IEnumerable<string> FindAllNodePaths()
+        {
+            if (Application.platform == RuntimePlatform.WindowsEditor)
+            {
+                return FindAllExecutablePathsWindows("node");
+            }
+
+            return FindAllExecutablePathsUnix("node");
+        }
+
+        /// <summary>
         /// Finds the npm executable path using fallback strategy.
         /// Order: which command -> common paths -> version manager paths
         /// </summary>
@@ -130,6 +144,59 @@ namespace io.github.hatayama.uLoopMCP
             return null;
         }
 
+        private static IEnumerable<string> FindAllExecutablePathsUnix(string executableName)
+        {
+            HashSet<string> seen = new HashSet<string>();
+
+            string whichPath = TryWhichCommand(executableName);
+            if (!string.IsNullOrEmpty(whichPath) && seen.Add(whichPath))
+            {
+                yield return whichPath;
+            }
+
+            foreach (string binPath in COMMON_BIN_PATHS)
+            {
+                string fullPath = Path.Combine(binPath, executableName);
+                if (File.Exists(fullPath) && seen.Add(fullPath))
+                {
+                    yield return fullPath;
+                }
+            }
+
+            foreach (string path in EnumerateVersionManagerPaths(executableName))
+            {
+                if (seen.Add(path))
+                {
+                    yield return path;
+                }
+            }
+        }
+
+        private static IEnumerable<string> FindAllExecutablePathsWindows(string executableName)
+        {
+            HashSet<string> seen = new HashSet<string>();
+
+            string[] wherePaths = TryWhereCommandAll(executableName);
+            if (wherePaths != null)
+            {
+                foreach (string path in wherePaths)
+                {
+                    if (!string.IsNullOrEmpty(path) && seen.Add(path))
+                    {
+                        yield return path;
+                    }
+                }
+            }
+
+            foreach (string path in EnumerateVersionManagerPaths(executableName))
+            {
+                if (seen.Add(path))
+                {
+                    yield return path;
+                }
+            }
+        }
+
         private static string TryWhichCommand(string executableName)
         {
             ProcessStartInfo startInfo = new ProcessStartInfo
@@ -147,6 +214,12 @@ namespace io.github.hatayama.uLoopMCP
 
         private static string TryWhereCommand(string executableName)
         {
+            string[] paths = TryWhereCommandAll(executableName);
+            return paths != null && paths.Length > 0 ? paths[0] : null;
+        }
+
+        private static string[] TryWhereCommandAll(string executableName)
+        {
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = "cmd.exe",
@@ -161,10 +234,16 @@ namespace io.github.hatayama.uLoopMCP
             if (!string.IsNullOrEmpty(output))
             {
                 string[] lines = output.Split('\n');
-                if (lines.Length > 0)
+                List<string> result = new List<string>();
+                foreach (string line in lines)
                 {
-                    return lines[0].Trim();
+                    string trimmed = line.Trim();
+                    if (!string.IsNullOrEmpty(trimmed))
+                    {
+                        result.Add(trimmed);
+                    }
                 }
+                return result.Count > 0 ? result.ToArray() : null;
             }
 
             return null;
@@ -213,6 +292,15 @@ namespace io.github.hatayama.uLoopMCP
 
         private static string SearchVersionManagerPaths(string executableName)
         {
+            foreach (string path in EnumerateVersionManagerPaths(executableName))
+            {
+                return path;
+            }
+            return null;
+        }
+
+        private static IEnumerable<string> EnumerateVersionManagerPaths(string executableName)
+        {
             string home = System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile);
 
             foreach ((string basePath, string binSubPath) in VERSION_MANAGERS)
@@ -232,12 +320,10 @@ namespace io.github.hatayama.uLoopMCP
                     string executablePath = Path.Combine(versionDir, binSubPath, executableName);
                     if (File.Exists(executablePath))
                     {
-                        return executablePath;
+                        yield return executablePath;
                     }
                 }
             }
-
-            return null;
         }
 
         private static void AddVersionManagerPaths(List<string> paths)
