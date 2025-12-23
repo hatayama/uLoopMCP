@@ -1,9 +1,7 @@
 {
-    "name": "uLoopMCP.Editor",
-    "rootNamespace": "",
-    "references": [
-        "GUID:5079a8d3a72924a81aa1cbc25f65ed1b"
-    ],
+    "name": "Unity.InternalAPIEditorBridge.001",
+    "rootNamespace": "io.github.hatayama.uLoopMCP",
+    "references": [],
     "includePlatforms": [
         "Editor"
     ],
@@ -16,3 +14,4 @@
     "versionDefines": [],
     "noEngineReferences": false
 }
+

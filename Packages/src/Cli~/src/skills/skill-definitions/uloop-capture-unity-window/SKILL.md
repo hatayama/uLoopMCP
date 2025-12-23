@@ -1,29 +1,41 @@
 ---
 name: uloop-capture-unity-window
-description: Capture Unity Editor windows as PNG via uloop CLI. Use when you need to: (1) Take a screenshot of Game View or Scene View, (2) Capture visual state for debugging or verification, (3) Capture Prefab edit mode view with UI support, (4) Save editor output as an image file.
+description: Capture Unity EditorWindow and save as PNG image. Use when you need to: (1) Take a screenshot of Game View, Scene View, Console, Inspector, etc., (2) Capture visual state for debugging or verification, (3) Save editor output as an image file.
 ---
 
 # uloop capture-unity-window
 
-Capture Unity Editor windows (Game View, Scene View, or Prefab edit mode) and save as PNG image.
+Capture any Unity EditorWindow by name and save as PNG image.
 
 ## Usage
 
 ```bash
-uloop capture-unity-window [--target <target>] [--resolution-scale <scale>]
+uloop capture-unity-window [--window-name <name>] [--resolution-scale <scale>]
 ```
 
 ## Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `--target` | enum | `GameView` | Target window: `GameView` (0) or `SceneView` (1) |
+| `--window-name` | string | `Game` | Window name to capture (e.g., "Game", "Scene", "Console", "Inspector", "Project", "Hierarchy", or any EditorWindow title) |
 | `--resolution-scale` | number | `1.0` | Resolution scale (0.1 to 1.0) |
 
-## Target Options
+## Window Name
 
-- **GameView (0)**: Captures the Game View window
-- **SceneView (1)**: Captures the Scene View window. Auto-detects Prefab edit mode and handles accordingly
+The window name is the text displayed in the window's title bar (tab). The user (human) will tell you which window to capture. Common window names include:
+
+- **Game**: Game View window
+- **Scene**: Scene View window
+- **Console**: Console window
+- **Inspector**: Inspector window
+- **Project**: Project browser window
+- **Hierarchy**: Hierarchy window
+- **Animation**: Animation window
+- **Animator**: Animator window
+- **Profiler**: Profiler window
+- **Audio Mixer**: Audio Mixer window
+
+You can also specify custom EditorWindow titles (e.g., "EditorWindow Capture Test").
 
 ## Examples
 
@@ -32,32 +44,38 @@ uloop capture-unity-window [--target <target>] [--resolution-scale <scale>]
 uloop capture-unity-window
 
 # Capture Game View at half resolution
-uloop capture-unity-window --target GameView --resolution-scale 0.5
+uloop capture-unity-window --window-name Game --resolution-scale 0.5
 
 # Capture Scene View
-uloop capture-unity-window --target SceneView
+uloop capture-unity-window --window-name Scene
 
-# Capture Scene View (will capture Prefab if in Prefab edit mode)
-uloop capture-unity-window --target SceneView --resolution-scale 0.8
+# Capture Console window
+uloop capture-unity-window --window-name Console
+
+# Capture Inspector window
+uloop capture-unity-window --window-name Inspector
+
+# Capture Project browser
+uloop capture-unity-window --window-name Project
+
+# Capture custom EditorWindow by title
+uloop capture-unity-window --window-name "My Custom Window"
 ```
 
 ## Output
 
 Returns JSON with:
-- `ImagePath`: Absolute path to the saved PNG image
-- `FileSizeBytes`: Size of the saved file in bytes
-- `Width`: Captured image width in pixels
-- `Height`: Captured image height in pixels
+- `CapturedCount`: Number of windows captured
+- `CapturedWindows`: Array of captured window info, each containing:
+  - `ImagePath`: Absolute path to the saved PNG image
+  - `FileSizeBytes`: Size of the saved file in bytes
+  - `Width`: Captured image width in pixels
+  - `Height`: Captured image height in pixels
 
-## Features
-
-- **Screen Space Overlay Canvas support**: UI canvases are temporarily converted to World Space for proper capture
-- **Prefab edit mode detection**: Automatically detects and properly captures Prefab view when in edit mode
-- **3D Prefab lighting**: Adds temporary directional light for 3D model prefabs
-- **Aspect ratio preservation**: Uses Scene View camera pixel rect for accurate capture
+When multiple windows of the same type are open (e.g., multiple Inspector windows), all matching windows are captured with numbered filenames (e.g., `Inspector_1_*.png`, `Inspector_2_*.png`).
 
 ## Notes
 
 - Use `uloop focus-window` first if needed
-- Target window must be visible in Unity Editor
-- For Prefab captures, open the prefab in edit mode before capturing with `--target SceneView`
+- Target window must be open in Unity Editor
+- Window name matching is case-insensitive

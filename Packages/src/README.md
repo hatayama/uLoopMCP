@@ -34,7 +34,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 3. Easy setup from Unity Package Manager and a few clicks to connect from LLM tools (Cursor, Claude Code, GitHub Copilot, Windsurf, etc.).
 4. Type-safe extension model for adding project-specific MCP tools that AI can implement and iterate on for you.
 5. Log and hierarchy data can be exported to files to avoid burning LLM context on large payloads.
-6. Standalone CLI tool `uloop` provided. **No MCP configuration required—just install Skills and LLM tools will automatically operate Unity**. 13 bundled Skills enable LLM tools to handle compilation, test execution, log retrieval, and more. ([Details](#cli-tool-uloop))
+6. Standalone CLI tool `uloop` provided. **No MCP configuration required—just install Skills and LLM tools will automatically operate Unity**. 15 bundled Skills enable LLM tools to handle compilation, test execution, log retrieval, and more. ([Details](#cli-tool-uloop))
 
 # Example Use Cases
 - Let an AI keep fixing your project until compilation passes and all tests go green.
@@ -150,7 +150,25 @@ Retrieve information about the currently active Hierarchy in nested JSON format.
 Ensures the Unity Editor window associated with the active MCP session becomes the foreground application on macOS and Windows Editor builds.  
 Great for keeping visual feedback in sync after other apps steal focus. (Linux is currently unsupported.)
 
-#### 12. execute-dynamic-code - Dynamic C# Code Execution
+#### 12. capture-unity-window - Capture EditorWindow
+Capture any EditorWindow as a PNG image. Specify the window name (the text displayed in the title bar/tab) to capture.
+When multiple windows of the same type are open (e.g., 3 Inspector windows), all windows are saved with numbered filenames.
+```
+→ capture-unity-window (WindowName: "Console")
+→ Save Console window state as PNG
+→ Provide visual feedback to AI
+```
+
+#### 13. control-play-mode - Control Play Mode
+Control Unity Editor's Play Mode. Supports three actions: Play (start/resume), Stop, and Pause.
+```
+→ control-play-mode (Action: Play)
+→ Start Play Mode to verify game behavior
+→ control-play-mode (Action: Pause)
+→ Pause to inspect state
+```
+
+#### 14. execute-dynamic-code - Dynamic C# Code Execution
 Execute C# code dynamically within Unity Editor.
 
 > **⚠️ Important Prerequisites**  
@@ -306,7 +324,7 @@ uLoopMCP includes a standalone CLI tool `uloop`.
 - **Multiple Unity instances**: Operate multiple Unity instances from a single AI Agent using `--port`
 - **Context-efficient**: Unlike MCP, does not consume LLM context
 
-Just install the 13 bundled Skills, and Skills-compatible LLM tools will automatically integrate with Unity.
+Just install the 15 bundled Skills, and Skills-compatible LLM tools will automatically integrate with Unity.
 
 ### Quick Start
 
@@ -341,7 +359,7 @@ After installing Skills, LLM tools can automatically handle instructions like th
 > **No MCP configuration required!** As long as the server is running in the uLoopMCP Window, LLM tools communicate directly with Unity through Skills.
 
 <details>
-<summary>All 13 Bundled Skills</summary>
+<summary>All 15 Bundled Skills</summary>
 
 - `/uloop-compile` - Execute compilation
 - `/uloop-get-logs` - Get console logs
@@ -353,9 +371,11 @@ After installing Skills, LLM tools can automatically handle instructions like th
 - `/uloop-get-menu-items` - Get menu items
 - `/uloop-execute-menu-item` - Execute menu item
 - `/uloop-find-game-objects` - Find GameObjects
-- `/uloop-capture-gameview` - Capture Game View
+- `/uloop-capture-unity-window` - Capture EditorWindow
+- `/uloop-control-play-mode` - Control Play Mode
 - `/uloop-execute-dynamic-code` - Execute dynamic C# code
 - `/uloop-get-provider-details` - Get search provider details
+- `/uloop-get-project-info` - Get project information
 
 </details>
 
