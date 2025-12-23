@@ -80,7 +80,7 @@ namespace io.github.hatayama.uLoopMCP
                 return null;
             }
 
-            // Linear色空間の場合、sRGBフラグを無効化して二重ガンマ変換を防ぐ
+            // For Linear color space, disable the sRGB flag to prevent double gamma conversion
             RenderTextureDescriptor descriptor = new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 24);
             if (QualitySettings.activeColorSpace == ColorSpace.Linear)
             {
