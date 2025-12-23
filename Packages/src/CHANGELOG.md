@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.47.0](https://github.com/hatayama/uLoopMCP/compare/v0.46.0...v0.47.0) (2025-12-23)
+
+
+### Features
+
+* add control-play-mode tool and fix MainThreadSwitcher for pause state ([#468](https://github.com/hatayama/uLoopMCP/issues/468)) ([35ee074](https://github.com/hatayama/uLoopMCP/commit/35ee0745f4e82ba6cee5c5148f9500f1bdf983c5))
+
+
+### Bug Fixes
+
+* add fallback when node validation fails ([#470](https://github.com/hatayama/uLoopMCP/issues/470)) ([9e4bd14](https://github.com/hatayama/uLoopMCP/commit/9e4bd1499f19cf44792a8d9b4017cc6732d46e15))
+
 ## [0.46.0](https://github.com/hatayama/uLoopMCP/compare/v0.45.2...v0.46.0) (2025-12-22)
 
 
