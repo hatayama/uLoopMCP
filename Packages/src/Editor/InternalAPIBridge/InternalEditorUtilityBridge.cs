@@ -48,7 +48,14 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            RenderTexture temporary = RenderTexture.GetTemporary(rt.descriptor);
+            // When in Linear color space, use a RenderTexture with sRGB write disabled
+            // to prevent double gamma correction from BlitSceneViewCapture.mat
+            RenderTextureDescriptor descriptor = rt.descriptor;
+            if (QualitySettings.activeColorSpace == ColorSpace.Linear)
+            {
+                descriptor.sRGB = false;
+            }
+            RenderTexture temporary = RenderTexture.GetTemporary(descriptor);
 
             float scale = EditorGUIUtility.pixelsPerPoint;
             Rect rect = new Rect(0.0f, 0.0f, window.position.width * scale, window.position.height * scale);

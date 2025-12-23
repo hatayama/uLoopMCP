@@ -15,7 +15,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private const string OUTPUT_DIRECTORY_NAME = "UnityWindowCaptures";
 
-        protected override Task<CaptureUnityWindowResponse> ExecuteAsync(
+        protected override async Task<CaptureUnityWindowResponse> ExecuteAsync(
             CaptureUnityWindowSchema parameters,
             CancellationToken ct)
         {
@@ -42,7 +42,7 @@ namespace io.github.hatayama.uLoopMCP
                     $"Window '{parameters.WindowName}' not found",
                     correlationId: correlationId
                 );
-                return Task.FromResult(new CaptureUnityWindowResponse());
+                return new CaptureUnityWindowResponse();
             }
 
             string outputDirectory = EnsureOutputDirectoryExists();
@@ -53,7 +53,7 @@ namespace io.github.hatayama.uLoopMCP
             for (int i = 0; i < windows.Length; i++)
             {
                 EditorWindow window = windows[i];
-                Texture2D texture = EditorWindowCaptureUtility.CaptureWindow(window, parameters.ResolutionScale);
+                Texture2D texture = await EditorWindowCaptureUtility.CaptureWindowAsync(window, parameters.ResolutionScale, ct);
                 if (texture == null)
                 {
                     VibeLogger.LogWarning(
@@ -101,7 +101,7 @@ namespace io.github.hatayama.uLoopMCP
                 correlationId: correlationId
             );
 
-            return Task.FromResult(new CaptureUnityWindowResponse(capturedWindows));
+            return new CaptureUnityWindowResponse(capturedWindows);
         }
 
         private void ValidateParameters(CaptureUnityWindowSchema parameters)

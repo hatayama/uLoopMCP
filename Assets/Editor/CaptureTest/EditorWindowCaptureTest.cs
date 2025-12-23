@@ -1,6 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 using System.IO;
+using System.Threading;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -9,6 +10,7 @@ namespace io.github.hatayama.uLoopMCP
         private string _windowName = "Console";
         private string _lastResult = "";
         private Texture2D _previewTexture;
+        private bool _isCapturing;
 
         [MenuItem("uLoopMCP/Windows/EditorWindow Capture Test")]
         public static void ShowWindow()
@@ -44,15 +46,22 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            if (GUILayout.Button("Capture Window"))
+            EditorGUI.BeginDisabledGroup(_isCapturing);
+            if (GUILayout.Button(_isCapturing ? "Capturing..." : "Capture Window"))
             {
-                CaptureWindow();
+                CaptureWindowAsync();
             }
+            EditorGUI.EndDisabledGroup();
 
             if (GUILayout.Button("List All Open Windows"))
             {
                 string[] names = EditorWindowCaptureUtility.GetOpenWindowNames();
                 _lastResult = "Open windows:\n" + string.Join("\n", names);
+            }
+
+            if (GUILayout.Button("Open Output Folder"))
+            {
+                OpenOutputFolder();
             }
 
             GUILayout.Space(10);
@@ -82,12 +91,22 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private void CaptureWindow()
+        private async void CaptureWindowAsync()
         {
+            if (_isCapturing)
+            {
+                return;
+            }
+
+            _isCapturing = true;
+            Repaint();
+
             EditorWindow[] windows = EditorWindowCaptureUtility.FindWindowsByName(_windowName);
             if (windows.Length == 0)
             {
                 _lastResult = $"Window '{_windowName}' not found";
+                _isCapturing = false;
+                Repaint();
                 return;
             }
 
@@ -109,7 +128,7 @@ namespace io.github.hatayama.uLoopMCP
             for (int i = 0; i < windows.Length; i++)
             {
                 EditorWindow window = windows[i];
-                Texture2D texture = EditorWindowCaptureUtility.CaptureWindow(window);
+                Texture2D texture = await EditorWindowCaptureUtility.CaptureWindowAsync(window, 1.0f, CancellationToken.None);
 
                 if (texture == null)
                 {
@@ -138,6 +157,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             _lastResult = sb.ToString();
+            _isCapturing = false;
             Repaint();
         }
 
@@ -147,6 +167,21 @@ namespace io.github.hatayama.uLoopMCP
             {
                 DestroyImmediate(_previewTexture);
             }
+        }
+
+        /// <summary>
+        /// Open the output folder in the default file browser using file:// URI.
+        /// </summary>
+        private void OpenOutputFolder()
+        {
+            string outputDir = Path.Combine(Application.dataPath.Replace("/Assets", ""), "uLoopMCPOutputs", "UnityWindowCaptures");
+            if (!Directory.Exists(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+            }
+
+            string fileUri = "file:///" + outputDir.Replace("\\", "/");
+            Application.OpenURL(fileUri);
         }
     }
 }
