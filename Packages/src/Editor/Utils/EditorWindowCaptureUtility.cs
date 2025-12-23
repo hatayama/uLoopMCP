@@ -47,7 +47,7 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Capture an EditorWindow to a Texture2D asynchronously.
-        /// Waits for 1 frame after showing the window to ensure it is fully rendered.
+        /// Waits for 2 frames after showing the window to ensure it is fully rendered.
         /// </summary>
         /// <param name="window">The EditorWindow to capture</param>
         /// <param name="resolutionScale">Resolution scale (0.1 to 1.0)</param>
