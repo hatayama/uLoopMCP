@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
@@ -75,12 +78,14 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Capture an EditorWindow to a Texture2D.
+        /// Capture an EditorWindow to a Texture2D asynchronously.
+        /// Waits for 1 frame after showing the window to ensure it is fully rendered.
         /// </summary>
         /// <param name="window">The EditorWindow to capture</param>
         /// <param name="resolutionScale">Resolution scale (0.1 to 1.0)</param>
+        /// <param name="ct">Cancellation token</param>
         /// <returns>Captured Texture2D, or null if capture failed</returns>
-        public static Texture2D CaptureWindow(EditorWindow window, float resolutionScale = 1.0f)
+        public static async Task<Texture2D> CaptureWindowAsync(EditorWindow window, float resolutionScale, CancellationToken ct)
         {
             if (window == null)
             {
@@ -89,8 +94,15 @@ namespace io.github.hatayama.uLoopMCP
 
             window.ShowTab();
             window.Focus();
-            window.Repaint();
+            await TimerDelay.Wait(1, ct);
+            return CaptureWindowInternal(window, resolutionScale);
+        }
 
+        /// <summary>
+        /// Internal capture logic shared by sync and async methods.
+        /// </summary>
+        private static Texture2D CaptureWindowInternal(EditorWindow window, float resolutionScale)
+        {
             float scale = EditorGUIUtility.pixelsPerPoint;
             int width = Mathf.RoundToInt(window.position.width * scale);
             int height = Mathf.RoundToInt(window.position.height * scale);
