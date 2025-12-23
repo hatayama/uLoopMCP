@@ -35,11 +35,6 @@ namespace io.github.hatayama.uLoopMCP
             CapturedWindows = capturedWindows;
         }
 
-        public CaptureUnityWindowResponse(bool failure)
-        {
-            CapturedWindows = new List<CapturedWindowInfo>();
-        }
-
         public CaptureUnityWindowResponse()
         {
         }

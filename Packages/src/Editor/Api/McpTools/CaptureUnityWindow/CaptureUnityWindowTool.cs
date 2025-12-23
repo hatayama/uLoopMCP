@@ -42,7 +42,7 @@ namespace io.github.hatayama.uLoopMCP
                     $"Window '{parameters.WindowName}' not found",
                     correlationId: correlationId
                 );
-                return Task.FromResult(new CaptureUnityWindowResponse(failure: true));
+                return Task.FromResult(new CaptureUnityWindowResponse());
             }
 
             string outputDirectory = EnsureOutputDirectoryExists();
@@ -69,14 +69,29 @@ namespace io.github.hatayama.uLoopMCP
                     : $"{safeWindowName}_{i + 1}_{timestamp}.png";
                 string savedPath = Path.Combine(outputDirectory, fileName);
 
-                SaveTextureAsPng(texture, savedPath);
-
                 int width = texture.width;
                 int height = texture.height;
-                UnityEngine.Object.DestroyImmediate(texture);
 
-                FileInfo savedFileInfo = new FileInfo(savedPath);
-                capturedWindows.Add(new CapturedWindowInfo(savedPath, savedFileInfo.Length, width, height));
+                try
+                {
+                    SaveTextureAsPng(texture, savedPath);
+
+                    FileInfo savedFileInfo = new FileInfo(savedPath);
+                    capturedWindows.Add(new CapturedWindowInfo(savedPath, savedFileInfo.Length, width, height));
+                }
+                catch (Exception ex)
+                {
+                    // File I/O is external resource access; catch to continue processing remaining windows
+                    VibeLogger.LogWarning(
+                        "capture_save_exception",
+                        $"Exception saving window index {i}: {ex.Message}",
+                        correlationId: correlationId
+                    );
+                }
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(texture);
+                }
             }
 
             VibeLogger.LogInfo(
