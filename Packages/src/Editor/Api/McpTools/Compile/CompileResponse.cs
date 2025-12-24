@@ -1,5 +1,3 @@
-using System;
-
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
@@ -58,15 +56,10 @@ namespace io.github.hatayama.uLoopMCP
         public string Message { get; set; }
 
         /// <summary>
-        /// Whether the compilation result is indeterminate (cannot be determined).
-        /// </summary>
-        public bool IsIndeterminate { get; set; }
-
-        /// <summary>
         /// Create a new CompileResponse
         /// </summary>
         public CompileResponse(bool? success, int? errorCount, int? warningCount, 
-                             CompileIssue[] errors, CompileIssue[] warnings, string message = null, bool isIndeterminate = false)
+                             CompileIssue[] errors, CompileIssue[] warnings, string message = null)
         {
             Success = success;
             ErrorCount = errorCount;
@@ -74,7 +67,6 @@ namespace io.github.hatayama.uLoopMCP
             Errors = errors;
             Warnings = warnings;
             Message = message;
-            IsIndeterminate = isIndeterminate;
         }
 
         /// <summary>
@@ -84,4 +76,4 @@ namespace io.github.hatayama.uLoopMCP
         {
         }
     }
-} 
+}

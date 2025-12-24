@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
-using System;
 using System.Threading;
 
 namespace io.github.hatayama.uLoopMCP
@@ -44,21 +43,11 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public async Task<BaseToolResponse> ExecuteAsync(JToken paramsToken)
         {
-            DateTime startTime = DateTime.UtcNow;
-
             // Convert JToken to strongly typed Schema
             TSchema parameters = ConvertToSchema(paramsToken);
 
             // Execute with type-safe parameters
             TResponse response = await ExecuteAsync(parameters, CancellationToken.None);
-
-            DateTime endTime = DateTime.UtcNow;
-
-            // Set timing information if response inherits from BaseToolResponse
-            if (response is BaseToolResponse baseResponse)
-            {
-                baseResponse.SetTimingInfo(startTime, endTime);
-            }
 
             // Return as BaseToolResponse for IUnityTool interface compatibility
             return response;

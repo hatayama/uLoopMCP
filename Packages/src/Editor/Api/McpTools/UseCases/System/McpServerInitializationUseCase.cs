@@ -47,8 +47,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Initialization result</returns>
         public override Task<ServerInitializationResponse> ExecuteAsync(ServerInitializationSchema parameters, CancellationToken cancellationToken)
         {
-            var response = new ServerInitializationResponse();
-            var startTime = System.DateTime.UtcNow;
+            ServerInitializationResponse response = new ServerInitializationResponse();
 
             try
             {
@@ -147,10 +146,6 @@ namespace io.github.hatayama.uLoopMCP
                 response.Success = false;
                 response.Message = "Server initialization failed. Please check the logs for details.";
                 return Task.FromResult(response);
-            }
-            finally
-            {
-                response.SetTimingInfo(startTime, System.DateTime.UtcNow);
             }
         }
     }

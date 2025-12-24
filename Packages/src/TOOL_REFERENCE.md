@@ -10,10 +10,8 @@ All Unity MCP tools share the following common elements:
 - `TimeoutSeconds` (number): Tool execution timeout in seconds
 
 ### Common Response Properties
-All tools automatically include the following timing information:
-- `StartedAt` (string): Tool execution start time (local time)
-- `EndedAt` (string): Tool execution end time (local time)
-- `ExecutionTimeMs` (number): Tool execution duration in milliseconds
+All tools automatically include the following property:
+- `Ver` (string): uLoopMCP server version for CLI compatibility check
 
 ---
 
@@ -260,7 +258,6 @@ All tools automatically include the following timing information:
   - `ErrorMessage` (string): Error message (if failed)
   - `SecurityLevel` (string): Current security level ("Disabled", "Restricted", "FullAccess")
   - `UpdatedCode` (string): Updated code (after applying fixes)
-  - `ExecutionTimeMs` (number): Execution time in milliseconds
 
 ### 12. focus-window
 - **Description**: Brings Unity Editor window to front on macOS and Windows
