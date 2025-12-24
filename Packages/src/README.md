@@ -399,7 +399,7 @@ uloop run-tests --filter-type all
 uloop execute-dynamic-code --code 'using UnityEngine; Debug.Log("Hello from CLI!");'
 ```
 
-### Shell Completion
+### Shell Completion (Optional)
 
 You can install Bash/Zsh/PowerShell completion:
 
