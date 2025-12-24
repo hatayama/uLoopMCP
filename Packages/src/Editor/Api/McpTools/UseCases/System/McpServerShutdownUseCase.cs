@@ -25,8 +25,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Shutdown result</returns>
         public override Task<ServerShutdownResponse> ExecuteAsync(ServerShutdownSchema parameters, CancellationToken cancellationToken)
         {
-            var response = new ServerShutdownResponse();
-            var startTime = System.DateTime.UtcNow;
+            ServerShutdownResponse response = new ServerShutdownResponse();
 
             try
             {
@@ -93,10 +92,6 @@ namespace io.github.hatayama.uLoopMCP
                 
                 response.Success = false;
                 response.Message = "Server shutdown failed. Please check the logs for details.";
-            }
-            finally
-            {
-                response.SetTimingInfo(startTime, System.DateTime.UtcNow);
             }
 
             return Task.FromResult(response);

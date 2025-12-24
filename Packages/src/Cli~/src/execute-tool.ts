@@ -111,7 +111,7 @@ function printVersionWarning(cliVersion: string, serverVersion: string): void {
  * Check server version from response and print warning if mismatched.
  */
 function checkServerVersion(result: Record<string, unknown>): void {
-  const serverVersion = result['ULoopServerVersion'] as string | undefined;
+  const serverVersion = result['Ver'] as string | undefined;
   if (serverVersion && serverVersion !== VERSION) {
     printVersionWarning(VERSION, serverVersion);
   }

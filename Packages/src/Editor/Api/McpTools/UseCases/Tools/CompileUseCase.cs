@@ -49,8 +49,7 @@ namespace io.github.hatayama.uLoopMCP
                     warningCount: null,
                     errors: null,
                     warnings: null,
-                    message: "Force compilation executed. Use get-logs tool to retrieve compilation messages.",
-                    isIndeterminate: true
+                    message: "Force compilation executed. Use get-logs tool to retrieve compilation messages."
                 );
             }
             

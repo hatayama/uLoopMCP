@@ -10,10 +10,8 @@
 - `TimeoutSeconds` (number): ツール実行のタイムアウト時間（秒）
 
 ### 共通レスポンスプロパティ
-すべてのツールには以下のタイミング情報が自動的に含まれます：
-- `StartedAt` (string): ツール実行開始時刻（ローカル時間）
-- `EndedAt` (string): ツール実行終了時刻（ローカル時間）
-- `ExecutionTimeMs` (number): ツール実行時間（ミリ秒）
+すべてのツールには以下のプロパティが自動的に含まれます：
+- `Ver` (string): CLIとの互換性チェック用のuLoopMCPサーバーバージョン
 
 ---
 
@@ -259,7 +257,6 @@
   - `ErrorMessage` (string): エラーメッセージ（失敗時）
   - `SecurityLevel` (string): 現在のセキュリティレベル（"Disabled", "Restricted", "FullAccess"）
   - `UpdatedCode` (string): 更新されたコード（修正適用後）
-  - `ExecutionTimeMs` (number): 実行時間（ミリ秒）
 
 ### 12. focus-window
 - **説明**: macOSおよびWindowsでUnity Editorウィンドウを前面に表示します
