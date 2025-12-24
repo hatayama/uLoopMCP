@@ -335,11 +335,11 @@ npm install -g uloop-cli
 
 **Step 2: Install Skills**
 ```bash
-# Install to project (recommended)
-uloop skills install
+# Install to project for Claude Code (project-level)
+uloop skills install --claude
 
 # Or install globally
-uloop skills install --global
+uloop skills install --claude --global
 ```
 
 That's it! Skills-compatible LLM tools will automatically recognize skills like `/uloop-compile`, `/uloop-get-logs`, and use them at the right time.
