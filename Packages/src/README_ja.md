@@ -399,7 +399,7 @@ uloop run-tests --filter-type all
 uloop execute-dynamic-code --code 'using UnityEngine; Debug.Log("Hello from CLI!");'
 ```
 
-### シェル補完
+### シェル補完（オプション）
 
 Bash/Zsh/PowerShell の補完機能をインストールできます：
 
