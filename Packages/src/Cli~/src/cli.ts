@@ -352,9 +352,69 @@ compdef _uloop uloop`;
 }
 
 /**
+ * Get the currently installed version of uloop-cli from npm.
+ */
+function getInstalledVersion(callback: (version: string | null) => void): void {
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const child = spawn(npmCommand, ['list', '-g', 'uloop-cli', '--json'], {
+    shell: true,
+  });
+
+  let stdout = '';
+  child.stdout.on('data', (data: Buffer) => {
+    stdout += data.toString();
+  });
+
+  child.on('close', (code) => {
+    if (code !== 0) {
+      callback(null);
+      return;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(stdout);
+    } catch {
+      callback(null);
+      return;
+    }
+
+    if (typeof parsed !== 'object' || parsed === null) {
+      callback(null);
+      return;
+    }
+
+    const deps = (parsed as Record<string, unknown>)['dependencies'];
+    if (typeof deps !== 'object' || deps === null) {
+      callback(null);
+      return;
+    }
+
+    const uloopCli = (deps as Record<string, unknown>)['uloop-cli'];
+    if (typeof uloopCli !== 'object' || uloopCli === null) {
+      callback(null);
+      return;
+    }
+
+    const version = (uloopCli as Record<string, unknown>)['version'];
+    if (typeof version !== 'string') {
+      callback(null);
+      return;
+    }
+
+    callback(version);
+  });
+
+  child.on('error', () => {
+    callback(null);
+  });
+}
+
+/**
  * Update uloop CLI to the latest version using npm.
  */
 function updateCli(): void {
+  const previousVersion = VERSION;
   console.log('Updating uloop-cli to the latest version...');
 
   const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
@@ -365,8 +425,13 @@ function updateCli(): void {
 
   child.on('close', (code) => {
     if (code === 0) {
-      console.log('\n✅ uloop-cli has been updated successfully!');
-      console.log('Run "uloop --version" to check the new version.');
+      getInstalledVersion((newVersion) => {
+        if (newVersion && newVersion !== previousVersion) {
+          console.log(`\n✅ uloop-cli updated: v${previousVersion} -> v${newVersion}`);
+        } else {
+          console.log(`\n✅ Already up to date (v${previousVersion})`);
+        }
+      });
     } else {
       console.error(`\n❌ Update failed with exit code ${code}`);
       process.exit(1);
