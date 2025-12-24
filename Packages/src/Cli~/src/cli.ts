@@ -365,14 +365,44 @@ function getInstalledVersion(callback: (version: string | null) => void): void {
     stdout += data.toString();
   });
 
-  child.on('close', () => {
-    const parsed: unknown = JSON.parse(stdout);
-    const deps = (parsed as Record<string, unknown>)['dependencies'] as
-      | Record<string, unknown>
-      | undefined;
-    const uloopCli = deps?.['uloop-cli'] as Record<string, unknown> | undefined;
-    const version = uloopCli?.['version'] as string | undefined;
-    callback(version ?? null);
+  child.on('close', (code) => {
+    if (code !== 0) {
+      callback(null);
+      return;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(stdout);
+    } catch {
+      callback(null);
+      return;
+    }
+
+    if (typeof parsed !== 'object' || parsed === null) {
+      callback(null);
+      return;
+    }
+
+    const deps = (parsed as Record<string, unknown>)['dependencies'];
+    if (typeof deps !== 'object' || deps === null) {
+      callback(null);
+      return;
+    }
+
+    const uloopCli = (deps as Record<string, unknown>)['uloop-cli'];
+    if (typeof uloopCli !== 'object' || uloopCli === null) {
+      callback(null);
+      return;
+    }
+
+    const version = (uloopCli as Record<string, unknown>)['version'];
+    if (typeof version !== 'string') {
+      callback(null);
+      return;
+    }
+
+    callback(version);
   });
 
   child.on('error', () => {
