@@ -30,5 +30,5 @@ Returns JSON confirming the window was focused.
 
 ## Notes
 
-- Useful before `uloop capture-gameview` to ensure Game View is visible
+- Useful before `uloop capture-unity-window` to ensure the target window is visible
 - Brings the main Unity Editor window to the foreground
