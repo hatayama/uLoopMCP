@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.48.2](https://github.com/hatayama/uLoopMCP/compare/v0.48.1...v0.48.2) (2025-12-24)
+
+
+### Bug Fixes
+
+* Optimize response JSON and add Claude Code skills ([#476](https://github.com/hatayama/uLoopMCP/issues/476)) ([c5d17c4](https://github.com/hatayama/uLoopMCP/commit/c5d17c4e226170a0edb625788c0bbed1f7d295a9))
+
 ## [0.48.1](https://github.com/hatayama/uLoopMCP/compare/v0.48.0...v0.48.1) (2025-12-23)
 
 
