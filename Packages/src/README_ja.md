@@ -34,7 +34,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 3. Unity Package Manager からインストールし、お使いの LLM ツール（Cursor / Claude Code / Codex / Gemini など）と数クリックで接続できます。
 4. プロジェクト固有の MCP ツールを型安全に拡張しやすく、AI に実装を任せやすい設計になっています。
 5. 大量のログや階層情報はファイルに書き出すことで、LLM のコンテキスト消費を抑える工夫をしています。
-6. スタンドアロン CLI ツール `uloop` を提供。**MCP設定不要で、Skills をインストールするだけで LLM ツールが自動的に Unity を操作できます**。15個のバンドルされた Skills により、コンパイル・テスト実行・ログ取得などをLLMツールに任せられます。（[詳細](#cli-ツール-uloop)）
+6. スタンドアロン CLI ツール `uloop` を提供。**MCP設定不要で、Skills をインストールするだけで LLM ツールが自動的に Unity を操作できます**。14個のバンドルされた Skills により、コンパイル・テスト実行・ログ取得などをLLMツールに任せられます。（[詳細](#cli-ツール-uloop)）
 
 # ユースケース例
 - Unity プロジェクトの「コンパイルが通るまで」「テストが緑になるまで」を、AI に任せて自律的に回し続ける
@@ -324,7 +324,7 @@ uLoopMCPには、スタンドアロンCLIツール `uloop` が付属していま
 - **複数Unityの操作**: 1つのAI Agentから `--port` 指定で複数のUnityインスタンスを操作可能
 - **コンテキスト節約**: MCPと違い、LLMのコンテキストを消費しない
 
-15個のバンドルされたSkillsをインストールするだけで、Skills対応のLLMツールが自動的にUnityと連携します。
+14個のバンドルされたSkillsをインストールするだけで、Skills対応のLLMツールが自動的にUnityと連携します。
 
 ### クイックスタート
 
@@ -335,11 +335,11 @@ npm install -g uloop-cli
 
 **ステップ2: Skillsのインストール**
 ```bash
-# プロジェクトにインストール（推奨）
-uloop skills install
+# Claude Code のプロジェクトにインストール（推奨）
+uloop skills install --claude
 
 # または、グローバルにインストール
-uloop skills install --global
+uloop skills install --claude --global
 ```
 
 これで完了です！Skills対応のLLMツールが `/uloop-compile`、`/uloop-get-logs` などのスキルを自動認識し、適切なタイミングで使用してくれます。
@@ -359,7 +359,7 @@ Skillsをインストールすると、LLMツールが以下のような指示�
 > **MCP設定は不要です！** uLoopMCP Windowでサーバーを起動していれば、Skillsを通じてLLMツールが直接Unityと通信します。
 
 <details>
-<summary>バンドルされている全15個のSkills一覧</summary>
+<summary>バンドルされている全14個のSkills一覧</summary>
 
 - `/uloop-compile` - コンパイルの実行
 - `/uloop-get-logs` - Consoleログの取得
@@ -375,7 +375,6 @@ Skillsをインストールすると、LLMツールが以下のような指示�
 - `/uloop-control-play-mode` - Play Modeの制御
 - `/uloop-execute-dynamic-code` - 動的C#コード実行
 - `/uloop-get-provider-details` - 検索プロバイダー詳細
-- `/uloop-get-project-info` - プロジェクト情報の取得
 
 </details>
 
