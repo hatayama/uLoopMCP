@@ -407,9 +407,9 @@ You can install Bash/Zsh/PowerShell completion:
 # Add completion script to shell config (auto-detects shell)
 uloop completion --install
 
-# Explicitly specify shell (when auto-detection fails, e.g., MINGW64)
-uloop completion --shell bash --install
-uloop completion --shell powershell --install
+# Explicitly specify shell (when auto-detection fails on Windows)
+uloop completion --shell bash --install        # Git Bash / MINGW64
+uloop completion --shell powershell --install  # PowerShell
 
 # Check completion script
 uloop completion

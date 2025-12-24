@@ -407,9 +407,9 @@ Bash/Zsh/PowerShell の補完機能をインストールできます：
 # 補完スクリプトをシェル設定に追加（シェル自動検出）
 uloop completion --install
 
-# シェルを明示的に指定（MINGW64等で自動検出が失敗する場合）
-uloop completion --shell bash --install
-uloop completion --shell powershell --install
+# シェルを明示的に指定（Windows環境で自動検出が失敗する場合）
+uloop completion --shell bash --install        # Git Bash / MINGW64
+uloop completion --shell powershell --install  # PowerShell
 
 # 補完スクリプトを確認
 uloop completion
