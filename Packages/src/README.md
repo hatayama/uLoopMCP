@@ -464,9 +464,12 @@ Scope(s): io.github.hatayama.uloopmcp
 
 
 ## Project-Specific Tool Development
-uLoopMCP enables efficient development of project-specific MCP tools without requiring changes to the core package.  
+uLoopMCP enables efficient development of project-specific MCP tools without requiring changes to the core package.
 The type-safe design allows for reliable custom tool implementation in minimal time.
 (If you ask AI, they should be able to make it for you soon ✨)
+
+> [!TIP]
+> **For AI-assisted development**: Detailed implementation guides are available in [.claude/rules/mcp-tools.md](/.claude/rules/mcp-tools.md) for MCP tool development and [.claude/rules/cli.md](/.claude/rules/cli.md) for CLI/Skills development. These guides are automatically loaded by Claude Code when working in the relevant directories.
 
 > [!IMPORTANT]  
 > **Security Settings**
