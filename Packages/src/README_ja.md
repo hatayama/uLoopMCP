@@ -595,6 +595,8 @@ description: ツールの説明と使用タイミング
 
 完全な例は [HelloWorld サンプル](/Assets/Editor/CustomCommandSamples/HelloWorld/SKILL.md) を参照してください。
 
+より実践的なサンプルプロジェクトは [uLoopMCP-extensions-sample](https://github.com/hatayama/uLoopMCP-extesnsions-sample) を参照してください。
+
 ## その他
 
 > [!TIP]
