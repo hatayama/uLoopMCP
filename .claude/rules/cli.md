@@ -54,6 +54,15 @@ E2E tests communicate with actual Unity Editor, so the following prerequisites a
 npm run test:cli # Run E2E tests (Unity must be running)
 ```
 
+### Domain Reload and Connection Drops
+
+**Important**: After `compile` command execution, Unity triggers a Domain Reload which forcibly disconnects the C# TCP server. This causes a few seconds of unavailability where Unity connections will fail. This behavior is unavoidable.
+
+When writing E2E tests:
+- Use `runCliWithRetry()` instead of `runCli()` for commands that run after `compile`
+- Place `compile --force-recompile` tests at the end of the test suite to minimize impact on other tests
+- Be aware that any test immediately following a compile-related test may experience connection instability
+
 ## npm Publishing
 
 This directory is published to npm as the `uloop-cli` package.
