@@ -386,6 +386,9 @@ Skillsを使わずにCLIを直接呼び出すこともできます：
 # 利用可能なツール一覧を取得
 uloop list
 
+# Unityからツール定義を取得しローカルキャッシュに保存 (.uloop/tools.json)
+uloop sync
+
 # コンパイルを実行
 uloop compile
 
@@ -462,10 +465,15 @@ Scope(s): io.github.hatayama.uloopmcp
 
 3. Package Managerウィンドウを開き、My RegistriesセクションのOpenUPMを選択。uLoopMCPが表示されます。
 
-## プロジェクト固有のツール開発
-uLoopMCPはコアパッケージへの変更を必要とせず、プロジェクト固有のMCPツールを効率的に開発できます。  
+## uLoopMCP 拡張ツールの開発
+uLoopMCPはコアパッケージへの変更を必要とせず、プロジェクト固有のMCPツールを効率的に開発できます。
 型安全な設計により、信頼性の高いカスタムツールを短時間で実装可能です。
 (AIに依頼すればすぐに作ってくれるはずです✨)
+
+開発した拡張ツールはGitHubで公開し、他のプロジェクトでも再利用できます。公開例は [uLoopMCP-extensions-sample](https://github.com/hatayama/uLoopMCP-extensions-sample) を参照してください。
+
+> [!TIP]
+> **AI支援開発向け**: 詳細な実装ガイドが [.claude/rules/mcp-tools.md](/.claude/rules/mcp-tools.md)（MCPツール開発用）と [.claude/rules/cli.md](/.claude/rules/cli.md)（CLI/Skills開発用）に用意されています。これらのガイドは、Claude Codeが該当ディレクトリで作業する際に自動的に読み込まれます。
 
 > [!IMPORTANT]  
 > **セキュリティ設定について**
@@ -560,6 +568,39 @@ public class MyCustomTool : AbstractUnityTool<MyCustomSchema, MyCustomResponse>
 [カスタムツールのサンプル](/Assets/Editor/CustomToolSamples)も参考にして下さい。
 
 </details>
+
+### カスタムツール用 Skills
+
+カスタムMCPツールを作成した際、同じ `Editor/` フォルダ内に `SKILL.md` ファイルを配置することで、LLMツールがSkillsシステムを通じて自動的にカスタムツールを認識・使用できるようになります。
+
+**仕組み:**
+1. カスタムツールと同じフォルダに `SKILL.md` ファイルを作成
+2. `uloop skills install --claude` を実行（バンドル + プロジェクトのSkillsをまとめてインストール）
+3. LLMツールがカスタムSkillを自動認識
+
+**SKILL.md のフォーマット:**
+```markdown
+---
+name: uloop-my-custom-tool
+description: ツールの説明と使用タイミング
+---
+
+# uloop my-custom-tool
+
+ツールの詳細ドキュメント...
+```
+
+**スキャン対象**（`SKILL.md` ファイルを検索）:
+- `Assets/**/Editor/<FolderName>/SKILL.md`
+- `Packages/*/Editor/<FolderName>/SKILL.md`
+- `Library/PackageCache/*/Editor/<FolderName>/SKILL.md`
+
+> [!TIP]
+> フロントマターに `internal: true` を追加すると、インストール対象から除外されます（内部ツールやデバッグ用ツールに便利）。
+
+完全な例は [HelloWorld サンプル](/Assets/Editor/CustomCommandSamples/HelloWorld/SKILL.md) を参照してください。
+
+より実践的なサンプルプロジェクトは [uLoopMCP-extensions-sample](https://github.com/hatayama/uLoopMCP-extensions-sample) を参照してください。
 
 ## その他
 

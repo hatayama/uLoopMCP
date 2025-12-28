@@ -386,6 +386,9 @@ You can also call the CLI directly without using Skills:
 # List available tools
 uloop list
 
+# Sync tool definitions from Unity to local cache (.uloop/tools.json)
+uloop sync
+
 # Execute compilation
 uloop compile
 
@@ -463,10 +466,15 @@ Scope(s): io.github.hatayama.uloopmcp
 
 
 
-## Project-Specific Tool Development
-uLoopMCP enables efficient development of project-specific MCP tools without requiring changes to the core package.  
+## uLoopMCP Extension Development
+uLoopMCP enables efficient development of project-specific MCP tools without requiring changes to the core package.
 The type-safe design allows for reliable custom tool implementation in minimal time.
 (If you ask AI, they should be able to make it for you soon ✨)
+
+You can publish your extension tools on GitHub and reuse them across other projects. See [uLoopMCP-extensions-sample](https://github.com/hatayama/uLoopMCP-extensions-sample) for an example.
+
+> [!TIP]
+> **For AI-assisted development**: Detailed implementation guides are available in [.claude/rules/mcp-tools.md](/.claude/rules/mcp-tools.md) for MCP tool development and [.claude/rules/cli.md](/.claude/rules/cli.md) for CLI/Skills development. These guides are automatically loaded by Claude Code when working in the relevant directories.
 
 > [!IMPORTANT]  
 > **Security Settings**
@@ -561,6 +569,39 @@ public class MyCustomTool : AbstractUnityTool<MyCustomSchema, MyCustomResponse>
 Please also refer to [Custom Tool Samples](/Assets/Editor/CustomToolSamples).
 
 </details>
+
+### Custom Skills for Your Tools
+
+When you create a custom MCP tool, you can also create a `SKILL.md` file in the same `Editor/` folder. This allows LLM tools to automatically discover and use your custom tool through the Skills system.
+
+**How it works:**
+1. Create a `SKILL.md` file in the same folder as your custom tool
+2. Run `uloop skills install --claude` to install all skills (bundled + project)
+3. LLM tools will automatically recognize your custom skill
+
+**SKILL.md format:**
+```markdown
+---
+name: uloop-my-custom-tool
+description: Description of what the tool does and when to use it.
+---
+
+# uloop my-custom-tool
+
+Detailed documentation for the tool...
+```
+
+**Scanned locations** (searches for `SKILL.md` files):
+- `Assets/**/Editor/<FolderName>/SKILL.md`
+- `Packages/*/Editor/<FolderName>/SKILL.md`
+- `Library/PackageCache/*/Editor/<FolderName>/SKILL.md`
+
+> [!TIP]
+> Add `internal: true` to the frontmatter to exclude a skill from installation (useful for internal/debug tools).
+
+See [HelloWorld sample](/Assets/Editor/CustomCommandSamples/HelloWorld/SKILL.md) for a complete example.
+
+For a more comprehensive example project, see [uLoopMCP-extensions-sample](https://github.com/hatayama/uLoopMCP-extensions-sample).
 
 ## Other
 > [!TIP]

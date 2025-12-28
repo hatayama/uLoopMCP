@@ -595,7 +595,49 @@ function listOptionsForCommand(cmdName: string): void {
   console.log(options.join('\n'));
 }
 
-// Handle completion options first (before commander parsing)
-if (!handleCompletionOptions()) {
+/**
+ * Check if a command exists in the current program.
+ */
+function commandExists(cmdName: string): boolean {
+  if (BUILTIN_COMMANDS.includes(cmdName as (typeof BUILTIN_COMMANDS)[number])) {
+    return true;
+  }
+  const tools = loadToolsCache();
+  return tools.tools.some((t) => t.name === cmdName);
+}
+
+/**
+ * Main entry point with auto-sync for unknown commands.
+ */
+async function main(): Promise<void> {
+  if (handleCompletionOptions()) {
+    return;
+  }
+
+  const args = process.argv.slice(2);
+  const cmdName = args.find((arg) => !arg.startsWith('-'));
+
+  if (cmdName && !commandExists(cmdName)) {
+    console.log(`\x1b[33mUnknown command '${cmdName}'. Syncing tools from Unity...\x1b[0m`);
+    try {
+      await syncTools({});
+      const newCache = loadToolsCache();
+      const tool = newCache.tools.find((t) => t.name === cmdName);
+      if (tool) {
+        registerToolCommand(tool);
+        console.log(`\x1b[32m✓ Found '${cmdName}' after sync.\x1b[0m\n`);
+      } else {
+        console.error(`\x1b[31mError: Command '${cmdName}' not found even after sync.\x1b[0m`);
+        process.exit(1);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`\x1b[31mError: Failed to sync tools: ${message}\x1b[0m`);
+      process.exit(1);
+    }
+  }
+
   program.parse();
 }
+
+void main();
