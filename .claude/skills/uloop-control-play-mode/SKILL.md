@@ -45,4 +45,3 @@ Returns JSON with the current play mode state:
 - Stop action exits play mode and returns to edit mode
 - Pause action pauses the game while remaining in play mode
 - Useful for automated testing workflows
-
