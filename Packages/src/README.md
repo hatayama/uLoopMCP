@@ -596,6 +596,8 @@ Detailed documentation for the tool...
 
 See [HelloWorld sample](/Assets/Editor/CustomCommandSamples/HelloWorld/SKILL.md) for a complete example.
 
+For a more comprehensive example project, see [uLoopMCP-extensions-sample](https://github.com/hatayama/uLoopMCP-extensions-sample).
+
 ## Other
 > [!TIP]
 > **File Output**  
