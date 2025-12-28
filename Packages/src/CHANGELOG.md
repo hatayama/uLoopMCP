@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.48.4](https://github.com/hatayama/uLoopMCP/compare/v0.48.3...v0.48.4) (2025-12-28)
+
+
+### Bug Fixes
+
+* **editor:** rename InternalAPIEditorBridge from 001 to 024 ([#484](https://github.com/hatayama/uLoopMCP/issues/484)) ([5be11ea](https://github.com/hatayama/uLoopMCP/commit/5be11ead3e74631d2e696fdd61a84ca35225963d))
+
 ## [0.48.3](https://github.com/hatayama/uLoopMCP/compare/v0.48.2...v0.48.3) (2025-12-24)
 
 
