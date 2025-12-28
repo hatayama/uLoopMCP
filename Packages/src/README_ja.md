@@ -386,6 +386,9 @@ Skillsを使わずにCLIを直接呼び出すこともできます：
 # 利用可能なツール一覧を取得
 uloop list
 
+# Unityからツール定義を取得しローカルキャッシュに保存 (.uloop/tools.json)
+uloop sync
+
 # コンパイルを実行
 uloop compile
 
