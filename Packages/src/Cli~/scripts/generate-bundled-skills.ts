@@ -73,7 +73,7 @@ function getSkillMetadataFromPath(
   const isInternal = frontmatter.internal === true;
   const dirName = name;
 
-  const relativePath = relative(OUTPUT_DIR, skillMdPath);
+  const relativePath = relative(OUTPUT_DIR, skillMdPath).replace(/\\/g, '/');
   const importPath = relativePath.startsWith('.') ? relativePath : `./${relativePath}`;
 
   return { dirName, name, isInternal, importPath };
