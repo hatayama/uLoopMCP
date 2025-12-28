@@ -1,5 +1,7 @@
 Comments in the code, commit messages, and PR titles and bodies should be written in English.
 
+Always use `io.github.hatayama.uLoopMCP` as the namespace.
+
 ## CLI Skills
 
 Skills in `Packages/src/Cli~/src/skills/skill-definitions/` with `internal: true` in their SKILL.md frontmatter are excluded from bundled skills (not included in `bundled-skills.ts`).
