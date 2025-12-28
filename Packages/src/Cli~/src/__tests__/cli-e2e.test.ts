@@ -92,22 +92,19 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       expect(result.Success).toBe(true);
       expect(result.ErrorCount).toBe(0);
     });
-
-    it('should support --force-recompile option', () => {
-      const { exitCode } = runCli('compile --force-recompile');
-
-      // Domain Reload causes connection to be lost, so we just verify the command runs
-      // The exit code may be non-zero due to connection being dropped during reload
-      expect(typeof exitCode).toBe('number');
-    });
   });
 
   describe('get-logs', () => {
     const TEST_LOG_MENU_PATH = 'uLoopMCP/Debug/LogGetter Tests/Output Test Logs';
+    const MENU_ITEM_WAIT_MS = 1000;
 
     function setupTestLogs(): void {
-      runCli('clear-console');
-      runCli(`execute-menu-item --menu-item-path "${TEST_LOG_MENU_PATH}"`);
+      runCliWithRetry('clear-console');
+      const result = runCliWithRetry(`execute-menu-item --menu-item-path "${TEST_LOG_MENU_PATH}"`);
+      if (result.exitCode !== 0) {
+        throw new Error(`execute-menu-item failed: ${result.stderr || result.stdout}`);
+      }
+      sleepSync(MENU_ITEM_WAIT_MS);
     }
 
     it('should retrieve test logs after executing Output Test Logs menu item', () => {
@@ -353,8 +350,8 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       const { stdout, exitCode } = runCli('skills list --claude');
 
       expect(exitCode).toBe(0);
-      // Should show bundled skills count (14)
-      expect(stdout).toMatch(/bundled:\s*\d+/i);
+      // Should show total skills count
+      expect(stdout).toMatch(/total:\s*\d+/i);
     });
 
     it('should install skills for claude target', () => {
@@ -402,6 +399,17 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       const { exitCode } = runCli('unknown-command');
 
       expect(exitCode).not.toBe(0);
+    });
+  });
+
+  // Domain Reload tests must run last to avoid affecting other tests
+  describe('compile --force-recompile (Domain Reload)', () => {
+    it('should support --force-recompile option', () => {
+      const { exitCode } = runCli('compile --force-recompile');
+
+      // Domain Reload causes connection to be lost, so we just verify the command runs
+      // The exit code may be non-zero due to connection being dropped during reload
+      expect(typeof exitCode).toBe('number');
     });
   });
 });
