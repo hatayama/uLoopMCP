@@ -339,6 +339,64 @@ describe('CLI E2E Tests (requires running Unity)', () => {
     });
   });
 
+  describe('skills', () => {
+    it('should list skills for claude target', () => {
+      const { stdout, exitCode } = runCli('skills list --claude');
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('uloop-compile');
+      expect(stdout).toContain('uloop-get-logs');
+      expect(stdout).toContain('uloop-run-tests');
+    });
+
+    it('should show bundled and project skills count', () => {
+      const { stdout, exitCode } = runCli('skills list --claude');
+
+      expect(exitCode).toBe(0);
+      // Should show bundled skills count (14)
+      expect(stdout).toMatch(/bundled:\s*\d+/i);
+    });
+
+    it('should install skills for claude target', () => {
+      // First uninstall to ensure clean state
+      runCli('skills uninstall --claude');
+
+      const { stdout, exitCode } = runCli('skills install --claude');
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toMatch(/installed|updated|skipped/i);
+    });
+
+    it('should uninstall skills for claude target', () => {
+      // First install to ensure there are skills to uninstall
+      runCli('skills install --claude');
+
+      const { stdout, exitCode } = runCli('skills uninstall --claude');
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toMatch(/removed|not found/i);
+    });
+
+    it('should include project skills in list when available', () => {
+      const { stdout, exitCode } = runCli('skills list --claude');
+
+      expect(exitCode).toBe(0);
+      // HelloWorld sample should be detected as a project skill
+      expect(stdout).toContain('uloop-hello-world');
+    });
+
+    it('should install project skills along with bundled skills', () => {
+      // First uninstall
+      runCli('skills uninstall --claude');
+
+      const { stdout, exitCode } = runCli('skills install --claude');
+
+      expect(exitCode).toBe(0);
+      // Should mention project skills were installed
+      expect(stdout).toMatch(/project|installed/i);
+    });
+  });
+
   describe('error handling', () => {
     it('should handle unknown commands gracefully', () => {
       const { exitCode } = runCli('unknown-command');

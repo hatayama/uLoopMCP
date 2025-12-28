@@ -79,7 +79,7 @@ export function getSkillStatus(
   return 'installed';
 }
 
-function parseFrontmatter(content: string): Record<string, string | boolean> {
+export function parseFrontmatter(content: string): Record<string, string | boolean> {
   const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
   if (!frontmatterMatch) {
     return {};

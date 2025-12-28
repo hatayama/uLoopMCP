@@ -2,10 +2,11 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  moduleFileExtensions: ['ts', 'js', 'json'],
+  moduleFileExtensions: ['ts', 'js', 'json', 'md'],
   testMatch: ['**/__tests__/**/*.test.ts'],
   transform: {
     '^.+\\.ts$': 'ts-jest',
+    '^.+\\.md$': '<rootDir>/md-transformer.cjs',
   },
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
