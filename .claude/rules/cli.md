@@ -1,3 +1,7 @@
+---
+paths: Packages/src/Cli~/**
+---
+
 # uloop CLI
 
 A CLI tool for communicating with Unity Editor. Completely independent from the MCP server (TypeScriptServer~).
@@ -23,9 +27,10 @@ src/
 ├── default-tools.json     # Default tool definitions
 ├── skills/                # Claude Code skills feature
 │   ├── skills-command.ts
-│   ├── skills-manager.ts
-│   ├── bundled-skills.ts
-│   └── skill-definitions/ # 13 skill definitions (.md)
+│   ├── skills-manager.ts  # Collects bundled + project skills
+│   ├── bundled-skills.ts  # Auto-generated from SKILL.md files
+│   └── skill-definitions/
+│       └── cli-only/      # CLI-only internal skills
 └── __tests__/
     └── cli-e2e.test.ts    # E2E tests
 ```
@@ -53,6 +58,29 @@ npm run test:cli # Run E2E tests (Unity must be running)
 
 This directory is published to npm as the `uloop-cli` package.
 Version is synchronized with `Packages/src/package.json` (managed by release-please).
+
+## Skills System
+
+Skills are collected from two sources:
+
+1. **Bundled skills** (build-time): Auto-generated from `SKILL.md` files in:
+   - `Editor/Api/McpTools/<ToolFolder>/SKILL.md`
+   - `skill-definitions/cli-only/<SkillFolder>/SKILL.md`
+
+2. **Project skills** (runtime): Scanned from Unity project's `Editor/` folders:
+   - `Assets/**/Editor/`
+   - `Packages/**/Editor/`
+   - `Library/PackageCache/**/Editor/`
+
+Run `npx tsx scripts/generate-bundled-skills.ts` to regenerate `bundled-skills.ts`.
+
+Skills with `internal: true` in frontmatter are excluded from bundled skills.
+
+Currently internal skills:
+- `uloop-get-project-info`
+- `uloop-get-version`
+
+When updating README documentation about bundled skills count, remember to exclude internal skills from the count.
 
 ## Notes
 
