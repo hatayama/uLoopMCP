@@ -1,3 +1,7 @@
+---
+paths: Packages/src/Editor/Api/**
+---
+
 # MCP Tool Development Guide
 
 This document describes how to create new MCP tools for uLoopMCP.
@@ -14,7 +18,8 @@ McpTools/
 ├── YourNewTool/             # Your new tool folder
 │   ├── YourNewToolSchema.cs
 │   ├── YourNewToolResponse.cs
-│   └── YourNewToolTool.cs
+│   ├── YourNewToolTool.cs
+│   └── SKILL.md             # Skill documentation (optional)
 └── ...
 ```
 
@@ -191,11 +196,11 @@ namespace io.github.hatayama.uLoopMCP
    mcp_uLoopMCP_your-new-tool
    ```
 
-### Step 6: Create SKILL.md
+### Step 6: Create SKILL.md (Optional)
 
-Create skill documentation for CLI usage.
+Create `SKILL.md` in the same folder as your tool for CLI skill support:
 
-`Packages/src/Cli~/src/skills/skill-definitions/uloop-your-new-tool/SKILL.md`:
+`McpTools/YourNewTool/SKILL.md`:
 
 ```markdown
 ---
@@ -237,33 +242,24 @@ Returns JSON with:
 - `ResultPath`: Path to the result
 - `Count`: Number of items processed
 - `Success`: Whether the operation succeeded
-
-## Notes
-
-- Any important notes or limitations
-- Related tools: `uloop other-tool`
 ```
 
-### Step 7: Generate bundled-skills.ts (Auto-Generated)
+**Note:** Add `internal: true` to frontmatter to exclude from bundled skills.
+
+### Step 7: Generate bundled-skills.ts
 
 The `bundled-skills.ts` file is **automatically generated** from SKILL.md files.
 
 **How it works:**
-- The script `scripts/generate-bundled-skills.ts` scans `skill-definitions/` directory
-- It reads all `SKILL.md` files and generates import statements
+- The script `scripts/generate-bundled-skills.ts` scans:
+  - `Editor/Api/McpTools/<ToolFolder>/SKILL.md`
+  - `skill-definitions/cli-only/<SkillFolder>/SKILL.md`
 - Skills with `internal: true` in frontmatter are excluded
 
 **Generate command:**
 ```bash
 cd Packages/src/Cli~
 npx tsx scripts/generate-bundled-skills.ts
-```
-
-**Output:**
-```
-Generated .../bundled-skills.ts
-  - Included: 14 skills
-  - Excluded (internal): uloop-get-project-info, uloop-get-version
 ```
 
 **Note:** This is also run automatically during `npm run build`.
@@ -313,17 +309,6 @@ The CLI uses a cache file (`.uloop/tools.json`) for tool definitions. After addi
 uloop sync
 ```
 
-**Output:**
-```
-Synced 17 tools to /path/to/project/.uloop/tools.json
-
-Tools:
-  - capture-unity-window
-  - clear-console
-  - compile
-  ...
-```
-
 **How tool loading works:**
 1. CLI checks for `.uloop/tools.json` (cache file)
 2. If cache exists, uses cached tool definitions
@@ -334,11 +319,6 @@ Tools:
 - After updating uLoopMCP version
 - If CLI commands don't match Unity tools
 
-**Alternative:** Delete the cache file to force using `default-tools.json`:
-```bash
-rm .uloop/tools.json
-```
-
 ## Naming Conventions
 
 | Item | Convention | Example |
@@ -348,7 +328,7 @@ rm .uloop/tools.json
 | Response class | PascalCase + Response | `YourNewToolResponse` |
 | Tool class | PascalCase + Tool | `YourNewToolTool` |
 | ToolName property | kebab-case | `"your-new-tool"` |
-| SKILL.md folder | uloop- prefix + kebab-case | `uloop-your-new-tool/` |
+| SKILL.md name field | uloop- prefix + kebab-case | `uloop-your-new-tool` |
 
 ## Tips
 
@@ -363,4 +343,3 @@ rm .uloop/tools.json
 - Tool with enum parameter: `ControlPlayMode/`
 - Complex tool with async operations: `CaptureUnityWindow/`
 - Tool with file output: `UnitySearch/`
-
