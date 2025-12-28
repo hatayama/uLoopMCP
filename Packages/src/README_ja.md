@@ -462,10 +462,12 @@ Scope(s): io.github.hatayama.uloopmcp
 
 3. Package Managerウィンドウを開き、My RegistriesセクションのOpenUPMを選択。uLoopMCPが表示されます。
 
-## プロジェクト固有のツール開発
+## uLoopMCP 拡張ツールの開発
 uLoopMCPはコアパッケージへの変更を必要とせず、プロジェクト固有のMCPツールを効率的に開発できます。
 型安全な設計により、信頼性の高いカスタムツールを短時間で実装可能です。
 (AIに依頼すればすぐに作ってくれるはずです✨)
+
+開発した拡張ツールはGitHubで公開し、他のプロジェクトでも再利用できます。公開例は [uLoopMCP-extensions-sample](https://github.com/hatayama/uLoopMCP-extensions-sample) を参照してください。
 
 > [!TIP]
 > **AI支援開発向け**: 詳細な実装ガイドが [.claude/rules/mcp-tools.md](/.claude/rules/mcp-tools.md)（MCPツール開発用）と [.claude/rules/cli.md](/.claude/rules/cli.md)（CLI/Skills開発用）に用意されています。これらのガイドは、Claude Codeが該当ディレクトリで作業する際に自動的に読み込まれます。
