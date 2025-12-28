@@ -590,10 +590,10 @@ description: ツールの説明と使用タイミング
 ツールの詳細ドキュメント...
 ```
 
-**スキャン対象:**
-- `Assets/**/Editor/`
-- `Packages/**/Editor/`
-- `Library/PackageCache/**/Editor/`
+**スキャン対象**（`SKILL.md` ファイルを検索）:
+- `Assets/**/Editor/<FolderName>/SKILL.md`
+- `Packages/*/Editor/<FolderName>/SKILL.md`
+- `Library/PackageCache/*/Editor/<FolderName>/SKILL.md`
 
 > [!TIP]
 > フロントマターに `internal: true` を追加すると、インストール対象から除外されます（内部ツールやデバッグ用ツールに便利）。
