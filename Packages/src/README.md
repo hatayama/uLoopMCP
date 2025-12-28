@@ -562,6 +562,37 @@ Please also refer to [Custom Tool Samples](/Assets/Editor/CustomToolSamples).
 
 </details>
 
+### Custom Skills for Your Tools
+
+When you create a custom MCP tool, you can also create a `SKILL.md` file in the same `Editor/` folder. This allows LLM tools to automatically discover and use your custom tool through the Skills system.
+
+**How it works:**
+1. Create a `SKILL.md` file in the same folder as your custom tool
+2. Run `uloop skills install --claude` to install all skills (bundled + project)
+3. LLM tools will automatically recognize your custom skill
+
+**SKILL.md format:**
+```markdown
+---
+name: uloop-my-custom-tool
+description: Description of what the tool does and when to use it.
+---
+
+# uloop my-custom-tool
+
+Detailed documentation for the tool...
+```
+
+**Scanned locations:**
+- `Assets/**/Editor/`
+- `Packages/**/Editor/`
+- `Library/PackageCache/**/Editor/`
+
+> [!TIP]
+> Add `internal: true` to the frontmatter to exclude a skill from installation (useful for internal/debug tools).
+
+See [HelloWorld sample](/Assets/Editor/CustomCommandSamples/HelloWorld/SKILL.md) for a complete example.
+
 ## Other
 > [!TIP]
 > **File Output**  

@@ -561,6 +561,37 @@ public class MyCustomTool : AbstractUnityTool<MyCustomSchema, MyCustomResponse>
 
 </details>
 
+### カスタムツール用 Skills
+
+カスタムMCPツールを作成した際、同じ `Editor/` フォルダ内に `SKILL.md` ファイルを配置することで、LLMツールがSkillsシステムを通じて自動的にカスタムツールを認識・使用できるようになります。
+
+**仕組み:**
+1. カスタムツールと同じフォルダに `SKILL.md` ファイルを作成
+2. `uloop skills install --claude` を実行（バンドル + プロジェクトのSkillsをまとめてインストール）
+3. LLMツールがカスタムSkillを自動認識
+
+**SKILL.md のフォーマット:**
+```markdown
+---
+name: uloop-my-custom-tool
+description: ツールの説明と使用タイミング
+---
+
+# uloop my-custom-tool
+
+ツールの詳細ドキュメント...
+```
+
+**スキャン対象:**
+- `Assets/**/Editor/`
+- `Packages/**/Editor/`
+- `Library/PackageCache/**/Editor/`
+
+> [!TIP]
+> フロントマターに `internal: true` を追加すると、インストール対象から除外されます（内部ツールやデバッグ用ツールに便利）。
+
+完全な例は [HelloWorld サンプル](/Assets/Editor/CustomCommandSamples/HelloWorld/SKILL.md) を参照してください。
+
 ## その他
 
 > [!TIP]
