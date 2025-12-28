@@ -1,6 +1,6 @@
 ---
 name: uloop-get-version
-description: Get uLoopMCP version information via uloop CLI. Use when you need to check uLoopMCP package version, verify installation, or troubleshoot version compatibility.
+description: Get Unity and project information via uloop CLI. Use when you need to verify Unity version, check project settings (ProductName, CompanyName, Version), or troubleshoot environment issues.
 internal: true
 ---
 
@@ -25,10 +25,12 @@ Returns JSON with:
 - `Platform`: Current platform
 - `DataPath`: Assets folder path
 - `PersistentDataPath`: Persistent data path
+- `TemporaryCachePath`: Temporary cache path
 - `IsEditor`: Whether running in editor
 - `ProductName`: Application product name
 - `CompanyName`: Company name
 - `Version`: Application version
+- `Ver`: uLoopMCP package version
 
 ## Notes
 
