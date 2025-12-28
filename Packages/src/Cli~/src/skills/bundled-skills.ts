@@ -10,20 +10,20 @@
  * To exclude a skill from bundling, add `internal: true` to its frontmatter.
  */
 
-import CaptureUnityWindowSkill from '../../../Editor/Api/McpTools/CaptureUnityWindow/SKILL.md';
-import ClearConsoleSkill from '../../../Editor/Api/McpTools/ClearConsole/SKILL.md';
-import CompileSkill from '../../../Editor/Api/McpTools/Compile/SKILL.md';
-import ControlPlayModeSkill from '../../../Editor/Api/McpTools/ControlPlayMode/SKILL.md';
-import ExecuteDynamicCodeSkill from '../../../Editor/Api/McpTools/ExecuteDynamicCode/SKILL.md';
-import ExecuteMenuItemSkill from '../../../Editor/Api/McpTools/ExecuteMenuItem/SKILL.md';
-import FindGameObjectsSkill from '../../../Editor/Api/McpTools/FindGameObjects/SKILL.md';
-import FocusUnityWindowSkill from '../../../Editor/Api/McpTools/FocusUnityWindow/SKILL.md';
-import GetHierarchySkill from '../../../Editor/Api/McpTools/GetHierarchy/SKILL.md';
-import GetLogsSkill from '../../../Editor/Api/McpTools/GetLogs/SKILL.md';
-import GetMenuItemsSkill from '../../../Editor/Api/McpTools/GetMenuItems/SKILL.md';
-import UnitySearchProviderDetailsSkill from '../../../Editor/Api/McpTools/UnitySearchProviderDetails/SKILL.md';
-import RunTestsSkill from '../../../Editor/Api/McpTools/RunTests/SKILL.md';
-import UnitySearchSkill from '../../../Editor/Api/McpTools/UnitySearch/SKILL.md';
+import captureUnityWindowSkill from '../../../Editor/Api/McpTools/CaptureUnityWindow/SKILL.md';
+import clearConsoleSkill from '../../../Editor/Api/McpTools/ClearConsole/SKILL.md';
+import compileSkill from '../../../Editor/Api/McpTools/Compile/SKILL.md';
+import controlPlayModeSkill from '../../../Editor/Api/McpTools/ControlPlayMode/SKILL.md';
+import executeDynamicCodeSkill from '../../../Editor/Api/McpTools/ExecuteDynamicCode/SKILL.md';
+import executeMenuItemSkill from '../../../Editor/Api/McpTools/ExecuteMenuItem/SKILL.md';
+import findGameObjectsSkill from '../../../Editor/Api/McpTools/FindGameObjects/SKILL.md';
+import focusWindowSkill from '../../../Editor/Api/McpTools/FocusUnityWindow/SKILL.md';
+import getHierarchySkill from '../../../Editor/Api/McpTools/GetHierarchy/SKILL.md';
+import getLogsSkill from '../../../Editor/Api/McpTools/GetLogs/SKILL.md';
+import getMenuItemsSkill from '../../../Editor/Api/McpTools/GetMenuItems/SKILL.md';
+import getProviderDetailsSkill from '../../../Editor/Api/McpTools/UnitySearchProviderDetails/SKILL.md';
+import runTestsSkill from '../../../Editor/Api/McpTools/RunTests/SKILL.md';
+import unitySearchSkill from '../../../Editor/Api/McpTools/UnitySearch/SKILL.md';
 
 export interface BundledSkill {
   name: string;
@@ -34,73 +34,73 @@ export interface BundledSkill {
 export const BUNDLED_SKILLS: BundledSkill[] = [
   {
     name: 'uloop-capture-unity-window',
-    dirName: 'CaptureUnityWindow',
-    content: CaptureUnityWindowSkill,
+    dirName: 'uloop-capture-unity-window',
+    content: captureUnityWindowSkill,
   },
   {
     name: 'uloop-clear-console',
-    dirName: 'ClearConsole',
-    content: ClearConsoleSkill,
+    dirName: 'uloop-clear-console',
+    content: clearConsoleSkill,
   },
   {
     name: 'uloop-compile',
-    dirName: 'Compile',
-    content: CompileSkill,
+    dirName: 'uloop-compile',
+    content: compileSkill,
   },
   {
     name: 'uloop-control-play-mode',
-    dirName: 'ControlPlayMode',
-    content: ControlPlayModeSkill,
+    dirName: 'uloop-control-play-mode',
+    content: controlPlayModeSkill,
   },
   {
     name: 'uloop-execute-dynamic-code',
-    dirName: 'ExecuteDynamicCode',
-    content: ExecuteDynamicCodeSkill,
+    dirName: 'uloop-execute-dynamic-code',
+    content: executeDynamicCodeSkill,
   },
   {
     name: 'uloop-execute-menu-item',
-    dirName: 'ExecuteMenuItem',
-    content: ExecuteMenuItemSkill,
+    dirName: 'uloop-execute-menu-item',
+    content: executeMenuItemSkill,
   },
   {
     name: 'uloop-find-game-objects',
-    dirName: 'FindGameObjects',
-    content: FindGameObjectsSkill,
+    dirName: 'uloop-find-game-objects',
+    content: findGameObjectsSkill,
   },
   {
     name: 'uloop-focus-window',
-    dirName: 'FocusUnityWindow',
-    content: FocusUnityWindowSkill,
+    dirName: 'uloop-focus-window',
+    content: focusWindowSkill,
   },
   {
     name: 'uloop-get-hierarchy',
-    dirName: 'GetHierarchy',
-    content: GetHierarchySkill,
+    dirName: 'uloop-get-hierarchy',
+    content: getHierarchySkill,
   },
   {
     name: 'uloop-get-logs',
-    dirName: 'GetLogs',
-    content: GetLogsSkill,
+    dirName: 'uloop-get-logs',
+    content: getLogsSkill,
   },
   {
     name: 'uloop-get-menu-items',
-    dirName: 'GetMenuItems',
-    content: GetMenuItemsSkill,
+    dirName: 'uloop-get-menu-items',
+    content: getMenuItemsSkill,
   },
   {
     name: 'uloop-get-provider-details',
-    dirName: 'UnitySearchProviderDetails',
-    content: UnitySearchProviderDetailsSkill,
+    dirName: 'uloop-get-provider-details',
+    content: getProviderDetailsSkill,
   },
   {
     name: 'uloop-run-tests',
-    dirName: 'RunTests',
-    content: RunTestsSkill,
+    dirName: 'uloop-run-tests',
+    content: runTestsSkill,
   },
   {
     name: 'uloop-unity-search',
-    dirName: 'UnitySearch',
-    content: UnitySearchSkill,
+    dirName: 'uloop-unity-search',
+    content: unitySearchSkill,
   },
 ];
 

@@ -137,7 +137,7 @@ function scanEditorFolderForSkills(editorPath: string, skills: ProjectSkill[]): 
 
         skills.push({
           name,
-          dirName: entry.name,
+          dirName: name,
           content,
           sourcePath: skillMdPath,
         });

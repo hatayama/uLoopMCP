@@ -60,7 +60,7 @@ function parseFrontmatter(content: string): Record<string, string | boolean> {
 
 function getSkillMetadataFromPath(
   skillMdPath: string,
-  dirName: string
+  folderName: string
 ): SkillMetadata | null {
   if (!existsSync(skillMdPath)) {
     return null;
@@ -69,8 +69,9 @@ function getSkillMetadataFromPath(
   const content = readFileSync(skillMdPath, 'utf-8');
   const frontmatter = parseFrontmatter(content);
 
-  const name = typeof frontmatter.name === 'string' ? frontmatter.name : dirName;
+  const name = typeof frontmatter.name === 'string' ? frontmatter.name : folderName;
   const isInternal = frontmatter.internal === true;
+  const dirName = name;
 
   const relativePath = relative(OUTPUT_DIR, skillMdPath);
   const importPath = relativePath.startsWith('.') ? relativePath : `./${relativePath}`;
