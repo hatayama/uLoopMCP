@@ -121,7 +121,7 @@ namespace io.github.hatayama.uLoopMCP
         private string EnsureOutputDirectoryExists()
         {
             string projectRoot = Application.dataPath.Replace("/Assets", "");
-            string outputDirectory = Path.Combine(projectRoot, "uLoopMCPOutputs", OUTPUT_DIRECTORY_NAME);
+            string outputDirectory = Path.Combine(projectRoot, McpConstants.OUTPUT_ROOT_DIR, OUTPUT_DIRECTORY_NAME);
 
             if (!Directory.Exists(outputDirectory))
             {

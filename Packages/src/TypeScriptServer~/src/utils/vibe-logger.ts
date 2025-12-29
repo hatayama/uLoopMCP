@@ -199,7 +199,7 @@ export class VibeLogger {
 
   /**
    * Get logs for AI analysis (formatted for Claude Code)
-   * Output directory: {project_root}/uLoopMCPOutputs/VibeLogs/
+   * Output directory: {project_root}/.uloop/outputs/VibeLogs/
    */
   static getLogsForAi(operation?: string, correlationId?: string, maxCount: number = 100): string {
     let filteredLogs = [...VibeLogger.memoryLogs];

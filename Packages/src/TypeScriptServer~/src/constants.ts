@@ -148,7 +148,7 @@ export const LIST_CHANGED_SUPPORTED_CLIENTS = ['cursor', 'mcp-inspector'] as con
 
 // File output directories
 export const OUTPUT_DIRECTORIES = {
-  ROOT: 'uLoopMCPOutputs',
+  ROOT: '.uloop/outputs',
   VIBE_LOGS: 'VibeLogs',
 } as const;
 

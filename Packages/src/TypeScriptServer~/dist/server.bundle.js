@@ -26106,7 +26106,7 @@ var POLLING = {
 };
 var LIST_CHANGED_SUPPORTED_CLIENTS = ["cursor", "mcp-inspector"];
 var OUTPUT_DIRECTORIES = {
-  ROOT: "uLoopMCPOutputs",
+  ROOT: ".uloop/outputs",
   VIBE_LOGS: "VibeLogs"
 };
 var CONNECTION_LOST_DEBOUNCE_MS = 500;
@@ -26390,7 +26390,7 @@ var VibeLogger = class _VibeLogger {
   }
   /**
    * Get logs for AI analysis (formatted for Claude Code)
-   * Output directory: {project_root}/uLoopMCPOutputs/VibeLogs/
+   * Output directory: {project_root}/.uloop/outputs/VibeLogs/
    */
   static getLogsForAi(operation, correlationId, maxCount = 100) {
     let filteredLogs = [..._VibeLogger.memoryLogs];

@@ -126,7 +126,6 @@ Packages/src/Cli~/dist/
 
 # Log files
 *.log
-uLoopMCPOutputs/
 
 # Runtime data
 pids

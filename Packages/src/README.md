@@ -140,7 +140,7 @@ Retrieve objects and examine component parameters.
 
 #### 10. get-hierarchy - Analyze Scene Structure
 Retrieve information about the currently active Hierarchy in nested JSON format. Works at runtime as well.
-**Automatic File Export**: Retrieved hierarchy data is always saved as JSON in `{project_root}/uLoopMCPOutputs/HierarchyResults/` directory. The MCP response only returns the file path, minimizing token consumption even for large datasets.
+**Automatic File Export**: Retrieved hierarchy data is always saved as JSON in `{project_root}/.uloop/outputs/HierarchyResults/` directory. The MCP response only returns the file path, minimizing token consumption even for large datasets.
 ```text
 → Understand parent-child relationships between GameObjects, discover and fix structural issues
 → Regardless of scene size, hierarchy data is saved to a file and the path is returned instead of raw JSON
@@ -607,8 +607,8 @@ For a more comprehensive example project, see [uLoopMCP-extensions-sample](https
 > [!TIP]
 > **File Output**  
 > 
-> The `run-tests`, `unity-search`, and `get-hierarchy` tools can save results to the `{project_root}/uLoopMCPOutputs/` directory to avoid massive token consumption when dealing with large datasets.
-> **Recommendation**: Add `uLoopMCPOutputs/` to `.gitignore` to exclude from version control.
+> The `run-tests`, `unity-search`, and `get-hierarchy` tools can save results to the `{project_root}/.uloop/outputs/` directory to avoid massive token consumption when dealing with large datasets.
+> **Recommendation**: Add `.uloop/outputs/` to `.gitignore` to exclude from version control.
 
 ## License
 MIT License
