@@ -78,7 +78,7 @@ namespace io.github.hatayama.uLoopMCP
         public const string ULOOPMCP_DIR = "uLoopMCP";
         
         // File output directories
-        public const string OUTPUT_ROOT_DIR = "uLoopMCPOutputs";
+        public const string OUTPUT_ROOT_DIR = ".uloop/outputs";
         public const string TEST_RESULTS_DIR = "TestResults";
         public const string SEARCH_RESULTS_DIR = "SearchResults";
         public const string HIERARCHY_RESULTS_DIR = "HierarchyResults";

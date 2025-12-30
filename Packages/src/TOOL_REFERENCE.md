@@ -68,7 +68,7 @@ All tools automatically include the following property:
   - `TestMode` (enum): Test mode - "EditMode"(0), "PlayMode"(1) (default: "EditMode")
     - **PlayMode Warning**: During PlayMode test execution, domain reload is temporarily disabled
   - `SaveXml` (boolean): Whether to save test results as XML file (default: false)
-    - XML files are saved to `{project root}/uLoopMCPOutputs/TestResults/` folder
+    - XML files are saved to `{project root}/.uloop/outputs/TestResults/` folder
 - **Response**:
   - `Success` (boolean): Whether test execution was successful
   - `Message` (string): Test execution message
@@ -183,7 +183,7 @@ All tools automatically include the following property:
       - `maxDepth` (number): Maximum depth reached during traversal
   - **Large hierarchies** (>100KB): Automatic file export
     - `hierarchySavedToFile` (boolean): Always true for large hierarchies
-    - `hierarchyFilePath` (string): Relative path to saved hierarchy file (e.g., "{project_root}/uLoopMCPOutputs/HierarchyResults/hierarchy_2025-07-10_21-30-15.json")
+    - `hierarchyFilePath` (string): Relative path to saved hierarchy file (e.g., "{project_root}/.uloop/outputs/HierarchyResults/hierarchy_2025-07-10_21-30-15.json")
     - `saveToFileReason` (string): Reason for file export ("auto_threshold")
     - `context` (object): Same context information as above
   - `Message` (string): Operation message
