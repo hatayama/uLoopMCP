@@ -608,7 +608,7 @@ description: ツールの説明と使用タイミング
 > **ファイル出力について**  
 > 
 > `run-tests`、`unity-search`、`get-hierarchy`の各ツールは、大量のデータによるトークン消費を避けるため、結果を`{project_root}/.uloop/outputs/`ディレクトリにファイル保存する機能があります。
-> **推奨**: `.gitignore`に`.uloop/outputs/`を追加してバージョン管理から除外してください。
+> **推奨**: `.gitignore`に`.uloop/`を追加してバージョン管理から除外してください。
 
 ## ライセンス
 MIT License

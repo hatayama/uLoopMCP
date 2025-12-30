@@ -608,7 +608,7 @@ For a more comprehensive example project, see [uLoopMCP-extensions-sample](https
 > **File Output**  
 > 
 > The `run-tests`, `unity-search`, and `get-hierarchy` tools can save results to the `{project_root}/.uloop/outputs/` directory to avoid massive token consumption when dealing with large datasets.
-> **Recommendation**: Add `.uloop/outputs/` to `.gitignore` to exclude from version control.
+> **Recommendation**: Add `.uloop/` to `.gitignore` to exclude from version control.
 
 ## License
 MIT License
