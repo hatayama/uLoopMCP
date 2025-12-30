@@ -142,7 +142,7 @@ UnitySearchが提供する検索プロバイダーを取得します
 
 #### 10. get-hierarchy - シーン構造の解析
 現在アクティブなHierarchyの情報をネストされたJSON形式で取得します。ランタイムでも動作します。
-**自動ファイル出力**: 取得したHierarchyは常に`{project_root}/uLoopMCPOutputs/HierarchyResults/`ディレクトリにJSONとして保存されます。MCPレスポンスにはファイルパスのみが返るため、大量データでもトークン消費を最小限に抑えられます。
+**自動ファイル出力**: 取得したHierarchyは常に`{project_root}/.uloop/outputs/HierarchyResults/`ディレクトリにJSONとして保存されます。MCPレスポンスにはファイルパスのみが返るため、大量データでもトークン消費を最小限に抑えられます。
 ```text
 → GameObject間の親子関係を理解。構造的な問題を発見・修正
 → シーンの規模にかかわらず、Hierarchyデータはファイルに保存され、生のJSONの代わりにパスが返されます
@@ -607,8 +607,8 @@ description: ツールの説明と使用タイミング
 > [!TIP]
 > **ファイル出力について**  
 > 
-> `run-tests`、`unity-search`、`get-hierarchy`の各ツールは、大量のデータによるトークン消費を避けるため、結果を`{project_root}/uLoopMCPOutputs/`ディレクトリにファイル保存する機能があります。
-> **推奨**: `.gitignore`に`uLoopMCPOutputs/`を追加してバージョン管理から除外してください。
+> `run-tests`、`unity-search`、`get-hierarchy`の各ツールは、大量のデータによるトークン消費を避けるため、結果を`{project_root}/.uloop/outputs/`ディレクトリにファイル保存する機能があります。
+> **推奨**: `.gitignore`に`.uloop/`を追加してバージョン管理から除外してください。
 
 ## ライセンス
 MIT License

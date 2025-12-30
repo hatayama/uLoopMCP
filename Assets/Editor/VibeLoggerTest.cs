@@ -72,9 +72,9 @@ namespace io.github.hatayama.uLoopMCP
             }
             
             Debug.Log($"[VibeLoggerTest] All log levels tested with correlation ID: {correlationId}");
-            Debug.Log("[VibeLoggerTest] Check uLoopMCPOutputs/VibeLogs/ folder for output files");
+            Debug.Log("[VibeLoggerTest] Check .uloop/outputs/VibeLogs/ folder for output files");
         }
-        
+
         [MenuItem("uLoopMCP/Debug/VibeLogger Tests/Test Explicit StackTrace Control")]
         public static void TestExplicitStackTraceControl()
         {
@@ -103,7 +103,7 @@ namespace io.github.hatayama.uLoopMCP
             );
             
             Debug.Log($"[VibeLoggerTest] Explicit control tested with correlation ID: {correlationId}");
-            Debug.Log("[VibeLoggerTest] Check uLoopMCPOutputs/VibeLogs/ folder for output files");
+            Debug.Log("[VibeLoggerTest] Check .uloop/outputs/VibeLogs/ folder for output files");
         }
     }
 }

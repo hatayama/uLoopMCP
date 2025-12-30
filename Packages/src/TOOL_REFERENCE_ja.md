@@ -68,7 +68,7 @@
   - `TestMode` (enum): テストモード - "EditMode"(0), "PlayMode"(1)（デフォルト: "EditMode"）
     - **PlayMode注意**: PlayModeテスト実行時は、一時的にdomain reloadが無効化されます
   - `SaveXml` (boolean): テスト結果をXMLファイルとして保存するかどうか（デフォルト: false）
-    - XMLファイルは `{project_root}/uLoopMCPOutputs/TestResults/` フォルダに保存されます
+    - XMLファイルは `{project_root}/.uloop/outputs/TestResults/` フォルダに保存されます
 - **レスポンス**:
   - `Success` (boolean): テスト実行が成功したかどうか
   - `Message` (string): テスト実行メッセージ
@@ -182,7 +182,7 @@
       - `maxDepth` (number): 探索中に到達した最大深度
   - **大きな階層**（>100KB）: 自動ファイルエクスポート
     - `hierarchySavedToFile` (boolean): 大きな階層では常にtrue
-    - `hierarchyFilePath` (string): 保存された階層ファイルの相対パス（例: "{project_root}/uLoopMCPOutputs/HierarchyResults/hierarchy_2025-07-10_21-30-15.json"）
+    - `hierarchyFilePath` (string): 保存された階層ファイルの相対パス（例: "{project_root}/.uloop/outputs/HierarchyResults/hierarchy_2025-07-10_21-30-15.json"）
     - `saveToFileReason` (string): ファイルエクスポートの理由（"auto_threshold"）
     - `context` (object): 上記と同じコンテキスト情報
   - `Message` (string): 操作メッセージ

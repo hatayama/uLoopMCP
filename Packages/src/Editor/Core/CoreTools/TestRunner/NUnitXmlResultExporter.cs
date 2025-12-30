@@ -30,7 +30,7 @@ namespace io.github.hatayama.uLoopMCP
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string fileName = $"{timestamp}.xml";
 
-            // Save to uLoopMCPOutputs/TestResults folder at project root (same level as Assets)
+            // Save to .uloop/outputs/TestResults folder at project root (same level as Assets)
             DirectoryInfo parentDir = Directory.GetParent(Application.dataPath);
             if (parentDir == null)
             {
