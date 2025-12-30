@@ -97,7 +97,7 @@ working-notes**
 memo.md
 Packages/src/Docs/**
 
-# uloop CLI cache
+# uloop CLI cache and outputs
 **/.uloop/
 
 # Node.js / TypeScript
