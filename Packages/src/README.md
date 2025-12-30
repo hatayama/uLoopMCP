@@ -431,6 +431,29 @@ uloop compile --port {target-port}
 > [!NOTE]
 > You can find the port number in each Unity's uLoopMCP Window.
 
+### Claude Code Sandbox Configuration
+
+When using uloop CLI with Claude Code in sandbox mode, you need to allow localhost connections. Add the following to your project's `.claude/settings.local.json`:
+
+```json
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "network": {
+      "allowLocalBinding": true
+    }
+  }
+}
+```
+
+> [!WARNING]
+> **Security Consideration**
+>
+> The `allowLocalBinding: true` setting allows connections to **all** localhost services, not just uloop. This means Claude Code could potentially access any service running on your machine (databases, development servers, Docker API, etc.). If you're running sensitive services on localhost, consider the implications.
+>
+> **Current limitation:** Claude Code does not support port-specific allowlists (e.g., allowing only port 8700). This is an all-or-nothing setting for localhost access.
+
 ## Installation
 
 > [!WARNING]

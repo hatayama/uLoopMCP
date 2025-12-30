@@ -210,9 +210,6 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle));
             McpEditorSettings.SetCustomPort(port);
-
-            // Automatically update all configured MCP editor settings with new port
-            McpPortChangeUpdater.UpdateAllConfigurationsForPortChange(port, "UI port change");
         }
 
         /// <summary>
