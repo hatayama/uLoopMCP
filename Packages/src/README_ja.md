@@ -431,6 +431,29 @@ uloop compile --port {target-port}
 > [!NOTE]
 > ポート番号は各Unityの uLoopMCP Window で確認できます。
 
+### Claude Code サンドボックス設定
+
+Claude Codeのサンドボックスモードでuloop CLIを使用する場合、localhost接続を許可する必要があります。プロジェクトの `.claude/settings.local.json` に以下を追加してください：
+
+```json
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "network": {
+      "allowLocalBinding": true
+    }
+  }
+}
+```
+
+> [!WARNING]
+> **セキュリティ上の注意点**
+>
+> `allowLocalBinding: true` 設定はuloopだけでなく、**すべての**localhostサービスへの接続を許可します。これはClaude Codeがマシン上で動作している他のサービス（データベース、開発サーバー、Docker APIなど）にもアクセスできることを意味します。localhostで機密性の高いサービスを実行している場合は、影響を検討してください。
+>
+> **現在の制限事項：** Claude Codeは特定ポートのみを許可するリスト（例：ポート8700のみ許可）をサポートしていません。localhost接続は全許可か全拒否のいずれかです。
+
 ## インストール
 
 > [!WARNING]
