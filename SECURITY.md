@@ -59,7 +59,7 @@ The following are considered in scope for security reports:
 When using uLoopMCP, we recommend:
 
 1. **Use Restricted Mode**: Set Dynamic Code Security Level to "Restricted" (Level 1) unless you specifically need full access
-2. **Review Third-Party Tools**: Only enable "Allow Third Party Tools" for trusted extensions
+2. **Review Third-Party Tools**: Only enable "Allow Third-Party Tools" for trusted extensions
 3. **Sandbox Environment**: For AI-driven development, consider running in sandbox environments or containers
 4. **Keep Updated**: Always use the latest version to benefit from security patches
 
