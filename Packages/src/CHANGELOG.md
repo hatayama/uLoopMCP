@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.50.2](https://github.com/hatayama/uLoopMCP/compare/v0.50.1...v0.50.2) (2025-12-30)
+
+
+### Bug Fixes
+
+* **cli:** update tsx to 4.21.0 to fix esbuild vulnerability ([#496](https://github.com/hatayama/uLoopMCP/issues/496)) ([e7240e2](https://github.com/hatayama/uLoopMCP/commit/e7240e221fa1771d7bb7c28e835f61c2f6e9b2b4))
+
 ## [0.50.1](https://github.com/hatayama/uLoopMCP/compare/v0.50.0...v0.50.1) (2025-12-30)
 
 
