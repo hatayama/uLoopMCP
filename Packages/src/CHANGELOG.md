@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.50.0](https://github.com/hatayama/uLoopMCP/compare/v0.49.0...v0.50.0) (2025-12-30)
+
+
+### Features
+
+* change output directory from uLoopMCPOutputs/ to .uloop/outputs/ ([#490](https://github.com/hatayama/uLoopMCP/issues/490)) ([30de345](https://github.com/hatayama/uLoopMCP/commit/30de345ac93f869ec5adb3949fd8ed38b7ed2628))
+
 ## [0.49.0](https://github.com/hatayama/uLoopMCP/compare/v0.48.4...v0.49.0) (2025-12-28)
 
 
