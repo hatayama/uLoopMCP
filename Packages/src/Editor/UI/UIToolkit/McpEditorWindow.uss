@@ -8,6 +8,10 @@
     padding: 4px;
 }
 
+.mcp-main-container--debug {
+    background-color: rgba(128, 0, 128, 0.15);
+}
+
 /* ===========================================
    Block: Section
    =========================================== */

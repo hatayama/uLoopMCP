@@ -37,7 +37,16 @@ namespace io.github.hatayama.uLoopMCP
         {
             _root = root;
             LoadLayout();
+            ApplyDebugStyle();
             InitializeSections();
+        }
+
+        private void ApplyDebugStyle()
+        {
+#if ULOOPMCP_DEBUG
+            VisualElement mainContainer = _root.Q<VisualElement>("main-scroll-view");
+            mainContainer?.AddToClassList("mcp-main-container--debug");
+#endif
         }
 
         private void LoadLayout()
