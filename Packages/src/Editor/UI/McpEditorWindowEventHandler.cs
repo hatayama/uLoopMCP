@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Unity.Profiling;
 using UnityEditor;
-using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -20,8 +16,6 @@ namespace io.github.hatayama.uLoopMCP
     {
         private static readonly ProfilerMarker s_onEditorUpdateMarker =
             new ProfilerMarker("McpEditorWindow.OnEditorUpdate");
-        private static readonly ProfilerMarker s_checkServerStateMarker =
-            new ProfilerMarker("McpEditorWindow.CheckServerState");
         private static readonly ProfilerMarker s_refreshUiMarker =
             new ProfilerMarker("McpEditorWindow.RefreshUI");
 
@@ -68,13 +62,13 @@ namespace io.github.hatayama.uLoopMCP
             EditorApplication.update -= OnEditorUpdate;
         }
 
-        /// <summary>
-        /// Subscribe to server events for immediate UI updates
-        /// </summary>
         private void SubscribeToServerEvents()
         {
-            // Unsubscribe first to avoid duplicate subscriptions
             UnsubscribeFromServerEvents();
+
+            McpBridgeServer.OnServerStarted += OnServerStateChanged;
+            McpBridgeServer.OnServerStopping += OnServerStateChanged;
+            ConnectedToolsMonitoringService.OnConnectedToolsChanged += OnConnectedToolsChanged;
 
             McpBridgeServer currentServer = McpServerController.CurrentServer;
             if (currentServer != null)
@@ -84,17 +78,28 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        /// <summary>
-        /// Unsubscribe from server events
-        /// </summary>
         private void UnsubscribeFromServerEvents()
         {
+            McpBridgeServer.OnServerStarted -= OnServerStateChanged;
+            McpBridgeServer.OnServerStopping -= OnServerStateChanged;
+            ConnectedToolsMonitoringService.OnConnectedToolsChanged -= OnConnectedToolsChanged;
+
             McpBridgeServer currentServer = McpServerController.CurrentServer;
             if (currentServer != null)
             {
                 currentServer.OnClientConnected -= OnClientConnected;
                 currentServer.OnClientDisconnected -= OnClientDisconnected;
             }
+        }
+
+        private void OnServerStateChanged()
+        {
+            _model.RequestRepaint();
+        }
+
+        private void OnConnectedToolsChanged()
+        {
+            _model.RequestRepaint();
         }
 
         /// <summary>
@@ -135,8 +140,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             using (s_onEditorUpdateMarker.Auto())
             {
-                CheckServerStateChanges();
-
                 if (_model.Runtime.IsPostCompileMode)
                 {
                     using (s_refreshUiMarker.Auto())
@@ -155,43 +158,6 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }
             }
-        }
-
-        private void CheckServerStateChanges()
-        {
-            using (s_checkServerStateMarker.Auto())
-            {
-                (bool isRunning, int port, bool _) = McpServerController.GetServerStatus();
-                IReadOnlyCollection<ConnectedClient> connectedClients =
-                    McpServerController.CurrentServer?.GetConnectedClients();
-                int connectedCount = connectedClients?.Count ?? 0;
-
-                string clientsInfoHash = GenerateClientsInfoHash(connectedClients);
-
-                if (isRunning != _model.Runtime.LastServerRunning ||
-                    port != _model.Runtime.LastServerPort ||
-                    connectedCount != _model.Runtime.LastConnectedClientsCount ||
-                    clientsInfoHash != _model.Runtime.LastClientsInfoHash)
-                {
-                    _model.UpdateServerStateTracking(isRunning, port, connectedCount, clientsInfoHash);
-                    _model.RequestRepaint();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Generate hash string from client information to detect changes
-        /// </summary>
-        private string GenerateClientsInfoHash(IReadOnlyCollection<ConnectedClient> clients)
-        {
-            if (clients == null || clients.Count == 0)
-            {
-                return "empty";
-            }
-
-            // Create a hash based on endpoint and client name for unique identification
-            var info = clients.Select(c => $"{c.Endpoint}:{c.ClientName}").OrderBy(s => s);
-            return string.Join("|", info);
         }
 
         /// <summary>
