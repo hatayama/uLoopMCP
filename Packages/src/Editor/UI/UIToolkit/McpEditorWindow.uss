@@ -43,11 +43,11 @@
 }
 
 .mcp-status__value--running {
-    color: #00cc00;
+    color: #2e7d32;
 }
 
 .mcp-status__value--stopped {
-    color: #cc0000;
+    color: #c62828;
 }
 
 /* ===========================================
@@ -81,8 +81,9 @@
 }
 
 .mcp-warning-label {
-    background-color: var(--unity-colors-warning-background, #554400);
-    border-color: var(--unity-colors-warning-border, #aa8800);
+    background-color: #5c4a00;
+    border-color: #7a6400;
+    color: #ffcc00;
     border-width: 1px;
     border-radius: 3px;
     padding: 8px;
@@ -104,21 +105,23 @@
 }
 
 .mcp-button--start {
-    background-color: #336633;
-    border-color: #44aa44;
+    background-color: #2e7d32;
+    border-color: #4caf50;
+    color: #ffffff;
 }
 
 .mcp-button--start:hover {
-    background-color: #448844;
+    background-color: #388e3c;
 }
 
 .mcp-button--stop {
-    background-color: #663333;
-    border-color: #aa4444;
+    background-color: #7b1a1a;
+    border-color: #a33;
+    color: #ffffff;
 }
 
 .mcp-button--stop:hover {
-    background-color: #884444;
+    background-color: #922222;
 }
 
 .mcp-button--warning {
@@ -135,8 +138,10 @@
 }
 
 .mcp-button--disabled {
-    background-color: var(--unity-colors-button-background-disabled, #444444);
-    color: var(--unity-colors-button-text-disabled, #888888);
+    background-color: #4a4a4a;
+    border-color: #5a5a5a;
+    color: #999999;
+    opacity: 1;
 }
 
 /* ===========================================
@@ -159,7 +164,7 @@
 }
 
 .mcp-toggle-row__label--danger {
-    color: #ffaa00;
+    color: #d84315;
 }
 
 /* ===========================================
@@ -241,8 +246,9 @@
 
 .mcp-warning-message {
     display: none;
-    background-color: var(--unity-colors-warning-background, #554400);
-    border-color: var(--unity-colors-warning-border, #aa8800);
+    background-color: #5c4a00;
+    border-color: #7a6400;
+    color: #ffcc00;
     border-width: 1px;
     border-radius: 3px;
     padding: 8px;
@@ -275,14 +281,14 @@
    Block: Security
    =========================================== */
 .mcp-security-warning {
-    background-color: var(--unity-colors-warning-background, #554400);
-    border-color: var(--unity-colors-warning-border, #aa8800);
+    background-color: #5c4a00;
+    border-color: #7a6400;
     border-width: 1px;
     border-radius: 3px;
     padding: 8px;
     margin-bottom: 8px;
     white-space: normal;
-    color: var(--unity-colors-warning-text, #ffcc44);
+    color: #ffcc00;
 }
 
 .mcp-section-header {
@@ -292,7 +298,7 @@
 }
 
 .mcp-section-header--danger {
-    color: #ffaa00;
+    color: #d84315;
 }
 
 .mcp-security-level-field {
@@ -311,8 +317,9 @@
 }
 
 .mcp-security-level-description--warning {
-    background-color: var(--unity-colors-warning-background, #554400);
-    border-color: var(--unity-colors-warning-border, #aa8800);
+    background-color: #5c4a00;
+    border-color: #7a6400;
+    color: #ffcc00;
 }
 
 /* ===========================================
