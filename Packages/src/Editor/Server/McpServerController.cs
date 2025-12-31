@@ -213,26 +213,36 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorSettings.ClearAfterCompileFlag();
             }
 
-            if (!wasRunning)
-            {
-                return;
-            }
-
             if (mcpServer != null && mcpServer.IsRunning)
             {
                 return;
             }
 
             bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
+            bool isFirstLaunch = McpEditorSettings.IsFirstLaunch;
+
+            if (isFirstLaunch)
+            {
+                return;
+            }
+
+            if (!wasRunning && !autoStartEnabled)
+            {
+                return;
+            }
+
             if (!autoStartEnabled && !isAfterCompile)
             {
                 McpEditorSettings.ClearServerSession();
                 return;
             }
 
+            // Use customPort when wasRunning=false (fresh auto-start), savedPort may not be set
+            int portToUse = wasRunning ? savedPort : McpEditorSettings.GetCustomPort();
+
             // Centralized, coalesced startup request
             // Store the task so McpEditorWindow can await it to prevent race conditions
-            _currentRecoveryTask = StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None);
+            _currentRecoveryTask = StartRecoveryIfNeededAsync(portToUse, isAfterCompile, CancellationToken.None);
             _ = _currentRecoveryTask.ContinueWith(task =>
             {
                 _currentRecoveryTask = null;
