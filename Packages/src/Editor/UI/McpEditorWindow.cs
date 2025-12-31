@@ -7,38 +7,13 @@ using System.Threading.Tasks;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    /// <summary>
-    /// Editor Window for controlling Unity MCP Server - Presenter layer in MVP architecture
-    /// Coordinates between Model, View, and helper classes for server management
-    /// Related classes:
-    /// - McpEditorModel: Model layer for state management and business logic
-    /// - McpEditorWindowView: View layer for UI rendering
-    /// - McpEditorWindowEventHandler: Event management helper (Unity/Server events)
-    /// - McpServerOperations: Server operations helper (start/stop/validation)
-    /// - McpEditorWindowState: State objects (UIState, RuntimeState, DebugState)
-    /// - McpConfigServiceFactory: Configuration services factory for different IDEs
-    /// - McpServerController: Core server lifecycle management
-    /// - McpBridgeServer: The actual TCP server implementation
-    /// - McpEditorSettings: Persistent settings storage
-    /// </summary>
     public class McpEditorWindow : EditorWindow
     {
-        // Configuration services factory
         private McpConfigServiceFactory _configServiceFactory;
-
-        // View layer
-        private McpEditorWindowView _view;
-
-        // Model layer (MVP pattern)
+        private McpEditorWindowUI _view;
         private McpEditorModel _model;
-
-        // Event handler (MVP pattern helper)
         private McpEditorWindowEventHandler _eventHandler;
-
-        // Server operations handler (MVP pattern helper)
         private McpServerOperations _serverOperations;
-
-        // Cache for stored tools to avoid repeated calls
         private IEnumerable<ConnectedClient> _cachedStoredTools;
         private float _lastStoredToolsUpdateTime;
 
@@ -59,73 +34,73 @@ namespace io.github.hatayama.uLoopMCP
             _view?.Dispose();
         }
 
+        private void CreateGUI()
+        {
+            InitializeView();
+            RefreshAllSections();
+        }
+
         private void InitializeAll()
         {
             InitializeModel();
-            InitializeView();
             InitializeConfigurationServices();
             InitializeEventHandler();
             InitializeServerOperations();
             LoadSavedSettings();
             RestoreSessionState();
-
             HandlePostCompileMode();
         }
 
-        /// <summary>
-        /// Initialize model layer
-        /// </summary>
         private void InitializeModel()
         {
             _model = new McpEditorModel();
         }
 
-        /// <summary>
-        /// Initialize view layer
-        /// </summary>
         private void InitializeView()
         {
-            _view = new McpEditorWindowView();
+            _view = new McpEditorWindowUI(rootVisualElement);
+            SetupViewCallbacks();
         }
 
+        private void SetupViewCallbacks()
+        {
+            _view.OnToggleServer += ToggleServer;
+            _view.OnAutoStartChanged += UpdateAutoStartServer;
+            _view.OnPortChanged += UpdateCustomPort;
+            _view.OnConnectedToolsFoldoutChanged += UpdateShowConnectedTools;
+            _view.OnEditorTypeChanged += UpdateSelectedEditorType;
+            _view.OnLLMSettingsFoldoutChanged += UpdateShowLLMToolSettings;
+            _view.OnRepositoryRootChanged += UpdateAddRepositoryRoot;
+            _view.OnConfigureClicked += ConfigureEditor;
+            _view.OnOpenSettingsClicked += OpenConfigurationFile;
+            _view.OnSecurityFoldoutChanged += UpdateShowSecuritySettings;
+            _view.OnEnableTestsChanged += UpdateEnableTestsExecution;
+            _view.OnAllowMenuChanged += UpdateAllowMenuItemExecution;
+            _view.OnAllowThirdPartyChanged += UpdateAllowThirdPartyTools;
+            _view.OnSecurityLevelChanged += UpdateDynamicCodeSecurityLevel;
+        }
 
-
-        /// <summary>
-        /// Get connected tools as ConnectedClient objects for UI display, sorted by name
-        /// </summary>
         public IEnumerable<ConnectedClient> GetConnectedToolsAsClients()
         {
             return ConnectedToolsMonitoringService.GetConnectedToolsAsClients();
         }
 
-        /// <summary>
-        /// Initialize configuration services factory
-        /// </summary>
         private void InitializeConfigurationServices()
         {
             _configServiceFactory = new McpConfigServiceFactory();
         }
 
-        /// <summary>
-        /// Initialize event handler
-        /// </summary>
         private void InitializeEventHandler()
         {
             _eventHandler = new McpEditorWindowEventHandler(_model, this);
             _eventHandler.Initialize();
         }
 
-        /// <summary>
-        /// Initialize server operations handler
-        /// </summary>
         private void InitializeServerOperations()
         {
             _serverOperations = new McpServerOperations(_model, _eventHandler);
         }
 
-        /// <summary>
-        /// Load saved settings from preferences
-        /// </summary>
         private void LoadSavedSettings()
         {
             _model.LoadFromSettings();
@@ -140,52 +115,28 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        /// <summary>
-        /// Restore session state from Unity SessionState
-        /// </summary>
         private void RestoreSessionState()
         {
             _model.LoadFromSessionState();
         }
 
-        /// <summary>
-        /// Handle post-compile mode initialization and auto-start logic
-        /// </summary>
         private async void HandlePostCompileMode()
         {
-            // Enable post-compile mode after domain reload
             _model.EnablePostCompileMode();
-
-            // Clear reconnecting UI flag on domain reload to ensure proper state
             McpEditorSettings.SetShowReconnectingUI(false);
 
-            // Wait for any ongoing recovery to complete before making auto-start decisions
-            // This prevents race conditions between McpServerController and McpEditorWindow
             Task recoveryTask = McpServerController.RecoveryTask;
             if (recoveryTask != null && !recoveryTask.IsCompleted)
             {
-                try
-                {
-                    await recoveryTask;
-                }
-                catch (Exception ex)
-                {
-                    VibeLogger.LogWarning("recovery_task_failed", ex.Message);
-                }
+                await recoveryTask;
             }
 
-            // Check if after compilation
             bool isAfterCompile = McpEditorSettings.GetIsAfterCompile();
 
-            // Grace period is already started in OnEnable() if needed
-
-            // After compile, rely on centralized recovery (McpServerController.StartRecoveryIfNeededAsync).
-            // EditorWindow does not auto-start the server; it only updates UI state and port display.
             if (isAfterCompile)
             {
                 McpEditorSettings.ClearAfterCompileFlag();
 
-                // Use saved port number for UI only
                 int savedPort = McpEditorSettings.GetServerPort();
                 bool portNeedsUpdate = savedPort != _model.UI.CustomPort;
 
@@ -197,9 +148,6 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // Determine if server should be started automatically (normal auto-start, not after-compile)
-            // Skip auto-start if recovery is in progress to avoid conflicting with StartRecoveryIfNeededAsync
-            // Skip auto-start on first launch so users can see initial settings before server starts
             bool shouldStartAutomatically = _model.UI.AutoStartServer;
             bool serverNotRunning = !McpServerController.IsServerRunning;
             bool isRecoveryInProgress = McpServerController.IsStartupProtectionActive();
@@ -219,87 +167,59 @@ namespace io.github.hatayama.uLoopMCP
             _view?.Dispose();
         }
 
-        /// <summary>
-        /// Cleanup event handler
-        /// </summary>
         private void CleanupEventHandler()
         {
             _eventHandler?.Cleanup();
         }
 
-        /// <summary>
-        /// Save current state to Unity SessionState
-        /// </summary>
         private void SaveSessionState()
         {
             _model.SaveToSessionState();
         }
 
-        /// <summary>
-        /// Called when the window gets focus - update UI to reflect current state
-        /// </summary>
         private void OnFocus()
         {
-            // Refresh UI when window gains focus to reflect any state changes
-            Repaint();
+            RefreshAllSections();
         }
 
-        private void OnGUI()
+        public void RefreshAllSections()
         {
-            // Draw debug background if ULOOPMCP_DEBUG is defined
-            _view.DrawDebugBackground(position);
-
-            // Synchronize server port and UI settings
-            SyncPortSettings();
-
-            // Make entire window scrollable
-            Vector2 newScrollPosition = EditorGUILayout.BeginScrollView(_model.UI.MainScrollPosition);
-            if (newScrollPosition != _model.UI.MainScrollPosition)
+            if (_view == null)
             {
-                UpdateMainScrollPosition(newScrollPosition);
+                return;
             }
 
-            // Use view layer for rendering
+            SyncPortSettings();
+
             ServerStatusData statusData = CreateServerStatusData();
-            _view.DrawServerStatus(statusData);
+            _view.UpdateServerStatus(statusData);
 
             ServerControlsData controlsData = CreateServerControlsData();
-            _view.DrawServerControls(
-                data: controlsData,
-                toggleServerCallback: ToggleServer,
-                autoStartCallback: UpdateAutoStartServer,
-                portChangeCallback: UpdateCustomPort);
+            _view.UpdateServerControls(controlsData);
 
             ConnectedToolsData toolsData = CreateConnectedToolsData();
-            _view.DrawConnectedToolsSection(
-                data: toolsData,
-                toggleFoldoutCallback: UpdateShowConnectedTools);
+            _view.UpdateConnectedTools(toolsData);
 
             EditorConfigData configData = CreateEditorConfigData();
-            _view.DrawEditorConfigSection(
-                data: configData,
-                editorChangeCallback: UpdateSelectedEditorType,
-                configureCallback: (editor) => ConfigureEditor(),
-                foldoutCallback: UpdateShowLLMToolSettings,
-                repositoryRootToggleCallback: UpdateAddRepositoryRoot);
+            _view.UpdateEditorConfig(configData);
 
             SecuritySettingsData securityData = CreateSecuritySettingsData();
-            _view.DrawSecuritySettings(
-                data: securityData,
-                foldoutCallback: UpdateShowSecuritySettings,
-                enableTestsCallback: UpdateEnableTestsExecution,
-                allowMenuCallback: UpdateAllowMenuItemExecution,
-                allowThirdPartyCallback: UpdateAllowThirdPartyTools);
-
-            EditorGUILayout.EndScrollView();
+            _view.UpdateSecuritySettings(securityData);
         }
 
-        /// <summary>
-        /// Synchronize server port and UI settings
-        /// </summary>
+        public void RefreshConnectedToolsSection()
+        {
+            if (_view == null)
+            {
+                return;
+            }
+
+            ConnectedToolsData toolsData = CreateConnectedToolsData();
+            _view.UpdateConnectedTools(toolsData);
+        }
+
         private void SyncPortSettings()
         {
-            // Synchronize if server is running and UI port setting differs from actual server port
             bool serverIsRunning = McpServerController.IsServerRunning;
 
             if (serverIsRunning)
@@ -314,9 +234,6 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        /// <summary>
-        /// Create server status data for view rendering
-        /// </summary>
         private ServerStatusData CreateServerStatusData()
         {
             (bool isRunning, int port, bool _) = McpServerController.GetServerStatus();
@@ -326,29 +243,22 @@ namespace io.github.hatayama.uLoopMCP
             return new ServerStatusData(isRunning, port, status, statusColor);
         }
 
-        /// <summary>
-        /// Create server controls data for view rendering
-        /// </summary>
         private ServerControlsData CreateServerControlsData()
         {
             bool isRunning = McpServerController.IsServerRunning;
 
-            // Check for port mismatch warnings
             bool hasPortWarning = false;
             string portWarningMessage = null;
 
             if (!isRunning)
             {
-                // Check if requested port is valid and available
                 int requestedPort = _model.UI.CustomPort;
 
-                // First check if port is valid
                 if (!McpPortValidator.ValidatePort(requestedPort))
                 {
                     hasPortWarning = true;
                     portWarningMessage = $"Port {requestedPort} is invalid. Port must be 1024 or higher and not a reserved system port.";
                 }
-                // Then check if valid port is available
                 else if (NetworkUtility.IsPortInUse(requestedPort))
                 {
                     hasPortWarning = true;
@@ -359,12 +269,9 @@ namespace io.github.hatayama.uLoopMCP
             return new ServerControlsData(_model.UI.CustomPort, _model.UI.AutoStartServer, isRunning, !isRunning, hasPortWarning, portWarningMessage);
         }
 
-        /// <summary>
-        /// Get stored tools with caching to avoid repeated calls
-        /// </summary>
         private IEnumerable<ConnectedClient> GetCachedStoredTools()
         {
-            const float cacheDuration = 0.1f; // 100ms cache
+            const float cacheDuration = 0.1f;
             float currentTime = Time.realtimeSinceStartup;
 
             if (_cachedStoredTools == null || (currentTime - _lastStoredToolsUpdateTime) > cacheDuration)
@@ -376,47 +283,35 @@ namespace io.github.hatayama.uLoopMCP
             return _cachedStoredTools;
         }
 
-        /// <summary>
-        /// Invalidate cached stored tools (call when tools change)
-        /// </summary>
         private void InvalidateStoredToolsCache()
         {
             _cachedStoredTools = null;
         }
 
-        /// <summary>
-        /// Create connected tools data for view rendering
-        /// </summary>
         private ConnectedToolsData CreateConnectedToolsData()
         {
             bool isServerRunning = McpServerController.IsServerRunning;
             IReadOnlyCollection<ConnectedClient> connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
 
-            // Check reconnecting UI flags from McpSessionManager
             bool showReconnectingUIFlag = McpEditorSettings.GetShowReconnectingUI();
             bool showPostCompileUIFlag = McpEditorSettings.GetShowPostCompileReconnectingUI();
 
-            // Only count clients with proper names (not Unknown Client) as "connected"
             bool hasNamedClients = connectedClients != null &&
                                    connectedClients.Any(client => client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME);
 
-            // Check if we have stored tools available (with caching)
             IEnumerable<ConnectedClient> storedTools = GetCachedStoredTools();
             bool hasStoredTools = storedTools.Any();
 
-            // If we have stored tools, show them (prioritize stored tools over server clients)
             if (hasStoredTools)
             {
                 connectedClients = storedTools.ToList();
                 hasNamedClients = true;
             }
 
-            // Show reconnecting UI only if no stored tools and no real clients
             bool showReconnectingUI = !hasStoredTools &&
                                       (showReconnectingUIFlag || showPostCompileUIFlag) &&
                                       !hasNamedClients;
 
-            // Clear post-compile flag when named clients are connected
             if (hasNamedClients && showPostCompileUIFlag)
             {
                 McpEditorSettings.ClearPostCompileReconnectingUI();
@@ -425,52 +320,35 @@ namespace io.github.hatayama.uLoopMCP
             return new ConnectedToolsData(connectedClients, _model.UI.ShowConnectedTools, isServerRunning, showReconnectingUI);
         }
 
-        /// <summary>
-        /// Create editor config data for view rendering
-        /// </summary>
         private EditorConfigData CreateEditorConfigData()
         {
             bool isServerRunning = McpServerController.IsServerRunning;
             int currentPort = McpServerController.ServerPort;
 
-            // Check configuration status
             bool isConfigured = false;
             bool hasPortMismatch = false;
             bool isUpdateNeeded = true;
             string configurationError = null;
 
-            try
-            {
-                IMcpConfigService configService = GetConfigService(_model.UI.SelectedEditorType);
-                isConfigured = configService.IsConfigured();
+            IMcpConfigService configService = GetConfigService(_model.UI.SelectedEditorType);
+            isConfigured = configService.IsConfigured();
 
-                // Check for port mismatch if configured
-                if (isConfigured)
+            if (isConfigured)
+            {
+                int configuredPort = configService.GetConfiguredPort();
+
+                if (isServerRunning)
                 {
-                    // Get configured port from the settings file
-                    int configuredPort = configService.GetConfiguredPort();
-
-                    // Check mismatch between server port and configured port
-                    if (isServerRunning)
-                    {
-                        hasPortMismatch = currentPort != configuredPort;
-                    }
-                    else
-                    {
-                        // When server is not running, check if UI port matches configured port
-                        hasPortMismatch = _model.UI.CustomPort != configuredPort;
-                    }
+                    hasPortMismatch = currentPort != configuredPort;
                 }
+                else
+                {
+                    hasPortMismatch = _model.UI.CustomPort != configuredPort;
+                }
+            }
 
-                // Check if update is needed
-                int portToCheck = isServerRunning ? currentPort : _model.UI.CustomPort;
-                isUpdateNeeded = configService.IsUpdateNeeded(portToCheck);
-            }
-            catch (Exception ex)
-            {
-                configurationError = ex.Message;
-                isUpdateNeeded = true; // If error occurs, assume update is needed
-            }
+            int portToCheck = isServerRunning ? currentPort : _model.UI.CustomPort;
+            isUpdateNeeded = configService.IsUpdateNeeded(portToCheck);
 
             return new EditorConfigData(
                 _model.UI.SelectedEditorType,
@@ -486,9 +364,6 @@ namespace io.github.hatayama.uLoopMCP
                 _model.UI.ShowRepositoryRootToggle);
         }
 
-        /// <summary>
-        /// Create security settings data for view rendering
-        /// </summary>
         private SecuritySettingsData CreateSecuritySettingsData()
         {
             return new SecuritySettingsData(
@@ -498,9 +373,6 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorSettings.GetAllowThirdPartyTools());
         }
 
-        /// <summary>
-        /// Configure editor settings
-        /// </summary>
         private void ConfigureEditor()
         {
             IMcpConfigService configService = GetConfigService(_model.UI.SelectedEditorType);
@@ -508,133 +380,125 @@ namespace io.github.hatayama.uLoopMCP
             int portToUse = isServerRunning ? McpServerController.ServerPort : _model.UI.CustomPort;
 
             configService.AutoConfigure(portToUse);
-            Repaint();
+            RefreshAllSections();
         }
 
-        /// <summary>
-        /// Start server (for user operations)
-        /// </summary>
+        private void OpenConfigurationFile()
+        {
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string gitRoot = UnityMcpPathResolver.GetGitRepositoryRoot();
+            string baseRoot = _model.UI.AddRepositoryRoot
+                ? (gitRoot ?? projectRoot)
+                : projectRoot;
+
+            string configPath = UnityMcpPathResolver.GetConfigPathForRoot(_model.UI.SelectedEditorType, baseRoot);
+            bool exists = System.IO.File.Exists(configPath);
+
+            if (exists)
+            {
+                EditorUtility.OpenWithDefaultApp(configPath);
+            }
+            else
+            {
+                string editorName = GetEditorDisplayName(_model.UI.SelectedEditorType);
+                EditorUtility.DisplayDialog(
+                    "Configuration File Not Found",
+                    $"Configuration file for {editorName} not found at:\n{configPath}\n\nPlease run 'Configure {editorName}' first to create the configuration file.",
+                    "OK");
+            }
+        }
+
+        private string GetEditorDisplayName(McpEditorType editorType)
+        {
+            return editorType switch
+            {
+                McpEditorType.Cursor => "Cursor",
+                McpEditorType.ClaudeCode => "Claude Code",
+                McpEditorType.VSCode => "VSCode",
+                McpEditorType.GeminiCLI => "Gemini CLI",
+                McpEditorType.Codex => "Codex",
+                McpEditorType.McpInspector => "MCP Inspector",
+                _ => editorType.ToString()
+            };
+        }
+
         private void StartServer()
         {
             if (_serverOperations.StartServer())
             {
-                Repaint();
+                RefreshAllSections();
             }
         }
 
-        /// <summary>
-        /// Stop server
-        /// </summary>
         private void StopServer()
         {
             _serverOperations.StopServer();
-            Repaint();
+            RefreshAllSections();
         }
 
-        /// <summary>
-        /// Get corresponding configuration service from editor type
-        /// </summary>
         private IMcpConfigService GetConfigService(McpEditorType editorType)
         {
             return _configServiceFactory.GetConfigService(editorType);
         }
 
-        // UIState update helper methods for callback unification
-
-        /// <summary>
-        /// Update AutoStartServer setting with persistence
-        /// </summary>
         private void UpdateAutoStartServer(bool autoStart)
         {
             _model.UpdateAutoStartServer(autoStart);
         }
 
-        /// <summary>
-        /// Update CustomPort setting with persistence
-        /// </summary>
         private void UpdateCustomPort(int port)
         {
             _model.UpdateCustomPort(port);
+            RefreshAllSections();
         }
 
-        /// <summary>
-        /// Update ShowConnectedTools setting
-        /// </summary>
         private void UpdateShowConnectedTools(bool show)
         {
             _model.UpdateShowConnectedTools(show);
         }
 
-        /// <summary>
-        /// Update ShowLLMToolSettings setting
-        /// </summary>
         private void UpdateShowLLMToolSettings(bool show)
         {
             _model.UpdateShowLLMToolSettings(show);
         }
 
-        /// <summary>
-        /// Update SelectedEditorType setting with persistence
-        /// </summary>
         private void UpdateSelectedEditorType(McpEditorType type)
         {
             _model.UpdateSelectedEditorType(type);
+            RefreshAllSections();
         }
 
-        /// <summary>
-        /// Update MainScrollPosition setting
-        /// </summary>
-        private void UpdateMainScrollPosition(Vector2 position)
-        {
-            _model.UpdateMainScrollPosition(position);
-        }
-
-        /// <summary>
-        /// Update ShowSecuritySettings setting
-        /// </summary>
         private void UpdateShowSecuritySettings(bool show)
         {
             _model.UpdateShowSecuritySettings(show);
         }
 
-        /// <summary>
-        /// Update EnableTestsExecution setting with persistence
-        /// </summary>
         private void UpdateEnableTestsExecution(bool enable)
         {
             _model.UpdateEnableTestsExecution(enable);
         }
 
-        /// <summary>
-        /// Update AllowMenuItemExecution setting with persistence
-        /// </summary>
         private void UpdateAllowMenuItemExecution(bool allow)
         {
             _model.UpdateAllowMenuItemExecution(allow);
         }
 
-        /// <summary>
-        /// Update AllowThirdPartyTools setting with persistence
-        /// </summary>
         private void UpdateAllowThirdPartyTools(bool allow)
         {
             _model.UpdateAllowThirdPartyTools(allow);
         }
 
-        /// <summary>
-        /// Update AddRepositoryRoot setting
-        /// </summary>
         private void UpdateAddRepositoryRoot(bool addRepositoryRoot)
         {
             _model.UpdateAddRepositoryRoot(addRepositoryRoot);
-            Repaint();
+            RefreshAllSections();
         }
 
-        
+        private void UpdateDynamicCodeSecurityLevel(DynamicCodeSecurityLevel level)
+        {
+            McpEditorSettings.SetDynamicCodeSecurityLevel(level);
+        }
 
-        /// <summary>
-        /// Toggle server state (start if stopped, stop if running)
-        /// </summary>
         private void ToggleServer()
         {
             if (McpServerController.IsServerRunning)

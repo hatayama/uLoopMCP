@@ -1,0 +1,323 @@
+/* ===========================================
+   McpEditorWindow UI Toolkit Stylesheet
+   Using BEM naming convention and Unity theme variables
+   =========================================== */
+
+/* Main Container */
+.mcp-main-container {
+    padding: 4px;
+}
+
+/* ===========================================
+   Block: Section
+   =========================================== */
+.mcp-section {
+    margin-bottom: 8px;
+}
+
+.mcp-section--box {
+    background-color: var(--unity-colors-helpbox-background);
+    border-color: var(--unity-colors-helpbox-border);
+    border-width: 1px;
+    border-radius: 3px;
+    padding: 8px;
+    overflow: hidden;
+}
+
+/* ===========================================
+   Block: Status
+   =========================================== */
+.mcp-status {
+    flex-direction: row;
+    align-items: center;
+}
+
+.mcp-status__label {
+    width: 50px;
+    -unity-font-style: bold;
+}
+
+.mcp-status__value {
+    -unity-font-style: bold;
+    max-width: 50px;
+}
+
+.mcp-status__value--running {
+    color: #00cc00;
+}
+
+.mcp-status__value--stopped {
+    color: #cc0000;
+}
+
+/* ===========================================
+   Block: Port Row
+   =========================================== */
+.mcp-port-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.mcp-port-row__label {
+    width: 30px;
+}
+
+.mcp-port-row__field {
+    width: 50px;
+    -unity-text-align: middle-right;
+}
+
+/* ===========================================
+   Block: Warning Container
+   =========================================== */
+.mcp-warning-container {
+    display: none;
+    margin-bottom: 8px;
+}
+
+.mcp-warning-container--visible {
+    display: flex;
+}
+
+.mcp-warning-label {
+    background-color: var(--unity-colors-warning-background, #554400);
+    border-color: var(--unity-colors-warning-border, #aa8800);
+    border-width: 1px;
+    border-radius: 3px;
+    padding: 8px;
+    white-space: normal;
+}
+
+/* ===========================================
+   Block: Button
+   =========================================== */
+.mcp-button {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.mcp-button--large {
+    height: 30px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.mcp-button--start {
+    background-color: #336633;
+    border-color: #44aa44;
+}
+
+.mcp-button--start:hover {
+    background-color: #448844;
+}
+
+.mcp-button--stop {
+    background-color: #663333;
+    border-color: #aa4444;
+}
+
+.mcp-button--stop:hover {
+    background-color: #884444;
+}
+
+.mcp-button--warning {
+    background-color: #665522;
+    border-color: #aa9944;
+}
+
+.mcp-button--warning:hover {
+    background-color: #887744;
+}
+
+.mcp-button--configure {
+    margin-top: 8px;
+}
+
+.mcp-button--disabled {
+    background-color: var(--unity-colors-button-background-disabled, #444444);
+    color: var(--unity-colors-button-text-disabled, #888888);
+}
+
+/* ===========================================
+   Block: Toggle Row
+   =========================================== */
+.mcp-toggle-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.mcp-toggle-row__toggle {
+    width: 20px;
+    margin-right: 4px;
+}
+
+.mcp-toggle-row__label {
+    flex-grow: 1;
+}
+
+.mcp-toggle-row__label--danger {
+    color: #ffaa00;
+}
+
+/* ===========================================
+   Block: Target Row (Editor Selection)
+   =========================================== */
+.mcp-target-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+    overflow: hidden;
+}
+
+.mcp-target-row__label {
+    width: 50px;
+    flex-shrink: 0;
+}
+
+.mcp-target-row__field {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* ===========================================
+   Block: Foldout
+   =========================================== */
+.mcp-foldout {
+    margin-left: -12px;
+}
+
+/* ===========================================
+   Block: Client (Connected Tools Item)
+   =========================================== */
+.mcp-clients-list {
+    margin-top: 8px;
+}
+
+.mcp-client {
+    background-color: rgba(76, 76, 76, 0.5);
+    border-radius: 3px;
+    padding: 8px;
+    margin-bottom: 3px;
+    flex-direction: row;
+    align-items: center;
+}
+
+.mcp-client__icon {
+    color: #88cc88;
+    margin-right: 4px;
+}
+
+.mcp-client__name {
+    -unity-font-style: bold;
+    flex-grow: 1;
+}
+
+.mcp-client__port {
+    color: #888888;
+}
+
+/* ===========================================
+   Block: Messages
+   =========================================== */
+.mcp-info-message {
+    display: none;
+    background-color: var(--unity-colors-helpbox-background);
+    border-color: var(--unity-colors-helpbox-border);
+    border-width: 1px;
+    border-radius: 3px;
+    padding: 8px;
+    margin-top: 8px;
+    white-space: normal;
+}
+
+.mcp-info-message--visible {
+    display: flex;
+}
+
+.mcp-warning-message {
+    display: none;
+    background-color: var(--unity-colors-warning-background, #554400);
+    border-color: var(--unity-colors-warning-border, #aa8800);
+    border-width: 1px;
+    border-radius: 3px;
+    padding: 8px;
+    margin-top: 8px;
+    white-space: normal;
+}
+
+.mcp-warning-message--visible {
+    display: flex;
+}
+
+.mcp-error-message {
+    display: none;
+    background-color: var(--unity-colors-error-background, #440000);
+    border-color: var(--unity-colors-error-border, #aa0000);
+    border-width: 1px;
+    border-radius: 3px;
+    padding: 8px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    white-space: normal;
+    color: var(--unity-colors-error-text, #ff4444);
+}
+
+.mcp-error-message--visible {
+    display: flex;
+}
+
+/* ===========================================
+   Block: Security
+   =========================================== */
+.mcp-security-warning {
+    background-color: var(--unity-colors-warning-background, #554400);
+    border-color: var(--unity-colors-warning-border, #aa8800);
+    border-width: 1px;
+    border-radius: 3px;
+    padding: 8px;
+    margin-bottom: 8px;
+    white-space: normal;
+    color: var(--unity-colors-warning-text, #ffcc44);
+}
+
+.mcp-section-header {
+    -unity-font-style: bold;
+    margin-top: 10px;
+    margin-bottom: 4px;
+}
+
+.mcp-section-header--danger {
+    color: #ffaa00;
+}
+
+.mcp-security-level-field {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.mcp-security-level-description {
+    background-color: var(--unity-colors-helpbox-background);
+    border-color: var(--unity-colors-helpbox-border);
+    border-width: 1px;
+    border-radius: 3px;
+    padding: 8px;
+    margin-top: 4px;
+    white-space: normal;
+}
+
+.mcp-security-level-description--warning {
+    background-color: var(--unity-colors-warning-background, #554400);
+    border-color: var(--unity-colors-warning-border, #aa8800);
+}
+
+/* ===========================================
+   Utility: Hidden
+   =========================================== */
+.mcp-hidden {
+    display: none;
+}

@@ -123,26 +123,20 @@ namespace io.github.hatayama.uLoopMCP
             _model.RequestRepaint();
         }
 
-        /// <summary>
-        /// Called from EditorApplication.update - handles UI refresh even when Unity is not focused
-        /// </summary>
         private void OnEditorUpdate()
         {
-            // Always check for server state changes
             CheckServerStateChanges();
 
-            // In post-compile mode, always repaint for immediate updates
             if (_model.Runtime.IsPostCompileMode)
             {
-                _window.Repaint();
+                _window.RefreshAllSections();
                 return;
             }
 
-            // Normal mode: repaint only when needed
             if (_model.Runtime.NeedsRepaint)
             {
                 _model.ClearRepaintRequest();
-                _window.Repaint();
+                _window.RefreshAllSections();
             }
         }
 
