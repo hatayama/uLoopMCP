@@ -67,6 +67,9 @@ namespace io.github.hatayama.uLoopMCP
             UpdateOpenSettingsButton(data);
         }
 
+        /// <summary>
+        /// EnumField.Init() can only be called once; subsequent calls reset the field and cause visual glitches.
+        /// </summary>
         private void InitializeEnumFieldIfNeeded(EditorConfigData data)
         {
             if (!_isInitialized)

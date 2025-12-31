@@ -52,11 +52,15 @@ namespace io.github.hatayama.uLoopMCP
             _allowMenuToggle.RegisterValueChangedCallback(evt => OnAllowMenuChanged?.Invoke(evt.newValue));
             _allowThirdPartyToggle.RegisterValueChangedCallback(evt => OnAllowThirdPartyChanged?.Invoke(evt.newValue));
 
+            // Labels need click handlers because UI Toolkit toggles don't natively support label clicks
             _enableTestsLabel.RegisterCallback<ClickEvent>(evt => ToggleValue(_enableTestsToggle, OnEnableTestsChanged));
             _allowMenuLabel.RegisterCallback<ClickEvent>(evt => ToggleValue(_allowMenuToggle, OnAllowMenuChanged));
             _allowThirdPartyLabel.RegisterCallback<ClickEvent>(evt => ToggleValue(_allowThirdPartyToggle, OnAllowThirdPartyChanged));
         }
 
+        /// <summary>
+        /// Manually toggle and notify because SetValueWithoutNotify doesn't fire change events.
+        /// </summary>
         private void ToggleValue(Toggle toggle, Action<bool> callback)
         {
             bool newValue = !toggle.value;
@@ -77,6 +81,9 @@ namespace io.github.hatayama.uLoopMCP
             _lastData = data;
         }
 
+        /// <summary>
+        /// EnumField.Init() can only be called once; subsequent calls reset the field and cause visual glitches.
+        /// </summary>
         private void InitializeSecurityLevelFieldIfNeeded()
         {
             if (_isInitialized)

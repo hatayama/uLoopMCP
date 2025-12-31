@@ -37,6 +37,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public void Update(ConnectedToolsData data)
         {
+            // During reconnection, keep showing the last valid client list to avoid UI flicker
             if (data.ShowReconnectingUI && _hasLastValidData)
             {
                 return;
