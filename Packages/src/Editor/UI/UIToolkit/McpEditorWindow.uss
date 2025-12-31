@@ -43,7 +43,7 @@
 }
 
 .mcp-status__value--running {
-    color: #2e7d32;
+    color: #4caf50;
 }
 
 .mcp-status__value--stopped {
@@ -213,7 +213,7 @@
 }
 
 .mcp-client__icon {
-    color: #88cc88;
+    color: #4caf50;
     margin-right: 4px;
 }
 
