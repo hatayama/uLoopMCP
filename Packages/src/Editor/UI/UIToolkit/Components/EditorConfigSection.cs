@@ -131,9 +131,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 else
                 {
-                    buttonText = data.IsServerRunning
-                        ? $"Settings Already Configured\n(Port {data.CurrentPort})"
-                        : $"Settings Already Configured\n(Port {data.CurrentPort})";
+                    buttonText = $"Settings Already Configured\n(Port {data.CurrentPort})";
                     buttonEnabled = false;
                 }
             }

@@ -50,7 +50,7 @@
 
                     <ui:VisualElement name="repository-root-row" class="mcp-toggle-row">
                         <ui:Toggle name="repository-root-toggle" class="mcp-toggle-row__toggle" />
-                        <ui:Label text="Use Repository Root" class="mcp-toggle-row__label" tooltip="ON にすると Git リポジトリルートで設定ファイルを生成します" />
+                        <ui:Label text="Use Repository Root" class="mcp-toggle-row__label" tooltip="When enabled, generates configuration file at the Git repository root" />
                     </ui:VisualElement>
 
                     <ui:Label name="config-error-label" class="mcp-error-message" />
