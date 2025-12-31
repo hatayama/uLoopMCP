@@ -5,6 +5,11 @@ using UnityEditor;
 
 namespace io.github.hatayama.uLoopMCP
 {
+    /// <summary>
+    /// View layer for McpEditorWindow in MVP architecture.
+    /// Owns UI sections and forwards user interactions to presenter via events.
+    /// Related: McpEditorWindow (presenter), McpEditorModel (model)
+    /// </summary>
     public class McpEditorWindowUI : IDisposable
     {
         private const string UXML_PATH = "Packages/io.github.hatayama.uloopmcp/Editor/UI/UIToolkit/McpEditorWindow.uxml";

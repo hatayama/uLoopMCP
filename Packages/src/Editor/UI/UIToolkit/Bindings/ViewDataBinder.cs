@@ -4,6 +4,10 @@ using UnityEditor.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
 {
+    /// <summary>
+    /// Utility for binding UI Toolkit elements to data without triggering change events.
+    /// SetValueWithoutNotify prevents infinite loops when updating UI from model changes.
+    /// </summary>
     public static class ViewDataBinder
     {
         public static void BindToggle(Toggle toggle, Func<bool> getter, Action<bool> onChanged)

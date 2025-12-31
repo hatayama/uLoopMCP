@@ -2,6 +2,10 @@ using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
 {
+    /// <summary>
+    /// UI section displaying server running status.
+    /// Part of McpEditorWindowUI's component hierarchy.
+    /// </summary>
     public class ServerStatusSection
     {
         private readonly Label _statusValueLabel;

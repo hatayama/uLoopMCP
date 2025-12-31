@@ -4,6 +4,10 @@ using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
 {
+    /// <summary>
+    /// UI section displaying connected LLM tools list.
+    /// Dynamically creates client items and handles reconnection UI state.
+    /// </summary>
     public class ConnectedToolsSection
     {
         private readonly Foldout _foldout;

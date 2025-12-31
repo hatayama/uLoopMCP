@@ -4,6 +4,10 @@ using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
 {
+    /// <summary>
+    /// UI section for LLM tool configuration (Cursor, Claude Code, etc).
+    /// Handles editor type selection and MCP settings file generation.
+    /// </summary>
     public class EditorConfigSection
     {
         private readonly Foldout _foldout;

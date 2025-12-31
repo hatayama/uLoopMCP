@@ -5,6 +5,10 @@ using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
 {
+    /// <summary>
+    /// UI section for security settings (test execution, menu items, dynamic code).
+    /// Controls dangerous MCP operations and Roslyn integration.
+    /// </summary>
     public class SecuritySettingsSection
     {
         private readonly Foldout _foldout;

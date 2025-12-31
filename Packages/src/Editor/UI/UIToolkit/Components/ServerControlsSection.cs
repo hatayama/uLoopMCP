@@ -4,6 +4,10 @@ using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
 {
+    /// <summary>
+    /// UI section for server start/stop controls and port configuration.
+    /// Part of McpEditorWindowUI's component hierarchy.
+    /// </summary>
     public class ServerControlsSection
     {
         private readonly IntegerField _portField;
