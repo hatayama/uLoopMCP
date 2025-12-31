@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Profiling;
 using UnityEditor;
 using UnityEngine;
 
@@ -17,6 +18,13 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     internal class McpEditorWindowEventHandler
     {
+        private static readonly ProfilerMarker s_onEditorUpdateMarker =
+            new ProfilerMarker("McpEditorWindow.OnEditorUpdate");
+        private static readonly ProfilerMarker s_checkServerStateMarker =
+            new ProfilerMarker("McpEditorWindow.CheckServerState");
+        private static readonly ProfilerMarker s_refreshUiMarker =
+            new ProfilerMarker("McpEditorWindow.RefreshUI");
+
         private readonly McpEditorModel _model;
         private readonly McpEditorWindow _window;
 
@@ -125,41 +133,49 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnEditorUpdate()
         {
-            CheckServerStateChanges();
-
-            if (_model.Runtime.IsPostCompileMode)
+            using (s_onEditorUpdateMarker.Auto())
             {
-                _window.RefreshAllSections();
-                return;
-            }
+                CheckServerStateChanges();
 
-            if (_model.Runtime.NeedsRepaint)
-            {
-                _model.ClearRepaintRequest();
-                _window.RefreshAllSections();
+                if (_model.Runtime.IsPostCompileMode)
+                {
+                    using (s_refreshUiMarker.Auto())
+                    {
+                        _window.RefreshAllSections();
+                    }
+                    return;
+                }
+
+                if (_model.Runtime.NeedsRepaint)
+                {
+                    _model.ClearRepaintRequest();
+                    using (s_refreshUiMarker.Auto())
+                    {
+                        _window.RefreshAllSections();
+                    }
+                }
             }
         }
 
-        /// <summary>
-        /// Check if server state has changed and mark repaint if needed
-        /// </summary>
         private void CheckServerStateChanges()
         {
-            (bool isRunning, int port, bool _) = McpServerController.GetServerStatus();
-            var connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
-            int connectedCount = connectedClients?.Count ?? 0;
-
-            // Generate hash of client information to detect changes in client names
-            string clientsInfoHash = GenerateClientsInfoHash(connectedClients);
-
-            // Check if any server state has changed
-            if (isRunning != _model.Runtime.LastServerRunning ||
-                port != _model.Runtime.LastServerPort ||
-                connectedCount != _model.Runtime.LastConnectedClientsCount ||
-                clientsInfoHash != _model.Runtime.LastClientsInfoHash)
+            using (s_checkServerStateMarker.Auto())
             {
-                _model.UpdateServerStateTracking(isRunning, port, connectedCount, clientsInfoHash);
-                _model.RequestRepaint();
+                (bool isRunning, int port, bool _) = McpServerController.GetServerStatus();
+                IReadOnlyCollection<ConnectedClient> connectedClients =
+                    McpServerController.CurrentServer?.GetConnectedClients();
+                int connectedCount = connectedClients?.Count ?? 0;
+
+                string clientsInfoHash = GenerateClientsInfoHash(connectedClients);
+
+                if (isRunning != _model.Runtime.LastServerRunning ||
+                    port != _model.Runtime.LastServerPort ||
+                    connectedCount != _model.Runtime.LastConnectedClientsCount ||
+                    clientsInfoHash != _model.Runtime.LastClientsInfoHash)
+                {
+                    _model.UpdateServerStateTracking(isRunning, port, connectedCount, clientsInfoHash);
+                    _model.RequestRepaint();
+                }
             }
         }
 
