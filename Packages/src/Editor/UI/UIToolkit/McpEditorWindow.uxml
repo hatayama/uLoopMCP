@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:ScrollView name="main-scroll-view" class="mcp-main-container">
+        <!-- Server Status Section -->
+        <ui:VisualElement name="server-status-section" class="mcp-section">
+            <ui:VisualElement class="mcp-status">
+                <ui:Label text="Status:" class="mcp-status__label" />
+                <ui:Label name="status-value" text="Stopped" class="mcp-status__value mcp-status__value--stopped" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Server Controls Section -->
+        <ui:VisualElement name="server-controls-section" class="mcp-section mcp-section--box">
+            <ui:VisualElement class="mcp-port-row">
+                <ui:Label text="Port:" class="mcp-port-row__label" />
+                <uie:IntegerField name="port-field" value="8080" class="mcp-port-row__field" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="port-warning-container" class="mcp-warning-container">
+                <ui:Label name="port-warning-label" class="mcp-warning-label" />
+            </ui:VisualElement>
+
+            <ui:Button name="toggle-server-button" text="Start Server" class="mcp-button mcp-button--large mcp-button--start" />
+
+            <ui:VisualElement class="mcp-toggle-row">
+                <ui:Toggle name="auto-start-toggle" class="mcp-toggle-row__toggle" />
+                <ui:Label text="Auto Start Server" class="mcp-toggle-row__label" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Connected Tools Section -->
+        <ui:VisualElement name="connected-tools-section" class="mcp-section mcp-section--box">
+            <ui:Foldout name="connected-tools-foldout" text="Connected LLM Tools" class="mcp-foldout">
+                <ui:VisualElement name="connected-tools-content">
+                    <ui:VisualElement name="clients-list" class="mcp-clients-list" />
+                    <ui:Label name="no-clients-message" text="No connected tools found." class="mcp-info-message" />
+                    <ui:Label name="server-not-running-message" text="Server is not running. Start the server to see connected tools." class="mcp-warning-message" />
+                </ui:VisualElement>
+            </ui:Foldout>
+        </ui:VisualElement>
+
+        <!-- LLM Tool Settings Section -->
+        <ui:VisualElement name="editor-config-section" class="mcp-section mcp-section--box">
+            <ui:Foldout name="llm-settings-foldout" text="LLM Tool Settings" class="mcp-foldout">
+                <ui:VisualElement name="llm-settings-content">
+                    <ui:VisualElement class="mcp-target-row">
+                        <ui:Label text="Target:" class="mcp-target-row__label" />
+                        <uie:EnumField name="editor-type-field" class="mcp-target-row__field" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="repository-root-row" class="mcp-toggle-row">
+                        <ui:Toggle name="repository-root-toggle" class="mcp-toggle-row__toggle" />
+                        <ui:Label text="Use Repository Root" class="mcp-toggle-row__label" tooltip="When enabled, generates configuration file at the Git repository root" />
+                    </ui:VisualElement>
+
+                    <ui:Label name="config-error-label" class="mcp-error-message" />
+
+                    <ui:Button name="configure-button" text="Configure" class="mcp-button mcp-button--configure" />
+                    <ui:Button name="open-settings-button" text="Open Settings File" class="mcp-button" />
+                </ui:VisualElement>
+            </ui:Foldout>
+        </ui:VisualElement>
+
+        <!-- Security Settings Section -->
+        <ui:VisualElement name="security-settings-section" class="mcp-section mcp-section--box">
+            <ui:Foldout name="security-foldout" text="Security Settings" class="mcp-foldout">
+                <ui:VisualElement name="security-content">
+                    <ui:Label text="These settings control dangerous MCP operations. Only enable if you trust the AI system.&#10;&#10;For safer operation, consider using sandbox environments or containers.&#10;&#10;Changes take effect immediately - no server restart required." class="mcp-security-warning" />
+
+                    <ui:Label text="Additional Security Options" class="mcp-section-header" />
+
+                    <ui:VisualElement class="mcp-toggle-row">
+                        <ui:Toggle name="enable-tests-toggle" class="mcp-toggle-row__toggle" />
+                        <ui:Label name="enable-tests-label" text="Allow Tests Execution" class="mcp-toggle-row__label mcp-toggle-row__label--danger" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="mcp-toggle-row">
+                        <ui:Toggle name="allow-menu-toggle" class="mcp-toggle-row__toggle" />
+                        <ui:Label name="allow-menu-label" text="Allow Menu Item Execution" class="mcp-toggle-row__label mcp-toggle-row__label--danger" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="mcp-toggle-row">
+                        <ui:Toggle name="allow-third-party-toggle" class="mcp-toggle-row__toggle" />
+                        <ui:Label name="allow-third-party-label" text="Allow Third Party Tools" class="mcp-toggle-row__label mcp-toggle-row__label--danger" />
+                    </ui:VisualElement>
+
+                    <ui:Label text="Dynamic Code Security Level" class="mcp-section-header mcp-section-header--danger" />
+                    <uie:EnumField name="security-level-field" label="Security Level" class="mcp-security-level-field" />
+                    <ui:Label name="security-level-description" class="mcp-security-level-description" />
+                </ui:VisualElement>
+            </ui:Foldout>
+        </ui:VisualElement>
+    </ui:ScrollView>
+</ui:UXML>
