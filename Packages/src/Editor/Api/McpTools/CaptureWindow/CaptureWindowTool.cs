@@ -8,15 +8,15 @@ using UnityEditor;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    [McpTool(Description = "Capture Unity EditorWindow and save as PNG image")]
-    public class CaptureUnityWindowTool : AbstractUnityTool<CaptureUnityWindowSchema, CaptureUnityWindowResponse>
+    [McpTool(Description = "Capture Unity EditorWindow and save as PNG")]
+    public class CaptureWindowTool : AbstractUnityTool<CaptureWindowSchema, CaptureWindowResponse>
     {
-        public override string ToolName => "capture-unity-window";
+        public override string ToolName => "capture-window";
 
         private const string OUTPUT_DIRECTORY_NAME = "UnityWindowCaptures";
 
-        protected override async Task<CaptureUnityWindowResponse> ExecuteAsync(
-            CaptureUnityWindowSchema parameters,
+        protected override async Task<CaptureWindowResponse> ExecuteAsync(
+            CaptureWindowSchema parameters,
             CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
@@ -24,9 +24,9 @@ namespace io.github.hatayama.uLoopMCP
             string correlationId = McpConstants.GenerateCorrelationId();
 
             VibeLogger.LogInfo(
-                "capture_unity_window_start",
+                "capture_window_start",
                 "Unity window capture started",
-                new { WindowName = parameters.WindowName, ResolutionScale = parameters.ResolutionScale },
+                new { WindowName = parameters.WindowName, ResolutionScale = parameters.ResolutionScale, MatchMode = parameters.MatchMode.ToString() },
                 correlationId: correlationId,
                 humanNote: "User requested Unity window screenshot",
                 aiTodo: "Monitor capture performance and file size"
@@ -34,15 +34,15 @@ namespace io.github.hatayama.uLoopMCP
 
             ValidateParameters(parameters);
 
-            EditorWindow[] windows = EditorWindowCaptureUtility.FindWindowsByName(parameters.WindowName);
+            EditorWindow[] windows = EditorWindowCaptureUtility.FindWindowsByName(parameters.WindowName, parameters.MatchMode);
             if (windows.Length == 0)
             {
                 VibeLogger.LogError(
                     "capture_window_not_found",
-                    $"Window '{parameters.WindowName}' not found",
+                    $"Window '{parameters.WindowName}' not found (MatchMode: {parameters.MatchMode})",
                     correlationId: correlationId
                 );
-                return new CaptureUnityWindowResponse();
+                return new CaptureWindowResponse();
             }
 
             string outputDirectory = EnsureOutputDirectoryExists();
@@ -101,10 +101,10 @@ namespace io.github.hatayama.uLoopMCP
                 correlationId: correlationId
             );
 
-            return new CaptureUnityWindowResponse(capturedWindows);
+            return new CaptureWindowResponse(capturedWindows);
         }
 
-        private void ValidateParameters(CaptureUnityWindowSchema parameters)
+        private void ValidateParameters(CaptureWindowSchema parameters)
         {
             if (string.IsNullOrEmpty(parameters.WindowName))
             {

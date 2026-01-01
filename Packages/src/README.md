@@ -150,11 +150,12 @@ Retrieve information about the currently active Hierarchy in nested JSON format.
 Ensures the Unity Editor window associated with the active MCP session becomes the foreground application on macOS and Windows Editor builds.  
 Great for keeping visual feedback in sync after other apps steal focus. (Linux is currently unsupported.)
 
-#### 12. capture-unity-window - Capture EditorWindow
-Capture any EditorWindow as a PNG image. Specify the window name (the text displayed in the title bar/tab) to capture.
+#### 12. capture-window - Capture EditorWindow
+Capture any EditorWindow as a PNG. Specify the window name (the text displayed in the title bar/tab) to capture.
 When multiple windows of the same type are open (e.g., 3 Inspector windows), all windows are saved with numbered filenames.
-```
-→ capture-unity-window (WindowName: "Console")
+Supports three matching modes: `exact` (default), `prefix`, and `contains` - all case-insensitive.
+```text
+→ capture-window (WindowName: "Console")
 → Save Console window state as PNG
 → Provide visual feedback to AI
 ```
@@ -371,7 +372,7 @@ After installing Skills, LLM tools can automatically handle instructions like th
 - `/uloop-get-menu-items` - Get menu items
 - `/uloop-execute-menu-item` - Execute menu item
 - `/uloop-find-game-objects` - Find GameObjects
-- `/uloop-capture-unity-window` - Capture EditorWindow
+- `/uloop-capture-window` - Capture EditorWindow
 - `/uloop-control-play-mode` - Control Play Mode
 - `/uloop-execute-dynamic-code` - Execute dynamic C# code
 - `/uloop-get-provider-details` - Get search provider details

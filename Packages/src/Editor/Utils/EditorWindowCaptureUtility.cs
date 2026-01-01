@@ -17,8 +17,9 @@ namespace io.github.hatayama.uLoopMCP
         /// Find all EditorWindows matching the given name (title bar text).
         /// </summary>
         /// <param name="windowName">Window name displayed in the title bar (e.g., "Console", "Inspector")</param>
+        /// <param name="matchMode">Matching mode: exact, prefix, or contains (all case-insensitive)</param>
         /// <returns>Array of matching EditorWindows (empty if none found)</returns>
-        public static EditorWindow[] FindWindowsByName(string windowName)
+        public static EditorWindow[] FindWindowsByName(string windowName, WindowMatchMode matchMode = WindowMatchMode.exact)
         {
             if (string.IsNullOrEmpty(windowName))
             {
@@ -35,8 +36,15 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 string title = window.titleContent.text;
-                if (title.Equals(windowName, StringComparison.OrdinalIgnoreCase) ||
-                    title.Contains(windowName, StringComparison.OrdinalIgnoreCase))
+                bool isMatch = matchMode switch
+                {
+                    WindowMatchMode.exact => title.Equals(windowName, StringComparison.OrdinalIgnoreCase),
+                    WindowMatchMode.prefix => title.StartsWith(windowName, StringComparison.OrdinalIgnoreCase),
+                    WindowMatchMode.contains => title.Contains(windowName, StringComparison.OrdinalIgnoreCase),
+                    _ => title.Equals(windowName, StringComparison.OrdinalIgnoreCase)
+                };
+
+                if (isMatch)
                 {
                     matchingWindows.Add(window);
                 }
@@ -61,7 +69,6 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             window.ShowTab();
-            window.Focus();
             await EditorDelay.DelayFrame(2, ct);
             return CaptureWindowInternal(window, resolutionScale);
         }

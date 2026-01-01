@@ -24,18 +24,18 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 
-    public class CaptureUnityWindowResponse : BaseToolResponse
+    public class CaptureWindowResponse : BaseToolResponse
     {
         public List<CapturedWindowInfo> CapturedWindows { get; set; } = new();
 
         public int CapturedCount => CapturedWindows.Count;
 
-        public CaptureUnityWindowResponse(List<CapturedWindowInfo> capturedWindows)
+        public CaptureWindowResponse(List<CapturedWindowInfo> capturedWindows)
         {
             CapturedWindows = capturedWindows;
         }
 
-        public CaptureUnityWindowResponse()
+        public CaptureWindowResponse()
         {
         }
     }
