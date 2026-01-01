@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.51.0](https://github.com/hatayama/uLoopMCP/compare/v0.50.2...v0.51.0) (2026-01-01)
+
+
+### Features
+
+* (capture-window): rename from capture-unity-window and add MatchMode parameter ([#504](https://github.com/hatayama/uLoopMCP/issues/504)) ([1614fc5](https://github.com/hatayama/uLoopMCP/commit/1614fc564a0680c5f9b68a10c6a741a29b953ff6))
+* **ui:** migrate McpEditorWindow from IMGUI to UI Toolkit ([#503](https://github.com/hatayama/uLoopMCP/issues/503)) ([c901024](https://github.com/hatayama/uLoopMCP/commit/c9010249f4d4ad33930adbcc08a331c20d4ed701))
+
+
+### Bug Fixes
+
+* **server:** enable auto-start without opening EditorWindow ([#500](https://github.com/hatayama/uLoopMCP/issues/500)) ([5766bdb](https://github.com/hatayama/uLoopMCP/commit/5766bdba683fec2f1fe385c0e8d747e5e3e1d066))
+* update qs to 6.14.1 to fix DoS vulnerability ([#501](https://github.com/hatayama/uLoopMCP/issues/501)) ([04a9adc](https://github.com/hatayama/uLoopMCP/commit/04a9adca6b92893f795b0ac23c9ca398ead680cd))
+
 ## [0.50.2](https://github.com/hatayama/uLoopMCP/compare/v0.50.1...v0.50.2) (2025-12-30)
 
 
