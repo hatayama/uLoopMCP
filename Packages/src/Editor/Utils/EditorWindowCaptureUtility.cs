@@ -69,7 +69,6 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             window.ShowTab();
-            window.Focus();
             await EditorDelay.DelayFrame(2, ct);
             return CaptureWindowInternal(window, resolutionScale);
         }
