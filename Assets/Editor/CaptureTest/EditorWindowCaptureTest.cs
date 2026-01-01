@@ -8,6 +8,7 @@ namespace io.github.hatayama.uLoopMCP
     public class EditorWindowCaptureTest : EditorWindow
     {
         private string _windowName = "Console";
+        private WindowMatchMode _matchMode = WindowMatchMode.exact;
         private string _lastResult = "";
         private Texture2D _previewTexture;
         private bool _isCapturing;
@@ -24,12 +25,13 @@ namespace io.github.hatayama.uLoopMCP
             GUILayout.Space(10);
 
             _windowName = EditorGUILayout.TextField("Window Name:", _windowName);
+            _matchMode = (WindowMatchMode)EditorGUILayout.EnumPopup("Match Mode:", _matchMode);
 
             GUILayout.Space(10);
 
             if (GUILayout.Button("Find Window"))
             {
-                EditorWindow[] windows = EditorWindowCaptureUtility.FindWindowsByName(_windowName);
+                EditorWindow[] windows = EditorWindowCaptureUtility.FindWindowsByName(_windowName, _matchMode);
                 if (windows.Length > 0)
                 {
                     System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -101,10 +103,10 @@ namespace io.github.hatayama.uLoopMCP
             _isCapturing = true;
             Repaint();
 
-            EditorWindow[] windows = EditorWindowCaptureUtility.FindWindowsByName(_windowName);
+            EditorWindow[] windows = EditorWindowCaptureUtility.FindWindowsByName(_windowName, _matchMode);
             if (windows.Length == 0)
             {
-                _lastResult = $"Window '{_windowName}' not found";
+                _lastResult = $"Window '{_windowName}' not found (MatchMode: {_matchMode})";
                 _isCapturing = false;
                 Repaint();
                 return;
