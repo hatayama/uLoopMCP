@@ -275,7 +275,7 @@
     },
     {
       "name": "capture-window",
-      "description": "Capture Unity EditorWindow and save as PNG image",
+      "description": "Capture Unity EditorWindow and save as PNG",
       "inputSchema": {
         "type": "object",
         "properties": {

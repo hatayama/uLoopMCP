@@ -153,10 +153,10 @@ macOS / Windows Editor上で、現在MCP接続中の Unity Editor ウィンド�
 他アプリにフォーカスが奪われた後でも、視覚的なフィードバックをすぐ確認できます。（Linuxは未対応）
 
 #### 12. capture-window - EditorWindowのキャプチャ
-任意のEditorWindowをPNG画像としてキャプチャします。ウィンドウ名（タイトルバーに表示されている文字列）を指定してキャプチャできます。
+任意のEditorWindowをPNGとしてキャプチャします。ウィンドウ名（タイトルバーに表示されている文字列）を指定してキャプチャできます。
 同じ種類のウィンドウが複数開いている場合（例：Inspectorを3つ開いている場合）、すべてのウィンドウを連番で保存します。
 3つのマッチングモードをサポート: `exact`（デフォルト）、`prefix`、`contains` - すべて大文字小文字を区別しません。
-```
+```text
 → capture-window (WindowName: "Console")
 → Console画面の状態をPNGで保存
 → AIに視覚的なフィードバックを提供

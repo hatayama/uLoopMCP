@@ -151,10 +151,10 @@ Ensures the Unity Editor window associated with the active MCP session becomes t
 Great for keeping visual feedback in sync after other apps steal focus. (Linux is currently unsupported.)
 
 #### 12. capture-window - Capture EditorWindow
-Capture any EditorWindow as a PNG image. Specify the window name (the text displayed in the title bar/tab) to capture.
+Capture any EditorWindow as a PNG. Specify the window name (the text displayed in the title bar/tab) to capture.
 When multiple windows of the same type are open (e.g., 3 Inspector windows), all windows are saved with numbered filenames.
 Supports three matching modes: `exact` (default), `prefix`, and `contains` - all case-insensitive.
-```
+```text
 → capture-window (WindowName: "Console")
 → Save Console window state as PNG
 → Provide visual feedback to AI

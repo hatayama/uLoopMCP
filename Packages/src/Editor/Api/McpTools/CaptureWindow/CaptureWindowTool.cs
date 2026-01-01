@@ -8,7 +8,7 @@ using UnityEditor;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    [McpTool(Description = "Capture Unity EditorWindow and save as PNG image")]
+    [McpTool(Description = "Capture Unity EditorWindow and save as PNG")]
     public class CaptureWindowTool : AbstractUnityTool<CaptureWindowSchema, CaptureWindowResponse>
     {
         public override string ToolName => "capture-window";

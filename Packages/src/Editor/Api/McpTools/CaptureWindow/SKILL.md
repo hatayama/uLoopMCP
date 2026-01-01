@@ -1,11 +1,11 @@
 ---
 name: uloop-capture-window
-description: Capture Unity EditorWindow and save as PNG image. Use when you need to: (1) Take a screenshot of Game View, Scene View, Console, Inspector, etc., (2) Capture visual state for debugging or verification, (3) Save editor output as an image file.
+description: Capture Unity EditorWindow and save as PNG. Use when you need to: (1) Take a screenshot of Game View, Scene View, Console, Inspector, etc., (2) Capture visual state for debugging or verification, (3) Save editor output as an image file.
 ---
 
 # uloop capture-window
 
-Capture any Unity EditorWindow by name and save as PNG image.
+Capture any Unity EditorWindow by name and save as PNG.
 
 ## Usage
 
@@ -79,7 +79,7 @@ uloop capture-window --window-name "My Custom Window"
 Returns JSON with:
 - `CapturedCount`: Number of windows captured
 - `CapturedWindows`: Array of captured window info, each containing:
-  - `ImagePath`: Absolute path to the saved PNG image
+  - `ImagePath`: Absolute path to the saved PNG file
   - `FileSizeBytes`: Size of the saved file in bytes
   - `Width`: Captured image width in pixels
   - `Height`: Captured image height in pixels
