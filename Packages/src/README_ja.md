@@ -152,11 +152,12 @@ UnitySearchが提供する検索プロバイダーを取得します
 macOS / Windows Editor上で、現在MCP接続中の Unity Editor ウィンドウを最前面に表示させます。  
 他アプリにフォーカスが奪われた後でも、視覚的なフィードバックをすぐ確認できます。（Linuxは未対応）
 
-#### 12. capture-unity-window - EditorWindowのキャプチャ
+#### 12. capture-window - EditorWindowのキャプチャ
 任意のEditorWindowをPNG画像としてキャプチャします。ウィンドウ名（タイトルバーに表示されている文字列）を指定してキャプチャできます。
 同じ種類のウィンドウが複数開いている場合（例：Inspectorを3つ開いている場合）、すべてのウィンドウを連番で保存します。
+3つのマッチングモードをサポート: `exact`（デフォルト）、`prefix`、`contains` - すべて大文字小文字を区別しません。
 ```
-→ capture-unity-window (WindowName: "Console")
+→ capture-window (WindowName: "Console")
 → Console画面の状態をPNGで保存
 → AIに視覚的なフィードバックを提供
 ```
@@ -371,7 +372,7 @@ Skillsをインストールすると、LLMツールが以下のような指示�
 - `/uloop-get-menu-items` - メニュー項目の取得
 - `/uloop-execute-menu-item` - メニュー項目の実行
 - `/uloop-find-game-objects` - GameObject検索
-- `/uloop-capture-unity-window` - EditorWindowのキャプチャ
+- `/uloop-capture-window` - EditorWindowのキャプチャ
 - `/uloop-control-play-mode` - Play Modeの制御
 - `/uloop-execute-dynamic-code` - 動的C#コード実行
 - `/uloop-get-provider-details` - 検索プロバイダー詳細

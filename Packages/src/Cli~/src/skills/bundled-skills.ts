@@ -10,7 +10,7 @@
  * To exclude a skill from bundling, add `internal: true` to its frontmatter.
  */
 
-import captureUnityWindowSkill from '../../../Editor/Api/McpTools/CaptureUnityWindow/SKILL.md';
+import captureWindowSkill from '../../../Editor/Api/McpTools/CaptureWindow/SKILL.md';
 import clearConsoleSkill from '../../../Editor/Api/McpTools/ClearConsole/SKILL.md';
 import compileSkill from '../../../Editor/Api/McpTools/Compile/SKILL.md';
 import controlPlayModeSkill from '../../../Editor/Api/McpTools/ControlPlayMode/SKILL.md';
@@ -33,9 +33,9 @@ export interface BundledSkill {
 
 export const BUNDLED_SKILLS: BundledSkill[] = [
   {
-    name: 'uloop-capture-unity-window',
-    dirName: 'uloop-capture-unity-window',
-    content: captureUnityWindowSkill,
+    name: 'uloop-capture-window',
+    dirName: 'uloop-capture-window',
+    content: captureWindowSkill,
   },
   {
     name: 'uloop-clear-console',

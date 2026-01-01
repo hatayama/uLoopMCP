@@ -274,7 +274,7 @@
       }
     },
     {
-      "name": "capture-unity-window",
+      "name": "capture-window",
       "description": "Capture Unity EditorWindow and save as PNG image",
       "inputSchema": {
         "type": "object",
@@ -288,6 +288,16 @@
             "type": "number",
             "description": "Resolution scale (0.1 to 1.0)",
             "default": 1
+          },
+          "MatchMode": {
+            "type": "string",
+            "description": "Window name matching mode (all case-insensitive)",
+            "enum": [
+              "exact",
+              "prefix",
+              "contains"
+            ],
+            "default": "exact"
           }
         }
       }
