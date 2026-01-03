@@ -1,5 +1,3 @@
-#if UNITY_EDITOR_OSX || UNITY_EDITOR_WIN
-
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,13 +15,10 @@ namespace io.github.hatayama.uLoopMCP
         /// <inheritdoc />
         protected override Task<FocusUnityWindowResponse> ExecuteAsync(
             FocusUnityWindowSchema parameters,
-            CancellationToken cancellationToken)
+            CancellationToken ct)
         {
             FocusUnityWindowUseCase useCase = new FocusUnityWindowUseCase();
-            return useCase.ExecuteAsync(parameters, cancellationToken);
+            return useCase.ExecuteAsync(parameters, ct);
         }
     }
 }
-
-#endif
-
