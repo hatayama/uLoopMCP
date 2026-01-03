@@ -333,6 +333,28 @@ Undo.CollapseUndoOperations(undoGroup);
 return $"Aligned {selected.Length} objects with {spacing}m spacing";
 ```
 
+## Batch Rename Assets (Undo-supported)
+
+```csharp
+using UnityEditor;
+
+// ObjectNames.SetNameSmart() supports Undo (AssetDatabase.RenameAsset() does NOT)
+Object[] selected = Selection.objects;
+if (selected.Length == 0)
+{
+    return "No assets selected";
+}
+
+for (int i = 0; i < selected.Length; i++)
+{
+    string newName = $"{i:D3}_{selected[i].name}";
+    ObjectNames.SetNameSmart(selected[i], newName);
+}
+
+AssetDatabase.SaveAssets();
+return $"Renamed {selected.Length} assets";
+```
+
 ## Batch Replace Material
 
 ```csharp
