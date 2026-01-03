@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.52.0](https://github.com/hatayama/uLoopMCP/compare/v0.51.0...v0.52.0) (2026-01-03)
+
+
+### Features
+
+* **execute-dynamic-code:** wrap execution in single Undo group ([#507](https://github.com/hatayama/uLoopMCP/issues/507)) ([3402d41](https://github.com/hatayama/uLoopMCP/commit/3402d4132e93021507e39ad2a92f56561f697e2e))
+* **skills:** add progressive disclosure and expand execute-dynamic-code examples ([#506](https://github.com/hatayama/uLoopMCP/issues/506)) ([b63fd13](https://github.com/hatayama/uLoopMCP/commit/b63fd134b93cbad9d660d7db738b15e6aec99044))
+
 ## [0.51.0](https://github.com/hatayama/uLoopMCP/compare/v0.50.2...v0.51.0) (2026-01-01)
 
 
