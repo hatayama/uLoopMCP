@@ -22,10 +22,11 @@ const EXCLUDED_DIRS = new Set([
   'Library',
 ]);
 
-function isUnityProject(dirPath: string): boolean {
+function isUnityProjectWithUloop(dirPath: string): boolean {
   const hasAssets = existsSync(join(dirPath, 'Assets'));
   const hasProjectSettings = existsSync(join(dirPath, 'ProjectSettings'));
-  return hasAssets && hasProjectSettings;
+  const hasUloopSettings = existsSync(join(dirPath, 'UserSettings/UnityMcpSettings.json'));
+  return hasAssets && hasProjectSettings && hasUloopSettings;
 }
 
 function findUnityProjectsInChildren(startPath: string, maxDepth: number): string[] {
@@ -40,7 +41,7 @@ function findUnityProjectsInChildren(startPath: string, maxDepth: number): strin
       return;
     }
 
-    if (isUnityProject(currentPath)) {
+    if (isUnityProjectWithUloop(currentPath)) {
       projects.push(currentPath);
       return;
     }
@@ -74,7 +75,7 @@ function findUnityProjectInParents(startPath: string): string | null {
   let currentPath = startPath;
 
   while (true) {
-    if (isUnityProject(currentPath)) {
+    if (isUnityProjectWithUloop(currentPath)) {
       return currentPath;
     }
 
