@@ -77,3 +77,18 @@ Returns JSON with execution result or compile errors.
 ## Notes
 
 For file/directory operations, use terminal commands instead.
+
+## Code Examples by Category
+
+For detailed code examples, refer to these files:
+
+- **Prefab operations**: See [examples/prefab-operations.md](examples/prefab-operations.md)
+  - Create prefabs, instantiate, add components, modify properties
+- **Material operations**: See [examples/material-operations.md](examples/material-operations.md)
+  - Create materials, set shaders/textures, modify properties
+- **Asset operations**: See [examples/asset-operations.md](examples/asset-operations.md)
+  - Find/search assets, duplicate, move, rename, load
+- **ScriptableObject**: See [examples/scriptableobject.md](examples/scriptableobject.md)
+  - Create ScriptableObjects, modify with SerializedObject
+- **Scene operations**: See [examples/scene-operations.md](examples/scene-operations.md)
+  - Create/modify GameObjects, set parents, wire references, load scenes

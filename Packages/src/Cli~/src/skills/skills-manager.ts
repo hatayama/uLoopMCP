@@ -7,7 +7,7 @@
 /* eslint-disable security/detect-non-literal-fs-filename */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { BUNDLED_SKILLS, BundledSkill } from './bundled-skills.js';
 import { TargetConfig } from './target-config.js';
@@ -249,6 +249,15 @@ export function installSkill(
 
   mkdirSync(skillDir, { recursive: true });
   writeFileSync(skillPath, skill.content, 'utf-8');
+
+  if ('additionalFiles' in skill && skill.additionalFiles) {
+    const additionalFiles: Record<string, string> = skill.additionalFiles;
+    for (const [relativePath, content] of Object.entries(additionalFiles)) {
+      const fullPath = join(skillDir, relativePath);
+      mkdirSync(dirname(fullPath), { recursive: true });
+      writeFileSync(fullPath, content, 'utf-8');
+    }
+  }
 }
 
 export function uninstallSkill(
