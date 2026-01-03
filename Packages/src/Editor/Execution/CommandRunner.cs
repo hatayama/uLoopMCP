@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEditor;
 using UnityEngine;
 using io.github.hatayama.uLoopMCP;
 
@@ -54,13 +55,16 @@ namespace io.github.hatayama.uLoopMCP
         public ExecutionResult Execute(ExecutionContext context)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
-            
+
             if (_isRunning)
             {
                 return CreateErrorResult(McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS);
             }
             _isRunning = true;
             _cancellationTokenSource = new CancellationTokenSource();
+
+            int undoGroup = Undo.GetCurrentGroup();
+            Undo.SetCurrentGroupName("ExecuteDynamicCode");
 
             try
             {
@@ -93,6 +97,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
+                Undo.CollapseUndoOperations(undoGroup);
                 _isRunning = false;
                 _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = null;
@@ -114,6 +119,9 @@ namespace io.github.hatayama.uLoopMCP
             }
             _isRunning = true;
             _cancellationTokenSource = new CancellationTokenSource();
+
+            int undoGroup = Undo.GetCurrentGroup();
+            Undo.SetCurrentGroupName("ExecuteDynamicCode");
 
             try
             {
@@ -144,6 +152,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
+                Undo.CollapseUndoOperations(undoGroup);
                 _isRunning = false;
                 _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = null;
