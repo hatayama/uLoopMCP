@@ -22,6 +22,11 @@ using UnityEditor;
 
 string prefabPath = "Assets/Prefabs/MyCube.prefab";
 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+if (prefab == null)
+{
+    return $"Prefab not found at {prefabPath}";
+}
+
 GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
 instance.transform.position = new Vector3(0, 1, 0);
 return $"Instantiated {instance.name}";
@@ -73,9 +78,15 @@ return "Modified prefab properties";
 
 ```csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 string prefabPath = "Assets/Prefabs/MyCube.prefab";
 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+if (prefab == null)
+{
+    return $"Prefab not found at {prefabPath}";
+}
+
 List<GameObject> instances = new List<GameObject>();
 
 foreach (GameObject obj in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))

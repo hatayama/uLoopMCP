@@ -94,6 +94,15 @@ string prefabPath = "Assets/Prefabs/Player.prefab";
 ScriptableObject so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(soPath);
 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
 
+if (so == null)
+{
+    return $"ScriptableObject not found at {soPath}";
+}
+if (prefab == null)
+{
+    return $"Prefab not found at {prefabPath}";
+}
+
 SerializedObject serializedObj = new SerializedObject(so);
 SerializedProperty prop = serializedObj.FindProperty("playerPrefab");
 
@@ -115,6 +124,11 @@ using UnityEditor;
 
 string path = "Assets/Data/ItemDatabase.asset";
 ScriptableObject so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+
+if (so == null)
+{
+    return $"Asset not found at {path}";
+}
 
 SerializedObject serializedObj = new SerializedObject(so);
 SerializedProperty arrayProp = serializedObj.FindProperty("items");
@@ -139,6 +153,7 @@ return "Array property not found";
 
 ```csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 string typeName = "GameSettings";
 string[] guids = AssetDatabase.FindAssets($"t:{typeName}");
@@ -160,6 +175,11 @@ string sourcePath = "Assets/Data/Template.asset";
 string destPath = "Assets/Data/NewInstance.asset";
 
 ScriptableObject source = AssetDatabase.LoadAssetAtPath<ScriptableObject>(sourcePath);
+if (source == null)
+{
+    return $"Source asset not found at {sourcePath}";
+}
+
 ScriptableObject copy = Object.Instantiate(source);
 AssetDatabase.CreateAsset(copy, destPath);
 AssetDatabase.SaveAssets();
@@ -170,9 +190,15 @@ return $"Duplicated to {destPath}";
 
 ```csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 string path = "Assets/Data/MyData.asset";
 ScriptableObject so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+
+if (so == null)
+{
+    return $"Asset not found at {path}";
+}
 
 SerializedObject serializedObj = new SerializedObject(so);
 SerializedProperty prop = serializedObj.GetIterator();

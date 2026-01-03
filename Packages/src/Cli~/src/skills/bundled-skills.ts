@@ -67,6 +67,7 @@ Code examples for AssetDatabase operations using \`execute-dynamic-code\`.
 
 \`\`\`csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 string[] prefabGuids = AssetDatabase.FindAssets("t:Prefab");
 List<string> paths = new List<string>();
@@ -82,6 +83,7 @@ return $"Found {paths.Count} prefabs";
 
 \`\`\`csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 string searchName = "Player";
 string[] guids = AssetDatabase.FindAssets(searchName);
@@ -98,6 +100,7 @@ return $"Found {paths.Count} assets matching '{searchName}'";
 
 \`\`\`csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 string folder = "Assets/Prefabs";
 string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { folder });
@@ -1194,6 +1197,11 @@ using UnityEditor;
 
 string prefabPath = "Assets/Prefabs/MyCube.prefab";
 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+if (prefab == null)
+{
+    return $"Prefab not found at {prefabPath}";
+}
+
 GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
 instance.transform.position = new Vector3(0, 1, 0);
 return $"Instantiated {instance.name}";
@@ -1245,9 +1253,15 @@ return "Modified prefab properties";
 
 \`\`\`csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 string prefabPath = "Assets/Prefabs/MyCube.prefab";
 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+if (prefab == null)
+{
+    return $"Prefab not found at {prefabPath}";
+}
+
 List<GameObject> instances = new List<GameObject>();
 
 foreach (GameObject obj in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
@@ -1592,6 +1606,15 @@ string prefabPath = "Assets/Prefabs/Player.prefab";
 ScriptableObject so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(soPath);
 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
 
+if (so == null)
+{
+    return $"ScriptableObject not found at {soPath}";
+}
+if (prefab == null)
+{
+    return $"Prefab not found at {prefabPath}";
+}
+
 SerializedObject serializedObj = new SerializedObject(so);
 SerializedProperty prop = serializedObj.FindProperty("playerPrefab");
 
@@ -1613,6 +1636,11 @@ using UnityEditor;
 
 string path = "Assets/Data/ItemDatabase.asset";
 ScriptableObject so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+
+if (so == null)
+{
+    return $"Asset not found at {path}";
+}
 
 SerializedObject serializedObj = new SerializedObject(so);
 SerializedProperty arrayProp = serializedObj.FindProperty("items");
@@ -1637,6 +1665,7 @@ return "Array property not found";
 
 \`\`\`csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 string typeName = "GameSettings";
 string[] guids = AssetDatabase.FindAssets($"t:{typeName}");
@@ -1658,6 +1687,11 @@ string sourcePath = "Assets/Data/Template.asset";
 string destPath = "Assets/Data/NewInstance.asset";
 
 ScriptableObject source = AssetDatabase.LoadAssetAtPath<ScriptableObject>(sourcePath);
+if (source == null)
+{
+    return $"Source asset not found at {sourcePath}";
+}
+
 ScriptableObject copy = Object.Instantiate(source);
 AssetDatabase.CreateAsset(copy, destPath);
 AssetDatabase.SaveAssets();
@@ -1668,9 +1702,15 @@ return $"Duplicated to {destPath}";
 
 \`\`\`csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 string path = "Assets/Data/MyData.asset";
 ScriptableObject so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+
+if (so == null)
+{
+    return $"Asset not found at {path}";
+}
 
 SerializedObject serializedObj = new SerializedObject(so);
 SerializedProperty prop = serializedObj.GetIterator();
@@ -1691,6 +1731,7 @@ Code examples for Selection operations using \`execute-dynamic-code\`.
 
 \`\`\`csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 GameObject[] selected = Selection.gameObjects;
 if (selected.Length == 0)
@@ -1753,6 +1794,7 @@ return $"Selected {enemies.Length} enemies";
 
 \`\`\`csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 Transform[] transforms = Selection.GetTransforms(SelectionMode.TopLevel);
 if (transforms.Length == 0)
@@ -1786,6 +1828,7 @@ return $"Deep selection count: {transforms.Length}";
 
 \`\`\`csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 Transform[] transforms = Selection.GetTransforms(SelectionMode.Editable);
 if (transforms.Length == 0)
@@ -1805,6 +1848,7 @@ return $"Editable: {string.Join(", ", names)}";
 
 \`\`\`csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 Object[] selectedAssets = Selection.GetFiltered<Object>(SelectionMode.Assets);
 if (selectedAssets.Length == 0)
@@ -1824,6 +1868,7 @@ return $"Assets: {string.Join(", ", paths)}";
 
 \`\`\`csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 string[] guids = Selection.assetGUIDs;
 if (guids.Length == 0)
@@ -1843,6 +1888,8 @@ return $"Selected assets: {string.Join(", ", paths)}";
 
 \`\`\`csharp
 using UnityEditor;
+using UnityEngine;
+using System.Collections.Generic;
 
 GameObject parent = Selection.activeGameObject;
 if (parent == null)
@@ -1872,6 +1919,7 @@ return $"Selected {children.Count} children";
 
 \`\`\`csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 GameObject[] selected = Selection.gameObjects;
 List<GameObject> withRigidbody = new List<GameObject>();
@@ -1921,6 +1969,7 @@ return "Selection cleared";
 
 \`\`\`csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 int layer = LayerMask.NameToLayer("UI");
 GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);

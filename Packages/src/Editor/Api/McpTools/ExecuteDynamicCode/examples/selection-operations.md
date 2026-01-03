@@ -6,6 +6,7 @@ Code examples for Selection operations using `execute-dynamic-code`.
 
 ```csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 GameObject[] selected = Selection.gameObjects;
 if (selected.Length == 0)
@@ -68,6 +69,7 @@ return $"Selected {enemies.Length} enemies";
 
 ```csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 Transform[] transforms = Selection.GetTransforms(SelectionMode.TopLevel);
 if (transforms.Length == 0)
@@ -101,6 +103,7 @@ return $"Deep selection count: {transforms.Length}";
 
 ```csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 Transform[] transforms = Selection.GetTransforms(SelectionMode.Editable);
 if (transforms.Length == 0)
@@ -120,6 +123,7 @@ return $"Editable: {string.Join(", ", names)}";
 
 ```csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 Object[] selectedAssets = Selection.GetFiltered<Object>(SelectionMode.Assets);
 if (selectedAssets.Length == 0)
@@ -139,6 +143,7 @@ return $"Assets: {string.Join(", ", paths)}";
 
 ```csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 string[] guids = Selection.assetGUIDs;
 if (guids.Length == 0)
@@ -158,6 +163,8 @@ return $"Selected assets: {string.Join(", ", paths)}";
 
 ```csharp
 using UnityEditor;
+using UnityEngine;
+using System.Collections.Generic;
 
 GameObject parent = Selection.activeGameObject;
 if (parent == null)
@@ -187,6 +194,7 @@ return $"Selected {children.Count} children";
 
 ```csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 GameObject[] selected = Selection.gameObjects;
 List<GameObject> withRigidbody = new List<GameObject>();
@@ -236,6 +244,7 @@ return "Selection cleared";
 
 ```csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 int layer = LayerMask.NameToLayer("UI");
 GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);

@@ -6,6 +6,7 @@ Code examples for AssetDatabase operations using `execute-dynamic-code`.
 
 ```csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 string[] prefabGuids = AssetDatabase.FindAssets("t:Prefab");
 List<string> paths = new List<string>();
@@ -21,6 +22,7 @@ return $"Found {paths.Count} prefabs";
 
 ```csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 string searchName = "Player";
 string[] guids = AssetDatabase.FindAssets(searchName);
@@ -37,6 +39,7 @@ return $"Found {paths.Count} assets matching '{searchName}'";
 
 ```csharp
 using UnityEditor;
+using System.Collections.Generic;
 
 string folder = "Assets/Prefabs";
 string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { folder });
