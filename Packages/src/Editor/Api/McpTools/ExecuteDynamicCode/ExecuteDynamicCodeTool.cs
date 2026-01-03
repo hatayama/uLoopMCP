@@ -28,12 +28,14 @@ Do:
 - AddComponent + reference wiring (SerializedObject)
 - Scene/hierarchy edits
 
-Don’t:
+Don't:
 - System.IO.* (File/Directory/Path)
 - AssetDatabase.CreateFolder / file writes
 - Create/edit .cs/.asmdef (use Terminal/IDE instead)
 
-Need files/dirs? Run terminal commands.")]
+Need files/dirs? Run terminal commands.
+
+See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/examples/")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
         private IDynamicCodeExecutor _executor;

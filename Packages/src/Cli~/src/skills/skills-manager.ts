@@ -1,16 +1,18 @@
 /**
- * Skills manager for installing/uninstalling/listing uloop skills.
- * Supports both bundled skills and project-local skills.
+ * Claude Code and other AI tools require skills to be in specific directories.
+ * This module bridges the gap between bundled/project skills and target tool
+ * configurations, handling path resolution and file synchronization.
  */
 
 // File paths are constructed from home directory and skill names, not from untrusted user input
 /* eslint-disable security/detect-non-literal-fs-filename */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { BUNDLED_SKILLS, BundledSkill } from './bundled-skills.js';
 import { TargetConfig } from './target-config.js';
+import { findUnityProjectRoot } from '../project-root.js';
 
 export type SkillStatus = 'installed' | 'not_installed' | 'outdated';
 
@@ -35,7 +37,13 @@ function getGlobalSkillsDir(target: TargetConfig): string {
 }
 
 function getProjectSkillsDir(target: TargetConfig): string {
-  return join(process.cwd(), target.projectDir, 'skills');
+  const projectRoot = findUnityProjectRoot();
+  if (!projectRoot) {
+    throw new Error(
+      'Not inside a Unity project. Run this command from within a Unity project directory.',
+    );
+  }
+  return join(projectRoot, target.projectDir, 'skills');
 }
 
 function getSkillPath(skillDirName: string, target: TargetConfig, global: boolean): string {
@@ -57,12 +65,34 @@ function isSkillOutdated(
   target: TargetConfig,
   global: boolean,
 ): boolean {
-  const skillPath = getSkillPath(skill.dirName, target, global);
+  const baseDir = global ? getGlobalSkillsDir(target) : getProjectSkillsDir(target);
+  const skillDir = join(baseDir, skill.dirName);
+  const skillPath = join(skillDir, target.skillFileName);
+
   if (!existsSync(skillPath)) {
     return false;
   }
+
   const installedContent = readFileSync(skillPath, 'utf-8');
-  return installedContent !== skill.content;
+  if (installedContent !== skill.content) {
+    return true;
+  }
+
+  if ('additionalFiles' in skill && skill.additionalFiles) {
+    const additionalFiles: Record<string, string> = skill.additionalFiles;
+    for (const [relativePath, expectedContent] of Object.entries(additionalFiles)) {
+      const filePath = join(skillDir, relativePath);
+      if (!existsSync(filePath)) {
+        return true;
+      }
+      const installedFileContent = readFileSync(filePath, 'utf-8');
+      if (installedFileContent !== expectedContent) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 export function getSkillStatus(
@@ -178,7 +208,10 @@ function findEditorFolders(basePath: string, maxDepth: number = 2): string[] {
 }
 
 export function collectProjectSkills(): ProjectSkill[] {
-  const projectRoot = process.cwd();
+  const projectRoot = findUnityProjectRoot();
+  if (!projectRoot) {
+    return [];
+  }
   const skills: ProjectSkill[] = [];
   const seenNames = new Set<string>();
 
@@ -249,6 +282,15 @@ export function installSkill(
 
   mkdirSync(skillDir, { recursive: true });
   writeFileSync(skillPath, skill.content, 'utf-8');
+
+  if ('additionalFiles' in skill && skill.additionalFiles) {
+    const additionalFiles: Record<string, string> = skill.additionalFiles;
+    for (const [relativePath, content] of Object.entries(additionalFiles)) {
+      const fullPath = join(skillDir, relativePath);
+      mkdirSync(dirname(fullPath), { recursive: true });
+      writeFileSync(fullPath, content, 'utf-8');
+    }
+  }
 }
 
 export function uninstallSkill(
