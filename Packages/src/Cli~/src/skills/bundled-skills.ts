@@ -231,6 +231,781 @@ AssetDatabase.Refresh();
 return "AssetDatabase refreshed";
 \`\`\`
 `,
+      'examples/batch-operations.md': `# Batch Operations
+
+Code examples for batch processing using \`execute-dynamic-code\`.
+
+## Batch Modify Selected Objects
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] selected = Selection.gameObjects;
+if (selected.Length == 0)
+{
+    return "No GameObjects selected";
+}
+
+int undoGroup = Undo.GetCurrentGroup();
+Undo.SetCurrentGroupName("Batch Modify");
+
+foreach (GameObject obj in selected)
+{
+    Undo.RecordObject(obj.transform, "");
+    obj.transform.localScale = Vector3.one * 2;
+}
+
+Undo.CollapseUndoOperations(undoGroup);
+return $"Scaled {selected.Length} objects (Single undo step)";
+\`\`\`
+
+## Edit Multiple Objects with SerializedObject
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] selected = Selection.gameObjects;
+if (selected.Length == 0)
+{
+    return "No GameObjects selected";
+}
+
+List<Transform> transforms = new List<Transform>();
+foreach (GameObject obj in selected)
+{
+    transforms.Add(obj.transform);
+}
+
+SerializedObject serializedObj = new SerializedObject(transforms.ToArray());
+SerializedProperty positionProp = serializedObj.FindProperty("m_LocalPosition");
+positionProp.vector3Value = Vector3.zero;
+serializedObj.ApplyModifiedProperties();
+
+return $"Reset position of {selected.Length} objects";
+\`\`\`
+
+## Batch Add Component
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] selected = Selection.gameObjects;
+if (selected.Length == 0)
+{
+    return "No GameObjects selected";
+}
+
+int undoGroup = Undo.GetCurrentGroup();
+Undo.SetCurrentGroupName("Batch Add Rigidbody");
+
+int addedCount = 0;
+foreach (GameObject obj in selected)
+{
+    if (obj.GetComponent<Rigidbody>() == null)
+    {
+        Undo.AddComponent<Rigidbody>(obj);
+        addedCount++;
+    }
+}
+
+Undo.CollapseUndoOperations(undoGroup);
+return $"Added Rigidbody to {addedCount} objects";
+\`\`\`
+
+## Batch Process Assets with StartAssetEditing
+
+\`\`\`csharp
+using UnityEditor;
+
+string[] guids = AssetDatabase.FindAssets("t:Material", new[] { "Assets/Materials" });
+if (guids.Length == 0)
+{
+    return "No materials found";
+}
+
+AssetDatabase.StartAssetEditing();
+
+int modified = 0;
+foreach (string guid in guids)
+{
+    string path = AssetDatabase.GUIDToAssetPath(guid);
+    Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+    if (mat != null)
+    {
+        mat.color = Color.white;
+        EditorUtility.SetDirty(mat);
+        modified++;
+    }
+}
+
+AssetDatabase.StopAssetEditing();
+AssetDatabase.SaveAssets();
+
+return $"Reset color of {modified} materials";
+\`\`\`
+
+## Batch Rename GameObjects
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] selected = Selection.gameObjects;
+if (selected.Length == 0)
+{
+    return "No GameObjects selected";
+}
+
+int undoGroup = Undo.GetCurrentGroup();
+Undo.SetCurrentGroupName("Batch Rename");
+
+for (int i = 0; i < selected.Length; i++)
+{
+    Undo.RecordObject(selected[i], "");
+    selected[i].name = $"Item_{i:D3}";
+}
+
+Undo.CollapseUndoOperations(undoGroup);
+return $"Renamed {selected.Length} objects";
+\`\`\`
+
+## Batch Set Layer
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] selected = Selection.gameObjects;
+if (selected.Length == 0)
+{
+    return "No GameObjects selected";
+}
+
+int layer = LayerMask.NameToLayer("Default");
+
+int undoGroup = Undo.GetCurrentGroup();
+Undo.SetCurrentGroupName("Batch Set Layer");
+
+foreach (GameObject obj in selected)
+{
+    Undo.RecordObject(obj, "");
+    obj.layer = layer;
+}
+
+Undo.CollapseUndoOperations(undoGroup);
+return $"Set layer of {selected.Length} objects to Default";
+\`\`\`
+
+## Batch Set Tag
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] selected = Selection.gameObjects;
+if (selected.Length == 0)
+{
+    return "No GameObjects selected";
+}
+
+int undoGroup = Undo.GetCurrentGroup();
+Undo.SetCurrentGroupName("Batch Set Tag");
+
+foreach (GameObject obj in selected)
+{
+    Undo.RecordObject(obj, "");
+    obj.tag = "Enemy";
+}
+
+Undo.CollapseUndoOperations(undoGroup);
+return $"Tagged {selected.Length} objects as Enemy";
+\`\`\`
+
+## Batch Modify ScriptableObjects
+
+\`\`\`csharp
+using UnityEditor;
+
+string[] guids = AssetDatabase.FindAssets("t:ScriptableObject", new[] { "Assets/Data" });
+if (guids.Length == 0)
+{
+    return "No ScriptableObjects found";
+}
+
+int modified = 0;
+foreach (string guid in guids)
+{
+    string path = AssetDatabase.GUIDToAssetPath(guid);
+    ScriptableObject so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+    if (so == null) continue;
+
+    SerializedObject serializedObj = new SerializedObject(so);
+    SerializedProperty prop = serializedObj.FindProperty("isEnabled");
+    if (prop != null)
+    {
+        prop.boolValue = true;
+        serializedObj.ApplyModifiedProperties();
+        EditorUtility.SetDirty(so);
+        modified++;
+    }
+}
+
+AssetDatabase.SaveAssets();
+return $"Enabled {modified} ScriptableObjects";
+\`\`\`
+
+## Batch Remove Component
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] selected = Selection.gameObjects;
+if (selected.Length == 0)
+{
+    return "No GameObjects selected";
+}
+
+int undoGroup = Undo.GetCurrentGroup();
+Undo.SetCurrentGroupName("Batch Remove Rigidbody");
+
+int removedCount = 0;
+foreach (GameObject obj in selected)
+{
+    Rigidbody rb = obj.GetComponent<Rigidbody>();
+    if (rb != null)
+    {
+        Undo.DestroyObjectImmediate(rb);
+        removedCount++;
+    }
+}
+
+Undo.CollapseUndoOperations(undoGroup);
+return $"Removed Rigidbody from {removedCount} objects";
+\`\`\`
+
+## Batch Set Static Flags
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] selected = Selection.gameObjects;
+if (selected.Length == 0)
+{
+    return "No GameObjects selected";
+}
+
+int undoGroup = Undo.GetCurrentGroup();
+Undo.SetCurrentGroupName("Batch Set Static");
+
+foreach (GameObject obj in selected)
+{
+    Undo.RecordObject(obj, "");
+    GameObjectUtility.SetStaticEditorFlags(obj, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccludeeStatic);
+}
+
+Undo.CollapseUndoOperations(undoGroup);
+return $"Set static flags on {selected.Length} objects";
+\`\`\`
+
+## Batch Process with Progress Bar
+
+\`\`\`csharp
+using UnityEditor;
+
+string[] guids = AssetDatabase.FindAssets("t:Texture2D");
+if (guids.Length == 0)
+{
+    return "No textures found";
+}
+
+int processed = 0;
+foreach (string guid in guids)
+{
+    string path = AssetDatabase.GUIDToAssetPath(guid);
+    TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+    if (importer != null && importer.maxTextureSize > 1024)
+    {
+        importer.maxTextureSize = 1024;
+        importer.SaveAndReimport();
+        processed++;
+    }
+
+    if (processed % 10 == 0)
+    {
+        EditorUtility.DisplayProgressBar("Processing Textures", path, (float)processed / guids.Length);
+    }
+}
+
+EditorUtility.ClearProgressBar();
+return $"Resized {processed} textures to max 1024";
+\`\`\`
+
+## Batch Align Objects
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] selected = Selection.gameObjects;
+if (selected.Length < 2)
+{
+    return "Select at least 2 objects";
+}
+
+int undoGroup = Undo.GetCurrentGroup();
+Undo.SetCurrentGroupName("Align Objects");
+
+float startX = selected[0].transform.position.x;
+float spacing = 2f;
+
+for (int i = 0; i < selected.Length; i++)
+{
+    Undo.RecordObject(selected[i].transform, "");
+    Vector3 pos = selected[i].transform.position;
+    pos.x = startX + (i * spacing);
+    selected[i].transform.position = pos;
+}
+
+Undo.CollapseUndoOperations(undoGroup);
+return $"Aligned {selected.Length} objects with {spacing}m spacing";
+\`\`\`
+
+## Batch Replace Material
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] selected = Selection.gameObjects;
+if (selected.Length == 0)
+{
+    return "No GameObjects selected";
+}
+
+string materialPath = "Assets/Materials/NewMaterial.mat";
+Material newMat = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+if (newMat == null)
+{
+    return $"Material not found at {materialPath}";
+}
+
+int undoGroup = Undo.GetCurrentGroup();
+Undo.SetCurrentGroupName("Batch Replace Material");
+
+int replaced = 0;
+foreach (GameObject obj in selected)
+{
+    MeshRenderer renderer = obj.GetComponent<MeshRenderer>();
+    if (renderer != null)
+    {
+        Undo.RecordObject(renderer, "");
+        renderer.sharedMaterial = newMat;
+        replaced++;
+    }
+}
+
+Undo.CollapseUndoOperations(undoGroup);
+return $"Replaced material on {replaced} objects";
+\`\`\`
+
+`,
+      'examples/cleanup-operations.md': `# Cleanup Operations
+
+Code examples for project cleanup operations using \`execute-dynamic-code\`.
+
+## Detect Missing Scripts on GameObject
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject selected = Selection.activeGameObject;
+if (selected == null)
+{
+    return "No GameObject selected";
+}
+
+int missingCount = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(selected);
+return $"{selected.name} has {missingCount} missing script(s)";
+\`\`\`
+
+## Remove Missing Scripts from GameObject
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject selected = Selection.activeGameObject;
+if (selected == null)
+{
+    return "No GameObject selected";
+}
+
+int removedCount = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(selected);
+return $"Removed {removedCount} missing script(s) from {selected.name}";
+\`\`\`
+
+## Scan Scene for Missing Scripts
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+List<string> objectsWithMissing = new List<string>();
+
+foreach (GameObject obj in allObjects)
+{
+    int count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(obj);
+    if (count > 0)
+    {
+        objectsWithMissing.Add($"{obj.name} ({count})");
+    }
+}
+
+if (objectsWithMissing.Count == 0)
+{
+    return "No missing scripts found in scene";
+}
+
+return $"Objects with missing scripts: {string.Join(", ", objectsWithMissing)}";
+\`\`\`
+
+## Remove All Missing Scripts from Scene
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+int totalRemoved = 0;
+
+int undoGroup = Undo.GetCurrentGroup();
+Undo.SetCurrentGroupName("Remove All Missing Scripts");
+
+foreach (GameObject obj in allObjects)
+{
+    int removed = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(obj);
+    totalRemoved += removed;
+}
+
+Undo.CollapseUndoOperations(undoGroup);
+return $"Removed {totalRemoved} missing scripts from scene";
+\`\`\`
+
+## Detect Missing References in Component
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject selected = Selection.activeGameObject;
+if (selected == null)
+{
+    return "No GameObject selected";
+}
+
+List<string> missingRefs = new List<string>();
+
+Component[] components = selected.GetComponents<Component>();
+foreach (Component comp in components)
+{
+    if (comp == null) continue;
+
+    SerializedObject so = new SerializedObject(comp);
+    SerializedProperty prop = so.GetIterator();
+
+    while (prop.NextVisible(true))
+    {
+        if (prop.propertyType == SerializedPropertyType.ObjectReference)
+        {
+            if (prop.objectReferenceValue == null && prop.objectReferenceInstanceIDValue != 0)
+            {
+                missingRefs.Add($"{comp.GetType().Name}.{prop.name}");
+            }
+        }
+    }
+}
+
+if (missingRefs.Count == 0)
+{
+    return "No missing references found";
+}
+
+return $"Missing references: {string.Join(", ", missingRefs)}";
+\`\`\`
+
+## Scan Scene for Missing References
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+List<string> results = new List<string>();
+
+foreach (GameObject obj in allObjects)
+{
+    Component[] components = obj.GetComponents<Component>();
+    foreach (Component comp in components)
+    {
+        if (comp == null) continue;
+
+        SerializedObject so = new SerializedObject(comp);
+        SerializedProperty prop = so.GetIterator();
+
+        while (prop.NextVisible(true))
+        {
+            if (prop.propertyType == SerializedPropertyType.ObjectReference)
+            {
+                if (prop.objectReferenceValue == null && prop.objectReferenceInstanceIDValue != 0)
+                {
+                    results.Add($"{obj.name}/{comp.GetType().Name}.{prop.name}");
+                }
+            }
+        }
+    }
+}
+
+if (results.Count == 0)
+{
+    return "No missing references found in scene";
+}
+
+return $"Missing references ({results.Count}): {string.Join(", ", results.Take(10))}...";
+\`\`\`
+
+## Find Unused Materials in Project
+
+\`\`\`csharp
+using UnityEditor;
+
+string[] materialGuids = AssetDatabase.FindAssets("t:Material");
+HashSet<string> usedMaterials = new HashSet<string>();
+
+string[] prefabGuids = AssetDatabase.FindAssets("t:Prefab");
+foreach (string guid in prefabGuids)
+{
+    string path = AssetDatabase.GUIDToAssetPath(guid);
+    string[] deps = AssetDatabase.GetDependencies(path, true);
+    foreach (string dep in deps)
+    {
+        if (dep.EndsWith(".mat"))
+        {
+            usedMaterials.Add(dep);
+        }
+    }
+}
+
+List<string> unusedMaterials = new List<string>();
+foreach (string guid in materialGuids)
+{
+    string path = AssetDatabase.GUIDToAssetPath(guid);
+    if (!usedMaterials.Contains(path))
+    {
+        unusedMaterials.Add(path);
+    }
+}
+
+return $"Found {unusedMaterials.Count} potentially unused materials";
+\`\`\`
+
+## Find Empty GameObjects
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+List<string> emptyObjects = new List<string>();
+
+foreach (GameObject obj in allObjects)
+{
+    Component[] components = obj.GetComponents<Component>();
+    if (components.Length == 1 && obj.transform.childCount == 0)
+    {
+        emptyObjects.Add(obj.name);
+    }
+}
+
+if (emptyObjects.Count == 0)
+{
+    return "No empty GameObjects found";
+}
+
+return $"Empty objects ({emptyObjects.Count}): {string.Join(", ", emptyObjects.Take(20))}";
+\`\`\`
+
+## Find Duplicate Names in Hierarchy
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+Dictionary<string, int> nameCounts = new Dictionary<string, int>();
+
+foreach (GameObject obj in allObjects)
+{
+    if (nameCounts.ContainsKey(obj.name))
+    {
+        nameCounts[obj.name]++;
+    }
+    else
+    {
+        nameCounts[obj.name] = 1;
+    }
+}
+
+List<string> duplicates = new List<string>();
+foreach (KeyValuePair<string, int> kvp in nameCounts)
+{
+    if (kvp.Value > 1)
+    {
+        duplicates.Add($"{kvp.Key} ({kvp.Value})");
+    }
+}
+
+if (duplicates.Count == 0)
+{
+    return "No duplicate names found";
+}
+
+return $"Duplicate names: {string.Join(", ", duplicates.Take(15))}";
+\`\`\`
+
+## Check for Broken Prefab Instances
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+List<string> brokenPrefabs = new List<string>();
+
+foreach (GameObject obj in allObjects)
+{
+    if (PrefabUtility.IsPartOfPrefabInstance(obj))
+    {
+        GameObject prefabAsset = PrefabUtility.GetCorrespondingObjectFromSource(obj);
+        if (prefabAsset == null)
+        {
+            brokenPrefabs.Add(obj.name);
+        }
+    }
+}
+
+if (brokenPrefabs.Count == 0)
+{
+    return "No broken prefab instances found";
+}
+
+return $"Broken prefab instances: {string.Join(", ", brokenPrefabs)}";
+\`\`\`
+
+## Find Objects with Negative Scale
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+List<string> negativeScale = new List<string>();
+
+foreach (GameObject obj in allObjects)
+{
+    Vector3 scale = obj.transform.localScale;
+    if (scale.x < 0 || scale.y < 0 || scale.z < 0)
+    {
+        negativeScale.Add($"{obj.name} ({scale})");
+    }
+}
+
+if (negativeScale.Count == 0)
+{
+    return "No objects with negative scale found";
+}
+
+return $"Negative scale objects: {string.Join(", ", negativeScale.Take(10))}";
+\`\`\`
+
+## Remove Empty Parent GameObjects
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+
+int undoGroup = Undo.GetCurrentGroup();
+Undo.SetCurrentGroupName("Remove Empty Parents");
+
+int removedCount = 0;
+foreach (GameObject obj in allObjects)
+{
+    if (obj == null) continue;
+
+    Component[] components = obj.GetComponents<Component>();
+    if (components.Length == 1 && obj.transform.childCount == 0)
+    {
+        Undo.DestroyObjectImmediate(obj);
+        removedCount++;
+    }
+}
+
+Undo.CollapseUndoOperations(undoGroup);
+return $"Removed {removedCount} empty GameObjects";
+\`\`\`
+
+## Find Large Meshes
+
+\`\`\`csharp
+using UnityEditor;
+
+string[] meshGuids = AssetDatabase.FindAssets("t:Mesh");
+List<string> largeMeshes = new List<string>();
+int threshold = 10000;
+
+foreach (string guid in meshGuids)
+{
+    string path = AssetDatabase.GUIDToAssetPath(guid);
+    Mesh mesh = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+    if (mesh != null && mesh.vertexCount > threshold)
+    {
+        largeMeshes.Add($"{path} ({mesh.vertexCount} verts)");
+    }
+}
+
+if (largeMeshes.Count == 0)
+{
+    return $"No meshes with more than {threshold} vertices found";
+}
+
+return $"Large meshes: {string.Join(", ", largeMeshes.Take(10))}";
+\`\`\`
+
+## Validate Asset References
+
+\`\`\`csharp
+using UnityEditor;
+
+string[] guids = AssetDatabase.FindAssets("t:ScriptableObject", new[] { "Assets/Data" });
+List<string> invalidRefs = new List<string>();
+
+foreach (string guid in guids)
+{
+    string path = AssetDatabase.GUIDToAssetPath(guid);
+    ScriptableObject so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+    if (so == null) continue;
+
+    SerializedObject serializedObj = new SerializedObject(so);
+    SerializedProperty prop = serializedObj.GetIterator();
+
+    while (prop.NextVisible(true))
+    {
+        if (prop.propertyType == SerializedPropertyType.ObjectReference)
+        {
+            if (prop.objectReferenceValue == null && prop.objectReferenceInstanceIDValue != 0)
+            {
+                invalidRefs.Add($"{path}: {prop.name}");
+            }
+        }
+    }
+}
+
+if (invalidRefs.Count == 0)
+{
+    return "All asset references are valid";
+}
+
+return $"Invalid references ({invalidRefs.Count}): {string.Join(", ", invalidRefs.Take(10))}";
+\`\`\`
+
+`,
       'examples/material-operations.md': `# Material Operations
 
 Code examples for Material operations using \`execute-dynamic-code\`.
@@ -885,6 +1660,508 @@ while (prop.NextVisible(true))
 }
 return string.Join(", ", properties);
 \`\`\`
+`,
+      'examples/selection-operations.md': `# Selection Operations
+
+Code examples for Selection operations using \`execute-dynamic-code\`.
+
+## Get Selected GameObjects
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] selected = Selection.gameObjects;
+if (selected.Length == 0)
+{
+    return "No GameObjects selected";
+}
+
+List<string> names = new List<string>();
+foreach (GameObject obj in selected)
+{
+    names.Add(obj.name);
+}
+return $"Selected: {string.Join(", ", names)}";
+\`\`\`
+
+## Get Active (Last Selected) GameObject
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject active = Selection.activeGameObject;
+if (active == null)
+{
+    return "No active GameObject";
+}
+return $"Active: {active.name}";
+\`\`\`
+
+## Set Selection Programmatically
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject obj = GameObject.Find("Player");
+if (obj == null)
+{
+    return "GameObject 'Player' not found";
+}
+
+Selection.activeGameObject = obj;
+return $"Selected {obj.name}";
+\`\`\`
+
+## Select Multiple GameObjects
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
+if (enemies.Length == 0)
+{
+    return "No enemies found";
+}
+
+Selection.objects = enemies;
+return $"Selected {enemies.Length} enemies";
+\`\`\`
+
+## Get Top-Level Transforms Only
+
+\`\`\`csharp
+using UnityEditor;
+
+Transform[] transforms = Selection.GetTransforms(SelectionMode.TopLevel);
+if (transforms.Length == 0)
+{
+    return "No transforms selected";
+}
+
+List<string> names = new List<string>();
+foreach (Transform t in transforms)
+{
+    names.Add(t.name);
+}
+return $"Top-level: {string.Join(", ", names)}";
+\`\`\`
+
+## Get Deep Selection (Including Children)
+
+\`\`\`csharp
+using UnityEditor;
+
+Transform[] transforms = Selection.GetTransforms(SelectionMode.Deep);
+if (transforms.Length == 0)
+{
+    return "No transforms selected";
+}
+
+return $"Deep selection count: {transforms.Length}";
+\`\`\`
+
+## Get Editable Objects Only
+
+\`\`\`csharp
+using UnityEditor;
+
+Transform[] transforms = Selection.GetTransforms(SelectionMode.Editable);
+if (transforms.Length == 0)
+{
+    return "No editable transforms selected";
+}
+
+List<string> names = new List<string>();
+foreach (Transform t in transforms)
+{
+    names.Add(t.name);
+}
+return $"Editable: {string.Join(", ", names)}";
+\`\`\`
+
+## Get Selected Assets
+
+\`\`\`csharp
+using UnityEditor;
+
+Object[] selectedAssets = Selection.GetFiltered<Object>(SelectionMode.Assets);
+if (selectedAssets.Length == 0)
+{
+    return "No assets selected";
+}
+
+List<string> paths = new List<string>();
+foreach (Object asset in selectedAssets)
+{
+    paths.Add(AssetDatabase.GetAssetPath(asset));
+}
+return $"Assets: {string.Join(", ", paths)}";
+\`\`\`
+
+## Get Selected Asset GUIDs
+
+\`\`\`csharp
+using UnityEditor;
+
+string[] guids = Selection.assetGUIDs;
+if (guids.Length == 0)
+{
+    return "No assets selected";
+}
+
+List<string> paths = new List<string>();
+foreach (string guid in guids)
+{
+    paths.Add(AssetDatabase.GUIDToAssetPath(guid));
+}
+return $"Selected assets: {string.Join(", ", paths)}";
+\`\`\`
+
+## Select All Children of Selected Object
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject parent = Selection.activeGameObject;
+if (parent == null)
+{
+    return "No GameObject selected";
+}
+
+List<GameObject> children = new List<GameObject>();
+foreach (Transform child in parent.GetComponentsInChildren<Transform>())
+{
+    if (child != parent.transform)
+    {
+        children.Add(child.gameObject);
+    }
+}
+
+if (children.Count == 0)
+{
+    return "No children found";
+}
+
+Selection.objects = children.ToArray();
+return $"Selected {children.Count} children";
+\`\`\`
+
+## Filter Selection by Component
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] selected = Selection.gameObjects;
+List<GameObject> withRigidbody = new List<GameObject>();
+
+foreach (GameObject obj in selected)
+{
+    if (obj.GetComponent<Rigidbody>() != null)
+    {
+        withRigidbody.Add(obj);
+    }
+}
+
+if (withRigidbody.Count == 0)
+{
+    return "No objects with Rigidbody in selection";
+}
+
+Selection.objects = withRigidbody.ToArray();
+return $"Filtered to {withRigidbody.Count} objects with Rigidbody";
+\`\`\`
+
+## Check if Object is Selected
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject player = GameObject.Find("Player");
+if (player == null)
+{
+    return "Player not found";
+}
+
+bool isSelected = Selection.Contains(player);
+return $"Player is {(isSelected ? "" : "not ")}selected";
+\`\`\`
+
+## Clear Selection
+
+\`\`\`csharp
+using UnityEditor;
+
+Selection.activeObject = null;
+return "Selection cleared";
+\`\`\`
+
+## Select Objects by Layer
+
+\`\`\`csharp
+using UnityEditor;
+
+int layer = LayerMask.NameToLayer("UI");
+GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+List<GameObject> layerObjects = new List<GameObject>();
+
+foreach (GameObject obj in allObjects)
+{
+    if (obj.layer == layer)
+    {
+        layerObjects.Add(obj);
+    }
+}
+
+if (layerObjects.Count == 0)
+{
+    return "No objects found on UI layer";
+}
+
+Selection.objects = layerObjects.ToArray();
+return $"Selected {layerObjects.Count} objects on UI layer";
+\`\`\`
+
+## Ping Object in Hierarchy/Project
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject obj = GameObject.Find("Player");
+if (obj == null)
+{
+    return "Player not found";
+}
+
+EditorGUIUtility.PingObject(obj);
+return $"Pinged {obj.name} in Hierarchy";
+\`\`\`
+
+## Focus on Selected Object in Scene View
+
+\`\`\`csharp
+using UnityEditor;
+
+if (Selection.activeGameObject == null)
+{
+    return "No GameObject selected";
+}
+
+SceneView.FrameLastActiveSceneView();
+return "Focused on selected object";
+\`\`\`
+
+`,
+      'examples/undo-operations.md': `# Undo Operations
+
+Code examples for Undo-supported operations using \`execute-dynamic-code\`.
+
+## Record Property Change (Undo.RecordObject)
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject selected = Selection.activeGameObject;
+if (selected == null)
+{
+    return "No GameObject selected";
+}
+
+Undo.RecordObject(selected.transform, "Move Object");
+selected.transform.position = new Vector3(0, 5, 0);
+return $"Moved {selected.name} (Undo available)";
+\`\`\`
+
+## Record Multiple Objects
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject[] selectedObjects = Selection.gameObjects;
+if (selectedObjects.Length == 0)
+{
+    return "No GameObjects selected";
+}
+
+Object[] transforms = new Object[selectedObjects.Length];
+for (int i = 0; i < selectedObjects.Length; i++)
+{
+    transforms[i] = selectedObjects[i].transform;
+}
+
+Undo.RecordObjects(transforms, "Move Multiple Objects");
+foreach (GameObject obj in selectedObjects)
+{
+    obj.transform.position += Vector3.up * 2;
+}
+return $"Moved {selectedObjects.Length} objects (Undo available)";
+\`\`\`
+
+## Complete Object Undo (For Complex Changes)
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject selected = Selection.activeGameObject;
+if (selected == null)
+{
+    return "No GameObject selected";
+}
+
+Undo.RegisterCompleteObjectUndo(selected, "Complete Object Change");
+selected.name = "RenamedObject";
+selected.layer = LayerMask.NameToLayer("Default");
+selected.tag = "Untagged";
+return $"Modified object completely (Undo available)";
+\`\`\`
+
+## Add Component with Undo
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject selected = Selection.activeGameObject;
+if (selected == null)
+{
+    return "No GameObject selected";
+}
+
+Rigidbody rb = Undo.AddComponent<Rigidbody>(selected);
+rb.mass = 2f;
+rb.useGravity = true;
+return $"Added Rigidbody to {selected.name} (Undo available)";
+\`\`\`
+
+## Set Parent with Undo
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject child = GameObject.Find("Child");
+GameObject parent = GameObject.Find("Parent");
+
+if (child == null || parent == null)
+{
+    return "Child or Parent not found";
+}
+
+Undo.SetTransformParent(child.transform, parent.transform, "Set Parent");
+return $"Set {child.name}'s parent to {parent.name} (Undo available)";
+\`\`\`
+
+## Create GameObject with Undo
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+cube.name = "UndoableCube";
+cube.transform.position = new Vector3(0, 1, 0);
+Undo.RegisterCreatedObjectUndo(cube, "Create Cube");
+return $"Created {cube.name} (Undo available)";
+\`\`\`
+
+## Destroy GameObject with Undo
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject obj = GameObject.Find("ObjectToDelete");
+if (obj == null)
+{
+    return "GameObject not found";
+}
+
+Undo.DestroyObjectImmediate(obj);
+return "GameObject destroyed (Undo available)";
+\`\`\`
+
+## Named Undo Group
+
+\`\`\`csharp
+using UnityEditor;
+
+GameObject selected = Selection.activeGameObject;
+if (selected == null)
+{
+    return "No GameObject selected";
+}
+
+Undo.SetCurrentGroupName("Complex Transform Operation");
+
+Undo.RecordObject(selected.transform, "");
+selected.transform.position = Vector3.zero;
+selected.transform.rotation = Quaternion.identity;
+selected.transform.localScale = Vector3.one;
+
+return "Reset transform (Single undo step)";
+\`\`\`
+
+## Collapse Multiple Operations into One Undo
+
+\`\`\`csharp
+using UnityEditor;
+
+int undoGroup = Undo.GetCurrentGroup();
+Undo.SetCurrentGroupName("Batch Operation");
+
+GameObject cube1 = GameObject.CreatePrimitive(PrimitiveType.Cube);
+cube1.name = "Cube1";
+Undo.RegisterCreatedObjectUndo(cube1, "");
+
+GameObject cube2 = GameObject.CreatePrimitive(PrimitiveType.Cube);
+cube2.name = "Cube2";
+cube2.transform.position = Vector3.right * 2;
+Undo.RegisterCreatedObjectUndo(cube2, "");
+
+GameObject cube3 = GameObject.CreatePrimitive(PrimitiveType.Cube);
+cube3.name = "Cube3";
+cube3.transform.position = Vector3.right * 4;
+Undo.RegisterCreatedObjectUndo(cube3, "");
+
+Undo.CollapseUndoOperations(undoGroup);
+return "Created 3 cubes (Single undo step)";
+\`\`\`
+
+## Modify ScriptableObject with Undo
+
+\`\`\`csharp
+using UnityEditor;
+
+string path = "Assets/Data/GameSettings.asset";
+ScriptableObject so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+if (so == null)
+{
+    return $"Asset not found at {path}";
+}
+
+Undo.RecordObject(so, "Modify Settings");
+SerializedObject serializedObj = new SerializedObject(so);
+SerializedProperty prop = serializedObj.FindProperty("maxHealth");
+if (prop != null)
+{
+    prop.intValue = 200;
+    serializedObj.ApplyModifiedProperties();
+}
+return "Modified ScriptableObject (Undo available)";
+\`\`\`
+
+## Modify Material with Undo
+
+\`\`\`csharp
+using UnityEditor;
+
+string path = "Assets/Materials/MyMaterial.mat";
+Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+if (mat == null)
+{
+    return $"Material not found at {path}";
+}
+
+Undo.RecordObject(mat, "Change Material Color");
+mat.color = Color.red;
+return "Changed material color (Undo available)";
+\`\`\`
+
 `,
     },
   },
