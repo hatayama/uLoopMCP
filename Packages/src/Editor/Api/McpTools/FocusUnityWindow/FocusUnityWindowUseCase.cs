@@ -120,28 +120,30 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static IntPtr ResolveUnityEditorWindowHandle()
         {
-            Process current = Process.GetCurrentProcess();
-            IntPtr handle = current.MainWindowHandle;
-            if (handle != IntPtr.Zero)
+            using (Process current = Process.GetCurrentProcess())
             {
-                return handle;
-            }
-
-            IntPtr found = IntPtr.Zero;
-            EnumWindows(
-                (hWnd, lParam) =>
+                IntPtr handle = current.MainWindowHandle;
+                if (handle != IntPtr.Zero)
                 {
-                    GetWindowThreadProcessId(hWnd, out uint pid);
-                    if (pid == (uint)current.Id && IsWindowVisible(hWnd))
-                    {
-                        found = hWnd;
-                        return false;
-                    }
-                    return true;
-                },
-                IntPtr.Zero);
+                    return handle;
+                }
 
-            return found;
+                IntPtr found = IntPtr.Zero;
+                EnumWindows(
+                    (hWnd, lParam) =>
+                    {
+                        GetWindowThreadProcessId(hWnd, out uint pid);
+                        if (pid == (uint)current.Id && IsWindowVisible(hWnd))
+                        {
+                            found = hWnd;
+                            return false;
+                        }
+                        return true;
+                    },
+                    IntPtr.Zero);
+
+                return found;
+            }
         }
 #endif
     }
