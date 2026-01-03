@@ -129,7 +129,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 using CancellationTokenSource combinedCts = CreateCombinedCancellationTokenSource(context);
 
-                ExecutionResult result = await ExecuteInternalAsync(context, combinedCts.Token, correlationId).ConfigureAwait(false);
+                ExecutionResult result = await ExecuteInternalAsync(context, combinedCts.Token, correlationId);
 
                 LogExecutionComplete(result, correlationId);
 
@@ -360,7 +360,7 @@ namespace io.github.hatayama.uLoopMCP
                     object[] callArgs = BuildArguments(executeAsyncMethod, context.Parameters, cancellationToken);
                     object invoked = executeAsyncMethod.Invoke(instance, callArgs);
 
-                    object awaitedResult = await io.github.hatayama.uLoopMCP.AwaitableHelper.AwaitIfNeeded(invoked).ConfigureAwait(false);
+                    object awaitedResult = await io.github.hatayama.uLoopMCP.AwaitableHelper.AwaitIfNeeded(invoked);
                     string resultString = awaitedResult?.ToString() ?? "";
 
                     return CreateSuccessResult(resultString);
