@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEditor;
 using UnityEngine;
 using io.github.hatayama.uLoopMCP;
 
@@ -54,13 +55,16 @@ namespace io.github.hatayama.uLoopMCP
         public ExecutionResult Execute(ExecutionContext context)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
-            
+
             if (_isRunning)
             {
                 return CreateErrorResult(McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS);
             }
             _isRunning = true;
             _cancellationTokenSource = new CancellationTokenSource();
+
+            int undoGroup = Undo.GetCurrentGroup();
+            Undo.SetCurrentGroupName("ExecuteDynamicCode");
 
             try
             {
@@ -93,6 +97,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
+                Undo.CollapseUndoOperations(undoGroup);
                 _isRunning = false;
                 _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = null;
@@ -115,13 +120,16 @@ namespace io.github.hatayama.uLoopMCP
             _isRunning = true;
             _cancellationTokenSource = new CancellationTokenSource();
 
+            int undoGroup = Undo.GetCurrentGroup();
+            Undo.SetCurrentGroupName("ExecuteDynamicCode");
+
             try
             {
                 LogExecutionStart(context, correlationId);
 
                 using CancellationTokenSource combinedCts = CreateCombinedCancellationTokenSource(context);
 
-                ExecutionResult result = await ExecuteInternalAsync(context, combinedCts.Token, correlationId).ConfigureAwait(false);
+                ExecutionResult result = await ExecuteInternalAsync(context, combinedCts.Token, correlationId);
 
                 LogExecutionComplete(result, correlationId);
 
@@ -144,6 +152,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
+                Undo.CollapseUndoOperations(undoGroup);
                 _isRunning = false;
                 _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = null;
@@ -351,7 +360,7 @@ namespace io.github.hatayama.uLoopMCP
                     object[] callArgs = BuildArguments(executeAsyncMethod, context.Parameters, cancellationToken);
                     object invoked = executeAsyncMethod.Invoke(instance, callArgs);
 
-                    object awaitedResult = await io.github.hatayama.uLoopMCP.AwaitableHelper.AwaitIfNeeded(invoked).ConfigureAwait(false);
+                    object awaitedResult = await io.github.hatayama.uLoopMCP.AwaitableHelper.AwaitIfNeeded(invoked);
                     string resultString = awaitedResult?.ToString() ?? "";
 
                     return CreateSuccessResult(resultString);
