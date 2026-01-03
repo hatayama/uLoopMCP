@@ -1,6 +1,7 @@
 /**
- * Skills manager for installing/uninstalling/listing uloop skills.
- * Supports both bundled skills and project-local skills.
+ * Claude Code and other AI tools require skills to be in specific directories.
+ * This module bridges the gap between bundled/project skills and target tool
+ * configurations, handling path resolution and file synchronization.
  */
 
 // File paths are constructed from home directory and skill names, not from untrusted user input

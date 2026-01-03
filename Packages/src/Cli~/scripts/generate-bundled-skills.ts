@@ -1,12 +1,7 @@
 /**
- * Auto-generates bundled-skills.ts from multiple source directories.
- * Scans SKILL.md files from:
- *   1. Editor/Api/McpTools/SKILL.md (C# tool folders)
- *   2. skill-definitions/cli-only/SKILL.md (CLI-only skills)
- *
- * Skills with `internal: true` in frontmatter are excluded from generation.
- *
- * Usage: npx tsx scripts/generate-bundled-skills.ts
+ * Skills are scattered across multiple directories (McpTools, cli-only).
+ * Without this generator, we'd need manual synchronization between source
+ * SKILL.md files and the bundled output, which is error-prone and tedious.
  */
 
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'fs';
