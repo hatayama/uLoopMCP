@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.53.0](https://github.com/hatayama/uLoopMCP/compare/v0.52.0...v0.53.0) (2026-01-03)
+
+
+### Features
+
+* **cli:** search child directories for Unity projects with uLoopMCP ([#510](https://github.com/hatayama/uLoopMCP/issues/510)) ([b83d12a](https://github.com/hatayama/uLoopMCP/commit/b83d12a316cd685093c107da7a9b5fb63a4bc72d))
+
 ## [0.52.0](https://github.com/hatayama/uLoopMCP/compare/v0.51.0...v0.52.0) (2026-01-03)
 
 
