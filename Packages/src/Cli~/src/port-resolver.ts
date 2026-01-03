@@ -7,6 +7,7 @@
 /* eslint-disable security/detect-non-literal-fs-filename */
 
 import { readFile } from 'fs/promises';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import { findUnityProjectRoot } from './project-root.js';
 
@@ -22,7 +23,12 @@ export async function resolveUnityPort(explicitPort?: number): Promise<number> {
     return explicitPort;
   }
 
-  const settingsPort = await readPortFromSettings();
+  const projectRoot = findUnityProjectRoot();
+  if (projectRoot === null) {
+    throw new Error('Unity project not found. Use --port option to specify the port explicitly.');
+  }
+
+  const settingsPort = await readPortFromSettings(projectRoot);
   if (settingsPort !== null) {
     return settingsPort;
   }
@@ -30,12 +36,12 @@ export async function resolveUnityPort(explicitPort?: number): Promise<number> {
   return DEFAULT_PORT;
 }
 
-async function readPortFromSettings(): Promise<number | null> {
-  const projectRoot = findUnityProjectRoot();
-  if (projectRoot === null) {
+async function readPortFromSettings(projectRoot: string): Promise<number | null> {
+  const settingsPath = join(projectRoot, 'UserSettings/UnityMcpSettings.json');
+
+  if (!existsSync(settingsPath)) {
     return null;
   }
-  const settingsPath = join(projectRoot, 'UserSettings/UnityMcpSettings.json');
 
   let content: string;
   try {
