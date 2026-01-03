@@ -64,12 +64,34 @@ function isSkillOutdated(
   target: TargetConfig,
   global: boolean,
 ): boolean {
-  const skillPath = getSkillPath(skill.dirName, target, global);
+  const baseDir = global ? getGlobalSkillsDir(target) : getProjectSkillsDir(target);
+  const skillDir = join(baseDir, skill.dirName);
+  const skillPath = join(skillDir, target.skillFileName);
+
   if (!existsSync(skillPath)) {
     return false;
   }
+
   const installedContent = readFileSync(skillPath, 'utf-8');
-  return installedContent !== skill.content;
+  if (installedContent !== skill.content) {
+    return true;
+  }
+
+  if ('additionalFiles' in skill && skill.additionalFiles) {
+    const additionalFiles: Record<string, string> = skill.additionalFiles;
+    for (const [relativePath, expectedContent] of Object.entries(additionalFiles)) {
+      const filePath = join(skillDir, relativePath);
+      if (!existsSync(filePath)) {
+        return true;
+      }
+      const installedFileContent = readFileSync(filePath, 'utf-8');
+      if (installedFileContent !== expectedContent) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 export function getSkillStatus(
