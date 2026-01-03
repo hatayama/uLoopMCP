@@ -88,6 +88,24 @@ string error = AssetDatabase.RenameAsset(assetPath, newName);
 return string.IsNullOrEmpty(error) ? $"Renamed to {newName}" : $"Error: {error}";
 ```
 
+## Rename Asset (Undo-supported)
+
+```csharp
+using UnityEditor;
+
+// ObjectNames.SetNameSmart() supports Undo (AssetDatabase.RenameAsset() does NOT)
+Object selected = Selection.activeObject;
+if (selected == null)
+{
+    return "No asset selected";
+}
+
+string oldName = selected.name;
+ObjectNames.SetNameSmart(selected, "NewName");
+AssetDatabase.SaveAssets();
+return $"Renamed {oldName} to {selected.name}";
+```
+
 ## Get Asset Path from Object
 
 ```csharp
