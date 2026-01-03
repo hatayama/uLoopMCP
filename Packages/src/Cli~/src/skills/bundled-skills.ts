@@ -75,7 +75,7 @@ foreach (string guid in prefabGuids)
 {
     paths.Add(AssetDatabase.GUIDToAssetPath(guid));
 }
-return \$"Found {paths.Count} prefabs";
+return $"Found {paths.Count} prefabs";
 \`\`\`
 
 ## Find Assets by Name
@@ -91,7 +91,7 @@ foreach (string guid in guids)
 {
     paths.Add(AssetDatabase.GUIDToAssetPath(guid));
 }
-return \$"Found {paths.Count} assets matching '{searchName}'";
+return $"Found {paths.Count} assets matching '{searchName}'";
 \`\`\`
 
 ## Find Assets in Folder
@@ -107,7 +107,7 @@ foreach (string guid in guids)
 {
     paths.Add(AssetDatabase.GUIDToAssetPath(guid));
 }
-return \$"Found {paths.Count} prefabs in {folder}";
+return $"Found {paths.Count} prefabs in {folder}";
 \`\`\`
 
 ## Duplicate Asset
@@ -119,7 +119,7 @@ string sourcePath = "Assets/Materials/MyMaterial.mat";
 string destPath = "Assets/Materials/MyMaterial_Backup.mat";
 
 bool success = AssetDatabase.CopyAsset(sourcePath, destPath);
-return success ? \$"Copied to {destPath}" : "Copy failed";
+return success ? $"Copied to {destPath}" : "Copy failed";
 \`\`\`
 
 ## Move Asset
@@ -131,7 +131,7 @@ string sourcePath = "Assets/OldFolder/MyAsset.asset";
 string destPath = "Assets/NewFolder/MyAsset.asset";
 
 string error = AssetDatabase.MoveAsset(sourcePath, destPath);
-return string.IsNullOrEmpty(error) ? \$"Moved to {destPath}" : \$"Error: {error}";
+return string.IsNullOrEmpty(error) ? $"Moved to {destPath}" : $"Error: {error}";
 \`\`\`
 
 ## Rename Asset
@@ -143,7 +143,7 @@ string assetPath = "Assets/Materials/OldName.mat";
 string newName = "NewName";
 
 string error = AssetDatabase.RenameAsset(assetPath, newName);
-return string.IsNullOrEmpty(error) ? \$"Renamed to {newName}" : \$"Error: {error}";
+return string.IsNullOrEmpty(error) ? $"Renamed to {newName}" : $"Error: {error}";
 \`\`\`
 
 ## Get Asset Path from Object
@@ -162,7 +162,7 @@ if (string.IsNullOrEmpty(path))
 {
     return "Selected object is not an asset (scene object)";
 }
-return \$"Asset path: {path}";
+return $"Asset path: {path}";
 \`\`\`
 
 ## Load Asset at Path
@@ -175,9 +175,9 @@ GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
 
 if (asset == null)
 {
-    return \$"Asset not found at {path}";
+    return $"Asset not found at {path}";
 }
-return \$"Loaded: {asset.name}";
+return $"Loaded: {asset.name}";
 \`\`\`
 
 ## Get All Assets of Type
@@ -196,7 +196,7 @@ foreach (string guid in scriptGuids)
         count++;
     }
 }
-return \$"Found {count} scripts in Assets folder";
+return $"Found {count} scripts in Assets folder";
 \`\`\`
 
 ## Check if Asset Exists
@@ -208,7 +208,7 @@ string path = "Assets/Prefabs/Player.prefab";
 string guid = AssetDatabase.AssetPathToGUID(path);
 
 bool exists = !string.IsNullOrEmpty(guid);
-return exists ? \$"Asset exists: {path}" : \$"Asset not found: {path}";
+return exists ? $"Asset exists: {path}" : $"Asset not found: {path}";
 \`\`\`
 
 ## Get Asset Dependencies
@@ -219,7 +219,7 @@ using UnityEditor;
 string assetPath = "Assets/Prefabs/Player.prefab";
 string[] dependencies = AssetDatabase.GetDependencies(assetPath, true);
 
-return \$"Asset has {dependencies.Length} dependencies";
+return $"Asset has {dependencies.Length} dependencies";
 \`\`\`
 
 ## Refresh AssetDatabase
@@ -246,7 +246,7 @@ mat.name = "MyMaterial";
 string path = "Assets/Materials/MyMaterial.mat";
 AssetDatabase.CreateAsset(mat, path);
 AssetDatabase.SaveAssets();
-return \$"Material created at {path}";
+return $"Material created at {path}";
 \`\`\`
 
 ## Set Material Color
@@ -293,7 +293,7 @@ Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
 mat.SetTexture("_MainTex", tex);
 EditorUtility.SetDirty(mat);
 AssetDatabase.SaveAssets();
-return \$"Assigned {tex.name} to material";
+return $"Assigned {tex.name} to material";
 \`\`\`
 
 ## Assign Material to GameObject
@@ -318,7 +318,7 @@ if (renderer == null)
 
 renderer.sharedMaterial = mat;
 EditorUtility.SetDirty(selected);
-return \$"Assigned {mat.name} to {selected.name}";
+return $"Assigned {mat.name} to {selected.name}";
 \`\`\`
 
 ## Enable/Disable Material Keywords
@@ -355,7 +355,7 @@ foreach (string guid in guids)
         matchingMaterials.Add(path);
     }
 }
-return \$"Found {matchingMaterials.Count} materials using {shaderName}";
+return $"Found {matchingMaterials.Count} materials using {shaderName}";
 \`\`\`
 
 ## Duplicate Material
@@ -370,7 +370,7 @@ Material source = AssetDatabase.LoadAssetAtPath<Material>(sourcePath);
 Material copy = new Material(source);
 AssetDatabase.CreateAsset(copy, destPath);
 AssetDatabase.SaveAssets();
-return \$"Material duplicated to {destPath}";
+return $"Material duplicated to {destPath}";
 \`\`\`
 `,
       'examples/prefab-operations.md': `# Prefab Operations
@@ -387,7 +387,7 @@ cube.name = "MyCube";
 string path = "Assets/Prefabs/MyCube.prefab";
 PrefabUtility.SaveAsPrefabAsset(cube, path);
 Object.DestroyImmediate(cube);
-return \$"Prefab created at {path}";
+return $"Prefab created at {path}";
 \`\`\`
 
 ## Instantiate a Prefab
@@ -399,7 +399,7 @@ string prefabPath = "Assets/Prefabs/MyCube.prefab";
 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
 GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
 instance.transform.position = new Vector3(0, 1, 0);
-return \$"Instantiated {instance.name}";
+return $"Instantiated {instance.name}";
 \`\`\`
 
 ## Add Component to Prefab
@@ -460,7 +460,7 @@ foreach (GameObject obj in Object.FindObjectsByType<GameObject>(FindObjectsSortM
         instances.Add(obj);
     }
 }
-return \$"Found {instances.Count} instances of {prefab.name}";
+return $"Found {instances.Count} instances of {prefab.name}";
 \`\`\`
 
 ## Apply Prefab Overrides
@@ -480,7 +480,7 @@ if (!PrefabUtility.IsPartOfPrefabInstance(selected))
 }
 
 PrefabUtility.ApplyPrefabInstance(selected, InteractionMode.UserAction);
-return \$"Applied overrides from {selected.name} to prefab";
+return $"Applied overrides from {selected.name} to prefab";
 \`\`\`
 `,
       'examples/scene-operations.md': `# Scene Operations
@@ -492,7 +492,7 @@ Code examples for Scene and Hierarchy operations using \`execute-dynamic-code\`.
 \`\`\`csharp
 GameObject obj = new GameObject("MyObject");
 obj.transform.position = new Vector3(0, 1, 0);
-return \$"Created {obj.name}";
+return $"Created {obj.name}";
 \`\`\`
 
 ## Create Primitive
@@ -501,7 +501,7 @@ return \$"Created {obj.name}";
 GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
 cube.name = "MyCube";
 cube.transform.position = new Vector3(2, 0, 0);
-return \$"Created {cube.name}";
+return $"Created {cube.name}";
 \`\`\`
 
 ## Add Component to GameObject
@@ -516,7 +516,7 @@ if (selected == null)
 Rigidbody rb = selected.AddComponent<Rigidbody>();
 rb.mass = 2f;
 rb.useGravity = true;
-return \$"Added Rigidbody to {selected.name}";
+return $"Added Rigidbody to {selected.name}";
 \`\`\`
 
 ## Find GameObject by Name
@@ -527,14 +527,14 @@ if (obj == null)
 {
     return "GameObject 'Player' not found";
 }
-return \$"Found: {obj.name} at {obj.transform.position}";
+return $"Found: {obj.name} at {obj.transform.position}";
 \`\`\`
 
 ## Find GameObjects by Tag
 
 \`\`\`csharp
 GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
-return \$"Found {enemies.Length} GameObjects with tag 'Enemy'";
+return $"Found {enemies.Length} GameObjects with tag 'Enemy'";
 \`\`\`
 
 ## Set Parent
@@ -549,7 +549,7 @@ if (child == null || parent == null)
 }
 
 child.transform.SetParent(parent.transform);
-return \$"Set {child.name}'s parent to {parent.name}";
+return $"Set {child.name}'s parent to {parent.name}";
 \`\`\`
 
 ## Get All Children
@@ -566,7 +566,7 @@ foreach (Transform child in parent.transform)
 {
     children.Add(child.name);
 }
-return \$"Children: {string.Join(", ", children)}";
+return $"Children: {string.Join(", ", children)}";
 \`\`\`
 
 ## Wire Component References
@@ -607,7 +607,7 @@ using UnityEditor.SceneManagement;
 
 string scenePath = "Assets/Scenes/MainMenu.unity";
 EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
-return \$"Loaded scene: {scenePath}";
+return $"Loaded scene: {scenePath}";
 \`\`\`
 
 ## Save Current Scene
@@ -617,7 +617,7 @@ using UnityEditor.SceneManagement;
 
 UnityEngine.SceneManagement.Scene scene = EditorSceneManager.GetActiveScene();
 EditorSceneManager.SaveScene(scene);
-return \$"Saved scene: {scene.name}";
+return $"Saved scene: {scene.name}";
 \`\`\`
 
 ## Create New Scene
@@ -626,7 +626,7 @@ return \$"Saved scene: {scene.name}";
 using UnityEditor.SceneManagement;
 
 UnityEngine.SceneManagement.Scene newScene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
-return \$"Created new scene: {newScene.name}";
+return $"Created new scene: {newScene.name}";
 \`\`\`
 
 ## Get All Root GameObjects in Scene
@@ -640,7 +640,7 @@ foreach (GameObject root in roots)
 {
     names.Add(root.name);
 }
-return \$"Root objects: {string.Join(", ", names)}";
+return $"Root objects: {string.Join(", ", names)}";
 \`\`\`
 
 ## Destroy GameObject
@@ -668,7 +668,7 @@ if (selected == null)
 GameObject copy = Object.Instantiate(selected);
 copy.name = selected.name + "_Copy";
 copy.transform.position = selected.transform.position + Vector3.right * 2;
-return \$"Created duplicate: {copy.name}";
+return $"Created duplicate: {copy.name}";
 \`\`\`
 
 ## Set Active/Inactive
@@ -681,7 +681,7 @@ if (obj == null)
 }
 
 obj.SetActive(!obj.activeSelf);
-return \$"{obj.name} is now {(obj.activeSelf ? "active" : "inactive")}";
+return $"{obj.name} is now {(obj.activeSelf ? "active" : "inactive")}";
 \`\`\`
 
 ## Modify Transform
@@ -712,7 +712,7 @@ ScriptableObject so = ScriptableObject.CreateInstance<ScriptableObject>();
 string path = "Assets/Data/MyData.asset";
 AssetDatabase.CreateAsset(so, path);
 AssetDatabase.SaveAssets();
-return \$"ScriptableObject created at {path}";
+return $"ScriptableObject created at {path}";
 \`\`\`
 
 ## Create Custom ScriptableObject
@@ -729,7 +729,7 @@ if (so == null)
 string path = "Assets/Data/MyCustomData.asset";
 AssetDatabase.CreateAsset(so, path);
 AssetDatabase.SaveAssets();
-return \$"Created {so.GetType().Name} at {path}";
+return $"Created {so.GetType().Name} at {path}";
 \`\`\`
 
 ## Modify ScriptableObject with SerializedObject
@@ -742,7 +742,7 @@ ScriptableObject so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
 
 if (so == null)
 {
-    return \$"Asset not found at {path}";
+    return $"Asset not found at {path}";
 }
 
 SerializedObject serializedObj = new SerializedObject(so);
@@ -842,14 +842,14 @@ return "Array property not found";
 using UnityEditor;
 
 string typeName = "GameSettings";
-string[] guids = AssetDatabase.FindAssets(\$"t:{typeName}");
+string[] guids = AssetDatabase.FindAssets($"t:{typeName}");
 List<string> paths = new List<string>();
 
 foreach (string guid in guids)
 {
     paths.Add(AssetDatabase.GUIDToAssetPath(guid));
 }
-return \$"Found {paths.Count} {typeName} assets";
+return $"Found {paths.Count} {typeName} assets";
 \`\`\`
 
 ## Duplicate ScriptableObject
@@ -864,7 +864,7 @@ ScriptableObject source = AssetDatabase.LoadAssetAtPath<ScriptableObject>(source
 ScriptableObject copy = Object.Instantiate(source);
 AssetDatabase.CreateAsset(copy, destPath);
 AssetDatabase.SaveAssets();
-return \$"Duplicated to {destPath}";
+return $"Duplicated to {destPath}";
 \`\`\`
 
 ## List All Properties of ScriptableObject
@@ -881,7 +881,7 @@ SerializedProperty prop = serializedObj.GetIterator();
 List<string> properties = new List<string>();
 while (prop.NextVisible(true))
 {
-    properties.Add(\$"{prop.name} ({prop.propertyType})");
+    properties.Add($"{prop.name} ({prop.propertyType})");
 }
 return string.Join(", ", properties);
 \`\`\`

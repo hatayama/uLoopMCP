@@ -11,6 +11,7 @@ import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { BUNDLED_SKILLS, BundledSkill } from './bundled-skills.js';
 import { TargetConfig } from './target-config.js';
+import { findUnityProjectRoot } from '../project-root.js';
 
 export type SkillStatus = 'installed' | 'not_installed' | 'outdated';
 
@@ -35,7 +36,13 @@ function getGlobalSkillsDir(target: TargetConfig): string {
 }
 
 function getProjectSkillsDir(target: TargetConfig): string {
-  return join(process.cwd(), target.projectDir, 'skills');
+  const projectRoot = findUnityProjectRoot();
+  if (!projectRoot) {
+    throw new Error(
+      'Not inside a Unity project. Run this command from within a Unity project directory.',
+    );
+  }
+  return join(projectRoot, target.projectDir, 'skills');
 }
 
 function getSkillPath(skillDirName: string, target: TargetConfig, global: boolean): string {
@@ -178,7 +185,10 @@ function findEditorFolders(basePath: string, maxDepth: number = 2): string[] {
 }
 
 export function collectProjectSkills(): ProjectSkill[] {
-  const projectRoot = process.cwd();
+  const projectRoot = findUnityProjectRoot();
+  if (!projectRoot) {
+    return [];
+  }
   const skills: ProjectSkill[] = [];
   const seenNames = new Set<string>();
 
