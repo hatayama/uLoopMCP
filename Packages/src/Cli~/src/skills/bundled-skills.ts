@@ -1324,6 +1324,25 @@ obj.transform.position = new Vector3(0, 1, 0);
 return $"Created {obj.name}";
 \`\`\`
 
+## Create UI GameObject (under Canvas)
+
+\`\`\`csharp
+using UnityEngine.UI;
+
+// UI objects require RectTransform, which is auto-added when parented to Canvas
+GameObject canvas = GameObject.Find("Canvas");
+if (canvas == null)
+{
+    return "Canvas not found in scene";
+}
+
+GameObject uiObj = new GameObject("MyUIElement");
+uiObj.transform.SetParent(canvas.transform, false);
+uiObj.AddComponent<RectTransform>();
+uiObj.AddComponent<Image>();
+return $"Created UI element: {uiObj.name}";
+\`\`\`
+
 ## Create Primitive
 
 \`\`\`csharp
