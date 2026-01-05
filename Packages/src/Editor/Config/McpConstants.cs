@@ -2,9 +2,9 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Central constants repository for Unity MCP system.
-    /// 
+    ///
     /// Design document reference: Packages/src/Editor/ARCHITECTURE.md
-    /// 
+    ///
     /// Related classes:
     /// - McpConfigService: Uses these constants for configuration management
     /// - McpServerConfigFactory: Uses port and environment variable constants
@@ -14,6 +14,61 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class McpConstants
     {
+        private static UnityEditor.PackageManager.PackageInfo _cachedPackageInfo;
+
+        /// <summary>
+        /// Gets the PackageInfo for uLoopMCP package.
+        /// Results are cached for performance.
+        /// </summary>
+        /// <exception cref="System.InvalidOperationException">Thrown when package info cannot be resolved.</exception>
+        public static UnityEditor.PackageManager.PackageInfo PackageInfo
+        {
+            get
+            {
+                if (_cachedPackageInfo == null)
+                {
+                    _cachedPackageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(
+                        typeof(McpConstants).Assembly);
+
+                    if (_cachedPackageInfo == null)
+                    {
+                        throw new System.InvalidOperationException(
+                            "Failed to resolve PackageInfo for uLoopMCP. " +
+                            "Ensure the package is properly installed via Package Manager.");
+                    }
+                }
+                return _cachedPackageInfo;
+            }
+        }
+
+        /// <summary>
+        /// Gets the package name (e.g., "io.github.hatayama.uloopmcp").
+        /// </summary>
+        public static string PackageName => PackageInfo.name;
+
+        /// <summary>
+        /// Gets the Unity asset path for the package (e.g., "Packages/io.github.hatayama.uloopmcp").
+        /// Use this for AssetDatabase.LoadAssetAtPath().
+        /// </summary>
+        public static string PackageAssetPath => PackageInfo.assetPath;
+
+        /// <summary>
+        /// Gets the resolved file system path for the package.
+        /// Use this for file system operations.
+        /// </summary>
+        public static string PackageResolvedPath => PackageInfo.resolvedPath;
+
+        /// <summary>
+        /// Gets the package name pattern for directory searching (e.g., "io.github.hatayama.uloopmcp@*").
+        /// Use this for Directory.GetDirectories() in PackageCache.
+        /// </summary>
+        public static string PackageNamePattern => $"{PackageName}@*";
+
+        /// <summary>
+        /// Gets the C# namespace for uLoopMCP (e.g., "io.github.hatayama.uLoopMCP").
+        /// </summary>
+        public static string PackageNamespace => typeof(McpConstants).Namespace;
+
         public const string PROJECT_NAME = "uLoopMCP";
         
         // JSON configuration keys
@@ -61,9 +116,6 @@ namespace io.github.hatayama.uLoopMCP
         // Reconnection settings
         public const int RECONNECTION_TIMEOUT_SECONDS = 10;
         
-        // Editor settings keys (development mode)
-        public const string SETTINGS_KEY_ENABLE_DEVELOPMENT_MODE = "EnableDevelopmentMode";
-        
         // TypeScript server related constants
         public const string TYPESCRIPT_SERVER_DIR = "TypeScriptServer~";
         public const string DIST_DIR = "dist";
@@ -74,7 +126,6 @@ namespace io.github.hatayama.uLoopMCP
         public const string SRC_DIR = "src";
         public const string LIBRARY_DIR = "Library";
         public const string PACKAGE_CACHE_DIR = "PackageCache";
-        public const string PACKAGE_NAME_PATTERN = "io.github.hatayama.uloopmcp@*";
         public const string ULOOPMCP_DIR = "uLoopMCP";
         
         // File output directories
@@ -83,28 +134,14 @@ namespace io.github.hatayama.uLoopMCP
         public const string SEARCH_RESULTS_DIR = "SearchResults";
         public const string HIERARCHY_RESULTS_DIR = "HierarchyResults";
         public const string VIBE_LOGS_DIR = "VibeLogs";
-        
-        // SessionState keys
-        public const string SESSION_KEY_SERVER_RUNNING = "uLoopMCP.ServerRunning";
-        public const string SESSION_KEY_SERVER_PORT = "uLoopMCP.ServerPort";
-        public const string SESSION_KEY_AFTER_COMPILE = "uLoopMCP.AfterCompile";
-        public const string SESSION_KEY_DOMAIN_RELOAD_IN_PROGRESS = "uLoopMCP.DomainReloadInProgress";
-        public const string SESSION_KEY_SELECTED_EDITOR_TYPE = "uLoopMCP.SelectedEditorType";
-        public const string SESSION_KEY_COMMUNICATION_LOG_HEIGHT = "uLoopMCP.CommunicationLogHeight";
-        public const string SESSION_KEY_COMMUNICATION_LOGS = "uLoopMCP.CommunicationLogs";
-        public const string SESSION_KEY_PENDING_REQUESTS = "uLoopMCP.PendingRequests";
-        public const string SESSION_KEY_RECONNECTING = "uLoopMCP.Reconnecting";
-        public const string SESSION_KEY_SHOW_RECONNECTING_UI = "uLoopMCP.ShowReconnectingUI";
-        
+
         // Correlation ID constants
         public const int CORRELATION_ID_LENGTH = 8; // Length for correlation ID generation
         public const string GUID_FORMAT_NO_HYPHENS = "N"; // GUID format without hyphens
         
         // Error message constants
-        public const string ERROR_SECURITY_VIOLATION = "SECURITY_VIOLATION";
         public const string ERROR_EXECUTION_DISABLED = "EXECUTION_DISABLED";
         public const string ERROR_COMPILATION_DISABLED_LEVEL0 = "COMPILATION_DISABLED_AT_LEVEL0";
-        public const string ERROR_MESSAGE_SECURITY_LEVEL_CHANGE_BLOCKED = "Changing security level is not allowed in Restricted mode.";
         public const string ERROR_MESSAGE_EXECUTION_DISABLED = "Dynamic code execution is currently disabled. Enable in McpEditorSettings > Security Level.";
         public const string ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0 = "Compilation is disabled at isolation level 0. Raise to level 1+ to compile.";
         
@@ -129,9 +166,9 @@ namespace io.github.hatayama.uLoopMCP
         // Security: Allowed namespaces for reflection operations
         public static readonly string[] ALLOWED_NAMESPACES = {
             "UnityEditor",
-            "Unity.EditorCoroutines", 
+            "Unity.EditorCoroutines",
             "Unity.VisualScripting",
-            "io.github.hatayama.uLoopMCP"
+            PackageNamespace
         };
         
         // Security: Denied types for reflection operations
@@ -142,16 +179,6 @@ namespace io.github.hatayama.uLoopMCP
             "System.Reflection.Assembly",
             "System.Activator"
         };
-        
-        /// <summary>
-        /// Gets the client name for the specified editor type
-        /// </summary>
-        /// <param name="editorType">The editor type</param>
-        /// <returns>The client name</returns>
-        public static string GetClientNameForEditor(McpEditorType editorType)
-        {
-            return EditorConfigProvider.GetClientName(editorType);
-        }
         
         /// <summary>
         /// Generates a short correlation ID for logging and tracking
