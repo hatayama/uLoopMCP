@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.53.2](https://github.com/hatayama/uLoopMCP/compare/v0.53.1...v0.53.2) (2026-01-05)
+
+
+### Bug Fixes
+
+* **ui:** replace hardcoded package paths with dynamic resolution ([#516](https://github.com/hatayama/uLoopMCP/issues/516)) ([18becbc](https://github.com/hatayama/uLoopMCP/commit/18becbc7221c87dbb2da0ae49b11a5cf21f8a86c))
+
 ## [0.53.1](https://github.com/hatayama/uLoopMCP/compare/v0.53.0...v0.53.1) (2026-01-05)
 
 
