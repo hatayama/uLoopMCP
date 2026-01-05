@@ -1,4 +1,4 @@
-name: Unity Compile Check
+name: Unity Compile Check and Test Runner
 
 on:
   pull_request:
@@ -7,12 +7,12 @@ on:
       - 'Packages/src/Editor/**/*.cs'
       - 'Packages/src/Runtime/**/*.cs'
       - 'Assets/**/*.cs'
-      - '.github/workflows/unity-compile-check.yml'
+      - '.github/workflows/unity-compile-check-and-test-runner.yml'
   workflow_dispatch:
 
 jobs:
-  compile-check:
-    name: Compile & Warning Check (Linux)
+  compile-check-and-test:
+    name: Compile Check & Test Runner (Linux)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
