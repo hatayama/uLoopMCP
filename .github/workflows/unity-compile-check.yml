@@ -7,11 +7,12 @@ on:
       - 'Packages/src/Editor/**/*.cs'
       - 'Packages/src/Runtime/**/*.cs'
       - 'Assets/**/*.cs'
+      - '.github/workflows/unity-compile-check.yml'
   workflow_dispatch:
 
 jobs:
-  compile-linux:
-    name: Compile Check (Linux)
+  compile-check:
+    name: Compile & Warning Check (Linux)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -27,7 +28,76 @@ jobs:
           restore-keys: |
             Library-
 
-      - name: Run EditMode tests (compile check)
+      - name: Compile Unity project
+        id: compile
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: 2022.3.62f1
+          targetPlatform: StandaloneLinux64
+          buildMethod: ''
+          allowDirtyBuild: true
+        continue-on-error: true
+
+      - name: Check for compile errors and warnings
+        run: |
+          LOG_FILE=$(find . -name "*.log" -path "*/build/*" -o -name "Editor.log" 2>/dev/null | head -1)
+
+          if [ -z "$LOG_FILE" ]; then
+            echo "No Unity log file found, checking artifacts..."
+            LOG_FILE="artifacts/unity-build.log"
+          fi
+
+          echo "=== Checking Unity compilation output ==="
+
+          ERROR_COUNT=0
+          WARNING_COUNT=0
+
+          if [ -f "$LOG_FILE" ]; then
+            echo "Analyzing log file: $LOG_FILE"
+
+            # Count errors (CS errors from compiler)
+            ERROR_COUNT=$(grep -c "error CS[0-9]*:" "$LOG_FILE" 2>/dev/null || echo "0")
+
+            # Count warnings (CS warnings from compiler, excluding specific noise)
+            WARNING_COUNT=$(grep -c "warning CS[0-9]*:" "$LOG_FILE" 2>/dev/null || echo "0")
+
+            echo ""
+            echo "=== Compilation Results ==="
+            echo "Errors: $ERROR_COUNT"
+            echo "Warnings: $WARNING_COUNT"
+            echo ""
+
+            if [ "$ERROR_COUNT" -gt 0 ]; then
+              echo "::error::Found $ERROR_COUNT compile error(s)"
+              echo ""
+              echo "=== Errors ==="
+              grep "error CS[0-9]*:" "$LOG_FILE" | head -20
+              exit 1
+            fi
+
+            if [ "$WARNING_COUNT" -gt 0 ]; then
+              echo "::warning::Found $WARNING_COUNT compile warning(s)"
+              echo ""
+              echo "=== Warnings ==="
+              grep "warning CS[0-9]*:" "$LOG_FILE" | head -20
+              exit 1
+            fi
+
+            echo "✅ No compile errors or warnings found!"
+          else
+            echo "::warning::Could not find Unity log file for analysis"
+            # Fall back to checking if build step failed
+            if [ "${{ steps.compile.outcome }}" == "failure" ]; then
+              echo "::error::Unity compilation failed"
+              exit 1
+            fi
+          fi
+
+      - name: Run EditMode tests
         uses: game-ci/unity-test-runner@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -36,12 +106,12 @@ jobs:
         with:
           unityVersion: 2022.3.62f1
           testMode: EditMode
-          checkName: Unity Compile Check Results
+          checkName: Unity Test Results
           githubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Test results (EditMode)
+          name: Unity test results
           path: artifacts
