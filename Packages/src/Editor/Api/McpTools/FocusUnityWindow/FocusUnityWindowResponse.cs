@@ -1,4 +1,3 @@
-#if UNITY_EDITOR_OSX || UNITY_EDITOR_WIN
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
@@ -50,5 +49,3 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 }
-
-#endif
