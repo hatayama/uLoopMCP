@@ -24,13 +24,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Library
-          key: Library-${{ hashFiles('Packages/src/**/*.cs', 'Assets/**/*.cs') }}
+          key: Library-2022.3.62f1-${{ hashFiles('Packages/src/**/*.cs', 'Assets/**/*.cs') }}
           restore-keys: |
-            Library-
+            Library-2022.3.62f1-
 
       - name: Compile Unity project
         id: compile
         uses: game-ci/unity-builder@v4
+        timeout-minutes: 30
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -99,6 +100,7 @@ jobs:
 
       - name: Run EditMode tests
         uses: game-ci/unity-test-runner@v4
+        timeout-minutes: 30
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}

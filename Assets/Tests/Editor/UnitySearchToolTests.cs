@@ -55,6 +55,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(containsTexture, Is.True, $"Search results missing fixture texture. Details: {debugInfo}");
 
             SearchResultItem matched = response.Results.First(item => string.Equals(item.Path, TextureAssetPath, StringComparison.OrdinalIgnoreCase));
+            // Provider ID varies across platforms (e.g., "asset" on macOS/Windows, "_group_provider_Files" on Linux CI)
             Assert.That(matched.Provider, Is.Not.Empty, "Provider should not be empty");
         }
 
@@ -83,6 +84,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(containsMesh, Is.True, $"Search results missing fixture mesh. Details: {debugInfo}");
 
             SearchResultItem matched = response.Results.First(item => string.Equals(item.Path, MeshAssetPath, StringComparison.OrdinalIgnoreCase));
+            // Provider ID varies across platforms (e.g., "asset" on macOS/Windows, "_group_provider_Files" on Linux CI)
             Assert.That(matched.Provider, Is.Not.Empty, "Provider should not be empty");
         }
 
