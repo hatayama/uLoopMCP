@@ -137,19 +137,7 @@ namespace io.github.hatayama.uLoopMCP
         public const string SEARCH_RESULTS_DIR = "SearchResults";
         public const string HIERARCHY_RESULTS_DIR = "HierarchyResults";
         public const string VIBE_LOGS_DIR = "VibeLogs";
-        
-        // SessionState keys
-        public const string SESSION_KEY_SERVER_RUNNING = "uLoopMCP.ServerRunning";
-        public const string SESSION_KEY_SERVER_PORT = "uLoopMCP.ServerPort";
-        public const string SESSION_KEY_AFTER_COMPILE = "uLoopMCP.AfterCompile";
-        public const string SESSION_KEY_DOMAIN_RELOAD_IN_PROGRESS = "uLoopMCP.DomainReloadInProgress";
-        public const string SESSION_KEY_SELECTED_EDITOR_TYPE = "uLoopMCP.SelectedEditorType";
-        public const string SESSION_KEY_COMMUNICATION_LOG_HEIGHT = "uLoopMCP.CommunicationLogHeight";
-        public const string SESSION_KEY_COMMUNICATION_LOGS = "uLoopMCP.CommunicationLogs";
-        public const string SESSION_KEY_PENDING_REQUESTS = "uLoopMCP.PendingRequests";
-        public const string SESSION_KEY_RECONNECTING = "uLoopMCP.Reconnecting";
-        public const string SESSION_KEY_SHOW_RECONNECTING_UI = "uLoopMCP.ShowReconnectingUI";
-        
+
         // Correlation ID constants
         public const int CORRELATION_ID_LENGTH = 8; // Length for correlation ID generation
         public const string GUID_FORMAT_NO_HYPHENS = "N"; // GUID format without hyphens
