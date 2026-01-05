@@ -1,0 +1,47 @@
+name: Unity Compile Check
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Packages/src/Editor/**/*.cs'
+      - 'Packages/src/Runtime/**/*.cs'
+      - 'Assets/**/*.cs'
+  workflow_dispatch:
+
+jobs:
+  compile-linux:
+    name: Compile Check (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Cache Library folder
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Packages/src/**/*.cs', 'Assets/**/*.cs') }}
+          restore-keys: |
+            Library-
+
+      - name: Run EditMode tests (compile check)
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: 2022.3.62f1
+          testMode: EditMode
+          checkName: Unity Compile Check Results
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Test results (EditMode)
+          path: artifacts
