@@ -42,7 +42,7 @@ namespace io.github.hatayama.uLoopMCP
             
             if (Directory.Exists(packageCacheDir))
             {
-                string[] packageDirs = Directory.GetDirectories(packageCacheDir, McpConstants.PACKAGE_NAME_PATTERN);
+                string[] packageDirs = Directory.GetDirectories(packageCacheDir, McpConstants.PackageNamePattern);
                 
                 foreach (string packageDir in packageDirs)
                 {

@@ -2,9 +2,9 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Central constants repository for Unity MCP system.
-    /// 
+    ///
     /// Design document reference: Packages/src/Editor/ARCHITECTURE.md
-    /// 
+    ///
     /// Related classes:
     /// - McpConfigService: Uses these constants for configuration management
     /// - McpServerConfigFactory: Uses port and environment variable constants
@@ -14,6 +14,53 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class McpConstants
     {
+        private static UnityEditor.PackageManager.PackageInfo _cachedPackageInfo;
+
+        /// <summary>
+        /// Gets the PackageInfo for uLoopMCP package.
+        /// Results are cached for performance.
+        /// </summary>
+        public static UnityEditor.PackageManager.PackageInfo PackageInfo
+        {
+            get
+            {
+                if (_cachedPackageInfo == null)
+                {
+                    _cachedPackageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(
+                        typeof(McpConstants).Assembly);
+                }
+                return _cachedPackageInfo;
+            }
+        }
+
+        /// <summary>
+        /// Gets the package name (e.g., "io.github.hatayama.uloopmcp").
+        /// </summary>
+        public static string PackageName => PackageInfo?.name ?? string.Empty;
+
+        /// <summary>
+        /// Gets the Unity asset path for the package (e.g., "Packages/io.github.hatayama.uloopmcp").
+        /// Use this for AssetDatabase.LoadAssetAtPath().
+        /// </summary>
+        public static string PackageAssetPath => PackageInfo?.assetPath ?? string.Empty;
+
+        /// <summary>
+        /// Gets the resolved file system path for the package.
+        /// Use this for file system operations.
+        /// </summary>
+        public static string PackageResolvedPath => PackageInfo?.resolvedPath ?? string.Empty;
+
+        /// <summary>
+        /// Gets the package name pattern for directory searching (e.g., "io.github.hatayama.uloopmcp@*").
+        /// Use this for Directory.GetDirectories() in PackageCache.
+        /// </summary>
+        public static string PackageNamePattern => string.IsNullOrEmpty(PackageName) ? string.Empty : $"{PackageName}@*";
+
+        /// <summary>
+        /// Gets the C# namespace for uLoopMCP (e.g., "io.github.hatayama.uLoopMCP").
+        /// </summary>
+        public static string PackageNamespace => typeof(McpConstants).Namespace ?? string.Empty;
+
         public const string PROJECT_NAME = "uLoopMCP";
         
         // JSON configuration keys
@@ -74,7 +121,6 @@ namespace io.github.hatayama.uLoopMCP
         public const string SRC_DIR = "src";
         public const string LIBRARY_DIR = "Library";
         public const string PACKAGE_CACHE_DIR = "PackageCache";
-        public const string PACKAGE_NAME_PATTERN = "io.github.hatayama.uloopmcp@*";
         public const string ULOOPMCP_DIR = "uLoopMCP";
         
         // File output directories
@@ -129,9 +175,9 @@ namespace io.github.hatayama.uLoopMCP
         // Security: Allowed namespaces for reflection operations
         public static readonly string[] ALLOWED_NAMESPACES = {
             "UnityEditor",
-            "Unity.EditorCoroutines", 
+            "Unity.EditorCoroutines",
             "Unity.VisualScripting",
-            "io.github.hatayama.uLoopMCP"
+            PackageNamespace
         };
         
         // Security: Denied types for reflection operations

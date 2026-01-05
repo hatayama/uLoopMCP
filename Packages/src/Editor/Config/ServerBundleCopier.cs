@@ -75,7 +75,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // 2. Check package path via Unity Package Manager API (supports submodules)
-            string packagePath = GetPackagePathViaUnityApi();
+            string packagePath = McpConstants.PackageResolvedPath;
             if (!string.IsNullOrEmpty(packagePath))
             {
                 string serverPath = Path.Combine(
@@ -98,7 +98,7 @@ namespace io.github.hatayama.uLoopMCP
             );
             if (Directory.Exists(packageCacheDir))
             {
-                string[] packageDirs = Directory.GetDirectories(packageCacheDir, McpConstants.PACKAGE_NAME_PATTERN);
+                string[] packageDirs = Directory.GetDirectories(packageCacheDir, McpConstants.PackageNamePattern);
                 foreach (string packageDir in packageDirs)
                 {
                     string serverPath = Path.Combine(
@@ -112,23 +112,6 @@ namespace io.github.hatayama.uLoopMCP
                         return serverPath;
                     }
                 }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Gets the package path using Unity Package Manager API.
-        /// Supports local packages referenced via file: protocol (e.g., submodules).
-        /// </summary>
-        private static string GetPackagePathViaUnityApi()
-        {
-            UnityEditor.PackageManager.PackageInfo packageInfo =
-                UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(ServerBundleCopier).Assembly);
-
-            if (packageInfo != null && !string.IsNullOrEmpty(packageInfo.resolvedPath))
-            {
-                return packageInfo.resolvedPath;
             }
 
             return null;

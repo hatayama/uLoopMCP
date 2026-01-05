@@ -466,7 +466,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // 3. Package path via Unity Package Manager API (supports submodules and local packages)
-            string packagePath = GetPackagePathViaUnityApi();
+            string packagePath = McpConstants.PackageResolvedPath;
             if (!string.IsNullOrEmpty(packagePath))
             {
                 string serverPath = BuildTypeScriptServerPath(packagePath);
@@ -480,7 +480,7 @@ namespace io.github.hatayama.uLoopMCP
             string packageCacheDir = Path.Combine(projectRoot, McpConstants.LIBRARY_DIR, McpConstants.PACKAGE_CACHE_DIR);
             if (Directory.Exists(packageCacheDir))
             {
-                string[] packageDirs = Directory.GetDirectories(packageCacheDir, McpConstants.PACKAGE_NAME_PATTERN);
+                string[] packageDirs = Directory.GetDirectories(packageCacheDir, McpConstants.PackageNamePattern);
                 foreach (string packageDir in packageDirs)
                 {
                     string serverPath = BuildTypeScriptServerPath(packageDir);
@@ -492,23 +492,6 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return string.Empty;
-        }
-
-        /// <summary>
-        /// Gets the package path using Unity Package Manager API.
-        /// Supports local packages referenced via file: protocol (e.g., submodules).
-        /// </summary>
-        private static string GetPackagePathViaUnityApi()
-        {
-            UnityEditor.PackageManager.PackageInfo packageInfo =
-                UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(UnityMcpPathResolver).Assembly);
-
-            if (packageInfo != null && !string.IsNullOrEmpty(packageInfo.resolvedPath))
-            {
-                return packageInfo.resolvedPath;
-            }
-
-            return null;
         }
 
         /// <summary>
@@ -532,8 +515,7 @@ namespace io.github.hatayama.uLoopMCP
             string packageCacheDir = Path.Combine(projectRoot, McpConstants.LIBRARY_DIR, McpConstants.PACKAGE_CACHE_DIR);
             if (Directory.Exists(packageCacheDir))
             {
-                // Search for directories starting with io.github.hatayama.uloopmcp@.
-                string[] packageDirs = Directory.GetDirectories(packageCacheDir, McpConstants.PACKAGE_NAME_PATTERN);
+                string[] packageDirs = Directory.GetDirectories(packageCacheDir, McpConstants.PackageNamePattern);
 
                 foreach (string packageDir in packageDirs)
                 {

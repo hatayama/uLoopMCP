@@ -56,9 +56,10 @@ namespace io.github.hatayama.uLoopMCP
 
         private void LoadLayout()
         {
-            string packagePath = GetPackagePath();
-            if (packagePath == null)
+            string packagePath = McpConstants.PackageAssetPath;
+            if (string.IsNullOrEmpty(packagePath))
             {
+                Debug.LogError("Failed to resolve package path for uLoopMCP");
                 return;
             }
 
@@ -82,20 +83,6 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             _root.styleSheets.Add(styleSheet);
-        }
-
-        private static string GetPackagePath()
-        {
-            UnityEditor.PackageManager.PackageInfo packageInfo =
-                UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(McpEditorWindowUI).Assembly);
-
-            if (packageInfo == null || string.IsNullOrEmpty(packageInfo.assetPath))
-            {
-                Debug.LogError("Failed to resolve package path for uLoopMCP");
-                return null;
-            }
-
-            return packageInfo.assetPath;
         }
 
         private void InitializeSections()
