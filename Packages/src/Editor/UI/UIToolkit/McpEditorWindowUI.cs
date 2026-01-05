@@ -12,8 +12,8 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class McpEditorWindowUI : IDisposable
     {
-        private const string UXML_PATH = "Packages/io.github.hatayama.uloopmcp/Editor/UI/UIToolkit/McpEditorWindow.uxml";
-        private const string USS_PATH = "Packages/io.github.hatayama.uloopmcp/Editor/UI/UIToolkit/McpEditorWindow.uss";
+        private const string UXML_RELATIVE_PATH = "Editor/UI/UIToolkit/McpEditorWindow.uxml";
+        private const string USS_RELATIVE_PATH = "Editor/UI/UIToolkit/McpEditorWindow.uss";
 
         private readonly VisualElement _root;
 
@@ -56,23 +56,46 @@ namespace io.github.hatayama.uLoopMCP
 
         private void LoadLayout()
         {
-            VisualTreeAsset visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UXML_PATH);
+            string packagePath = GetPackagePath();
+            if (packagePath == null)
+            {
+                return;
+            }
+
+            string uxmlPath = $"{packagePath}/{UXML_RELATIVE_PATH}";
+            string ussPath = $"{packagePath}/{USS_RELATIVE_PATH}";
+
+            VisualTreeAsset visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(uxmlPath);
             if (visualTree == null)
             {
-                Debug.LogError($"Failed to load UXML from: {UXML_PATH}");
+                Debug.LogError($"Failed to load UXML from: {uxmlPath}");
                 return;
             }
 
             visualTree.CloneTree(_root);
 
-            StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(USS_PATH);
+            StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(ussPath);
             if (styleSheet == null)
             {
-                Debug.LogError($"Failed to load USS from: {USS_PATH}");
+                Debug.LogError($"Failed to load USS from: {ussPath}");
                 return;
             }
 
             _root.styleSheets.Add(styleSheet);
+        }
+
+        private static string GetPackagePath()
+        {
+            UnityEditor.PackageManager.PackageInfo packageInfo =
+                UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(McpEditorWindowUI).Assembly);
+
+            if (packageInfo == null || string.IsNullOrEmpty(packageInfo.assetPath))
+            {
+                Debug.LogError("Failed to resolve package path for uLoopMCP");
+                return null;
+            }
+
+            return packageInfo.assetPath;
         }
 
         private void InitializeSections()
