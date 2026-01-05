@@ -20,6 +20,7 @@ namespace io.github.hatayama.uLoopMCP
         /// Gets the PackageInfo for uLoopMCP package.
         /// Results are cached for performance.
         /// </summary>
+        /// <exception cref="System.InvalidOperationException">Thrown when package info cannot be resolved.</exception>
         public static UnityEditor.PackageManager.PackageInfo PackageInfo
         {
             get
@@ -28,6 +29,13 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     _cachedPackageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(
                         typeof(McpConstants).Assembly);
+
+                    if (_cachedPackageInfo == null)
+                    {
+                        throw new System.InvalidOperationException(
+                            "Failed to resolve PackageInfo for uLoopMCP. " +
+                            "Ensure the package is properly installed via Package Manager.");
+                    }
                 }
                 return _cachedPackageInfo;
             }
@@ -36,30 +44,30 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Gets the package name (e.g., "io.github.hatayama.uloopmcp").
         /// </summary>
-        public static string PackageName => PackageInfo?.name ?? string.Empty;
+        public static string PackageName => PackageInfo.name;
 
         /// <summary>
         /// Gets the Unity asset path for the package (e.g., "Packages/io.github.hatayama.uloopmcp").
         /// Use this for AssetDatabase.LoadAssetAtPath().
         /// </summary>
-        public static string PackageAssetPath => PackageInfo?.assetPath ?? string.Empty;
+        public static string PackageAssetPath => PackageInfo.assetPath;
 
         /// <summary>
         /// Gets the resolved file system path for the package.
         /// Use this for file system operations.
         /// </summary>
-        public static string PackageResolvedPath => PackageInfo?.resolvedPath ?? string.Empty;
+        public static string PackageResolvedPath => PackageInfo.resolvedPath;
 
         /// <summary>
         /// Gets the package name pattern for directory searching (e.g., "io.github.hatayama.uloopmcp@*").
         /// Use this for Directory.GetDirectories() in PackageCache.
         /// </summary>
-        public static string PackageNamePattern => string.IsNullOrEmpty(PackageName) ? string.Empty : $"{PackageName}@*";
+        public static string PackageNamePattern => $"{PackageName}@*";
 
         /// <summary>
         /// Gets the C# namespace for uLoopMCP (e.g., "io.github.hatayama.uLoopMCP").
         /// </summary>
-        public static string PackageNamespace => typeof(McpConstants).Namespace ?? string.Empty;
+        public static string PackageNamespace => typeof(McpConstants).Namespace;
 
         public const string PROJECT_NAME = "uLoopMCP";
         

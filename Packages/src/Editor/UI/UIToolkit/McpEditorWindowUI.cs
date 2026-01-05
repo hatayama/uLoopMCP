@@ -56,15 +56,8 @@ namespace io.github.hatayama.uLoopMCP
 
         private void LoadLayout()
         {
-            string packagePath = McpConstants.PackageAssetPath;
-            if (string.IsNullOrEmpty(packagePath))
-            {
-                Debug.LogError("Failed to resolve package path for uLoopMCP");
-                return;
-            }
-
-            string uxmlPath = $"{packagePath}/{UXML_RELATIVE_PATH}";
-            string ussPath = $"{packagePath}/{USS_RELATIVE_PATH}";
+            string uxmlPath = $"{McpConstants.PackageAssetPath}/{UXML_RELATIVE_PATH}";
+            string ussPath = $"{McpConstants.PackageAssetPath}/{USS_RELATIVE_PATH}";
 
             VisualTreeAsset visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(uxmlPath);
             if (visualTree == null)
