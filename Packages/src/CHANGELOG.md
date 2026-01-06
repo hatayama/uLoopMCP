@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.53.3](https://github.com/hatayama/uLoopMCP/compare/v0.53.2...v0.53.3) (2026-01-06)
+
+
+### Bug Fixes
+
+* **config:** preserve non-uLoopMCP servers when saving MCP configuration ([#518](https://github.com/hatayama/uLoopMCP/issues/518)) ([635ece7](https://github.com/hatayama/uLoopMCP/commit/635ece7d7096834cb2e6b88ed488aee25e3e0dfc))
+
 ## [0.53.2](https://github.com/hatayama/uLoopMCP/compare/v0.53.1...v0.53.2) (2026-01-05)
 
 
