@@ -140,7 +140,6 @@ namespace io.github.hatayama.uLoopMCP
 
             Dictionary<string, object> mergedServers = GetExistingServersPreservingOrder(jsonStructure);
 
-            // Update or add uLoopMCP servers from config
             foreach (KeyValuePair<string, McpServerConfigData> kvp in config.mcpServers)
             {
                 if (!kvp.Key.StartsWith(McpConstants.PROJECT_NAME))
@@ -298,10 +297,6 @@ namespace io.github.hatayama.uLoopMCP
             return uloopServers;
         }
 
-        /// <summary>
-        /// Preserves original order and structure of all existing servers.
-        /// Non-uLoopMCP servers keep their original structure, uLoopMCP servers are placeholders to be updated.
-        /// </summary>
         private Dictionary<string, object> GetExistingServersPreservingOrder(Dictionary<string, object> jsonStructure)
         {
             Dictionary<string, object> servers = new();
@@ -321,8 +316,6 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (KeyValuePair<string, object> serverEntry in existingServers)
             {
-                // Non-uLoopMCP servers: preserve original structure
-                // uLoopMCP servers: add placeholder (will be overwritten with updated config)
                 servers[serverEntry.Key] = serverEntry.Value;
             }
 
