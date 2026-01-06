@@ -138,16 +138,24 @@ namespace io.github.hatayama.uLoopMCP
                 jsonStructure = new Dictionary<string, object>();
             }
 
-            // Update only the mcpServers section.
-            jsonStructure[McpConstants.JSON_KEY_MCP_SERVERS] = config.mcpServers.ToDictionary(
-                kvp => kvp.Key,
-                kvp => new
+            JObject mergedServers = GetExistingServersPreservingOrder(jsonStructure);
+
+            foreach (KeyValuePair<string, McpServerConfigData> kvp in config.mcpServers)
+            {
+                if (!kvp.Key.StartsWith(McpConstants.PROJECT_NAME))
+                {
+                    continue;
+                }
+
+                mergedServers[kvp.Key] = JObject.FromObject(new
                 {
                     command = kvp.Value.command,
                     args = kvp.Value.args,
                     env = kvp.Value.env
-                }
-            );
+                });
+            }
+
+            jsonStructure[McpConstants.JSON_KEY_MCP_SERVERS] = mergedServers;
 
             // Security: Use safe settings for serialization
             string newJsonContent = JsonConvert.SerializeObject(jsonStructure, Formatting.Indented, SafeJsonSettings);
@@ -287,6 +295,28 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return uloopServers;
+        }
+
+        /// <summary>
+        /// JObject preserves insertion order, unlike Dictionary on .NET Framework 4.x.
+        /// </summary>
+        private JObject GetExistingServersPreservingOrder(Dictionary<string, object> jsonStructure)
+        {
+            JObject servers = new();
+
+            if (!jsonStructure.ContainsKey(McpConstants.JSON_KEY_MCP_SERVERS))
+            {
+                return servers;
+            }
+
+            JObject existingServers = JObject.FromObject(jsonStructure[McpConstants.JSON_KEY_MCP_SERVERS]);
+
+            foreach (JProperty serverEntry in existingServers.Properties())
+            {
+                servers[serverEntry.Name] = serverEntry.Value;
+            }
+
+            return servers;
         }
 
         /// <summary>
