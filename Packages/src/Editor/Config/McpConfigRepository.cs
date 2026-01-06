@@ -140,8 +140,14 @@ namespace io.github.hatayama.uLoopMCP
 
             Dictionary<string, object> mergedServers = GetExistingNonULoopMCPServers(jsonStructure);
 
+            // Only write uLoopMCP servers from config (non-uLoopMCP servers are already preserved above)
             foreach (KeyValuePair<string, McpServerConfigData> kvp in config.mcpServers)
             {
+                if (!kvp.Key.StartsWith(McpConstants.PROJECT_NAME))
+                {
+                    continue;
+                }
+
                 mergedServers[kvp.Key] = new
                 {
                     command = kvp.Value.command,
