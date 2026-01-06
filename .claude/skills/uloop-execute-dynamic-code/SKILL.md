@@ -1,6 +1,6 @@
 ---
 name: uloop-execute-dynamic-code
-description: Execute C# code dynamically in Unity Editor via uloop CLI. Use for editor automation: (1) Prefab/material wiring and AddComponent operations, (2) Reference wiring with SerializedObject, (3) Scene/hierarchy edits and batch operations. NOT for file I/O or script authoring.
+description: Execute C# code dynamically in Unity Editor via uloop CLI. Use for editor automation: (1) Prefab/material wiring and AddComponent operations, (2) Reference wiring with SerializedObject, (3) Scene/hierarchy edits and batch operations.
 ---
 
 # uloop execute-dynamic-code
@@ -45,14 +45,19 @@ return x;
 - AddComponent + reference wiring (SerializedObject)
 - Scene/hierarchy edits
 - Inspector modifications
+- File I/O with System.IO (requires Full Access)
 
-## Forbidden Operations
+## Security Levels
 
-- System.IO.* (File/Directory/Path)
-- AssetDatabase.CreateFolder / file writes
-- Create/edit .cs/.asmdef files
+| Level | Name | Available APIs |
+|-------|------|----------------|
+| 0 | Disabled | None (compilation and execution disabled) |
+| 1 | Restricted | UnityEngine.*, UnityEditor.*, System.Collections.* (System.IO, System.Net.Http, reflection blocked) |
+| 2 | Full Access | All APIs including System.IO.*, System.Reflection.Emit |
 
-## Examples
+Configure in Unity: **uLoopMCP > Dynamic Code Security Level**
+
+## Quick Examples
 
 ### bash / zsh / MINGW64 / Git Bash
 
@@ -74,6 +79,6 @@ uloop execute-dynamic-code --code 'UnityEngine.Debug.Log(""Hello from CLI!"");'
 
 Returns JSON with execution result or compile errors.
 
-## Notes
+## Example Guides
 
-For file/directory operations, use terminal commands instead.
+See `examples/` folder for detailed usage patterns.
