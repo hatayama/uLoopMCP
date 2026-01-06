@@ -138,9 +138,9 @@ namespace io.github.hatayama.uLoopMCP
                 jsonStructure = new Dictionary<string, object>();
             }
 
-            Dictionary<string, object> mergedServers = GetExistingNonULoopMCPServers(jsonStructure);
+            Dictionary<string, object> mergedServers = GetExistingServersPreservingOrder(jsonStructure);
 
-            // Only write uLoopMCP servers from config (non-uLoopMCP servers are already preserved above)
+            // Update or add uLoopMCP servers from config
             foreach (KeyValuePair<string, McpServerConfigData> kvp in config.mcpServers)
             {
                 if (!kvp.Key.StartsWith(McpConstants.PROJECT_NAME))
@@ -299,15 +299,16 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Allows other MCP servers (e.g., context7) to coexist with uLoopMCP by preserving their original structure.
+        /// Preserves original order and structure of all existing servers.
+        /// Non-uLoopMCP servers keep their original structure, uLoopMCP servers are placeholders to be updated.
         /// </summary>
-        private Dictionary<string, object> GetExistingNonULoopMCPServers(Dictionary<string, object> jsonStructure)
+        private Dictionary<string, object> GetExistingServersPreservingOrder(Dictionary<string, object> jsonStructure)
         {
-            Dictionary<string, object> nonULoopServers = new();
+            Dictionary<string, object> servers = new();
 
             if (!jsonStructure.ContainsKey(McpConstants.JSON_KEY_MCP_SERVERS))
             {
-                return nonULoopServers;
+                return servers;
             }
 
             string mcpServersJson = JsonConvert.SerializeObject(jsonStructure[McpConstants.JSON_KEY_MCP_SERVERS], SafeJsonSettings);
@@ -315,20 +316,17 @@ namespace io.github.hatayama.uLoopMCP
 
             if (existingServers == null)
             {
-                return nonULoopServers;
+                return servers;
             }
 
             foreach (KeyValuePair<string, object> serverEntry in existingServers)
             {
-                if (serverEntry.Key.StartsWith(McpConstants.PROJECT_NAME))
-                {
-                    continue;
-                }
-
-                nonULoopServers[serverEntry.Key] = serverEntry.Value;
+                // Non-uLoopMCP servers: preserve original structure
+                // uLoopMCP servers: add placeholder (will be overwritten with updated config)
+                servers[serverEntry.Key] = serverEntry.Value;
             }
 
-            return nonULoopServers;
+            return servers;
         }
 
         /// <summary>
