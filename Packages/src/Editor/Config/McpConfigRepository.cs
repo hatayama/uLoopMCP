@@ -138,7 +138,6 @@ namespace io.github.hatayama.uLoopMCP
                 jsonStructure = new Dictionary<string, object>();
             }
 
-            // Merge existing non-uLoopMCP servers with uLoopMCP configuration
             Dictionary<string, object> mergedServers = GetExistingNonULoopMCPServers(jsonStructure);
 
             foreach (KeyValuePair<string, McpServerConfigData> kvp in config.mcpServers)
@@ -294,11 +293,8 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Gets existing non-uLoopMCP servers from the JSON structure, preserving their original structure.
-        /// This allows other MCP servers (e.g., context7) to coexist with uLoopMCP.
+        /// Allows other MCP servers (e.g., context7) to coexist with uLoopMCP by preserving their original structure.
         /// </summary>
-        /// <param name="jsonStructure">The parsed JSON structure</param>
-        /// <returns>Dictionary containing non-uLoopMCP servers with their original JSON structure</returns>
         private Dictionary<string, object> GetExistingNonULoopMCPServers(Dictionary<string, object> jsonStructure)
         {
             Dictionary<string, object> nonULoopServers = new();
