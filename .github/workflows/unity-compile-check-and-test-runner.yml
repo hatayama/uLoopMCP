@@ -10,6 +10,10 @@ on:
       - '.github/workflows/unity-compile-check-and-test-runner.yml'
   workflow_dispatch:
 
+permissions:
+  checks: write
+  contents: read
+
 jobs:
   compile-check-and-test:
     name: Compile Check & Test Runner (Linux)

@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -31,7 +30,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
-        public async Task ExecuteSearchAsync_ShouldFindFixtureTexture()
+        public void ExecuteSearchAsync_ShouldFindFixtureTexture()
         {
             UnitySearchSchema schema = new UnitySearchSchema
             {
@@ -46,7 +45,7 @@ namespace io.github.hatayama.uLoopMCP
                 PathFilter = FixtureFolder + "/*"
             };
 
-            UnitySearchResponse response = await UnitySearchService.ExecuteSearchAsync(schema);
+            UnitySearchResponse response = UnitySearchService.ExecuteSearchAsync(schema).GetAwaiter().GetResult();
 
             Assert.That(response.Success, Is.True, $"Search failed: {response.ErrorMessage}");
             bool containsTexture = response.Results.Any(item => string.Equals(item.Path, TextureAssetPath, StringComparison.OrdinalIgnoreCase));
@@ -55,12 +54,11 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(containsTexture, Is.True, $"Search results missing fixture texture. Details: {debugInfo}");
 
             SearchResultItem matched = response.Results.First(item => string.Equals(item.Path, TextureAssetPath, StringComparison.OrdinalIgnoreCase));
-            // Provider ID varies across platforms (e.g., "asset" on macOS/Windows, "_group_provider_Files" on Linux CI)
             Assert.That(matched.Provider, Is.Not.Empty, "Provider should not be empty");
         }
 
         [Test]
-        public async Task ExecuteSearchAsync_ShouldFindFixtureMesh()
+        public void ExecuteSearchAsync_ShouldFindFixtureMesh()
         {
             UnitySearchSchema schema = new UnitySearchSchema
             {
@@ -75,7 +73,7 @@ namespace io.github.hatayama.uLoopMCP
                 PathFilter = FixtureFolder + "/*"
             };
 
-            UnitySearchResponse response = await UnitySearchService.ExecuteSearchAsync(schema);
+            UnitySearchResponse response = UnitySearchService.ExecuteSearchAsync(schema).GetAwaiter().GetResult();
 
             Assert.That(response.Success, Is.True, $"Search failed: {response.ErrorMessage}");
             bool containsMesh = response.Results.Any(item => string.Equals(item.Path, MeshAssetPath, StringComparison.OrdinalIgnoreCase));
@@ -84,7 +82,6 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(containsMesh, Is.True, $"Search results missing fixture mesh. Details: {debugInfo}");
 
             SearchResultItem matched = response.Results.First(item => string.Equals(item.Path, MeshAssetPath, StringComparison.OrdinalIgnoreCase));
-            // Provider ID varies across platforms (e.g., "asset" on macOS/Windows, "_group_provider_Files" on Linux CI)
             Assert.That(matched.Provider, Is.Not.Empty, "Provider should not be empty");
         }
 
