@@ -1,6 +1,6 @@
 ---
 name: uloop-execute-dynamic-code
-description: Execute C# code dynamically in Unity Editor via uloop CLI. Use for editor automation: (1) Prefab/material wiring and AddComponent operations, (2) Reference wiring with SerializedObject, (3) Scene/hierarchy edits and batch operations.
+description: Automate Unity Editor operations. Use when you need to: (1) Wire prefabs/materials and AddComponent operations, (2) Modify references with SerializedObject/PrefabUtility, (3) Batch edit scene/hierarchy or Inspector values. Executes C# code dynamically via uloop CLI.
 ---
 
 # uloop execute-dynamic-code
