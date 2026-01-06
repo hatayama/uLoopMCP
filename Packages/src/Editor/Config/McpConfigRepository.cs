@@ -138,7 +138,7 @@ namespace io.github.hatayama.uLoopMCP
                 jsonStructure = new Dictionary<string, object>();
             }
 
-            Dictionary<string, object> mergedServers = GetExistingServersPreservingOrder(jsonStructure);
+            JObject mergedServers = GetExistingServersPreservingOrder(jsonStructure);
 
             foreach (KeyValuePair<string, McpServerConfigData> kvp in config.mcpServers)
             {
@@ -147,12 +147,12 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
                 }
 
-                mergedServers[kvp.Key] = new
+                mergedServers[kvp.Key] = JObject.FromObject(new
                 {
                     command = kvp.Value.command,
                     args = kvp.Value.args,
                     env = kvp.Value.env
-                };
+                });
             }
 
             jsonStructure[McpConstants.JSON_KEY_MCP_SERVERS] = mergedServers;
@@ -297,26 +297,23 @@ namespace io.github.hatayama.uLoopMCP
             return uloopServers;
         }
 
-        private Dictionary<string, object> GetExistingServersPreservingOrder(Dictionary<string, object> jsonStructure)
+        /// <summary>
+        /// JObject preserves insertion order, unlike Dictionary on .NET Framework 4.x.
+        /// </summary>
+        private JObject GetExistingServersPreservingOrder(Dictionary<string, object> jsonStructure)
         {
-            Dictionary<string, object> servers = new();
+            JObject servers = new();
 
             if (!jsonStructure.ContainsKey(McpConstants.JSON_KEY_MCP_SERVERS))
             {
                 return servers;
             }
 
-            string mcpServersJson = JsonConvert.SerializeObject(jsonStructure[McpConstants.JSON_KEY_MCP_SERVERS], SafeJsonSettings);
-            Dictionary<string, object> existingServers = JsonConvert.DeserializeObject<Dictionary<string, object>>(mcpServersJson, SafeJsonSettings);
+            JObject existingServers = JObject.FromObject(jsonStructure[McpConstants.JSON_KEY_MCP_SERVERS]);
 
-            if (existingServers == null)
+            foreach (JProperty serverEntry in existingServers.Properties())
             {
-                return servers;
-            }
-
-            foreach (KeyValuePair<string, object> serverEntry in existingServers)
-            {
-                servers[serverEntry.Key] = serverEntry.Value;
+                servers[serverEntry.Name] = serverEntry.Value;
             }
 
             return servers;
