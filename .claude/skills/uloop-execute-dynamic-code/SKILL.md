@@ -57,7 +57,7 @@ return x;
 
 Configure in Unity: **uLoopMCP > Dynamic Code Security Level**
 
-## Examples
+## Quick Examples
 
 ### bash / zsh / MINGW64 / Git Bash
 
@@ -79,6 +79,6 @@ uloop execute-dynamic-code --code 'UnityEngine.Debug.Log(""Hello from CLI!"");'
 
 Returns JSON with execution result or compile errors.
 
-## Examples
+## Example Guides
 
 See `examples/` folder for detailed usage patterns.
