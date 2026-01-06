@@ -138,16 +138,20 @@ namespace io.github.hatayama.uLoopMCP
                 jsonStructure = new Dictionary<string, object>();
             }
 
-            // Update only the mcpServers section.
-            jsonStructure[McpConstants.JSON_KEY_MCP_SERVERS] = config.mcpServers.ToDictionary(
-                kvp => kvp.Key,
-                kvp => new
+            // Merge existing non-uLoopMCP servers with uLoopMCP configuration
+            Dictionary<string, object> mergedServers = GetExistingNonULoopMCPServers(jsonStructure);
+
+            foreach (KeyValuePair<string, McpServerConfigData> kvp in config.mcpServers)
+            {
+                mergedServers[kvp.Key] = new
                 {
                     command = kvp.Value.command,
                     args = kvp.Value.args,
                     env = kvp.Value.env
-                }
-            );
+                };
+            }
+
+            jsonStructure[McpConstants.JSON_KEY_MCP_SERVERS] = mergedServers;
 
             // Security: Use safe settings for serialization
             string newJsonContent = JsonConvert.SerializeObject(jsonStructure, Formatting.Indented, SafeJsonSettings);
@@ -287,6 +291,42 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return uloopServers;
+        }
+
+        /// <summary>
+        /// Gets existing non-uLoopMCP servers from the JSON structure, preserving their original structure.
+        /// This allows other MCP servers (e.g., context7) to coexist with uLoopMCP.
+        /// </summary>
+        /// <param name="jsonStructure">The parsed JSON structure</param>
+        /// <returns>Dictionary containing non-uLoopMCP servers with their original JSON structure</returns>
+        private Dictionary<string, object> GetExistingNonULoopMCPServers(Dictionary<string, object> jsonStructure)
+        {
+            Dictionary<string, object> nonULoopServers = new();
+
+            if (!jsonStructure.ContainsKey(McpConstants.JSON_KEY_MCP_SERVERS))
+            {
+                return nonULoopServers;
+            }
+
+            string mcpServersJson = JsonConvert.SerializeObject(jsonStructure[McpConstants.JSON_KEY_MCP_SERVERS], SafeJsonSettings);
+            Dictionary<string, object> existingServers = JsonConvert.DeserializeObject<Dictionary<string, object>>(mcpServersJson, SafeJsonSettings);
+
+            if (existingServers == null)
+            {
+                return nonULoopServers;
+            }
+
+            foreach (KeyValuePair<string, object> serverEntry in existingServers)
+            {
+                if (serverEntry.Key.StartsWith(McpConstants.PROJECT_NAME))
+                {
+                    continue;
+                }
+
+                nonULoopServers[serverEntry.Key] = serverEntry.Value;
+            }
+
+            return nonULoopServers;
         }
 
         /// <summary>
