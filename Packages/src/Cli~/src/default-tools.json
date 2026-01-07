@@ -324,6 +324,11 @@
             "type": "boolean",
             "description": "Enable parallel execution mode (use with caution - may cause race conditions)",
             "default": false
+          },
+          "NoWait": {
+            "type": "boolean",
+            "description": "Fire-and-forget mode - return after compile, execute in background",
+            "default": false
           }
         }
       }

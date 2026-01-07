@@ -21,6 +21,7 @@ uloop execute-dynamic-code --code '<c# code>'
 | `--compile-only` | boolean | Compile without execution |
 | `--auto-qualify-unity-types-once` | boolean | Auto-qualify Unity types |
 | `--allow-parallel` | boolean | Enable parallel execution (⚠️ use with caution) |
+| `--no-wait` | boolean | Fire-and-forget mode (return after compile, execute in background) |
 
 ## Code Format
 
@@ -119,3 +120,42 @@ uloop execute-dynamic-code --code 'new GameObject("Object1");' --allow-parallel
 - Modifying the same GameObject or component from multiple executions
 - Operations with sequential dependencies
 - Operations that require consistent Editor state
+
+## Fire-and-Forget Mode
+
+`--no-wait` returns immediately after successful compilation. Execution continues in Unity background.
+
+```bash
+# Start a long-running monitoring task - CLI returns immediately
+uloop execute-dynamic-code --no-wait --allow-parallel --code '
+while (GameObject.Find("TargetButton") == null) {
+    await Cysharp.Threading.Tasks.UniTask.Delay(100);
+}
+Selection.activeGameObject = GameObject.Find("TargetButton");
+'
+
+# Check execution results in Unity Console
+uloop get-logs --search-text "NoWait"
+```
+
+### Behavior
+
+- ✅ **Compile errors ARE returned** (compile check happens before return)
+- ⚠️ **Runtime errors logged to Unity Console only** (not returned to CLI)
+- 🔄 **Use with `--allow-parallel`** for multiple background tasks
+
+### Use Cases
+
+- Long-running monitoring tasks (wait for UI element to appear)
+- Scheduled actions (wait N seconds then perform action)
+- Multiple independent background tasks
+
+### Checking Background Execution Results
+
+```bash
+# View recent NoWait execution logs
+uloop get-logs --search-text "NoWait"
+
+# View all recent logs
+uloop get-logs --max-count 20
+```

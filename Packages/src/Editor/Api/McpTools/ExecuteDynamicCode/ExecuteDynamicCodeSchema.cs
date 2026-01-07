@@ -84,5 +84,23 @@ Recommended for:
 - Creating objects that don't interact with each other
 - Batch operations on separate assets")]
         public bool AllowParallel { get; set; } = false;
+
+        /// <summary>Fire-and-forget mode</summary>
+        [Description(@"Fire-and-forget mode (default: false).
+
+When true: Returns immediately after compile succeeds.
+Execution continues in Unity background - results/errors not returned to CLI.
+
+Use with async code that doesn't need immediate result feedback.
+
+Behavior:
+- Compile errors ARE returned (compile check happens before return)
+- Runtime errors logged to Unity Console only (use 'uloop get-logs --search-text NoWait')
+
+Use cases:
+- Long-running monitoring tasks (wait for button to appear)
+- Scheduled actions (wait N seconds then do X)
+- Multiple independent background tasks")]
+        public bool NoWait { get; set; } = false;
     }
 }

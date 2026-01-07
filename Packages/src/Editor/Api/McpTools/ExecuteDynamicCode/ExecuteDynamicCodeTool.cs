@@ -107,7 +107,7 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                         "Ensure operations do not modify the same GameObjects"
                     );
                 }
-                
+
                 // Level 0: Preempt with unified error (compilation and execution not allowed)
                 if (_currentSecurityLevel == DynamicCodeSecurityLevel.Disabled)
                 {
@@ -176,7 +176,8 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     parametersArray,
                     cancellationToken,
                     parameters.CompileOnly,
-                    parameters.AllowParallel
+                    parameters.AllowParallel,
+                    parameters.NoWait
                 );
 
                 // Optional: auto-insert return retry if missing return likely caused failure (unconditional)
@@ -201,7 +202,8 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                             parametersArray,
                             cancellationToken,
                             parameters.CompileOnly,
-                            parameters.AllowParallel
+                            parameters.AllowParallel,
+                            parameters.NoWait
                         );
                         if (retryReturnResult.Success)
                         {
@@ -231,7 +233,8 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                                 parametersArray,
                                 cancellationToken,
                                 parameters.CompileOnly,
-                                parameters.AllowParallel
+                                parameters.AllowParallel,
+                                parameters.NoWait
                             );
                             // Prefer retry result if success, otherwise keep original but merge logs
                             if (retryResult.Success)
@@ -259,6 +262,13 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                 {
                     if (toolResponse.Logs == null) toolResponse.Logs = new List<string>();
                     toolResponse.Logs.Insert(0, "⚠️ PARALLEL MODE: Race conditions may occur if multiple executions modify the same GameObjects.");
+                }
+
+                // Add no-wait mode warning to response logs
+                if (parameters.NoWait)
+                {
+                    if (toolResponse.Logs == null) toolResponse.Logs = new List<string>();
+                    toolResponse.Logs.Insert(0, "⚠️ NO-WAIT MODE: Execution continues in background. Results/errors will NOT be returned. Check Unity Console: uloop get-logs --search-text NoWait");
                 }
 
                 return toolResponse;
