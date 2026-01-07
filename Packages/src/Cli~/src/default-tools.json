@@ -319,6 +319,11 @@
           "AutoQualifyUnityTypesOnce": {
             "type": "boolean",
             "description": "Auto-qualify Unity types"
+          },
+          "AllowParallel": {
+            "type": "boolean",
+            "description": "Enable parallel execution mode (use with caution - may cause race conditions)",
+            "default": false
           }
         }
       }

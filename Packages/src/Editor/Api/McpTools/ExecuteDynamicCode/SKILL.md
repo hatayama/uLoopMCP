@@ -20,6 +20,7 @@ uloop execute-dynamic-code --code '<c# code>'
 | `--code` | string | C# code to execute (direct statements, no class wrapper) |
 | `--compile-only` | boolean | Compile without execution |
 | `--auto-qualify-unity-types-once` | boolean | Auto-qualify Unity types |
+| `--allow-parallel` | boolean | Enable parallel execution (⚠️ use with caution) |
 
 ## Code Format
 
@@ -92,3 +93,29 @@ For detailed code examples, refer to these files:
   - Create ScriptableObjects, modify with SerializedObject
 - **Scene operations**: See [examples/scene-operations.md](examples/scene-operations.md)
   - Create/modify GameObjects, set parents, wire references, load scenes
+
+## Parallel Execution Mode
+
+`--allow-parallel` enables concurrent execution of multiple requests.
+
+```bash
+uloop execute-dynamic-code --code 'new GameObject("Object1");' --allow-parallel
+```
+
+### ⚠️ Risks
+
+- **Race conditions**: Simultaneous modifications to the same GameObject may cause unpredictable behavior
+- **Undo complexity**: Each parallel execution creates its own Undo group
+- **Unity API thread safety**: Some Unity APIs are not thread-safe
+
+### When to Use
+
+- Independent operations (e.g., creating objects in different locations)
+- Non-overlapping asset modifications
+- Read-only operations (queries, searches)
+
+### When NOT to Use
+
+- Modifying the same GameObject or component from multiple executions
+- Operations with sequential dependencies
+- Operations that require consistent Editor state
