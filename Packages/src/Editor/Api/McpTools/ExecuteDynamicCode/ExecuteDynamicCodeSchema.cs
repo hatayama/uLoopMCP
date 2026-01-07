@@ -67,5 +67,40 @@ NG:   ""Parameters"": ""{}""")]
   modify your source files.
 - Disable if you prefer manual control.")]
         public bool AutoQualifyUnityTypesOnce { get; set; } = false;
+
+        /// <summary>Enable parallel execution mode</summary>
+        [Description(@"Enable parallel execution mode (default: false).
+
+When false (default): Exclusive execution - safe, sequential processing.
+When true: Allows concurrent execution - faster but requires coordination.
+
+⚠️ CAUTION:
+- Parallel executions on the same GameObjects may cause race conditions
+- Each execution creates its own Undo group
+- Use only for independent operations (e.g., creating different objects in different locations)
+
+Recommended for:
+- Independent read-only operations
+- Creating objects that don't interact with each other
+- Batch operations on separate assets")]
+        public bool AllowParallel { get; set; } = false;
+
+        /// <summary>Fire-and-forget mode</summary>
+        [Description(@"Fire-and-forget mode (default: false).
+
+When true: Returns immediately after compile succeeds.
+Execution continues in Unity background - results/errors not returned to CLI.
+
+Use with async code that doesn't need immediate result feedback.
+
+Behavior:
+- Compile errors ARE returned (compile check happens before return)
+- Runtime errors logged to Unity Console only (use 'uloop get-logs --search-text FireAndForget')
+
+Use cases:
+- Long-running monitoring tasks (wait for button to appear)
+- Scheduled actions (wait N seconds then do X)
+- Multiple independent background tasks")]
+        public bool FireAndForget { get; set; } = false;
     }
 }
