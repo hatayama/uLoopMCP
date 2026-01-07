@@ -17,7 +17,8 @@ namespace io.github.hatayama.uLoopMCP
             object[] parameters = null,
             CancellationToken cancellationToken = default,
             bool compileOnly = false,
-            bool allowParallel = false
+            bool allowParallel = false,
+            bool noWait = false
         );
 
         /// <summary>Asynchronous code execution</summary>
@@ -27,7 +28,8 @@ namespace io.github.hatayama.uLoopMCP
             object[] parameters = null,
             CancellationToken cancellationToken = default,
             bool compileOnly = false,
-            bool allowParallel = false
+            bool allowParallel = false,
+            bool noWait = false
         );
 
 
