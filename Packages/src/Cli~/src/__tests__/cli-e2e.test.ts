@@ -394,6 +394,70 @@ describe('CLI E2E Tests (requires running Unity)', () => {
     });
   });
 
+  describe('execute-dynamic-code', () => {
+    const MARKER_OBJECT_NAME = 'NoWaitTestMarker';
+
+    afterEach(() => {
+      // Cleanup: destroy marker object if exists
+      runCliWithRetry(
+        `execute-dynamic-code --code "var obj = UnityEngine.GameObject.Find(\\"${MARKER_OBJECT_NAME}\\"); if (obj != null) UnityEngine.Object.DestroyImmediate(obj);"`,
+      );
+    });
+
+    it('should execute simple code and return result', () => {
+      const result = runCliJson<{ Success: boolean; Result: string }>(
+        'execute-dynamic-code --code "return 1 + 2;"',
+      );
+
+      expect(result.Success).toBe(true);
+      expect(result.Result).toBe('3');
+    });
+
+    it('should return compile error for invalid code', () => {
+      const result = runCliJson<{ Success: boolean; ErrorMessage: string }>(
+        'execute-dynamic-code --code "this is not valid C#"',
+      );
+
+      expect(result.Success).toBe(false);
+      expect(result.ErrorMessage).toBeTruthy();
+    });
+
+    describe('--no-wait mode', () => {
+      it('should return immediately and execute in background', () => {
+        // Step 1: Start background task that creates GameObject after 3 seconds (fire-and-forget)
+        const noWaitResult = runCliJson<{
+          Success: boolean;
+          Result: string | null;
+          Logs: string[];
+        }>(
+          `execute-dynamic-code --no-wait --code "await io.github.hatayama.uLoopMCP.TimerDelay.Wait(3000); new UnityEngine.GameObject(\\"${MARKER_OBJECT_NAME}\\");"`,
+        );
+
+        expect(noWaitResult.Success).toBe(true);
+        expect(noWaitResult.Result).toBeFalsy(); // NoWait returns null/empty result
+        // NoWait mode logs contain either "background" or standard success message
+        expect(noWaitResult.Logs.length).toBeGreaterThan(0);
+
+        // Step 2: Monitor for the GameObject (waits for result)
+        const monitorResult = runCliJson<{ Success: boolean; Result: string }>(
+          `execute-dynamic-code --code "while (UnityEngine.GameObject.Find(\\"${MARKER_OBJECT_NAME}\\") == null) { await io.github.hatayama.uLoopMCP.TimerDelay.Wait(500); } return \\"Found it!\\";"`,
+        );
+
+        expect(monitorResult.Success).toBe(true);
+        expect(monitorResult.Result).toBe('Found it!');
+      });
+
+      it('should return compile error even in no-wait mode', () => {
+        const result = runCliJson<{ Success: boolean; ErrorMessage: string }>(
+          'execute-dynamic-code --no-wait --code "invalid code!!!"',
+        );
+
+        expect(result.Success).toBe(false);
+        expect(result.ErrorMessage).toBeTruthy();
+      });
+    });
+  });
+
   describe('error handling', () => {
     it('should handle unknown commands gracefully', () => {
       const { exitCode } = runCli('unknown-command');
