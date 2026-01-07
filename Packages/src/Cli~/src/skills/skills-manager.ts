@@ -115,7 +115,7 @@ export function parseFrontmatter(content: string): Record<string, string | boole
     return {};
   }
 
-  const frontmatter: Record<string, string | boolean> = {};
+  const frontmatterMap = new Map<string, string | boolean>();
   const lines = frontmatterMatch[1].split('\n');
 
   for (const line of lines) {
@@ -125,18 +125,19 @@ export function parseFrontmatter(content: string): Record<string, string | boole
     }
 
     const key = line.slice(0, colonIndex).trim();
-    const value = line.slice(colonIndex + 1).trim();
+    const rawValue = line.slice(colonIndex + 1).trim();
 
-    if (value === 'true') {
-      frontmatter[key] = true;
-    } else if (value === 'false') {
-      frontmatter[key] = false;
-    } else {
-      frontmatter[key] = value;
+    let parsedValue: string | boolean = rawValue;
+    if (rawValue === 'true') {
+      parsedValue = true;
+    } else if (rawValue === 'false') {
+      parsedValue = false;
     }
+
+    frontmatterMap.set(key, parsedValue);
   }
 
-  return frontmatter;
+  return Object.fromEntries(frontmatterMap);
 }
 
 function scanEditorFolderForSkills(editorPath: string, skills: ProjectSkill[]): void {
