@@ -65,6 +65,10 @@ using UnityEditor;
 
 string path = "Assets/Data/GameSettings.asset";
 ScriptableObject so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+if (so == null)
+{
+    return $"Asset not found at {path}";
+}
 
 SerializedObject serializedObj = new SerializedObject(so);
 
