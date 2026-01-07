@@ -30,5 +30,6 @@ export const TARGET_CONFIGS: Record<TargetId, TargetConfig> = {
 export const ALL_TARGET_IDS: TargetId[] = ['claude', 'codex'];
 
 export function getTargetConfig(id: TargetId): TargetConfig {
+  // eslint-disable-next-line security/detect-object-injection -- id is type-constrained to TargetId union type
   return TARGET_CONFIGS[id];
 }

@@ -6,7 +6,7 @@
 // Path traversal is intentional for finding Unity project root
 /* eslint-disable security/detect-non-literal-fs-filename */
 
-import { existsSync, readdirSync } from 'fs';
+import { existsSync, readdirSync, Dirent } from 'fs';
 import { join, dirname } from 'path';
 
 const CHILD_SEARCH_MAX_DEPTH = 3;
@@ -46,9 +46,10 @@ function findUnityProjectsInChildren(startPath: string, maxDepth: number): strin
       return;
     }
 
-    let entries: ReturnType<typeof readdirSync>;
+    let entries: Dirent[];
     try {
-      entries = readdirSync(currentPath, { withFileTypes: true });
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- ts-jest requires explicit Dirent[] type due to Node.js 22+ generic Dirent<T> changes
+      entries = readdirSync(currentPath, { withFileTypes: true }) as Dirent[];
     } catch {
       return;
     }
@@ -110,12 +111,14 @@ export function findUnityProjectRoot(startPath: string = process.cwd()): string 
 
   if (childProjects.length > 0) {
     if (childProjects.length > 1) {
+      /* eslint-disable no-console -- CLI user-facing warning output */
       console.error('\x1b[33mWarning: Multiple Unity projects found in child directories:\x1b[0m');
       for (const project of childProjects) {
         console.error(`  - ${project}`);
       }
       console.error(`\x1b[33mUsing: ${childProjects[0]}\x1b[0m`);
       console.error('');
+      /* eslint-enable no-console */
     }
     return childProjects[0];
   }
