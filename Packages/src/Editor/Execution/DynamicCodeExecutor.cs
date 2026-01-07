@@ -38,7 +38,8 @@ namespace io.github.hatayama.uLoopMCP
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
             object[] parameters = null,
             CancellationToken cancellationToken = default,
-            bool compileOnly = false)
+            bool compileOnly = false,
+            bool allowParallel = false)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
             Stopwatch stopwatch = Stopwatch.StartNew();
@@ -91,7 +92,8 @@ namespace io.github.hatayama.uLoopMCP
                     parameters,
                     correlationId,
                     cancellationToken,
-                    stopwatch);
+                    stopwatch,
+                    allowParallel);
 
                 LogExecutionComplete(executionResult, correlationId, stopwatch);
                 return executionResult;
@@ -150,14 +152,16 @@ namespace io.github.hatayama.uLoopMCP
             object[] parameters,
             string correlationId,
             CancellationToken cancellationToken,
-            Stopwatch stopwatch)
+            Stopwatch stopwatch,
+            bool allowParallel)
         {
             ExecutionResult executionResult = ExecuteCompiledCode(
                 assembly,
                 className,
                 parameters,
                 correlationId,
-                cancellationToken);
+                cancellationToken,
+                allowParallel);
 
             executionResult.ExecutionTime = stopwatch.Elapsed;
             UpdateStatistics(executionResult, stopwatch.Elapsed);
@@ -198,7 +202,8 @@ namespace io.github.hatayama.uLoopMCP
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
             object[] parameters = null,
             CancellationToken cancellationToken = default,
-            bool compileOnly = false)
+            bool compileOnly = false,
+            bool allowParallel = false)
         {
 #pragma warning restore CS1998
             // Runtime Security Check (also blocks compilation at Level 0)
@@ -242,7 +247,7 @@ namespace io.github.hatayama.uLoopMCP
                     CancellationToken = cancellationToken
                 };
 
-                ExecutionResult executionResult = await _runner.ExecuteAsync(context).ConfigureAwait(false);
+                ExecutionResult executionResult = await _runner.ExecuteAsync(context, allowParallel).ConfigureAwait(false);
                 executionResult.ExecutionTime = stopwatch.Elapsed;
                 UpdateStatistics(executionResult, stopwatch.Elapsed);
                 return executionResult;
@@ -365,20 +370,20 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         private ExecutionResult ExecuteCompiledCode(
-            System.Reflection.Assembly assembly, 
+            System.Reflection.Assembly assembly,
             string className,
-            object[] parameters, 
+            object[] parameters,
             string correlationId,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            bool allowParallel)
         {
-            // Create ExecutionContext and call Execute method
             ExecutionContext context = new ExecutionContext
             {
                 CompiledAssembly = assembly,
                 Parameters = ConvertParametersToDict(parameters ?? new object[0]),
                 CancellationToken = cancellationToken
             };
-            return _runner.Execute(context);
+            return _runner.Execute(context, allowParallel);
         }
 
         private ExecutionResult CreateFailureResult(string message, TimeSpan executionTime, 

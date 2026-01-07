@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
@@ -11,15 +12,18 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Controls the execution of compiled code.
-    /// 
+    /// Supports both exclusive (default) and parallel execution modes.
+    ///
     /// Related Classes: ExecutionContext, ExecutionResult
     /// </summary>
     public class CommandRunner
     {
-        private bool _isRunning = false;
-        private CancellationTokenSource _cancellationTokenSource;
+        private readonly SemaphoreSlim _executionSemaphore = new SemaphoreSlim(1, 1);
+        private readonly ConcurrentDictionary<string, CancellationTokenSource> _executionCts = new ConcurrentDictionary<string, CancellationTokenSource>();
+        private int _runningCount = 0;
 
-        public bool IsRunning => _isRunning;
+        public bool IsRunning => _runningCount > 0;
+        public int RunningCount => _runningCount;
 
         private static void LogExecutionStart(ExecutionContext context, string correlationId)
         {
@@ -44,36 +48,45 @@ namespace io.github.hatayama.uLoopMCP
             );
         }
 
-        private CancellationTokenSource CreateCombinedCancellationTokenSource(ExecutionContext context)
+        private static CancellationTokenSource CreateCombinedCancellationTokenSource(
+            CancellationTokenSource executionCts,
+            ExecutionContext context)
         {
             return CancellationTokenSource.CreateLinkedTokenSource(
-                _cancellationTokenSource.Token,
+                executionCts.Token,
                 context.CancellationToken
             );
         }
 
-        public ExecutionResult Execute(ExecutionContext context)
+        public ExecutionResult Execute(ExecutionContext context, bool allowParallel = false)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
 
-            if (_isRunning)
+            // Exclusive mode: use semaphore to block concurrent executions
+            if (!allowParallel)
             {
-                return CreateErrorResult(McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS);
+                bool acquired = _executionSemaphore.Wait(0);
+                if (!acquired)
+                {
+                    return CreateErrorResult(McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS);
+                }
             }
-            _isRunning = true;
-            _cancellationTokenSource = new CancellationTokenSource();
+
+            Interlocked.Increment(ref _runningCount);
+
+            CancellationTokenSource executionCts = new CancellationTokenSource();
+            _executionCts.TryAdd(correlationId, executionCts);
 
             int undoGroup = Undo.GetCurrentGroup();
-            Undo.SetCurrentGroupName("ExecuteDynamicCode");
+            string undoName = allowParallel ? $"ExecuteDynamicCode-{correlationId}" : "ExecuteDynamicCode";
+            Undo.SetCurrentGroupName(undoName);
 
             try
             {
                 LogExecutionStart(context, correlationId);
 
-                // Configure timeout
-                using CancellationTokenSource combinedCts = CreateCombinedCancellationTokenSource(context);
+                using CancellationTokenSource combinedCts = CreateCombinedCancellationTokenSource(executionCts, context);
 
-                // Execute
                 ExecutionResult result = ExecuteInternal(context, combinedCts.Token, correlationId);
 
                 LogExecutionComplete(result, correlationId);
@@ -98,36 +111,59 @@ namespace io.github.hatayama.uLoopMCP
             finally
             {
                 Undo.CollapseUndoOperations(undoGroup);
-                _isRunning = false;
-                _cancellationTokenSource?.Dispose();
-                _cancellationTokenSource = null;
+                _executionCts.TryRemove(correlationId, out _);
+                executionCts.Dispose();
+                Interlocked.Decrement(ref _runningCount);
+
+                if (!allowParallel)
+                {
+                    _executionSemaphore.Release();
+                }
             }
         }
 
-        public void Cancel()
+        /// <summary>Cancel all running executions</summary>
+        public void CancelAll()
         {
-            _cancellationTokenSource?.Cancel();
+            foreach (CancellationTokenSource cts in _executionCts.Values)
+            {
+                cts.Cancel();
+            }
         }
 
-        public async Task<ExecutionResult> ExecuteAsync(ExecutionContext context)
+        /// <summary>Cancel a specific execution by correlationId</summary>
+        public void Cancel(string correlationId)
+        {
+            if (_executionCts.TryGetValue(correlationId, out CancellationTokenSource cts))
+            {
+                cts.Cancel();
+            }
+        }
+
+        public async Task<ExecutionResult> ExecuteAsync(ExecutionContext context, bool allowParallel = false)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
 
-            if (_isRunning)
+            // Exclusive mode: use semaphore to wait for previous execution
+            if (!allowParallel)
             {
-                return CreateErrorResult(McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS);
+                await _executionSemaphore.WaitAsync(context.CancellationToken);
             }
-            _isRunning = true;
-            _cancellationTokenSource = new CancellationTokenSource();
+
+            Interlocked.Increment(ref _runningCount);
+
+            CancellationTokenSource executionCts = new CancellationTokenSource();
+            _executionCts.TryAdd(correlationId, executionCts);
 
             int undoGroup = Undo.GetCurrentGroup();
-            Undo.SetCurrentGroupName("ExecuteDynamicCode");
+            string undoName = allowParallel ? $"ExecuteDynamicCode-{correlationId}" : "ExecuteDynamicCode";
+            Undo.SetCurrentGroupName(undoName);
 
             try
             {
                 LogExecutionStart(context, correlationId);
 
-                using CancellationTokenSource combinedCts = CreateCombinedCancellationTokenSource(context);
+                using CancellationTokenSource combinedCts = CreateCombinedCancellationTokenSource(executionCts, context);
 
                 ExecutionResult result = await ExecuteInternalAsync(context, combinedCts.Token, correlationId);
 
@@ -153,9 +189,14 @@ namespace io.github.hatayama.uLoopMCP
             finally
             {
                 Undo.CollapseUndoOperations(undoGroup);
-                _isRunning = false;
-                _cancellationTokenSource?.Dispose();
-                _cancellationTokenSource = null;
+                _executionCts.TryRemove(correlationId, out _);
+                executionCts.Dispose();
+                Interlocked.Decrement(ref _runningCount);
+
+                if (!allowParallel)
+                {
+                    _executionSemaphore.Release();
+                }
             }
         }
 
