@@ -127,7 +127,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             foreach (CancellationTokenSource cts in _executionCts.Values)
             {
-                cts.Cancel();
+                // CTS may be disposed by finally block during iteration (race condition with cleanup)
+                try { cts.Cancel(); }
+                catch (ObjectDisposedException) { }
             }
         }
 
@@ -136,7 +138,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (_executionCts.TryGetValue(correlationId, out CancellationTokenSource cts))
             {
-                cts.Cancel();
+                // CTS may be disposed by finally block between TryGetValue and Cancel (race condition with cleanup)
+                try { cts.Cancel(); }
+                catch (ObjectDisposedException) { }
             }
         }
 
