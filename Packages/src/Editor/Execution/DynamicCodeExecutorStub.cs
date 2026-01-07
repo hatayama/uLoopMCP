@@ -25,7 +25,8 @@ namespace io.github.hatayama.uLoopMCP
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
             object[] parameters = null,
             CancellationToken cancellationToken = default,
-            bool compileOnly = false)
+            bool compileOnly = false,
+            bool allowParallel = false)
         {
             return CreateRoslynRequiredResult();
         }
@@ -36,7 +37,8 @@ namespace io.github.hatayama.uLoopMCP
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
             object[] parameters = null,
             CancellationToken cancellationToken = default,
-            bool compileOnly = false)
+            bool compileOnly = false,
+            bool allowParallel = false)
         {
             return await Task.FromResult(CreateRoslynRequiredResult());
         }
