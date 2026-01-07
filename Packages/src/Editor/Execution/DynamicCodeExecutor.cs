@@ -40,7 +40,7 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false,
             bool allowParallel = false,
-            bool noWait = false)
+            bool fireAndForget = false)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
             Stopwatch stopwatch = Stopwatch.StartNew();
@@ -78,8 +78,8 @@ namespace io.github.hatayama.uLoopMCP
                     return CreateCompileOnlySuccessResult(compilationResult, correlationId, stopwatch);
                 }
 
-                // Phase 4: Check NoWait Mode - fire-and-forget execution
-                if (noWait)
+                // Phase 4: Check FireAndForget Mode - fire-and-forget execution
+                if (fireAndForget)
                 {
                     _ = ExecuteInBackgroundAsync(
                         compilationResult.CompiledAssembly,
@@ -97,7 +97,7 @@ namespace io.github.hatayama.uLoopMCP
                         {
                             "✓ Compiled successfully. Execution started in background.",
                             $"CorrelationId: {correlationId}",
-                            "Check Unity Console for execution results: uloop get-logs --search-text NoWait"
+                            "Check Unity Console for execution results: uloop get-logs --search-text FireAndForget"
                         }
                     };
                 }
@@ -229,7 +229,7 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false,
             bool allowParallel = false,
-            bool noWait = false)
+            bool fireAndForget = false)
         {
 #pragma warning restore CS1998
             // Runtime Security Check (also blocks compilation at Level 0)
@@ -265,8 +265,8 @@ namespace io.github.hatayama.uLoopMCP
                     return CreateCompileOnlySuccessResult(compilationResult, correlationId, stopwatch);
                 }
 
-                // Phase 4: Check NoWait Mode - fire-and-forget execution
-                if (noWait)
+                // Phase 4: Check FireAndForget Mode - fire-and-forget execution
+                if (fireAndForget)
                 {
                     _ = ExecuteInBackgroundAsync(
                         compilationResult.CompiledAssembly,
@@ -284,7 +284,7 @@ namespace io.github.hatayama.uLoopMCP
                         {
                             "✓ Compiled successfully. Execution started in background.",
                             $"CorrelationId: {correlationId}",
-                            "Check Unity Console for execution results: uloop get-logs --search-text NoWait"
+                            "Check Unity Console for execution results: uloop get-logs --search-text FireAndForget"
                         }
                     };
                 }
@@ -308,7 +308,7 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        /// <summary>Background execution for NoWait mode</summary>
+        /// <summary>Background execution for FireAndForget mode</summary>
         private async Task ExecuteInBackgroundAsync(
             System.Reflection.Assembly compiledAssembly,
             object[] parameters,
@@ -330,7 +330,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     VibeLogger.LogInfo(
                         "nowait_execution_complete",
-                        $"[NoWait] Background execution completed: {result.Result}",
+                        $"[FireAndForget] Background execution completed: {result.Result}",
                         new { correlationId, result = result.Result },
                         correlationId
                     );
@@ -339,7 +339,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     VibeLogger.LogWarning(
                         "nowait_execution_failed",
-                        $"[NoWait] Background execution failed: {result.ErrorMessage}",
+                        $"[FireAndForget] Background execution failed: {result.ErrorMessage}",
                         new { correlationId, error = result.ErrorMessage },
                         correlationId
                     );
@@ -349,7 +349,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 VibeLogger.LogError(
                     "nowait_execution_error",
-                    $"[NoWait] Background execution error: {ex.Message}",
+                    $"[FireAndForget] Background execution error: {ex.Message}",
                     new { correlationId, error = ex.Message, stackTrace = ex.StackTrace },
                     correlationId
                 );

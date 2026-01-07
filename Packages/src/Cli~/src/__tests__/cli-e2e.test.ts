@@ -422,21 +422,21 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       expect(result.ErrorMessage).toBeTruthy();
     });
 
-    describe('--no-wait mode', () => {
+    describe('--fire-and-forget mode', () => {
       it('should return immediately and execute in background', () => {
         // Step 1: Start background task that creates GameObject after 3 seconds (fire-and-forget)
-        const noWaitResult = runCliJson<{
+        const fireAndForgetResult = runCliJson<{
           Success: boolean;
           Result: string | null;
           Logs: string[];
         }>(
-          `execute-dynamic-code --no-wait --code "await io.github.hatayama.uLoopMCP.TimerDelay.Wait(3000); new UnityEngine.GameObject(\\"${MARKER_OBJECT_NAME}\\");"`,
+          `execute-dynamic-code --fire-and-forget --code "await io.github.hatayama.uLoopMCP.TimerDelay.Wait(3000); new UnityEngine.GameObject(\\"${MARKER_OBJECT_NAME}\\");"`,
         );
 
-        expect(noWaitResult.Success).toBe(true);
-        expect(noWaitResult.Result).toBeFalsy(); // NoWait returns null/empty result
-        // NoWait mode logs contain either "background" or standard success message
-        expect(noWaitResult.Logs.length).toBeGreaterThan(0);
+        expect(fireAndForgetResult.Success).toBe(true);
+        expect(fireAndForgetResult.Result).toBeFalsy(); // FireAndForget returns null/empty result
+        // FireAndForget mode logs contain either "background" or standard success message
+        expect(fireAndForgetResult.Logs.length).toBeGreaterThan(0);
 
         // Step 2: Monitor for the GameObject (waits for result)
         const monitorResult = runCliJson<{ Success: boolean; Result: string }>(
@@ -447,9 +447,9 @@ describe('CLI E2E Tests (requires running Unity)', () => {
         expect(monitorResult.Result).toBe('Found it!');
       });
 
-      it('should return compile error even in no-wait mode', () => {
+      it('should return compile error even in fire-and-forget mode', () => {
         const result = runCliJson<{ Success: boolean; ErrorMessage: string }>(
-          'execute-dynamic-code --no-wait --code "invalid code!!!"',
+          'execute-dynamic-code --fire-and-forget --code "invalid code!!!"',
         );
 
         expect(result.Success).toBe(false);

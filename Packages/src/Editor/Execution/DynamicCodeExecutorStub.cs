@@ -27,7 +27,7 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false,
             bool allowParallel = false,
-            bool noWait = false)
+            bool fireAndForget = false)
         {
             return CreateRoslynRequiredResult();
         }
@@ -40,7 +40,7 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false,
             bool allowParallel = false,
-            bool noWait = false)
+            bool fireAndForget = false)
         {
             return await Task.FromResult(CreateRoslynRequiredResult());
         }

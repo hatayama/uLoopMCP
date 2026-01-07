@@ -95,12 +95,12 @@ Use with async code that doesn't need immediate result feedback.
 
 Behavior:
 - Compile errors ARE returned (compile check happens before return)
-- Runtime errors logged to Unity Console only (use 'uloop get-logs --search-text NoWait')
+- Runtime errors logged to Unity Console only (use 'uloop get-logs --search-text FireAndForget')
 
 Use cases:
 - Long-running monitoring tasks (wait for button to appear)
 - Scheduled actions (wait N seconds then do X)
 - Multiple independent background tasks")]
-        public bool NoWait { get; set; } = false;
+        public bool FireAndForget { get; set; } = false;
     }
 }

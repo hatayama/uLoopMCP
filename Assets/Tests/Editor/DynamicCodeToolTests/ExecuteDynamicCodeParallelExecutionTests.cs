@@ -208,7 +208,7 @@ return ""task2"";
         }
 
         [Test]
-        public async Task NoWaitMode_ReturnsImmediatelyAfterCompile()
+        public async Task FireAndForgetMode_ReturnsImmediatelyAfterCompile()
         {
             // Use simple code that doesn't use Task.Delay (blocked by Restricted security level)
             string code = @"return ""should_not_see_this"";";
@@ -220,16 +220,16 @@ return ""task2"";
                 CancellationToken.None,
                 compileOnly: false,
                 allowParallel: false,
-                noWait: true
+                fireAndForget: true
             );
 
             Assert.IsTrue(result.Success, result.ErrorMessage);
-            Assert.IsNull(result.Result, "NoWait mode should not return execution result");
+            Assert.IsNull(result.Result, "FireAndForget mode should not return execution result");
             Assert.IsTrue(result.Logs.Exists(log => log.Contains("background")), "Logs should mention background execution");
         }
 
         [Test]
-        public async Task NoWaitMode_ReturnsCompileErrorImmediately()
+        public async Task FireAndForgetMode_ReturnsCompileErrorImmediately()
         {
             string invalidCode = @"this is not valid C# code!!!";
 
@@ -240,15 +240,15 @@ return ""task2"";
                 CancellationToken.None,
                 compileOnly: false,
                 allowParallel: false,
-                noWait: true
+                fireAndForget: true
             );
 
-            Assert.IsFalse(result.Success, "Compile error should fail even in NoWait mode");
+            Assert.IsFalse(result.Success, "Compile error should fail even in FireAndForget mode");
             Assert.IsNotNull(result.ErrorMessage, "Should have error message");
         }
 
         [Test]
-        public async Task NoWaitMode_WithAllowParallel_WorksTogether()
+        public async Task FireAndForgetMode_WithAllowParallel_WorksTogether()
         {
             // Use simple code that doesn't use Task.Delay (blocked by Restricted security level)
             string code1 = @"return ""task1"";";
@@ -261,7 +261,7 @@ return ""task2"";
                 CancellationToken.None,
                 compileOnly: false,
                 allowParallel: true,
-                noWait: true
+                fireAndForget: true
             );
 
             Task<ExecutionResult> task2 = _executor.ExecuteCodeAsync(
@@ -271,7 +271,7 @@ return ""task2"";
                 CancellationToken.None,
                 compileOnly: false,
                 allowParallel: true,
-                noWait: true
+                fireAndForget: true
             );
 
             ExecutionResult result1 = await task1;
@@ -279,12 +279,12 @@ return ""task2"";
 
             Assert.IsTrue(result1.Success, result1.ErrorMessage);
             Assert.IsTrue(result2.Success, result2.ErrorMessage);
-            Assert.IsNull(result1.Result, "NoWait should not return execution result");
-            Assert.IsNull(result2.Result, "NoWait should not return execution result");
+            Assert.IsNull(result1.Result, "FireAndForget should not return execution result");
+            Assert.IsNull(result2.Result, "FireAndForget should not return execution result");
         }
 
         [Test]
-        public async Task NoWaitMode_DefaultIsFalse()
+        public async Task FireAndForgetMode_DefaultIsFalse()
         {
             string code = @"return ""sync_result"";";
 
@@ -298,7 +298,7 @@ return ""task2"";
             );
 
             Assert.IsTrue(result.Success, result.ErrorMessage);
-            Assert.AreEqual("sync_result", result.Result, "Default (noWait=false) should return execution result");
+            Assert.AreEqual("sync_result", result.Result, "Default (fireAndForget=false) should return execution result");
         }
     }
 }

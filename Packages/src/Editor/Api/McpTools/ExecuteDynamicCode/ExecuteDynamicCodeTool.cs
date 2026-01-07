@@ -177,7 +177,7 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     cancellationToken,
                     parameters.CompileOnly,
                     parameters.AllowParallel,
-                    parameters.NoWait
+                    parameters.FireAndForget
                 );
 
                 // Optional: auto-insert return retry if missing return likely caused failure (unconditional)
@@ -203,7 +203,7 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                             cancellationToken,
                             parameters.CompileOnly,
                             parameters.AllowParallel,
-                            parameters.NoWait
+                            parameters.FireAndForget
                         );
                         if (retryReturnResult.Success)
                         {
@@ -234,7 +234,7 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                                 cancellationToken,
                                 parameters.CompileOnly,
                                 parameters.AllowParallel,
-                                parameters.NoWait
+                                parameters.FireAndForget
                             );
                             // Prefer retry result if success, otherwise keep original but merge logs
                             if (retryResult.Success)
@@ -264,11 +264,11 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     toolResponse.Logs.Insert(0, "⚠️ PARALLEL MODE: Race conditions may occur if multiple executions modify the same GameObjects.");
                 }
 
-                // Add no-wait mode warning to response logs
-                if (parameters.NoWait)
+                // Add fire-and-forget mode warning to response logs
+                if (parameters.FireAndForget)
                 {
                     if (toolResponse.Logs == null) toolResponse.Logs = new List<string>();
-                    toolResponse.Logs.Insert(0, "⚠️ NO-WAIT MODE: Execution continues in background. Results/errors will NOT be returned. Check Unity Console: uloop get-logs --search-text NoWait");
+                    toolResponse.Logs.Insert(0, "⚠️ FIRE-AND-FORGET MODE: Execution continues in background. Results/errors will NOT be returned. Check Unity Console: uloop get-logs --search-text FireAndForget");
                 }
 
                 return toolResponse;

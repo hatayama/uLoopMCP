@@ -325,7 +325,7 @@
             "description": "Enable parallel execution mode (use with caution - may cause race conditions)",
             "default": false
           },
-          "NoWait": {
+          "FireAndForget": {
             "type": "boolean",
             "description": "Fire-and-forget mode - return after compile, execute in background",
             "default": false

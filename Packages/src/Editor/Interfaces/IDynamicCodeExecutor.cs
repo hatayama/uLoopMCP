@@ -18,7 +18,7 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false,
             bool allowParallel = false,
-            bool noWait = false
+            bool fireAndForget = false
         );
 
         /// <summary>Asynchronous code execution</summary>
@@ -29,7 +29,7 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false,
             bool allowParallel = false,
-            bool noWait = false
+            bool fireAndForget = false
         );
 
 

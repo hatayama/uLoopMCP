@@ -21,7 +21,7 @@ uloop execute-dynamic-code --code '<c# code>'
 | `--compile-only` | boolean | Compile without execution |
 | `--auto-qualify-unity-types-once` | boolean | Auto-qualify Unity types |
 | `--allow-parallel` | boolean | Enable parallel execution (⚠️ use with caution) |
-| `--no-wait` | boolean | Fire-and-forget mode (return after compile, execute in background) |
+| `--fire-and-forget` | boolean | Fire-and-forget mode (return after compile, execute in background) |
 
 ## Code Format
 
@@ -123,11 +123,11 @@ uloop execute-dynamic-code --code 'new GameObject("Object1");' --allow-parallel
 
 ## Fire-and-Forget Mode
 
-`--no-wait` returns immediately after successful compilation. Execution continues in Unity background.
+`--fire-and-forget` returns immediately after successful compilation. Execution continues in Unity background.
 
 ```bash
 # Start a long-running monitoring task - CLI returns immediately
-uloop execute-dynamic-code --no-wait --allow-parallel --code '
+uloop execute-dynamic-code --fire-and-forget --allow-parallel --code '
 while (GameObject.Find("TargetButton") == null) {
     await Cysharp.Threading.Tasks.UniTask.Delay(100);
 }
@@ -135,7 +135,7 @@ Selection.activeGameObject = GameObject.Find("TargetButton");
 '
 
 # Check execution results in Unity Console
-uloop get-logs --search-text "NoWait"
+uloop get-logs --search-text "FireAndForget"
 ```
 
 ### Behavior
@@ -153,8 +153,8 @@ uloop get-logs --search-text "NoWait"
 ### Checking Background Execution Results
 
 ```bash
-# View recent NoWait execution logs
-uloop get-logs --search-text "NoWait"
+# View recent FireAndForget execution logs
+uloop get-logs --search-text "FireAndForget"
 
 # View all recent logs
 uloop get-logs --max-count 20
