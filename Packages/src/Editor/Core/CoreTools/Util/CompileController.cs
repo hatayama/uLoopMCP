@@ -72,7 +72,7 @@ namespace io.github.hatayama.uLoopMCP
             if (!validation.IsValid)
             {
                 return new CompileResult(
-                    success: null,
+                    success: false,
                     errorCount: 0,
                     warningCount: 0,
                     completedAt: DateTime.Now,
@@ -138,8 +138,16 @@ namespace io.github.hatayama.uLoopMCP
                 waitedMs += McpConstants.COMPILE_START_POLL_INTERVAL_MS;
             }
 
+            AssemblyDefinitionDuplicationValidationService asmdefValidationService = new();
+            ValidationResult asmdefValidation = asmdefValidationService.ValidateNoDuplicateAsmdefNames();
+            if (!asmdefValidation.IsValid)
+            {
+                AbortCompile(asmdefValidation.ErrorMessage);
+                return;
+            }
+
             AbortCompile(
-                "Compilation did not start. Possible causes: duplicate asmdef names, editor update/reload locks, Auto Refresh disabled, or no script changes."
+                "Compilation did not start. Possible causes: editor update/reload locks, Auto Refresh disabled, or no script changes."
             );
         }
 
@@ -157,7 +165,7 @@ namespace io.github.hatayama.uLoopMCP
             _isCompiling = false;
 
             CompileResult result = new CompileResult(
-                success: null,
+                success: false,
                 errorCount: 0,
                 warningCount: 0,
                 completedAt: DateTime.Now,

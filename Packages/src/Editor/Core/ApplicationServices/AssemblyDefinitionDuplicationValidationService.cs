@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditorInternal;
+using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -14,6 +15,88 @@ namespace io.github.hatayama.uLoopMCP
     {
         private static readonly Regex AsmdefNameRegex =
             new("\"name\"\\s*:\\s*\"(?<name>[^\"]+)\"", RegexOptions.Compiled);
+
+        private static readonly Regex DuplicateAsmdefConsoleRegex = new(
+            "^Assembly with name '(?<name>[^']+)' already exists \\((?<path>[^)]+)\\)$",
+            RegexOptions.Compiled
+        );
+
+        public ValidationResult ValidateNoDuplicateAsmdefNamesFromConsoleErrors()
+        {
+            LogRetrievalService retrievalService = new();
+            LogDisplayDto logData = retrievalService.GetLogsWithSearch(
+                McpLogType.Error,
+                "Assembly with name '",
+                useRegex: false,
+                searchInStackTrace: false
+            );
+
+            Dictionary<string, List<string>> pathsByAsmName = new(StringComparer.Ordinal);
+
+            foreach (LogEntryDto entry in logData.LogEntries)
+            {
+                if (string.IsNullOrEmpty(entry.Message))
+                {
+                    continue;
+                }
+
+                Match match = DuplicateAsmdefConsoleRegex.Match(entry.Message.Trim());
+                if (!match.Success)
+                {
+                    continue;
+                }
+
+                string asmName = match.Groups["name"].Value;
+                string assetPath = match.Groups["path"].Value;
+                if (string.IsNullOrEmpty(asmName) || string.IsNullOrEmpty(assetPath))
+                {
+                    continue;
+                }
+
+                // Prevent false positives from stale console logs by verifying the asset still exists.
+                UnityEngine.Object obj = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
+                if (obj == null)
+                {
+                    continue;
+                }
+
+                if (!pathsByAsmName.TryGetValue(asmName, out List<string> paths))
+                {
+                    paths = new List<string>();
+                    pathsByAsmName.Add(asmName, paths);
+                }
+
+                if (!paths.Contains(assetPath))
+                {
+                    paths.Add(assetPath);
+                }
+            }
+
+            if (pathsByAsmName.Count == 0)
+            {
+                return ValidationResult.Success();
+            }
+
+            string details = string.Join(
+                "\n",
+                pathsByAsmName
+                    .OrderBy(kvp => kvp.Key, StringComparer.Ordinal)
+                    .Take(5)
+                    .Select(d =>
+                    {
+                        string paths = string.Join("\n  ", d.Value.Take(8));
+                        return $"- {d.Key}\n  {paths}";
+                    })
+            );
+
+            string message =
+                $"{McpConstants.ERROR_MESSAGE_DUPLICATE_ASMDEF}\n" +
+                "Detected from Console errors:\n" +
+                $"{details}\n" +
+                "Fix: ensure each .asmdef has a unique \"name\".";
+
+            return ValidationResult.Failure(message);
+        }
 
         public ValidationResult ValidateNoDuplicateAsmdefNames()
         {
@@ -66,7 +149,7 @@ namespace io.github.hatayama.uLoopMCP
                 $"{details}\n" +
                 "Fix: ensure each .asmdef has a unique \"name\".";
 
-            return ValidationResult.Failure(message, McpConstants.ERROR_DUPLICATE_ASMDEF);
+            return ValidationResult.Failure(message);
         }
 
         private static string GetAsmdefName(AssemblyDefinitionAsset asmdef)

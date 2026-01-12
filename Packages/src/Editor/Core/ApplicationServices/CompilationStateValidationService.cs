@@ -38,7 +38,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             AssemblyDefinitionDuplicationValidationService asmdefValidationService = new();
-            ValidationResult asmdefValidation = asmdefValidationService.ValidateNoDuplicateAsmdefNames();
+            ValidationResult asmdefValidation = asmdefValidationService.ValidateNoDuplicateAsmdefNamesFromConsoleErrors();
             if (!asmdefValidation.IsValid)
             {
                 return asmdefValidation;

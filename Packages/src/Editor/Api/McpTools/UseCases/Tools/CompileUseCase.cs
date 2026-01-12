@@ -31,9 +31,7 @@ namespace io.github.hatayama.uLoopMCP
                     errorCount: 1,
                     warningCount: 0,
                     errors: new[] { new CompileIssue(validation.ErrorMessage, "", 0) },
-                    warnings: new CompileIssue[0],
-                    message: validation.ErrorMessage,
-                    errorCode: validation.ErrorCode
+                    warnings: new CompileIssue[0]
                 );
             }
             

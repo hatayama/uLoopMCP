@@ -142,7 +142,6 @@ namespace io.github.hatayama.uLoopMCP
         // Error message constants
         public const string ERROR_EXECUTION_DISABLED = "EXECUTION_DISABLED";
         public const string ERROR_COMPILATION_DISABLED_LEVEL0 = "COMPILATION_DISABLED_AT_LEVEL0";
-        public const string ERROR_DUPLICATE_ASMDEF = "DUPLICATE_ASMDEF";
         public const string ERROR_MESSAGE_SECURITY_LEVEL_CHANGE_BLOCKED = "Changing security level is not allowed in Restricted mode.";
         public const string ERROR_MESSAGE_EXECUTION_DISABLED = "Dynamic code execution is currently disabled. Enable in McpEditorSettings > Security Level.";
         public const string ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0 = "Compilation is disabled at isolation level 0. Raise to level 1+ to compile.";
