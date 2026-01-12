@@ -51,14 +51,22 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (_logBuilder == null) return;
 
-            string resultMessage = !string.IsNullOrEmpty(result.Message)
-                ? result.Message
-                : result.Success switch
+            string resultMessage = result.Message;
+            if (string.IsNullOrEmpty(resultMessage))
+            {
+                if (result.Success == true)
                 {
-                    true => "Compilation successful! No issues.",
-                    false => "Compilation failed! Please check the errors.",
-                    null => "Compilation status is indeterminate. Use get-logs tool to check results."
-                };
+                    resultMessage = "Compilation successful! No issues.";
+                }
+                else if (result.Success == false)
+                {
+                    resultMessage = "Compilation failed! Please check the errors.";
+                }
+                else
+                {
+                    resultMessage = "Compilation status is indeterminate. Use get-logs tool to check results.";
+                }
+            }
 
             _logBuilder.AppendLine();
 
@@ -71,7 +79,16 @@ namespace io.github.hatayama.uLoopMCP
 
             _logBuilder.AppendLine("=== Compilation Finished ===");
             _logBuilder.AppendLine($"Result: {resultMessage}");
-            _logBuilder.AppendLine($"Has Errors: {!result.Success}");
+            string hasErrors = "Unknown";
+            if (result.Success == true)
+            {
+                hasErrors = "False";
+            }
+            else if (result.Success == false)
+            {
+                hasErrors = "True";
+            }
+            _logBuilder.AppendLine($"Has Errors: {hasErrors}");
             _logBuilder.AppendLine($"Completion Time: {result.CompletedAt:HH:mm:ss}");
 
             if (result.Messages.Length > 0)
@@ -80,9 +97,16 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                _logBuilder.AppendLine(result.IsIndeterminate
-                    ? "Processed Assemblies: Unknown (compilation did not provide details)"
-                    : "Processed Assemblies: None (no changes)");
+                string processedAssemblies;
+                if (result.IsIndeterminate)
+                {
+                    processedAssemblies = "Processed Assemblies: Unknown (compilation did not provide details)";
+                }
+                else
+                {
+                    processedAssemblies = "Processed Assemblies: None (no changes)";
+                }
+                _logBuilder.AppendLine(processedAssemblies);
             }
         }
 

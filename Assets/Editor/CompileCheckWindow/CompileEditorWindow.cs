@@ -122,10 +122,18 @@ namespace io.github.hatayama.uLoopMCP
             
             // Output result to log (for debugging)
             string message = string.IsNullOrEmpty(result.Message) ? "(none)" : result.Message;
-            bool success = result.Success ?? false;
-            UnityEngine.Debug.LogWarning(
-                $"Compilation finished: Success={success}, Indeterminate={result.IsIndeterminate}, Errors={result.error.Length}, Warnings={result.warning.Length}, Message={message}"
-            );
+            bool displaySuccess = result.Success ?? false;
+            bool shouldWarn = result.Success == false;
+            string logMessage =
+                $"Compilation finished: Success={displaySuccess}, Indeterminate={result.IsIndeterminate}, Errors={result.error.Length}, Warnings={result.warning.Length}, Message={message}";
+
+            if (shouldWarn)
+            {
+                UnityEngine.Debug.LogWarning(logMessage);
+                return;
+            }
+
+            UnityEngine.Debug.Log(logMessage);
         }
 
         private void OnCompileCompleted(CompileResult result)
