@@ -51,17 +51,19 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (_logBuilder == null) return;
 
-            string resultMessage = result.Success switch
-            {
-                true => "Compilation successful! No issues.",
-                false => "Compilation failed! Please check the errors.",
-                null => "Compilation status is indeterminate. Use get-logs tool to check results."
-            };
+            string resultMessage = !string.IsNullOrEmpty(result.Message)
+                ? result.Message
+                : result.Success switch
+                {
+                    true => "Compilation successful! No issues.",
+                    false => "Compilation failed! Please check the errors.",
+                    null => "Compilation status is indeterminate. Use get-logs tool to check results."
+                };
 
             _logBuilder.AppendLine();
 
             // Display for when no assemblies were processed (no changes)
-            if (result.Messages.Length == 0)
+            if (!result.IsIndeterminate && result.Messages.Length == 0)
             {
                 _logBuilder.AppendLine("No changes, so compilation was skipped.");
                 _logBuilder.AppendLine("But it finished without any problems!");
@@ -78,7 +80,9 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                _logBuilder.AppendLine("Processed Assemblies: None (no changes)");
+                _logBuilder.AppendLine(result.IsIndeterminate
+                    ? "Processed Assemblies: Unknown (compilation did not provide details)"
+                    : "Processed Assemblies: None (no changes)");
             }
         }
 

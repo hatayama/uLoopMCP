@@ -26,6 +26,11 @@ namespace io.github.hatayama.uLoopMCP
     public class CompileResponse : BaseToolResponse
     {
         /// <summary>
+        /// Optional error code for special conditions (e.g., DUPLICATE_ASMDEF).
+        /// </summary>
+        public string ErrorCode { get; set; }
+
+        /// <summary>
         /// Whether compilation was successful. Null indicates indeterminate status.
         /// </summary>
         public bool? Success { get; set; }
@@ -58,8 +63,15 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Create a new CompileResponse
         /// </summary>
-        public CompileResponse(bool? success, int? errorCount, int? warningCount, 
-                             CompileIssue[] errors, CompileIssue[] warnings, string message = null)
+        public CompileResponse(
+            bool? success,
+            int? errorCount,
+            int? warningCount,
+            CompileIssue[] errors,
+            CompileIssue[] warnings,
+            string message = null,
+            string errorCode = null
+        )
         {
             Success = success;
             ErrorCount = errorCount;
@@ -67,6 +79,7 @@ namespace io.github.hatayama.uLoopMCP
             Errors = errors;
             Warnings = warnings;
             Message = message;
+            ErrorCode = errorCode;
         }
 
         /// <summary>

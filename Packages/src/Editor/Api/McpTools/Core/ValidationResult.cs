@@ -18,14 +18,20 @@ namespace io.github.hatayama.uLoopMCP
         public string ErrorMessage { get; }
 
         /// <summary>
+        /// Optional error code when validation fails
+        /// </summary>
+        public string ErrorCode { get; }
+
+        /// <summary>
         /// Create ValidationResult
         /// </summary>
         /// <param name="isValid">Validation result</param>
         /// <param name="errorMessage">Error message (null on success)</param>
-        public ValidationResult(bool isValid, string errorMessage = null)
+        public ValidationResult(bool isValid, string errorMessage = null, string errorCode = null)
         {
             IsValid = isValid;
             ErrorMessage = errorMessage;
+            ErrorCode = errorCode;
         }
 
         /// <summary>
@@ -39,6 +45,6 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         /// <param name="errorMessage">Error message</param>
         /// <returns>ValidationResult representing failure</returns>
-        public static ValidationResult Failure(string errorMessage) => new(false, errorMessage);
+        public static ValidationResult Failure(string errorMessage, string errorCode = null) => new(false, errorMessage, errorCode);
     }
 }

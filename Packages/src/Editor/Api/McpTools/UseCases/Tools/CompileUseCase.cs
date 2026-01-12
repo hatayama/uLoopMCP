@@ -31,14 +31,16 @@ namespace io.github.hatayama.uLoopMCP
                     errorCount: 1,
                     warningCount: 0,
                     errors: new[] { new CompileIssue(validation.ErrorMessage, "", 0) },
-                    warnings: new CompileIssue[0]
+                    warnings: new CompileIssue[0],
+                    message: validation.ErrorMessage,
+                    errorCode: validation.ErrorCode
                 );
             }
             
             // 2. Compilation execution
             cancellationToken.ThrowIfCancellationRequested();
             CompilationExecutionService executionService = new();
-            CompileResult result = await executionService.ExecuteCompilationAsync(parameters.ForceRecompile);
+            CompileResult result = await executionService.ExecuteCompilationAsync(parameters.ForceRecompile, cancellationToken);
             
             // 3. Result formatting
             if (result.IsIndeterminate)
@@ -49,7 +51,7 @@ namespace io.github.hatayama.uLoopMCP
                     warningCount: null,
                     errors: null,
                     warnings: null,
-                    message: "Force compilation executed. Use get-logs tool to retrieve compilation messages."
+                    message: result.Message ?? "Compilation status is indeterminate. Use get-logs tool to check results."
                 );
             }
             
