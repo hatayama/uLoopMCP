@@ -134,7 +134,9 @@ namespace io.github.hatayama.uLoopMCP
                     return;
                 }
 
-                await TimerDelay.Wait(McpConstants.COMPILE_START_POLL_INTERVAL_MS, ct);
+                // Do not pass CancellationToken here: this method is fire-and-forget and must not throw.
+                // Cancellation is handled by explicit checks above to avoid leaving _currentCompileTask pending.
+                await TimerDelay.Wait(McpConstants.COMPILE_START_POLL_INTERVAL_MS);
                 waitedMs += McpConstants.COMPILE_START_POLL_INTERVAL_MS;
             }
 
