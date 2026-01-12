@@ -51,17 +51,27 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (_logBuilder == null) return;
 
-            string resultMessage = result.Success switch
+            string resultMessage = result.Message;
+            if (string.IsNullOrEmpty(resultMessage))
             {
-                true => "Compilation successful! No issues.",
-                false => "Compilation failed! Please check the errors.",
-                null => "Compilation status is indeterminate. Use get-logs tool to check results."
-            };
+                if (result.Success == true)
+                {
+                    resultMessage = "Compilation successful! No issues.";
+                }
+                else if (result.Success == false)
+                {
+                    resultMessage = "Compilation failed! Please check the errors.";
+                }
+                else
+                {
+                    resultMessage = "Compilation status is indeterminate. Use get-logs tool to check results.";
+                }
+            }
 
             _logBuilder.AppendLine();
 
             // Display for when no assemblies were processed (no changes)
-            if (result.Messages.Length == 0)
+            if (!result.IsIndeterminate && result.Messages.Length == 0)
             {
                 _logBuilder.AppendLine("No changes, so compilation was skipped.");
                 _logBuilder.AppendLine("But it finished without any problems!");
@@ -69,7 +79,16 @@ namespace io.github.hatayama.uLoopMCP
 
             _logBuilder.AppendLine("=== Compilation Finished ===");
             _logBuilder.AppendLine($"Result: {resultMessage}");
-            _logBuilder.AppendLine($"Has Errors: {!result.Success}");
+            string hasErrors = "Unknown";
+            if (result.Success == true)
+            {
+                hasErrors = "False";
+            }
+            else if (result.Success == false)
+            {
+                hasErrors = "True";
+            }
+            _logBuilder.AppendLine($"Has Errors: {hasErrors}");
             _logBuilder.AppendLine($"Completion Time: {result.CompletedAt:HH:mm:ss}");
 
             if (result.Messages.Length > 0)
@@ -78,7 +97,16 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                _logBuilder.AppendLine("Processed Assemblies: None (no changes)");
+                string processedAssemblies;
+                if (result.IsIndeterminate)
+                {
+                    processedAssemblies = "Processed Assemblies: Unknown (compilation did not provide details)";
+                }
+                else
+                {
+                    processedAssemblies = "Processed Assemblies: None (no changes)";
+                }
+                _logBuilder.AppendLine(processedAssemblies);
             }
         }
 

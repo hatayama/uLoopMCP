@@ -121,7 +121,19 @@ namespace io.github.hatayama.uLoopMCP
             CompileResult result = await _compileController.TryCompileAsync(_forceRecompile);
             
             // Output result to log (for debugging)
-            UnityEngine.Debug.Log($"Compilation finished: Success={result.Success}, Errors={result.error.Length}, Warnings={result.warning.Length}");
+            string message = string.IsNullOrEmpty(result.Message) ? "(none)" : result.Message;
+            bool displaySuccess = result.Success ?? false;
+            bool shouldWarn = result.Success == false;
+            string logMessage =
+                $"Compilation finished: Success={displaySuccess}, Indeterminate={result.IsIndeterminate}, Errors={result.error.Length}, Warnings={result.warning.Length}, Message={message}";
+
+            if (shouldWarn)
+            {
+                UnityEngine.Debug.LogWarning(logMessage);
+                return;
+            }
+
+            UnityEngine.Debug.Log(logMessage);
         }
 
         private void OnCompileCompleted(CompileResult result)

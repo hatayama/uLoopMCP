@@ -18,17 +18,30 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (EditorApplication.isCompiling)
             {
-                return ValidationResult.Failure("Compilation is already in progress. Please wait for the current compilation to finish.");
+                return ValidationResult.Failure(
+                    "Compilation is already in progress. Please wait for the current compilation to finish."
+                );
             }
             
             if (McpEditorSettings.GetIsDomainReloadInProgress())
             {
-                return ValidationResult.Failure("Cannot compile while domain reload is in progress. Please wait for the domain reload to complete.");
+                return ValidationResult.Failure(
+                    "Cannot compile while domain reload is in progress. Please wait for the domain reload to complete."
+                );
             }
             
             if (EditorApplication.isUpdating)
             {
-                return ValidationResult.Failure("Cannot compile while editor is updating. Please wait for the update to complete.");
+                return ValidationResult.Failure(
+                    "Cannot compile while editor is updating. Please wait for the update to complete."
+                );
+            }
+
+            AssemblyDefinitionDuplicationValidationService asmdefValidationService = new();
+            ValidationResult asmdefValidation = asmdefValidationService.ValidateNoDuplicateAsmdefNamesFromConsoleErrors();
+            if (!asmdefValidation.IsValid)
+            {
+                return asmdefValidation;
             }
             
             return ValidationResult.Success();

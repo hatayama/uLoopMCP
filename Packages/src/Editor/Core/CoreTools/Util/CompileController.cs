@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -51,6 +52,11 @@ namespace io.github.hatayama.uLoopMCP
         /// <exception cref="InvalidOperationException">Thrown when the task is not found during compilation.</exception>
         public async Task<CompileResult> TryCompileAsync(bool forceRecompile = false)
         {
+            return await TryCompileAsync(forceRecompile, CancellationToken.None);
+        }
+
+        public async Task<CompileResult> TryCompileAsync(bool forceRecompile, CancellationToken ct)
+        {
             if (_isCompiling)
             {
                 // If compilation is already in progress, wait for the current task.
@@ -59,6 +65,23 @@ namespace io.github.hatayama.uLoopMCP
                     return await _currentCompileTask.Task;
                 }
                 throw new InvalidOperationException("Compilation is in progress, but the task could not be found.");
+            }
+
+            CompilationStateValidationService validationService = new();
+            ValidationResult validation = validationService.ValidateCompilationState();
+            if (!validation.IsValid)
+            {
+                return new CompileResult(
+                    success: false,
+                    errorCount: 0,
+                    warningCount: 0,
+                    completedAt: DateTime.Now,
+                    messages: new CompilerMessage[0],
+                    errors: new CompilerMessage[0],
+                    warnings: new CompilerMessage[0],
+                    isIndeterminate: true,
+                    message: validation.ErrorMessage
+                );
             }
 
             _isCompiling = true;
@@ -85,7 +108,81 @@ namespace io.github.hatayama.uLoopMCP
                 CompilationPipeline.RequestScriptCompilation();
             }
 
+            _ = WatchCompileStartAsync(ct);
             return await _currentCompileTask.Task;
+        }
+
+        private async Task WatchCompileStartAsync(CancellationToken ct)
+        {
+            int waitedMs = 0;
+
+            while (waitedMs < McpConstants.COMPILE_START_TIMEOUT_MS)
+            {
+                if (ct.IsCancellationRequested)
+                {
+                    AbortCompile("Compilation request was cancelled before it started.");
+                    return;
+                }
+
+                if (EditorApplication.isCompiling)
+                {
+                    return;
+                }
+
+                if (_currentCompileTask == null || _currentCompileTask.Task.IsCompleted)
+                {
+                    return;
+                }
+
+                // Do not pass CancellationToken here: this method is fire-and-forget and must not throw.
+                // Cancellation is handled by explicit checks above to avoid leaving _currentCompileTask pending.
+                await TimerDelay.Wait(McpConstants.COMPILE_START_POLL_INTERVAL_MS);
+                waitedMs += McpConstants.COMPILE_START_POLL_INTERVAL_MS;
+            }
+
+            AssemblyDefinitionDuplicationValidationService asmdefValidationService = new();
+            ValidationResult asmdefValidation = asmdefValidationService.ValidateNoDuplicateAsmdefNames();
+            if (!asmdefValidation.IsValid)
+            {
+                AbortCompile(asmdefValidation.ErrorMessage);
+                return;
+            }
+
+            AbortCompile(
+                "Compilation did not start. Possible causes: editor update/reload locks, Auto Refresh disabled, or no script changes."
+            );
+        }
+
+        private void AbortCompile(string reason)
+        {
+            if (_currentCompileTask == null || _currentCompileTask.Task.IsCompleted)
+            {
+                return;
+            }
+
+            // Unregister events.
+            CompilationPipeline.compilationFinished -= HandleCompileFinished;
+            CompilationPipeline.assemblyCompilationFinished -= HandleAssemblyFinished;
+
+            _isCompiling = false;
+
+            CompileResult result = new CompileResult(
+                success: false,
+                errorCount: 0,
+                warningCount: 0,
+                completedAt: DateTime.Now,
+                messages: new CompilerMessage[0],
+                errors: new CompilerMessage[0],
+                warnings: new CompilerMessage[0],
+                isIndeterminate: true,
+                message: reason
+            );
+
+            OnCompileCompleted?.Invoke(result);
+
+            TaskCompletionSource<CompileResult> task = _currentCompileTask;
+            _currentCompileTask = null;
+            task.SetResult(result);
         }
 
         /// <summary>
@@ -155,7 +252,8 @@ namespace io.github.hatayama.uLoopMCP
                     messages: new CompilerMessage[0],
                     errors: new CompilerMessage[0],
                     warnings: new CompilerMessage[0],
-                    isIndeterminate: true
+                    isIndeterminate: true,
+                    message: "Force compilation executed. Use get-logs tool to retrieve compilation messages."
                 );
             }
 
@@ -256,6 +354,11 @@ namespace io.github.hatayama.uLoopMCP
         public bool IsIndeterminate { get; }
 
         /// <summary>
+        /// Optional message for additional information
+        /// </summary>
+        public string Message { get; }
+
+        /// <summary>
         /// Alias for error messages (for backward compatibility).
         /// </summary>
         public CompilerMessage[] error => Errors;
@@ -276,7 +379,17 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="errors">The error messages.</param>
         /// <param name="warnings">The warning messages.</param>
         /// <param name="isIndeterminate">Whether the result is indeterminate.</param>
-        public CompileResult(bool? success, int errorCount, int warningCount, DateTime completedAt, CompilerMessage[] messages, CompilerMessage[] errors, CompilerMessage[] warnings, bool isIndeterminate = false)
+        public CompileResult(
+            bool? success,
+            int errorCount,
+            int warningCount,
+            DateTime completedAt,
+            CompilerMessage[] messages,
+            CompilerMessage[] errors,
+            CompilerMessage[] warnings,
+            bool isIndeterminate = false,
+            string message = null
+        )
         {
             Success = success;
             ErrorCount = errorCount;
@@ -286,6 +399,7 @@ namespace io.github.hatayama.uLoopMCP
             Errors = errors;
             Warnings = warnings;
             IsIndeterminate = isIndeterminate;
+            Message = message;
         }
     }
 }

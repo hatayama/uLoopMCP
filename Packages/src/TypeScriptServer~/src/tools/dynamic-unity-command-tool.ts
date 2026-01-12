@@ -194,10 +194,28 @@ export class DynamicUnityCommandTool extends BaseTool {
             text: typeof result === 'string' ? result : JSON.stringify(result, null, 2),
           },
         ],
+        // Treat Unity-side failure responses as MCP tool errors.
+        // Otherwise tools that return { Success: false, ... } appear as "success" in MCP Inspector.
+        isError: this.isUnityFailureResult(result),
       };
     } catch (error) {
       return this.formatErrorResponse(error);
     }
+  }
+
+  private isUnityFailureResult(result: unknown): boolean {
+    if (typeof result !== 'object' || result === null) {
+      return false;
+    }
+
+    const obj = result as Record<string, unknown>;
+
+    // Convention across Unity tools: Success=false means tool-level failure.
+    if (obj.Success === false) {
+      return true;
+    }
+
+    return false;
   }
 
   protected formatErrorResponse(error: unknown): ToolResponse {
