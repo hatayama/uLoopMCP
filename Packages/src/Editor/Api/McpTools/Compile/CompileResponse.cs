@@ -26,27 +26,37 @@ namespace io.github.hatayama.uLoopMCP
     public class CompileResponse : BaseToolResponse
     {
         /// <summary>
-        /// Whether compilation was successful. Null indicates indeterminate status.
+        /// Whether compilation was successful.
+        /// Null is used when the tool cannot reliably determine the result yet (e.g., forced recompile/domain reload),
+        /// to avoid misleading clients into treating "0 errors" as a confirmed success.
         /// </summary>
         public bool? Success { get; set; }
 
         /// <summary>
-        /// Number of compilation errors. Null when status is indeterminate.
+        /// Number of compilation errors.
+        /// Null is used when the tool intentionally does not provide details (e.g., forced recompile),
+        /// because Unity reports errors/warnings after domain reload and clients should fetch logs later.
         /// </summary>
         public int? ErrorCount { get; set; }
 
         /// <summary>
-        /// Number of compilation warnings. Null when status is indeterminate.
+        /// Number of compilation warnings.
+        /// Null is used when the tool intentionally does not provide details (e.g., forced recompile),
+        /// because Unity reports errors/warnings after domain reload and clients should fetch logs later.
         /// </summary>
         public int? WarningCount { get; set; }
 
         /// <summary>
-        /// Compilation errors. Null when status is indeterminate.
+        /// Compilation errors.
+        /// Null is used when the tool intentionally does not provide details (e.g., forced recompile),
+        /// because Unity reports errors/warnings after domain reload and clients should fetch logs later.
         /// </summary>
         public CompileIssue[] Errors { get; set; }
 
         /// <summary>
-        /// Compilation warnings. Null when status is indeterminate.
+        /// Compilation warnings.
+        /// Null is used when the tool intentionally does not provide details (e.g., forced recompile),
+        /// because Unity reports errors/warnings after domain reload and clients should fetch logs later.
         /// </summary>
         public CompileIssue[] Warnings { get; set; }
 
