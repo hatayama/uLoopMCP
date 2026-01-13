@@ -82,18 +82,32 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                 VibeLogger.LogInfo(
                     "execute_dynamic_code_start",
                     "Dynamic code execution started (return optional)",
-                    new { 
+                    new {
                         correlationId,
                         codeLength = parameters.Code?.Length ?? 0,
                         compileOnly = parameters.CompileOnly,
                         parametersCount = parameters.Parameters?.Count ?? 0,
-                        securityLevel = _currentSecurityLevel.ToString()
+                        securityLevel = _currentSecurityLevel.ToString(),
+                        allowParallel = parameters.AllowParallel
                     },
                     correlationId,
                     "Dynamic code execution request received (return is optional)",
                     "Monitor execution flow and performance"
                 );
-                
+
+                // Warning log for parallel mode
+                if (parameters.AllowParallel)
+                {
+                    VibeLogger.LogWarning(
+                        "execute_dynamic_code_parallel_mode",
+                        "Parallel execution mode enabled - use with caution",
+                        new { correlationId, allowParallel = true },
+                        correlationId,
+                        "Parallel mode allows concurrent executions but may cause race conditions",
+                        "Ensure operations do not modify the same GameObjects"
+                    );
+                }
+
                 // Level 0: Preempt with unified error (compilation and execution not allowed)
                 if (_currentSecurityLevel == DynamicCodeSecurityLevel.Disabled)
                 {
@@ -161,7 +175,9 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     "DynamicCommand",
                     parametersArray,
                     cancellationToken,
-                    parameters.CompileOnly
+                    parameters.CompileOnly,
+                    parameters.AllowParallel,
+                    parameters.FireAndForget
                 );
 
                 // Optional: auto-insert return retry if missing return likely caused failure (unconditional)
@@ -185,7 +201,9 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                             "DynamicCommand",
                             parametersArray,
                             cancellationToken,
-                            parameters.CompileOnly
+                            parameters.CompileOnly,
+                            parameters.AllowParallel,
+                            parameters.FireAndForget
                         );
                         if (retryReturnResult.Success)
                         {
@@ -214,7 +232,9 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                                 "DynamicCommand",
                                 parametersArray,
                                 cancellationToken,
-                                parameters.CompileOnly
+                                parameters.CompileOnly,
+                                parameters.AllowParallel,
+                                parameters.FireAndForget
                             );
                             // Prefer retry result if success, otherwise keep original but merge logs
                             if (retryResult.Success)
@@ -233,10 +253,24 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                 // Convert to response (use improved message on error)
                 ExecuteDynamicCodeResponse toolResponse = ConvertExecutionResultToResponse(
                     executionResult, originalCode, correlationId);
-                
+
                 // Add security level
                 toolResponse.SecurityLevel = _currentSecurityLevel.ToString();
-                
+
+                // Add parallel mode warning to response logs
+                if (parameters.AllowParallel)
+                {
+                    if (toolResponse.Logs == null) toolResponse.Logs = new List<string>();
+                    toolResponse.Logs.Insert(0, "⚠️ PARALLEL MODE: Race conditions may occur if multiple executions modify the same GameObjects.");
+                }
+
+                // Add fire-and-forget mode warning to response logs
+                if (parameters.FireAndForget)
+                {
+                    if (toolResponse.Logs == null) toolResponse.Logs = new List<string>();
+                    toolResponse.Logs.Insert(0, "⚠️ FIRE-AND-FORGET MODE: Execution continues in background. Results/errors will NOT be returned. Check Unity Console: uloop get-logs --search-text FireAndForget");
+                }
+
                 return toolResponse;
             }
             catch (Exception ex)

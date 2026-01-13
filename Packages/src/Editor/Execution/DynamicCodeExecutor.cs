@@ -38,7 +38,9 @@ namespace io.github.hatayama.uLoopMCP
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
             object[] parameters = null,
             CancellationToken cancellationToken = default,
-            bool compileOnly = false)
+            bool compileOnly = false,
+            bool allowParallel = false,
+            bool fireAndForget = false)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
             Stopwatch stopwatch = Stopwatch.StartNew();
@@ -76,6 +78,30 @@ namespace io.github.hatayama.uLoopMCP
                     return CreateCompileOnlySuccessResult(compilationResult, correlationId, stopwatch);
                 }
 
+                // Phase 4: Check FireAndForget Mode - fire-and-forget execution
+                if (fireAndForget)
+                {
+                    _ = ExecuteInBackgroundAsync(
+                        compilationResult.CompiledAssembly,
+                        parameters,
+                        allowParallel,
+                        correlationId
+                    );
+
+                    return new ExecutionResult
+                    {
+                        Success = true,
+                        Result = null,
+                        ExecutionTime = stopwatch.Elapsed,
+                        Logs = new List<string>
+                        {
+                            "✓ Compiled successfully. Execution started in background.",
+                            $"CorrelationId: {correlationId}",
+                            "Check Unity Console for execution results: uloop get-logs --search-text FireAndForget"
+                        }
+                    };
+                }
+
                 // Runtime Guard: Level 0 blocks execution (defensive; should be caught earlier)
                 if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
                 {
@@ -84,14 +110,15 @@ namespace io.github.hatayama.uLoopMCP
                         McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0);
                 }
 
-                // Phase 4: Execution
+                // Phase 5: Execution
                 ExecutionResult executionResult = PerformExecution(
                     compilationResult.CompiledAssembly,
                     className,
                     parameters,
                     correlationId,
                     cancellationToken,
-                    stopwatch);
+                    stopwatch,
+                    allowParallel);
 
                 LogExecutionComplete(executionResult, correlationId, stopwatch);
                 return executionResult;
@@ -150,14 +177,16 @@ namespace io.github.hatayama.uLoopMCP
             object[] parameters,
             string correlationId,
             CancellationToken cancellationToken,
-            Stopwatch stopwatch)
+            Stopwatch stopwatch,
+            bool allowParallel)
         {
             ExecutionResult executionResult = ExecuteCompiledCode(
                 assembly,
                 className,
                 parameters,
                 correlationId,
-                cancellationToken);
+                cancellationToken,
+                allowParallel);
 
             executionResult.ExecutionTime = stopwatch.Elapsed;
             UpdateStatistics(executionResult, stopwatch.Elapsed);
@@ -198,7 +227,9 @@ namespace io.github.hatayama.uLoopMCP
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
             object[] parameters = null,
             CancellationToken cancellationToken = default,
-            bool compileOnly = false)
+            bool compileOnly = false,
+            bool allowParallel = false,
+            bool fireAndForget = false)
         {
 #pragma warning restore CS1998
             // Runtime Security Check (also blocks compilation at Level 0)
@@ -234,7 +265,31 @@ namespace io.github.hatayama.uLoopMCP
                     return CreateCompileOnlySuccessResult(compilationResult, correlationId, stopwatch);
                 }
 
-                // Phase 4: Execution (async via CommandRunner)
+                // Phase 4: Check FireAndForget Mode - fire-and-forget execution
+                if (fireAndForget)
+                {
+                    _ = ExecuteInBackgroundAsync(
+                        compilationResult.CompiledAssembly,
+                        parameters,
+                        allowParallel,
+                        correlationId
+                    );
+
+                    return new ExecutionResult
+                    {
+                        Success = true,
+                        Result = null,
+                        ExecutionTime = stopwatch.Elapsed,
+                        Logs = new List<string>
+                        {
+                            "✓ Compiled successfully. Execution started in background.",
+                            $"CorrelationId: {correlationId}",
+                            "Check Unity Console for execution results: uloop get-logs --search-text FireAndForget"
+                        }
+                    };
+                }
+
+                // Phase 5: Normal Execution (async via CommandRunner)
                 ExecutionContext context = new ExecutionContext
                 {
                     CompiledAssembly = compilationResult.CompiledAssembly,
@@ -242,7 +297,7 @@ namespace io.github.hatayama.uLoopMCP
                     CancellationToken = cancellationToken
                 };
 
-                ExecutionResult executionResult = await _runner.ExecuteAsync(context).ConfigureAwait(false);
+                ExecutionResult executionResult = await _runner.ExecuteAsync(context, allowParallel).ConfigureAwait(false);
                 executionResult.ExecutionTime = stopwatch.Elapsed;
                 UpdateStatistics(executionResult, stopwatch.Elapsed);
                 return executionResult;
@@ -250,6 +305,54 @@ namespace io.github.hatayama.uLoopMCP
             catch (Exception ex)
             {
                 return HandleExecutionException(ex, correlationId, stopwatch);
+            }
+        }
+
+        /// <summary>Background execution for FireAndForget mode</summary>
+        private async Task ExecuteInBackgroundAsync(
+            System.Reflection.Assembly compiledAssembly,
+            object[] parameters,
+            bool allowParallel,
+            string correlationId)
+        {
+            try
+            {
+                ExecutionContext context = new ExecutionContext
+                {
+                    CompiledAssembly = compiledAssembly,
+                    Parameters = ConvertParametersToDict(parameters ?? new object[0]),
+                    CancellationToken = CancellationToken.None
+                };
+
+                ExecutionResult result = await _runner.ExecuteAsync(context, allowParallel).ConfigureAwait(false);
+
+                if (result.Success)
+                {
+                    VibeLogger.LogInfo(
+                        "nowait_execution_complete",
+                        $"[FireAndForget] Background execution completed: {result.Result}",
+                        new { correlationId, result = result.Result },
+                        correlationId
+                    );
+                }
+                else
+                {
+                    VibeLogger.LogWarning(
+                        "nowait_execution_failed",
+                        $"[FireAndForget] Background execution failed: {result.ErrorMessage}",
+                        new { correlationId, error = result.ErrorMessage },
+                        correlationId
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                VibeLogger.LogError(
+                    "nowait_execution_error",
+                    $"[FireAndForget] Background execution error: {ex.Message}",
+                    new { correlationId, error = ex.Message, stackTrace = ex.StackTrace },
+                    correlationId
+                );
             }
         }
 
@@ -365,20 +468,20 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         private ExecutionResult ExecuteCompiledCode(
-            System.Reflection.Assembly assembly, 
+            System.Reflection.Assembly assembly,
             string className,
-            object[] parameters, 
+            object[] parameters,
             string correlationId,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            bool allowParallel)
         {
-            // Create ExecutionContext and call Execute method
             ExecutionContext context = new ExecutionContext
             {
                 CompiledAssembly = assembly,
                 Parameters = ConvertParametersToDict(parameters ?? new object[0]),
                 CancellationToken = cancellationToken
             };
-            return _runner.Execute(context);
+            return _runner.Execute(context, allowParallel);
         }
 
         private ExecutionResult CreateFailureResult(string message, TimeSpan executionTime, 
