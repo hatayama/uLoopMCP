@@ -389,6 +389,15 @@ export interface UninstallResult {
 export function uninstallAllSkills(target: TargetConfig, global: boolean): UninstallResult {
   const result: UninstallResult = { removed: 0, notFound: 0 };
 
+  const baseDir = global ? getGlobalSkillsDir(target) : getProjectSkillsDir(target);
+  for (const deprecatedName of DEPRECATED_SKILLS) {
+    const deprecatedDir = join(baseDir, deprecatedName);
+    if (existsSync(deprecatedDir)) {
+      rmSync(deprecatedDir, { recursive: true, force: true });
+      result.removed++;
+    }
+  }
+
   for (const skill of BUNDLED_SKILLS) {
     if (uninstallSkill(skill, target, global)) {
       result.removed++;
