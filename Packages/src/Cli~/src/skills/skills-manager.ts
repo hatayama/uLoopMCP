@@ -13,6 +13,7 @@ import { homedir } from 'os';
 import { BUNDLED_SKILLS, BundledSkill } from './bundled-skills.js';
 import { TargetConfig } from './target-config.js';
 import { findUnityProjectRoot } from '../project-root.js';
+import { DEPRECATED_SKILLS } from './deprecated-skills.js';
 
 export type SkillStatus = 'installed' | 'not_installed' | 'outdated';
 
@@ -316,6 +317,7 @@ export interface InstallResult {
   skipped: number;
   bundledCount: number;
   projectCount: number;
+  deprecatedRemoved: number;
 }
 
 export function installAllSkills(target: TargetConfig, global: boolean): InstallResult {
@@ -325,7 +327,17 @@ export function installAllSkills(target: TargetConfig, global: boolean): Install
     skipped: 0,
     bundledCount: 0,
     projectCount: 0,
+    deprecatedRemoved: 0,
   };
+
+  const baseDir = global ? getGlobalSkillsDir(target) : getProjectSkillsDir(target);
+  for (const deprecatedName of DEPRECATED_SKILLS) {
+    const deprecatedDir = join(baseDir, deprecatedName);
+    if (existsSync(deprecatedDir)) {
+      rmSync(deprecatedDir, { recursive: true, force: true });
+      result.deprecatedRemoved++;
+    }
+  }
 
   for (const skill of BUNDLED_SKILLS) {
     const status = getSkillStatus(skill, target, global);
@@ -376,6 +388,15 @@ export interface UninstallResult {
 
 export function uninstallAllSkills(target: TargetConfig, global: boolean): UninstallResult {
   const result: UninstallResult = { removed: 0, notFound: 0 };
+
+  const baseDir = global ? getGlobalSkillsDir(target) : getProjectSkillsDir(target);
+  for (const deprecatedName of DEPRECATED_SKILLS) {
+    const deprecatedDir = join(baseDir, deprecatedName);
+    if (existsSync(deprecatedDir)) {
+      rmSync(deprecatedDir, { recursive: true, force: true });
+      result.removed++;
+    }
+  }
 
   for (const skill of BUNDLED_SKILLS) {
     if (uninstallSkill(skill, target, global)) {
