@@ -20,8 +20,6 @@ uloop execute-dynamic-code --code '<c# code>'
 | `--code` | string | C# code to execute (direct statements, no class wrapper) |
 | `--compile-only` | boolean | Compile without execution |
 | `--auto-qualify-unity-types-once` | boolean | Auto-qualify Unity types |
-| `--allow-parallel` | boolean | Enable parallel execution (⚠️ use with caution) |
-| `--fire-and-forget` | boolean | Fire-and-forget mode (return after compile, execute in background) |
 
 ## Code Format
 
@@ -94,68 +92,3 @@ For detailed code examples, refer to these files:
   - Create ScriptableObjects, modify with SerializedObject
 - **Scene operations**: See [examples/scene-operations.md](examples/scene-operations.md)
   - Create/modify GameObjects, set parents, wire references, load scenes
-
-## Parallel Execution Mode
-
-`--allow-parallel` enables concurrent execution of multiple requests.
-
-```bash
-uloop execute-dynamic-code --code 'new GameObject("Object1");' --allow-parallel
-```
-
-### ⚠️ Risks
-
-- **Race conditions**: Simultaneous modifications to the same GameObject may cause unpredictable behavior
-- **Undo complexity**: Each parallel execution creates its own Undo group
-- **Unity API thread safety**: Some Unity APIs are not thread-safe
-
-### When to Use
-
-- Independent operations (e.g., creating objects in different locations)
-- Non-overlapping asset modifications
-- Read-only operations (queries, searches)
-
-### When NOT to Use
-
-- Modifying the same GameObject or component from multiple executions
-- Operations with sequential dependencies
-- Operations that require consistent Editor state
-
-## Fire-and-Forget Mode
-
-`--fire-and-forget` returns immediately after successful compilation. Execution continues in Unity background.
-
-```bash
-# Start a long-running monitoring task - CLI returns immediately
-uloop execute-dynamic-code --fire-and-forget --allow-parallel --code '
-while (GameObject.Find("TargetButton") == null) {
-    await Cysharp.Threading.Tasks.UniTask.Delay(100);
-}
-Selection.activeGameObject = GameObject.Find("TargetButton");
-'
-
-# Check execution results in Unity Console
-uloop get-logs --search-text "FireAndForget"
-```
-
-### Behavior
-
-- ✅ **Compile errors ARE returned** (compile check happens before return)
-- ⚠️ **Runtime errors logged to Unity Console only** (not returned to CLI)
-- 🔄 **Use with `--allow-parallel`** for multiple background tasks
-
-### Use Cases
-
-- Long-running monitoring tasks (wait for UI element to appear)
-- Scheduled actions (wait N seconds then perform action)
-- Multiple independent background tasks
-
-### Checking Background Execution Results
-
-```bash
-# View recent FireAndForget execution logs
-uloop get-logs --search-text "FireAndForget"
-
-# View all recent logs
-uloop get-logs --max-count 20
-```

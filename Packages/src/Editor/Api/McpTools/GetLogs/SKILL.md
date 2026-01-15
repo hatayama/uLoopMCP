@@ -1,6 +1,6 @@
 ---
 name: uloop-get-logs
-description: Retrieve Unity Console logs via uloop CLI. Use when you need to: (1) Check for errors or warnings after operations, (2) Debug runtime issues in Unity Editor, (3) Investigate unexpected behavior or exceptions.
+description: Get Unity Console output including errors, warnings, and Debug.Log messages. Use when you need to: (1) Check for compile errors or runtime exceptions after code changes, (2) See what Debug.Log printed during execution, (3) Find NullReferenceException, MissingComponentException, or other error messages, (4) Investigate why something failed in Unity Editor.
 ---
 
 # uloop get-logs

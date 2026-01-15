@@ -11,7 +11,6 @@
  * To exclude a skill from bundling, add `internal: true` to its frontmatter.
  */
 
-import captureWindowSkill from '../../../Editor/Api/McpTools/CaptureWindow/SKILL.md';
 import clearConsoleSkill from '../../../Editor/Api/McpTools/ClearConsole/SKILL.md';
 import compileSkill from '../../../Editor/Api/McpTools/Compile/SKILL.md';
 import controlPlayModeSkill from '../../../Editor/Api/McpTools/ControlPlayMode/SKILL.md';
@@ -24,6 +23,7 @@ import getLogsSkill from '../../../Editor/Api/McpTools/GetLogs/SKILL.md';
 import getMenuItemsSkill from '../../../Editor/Api/McpTools/GetMenuItems/SKILL.md';
 import getProviderDetailsSkill from '../../../Editor/Api/McpTools/UnitySearchProviderDetails/SKILL.md';
 import runTestsSkill from '../../../Editor/Api/McpTools/RunTests/SKILL.md';
+import screenshotSkill from '../../../Editor/Api/McpTools/CaptureWindow/SKILL.md';
 import unitySearchSkill from '../../../Editor/Api/McpTools/UnitySearch/SKILL.md';
 
 export interface BundledSkill {
@@ -34,11 +34,6 @@ export interface BundledSkill {
 }
 
 export const BUNDLED_SKILLS: BundledSkill[] = [
-  {
-    name: 'uloop-capture-window',
-    dirName: 'uloop-capture-window',
-    content: captureWindowSkill,
-  },
   {
     name: 'uloop-clear-console',
     dirName: 'uloop-clear-console',
@@ -1232,6 +1227,10 @@ using UnityEditor;
 
 string prefabPath = "Assets/Prefabs/MyCube.prefab";
 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+if (prefab == null)
+{
+    return $"Prefab not found at {prefabPath}";
+}
 string assetPath = AssetDatabase.GetAssetPath(prefab);
 
 using (PrefabUtility.EditPrefabContentsScope scope = new PrefabUtility.EditPrefabContentsScope(assetPath))
@@ -1252,6 +1251,10 @@ using UnityEditor;
 
 string prefabPath = "Assets/Prefabs/MyCube.prefab";
 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+if (prefab == null)
+{
+    return $"Prefab not found at {prefabPath}";
+}
 
 using (PrefabUtility.EditPrefabContentsScope scope = new PrefabUtility.EditPrefabContentsScope(prefabPath))
 {
@@ -1614,6 +1617,10 @@ using UnityEditor;
 
 string path = "Assets/Data/GameSettings.asset";
 ScriptableObject so = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+if (so == null)
+{
+    return $"Asset not found at {path}";
+}
 
 SerializedObject serializedObj = new SerializedObject(so);
 
@@ -2312,6 +2319,11 @@ return "Changed material color (Undo available)";
     name: 'uloop-run-tests',
     dirName: 'uloop-run-tests',
     content: runTestsSkill,
+  },
+  {
+    name: 'uloop-screenshot',
+    dirName: 'uloop-screenshot',
+    content: screenshotSkill,
   },
   {
     name: 'uloop-unity-search',
