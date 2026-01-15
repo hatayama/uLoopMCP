@@ -164,6 +164,9 @@ function installSkills(targets: TargetConfig[], global: boolean): void {
     console.log(`  \x1b[32m✓\x1b[0m Installed: ${result.installed}`);
     console.log(`  \x1b[33m↑\x1b[0m Updated: ${result.updated}`);
     console.log(`  \x1b[90m-\x1b[0m Skipped (up-to-date): ${result.skipped}`);
+    if (result.deprecatedRemoved > 0) {
+      console.log(`  \x1b[31m✗\x1b[0m Deprecated removed: ${result.deprecatedRemoved}`);
+    }
     console.log(`  Location: ${dir}`);
     console.log('');
   }

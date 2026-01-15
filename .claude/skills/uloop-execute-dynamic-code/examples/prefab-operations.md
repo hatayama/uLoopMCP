@@ -39,6 +39,10 @@ using UnityEditor;
 
 string prefabPath = "Assets/Prefabs/MyCube.prefab";
 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+if (prefab == null)
+{
+    return $"Prefab not found at {prefabPath}";
+}
 string assetPath = AssetDatabase.GetAssetPath(prefab);
 
 using (PrefabUtility.EditPrefabContentsScope scope = new PrefabUtility.EditPrefabContentsScope(assetPath))
@@ -59,6 +63,10 @@ using UnityEditor;
 
 string prefabPath = "Assets/Prefabs/MyCube.prefab";
 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+if (prefab == null)
+{
+    return $"Prefab not found at {prefabPath}";
+}
 
 using (PrefabUtility.EditPrefabContentsScope scope = new PrefabUtility.EditPrefabContentsScope(prefabPath))
 {
