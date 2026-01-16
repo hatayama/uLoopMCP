@@ -530,6 +530,9 @@ function collectSkillFolderFilesRecursive(
     const relativePath = fullPath.slice(baseDir.length + 1);
 
     if (entry.isDirectory()) {
+      if (EXCLUDED_DIRS.has(entry.name)) {
+        continue;
+      }
       collectSkillFolderFilesRecursive(baseDir, fullPath, additionalFiles);
     } else if (entry.isFile()) {
       if (entry.name === SkillsPathConstants.SKILL_FILE) {
