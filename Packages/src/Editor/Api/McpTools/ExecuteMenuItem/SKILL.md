@@ -1,6 +1,6 @@
 ---
 name: uloop-execute-menu-item
-description: Execute Unity MenuItem via uloop CLI. Use when you need to: (1) Trigger menu commands programmatically, (2) Automate editor actions (save, build, refresh), (3) Run custom menu items defined in scripts.
+description: "Execute Unity MenuItem via uloop CLI. Use when you need to: (1) Trigger menu commands programmatically, (2) Automate editor actions (save, build, refresh), (3) Run custom menu items defined in scripts."
 ---
 
 # uloop execute-menu-item

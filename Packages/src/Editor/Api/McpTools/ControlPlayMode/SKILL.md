@@ -1,6 +1,6 @@
 ---
 name: uloop-control-play-mode
-description: Control Unity Editor play mode via uloop CLI. Use when you need to: (1) Start play mode for testing, (2) Stop play mode after testing, (3) Pause play mode for debugging.
+description: "Control Unity Editor play mode via uloop CLI. Use when you need to: (1) Start play mode for testing, (2) Stop play mode after testing, (3) Pause play mode for debugging."
 ---
 
 # uloop control-play-mode

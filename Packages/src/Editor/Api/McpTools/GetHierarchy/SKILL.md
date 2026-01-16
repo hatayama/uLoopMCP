@@ -1,6 +1,6 @@
 ---
 name: uloop-get-hierarchy
-description: Get Unity Hierarchy structure via uloop CLI. Use when you need to: (1) Inspect scene structure and GameObject tree, (2) Find GameObjects and their parent-child relationships, (3) Check component attachments on objects.
+description: "Get Unity Hierarchy structure via uloop CLI. Use when you need to: (1) Inspect scene structure and GameObject tree, (2) Find GameObjects and their parent-child relationships, (3) Check component attachments on objects."
 ---
 
 # uloop get-hierarchy
