@@ -1,6 +1,6 @@
 ---
 name: uloop-get-version
-description: Get Unity and project information via uloop CLI. Use when you need to verify Unity version, check project settings (ProductName, CompanyName, Version), or troubleshoot environment issues.
+description: "Get Unity and project information via uloop CLI. Use when you need to verify Unity version, check project settings (ProductName, CompanyName, Version), or troubleshoot environment issues."
 internal: true
 ---
 
