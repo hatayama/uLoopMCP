@@ -82,13 +82,13 @@ For file/directory operations, use terminal commands instead.
 
 For detailed code examples, refer to these files:
 
-- **Prefab operations**: See [examples/prefab-operations.md](examples/prefab-operations.md)
+- **Prefab operations**: See [references/prefab-operations.md](references/prefab-operations.md)
   - Create prefabs, instantiate, add components, modify properties
-- **Material operations**: See [examples/material-operations.md](examples/material-operations.md)
+- **Material operations**: See [references/material-operations.md](references/material-operations.md)
   - Create materials, set shaders/textures, modify properties
-- **Asset operations**: See [examples/asset-operations.md](examples/asset-operations.md)
+- **Asset operations**: See [references/asset-operations.md](references/asset-operations.md)
   - Find/search assets, duplicate, move, rename, load
-- **ScriptableObject**: See [examples/scriptableobject.md](examples/scriptableobject.md)
+- **ScriptableObject**: See [references/scriptableobject.md](references/scriptableobject.md)
   - Create ScriptableObjects, modify with SerializedObject
-- **Scene operations**: See [examples/scene-operations.md](examples/scene-operations.md)
+- **Scene operations**: See [references/scene-operations.md](references/scene-operations.md)
   - Create/modify GameObjects, set parents, wire references, load scenes
