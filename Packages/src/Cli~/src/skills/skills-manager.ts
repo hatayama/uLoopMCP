@@ -8,9 +8,8 @@
 /* eslint-disable security/detect-non-literal-fs-filename */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, resolve, isAbsolute, sep } from 'path';
 import { homedir } from 'os';
-import { BUNDLED_SKILLS, BundledSkill } from './bundled-skills.js';
 import { TargetConfig } from './target-config.js';
 import { findUnityProjectRoot } from '../project-root.js';
 import { DEPRECATED_SKILLS } from './deprecated-skills.js';
@@ -24,14 +23,42 @@ export interface SkillInfo {
   source?: 'bundled' | 'project';
 }
 
-export interface ProjectSkill {
+export interface SkillDefinition {
   name: string;
   dirName: string;
   content: string;
   sourcePath: string;
+  additionalFiles?: Record<string, string>;
+  sourceType: 'package' | 'cli-only' | 'project';
 }
 
 const EXCLUDED_DIRS = new Set(['node_modules', '.git', 'Temp', 'obj', 'Build', 'Builds', 'Logs']);
+class SkillsPathConstants {
+  public static readonly PACKAGES_DIR = 'Packages';
+  public static readonly SRC_DIR = 'src';
+  public static readonly SKILLS_DIR = 'skills';
+  public static readonly EDITOR_DIR = 'Editor';
+  public static readonly API_DIR = 'Api';
+  public static readonly MCP_TOOLS_DIR = 'McpTools';
+  public static readonly EXAMPLES_DIR = 'examples';
+  public static readonly LIBRARY_DIR = 'Library';
+  public static readonly PACKAGE_CACHE_DIR = 'PackageCache';
+  public static readonly ASSETS_DIR = 'Assets';
+  public static readonly MANIFEST_FILE = 'manifest.json';
+  public static readonly SKILL_FILE = 'SKILL.md';
+  public static readonly CLI_ONLY_DIR = 'skill-definitions';
+  public static readonly CLI_ONLY_SUBDIR = 'cli-only';
+  public static readonly DIST_PARENT_DIR = '..';
+  public static readonly MD_EXTENSION = '.md';
+  public static readonly FILE_PROTOCOL = 'file:';
+  public static readonly PATH_PROTOCOL = 'path:';
+  public static readonly PACKAGE_NAME = 'io.github.hatayama.uloopmcp';
+  public static readonly PACKAGE_NAME_ALIAS = 'io.github.hatayama.uLoopMCP';
+  public static readonly PACKAGE_NAMES = [
+    SkillsPathConstants.PACKAGE_NAME,
+    SkillsPathConstants.PACKAGE_NAME_ALIAS,
+  ];
+}
 
 function getGlobalSkillsDir(target: TargetConfig): string {
   return join(homedir(), target.projectDir, 'skills');
@@ -52,20 +79,12 @@ function getSkillPath(skillDirName: string, target: TargetConfig, global: boolea
   return join(baseDir, skillDirName, target.skillFileName);
 }
 
-function isSkillInstalled(
-  skill: BundledSkill | ProjectSkill,
-  target: TargetConfig,
-  global: boolean,
-): boolean {
+function isSkillInstalled(skill: SkillDefinition, target: TargetConfig, global: boolean): boolean {
   const skillPath = getSkillPath(skill.dirName, target, global);
   return existsSync(skillPath);
 }
 
-function isSkillOutdated(
-  skill: BundledSkill | ProjectSkill,
-  target: TargetConfig,
-  global: boolean,
-): boolean {
+function isSkillOutdated(skill: SkillDefinition, target: TargetConfig, global: boolean): boolean {
   const baseDir = global ? getGlobalSkillsDir(target) : getProjectSkillsDir(target);
   const skillDir = join(baseDir, skill.dirName);
   const skillPath = join(skillDir, target.skillFileName);
@@ -97,7 +116,7 @@ function isSkillOutdated(
 }
 
 export function getSkillStatus(
-  skill: BundledSkill | ProjectSkill,
+  skill: SkillDefinition,
   target: TargetConfig,
   global: boolean,
 ): SkillStatus {
@@ -141,7 +160,11 @@ export function parseFrontmatter(content: string): Record<string, string | boole
   return Object.fromEntries(frontmatterMap);
 }
 
-function scanEditorFolderForSkills(editorPath: string, skills: ProjectSkill[]): void {
+function scanEditorFolderForSkills(
+  editorPath: string,
+  skills: SkillDefinition[],
+  sourceType: SkillDefinition['sourceType'],
+): void {
   if (!existsSync(editorPath)) {
     return;
   }
@@ -156,7 +179,7 @@ function scanEditorFolderForSkills(editorPath: string, skills: ProjectSkill[]): 
     const fullPath = join(editorPath, entry.name);
 
     if (entry.isDirectory()) {
-      const skillMdPath = join(fullPath, 'SKILL.md');
+      const skillMdPath = join(fullPath, SkillsPathConstants.SKILL_FILE);
       if (existsSync(skillMdPath)) {
         const content = readFileSync(skillMdPath, 'utf-8');
         const frontmatter = parseFrontmatter(content);
@@ -166,16 +189,19 @@ function scanEditorFolderForSkills(editorPath: string, skills: ProjectSkill[]): 
         }
 
         const name = typeof frontmatter.name === 'string' ? frontmatter.name : entry.name;
+        const additionalFiles = collectAdditionalFiles(fullPath);
 
         skills.push({
           name,
           dirName: name,
           content,
           sourcePath: skillMdPath,
+          additionalFiles,
+          sourceType,
         });
       }
 
-      scanEditorFolderForSkills(fullPath, skills);
+      scanEditorFolderForSkills(fullPath, skills, sourceType);
     }
   }
 }
@@ -209,18 +235,18 @@ function findEditorFolders(basePath: string, maxDepth: number = 2): string[] {
   return editorFolders;
 }
 
-export function collectProjectSkills(): ProjectSkill[] {
+export function collectProjectSkills(excludedRoots: string[] = []): SkillDefinition[] {
   const projectRoot = findUnityProjectRoot();
   if (!projectRoot) {
     return [];
   }
-  const skills: ProjectSkill[] = [];
+  const skills: SkillDefinition[] = [];
   const seenNames = new Set<string>();
 
   const searchPaths = [
-    join(projectRoot, 'Assets'),
-    join(projectRoot, 'Packages'),
-    join(projectRoot, 'Library', 'PackageCache'),
+    join(projectRoot, SkillsPathConstants.ASSETS_DIR),
+    join(projectRoot, SkillsPathConstants.PACKAGES_DIR),
+    join(projectRoot, SkillsPathConstants.LIBRARY_DIR, SkillsPathConstants.PACKAGE_CACHE_DIR),
   ];
 
   for (const searchPath of searchPaths) {
@@ -231,12 +257,15 @@ export function collectProjectSkills(): ProjectSkill[] {
     const editorFolders = findEditorFolders(searchPath, 3);
 
     for (const editorFolder of editorFolders) {
-      scanEditorFolderForSkills(editorFolder, skills);
+      scanEditorFolderForSkills(editorFolder, skills, 'project');
     }
   }
 
-  const uniqueSkills: ProjectSkill[] = [];
+  const uniqueSkills: SkillDefinition[] = [];
   for (const skill of skills) {
+    if (isUnderExcludedRoots(skill.sourcePath, excludedRoots)) {
+      continue;
+    }
     if (!seenNames.has(skill.name)) {
       seenNames.add(skill.name);
       uniqueSkills.push(skill);
@@ -247,37 +276,18 @@ export function collectProjectSkills(): ProjectSkill[] {
 }
 
 export function getAllSkillStatuses(target: TargetConfig, global: boolean): SkillInfo[] {
-  const bundledStatuses: SkillInfo[] = BUNDLED_SKILLS.map((skill) => ({
+  const allSkills = collectAllSkills();
+  return allSkills.map((skill) => ({
     name: skill.name,
     status: getSkillStatus(skill, target, global),
     path: isSkillInstalled(skill, target, global)
       ? getSkillPath(skill.dirName, target, global)
       : undefined,
-    source: 'bundled' as const,
+    source: skill.sourceType === 'project' ? 'project' : 'bundled',
   }));
-
-  const projectSkills = collectProjectSkills();
-  const bundledNames = new Set(BUNDLED_SKILLS.map((s) => s.name));
-
-  const projectStatuses: SkillInfo[] = projectSkills
-    .filter((skill) => !bundledNames.has(skill.name))
-    .map((skill) => ({
-      name: skill.name,
-      status: getSkillStatus(skill, target, global),
-      path: isSkillInstalled(skill, target, global)
-        ? getSkillPath(skill.dirName, target, global)
-        : undefined,
-      source: 'project' as const,
-    }));
-
-  return [...bundledStatuses, ...projectStatuses];
 }
 
-export function installSkill(
-  skill: BundledSkill | ProjectSkill,
-  target: TargetConfig,
-  global: boolean,
-): void {
+export function installSkill(skill: SkillDefinition, target: TargetConfig, global: boolean): void {
   const baseDir = global ? getGlobalSkillsDir(target) : getProjectSkillsDir(target);
   const skillDir = join(baseDir, skill.dirName);
   const skillPath = join(skillDir, target.skillFileName);
@@ -296,7 +306,7 @@ export function installSkill(
 }
 
 export function uninstallSkill(
-  skill: BundledSkill | ProjectSkill,
+  skill: SkillDefinition,
   target: TargetConfig,
   global: boolean,
 ): boolean {
@@ -339,7 +349,11 @@ export function installAllSkills(target: TargetConfig, global: boolean): Install
     }
   }
 
-  for (const skill of BUNDLED_SKILLS) {
+  const allSkills = collectAllSkills();
+  const projectSkills = allSkills.filter((skill) => skill.sourceType === 'project');
+  const nonProjectSkills = allSkills.filter((skill) => skill.sourceType !== 'project');
+
+  for (const skill of allSkills) {
     const status = getSkillStatus(skill, target, global);
 
     if (status === 'not_installed') {
@@ -352,31 +366,8 @@ export function installAllSkills(target: TargetConfig, global: boolean): Install
       result.skipped++;
     }
   }
-  result.bundledCount = BUNDLED_SKILLS.length;
-
-  const projectSkills = collectProjectSkills();
-  const bundledNames = new Set(BUNDLED_SKILLS.map((s) => s.name));
-
-  for (const skill of projectSkills) {
-    if (bundledNames.has(skill.name)) {
-      continue;
-    }
-
-    const status = getSkillStatus(skill, target, global);
-
-    if (status === 'not_installed') {
-      installSkill(skill, target, global);
-      result.installed++;
-      result.projectCount++;
-    } else if (status === 'outdated') {
-      installSkill(skill, target, global);
-      result.updated++;
-      result.projectCount++;
-    } else {
-      result.skipped++;
-      result.projectCount++;
-    }
-  }
+  result.bundledCount = nonProjectSkills.length;
+  result.projectCount = projectSkills.length;
 
   return result;
 }
@@ -398,22 +389,8 @@ export function uninstallAllSkills(target: TargetConfig, global: boolean): Unins
     }
   }
 
-  for (const skill of BUNDLED_SKILLS) {
-    if (uninstallSkill(skill, target, global)) {
-      result.removed++;
-    } else {
-      result.notFound++;
-    }
-  }
-
-  const projectSkills = collectProjectSkills();
-  const bundledNames = new Set(BUNDLED_SKILLS.map((s) => s.name));
-
-  for (const skill of projectSkills) {
-    if (bundledNames.has(skill.name)) {
-      continue;
-    }
-
+  const allSkills = collectAllSkills();
+  for (const skill of allSkills) {
     if (uninstallSkill(skill, target, global)) {
       result.removed++;
     } else {
@@ -429,8 +406,255 @@ export function getInstallDir(target: TargetConfig, global: boolean): string {
 }
 
 export function getTotalSkillCount(): number {
-  const projectSkills = collectProjectSkills();
-  const bundledNames = new Set(BUNDLED_SKILLS.map((s) => s.name));
-  const uniqueProjectCount = projectSkills.filter((s) => !bundledNames.has(s.name)).length;
-  return BUNDLED_SKILLS.length + uniqueProjectCount;
+  return collectAllSkills().length;
+}
+
+function collectAllSkills(): SkillDefinition[] {
+  const projectRoot = findUnityProjectRoot();
+  const packageRoot = projectRoot ? resolvePackageRoot(projectRoot) : null;
+  const packageSkills = packageRoot ? collectPackageSkillsFromRoot(packageRoot) : [];
+  const cliOnlySkills = collectCliOnlySkills();
+  const projectSkills = collectProjectSkills(packageRoot ? [packageRoot] : []);
+
+  return dedupeSkillsByName([packageSkills, cliOnlySkills, projectSkills]);
+}
+
+function collectPackageSkillsFromRoot(packageRoot: string): SkillDefinition[] {
+  const mcpToolsRoot = join(
+    packageRoot,
+    SkillsPathConstants.EDITOR_DIR,
+    SkillsPathConstants.API_DIR,
+    SkillsPathConstants.MCP_TOOLS_DIR,
+  );
+  if (!existsSync(mcpToolsRoot)) {
+    return [];
+  }
+  const skills: SkillDefinition[] = [];
+  scanEditorFolderForSkills(mcpToolsRoot, skills, 'package');
+  return skills;
+}
+
+function collectCliOnlySkills(): SkillDefinition[] {
+  const cliOnlyRoot = resolve(
+    __dirname,
+    SkillsPathConstants.DIST_PARENT_DIR,
+    SkillsPathConstants.SRC_DIR,
+    SkillsPathConstants.SKILLS_DIR,
+    SkillsPathConstants.CLI_ONLY_DIR,
+    SkillsPathConstants.CLI_ONLY_SUBDIR,
+  );
+  if (!existsSync(cliOnlyRoot)) {
+    return [];
+  }
+  const skills: SkillDefinition[] = [];
+  scanEditorFolderForSkills(cliOnlyRoot, skills, 'cli-only');
+  return skills;
+}
+
+function collectAdditionalFiles(skillDir: string): Record<string, string> | undefined {
+  const examplesDir = join(skillDir, SkillsPathConstants.EXAMPLES_DIR);
+  if (!existsSync(examplesDir)) {
+    return undefined;
+  }
+  const entries = readdirSync(examplesDir, { withFileTypes: true });
+  const additionalFiles: Record<string, string> = {};
+  for (const entry of entries) {
+    if (!entry.isFile()) {
+      continue;
+    }
+    if (!entry.name.endsWith(SkillsPathConstants.MD_EXTENSION)) {
+      continue;
+    }
+    const filePath = join(examplesDir, entry.name);
+    const relativePath = join(SkillsPathConstants.EXAMPLES_DIR, entry.name);
+    // eslint-disable-next-line security/detect-object-injection -- Example paths are controlled by package files, not user input.
+    additionalFiles[relativePath] = readFileSync(filePath, 'utf-8');
+  }
+  return Object.keys(additionalFiles).length > 0 ? additionalFiles : undefined;
+}
+
+function dedupeSkillsByName(skillGroups: SkillDefinition[][]): SkillDefinition[] {
+  const seenNames = new Set<string>();
+  const merged: SkillDefinition[] = [];
+  for (const group of skillGroups) {
+    for (const skill of group) {
+      if (seenNames.has(skill.name)) {
+        continue;
+      }
+      seenNames.add(skill.name);
+      merged.push(skill);
+    }
+  }
+  return merged;
+}
+
+function resolvePackageRoot(projectRoot: string): string | null {
+  const candidates: string[] = [];
+  candidates.push(join(projectRoot, SkillsPathConstants.PACKAGES_DIR, SkillsPathConstants.SRC_DIR));
+
+  const manifestPaths = resolveManifestPackagePaths(projectRoot);
+  for (const manifestPath of manifestPaths) {
+    candidates.push(manifestPath);
+  }
+
+  for (const packageName of SkillsPathConstants.PACKAGE_NAMES) {
+    candidates.push(join(projectRoot, SkillsPathConstants.PACKAGES_DIR, packageName));
+  }
+
+  const directRoot = resolveFirstPackageRoot(candidates);
+  if (directRoot) {
+    return directRoot;
+  }
+
+  return resolvePackageCacheRoot(projectRoot);
+}
+
+function resolveManifestPackagePaths(projectRoot: string): string[] {
+  const manifestPath = join(
+    projectRoot,
+    SkillsPathConstants.PACKAGES_DIR,
+    SkillsPathConstants.MANIFEST_FILE,
+  );
+  if (!existsSync(manifestPath)) {
+    return [];
+  }
+  const manifestContent = readFileSync(manifestPath, 'utf-8');
+  const manifestJson = JSON.parse(manifestContent) as { dependencies?: Record<string, string> };
+  const dependencies = manifestJson.dependencies;
+  if (!dependencies) {
+    return [];
+  }
+  const resolvedPaths: string[] = [];
+  for (const [dependencyName, dependencyValue] of Object.entries(dependencies)) {
+    if (!isTargetPackageName(dependencyName)) {
+      continue;
+    }
+    const localPath = resolveLocalDependencyPath(dependencyValue, projectRoot);
+    if (localPath) {
+      resolvedPaths.push(localPath);
+    }
+  }
+  return resolvedPaths;
+}
+
+function resolveLocalDependencyPath(dependencyValue: string, projectRoot: string): string | null {
+  if (dependencyValue.startsWith(SkillsPathConstants.FILE_PROTOCOL)) {
+    const rawPath = dependencyValue.slice(SkillsPathConstants.FILE_PROTOCOL.length);
+    return resolveDependencyPath(rawPath, projectRoot);
+  }
+  if (dependencyValue.startsWith(SkillsPathConstants.PATH_PROTOCOL)) {
+    const rawPath = dependencyValue.slice(SkillsPathConstants.PATH_PROTOCOL.length);
+    return resolveDependencyPath(rawPath, projectRoot);
+  }
+  return null;
+}
+
+function resolveDependencyPath(rawPath: string, projectRoot: string): string | null {
+  const trimmed = rawPath.trim();
+  if (!trimmed) {
+    return null;
+  }
+  let normalizedPath = trimmed;
+  if (normalizedPath.startsWith('//')) {
+    normalizedPath = normalizedPath.slice(2);
+  }
+  if (isAbsolute(normalizedPath)) {
+    return normalizedPath;
+  }
+  return resolve(projectRoot, normalizedPath);
+}
+
+function resolveFirstPackageRoot(candidates: string[]): string | null {
+  for (const candidate of candidates) {
+    const resolvedRoot = resolvePackageRootCandidate(candidate);
+    if (resolvedRoot) {
+      return resolvedRoot;
+    }
+  }
+  return null;
+}
+
+function resolvePackageCacheRoot(projectRoot: string): string | null {
+  const packageCacheDir = join(
+    projectRoot,
+    SkillsPathConstants.LIBRARY_DIR,
+    SkillsPathConstants.PACKAGE_CACHE_DIR,
+  );
+  if (!existsSync(packageCacheDir)) {
+    return null;
+  }
+  const entries = readdirSync(packageCacheDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    if (!isTargetPackageCacheDir(entry.name)) {
+      continue;
+    }
+    const candidate = join(packageCacheDir, entry.name);
+    const resolvedRoot = resolvePackageRootCandidate(candidate);
+    if (resolvedRoot) {
+      return resolvedRoot;
+    }
+  }
+  return null;
+}
+
+function resolvePackageRootCandidate(candidate: string): string | null {
+  if (!existsSync(candidate)) {
+    return null;
+  }
+  const directToolsPath = join(
+    candidate,
+    SkillsPathConstants.EDITOR_DIR,
+    SkillsPathConstants.API_DIR,
+    SkillsPathConstants.MCP_TOOLS_DIR,
+  );
+  if (existsSync(directToolsPath)) {
+    return candidate;
+  }
+
+  const nestedRoot = join(candidate, SkillsPathConstants.PACKAGES_DIR, SkillsPathConstants.SRC_DIR);
+  const nestedToolsPath = join(
+    nestedRoot,
+    SkillsPathConstants.EDITOR_DIR,
+    SkillsPathConstants.API_DIR,
+    SkillsPathConstants.MCP_TOOLS_DIR,
+  );
+  if (existsSync(nestedToolsPath)) {
+    return nestedRoot;
+  }
+  return null;
+}
+
+function isTargetPackageName(name: string): boolean {
+  const normalized = name.toLowerCase();
+  return SkillsPathConstants.PACKAGE_NAMES.some(
+    (packageName) => packageName.toLowerCase() === normalized,
+  );
+}
+
+function isTargetPackageCacheDir(dirName: string): boolean {
+  const normalized = dirName.toLowerCase();
+  return SkillsPathConstants.PACKAGE_NAMES.some((packageName) =>
+    normalized.startsWith(`${packageName.toLowerCase()}@`),
+  );
+}
+
+function isUnderExcludedRoots(targetPath: string, excludedRoots: string[]): boolean {
+  for (const root of excludedRoots) {
+    if (isPathUnder(targetPath, root)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isPathUnder(childPath: string, parentPath: string): boolean {
+  const resolvedChild = resolve(childPath);
+  const resolvedParent = resolve(parentPath);
+  if (resolvedChild === resolvedParent) {
+    return true;
+  }
+  return resolvedChild.startsWith(resolvedParent + sep);
 }
