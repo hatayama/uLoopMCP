@@ -519,7 +519,15 @@ function resolveManifestPackagePaths(projectRoot: string): string[] {
     return [];
   }
   const manifestContent = readFileSync(manifestPath, 'utf-8');
-  const manifestJson = JSON.parse(manifestContent) as { dependencies?: Record<string, string> };
+  let manifestJson: { dependencies?: Record<string, string> };
+  try {
+    manifestJson = JSON.parse(manifestContent) as { dependencies?: Record<string, string> };
+  } catch (error) {
+    // Manifest is user-editable; fail-soft to keep skill installation usable.
+    // eslint-disable-next-line no-console -- Warning is required; silent failure would hide manifest issues.
+    console.warn('Failed to parse manifest.json; skipping manifest-based path resolution.', error);
+    return [];
+  }
   const dependencies = manifestJson.dependencies;
   if (!dependencies) {
     return [];
