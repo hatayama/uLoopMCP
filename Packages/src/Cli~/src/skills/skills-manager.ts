@@ -184,7 +184,6 @@ function warnLegacySkillStructure(toolPath: string, legacySkillMdPath: string): 
   warnedLegacyPaths.add(legacySkillMdPath);
 
   const hasLegacyExamples = existsSync(join(toolPath, 'examples'));
-  const legacyFiles = hasLegacyExamples ? 'SKILL.md and examples/' : 'SKILL.md';
 
   /* eslint-disable no-console -- CLI user-facing warning output */
   console.error('\x1b[33m' + '='.repeat(70) + '\x1b[0m');
@@ -192,8 +191,11 @@ function warnLegacySkillStructure(toolPath: string, legacySkillMdPath: string): 
   console.error(`  Path: ${legacySkillMdPath}`);
   console.error('');
   console.error('  The skill structure has changed. Please migrate to the new format:');
-  console.error(`    1. Create a "Skill" folder in the tool directory`);
-  console.error(`    2. Move ${legacyFiles} into the "Skill" folder`);
+  console.error('    1. Create a "Skill" folder in the tool directory');
+  console.error('    2. Move SKILL.md into the "Skill" folder');
+  if (hasLegacyExamples) {
+    console.error('    3. Rename examples/ to references/ and move into Skill/references/');
+  }
   console.error('');
   console.error('  Expected structure:');
   console.error('    ToolName/');
