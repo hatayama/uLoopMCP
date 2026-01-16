@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.54.0](https://github.com/hatayama/uLoopMCP/compare/v0.53.3...v0.54.0) (2026-01-16)
+
+
+### Features
+
+* improve skill discoverability with better naming and descriptions ([#534](https://github.com/hatayama/uLoopMCP/issues/534)) ([0c9c2d5](https://github.com/hatayama/uLoopMCP/commit/0c9c2d5a02793e9b4ee7b6f7e4043a6045fbd8c3))
+* migrate skills to Agent Skills specification structure ([#538](https://github.com/hatayama/uLoopMCP/issues/538)) ([64dea12](https://github.com/hatayama/uLoopMCP/commit/64dea12d0887e1f1366a7b8ee8a82852fc57fb2d))
+* Switch CLI skills to dynamic package loading ([#537](https://github.com/hatayama/uLoopMCP/issues/537)) ([4e48593](https://github.com/hatayama/uLoopMCP/commit/4e48593f81d76f62c764a88bffbfde56c0dafa35))
+
+
+### Bug Fixes
+
+* **cli:** resolve lint warnings and type errors ([#524](https://github.com/hatayama/uLoopMCP/issues/524)) ([ffe0df6](https://github.com/hatayama/uLoopMCP/commit/ffe0df616a204991895c5940f593606c23bdd128))
+* **compile:** report duplicate asmdef and avoid silent hangs ([#529](https://github.com/hatayama/uLoopMCP/issues/529)) ([f181aaa](https://github.com/hatayama/uLoopMCP/commit/f181aaaecfdc28c148bbbc371bbf5d969cb96081))
+* correct SKILL.md file format ([#535](https://github.com/hatayama/uLoopMCP/issues/535)) ([79ce5d4](https://github.com/hatayama/uLoopMCP/commit/79ce5d4cd1936f53a3c5f84a21e886f8a925eabd))
+
 ## [0.53.3](https://github.com/hatayama/uLoopMCP/compare/v0.53.2...v0.53.3) (2026-01-06)
 
 
