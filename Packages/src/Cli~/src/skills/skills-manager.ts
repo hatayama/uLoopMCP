@@ -28,7 +28,7 @@ export interface SkillDefinition {
   dirName: string;
   content: string;
   sourcePath: string;
-  additionalFiles?: Record<string, string>;
+  additionalFiles?: Record<string, Buffer>;
   sourceType: 'package' | 'cli-only' | 'project';
 }
 
@@ -114,14 +114,14 @@ function isSkillOutdated(skill: SkillDefinition, target: TargetConfig, global: b
   }
 
   if ('additionalFiles' in skill && skill.additionalFiles) {
-    const additionalFiles: Record<string, string> = skill.additionalFiles;
+    const additionalFiles: Record<string, Buffer> = skill.additionalFiles;
     for (const [relativePath, expectedContent] of Object.entries(additionalFiles)) {
       const filePath = join(skillDir, relativePath);
       if (!existsSync(filePath)) {
         return true;
       }
-      const installedFileContent = readFileSync(filePath, 'utf-8');
-      if (installedFileContent !== expectedContent) {
+      const installedFileContent = readFileSync(filePath);
+      if (!installedFileContent.equals(expectedContent)) {
         return true;
       }
     }
@@ -346,11 +346,11 @@ export function installSkill(skill: SkillDefinition, target: TargetConfig, globa
   writeFileSync(skillPath, skill.content, 'utf-8');
 
   if ('additionalFiles' in skill && skill.additionalFiles) {
-    const additionalFiles: Record<string, string> = skill.additionalFiles;
+    const additionalFiles: Record<string, Buffer> = skill.additionalFiles;
     for (const [relativePath, content] of Object.entries(additionalFiles)) {
       const fullPath = join(skillDir, relativePath);
       mkdirSync(dirname(fullPath), { recursive: true });
-      writeFileSync(fullPath, content, 'utf-8');
+      writeFileSync(fullPath, content);
     }
   }
 }
@@ -516,7 +516,7 @@ function isExcludedFile(fileName: string): boolean {
 function collectSkillFolderFilesRecursive(
   baseDir: string,
   currentDir: string,
-  additionalFiles: Record<string, string>,
+  additionalFiles: Record<string, Buffer>,
 ): void {
   const entries = readdirSync(currentDir, { withFileTypes: true });
   for (const entry of entries) {
@@ -536,16 +536,16 @@ function collectSkillFolderFilesRecursive(
         continue;
       }
       // eslint-disable-next-line security/detect-object-injection -- Paths are controlled by package files, not user input.
-      additionalFiles[relativePath] = readFileSync(fullPath, 'utf-8');
+      additionalFiles[relativePath] = readFileSync(fullPath);
     }
   }
 }
 
-function collectSkillFolderFiles(skillDir: string): Record<string, string> | undefined {
+function collectSkillFolderFiles(skillDir: string): Record<string, Buffer> | undefined {
   if (!existsSync(skillDir)) {
     return undefined;
   }
-  const additionalFiles: Record<string, string> = {};
+  const additionalFiles: Record<string, Buffer> = {};
   collectSkillFolderFilesRecursive(skillDir, skillDir, additionalFiles);
   return Object.keys(additionalFiles).length > 0 ? additionalFiles : undefined;
 }
