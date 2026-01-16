@@ -595,12 +595,23 @@ public class MyCustomTool : AbstractUnityTool<MyCustomSchema, MyCustomResponse>
 
 ### カスタムツール用 Skills
 
-カスタムMCPツールを作成した際、同じ `Editor/` フォルダ内に `SKILL.md` ファイルを配置することで、LLMツールがSkillsシステムを通じて自動的にカスタムツールを認識・使用できるようになります。
+カスタムMCPツールを作成した際、ツールフォルダ内に `Skill/` サブフォルダを作成し、`SKILL.md` ファイルを配置することで、LLMツールがSkillsシステムを通じて自動的にカスタムツールを認識・使用できるようになります。
 
 **仕組み:**
-1. カスタムツールと同じフォルダに `SKILL.md` ファイルを作成
-2. `uloop skills install --claude` を実行（バンドル + プロジェクトのSkillsをまとめてインストール）
-3. LLMツールがカスタムSkillを自動認識
+1. カスタムツールのフォルダ内に `Skill/` サブフォルダを作成
+2. `Skill/` フォルダ内に `SKILL.md` ファイルを配置
+3. `uloop skills install --claude` を実行（バンドル + プロジェクトのSkillsをまとめてインストール）
+4. LLMツールがカスタムSkillを自動認識
+
+**ディレクトリ構造:**
+```
+Assets/Editor/CustomTools/MyTool/
+├── MyTool.cs           # MCPツール実装
+└── Skill/
+    ├── SKILL.md        # スキル定義（必須）
+    └── references/     # 追加ファイル（オプション）
+        └── usage.md
+```
 
 **SKILL.md のフォーマット:**
 ```markdown
@@ -614,15 +625,16 @@ description: ツールの説明と使用タイミング
 ツールの詳細ドキュメント...
 ```
 
-**スキャン対象**（`SKILL.md` ファイルを検索）:
-- `Assets/**/Editor/<FolderName>/SKILL.md`
-- `Packages/*/Editor/<FolderName>/SKILL.md`
-- `Library/PackageCache/*/Editor/<FolderName>/SKILL.md`
+**スキャン対象**（`Skill/SKILL.md` ファイルを検索）:
+- `Assets/**/Editor/<ToolFolder>/Skill/SKILL.md`
+- `Packages/*/Editor/<ToolFolder>/Skill/SKILL.md`
+- `Library/PackageCache/*/Editor/<ToolFolder>/Skill/SKILL.md`
 
 > [!TIP]
-> フロントマターに `internal: true` を追加すると、インストール対象から除外されます（内部ツールやデバッグ用ツールに便利）。
+> - フロントマターに `internal: true` を追加すると、インストール対象から除外されます（内部ツールやデバッグ用ツールに便利）
+> - `Skill/` フォルダ内の追加ファイル（`references/`、`scripts/`、`assets/` など）もインストール時に一緒にコピーされます
 
-完全な例は [HelloWorld サンプル](/Assets/Editor/CustomCommandSamples/HelloWorld/SKILL.md) を参照してください。
+完全な例は [HelloWorld サンプル](/Assets/Editor/CustomCommandSamples/HelloWorld/Skill/SKILL.md) を参照してください。
 
 より実践的なサンプルプロジェクトは [uLoopMCP-extensions-sample](https://github.com/hatayama/uLoopMCP-extensions-sample) を参照してください。
 
