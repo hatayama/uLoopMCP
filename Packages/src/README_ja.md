@@ -617,7 +617,7 @@ Assets/Editor/CustomTools/MyTool/
 ```markdown
 ---
 name: uloop-my-custom-tool
-description: ツールの説明と使用タイミング
+description: "ツールの説明と使用タイミング"
 ---
 
 # uloop my-custom-tool
