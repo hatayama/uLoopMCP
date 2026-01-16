@@ -196,7 +196,7 @@ function warnLegacySkillStructure(toolPath: string, legacySkillMdPath: string): 
   console.error('    ToolName/');
   console.error('      └── Skill/');
   console.error('            ├── SKILL.md');
-  console.error('            └── <additional files>  (scripts/, references/, assets/, etc.)');
+  console.error('            └── (any additional files or directories)');
   console.error('\x1b[33m' + '='.repeat(70) + '\x1b[0m');
   console.error('');
   /* eslint-enable no-console */
