@@ -11,7 +11,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync
 import { join, dirname, resolve, isAbsolute, sep } from 'path';
 import { homedir } from 'os';
 import { TargetConfig } from './target-config.js';
-import { findUnityProjectRoot } from '../project-root.js';
+import { findUnityProjectRoot, getUnityProjectStatus } from '../project-root.js';
 import { DEPRECATED_SKILLS } from './deprecated-skills.js';
 
 export type SkillStatus = 'installed' | 'not_installed' | 'outdated';
@@ -32,7 +32,17 @@ export interface SkillDefinition {
   sourceType: 'package' | 'cli-only' | 'project';
 }
 
-const EXCLUDED_DIRS = new Set(['node_modules', '.git', 'Temp', 'obj', 'Build', 'Builds', 'Logs']);
+const EXCLUDED_DIRS = new Set([
+  'node_modules',
+  '.git',
+  'Temp',
+  'obj',
+  'Build',
+  'Builds',
+  'Logs',
+  'Skill',
+]);
+const EXCLUDED_FILES = new Set(['.meta', '.DS_Store', '.gitkeep']);
 class SkillsPathConstants {
   public static readonly PACKAGES_DIR = 'Packages';
   public static readonly SRC_DIR = 'src';
@@ -40,7 +50,7 @@ class SkillsPathConstants {
   public static readonly EDITOR_DIR = 'Editor';
   public static readonly API_DIR = 'Api';
   public static readonly MCP_TOOLS_DIR = 'McpTools';
-  public static readonly EXAMPLES_DIR = 'examples';
+  public static readonly SKILL_DIR = 'Skill';
   public static readonly LIBRARY_DIR = 'Library';
   public static readonly PACKAGE_CACHE_DIR = 'PackageCache';
   public static readonly ASSETS_DIR = 'Assets';
@@ -49,7 +59,6 @@ class SkillsPathConstants {
   public static readonly CLI_ONLY_DIR = 'skill-definitions';
   public static readonly CLI_ONLY_SUBDIR = 'cli-only';
   public static readonly DIST_PARENT_DIR = '..';
-  public static readonly MD_EXTENSION = '.md';
   public static readonly FILE_PROTOCOL = 'file:';
   public static readonly PATH_PROTOCOL = 'path:';
   public static readonly PACKAGE_NAME = 'io.github.hatayama.uloopmcp';
@@ -65,13 +74,19 @@ function getGlobalSkillsDir(target: TargetConfig): string {
 }
 
 function getProjectSkillsDir(target: TargetConfig): string {
-  const projectRoot = findUnityProjectRoot();
-  if (!projectRoot) {
+  const status = getUnityProjectStatus();
+  if (!status.found) {
     throw new Error(
       'Not inside a Unity project. Run this command from within a Unity project directory.',
     );
   }
-  return join(projectRoot, target.projectDir, 'skills');
+  if (!status.hasUloop) {
+    throw new Error(
+      `uLoopMCP is not installed in this Unity project (${status.path}).\n` +
+        'Please install uLoopMCP package first, then run this command again.',
+    );
+  }
+  return join(status.path as string, target.projectDir, 'skills');
 }
 
 function getSkillPath(skillDirName: string, target: TargetConfig, global: boolean): string {
@@ -160,10 +175,41 @@ export function parseFrontmatter(content: string): Record<string, string | boole
   return Object.fromEntries(frontmatterMap);
 }
 
+const warnedLegacyPaths = new Set<string>();
+
+function warnLegacySkillStructure(toolPath: string, legacySkillMdPath: string): void {
+  if (warnedLegacyPaths.has(legacySkillMdPath)) {
+    return;
+  }
+  warnedLegacyPaths.add(legacySkillMdPath);
+
+  const hasLegacyExamples = existsSync(join(toolPath, 'examples'));
+  const legacyFiles = hasLegacyExamples ? 'SKILL.md and examples/' : 'SKILL.md';
+
+  /* eslint-disable no-console -- CLI user-facing warning output */
+  console.error('\x1b[33m' + '='.repeat(70) + '\x1b[0m');
+  console.error('\x1b[33mWarning: Legacy skill structure detected\x1b[0m');
+  console.error(`  Path: ${legacySkillMdPath}`);
+  console.error('');
+  console.error('  The skill structure has changed. Please migrate to the new format:');
+  console.error(`    1. Create a "Skill" folder in the tool directory`);
+  console.error(`    2. Move ${legacyFiles} into the "Skill" folder`);
+  console.error('');
+  console.error('  Expected structure:');
+  console.error('    ToolName/');
+  console.error('      └── Skill/');
+  console.error('            ├── SKILL.md');
+  console.error('            └── references/  (optional)');
+  console.error('\x1b[33m' + '='.repeat(70) + '\x1b[0m');
+  console.error('');
+  /* eslint-enable no-console */
+}
+
 function scanEditorFolderForSkills(
   editorPath: string,
   skills: SkillDefinition[],
   sourceType: SkillDefinition['sourceType'],
+  warnLegacy: boolean = true,
 ): void {
   if (!existsSync(editorPath)) {
     return;
@@ -179,7 +225,14 @@ function scanEditorFolderForSkills(
     const fullPath = join(editorPath, entry.name);
 
     if (entry.isDirectory()) {
-      const skillMdPath = join(fullPath, SkillsPathConstants.SKILL_FILE);
+      const skillDir = join(fullPath, SkillsPathConstants.SKILL_DIR);
+      const skillMdPath = join(skillDir, SkillsPathConstants.SKILL_FILE);
+
+      const legacySkillMdPath = join(fullPath, SkillsPathConstants.SKILL_FILE);
+      if (warnLegacy && !existsSync(skillMdPath) && existsSync(legacySkillMdPath)) {
+        warnLegacySkillStructure(fullPath, legacySkillMdPath);
+      }
+
       if (existsSync(skillMdPath)) {
         const content = readFileSync(skillMdPath, 'utf-8');
         const frontmatter = parseFrontmatter(content);
@@ -189,7 +242,7 @@ function scanEditorFolderForSkills(
         }
 
         const name = typeof frontmatter.name === 'string' ? frontmatter.name : entry.name;
-        const additionalFiles = collectAdditionalFiles(fullPath);
+        const additionalFiles = collectSkillFolderFiles(skillDir);
 
         skills.push({
           name,
@@ -201,7 +254,7 @@ function scanEditorFolderForSkills(
         });
       }
 
-      scanEditorFolderForSkills(fullPath, skills, sourceType);
+      scanEditorFolderForSkills(fullPath, skills, sourceType, warnLegacy);
     }
   }
 }
@@ -447,29 +500,53 @@ function collectCliOnlySkills(): SkillDefinition[] {
     return [];
   }
   const skills: SkillDefinition[] = [];
-  scanEditorFolderForSkills(cliOnlyRoot, skills, 'cli-only');
+  scanEditorFolderForSkills(cliOnlyRoot, skills, 'cli-only', false);
   return skills;
 }
 
-function collectAdditionalFiles(skillDir: string): Record<string, string> | undefined {
-  const examplesDir = join(skillDir, SkillsPathConstants.EXAMPLES_DIR);
-  if (!existsSync(examplesDir)) {
+function isExcludedFile(fileName: string): boolean {
+  if (EXCLUDED_FILES.has(fileName)) {
+    return true;
+  }
+  for (const pattern of EXCLUDED_FILES) {
+    if (fileName.endsWith(pattern)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function collectSkillFolderFilesRecursive(
+  baseDir: string,
+  currentDir: string,
+  additionalFiles: Record<string, string>,
+): void {
+  const entries = readdirSync(currentDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (isExcludedFile(entry.name)) {
+      continue;
+    }
+    const fullPath = join(currentDir, entry.name);
+    const relativePath = fullPath.slice(baseDir.length + 1);
+
+    if (entry.isDirectory()) {
+      collectSkillFolderFilesRecursive(baseDir, fullPath, additionalFiles);
+    } else if (entry.isFile()) {
+      if (entry.name === SkillsPathConstants.SKILL_FILE) {
+        continue;
+      }
+      // eslint-disable-next-line security/detect-object-injection -- Paths are controlled by package files, not user input.
+      additionalFiles[relativePath] = readFileSync(fullPath, 'utf-8');
+    }
+  }
+}
+
+function collectSkillFolderFiles(skillDir: string): Record<string, string> | undefined {
+  if (!existsSync(skillDir)) {
     return undefined;
   }
-  const entries = readdirSync(examplesDir, { withFileTypes: true });
   const additionalFiles: Record<string, string> = {};
-  for (const entry of entries) {
-    if (!entry.isFile()) {
-      continue;
-    }
-    if (!entry.name.endsWith(SkillsPathConstants.MD_EXTENSION)) {
-      continue;
-    }
-    const filePath = join(examplesDir, entry.name);
-    const relativePath = join(SkillsPathConstants.EXAMPLES_DIR, entry.name);
-    // eslint-disable-next-line security/detect-object-injection -- Example paths are controlled by package files, not user input.
-    additionalFiles[relativePath] = readFileSync(filePath, 'utf-8');
-  }
+  collectSkillFolderFilesRecursive(skillDir, skillDir, additionalFiles);
   return Object.keys(additionalFiles).length > 0 ? additionalFiles : undefined;
 }
 

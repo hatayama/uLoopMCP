@@ -22,11 +22,18 @@ const EXCLUDED_DIRS = new Set([
   'Library',
 ]);
 
-function isUnityProjectWithUloop(dirPath: string): boolean {
+function isUnityProject(dirPath: string): boolean {
   const hasAssets = existsSync(join(dirPath, 'Assets'));
   const hasProjectSettings = existsSync(join(dirPath, 'ProjectSettings'));
-  const hasUloopSettings = existsSync(join(dirPath, 'UserSettings/UnityMcpSettings.json'));
-  return hasAssets && hasProjectSettings && hasUloopSettings;
+  return hasAssets && hasProjectSettings;
+}
+
+function hasUloopInstalled(dirPath: string): boolean {
+  return existsSync(join(dirPath, 'UserSettings/UnityMcpSettings.json'));
+}
+
+function isUnityProjectWithUloop(dirPath: string): boolean {
+  return isUnityProject(dirPath) && hasUloopInstalled(dirPath);
 }
 
 function findUnityProjectsInChildren(startPath: string, maxDepth: number): string[] {
@@ -124,4 +131,92 @@ export function findUnityProjectRoot(startPath: string = process.cwd()): string 
   }
 
   return findUnityProjectInParents(startPath);
+}
+
+export interface UnityProjectStatus {
+  found: boolean;
+  path: string | null;
+  hasUloop: boolean;
+}
+
+/**
+ * Check Unity project status with detailed information.
+ * Returns whether a Unity project exists and whether uLoopMCP is installed.
+ */
+export function getUnityProjectStatus(startPath: string = process.cwd()): UnityProjectStatus {
+  const unityProjectWithUloop = findUnityProjectRoot(startPath);
+  if (unityProjectWithUloop) {
+    return { found: true, path: unityProjectWithUloop, hasUloop: true };
+  }
+
+  const unityProjectWithoutUloop = findUnityProjectWithoutUloop(startPath);
+  if (unityProjectWithoutUloop) {
+    return { found: true, path: unityProjectWithoutUloop, hasUloop: false };
+  }
+
+  return { found: false, path: null, hasUloop: false };
+}
+
+function findUnityProjectWithoutUloop(startPath: string): string | null {
+  const childProject = findUnityProjectInChildrenWithoutUloop(startPath, CHILD_SEARCH_MAX_DEPTH);
+  if (childProject) {
+    return childProject;
+  }
+  return findUnityProjectInParentsWithoutUloop(startPath);
+}
+
+function findUnityProjectInChildrenWithoutUloop(
+  startPath: string,
+  maxDepth: number,
+): string | null {
+  function scan(currentPath: string, depth: number): string | null {
+    if (depth > maxDepth || !existsSync(currentPath)) {
+      return null;
+    }
+
+    if (isUnityProject(currentPath)) {
+      return currentPath;
+    }
+
+    let entries: Dirent[];
+    try {
+      entries = readdirSync(currentPath, { withFileTypes: true });
+    } catch {
+      return null;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory() || EXCLUDED_DIRS.has(entry.name)) {
+        continue;
+      }
+      const result = scan(join(currentPath, entry.name), depth + 1);
+      if (result) {
+        return result;
+      }
+    }
+    return null;
+  }
+
+  return scan(startPath, 0);
+}
+
+function findUnityProjectInParentsWithoutUloop(startPath: string): string | null {
+  let currentPath = startPath;
+
+  while (true) {
+    if (isUnityProject(currentPath)) {
+      return currentPath;
+    }
+
+    const isGitRoot = existsSync(join(currentPath, '.git'));
+    if (isGitRoot) {
+      return null;
+    }
+
+    const parentPath = dirname(currentPath);
+    if (parentPath === currentPath) {
+      return null;
+    }
+    currentPath = parentPath;
+  }
 }
