@@ -121,7 +121,7 @@ function listSkills(targets: TargetConfig[], global: boolean): void {
     console.log('');
   }
 
-  console.log(`Total: ${getTotalSkillCount()} bundled skills`);
+  console.log(`Total: ${getTotalSkillCount()} skills`);
 }
 
 function getStatusIcon(status: string): string {
