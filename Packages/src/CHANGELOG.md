@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.54.3](https://github.com/hatayama/uLoopMCP/compare/v0.54.2...v0.54.3) (2026-01-17)
+
+
+### Bug Fixes
+
+* improve CLI connection error message for better user experience ([#544](https://github.com/hatayama/uLoopMCP/issues/544)) ([ac62293](https://github.com/hatayama/uLoopMCP/commit/ac622936a574bd15d599478c61614d8b93fc3d5d))
+
 ## [0.54.2](https://github.com/hatayama/uLoopMCP/compare/v0.54.1...v0.54.2) (2026-01-17)
 
 
