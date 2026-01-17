@@ -1,6 +1,6 @@
 ---
 name: uloop-get-project-info
-description: Get Unity project information via uloop CLI. Use when you need to check project settings, Unity version, platform, or other project metadata.
+description: "Get Unity project information via uloop CLI. Use when you need to check project settings, Unity version, platform, or other project metadata."
 internal: true
 ---
 

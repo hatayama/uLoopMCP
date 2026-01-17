@@ -596,18 +596,29 @@ Please also refer to [Custom Tool Samples](/Assets/Editor/CustomToolSamples).
 
 ### Custom Skills for Your Tools
 
-When you create a custom MCP tool, you can also create a `SKILL.md` file in the same `Editor/` folder. This allows LLM tools to automatically discover and use your custom tool through the Skills system.
+When you create a custom MCP tool, you can create a `Skill/` subfolder within the tool folder and place a `SKILL.md` file there. This allows LLM tools to automatically discover and use your custom tool through the Skills system.
 
 **How it works:**
-1. Create a `SKILL.md` file in the same folder as your custom tool
-2. Run `uloop skills install --claude` to install all skills (bundled + project)
-3. LLM tools will automatically recognize your custom skill
+1. Create a `Skill/` subfolder in your custom tool's folder
+2. Place `SKILL.md` inside the `Skill/` folder
+3. Run `uloop skills install --claude` to install all skills (bundled + project)
+4. LLM tools will automatically recognize your custom skill
+
+**Directory structure:**
+```
+Assets/Editor/CustomTools/MyTool/
+├── MyTool.cs           # MCP tool implementation
+└── Skill/
+    ├── SKILL.md        # Skill definition (required)
+    └── references/     # Additional files (optional)
+        └── usage.md
+```
 
 **SKILL.md format:**
 ```markdown
 ---
 name: uloop-my-custom-tool
-description: Description of what the tool does and when to use it.
+description: "Description of what the tool does and when to use it."
 ---
 
 # uloop my-custom-tool
@@ -615,15 +626,16 @@ description: Description of what the tool does and when to use it.
 Detailed documentation for the tool...
 ```
 
-**Scanned locations** (searches for `SKILL.md` files):
-- `Assets/**/Editor/<FolderName>/SKILL.md`
-- `Packages/*/Editor/<FolderName>/SKILL.md`
-- `Library/PackageCache/*/Editor/<FolderName>/SKILL.md`
+**Scanned locations** (searches for `Skill/SKILL.md` files):
+- `Assets/**/Editor/<ToolFolder>/Skill/SKILL.md`
+- `Packages/*/Editor/<ToolFolder>/Skill/SKILL.md`
+- `Library/PackageCache/*/Editor/<ToolFolder>/Skill/SKILL.md`
 
 > [!TIP]
-> Add `internal: true` to the frontmatter to exclude a skill from installation (useful for internal/debug tools).
+> - Add `internal: true` to the frontmatter to exclude a skill from installation (useful for internal/debug tools)
+> - Additional files in the `Skill/` folder (such as `references/`, `scripts/`, `assets/`) are also copied during installation
 
-See [HelloWorld sample](/Assets/Editor/CustomCommandSamples/HelloWorld/SKILL.md) for a complete example.
+See [HelloWorld sample](/Assets/Editor/CustomCommandSamples/HelloWorld/Skill/SKILL.md) for a complete example.
 
 For a more comprehensive example project, see [uLoopMCP-extensions-sample](https://github.com/hatayama/uLoopMCP-extensions-sample).
 
