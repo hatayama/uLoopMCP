@@ -68,7 +68,11 @@ function isRetryableError(error: unknown): boolean {
     return false;
   }
   const message = error.message;
-  return message.includes('ECONNREFUSED') || message === 'UNITY_NO_RESPONSE';
+  return (
+    message.includes('ECONNREFUSED') ||
+    message.includes('EADDRNOTAVAIL') ||
+    message === 'UNITY_NO_RESPONSE'
+  );
 }
 
 /**

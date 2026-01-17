@@ -213,6 +213,17 @@ function extractGlobalOptions(options: Record<string, unknown>): GlobalOptions {
   };
 }
 
+function isConnectionError(message: string): boolean {
+  return message.includes('ECONNREFUSED') || message.includes('EADDRNOTAVAIL');
+}
+
+function printConnectionError(): void {
+  console.error('\x1b[31mError: Cannot connect to Unity.\x1b[0m');
+  console.error('Make sure Unity Editor is open and uLoopMCP server is running.');
+  console.error('');
+  console.error('[For AI] Please report the above to the user.');
+}
+
 async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
   try {
     await fn();
@@ -243,9 +254,8 @@ async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
       process.exit(1);
     }
 
-    if (message.includes('ECONNREFUSED')) {
-      console.error('\x1b[31mError: Cannot connect to Unity.\x1b[0m');
-      console.error('Make sure Unity is running with uLoopMCP installed.');
+    if (isConnectionError(message)) {
+      printConnectionError();
       process.exit(1);
     }
 
@@ -632,7 +642,11 @@ async function main(): Promise<void> {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error(`\x1b[31mError: Failed to sync tools: ${message}\x1b[0m`);
+      if (isConnectionError(message)) {
+        printConnectionError();
+      } else {
+        console.error(`\x1b[31mError: Failed to sync tools: ${message}\x1b[0m`);
+      }
       process.exit(1);
     }
   }
