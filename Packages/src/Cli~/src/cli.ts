@@ -243,9 +243,11 @@ async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
       process.exit(1);
     }
 
-    if (message.includes('ECONNREFUSED')) {
+    if (message.includes('ECONNREFUSED') || message.includes('EADDRNOTAVAIL')) {
       console.error('\x1b[31mError: Cannot connect to Unity.\x1b[0m');
-      console.error('Make sure Unity is running with uLoopMCP installed.');
+      console.error('Make sure Unity Editor is open and uLoopMCP server is running.');
+      console.error('');
+      console.error('[For AI] Please report the above to the user.');
       process.exit(1);
     }
 
