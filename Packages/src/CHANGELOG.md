@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.54.2](https://github.com/hatayama/uLoopMCP/compare/v0.54.1...v0.54.2) (2026-01-17)
+
+
+### Bug Fixes
+
+* add README for uloop-cli npm package ([#541](https://github.com/hatayama/uLoopMCP/issues/541)) ([b8ec5b5](https://github.com/hatayama/uLoopMCP/commit/b8ec5b5f1418847a32bc8d9b6764b85230adf24a))
+* Delete Unnecessary Files ([#543](https://github.com/hatayama/uLoopMCP/issues/543)) ([cec1615](https://github.com/hatayama/uLoopMCP/commit/cec1615b1d1ad9672f98ca0e731d0fe6f607939a))
+
 ## [0.54.1](https://github.com/hatayama/uLoopMCP/compare/v0.54.0...v0.54.1) (2026-01-17)
 
 
