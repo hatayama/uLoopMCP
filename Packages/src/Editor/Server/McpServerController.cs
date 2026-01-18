@@ -100,6 +100,12 @@ namespace io.github.hatayama.uLoopMCP
                 // UseCase creates a new server instance, so we keep a reference here
                 // for compatibility with existing code
                 mcpServer = result.ServerInstance;
+                
+                // User has explicitly started the server, so mark first launch as completed
+                if (!McpEditorSettings.GetHasCompletedFirstLaunch())
+                {
+                    McpEditorSettings.SetHasCompletedFirstLaunch(true);
+                }
             }
             else
             {
@@ -219,9 +225,9 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
-            bool isFirstLaunch = McpEditorSettings.IsFirstLaunch;
+            bool hasCompletedFirstLaunch = McpEditorSettings.GetHasCompletedFirstLaunch();
 
-            if (isFirstLaunch)
+            if (!hasCompletedFirstLaunch)
             {
                 return;
             }

@@ -50,7 +50,10 @@ namespace io.github.hatayama.uLoopMCP
             if (wasRunning && (currentServer == null || !currentServer.IsRunning))
             {
                 bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
-                if (autoStartEnabled || isAfterCompile)
+                bool hasCompletedFirstLaunch = McpEditorSettings.GetHasCompletedFirstLaunch();
+                
+                // Skip auto-start if first launch has not been completed (user must start manually first time)
+                if ((autoStartEnabled || isAfterCompile) && hasCompletedFirstLaunch)
                 {
                     _ = McpServerController.StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None).ContinueWith(task =>
                     {

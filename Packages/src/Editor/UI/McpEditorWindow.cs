@@ -151,8 +151,8 @@ namespace io.github.hatayama.uLoopMCP
             bool shouldStartAutomatically = _model.UI.AutoStartServer;
             bool serverNotRunning = !McpServerController.IsServerRunning;
             bool isRecoveryInProgress = McpServerController.IsStartupProtectionActive();
-            bool isFirstLaunch = McpEditorSettings.IsFirstLaunch;
-            bool shouldStartServer = shouldStartAutomatically && serverNotRunning && !isRecoveryInProgress && !isFirstLaunch;
+            bool hasCompletedFirstLaunch = McpEditorSettings.GetHasCompletedFirstLaunch();
+            bool shouldStartServer = shouldStartAutomatically && serverNotRunning && !isRecoveryInProgress && hasCompletedFirstLaunch;
 
             if (shouldStartServer)
             {
