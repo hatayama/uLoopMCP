@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "com.boxqkrtm.ide.cursor": "https://github.com/boxqkrtm/com.unity.ide.cursor.git",
+    "com.mattun.unicon": "1.2.5",
     "com.unity.ext.nunit": "2.0.3",
     "com.unity.ide.rider": "3.0.36",
     "com.unity.ide.visualstudio": "2.0.23",
@@ -14,7 +15,8 @@
       "name": "OpenUPM",
       "url": "https://package.openupm.com",
       "scopes": [
-        "org.nuget"
+        "org.nuget",
+        "com.mattun.unicon"
       ]
     }
   ]

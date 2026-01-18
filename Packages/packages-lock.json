@@ -9,6 +9,13 @@
       },
       "hash": "38fecf55e4fd94ccfe58a92ed8ad1a529ba1694e"
     },
+    "com.mattun.unicon": {
+      "version": "1.2.5",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://package.openupm.com"
+    },
     "com.unity.ext.nunit": {
       "version": "2.0.3",
       "depth": 0,
