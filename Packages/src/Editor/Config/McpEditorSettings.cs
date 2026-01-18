@@ -851,7 +851,18 @@ namespace io.github.hatayama.uLoopMCP
                         throw new InvalidDataException("Settings file contains invalid JSON content");
                     }
 
+                    // JsonUtility uses default field values when keys are missing from JSON,
+                    // so hasCompletedFirstLaunch will be false for legacy configs that lack the field.
+                    bool isLegacyConfig = !json.Contains("hasCompletedFirstLaunch");
+                    
                     _cachedSettings = JsonUtility.FromJson<McpEditorSettingsData>(json);
+                    
+                    // Existing users upgrading from older versions should retain auto-start behavior
+                    if (isLegacyConfig)
+                    {
+                        _cachedSettings = _cachedSettings with { hasCompletedFirstLaunch = true };
+                        SaveSettings(_cachedSettings);
+                    }
                 }
                 else
                 {
