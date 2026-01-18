@@ -49,6 +49,9 @@ namespace io.github.hatayama.uLoopMCP
         // Repository Root Toggle
         public bool addRepositoryRoot = false;
         
+        // First Launch Completion Flag
+        public bool hasCompletedFirstLaunch = false;
+        
         // Session State Settings (moved from McpSessionManager)
         public bool isServerRunning = false;
         public int serverPort = McpServerConfig.DEFAULT_PORT;
@@ -78,14 +81,6 @@ namespace io.github.hatayama.uLoopMCP
         private static string SettingsFilePath => Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
 
         private static McpEditorSettingsData _cachedSettings;
-
-        // Settings file was newly created during this session (first launch detection)
-        private static bool _isFirstLaunch;
-
-        /// <summary>
-        /// Whether this is the first launch (settings file was newly created).
-        /// </summary>
-        public static bool IsFirstLaunch => _isFirstLaunch;
 
         /// <summary>
         /// Gets the settings data.
@@ -315,6 +310,24 @@ namespace io.github.hatayama.uLoopMCP
         {
             McpEditorSettingsData settings = GetSettings();
             McpEditorSettingsData newSettings = settings with { addRepositoryRoot = addRepositoryRoot };
+            SaveSettings(newSettings);
+        }
+
+        /// <summary>
+        /// Gets the first launch completion flag.
+        /// </summary>
+        public static bool GetHasCompletedFirstLaunch()
+        {
+            return GetSettings().hasCompletedFirstLaunch;
+        }
+
+        /// <summary>
+        /// Sets the first launch completion flag.
+        /// </summary>
+        public static void SetHasCompletedFirstLaunch(bool hasCompletedFirstLaunch)
+        {
+            McpEditorSettingsData settings = GetSettings();
+            McpEditorSettingsData newSettings = settings with { hasCompletedFirstLaunch = hasCompletedFirstLaunch };
             SaveSettings(newSettings);
         }
         
@@ -839,14 +852,12 @@ namespace io.github.hatayama.uLoopMCP
                     }
 
                     _cachedSettings = JsonUtility.FromJson<McpEditorSettingsData>(json);
-                    _isFirstLaunch = false;
                 }
                 else
                 {
                     // Create default settings.
                     _cachedSettings = new McpEditorSettingsData();
                     SaveSettings(_cachedSettings);
-                    _isFirstLaunch = true;
                 }
             }
             catch (Exception ex)
