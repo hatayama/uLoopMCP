@@ -29,14 +29,27 @@ namespace io.github.hatayama.uLoopMCP
             // Handles case where mcpServer instance became null unexpectedly
             if (currentServer == null && McpEditorSettings.GetIsServerRunning())
             {
-                serverRunning = true;
-                serverPort = McpEditorSettings.GetServerPort();
-                VibeLogger.LogWarning(
-                    "domain_reload_session_fallback",
-                    "Server instance is null but session state indicates running. Using session state for recovery.",
-                    new { session_port = serverPort },
-                    correlationId
-                );
+                int sessionPort = McpEditorSettings.GetServerPort();
+                if (NetworkUtility.IsValidPort(sessionPort))
+                {
+                    serverRunning = true;
+                    serverPort = sessionPort;
+                    VibeLogger.LogWarning(
+                        "domain_reload_session_fallback",
+                        "Server instance is null but session state indicates running. Using session state for recovery.",
+                        new { session_port = sessionPort },
+                        correlationId
+                    );
+                }
+                else
+                {
+                    VibeLogger.LogWarning(
+                        "domain_reload_session_fallback_invalid_port",
+                        "Session indicates running but port is invalid. Ignoring session state fallback.",
+                        new { session_port = sessionPort },
+                        correlationId
+                    );
+                }
             }
 
             // 4. Detect and record Domain Reload start
