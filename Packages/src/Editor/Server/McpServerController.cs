@@ -100,7 +100,12 @@ namespace io.github.hatayama.uLoopMCP
                 // UseCase creates a new server instance, so we keep a reference here
                 // for compatibility with existing code
                 mcpServer = result.ServerInstance;
-                
+
+                // Sync session state with the running server to enable domain reload recovery
+                // even if mcpServer instance becomes null unexpectedly
+                McpEditorSettings.SetIsServerRunning(true);
+                McpEditorSettings.SetServerPort(mcpServer.Port);
+
                 // User has explicitly started the server, so mark first launch as completed
                 if (!McpEditorSettings.GetHasCompletedFirstLaunch())
                 {
@@ -138,6 +143,9 @@ namespace io.github.hatayama.uLoopMCP
             {
                 // Server stopped by UseCase, so clear the reference
                 mcpServer = null;
+
+                // Clear session state to reflect server stopped
+                McpEditorSettings.SetIsServerRunning(false);
             }
             else
             {

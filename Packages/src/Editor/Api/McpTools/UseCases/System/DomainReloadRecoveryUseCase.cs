@@ -21,11 +21,25 @@ namespace io.github.hatayama.uLoopMCP
             // 1. Generate tracking ID for related operations
             string correlationId = VibeLogger.GenerateCorrelationId();
 
-            // 2. Check server state
+            // 2. Check server state from instance
             bool serverRunning = currentServer?.IsRunning ?? false;
             int? serverPort = currentServer?.Port;
 
-            // 3. Detect and record Domain Reload start
+            // 3. Fallback to session state if instance is null but session says server was running
+            // Handles case where mcpServer instance became null unexpectedly
+            if (!serverRunning && McpEditorSettings.GetIsServerRunning())
+            {
+                serverRunning = true;
+                serverPort = McpEditorSettings.GetServerPort();
+                VibeLogger.LogWarning(
+                    "domain_reload_session_fallback",
+                    "Server instance is null but session state indicates running. Using session state for recovery.",
+                    new { session_port = serverPort },
+                    correlationId
+                );
+            }
+
+            // 4. Detect and record Domain Reload start
             DomainReloadDetectionService.StartDomainReload(correlationId, serverRunning, serverPort);
 
             // 4. If server is running, execute stop processing
