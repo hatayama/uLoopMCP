@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -11,6 +13,15 @@ namespace io.github.hatayama.uLoopMCP
     {
         private bool _originalIsServerRunning;
         private int _originalServerPort;
+
+        private static int GetFreePort()
+        {
+            TcpListener listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            return port;
+        }
 
         [SetUp]
         public void SetUp()
@@ -77,8 +88,8 @@ namespace io.github.hatayama.uLoopMCP
         public void ExecuteBeforeDomainReload_ShouldPreferInstanceState_WhenInstanceIsRunning()
         {
             // Arrange
-            int sessionPort = 7500;
-            int instancePort = 7501;
+            int sessionPort = GetFreePort();
+            int instancePort = GetFreePort();
             McpEditorSettings.SetIsServerRunning(true);
             McpEditorSettings.SetServerPort(sessionPort);
 

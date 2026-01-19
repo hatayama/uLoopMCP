@@ -27,7 +27,7 @@ namespace io.github.hatayama.uLoopMCP
 
             // 3. Fallback to session state if instance is null but session says server was running
             // Handles case where mcpServer instance became null unexpectedly
-            if (!serverRunning && McpEditorSettings.GetIsServerRunning())
+            if (currentServer == null && McpEditorSettings.GetIsServerRunning())
             {
                 serverRunning = true;
                 serverPort = McpEditorSettings.GetServerPort();
