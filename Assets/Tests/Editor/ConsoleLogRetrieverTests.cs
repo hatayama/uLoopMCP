@@ -321,20 +321,93 @@ namespace io.github.hatayama.uLoopMCP
             // This test verifies that ConsoleLogRetriever can be initialized using reflection
             // to access Unity's internal LogEntries and ConsoleWindow types without errors.
             // This validates the core reflection setup and type discovery.
-            
+
             // Act & Assert - Reflection-based initialization should succeed
             Assert.DoesNotThrow(() => {
                 ConsoleLogRetriever newRetriever = new ConsoleLogRetriever();
-                
+
                 // Basic reflection functionality should work
                 int count = newRetriever.GetLogCount();
                 int mask = newRetriever.GetCurrentMask();
                 List<LogEntryDto> logs = newRetriever.GetAllLogs();
-                
+
                 Assert.GreaterOrEqual(count, 0);
                 Assert.GreaterOrEqual(mask, 0);
                 Assert.IsNotNull(logs);
             }, "ConsoleLogRetriever should initialize and work without exceptions");
+        }
+
+        [Test]
+        public void LogEntry_MultiByte_JapaneseMessage_SeparatedCorrectly()
+        {
+            // Unity's callstackTextStartUTF8 returns UTF-8 byte position, but
+            // string.Substring() requires character position. For multi-byte characters
+            // like Japanese (3 bytes per char in UTF-8), the boundary will be wrong
+            // if byte position is used directly as character position.
+
+            // Arrange - Generate log with Japanese message
+            string uniqueTestId = System.Guid.NewGuid().ToString("N")[..8];
+            string japaneseMessage = $"日本語テスト_{uniqueTestId}";
+
+            LogAssert.Expect(UnityEngine.LogType.Log, japaneseMessage);
+            Debug.Log(japaneseMessage);
+
+            // Act
+            List<LogEntryDto> logs = retriever.GetAllLogs();
+
+            // Assert - Japanese message should be properly separated
+            LogEntryDto testLog = logs.FirstOrDefault(log => log.Message.Contains(uniqueTestId));
+            Assert.IsNotNull(testLog, "Test log should be found");
+
+            // Message should contain the full Japanese text without being cut off
+            Assert.IsTrue(testLog.Message.Contains("日本語テスト"),
+                "Message should contain full Japanese text without corruption");
+
+            // Message should exactly match what was logged (no truncation due to UTF-8 byte position bug)
+            Assert.AreEqual(japaneseMessage, testLog.Message.Trim(),
+                $"Message should match exactly. Expected: '{japaneseMessage}', Actual: '{testLog.Message.Trim()}'");
+
+            // Stack trace should not contain our message content
+            if (!string.IsNullOrEmpty(testLog.StackTrace))
+            {
+                Assert.IsFalse(testLog.StackTrace.Contains("日本語テスト"),
+                    "Stack trace should not contain our Japanese message content");
+            }
+        }
+
+        [Test]
+        public void LogEntry_MultiByte_MixedContent_SeparatedCorrectly()
+        {
+            // Unicode characters like emojis and CJK characters use multiple UTF-8 bytes.
+            // This test verifies correct handling of mixed ASCII and multi-byte content.
+
+            // Arrange - Generate log with mixed ASCII and multi-byte content
+            string uniqueTestId = System.Guid.NewGuid().ToString("N")[..8];
+            string mixedMessage = $"Hello こんにちは World 世界 Test_{uniqueTestId}";
+
+            LogAssert.Expect(UnityEngine.LogType.Log, mixedMessage);
+            Debug.Log(mixedMessage);
+
+            // Act
+            List<LogEntryDto> logs = retriever.GetAllLogs();
+
+            // Assert - Mixed content should be properly separated
+            LogEntryDto testLog = logs.FirstOrDefault(log => log.Message.Contains(uniqueTestId));
+            Assert.IsNotNull(testLog, "Test log should be found");
+
+            // All content should be present in the message
+            Assert.IsTrue(testLog.Message.Contains("Hello"),
+                "Message should contain ASCII 'Hello'");
+            Assert.IsTrue(testLog.Message.Contains("こんにちは"),
+                "Message should contain Japanese greeting");
+            Assert.IsTrue(testLog.Message.Contains("World"),
+                "Message should contain ASCII 'World'");
+            Assert.IsTrue(testLog.Message.Contains("世界"),
+                "Message should contain Japanese word '世界'");
+
+            // Full message should match exactly
+            Assert.AreEqual(mixedMessage, testLog.Message.Trim(),
+                $"Mixed message should match exactly. Expected: '{mixedMessage}', Actual: '{testLog.Message.Trim()}'");
         }
     }
 }

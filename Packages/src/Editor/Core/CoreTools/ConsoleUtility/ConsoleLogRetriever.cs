@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 using UnityEditor;
 using UnityEngine;
 
@@ -278,22 +279,44 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Converts a UTF-8 byte position to a character position in a string.
+        /// Unity's LogEntry.callstackTextStartUTF8 provides byte offset, but
+        /// string.Substring() requires character offset.
+        /// </summary>
+        private int ConvertUtf8BytePositionToCharPosition(string text, int utf8BytePosition)
+        {
+            if (string.IsNullOrEmpty(text) || utf8BytePosition <= 0)
+            {
+                return 0;
+            }
+
+            byte[] utf8Bytes = Encoding.UTF8.GetBytes(text);
+
+            if (utf8BytePosition >= utf8Bytes.Length)
+            {
+                return text.Length;
+            }
+
+            string decodedPortion = Encoding.UTF8.GetString(utf8Bytes, 0, utf8BytePosition);
+            return decodedPortion.Length;
+        }
+
+        /// <summary>
         /// Separates message and stack trace using Unity's internal callstack boundary
         /// </summary>
-        private (string message, string stackTrace) SeparateMessageAndStackTrace(string fullMessage, int callstackTextStart)
+        private (string message, string stackTrace) SeparateMessageAndStackTrace(string fullMessage, int callstackTextStartUtf8)
         {
             if (string.IsNullOrEmpty(fullMessage)) return ("", "");
 
-            // Use Unity's internal boundary to separate message and stack trace
-            if (callstackTextStart <= 0 || callstackTextStart >= fullMessage.Length)
+            int charPosition = ConvertUtf8BytePositionToCharPosition(fullMessage, callstackTextStartUtf8);
+
+            if (charPosition <= 0 || charPosition >= fullMessage.Length)
             {
-                // No stack trace or invalid boundary, entire message is the log message
                 return (fullMessage.Trim(), "");
             }
 
-            // Split at the exact boundary Unity provides
-            string message = fullMessage.Substring(0, callstackTextStart).Trim();
-            string stackTrace = fullMessage.Substring(callstackTextStart).Trim();
+            string message = fullMessage.Substring(0, charPosition).Trim();
+            string stackTrace = fullMessage.Substring(charPosition).Trim();
 
             return (message, stackTrace);
         }
