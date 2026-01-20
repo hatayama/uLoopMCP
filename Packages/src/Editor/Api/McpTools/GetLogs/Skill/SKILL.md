@@ -1,6 +1,6 @@
 ---
 name: uloop-get-logs
-description: "Check Unity Console logs. Use when user says: 'check the logs', 'what's in the console', 'show me the errors', 'why did it fail', 'what happened', 'see what printed'. Retrieves errors, warnings, and Debug.Log messages."
+description: "Check Unity Console logs. Use when: checking logs, debugging errors, investigating failures, or when user asks about console output. Retrieves errors, warnings, and Debug.Log messages."
 ---
 
 # uloop get-logs

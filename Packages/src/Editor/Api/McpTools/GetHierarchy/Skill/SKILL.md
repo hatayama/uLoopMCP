@@ -1,6 +1,6 @@
 ---
 name: uloop-get-hierarchy
-description: "Get Unity Hierarchy structure. Use when user says: 'show me the hierarchy', 'what's in the scene', 'check the scene structure', 'what GameObjects exist', 'show the object tree'. Returns the scene's GameObject tree with components."
+description: "Get Unity Hierarchy structure. Use when: inspecting scene structure, exploring GameObjects, checking parent-child relationships, or when user asks about hierarchy. Returns the scene's GameObject tree with components."
 ---
 
 # uloop get-hierarchy
