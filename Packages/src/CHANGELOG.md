@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.54.6](https://github.com/hatayama/uLoopMCP/compare/v0.54.5...v0.54.6) (2026-01-20)
+
+
+### Bug Fixes
+
+* improve skill descriptions for better AI recognition ([#553](https://github.com/hatayama/uLoopMCP/issues/553)) ([3febc3a](https://github.com/hatayama/uLoopMCP/commit/3febc3affb9e0c63dc98294ec508fa909ed8bb9b))
+
 ## [0.54.5](https://github.com/hatayama/uLoopMCP/compare/v0.54.4...v0.54.5) (2026-01-19)
 
 
