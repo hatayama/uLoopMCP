@@ -1,6 +1,6 @@
 ---
 name: uloop-run-tests
-description: "Execute Unity Test Runner via uloop CLI. Use when you need to: (1) Run unit tests (EditMode tests), (2) Run integration tests (PlayMode tests), (3) Verify code changes don't break existing functionality."
+description: "Execute Unity Test Runner. Use when: running unit tests, verifying code changes, checking test results, or when user asks to run tests. Returns test results with pass/fail counts."
 ---
 
 # uloop run-tests
