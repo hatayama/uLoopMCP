@@ -212,6 +212,24 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       expect(typeof result.hierarchyFilePath).toBe('string');
       expect(result.hierarchyFilePath).toContain('hierarchy_');
     });
+
+    it('should support --no-include-components to disable components', () => {
+      const result = runCliJson<{ hierarchyFilePath: string }>(
+        'get-hierarchy --max-depth 1 --no-include-components',
+      );
+
+      expect(typeof result.hierarchyFilePath).toBe('string');
+      expect(result.hierarchyFilePath).toContain('hierarchy_');
+    });
+
+    it('should support --no-include-inactive to exclude inactive objects', () => {
+      const result = runCliJson<{ hierarchyFilePath: string }>(
+        'get-hierarchy --max-depth 1 --no-include-inactive',
+      );
+
+      expect(typeof result.hierarchyFilePath).toBe('string');
+      expect(result.hierarchyFilePath).toContain('hierarchy_');
+    });
   });
 
   describe('get-menu-items', () => {
@@ -257,6 +275,14 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       const messages = logs.Logs.map((log) => log.Message);
       expect(messages.some((m) => m.includes('LogGetter test complete'))).toBe(true);
     });
+
+    it('should support --no-use-reflection-fallback option', () => {
+      const result = runCliJson<{ Success: boolean }>(
+        `execute-menu-item --menu-item-path "${TEST_LOG_MENU_PATH}" --no-use-reflection-fallback`,
+      );
+
+      expect(result.Success).toBe(true);
+    });
   });
 
   describe('unity-search', () => {
@@ -284,6 +310,22 @@ describe('CLI E2E Tests (requires running Unity)', () => {
 
       expect(Array.isArray(result.Providers)).toBe(true);
     });
+
+    it('should support --no-include-descriptions to exclude descriptions', () => {
+      const result = runCliJson<{ Providers: unknown[] }>(
+        'get-provider-details --no-include-descriptions',
+      );
+
+      expect(Array.isArray(result.Providers)).toBe(true);
+    });
+
+    it('should support --no-sort-by-priority to disable priority sorting', () => {
+      const result = runCliJson<{ Providers: unknown[] }>(
+        'get-provider-details --no-sort-by-priority',
+      );
+
+      expect(Array.isArray(result.Providers)).toBe(true);
+    });
   });
 
   describe('--help', () => {
@@ -301,6 +343,23 @@ describe('CLI E2E Tests (requires running Unity)', () => {
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain('--force-recompile');
+    });
+
+    it('should display --no-xxx options for default-true booleans in get-hierarchy help', () => {
+      const { stdout, exitCode } = runCli('get-hierarchy --help');
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('--no-include-components');
+      expect(stdout).toContain('--no-include-inactive');
+      expect(stdout).toContain('Disable:');
+    });
+
+    it('should display --no-xxx options for default-true booleans in get-provider-details help', () => {
+      const { stdout, exitCode } = runCli('get-provider-details --help');
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('--no-include-descriptions');
+      expect(stdout).toContain('--no-sort-by-priority');
     });
   });
 

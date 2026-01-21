@@ -102,6 +102,15 @@ function registerToolCommand(tool: ToolDefinition): void {
   // Add options from inputSchema.properties
   const properties = tool.inputSchema.properties;
   for (const [propName, propInfo] of Object.entries(properties)) {
+    const lowerType = propInfo.type.toLowerCase();
+    const kebabName = pascalToKebabCase(propName);
+
+    // Add --no-xxx option for default-true booleans (must be registered before --xxx)
+    // commander.js requires --no-xxx to allow setting false for default-true flags
+    if (lowerType === 'boolean' && propInfo.default === true) {
+      cmd.option(`--no-${kebabName}`, `Disable: ${propInfo.description || kebabName}`);
+    }
+
     const optionStr = generateOptionString(propName, propInfo);
     const description = buildOptionDescription(propInfo);
     const defaultValue = propInfo.default as string | boolean | undefined;
@@ -597,9 +606,15 @@ function listOptionsForCommand(cmdName: string): void {
   }
 
   const options: string[] = [];
-  for (const propName of Object.keys(tool.inputSchema.properties)) {
+  for (const [propName, propInfo] of Object.entries(tool.inputSchema.properties)) {
     const kebabName = pascalToKebabCase(propName);
     options.push(`--${kebabName}`);
+
+    // Add --no-xxx for default-true booleans
+    const lowerType = propInfo.type.toLowerCase();
+    if (lowerType === 'boolean' && propInfo.default === true) {
+      options.push(`--no-${kebabName}`);
+    }
   }
 
   console.log(options.join('\n'));
