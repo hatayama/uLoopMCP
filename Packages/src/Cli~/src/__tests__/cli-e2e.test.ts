@@ -212,6 +212,24 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       expect(typeof result.hierarchyFilePath).toBe('string');
       expect(result.hierarchyFilePath).toContain('hierarchy_');
     });
+
+    it('should support --include-components false to disable components', () => {
+      const result = runCliJson<{ hierarchyFilePath: string }>(
+        'get-hierarchy --max-depth 1 --include-components false',
+      );
+
+      expect(typeof result.hierarchyFilePath).toBe('string');
+      expect(result.hierarchyFilePath).toContain('hierarchy_');
+    });
+
+    it('should support --include-inactive false to exclude inactive objects', () => {
+      const result = runCliJson<{ hierarchyFilePath: string }>(
+        'get-hierarchy --max-depth 1 --include-inactive false',
+      );
+
+      expect(typeof result.hierarchyFilePath).toBe('string');
+      expect(result.hierarchyFilePath).toContain('hierarchy_');
+    });
   });
 
   describe('get-menu-items', () => {
@@ -257,6 +275,14 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       const messages = logs.Logs.map((log) => log.Message);
       expect(messages.some((m) => m.includes('LogGetter test complete'))).toBe(true);
     });
+
+    it('should support --use-reflection-fallback false option', () => {
+      const result = runCliJson<{ Success: boolean }>(
+        `execute-menu-item --menu-item-path "${TEST_LOG_MENU_PATH}" --use-reflection-fallback false`,
+      );
+
+      expect(result.Success).toBe(true);
+    });
   });
 
   describe('unity-search', () => {
@@ -270,7 +296,7 @@ describe('CLI E2E Tests (requires running Unity)', () => {
   describe('find-game-objects', () => {
     it('should find game objects with name pattern', () => {
       const result = runCliJson<{ results: unknown[]; totalFound: number }>(
-        'find-game-objects --name-pattern "*" --include-inactive',
+        'find-game-objects --name-pattern "*" --include-inactive true',
       );
 
       expect(Array.isArray(result.results)).toBe(true);
@@ -281,6 +307,22 @@ describe('CLI E2E Tests (requires running Unity)', () => {
   describe('get-provider-details', () => {
     it('should retrieve search providers', () => {
       const result = runCliJson<{ Providers: unknown[] }>('get-provider-details');
+
+      expect(Array.isArray(result.Providers)).toBe(true);
+    });
+
+    it('should support --include-descriptions false to exclude descriptions', () => {
+      const result = runCliJson<{ Providers: unknown[] }>(
+        'get-provider-details --include-descriptions false',
+      );
+
+      expect(Array.isArray(result.Providers)).toBe(true);
+    });
+
+    it('should support --sort-by-priority false to disable priority sorting', () => {
+      const result = runCliJson<{ Providers: unknown[] }>(
+        'get-provider-details --sort-by-priority false',
+      );
 
       expect(Array.isArray(result.Providers)).toBe(true);
     });
@@ -301,6 +343,16 @@ describe('CLI E2E Tests (requires running Unity)', () => {
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain('--force-recompile');
+    });
+
+    it('should display boolean options with value format in get-hierarchy help', () => {
+      const { stdout, exitCode } = runCli('get-hierarchy --help');
+
+      expect(exitCode).toBe(0);
+      // Boolean options should show <value> format
+      expect(stdout).toContain('--include-components <value>');
+      expect(stdout).toContain('--include-inactive <value>');
+      expect(stdout).toContain('(default: "true")');
     });
   });
 

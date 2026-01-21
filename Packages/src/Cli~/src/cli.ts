@@ -104,9 +104,11 @@ function registerToolCommand(tool: ToolDefinition): void {
   for (const [propName, propInfo] of Object.entries(properties)) {
     const optionStr = generateOptionString(propName, propInfo);
     const description = buildOptionDescription(propInfo);
-    const defaultValue = propInfo.default as string | boolean | undefined;
-    if (defaultValue !== undefined) {
-      cmd.option(optionStr, description, defaultValue);
+    const defaultValue = propInfo.default;
+    if (defaultValue !== undefined && defaultValue !== null) {
+      // Convert default values to strings for consistent CLI handling
+      const defaultStr = convertDefaultToString(defaultValue);
+      cmd.option(optionStr, description, defaultStr);
     } else {
       cmd.option(optionStr, description);
     }
@@ -132,16 +134,25 @@ function registerToolCommand(tool: ToolDefinition): void {
 }
 
 /**
+ * Convert default value to string for CLI option registration.
+ */
+function convertDefaultToString(value: unknown): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'boolean' || typeof value === 'number') {
+    return String(value);
+  }
+  return JSON.stringify(value);
+}
+
+/**
  * Generate commander.js option string from property info.
+ * All types use value format (--option <value>) for consistency with MCP.
  */
 function generateOptionString(propName: string, propInfo: ToolProperty): string {
   const kebabName = pascalToKebabCase(propName);
-  const lowerType = propInfo.type.toLowerCase();
-
-  if (lowerType === 'boolean') {
-    return `--${kebabName}`;
-  }
-
+  void propInfo; // All types now use value format
   return `--${kebabName} <value>`;
 }
 
@@ -183,6 +194,17 @@ function buildParams(
  */
 function convertValue(value: unknown, propInfo: ToolProperty): unknown {
   const lowerType = propInfo.type.toLowerCase();
+
+  if (lowerType === 'boolean' && typeof value === 'string') {
+    const lower = value.toLowerCase();
+    if (lower === 'true') {
+      return true;
+    }
+    if (lower === 'false') {
+      return false;
+    }
+    throw new Error(`Invalid boolean value: ${value}. Use 'true' or 'false'.`);
+  }
 
   if (lowerType === 'array' && typeof value === 'string') {
     return value.split(',').map((s) => s.trim());
