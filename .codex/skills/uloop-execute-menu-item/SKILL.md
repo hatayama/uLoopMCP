@@ -18,7 +18,7 @@ uloop execute-menu-item --menu-item-path "<path>"
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `--menu-item-path` | string | - | Menu item path (e.g., "GameObject/Create Empty") |
-| `--use-reflection-fallback` | boolean | `true` | Use reflection fallback |
+| `--use-reflection-fallback` | boolean | `true` | Use reflection fallback (use `--no-use-reflection-fallback` to disable) |
 
 ## Examples
 

@@ -19,8 +19,8 @@ uloop get-hierarchy [options]
 |-----------|------|---------|-------------|
 | `--root-path` | string | - | Root GameObject path to start from |
 | `--max-depth` | integer | `-1` | Maximum depth (-1 for unlimited) |
-| `--include-components` | boolean | `true` | Include component information |
-| `--include-inactive` | boolean | `true` | Include inactive GameObjects |
+| `--include-components` | boolean | `true` | Include component information (use `--no-include-components` to disable) |
+| `--include-inactive` | boolean | `true` | Include inactive GameObjects (use `--no-include-inactive` to disable) |
 | `--include-paths` | boolean | `false` | Include full path information |
 
 ## Examples
@@ -36,7 +36,10 @@ uloop get-hierarchy --root-path "Canvas/UI"
 uloop get-hierarchy --max-depth 2
 
 # Without components
-uloop get-hierarchy --include-components false
+uloop get-hierarchy --no-include-components
+
+# Exclude inactive GameObjects
+uloop get-hierarchy --no-include-inactive
 ```
 
 ## Output

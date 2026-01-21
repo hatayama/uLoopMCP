@@ -19,8 +19,8 @@ uloop get-provider-details [options]
 |-----------|------|---------|-------------|
 | `--provider-id` | string | - | Specific provider ID to query |
 | `--active-only` | boolean | `false` | Only show active providers |
-| `--include-descriptions` | boolean | `true` | Include descriptions |
-| `--sort-by-priority` | boolean | `true` | Sort by priority |
+| `--include-descriptions` | boolean | `true` | Include descriptions (use `--no-include-descriptions` to disable) |
+| `--sort-by-priority` | boolean | `true` | Sort by priority (use `--no-sort-by-priority` to disable) |
 
 ## Examples
 
