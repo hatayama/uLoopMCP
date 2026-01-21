@@ -87,12 +87,6 @@ program
 // Register skills subcommand
 registerSkillsCommand(program);
 
-// Load tools from cache and register commands dynamically
-const toolsCache = loadToolsCache();
-for (const tool of toolsCache.tools) {
-  registerToolCommand(tool);
-}
-
 /**
  * Register a tool as a CLI command dynamically.
  */
@@ -666,11 +660,6 @@ async function main(): Promise<void> {
     );
     try {
       await syncTools({});
-      // Re-register commands with updated cache
-      const updatedCache = loadToolsCache();
-      for (const tool of updatedCache.tools) {
-        registerToolCommand(tool);
-      }
       console.log('\x1b[32m✓ Tools synced successfully.\x1b[0m\n');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -683,6 +672,12 @@ async function main(): Promise<void> {
         console.error("\x1b[33mRun 'uloop sync' manually when Unity is available.\x1b[0m\n");
       }
     }
+  }
+
+  // Register tool commands from cache (after potential auto-sync)
+  const toolsCache = loadToolsCache();
+  for (const tool of toolsCache.tools) {
+    registerToolCommand(tool);
   }
 
   const args = process.argv.slice(2);
