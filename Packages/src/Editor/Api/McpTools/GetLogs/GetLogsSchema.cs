@@ -53,6 +53,6 @@ namespace io.github.hatayama.uLoopMCP
         /// Whether to display stack trace
         /// </summary>
         [Description("Whether to display stack trace")]
-        public bool IncludeStackTrace { get; set; } = true;
+        public bool IncludeStackTrace { get; set; } = false;
     }
 } 

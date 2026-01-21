@@ -43,7 +43,7 @@
           "IncludeStackTrace": {
             "type": "boolean",
             "description": "Include stack trace in output",
-            "default": true
+            "default": false
           },
           "UseRegex": {
             "type": "boolean",
