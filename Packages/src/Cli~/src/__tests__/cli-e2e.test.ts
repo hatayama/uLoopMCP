@@ -302,6 +302,17 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       expect(Array.isArray(result.results)).toBe(true);
       expect(typeof result.totalFound).toBe('number');
     });
+
+    it('should find Cube game object with default array parameter', () => {
+      // This test verifies that default array values (e.g., RequiredComponents: [])
+      // are correctly handled and don't cause search to fail
+      const result = runCliJson<{ results: Array<{ name: string }>; totalFound: number }>(
+        'find-game-objects --name-pattern "Cube"',
+      );
+
+      expect(result.totalFound).toBeGreaterThan(0);
+      expect(result.results.some((r) => r.name === 'Cube')).toBe(true);
+    });
   });
 
   describe('get-provider-details', () => {

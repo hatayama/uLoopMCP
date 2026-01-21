@@ -207,6 +207,12 @@ function convertValue(value: unknown, propInfo: ToolProperty): unknown {
   }
 
   if (lowerType === 'array' && typeof value === 'string') {
+    // Handle JSON array format (e.g., "[]" or "[\"item1\",\"item2\"]")
+    if (value.startsWith('[') && value.endsWith(']')) {
+      const parsed: unknown = JSON.parse(value);
+      return parsed;
+    }
+    // Handle comma-separated format (e.g., "item1,item2")
     return value.split(',').map((s) => s.trim());
   }
 
