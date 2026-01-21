@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.54.7](https://github.com/hatayama/uLoopMCP/compare/v0.54.6...v0.54.7) (2026-01-21)
+
+
+### Bug Fixes
+
+* change CLI boolean options to value format for MCP consistency ([#559](https://github.com/hatayama/uLoopMCP/issues/559)) ([3ad62e6](https://github.com/hatayama/uLoopMCP/commit/3ad62e677f92e39f50bf55606f8aef539678d083))
+* change IncludeStackTrace default value from true to false in get-logs ([#557](https://github.com/hatayama/uLoopMCP/issues/557)) ([8609dbc](https://github.com/hatayama/uLoopMCP/commit/8609dbc71ca9d37fa11053e95450a6702d89cf3a))
+* convert UTF-8 byte position to character position in get-logs ([#555](https://github.com/hatayama/uLoopMCP/issues/555)) ([04aaaff](https://github.com/hatayama/uLoopMCP/commit/04aaaffef518ad1447ca2de6a48234d0cc0eb899))
+* handle JSON array format in CLI default values ([#560](https://github.com/hatayama/uLoopMCP/issues/560)) ([e194347](https://github.com/hatayama/uLoopMCP/commit/e1943478d7faea0a5f01adc4d8b8f0b63a75cd5e))
+
 ## [0.54.6](https://github.com/hatayama/uLoopMCP/compare/v0.54.5...v0.54.6) (2026-01-20)
 
 
