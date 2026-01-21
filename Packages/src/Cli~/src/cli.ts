@@ -19,7 +19,7 @@ import {
   GlobalOptions,
   syncTools,
 } from './execute-tool.js';
-import { loadToolsCache, ToolDefinition, ToolProperty } from './tool-cache.js';
+import { loadToolsCache, hasCacheFile, ToolDefinition, ToolProperty } from './tool-cache.js';
 import { pascalToKebabCase } from './arg-parser.js';
 import { registerSkillsCommand } from './skills/skills-command.js';
 import { VERSION } from './version.js';
@@ -86,12 +86,6 @@ program
 
 // Register skills subcommand
 registerSkillsCommand(program);
-
-// Load tools from cache and register commands dynamically
-const toolsCache = loadToolsCache();
-for (const tool of toolsCache.tools) {
-  registerToolCommand(tool);
-}
 
 /**
  * Register a tool as a CLI command dynamically.
@@ -656,6 +650,34 @@ function commandExists(cmdName: string): boolean {
 async function main(): Promise<void> {
   if (handleCompletionOptions()) {
     return;
+  }
+
+  // Check if cache version is outdated and auto-sync if needed
+  const cachedVersion = loadToolsCache().version;
+  if (hasCacheFile() && cachedVersion !== VERSION) {
+    console.log(
+      `\x1b[33mCache outdated (${cachedVersion} → ${VERSION}). Syncing tools from Unity...\x1b[0m`,
+    );
+    try {
+      await syncTools({});
+      console.log('\x1b[32m✓ Tools synced successfully.\x1b[0m\n');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (isConnectionError(message)) {
+        console.error('\x1b[33mWarning: Failed to sync tools. Using cached definitions.\x1b[0m');
+        console.error("\x1b[33mRun 'uloop sync' manually when Unity is available.\x1b[0m\n");
+      } else {
+        console.error('\x1b[33mWarning: Failed to sync tools. Using cached definitions.\x1b[0m');
+        console.error(`\x1b[33mError: ${message}\x1b[0m`);
+        console.error("\x1b[33mRun 'uloop sync' manually when Unity is available.\x1b[0m\n");
+      }
+    }
+  }
+
+  // Register tool commands from cache (after potential auto-sync)
+  const toolsCache = loadToolsCache();
+  for (const tool of toolsCache.tools) {
+    registerToolCommand(tool);
   }
 
   const args = process.argv.slice(2);
