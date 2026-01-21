@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.55.0](https://github.com/hatayama/uLoopMCP/compare/v0.54.7...v0.55.0) (2026-01-21)
+
+
+### Features
+
+* **cli:** auto-sync tools cache when CLI version changes ([#562](https://github.com/hatayama/uLoopMCP/issues/562)) ([cdb014d](https://github.com/hatayama/uLoopMCP/commit/cdb014d955077ca21c981b112f3c679533e66ae9))
+
 ## [0.54.7](https://github.com/hatayama/uLoopMCP/compare/v0.54.6...v0.54.7) (2026-01-21)
 
 
