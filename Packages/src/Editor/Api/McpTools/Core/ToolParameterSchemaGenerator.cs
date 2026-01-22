@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json;
 using System.ComponentModel;
@@ -97,10 +98,21 @@ namespace io.github.hatayama.uLoopMCP
                 return "array";
             if (underlyingType.IsEnum)
                 return "string"; // Enums are treated as strings with enum constraints
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>))
+            if (IsDictionaryType(underlyingType))
                 return "object";
 
             return "string"; // Default fallback
+        }
+
+        /// <summary>
+        /// Check if type is a dictionary type (Dictionary, IDictionary, IReadOnlyDictionary)
+        /// </summary>
+        private static bool IsDictionaryType(Type type)
+        {
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>))
+                return true;
+            return type.GetInterfaces().Any(i =>
+                i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>));
         }
 
         /// <summary>

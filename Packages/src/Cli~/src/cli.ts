@@ -232,17 +232,26 @@ function convertValue(value: unknown, propInfo: ToolProperty): unknown {
     return parsed;
   }
 
-  if (lowerType === 'object' && typeof value === 'string') {
-    if (value.startsWith('{') && value.endsWith('}')) {
+  if (lowerType === 'object') {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) {
+        throw new Error(`Invalid object value: ${value}. Use JSON object syntax.`);
+      }
       try {
-        const parsed: unknown = JSON.parse(value);
+        const parsed: unknown = JSON.parse(trimmed);
         if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
           return parsed;
         }
       } catch {
-        // Parse failed, return original value
+        // fall through to error below
       }
+      throw new Error(`Invalid object value: ${value}. Use JSON object syntax.`);
     }
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      return value;
+    }
+    throw new Error(`Invalid object value: ${String(value)}. Use JSON object syntax.`);
   }
 
   return value;
