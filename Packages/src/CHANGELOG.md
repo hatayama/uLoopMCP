@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.55.1](https://github.com/hatayama/uLoopMCP/compare/v0.55.0...v0.55.1) (2026-01-22)
+
+
+### Bug Fixes
+
+* handle Dictionary type as object in schema and CLI value conversion ([#564](https://github.com/hatayama/uLoopMCP/issues/564)) ([2047ba9](https://github.com/hatayama/uLoopMCP/commit/2047ba93febbf90f7a41b228ad8631f6ddf3ca91))
+
 ## [0.55.0](https://github.com/hatayama/uLoopMCP/compare/v0.54.7...v0.55.0) (2026-01-21)
 
 
