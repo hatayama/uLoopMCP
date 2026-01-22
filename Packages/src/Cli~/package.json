@@ -1,6 +1,6 @@
 {
   "name": "uloop-cli",
-  "version": "0.55.0",
+  "version": "0.55.1",
   "//version": "x-release-please-version",
   "description": "CLI tool for Unity Editor communication via uLoopMCP",
   "main": "dist/cli.bundle.cjs",
