@@ -97,6 +97,8 @@ namespace io.github.hatayama.uLoopMCP
                 return "array";
             if (underlyingType.IsEnum)
                 return "string"; // Enums are treated as strings with enum constraints
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>))
+                return "object";
 
             return "string"; // Default fallback
         }

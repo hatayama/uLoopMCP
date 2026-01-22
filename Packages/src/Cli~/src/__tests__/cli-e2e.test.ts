@@ -457,6 +457,23 @@ describe('CLI E2E Tests (requires running Unity)', () => {
     });
   });
 
+  describe('execute-dynamic-code', () => {
+    it('should execute simple code without parameters', () => {
+      // Result is serialized as string by Unity
+      const result = runCliJson<{ Result: string }>('execute-dynamic-code --code "return 1;"');
+
+      expect(result.Result).toBe('1');
+    });
+
+    it('should execute code with explicit empty parameters', () => {
+      const result = runCliJson<{ Result: string }>(
+        'execute-dynamic-code --code "return \\"hello\\";" --parameters "{}"',
+      );
+
+      expect(result.Result).toBe('hello');
+    });
+  });
+
   describe('error handling', () => {
     it('should handle unknown commands gracefully', () => {
       const { exitCode } = runCli('unknown-command');

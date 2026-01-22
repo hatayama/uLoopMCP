@@ -232,6 +232,19 @@ function convertValue(value: unknown, propInfo: ToolProperty): unknown {
     return parsed;
   }
 
+  if (lowerType === 'object' && typeof value === 'string') {
+    if (value.startsWith('{') && value.endsWith('}')) {
+      try {
+        const parsed: unknown = JSON.parse(value);
+        if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+          return parsed;
+        }
+      } catch {
+        // Parse failed, return original value
+      }
+    }
+  }
+
   return value;
 }
 
