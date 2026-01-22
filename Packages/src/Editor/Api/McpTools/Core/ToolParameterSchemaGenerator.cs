@@ -109,10 +109,18 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static bool IsDictionaryType(Type type)
         {
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>))
-                return true;
+            if (type.IsGenericType)
+            {
+                Type genericDef = type.GetGenericTypeDefinition();
+                if (genericDef == typeof(Dictionary<,>) ||
+                    genericDef == typeof(IDictionary<,>) ||
+                    genericDef == typeof(IReadOnlyDictionary<,>))
+                    return true;
+            }
             return type.GetInterfaces().Any(i =>
-                i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>));
+                i.IsGenericType &&
+                (i.GetGenericTypeDefinition() == typeof(IDictionary<,>) ||
+                 i.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>)));
         }
 
         /// <summary>
