@@ -73,7 +73,11 @@ export class DirectUnityClient {
     return new Promise((resolve, reject) => {
       const socket = this.socket!;
       const timeoutId = setTimeout(() => {
-        reject(new Error(`Request timed out after ${NETWORK_TIMEOUT_MS}ms`));
+        reject(
+          new Error(
+            `Request timed out after ${NETWORK_TIMEOUT_MS}ms. Unity may be frozen or busy. Please report this to the user and ask how to proceed. Do NOT kill Unity processes without user permission.`,
+          ),
+        );
       }, NETWORK_TIMEOUT_MS);
 
       const onData = (chunk: Buffer): void => {
