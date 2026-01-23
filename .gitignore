@@ -160,3 +160,5 @@ eslint-results.xml
 
 # Yarn Integrity file
 .yarn-integrity
+
+.claude/plans
