@@ -19,17 +19,63 @@ namespace io.github.hatayama.uLoopMCP
         public List<HierarchyNode> GetHierarchyNodes(HierarchyOptions options)
         {
             List<HierarchyNode> nodes = new List<HierarchyNode>();
-            GameObject[] rootObjects = GetRootGameObjects(options.RootPath);
-            
+            GameObject[] rootObjects = options.UseSelection
+                ? GetSelectedRootGameObjects()
+                : GetRootGameObjects(options.RootPath);
+
             foreach (GameObject root in rootObjects)
             {
                 if (!options.IncludeInactive && !root.activeInHierarchy)
                     continue;
-                    
+
                 TraverseHierarchy(root, null, 0, options, nodes);
             }
-            
+
             return nodes;
+        }
+
+        /// <summary>
+        /// Get selected GameObjects as roots, filtering out descendants
+        /// to avoid duplicate traversal when parent and child are both selected.
+        /// </summary>
+        private GameObject[] GetSelectedRootGameObjects()
+        {
+            GameObject[] selected = Selection.gameObjects;
+            if (selected == null || selected.Length == 0)
+            {
+                return System.Array.Empty<GameObject>();
+            }
+
+            List<GameObject> roots = new List<GameObject>();
+            foreach (GameObject obj in selected)
+            {
+                if (obj == null)
+                {
+                    continue;
+                }
+
+                bool isDescendantOfAnotherSelected = false;
+                foreach (GameObject other in selected)
+                {
+                    if (other == null || other == obj)
+                    {
+                        continue;
+                    }
+
+                    if (obj.transform.IsChildOf(other.transform))
+                    {
+                        isDescendantOfAnotherSelected = true;
+                        break;
+                    }
+                }
+
+                if (!isDescendantOfAnotherSelected)
+                {
+                    roots.Add(obj);
+                }
+            }
+
+            return roots.ToArray();
         }
         
         /// <summary>

@@ -142,6 +142,11 @@
           "IncludePaths": {
             "type": "boolean",
             "description": "Include path information"
+          },
+          "UseSelection": {
+            "type": "boolean",
+            "description": "Use selected GameObject(s) as root(s). When true, RootPath is ignored.",
+            "default": false
           }
         }
       }
