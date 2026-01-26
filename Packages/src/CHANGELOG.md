@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.56.0](https://github.com/hatayama/uLoopMCP/compare/v0.55.2...v0.56.0) (2026-01-26)
+
+
+### Features
+
+* Add Selected mode to FindGameObjects tool ([#569](https://github.com/hatayama/uLoopMCP/issues/569)) ([d2f50cd](https://github.com/hatayama/uLoopMCP/commit/d2f50cd4c4a9b375dc1ce7088648e55f25c0ee20))
+* Add UseSelection mode to GetHierarchy tool ([#575](https://github.com/hatayama/uLoopMCP/issues/575)) ([1bdb079](https://github.com/hatayama/uLoopMCP/commit/1bdb0791a321b819800b52f87d1016f21698e782))
+* Add version mismatch diagnostic for timeout and connection errors ([#576](https://github.com/hatayama/uLoopMCP/issues/576)) ([a4c9125](https://github.com/hatayama/uLoopMCP/commit/a4c9125830e253442c9fd464533dd48585f077e7))
+
 ## [0.55.2](https://github.com/hatayama/uLoopMCP/compare/v0.55.1...v0.55.2) (2026-01-23)
 
 
