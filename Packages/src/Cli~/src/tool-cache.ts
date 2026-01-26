@@ -119,8 +119,8 @@ export function getCachedServerVersion(): string | undefined {
 
   try {
     const content = readFileSync(cachePath, 'utf-8');
-    const cache = JSON.parse(content) as ToolsCache;
-    return cache.version;
+    const cache = JSON.parse(content) as Partial<ToolsCache>;
+    return typeof cache.version === 'string' ? cache.version : undefined;
   } catch {
     return undefined;
   }
