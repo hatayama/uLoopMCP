@@ -134,10 +134,13 @@ UnitySearchが提供する検索プロバイダーを取得します
 ```
 
 #### 9. find-game-objects - シーン内オブジェクト検索
-オブジェクトを取得し、コンポーネントのパラメータを調べます
-```
+オブジェクトを取得し、コンポーネントのパラメータを調べます。また、Unity Editorで選択中のGameObject（複数可）の情報も取得できます。
+```text
 → find-game-objects (RequiredComponents: ["Camera"])
 → Cameraコンポーネントのパラメータを調査
+
+→ find-game-objects (SearchMode: "Selected")
+→ Unity Editorで選択中のGameObjectの詳細情報を取得（複数選択対応）
 ```
 
 #### 10. get-hierarchy - シーン構造の解析

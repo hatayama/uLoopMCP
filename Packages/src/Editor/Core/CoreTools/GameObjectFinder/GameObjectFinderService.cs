@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -113,24 +114,67 @@ namespace io.github.hatayama.uLoopMCP
             // Check name pattern
             if (!GameObjectSearchFilters.MatchesNamePattern(gameObject, options.NamePattern, options.SearchMode))
                 return false;
-                
+
             // Check required components
             if (!GameObjectSearchFilters.HasRequiredComponents(gameObject, options.RequiredComponents))
                 return false;
-                
+
             // Check tag
             if (!GameObjectSearchFilters.MatchesTag(gameObject, options.Tag))
                 return false;
-                
+
             // Check layer
             if (!GameObjectSearchFilters.MatchesLayer(gameObject, options.Layer))
                 return false;
-                
+
             // Check active state
             if (!GameObjectSearchFilters.MatchesActiveState(gameObject, options.IncludeInactive))
                 return false;
-                
+
             return true;
+        }
+
+        /// <summary>
+        /// Get currently selected GameObjects in Unity Editor
+        /// </summary>
+        /// <param name="includeInactive">Whether to include inactive GameObjects in results</param>
+        /// <returns>Array of GameObjectDetails for selected objects</returns>
+        public GameObjectDetails[] FindSelectedGameObjects(bool includeInactive)
+        {
+            GameObject[] selectedGameObjects = Selection.gameObjects;
+
+            if (selectedGameObjects == null || selectedGameObjects.Length == 0)
+            {
+                return new GameObjectDetails[0];
+            }
+
+            List<GameObjectDetails> results = new List<GameObjectDetails>();
+
+            foreach (GameObject gameObject in selectedGameObjects)
+            {
+                if (gameObject == null)
+                {
+                    continue;
+                }
+
+                if (!includeInactive && !gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                GameObjectDetails details = new GameObjectDetails
+                {
+                    Found = true,
+                    GameObject = gameObject,
+                    Name = gameObject.name,
+                    Path = GetFullPath(gameObject),
+                    IsActive = gameObject.activeSelf
+                };
+
+                results.Add(details);
+            }
+
+            return results.ToArray();
         }
     }
 }
