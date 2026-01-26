@@ -12,17 +12,21 @@ namespace io.github.hatayama.uLoopMCP
     {
         private GameObject testRoot;
         private HierarchyService service;
-        
+        private Object[] originalSelection;
+
         [SetUp]
         public void SetUp()
         {
             service = new HierarchyService();
             testRoot = new GameObject("TestRoot");
+            originalSelection = Selection.objects;
         }
-        
+
         [TearDown]
         public void TearDown()
         {
+            Selection.objects = originalSelection;
+
             if (testRoot != null)
             {
                 Object.DestroyImmediate(testRoot);
