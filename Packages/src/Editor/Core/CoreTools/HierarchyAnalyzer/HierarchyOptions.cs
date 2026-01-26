@@ -24,5 +24,11 @@ namespace io.github.hatayama.uLoopMCP
         /// Include component information in the result
         /// </summary>
         public bool IncludeComponents { get; set; } = true;
+
+        /// <summary>
+        /// Use selected GameObject(s) as root(s) for hierarchy traversal.
+        /// When true, RootPath is ignored.
+        /// </summary>
+        public bool UseSelection { get; set; } = false;
     }
 }

@@ -40,7 +40,8 @@ namespace io.github.hatayama.uLoopMCP
                     IncludeInactive = parameters.IncludeInactive,
                     MaxDepth = parameters.MaxDepth,
                     RootPath = parameters.RootPath,
-                    IncludeComponents = parameters.IncludeComponents
+                    IncludeComponents = parameters.IncludeComponents,
+                    UseSelection = parameters.UseSelection
                 };
                 
                 cancellationToken.ThrowIfCancellationRequested();

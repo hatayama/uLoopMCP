@@ -12,17 +12,21 @@ namespace io.github.hatayama.uLoopMCP
     {
         private GameObject testRoot;
         private HierarchyService service;
-        
+        private Object[] originalSelection;
+
         [SetUp]
         public void SetUp()
         {
             service = new HierarchyService();
             testRoot = new GameObject("TestRoot");
+            originalSelection = Selection.objects;
         }
-        
+
         [TearDown]
         public void TearDown()
         {
+            Selection.objects = originalSelection;
+
             if (testRoot != null)
             {
                 Object.DestroyImmediate(testRoot);
@@ -150,11 +154,65 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Act
             HierarchyContext context = service.GetCurrentContext();
-            
+
             // Assert
             Assert.That(context, Is.Not.Null);
             Assert.That(context.sceneType, Is.EqualTo("editor").Or.EqualTo("runtime"));
             Assert.That(context.sceneName, Is.Not.Null);
+        }
+
+        [Test]
+        public void GetHierarchyNodes_WithUseSelection_ReturnsSelectedHierarchy()
+        {
+            // Arrange
+            GameObject child = new GameObject("ChildForSelection");
+            child.transform.SetParent(testRoot.transform);
+            Selection.objects = new Object[] { testRoot };
+
+            HierarchyOptions options = new HierarchyOptions { UseSelection = true };
+
+            // Act
+            List<HierarchyNode> nodes = service.GetHierarchyNodes(options);
+
+            // Assert
+            Assert.That(nodes.Find(n => n.name == testRoot.name), Is.Not.Null);
+            Assert.That(nodes.Find(n => n.name == child.name), Is.Not.Null);
+        }
+
+        [Test]
+        public void GetHierarchyNodes_WithUseSelectionAndNoSelection_ReturnsEmpty()
+        {
+            // Arrange
+            Selection.objects = new Object[0];
+            HierarchyOptions options = new HierarchyOptions { UseSelection = true };
+
+            // Act
+            List<HierarchyNode> nodes = service.GetHierarchyNodes(options);
+
+            // Assert
+            Assert.That(nodes.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void GetHierarchyNodes_WithUseSelectionAndParentChildSelection_FiltersDescendants()
+        {
+            // Arrange
+            GameObject child = new GameObject("ChildFiltered");
+            child.transform.SetParent(testRoot.transform);
+            Selection.objects = new Object[] { testRoot, child };
+
+            HierarchyOptions options = new HierarchyOptions { UseSelection = true };
+
+            // Act
+            List<HierarchyNode> nodes = service.GetHierarchyNodes(options);
+
+            // Assert
+            HierarchyNode rootNode = nodes.Find(n => n.name == testRoot.name);
+            HierarchyNode childNode = nodes.Find(n => n.name == child.name);
+            Assert.That(rootNode, Is.Not.Null);
+            Assert.That(childNode, Is.Not.Null);
+            Assert.That(rootNode.parent, Is.Null, "Root should have no parent in result");
+            Assert.That(childNode.parent, Is.EqualTo(rootNode.id), "Child should be traversed as descendant of root, not as separate root");
         }
     }
 }
