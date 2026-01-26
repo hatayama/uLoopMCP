@@ -155,25 +155,45 @@ namespace io.github.hatayama.uLoopMCP
 
             // Convert to FindGameObjectResult array
             List<FindGameObjectResult> results = new List<FindGameObjectResult>();
+            List<ProcessingError> errors = new List<ProcessingError>();
 
             foreach (GameObjectDetails details in selectedObjects)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                FindGameObjectResult result = new FindGameObjectResult
+                try
                 {
-                    name = details.Name,
-                    path = details.Path,
-                    isActive = details.IsActive,
-                    tag = details.GameObject.tag,
-                    layer = details.GameObject.layer,
-                    components = _componentSerializer.SerializeComponents(details.GameObject)
-                };
+                    FindGameObjectResult result = new FindGameObjectResult
+                    {
+                        name = details.Name,
+                        path = details.Path,
+                        isActive = details.IsActive,
+                        tag = details.GameObject.tag,
+                        layer = details.GameObject.layer,
+                        components = _componentSerializer.SerializeComponents(details.GameObject)
+                    };
 
-                results.Add(result);
+                    results.Add(result);
+                }
+                catch (System.Exception ex)
+                {
+                    UnityEngine.Debug.LogWarning($"Failed to process selected GameObject '{details.Name}': {ex.Message}");
+                    VibeLogger.LogWarning(
+                        "selected_gameobject_processing_failed",
+                        $"Failed to process selected GameObject: {details.Name}",
+                        new { gameObjectName = details.Name, gameObjectPath = details.Path, error = ex.Message }
+                    );
+                    errors.Add(new ProcessingError
+                    {
+                        gameObjectName = details.Name,
+                        gameObjectPath = details.Path,
+                        error = ex.Message
+                    });
+                }
             }
 
             FindGameObjectResult[] resultArray = results.ToArray();
+            ProcessingError[] errorArray = errors.Count > 0 ? errors.ToArray() : null;
 
             // Single selection: return JSON directly
             if (resultArray.Length == 1)
@@ -181,7 +201,20 @@ namespace io.github.hatayama.uLoopMCP
                 return new FindGameObjectsResponse
                 {
                     results = resultArray,
-                    totalFound = 1
+                    totalFound = 1,
+                    processingErrors = errorArray
+                };
+            }
+
+            // No successful results
+            if (resultArray.Length == 0)
+            {
+                return new FindGameObjectsResponse
+                {
+                    results = new FindGameObjectResult[0],
+                    totalFound = 0,
+                    processingErrors = errorArray,
+                    message = "All selected GameObjects failed to process."
                 };
             }
 
@@ -192,7 +225,8 @@ namespace io.github.hatayama.uLoopMCP
             {
                 resultsFilePath = filePath,
                 totalFound = resultArray.Length,
-                message = $"Multiple objects selected ({resultArray.Length}). Results exported to file."
+                message = $"Multiple objects selected ({resultArray.Length}). Results exported to file.",
+                processingErrors = errorArray
             };
         }
     }

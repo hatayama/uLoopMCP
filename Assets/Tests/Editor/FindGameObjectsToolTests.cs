@@ -514,7 +514,8 @@ namespace io.github.hatayama.uLoopMCP
         public async Task ExecuteAsync_WithSelectedMode_SingleSelection_ReturnsJsonDirectly()
         {
             // Arrange
-            Selection.activeGameObject = testObject1;
+            Object[] previousSelection = Selection.objects;
+            Selection.objects = new Object[] { testObject1 };
 
             JObject paramsJson = new JObject
             {
@@ -537,7 +538,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
-                Selection.activeGameObject = null;
+                Selection.objects = previousSelection;
             }
         }
 

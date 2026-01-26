@@ -133,7 +133,7 @@ Execute menu items defined with [MenuItem("xxx")] attribute.
 
 #### 9. find-game-objects - Search Scene Objects
 Retrieve objects and examine component parameters. Also retrieve information about currently selected GameObjects (multiple selection supported) in Unity Editor.
-```
+```text
 → find-game-objects (RequiredComponents: ["Camera"])
 → Investigate Camera component parameters
 
