@@ -321,6 +321,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
       spinner.update('Syncing tools...');
       const result = await client.sendRequest<{
         Tools: UnityToolInfo[];
+        Ver?: string;
       }>('get-tool-details', { IncludeDevelopmentOnly: false });
 
       spinner.stop();
@@ -331,6 +332,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
 
       const cache: ToolsCache = {
         version: VERSION,
+        serverVersion: result.Ver,
         updatedAt: new Date().toISOString(),
         tools: result.Tools.map((tool) => ({
           name: tool.name,
