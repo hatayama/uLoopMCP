@@ -80,7 +80,7 @@ function isRetryableError(error: unknown): boolean {
  * Returns true if v1 < v2, false otherwise.
  * Falls back to string comparison if versions are invalid.
  */
-function isVersionOlder(v1: string, v2: string): boolean {
+export function isVersionOlder(v1: string, v2: string): boolean {
   const parsed1 = semver.valid(v1);
   const parsed2 = semver.valid(v2);
 
@@ -321,6 +321,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
       spinner.update('Syncing tools...');
       const result = await client.sendRequest<{
         Tools: UnityToolInfo[];
+        Ver?: string;
       }>('get-tool-details', { IncludeDevelopmentOnly: false });
 
       spinner.stop();
@@ -331,6 +332,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
 
       const cache: ToolsCache = {
         version: VERSION,
+        serverVersion: result.Ver,
         updatedAt: new Date().toISOString(),
         tools: result.Tools.map((tool) => ({
           name: tool.name,

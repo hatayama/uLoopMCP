@@ -18,8 +18,15 @@ import {
   listAvailableTools,
   GlobalOptions,
   syncTools,
+  isVersionOlder,
 } from './execute-tool.js';
-import { loadToolsCache, hasCacheFile, ToolDefinition, ToolProperty } from './tool-cache.js';
+import {
+  loadToolsCache,
+  hasCacheFile,
+  ToolDefinition,
+  ToolProperty,
+  getCachedServerVersion,
+} from './tool-cache.js';
 import { pascalToKebabCase } from './arg-parser.js';
 import { registerSkillsCommand } from './skills/skills-command.js';
 import { VERSION } from './version.js';
@@ -274,12 +281,45 @@ function printConnectionError(): void {
   console.error('[For AI] Please report the above to the user.');
 }
 
+/**
+ * Print version mismatch diagnostic information when errors occur.
+ * Only prints if versions are mismatched.
+ */
+function printVersionMismatchDiagnostic(): void {
+  const serverVersion = getCachedServerVersion();
+  if (serverVersion === undefined) {
+    return;
+  }
+
+  if (serverVersion === VERSION) {
+    return;
+  }
+
+  const isCliOlder = isVersionOlder(VERSION, serverVersion);
+  const action = isCliOlder ? 'Update' : 'Downgrade';
+  const updateCommand = `npm install -g uloop-cli@${serverVersion}`;
+
+  console.error('');
+  console.error('\x1b[33m━━━ Version Mismatch Diagnostic ━━━\x1b[0m');
+  console.error('');
+  console.error(`  CLI version:     ${VERSION}`);
+  console.error(`  Unity package:   ${serverVersion}`);
+  console.error('  Version mismatch may cause communication errors.');
+  console.error('');
+  console.error(`  To fix: ${action} CLI to match Unity package version`);
+  console.error(`    ${updateCommand}`);
+  console.error('');
+  console.error('[For AI] Please ask the user if they would like to run this command.');
+  console.error('\x1b[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m');
+}
+
 async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
   try {
     await fn();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
+    // Unity busy states have clear causes - no version diagnostic needed
     if (message === 'UNITY_COMPILING') {
       console.error('\x1b[33m⏳ Unity is compiling scripts.\x1b[0m');
       console.error('Please wait for compilation to finish and try again.');
@@ -298,14 +338,24 @@ async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
       process.exit(1);
     }
 
+    // Errors that may be caused by version mismatch - show diagnostic
     if (message === 'UNITY_NO_RESPONSE') {
       console.error('\x1b[33m⏳ Unity is busy (no response received).\x1b[0m');
       console.error('Unity may be compiling, reloading, or starting. Please wait and try again.');
+      printVersionMismatchDiagnostic();
       process.exit(1);
     }
 
     if (isConnectionError(message)) {
       printConnectionError();
+      printVersionMismatchDiagnostic();
+      process.exit(1);
+    }
+
+    // Timeout errors
+    if (message.includes('Request timed out')) {
+      console.error(`\x1b[31mError: ${message}\x1b[0m`);
+      printVersionMismatchDiagnostic();
       process.exit(1);
     }
 

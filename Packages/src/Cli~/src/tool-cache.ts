@@ -33,6 +33,7 @@ export interface ToolDefinition {
 
 export interface ToolsCache {
   version: string;
+  serverVersion?: string;
   updatedAt?: string;
   tools: ToolDefinition[];
 }
@@ -104,4 +105,24 @@ export function hasCacheFile(): boolean {
  */
 export function getCacheFilePath(): string {
   return getCachePath();
+}
+
+/**
+ * Get the Unity server version from cache file.
+ * Returns undefined if cache doesn't exist, is corrupted, or serverVersion is missing.
+ */
+export function getCachedServerVersion(): string | undefined {
+  const cachePath = getCachePath();
+
+  if (!existsSync(cachePath)) {
+    return undefined;
+  }
+
+  try {
+    const content = readFileSync(cachePath, 'utf-8');
+    const cache = JSON.parse(content) as Partial<ToolsCache>;
+    return typeof cache.serverVersion === 'string' ? cache.serverVersion : undefined;
+  } catch {
+    return undefined;
+  }
 }
