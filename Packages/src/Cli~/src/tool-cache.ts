@@ -105,3 +105,23 @@ export function hasCacheFile(): boolean {
 export function getCacheFilePath(): string {
   return getCachePath();
 }
+
+/**
+ * Get the server version from cache file.
+ * Returns undefined if cache doesn't exist or is corrupted.
+ */
+export function getCachedServerVersion(): string | undefined {
+  const cachePath = getCachePath();
+
+  if (!existsSync(cachePath)) {
+    return undefined;
+  }
+
+  try {
+    const content = readFileSync(cachePath, 'utf-8');
+    const cache = JSON.parse(content) as ToolsCache;
+    return cache.version;
+  } catch {
+    return undefined;
+  }
+}

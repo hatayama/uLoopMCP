@@ -80,7 +80,7 @@ function isRetryableError(error: unknown): boolean {
  * Returns true if v1 < v2, false otherwise.
  * Falls back to string comparison if versions are invalid.
  */
-function isVersionOlder(v1: string, v2: string): boolean {
+export function isVersionOlder(v1: string, v2: string): boolean {
   const parsed1 = semver.valid(v1);
   const parsed2 = semver.valid(v2);
 
