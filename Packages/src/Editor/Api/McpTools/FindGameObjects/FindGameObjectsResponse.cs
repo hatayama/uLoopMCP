@@ -5,6 +5,10 @@ namespace io.github.hatayama.uLoopMCP
         public FindGameObjectResult[] results { get; set; }
         public int totalFound { get; set; }
         public string errorMessage { get; set; }
+
+        // For multiple selection file output
+        public string resultsFilePath { get; set; }
+        public string message { get; set; }
     }
     
     public class FindGameObjectResult

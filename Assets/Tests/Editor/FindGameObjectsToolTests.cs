@@ -1,5 +1,7 @@
+using System.IO;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 using Newtonsoft.Json.Linq;
 
@@ -455,23 +457,23 @@ namespace io.github.hatayama.uLoopMCP
             GameObject obj1 = new GameObject("TestObjectOne");
             GameObject obj2 = new GameObject("AnotherTestObjectTwo");
             GameObject obj3 = new GameObject("DifferentName");
-            
+
             JObject paramsJson = new JObject
             {
                 ["NamePattern"] = "TestObject",
                 ["SearchMode"] = "Contains"
             };
-            
+
             try
             {
                 // Act
                 BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
                 FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
-                
+
                 // Assert
                 Assert.That(response, Is.Not.Null);
                 Assert.That(response.totalFound, Is.EqualTo(4)); // Includes SetUp objects (TestObject1, TestObject2)
-                
+
                 string[] foundNames = System.Array.ConvertAll(response.results, r => r.name);
                 Assert.That(foundNames, Does.Contain("TestObjectOne"));
                 Assert.That(foundNames, Does.Contain("AnotherTestObjectTwo"));
@@ -483,6 +485,174 @@ namespace io.github.hatayama.uLoopMCP
                 Object.DestroyImmediate(obj1);
                 Object.DestroyImmediate(obj2);
                 Object.DestroyImmediate(obj3);
+            }
+        }
+
+        [Test]
+        public async Task ExecuteAsync_WithSelectedMode_NoSelection_ReturnsEmptyResult()
+        {
+            // Arrange
+            Selection.objects = new Object[0];
+
+            JObject paramsJson = new JObject
+            {
+                ["SearchMode"] = "Selected"
+            };
+
+            // Act
+            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
+
+            // Assert
+            Assert.That(response, Is.Not.Null);
+            Assert.That(response.totalFound, Is.EqualTo(0));
+            Assert.That(response.results, Is.Empty);
+            Assert.That(response.message, Does.Contain("No GameObjects"));
+        }
+
+        [Test]
+        public async Task ExecuteAsync_WithSelectedMode_SingleSelection_ReturnsJsonDirectly()
+        {
+            // Arrange
+            Selection.activeGameObject = testObject1;
+
+            JObject paramsJson = new JObject
+            {
+                ["SearchMode"] = "Selected"
+            };
+
+            try
+            {
+                // Act
+                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
+
+                // Assert
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.totalFound, Is.EqualTo(1));
+                Assert.That(response.results, Is.Not.Null);
+                Assert.That(response.results.Length, Is.EqualTo(1));
+                Assert.That(response.results[0].name, Is.EqualTo("TestObject1"));
+                Assert.That(response.resultsFilePath, Is.Null);
+            }
+            finally
+            {
+                Selection.activeGameObject = null;
+            }
+        }
+
+        [Test]
+        public async Task ExecuteAsync_WithSelectedMode_MultipleSelection_ExportsToFile()
+        {
+            // Arrange
+            Selection.objects = new Object[] { testObject1, testObject2 };
+
+            JObject paramsJson = new JObject
+            {
+                ["SearchMode"] = "Selected"
+            };
+
+            try
+            {
+                // Act
+                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
+
+                // Assert
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.totalFound, Is.EqualTo(2));
+                Assert.That(response.resultsFilePath, Is.Not.Null);
+                Assert.That(response.resultsFilePath, Does.Contain("FindGameObjectsResults"));
+                Assert.That(response.message, Does.Contain("Multiple objects selected"));
+
+                // Verify file exists
+                string fullPath = Path.Combine(Application.dataPath, "..", response.resultsFilePath);
+                Assert.That(File.Exists(fullPath), Is.True, $"Export file should exist at {fullPath}");
+
+                // Cleanup exported file
+                if (File.Exists(fullPath))
+                {
+                    File.Delete(fullPath);
+                }
+            }
+            finally
+            {
+                Selection.objects = new Object[0];
+            }
+        }
+
+        [Test]
+        public async Task ExecuteAsync_WithSelectedMode_IncludeInactiveFalse_ExcludesInactiveObjects()
+        {
+            // Arrange
+            testObject1.SetActive(true);
+            testObject2.SetActive(false);
+            Selection.objects = new Object[] { testObject1, testObject2 };
+
+            JObject paramsJson = new JObject
+            {
+                ["SearchMode"] = "Selected",
+                ["IncludeInactive"] = false
+            };
+
+            try
+            {
+                // Act
+                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
+
+                // Assert
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.totalFound, Is.EqualTo(1));
+                Assert.That(response.results, Is.Not.Null);
+                Assert.That(response.results.Length, Is.EqualTo(1));
+                Assert.That(response.results[0].name, Is.EqualTo("TestObject1"));
+            }
+            finally
+            {
+                testObject1.SetActive(true);
+                testObject2.SetActive(true);
+                Selection.objects = new Object[0];
+            }
+        }
+
+        [Test]
+        public async Task ExecuteAsync_WithSelectedMode_IncludeInactiveTrue_IncludesInactiveObjects()
+        {
+            // Arrange
+            testObject1.SetActive(true);
+            testObject2.SetActive(false);
+            Selection.objects = new Object[] { testObject1, testObject2 };
+
+            JObject paramsJson = new JObject
+            {
+                ["SearchMode"] = "Selected",
+                ["IncludeInactive"] = true
+            };
+
+            try
+            {
+                // Act
+                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
+
+                // Assert
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.totalFound, Is.EqualTo(2));
+                Assert.That(response.resultsFilePath, Is.Not.Null); // Multiple selection exports to file
+
+                // Cleanup exported file
+                string fullPath = Path.Combine(Application.dataPath, "..", response.resultsFilePath);
+                if (File.Exists(fullPath))
+                {
+                    File.Delete(fullPath);
+                }
+            }
+            finally
+            {
+                testObject1.SetActive(true);
+                testObject2.SetActive(true);
+                Selection.objects = new Object[0];
             }
         }
     }

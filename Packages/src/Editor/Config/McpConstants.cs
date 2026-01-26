@@ -133,6 +133,7 @@ namespace io.github.hatayama.uLoopMCP
         public const string TEST_RESULTS_DIR = "TestResults";
         public const string SEARCH_RESULTS_DIR = "SearchResults";
         public const string HIERARCHY_RESULTS_DIR = "HierarchyResults";
+        public const string FIND_GAMEOBJECTS_RESULTS_DIR = "FindGameObjectsResults";
         public const string VIBE_LOGS_DIR = "VibeLogs";
 
         // Correlation ID constants

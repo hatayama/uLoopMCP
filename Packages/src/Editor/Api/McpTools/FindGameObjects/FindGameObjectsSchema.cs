@@ -6,7 +6,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         // Search criteria
         public string NamePattern { get; set; } = "";
-        [Description("Search mode (Exact(0), Path(1), Regex(2), Contains(3))")]
+        [Description("Search mode (Exact(0), Path(1), Regex(2), Contains(3), Selected(4))")]
         public SearchMode SearchMode { get; set; } = SearchMode.Exact;
         public string[] RequiredComponents { get; set; } = new string[0];
         public string Tag { get; set; } = "";
@@ -23,6 +23,7 @@ namespace io.github.hatayama.uLoopMCP
         Exact = 0,      // Exact match (default)
         Path = 1,       // Hierarchy path search (e.g. "Canvas/Button")
         Regex = 2,      // Regular expression
-        Contains = 3    // Partial match
+        Contains = 3,   // Partial match
+        Selected = 4    // Get currently selected GameObjects in Unity Editor
     }
 }
