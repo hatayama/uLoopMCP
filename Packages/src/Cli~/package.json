@@ -41,18 +41,18 @@
     "provenance": true
   },
   "dependencies": {
-    "commander": "^14.0.2",
+    "commander": "14.0.2",
     "launch-unity": "0.12.0",
-    "semver": "^7.7.3"
+    "semver": "7.7.3"
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",
     "@types/jest": "30.0.0",
     "@types/node": "25.0.2",
-    "@types/semver": "^7.7.1",
+    "@types/semver": "7.7.1",
     "esbuild": "0.27.1",
     "eslint": "9.39.2",
-    "eslint-config-prettier": "^10.1.8",
+    "eslint-config-prettier": "10.1.8",
     "eslint-plugin-prettier": "5.5.4",
     "eslint-plugin-security": "3.0.1",
     "jest": "30.2.0",
