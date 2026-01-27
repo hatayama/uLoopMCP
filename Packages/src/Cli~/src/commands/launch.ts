@@ -45,11 +45,23 @@ export function registerLaunchCommand(program: Command): void {
     });
 }
 
+function parseMaxDepth(value: string | undefined): number {
+  if (value === undefined) {
+    return 3;
+  }
+  const parsed = parseInt(value, 10);
+  if (Number.isNaN(parsed)) {
+    console.error(`Error: Invalid --max-depth value: "${value}". Must be an integer.`);
+    process.exit(1);
+  }
+  return parsed;
+}
+
 async function runLaunchCommand(
   projectPath: string | undefined,
   options: LaunchCommandOptions,
 ): Promise<void> {
-  const maxDepth = options.maxDepth ? parseInt(options.maxDepth, 10) : 3;
+  const maxDepth = parseMaxDepth(options.maxDepth);
 
   let resolvedProjectPath: string | undefined = projectPath ? resolve(projectPath) : undefined;
 
