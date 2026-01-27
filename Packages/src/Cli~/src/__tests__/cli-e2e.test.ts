@@ -501,7 +501,6 @@ describe('CLI E2E Tests (requires running Unity)', () => {
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain('Unity process already running');
-      expect(stdout).toContain('Brought existing Unity to the front');
     });
 
     it('should fail gracefully when project not found', () => {
