@@ -482,6 +482,46 @@ describe('CLI E2E Tests (requires running Unity)', () => {
     });
   });
 
+  describe('launch', () => {
+    it('should display launch command help', () => {
+      const { stdout, exitCode } = runCli('launch --help');
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('Launch Unity project');
+      expect(stdout).toContain('--restart');
+      expect(stdout).toContain('--platform');
+      expect(stdout).toContain('--max-depth');
+      expect(stdout).toContain('--add-unity-hub');
+      expect(stdout).toContain('--favorite');
+    });
+
+    it('should detect already running Unity and focus window', () => {
+      // Unity is already running for this test suite, so launch should detect it
+      const { stdout, exitCode } = runCli(`launch "${UNITY_PROJECT_ROOT}"`);
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('Unity process already running');
+    });
+
+    it('should fail gracefully when project not found', () => {
+      const { stdout, stderr, exitCode } = runCli('launch /nonexistent/path/to/project');
+
+      expect(exitCode).not.toBe(0);
+      // Error message should mention project not found or version file not found
+      const output = stderr || stdout;
+      expect(output).toMatch(/not found|does not appear to be a Unity project/i);
+    });
+
+    it('should search for Unity project from current directory', () => {
+      // This test runs from Unity project root, so it should find the project
+      const { stdout, exitCode } = runCli('launch');
+
+      expect(exitCode).toBe(0);
+      // Should either find and focus existing Unity or report no Unity found
+      expect(stdout).toMatch(/Unity process already running|Selected project/);
+    });
+  });
+
   // Domain Reload tests must run last to avoid affecting other tests
   describe('compile --force-recompile (Domain Reload)', () => {
     it('should support --force-recompile option', () => {

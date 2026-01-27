@@ -22,6 +22,7 @@ uloop get-hierarchy [options]
 | `--include-components` | boolean | `true` | Include component information |
 | `--include-inactive` | boolean | `true` | Include inactive GameObjects |
 | `--include-paths` | boolean | `false` | Include full path information |
+| `--use-selection` | boolean | `false` | Use selected GameObject(s) as root(s). When true, `--root-path` is ignored. |
 
 ## Examples
 
@@ -37,6 +38,9 @@ uloop get-hierarchy --max-depth 2
 
 # Without components
 uloop get-hierarchy --include-components false
+
+# Get hierarchy from currently selected GameObjects
+uloop get-hierarchy --use-selection
 ```
 
 ## Output
