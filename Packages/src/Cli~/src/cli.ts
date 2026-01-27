@@ -29,6 +29,7 @@ import {
 } from './tool-cache.js';
 import { pascalToKebabCase } from './arg-parser.js';
 import { registerSkillsCommand } from './skills/skills-command.js';
+import { registerLaunchCommand } from './commands/launch.js';
 import { VERSION } from './version.js';
 import { findUnityProjectRoot } from './project-root.js';
 
@@ -36,7 +37,15 @@ interface CliOptions extends GlobalOptions {
   [key: string]: unknown;
 }
 
-const BUILTIN_COMMANDS = ['list', 'sync', 'completion', 'update', 'fix', 'skills'] as const;
+const BUILTIN_COMMANDS = [
+  'list',
+  'sync',
+  'completion',
+  'update',
+  'fix',
+  'skills',
+  'launch',
+] as const;
 
 const program = new Command();
 
@@ -93,6 +102,9 @@ program
 
 // Register skills subcommand
 registerSkillsCommand(program);
+
+// Register launch subcommand
+registerLaunchCommand(program);
 
 /**
  * Register a tool as a CLI command dynamically.
