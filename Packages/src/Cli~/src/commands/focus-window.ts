@@ -38,12 +38,22 @@ export function registerFocusWindowCommand(program: Command): void {
         process.exit(1);
       }
 
-      await focusUnityProcess(runningProcess.pid);
-      console.log(
-        JSON.stringify({
-          Success: true,
-          Message: `Unity Editor window focused (PID: ${runningProcess.pid})`,
-        }),
-      );
+      try {
+        await focusUnityProcess(runningProcess.pid);
+        console.log(
+          JSON.stringify({
+            Success: true,
+            Message: `Unity Editor window focused (PID: ${runningProcess.pid})`,
+          }),
+        );
+      } catch (error) {
+        console.error(
+          JSON.stringify({
+            Success: false,
+            Message: `Failed to focus Unity window: ${error instanceof Error ? error.message : String(error)}`,
+          }),
+        );
+        process.exit(1);
+      }
     });
 }
