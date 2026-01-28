@@ -12,7 +12,7 @@ import { safeSetTimeout, stopSafeTimer } from './utils/safe-timer.js';
 import { ConnectionManager } from './connection-manager.js';
 import { MessageHandler } from './message-handler.js';
 import { VibeLogger } from './utils/vibe-logger.js';
-import { focusUnityWindowByProjectPath } from './utils/unity-window-focus.js';
+import { findRunningUnityProcess, focusUnityProcess } from 'launch-unity';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 
@@ -687,25 +687,28 @@ export class UnityClient {
     const projectPath = resolve(dirname(currentFile), '..', '..');
 
     // Fire-and-forget: focus the Unity that matches this project
-    void focusUnityWindowByProjectPath(projectPath).then((result) => {
-      if (result.success) {
-        VibeLogger.logInfo(
-          'focus_window_success',
-          'Brought Unity window to foreground via OS command',
-          { project_path: projectPath },
-          undefined,
-          'Successfully focused Unity window after timeout',
-        );
-      } else {
+    void (async (): Promise<void> => {
+      const runningProcess = await findRunningUnityProcess(projectPath);
+      if (!runningProcess) {
         VibeLogger.logDebug(
           'focus_window_failed',
           'Failed to bring Unity window to foreground',
-          { message: result.message, project_path: projectPath },
+          { message: 'No running Unity process found', project_path: projectPath },
           undefined,
           'Could not focus Unity window - may not be running',
         );
+        return;
       }
-    });
+
+      await focusUnityProcess(runningProcess.pid);
+      VibeLogger.logInfo(
+        'focus_window_success',
+        'Brought Unity window to foreground via OS command',
+        { project_path: projectPath, pid: runningProcess.pid },
+        undefined,
+        'Successfully focused Unity window after timeout',
+      );
+    })();
   }
 
   /**

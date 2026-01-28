@@ -10,6 +10,9 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { UnityClient } from './unity-client.js';
 import { VibeLogger } from './utils/vibe-logger.js';
+import { findRunningUnityProcess, focusUnityProcess } from 'launch-unity';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 import { UnityDiscovery } from './unity-discovery.js';
 import { UnityConnectionManager } from './unity-connection-manager.js';
 import { UnityToolManager } from './unity-tool-manager.js';
@@ -281,6 +284,11 @@ class UnityMcpServer {
       // Tool executed
 
       try {
+        // Intercept focus-window: handle at OS level, bypassing Unity TCP
+        if (name === 'focus-window') {
+          return await this.handleFocusWindow();
+        }
+
         // Check if it's a dynamic Unity tool
         if (this.toolManager.hasTool(name)) {
           const dynamicTool = this.toolManager.getTool(name);
@@ -309,6 +317,49 @@ class UnityMcpServer {
         };
       }
     });
+  }
+
+  /**
+   * Handle focus-window tool call at OS level, bypassing Unity TCP.
+   * Works even when Unity is busy (compiling, domain reload).
+   */
+  private async handleFocusWindow(): Promise<{
+    content: Array<{ type: string; text: string }>;
+    isError: boolean;
+  }> {
+    // Derive project path from bundle location: Library/uLoopMCP/server.bundle.js -> project root
+    const currentFile = fileURLToPath(import.meta.url);
+    const projectPath = resolve(dirname(currentFile), '..', '..');
+
+    const runningProcess = await findRunningUnityProcess(projectPath);
+    if (!runningProcess) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              Message: 'No running Unity process found for this project',
+              Success: false,
+            }),
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    await focusUnityProcess(runningProcess.pid);
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            Message: `Unity Editor window focused (PID: ${runningProcess.pid})`,
+            Success: true,
+          }),
+        },
+      ],
+      isError: false,
+    };
   }
 
   /**

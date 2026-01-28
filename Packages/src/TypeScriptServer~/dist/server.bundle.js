@@ -2980,7 +2980,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve4.call(this, root, ref);
+      let _sch = resolve5.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a2 = root.localRefs) === null || _a2 === void 0 ? void 0 : _a2[ref];
         const { schemaId } = this.opts;
@@ -3007,7 +3007,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve4(root, ref) {
+    function resolve5(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3582,7 +3582,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve4(baseURI, relativeURI, options) {
+    function resolve5(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const resolved = resolveComponent(parse3(baseURI, schemelessOptions), parse3(relativeURI, schemelessOptions), schemelessOptions, true);
       schemelessOptions.skipEscape = true;
@@ -3809,7 +3809,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize: normalize2,
-      resolve: resolve4,
+      resolve: resolve5,
       resolveComponent,
       equal,
       serialize,
@@ -9591,7 +9591,7 @@ var require_compile2 = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve4.call(this, root, ref);
+      let _sch = resolve5.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a2 = root.localRefs) === null || _a2 === void 0 ? void 0 : _a2[ref];
         const { schemaId } = this.opts;
@@ -9618,7 +9618,7 @@ var require_compile2 = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve4(root, ref) {
+    function resolve5(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -25230,7 +25230,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve4) => setTimeout(resolve4, pollInterval));
+        await new Promise((resolve5) => setTimeout(resolve5, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -25247,7 +25247,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve4, reject) => {
+    return new Promise((resolve5, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -25325,7 +25325,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve4(parseResult.data);
+            resolve5(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -25586,12 +25586,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve4, reject) => {
+    return new Promise((resolve5, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve4, interval);
+      const timeoutId = setTimeout(resolve5, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -26320,12 +26320,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve4) => {
+    return new Promise((resolve5) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve4();
+        resolve5();
       } else {
-        this._stdout.once("drain", resolve4);
+        this._stdout.once("drain", resolve5);
       }
     });
   }
@@ -26972,7 +26972,7 @@ var VibeLogger = class _VibeLogger {
    * Asynchronous sleep function for retry delays
    */
   static async sleep(ms) {
-    return new Promise((resolve4) => setTimeout(resolve4, ms));
+    return new Promise((resolve5) => setTimeout(resolve5, ms));
   }
   /**
    * Get current environment information
@@ -27654,8 +27654,8 @@ var MessageHandler = class {
   /**
    * Register a pending request
    */
-  registerPendingRequest(id, resolve4, reject) {
-    this.pendingRequests.set(id, { resolve: resolve4, reject, timestamp: Date.now() });
+  registerPendingRequest(id, resolve5, reject) {
+    this.pendingRequests.set(id, { resolve: resolve5, reject, timestamp: Date.now() });
   }
   /**
    * Handle incoming data from Unity using Content-Length framing
@@ -27844,9 +27844,9 @@ var MessageHandler = class {
   }
 };
 
-// src/utils/unity-window-focus.ts
-import { execFile } from "node:child_process";
-import { resolve as resolve2 } from "node:path";
+// node_modules/launch-unity/dist/lib.js
+import { execFile, spawn } from "node:child_process";
+import { join as join2, resolve as resolve2 } from "node:path";
 import { promisify } from "node:util";
 var execFileAsync = promisify(execFile);
 var UNITY_EXECUTABLE_PATTERN_MAC = /Unity\.app\/Contents\/MacOS\/Unity/i;
@@ -27855,21 +27855,25 @@ var PROJECT_PATH_PATTERN = /-(?:projectPath|projectpath)(?:=|\s+)("[^"]+"|'[^']+
 var PROCESS_LIST_COMMAND_MAC = "ps";
 var PROCESS_LIST_ARGS_MAC = ["-axo", "pid=,command=", "-ww"];
 var WINDOWS_POWERSHELL = "powershell";
-var normalizePath = (target) => {
-  const resolvedPath = resolve2(target);
-  let trimmed = resolvedPath;
+var removeTrailingSeparators = (target) => {
+  let trimmed = target;
   while (trimmed.length > 1 && (trimmed.endsWith("/") || trimmed.endsWith("\\"))) {
     trimmed = trimmed.slice(0, -1);
   }
   return trimmed;
 };
+var normalizePath = (target) => {
+  const resolvedPath = resolve2(target);
+  const trimmed = removeTrailingSeparators(resolvedPath);
+  return trimmed;
+};
 var toComparablePath = (value) => {
-  return value.replace(/\\/g, "/").toLowerCase();
+  return value.replace(/\\/g, "/").toLocaleLowerCase();
 };
 var pathsEqual = (left, right) => {
   return toComparablePath(normalizePath(left)) === toComparablePath(normalizePath(right));
 };
-var extractProjectPath = (command) => {
+function extractProjectPath(command) {
   const match = command.match(PROJECT_PATH_PATTERN);
   if (!match) {
     return void 0;
@@ -27886,7 +27890,7 @@ var extractProjectPath = (command) => {
     return trimmed.slice(1, -1);
   }
   return trimmed;
-};
+}
 var isUnityAuxiliaryProcess = (command) => {
   const normalizedCommand = command.toLowerCase();
   if (normalizedCommand.includes("-batchmode")) {
@@ -27901,11 +27905,7 @@ async function listUnityProcessesMac() {
     stdout = result.stdout;
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
-    VibeLogger.logDebug(
-      "unity_process_list_failed",
-      `Failed to retrieve Unity process list: ${message}`,
-      { platform: "darwin" }
-    );
+    console.error(`Failed to retrieve Unity process list: ${message}`);
     return [];
   }
   const lines = stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
@@ -27948,19 +27948,11 @@ async function listUnityProcessesWindows() {
   ];
   let stdout = "";
   try {
-    const result = await execFileAsync(WINDOWS_POWERSHELL, [
-      "-NoProfile",
-      "-Command",
-      scriptLines.join("\n")
-    ]);
+    const result = await execFileAsync(WINDOWS_POWERSHELL, ["-NoProfile", "-Command", scriptLines.join("\n")]);
     stdout = result.stdout ?? "";
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
-    VibeLogger.logDebug(
-      "unity_process_list_failed",
-      `Failed to retrieve Unity process list on Windows: ${message}`,
-      { platform: "win32" }
-    );
+    console.error(`Failed to retrieve Unity process list on Windows: ${message}`);
     return [];
   }
   const lines = stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
@@ -28002,22 +27994,31 @@ async function listUnityProcesses() {
   }
   return [];
 }
-async function findUnityProcessByProjectPath(projectPath) {
+async function findRunningUnityProcess(projectPath) {
   const normalizedTarget = normalizePath(projectPath);
   const processes = await listUnityProcesses();
   return processes.find((candidate) => pathsEqual(candidate.projectPath, normalizedTarget));
 }
-async function focusUnityWindowMac(pid) {
+async function focusUnityProcess(pid) {
+  if (process.platform === "darwin") {
+    await focusUnityProcessMac(pid);
+    return;
+  }
+  if (process.platform === "win32") {
+    await focusUnityProcessWindows(pid);
+  }
+}
+async function focusUnityProcessMac(pid) {
   const script = `tell application "System Events" to set frontmost of (first process whose unix id is ${pid}) to true`;
   try {
     await execFileAsync("osascript", ["-e", script]);
-    return { success: true, message: `Focused Unity window (PID: ${pid})` };
+    console.log("Brought existing Unity to the front.");
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
-    return { success: false, message: `Failed to focus Unity window: ${message}` };
+    console.warn(`Failed to bring Unity to front: ${message}`);
   }
 }
-async function focusUnityWindowWindows(pid) {
+async function focusUnityProcessWindows(pid) {
   const addTypeLines = [
     'Add-Type -TypeDefinition @"',
     "using System;",
@@ -28031,38 +28032,19 @@ async function focusUnityWindowWindows(pid) {
   const scriptLines = [
     "$ErrorActionPreference = 'Stop'",
     ...addTypeLines,
-    `try { $process = Get-Process -Id ${pid} -ErrorAction Stop } catch { exit 1 }`,
+    `try { $process = Get-Process -Id ${pid} -ErrorAction Stop } catch { return }`,
     "$handle = $process.MainWindowHandle",
-    "if ($handle -eq 0) { exit 1 }",
+    "if ($handle -eq 0) { return }",
     "[Win32Interop]::ShowWindowAsync($handle, 9) | Out-Null",
     "[Win32Interop]::SetForegroundWindow($handle) | Out-Null"
   ];
   try {
     await execFileAsync(WINDOWS_POWERSHELL, ["-NoProfile", "-Command", scriptLines.join("\n")]);
-    return { success: true, message: `Focused Unity window (PID: ${pid})` };
+    console.log("Brought existing Unity to the front.");
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
-    return { success: false, message: `Failed to focus Unity window on Windows: ${message}` };
+    console.warn(`Failed to bring Unity to front on Windows: ${message}`);
   }
-}
-async function focusUnityWindowByPid(pid) {
-  if (process.platform === "darwin") {
-    return await focusUnityWindowMac(pid);
-  }
-  if (process.platform === "win32") {
-    return await focusUnityWindowWindows(pid);
-  }
-  return { success: false, message: `Unsupported platform: ${process.platform}` };
-}
-async function focusUnityWindowByProjectPath(projectPath) {
-  const processInfo = await findUnityProcessByProjectPath(projectPath);
-  if (!processInfo) {
-    return {
-      success: false,
-      message: `No Unity process found for project: ${projectPath}`
-    };
-  }
-  return await focusUnityWindowByPid(processInfo.pid);
 }
 
 // src/unity-client.ts
@@ -28231,7 +28213,7 @@ var UnityClient = class _UnityClient {
     if (this._connected && this.socket && !this.socket.destroyed) {
       return;
     }
-    return new Promise((resolve4, reject) => {
+    return new Promise((resolve5, reject) => {
       this.socket = new net.Socket();
       const currentSocket = this.socket;
       let connectionEstablished = false;
@@ -28284,7 +28266,7 @@ var UnityClient = class _UnityClient {
             );
           }
         });
-        resolve4();
+        resolve5();
       });
       currentSocket.on("error", (error2) => {
         this._connected = false;
@@ -28476,7 +28458,7 @@ var UnityClient = class _UnityClient {
    * Send request and wait for response
    */
   async sendRequest(request, timeoutMs) {
-    return new Promise((resolve4, reject) => {
+    return new Promise((resolve5, reject) => {
       if (!this.socket || this.socket.destroyed || !this.connected) {
         reject(new Error(ERROR_MESSAGES.NOT_CONNECTED));
         return;
@@ -28503,7 +28485,7 @@ var UnityClient = class _UnityClient {
         request.id,
         (response) => {
           stopSafeTimer(timeoutTimer);
-          resolve4(response);
+          resolve5(response);
         },
         (error2) => {
           stopSafeTimer(timeoutTimer);
@@ -28578,25 +28560,27 @@ var UnityClient = class _UnityClient {
   tryFocusUnityWindow() {
     const currentFile = fileURLToPath2(import.meta.url);
     const projectPath = resolve3(dirname2(currentFile), "..", "..");
-    void focusUnityWindowByProjectPath(projectPath).then((result) => {
-      if (result.success) {
-        VibeLogger.logInfo(
-          "focus_window_success",
-          "Brought Unity window to foreground via OS command",
-          { project_path: projectPath },
-          void 0,
-          "Successfully focused Unity window after timeout"
-        );
-      } else {
+    void (async () => {
+      const runningProcess = await findRunningUnityProcess(projectPath);
+      if (!runningProcess) {
         VibeLogger.logDebug(
           "focus_window_failed",
           "Failed to bring Unity window to foreground",
-          { message: result.message, project_path: projectPath },
+          { message: "No running Unity process found", project_path: projectPath },
           void 0,
           "Could not focus Unity window - may not be running"
         );
+        return;
       }
-    });
+      await focusUnityProcess(runningProcess.pid);
+      VibeLogger.logInfo(
+        "focus_window_success",
+        "Brought Unity window to foreground via OS command",
+        { project_path: projectPath, pid: runningProcess.pid },
+        void 0,
+        "Successfully focused Unity window after timeout"
+      );
+    })();
   }
   /**
    * Detect stuck state and attempt recovery
@@ -28670,25 +28654,29 @@ var UnityClient = class _UnityClient {
    * Performs low-level TCP connection test with short timeout
    */
   static async isUnityAvailable(port) {
-    return new Promise((resolve4) => {
+    return new Promise((resolve5) => {
       const socket = new net.Socket();
       const timeout = 500;
       const timer = setTimeout(() => {
         socket.destroy();
-        resolve4(false);
+        resolve5(false);
       }, timeout);
       socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
         clearTimeout(timer);
         socket.destroy();
-        resolve4(true);
+        resolve5(true);
       });
       socket.on("error", () => {
         clearTimeout(timer);
-        resolve4(false);
+        resolve5(false);
       });
     });
   }
 };
+
+// src/server.ts
+import { fileURLToPath as fileURLToPath3 } from "url";
+import { dirname as dirname3, resolve as resolve4 } from "path";
 
 // src/unity-discovery.ts
 var UnityDiscovery = class _UnityDiscovery {
@@ -29165,14 +29153,14 @@ var UnityConnectionManager = class {
    * Wait for Unity connection with timeout
    */
   async waitForUnityConnectionWithTimeout(timeoutMs) {
-    return new Promise((resolve4, reject) => {
+    return new Promise((resolve5, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error(`Unity connection timeout after ${timeoutMs}ms`));
       }, timeoutMs);
       const checkConnection = () => {
         if (this.unityClient.connected) {
           clearTimeout(timeout);
-          resolve4();
+          resolve5();
           return;
         }
         if (this.isInitialized) {
@@ -29180,7 +29168,7 @@ var UnityConnectionManager = class {
             if (this.unityClient.connected) {
               clearTimeout(timeout);
               clearInterval(connectionInterval);
-              resolve4();
+              resolve5();
             }
           }, 100);
           return;
@@ -29188,7 +29176,7 @@ var UnityConnectionManager = class {
         this.initialize(() => {
           return new Promise((resolveCallback) => {
             clearTimeout(timeout);
-            resolve4();
+            resolve5();
             resolveCallback();
           });
         });
@@ -30799,6 +30787,9 @@ var UnityMcpServer = class {
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
       try {
+        if (name === "focus-window") {
+          return await this.handleFocusWindow();
+        }
         if (this.toolManager.hasTool(name)) {
           const dynamicTool = this.toolManager.getTool(name);
           if (!dynamicTool) {
@@ -30823,6 +30814,42 @@ var UnityMcpServer = class {
         };
       }
     });
+  }
+  /**
+   * Handle focus-window tool call at OS level, bypassing Unity TCP.
+   * Works even when Unity is busy (compiling, domain reload).
+   */
+  async handleFocusWindow() {
+    const currentFile = fileURLToPath3(import.meta.url);
+    const projectPath = resolve4(dirname3(currentFile), "..", "..");
+    const runningProcess = await findRunningUnityProcess(projectPath);
+    if (!runningProcess) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              Message: "No running Unity process found for this project",
+              Success: false
+            })
+          }
+        ],
+        isError: true
+      };
+    }
+    await focusUnityProcess(runningProcess.pid);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            Message: `Unity Editor window focused (PID: ${runningProcess.pid})`,
+            Success: true
+          })
+        }
+      ],
+      isError: false
+    };
   }
   /**
    * Start the server
