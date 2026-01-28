@@ -75,7 +75,7 @@ export class DirectUnityClient {
       const timeoutId = setTimeout(() => {
         reject(
           new Error(
-            `Request timed out after ${NETWORK_TIMEOUT_MS}ms. Unity may be frozen or busy. [For AI] Please report this to the user and ask how to proceed. Do NOT kill Unity processes without user permission.`,
+            `Request timed out after ${NETWORK_TIMEOUT_MS}ms. Unity may be frozen or busy. [For AI] Run 'uloop focus-window' to bring Unity to the front, then retry the tool. If the issue persists, report this to the user and ask how to proceed. Do NOT kill Unity processes without user permission.`,
           ),
         );
       }, NETWORK_TIMEOUT_MS);

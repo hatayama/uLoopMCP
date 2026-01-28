@@ -2980,7 +2980,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve5.call(this, root, ref);
+      let _sch = resolve4.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a2 = root.localRefs) === null || _a2 === void 0 ? void 0 : _a2[ref];
         const { schemaId } = this.opts;
@@ -3007,7 +3007,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve5(root, ref) {
+    function resolve4(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3582,7 +3582,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve5(baseURI, relativeURI, options) {
+    function resolve4(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const resolved = resolveComponent(parse3(baseURI, schemelessOptions), parse3(relativeURI, schemelessOptions), schemelessOptions, true);
       schemelessOptions.skipEscape = true;
@@ -3809,7 +3809,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize: normalize2,
-      resolve: resolve5,
+      resolve: resolve4,
       resolveComponent,
       equal,
       serialize,
@@ -9591,7 +9591,7 @@ var require_compile2 = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve5.call(this, root, ref);
+      let _sch = resolve4.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a2 = root.localRefs) === null || _a2 === void 0 ? void 0 : _a2[ref];
         const { schemaId } = this.opts;
@@ -9618,7 +9618,7 @@ var require_compile2 = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve5(root, ref) {
+    function resolve4(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -25230,7 +25230,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve5) => setTimeout(resolve5, pollInterval));
+        await new Promise((resolve4) => setTimeout(resolve4, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -25247,7 +25247,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve5, reject) => {
+    return new Promise((resolve4, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -25325,7 +25325,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve5(parseResult.data);
+            resolve4(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -25586,12 +25586,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve5, reject) => {
+    return new Promise((resolve4, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve5, interval);
+      const timeoutId = setTimeout(resolve4, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -26320,12 +26320,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve5) => {
+    return new Promise((resolve4) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve5();
+        resolve4();
       } else {
-        this._stdout.once("drain", resolve5);
+        this._stdout.once("drain", resolve4);
       }
     });
   }
@@ -26377,7 +26377,7 @@ var ENVIRONMENT = {
 var ERROR_MESSAGES = {
   NOT_CONNECTED: "Unity MCP Bridge is not connected",
   CONNECTION_FAILED: "Unity connection failed",
-  TIMEOUT: "timed out waiting for Unity response (uLoopMCP). Unity may be frozen or busy. Please report this to the user and ask how to proceed. Do NOT kill Unity processes without user permission.",
+  TIMEOUT: "timed out waiting for Unity response (uLoopMCP). Unity may be frozen or busy. [For AI] Run 'uloop focus-window' to bring Unity to the front, then retry the tool. If the issue persists, report this to the user and ask how to proceed. Do NOT kill Unity processes without user permission.",
   INVALID_RESPONSE: "Invalid response from Unity"
 };
 var POLLING = {
@@ -26972,7 +26972,7 @@ var VibeLogger = class _VibeLogger {
    * Asynchronous sleep function for retry delays
    */
   static async sleep(ms) {
-    return new Promise((resolve5) => setTimeout(resolve5, ms));
+    return new Promise((resolve4) => setTimeout(resolve4, ms));
   }
   /**
    * Get current environment information
@@ -27654,8 +27654,8 @@ var MessageHandler = class {
   /**
    * Register a pending request
    */
-  registerPendingRequest(id, resolve5, reject) {
-    this.pendingRequests.set(id, { resolve: resolve5, reject, timestamp: Date.now() });
+  registerPendingRequest(id, resolve4, reject) {
+    this.pendingRequests.set(id, { resolve: resolve4, reject, timestamp: Date.now() });
   }
   /**
    * Handle incoming data from Unity using Content-Length framing
@@ -27841,6 +27841,598 @@ var MessageHandler = class {
    */
   getBufferStats() {
     return this.dynamicBuffer.getStats();
+  }
+};
+
+// src/unity-client.ts
+var UnityClient = class _UnityClient {
+  static MAX_COUNTER = 9999;
+  static COUNTER_PADDING = 4;
+  static instance = null;
+  socket = null;
+  _connected = false;
+  port;
+  host = UNITY_CONNECTION.DEFAULT_HOST;
+  reconnectHandlers = /* @__PURE__ */ new Set();
+  connectionManager = new ConnectionManager();
+  messageHandler = new MessageHandler();
+  unityDiscovery = null;
+  // Reference to UnityDiscovery for connection loss handling
+  requestIdCounter = 0;
+  // Will be incremented to 1 on first use
+  processId = process.pid;
+  randomSeed = Math.floor(Math.random() * 1e3);
+  storedClientName = null;
+  isConnecting = false;
+  connectingPromise = null;
+  hasEverConnected = false;
+  shutdownReason = null;
+  // Stuck detection: tracks when connection was last successful
+  lastSuccessfulConnectionTime = 0;
+  forceReconnectAttempts = 0;
+  constructor() {
+    const unityTcpPort = process.env.UNITY_TCP_PORT;
+    if (!unityTcpPort) {
+      throw new Error("UNITY_TCP_PORT environment variable is required but not set");
+    }
+    const parsedPort = parseInt(unityTcpPort, 10);
+    if (isNaN(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
+      throw new Error(`UNITY_TCP_PORT must be a valid port number (1-65535), got: ${unityTcpPort}`);
+    }
+    this.port = parsedPort;
+  }
+  /**
+   * Get the singleton instance of UnityClient
+   */
+  static getInstance() {
+    if (!_UnityClient.instance) {
+      _UnityClient.instance = new _UnityClient();
+    }
+    return _UnityClient.instance;
+  }
+  /**
+   * Reset the singleton instance (for testing purposes)
+   */
+  static resetInstance() {
+    if (_UnityClient.instance) {
+      _UnityClient.instance.handlePermanentDisconnect("manual_reset");
+      _UnityClient.instance.storedClientName = null;
+      _UnityClient.instance = null;
+    }
+  }
+  /**
+   * Update Unity connection port (for discovery)
+   */
+  updatePort(newPort) {
+    this.port = newPort;
+  }
+  /**
+   * Set Unity Discovery reference for connection loss handling
+   */
+  setUnityDiscovery(unityDiscovery) {
+    this.unityDiscovery = unityDiscovery;
+  }
+  get connected() {
+    return this._connected && this.socket !== null && !this.socket.destroyed;
+  }
+  /**
+   * Register notification handler for specific method
+   */
+  onNotification(method, handler) {
+    this.messageHandler.onNotification(method, handler);
+  }
+  /**
+   * Remove notification handler
+   */
+  offNotification(method) {
+    this.messageHandler.offNotification(method);
+  }
+  /**
+   * Set shutdown reason received from Unity server
+   * @param reason The reason for server shutdown
+   */
+  setShutdownReason(reason) {
+    this.shutdownReason = reason;
+  }
+  /**
+   * Get whether the client has ever connected successfully
+   */
+  getHasEverConnected() {
+    return this.hasEverConnected;
+  }
+  /**
+   * Register reconnect handler
+   */
+  onReconnect(handler) {
+    this.reconnectHandlers.add(handler);
+  }
+  /**
+   * Remove reconnect handler
+   */
+  offReconnect(handler) {
+    this.reconnectHandlers.delete(handler);
+  }
+  /**
+   * Lightweight connection health check
+   * Tests socket state without creating new connections
+   *
+   * Note: Previously included a ping test, but it was removed because:
+   * - During Domain Reload, Unity server restarts and takes ~16 seconds to initialize
+   * - The 1-second ping timeout caused false positives (appeared disconnected when Unity was just initializing)
+   * - Socket state check is sufficient; actual request timeouts (3 min) handle truly unresponsive Unity
+   */
+  testConnection() {
+    if (!this._connected || this.socket === null || this.socket.destroyed) {
+      return false;
+    }
+    if (!this.socket.readable || !this.socket.writable) {
+      this._connected = false;
+      return false;
+    }
+    return true;
+  }
+  /**
+   * Ensure connection to Unity (singleton-safe reconnection)
+   * Properly manages single connection instance
+   */
+  async ensureConnected() {
+    if (this._connected && this.socket && !this.socket.destroyed) {
+      if (this.testConnection()) {
+        return;
+      }
+    }
+    if (this.connectingPromise) {
+      await this.connectingPromise;
+      return;
+    }
+    this.connectingPromise = (async () => {
+      this.isConnecting = true;
+      this.disconnect();
+      await this.connect();
+    })().catch((error2) => {
+      VibeLogger.logError("unity_connect_failed", "Unity connect attempt failed", {
+        message: error2 instanceof Error ? error2.message : String(error2)
+      });
+      throw error2;
+    }).finally(() => {
+      this.isConnecting = false;
+      this.connectingPromise = null;
+    });
+    await this.connectingPromise;
+  }
+  /**
+   * Connect to Unity
+   * Creates a new socket connection (should only be called after disconnect)
+   */
+  async connect() {
+    if (this._connected && this.socket && !this.socket.destroyed) {
+      return;
+    }
+    return new Promise((resolve4, reject) => {
+      this.socket = new net.Socket();
+      const currentSocket = this.socket;
+      let connectionEstablished = false;
+      let promiseSettled = false;
+      let connectionLossHandled = false;
+      const handleConnectionLossOnce = () => {
+        if (connectionLossHandled) {
+          return;
+        }
+        if (this.socket !== currentSocket) {
+          return;
+        }
+        connectionLossHandled = true;
+        this.socket = null;
+        this.handleConnectionLoss();
+      };
+      const finalizeInitialFailure = (error2, logCode, logMessage) => {
+        if (promiseSettled) {
+          return;
+        }
+        promiseSettled = true;
+        VibeLogger.logError(logCode, logMessage, { message: error2.message });
+        if (!currentSocket.destroyed) {
+          currentSocket.destroy();
+        }
+        if (this.socket === currentSocket) {
+          this.socket = null;
+        }
+        reject(error2);
+      };
+      currentSocket.connect(this.port, this.host, () => {
+        this._connected = true;
+        this.hasEverConnected = true;
+        this.shutdownReason = null;
+        this.lastSuccessfulConnectionTime = Date.now();
+        this.forceReconnectAttempts = 0;
+        connectionEstablished = true;
+        promiseSettled = true;
+        this.reconnectHandlers.forEach((handler) => {
+          try {
+            handler();
+          } catch (error2) {
+            VibeLogger.logError(
+              "unity_reconnect_handler_error",
+              "Unity reconnect handler threw an error",
+              {
+                message: error2 instanceof Error ? error2.message : String(error2),
+                stack: error2 instanceof Error ? error2.stack : void 0
+              }
+            );
+          }
+        });
+        resolve4();
+      });
+      currentSocket.on("error", (error2) => {
+        this._connected = false;
+        if (!currentSocket.destroyed) {
+          currentSocket.destroy();
+        }
+        if (!connectionEstablished) {
+          finalizeInitialFailure(
+            new Error(`Unity connection failed: ${error2.message}`),
+            "unity_connect_attempt_failed",
+            "Unity socket error during connection attempt"
+          );
+          return;
+        }
+        VibeLogger.logError("unity_socket_error", "Unity socket error", {
+          message: error2.message
+        });
+        handleConnectionLossOnce();
+      });
+      currentSocket.on("close", () => {
+        this._connected = false;
+        if (!connectionEstablished) {
+          finalizeInitialFailure(
+            new Error("Unity connection closed before being established"),
+            "unity_connect_closed_pre_handshake",
+            "Unity socket closed during connection attempt"
+          );
+          return;
+        }
+        handleConnectionLossOnce();
+      });
+      currentSocket.on("end", () => {
+        this._connected = false;
+        if (!connectionEstablished) {
+          finalizeInitialFailure(
+            new Error("Unity connection ended before being established"),
+            "unity_connect_end_pre_handshake",
+            "Unity socket ended during connection attempt"
+          );
+          return;
+        }
+        handleConnectionLossOnce();
+      });
+      currentSocket.on("data", (data) => {
+        this.messageHandler.handleIncomingData(data);
+      });
+    });
+  }
+  /**
+   * Detect client name from stored value, environment variables, or default
+   */
+  detectClientName() {
+    if (this.storedClientName) {
+      return this.storedClientName;
+    }
+    return process.env.MCP_CLIENT_NAME || DEFAULT_CLIENT_NAME;
+  }
+  /**
+   * Send client name to Unity for identification
+   */
+  async setClientName(clientName) {
+    if (!this.connected) {
+      return;
+    }
+    if (clientName) {
+      this.storedClientName = clientName;
+    }
+    const finalClientName = clientName || this.detectClientName();
+    const request = {
+      jsonrpc: JSONRPC.VERSION,
+      id: this.generateId(),
+      method: "set-client-name",
+      params: {
+        ClientName: finalClientName
+      }
+    };
+    try {
+      const response = await this.sendRequest(request);
+      if (response.error) {
+      }
+    } catch {
+    }
+  }
+  /**
+   * Get available tools from Unity
+   */
+  async getAvailableTools() {
+    await this.ensureConnected();
+    const request = {
+      jsonrpc: JSONRPC.VERSION,
+      id: this.generateId(),
+      method: "getAvailableTools",
+      params: {}
+    };
+    const response = await this.sendRequest(request);
+    if (response.error) {
+      throw new Error(`Failed to get available tools: ${response.error.message}`);
+    }
+    return response.result || [];
+  }
+  /**
+   * Get tool details from Unity
+   */
+  async getToolDetails(includeDevelopmentOnly = false) {
+    await this.ensureConnected();
+    const request = {
+      jsonrpc: JSONRPC.VERSION,
+      id: this.generateId(),
+      method: "get-tool-details",
+      params: { IncludeDevelopmentOnly: includeDevelopmentOnly }
+    };
+    const response = await this.sendRequest(request);
+    if (response.error) {
+      throw new Error(`Failed to get tool details: ${response.error.message}`);
+    }
+    return response.result || [];
+  }
+  /**
+   * Execute any Unity tool dynamically
+   */
+  async executeTool(toolName, params = {}) {
+    if (!this.connected) {
+      if (!this.hasEverConnected) {
+        throw new Error(this.getServerNotRunningMessage());
+      }
+      if (this.shutdownReason === ServerShutdownReason.EDITOR_QUIT) {
+        throw new Error(this.getServerNotRunningMessage());
+      }
+      await this.detectAndRecoverFromStuckState();
+      return this.getOsSpecificReconnectMessage();
+    }
+    await this.setClientName();
+    const request = {
+      jsonrpc: JSONRPC.VERSION,
+      id: this.generateId(),
+      method: toolName,
+      params
+    };
+    const timeoutMs = TIMEOUTS.NETWORK;
+    try {
+      const response = await this.sendRequest(request, timeoutMs);
+      return this.handleToolResponse(response);
+    } catch (error2) {
+      if (error2 instanceof Error && error2.message.includes("timed out")) {
+      }
+      throw error2;
+    }
+  }
+  /**
+   * Build a guidance message for temporary disconnection after compile.
+   */
+  getOsSpecificReconnectMessage() {
+    const baseMessage = "Waiting for Unity to be ready (normal during compilation). Wait 3 seconds then retry. If still not ready after several attempts, increase wait time (5 \u2192 10 seconds). Report as error only after 1+ minute of failures.";
+    const platform = process.platform;
+    if (platform === "win32") {
+      return `${baseMessage} Example: Start-Sleep -Seconds 3`;
+    }
+    return `${baseMessage} Example: sleep 3`;
+  }
+  /**
+   * Build an error message for when Unity server is not running.
+   */
+  getServerNotRunningMessage() {
+    return "Unity server is not running. Please start Unity Editor and ensure uLoopMCP package is properly installed. If Unity is already running, check Window > uLoopMCP > Server Status.";
+  }
+  handleToolResponse(response) {
+    if (response.error) {
+      throw new Error(response.error.message);
+    }
+    return response.result;
+  }
+  /**
+   * Generate unique request ID as string
+   * Uses timestamp + process ID + random seed + counter for guaranteed uniqueness across processes
+   */
+  generateId() {
+    if (this.requestIdCounter >= _UnityClient.MAX_COUNTER) {
+      this.requestIdCounter = 1;
+    } else {
+      this.requestIdCounter++;
+    }
+    const timestamp = Date.now();
+    const processId = this.processId;
+    const randomSeed = this.randomSeed;
+    const counter = this.requestIdCounter.toString().padStart(_UnityClient.COUNTER_PADDING, "0");
+    return `ts_${timestamp}_${processId}_${randomSeed}_${counter}`;
+  }
+  /**
+   * Send request and wait for response
+   */
+  async sendRequest(request, timeoutMs) {
+    return new Promise((resolve4, reject) => {
+      if (!this.socket || this.socket.destroyed || !this.connected) {
+        reject(new Error(ERROR_MESSAGES.NOT_CONNECTED));
+        return;
+      }
+      const timeout_duration = timeoutMs || TIMEOUTS.NETWORK;
+      const timeoutTimer = safeSetTimeout(() => {
+        stopSafeTimer(timeoutTimer);
+        VibeLogger.logWarning(
+          "request_timeout_fired",
+          "Request timed out waiting for Unity response",
+          {
+            request_id: request.id,
+            method: request.method,
+            timeout_ms: timeout_duration
+          },
+          void 0,
+          "Unity may be frozen in the background"
+        );
+        this.messageHandler.removePendingRequest(request.id);
+        reject(new Error(`Request ${ERROR_MESSAGES.TIMEOUT}`));
+      }, timeout_duration);
+      this.messageHandler.registerPendingRequest(
+        request.id,
+        (response) => {
+          stopSafeTimer(timeoutTimer);
+          resolve4(response);
+        },
+        (error2) => {
+          stopSafeTimer(timeoutTimer);
+          reject(error2 instanceof Error ? error2 : new Error(String(error2)));
+        }
+      );
+      const requestStr = this.messageHandler.createRequest(
+        request.method,
+        request.params,
+        request.id
+      );
+      if (this.socket) {
+        this.socket.write(requestStr);
+      }
+    });
+  }
+  /**
+   * Disconnect socket only (does NOT clear pending requests)
+   *
+   * Pending requests are managed separately - they have their own 3-minute timeout.
+   * Use handlePermanentDisconnect() when you need to clear pending requests.
+   */
+  disconnect() {
+    this.connectionManager.stopPolling();
+    this.messageHandler.clearBuffer();
+    if (this.socket) {
+      this.socket.destroy();
+      this.socket = null;
+    }
+    this._connected = false;
+  }
+  /**
+   * Handle permanent disconnection (Unity shutdown, manual reset, etc.)
+   *
+   * This clears all pending requests AND disconnects the socket.
+   * Use this when you know requests can never be fulfilled.
+   */
+  handlePermanentDisconnect(reason) {
+    if (reason === "editor_quit") {
+      this.messageHandler.clearPendingRequests(this.getServerNotRunningMessage());
+    } else {
+      this.messageHandler.clearPendingRequestsWithSuccess(this.getOsSpecificReconnectMessage());
+    }
+    this.requestIdCounter = 0;
+    this.disconnect();
+  }
+  /**
+   * Handle connection loss by delegating to UnityDiscovery
+   *
+   * When socket closes, pending requests will never get responses,
+   * so we must clear them immediately (not wait for 5-minute timeout).
+   */
+  handleConnectionLoss() {
+    if (this.shutdownReason === ServerShutdownReason.EDITOR_QUIT) {
+      this.messageHandler.clearPendingRequests(this.getServerNotRunningMessage());
+    } else {
+      this.messageHandler.clearPendingRequestsWithSuccess(this.getOsSpecificReconnectMessage());
+    }
+    this.requestIdCounter = 0;
+    this.connectionManager.triggerConnectionLost();
+    if (this.unityDiscovery) {
+      this.unityDiscovery.handleConnectionLost();
+    }
+  }
+  /**
+   * Detect stuck state and attempt recovery
+   * Called when executeTool() finds connected=false
+   */
+  async detectAndRecoverFromStuckState() {
+    const timeSinceLastConnection = Date.now() - this.lastSuccessfulConnectionTime;
+    if (this.hasEverConnected && this.lastSuccessfulConnectionTime > 0 && timeSinceLastConnection > CONNECTION_RECOVERY.STUCK_THRESHOLD_MS && this.forceReconnectAttempts < CONNECTION_RECOVERY.MAX_FORCE_RECONNECT_ATTEMPTS) {
+      this.forceReconnectAttempts++;
+      VibeLogger.logWarning(
+        "unity_client_stuck_detected",
+        "Stuck state detected - attempting force reconnection",
+        {
+          time_since_last_connection_ms: timeSinceLastConnection,
+          stuck_threshold_ms: CONNECTION_RECOVERY.STUCK_THRESHOLD_MS,
+          force_reconnect_attempt: this.forceReconnectAttempts,
+          max_attempts: CONNECTION_RECOVERY.MAX_FORCE_RECONNECT_ATTEMPTS
+        },
+        void 0,
+        "Connection has been disconnected for too long despite Unity likely running",
+        "Attempting force reconnection to recover from stuck state"
+      );
+      if (this.unityDiscovery) {
+        const recovered = await this.unityDiscovery.forceImmediateReconnection();
+        if (recovered) {
+          VibeLogger.logInfo(
+            "unity_client_stuck_recovered",
+            "Successfully recovered from stuck state",
+            {
+              force_reconnect_attempt: this.forceReconnectAttempts
+            },
+            void 0,
+            "Force reconnection succeeded"
+          );
+          this.forceReconnectAttempts = 0;
+        } else {
+          VibeLogger.logWarning(
+            "unity_client_stuck_recovery_failed",
+            "Force reconnection attempt failed",
+            {
+              force_reconnect_attempt: this.forceReconnectAttempts,
+              max_attempts: CONNECTION_RECOVERY.MAX_FORCE_RECONNECT_ATTEMPTS
+            },
+            void 0,
+            "Will retry on next tool execution if threshold not exceeded"
+          );
+        }
+      }
+    }
+  }
+  /**
+   * Set callback for when connection is restored
+   */
+  setReconnectedCallback(callback) {
+    this.connectionManager.setReconnectedCallback(callback);
+  }
+  /**
+   * Fetch tool details from Unity with development mode support
+   */
+  async fetchToolDetailsFromUnity(includeDevelopmentOnly = false) {
+    const params = { IncludeDevelopmentOnly: includeDevelopmentOnly };
+    const toolDetailsResponse = await this.executeTool("get-tool-details", params);
+    const toolDetails = toolDetailsResponse?.Tools || toolDetailsResponse;
+    if (!Array.isArray(toolDetails)) {
+      return null;
+    }
+    return toolDetails;
+  }
+  /**
+   * Check if Unity is available on specific port
+   * Performs low-level TCP connection test with short timeout
+   */
+  static async isUnityAvailable(port) {
+    return new Promise((resolve4) => {
+      const socket = new net.Socket();
+      const timeout = 500;
+      const timer = setTimeout(() => {
+        socket.destroy();
+        resolve4(false);
+      }, timeout);
+      socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
+        clearTimeout(timer);
+        socket.destroy();
+        resolve4(true);
+      });
+      socket.on("error", () => {
+        clearTimeout(timer);
+        resolve4(false);
+      });
+    });
   }
 };
 
@@ -28047,636 +28639,9 @@ async function focusUnityProcessWindows(pid) {
   }
 }
 
-// src/unity-client.ts
+// src/server.ts
 import { fileURLToPath as fileURLToPath2 } from "url";
 import { dirname as dirname2, resolve as resolve3 } from "path";
-var UnityClient = class _UnityClient {
-  static MAX_COUNTER = 9999;
-  static COUNTER_PADDING = 4;
-  static instance = null;
-  socket = null;
-  _connected = false;
-  port;
-  host = UNITY_CONNECTION.DEFAULT_HOST;
-  reconnectHandlers = /* @__PURE__ */ new Set();
-  connectionManager = new ConnectionManager();
-  messageHandler = new MessageHandler();
-  unityDiscovery = null;
-  // Reference to UnityDiscovery for connection loss handling
-  requestIdCounter = 0;
-  // Will be incremented to 1 on first use
-  processId = process.pid;
-  randomSeed = Math.floor(Math.random() * 1e3);
-  storedClientName = null;
-  isConnecting = false;
-  connectingPromise = null;
-  hasEverConnected = false;
-  shutdownReason = null;
-  // Stuck detection: tracks when connection was last successful
-  lastSuccessfulConnectionTime = 0;
-  forceReconnectAttempts = 0;
-  constructor() {
-    const unityTcpPort = process.env.UNITY_TCP_PORT;
-    if (!unityTcpPort) {
-      throw new Error("UNITY_TCP_PORT environment variable is required but not set");
-    }
-    const parsedPort = parseInt(unityTcpPort, 10);
-    if (isNaN(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
-      throw new Error(`UNITY_TCP_PORT must be a valid port number (1-65535), got: ${unityTcpPort}`);
-    }
-    this.port = parsedPort;
-  }
-  /**
-   * Get the singleton instance of UnityClient
-   */
-  static getInstance() {
-    if (!_UnityClient.instance) {
-      _UnityClient.instance = new _UnityClient();
-    }
-    return _UnityClient.instance;
-  }
-  /**
-   * Reset the singleton instance (for testing purposes)
-   */
-  static resetInstance() {
-    if (_UnityClient.instance) {
-      _UnityClient.instance.handlePermanentDisconnect("manual_reset");
-      _UnityClient.instance.storedClientName = null;
-      _UnityClient.instance = null;
-    }
-  }
-  /**
-   * Update Unity connection port (for discovery)
-   */
-  updatePort(newPort) {
-    this.port = newPort;
-  }
-  /**
-   * Set Unity Discovery reference for connection loss handling
-   */
-  setUnityDiscovery(unityDiscovery) {
-    this.unityDiscovery = unityDiscovery;
-  }
-  get connected() {
-    return this._connected && this.socket !== null && !this.socket.destroyed;
-  }
-  /**
-   * Register notification handler for specific method
-   */
-  onNotification(method, handler) {
-    this.messageHandler.onNotification(method, handler);
-  }
-  /**
-   * Remove notification handler
-   */
-  offNotification(method) {
-    this.messageHandler.offNotification(method);
-  }
-  /**
-   * Set shutdown reason received from Unity server
-   * @param reason The reason for server shutdown
-   */
-  setShutdownReason(reason) {
-    this.shutdownReason = reason;
-  }
-  /**
-   * Get whether the client has ever connected successfully
-   */
-  getHasEverConnected() {
-    return this.hasEverConnected;
-  }
-  /**
-   * Register reconnect handler
-   */
-  onReconnect(handler) {
-    this.reconnectHandlers.add(handler);
-  }
-  /**
-   * Remove reconnect handler
-   */
-  offReconnect(handler) {
-    this.reconnectHandlers.delete(handler);
-  }
-  /**
-   * Lightweight connection health check
-   * Tests socket state without creating new connections
-   *
-   * Note: Previously included a ping test, but it was removed because:
-   * - During Domain Reload, Unity server restarts and takes ~16 seconds to initialize
-   * - The 1-second ping timeout caused false positives (appeared disconnected when Unity was just initializing)
-   * - Socket state check is sufficient; actual request timeouts (3 min) handle truly unresponsive Unity
-   */
-  testConnection() {
-    if (!this._connected || this.socket === null || this.socket.destroyed) {
-      return false;
-    }
-    if (!this.socket.readable || !this.socket.writable) {
-      this._connected = false;
-      return false;
-    }
-    return true;
-  }
-  /**
-   * Ensure connection to Unity (singleton-safe reconnection)
-   * Properly manages single connection instance
-   */
-  async ensureConnected() {
-    if (this._connected && this.socket && !this.socket.destroyed) {
-      if (this.testConnection()) {
-        return;
-      }
-    }
-    if (this.connectingPromise) {
-      await this.connectingPromise;
-      return;
-    }
-    this.connectingPromise = (async () => {
-      this.isConnecting = true;
-      this.disconnect();
-      await this.connect();
-    })().catch((error2) => {
-      VibeLogger.logError("unity_connect_failed", "Unity connect attempt failed", {
-        message: error2 instanceof Error ? error2.message : String(error2)
-      });
-      throw error2;
-    }).finally(() => {
-      this.isConnecting = false;
-      this.connectingPromise = null;
-    });
-    await this.connectingPromise;
-  }
-  /**
-   * Connect to Unity
-   * Creates a new socket connection (should only be called after disconnect)
-   */
-  async connect() {
-    if (this._connected && this.socket && !this.socket.destroyed) {
-      return;
-    }
-    return new Promise((resolve5, reject) => {
-      this.socket = new net.Socket();
-      const currentSocket = this.socket;
-      let connectionEstablished = false;
-      let promiseSettled = false;
-      let connectionLossHandled = false;
-      const handleConnectionLossOnce = () => {
-        if (connectionLossHandled) {
-          return;
-        }
-        if (this.socket !== currentSocket) {
-          return;
-        }
-        connectionLossHandled = true;
-        this.socket = null;
-        this.handleConnectionLoss();
-      };
-      const finalizeInitialFailure = (error2, logCode, logMessage) => {
-        if (promiseSettled) {
-          return;
-        }
-        promiseSettled = true;
-        VibeLogger.logError(logCode, logMessage, { message: error2.message });
-        if (!currentSocket.destroyed) {
-          currentSocket.destroy();
-        }
-        if (this.socket === currentSocket) {
-          this.socket = null;
-        }
-        reject(error2);
-      };
-      currentSocket.connect(this.port, this.host, () => {
-        this._connected = true;
-        this.hasEverConnected = true;
-        this.shutdownReason = null;
-        this.lastSuccessfulConnectionTime = Date.now();
-        this.forceReconnectAttempts = 0;
-        connectionEstablished = true;
-        promiseSettled = true;
-        this.reconnectHandlers.forEach((handler) => {
-          try {
-            handler();
-          } catch (error2) {
-            VibeLogger.logError(
-              "unity_reconnect_handler_error",
-              "Unity reconnect handler threw an error",
-              {
-                message: error2 instanceof Error ? error2.message : String(error2),
-                stack: error2 instanceof Error ? error2.stack : void 0
-              }
-            );
-          }
-        });
-        resolve5();
-      });
-      currentSocket.on("error", (error2) => {
-        this._connected = false;
-        if (!currentSocket.destroyed) {
-          currentSocket.destroy();
-        }
-        if (!connectionEstablished) {
-          finalizeInitialFailure(
-            new Error(`Unity connection failed: ${error2.message}`),
-            "unity_connect_attempt_failed",
-            "Unity socket error during connection attempt"
-          );
-          return;
-        }
-        VibeLogger.logError("unity_socket_error", "Unity socket error", {
-          message: error2.message
-        });
-        handleConnectionLossOnce();
-      });
-      currentSocket.on("close", () => {
-        this._connected = false;
-        if (!connectionEstablished) {
-          finalizeInitialFailure(
-            new Error("Unity connection closed before being established"),
-            "unity_connect_closed_pre_handshake",
-            "Unity socket closed during connection attempt"
-          );
-          return;
-        }
-        handleConnectionLossOnce();
-      });
-      currentSocket.on("end", () => {
-        this._connected = false;
-        if (!connectionEstablished) {
-          finalizeInitialFailure(
-            new Error("Unity connection ended before being established"),
-            "unity_connect_end_pre_handshake",
-            "Unity socket ended during connection attempt"
-          );
-          return;
-        }
-        handleConnectionLossOnce();
-      });
-      currentSocket.on("data", (data) => {
-        this.messageHandler.handleIncomingData(data);
-      });
-    });
-  }
-  /**
-   * Detect client name from stored value, environment variables, or default
-   */
-  detectClientName() {
-    if (this.storedClientName) {
-      return this.storedClientName;
-    }
-    return process.env.MCP_CLIENT_NAME || DEFAULT_CLIENT_NAME;
-  }
-  /**
-   * Send client name to Unity for identification
-   */
-  async setClientName(clientName) {
-    if (!this.connected) {
-      return;
-    }
-    if (clientName) {
-      this.storedClientName = clientName;
-    }
-    const finalClientName = clientName || this.detectClientName();
-    const request = {
-      jsonrpc: JSONRPC.VERSION,
-      id: this.generateId(),
-      method: "set-client-name",
-      params: {
-        ClientName: finalClientName
-      }
-    };
-    try {
-      const response = await this.sendRequest(request);
-      if (response.error) {
-      }
-    } catch {
-    }
-  }
-  /**
-   * Get available tools from Unity
-   */
-  async getAvailableTools() {
-    await this.ensureConnected();
-    const request = {
-      jsonrpc: JSONRPC.VERSION,
-      id: this.generateId(),
-      method: "getAvailableTools",
-      params: {}
-    };
-    const response = await this.sendRequest(request);
-    if (response.error) {
-      throw new Error(`Failed to get available tools: ${response.error.message}`);
-    }
-    return response.result || [];
-  }
-  /**
-   * Get tool details from Unity
-   */
-  async getToolDetails(includeDevelopmentOnly = false) {
-    await this.ensureConnected();
-    const request = {
-      jsonrpc: JSONRPC.VERSION,
-      id: this.generateId(),
-      method: "get-tool-details",
-      params: { IncludeDevelopmentOnly: includeDevelopmentOnly }
-    };
-    const response = await this.sendRequest(request);
-    if (response.error) {
-      throw new Error(`Failed to get tool details: ${response.error.message}`);
-    }
-    return response.result || [];
-  }
-  /**
-   * Execute any Unity tool dynamically
-   */
-  async executeTool(toolName, params = {}) {
-    if (!this.connected) {
-      if (!this.hasEverConnected) {
-        throw new Error(this.getServerNotRunningMessage());
-      }
-      if (this.shutdownReason === ServerShutdownReason.EDITOR_QUIT) {
-        throw new Error(this.getServerNotRunningMessage());
-      }
-      await this.detectAndRecoverFromStuckState();
-      return this.getOsSpecificReconnectMessage();
-    }
-    await this.setClientName();
-    const request = {
-      jsonrpc: JSONRPC.VERSION,
-      id: this.generateId(),
-      method: toolName,
-      params
-    };
-    const timeoutMs = TIMEOUTS.NETWORK;
-    try {
-      const response = await this.sendRequest(request, timeoutMs);
-      return this.handleToolResponse(response);
-    } catch (error2) {
-      if (error2 instanceof Error && error2.message.includes("timed out")) {
-      }
-      throw error2;
-    }
-  }
-  /**
-   * Build a guidance message for temporary disconnection after compile.
-   */
-  getOsSpecificReconnectMessage() {
-    const baseMessage = "Waiting for Unity to be ready (normal during compilation). Wait 3 seconds then retry. If still not ready after several attempts, increase wait time (5 \u2192 10 seconds). Report as error only after 1+ minute of failures.";
-    const platform = process.platform;
-    if (platform === "win32") {
-      return `${baseMessage} Example: Start-Sleep -Seconds 3`;
-    }
-    return `${baseMessage} Example: sleep 3`;
-  }
-  /**
-   * Build an error message for when Unity server is not running.
-   */
-  getServerNotRunningMessage() {
-    return "Unity server is not running. Please start Unity Editor and ensure uLoopMCP package is properly installed. If Unity is already running, check Window > uLoopMCP > Server Status.";
-  }
-  handleToolResponse(response) {
-    if (response.error) {
-      throw new Error(response.error.message);
-    }
-    return response.result;
-  }
-  /**
-   * Generate unique request ID as string
-   * Uses timestamp + process ID + random seed + counter for guaranteed uniqueness across processes
-   */
-  generateId() {
-    if (this.requestIdCounter >= _UnityClient.MAX_COUNTER) {
-      this.requestIdCounter = 1;
-    } else {
-      this.requestIdCounter++;
-    }
-    const timestamp = Date.now();
-    const processId = this.processId;
-    const randomSeed = this.randomSeed;
-    const counter = this.requestIdCounter.toString().padStart(_UnityClient.COUNTER_PADDING, "0");
-    return `ts_${timestamp}_${processId}_${randomSeed}_${counter}`;
-  }
-  /**
-   * Send request and wait for response
-   */
-  async sendRequest(request, timeoutMs) {
-    return new Promise((resolve5, reject) => {
-      if (!this.socket || this.socket.destroyed || !this.connected) {
-        reject(new Error(ERROR_MESSAGES.NOT_CONNECTED));
-        return;
-      }
-      const timeout_duration = timeoutMs || TIMEOUTS.NETWORK;
-      const timeoutTimer = safeSetTimeout(() => {
-        stopSafeTimer(timeoutTimer);
-        VibeLogger.logWarning(
-          "request_timeout_fired",
-          "Request timed out waiting for Unity response",
-          {
-            request_id: request.id,
-            method: request.method,
-            timeout_ms: timeout_duration
-          },
-          void 0,
-          "Unity may be frozen in the background"
-        );
-        this.tryFocusUnityWindow();
-        this.messageHandler.removePendingRequest(request.id);
-        reject(new Error(`Request ${ERROR_MESSAGES.TIMEOUT}`));
-      }, timeout_duration);
-      this.messageHandler.registerPendingRequest(
-        request.id,
-        (response) => {
-          stopSafeTimer(timeoutTimer);
-          resolve5(response);
-        },
-        (error2) => {
-          stopSafeTimer(timeoutTimer);
-          reject(error2 instanceof Error ? error2 : new Error(String(error2)));
-        }
-      );
-      const requestStr = this.messageHandler.createRequest(
-        request.method,
-        request.params,
-        request.id
-      );
-      if (this.socket) {
-        this.socket.write(requestStr);
-      }
-    });
-  }
-  /**
-   * Disconnect socket only (does NOT clear pending requests)
-   *
-   * Pending requests are managed separately - they have their own 3-minute timeout.
-   * Use handlePermanentDisconnect() when you need to clear pending requests.
-   */
-  disconnect() {
-    this.connectionManager.stopPolling();
-    this.messageHandler.clearBuffer();
-    if (this.socket) {
-      this.socket.destroy();
-      this.socket = null;
-    }
-    this._connected = false;
-  }
-  /**
-   * Handle permanent disconnection (Unity shutdown, manual reset, etc.)
-   *
-   * This clears all pending requests AND disconnects the socket.
-   * Use this when you know requests can never be fulfilled.
-   */
-  handlePermanentDisconnect(reason) {
-    if (reason === "editor_quit") {
-      this.messageHandler.clearPendingRequests(this.getServerNotRunningMessage());
-    } else {
-      this.messageHandler.clearPendingRequestsWithSuccess(this.getOsSpecificReconnectMessage());
-    }
-    this.requestIdCounter = 0;
-    this.disconnect();
-  }
-  /**
-   * Handle connection loss by delegating to UnityDiscovery
-   *
-   * When socket closes, pending requests will never get responses,
-   * so we must clear them immediately (not wait for 5-minute timeout).
-   */
-  handleConnectionLoss() {
-    if (this.shutdownReason === ServerShutdownReason.EDITOR_QUIT) {
-      this.messageHandler.clearPendingRequests(this.getServerNotRunningMessage());
-    } else {
-      this.messageHandler.clearPendingRequestsWithSuccess(this.getOsSpecificReconnectMessage());
-    }
-    this.requestIdCounter = 0;
-    this.connectionManager.triggerConnectionLost();
-    if (this.unityDiscovery) {
-      this.unityDiscovery.handleConnectionLost();
-    }
-  }
-  /**
-   * Try to bring Unity window to foreground (fire-and-forget)
-   * Called when a request times out - Unity may be frozen in background
-   *
-   * Uses OS-level commands (osascript on macOS, PowerShell on Windows)
-   * instead of socket notification, so it works even during Domain Reload.
-   */
-  tryFocusUnityWindow() {
-    const currentFile = fileURLToPath2(import.meta.url);
-    const projectPath = resolve3(dirname2(currentFile), "..", "..");
-    void (async () => {
-      const runningProcess = await findRunningUnityProcess(projectPath);
-      if (!runningProcess) {
-        VibeLogger.logDebug(
-          "focus_window_failed",
-          "Failed to bring Unity window to foreground",
-          { message: "No running Unity process found", project_path: projectPath },
-          void 0,
-          "Could not focus Unity window - may not be running"
-        );
-        return;
-      }
-      await focusUnityProcess(runningProcess.pid);
-      VibeLogger.logInfo(
-        "focus_window_success",
-        "Brought Unity window to foreground via OS command",
-        { project_path: projectPath, pid: runningProcess.pid },
-        void 0,
-        "Successfully focused Unity window after timeout"
-      );
-    })();
-  }
-  /**
-   * Detect stuck state and attempt recovery
-   * Called when executeTool() finds connected=false
-   */
-  async detectAndRecoverFromStuckState() {
-    const timeSinceLastConnection = Date.now() - this.lastSuccessfulConnectionTime;
-    if (this.hasEverConnected && this.lastSuccessfulConnectionTime > 0 && timeSinceLastConnection > CONNECTION_RECOVERY.STUCK_THRESHOLD_MS && this.forceReconnectAttempts < CONNECTION_RECOVERY.MAX_FORCE_RECONNECT_ATTEMPTS) {
-      this.forceReconnectAttempts++;
-      VibeLogger.logWarning(
-        "unity_client_stuck_detected",
-        "Stuck state detected - attempting force reconnection",
-        {
-          time_since_last_connection_ms: timeSinceLastConnection,
-          stuck_threshold_ms: CONNECTION_RECOVERY.STUCK_THRESHOLD_MS,
-          force_reconnect_attempt: this.forceReconnectAttempts,
-          max_attempts: CONNECTION_RECOVERY.MAX_FORCE_RECONNECT_ATTEMPTS
-        },
-        void 0,
-        "Connection has been disconnected for too long despite Unity likely running",
-        "Attempting force reconnection to recover from stuck state"
-      );
-      if (this.unityDiscovery) {
-        const recovered = await this.unityDiscovery.forceImmediateReconnection();
-        if (recovered) {
-          VibeLogger.logInfo(
-            "unity_client_stuck_recovered",
-            "Successfully recovered from stuck state",
-            {
-              force_reconnect_attempt: this.forceReconnectAttempts
-            },
-            void 0,
-            "Force reconnection succeeded"
-          );
-          this.forceReconnectAttempts = 0;
-        } else {
-          VibeLogger.logWarning(
-            "unity_client_stuck_recovery_failed",
-            "Force reconnection attempt failed",
-            {
-              force_reconnect_attempt: this.forceReconnectAttempts,
-              max_attempts: CONNECTION_RECOVERY.MAX_FORCE_RECONNECT_ATTEMPTS
-            },
-            void 0,
-            "Will retry on next tool execution if threshold not exceeded"
-          );
-        }
-      }
-    }
-  }
-  /**
-   * Set callback for when connection is restored
-   */
-  setReconnectedCallback(callback) {
-    this.connectionManager.setReconnectedCallback(callback);
-  }
-  /**
-   * Fetch tool details from Unity with development mode support
-   */
-  async fetchToolDetailsFromUnity(includeDevelopmentOnly = false) {
-    const params = { IncludeDevelopmentOnly: includeDevelopmentOnly };
-    const toolDetailsResponse = await this.executeTool("get-tool-details", params);
-    const toolDetails = toolDetailsResponse?.Tools || toolDetailsResponse;
-    if (!Array.isArray(toolDetails)) {
-      return null;
-    }
-    return toolDetails;
-  }
-  /**
-   * Check if Unity is available on specific port
-   * Performs low-level TCP connection test with short timeout
-   */
-  static async isUnityAvailable(port) {
-    return new Promise((resolve5) => {
-      const socket = new net.Socket();
-      const timeout = 500;
-      const timer = setTimeout(() => {
-        socket.destroy();
-        resolve5(false);
-      }, timeout);
-      socket.connect(port, UNITY_CONNECTION.DEFAULT_HOST, () => {
-        clearTimeout(timer);
-        socket.destroy();
-        resolve5(true);
-      });
-      socket.on("error", () => {
-        clearTimeout(timer);
-        resolve5(false);
-      });
-    });
-  }
-};
-
-// src/server.ts
-import { fileURLToPath as fileURLToPath3 } from "url";
-import { dirname as dirname3, resolve as resolve4 } from "path";
 
 // src/unity-discovery.ts
 var UnityDiscovery = class _UnityDiscovery {
@@ -29153,14 +29118,14 @@ var UnityConnectionManager = class {
    * Wait for Unity connection with timeout
    */
   async waitForUnityConnectionWithTimeout(timeoutMs) {
-    return new Promise((resolve5, reject) => {
+    return new Promise((resolve4, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error(`Unity connection timeout after ${timeoutMs}ms`));
       }, timeoutMs);
       const checkConnection = () => {
         if (this.unityClient.connected) {
           clearTimeout(timeout);
-          resolve5();
+          resolve4();
           return;
         }
         if (this.isInitialized) {
@@ -29168,7 +29133,7 @@ var UnityConnectionManager = class {
             if (this.unityClient.connected) {
               clearTimeout(timeout);
               clearInterval(connectionInterval);
-              resolve5();
+              resolve4();
             }
           }, 100);
           return;
@@ -29176,7 +29141,7 @@ var UnityConnectionManager = class {
         this.initialize(() => {
           return new Promise((resolveCallback) => {
             clearTimeout(timeout);
-            resolve5();
+            resolve4();
             resolveCallback();
           });
         });
@@ -30820,8 +30785,8 @@ var UnityMcpServer = class {
    * Works even when Unity is busy (compiling, domain reload).
    */
   async handleFocusWindow() {
-    const currentFile = fileURLToPath3(import.meta.url);
-    const projectPath = resolve4(dirname3(currentFile), "..", "..");
+    const currentFile = fileURLToPath2(import.meta.url);
+    const projectPath = resolve3(dirname2(currentFile), "..", "..");
     const runningProcess = await findRunningUnityProcess(projectPath);
     if (!runningProcess) {
       return {
