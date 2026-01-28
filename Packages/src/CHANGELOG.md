@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.57.0](https://github.com/hatayama/uLoopMCP/compare/v0.56.0...v0.57.0) (2026-01-28)
+
+
+### Features
+
+* **cli:** Add launch command to open Unity projects ([#577](https://github.com/hatayama/uLoopMCP/issues/577)) ([d91c153](https://github.com/hatayama/uLoopMCP/commit/d91c153f5f2985c06d522e96253879630c5f757f))
+
 ## [0.56.0](https://github.com/hatayama/uLoopMCP/compare/v0.55.2...v0.56.0) (2026-01-26)
 
 
