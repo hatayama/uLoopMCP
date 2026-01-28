@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.58.0](https://github.com/hatayama/uLoopMCP/compare/v0.57.0...v0.58.0) (2026-01-28)
+
+
+### Features
+
+* Implement focus-window at OS level using launch-unity package ([#580](https://github.com/hatayama/uLoopMCP/issues/580)) ([978896d](https://github.com/hatayama/uLoopMCP/commit/978896db7188d81b0d99fe692529fc699d6dadfa))
+
 ## [0.57.0](https://github.com/hatayama/uLoopMCP/compare/v0.56.0...v0.57.0) (2026-01-28)
 
 
