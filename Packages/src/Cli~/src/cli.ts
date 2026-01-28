@@ -30,6 +30,7 @@ import {
 import { pascalToKebabCase } from './arg-parser.js';
 import { registerSkillsCommand } from './skills/skills-command.js';
 import { registerLaunchCommand } from './commands/launch.js';
+import { registerFocusWindowCommand } from './commands/focus-window.js';
 import { VERSION } from './version.js';
 import { findUnityProjectRoot } from './project-root.js';
 
@@ -45,6 +46,7 @@ const BUILTIN_COMMANDS = [
   'fix',
   'skills',
   'launch',
+  'focus-window',
 ] as const;
 
 const program = new Command();
@@ -106,10 +108,17 @@ registerSkillsCommand(program);
 // Register launch subcommand
 registerLaunchCommand(program);
 
+// Register focus-window subcommand
+registerFocusWindowCommand(program);
+
 /**
  * Register a tool as a CLI command dynamically.
  */
 function registerToolCommand(tool: ToolDefinition): void {
+  // Skip if already registered as a built-in command
+  if (BUILTIN_COMMANDS.includes(tool.name as (typeof BUILTIN_COMMANDS)[number])) {
+    return;
+  }
   const cmd = program.command(tool.name).description(tool.description);
 
   // Add options from inputSchema.properties

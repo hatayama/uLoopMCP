@@ -123,7 +123,7 @@ export const ERROR_MESSAGES = {
   NOT_CONNECTED: 'Unity MCP Bridge is not connected',
   CONNECTION_FAILED: 'Unity connection failed',
   TIMEOUT:
-    'timed out waiting for Unity response (uLoopMCP). Unity may be frozen or busy. Please report this to the user and ask how to proceed. Do NOT kill Unity processes without user permission.',
+    "timed out waiting for Unity response (uLoopMCP). Unity may be frozen or busy. [For AI] Run 'uloop focus-window' to bring Unity to the front, then retry the tool. If the issue persists, report this to the user and ask how to proceed. Do NOT kill Unity processes without user permission.",
   INVALID_RESPONSE: 'Invalid response from Unity',
 } as const;
 

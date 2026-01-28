@@ -136,28 +136,13 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Handle focus-window notification by bringing Unity to foreground
-        /// Fire-and-forget - no response needed
+        /// Handle focus-window notification.
+        /// Note: focus-window is now handled at OS level by TypeScript MCP server using launch-unity package.
+        /// This notification handler remains for protocol compatibility but does nothing.
         /// </summary>
         private static void HandleFocusWindowNotification()
         {
-#if UNITY_EDITOR_OSX || UNITY_EDITOR_WIN
-            // Fire-and-forget async execution
-            Task.Run(async () =>
-            {
-                try
-                {
-                    FocusUnityWindowUseCase useCase = new FocusUnityWindowUseCase();
-                    FocusUnityWindowSchema schema = new FocusUnityWindowSchema();
-                    await useCase.ExecuteAsync(schema, CancellationToken.None);
-                }
-                catch (Exception ex)
-                {
-                    // Log but don't throw - this is fire-and-forget
-                    UnityEngine.Debug.LogWarning($"[JsonRpcProcessor] focus-window notification failed: {ex.Message}");
-                }
-            });
-#endif
+            // Intentionally empty - focus-window is handled by TypeScript MCP server at OS level
         }
 
         /// <summary>

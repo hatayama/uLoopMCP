@@ -12,9 +12,6 @@ import { safeSetTimeout, stopSafeTimer } from './utils/safe-timer.js';
 import { ConnectionManager } from './connection-manager.js';
 import { MessageHandler } from './message-handler.js';
 import { VibeLogger } from './utils/vibe-logger.js';
-import { focusUnityWindowByProjectPath } from './utils/unity-window-focus.js';
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
 
 /**
  * Unity client interface for external dependencies
@@ -581,9 +578,6 @@ export class UnityClient {
           'Unity may be frozen in the background',
         );
 
-        // Try to bring Unity window to foreground (fire-and-forget)
-        this.tryFocusUnityWindow();
-
         // Network timeout occurred - only reject THIS request, not all pending requests
         this.messageHandler.removePendingRequest(request.id);
         reject(new Error(`Request ${ERROR_MESSAGES.TIMEOUT}`));
@@ -672,40 +666,6 @@ export class UnityClient {
     if (this.unityDiscovery) {
       this.unityDiscovery.handleConnectionLost();
     }
-  }
-
-  /**
-   * Try to bring Unity window to foreground (fire-and-forget)
-   * Called when a request times out - Unity may be frozen in background
-   *
-   * Uses OS-level commands (osascript on macOS, PowerShell on Windows)
-   * instead of socket notification, so it works even during Domain Reload.
-   */
-  private tryFocusUnityWindow(): void {
-    // Derive project path from bundle location: Library/uLoopMCP/server.bundle.js -> project root
-    const currentFile = fileURLToPath(import.meta.url);
-    const projectPath = resolve(dirname(currentFile), '..', '..');
-
-    // Fire-and-forget: focus the Unity that matches this project
-    void focusUnityWindowByProjectPath(projectPath).then((result) => {
-      if (result.success) {
-        VibeLogger.logInfo(
-          'focus_window_success',
-          'Brought Unity window to foreground via OS command',
-          { project_path: projectPath },
-          undefined,
-          'Successfully focused Unity window after timeout',
-        );
-      } else {
-        VibeLogger.logDebug(
-          'focus_window_failed',
-          'Failed to bring Unity window to foreground',
-          { message: result.message, project_path: projectPath },
-          undefined,
-          'Could not focus Unity window - may not be running',
-        );
-      }
-    });
   }
 
   /**

@@ -26377,7 +26377,7 @@ var ENVIRONMENT = {
 var ERROR_MESSAGES = {
   NOT_CONNECTED: "Unity MCP Bridge is not connected",
   CONNECTION_FAILED: "Unity connection failed",
-  TIMEOUT: "timed out waiting for Unity response (uLoopMCP). Unity may be frozen or busy. Please report this to the user and ask how to proceed. Do NOT kill Unity processes without user permission.",
+  TIMEOUT: "timed out waiting for Unity response (uLoopMCP). Unity may be frozen or busy. [For AI] Run 'uloop focus-window' to bring Unity to the front, then retry the tool. If the issue persists, report this to the user and ask how to proceed. Do NOT kill Unity processes without user permission.",
   INVALID_RESPONSE: "Invalid response from Unity"
 };
 var POLLING = {
@@ -27844,230 +27844,7 @@ var MessageHandler = class {
   }
 };
 
-// src/utils/unity-window-focus.ts
-import { execFile } from "node:child_process";
-import { resolve as resolve2 } from "node:path";
-import { promisify } from "node:util";
-var execFileAsync = promisify(execFile);
-var UNITY_EXECUTABLE_PATTERN_MAC = /Unity\.app\/Contents\/MacOS\/Unity/i;
-var UNITY_EXECUTABLE_PATTERN_WINDOWS = /Unity\.exe/i;
-var PROJECT_PATH_PATTERN = /-(?:projectPath|projectpath)(?:=|\s+)("[^"]+"|'[^']+'|[^\s"']+)/i;
-var PROCESS_LIST_COMMAND_MAC = "ps";
-var PROCESS_LIST_ARGS_MAC = ["-axo", "pid=,command=", "-ww"];
-var WINDOWS_POWERSHELL = "powershell";
-var normalizePath = (target) => {
-  const resolvedPath = resolve2(target);
-  let trimmed = resolvedPath;
-  while (trimmed.length > 1 && (trimmed.endsWith("/") || trimmed.endsWith("\\"))) {
-    trimmed = trimmed.slice(0, -1);
-  }
-  return trimmed;
-};
-var toComparablePath = (value) => {
-  return value.replace(/\\/g, "/").toLowerCase();
-};
-var pathsEqual = (left, right) => {
-  return toComparablePath(normalizePath(left)) === toComparablePath(normalizePath(right));
-};
-var extractProjectPath = (command) => {
-  const match = command.match(PROJECT_PATH_PATTERN);
-  if (!match) {
-    return void 0;
-  }
-  const raw = match[1];
-  if (!raw) {
-    return void 0;
-  }
-  const trimmed = raw.trim();
-  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    return trimmed.slice(1, -1);
-  }
-  if (trimmed.startsWith("'") && trimmed.endsWith("'")) {
-    return trimmed.slice(1, -1);
-  }
-  return trimmed;
-};
-var isUnityAuxiliaryProcess = (command) => {
-  const normalizedCommand = command.toLowerCase();
-  if (normalizedCommand.includes("-batchmode")) {
-    return true;
-  }
-  return normalizedCommand.includes("assetimportworker");
-};
-async function listUnityProcessesMac() {
-  let stdout = "";
-  try {
-    const result = await execFileAsync(PROCESS_LIST_COMMAND_MAC, PROCESS_LIST_ARGS_MAC);
-    stdout = result.stdout;
-  } catch (error2) {
-    const message = error2 instanceof Error ? error2.message : String(error2);
-    VibeLogger.logDebug(
-      "unity_process_list_failed",
-      `Failed to retrieve Unity process list: ${message}`,
-      { platform: "darwin" }
-    );
-    return [];
-  }
-  const lines = stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
-  const processes = [];
-  for (const line of lines) {
-    const match = line.match(/^(\d+)\s+(.*)$/);
-    if (!match) {
-      continue;
-    }
-    const pidValue = Number.parseInt(match[1] ?? "", 10);
-    if (!Number.isFinite(pidValue)) {
-      continue;
-    }
-    const command = match[2] ?? "";
-    if (!UNITY_EXECUTABLE_PATTERN_MAC.test(command)) {
-      continue;
-    }
-    if (isUnityAuxiliaryProcess(command)) {
-      continue;
-    }
-    const projectArgument = extractProjectPath(command);
-    if (!projectArgument) {
-      continue;
-    }
-    processes.push({
-      pid: pidValue,
-      projectPath: normalizePath(projectArgument)
-    });
-  }
-  return processes;
-}
-async function listUnityProcessesWindows() {
-  const scriptLines = [
-    "$ErrorActionPreference = 'Stop'",
-    `$processes = Get-CimInstance Win32_Process -Filter "Name = 'Unity.exe'" | Where-Object { $_.CommandLine }`,
-    "foreach ($process in $processes) {",
-    `  $commandLine = $process.CommandLine -replace "\`r", ' ' -replace "\`n", ' '`,
-    '  Write-Output ("{0}|{1}" -f $process.ProcessId, $commandLine)',
-    "}"
-  ];
-  let stdout = "";
-  try {
-    const result = await execFileAsync(WINDOWS_POWERSHELL, [
-      "-NoProfile",
-      "-Command",
-      scriptLines.join("\n")
-    ]);
-    stdout = result.stdout ?? "";
-  } catch (error2) {
-    const message = error2 instanceof Error ? error2.message : String(error2);
-    VibeLogger.logDebug(
-      "unity_process_list_failed",
-      `Failed to retrieve Unity process list on Windows: ${message}`,
-      { platform: "win32" }
-    );
-    return [];
-  }
-  const lines = stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
-  const processes = [];
-  for (const line of lines) {
-    const delimiterIndex = line.indexOf("|");
-    if (delimiterIndex < 0) {
-      continue;
-    }
-    const pidText = line.slice(0, delimiterIndex).trim();
-    const command = line.slice(delimiterIndex + 1).trim();
-    const pidValue = Number.parseInt(pidText, 10);
-    if (!Number.isFinite(pidValue)) {
-      continue;
-    }
-    if (!UNITY_EXECUTABLE_PATTERN_WINDOWS.test(command)) {
-      continue;
-    }
-    if (isUnityAuxiliaryProcess(command)) {
-      continue;
-    }
-    const projectArgument = extractProjectPath(command);
-    if (!projectArgument) {
-      continue;
-    }
-    processes.push({
-      pid: pidValue,
-      projectPath: normalizePath(projectArgument)
-    });
-  }
-  return processes;
-}
-async function listUnityProcesses() {
-  if (process.platform === "darwin") {
-    return await listUnityProcessesMac();
-  }
-  if (process.platform === "win32") {
-    return await listUnityProcessesWindows();
-  }
-  return [];
-}
-async function findUnityProcessByProjectPath(projectPath) {
-  const normalizedTarget = normalizePath(projectPath);
-  const processes = await listUnityProcesses();
-  return processes.find((candidate) => pathsEqual(candidate.projectPath, normalizedTarget));
-}
-async function focusUnityWindowMac(pid) {
-  const script = `tell application "System Events" to set frontmost of (first process whose unix id is ${pid}) to true`;
-  try {
-    await execFileAsync("osascript", ["-e", script]);
-    return { success: true, message: `Focused Unity window (PID: ${pid})` };
-  } catch (error2) {
-    const message = error2 instanceof Error ? error2.message : String(error2);
-    return { success: false, message: `Failed to focus Unity window: ${message}` };
-  }
-}
-async function focusUnityWindowWindows(pid) {
-  const addTypeLines = [
-    'Add-Type -TypeDefinition @"',
-    "using System;",
-    "using System.Runtime.InteropServices;",
-    "public static class Win32Interop {",
-    '  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);',
-    '  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);',
-    "}",
-    '"@'
-  ];
-  const scriptLines = [
-    "$ErrorActionPreference = 'Stop'",
-    ...addTypeLines,
-    `try { $process = Get-Process -Id ${pid} -ErrorAction Stop } catch { exit 1 }`,
-    "$handle = $process.MainWindowHandle",
-    "if ($handle -eq 0) { exit 1 }",
-    "[Win32Interop]::ShowWindowAsync($handle, 9) | Out-Null",
-    "[Win32Interop]::SetForegroundWindow($handle) | Out-Null"
-  ];
-  try {
-    await execFileAsync(WINDOWS_POWERSHELL, ["-NoProfile", "-Command", scriptLines.join("\n")]);
-    return { success: true, message: `Focused Unity window (PID: ${pid})` };
-  } catch (error2) {
-    const message = error2 instanceof Error ? error2.message : String(error2);
-    return { success: false, message: `Failed to focus Unity window on Windows: ${message}` };
-  }
-}
-async function focusUnityWindowByPid(pid) {
-  if (process.platform === "darwin") {
-    return await focusUnityWindowMac(pid);
-  }
-  if (process.platform === "win32") {
-    return await focusUnityWindowWindows(pid);
-  }
-  return { success: false, message: `Unsupported platform: ${process.platform}` };
-}
-async function focusUnityWindowByProjectPath(projectPath) {
-  const processInfo = await findUnityProcessByProjectPath(projectPath);
-  if (!processInfo) {
-    return {
-      success: false,
-      message: `No Unity process found for project: ${projectPath}`
-    };
-  }
-  return await focusUnityWindowByPid(processInfo.pid);
-}
-
 // src/unity-client.ts
-import { fileURLToPath as fileURLToPath2 } from "url";
-import { dirname as dirname2, resolve as resolve3 } from "path";
 var UnityClient = class _UnityClient {
   static MAX_COUNTER = 9999;
   static COUNTER_PADDING = 4;
@@ -28495,7 +28272,6 @@ var UnityClient = class _UnityClient {
           void 0,
           "Unity may be frozen in the background"
         );
-        this.tryFocusUnityWindow();
         this.messageHandler.removePendingRequest(request.id);
         reject(new Error(`Request ${ERROR_MESSAGES.TIMEOUT}`));
       }, timeout_duration);
@@ -28567,36 +28343,6 @@ var UnityClient = class _UnityClient {
     if (this.unityDiscovery) {
       this.unityDiscovery.handleConnectionLost();
     }
-  }
-  /**
-   * Try to bring Unity window to foreground (fire-and-forget)
-   * Called when a request times out - Unity may be frozen in background
-   *
-   * Uses OS-level commands (osascript on macOS, PowerShell on Windows)
-   * instead of socket notification, so it works even during Domain Reload.
-   */
-  tryFocusUnityWindow() {
-    const currentFile = fileURLToPath2(import.meta.url);
-    const projectPath = resolve3(dirname2(currentFile), "..", "..");
-    void focusUnityWindowByProjectPath(projectPath).then((result) => {
-      if (result.success) {
-        VibeLogger.logInfo(
-          "focus_window_success",
-          "Brought Unity window to foreground via OS command",
-          { project_path: projectPath },
-          void 0,
-          "Successfully focused Unity window after timeout"
-        );
-      } else {
-        VibeLogger.logDebug(
-          "focus_window_failed",
-          "Failed to bring Unity window to foreground",
-          { message: result.message, project_path: projectPath },
-          void 0,
-          "Could not focus Unity window - may not be running"
-        );
-      }
-    });
   }
   /**
    * Detect stuck state and attempt recovery
@@ -28689,6 +28435,213 @@ var UnityClient = class _UnityClient {
     });
   }
 };
+
+// node_modules/launch-unity/dist/lib.js
+import { execFile, spawn } from "node:child_process";
+import { join as join2, resolve as resolve2 } from "node:path";
+import { promisify } from "node:util";
+var execFileAsync = promisify(execFile);
+var UNITY_EXECUTABLE_PATTERN_MAC = /Unity\.app\/Contents\/MacOS\/Unity/i;
+var UNITY_EXECUTABLE_PATTERN_WINDOWS = /Unity\.exe/i;
+var PROJECT_PATH_PATTERN = /-(?:projectPath|projectpath)(?:=|\s+)("[^"]+"|'[^']+'|[^\s"']+)/i;
+var PROCESS_LIST_COMMAND_MAC = "ps";
+var PROCESS_LIST_ARGS_MAC = ["-axo", "pid=,command=", "-ww"];
+var WINDOWS_POWERSHELL = "powershell";
+var removeTrailingSeparators = (target) => {
+  let trimmed = target;
+  while (trimmed.length > 1 && (trimmed.endsWith("/") || trimmed.endsWith("\\"))) {
+    trimmed = trimmed.slice(0, -1);
+  }
+  return trimmed;
+};
+var normalizePath = (target) => {
+  const resolvedPath = resolve2(target);
+  const trimmed = removeTrailingSeparators(resolvedPath);
+  return trimmed;
+};
+var toComparablePath = (value) => {
+  return value.replace(/\\/g, "/").toLocaleLowerCase();
+};
+var pathsEqual = (left, right) => {
+  return toComparablePath(normalizePath(left)) === toComparablePath(normalizePath(right));
+};
+function extractProjectPath(command) {
+  const match = command.match(PROJECT_PATH_PATTERN);
+  if (!match) {
+    return void 0;
+  }
+  const raw = match[1];
+  if (!raw) {
+    return void 0;
+  }
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    return trimmed.slice(1, -1);
+  }
+  if (trimmed.startsWith("'") && trimmed.endsWith("'")) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+var isUnityAuxiliaryProcess = (command) => {
+  const normalizedCommand = command.toLowerCase();
+  if (normalizedCommand.includes("-batchmode")) {
+    return true;
+  }
+  return normalizedCommand.includes("assetimportworker");
+};
+async function listUnityProcessesMac() {
+  let stdout = "";
+  try {
+    const result = await execFileAsync(PROCESS_LIST_COMMAND_MAC, PROCESS_LIST_ARGS_MAC);
+    stdout = result.stdout;
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    console.error(`Failed to retrieve Unity process list: ${message}`);
+    return [];
+  }
+  const lines = stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+  const processes = [];
+  for (const line of lines) {
+    const match = line.match(/^(\d+)\s+(.*)$/);
+    if (!match) {
+      continue;
+    }
+    const pidValue = Number.parseInt(match[1] ?? "", 10);
+    if (!Number.isFinite(pidValue)) {
+      continue;
+    }
+    const command = match[2] ?? "";
+    if (!UNITY_EXECUTABLE_PATTERN_MAC.test(command)) {
+      continue;
+    }
+    if (isUnityAuxiliaryProcess(command)) {
+      continue;
+    }
+    const projectArgument = extractProjectPath(command);
+    if (!projectArgument) {
+      continue;
+    }
+    processes.push({
+      pid: pidValue,
+      projectPath: normalizePath(projectArgument)
+    });
+  }
+  return processes;
+}
+async function listUnityProcessesWindows() {
+  const scriptLines = [
+    "$ErrorActionPreference = 'Stop'",
+    `$processes = Get-CimInstance Win32_Process -Filter "Name = 'Unity.exe'" | Where-Object { $_.CommandLine }`,
+    "foreach ($process in $processes) {",
+    `  $commandLine = $process.CommandLine -replace "\`r", ' ' -replace "\`n", ' '`,
+    '  Write-Output ("{0}|{1}" -f $process.ProcessId, $commandLine)',
+    "}"
+  ];
+  let stdout = "";
+  try {
+    const result = await execFileAsync(WINDOWS_POWERSHELL, ["-NoProfile", "-Command", scriptLines.join("\n")]);
+    stdout = result.stdout ?? "";
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    console.error(`Failed to retrieve Unity process list on Windows: ${message}`);
+    return [];
+  }
+  const lines = stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+  const processes = [];
+  for (const line of lines) {
+    const delimiterIndex = line.indexOf("|");
+    if (delimiterIndex < 0) {
+      continue;
+    }
+    const pidText = line.slice(0, delimiterIndex).trim();
+    const command = line.slice(delimiterIndex + 1).trim();
+    const pidValue = Number.parseInt(pidText, 10);
+    if (!Number.isFinite(pidValue)) {
+      continue;
+    }
+    if (!UNITY_EXECUTABLE_PATTERN_WINDOWS.test(command)) {
+      continue;
+    }
+    if (isUnityAuxiliaryProcess(command)) {
+      continue;
+    }
+    const projectArgument = extractProjectPath(command);
+    if (!projectArgument) {
+      continue;
+    }
+    processes.push({
+      pid: pidValue,
+      projectPath: normalizePath(projectArgument)
+    });
+  }
+  return processes;
+}
+async function listUnityProcesses() {
+  if (process.platform === "darwin") {
+    return await listUnityProcessesMac();
+  }
+  if (process.platform === "win32") {
+    return await listUnityProcessesWindows();
+  }
+  return [];
+}
+async function findRunningUnityProcess(projectPath) {
+  const normalizedTarget = normalizePath(projectPath);
+  const processes = await listUnityProcesses();
+  return processes.find((candidate) => pathsEqual(candidate.projectPath, normalizedTarget));
+}
+async function focusUnityProcess(pid) {
+  if (process.platform === "darwin") {
+    await focusUnityProcessMac(pid);
+    return;
+  }
+  if (process.platform === "win32") {
+    await focusUnityProcessWindows(pid);
+  }
+}
+async function focusUnityProcessMac(pid) {
+  const script = `tell application "System Events" to set frontmost of (first process whose unix id is ${pid}) to true`;
+  try {
+    await execFileAsync("osascript", ["-e", script]);
+    console.log("Brought existing Unity to the front.");
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    console.warn(`Failed to bring Unity to front: ${message}`);
+  }
+}
+async function focusUnityProcessWindows(pid) {
+  const addTypeLines = [
+    'Add-Type -TypeDefinition @"',
+    "using System;",
+    "using System.Runtime.InteropServices;",
+    "public static class Win32Interop {",
+    '  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);',
+    '  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);',
+    "}",
+    '"@'
+  ];
+  const scriptLines = [
+    "$ErrorActionPreference = 'Stop'",
+    ...addTypeLines,
+    `try { $process = Get-Process -Id ${pid} -ErrorAction Stop } catch { return }`,
+    "$handle = $process.MainWindowHandle",
+    "if ($handle -eq 0) { return }",
+    "[Win32Interop]::ShowWindowAsync($handle, 9) | Out-Null",
+    "[Win32Interop]::SetForegroundWindow($handle) | Out-Null"
+  ];
+  try {
+    await execFileAsync(WINDOWS_POWERSHELL, ["-NoProfile", "-Command", scriptLines.join("\n")]);
+    console.log("Brought existing Unity to the front.");
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    console.warn(`Failed to bring Unity to front on Windows: ${message}`);
+  }
+}
+
+// src/server.ts
+import { fileURLToPath as fileURLToPath2 } from "url";
+import { dirname as dirname2, resolve as resolve3 } from "path";
 
 // src/unity-discovery.ts
 var UnityDiscovery = class _UnityDiscovery {
@@ -30799,6 +30752,9 @@ var UnityMcpServer = class {
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
       try {
+        if (name === "focus-window") {
+          return await this.handleFocusWindow();
+        }
         if (this.toolManager.hasTool(name)) {
           const dynamicTool = this.toolManager.getTool(name);
           if (!dynamicTool) {
@@ -30823,6 +30779,42 @@ var UnityMcpServer = class {
         };
       }
     });
+  }
+  /**
+   * Handle focus-window tool call at OS level, bypassing Unity TCP.
+   * Works even when Unity is busy (compiling, domain reload).
+   */
+  async handleFocusWindow() {
+    const currentFile = fileURLToPath2(import.meta.url);
+    const projectPath = resolve3(dirname2(currentFile), "..", "..");
+    const runningProcess = await findRunningUnityProcess(projectPath);
+    if (!runningProcess) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              Message: "No running Unity process found for this project",
+              Success: false
+            })
+          }
+        ],
+        isError: true
+      };
+    }
+    await focusUnityProcess(runningProcess.pid);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            Message: `Unity Editor window focused (PID: ${runningProcess.pid})`,
+            Success: true
+          })
+        }
+      ],
+      isError: false
+    };
   }
   /**
    * Start the server
