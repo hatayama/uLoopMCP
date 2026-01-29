@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.59.0](https://github.com/hatayama/uLoopMCP/compare/v0.58.0...v0.59.0) (2026-01-29)
+
+
+### Features
+
+* **compile:** Respect Unity's Script Changes While Playing setting ([#582](https://github.com/hatayama/uLoopMCP/issues/582)) ([d2e0659](https://github.com/hatayama/uLoopMCP/commit/d2e06596e86ae47ac20dff3e0c21ba1378b8f9b9))
+
 ## [0.58.0](https://github.com/hatayama/uLoopMCP/compare/v0.57.0...v0.58.0) (2026-01-28)
 
 
