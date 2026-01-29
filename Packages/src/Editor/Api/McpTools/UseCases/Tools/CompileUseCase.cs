@@ -1,26 +1,53 @@
+using System;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Linq;
+using UnityEditor;
+using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Handles temporal cohesion for compilation processing
-    /// Processing sequence: 1. Compilation state validation, 2. Compilation execution, 3. Result formatting
-    /// Related classes: CompileTool, CompilationStateValidationService, CompilationExecutionService
+    /// Processing sequence: 1. Play Mode preparation, 2. Compilation state validation, 3. Compilation execution, 4. Result formatting
+    /// Related classes: CompileTool, PlayModeCompilationPreparationService, CompilationStateValidationService, CompilationExecutionService
     /// Design reference: @Packages/docs/ARCHITECTURE_Unity.md - UseCase + Tool Pattern (DDD Integration)
     /// </summary>
     public class CompileUseCase : AbstractUseCase<CompileSchema, CompileResponse>
     {
+        private const int MAX_WAIT_MS = 5000;
+        private const int POLL_INTERVAL_MS = 50;
+
         /// <summary>
         /// Executes compilation processing
         /// </summary>
         /// <param name="parameters">Compilation parameters</param>
-        /// <param name="cancellationToken">Cancellation control token</param>
+        /// <param name="ct">Cancellation control token</param>
         /// <returns>Compilation result</returns>
-        public override async Task<CompileResponse> ExecuteAsync(CompileSchema parameters, CancellationToken cancellationToken)
+        public override async Task<CompileResponse> ExecuteAsync(CompileSchema parameters, CancellationToken ct)
         {
-            // 1. Compilation state validation
+            // 1. Play Mode preparation check
+            PlayModeCompilationPreparationService preparationService = new();
+            PreparationResult preparation = preparationService.DeterminePreparationAction();
+
+            if (!preparation.CanProceed)
+            {
+                return new CompileResponse(
+                    success: false,
+                    errorCount: 1,
+                    warningCount: 0,
+                    errors: new[] { new CompileIssue(preparation.ErrorMessage, "", 0) },
+                    warnings: Array.Empty<CompileIssue>()
+                );
+            }
+
+            if (preparation.NeedsPlayModeStop)
+            {
+                preparationService.StopPlayMode();
+                await WaitForPlayModeExitAsync(ct);
+            }
+
+            // 2. Compilation state validation
             CompilationStateValidationService validationService = new();
             ValidationResult validation = validationService.ValidateCompilationState();
             
@@ -31,16 +58,16 @@ namespace io.github.hatayama.uLoopMCP
                     errorCount: 1,
                     warningCount: 0,
                     errors: new[] { new CompileIssue(validation.ErrorMessage, "", 0) },
-                    warnings: new CompileIssue[0]
+                    warnings: Array.Empty<CompileIssue>()
                 );
             }
-            
-            // 2. Compilation execution
-            cancellationToken.ThrowIfCancellationRequested();
+
+            // 3. Compilation execution
+            ct.ThrowIfCancellationRequested();
             CompilationExecutionService executionService = new();
-            CompileResult result = await executionService.ExecuteCompilationAsync(parameters.ForceRecompile, cancellationToken);
+            CompileResult result = await executionService.ExecuteCompilationAsync(parameters.ForceRecompile, ct);
             
-            // 3. Result formatting
+            // 4. Result formatting
             if (result.IsIndeterminate)
             {
                 return new CompileResponse(
@@ -63,6 +90,20 @@ namespace io.github.hatayama.uLoopMCP
                 errors: errors,
                 warnings: warnings
             );
+        }
+
+        private async Task WaitForPlayModeExitAsync(CancellationToken ct)
+        {
+            int waitedMs = 0;
+
+            while (EditorApplication.isPlaying && waitedMs < MAX_WAIT_MS)
+            {
+                ct.ThrowIfCancellationRequested();
+                await TimerDelay.Wait(POLL_INTERVAL_MS, ct);
+                waitedMs += POLL_INTERVAL_MS;
+            }
+
+            Debug.Assert(!EditorApplication.isPlaying, "Play mode should have stopped by now");
         }
     }
 }
