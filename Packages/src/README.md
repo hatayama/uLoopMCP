@@ -34,9 +34,10 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 3. Easy setup from Unity Package Manager and a few clicks to connect from LLM tools (Cursor, Claude Code, GitHub Copilot, Windsurf, etc.).
 4. Type-safe extension model for adding project-specific MCP tools that AI can implement and iterate on for you.
 5. Log and hierarchy data can be exported to files to avoid burning LLM context on large payloads.
-6. Standalone CLI tool `uloop` provided. **No MCP configuration required—just install Skills and LLM tools will automatically operate Unity**. 14 bundled Skills enable LLM tools to handle compilation, test execution, log retrieval, and more. ([Details](#cli-tool-uloop))
+6. Standalone CLI tool `uloop` provided. **No MCP configuration required—just install Skills and LLM tools will automatically operate Unity**. 15 bundled Skills enable LLM tools to handle compilation, test execution, log retrieval, and more. ([Details](#cli-tool-uloop))
 
 # Example Use Cases
+- Launch Unity with the correct Editor version from AI tools, even when Unity isn't running.
 - Let an AI keep fixing your project until compilation passes and all tests go green.
 - Ask the AI to fix bugs or refactor existing code, and verify results using `compile` / `test runner execution` / `log retrieval`.
 - After verification, enter Play Mode using `MenuItem execution` or `compile-free C# code execution`, then bring Unity Editor to the foreground with `Unity window focus`.
@@ -331,7 +332,7 @@ uLoopMCP includes a standalone CLI tool `uloop`.
 - **Multiple Unity instances**: Operate multiple Unity instances from a single AI Agent using `--port`
 - **Context-efficient**: Unlike MCP, does not consume LLM context
 
-Just install the 14 bundled Skills, and Skills-compatible LLM tools will automatically integrate with Unity.
+Just install the 15 bundled Skills, and Skills-compatible LLM tools will automatically integrate with Unity.
 
 ### Quick Start
 
@@ -357,6 +358,7 @@ After installing Skills, LLM tools can automatically handle instructions like th
 
 | Your Instruction | Skill Used by LLM Tools |
 |---|---|
+| "Launch Unity for this project" | `/uloop-launch` |
 | "Fix the compile errors" | `/uloop-compile` |
 | "Run the tests and tell me why they failed" | `/uloop-run-tests` + `/uloop-get-logs` |
 | "Check the scene hierarchy" | `/uloop-get-hierarchy` |
@@ -366,8 +368,9 @@ After installing Skills, LLM tools can automatically handle instructions like th
 > **No MCP configuration required!** As long as the server is running in the uLoopMCP Window, LLM tools communicate directly with Unity through Skills.
 
 <details>
-<summary>All 14 Bundled Skills</summary>
+<summary>All 15 Bundled Skills</summary>
 
+- `/uloop-launch` - Launch Unity with correct version
 - `/uloop-compile` - Execute compilation
 - `/uloop-get-logs` - Get console logs
 - `/uloop-run-tests` - Run tests
@@ -393,8 +396,14 @@ You can also call the CLI directly without using Skills:
 # List available tools
 uloop list
 
-# Sync tool definitions from Unity to local cache (.uloop/tools.json)
-uloop sync
+# Launch Unity project with correct version
+uloop launch
+
+# Launch with build target (Android, iOS, StandaloneOSX, etc.)
+uloop launch -p Android
+
+# Kill running Unity and restart
+uloop launch -r
 
 # Execute compilation
 uloop compile
