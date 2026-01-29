@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Linq;
 using UnityEditor;
-using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -44,7 +43,17 @@ namespace io.github.hatayama.uLoopMCP
             if (preparation.NeedsPlayModeStop)
             {
                 preparationService.StopPlayMode();
-                await WaitForPlayModeExitAsync(ct);
+                bool exited = await WaitForPlayModeExitAsync(ct);
+                if (!exited)
+                {
+                    return new CompileResponse(
+                        success: false,
+                        errorCount: 1,
+                        warningCount: 0,
+                        errors: new[] { new CompileIssue("Play Mode did not exit within 5 seconds; compilation aborted.", "", 0) },
+                        warnings: Array.Empty<CompileIssue>()
+                    );
+                }
             }
 
             // 2. Compilation state validation
@@ -92,7 +101,7 @@ namespace io.github.hatayama.uLoopMCP
             );
         }
 
-        private async Task WaitForPlayModeExitAsync(CancellationToken ct)
+        private async Task<bool> WaitForPlayModeExitAsync(CancellationToken ct)
         {
             int waitedMs = 0;
 
@@ -103,7 +112,7 @@ namespace io.github.hatayama.uLoopMCP
                 waitedMs += POLL_INTERVAL_MS;
             }
 
-            Debug.Assert(!EditorApplication.isPlaying, "Play mode should have stopped by now");
+            return !EditorApplication.isPlaying;
         }
     }
 }
