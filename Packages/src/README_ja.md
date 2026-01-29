@@ -34,9 +34,10 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 3. Unity Package Manager からインストールし、お使いの LLM ツール（Cursor / Claude Code / Codex / Gemini など）と数クリックで接続できます。
 4. プロジェクト固有の MCP ツールを型安全に拡張しやすく、AI に実装を任せやすい設計になっています。
 5. 大量のログや階層情報はファイルに書き出すことで、LLM のコンテキスト消費を抑える工夫をしています。
-6. スタンドアロン CLI ツール `uloop` を提供。**MCP設定不要で、Skills をインストールするだけで LLM ツールが自動的に Unity を操作できます**。14個のバンドルされた Skills により、コンパイル・テスト実行・ログ取得などをLLMツールに任せられます。（[詳細](#cli-ツール-uloop)）
+6. スタンドアロン CLI ツール `uloop` を提供。**MCP設定不要で、Skills をインストールするだけで LLM ツールが自動的に Unity を操作できます**。15個のバンドルされた Skills により、コンパイル・テスト実行・ログ取得などをLLMツールに任せられます。（[詳細](#cli-ツール-uloop)）
 
 # ユースケース例
+- Unityが起動していない状態でも、AIツールから正しいEditorバージョンでUnityを起動する
 - Unity プロジェクトの「コンパイルが通るまで」「テストが緑になるまで」を、AI に任せて自律的に回し続ける
 - 既存コードベースに対して、バグ修正やリファクタリングをAIに依頼し、`compile` / `test runnerの実行` / `log取得` で結果を検証させる
 - 検証完了後、`MenuItemの実行` または `コンパイル不要のC#コード実行` でPlay Modeに入り、`Unityウィンドウフォーカス機能` でUnity Editorを最前面に表示させる
@@ -331,7 +332,7 @@ uLoopMCPには、スタンドアロンCLIツール `uloop` が付属していま
 - **複数Unityの操作**: 1つのAI Agentから `--port` 指定で複数のUnityインスタンスを操作可能
 - **コンテキスト節約**: MCPと違い、LLMのコンテキストを消費しない
 
-14個のバンドルされたSkillsをインストールするだけで、Skills対応のLLMツールが自動的にUnityと連携します。
+15個のバンドルされたSkillsをインストールするだけで、Skills対応のLLMツールが自動的にUnityと連携します。
 
 ### クイックスタート
 
@@ -357,6 +358,7 @@ Skillsをインストールすると、LLMツールが以下のような指示�
 
 | あなたの指示 | LLMツールが使うSkill |
 |---|---|
+| 「このプロジェクトのUnityを起動して」 | `/uloop-launch` |
 | 「コンパイルエラーを直して」 | `/uloop-compile` |
 | 「テストを実行して失敗原因を教えて」 | `/uloop-run-tests` + `/uloop-get-logs` |
 | 「シーンの階層構造を確認して」 | `/uloop-get-hierarchy` |
@@ -366,8 +368,9 @@ Skillsをインストールすると、LLMツールが以下のような指示�
 > **MCP設定は不要です！** uLoopMCP Windowでサーバーを起動していれば、Skillsを通じてLLMツールが直接Unityと通信します。
 
 <details>
-<summary>バンドルされている全14個のSkills一覧</summary>
+<summary>バンドルされている全15個のSkills一覧</summary>
 
+- `/uloop-launch` - 正しいバージョンでUnityを起動
 - `/uloop-compile` - コンパイルの実行
 - `/uloop-get-logs` - Consoleログの取得
 - `/uloop-run-tests` - テストの実行
@@ -393,8 +396,14 @@ Skillsを使わずにCLIを直接呼び出すこともできます：
 # 利用可能なツール一覧を取得
 uloop list
 
-# Unityからツール定義を取得しローカルキャッシュに保存 (.uloop/tools.json)
-uloop sync
+# 正しいバージョンでUnityプロジェクトを起動
+uloop launch
+
+# ビルドターゲットを指定して起動（Android, iOS, StandaloneOSX など）
+uloop launch -p Android
+
+# 実行中のUnityを終了して再起動
+uloop launch -r
 
 # コンパイルを実行
 uloop compile
