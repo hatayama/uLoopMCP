@@ -118,7 +118,7 @@ async function runLaunchCommand(
     unityArgs: [],
     unityVersion,
   };
-  launch(resolved);
+  await launch(resolved);
 
   const now = new Date();
   await updateLastModifiedIfExists(resolvedProjectPath, now);
