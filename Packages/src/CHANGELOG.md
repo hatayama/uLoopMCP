@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.59.1](https://github.com/hatayama/uLoopMCP/compare/v0.59.0...v0.59.1) (2026-02-05)
+
+
+### Bug Fixes
+
+* Add uloop fix suggestion to error messages ([#593](https://github.com/hatayama/uLoopMCP/issues/593)) ([ccca327](https://github.com/hatayama/uLoopMCP/commit/ccca327ca13996602c3fbe2d4e1c20dc2a8f0ab4))
+* Delete lock files when server startup is skipped ([#595](https://github.com/hatayama/uLoopMCP/issues/595)) ([9621cc2](https://github.com/hatayama/uLoopMCP/commit/9621cc21522f0cf43de6013a5d69c4e3891b4d12))
+
 ## [0.59.0](https://github.com/hatayama/uLoopMCP/compare/v0.58.0...v0.59.0) (2026-01-29)
 
 
