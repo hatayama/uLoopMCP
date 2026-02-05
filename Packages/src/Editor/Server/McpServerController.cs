@@ -212,8 +212,6 @@ namespace io.github.hatayama.uLoopMCP
             // If the server is already running (e.g., started from McpEditorWindow).
             if (mcpServer?.IsRunning == true)
             {
-                VibeLogger.LogInfo("server_restore_skip", "already_running_instance",
-                    new { was_running = wasRunning, saved_port = savedPort, after_compile = isAfterCompile });
                 // Just clear the post-compilation flag and exit.
                 if (isAfterCompile)
                 {
@@ -231,8 +229,6 @@ namespace io.github.hatayama.uLoopMCP
 
             if (mcpServer != null && mcpServer.IsRunning)
             {
-                VibeLogger.LogInfo("server_restore_skip", "running_instance",
-                    new { was_running = wasRunning, saved_port = savedPort, after_compile = isAfterCompile });
                 return;
             }
 
@@ -241,24 +237,18 @@ namespace io.github.hatayama.uLoopMCP
 
             if (!hasCompletedFirstLaunch)
             {
-                VibeLogger.LogInfo("server_restore_skip", "first_launch_incomplete",
-                    new { was_running = wasRunning, saved_port = savedPort, after_compile = isAfterCompile, auto_start = autoStartEnabled });
                 DeleteAllLockFiles();
                 return;
             }
 
             if (!wasRunning && !autoStartEnabled)
             {
-                VibeLogger.LogInfo("server_restore_skip", "not_running_and_auto_start_disabled",
-                    new { was_running = wasRunning, saved_port = savedPort, after_compile = isAfterCompile, auto_start = autoStartEnabled });
                 DeleteAllLockFiles();
                 return;
             }
 
             if (!autoStartEnabled && !isAfterCompile)
             {
-                VibeLogger.LogInfo("server_restore_skip", "auto_start_disabled_and_not_after_compile",
-                    new { was_running = wasRunning, saved_port = savedPort, after_compile = isAfterCompile, auto_start = autoStartEnabled });
                 DeleteAllLockFiles();
                 McpEditorSettings.ClearServerSession();
                 return;

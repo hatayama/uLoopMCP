@@ -23,25 +23,11 @@ namespace io.github.hatayama.uLoopMCP
             bool wasRunning = McpEditorSettings.GetIsServerRunning();
             int savedPort = McpEditorSettings.GetServerPort();
             bool isAfterCompile = McpEditorSettings.GetIsAfterCompile();
-            bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
-            bool hasCompletedFirstLaunch = McpEditorSettings.GetHasCompletedFirstLaunch();
-
-            VibeLogger.LogInfo("session_restore_check", "restore_state_snapshot",
-                new
-                {
-                    was_running = wasRunning,
-                    saved_port = savedPort,
-                    after_compile = isAfterCompile,
-                    auto_start = autoStartEnabled,
-                    first_launch_done = hasCompletedFirstLaunch
-                });
 
             // If server is already running
             McpBridgeServer currentServer = McpServerController.CurrentServer;
             if (currentServer?.IsRunning == true)
             {
-                VibeLogger.LogInfo("session_restore_skip", "already_running_instance",
-                    new { was_running = wasRunning, saved_port = savedPort, after_compile = isAfterCompile });
                 // Server is running, clean up lock files
                 CompilationLockService.DeleteLockFile();
                 DomainReloadDetectionService.DeleteLockFile();
@@ -63,11 +49,12 @@ namespace io.github.hatayama.uLoopMCP
             // If server was running and is currently stopped, delegate to centralized controller logic
             if (wasRunning && (currentServer == null || !currentServer.IsRunning))
             {
+                bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
+                bool hasCompletedFirstLaunch = McpEditorSettings.GetHasCompletedFirstLaunch();
+
                 // Skip auto-start if first launch has not been completed (user must start manually first time)
                 if ((autoStartEnabled || isAfterCompile) && hasCompletedFirstLaunch)
                 {
-                    VibeLogger.LogInfo("session_restore_start", "delegate_to_controller",
-                        new { saved_port = savedPort, after_compile = isAfterCompile });
                     _ = McpServerController.StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None).ContinueWith(task =>
                     {
                         if (task.IsFaulted)
@@ -79,8 +66,6 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 else
                 {
-                    VibeLogger.LogInfo("session_restore_skip", "auto_start_blocked",
-                        new { was_running = wasRunning, saved_port = savedPort, after_compile = isAfterCompile, auto_start = autoStartEnabled, first_launch_done = hasCompletedFirstLaunch });
                     // Server won't start, but lock files must be deleted so CLI doesn't think Unity is busy
                     CompilationLockService.DeleteLockFile();
                     DomainReloadDetectionService.DeleteLockFile();
