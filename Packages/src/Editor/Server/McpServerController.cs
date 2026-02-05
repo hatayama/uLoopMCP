@@ -237,16 +237,19 @@ namespace io.github.hatayama.uLoopMCP
 
             if (!hasCompletedFirstLaunch)
             {
+                DeleteAllLockFiles();
                 return;
             }
 
             if (!wasRunning && !autoStartEnabled)
             {
+                DeleteAllLockFiles();
                 return;
             }
 
             if (!autoStartEnabled && !isAfterCompile)
             {
+                DeleteAllLockFiles();
                 McpEditorSettings.ClearServerSession();
                 return;
             }
@@ -315,6 +318,16 @@ namespace io.github.hatayama.uLoopMCP
                     McpEditorSettings.ClearServerSession();
                 }
             }
+        }
+
+        /// <summary>
+        /// Prevent CLI from misdetecting a busy state when server startup is intentionally skipped.
+        /// </summary>
+        private static void DeleteAllLockFiles()
+        {
+            CompilationLockService.DeleteLockFile();
+            DomainReloadDetectionService.DeleteLockFile();
+            ServerStartingLockService.DeleteLockFile();
         }
 
         /// <summary>

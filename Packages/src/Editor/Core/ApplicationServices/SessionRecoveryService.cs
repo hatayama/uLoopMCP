@@ -51,7 +51,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
                 bool hasCompletedFirstLaunch = McpEditorSettings.GetHasCompletedFirstLaunch();
-                
+
                 // Skip auto-start if first launch has not been completed (user must start manually first time)
                 if ((autoStartEnabled || isAfterCompile) && hasCompletedFirstLaunch)
                 {
@@ -66,6 +66,10 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 else
                 {
+                    // Server won't start, but lock files must be deleted so CLI doesn't think Unity is busy
+                    CompilationLockService.DeleteLockFile();
+                    DomainReloadDetectionService.DeleteLockFile();
+                    ServerStartingLockService.DeleteLockFile();
                     McpEditorSettings.ClearServerSession();
                 }
             }
