@@ -20,12 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           lfs: true
 
       - name: Cache Library folder
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: Library
           key: Library-2022.3.62f1-${{ hashFiles('Packages/src/**/*.cs', 'Assets/**/*.cs') }}
@@ -116,7 +116,7 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: Unity test results
