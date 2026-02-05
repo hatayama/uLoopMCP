@@ -344,18 +344,24 @@ async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
     if (message === 'UNITY_COMPILING') {
       console.error('\x1b[33m⏳ Unity is compiling scripts.\x1b[0m');
       console.error('Please wait for compilation to finish and try again.');
+      console.error('');
+      console.error('If the issue persists, run: uloop fix');
       process.exit(1);
     }
 
     if (message === 'UNITY_DOMAIN_RELOAD') {
       console.error('\x1b[33m⏳ Unity is reloading (Domain Reload in progress).\x1b[0m');
       console.error('Please wait a moment and try again.');
+      console.error('');
+      console.error('If the issue persists, run: uloop fix');
       process.exit(1);
     }
 
     if (message === 'UNITY_SERVER_STARTING') {
       console.error('\x1b[33m⏳ Unity server is starting.\x1b[0m');
       console.error('Please wait a moment and try again.');
+      console.error('');
+      console.error('If the issue persists, run: uloop fix');
       process.exit(1);
     }
 
