@@ -69,33 +69,37 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        
+
         # Validate and sanitize branch name to prevent shell injection
         BRANCH_NAME="${{ github.head_ref }}"
         if [[ ! "$BRANCH_NAME" =~ ^[a-zA-Z0-9/_.-]+$ ]]; then
           echo "Error: Invalid branch name format: $BRANCH_NAME"
           exit 1
         fi
-        
+
+        # Save built artifacts before switching branches
+        TEMP_DIR=$(mktemp -d "$RUNNER_TEMP/server-bundle.XXXXXX")
+        cp Packages/src/TypeScriptServer~/dist/server.bundle.js "$TEMP_DIR/server.bundle.js"
+        cp Packages/src/TypeScriptServer~/dist/server.bundle.js.map "$TEMP_DIR/server.bundle.js.map"
+
         echo "Fetching and switching to actual branch..."
         git fetch origin "$BRANCH_NAME:$BRANCH_NAME"
         git checkout "$BRANCH_NAME"
-        git reset --hard "origin/$BRANCH_NAME"
-        
+
+        # Restore built artifacts
+        cp "$TEMP_DIR/server.bundle.js" Packages/src/TypeScriptServer~/dist/server.bundle.js
+        cp "$TEMP_DIR/server.bundle.js.map" Packages/src/TypeScriptServer~/dist/server.bundle.js.map
+        rm -rf "$TEMP_DIR"
+
         echo "Adding only dist/ files to git..."
-        git add Packages/src/TypeScriptServer~/dist/
-        
+        git add Packages/src/TypeScriptServer~/dist/server.bundle.js Packages/src/TypeScriptServer~/dist/server.bundle.js.map
+
         echo "Checking for changes..."
         if git diff --staged --quiet; then
           echo "No changes to commit"
         else
           echo "Committing built files..."
-          git commit -m "Auto-build TypeScript Server [skip ci]
-          
-          Built files:
-          - dist/server.bundle.js
-          
-          Note: node_modules/ is excluded by .gitignore"
+          git commit -m "chore: rebuild server bundle [skip ci]"
           git push origin "$BRANCH_NAME"
           echo "Built files committed successfully"
         fi
@@ -133,4 +137,3 @@ jobs:
         echo "Validating package.json syntax..."
         node -e "JSON.parse(require('fs').readFileSync('package.json', 'utf8'))"
         echo "✅ package.json is valid"
-
