@@ -247,9 +247,6 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             }
         }
         
-        /// <summary>
-        /// Convert ExecutionResponse to ExecuteDynamicCodeResponse
-        /// </summary>
         private ExecuteDynamicCodeResponse ConvertExecutionResultToResponse(
             ExecutionResult result, string originalCode, string correlationId)
         {
@@ -448,11 +445,6 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             return sb.ToString();
         }
 
-        /// <summary>
-        /// Append a safe default return when snippet likely misses a return statement.
-        /// - Adds a trailing semicolon if last non-whitespace char is not ';'
-        /// - Appends '\nreturn null;' to make result type object-compatible
-        /// </summary>
         private static string AppendReturnIfMissing(string originalCode)
         {
             string code = originalCode ?? string.Empty;
@@ -462,9 +454,6 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             return builder + "\nreturn null;";
         }
         
-        /// <summary>
-        /// Create error response
-        /// </summary>
         private ExecuteDynamicCodeResponse CreateErrorResponse(string errorMessage)
         {
             return new ExecuteDynamicCodeResponse

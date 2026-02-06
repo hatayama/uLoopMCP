@@ -9,20 +9,12 @@ using System.Text.RegularExpressions;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    /// <summary>
-    /// Resolves missing using directives by searching the compilation's GlobalNamespace
-    /// for types matching unresolved identifiers from CS0246 diagnostics.
-    /// Related classes: RoslynCompiler (consumer via ApplyDiagnosticFixes)
-    /// </summary>
     public class UsingDirectiveResolver
     {
         private static readonly Regex TypeNamePattern = new Regex(@"['""]([^'""]+)['""]", RegexOptions.Compiled);
 
         private readonly Dictionary<string, List<string>> _typeNameToNamespacesCache = new();
 
-        /// <summary>
-        /// Resolve unresolved types from CS0246 diagnostics by searching the compilation's symbol table.
-        /// </summary>
         public List<UsingResolutionResult> ResolveUnresolvedTypes(
             CSharpCompilation compilation,
             IEnumerable<Diagnostic> diagnostics)
@@ -54,12 +46,7 @@ namespace io.github.hatayama.uLoopMCP
             return results;
         }
 
-        /// <summary>
-        /// Extract the unresolved type name from a CS0246 diagnostic.
-        /// First prefers syntax location to avoid message-format dependency.
-        /// Falls back to message parsing if syntax extraction fails.
-        /// CS0246: "The type or namespace name 'Vector3' could not be found ..."
-        /// </summary>
+        // Prefers syntax-level extraction over message parsing to avoid locale/format dependency
         public string ExtractTypeNameFromDiagnostic(Diagnostic diagnostic)
         {
             Debug.Assert(diagnostic != null, "diagnostic must not be null");
@@ -141,10 +128,6 @@ namespace io.github.hatayama.uLoopMCP
             return normalized;
         }
 
-        /// <summary>
-        /// Search the compilation's GlobalNamespace recursively for all namespaces containing a type with the given name.
-        /// Results are cached per instance to avoid repeated walks for the same type name.
-        /// </summary>
         public List<string> FindNamespacesForType(CSharpCompilation compilation, string typeName)
         {
             Debug.Assert(compilation != null, "compilation must not be null");
@@ -188,9 +171,6 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 
-    /// <summary>
-    /// Result of attempting to resolve a single unresolved type name to a using directive.
-    /// </summary>
     public class UsingResolutionResult
     {
         public string TypeName { get; set; }

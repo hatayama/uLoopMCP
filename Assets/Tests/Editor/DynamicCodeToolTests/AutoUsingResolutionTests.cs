@@ -5,10 +5,6 @@ using System.Linq;
 
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
-    /// <summary>
-    /// Integration tests for automatic using directive resolution in RoslynCompiler.
-    /// Verifies that CS0246 errors trigger namespace search and auto-insertion of using directives.
-    /// </summary>
     public class AutoUsingResolutionTests
     {
         private RoslynCompiler _compiler;

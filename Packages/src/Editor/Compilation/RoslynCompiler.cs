@@ -588,9 +588,6 @@ namespace io.github.hatayama.uLoopMCP
             return references;
         }
 
-        /// <summary>
-        /// Apply diagnostic-driven fixes (auto-resolve missing using directives for CS0246 errors)
-        /// </summary>
         private SyntaxTree ApplyDiagnosticFixes(CSharpCompilation compilation, CompilationContext context, string correlationId)
         {
             SyntaxTree currentTree = context.SyntaxTree;
@@ -688,9 +685,6 @@ namespace io.github.hatayama.uLoopMCP
             return newRoot.SyntaxTree;
         }
 
-        /// <summary>
-        /// Initialize compilation
-        /// </summary>
         private CSharpCompilation CreateCompilation(string assemblyName, SyntaxTree syntaxTree, IEnumerable<MetadataReference> references)
         {
             CSharpCompilationOptions compilationOptions = new CSharpCompilationOptions(
