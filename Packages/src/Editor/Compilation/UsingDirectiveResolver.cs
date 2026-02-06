@@ -130,18 +130,18 @@ namespace io.github.hatayama.uLoopMCP
                 return cached;
             }
 
-            List<string> results = new();
+            HashSet<string> results = new();
             SearchNamespace(compilation.GlobalNamespace, typeName, results);
 
-            List<string> distinctResults = results.Distinct().ToList();
-            _typeNameToNamespacesCache[typeName] = distinctResults;
-            return distinctResults;
+            List<string> resultList = results.ToList();
+            _typeNameToNamespacesCache[typeName] = resultList;
+            return resultList;
         }
 
         private void SearchNamespace(
             INamespaceSymbol namespaceSymbol,
             string typeName,
-            List<string> results)
+            ICollection<string> results)
         {
             // INamespaceSymbol.GetMembers(name) is a hash-based O(1) lookup
             foreach (ISymbol member in namespaceSymbol.GetMembers(typeName))
