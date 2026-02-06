@@ -428,7 +428,8 @@ namespace io.github.hatayama.uLoopMCP
                 Logs = new List<string>(),
                 ExecutionTime = executionTime,
                 CompilationErrors = compilationResult.Errors,
-                UpdatedCode = compilationResult.UpdatedCode
+                UpdatedCode = compilationResult.UpdatedCode,
+                AmbiguousTypeCandidates = compilationResult.AmbiguousTypeCandidates
             };
         }
 

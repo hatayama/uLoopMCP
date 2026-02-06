@@ -59,13 +59,13 @@ NG:   ""Parameters"": ""{}""")]
 - For new MonoBehaviours: create .cs → compile (mcp__uLoopMCP__compile with ForceRecompile=false) → ensure ErrorCount=0 → AddComponent")]
         public bool CompileOnly { get; set; } = false;
 
-        /// <summary>Attempt to auto-qualify common UnityEngine identifiers once and retry on failure</summary>
-        [Description(@"Auto-qualify common UnityEngine identifiers and retry once when compilation fails.
+        /// <summary>[DEPRECATED] Auto-using resolution is now built into the compiler.</summary>
+        [Description(@"[DEPRECATED] Auto-using resolution is now built into the compiler.
 
-- Behavior: If the snippet lacks 'using UnityEngine;' and errors like CS0103/CS0246 occur for common Unity types,
-  the tool inserts 'using UnityEngine;' at the top and retries once. This is a best-effort convenience and won't
-  modify your source files.
-- Disable if you prefer manual control.")]
+This parameter is kept for backward compatibility but has no effect.
+The compiler automatically resolves missing using directives by searching
+the compilation's namespace table. Single-candidate types are auto-resolved;
+ambiguous types produce an error listing all candidate namespaces.")]
         public bool AutoQualifyUnityTypesOnce { get; set; } = false;
     }
 }

@@ -36,6 +36,12 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>Failure Reason Category</summary>
         public CompilationFailureReason FailureReason { get; set; } = CompilationFailureReason.None;
+
+        /// <summary>
+        /// Types that could not be auto-resolved because multiple namespace candidates were found.
+        /// Key: type name, Value: list of candidate namespaces.
+        /// </summary>
+        public Dictionary<string, List<string>> AmbiguousTypeCandidates { get; set; } = new();
     }
 
     /// <summary>

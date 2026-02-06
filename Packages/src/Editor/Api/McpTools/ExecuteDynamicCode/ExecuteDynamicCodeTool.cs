@@ -199,37 +199,6 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     }
                 }
 
-                // Optional: simple auto-qualify retry if enabled and first attempt failed with likely UnityEngine identifiers
-                if (!executionResult.Success && parameters.AutoQualifyUnityTypesOnce)
-                {
-                    bool hasUsingUnityEngine = originalCode.Contains("using UnityEngine;");
-                    if (!hasUsingUnityEngine)
-                    {
-                        bool looksLikeUnityIdentifier = (executionResult.Logs?.Any(l => l.Contains("CS0103") || l.Contains("CS0246")) == true);
-                        if (looksLikeUnityIdentifier)
-                        {
-                            string retriedCode = "using UnityEngine;\n" + originalCode;
-                            ExecutionResult retryResult = await _executor.ExecuteCodeAsync(
-                                retriedCode,
-                                "DynamicCommand",
-                                parametersArray,
-                                cancellationToken,
-                                parameters.CompileOnly
-                            );
-                            // Prefer retry result if success, otherwise keep original but merge logs
-                            if (retryResult.Success)
-                            {
-                                executionResult = retryResult;
-                            }
-                            else if (retryResult.Logs?.Any() == true)
-                            {
-                                if (executionResult.Logs == null) executionResult.Logs = new List<string>();
-                                executionResult.Logs.AddRange(retryResult.Logs);
-                            }
-                        }
-                    }
-                }
-                
                 // Convert to response (use improved message on error)
                 ExecuteDynamicCodeResponse toolResponse = ConvertExecutionResultToResponse(
                     executionResult, originalCode, correlationId);
@@ -345,7 +314,7 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                 {
                     // Build diagnostics with context, hints, and suggestions
                     bool hasUsingUnityEngine = (originalCode ?? string.Empty).Contains("using UnityEngine;");
-                    response.Diagnostics = BuildDiagnostics(result.CompilationErrors, result.UpdatedCode, hasUsingUnityEngine);
+                    response.Diagnostics = BuildDiagnostics(result.CompilationErrors, result.UpdatedCode, hasUsingUnityEngine, result.AmbiguousTypeCandidates);
                     response.CompilationErrors = response.Diagnostics; // backward compat
 
                     int total = response.Diagnostics.Count;
@@ -357,13 +326,6 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
 
                     // Prefer concise summary in Logs instead of raw error spam
                     response.Logs.Add(response.DiagnosticsSummary);
-
-                    // Preflight: detect unqualified UnityEngine identifiers (when no using UnityEngine)
-                    List<string> suspects = DetectUnqualifiedUnityIdentifiers(originalCode ?? string.Empty, hasUsingUnityEngine);
-                    if (suspects.Count > 0)
-                    {
-                        response.Logs.Add($"Preflight: Found potential unqualified UnityEngine identifiers: {string.Join(", ", suspects.Distinct())}");
-                    }
                 }
 
                 // Attach updated code when available (for line mapping)
@@ -387,13 +349,14 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
         private static List<CompilationErrorDto> BuildDiagnostics(
             List<CompilationError> errors,
             string updatedCode,
-            bool hasUsingUnityEngine)
+            bool hasUsingUnityEngine,
+            Dictionary<string, List<string>> ambiguousCandidates = null)
         {
             List<CompilationErrorDto> list = new();
             string[] lines = string.IsNullOrEmpty(updatedCode) ? Array.Empty<string>() : updatedCode.Split(new char[] { '\n' }, StringSplitOptions.None);
             foreach (CompilationError e in errors)
             {
-                (string hint, List<string> suggestions) = GetHintAndSuggestions(e, hasUsingUnityEngine);
+                (string hint, List<string> suggestions) = GetHintAndSuggestions(e, hasUsingUnityEngine, ambiguousCandidates);
                 string context = ExtractContext(lines, e.Line, e.Column);
                 list.Add(new CompilationErrorDto
                 {
@@ -417,7 +380,12 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             return list;
         }
 
-        private static (string, List<string>) GetHintAndSuggestions(CompilationError e, bool hasUsingUnityEngine)
+        private static readonly Regex TypeNameInErrorPattern = new Regex(@"'([^']+)'", RegexOptions.Compiled);
+
+        private static (string, List<string>) GetHintAndSuggestions(
+            CompilationError e,
+            bool hasUsingUnityEngine,
+            Dictionary<string, List<string>> ambiguousCandidates = null)
         {
             string hint = string.Empty;
             List<string> suggestions = new();
@@ -425,11 +393,24 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             {
                 case "CS0103": // name does not exist in the current context
                 case "CS0246": // type or namespace name could not be found
-                    hint = hasUsingUnityEngine
-                        ? "Identifier may require fully-qualified name (e.g., UnityEngine.Mathf)."
-                        : "Add 'using UnityEngine;' at the top or use fully-qualified name (e.g., UnityEngine.Mathf).";
-                    suggestions.Add("Add 'using UnityEngine;' at the top of the snippet");
-                    suggestions.Add("Qualify with 'UnityEngine.' prefix");
+                    string typeName = ExtractTypeNameFromErrorMessage(e.Message);
+                    if (typeName != null
+                        && ambiguousCandidates != null
+                        && ambiguousCandidates.TryGetValue(typeName, out List<string> candidates))
+                    {
+                        string candidateList = string.Join(", ", candidates);
+                        hint = $"Auto-using resolution found multiple candidates for '{typeName}': {candidateList}. Use a fully-qualified name or add the correct using directive.";
+                        foreach (string ns in candidates)
+                        {
+                            suggestions.Add($"Use {ns}.{typeName}");
+                        }
+                    }
+                    else
+                    {
+                        hint = "Auto-using resolution was attempted but could not resolve this identifier. Use a fully-qualified name (e.g., UnityEngine.Mathf) or add the correct using directive.";
+                        suggestions.Add("Use fully-qualified name (e.g., UnityEngine.Mathf, System.Linq.Enumerable)");
+                        suggestions.Add("Add the appropriate using directive at the top of the snippet");
+                    }
                     break;
                 case "CS0104": // ambiguous reference
                     hint = "Identifier is ambiguous; qualify explicitly (e.g., UnityEngine.Object).";
@@ -439,6 +420,20 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     break;
             }
             return (hint, suggestions);
+        }
+
+        private static string ExtractTypeNameFromErrorMessage(string message)
+        {
+            Match match = TypeNameInErrorPattern.Match(message);
+            if (!match.Success) return null;
+
+            string rawName = match.Groups[1].Value;
+            int genericIndex = rawName.IndexOf('<');
+            if (genericIndex > 0)
+            {
+                rawName = rawName.Substring(0, genericIndex);
+            }
+            return rawName;
         }
 
         private static string ExtractContext(string[] lines, int lineNumber1Based, int column1Based)
@@ -464,23 +459,6 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             return sb.ToString();
         }
 
-        private static List<string> DetectUnqualifiedUnityIdentifiers(string originalCode, bool hasUsingUnityEngine)
-        {
-            List<string> suspects = new();
-            if (string.IsNullOrEmpty(originalCode)) return suspects;
-            if (hasUsingUnityEngine) return suspects; // with using, skip preflight
-
-            string pattern = @"(?<!UnityEngine\.)(?<!\.)\b(Mathf|Shader|GameObject|PrimitiveType|BoxCollider|SphereCollider|Rigidbody|Quaternion|Vector2|Vector3|Vector4|Color|Transform|Terrain|TerrainData|Renderer|MeshRenderer|Material)\b";
-            foreach (Match m in Regex.Matches(originalCode, pattern))
-            {
-                if (m.Success)
-                {
-                    suspects.Add(m.Value);
-                }
-            }
-            return suspects;
-        }
-        
         /// <summary>
         /// Append a safe default return when snippet likely misses a return statement.
         /// - Adds a trailing semicolon if last non-whitespace char is not ';'
