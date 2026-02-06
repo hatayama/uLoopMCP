@@ -588,8 +588,13 @@ namespace io.github.hatayama.uLoopMCP
             return references;
         }
 
-        private SyntaxTree ApplyDiagnosticFixes(CSharpCompilation compilation, CompilationContext context, string correlationId)
+        private SyntaxTree ApplyDiagnosticFixes(
+            CSharpCompilation compilation,
+            CompilationContext context,
+            out Dictionary<string, List<string>> ambiguousTypeCandidates,
+            string correlationId)
         {
+            ambiguousTypeCandidates = new();
             SyntaxTree currentTree = context.SyntaxTree;
             UsingDirectiveResolver resolver = new UsingDirectiveResolver();
             int maxAttempts = 3;
@@ -624,7 +629,7 @@ namespace io.github.hatayama.uLoopMCP
                     }
                     else if (resolution.CandidateNamespaces.Count > 1)
                     {
-                        context.AmbiguousTypeCandidates[resolution.TypeName] =
+                        ambiguousTypeCandidates[resolution.TypeName] =
                             new List<string>(resolution.CandidateNamespaces);
 
                         VibeLogger.LogWarning(
@@ -710,26 +715,22 @@ namespace io.github.hatayama.uLoopMCP
                 context.References
             );
 
-            // Diagnostic-driven fixes in Unity AI Assistant style
-            SyntaxTree fixedTree = ApplyDiagnosticFixes(compilation, context, correlationId);
+            SyntaxTree fixedTree = ApplyDiagnosticFixes(
+                compilation, context, out Dictionary<string, List<string>> ambiguousCandidates, correlationId);
 
-            // Update context with corrected Tree
             context.SyntaxTree = fixedTree;
             context.WrappedCode = fixedTree.ToString();
 
-            // Final compilation
             compilation = compilation.ReplaceSyntaxTree(
                 compilation.SyntaxTrees.First(),
                 fixedTree
             );
 
-            // Output assembly and process results
             using MemoryStream memoryStream = new MemoryStream();
             Microsoft.CodeAnalysis.Emit.EmitResult emitResult = compilation.Emit(memoryStream);
 
-            // Security check (only in Restricted mode)
             CompilationResult result = ProcessEmitResult(emitResult, memoryStream, context, correlationId);
-            result.AmbiguousTypeCandidates = context.AmbiguousTypeCandidates;
+            result.AmbiguousTypeCandidates = ambiguousCandidates;
 
             // Perform security verification only on successful compilation
             if (result.Success && _currentSecurityLevel == DynamicCodeSecurityLevel.Restricted)
@@ -995,7 +996,6 @@ namespace io.github.hatayama.uLoopMCP
         public string WrappedCode { get; set; }
         public SyntaxTree SyntaxTree { get; set; }
         public List<MetadataReference> References { get; set; }
-        public Dictionary<string, List<string>> AmbiguousTypeCandidates { get; set; } = new();
     }
 }
 #endif
