@@ -73,6 +73,11 @@ namespace io.github.hatayama.uLoopMCP
             SyntaxNode node = root.FindNode(diagnostic.Location.SourceSpan, getInnermostNodeForTie: true);
             if (node == null) return null;
 
+            if (node is QualifiedNameSyntax qualifiedName)
+            {
+                node = qualifiedName.Right;
+            }
+
             if (node is IdentifierNameSyntax identifierName)
             {
                 return NormalizeTypeName(identifierName.Identifier.ValueText);
@@ -81,19 +86,6 @@ namespace io.github.hatayama.uLoopMCP
             if (node is GenericNameSyntax genericName)
             {
                 return NormalizeTypeName(genericName.Identifier.ValueText);
-            }
-
-            if (node is QualifiedNameSyntax qualifiedName)
-            {
-                if (qualifiedName.Right is IdentifierNameSyntax rightIdentifier)
-                {
-                    return NormalizeTypeName(rightIdentifier.Identifier.ValueText);
-                }
-
-                if (qualifiedName.Right is GenericNameSyntax rightGeneric)
-                {
-                    return NormalizeTypeName(rightGeneric.Identifier.ValueText);
-                }
             }
 
             SyntaxToken token = root.FindToken(diagnostic.Location.SourceSpan.Start);
