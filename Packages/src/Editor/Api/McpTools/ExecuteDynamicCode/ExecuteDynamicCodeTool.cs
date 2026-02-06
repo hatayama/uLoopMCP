@@ -378,8 +378,6 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             return list;
         }
 
-        private static readonly Regex TypeNameInErrorPattern = new Regex(@"['""]([^'""]+)['""]", RegexOptions.Compiled);
-
         private static (string, List<string>) GetHintAndSuggestions(
             CompilationError e,
             Dictionary<string, List<string>> ambiguousCandidates = null)
@@ -389,7 +387,11 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             switch (e.ErrorCode)
             {
                 case "CS0246": // type or namespace name could not be found
-                    string typeName = ExtractTypeNameFromErrorMessage(e.Message);
+#if ULOOPMCP_HAS_ROSLYN
+                    string typeName = UsingDirectiveResolver.ExtractTypeNameFromMessage(e.Message);
+#else
+                    string typeName = (string)null;
+#endif
                     if (typeName != null
                         && ambiguousCandidates != null
                         && ambiguousCandidates.TryGetValue(typeName, out List<string> candidates))
@@ -421,20 +423,6 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     break;
             }
             return (hint, suggestions);
-        }
-
-        private static string ExtractTypeNameFromErrorMessage(string message)
-        {
-            Match match = TypeNameInErrorPattern.Match(message);
-            if (!match.Success) return null;
-
-            string rawName = match.Groups[1].Value;
-            int genericIndex = rawName.IndexOf('<');
-            if (genericIndex > 0)
-            {
-                rawName = rawName.Substring(0, genericIndex);
-            }
-            return rawName;
         }
 
         private static string ExtractContext(string[] lines, int lineNumber1Based, int column1Based)

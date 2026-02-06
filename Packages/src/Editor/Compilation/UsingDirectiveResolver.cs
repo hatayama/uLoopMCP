@@ -123,6 +123,14 @@ namespace io.github.hatayama.uLoopMCP
             return null;
         }
 
+        public static string ExtractTypeNameFromMessage(string message)
+        {
+            Match match = TypeNamePattern.Match(message);
+            if (!match.Success) return null;
+
+            return NormalizeTypeName(match.Groups[1].Value);
+        }
+
         private static string NormalizeTypeName(string rawName)
         {
             if (string.IsNullOrWhiteSpace(rawName)) return null;
