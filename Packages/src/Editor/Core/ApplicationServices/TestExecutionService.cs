@@ -14,22 +14,20 @@ namespace io.github.hatayama.uLoopMCP
         /// Execute tests in PlayMode
         /// </summary>
         /// <param name="filter">Test execution filter</param>
-        /// <param name="saveXml">XML save flag</param>
         /// <returns>Test execution result</returns>
-        public async Task<SerializableTestResult> ExecutePlayModeTestAsync(TestExecutionFilter filter, bool saveXml)
+        public async Task<SerializableTestResult> ExecutePlayModeTestAsync(TestExecutionFilter filter)
         {
-            return await PlayModeTestExecuter.ExecutePlayModeTest(filter, saveXml);
+            return await PlayModeTestExecuter.ExecutePlayModeTest(filter);
         }
 
         /// <summary>
         /// Execute tests in EditMode
         /// </summary>
         /// <param name="filter">Test execution filter</param>
-        /// <param name="saveXml">XML save flag</param>
         /// <returns>Test execution result</returns>
-        public async Task<SerializableTestResult> ExecuteEditModeTestAsync(TestExecutionFilter filter, bool saveXml)
+        public async Task<SerializableTestResult> ExecuteEditModeTestAsync(TestExecutionFilter filter)
         {
-            return await PlayModeTestExecuter.ExecuteEditModeTest(filter, saveXml);
+            return await PlayModeTestExecuter.ExecuteEditModeTest(filter);
         }
     }
 }

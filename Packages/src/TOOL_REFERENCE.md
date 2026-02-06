@@ -67,8 +67,6 @@ All tools automatically include the following property:
     - `assembly`: Assembly name (e.g.: uLoopMCP.Tests.Editor)
   - `TestMode` (enum): Test mode - "EditMode"(0), "PlayMode"(1) (default: "EditMode")
     - **PlayMode Warning**: During PlayMode test execution, domain reload is temporarily disabled
-  - `SaveXml` (boolean): Whether to save test results as XML file (default: false)
-    - XML files are saved to `{project root}/.uloop/outputs/TestResults/` folder
 - **Response**:
   - `Success` (boolean): Whether test execution was successful
   - `Message` (string): Test execution message
@@ -77,7 +75,7 @@ All tools automatically include the following property:
   - `PassedCount` (number): Number of passed tests
   - `FailedCount` (number): Number of failed tests
   - `SkippedCount` (number): Number of skipped tests
-  - `XmlPath` (string): XML result file path (if SaveXml is true)
+  - `XmlPath` (string): NUnit XML result file path (auto-saved when tests fail). XML files are saved to `{project root}/.uloop/outputs/TestResults/` folder
 
 ### 4. clear-console
 - **Description**: Clears Unity console logs for clean development workflow

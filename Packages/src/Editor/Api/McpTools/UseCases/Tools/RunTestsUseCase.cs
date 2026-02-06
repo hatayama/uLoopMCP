@@ -38,14 +38,12 @@ namespace io.github.hatayama.uLoopMCP
                 if (parameters.TestMode == TestMode.PlayMode)
                 {
                     // TODO: Add cancellationToken parameter when TestExecutionService supports it
-                    // result = await executionService.ExecutePlayModeTestAsync(filter, parameters.SaveXml, cancellationToken);
-                    result = await executionService.ExecutePlayModeTestAsync(filter, parameters.SaveXml);
+                    result = await executionService.ExecutePlayModeTestAsync(filter);
                 }
                 else
                 {
                     // TODO: Add cancellationToken parameter when TestExecutionService supports it
-                    // result = await executionService.ExecuteEditModeTestAsync(filter, parameters.SaveXml, cancellationToken);
-                    result = await executionService.ExecuteEditModeTestAsync(filter, parameters.SaveXml);
+                    result = await executionService.ExecuteEditModeTestAsync(filter);
                 }
             }
             catch (System.OperationCanceledException)

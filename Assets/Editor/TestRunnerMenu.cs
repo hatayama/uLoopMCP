@@ -10,51 +10,23 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class TestRunnerMenu
     {
-        [MenuItem("uLoopMCP/Tools/Test Runner/Run EditMode Tests/All Tests (Save XML)")]
-        public static async void RunEditModeTestsAndSaveXml()
+        [MenuItem("uLoopMCP/Tools/Test Runner/Run EditMode Tests/All Tests")]
+        public static async void RunEditModeTests()
         {
-            Debug.Log("Running EditMode tests and saving to XML!");
-            
-            SerializableTestResult result = await PlayModeTestExecuter.ExecuteEditModeTest(
-                null, 
-                true);
-                
-            LogTestResult(result);
-        }
-        
-        [MenuItem("uLoopMCP/Tools/Test Runner/Run EditMode Tests/All Tests (Log Only)")]
-        public static async void RunEditModeTestsAndLogOnly()
-        {
-            Debug.Log("Running EditMode tests (log only)!");
-            
-            SerializableTestResult result = await PlayModeTestExecuter.ExecuteEditModeTest(
-                null, 
-                false);
-                
+            Debug.Log("Running EditMode tests!");
+
+            SerializableTestResult result = await PlayModeTestExecuter.ExecuteEditModeTest();
+
             LogTestResult(result);
         }
 
-        [MenuItem("uLoopMCP/Tools/Test Runner/Run PlayMode Tests/All Tests (Save XML)")]
-        public static async void RunPlayModeTestsAndSaveXml()
+        [MenuItem("uLoopMCP/Tools/Test Runner/Run PlayMode Tests/All Tests")]
+        public static async void RunPlayModeTests()
         {
-            Debug.Log("Running PlayMode tests and saving to XML!");
-            
-            SerializableTestResult result = await PlayModeTestExecuter.ExecutePlayModeTest(
-                null, 
-                true);
-                
-            LogTestResult(result);
-        }
-        
-        [MenuItem("uLoopMCP/Tools/Test Runner/Run PlayMode Tests/All Tests (Log Only)")]
-        public static async void RunPlayModeTestsAndLogOnly()
-        {
-            Debug.Log("Running PlayMode tests (log only)!");
-            
-            SerializableTestResult result = await PlayModeTestExecuter.ExecutePlayModeTest(
-                null, 
-                false);
-                
+            Debug.Log("Running PlayMode tests!");
+
+            SerializableTestResult result = await PlayModeTestExecuter.ExecutePlayModeTest();
+
             LogTestResult(result);
         }
         
@@ -75,9 +47,7 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Log("Running only CompileCommandTests!");
             
             TestExecutionFilter filter = TestExecutionFilter.ByClassName("io.github.hatayama.uLoopMCP.CompileCommandTests");
-            SerializableTestResult result = await PlayModeTestExecuter.ExecuteEditModeTest(
-                filter, 
-                false);
+            SerializableTestResult result = await PlayModeTestExecuter.ExecuteEditModeTest(filter);
                 
             LogTestResult(result);
         }
@@ -88,9 +58,7 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Log("Running only GetLogsCommandTests!");
             
             TestExecutionFilter filter = TestExecutionFilter.ByClassName("io.github.hatayama.uLoopMCP.GetLogsCommandTests");
-            SerializableTestResult result = await PlayModeTestExecuter.ExecuteEditModeTest(
-                filter, 
-                false);
+            SerializableTestResult result = await PlayModeTestExecuter.ExecuteEditModeTest(filter);
                 
             LogTestResult(result);
         }
@@ -101,9 +69,7 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Log("Running only MainThreadSwitcherTests!");
             
             TestExecutionFilter filter = TestExecutionFilter.ByClassName("io.github.hatayama.uLoopMCP.MainThreadSwitcherTests");
-            SerializableTestResult result = await PlayModeTestExecuter.ExecuteEditModeTest(
-                filter, 
-                false);
+            SerializableTestResult result = await PlayModeTestExecuter.ExecuteEditModeTest(filter);
                 
             LogTestResult(result);
         }
@@ -114,9 +80,7 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Log("Running only SampleEditModeTest!");
             
             TestExecutionFilter filter = TestExecutionFilter.ByClassName("Tests.SampleEditModeTest");
-            SerializableTestResult result = await PlayModeTestExecuter.ExecuteEditModeTest(
-                filter, 
-                false);
+            SerializableTestResult result = await PlayModeTestExecuter.ExecuteEditModeTest(filter);
                 
             LogTestResult(result);
         }

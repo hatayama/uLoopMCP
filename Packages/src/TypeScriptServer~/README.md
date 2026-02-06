@@ -156,7 +156,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"getLogs","params":{"logType":"All","maxC
 
 ### Run Tests
 ```bash
-echo '{"jsonrpc":"2.0","id":1,"method":"runtests","params":{"filterType":"all","filterValue":"","saveXml":false}}' | nc localhost 7400
+echo '{"jsonrpc":"2.0","id":1,"method":"runtests","params":{"filterType":"all","filterValue":""}}' | nc localhost 7400
 ```
 
 ### Notes

@@ -67,8 +67,6 @@
     - `assembly`: アセンブリ名（例：uLoopMCP.Tests.Editor）
   - `TestMode` (enum): テストモード - "EditMode"(0), "PlayMode"(1)（デフォルト: "EditMode"）
     - **PlayMode注意**: PlayModeテスト実行時は、一時的にdomain reloadが無効化されます
-  - `SaveXml` (boolean): テスト結果をXMLファイルとして保存するかどうか（デフォルト: false）
-    - XMLファイルは `{project_root}/.uloop/outputs/TestResults/` フォルダに保存されます
 - **レスポンス**:
   - `Success` (boolean): テスト実行が成功したかどうか
   - `Message` (string): テスト実行メッセージ
@@ -77,7 +75,7 @@
   - `PassedCount` (number): 合格したテストの数
   - `FailedCount` (number): 失敗したテストの数
   - `SkippedCount` (number): スキップされたテストの数
-  - `XmlPath` (string): XML結果ファイルのパス（SaveXmlがtrueの場合）
+  - `XmlPath` (string): NUnit XML結果ファイルのパス（テスト失敗時に自動保存）。XMLファイルは `{project_root}/.uloop/outputs/TestResults/` フォルダに保存されます
 
 ### 4. clear-console
 - **説明**: クリーンな開発ワークフローのためにUnityコンソールログをクリアします
