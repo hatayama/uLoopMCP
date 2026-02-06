@@ -85,10 +85,6 @@
           "FilterValue": {
             "type": "string",
             "description": "Filter value"
-          },
-          "SaveXml": {
-            "type": "boolean",
-            "description": "Save test results as XML"
           }
         }
       }

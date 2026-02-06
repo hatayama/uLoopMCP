@@ -15,46 +15,41 @@ namespace io.github.hatayama.uLoopMCP
         /// Execute PlayMode tests asynchronously with domain reload control
         /// </summary>
         /// <param name="filter">Test execution filter (null for all tests)</param>
-        /// <param name="saveXml">Whether to save results as XML</param>
         /// <returns>Test execution result</returns>
         public static async Task<SerializableTestResult> ExecutePlayModeTest(
-            TestExecutionFilter filter = null, 
-            bool saveXml = false)
+            TestExecutionFilter filter = null)
         {
             using DomainReloadDisableScope scope = new();
-            return await ExecuteTestWithEventNotification(TestMode.PlayMode, filter, saveXml);
+            return await ExecuteTestWithEventNotification(TestMode.PlayMode, filter);
         }
 
         /// <summary>
         /// Execute EditMode tests asynchronously
         /// </summary>
         /// <param name="filter">Test execution filter (null for all tests)</param>
-        /// <param name="saveXml">Whether to save results as XML</param>
         /// <returns>Test execution result</returns>
         public static async Task<SerializableTestResult> ExecuteEditModeTest(
-            TestExecutionFilter filter = null, 
-            bool saveXml = false)
+            TestExecutionFilter filter = null)
         {
-            return await ExecuteTestWithEventNotification(TestMode.EditMode, filter, saveXml);
+            return await ExecuteTestWithEventNotification(TestMode.EditMode, filter);
         }
 
         /// <summary>
         /// Execute test with event-based result notification
         /// </summary>
         private static async Task<SerializableTestResult> ExecuteTestWithEventNotification(
-            TestMode testMode, 
-            TestExecutionFilter filter, 
-            bool saveXml)
+            TestMode testMode,
+            TestExecutionFilter filter)
         {
             TaskCompletionSource<SerializableTestResult> tcs = new();
-            
+
             using UnifiedTestCallback callback = new();
             callback.OnTestCompleted += (result, rawResult) =>
             {
                 if (!tcs.Task.IsCompleted)
                 {
-                    // Apply XML export if requested
-                    if (saveXml && rawResult != null)
+                    // Auto-save XML when tests fail for detailed failure diagnosis
+                    if (result.failedCount > 0 && rawResult != null)
                     {
                         result.xmlPath = NUnitXmlResultExporter.SaveTestResultAsXml(rawResult);
                     }

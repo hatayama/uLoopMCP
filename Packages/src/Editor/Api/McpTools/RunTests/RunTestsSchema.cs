@@ -41,10 +41,5 @@ namespace io.github.hatayama.uLoopMCP
         [Description("Filter value (specify when filterType is not all)\n• exact: Individual test method name (e.g.: io.github.hatayama.uLoopMCP.ConsoleLogRetrieverTests.GetAllLogs_WithMaskAllOff_StillReturnsAllLogs)\n• regex: Class name or namespace (e.g.: io.github.hatayama.uLoopMCP.ConsoleLogRetrieverTests, io.github.hatayama.uLoopMCP)\n• assembly: Assembly name (e.g.: uLoopMCP.Tests.Editor)")]
         public string FilterValue { get; set; } = "";
 
-        /// <summary>
-        /// Whether to save test results as XML file
-        /// </summary>
-        [Description("Whether to save test results as XML file. Test results are saved to external files to avoid massive token consumption when returning results directly. Please read the file if you need detailed test results.")]
-        public bool SaveXml { get; set; } = false;
     }
 } 

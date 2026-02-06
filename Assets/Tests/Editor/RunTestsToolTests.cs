@@ -38,14 +38,12 @@ namespace io.github.hatayama.uLoopMCP
             RunTestsSchema schema = new RunTestsSchema
             {
                 FilterType = TestFilterType.regex,
-                FilterValue = "TestClass",
-                SaveXml = true
+                FilterValue = "TestClass"
             };
 
             // Assert - Schema properties should match what we set
             Assert.That(schema.FilterType, Is.EqualTo(TestFilterType.regex));
             Assert.That(schema.FilterValue, Is.EqualTo("TestClass"));
-            Assert.That(schema.SaveXml, Is.True);
         }
 
         /// <summary>
@@ -63,7 +61,6 @@ namespace io.github.hatayama.uLoopMCP
             // Assert - Schema should have default values
             Assert.That(schema.FilterType, Is.EqualTo(TestFilterType.all));
             Assert.That(schema.FilterValue ?? string.Empty, Is.EqualTo(string.Empty));
-            Assert.That(schema.SaveXml, Is.False);
         }
 
         /// <summary>
