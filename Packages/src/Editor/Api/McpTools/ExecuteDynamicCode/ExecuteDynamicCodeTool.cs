@@ -199,37 +199,6 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     }
                 }
 
-                // Optional: simple auto-qualify retry if enabled and first attempt failed with likely UnityEngine identifiers
-                if (!executionResult.Success && parameters.AutoQualifyUnityTypesOnce)
-                {
-                    bool hasUsingUnityEngine = originalCode.Contains("using UnityEngine;");
-                    if (!hasUsingUnityEngine)
-                    {
-                        bool looksLikeUnityIdentifier = (executionResult.Logs?.Any(l => l.Contains("CS0103") || l.Contains("CS0246")) == true);
-                        if (looksLikeUnityIdentifier)
-                        {
-                            string retriedCode = "using UnityEngine;\n" + originalCode;
-                            ExecutionResult retryResult = await _executor.ExecuteCodeAsync(
-                                retriedCode,
-                                "DynamicCommand",
-                                parametersArray,
-                                cancellationToken,
-                                parameters.CompileOnly
-                            );
-                            // Prefer retry result if success, otherwise keep original but merge logs
-                            if (retryResult.Success)
-                            {
-                                executionResult = retryResult;
-                            }
-                            else if (retryResult.Logs?.Any() == true)
-                            {
-                                if (executionResult.Logs == null) executionResult.Logs = new List<string>();
-                                executionResult.Logs.AddRange(retryResult.Logs);
-                            }
-                        }
-                    }
-                }
-                
                 // Convert to response (use improved message on error)
                 ExecuteDynamicCodeResponse toolResponse = ConvertExecutionResultToResponse(
                     executionResult, originalCode, correlationId);
@@ -278,9 +247,6 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             }
         }
         
-        /// <summary>
-        /// Convert ExecutionResponse to ExecuteDynamicCodeResponse
-        /// </summary>
         private ExecuteDynamicCodeResponse ConvertExecutionResultToResponse(
             ExecutionResult result, string originalCode, string correlationId)
         {
@@ -344,26 +310,18 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                 if (result.CompilationErrors?.Any() == true)
                 {
                     // Build diagnostics with context, hints, and suggestions
-                    bool hasUsingUnityEngine = (originalCode ?? string.Empty).Contains("using UnityEngine;");
-                    response.Diagnostics = BuildDiagnostics(result.CompilationErrors, result.UpdatedCode, hasUsingUnityEngine);
+                    response.Diagnostics = BuildDiagnostics(result.CompilationErrors, result.UpdatedCode, result.AmbiguousTypeCandidates);
                     response.CompilationErrors = response.Diagnostics; // backward compat
 
                     int total = response.Diagnostics.Count;
                     int unique = response.Diagnostics
                         .GroupBy(e => new { e.Line, e.Column, e.ErrorCode, e.Message })
                         .Count();
-                    var first = response.Diagnostics.First();
+                    CompilationErrorDto first = response.Diagnostics.First();
                     response.DiagnosticsSummary = $"Errors: {unique} unique ({total} total). First at L{first.Line}: {first.ErrorCode} {first.Message}";
 
                     // Prefer concise summary in Logs instead of raw error spam
                     response.Logs.Add(response.DiagnosticsSummary);
-
-                    // Preflight: detect unqualified UnityEngine identifiers (when no using UnityEngine)
-                    List<string> suspects = DetectUnqualifiedUnityIdentifiers(originalCode ?? string.Empty, hasUsingUnityEngine);
-                    if (suspects.Count > 0)
-                    {
-                        response.Logs.Add($"Preflight: Found potential unqualified UnityEngine identifiers: {string.Join(", ", suspects.Distinct())}");
-                    }
                 }
 
                 // Attach updated code when available (for line mapping)
@@ -387,13 +345,13 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
         private static List<CompilationErrorDto> BuildDiagnostics(
             List<CompilationError> errors,
             string updatedCode,
-            bool hasUsingUnityEngine)
+            Dictionary<string, List<string>> ambiguousCandidates = null)
         {
             List<CompilationErrorDto> list = new();
             string[] lines = string.IsNullOrEmpty(updatedCode) ? Array.Empty<string>() : updatedCode.Split(new char[] { '\n' }, StringSplitOptions.None);
             foreach (CompilationError e in errors)
             {
-                (string hint, List<string> suggestions) = GetHintAndSuggestions(e, hasUsingUnityEngine);
+                (string hint, List<string> suggestions) = GetHintAndSuggestions(e, ambiguousCandidates);
                 string context = ExtractContext(lines, e.Line, e.Column);
                 list.Add(new CompilationErrorDto
                 {
@@ -417,19 +375,42 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             return list;
         }
 
-        private static (string, List<string>) GetHintAndSuggestions(CompilationError e, bool hasUsingUnityEngine)
+        private static (string, List<string>) GetHintAndSuggestions(
+            CompilationError e,
+            Dictionary<string, List<string>> ambiguousCandidates = null)
         {
             string hint = string.Empty;
             List<string> suggestions = new();
             switch (e.ErrorCode)
             {
-                case "CS0103": // name does not exist in the current context
                 case "CS0246": // type or namespace name could not be found
-                    hint = hasUsingUnityEngine
-                        ? "Identifier may require fully-qualified name (e.g., UnityEngine.Mathf)."
-                        : "Add 'using UnityEngine;' at the top or use fully-qualified name (e.g., UnityEngine.Mathf).";
-                    suggestions.Add("Add 'using UnityEngine;' at the top of the snippet");
-                    suggestions.Add("Qualify with 'UnityEngine.' prefix");
+#if ULOOPMCP_HAS_ROSLYN
+                    string typeName = UsingDirectiveResolver.ExtractTypeNameFromMessage(e.Message);
+#else
+                    string typeName = (string)null;
+#endif
+                    if (typeName != null
+                        && ambiguousCandidates != null
+                        && ambiguousCandidates.TryGetValue(typeName, out List<string> candidates))
+                    {
+                        string candidateList = string.Join(", ", candidates);
+                        hint = $"Auto-using resolution found multiple candidates for '{typeName}': {candidateList}. Use a fully-qualified name or add the correct using directive.";
+                        foreach (string ns in candidates)
+                        {
+                            suggestions.Add($"Use {ns}.{typeName}");
+                        }
+                    }
+                    else
+                    {
+                        hint = "Auto-using resolution was attempted but could not resolve this identifier. Use a fully-qualified name (e.g., UnityEngine.Mathf) or add the correct using directive.";
+                        suggestions.Add("Use fully-qualified name (e.g., UnityEngine.Mathf, System.Linq.Enumerable)");
+                        suggestions.Add("Add the appropriate using directive at the top of the snippet");
+                    }
+                    break;
+                case "CS0103": // name does not exist in the current context
+                    hint = "Identifier does not exist in the current context. Check spelling, declaration scope, and whether this should be a type name.";
+                    suggestions.Add("Declare the identifier before use");
+                    suggestions.Add("If this is a type name, use a fully-qualified name or add the correct using directive");
                     break;
                 case "CS0104": // ambiguous reference
                     hint = "Identifier is ambiguous; qualify explicitly (e.g., UnityEngine.Object).";
@@ -464,28 +445,6 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             return sb.ToString();
         }
 
-        private static List<string> DetectUnqualifiedUnityIdentifiers(string originalCode, bool hasUsingUnityEngine)
-        {
-            List<string> suspects = new();
-            if (string.IsNullOrEmpty(originalCode)) return suspects;
-            if (hasUsingUnityEngine) return suspects; // with using, skip preflight
-
-            string pattern = @"(?<!UnityEngine\.)(?<!\.)\b(Mathf|Shader|GameObject|PrimitiveType|BoxCollider|SphereCollider|Rigidbody|Quaternion|Vector2|Vector3|Vector4|Color|Transform|Terrain|TerrainData|Renderer|MeshRenderer|Material)\b";
-            foreach (Match m in Regex.Matches(originalCode, pattern))
-            {
-                if (m.Success)
-                {
-                    suspects.Add(m.Value);
-                }
-            }
-            return suspects;
-        }
-        
-        /// <summary>
-        /// Append a safe default return when snippet likely misses a return statement.
-        /// - Adds a trailing semicolon if last non-whitespace char is not ';'
-        /// - Appends '\nreturn null;' to make result type object-compatible
-        /// </summary>
         private static string AppendReturnIfMissing(string originalCode)
         {
             string code = originalCode ?? string.Empty;
@@ -495,9 +454,6 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             return builder + "\nreturn null;";
         }
         
-        /// <summary>
-        /// Create error response
-        /// </summary>
         private ExecuteDynamicCodeResponse CreateErrorResponse(string errorMessage)
         {
             return new ExecuteDynamicCodeResponse

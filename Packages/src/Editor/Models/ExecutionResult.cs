@@ -42,5 +42,11 @@ namespace io.github.hatayama.uLoopMCP
         /// Useful for debugging reported line/column numbers.
         /// </summary>
         public string UpdatedCode { get; set; }
+
+        /// <summary>
+        /// Types that could not be auto-resolved because multiple namespace candidates were found.
+        /// Key: type name, Value: list of candidate namespaces.
+        /// </summary>
+        public Dictionary<string, List<string>> AmbiguousTypeCandidates { get; set; } = new();
     }
 }

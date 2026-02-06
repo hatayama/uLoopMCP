@@ -588,16 +588,18 @@ namespace io.github.hatayama.uLoopMCP
             return references;
         }
 
-        /// <summary>
-        /// Apply diagnostic-driven fixes
-        /// </summary>
-        private SyntaxTree ApplyDiagnosticFixes(CSharpCompilation compilation, SyntaxTree syntaxTree, string correlationId)
+        private SyntaxTree ApplyDiagnosticFixes(
+            CSharpCompilation compilation,
+            CompilationContext context,
+            out Dictionary<string, List<string>> ambiguousTypeCandidates,
+            string correlationId)
         {
-            SyntaxTree currentTree = syntaxTree;
-            bool hasError = true;
+            ambiguousTypeCandidates = new();
+            SyntaxTree currentTree = context.SyntaxTree;
+            UsingDirectiveResolver resolver = new UsingDirectiveResolver();
             int maxAttempts = 3;
 
-            for (int attempt = 0; attempt < maxAttempts && hasError; attempt++)
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
                 compilation = compilation.ReplaceSyntaxTree(
                     compilation.SyntaxTrees.First(),
@@ -607,16 +609,87 @@ namespace io.github.hatayama.uLoopMCP
                     .Where(d => d.Severity == DiagnosticSeverity.Error)
                     .ToArray();
 
-                hasError = diagnostics.Any();
-                if (!hasError) break;
+                if (!diagnostics.Any()) break;
+
+                Diagnostic[] unresolvedTypeDiagnostics = diagnostics
+                    .Where(d => d.Id == "CS0246")
+                    .ToArray();
+
+                if (!unresolvedTypeDiagnostics.Any()) break;
+
+                List<UsingResolutionResult> resolutions = resolver.ResolveUnresolvedTypes(
+                    compilation, unresolvedTypeDiagnostics);
+
+                HashSet<string> namespacesToAdd = new();
+                foreach (UsingResolutionResult resolution in resolutions)
+                {
+                    if (resolution.IsUnique)
+                    {
+                        namespacesToAdd.Add(resolution.CandidateNamespaces[0]);
+                    }
+                    else if (resolution.CandidateNamespaces.Count > 1)
+                    {
+                        ambiguousTypeCandidates[resolution.TypeName] =
+                            new List<string>(resolution.CandidateNamespaces);
+
+                        VibeLogger.LogWarning(
+                            "roslyn_auto_using_ambiguous",
+                            $"Ambiguous type '{resolution.TypeName}': multiple namespaces found",
+                            new
+                            {
+                                typeName = resolution.TypeName,
+                                candidates = string.Join(", ", resolution.CandidateNamespaces)
+                            },
+                            correlationId,
+                            $"Use fully-qualified name for '{resolution.TypeName}'",
+                            $"Candidates: {string.Join(", ", resolution.CandidateNamespaces)}"
+                        );
+                    }
+                }
+
+                if (namespacesToAdd.Count == 0) break;
+
+                currentTree = AddUsingDirectives(currentTree, namespacesToAdd);
+
+                VibeLogger.LogInfo(
+                    "roslyn_auto_using_added",
+                    "Auto-resolved using directives",
+                    new { attempt, namespaces = string.Join(", ", namespacesToAdd) },
+                    correlationId,
+                    $"Auto-added {namespacesToAdd.Count} using directive(s)",
+                    "Monitor auto-using resolution patterns"
+                );
             }
 
             return currentTree;
         }
 
-        /// <summary>
-        /// Initialize compilation
-        /// </summary>
+        private SyntaxTree AddUsingDirectives(SyntaxTree tree, IEnumerable<string> namespaces)
+        {
+            CompilationUnitSyntax root = tree.GetCompilationUnitRoot();
+
+            HashSet<string> existingUsings = new(
+                root.Usings.Select(u => u.Name.ToString()));
+
+            List<UsingDirectiveSyntax> newUsings = new();
+            foreach (string ns in namespaces)
+            {
+                if (!existingUsings.Contains(ns))
+                {
+                    UsingDirectiveSyntax usingDirective = SyntaxFactory.UsingDirective(
+                        SyntaxFactory.ParseName(ns))
+                        .NormalizeWhitespace()
+                        .WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
+                    newUsings.Add(usingDirective);
+                }
+            }
+
+            if (newUsings.Count == 0) return tree;
+
+            CompilationUnitSyntax newRoot = root.AddUsings(newUsings.ToArray());
+            return newRoot.SyntaxTree;
+        }
+
         private CSharpCompilation CreateCompilation(string assemblyName, SyntaxTree syntaxTree, IEnumerable<MetadataReference> references)
         {
             CSharpCompilationOptions compilationOptions = new CSharpCompilationOptions(
@@ -642,25 +715,22 @@ namespace io.github.hatayama.uLoopMCP
                 context.References
             );
 
-            // Diagnostic-driven fixes in Unity AI Assistant style
-            SyntaxTree fixedTree = ApplyDiagnosticFixes(compilation, context.SyntaxTree, correlationId);
+            SyntaxTree fixedTree = ApplyDiagnosticFixes(
+                compilation, context, out Dictionary<string, List<string>> ambiguousCandidates, correlationId);
 
-            // Update context with corrected Tree
             context.SyntaxTree = fixedTree;
             context.WrappedCode = fixedTree.ToString();
 
-            // Final compilation
             compilation = compilation.ReplaceSyntaxTree(
                 compilation.SyntaxTrees.First(),
                 fixedTree
             );
 
-            // Output assembly and process results
             using MemoryStream memoryStream = new MemoryStream();
             Microsoft.CodeAnalysis.Emit.EmitResult emitResult = compilation.Emit(memoryStream);
 
-            // Security check (only in Restricted mode)
             CompilationResult result = ProcessEmitResult(emitResult, memoryStream, context, correlationId);
+            result.AmbiguousTypeCandidates = ambiguousCandidates;
 
             // Perform security verification only on successful compilation
             if (result.Success && _currentSecurityLevel == DynamicCodeSecurityLevel.Restricted)

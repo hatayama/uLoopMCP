@@ -58,14 +58,5 @@ NG:   ""Parameters"": ""{}""")]
 - Uses Roslyn validation to surface diagnostics
 - For new MonoBehaviours: create .cs → compile (mcp__uLoopMCP__compile with ForceRecompile=false) → ensure ErrorCount=0 → AddComponent")]
         public bool CompileOnly { get; set; } = false;
-
-        /// <summary>Attempt to auto-qualify common UnityEngine identifiers once and retry on failure</summary>
-        [Description(@"Auto-qualify common UnityEngine identifiers and retry once when compilation fails.
-
-- Behavior: If the snippet lacks 'using UnityEngine;' and errors like CS0103/CS0246 occur for common Unity types,
-  the tool inserts 'using UnityEngine;' at the top and retries once. This is a best-effort convenience and won't
-  modify your source files.
-- Disable if you prefer manual control.")]
-        public bool AutoQualifyUnityTypesOnce { get; set; } = false;
     }
 }

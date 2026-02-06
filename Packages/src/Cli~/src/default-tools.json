@@ -316,10 +316,6 @@
           "CompileOnly": {
             "type": "boolean",
             "description": "Compile only without execution"
-          },
-          "AutoQualifyUnityTypesOnce": {
-            "type": "boolean",
-            "description": "Auto-qualify Unity types"
           }
         }
       }
