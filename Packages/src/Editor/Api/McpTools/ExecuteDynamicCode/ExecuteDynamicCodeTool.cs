@@ -320,7 +320,7 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     int unique = response.Diagnostics
                         .GroupBy(e => new { e.Line, e.Column, e.ErrorCode, e.Message })
                         .Count();
-                    var first = response.Diagnostics.First();
+                    CompilationErrorDto first = response.Diagnostics.First();
                     response.DiagnosticsSummary = $"Errors: {unique} unique ({total} total). First at L{first.Line}: {first.ErrorCode} {first.Message}";
 
                     // Prefer concise summary in Logs instead of raw error spam
