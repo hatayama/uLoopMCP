@@ -196,7 +196,6 @@ namespace io.github.hatayama.uLoopMCP
         public string TypeName { get; set; }
         public List<string> CandidateNamespaces { get; set; } = new();
         public bool IsUnique => CandidateNamespaces.Count == 1;
-        public bool HasCandidates => CandidateNamespaces.Count > 0;
     }
 }
 #endif
