@@ -20,11 +20,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private readonly Dictionary<string, List<string>> _typeNameToNamespacesCache = new();
 
-        public void ClearCache()
-        {
-            _typeNameToNamespacesCache.Clear();
-        }
-
         /// <summary>
         /// Resolve unresolved types from CS0246 diagnostics by searching the compilation's symbol table.
         /// </summary>

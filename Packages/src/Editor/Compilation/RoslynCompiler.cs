@@ -659,7 +659,6 @@ namespace io.github.hatayama.uLoopMCP
                 );
             }
 
-            resolver.ClearCache();
             return currentTree;
         }
 
