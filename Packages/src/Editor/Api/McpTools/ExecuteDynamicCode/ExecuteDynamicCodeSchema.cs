@@ -58,14 +58,5 @@ NG:   ""Parameters"": ""{}""")]
 - Uses Roslyn validation to surface diagnostics
 - For new MonoBehaviours: create .cs → compile (mcp__uLoopMCP__compile with ForceRecompile=false) → ensure ErrorCount=0 → AddComponent")]
         public bool CompileOnly { get; set; } = false;
-
-        /// <summary>[DEPRECATED] Auto-using resolution is now built into the compiler.</summary>
-        [Description(@"[DEPRECATED] Auto-using resolution is now built into the compiler.
-
-This parameter is kept for backward compatibility but has no effect.
-The compiler automatically resolves missing using directives by searching
-the compilation's namespace table. Single-candidate types are auto-resolved;
-ambiguous types produce an error listing all candidate namespaces.")]
-        public bool AutoQualifyUnityTypesOnce { get; set; } = false;
     }
 }
