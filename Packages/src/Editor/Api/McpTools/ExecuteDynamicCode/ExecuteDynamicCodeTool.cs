@@ -313,8 +313,7 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                 if (result.CompilationErrors?.Any() == true)
                 {
                     // Build diagnostics with context, hints, and suggestions
-                    bool hasUsingUnityEngine = (originalCode ?? string.Empty).Contains("using UnityEngine;");
-                    response.Diagnostics = BuildDiagnostics(result.CompilationErrors, result.UpdatedCode, hasUsingUnityEngine, result.AmbiguousTypeCandidates);
+                    response.Diagnostics = BuildDiagnostics(result.CompilationErrors, result.UpdatedCode, result.AmbiguousTypeCandidates);
                     response.CompilationErrors = response.Diagnostics; // backward compat
 
                     int total = response.Diagnostics.Count;
@@ -349,14 +348,13 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
         private static List<CompilationErrorDto> BuildDiagnostics(
             List<CompilationError> errors,
             string updatedCode,
-            bool hasUsingUnityEngine,
             Dictionary<string, List<string>> ambiguousCandidates = null)
         {
             List<CompilationErrorDto> list = new();
             string[] lines = string.IsNullOrEmpty(updatedCode) ? Array.Empty<string>() : updatedCode.Split(new char[] { '\n' }, StringSplitOptions.None);
             foreach (CompilationError e in errors)
             {
-                (string hint, List<string> suggestions) = GetHintAndSuggestions(e, hasUsingUnityEngine, ambiguousCandidates);
+                (string hint, List<string> suggestions) = GetHintAndSuggestions(e, ambiguousCandidates);
                 string context = ExtractContext(lines, e.Line, e.Column);
                 list.Add(new CompilationErrorDto
                 {
@@ -380,18 +378,16 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             return list;
         }
 
-        private static readonly Regex TypeNameInErrorPattern = new Regex(@"'([^']+)'", RegexOptions.Compiled);
+        private static readonly Regex TypeNameInErrorPattern = new Regex(@"['""]([^'""]+)['""]", RegexOptions.Compiled);
 
         private static (string, List<string>) GetHintAndSuggestions(
             CompilationError e,
-            bool hasUsingUnityEngine,
             Dictionary<string, List<string>> ambiguousCandidates = null)
         {
             string hint = string.Empty;
             List<string> suggestions = new();
             switch (e.ErrorCode)
             {
-                case "CS0103": // name does not exist in the current context
                 case "CS0246": // type or namespace name could not be found
                     string typeName = ExtractTypeNameFromErrorMessage(e.Message);
                     if (typeName != null
@@ -411,6 +407,11 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                         suggestions.Add("Use fully-qualified name (e.g., UnityEngine.Mathf, System.Linq.Enumerable)");
                         suggestions.Add("Add the appropriate using directive at the top of the snippet");
                     }
+                    break;
+                case "CS0103": // name does not exist in the current context
+                    hint = "Identifier does not exist in the current context. Check spelling, declaration scope, and whether this should be a type name.";
+                    suggestions.Add("Declare the identifier before use");
+                    suggestions.Add("If this is a type name, use a fully-qualified name or add the correct using directive");
                     break;
                 case "CS0104": // ambiguous reference
                     hint = "Identifier is ambiguous; qualify explicitly (e.g., UnityEngine.Object).";

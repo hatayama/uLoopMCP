@@ -589,7 +589,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Apply diagnostic-driven fixes (auto-resolve missing using directives for CS0103/CS0246 errors)
+        /// Apply diagnostic-driven fixes (auto-resolve missing using directives for CS0246 errors)
         /// </summary>
         private SyntaxTree ApplyDiagnosticFixes(CSharpCompilation compilation, CompilationContext context, string correlationId)
         {
@@ -610,7 +610,7 @@ namespace io.github.hatayama.uLoopMCP
                 if (!diagnostics.Any()) break;
 
                 Diagnostic[] unresolvedTypeDiagnostics = diagnostics
-                    .Where(d => d.Id == "CS0103" || d.Id == "CS0246")
+                    .Where(d => d.Id == "CS0246")
                     .ToArray();
 
                 if (!unresolvedTypeDiagnostics.Any()) break;

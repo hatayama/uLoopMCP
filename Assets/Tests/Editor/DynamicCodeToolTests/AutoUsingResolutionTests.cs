@@ -7,7 +7,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     /// <summary>
     /// Integration tests for automatic using directive resolution in RoslynCompiler.
-    /// Verifies that CS0103/CS0246 errors trigger namespace search and auto-insertion of using directives.
+    /// Verifies that CS0246 errors trigger namespace search and auto-insertion of using directives.
     /// </summary>
     public class AutoUsingResolutionTests
     {
@@ -59,18 +59,16 @@ return window?.ToString() ?? ""null"";";
         }
 
         [Test]
-        public void Should_AutoResolve_SystemLinq_When_EnumerableUsed()
+        public void Should_AutoResolve_SystemText_When_StringBuilderUsed()
         {
-            // Enumerable (type) produces CS0103, while extension methods like .First() produce CS1061
-            // which is not handled by auto-using resolution
-            string code = @"System.Collections.Generic.IEnumerable<int> range = Enumerable.Range(0, 3);
-return range.ToString();";
+            string code = @"StringBuilder sb = new StringBuilder();
+return sb.ToString();";
 
             CompilationResult result = Compile(code);
 
             Assert.IsTrue(result.Success, $"Compilation should succeed. Errors: {FormatErrors(result)}");
-            Assert.IsTrue(result.UpdatedCode.Contains("using System.Linq;"),
-                "Should auto-add 'using System.Linq;'");
+            Assert.IsTrue(result.UpdatedCode.Contains("using System.Text;"),
+                "Should auto-add 'using System.Text;'");
         }
 
         [Test]
@@ -91,16 +89,16 @@ return obj?.ToString() ?? ""null"";";
         public void Should_ResolveMultipleUsings_InSingleCompilation()
         {
             string code = @"EditorWindow window = null;
-System.Collections.Generic.IEnumerable<int> range = Enumerable.Range(0, 3);
-return (window?.ToString() ?? ""null"") + range.ToString();";
+StringBuilder sb = new StringBuilder();
+return (window?.ToString() ?? ""null"") + sb.ToString();";
 
             CompilationResult result = Compile(code);
 
             Assert.IsTrue(result.Success, $"Compilation should succeed. Errors: {FormatErrors(result)}");
             Assert.IsTrue(result.UpdatedCode.Contains("using UnityEditor;"),
                 "Should auto-add 'using UnityEditor;'");
-            Assert.IsTrue(result.UpdatedCode.Contains("using System.Linq;"),
-                "Should auto-add 'using System.Linq;'");
+            Assert.IsTrue(result.UpdatedCode.Contains("using System.Text;"),
+                "Should auto-add 'using System.Text;'");
         }
 
         [Test]

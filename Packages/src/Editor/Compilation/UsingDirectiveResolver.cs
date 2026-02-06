@@ -1,6 +1,7 @@
 #if ULOOPMCP_HAS_ROSLYN
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -10,12 +11,12 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Resolves missing using directives by searching the compilation's GlobalNamespace
-    /// for types matching unresolved identifiers from CS0103/CS0246 diagnostics.
+    /// for types matching unresolved identifiers from CS0246 diagnostics.
     /// Related classes: RoslynCompiler (consumer via ApplyDiagnosticFixes)
     /// </summary>
     public class UsingDirectiveResolver
     {
-        private static readonly Regex TypeNamePattern = new Regex(@"'([^']+)'", RegexOptions.Compiled);
+        private static readonly Regex TypeNamePattern = new Regex(@"['""]([^'""]+)['""]", RegexOptions.Compiled);
 
         private readonly Dictionary<string, List<string>> _typeNameToNamespacesCache = new();
 
@@ -25,7 +26,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Resolve unresolved types from CS0103/CS0246 diagnostics by searching the compilation's symbol table.
+        /// Resolve unresolved types from CS0246 diagnostics by searching the compilation's symbol table.
         /// </summary>
         public List<UsingResolutionResult> ResolveUnresolvedTypes(
             CSharpCompilation compilation,
@@ -39,8 +40,8 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (Diagnostic diagnostic in diagnostics)
             {
-                Debug.Assert(diagnostic.Id == "CS0103" || diagnostic.Id == "CS0246",
-                    $"Expected CS0103 or CS0246 but got {diagnostic.Id}");
+                Debug.Assert(diagnostic.Id == "CS0246",
+                    $"Expected CS0246 but got {diagnostic.Id}");
 
                 string typeName = ExtractTypeNameFromDiagnostic(diagnostic);
                 if (string.IsNullOrEmpty(typeName)) continue;
@@ -59,28 +60,82 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Extract the unresolved type name from a CS0103/CS0246 diagnostic message.
-        /// CS0103: "The name 'Mathf' does not exist in the current context"
+        /// Extract the unresolved type name from a CS0246 diagnostic.
+        /// First prefers syntax location to avoid message-format dependency.
+        /// Falls back to message parsing if syntax extraction fails.
         /// CS0246: "The type or namespace name 'Vector3' could not be found ..."
         /// </summary>
         public string ExtractTypeNameFromDiagnostic(Diagnostic diagnostic)
         {
             Debug.Assert(diagnostic != null, "diagnostic must not be null");
 
+            string typeNameFromLocation = ExtractTypeNameFromLocation(diagnostic);
+            if (!string.IsNullOrEmpty(typeNameFromLocation))
+            {
+                return typeNameFromLocation;
+            }
+
             string message = diagnostic.GetMessage();
             Match match = TypeNamePattern.Match(message);
             if (!match.Success) return null;
 
-            string rawName = match.Groups[1].Value;
+            return NormalizeTypeName(match.Groups[1].Value);
+        }
 
-            // Strip generic arity suffix (e.g. "List<>" -> "List")
-            int genericIndex = rawName.IndexOf('<');
-            if (genericIndex > 0)
+        private string ExtractTypeNameFromLocation(Diagnostic diagnostic)
+        {
+            if (!diagnostic.Location.IsInSource) return null;
+            if (diagnostic.Location.SourceTree == null) return null;
+
+            SyntaxNode root = diagnostic.Location.SourceTree.GetRoot();
+            SyntaxNode node = root.FindNode(diagnostic.Location.SourceSpan, getInnermostNodeForTie: true);
+            if (node == null) return null;
+
+            if (node is IdentifierNameSyntax identifierName)
             {
-                rawName = rawName.Substring(0, genericIndex);
+                return NormalizeTypeName(identifierName.Identifier.ValueText);
             }
 
-            return rawName;
+            if (node is GenericNameSyntax genericName)
+            {
+                return NormalizeTypeName(genericName.Identifier.ValueText);
+            }
+
+            if (node is QualifiedNameSyntax qualifiedName)
+            {
+                if (qualifiedName.Right is IdentifierNameSyntax rightIdentifier)
+                {
+                    return NormalizeTypeName(rightIdentifier.Identifier.ValueText);
+                }
+
+                if (qualifiedName.Right is GenericNameSyntax rightGeneric)
+                {
+                    return NormalizeTypeName(rightGeneric.Identifier.ValueText);
+                }
+            }
+
+            SyntaxToken token = root.FindToken(diagnostic.Location.SourceSpan.Start);
+            if (token.IsKind(SyntaxKind.IdentifierToken))
+            {
+                return NormalizeTypeName(token.ValueText);
+            }
+
+            return null;
+        }
+
+        private static string NormalizeTypeName(string rawName)
+        {
+            if (string.IsNullOrWhiteSpace(rawName)) return null;
+            string normalized = rawName.Trim();
+
+            // Strip generic arity suffix (e.g. "List<>" -> "List")
+            int genericIndex = normalized.IndexOf('<');
+            if (genericIndex > 0)
+            {
+                normalized = normalized.Substring(0, genericIndex);
+            }
+
+            return normalized;
         }
 
         /// <summary>
