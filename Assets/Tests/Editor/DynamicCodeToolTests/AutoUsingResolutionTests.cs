@@ -108,6 +108,11 @@ return numbers.Count;";
 
             Assert.IsFalse(result.Success,
                 "Compilation should fail when type has multiple namespace candidates");
+            Assert.IsTrue(result.AmbiguousTypeCandidates.ContainsKey("List"),
+                "Should report List as ambiguous");
+            List<string> candidates = result.AmbiguousTypeCandidates["List"];
+            Assert.That(candidates, Has.Member("System.Collections.Generic"));
+            Assert.That(candidates, Has.Member("NUnit.Framework"));
         }
 
         [Test]
