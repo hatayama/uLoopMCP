@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.61.0](https://github.com/hatayama/uLoopMCP/compare/v0.60.0...v0.61.0) (2026-02-08)
+
+
+### Features
+
+* upgrade launch-unity to v0.15.0 and use orchestrateLaunch() ([#601](https://github.com/hatayama/uLoopMCP/issues/601)) ([70c64d7](https://github.com/hatayama/uLoopMCP/commit/70c64d75f73f4ab0f693fb27a5eb6231d74345ee))
+
 ## [0.60.0](https://github.com/hatayama/uLoopMCP/compare/v0.59.1...v0.60.0) (2026-02-06)
 
 
