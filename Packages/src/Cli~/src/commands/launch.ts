@@ -23,7 +23,11 @@ interface LaunchCommandOptions {
 export function registerLaunchCommand(program: Command): void {
   program
     .command('launch')
-    .description('Launch Unity project with matching Editor version')
+    .description(
+      'Open a Unity project with the matching Editor version installed by Unity Hub.\n' +
+        'Auto-detects project path and Unity version from ProjectSettings/ProjectVersion.txt.\n' +
+        'Details: https://github.com/hatayama/LaunchUnityCommand',
+    )
     .argument('[project-path]', 'Path to Unity project')
     .option('-r, --restart', 'Kill running Unity and restart')
     .option('-q, --quit', 'Gracefully quit running Unity')
