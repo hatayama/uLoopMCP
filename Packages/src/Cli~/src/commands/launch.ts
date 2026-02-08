@@ -26,7 +26,7 @@ export function registerLaunchCommand(program: Command): void {
     .description(
       'Open a Unity project with the matching Editor version installed by Unity Hub.\n' +
         'Auto-detects project path and Unity version from ProjectSettings/ProjectVersion.txt.\n' +
-        'Details: https://github.com/hatayama/LaunchUnityCommand',
+        "Run 'uloop launch -h' for all options. Details: https://github.com/hatayama/LaunchUnityCommand",
     )
     .argument('[project-path]', 'Path to Unity project')
     .option('-r, --restart', 'Kill running Unity and restart')
