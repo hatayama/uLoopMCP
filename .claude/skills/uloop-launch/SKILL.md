@@ -1,6 +1,6 @@
 ---
 name: uloop-launch
-description: "Launch Unity project with matching Editor version via uloop CLI. Use when you need to: (1) Open a Unity project with the correct Editor version, (2) Restart Unity to apply changes, (3) Switch build target when launching."
+description: "Launch Unity project with matching Editor version via uloop CLI. Use when you need to: (1) Open a Unity project with the correct Editor version, (2) Restart Unity to apply changes, (3) Switch build target when launching, (4) Gracefully quit running Unity."
 ---
 
 # uloop launch
@@ -19,6 +19,7 @@ uloop launch [project-path] [options]
 |-----------|------|-------------|
 | `project-path` | string | Path to Unity project (optional, searches current directory if omitted) |
 | `-r, --restart` | boolean | Kill running Unity and restart |
+| `-q, --quit` | boolean | Gracefully quit running Unity (cannot be used with --restart) |
 | `-p, --platform <P>` | string | Build target (e.g., StandaloneOSX, Android, iOS) |
 | `--max-depth <N>` | number | Search depth when project-path is omitted (default: 3, -1 for unlimited) |
 | `-a, --add-unity-hub` | boolean | Add to Unity Hub only (does not launch) |
@@ -35,6 +36,9 @@ uloop launch /path/to/project
 
 # Restart Unity (kill existing and relaunch)
 uloop launch -r
+
+# Gracefully quit running Unity
+uloop launch -q
 
 # Launch with build target
 uloop launch -p Android
