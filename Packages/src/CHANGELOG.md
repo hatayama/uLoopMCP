@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.61.1](https://github.com/hatayama/uLoopMCP/compare/v0.61.0...v0.61.1) (2026-02-09)
+
+
+### Bug Fixes
+
+* prevent JSON corruption from concurrent SaveSettings writes ([#603](https://github.com/hatayama/uLoopMCP/issues/603)) ([763addc](https://github.com/hatayama/uLoopMCP/commit/763addcf088731fd05bc7997705d1a53acfb8d54))
+
 ## [0.61.0](https://github.com/hatayama/uLoopMCP/compare/v0.60.0...v0.61.0) (2026-02-08)
 
 
