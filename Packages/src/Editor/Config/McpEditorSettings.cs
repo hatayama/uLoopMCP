@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security;
-using System.Threading.Tasks;
+
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEngine;
@@ -121,10 +121,23 @@ namespace io.github.hatayama.uLoopMCP
                 throw new SecurityException("Settings JSON content exceeds size limit");
             }
             
-            _ = WriteSettingsFileWithRetryAsync(SettingsFilePath, json);
+            WriteSettingsFileAtomic(SettingsFilePath, json);
             _cachedSettings = settings;
 
             // MCP Editor settings saved
+        }
+
+        /// <summary>
+        /// Applies a transformation to the current settings and saves once.
+        /// Use when multiple fields need to be updated together to avoid redundant writes.
+        /// </summary>
+        public static void UpdateSettings(Func<McpEditorSettingsData, McpEditorSettingsData> transform)
+        {
+            Debug.Assert(transform != null, "transform must not be null");
+
+            McpEditorSettingsData current = GetSettings();
+            McpEditorSettingsData updated = transform(current);
+            SaveSettings(updated);
         }
 
         /// <summary>
@@ -573,8 +586,11 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void ClearReconnectingFlags()
         {
-            SetIsReconnecting(false);
-            SetShowReconnectingUI(false);
+            UpdateSettings(s => s with
+            {
+                isReconnecting = false,
+                showReconnectingUI = false
+            });
         }
 
         /// <summary>
@@ -598,8 +614,11 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void ClearCommunicationLogs()
         {
-            SetCommunicationLogsJson("[]");
-            SetPendingRequestsJson("{}");
+            UpdateSettings(s => s with
+            {
+                communicationLogsJson = "[]",
+                pendingRequestsJson = "{}"
+            });
         }
 
         /// <summary>
@@ -904,51 +923,32 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Writes settings file with retry mechanism to handle sharing violations.
+        /// Writes settings file atomically via temp file + rename.
+        /// Prevents external processes (CLI) from reading a partially-written file.
         /// </summary>
-        /// <param name="filePath">Path to settings file</param>
-        /// <param name="content">JSON content to write</param>
-        private static async Task WriteSettingsFileWithRetryAsync(string filePath, string content)
+        private static void WriteSettingsFileAtomic(string filePath, string content)
         {
-            const int maxRetries = 3;
-            const int retryDelayMs = 50;
+            string tempFilePath = filePath + ".tmp";
+            string backupFilePath = filePath + ".bak";
+            File.WriteAllText(tempFilePath, content);
 
-            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            // .NET Framework 4.7.1 lacks File.Move(src, dst, overwrite), so we
+            // rotate old → .bak before moving .tmp → target to minimize the window
+            // where the target file is absent for external readers (CLI).
+            if (File.Exists(filePath))
             {
-                try
+                if (File.Exists(backupFilePath))
                 {
-                    File.WriteAllText(filePath, content);
-                    return; // Success
+                    File.Delete(backupFilePath);
                 }
-                catch (IOException ex) when (IsFileSharingViolation(ex))
-                {
-                    if (attempt == maxRetries)
-                    {
-                        UnityEngine.Debug.LogError($"Failed to write settings file after {maxRetries} attempts: {ex.Message}");
-                        return; // Give up gracefully instead of throwing
-                    }
-
-                    // Wait before retry using TimerDelay (Unity-safe async delay)
-                    await TimerDelay.Wait(retryDelayMs * attempt);
-                }
+                File.Move(filePath, backupFilePath);
             }
-        }
+            File.Move(tempFilePath, filePath);
 
-        /// <summary>
-        /// Checks if IOException is a file sharing violation based on HResult.
-        /// </summary>
-        /// <param name="ex">IOException to check</param>
-        /// <returns>True if it's a sharing violation</returns>
-        private static bool IsFileSharingViolation(IOException ex)
-        {
-            // Windows ERROR_SHARING_VIOLATION = 0x80070020
-            // Windows ERROR_LOCK_VIOLATION = 0x80070021
-            // macOS/Unix may have different error codes but IOException base handling should work
-            const int ERROR_SHARING_VIOLATION = unchecked((int)0x80070020);
-            const int ERROR_LOCK_VIOLATION = unchecked((int)0x80070021);
-            
-            return ex.HResult == ERROR_SHARING_VIOLATION || 
-                   ex.HResult == ERROR_LOCK_VIOLATION;
+            if (File.Exists(backupFilePath))
+            {
+                File.Delete(backupFilePath);
+            }
         }
         
         /// <summary>

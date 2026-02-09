@@ -102,8 +102,11 @@ namespace io.github.hatayama.uLoopMCP
                 newServer.StartServer(availablePort);
 
                 // Update session state
-                                McpEditorSettings.SetServerPort(availablePort);
-                McpEditorSettings.SetIsReconnecting(false);
+                McpEditorSettings.UpdateSettings(s => s with
+                {
+                    serverPort = availablePort,
+                    isReconnecting = false
+                });
 
                 return ValidationResult.Success();
             }
