@@ -852,7 +852,14 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     throw new SecurityException($"Invalid settings file path: {SettingsFilePath}");
                 }
-                
+
+                // Recover from interrupted atomic write: if target is missing but .bak exists, restore it.
+                string backupPath = SettingsFilePath + ".bak";
+                if (!File.Exists(SettingsFilePath) && File.Exists(backupPath))
+                {
+                    File.Move(backupPath, SettingsFilePath);
+                }
+
                 if (File.Exists(SettingsFilePath))
                 {
                     // Security: Check file size before reading
