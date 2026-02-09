@@ -124,7 +124,8 @@ namespace io.github.hatayama.uLoopMCP
             WriteSettingsFileAtomic(SettingsFilePath, json);
             _cachedSettings = settings;
 
-            // MCP Editor settings saved
+            // Best-effort cleanup: even if this fails, .bak is overwritten on next save
+            CleanupBackupFile(SettingsFilePath + ".bak");
         }
 
         /// <summary>
@@ -951,13 +952,16 @@ namespace io.github.hatayama.uLoopMCP
                 File.Move(filePath, backupFilePath);
             }
             File.Move(tempFilePath, filePath);
+        }
 
+        private static void CleanupBackupFile(string backupFilePath)
+        {
             if (File.Exists(backupFilePath))
             {
                 File.Delete(backupFilePath);
             }
         }
-        
+
         /// <summary>
 /// Retrieve NamedBuildTarget for configured platforms
         /// </summary>
