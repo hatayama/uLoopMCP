@@ -44,18 +44,24 @@ namespace io.github.hatayama.uLoopMCP
             // Create lock file for external process detection (e.g., CLI tools)
             CreateLockFile();
 
-            // Set Domain Reload in progress flag
-            McpEditorSettings.SetIsDomainReloadInProgress(true);
-
             // Save session state if server is running
             if (serverIsRunning && serverPort.HasValue)
             {
-                McpEditorSettings.SetIsServerRunning(true);
-                McpEditorSettings.SetServerPort(serverPort.Value);
-                McpEditorSettings.SetIsAfterCompile(true);
-                McpEditorSettings.SetIsReconnecting(true);
-                McpEditorSettings.SetShowReconnectingUI(true);
-                McpEditorSettings.SetShowPostCompileReconnectingUI(true);
+                int port = serverPort.Value;
+                McpEditorSettings.UpdateSettings(s => s with
+                {
+                    isDomainReloadInProgress = true,
+                    isServerRunning = true,
+                    serverPort = port,
+                    isAfterCompile = true,
+                    isReconnecting = true,
+                    showReconnectingUI = true,
+                    showPostCompileReconnectingUI = true
+                });
+            }
+            else
+            {
+                McpEditorSettings.SetIsDomainReloadInProgress(true);
             }
 
             // Log recording
