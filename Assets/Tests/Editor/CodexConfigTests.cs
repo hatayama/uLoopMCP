@@ -126,15 +126,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             string configPath = UnityMcpPathResolver.GetCodexConfigPath();
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
-            string homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string expected = System.IO.Path.Combine(projectRoot, ".codex", "config.toml");
 
-            Assert.IsTrue(configPath.StartsWith(projectRoot),
-                $"Codex config should be under project root, but was: {configPath}");
-            Assert.IsFalse(configPath.StartsWith(homeDir) && !projectRoot.StartsWith(homeDir.TrimEnd('/','\\') + "/"),
-                "Codex config should not resolve to home directory");
-            Assert.IsTrue(configPath.EndsWith(".codex" + System.IO.Path.DirectorySeparatorChar + "config.toml")
-                       || configPath.EndsWith(".codex/config.toml"),
-                $"Codex config should end with .codex/config.toml, but was: {configPath}");
+            Assert.AreEqual(expected, configPath);
         }
 
         [Test]
@@ -142,11 +136,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             string configDir = UnityMcpPathResolver.GetCodexConfigDirectory();
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string expected = System.IO.Path.Combine(projectRoot, ".codex");
 
-            Assert.IsTrue(configDir.StartsWith(projectRoot),
-                $"Codex config dir should be under project root, but was: {configDir}");
-            Assert.IsTrue(configDir.EndsWith(".codex"),
-                $"Codex config dir should end with .codex, but was: {configDir}");
+            Assert.AreEqual(expected, configDir);
         }
 
         // ----------------------------------------------------------------
