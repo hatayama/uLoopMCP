@@ -262,7 +262,7 @@ CLIの代わりに、MCP（Model Context Protocol）経由で接続すること�
 ### 1. compile - コンパイルの実行
 AssetDatabase.Refresh()をした後、コンパイルして結果を返却します。内蔵のLinterでは発見できないエラー・警告を見つける事ができます。
 差分コンパイルと強制全体コンパイルを選択できます。
-```
+```text
 → compile実行、エラー・警告内容を解析
 → 該当ファイルを自動修正
 → 再度compileで確認
@@ -299,14 +299,14 @@ Unity Test Runnerを実行し、テスト結果を取得します。FilterType�
 ## Unity Editor 自動化・探索ツール
 ### 4. clear-console - ログのクリーンアップ
 log検索時、ノイズのとなるlogをクリアする事ができます。
-```
+```text
 → clear-console
 → 新しいデバッグセッションを開始
 ```
 
 ### 5. unity-search - UnitySearchによるプロジェクト検索
 [UnitySearch](https://docs.unity3d.com/ja/2022.3/Manual/search-overview.html)を使うことができます。
-```
+```text
 → unity-search (SearchQuery: "*.prefab")
 → 特定の条件に合うPrefabをリストアップ
 → 問題のあるPrefabを特定する
@@ -314,7 +314,7 @@ log検索時、ノイズのとなるlogをクリアする事ができます。
 
 ### 6. get-provider-details - UnitySearch検索プロバイダーの確認
 UnitySearchが提供する検索プロバイダーを取得します
-```
+```text
 → 各プロバイダーの機能を理解、最適な検索方法を選択
 ```
 
@@ -323,7 +323,7 @@ UnitySearchが提供する検索プロバイダーを取得します
 
 ### 8. execute-menu-item - メニュー項目の実行
 [MenuItem("xxx")]属性で定義されたメニュー項目を実行できます。
-```
+```text
 → project固有のツールを実行
 → get-logsで結果を確認
 ```

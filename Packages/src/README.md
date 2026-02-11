@@ -261,7 +261,7 @@ You can also connect via MCP (Model Context Protocol) instead of CLI. No CLI or 
 ### 1. compile - Execute Compilation
 Performs AssetDatabase.Refresh() and then compiles, returning the results. Can detect errors and warnings that built-in linters cannot find.
 You can choose between incremental compilation and forced full compilation.
-```
+```text
 → Execute compile, analyze error and warning content
 → Automatically fix relevant files
 → Verify with compile again
@@ -298,14 +298,14 @@ This is also a strategy to avoid consuming context.
 ### Unity Editor Automation & Discovery Tools
 ### 4. clear-console - Log Cleanup
 Clear logs that become noise during log searches.
-```
+```text
 → clear-console
 → Start new debug session
 ```
 
 ### 5. unity-search - Project Search with UnitySearch
 You can use [UnitySearch](https://docs.unity3d.com/Manual/search-overview.html).
-```
+```text
 → unity-search (SearchQuery: "*.prefab")
 → List prefabs matching specific conditions
 → Identify problematic prefabs
@@ -313,7 +313,7 @@ You can use [UnitySearch](https://docs.unity3d.com/Manual/search-overview.html).
 
 ### 6. get-provider-details - Check UnitySearch Search Providers
 Retrieve search providers offered by UnitySearch.
-```
+```text
 → Understand each provider's capabilities, choose optimal search method
 ```
 
@@ -322,7 +322,7 @@ Retrieve menu items defined with [MenuItem("xxx")] attribute. Can filter by stri
 
 ### 8. execute-menu-item - Execute Menu Items
 Execute menu items defined with [MenuItem("xxx")] attribute.
-```
+```text
 → Execute project-specific tools
 → Check results with get-logs
 ```
