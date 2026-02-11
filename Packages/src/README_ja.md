@@ -36,7 +36,7 @@ uLoopMCPのコアとなるコンセプトは次の2つです。
 https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 
 # 特徴
-1. スタンドアロン CLI ツール `uloop` を提供。**MCP設定不要で、Skills をインストールするだけで LLM ツールが自動的に Unity を操作できます**。15個のバンドルされた Skills により、コンパイル・テスト実行・ログ取得などをLLMツールに任せられます。（[詳細](#skills-について)）
+1. スタンドアロン CLI ツール `uloop` を提供。**MCP設定不要で、Skills をインストールするだけで LLM ツールが自動的に Unity を操作できます**。15個のバンドルされた Skills により、コンパイル・テスト実行・ログ取得などをLLMツールに任せられます。（[詳細](#クイックスタート)）
 2. AI がコンパイル → テスト実行 → ログ解析 → 再修正までを繰り返せるよう、`compile` / `run-tests` / `get-logs` / `clear-console` などのツールをひとまとめに提供します。
 3. `execute-dynamic-code` を中心に、Unity Editor のメニュー実行、シーン探索、GameObject 操作などをコードから自在に自動化できます。
 4. Unity Package Manager からインストールし、CLIまたはMCPでお使いの LLM ツール（Claude Code / Codex / Cursor / Gemini など）と接続できます。
@@ -94,6 +94,9 @@ Scope(s): io.github.hatayama.uloopmcp
 <img width="577" height="174" alt="CleanShot 2026-02-11 at 23 04 15" src="https://github.com/user-attachments/assets/59c06e4b-7a61-4325-bad2-3ad52f8e7a6d" />
 </div>
 
+> MCP接続で利用する場合、ステップ1だけで準備完了です。CLIやSkillsのインストールは不要です。
+> [MCP接続の手順](#mcp接続cliの代替) に進んでください。
+
 ### ステップ2: CLIのインストール（CLI利用者のみ）
 ```bash
 npm install -g uloop-cli
@@ -111,18 +114,7 @@ uloop skills install --codex
 uloop skills install --claude --global
 ```
 
-これで完了です！Skills対応のLLMツールが `/uloop-compile`、`/uloop-get-logs` などのスキルを自動認識し、適切なタイミングで使用してくれます。
-
-例えば次のように指示すると、AIが自律的な開発ループを回し始めます：
-  - 「このプロジェクトのコンパイルが通るように直して、`compile` でエラーが 0 になるまで繰り返して」
-  - 「`run-tests` で `uLoopMCP.Tests.Editor` のテストを全部通すまで、実装とテストを更新して」
-  - 「`execute-dynamic-code` でサンプルシーンに Cube を 10 個並べて、カメラ位置も自動調整して」
-
-> MCP接続で利用したい場合は、[MCP接続（CLIの代替）](#mcp接続cliの代替) を参照してください。
-
-## Skills について
-
-Skillsをインストールすると、LLMツールが以下のような指示に自動で対応できるようになります：
+これで完了です！Skillsをインストールすると、LLMツールが以下のような指示に自動で対応できるようになります：
 
 | あなたの指示 | LLMツールが使うSkill |
 |---|---|
@@ -217,7 +209,7 @@ uloop compile --port {target-port}
 
 ## MCP接続（CLIの代替）
 
-CLIの代わりに、MCP（Model Context Protocol）経由で接続することもできます。
+CLIの代わりに、MCP（Model Context Protocol）経由で接続することもできます。CLIやSkillsのインストールは不要です。
 
 > **💡 CLIとMCPの関係**
 > CLIはMCPの全機能に加え、Unityの起動・再起動などCLI固有の機能も提供します。

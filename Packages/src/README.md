@@ -36,7 +36,7 @@ uLoopMCP is built around two core ideas:
 https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 
 # Features
-1. Standalone CLI tool `uloop` provided. **No MCP configuration required—just install Skills and LLM tools will automatically operate Unity**. 15 bundled Skills enable LLM tools to handle compilation, test execution, log retrieval, and more. ([Details](#about-skills))
+1. Standalone CLI tool `uloop` provided. **No MCP configuration required—just install Skills and LLM tools will automatically operate Unity**. 15 bundled Skills enable LLM tools to handle compilation, test execution, log retrieval, and more. ([Details](#quickstart))
 2. Bundle of tools to let AI run the full loop (compile → test → log analysis → fix → repeat) on a Unity project.
 3. `execute-dynamic-code` at the core, enabling rich Unity Editor automation: menu execution, scene exploration, GameObject manipulation, and more.
 4. Easy setup from Unity Package Manager, connect via CLI or MCP from LLM tools (Claude Code / Codex / Cursor / Gemini, etc.).
@@ -93,6 +93,9 @@ After [Installation](#installation), open `Window > uLoopMCP` in Unity and press
 <img width="800" height="495" alt="uloopmcp" src="https://github.com/user-attachments/assets/08053248-7f0c-4618-8d1f-7e0560341548" />
 </div>
 
+> For MCP connection, only Step 1 is needed. No CLI or Skills installation required.
+> Proceed to [MCP Connection Steps](#mcp-connection-cli-alternative).
+
 ### Step 2: Install the CLI (CLI users only)
 ```bash
 npm install -g uloop-cli
@@ -110,18 +113,7 @@ uloop skills install --codex
 uloop skills install --claude --global
 ```
 
-That's it! Skills-compatible LLM tools will automatically recognize skills like `/uloop-compile`, `/uloop-get-logs`, and use them at the right time.
-
-For example, if you give instructions like the following, the AI will start running an autonomous development loop:
-  - "Fix this project until `compile` reports no errors, using the `compile` tool as needed."
-  - "Run tests in `uLoopMCP.Tests.Editor` with `run-tests` and keep updating the code until all tests pass."
-  - "Use `execute-dynamic-code` to create a sample scene with 10 cubes and adjust the camera so all cubes are visible."
-
-> For MCP connection, see [MCP Connection (CLI Alternative)](#mcp-connection-cli-alternative).
-
-## About Skills
-
-After installing Skills, LLM tools can automatically handle instructions like these:
+That's it! After installing Skills, LLM tools can automatically handle instructions like these:
 
 | Your Instruction | Skill Used by LLM Tools |
 |---|---|
@@ -216,7 +208,7 @@ uloop compile --port {target-port}
 
 ## MCP Connection (CLI Alternative)
 
-You can also connect via MCP (Model Context Protocol) instead of CLI.
+You can also connect via MCP (Model Context Protocol) instead of CLI. No CLI or Skills installation required.
 
 > **💡 CLI and MCP Relationship**
 > CLI provides all MCP functionality plus additional CLI-specific features such as launching and restarting Unity.
