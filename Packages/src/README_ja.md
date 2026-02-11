@@ -35,7 +35,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 >
 > - **Unity 2022.3以上**
 > - **Node.js 22.0以上** - CLIおよびMCPサーバーの実行に必要
-> - Node.jsを[こちら](https://nodejs.org/en/download)からインストールしてください
+> - [公式サイト](https://nodejs.org/en/download)やお好みのバージョンマネージャー等でインストールしてください
 
 ### Unity Package Manager経由
 

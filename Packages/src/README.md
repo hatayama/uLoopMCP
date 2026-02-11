@@ -35,7 +35,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 >
 > - **Unity 2022.3 or later**
 > - **Node.js 22.0 or later** - Required for CLI and MCP server execution
-> - Install Node.js from [here](https://nodejs.org/en/download)
+> - Install via the [official site](https://nodejs.org/en/download) or your preferred version manager
 
 ### Via Unity Package Manager
 
