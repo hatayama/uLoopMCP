@@ -13,11 +13,9 @@
     <img width="500" alt="uLoopMCP" src="https://github.com/user-attachments/assets/a8b53cca-5444-445d-aa39-9024d41763e6" />
 </h1>
 
-CLIまたはMCPを通じて、様々なLLMツールからUnity Editorを操作できます。
+CLI（推奨）またはMCPを通じて、様々なLLMツールからUnity Editorを操作できます。
 
 AIによる開発サイクルを高速に回すことで、継続的な改善Loopを実現します。
-
-**CLI** と **MCP** の2つの接続方式を提供しています。推奨はCLI方式（Skills対応LLMツールが自動認識、MCP設定不要）です。
 
 # コンセプト
 uLoopMCPは、「AIがUnityプロジェクトの実装をできるだけ人手を介さずに進められる」ことを目指して作られた Unity連携ツールです。
