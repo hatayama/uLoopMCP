@@ -70,7 +70,7 @@ namespace io.github.hatayama.uLoopMCP
     /// 
     /// #### Server Path Format:
     /// - Desktop editors (Cursor, VSCode, Windsurf): Absolute path
-    /// - CLI editors (Claude Code, Gemini CLI): Relative path from project root
+    /// - CLI / project-level editors (Claude Code, Gemini CLI, Codex): Relative path from project root
     /// 
     /// #### Environment Variables:
     /// ```json
