@@ -17,16 +17,11 @@ CLIまたはMCPを通じて、様々なLLMツールからUnity Editorを操作�
 
 AIによる開発サイクルを高速に回すことで、継続的な改善Loopを実現します。
 
+**CLI** と **MCP** の2つの接続方式を提供しています。推奨はCLI方式（Skills対応LLMツールが自動認識、MCP設定不要）です。
+
 # コンセプト
 uLoopMCPは、「AIがUnityプロジェクトの実装をできるだけ人手を介さずに進められる」ことを目指して作られた Unity連携ツールです。
 人間が手で行っていたコンパイル、Test Runner の実行、ログ確認、シーン編集などの作業を、LLM ツールからまとめて操作できるようにします。
-
-uLoopMCPは **CLI** と **MCP** の2つの接続方式を提供します。どちらも同じ機能が使えます。
-
-| 接続方式 | 特徴 | 推奨シーン |
-|---------|------|-----------|
-| **CLI (uloop)** 推奨 | Skills対応のLLMツールが自動認識。MCP設定不要 | Claude Code, Codex など Skills 対応ツール |
-| **MCP** | LLMツール側でMCPサーバーとして接続 | Cursor, Windsurf など MCP 対応ツール |
 
 uLoopMCPのコアとなるコンセプトは次の2つです。
 
@@ -35,23 +30,7 @@ uLoopMCPのコアとなるコンセプトは次の2つです。
 
 https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 
-# 特徴
-1. スタンドアロン CLI ツール `uloop` を提供。**MCP設定不要で、Skills をインストールするだけで LLM ツールが自動的に Unity を操作できます**。15個のバンドルされた Skills により、コンパイル・テスト実行・ログ取得などをLLMツールに任せられます。（[詳細](#クイックスタート)）
-2. AI がコンパイル → テスト実行 → ログ解析 → 再修正までを繰り返せるよう、`compile` / `run-tests` / `get-logs` / `clear-console` などのツールをひとまとめに提供します。
-3. `execute-dynamic-code` を中心に、Unity Editor のメニュー実行、シーン探索、GameObject 操作などをコードから自在に自動化できます。
-4. Unity Package Manager からインストールし、CLIまたはMCPでお使いの LLM ツール（Claude Code / Codex / Cursor / Gemini など）と接続できます。
-5. プロジェクト固有のツールを型安全に拡張しやすく、AI に実装を任せやすい設計になっています。
-6. 大量のログや階層情報はファイルに書き出すことで、LLM のコンテキスト消費を抑える工夫をしています。
-
-# ユースケース例
-- Unityが起動していない状態でも、AIツールから正しいEditorバージョンでUnityを起動する
-- Unity プロジェクトの「コンパイルが通るまで」「テストが緑になるまで」を、AI に任せて自律的に回し続ける
-- 既存コードベースに対して、バグ修正やリファクタリングをAIに依頼し、`compile` / `test runnerの実行` / `log取得` で結果を検証させる
-- 検証完了後、`MenuItemの実行` または `コンパイル不要のC#コード実行` でPlay Modeに入り、`Unityウィンドウフォーカス機能` でUnity Editorを最前面に表示させる
-- 大量のPrefab / GameObjectを`Hierarchy調査機能`・`Unity Search`・`コンパイル不要のC#コード実行`でAIに調査させ、パラメータの一括修正やシーン構造の整理を行う
-- チーム専用のツールを追加し、プロジェクト固有のチェックや自動修正をAIから呼び出せるようにする
-
-## インストール
+# インストール
 
 > [!WARNING]
 > 以下のソフトウェアが必須です
@@ -85,10 +64,17 @@ Scope(s): io.github.hatayama.uloopmcp
 
 3. Package Managerウィンドウを開き、My RegistriesセクションのOpenUPMを選択。uLoopMCPが表示されます。
 
-## クイックスタート
+# クイックスタート
+
+uLoopMCPは **CLI** と **MCP** の2つの接続方式を提供します。どちらも同じ機能が使えます。
+
+| 接続方式 | 特徴 | 推奨シーン |
+|---------|------|-----------|
+| **CLI (uloop)** 推奨 | Skills対応のLLMツールが自動認識。MCP設定不要 | Claude Code, Codex など Skills 対応ツール |
+| **MCP** | LLMツール側でMCPサーバーとして接続 | Cursor, Windsurf など MCP 対応ツール |
 
 ### ステップ1: uLoopMCPサーバーの起動
-[インストール](#インストール) 完了後、Unity メニューから `Window > uLoopMCP` を開き、`Start Server` ボタンを押してサーバーを起動します。
+インストールが完了したら、Unity メニューから `Window > uLoopMCP` を開き、`Start Server` ボタンを押してサーバーを起動します。
 
 <div align="center">
 <img width="577" height="174" alt="CleanShot 2026-02-11 at 23 04 15" src="https://github.com/user-attachments/assets/59c06e4b-7a61-4325-bad2-3ad52f8e7a6d" />
@@ -263,6 +249,22 @@ CLIの代わりに、MCP（Model Context Protocol）経由で接続すること�
 ### 複数のUnityインスタンスのサポート
 > [!NOTE]
 > ポート番号を変更することで複数のUnityインスタンスをサポートできます。uLoopMCP起動時に自動的に使われていないportが割り当てられます。
+
+# 特徴
+1. スタンドアロン CLI ツール `uloop` を提供。**MCP設定不要で、Skills をインストールするだけで LLM ツールが自動的に Unity を操作できます**。15個のバンドルされた Skills により、コンパイル・テスト実行・ログ取得などをLLMツールに任せられます。（[詳細](#クイックスタート)）
+2. AI がコンパイル → テスト実行 → ログ解析 → 再修正までを繰り返せるよう、`compile` / `run-tests` / `get-logs` / `clear-console` などのツールをひとまとめに提供します。
+3. `execute-dynamic-code` を中心に、Unity Editor のメニュー実行、シーン探索、GameObject 操作などをコードから自在に自動化できます。
+4. Unity Package Manager からインストールし、CLIまたはMCPでお使いの LLM ツール（Claude Code / Codex / Cursor / Gemini など）と接続できます。
+5. プロジェクト固有のツールを型安全に拡張しやすく、AI に実装を任せやすい設計になっています。
+6. 大量のログや階層情報はファイルに書き出すことで、LLM のコンテキスト消費を抑える工夫をしています。
+
+# ユースケース例
+- Unityが起動していない状態でも、AIツールから正しいEditorバージョンでUnityを起動する
+- Unity プロジェクトの「コンパイルが通るまで」「テストが緑になるまで」を、AI に任せて自律的に回し続ける
+- 既存コードベースに対して、バグ修正やリファクタリングをAIに依頼し、`compile` / `test runnerの実行` / `log取得` で結果を検証させる
+- 検証完了後、`MenuItemの実行` または `コンパイル不要のC#コード実行` でPlay Modeに入り、`Unityウィンドウフォーカス機能` でUnity Editorを最前面に表示させる
+- 大量のPrefab / GameObjectを`Hierarchy調査機能`・`Unity Search`・`コンパイル不要のC#コード実行`でAIに調査させ、パラメータの一括修正やシーン構造の整理を行う
+- チーム専用のツールを追加し、プロジェクト固有のチェックや自動修正をAIから呼び出せるようにする
 
 # 主要機能
 ### 自律開発ループ系ツール
