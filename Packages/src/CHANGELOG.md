@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.62.0](https://github.com/hatayama/uLoopMCP/compare/v0.61.1...v0.62.0) (2026-02-11)
+
+
+### Features
+
+* align Codex classification and add regression tests after [#609](https://github.com/hatayama/uLoopMCP/issues/609) ([#614](https://github.com/hatayama/uLoopMCP/issues/614)) ([4eb2432](https://github.com/hatayama/uLoopMCP/commit/4eb24325a5fa7a6a37d498294eadb9f961533efd))
+
+
+### Bug Fixes
+
+* Codexのプロジェクト単位設定をサポート ([#609](https://github.com/hatayama/uLoopMCP/issues/609)) ([3e99d97](https://github.com/hatayama/uLoopMCP/commit/3e99d97b967e04a8541d50c2b619f9817a11194b))
+
 ## [0.61.1](https://github.com/hatayama/uLoopMCP/compare/v0.61.0...v0.61.1) (2026-02-09)
 
 
