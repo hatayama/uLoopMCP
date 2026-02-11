@@ -37,23 +37,23 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 > - **Node.js 22.0 or later** - Required for CLI and MCP server execution
 > - Install via the [official site](https://nodejs.org/en/download) or your preferred version manager
 
-### Via Unity Package Manager
+## Via Unity Package Manager
 
 1. Open Unity Editor
 2. Open Window > Package Manager
 3. Click the "+" button
 4. Select "Add package from git URL"
 5. Enter the following URL:
-```
+```text
 https://github.com/hatayama/uLoopMCP.git?path=/Packages/src
 ```
 
-### Via OpenUPM (Recommended)
+## Via OpenUPM (Recommended)
 
-### Using Scoped registry in Unity Package Manager
+## Using Scoped registry in Unity Package Manager
 1. Open Project Settings window and go to Package Manager page
 2. Add the following entry to the Scoped Registries list:
-```
+```text
 Name: OpenUPM
 URL: https://package.openupm.com
 Scope(s): io.github.hatayama.uloopmcp
@@ -70,7 +70,7 @@ uLoopMCP provides two connection methods: **CLI** and **MCP**. Both offer the sa
 | **CLI (uloop)** Recommended | Auto-recognized by Skills-compatible LLM tools. No MCP config needed | Claude Code, Codex, and other Skills-compatible tools |
 | **MCP** | Connect as an MCP server from LLM tools | Cursor, Windsurf, and other MCP-compatible tools |
 
-### Step 1: Start the uLoopMCP Server
+## Step 1: Start the uLoopMCP Server
 After installation, open `Window > uLoopMCP` in Unity and press the `Start Server` button to launch the server.
 
 <div align="center">
@@ -80,12 +80,12 @@ After installation, open `Window > uLoopMCP` in Unity and press the `Start Serve
 > For MCP connection, only Step 1 is needed. No CLI or Skills installation required.
 > Proceed to [MCP Connection Steps](#mcp-connection-cli-alternative).
 
-### Step 2: Install the CLI (CLI users only)
+## Step 2: Install the CLI (CLI users only)
 ```bash
 npm install -g uloop-cli
 ```
 
-### Step 3: Install Skills (CLI users only)
+## Step 3: Install Skills (CLI users only)
 ```bash
 # Install to project for Claude Code (recommended)
 uloop skills install --claude
@@ -258,7 +258,7 @@ You can also connect via MCP (Model Context Protocol) instead of CLI. No CLI or 
 
 # Key Features
 ## Development Loop Tools
-#### 1. compile - Execute Compilation
+### 1. compile - Execute Compilation
 Performs AssetDatabase.Refresh() and then compiles, returning the results. Can detect errors and warnings that built-in linters cannot find.
 You can choose between incremental compilation and forced full compilation.
 ```
@@ -267,7 +267,7 @@ You can choose between incremental compilation and forced full compilation.
 → Verify with compile again
 ```
 
-#### 2. get-logs - Retrieve Logs Same as Unity Console
+### 2. get-logs - Retrieve Logs Same as Unity Console
 Filter by LogType or search target string with advanced search capabilities. You can also choose whether to include stacktrace.
 This allows you to retrieve logs while keeping the context small.
 **MaxCount behavior**: Returns the latest logs (tail-like behavior). When MaxCount=10, returns the most recent 10 logs.
@@ -281,13 +281,13 @@ This allows you to retrieve logs while keeping the context small.
 → Identify cause from stacktrace, fix relevant code
 ```
 
-#### 3. run-tests - Execute TestRunner (PlayMode, EditMode supported)
+### 3. run-tests - Execute TestRunner (PlayMode, EditMode supported)
 Executes Unity Test Runner and retrieves test results. You can set conditions with FilterType and FilterValue.
 - FilterType: all (all tests), exact (individual test method name), regex (class name or namespace), assembly (assembly name)
 - FilterValue: Value according to filter type (class name, namespace, etc.)
 Test results can be output as xml. The output path is returned so AI can read it.
 This is also a strategy to avoid consuming context.
-```
+```text
 → run-tests (FilterType: exact, FilterValue: "io.github.hatayama.uLoopMCP.ConsoleLogRetrieverTests.GetAllLogs_WithMaskAllOff_StillReturnsAllLogs")
 → Check failed tests, fix implementation to pass tests
 ```
@@ -296,14 +296,14 @@ This is also a strategy to avoid consuming context.
 > Note that static variables will not be reset during this period.
 
 ### Unity Editor Automation & Discovery Tools
-#### 4. clear-console - Log Cleanup
+### 4. clear-console - Log Cleanup
 Clear logs that become noise during log searches.
 ```
 → clear-console
 → Start new debug session
 ```
 
-#### 5. unity-search - Project Search with UnitySearch
+### 5. unity-search - Project Search with UnitySearch
 You can use [UnitySearch](https://docs.unity3d.com/Manual/search-overview.html).
 ```
 → unity-search (SearchQuery: "*.prefab")
@@ -311,23 +311,23 @@ You can use [UnitySearch](https://docs.unity3d.com/Manual/search-overview.html).
 → Identify problematic prefabs
 ```
 
-#### 6. get-provider-details - Check UnitySearch Search Providers
+### 6. get-provider-details - Check UnitySearch Search Providers
 Retrieve search providers offered by UnitySearch.
 ```
 → Understand each provider's capabilities, choose optimal search method
 ```
 
-#### 7. get-menu-items - Retrieve Menu Items
+### 7. get-menu-items - Retrieve Menu Items
 Retrieve menu items defined with [MenuItem("xxx")] attribute. Can filter by string specification.
 
-#### 8. execute-menu-item - Execute Menu Items
+### 8. execute-menu-item - Execute Menu Items
 Execute menu items defined with [MenuItem("xxx")] attribute.
 ```
 → Execute project-specific tools
 → Check results with get-logs
 ```
 
-#### 9. find-game-objects - Search Scene Objects
+### 9. find-game-objects - Search Scene Objects
 Retrieve objects and examine component parameters. Also retrieve information about currently selected GameObjects (multiple selection supported) in Unity Editor.
 ```text
 → find-game-objects (RequiredComponents: ["Camera"])
@@ -337,7 +337,7 @@ Retrieve objects and examine component parameters. Also retrieve information abo
 → Get detailed information about currently selected GameObjects in Unity Editor (supports multiple selection)
 ```
 
-#### 10. get-hierarchy - Analyze Scene Structure
+### 10. get-hierarchy - Analyze Scene Structure
 Retrieve information about the currently active Hierarchy in nested JSON format. Works at runtime as well.
 **Automatic File Export**: Retrieved hierarchy data is always saved as JSON in `{project_root}/.uloop/outputs/HierarchyResults/` directory. The MCP response only returns the file path, minimizing token consumption even for large datasets.
 **Selection Mode**: Use `UseSelection: true` to get hierarchy starting from currently selected GameObject(s) in Unity Editor. Supports multiple selection - when parent and child are both selected, only the parent is used as root to avoid duplicate traversal.
@@ -348,11 +348,11 @@ Retrieve information about the currently active Hierarchy in nested JSON format.
 → Get hierarchy of currently selected GameObjects without specifying paths manually
 ```
 
-#### 11. focus-window - Bring Unity Editor Window to Front (macOS & Windows)
+### 11. focus-window - Bring Unity Editor Window to Front (macOS & Windows)
 Ensures the Unity Editor window associated with the active MCP session becomes the foreground application on macOS and Windows Editor builds.
 Great for keeping visual feedback in sync after other apps steal focus. (Linux is currently unsupported.)
 
-#### 12. capture-window - Capture EditorWindow
+### 12. capture-window - Capture EditorWindow
 Capture any EditorWindow as a PNG. Specify the window name (the text displayed in the title bar/tab) to capture.
 When multiple windows of the same type are open (e.g., 3 Inspector windows), all windows are saved with numbered filenames.
 Supports three matching modes: `exact` (default), `prefix`, and `contains` - all case-insensitive.
@@ -362,7 +362,7 @@ Supports three matching modes: `exact` (default), `prefix`, and `contains` - all
 → Provide visual feedback to AI
 ```
 
-#### 13. control-play-mode - Control Play Mode
+### 13. control-play-mode - Control Play Mode
 Control Unity Editor's Play Mode. Supports three actions: Play (start/resume), Stop, and Pause.
 ```
 → control-play-mode (Action: Play)
@@ -371,7 +371,7 @@ Control Unity Editor's Play Mode. Supports three actions: Play (start/resume), S
 → Pause to inspect state
 ```
 
-#### 14. execute-dynamic-code - Dynamic C# Code Execution
+### 14. execute-dynamic-code - Dynamic C# Code Execution
 Execute C# code dynamically within Unity Editor.
 
 > **⚠️ Important Prerequisites**

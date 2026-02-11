@@ -37,23 +37,23 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 > - **Node.js 22.0以上** - CLIおよびMCPサーバーの実行に必要
 > - [公式サイト](https://nodejs.org/en/download)やお好みのバージョンマネージャー等でインストールしてください
 
-### Unity Package Manager経由
+## Unity Package Manager経由
 
 1. Unity Editorを開く
 2. Window > Package Managerを開く
 3. 「+」ボタンをクリック
 4. 「Add package from git URL」を選択
 5. 以下のURLを入力：
-```
+```text
 https://github.com/hatayama/uLoopMCP.git?path=/Packages/src
 ```
 
-### OpenUPM経由（推奨）
+## OpenUPM経由（推奨）
 
-### Unity Package ManagerでScoped registryを使用
+## Unity Package ManagerでScoped registryを使用
 1. Project Settingsウィンドウを開き、Package Managerページに移動
 2. Scoped Registriesリストに以下のエントリを追加：
-```
+```text
 Name: OpenUPM
 URL: https://package.openupm.com
 Scope(s): io.github.hatayama.uloopmcp
@@ -71,7 +71,7 @@ uLoopMCPは **CLI** と **MCP** の2つの接続方式を提供します。ど�
 | **CLI (uloop)** 推奨 | Skills対応のLLMツールが自動認識。MCP設定不要 | Claude Code, Codex など Skills 対応ツール |
 | **MCP** | LLMツール側でMCPサーバーとして接続 | Cursor, Windsurf など MCP 対応ツール |
 
-### ステップ1: uLoopMCPサーバーの起動
+## ステップ1: uLoopMCPサーバーの起動
 インストールが完了したら、Unity メニューから `Window > uLoopMCP` を開き、`Start Server` ボタンを押してサーバーを起動します。
 
 <div align="center">
@@ -81,12 +81,12 @@ uLoopMCPは **CLI** と **MCP** の2つの接続方式を提供します。ど�
 > MCP接続で利用する場合、ステップ1だけで準備完了です。CLIやSkillsのインストールは不要です。
 > [MCP接続の手順](#mcp接続cliの代替) に進んでください。
 
-### ステップ2: CLIのインストール（CLI利用者のみ）
+## ステップ2: CLIのインストール（CLI利用者のみ）
 ```bash
 npm install -g uloop-cli
 ```
 
-### ステップ3: Skillsのインストール（CLI利用者のみ）
+## ステップ3: Skillsのインストール（CLI利用者のみ）
 ```bash
 # Claude Code のプロジェクトにインストール（推奨）
 uloop skills install --claude
@@ -258,8 +258,8 @@ CLIの代わりに、MCP（Model Context Protocol）経由で接続すること�
 > ポート番号を変更することで複数のUnityインスタンスをサポートできます。uLoopMCP起動時に自動的に使われていないportが割り当てられます。
 
 # 主要機能
-### 自律開発ループ系ツール
-#### 1. compile - コンパイルの実行
+## 自律開発ループ系ツール
+### 1. compile - コンパイルの実行
 AssetDatabase.Refresh()をした後、コンパイルして結果を返却します。内蔵のLinterでは発見できないエラー・警告を見つける事ができます。
 差分コンパイルと強制全体コンパイルを選択できます。
 ```
@@ -268,7 +268,7 @@ AssetDatabase.Refresh()をした後、コンパイルして結果を返却しま
 → 再度compileで確認
 ```
 
-#### 2. get-logs - UnityのConsoleと同じ内容のLogを取得します
+### 2. get-logs - UnityのConsoleと同じ内容のLogを取得します
 LogTypeや検索対象の文字列で絞り込む事ができます。また、stacktraceの有無も選択できます。
 これにより、コンテキストを小さく保ちながらlogを取得できます。
 **MaxCountの動作**: 最新のログから指定数を取得します（tail的な動作）。MaxCount=10なら最新の10件のログを返します。
@@ -282,13 +282,13 @@ LogTypeや検索対象の文字列で絞り込む事ができます。また、s
 → スタックトレースから原因箇所を特定、該当コードを修正
 ```
 
-#### 3. run-tests - TestRunnerの実行 (PlayMode, EditMode対応)
+### 3. run-tests - TestRunnerの実行 (PlayMode, EditMode対応)
 Unity Test Runnerを実行し、テスト結果を取得します。FilterTypeとFilterValueで条件を設定できます。
 - FilterType: all（全テスト）、fullclassname（完全クラス名）など
 - FilterValue: フィルタータイプに応じた値（クラス名、名前空間など）
 テスト結果をxmlで出力する事が可能です。出力pathを返すので、それをAIに読み取ってもらう事ができます。
 これもコンテキストを圧迫しないための工夫です。
-```
+```text
 → run-tests (FilterType: fullclassname, FilterValue: "PlayerControllerTests")
 → 失敗したテストを確認、実装を修正してテストをパス
 ```
@@ -296,15 +296,15 @@ Unity Test Runnerを実行し、テスト結果を取得します。FilterType�
 > PlayModeテスト実行の際、Domain Reloadは強制的にOFFにされます。(テスト終了後に元の設定に戻ります)
 > この際、Static変数がリセットされない事に注意して下さい。
 
-### Unity Editor 自動化・探索ツール
-#### 4. clear-console - ログのクリーンアップ
+## Unity Editor 自動化・探索ツール
+### 4. clear-console - ログのクリーンアップ
 log検索時、ノイズのとなるlogをクリアする事ができます。
 ```
 → clear-console
 → 新しいデバッグセッションを開始
 ```
 
-#### 5. unity-search - UnitySearchによるプロジェクト検索
+### 5. unity-search - UnitySearchによるプロジェクト検索
 [UnitySearch](https://docs.unity3d.com/ja/2022.3/Manual/search-overview.html)を使うことができます。
 ```
 → unity-search (SearchQuery: "*.prefab")
@@ -312,23 +312,23 @@ log検索時、ノイズのとなるlogをクリアする事ができます。
 → 問題のあるPrefabを特定する
 ```
 
-#### 6. get-provider-details - UnitySearch検索プロバイダーの確認
+### 6. get-provider-details - UnitySearch検索プロバイダーの確認
 UnitySearchが提供する検索プロバイダーを取得します
 ```
 → 各プロバイダーの機能を理解、最適な検索方法を選択
 ```
 
-#### 7. get-menu-items - メニュー項目の取得
+### 7. get-menu-items - メニュー項目の取得
 [MenuItem("xxx")]属性で定義されたメニュー項目を取得します。文字列指定でフィルター出来ます。
 
-#### 8. execute-menu-item - メニュー項目の実行
+### 8. execute-menu-item - メニュー項目の実行
 [MenuItem("xxx")]属性で定義されたメニュー項目を実行できます。
 ```
 → project固有のツールを実行
 → get-logsで結果を確認
 ```
 
-#### 9. find-game-objects - シーン内オブジェクト検索
+### 9. find-game-objects - シーン内オブジェクト検索
 オブジェクトを取得し、コンポーネントのパラメータを調べます。また、Unity Editorで選択中のGameObject（複数可）の情報も取得できます。
 ```text
 → find-game-objects (RequiredComponents: ["Camera"])
@@ -338,7 +338,7 @@ UnitySearchが提供する検索プロバイダーを取得します
 → Unity Editorで選択中のGameObjectの詳細情報を取得（複数選択対応）
 ```
 
-#### 10. get-hierarchy - シーン構造の解析
+### 10. get-hierarchy - シーン構造の解析
 現在アクティブなHierarchyの情報をネストされたJSON形式で取得します。ランタイムでも動作します。
 **自動ファイル出力**: 取得したHierarchyは常に`{project_root}/.uloop/outputs/HierarchyResults/`ディレクトリにJSONとして保存されます。MCPレスポンスにはファイルパスのみが返るため、大量データでもトークン消費を最小限に抑えられます。
 **選択モード**: `UseSelection: true` を指定すると、Unity Editorで選択中のGameObjectから階層を取得できます。複数選択にも対応 - 親子両方が選択されている場合、重複を避けるため親のみがルートとして使用されます。
@@ -349,11 +349,11 @@ UnitySearchが提供する検索プロバイダーを取得します
 → パスを手動で指定せずに、選択中のGameObjectの階層を取得
 ```
 
-#### 11. focus-window - Unity Editorウィンドウを前面化（macOS / Windows対応）
+### 11. focus-window - Unity Editorウィンドウを前面化（macOS / Windows対応）
 macOS / Windows Editor上で、現在MCP接続中の Unity Editor ウィンドウを最前面に表示させます。
 他アプリにフォーカスが奪われた後でも、視覚的なフィードバックをすぐ確認できます。（Linuxは未対応）
 
-#### 12. capture-window - EditorWindowのキャプチャ
+### 12. capture-window - EditorWindowのキャプチャ
 任意のEditorWindowをPNGとしてキャプチャします。ウィンドウ名（タイトルバーに表示されている文字列）を指定してキャプチャできます。
 同じ種類のウィンドウが複数開いている場合（例：Inspectorを3つ開いている場合）、すべてのウィンドウを連番で保存します。
 3つのマッチングモードをサポート: `exact`（デフォルト）、`prefix`、`contains` - すべて大文字小文字を区別しません。
@@ -363,7 +363,7 @@ macOS / Windows Editor上で、現在MCP接続中の Unity Editor ウィンド�
 → AIに視覚的なフィードバックを提供
 ```
 
-#### 13. control-play-mode - Play Modeの制御
+### 13. control-play-mode - Play Modeの制御
 Unity EditorのPlay Modeを制御します。Play（再生開始/一時停止解除）、Stop（停止）、Pause（一時停止）の3つのアクションを実行できます。
 ```
 → control-play-mode (Action: Play)
@@ -372,7 +372,7 @@ Unity EditorのPlay Modeを制御します。Play（再生開始/一時停止解
 → 一時停止して状態を確認
 ```
 
-#### 14. execute-dynamic-code - 動的C#コード実行
+### 14. execute-dynamic-code - 動的C#コード実行
 Unity Editor内で動的にC#コードを実行します。
 
 > **⚠️ 重要な前提条件**
