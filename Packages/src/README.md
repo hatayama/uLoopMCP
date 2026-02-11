@@ -282,8 +282,8 @@ For detailed specifications of all tools (parameters, responses, examples), see 
 > This is a bug in Cursor itself, and it has been reported in [Issue#3887](https://github.com/cursor/cursor/issues/3887) and is awaiting a fix.  
 > **Workaround**: Toggle the target MCP off → on in Cursor's Tools & MCP settings to recover. If that doesn't work, restart Cursor.
 
-> [!WARNING]  
-> **About Codex / Windsurf**  
+> [!WARNING]
+> **About Windsurf**
 > Project-level configuration is not supported; only a global configuration is available.
 
 <details>

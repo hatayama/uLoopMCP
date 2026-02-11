@@ -320,13 +320,11 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Gets the path to the Codex configuration file.
-        /// macOS/Linux: ~/.codex/config.toml
-        /// Windows: %USERPROFILE%\\.codex\\config.toml
+        /// Resolves to {projectRoot}/.codex/config.toml (or {gitRoot}/.codex/config.toml when repository root is enabled).
         /// </summary>
         public static string GetCodexConfigPath()
         {
-            string homeDirectory = System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile);
-            return Path.Combine(homeDirectory, CODEX_CONFIG_DIR, CODEX_CONFIG_FILE);
+            return CombineWithConfigurationRoot(CODEX_CONFIG_DIR, CODEX_CONFIG_FILE);
         }
 
         /// <summary>
@@ -342,7 +340,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Gets the configuration file path for the specified editor using an explicit base root.
         /// For editors whose configs live under the project/repository root, the path is resolved under baseRoot.
-        /// For editors with home-directory configs (e.g., Windsurf, Codex), returns their standard home path.
+        /// For editors with home-directory configs (e.g., Windsurf), returns their standard home path.
         /// </summary>
         /// <param name="editorType">Editor type</param>
         /// <param name="baseRoot">Base root directory (e.g., Git root or Unity project root)</param>
@@ -359,7 +357,7 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorType.GeminiCLI => Path.Combine(root, GEMINI_CONFIG_DIR, GEMINI_CONFIG_FILE),
                 McpEditorType.McpInspector => Path.Combine(root, MCP_INSPECTOR_CONFIG_FILE),
                 McpEditorType.Windsurf => GetWindsurfConfigPath(),
-                McpEditorType.Codex => GetCodexConfigPath(),
+                McpEditorType.Codex => Path.Combine(root, CODEX_CONFIG_DIR, CODEX_CONFIG_FILE),
                 _ => throw new ArgumentOutOfRangeException(nameof(editorType), editorType, null),
             };
         }
@@ -399,13 +397,11 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Gets the Codex configuration directory path.
-        /// macOS/Linux: ~/.codex
-        /// Windows: %USERPROFILE%\\.codex
+        /// Resolves to {projectRoot}/.codex (or {gitRoot}/.codex when repository root is enabled).
         /// </summary>
         public static string GetCodexConfigDirectory()
         {
-            string homeDirectory = System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile);
-            return Path.Combine(homeDirectory, CODEX_CONFIG_DIR);
+            return CombineWithConfigurationRoot(CODEX_CONFIG_DIR);
         }
 
         /// <summary>

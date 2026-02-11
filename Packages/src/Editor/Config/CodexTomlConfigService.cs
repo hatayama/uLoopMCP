@@ -50,9 +50,9 @@ namespace io.github.hatayama.uLoopMCP
             if (!File.Exists(path)) return true;
             string content = File.ReadAllText(path);
 
-            string expectedArg0 = UnityMcpPathResolver.GetTypeScriptServerPath();
-            if (string.IsNullOrEmpty(expectedArg0) || !File.Exists(expectedArg0)) return false;
-            // PowerShell workflow: no conversion required (use Windows path as-is)
+            string serverAbsolutePath = UnityMcpPathResolver.GetTypeScriptServerPath();
+            if (string.IsNullOrEmpty(serverAbsolutePath) || !File.Exists(serverAbsolutePath)) return false;
+            string expectedArg0 = UnityMcpPathResolver.MakeRelativeToConfigurationRoot(serverAbsolutePath);
             
             (string arg0, int? existingPort) = ReadCurrentValues(content);
             if (string.IsNullOrEmpty(arg0) || existingPort == null) return true;
@@ -87,9 +87,10 @@ namespace io.github.hatayama.uLoopMCP
             {
                 throw new System.InvalidOperationException("TypeScript server bundle path not found.");
             }
-            // PowerShell workflow: no conversion required (use Windows path as-is)
-            
-            string block = BuildBlock(port, serverPath);
+            // Use relative path for better portability (config is now project-level)
+            string relativeServerPath = UnityMcpPathResolver.MakeRelativeToConfigurationRoot(serverPath);
+
+            string block = BuildBlock(port, relativeServerPath);
 
             string result;
             if (SectionRegex.IsMatch(content))

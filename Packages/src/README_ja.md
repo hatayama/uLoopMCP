@@ -282,8 +282,8 @@ Scope(s): org.nuget
 > これはCursor本体のバグであり、現在[Issue#3887](https://github.com/cursor/cursor/issues/3887)に報告済みで修正を待っている状態です。 
 > **回避策**: Cursorの Tools & MCP で対象MCPのトグルを off → on に切り替えると復旧します。それでも直らない場合はCursorを再起動してください。
 
-> [!WARNING]  
-> **Codex / Windsurfについて**  
+> [!WARNING]
+> **Windsurfについて**
 > プロジェクト単位の設定ができず、global設定のみとなります。
 
 <details>
