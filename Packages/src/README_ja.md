@@ -19,12 +19,12 @@ AIによる開発サイクルを高速に回すことで、継続的な改善Loo
 
 # コンセプト
 uLoopMCPは、「AIがUnityプロジェクトの実装をできるだけ人手を介さずに進められる」ことを目指して作られた Unity連携ツールです。
-人間が手で行っていたコンパイル、Test Runner の実行、ログ確認、シーン編集などの作業を、LLM ツールからまとめて操作できるようにします。
+人間が手で行っていたコンパイル、Test Runner の実行、ログ確認、シーン編集、画面キャプチャによるUIレイアウト確認などの作業を、LLM ツールからまとめて操作できるようにします。
 
 uLoopMCPのコアとなるコンセプトは次の2つです。
 
 1. **compile / run-tests / get-logs / clear-console などを組み合わせて、AIが自分でビルド・テスト・ログ解析を回し続けられる「自律開発ループ」を提供すること**
-2. **execute-dynamic-code や execute-menu-item などを使って、Unity Editorの操作（シーン構築、メニュー実行、オブジェクト操作など）まで AIに任せられること**
+2. **execute-dynamic-code や execute-menu-item、capture-window などを使って、Unity Editorの操作（シーン構築、メニュー実行、オブジェクト操作、スクリーンショットを見ながらのUI改善など）まで AIに任せられること**
 
 https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 
@@ -109,6 +109,7 @@ uloop skills install --claude --global
 | 「Prefabを検索して」 | `/uloop-unity-search` |
 | 「Unityを再生させて、Unityを前面に出して」 | `/uloop-control-play-mode` + `/uloop-focus-window` |
 | 「Prefabのパラメータを一括修正して」 | `/uloop-execute-dynamic-code` |
+| 「Game Viewのスクショを撮って、UIレイアウトを調整して」 | `/uloop-screenshot` + `/uloop-execute-dynamic-code` |
 
 > [!TIP]
 > **MCP設定は不要です！** uLoopMCP Windowでサーバーを起動し、CLIとSkillsをインストールしていれば、LLMツールが直接Unityと通信します。

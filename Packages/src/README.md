@@ -19,12 +19,12 @@ Designed to keep AI-driven development loops running autonomously inside your ex
 
 # Concept
 uLoopMCP is a Unity integration tool designed so that **AI can drive your Unity project forward with minimal human intervention**.
-Tasks that humans typically handle manually—compiling, running the Test Runner, checking logs, and editing scenes in the Editor—are exposed as tools that LLMs can orchestrate.
+Tasks that humans typically handle manually—compiling, running the Test Runner, checking logs, editing scenes, and capturing windows to verify UI layouts—are exposed as tools that LLMs can orchestrate.
 
 uLoopMCP is built around two core ideas:
 
 1. **Provide a "self-hosted development loop" where an AI can repeatedly compile, run tests, inspect logs, and fix issues using tools like `compile`, `run-tests`, `get-logs`, and `clear-console`.**
-2. **Allow AI to operate the Unity Editor itself—creating objects, calling menu items, and inspecting scenes—via tools like `execute-dynamic-code` and `execute-menu-item`.**
+2. **Allow AI to operate the Unity Editor itself—creating objects, calling menu items, inspecting scenes, and refining UI layouts from screenshots—via tools like `execute-dynamic-code`, `execute-menu-item`, and `capture-window`.**
 
 https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 
@@ -108,6 +108,7 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 | "Search for prefabs" | `/uloop-unity-search` |
 | "Play the game and bring Unity to the front" | `/uloop-control-play-mode` + `/uloop-focus-window` |
 | "Bulk-update prefab parameters" | `/uloop-execute-dynamic-code` |
+| "Take a screenshot of Game View and adjust the UI layout" | `/uloop-screenshot` + `/uloop-execute-dynamic-code` |
 
 > [!TIP]
 > **No MCP configuration required!** As long as the server is running in the uLoopMCP Window and you have installed the CLI and Skills, LLM tools communicate directly with Unity.
