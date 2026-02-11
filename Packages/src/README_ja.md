@@ -91,7 +91,7 @@ Scope(s): io.github.hatayama.uloopmcp
 [インストール](#インストール) 完了後、Unity メニューから `Window > uLoopMCP` を開き、`Start Server` ボタンを押してサーバーを起動します。
 
 <div align="center">
-<img width="800" height="495" alt="uloopmcp" src="https://github.com/user-attachments/assets/08053248-7f0c-4618-8d1f-7e0560341548" />
+<img width="577" height="174" alt="CleanShot 2026-02-11 at 23 04 15" src="https://github.com/user-attachments/assets/59c06e4b-7a61-4325-bad2-3ad52f8e7a6d" />
 </div>
 
 ### ステップ2: CLIのインストール（CLI利用者のみ）
