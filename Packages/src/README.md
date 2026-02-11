@@ -13,20 +13,13 @@
     <img width="500" alt="uLoopMCP" src="https://github.com/user-attachments/assets/a8b53cca-5444-445d-aa39-9024d41763e6" />
 </h1>
 
-Let an AI agent compile, test, and operate your Unity project from popular LLM tools via CLI or MCP.
+Let an AI agent compile, test, and operate your Unity project from popular LLM tools via CLI (recommended) or MCP.
 
 Designed to keep AI-driven development loops running autonomously inside your existing Unity projects.
 
 # Concept
 uLoopMCP is a Unity integration tool designed so that **AI can drive your Unity project forward with minimal human intervention**.
 Tasks that humans typically handle manually—compiling, running the Test Runner, checking logs, and editing scenes in the Editor—are exposed as tools that LLMs can orchestrate.
-
-uLoopMCP provides two connection methods: **CLI** and **MCP**. Both offer the same core functionality.
-
-| Connection | Characteristics | Recommended For |
-|---------|------|-----------|
-| **CLI (uloop)** Recommended | Auto-recognized by Skills-compatible LLM tools. No MCP config needed | Claude Code, Codex, and other Skills-compatible tools |
-| **MCP** | Connect as an MCP server from LLM tools | Cursor, Windsurf, and other MCP-compatible tools |
 
 uLoopMCP is built around two core ideas:
 
@@ -35,23 +28,7 @@ uLoopMCP is built around two core ideas:
 
 https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 
-# Features
-1. Standalone CLI tool `uloop` provided. **No MCP configuration required—just install Skills and LLM tools will automatically operate Unity**. 15 bundled Skills enable LLM tools to handle compilation, test execution, log retrieval, and more. ([Details](#quickstart))
-2. Bundle of tools to let AI run the full loop (compile → test → log analysis → fix → repeat) on a Unity project.
-3. `execute-dynamic-code` at the core, enabling rich Unity Editor automation: menu execution, scene exploration, GameObject manipulation, and more.
-4. Easy setup from Unity Package Manager, connect via CLI or MCP from LLM tools (Claude Code / Codex / Cursor / Gemini, etc.).
-5. Type-safe extension model for adding project-specific tools that AI can implement and iterate on for you.
-6. Log and hierarchy data can be exported to files to avoid burning LLM context on large payloads.
-
-# Example Use Cases
-- Launch Unity with the correct Editor version from AI tools, even when Unity isn't running.
-- Let an AI keep fixing your project until compilation passes and all tests go green.
-- Ask the AI to fix bugs or refactor existing code, and verify results using `compile` / `test runner execution` / `log retrieval`.
-- After verification, enter Play Mode using `MenuItem execution` or `compile-free C# code execution`, then bring Unity Editor to the foreground with `Unity window focus`.
-- Have the AI inspect large numbers of Prefabs / GameObjects using `Hierarchy inspection`, `Unity Search`, and `compile-free C# code execution` for bulk parameter adjustments or scene structure organization.
-- Build team-specific tools for custom checks and automated refactors, and call them from your LLM environment.
-
-## Installation
+# Installation
 
 > [!WARNING]
 > The following software is required
@@ -84,10 +61,17 @@ Scope(s): io.github.hatayama.uloopmcp
 
 3. Open Package Manager window and select OpenUPM in the My Registries section. uLoopMCP will be displayed.
 
-## Quickstart
+# Quickstart
+
+uLoopMCP provides two connection methods: **CLI** and **MCP**. Both offer the same core functionality.
+
+| Connection | Characteristics | Recommended For |
+|---------|------|-----------|
+| **CLI (uloop)** Recommended | Auto-recognized by Skills-compatible LLM tools. No MCP config needed | Claude Code, Codex, and other Skills-compatible tools |
+| **MCP** | Connect as an MCP server from LLM tools | Cursor, Windsurf, and other MCP-compatible tools |
 
 ### Step 1: Start the uLoopMCP Server
-After [Installation](#installation), open `Window > uLoopMCP` in Unity and press the `Start Server` button to launch the server.
+After installation, open `Window > uLoopMCP` in Unity and press the `Start Server` button to launch the server.
 
 <div align="center">
 <img width="800" height="495" alt="uloopmcp" src="https://github.com/user-attachments/assets/08053248-7f0c-4618-8d1f-7e0560341548" />
@@ -122,6 +106,8 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 | "Run the tests and tell me why they failed" | `/uloop-run-tests` + `/uloop-get-logs` |
 | "Check the scene hierarchy" | `/uloop-get-hierarchy` |
 | "Search for prefabs" | `/uloop-unity-search` |
+| "Play the game and bring Unity to the front" | `/uloop-control-play-mode` + `/uloop-focus-window` |
+| "Bulk-update prefab parameters" | `/uloop-execute-dynamic-code` |
 
 > [!TIP]
 > **No MCP configuration required!** As long as the server is running in the uLoopMCP Window and you have installed the CLI and Skills, LLM tools communicate directly with Unity.
@@ -147,7 +133,8 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 
 </details>
 
-## Direct CLI Usage (Advanced)
+<details>
+<summary>Direct CLI Usage (Advanced)</summary>
 
 You can also call the CLI directly without using Skills:
 
@@ -177,7 +164,10 @@ uloop run-tests --filter-type all
 uloop execute-dynamic-code --code 'using UnityEngine; Debug.Log("Hello from CLI!");'
 ```
 
-## Shell Completion (Optional)
+</details>
+
+<details>
+<summary>Shell Completion (Optional)</summary>
 
 You can install Bash/Zsh/PowerShell completion:
 
@@ -192,6 +182,8 @@ uloop completion --shell powershell --install  # PowerShell
 # Check completion script
 uloop completion
 ```
+
+</details>
 
 ## Port Specification
 
