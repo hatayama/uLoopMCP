@@ -132,7 +132,8 @@ uloop skills install --claude --global
 
 </details>
 
-## CLIの直接利用（上級者向け）
+<details>
+<summary>CLIの直接利用（上級者向け）</summary>
 
 Skillsを使わずにCLIを直接呼び出すこともできます：
 
@@ -162,7 +163,10 @@ uloop run-tests --filter-type all
 uloop execute-dynamic-code --code 'using UnityEngine; Debug.Log("Hello from CLI!");'
 ```
 
-## シェル補完（オプション）
+</details>
+
+<details>
+<summary>シェル補完（オプション）</summary>
 
 Bash/Zsh/PowerShell の補完機能をインストールできます：
 
@@ -177,6 +181,8 @@ uloop completion --shell powershell --install  # PowerShell
 # 補完スクリプトを確認
 uloop completion
 ```
+
+</details>
 
 ## ポート指定
 
