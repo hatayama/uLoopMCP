@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Configuration service for Codex (~/.codex/config.toml), TOML string-based.
+    /// Configuration service for Codex ({projectRoot}/.codex/config.toml), TOML string-based.
     /// </summary>
     public sealed class CodexTomlConfigService : IMcpConfigService
     {
@@ -188,10 +188,10 @@ namespace io.github.hatayama.uLoopMCP
             return (arg0, port);
         }
 
-        private static string BuildBlock(int port, string serverAbsolutePath)
+        private static string BuildBlock(int port, string serverPath)
         {
             // Use single-quoted TOML literal string for args so backslashes don't need escaping
-            string literalPath = serverAbsolutePath.Replace("'", "''");
+            string literalPath = serverPath.Replace("'", "''");
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("[mcp_servers.uLoopMCP]");
             sb.AppendLine("command = \"node\"");

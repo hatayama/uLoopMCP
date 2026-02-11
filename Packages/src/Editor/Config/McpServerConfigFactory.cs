@@ -65,16 +65,15 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>The processed server path</returns>
         private static string GetServerPathForEditor(string serverPath, McpEditorType editorType)
         {
-            // Desktop editors (Cursor, VSCode, Windsurf, Codex) require absolute path for proper connection
-            if (editorType == McpEditorType.Cursor || 
-                editorType == McpEditorType.VSCode || 
-                editorType == McpEditorType.Windsurf ||
-                editorType == McpEditorType.Codex)
+            // Desktop editors (Cursor, VSCode, Windsurf) require absolute path for proper connection
+            if (editorType == McpEditorType.Cursor ||
+                editorType == McpEditorType.VSCode ||
+                editorType == McpEditorType.Windsurf)
             {
                 return serverPath;
             }
-            
-            // CLI-based editors (Claude Code, Gemini CLI) use relative path for better portability
+
+            // CLI / project-level editors (Claude Code, Gemini CLI, Codex) use relative path for better portability
             return ConvertToRelativePath(serverPath);
         }
 
