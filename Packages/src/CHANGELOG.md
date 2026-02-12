@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.62.2](https://github.com/hatayama/uLoopMCP/compare/v0.62.1...v0.62.2) (2026-02-12)
+
+
+### Bug Fixes
+
+* Fix CLI port resolution when serverPort is invalid ([#619](https://github.com/hatayama/uLoopMCP/issues/619)) ([8ddc4a5](https://github.com/hatayama/uLoopMCP/commit/8ddc4a5222f624571fc10912269f18f8b2f86bae))
+
 ## [0.62.1](https://github.com/hatayama/uLoopMCP/compare/v0.62.0...v0.62.1) (2026-02-11)
 
 
