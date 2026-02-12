@@ -14,8 +14,44 @@ import { findUnityProjectRoot } from './project-root.js';
 const DEFAULT_PORT = 8700;
 
 interface UnityMcpSettings {
+  isServerRunning?: boolean;
   serverPort?: number;
   customPort?: number;
+}
+
+function normalizePort(port: unknown): number | null {
+  if (typeof port !== 'number') {
+    return null;
+  }
+
+  if (!Number.isInteger(port)) {
+    return null;
+  }
+
+  if (port < 1 || port > 65535) {
+    return null;
+  }
+
+  return port;
+}
+
+export function resolvePortFromUnitySettings(settings: UnityMcpSettings): number | null {
+  const serverPort = normalizePort(settings.serverPort);
+  const customPort = normalizePort(settings.customPort);
+
+  if (settings.isServerRunning === true && serverPort !== null) {
+    return serverPort;
+  }
+
+  if (customPort !== null) {
+    return customPort;
+  }
+
+  if (serverPort !== null) {
+    return serverPort;
+  }
+
+  return null;
 }
 
 export async function resolveUnityPort(explicitPort?: number): Promise<number> {
@@ -57,13 +93,5 @@ async function readPortFromSettings(projectRoot: string): Promise<number | null>
     return null;
   }
 
-  if (typeof settings.serverPort === 'number') {
-    return settings.serverPort;
-  }
-
-  if (typeof settings.customPort === 'number') {
-    return settings.customPort;
-  }
-
-  return null;
+  return resolvePortFromUnitySettings(settings);
 }
