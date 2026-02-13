@@ -38,6 +38,8 @@ interface CliOptions extends GlobalOptions {
   [key: string]: unknown;
 }
 
+const LAUNCH_COMMAND = 'launch' as const;
+
 const BUILTIN_COMMANDS = [
   'list',
   'sync',
@@ -45,7 +47,7 @@ const BUILTIN_COMMANDS = [
   'update',
   'fix',
   'skills',
-  'launch',
+  LAUNCH_COMMAND,
   'focus-window',
 ] as const;
 
@@ -751,24 +753,30 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Check if cache version is outdated and auto-sync if needed
-  const cachedVersion = loadToolsCache().version;
-  if (hasCacheFile() && cachedVersion !== VERSION) {
-    console.log(
-      `\x1b[33mCache outdated (${cachedVersion} → ${VERSION}). Syncing tools from Unity...\x1b[0m`,
-    );
-    try {
-      await syncTools({});
-      console.log('\x1b[32m✓ Tools synced successfully.\x1b[0m\n');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (isConnectionError(message)) {
-        console.error('\x1b[33mWarning: Failed to sync tools. Using cached definitions.\x1b[0m');
-        console.error("\x1b[33mRun 'uloop sync' manually when Unity is available.\x1b[0m\n");
-      } else {
-        console.error('\x1b[33mWarning: Failed to sync tools. Using cached definitions.\x1b[0m');
-        console.error(`\x1b[33mError: ${message}\x1b[0m`);
-        console.error("\x1b[33mRun 'uloop sync' manually when Unity is available.\x1b[0m\n");
+  const args = process.argv.slice(2);
+  const cmdName = args.find((arg) => !arg.startsWith('-'));
+
+  // launch starts Unity, so it cannot connect to Unity for sync
+  if (cmdName !== LAUNCH_COMMAND) {
+    // Check if cache version is outdated and auto-sync if needed
+    const cachedVersion = loadToolsCache().version;
+    if (hasCacheFile() && cachedVersion !== VERSION) {
+      console.log(
+        `\x1b[33mCache outdated (${cachedVersion} → ${VERSION}). Syncing tools from Unity...\x1b[0m`,
+      );
+      try {
+        await syncTools({});
+        console.log('\x1b[32m✓ Tools synced successfully.\x1b[0m\n');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (isConnectionError(message)) {
+          console.error('\x1b[33mWarning: Failed to sync tools. Using cached definitions.\x1b[0m');
+          console.error("\x1b[33mRun 'uloop sync' manually when Unity is available.\x1b[0m\n");
+        } else {
+          console.error('\x1b[33mWarning: Failed to sync tools. Using cached definitions.\x1b[0m');
+          console.error(`\x1b[33mError: ${message}\x1b[0m`);
+          console.error("\x1b[33mRun 'uloop sync' manually when Unity is available.\x1b[0m\n");
+        }
       }
     }
   }
@@ -778,9 +786,6 @@ async function main(): Promise<void> {
   for (const tool of toolsCache.tools) {
     registerToolCommand(tool);
   }
-
-  const args = process.argv.slice(2);
-  const cmdName = args.find((arg) => !arg.startsWith('-'));
 
   if (cmdName && !commandExists(cmdName)) {
     console.log(`\x1b[33mUnknown command '${cmdName}'. Syncing tools from Unity...\x1b[0m`);
