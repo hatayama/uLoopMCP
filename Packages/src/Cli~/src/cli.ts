@@ -39,12 +39,16 @@ interface CliOptions extends GlobalOptions {
 }
 
 const LAUNCH_COMMAND = 'launch' as const;
+const UPDATE_COMMAND = 'update' as const;
+
+// commander.js built-in flags that exit immediately without needing Unity
+const NO_SYNC_FLAGS = ['-v', '--version', '-h', '--help'] as const;
 
 const BUILTIN_COMMANDS = [
   'list',
   'sync',
   'completion',
-  'update',
+  UPDATE_COMMAND,
   'fix',
   'skills',
   LAUNCH_COMMAND,
@@ -745,6 +749,13 @@ function commandExists(cmdName: string): boolean {
   return tools.tools.some((t) => t.name === cmdName);
 }
 
+function shouldSkipAutoSync(cmdName: string | undefined, args: string[]): boolean {
+  if (cmdName === LAUNCH_COMMAND || cmdName === UPDATE_COMMAND) {
+    return true;
+  }
+  return args.some((arg) => (NO_SYNC_FLAGS as readonly string[]).includes(arg));
+}
+
 /**
  * Main entry point with auto-sync for unknown commands.
  */
@@ -756,8 +767,7 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const cmdName = args.find((arg) => !arg.startsWith('-'));
 
-  // launch starts Unity, so it cannot connect to Unity for sync
-  if (cmdName !== LAUNCH_COMMAND) {
+  if (!shouldSkipAutoSync(cmdName, args)) {
     // Check if cache version is outdated and auto-sync if needed
     const cachedVersion = loadToolsCache().version;
     if (hasCacheFile() && cachedVersion !== VERSION) {
