@@ -99,8 +99,10 @@ jobs:
             --jq '.content' | base64 -d) || CHANGELOG=""
 
           if [ -n "$CHANGELOG" ]; then
-            # Extract entries between current and new version
-            DIFF=$(echo "$CHANGELOG" | sed -n "/^## .*${NEW_VERSION}/,/^## .*${CLI_VERSION}/p" | head -n -1)
+            # Escape dots for sed regex so semver dots match literally
+            NEW_ESCAPED=$(printf '%s' "$NEW_VERSION" | sed 's/\./\\./g')
+            CLI_ESCAPED=$(printf '%s' "$CLI_VERSION" | sed 's/\./\\./g')
+            DIFF=$(echo "$CHANGELOG" | sed -n "/^## .*${NEW_ESCAPED}/,/^## .*${CLI_ESCAPED}/p" | head -n -1)
             if [ -z "$DIFF" ]; then
               DIFF="Could not extract CHANGELOG diff. Please check the release page."
             fi
