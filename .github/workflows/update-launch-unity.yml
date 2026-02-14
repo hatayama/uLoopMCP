@@ -28,15 +28,25 @@ jobs:
 
       - name: 🔍 Resolve versions
         id: version
+        env:
+          DISPATCH_VERSION: ${{ github.event.client_payload.version }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
           # Priority: dispatch payload → workflow_dispatch input → npm latest
-          NEW_VERSION="${{ github.event.client_payload.version }}"
+          NEW_VERSION="$DISPATCH_VERSION"
           if [ -z "$NEW_VERSION" ]; then
-            NEW_VERSION="${{ github.event.inputs.version }}"
+            NEW_VERSION="$INPUT_VERSION"
           fi
           if [ -z "$NEW_VERSION" ]; then
             NEW_VERSION=$(npm view launch-unity version)
           fi
+
+          # Validate semver format (stable + pre-release allowed, no build metadata)
+          if ! [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Invalid version format: $NEW_VERSION"
+            exit 1
+          fi
+
           echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
           # Get current versions from both package.json files
@@ -49,10 +59,11 @@ jobs:
 
       - name: ✅ Check if update is needed
         id: check
+        env:
+          NEW: ${{ steps.version.outputs.new_version }}
+          CLI: ${{ steps.version.outputs.cli_version }}
+          SERVER: ${{ steps.version.outputs.server_version }}
         run: |
-          NEW="${{ steps.version.outputs.new_version }}"
-          CLI="${{ steps.version.outputs.cli_version }}"
-          SERVER="${{ steps.version.outputs.server_version }}"
           # Skip if both are already up to date
           if [ "$NEW" = "$CLI" ] && [ "$NEW" = "$SERVER" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -65,26 +76,31 @@ jobs:
       - name: 📦 Update Cli~ dependency
         if: steps.check.outputs.skip == 'false'
         working-directory: Packages/src/Cli~
-        run: npm install launch-unity@${{ steps.version.outputs.new_version }} --save-exact
+        env:
+          TARGET_VERSION: ${{ steps.version.outputs.new_version }}
+        run: npm install "launch-unity@${TARGET_VERSION}" --save-exact
 
       - name: 📦 Update TypeScriptServer~ dependency
         if: steps.check.outputs.skip == 'false'
         working-directory: Packages/src/TypeScriptServer~
-        run: npm install launch-unity@${{ steps.version.outputs.new_version }} --save-exact
+        env:
+          TARGET_VERSION: ${{ steps.version.outputs.new_version }}
+        run: npm install "launch-unity@${TARGET_VERSION}" --save-exact
 
       - name: 📝 Fetch CHANGELOG diff
         if: steps.check.outputs.skip == 'false'
+        env:
+          CLI_VERSION: ${{ steps.version.outputs.cli_version }}
+          NEW_VERSION: ${{ steps.version.outputs.new_version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          CLI="${{ steps.version.outputs.cli_version }}"
-          NEW="${{ steps.version.outputs.new_version }}"
-
           # Fetch CHANGELOG.md from launch-unity repo
           CHANGELOG=$(gh api repos/hatayama/LaunchUnityCommand/contents/CHANGELOG.md \
             --jq '.content' | base64 -d) || CHANGELOG=""
 
           if [ -n "$CHANGELOG" ]; then
             # Extract entries between current and new version
-            DIFF=$(echo "$CHANGELOG" | sed -n "/^## .*${NEW}/,/^## .*${CLI}/p" | head -n -1)
+            DIFF=$(echo "$CHANGELOG" | sed -n "/^## .*${NEW_VERSION}/,/^## .*${CLI_VERSION}/p" | head -n -1)
             if [ -z "$DIFF" ]; then
               DIFF="Could not extract CHANGELOG diff. Please check the release page."
             fi
@@ -94,26 +110,28 @@ jobs:
 
           # Write to file to avoid multiline output escaping issues
           echo "$DIFF" > /tmp/changelog-diff.txt
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 📝 Prepare PR body
         if: steps.check.outputs.skip == 'false'
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new_version }}
+          CLI_VERSION: ${{ steps.version.outputs.cli_version }}
+          SERVER_VERSION: ${{ steps.version.outputs.server_version }}
         run: |
           {
             echo "Automated update triggered by launch-unity release."
             echo ""
             echo "## Changes"
-            echo "- Update \`launch-unity\` to \`${{ steps.version.outputs.new_version }}\`"
-            echo "- Cli~ was at \`${{ steps.version.outputs.cli_version }}\`"
-            echo "- TypeScriptServer~ was at \`${{ steps.version.outputs.server_version }}\`"
+            echo "- Update \`launch-unity\` to \`${NEW_VERSION}\`"
+            echo "- Cli~ was at \`${CLI_VERSION}\`"
+            echo "- TypeScriptServer~ was at \`${SERVER_VERSION}\`"
             echo ""
-            echo "## CHANGELOG (launch-unity ${{ steps.version.outputs.cli_version }} → ${{ steps.version.outputs.new_version }})"
+            echo "## CHANGELOG (launch-unity ${CLI_VERSION} → ${NEW_VERSION})"
             echo ""
             cat /tmp/changelog-diff.txt
             echo ""
             echo "---"
-            echo "Release: https://github.com/hatayama/LaunchUnityCommand/releases/tag/launch-unity-v${{ steps.version.outputs.new_version }}"
+            echo "Release: https://github.com/hatayama/LaunchUnityCommand/releases/tag/launch-unity-v${NEW_VERSION}"
           } > /tmp/pr-body.md
 
       - name: 🚀 Create Pull Request
