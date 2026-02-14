@@ -34,6 +34,18 @@ jobs:
         npm ci --ignore-scripts=false
         echo "Dependencies installed successfully"
         
+    - name: Type check TypeScript Server
+      working-directory: Packages/src/TypeScriptServer~
+      run: npx tsc --noEmit
+
+    - name: Install CLI dependencies
+      working-directory: Packages/src/Cli~
+      run: npm ci
+
+    - name: Type check CLI
+      working-directory: Packages/src/Cli~
+      run: npx tsc --noEmit
+
     - name: Build TypeScript Server
       working-directory: Packages/src/TypeScriptServer~
       env:
