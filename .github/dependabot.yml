@@ -19,7 +19,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/Packages/src/TypeScriptServer~"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
@@ -32,6 +32,28 @@ updates:
       - dependency-name: "@eslint/js"
         update-types: ["version-update:semver-major"]
     # Group minor/patch updates to reduce PR noise
+    groups:
+      dev-dependencies:
+        patterns:
+          - "@types/*"
+          - "eslint*"
+          - "prettier*"
+          - "typescript"
+          - "jest*"
+          - "ts-jest"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # CLI npm packages
+  - package-ecosystem: "npm"
+    directory: "/Packages/src/Cli~"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
     groups:
       dev-dependencies:
         patterns:
