@@ -28455,7 +28455,7 @@ import { promisify } from "node:util";
 var execFileAsync = promisify(execFile);
 var UNITY_EXECUTABLE_PATTERN_MAC = /Unity\.app\/Contents\/MacOS\/Unity/i;
 var UNITY_EXECUTABLE_PATTERN_WINDOWS = /Unity\.exe/i;
-var PROJECT_PATH_PATTERN = /-(?:projectPath|projectpath)(?:=|\s+)("[^"]+"|'[^']+'|[^\s"']+)/i;
+var PROJECT_PATH_PATTERN = /-(?:projectPath|projectpath)(?:=|\s+)("[^"]+"|'[^']+'|.+?)(?=\s+-[a-zA-Z]|$)/i;
 var PROCESS_LIST_COMMAND_MAC = "ps";
 var PROCESS_LIST_ARGS_MAC = ["-axo", "pid=,command=", "-ww"];
 var WINDOWS_POWERSHELL = "powershell";
