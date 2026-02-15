@@ -43,7 +43,7 @@
   "dependencies": {
     "commander": "14.0.2",
     "launch-unity": "0.15.0",
-    "semver": "7.7.3"
+    "semver": "7.7.4"
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",
