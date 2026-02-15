@@ -618,6 +618,85 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
+        public async Task ExecuteAsync_ReturnsObjectReferenceProperties()
+        {
+            // Arrange
+            GameObject anchorTarget = new GameObject("AnchorTarget");
+            MeshRenderer renderer = testObject1.AddComponent<MeshRenderer>();
+            renderer.probeAnchor = anchorTarget.transform;
+
+            JObject paramsJson = new JObject
+            {
+                ["NamePattern"] = "TestObject1",
+                ["SearchMode"] = "Exact"
+            };
+
+            try
+            {
+                // Act
+                BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+                FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
+
+                // Assert
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.totalFound, Is.EqualTo(1));
+
+                ComponentInfo meshRenderer = System.Array.Find(
+                    response.results[0].components, c => c.type == "MeshRenderer");
+                Assert.That(meshRenderer, Is.Not.Null);
+
+                ComponentPropertyInfo probeAnchor = System.Array.Find(
+                    meshRenderer.properties, p => p.name == "Probe Anchor");
+                Assert.That(probeAnchor, Is.Not.Null, "MeshRenderer should have Probe Anchor property");
+                Assert.That(probeAnchor.type, Is.EqualTo("ObjectReference"));
+
+                // Value should be a structured object with name, type, instanceId
+                JObject valueObj = JObject.FromObject(probeAnchor.value);
+                Assert.That(valueObj["name"].ToString(), Is.EqualTo("AnchorTarget"));
+                Assert.That(valueObj["type"].ToString(), Is.EqualTo("Transform"));
+                Assert.That(valueObj["instanceId"].Value<int>(), Is.EqualTo(anchorTarget.transform.GetInstanceID()));
+            }
+            finally
+            {
+                Object.DestroyImmediate(anchorTarget);
+            }
+        }
+
+        [Test]
+        public async Task ExecuteAsync_ReturnsNoneForUnsetObjectReference()
+        {
+            // Arrange
+            testObject1.AddComponent<MeshRenderer>();
+
+            JObject paramsJson = new JObject
+            {
+                ["NamePattern"] = "TestObject1",
+                ["SearchMode"] = "Exact"
+            };
+
+            // Act
+            BaseToolResponse baseResponse = await tool.ExecuteAsync(paramsJson);
+            FindGameObjectsResponse response = baseResponse as FindGameObjectsResponse;
+
+            // Assert
+            Assert.That(response, Is.Not.Null);
+            Assert.That(response.totalFound, Is.EqualTo(1));
+
+            ComponentInfo meshRenderer = System.Array.Find(
+                response.results[0].components, c => c.type == "MeshRenderer");
+            Assert.That(meshRenderer, Is.Not.Null);
+
+            ComponentPropertyInfo probeAnchor = System.Array.Find(
+                meshRenderer.properties, p => p.name == "Probe Anchor");
+            Assert.That(probeAnchor, Is.Not.Null, "MeshRenderer should have Probe Anchor property");
+
+            JObject valueObj = JObject.FromObject(probeAnchor.value);
+            Assert.That(valueObj["name"].ToString(), Is.EqualTo("None"));
+            Assert.That(valueObj["type"].ToString(), Is.EqualTo("None"));
+            Assert.That(valueObj["instanceId"].Value<int>(), Is.EqualTo(0));
+        }
+
+        [Test]
         public async Task ExecuteAsync_WithSelectedMode_IncludeInactiveTrue_IncludesInactiveObjects()
         {
             // Arrange
