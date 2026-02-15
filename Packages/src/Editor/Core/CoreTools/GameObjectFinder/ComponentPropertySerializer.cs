@@ -79,6 +79,18 @@ namespace io.github.hatayama.uLoopMCP
                     return property.quaternionValue;
                 case SerializedPropertyType.Enum:
                     return property.enumNames[property.enumValueIndex];
+                case SerializedPropertyType.ObjectReference:
+                    UnityEngine.Object obj = property.objectReferenceValue;
+                    if (obj == null)
+                    {
+                        // objectReferenceInstanceIDValue != 0 means a broken (Missing) reference
+                        if (property.objectReferenceInstanceIDValue != 0)
+                        {
+                            return new { name = "Missing", type = "Missing", instanceId = property.objectReferenceInstanceIDValue };
+                        }
+                        return new { name = "None", type = "None", instanceId = 0 };
+                    }
+                    return new { name = obj.name, type = obj.GetType().Name, instanceId = obj.GetInstanceID() };
                 default:
                     return null; // Unsupported property types
             }

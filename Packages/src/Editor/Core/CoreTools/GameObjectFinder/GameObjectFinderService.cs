@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -33,7 +34,7 @@ namespace io.github.hatayama.uLoopMCP
             // Handle hierarchy path search separately
             if (options.SearchMode == SearchMode.Path && !string.IsNullOrEmpty(options.NamePattern))
             {
-                GameObject found = GameObject.Find(options.NamePattern);
+                GameObject found = FindGameObjectByPath(options.NamePattern);
                 if (found != null)
                 {
                     GameObjectDetails details = new GameObjectDetails
@@ -75,11 +76,48 @@ namespace io.github.hatayama.uLoopMCP
             return results.ToArray();
         }
         
+        private GameObject FindGameObjectByPath(string path)
+        {
+            // GameObject.Find() does not work in Prefab Stage; Transform.Find() intentionally
+            // returns inactive children too — active/inactive filtering is handled by the caller.
+            PrefabStage prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+            if (prefabStage == null)
+            {
+                return GameObject.Find(path);
+            }
+
+            GameObject prefabRoot = prefabStage.prefabContentsRoot;
+            string trimmedPath = path.TrimStart('/');
+
+            if (trimmedPath == prefabRoot.name)
+            {
+                return prefabRoot;
+            }
+
+            if (trimmedPath.StartsWith(prefabRoot.name + "/"))
+            {
+                string relativePath = trimmedPath.Substring(prefabRoot.name.Length + 1);
+                Transform found = prefabRoot.transform.Find(relativePath);
+                return found != null ? found.gameObject : null;
+            }
+
+            Transform directFind = prefabRoot.transform.Find(trimmedPath);
+            return directFind != null ? directFind.gameObject : null;
+        }
+
         private List<GameObject> GetAllGameObjects(bool includeInactive)
         {
             List<GameObject> allGameObjects = new List<GameObject>();
-            
-            // Get objects from all loaded scenes
+
+            // Prefab Stage has its own scene not visible via SceneManager
+            PrefabStage prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+            if (prefabStage != null)
+            {
+                GameObject prefabRoot = prefabStage.prefabContentsRoot;
+                AddGameObjectAndChildren(prefabRoot, allGameObjects, includeInactive);
+                return allGameObjects;
+            }
+
             for (int i = 0; i < SceneManager.sceneCount; i++)
             {
                 Scene scene = SceneManager.GetSceneAt(i);
@@ -92,7 +130,7 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }
             }
-            
+
             return allGameObjects;
         }
         
