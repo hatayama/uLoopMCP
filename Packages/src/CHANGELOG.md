@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.63.0](https://github.com/hatayama/uLoopMCP/compare/v0.62.4...v0.63.0) (2026-02-15)
+
+
+### Features
+
+* Add Prefab Stage support and ObjectReference serialization to find-game-objects ([#636](https://github.com/hatayama/uLoopMCP/issues/636)) ([f667aa8](https://github.com/hatayama/uLoopMCP/commit/f667aa81ec69327b383c28722173f846085a3dc3))
+
+
+### Bug Fixes
+
+* **deps:** bump launch-unity to 0.15.1 ([c25653a](https://github.com/hatayama/uLoopMCP/commit/c25653a590597c2702e13943e9595d71c1b51e73))
+
 ## [0.62.4](https://github.com/hatayama/uLoopMCP/compare/v0.62.3...v0.62.4) (2026-02-13)
 
 
