@@ -78,7 +78,8 @@ namespace io.github.hatayama.uLoopMCP
         
         private GameObject FindGameObjectByPath(string path)
         {
-            // GameObject.Find() does not work in Prefab Stage
+            // GameObject.Find() does not work in Prefab Stage; Transform.Find() intentionally
+            // returns inactive children too — active/inactive filtering is handled by the caller.
             PrefabStage prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
             if (prefabStage == null)
             {
