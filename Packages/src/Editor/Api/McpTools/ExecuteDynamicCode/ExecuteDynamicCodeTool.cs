@@ -408,9 +408,28 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     }
                     break;
                 case "CS0103": // name does not exist in the current context
-                    hint = "Identifier does not exist in the current context. Check spelling, declaration scope, and whether this should be a type name.";
-                    suggestions.Add("Declare the identifier before use");
-                    suggestions.Add("If this is a type name, use a fully-qualified name or add the correct using directive");
+#if ULOOPMCP_HAS_ROSLYN
+                    string identifierName = UsingDirectiveResolver.ExtractTypeNameFromMessage(e.Message);
+#else
+                    string identifierName = (string)null;
+#endif
+                    if (identifierName != null
+                        && ambiguousCandidates != null
+                        && ambiguousCandidates.TryGetValue(identifierName, out List<string> cs0103Candidates))
+                    {
+                        string candidateList = string.Join(", ", cs0103Candidates);
+                        hint = $"Auto-using resolution found multiple candidates for '{identifierName}': {candidateList}. Use a fully-qualified name or add the correct using directive.";
+                        foreach (string ns in cs0103Candidates)
+                        {
+                            suggestions.Add($"Use {ns}.{identifierName}");
+                        }
+                    }
+                    else
+                    {
+                        hint = "Identifier does not exist in the current context. Check spelling, declaration scope, and whether this should be a type name.";
+                        suggestions.Add("Declare the identifier before use");
+                        suggestions.Add("If this is a type name, use a fully-qualified name or add the correct using directive");
+                    }
                     break;
                 case "CS0104": // ambiguous reference
                     hint = "Identifier is ambiguous; qualify explicitly (e.g., UnityEngine.Object).";
