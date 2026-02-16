@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.64.0](https://github.com/hatayama/uLoopMCP/compare/v0.63.0...v0.64.0) (2026-02-16)
+
+
+### Features
+
+* support CS0103 auto-using resolution ([#641](https://github.com/hatayama/uLoopMCP/issues/641)) ([a05edf7](https://github.com/hatayama/uLoopMCP/commit/a05edf7e36e055d76b154df5f35ceb691f724a20))
+
+
+### Bug Fixes
+
+* improve server recovery fallback when saved port is unavailable ([#639](https://github.com/hatayama/uLoopMCP/issues/639)) ([1ee5e6c](https://github.com/hatayama/uLoopMCP/commit/1ee5e6ce97b2f88668d61743d9037c6d6664ffbf))
+* prevent background Unity processes from mutating server state ([#642](https://github.com/hatayama/uLoopMCP/issues/642)) ([cdf1285](https://github.com/hatayama/uLoopMCP/commit/cdf1285f41165fec080227139b777f6b6fff83a8))
+
 ## [0.63.0](https://github.com/hatayama/uLoopMCP/compare/v0.62.4...v0.63.0) (2026-02-15)
 
 
