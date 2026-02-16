@@ -12,14 +12,32 @@ namespace io.github.hatayama.uLoopMCP
     [InitializeOnLoad]
     public static class DomainReloadDetectionService
     {
+        private static bool IsBackgroundUnityProcess()
+        {
+            bool isBatchMode = UnityEngine.Application.isBatchMode;
+            bool isAssetImportWorker = AssetDatabase.IsAssetImportWorkerProcess();
+            return isBatchMode || isAssetImportWorker;
+        }
+
         static DomainReloadDetectionService()
         {
+            if (IsBackgroundUnityProcess())
+            {
+                VibeLogger.LogInfo("domain_reload_hook_skip", "Skipping domain reload hooks in background Unity process.");
+                return;
+            }
+
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
             AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
         }
 
         private static void OnBeforeAssemblyReload()
         {
+            if (IsBackgroundUnityProcess())
+            {
+                return;
+            }
+
             CreateLockFile();
         }
 
@@ -41,6 +59,12 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="serverPort">Server port number</param>
         public static void StartDomainReload(string correlationId, bool serverIsRunning, int? serverPort)
         {
+            if (IsBackgroundUnityProcess())
+            {
+                VibeLogger.LogInfo("domain_reload_start_ignored", "background_process", correlationId: correlationId);
+                return;
+            }
+
             // Create lock file for external process detection (e.g., CLI tools)
             CreateLockFile();
 
@@ -83,6 +107,12 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="correlationId">Tracking ID for related operations</param>
         public static void CompleteDomainReload(string correlationId)
         {
+            if (IsBackgroundUnityProcess())
+            {
+                VibeLogger.LogInfo("domain_reload_complete_ignored", "background_process", correlationId: correlationId);
+                return;
+            }
+
             // Lock file is deleted by McpBridgeServer when server startup completes
             // to avoid a gap between domain reload completion and server ready
 
