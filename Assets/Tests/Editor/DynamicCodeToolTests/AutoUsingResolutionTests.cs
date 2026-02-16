@@ -129,6 +129,67 @@ return x?.ToString() ?? ""null"";";
                 "Should report CS0246 for unresolvable type");
         }
 
+        [Test]
+        public void Should_AutoResolve_UnityEngine_When_DebugLogUsed()
+        {
+            string code = @"Debug.Log(""Hello from CS0103 auto-using"");
+return null;";
+
+            CompilationResult result = Compile(code);
+
+            Assert.IsTrue(result.Success, $"Compilation should succeed. Errors: {FormatErrors(result)}");
+            Assert.IsTrue(result.UpdatedCode.Contains("using UnityEngine;"),
+                "Should auto-add 'using UnityEngine;' for Debug.Log");
+        }
+
+        [Test]
+        public void Should_NotReportCs0103_When_DebugLogUsedWithoutUsingDirective()
+        {
+            string code = @"Debug.Log(""No using directive required"");
+return null;";
+
+            CompilationResult result = Compile(code);
+            List<CompilationError> errors = result.Errors ?? new List<CompilationError>();
+            bool hasCs0103 = errors.Any(e => e.ErrorCode == "CS0103");
+
+            Assert.IsTrue(result.Success, $"Compilation should succeed. Errors: {FormatErrors(result)}");
+            Assert.IsFalse(hasCs0103,
+                "Should not report CS0103 when using-less Debug.Log is auto-resolved");
+        }
+
+        [Test]
+        public void Should_NotAutoResolve_When_Cs0103TargetIsNotPascalCase()
+        {
+            string code = @"debug.Log(""Hello from non-type identifier"");
+return null;";
+
+            CompilationResult result = Compile(code);
+
+            Assert.IsFalse(result.Success,
+                "Compilation should fail when CS0103 target does not look like a type name");
+            Assert.IsFalse(result.UpdatedCode.Contains("using UnityEngine;"),
+                "Should not auto-add UnityEngine using for non-PascalCase identifier");
+            Assert.IsTrue(result.Errors.Any(e => e.ErrorCode == "CS0103"),
+                "Should report CS0103 for unresolved identifier");
+        }
+
+        [Test]
+        public void Should_ReportAmbiguousCandidates_When_Cs0103HasMultipleTypeMatches()
+        {
+            string code = @"Debug.Assert(true);
+return null;";
+
+            CompilationResult result = Compile(code);
+
+            Assert.IsFalse(result.Success,
+                "Compilation should fail when CS0103 type has multiple namespace candidates");
+            Assert.IsTrue(result.AmbiguousTypeCandidates.ContainsKey("Debug"),
+                "Should report Debug as ambiguous");
+            List<string> candidates = result.AmbiguousTypeCandidates["Debug"];
+            Assert.That(candidates, Has.Member("UnityEngine"));
+            Assert.That(candidates, Has.Member("System.Diagnostics"));
+        }
+
         private CompilationResult Compile(string code)
         {
             CompilationRequest request = new()

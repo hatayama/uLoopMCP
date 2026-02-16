@@ -612,12 +612,12 @@ namespace io.github.hatayama.uLoopMCP
                 if (!diagnostics.Any()) break;
 
                 Diagnostic[] unresolvedTypeDiagnostics = diagnostics
-                    .Where(d => d.Id == "CS0246")
+                    .Where(d => d.Id == "CS0246" || d.Id == "CS0103")
                     .ToArray();
 
                 if (!unresolvedTypeDiagnostics.Any()) break;
 
-                List<UsingResolutionResult> resolutions = resolver.ResolveUnresolvedTypes(
+                List<UsingResolutionResult> resolutions = resolver.ResolveMissingSymbols(
                     compilation, unresolvedTypeDiagnostics);
 
                 HashSet<string> namespacesToAdd = new();
