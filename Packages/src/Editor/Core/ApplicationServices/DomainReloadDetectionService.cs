@@ -14,9 +14,8 @@ namespace io.github.hatayama.uLoopMCP
     {
         private static bool IsBackgroundUnityProcess()
         {
-            bool isBatchMode = UnityEngine.Application.isBatchMode;
             bool isAssetImportWorker = AssetDatabase.IsAssetImportWorkerProcess();
-            return isBatchMode || isAssetImportWorker;
+            return isAssetImportWorker;
         }
 
         static DomainReloadDetectionService()
