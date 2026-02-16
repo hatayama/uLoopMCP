@@ -650,7 +650,7 @@ namespace io.github.hatayama.uLoopMCP
                 catch (Exception ex)
                 {
                     VibeLogger.LogWarning("config_auto_update_failed", $"Failed to auto-update configurations: {ex.Message}");
-                    Debug.LogError($"[uLoopMCP] Failed to auto-update configurations: {ex.Message}");
+                    Debug.LogWarning($"[{McpConstants.PROJECT_NAME}] Failed to auto-update configurations: {ex.Message}");
                     // Continue with running server even if config update fails
                 }
 
