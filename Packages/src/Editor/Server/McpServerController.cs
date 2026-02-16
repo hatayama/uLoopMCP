@@ -495,6 +495,38 @@ namespace io.github.hatayama.uLoopMCP
             return NetworkUtility.FindAvailablePort(startPort);
         }
 
+        private static bool TryFindFallbackPort(int currentPort, out int fallbackPort)
+        {
+            const int maxAttempts = 10;
+
+            for (int offset = 1; offset <= maxAttempts; offset++)
+            {
+                int candidatePort = currentPort + offset;
+                if (!McpPortValidator.ValidatePort(candidatePort, "for recovery fallback"))
+                {
+                    continue;
+                }
+
+                if (NetworkUtility.IsPortInUse(candidatePort))
+                {
+                    continue;
+                }
+
+                fallbackPort = candidatePort;
+                return true;
+            }
+
+            fallbackPort = currentPort;
+            return false;
+        }
+
+        private static void LogRecoveryFallback(int sourcePort, int fallbackPort, string reason)
+        {
+            string message = $"Recovery fallback activated: {sourcePort} -> {fallbackPort} ({reason})";
+            VibeLogger.LogWarning("recovery_port_fallback", message);
+            Debug.LogWarning($"[{McpConstants.PROJECT_NAME}] {message}");
+        }
+
         /// <summary>
         /// Validates server configuration before starting
         /// Implements fail-fast behavior for invalid configurations
@@ -579,28 +611,47 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }
 
-                // Auto-update configuration files before starting server
-                // This ensures paths are updated after package updates
-                try
+                int chosenPort = savedPort;
+                bool savedPortInUse = NetworkUtility.IsPortInUse(savedPort);
+                if (savedPortInUse && TryFindFallbackPort(savedPort, out int preBindFallbackPort))
                 {
-                    McpConfigAutoUpdater.UpdateAllConfiguredEditors(savedPort);
-                }
-                catch (Exception ex)
-                {
-                    VibeLogger.LogWarning("config_auto_update_failed", $"Failed to auto-update configurations: {ex.Message}");
-                    Debug.LogError($"[uLoopMCP] Failed to auto-update configurations: {ex.Message}");
-                    // Continue with server startup even if config update fails
+                    chosenPort = preBindFallbackPort;
+                    LogRecoveryFallback(savedPort, chosenPort, "saved_port_in_use_before_bind");
                 }
 
-                int chosenPort = savedPort;
                 bool started = await TryBindWithWaitAsync(chosenPort, 5000, 250, cancellationToken);
+
+                if (!started)
+                {
+                    if (TryFindFallbackPort(chosenPort, out int fallbackPort) && fallbackPort != chosenPort)
+                    {
+                        int previousAttemptPort = chosenPort;
+                        chosenPort = fallbackPort;
+                        LogRecoveryFallback(previousAttemptPort, chosenPort, "bind_retry_timeout");
+                        started = await TryBindWithWaitAsync(chosenPort, 5000, 250, cancellationToken);
+                    }
+                }
 
                 if (!started)
                 {
                     // Ensure session reflects stopped state on failure
                     McpEditorSettings.ClearServerSession();
                     McpEditorSettings.ClearReconnectingFlags();
-                    throw new InvalidOperationException($"Failed to bind port {savedPort} during server recovery.");
+                    Debug.LogError($"[{McpConstants.PROJECT_NAME}] Recovery failed: no available port to bind. SavedPort={savedPort}, LastAttemptPort={chosenPort}");
+                    throw new InvalidOperationException($"Failed to bind any recovery port. SavedPort={savedPort}, LastAttemptPort={chosenPort}.");
+                }
+
+                // Auto-update configuration files after startup.
+                // This keeps external editor settings aligned with path updates and recovery port fallback.
+                try
+                {
+                    McpConfigAutoUpdater.UpdateAllConfiguredEditors(chosenPort);
+                }
+                catch (Exception ex)
+                {
+                    VibeLogger.LogWarning("config_auto_update_failed", $"Failed to auto-update configurations: {ex.Message}");
+                    Debug.LogWarning($"[{McpConstants.PROJECT_NAME}] Failed to auto-update configurations: {ex.Message}");
+                    // Continue with running server even if config update fails
                 }
 
                 // Mark running and update settings
