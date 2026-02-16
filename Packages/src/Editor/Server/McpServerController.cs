@@ -23,6 +23,12 @@ namespace io.github.hatayama.uLoopMCP
         private static long startupProtectionUntilTicks = 0; // UTC ticks
         private static Task _currentRecoveryTask;
 
+        private static bool IsBackgroundUnityProcess()
+        {
+            bool isAssetImportWorker = AssetDatabase.IsAssetImportWorkerProcess();
+            return isAssetImportWorker;
+        }
+
         /// <summary>
         /// The current MCP server instance.
         /// </summary>
@@ -45,6 +51,12 @@ namespace io.github.hatayama.uLoopMCP
 
         static McpServerController()
         {
+            if (IsBackgroundUnityProcess())
+            {
+                VibeLogger.LogInfo("server_controller_background_skip", "Skipping MCP server controller initialization in background Unity process.");
+                return;
+            }
+
             // Register cleanup for when Unity exits.
             EditorApplication.quitting += OnEditorQuitting;
 
@@ -79,6 +91,12 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static async Task StartServerWithUseCaseAsync(int port)
         {
+            if (IsBackgroundUnityProcess())
+            {
+                VibeLogger.LogInfo("server_start_ignored", "background_process");
+                return;
+            }
+
             // Signal server is starting for CLI detection
             ServerStartingLockService.CreateLockFile();
 
@@ -132,6 +150,12 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static async Task StopServerWithUseCaseAsync()
         {
+            if (IsBackgroundUnityProcess())
+            {
+                VibeLogger.LogInfo("server_stop_ignored", "background_process");
+                return;
+            }
+
             // Execute shutdown UseCase
             McpServerShutdownUseCase useCase = new(new McpServerStartupService());
             ServerShutdownSchema schema = new() { ForceShutdown = false };
@@ -205,6 +229,12 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static void RestoreServerStateIfNeeded()
         {
+            if (IsBackgroundUnityProcess())
+            {
+                VibeLogger.LogInfo("server_restore_skipped", "background_process");
+                return;
+            }
+
             bool wasRunning = McpEditorSettings.GetIsServerRunning();
             int savedPort = McpEditorSettings.GetServerPort();
             bool isAfterCompile = McpEditorSettings.GetIsAfterCompile();
@@ -570,6 +600,12 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static async Task StartRecoveryIfNeededAsync(int savedPort, bool isAfterCompile, CancellationToken cancellationToken)
         {
+            if (IsBackgroundUnityProcess())
+            {
+                VibeLogger.LogInfo("server_start_ignored", "background_process");
+                return;
+            }
+
             // Ensure lock files are cleaned up on server startup (handles crash recovery)
             DomainReloadDetectionService.DeleteLockFile();
             CompilationLockService.DeleteLockFile();
