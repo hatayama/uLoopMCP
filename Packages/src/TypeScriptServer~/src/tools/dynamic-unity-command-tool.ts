@@ -47,7 +47,6 @@ interface CompileExecutionContext {
 export class DynamicUnityCommandTool extends BaseTool {
   private static readonly DOMAIN_RELOAD_WAIT_TIMEOUT_MS = 10000;
   private static readonly DOMAIN_RELOAD_WAIT_POLL_INTERVAL_MS = 100;
-  private static readonly DOMAIN_RELOAD_START_GRACE_MS = 3000;
 
   public readonly name: string;
   public readonly description: string;
@@ -323,24 +322,14 @@ export class DynamicUnityCommandTool extends BaseTool {
         return storedResult;
       }
 
-      if (
-        storedResult !== undefined &&
-        !busyObserved &&
-        waitedMs >= DynamicUnityCommandTool.DOMAIN_RELOAD_START_GRACE_MS
-      ) {
-        return storedResult;
-      }
-
-      if (
-        !busyObserved &&
-        waitedMs >= DynamicUnityCommandTool.DOMAIN_RELOAD_START_GRACE_MS &&
-        storedResult === undefined
-      ) {
-        return undefined;
-      }
-
       await this.sleep(DynamicUnityCommandTool.DOMAIN_RELOAD_WAIT_POLL_INTERVAL_MS);
       waitedMs += DynamicUnityCommandTool.DOMAIN_RELOAD_WAIT_POLL_INTERVAL_MS;
+    }
+
+    if (!busyObserved) {
+      throw new Error(
+        `Domain reload was not detected within ${DynamicUnityCommandTool.DOMAIN_RELOAD_WAIT_TIMEOUT_MS}ms for request '${requestId}'.`,
+      );
     }
 
     throw new Error(

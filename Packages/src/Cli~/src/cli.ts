@@ -756,6 +756,25 @@ function shouldSkipAutoSync(cmdName: string | undefined, args: string[]): boolea
   return args.some((arg) => (NO_SYNC_FLAGS as readonly string[]).includes(arg));
 }
 
+function extractSyncGlobalOptions(args: string[]): GlobalOptions {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--port' || arg === '-p') {
+      const nextArg = args[i + 1];
+      if (nextArg !== undefined && !nextArg.startsWith('-')) {
+        return { port: nextArg };
+      }
+      continue;
+    }
+
+    if (arg.startsWith('--port=')) {
+      return { port: arg.slice('--port='.length) };
+    }
+  }
+
+  return {};
+}
+
 /**
  * Main entry point with auto-sync for unknown commands.
  */
@@ -766,6 +785,7 @@ async function main(): Promise<void> {
 
   const args = process.argv.slice(2);
   const cmdName = args.find((arg) => !arg.startsWith('-'));
+  const syncGlobalOptions = extractSyncGlobalOptions(args);
 
   if (!shouldSkipAutoSync(cmdName, args)) {
     // Check if cache version is outdated and auto-sync if needed
@@ -775,7 +795,7 @@ async function main(): Promise<void> {
         `\x1b[33mCache outdated (${cachedVersion} → ${VERSION}). Syncing tools from Unity...\x1b[0m`,
       );
       try {
-        await syncTools({});
+        await syncTools(syncGlobalOptions);
         console.log('\x1b[32m✓ Tools synced successfully.\x1b[0m\n');
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -800,7 +820,7 @@ async function main(): Promise<void> {
   if (cmdName && !commandExists(cmdName)) {
     console.log(`\x1b[33mUnknown command '${cmdName}'. Syncing tools from Unity...\x1b[0m`);
     try {
-      await syncTools({});
+      await syncTools(syncGlobalOptions);
       const newCache = loadToolsCache();
       const tool = newCache.tools.find((t) => t.name === cmdName);
       if (tool) {

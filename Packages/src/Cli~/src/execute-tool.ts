@@ -60,7 +60,6 @@ const RETRY_DELAY_MS = 500;
 const MAX_RETRIES = 3;
 const DOMAIN_RELOAD_WAIT_TIMEOUT_MS = 10000;
 const DOMAIN_RELOAD_WAIT_POLL_INTERVAL_MS = 100;
-const DOMAIN_RELOAD_START_GRACE_MS = 3000;
 
 interface CompileExecutionOptions {
   forceRecompile: boolean;
@@ -182,10 +181,6 @@ async function waitForDomainReloadToSettle(projectRoot: string, port: number): P
       busyObserved = true;
     }
 
-    if (!busyObserved && waitedMs >= DOMAIN_RELOAD_START_GRACE_MS) {
-      return;
-    }
-
     if (busyObserved && !isBusy) {
       const reachable = await canConnectToUnity(port);
       if (reachable) {
@@ -195,6 +190,12 @@ async function waitForDomainReloadToSettle(projectRoot: string, port: number): P
 
     await sleep(DOMAIN_RELOAD_WAIT_POLL_INTERVAL_MS);
     waitedMs += DOMAIN_RELOAD_WAIT_POLL_INTERVAL_MS;
+  }
+
+  if (!busyObserved) {
+    throw new Error(
+      `Domain reload was not detected within ${DOMAIN_RELOAD_WAIT_TIMEOUT_MS}ms. Run 'uloop fix' and retry.`,
+    );
   }
 
   throw new Error(
