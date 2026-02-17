@@ -77,7 +77,18 @@ function runCliJson<T>(args: string): T {
   if (exitCode !== 0) {
     throw new Error(`CLI failed with exit code ${exitCode}: ${stderr || stdout}`);
   }
-  return JSON.parse(stdout) as T;
+
+  const trimmedOutput = stdout.trim();
+  const jsonStartByLine = trimmedOutput.lastIndexOf('\n{');
+  const jsonStart = jsonStartByLine >= 0 ? jsonStartByLine + 1 : trimmedOutput.indexOf('{');
+  const jsonEnd = trimmedOutput.lastIndexOf('}');
+
+  if (jsonStart < 0 || jsonEnd < 0 || jsonEnd < jsonStart) {
+    throw new Error(`JSON payload not found in CLI output: ${trimmedOutput}`);
+  }
+
+  const jsonPayload = trimmedOutput.slice(jsonStart, jsonEnd + 1);
+  return JSON.parse(jsonPayload) as T;
 }
 
 describe('CLI E2E Tests (requires running Unity)', () => {
@@ -97,12 +108,31 @@ describe('CLI E2E Tests (requires running Unity)', () => {
   describe('get-logs', () => {
     const TEST_LOG_MENU_PATH = 'uLoopMCP/Debug/LogGetter Tests/Output Test Logs';
     const MENU_ITEM_WAIT_MS = 1000;
+    const ERROR_FAMILY_PREFIX = 'CliE2EErrorFamily';
 
     function setupTestLogs(): void {
       runCliWithRetry('clear-console');
       const result = runCliWithRetry(`execute-menu-item --menu-item-path "${TEST_LOG_MENU_PATH}"`);
       if (result.exitCode !== 0) {
         throw new Error(`execute-menu-item failed: ${result.stderr || result.stdout}`);
+      }
+      sleepSync(MENU_ITEM_WAIT_MS);
+    }
+
+    function setupErrorFamilyLogs(token: string): void {
+      runCliWithRetry('clear-console');
+      const code = [
+        'using UnityEngine;',
+        'using System;',
+        `Debug.LogError("${ERROR_FAMILY_PREFIX}_Error_${token}");`,
+        `Debug.LogException(new InvalidOperationException("${ERROR_FAMILY_PREFIX}_Exception_${token}"));`,
+        `Debug.LogAssertion("${ERROR_FAMILY_PREFIX}_Assert_${token}");`,
+        `Debug.Log("${ERROR_FAMILY_PREFIX}_AssertLike_${token}");`,
+        `Debug.LogWarning("${ERROR_FAMILY_PREFIX}_Warning_${token}");`,
+      ].join(' ');
+      const result = runCliWithRetry(`execute-dynamic-code --code '${code}'`);
+      if (result.exitCode !== 0) {
+        throw new Error(`execute-dynamic-code failed: ${result.stderr || result.stdout}`);
       }
       sleepSync(MENU_ITEM_WAIT_MS);
     }
@@ -161,6 +191,47 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       // Verify test error log exists
       const messages = result.Logs.map((log) => log.Message);
       expect(messages.some((m) => m.includes('This is an error log'))).toBe(true);
+    });
+
+    it('should filter by lowercase log type error', () => {
+      setupTestLogs();
+
+      const result = runCliJson<{ Logs: Array<{ Type: string; Message: string }> }>(
+        'get-logs --log-type error',
+      );
+
+      expect(result.Logs.length).toBeGreaterThan(0);
+      for (const log of result.Logs) {
+        expect(log.Type).toBe('Error');
+      }
+      const messages = result.Logs.map((log) => log.Message);
+      expect(messages.some((m) => m.includes('This is an error log'))).toBe(true);
+    });
+
+    it('should include exception and assertion logs in Error filter', () => {
+      const token = `${Date.now()}`;
+      setupErrorFamilyLogs(token);
+
+      const result = runCliJson<{ Logs: Array<{ Type: string; Message: string }> }>(
+        `get-logs --log-type Error --search-text "${token}" --max-count 20`,
+      );
+
+      expect(result.Logs.length).toBeGreaterThanOrEqual(3);
+      for (const log of result.Logs) {
+        expect(log.Type).toBe('Error');
+      }
+
+      const messages = result.Logs.map((log) => log.Message);
+      expect(messages.some((m) => m.includes(`${ERROR_FAMILY_PREFIX}_Error_${token}`))).toBe(true);
+      expect(messages.some((m) => m.includes(`${ERROR_FAMILY_PREFIX}_Exception_${token}`))).toBe(
+        true,
+      );
+      expect(messages.some((m) => m.includes(`${ERROR_FAMILY_PREFIX}_AssertLike_${token}`))).toBe(
+        true,
+      );
+      expect(messages.some((m) => m.includes(`${ERROR_FAMILY_PREFIX}_Warning_${token}`))).toBe(
+        false,
+      );
     });
 
     it('should search logs by text', () => {
@@ -487,7 +558,7 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       const { stdout, exitCode } = runCli('launch --help');
 
       expect(exitCode).toBe(0);
-      expect(stdout).toContain('Launch Unity project');
+      expect(stdout).toContain('Open a Unity project');
       expect(stdout).toContain('--restart');
       expect(stdout).toContain('--platform');
       expect(stdout).toContain('--max-depth');

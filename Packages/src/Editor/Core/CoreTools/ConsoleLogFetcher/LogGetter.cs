@@ -2,6 +2,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -19,6 +20,120 @@ namespace io.github.hatayama.uLoopMCP
             LogRetriever = new ConsoleLogRetriever();
         }
 
+        private static string NormalizeMcpLogType(string mcpLogType)
+        {
+            if (string.Equals(mcpLogType, McpLogType.Error, StringComparison.OrdinalIgnoreCase))
+            {
+                return McpLogType.Error;
+            }
+
+            if (string.Equals(mcpLogType, McpLogType.Warning, StringComparison.OrdinalIgnoreCase))
+            {
+                return McpLogType.Warning;
+            }
+
+            if (string.Equals(mcpLogType, McpLogType.Log, StringComparison.OrdinalIgnoreCase))
+            {
+                return McpLogType.Log;
+            }
+
+            if (string.Equals(mcpLogType, McpLogType.All, StringComparison.OrdinalIgnoreCase))
+            {
+                return McpLogType.All;
+            }
+
+            return McpLogType.Log;
+        }
+
+        private static bool IsAssertionLikeEntry(LogEntryDto entry)
+        {
+            if (entry == null)
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(entry.Message) &&
+                entry.Message.IndexOf("assert", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+
+            if (string.IsNullOrEmpty(entry.StackTrace))
+            {
+                return false;
+            }
+
+            if (entry.StackTrace.IndexOf("Debug:LogAssertion", StringComparison.Ordinal) >= 0)
+            {
+                return true;
+            }
+
+            if (entry.StackTrace.IndexOf("Debug.LogAssertion", StringComparison.Ordinal) >= 0)
+            {
+                return true;
+            }
+
+            if (entry.StackTrace.IndexOf("Debug:Assert", StringComparison.Ordinal) >= 0)
+            {
+                return true;
+            }
+
+            return entry.StackTrace.IndexOf("Debug.Assert", StringComparison.Ordinal) >= 0;
+        }
+
+        private static bool IsErrorFamilyEntry(LogEntryDto entry)
+        {
+            if (entry == null)
+            {
+                return false;
+            }
+
+            if (string.Equals(entry.LogType, McpLogType.Error, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return IsAssertionLikeEntry(entry);
+        }
+
+        private static List<LogEntryDto> GetLogsByMcpLogType(string logType)
+        {
+            string normalizedLogType = NormalizeMcpLogType(logType);
+
+            if (string.Equals(normalizedLogType, McpLogType.All, StringComparison.Ordinal))
+            {
+                return LogRetriever.GetAllLogs();
+            }
+
+            if (string.Equals(normalizedLogType, McpLogType.Error, StringComparison.Ordinal))
+            {
+                List<LogEntryDto> allEntries = LogRetriever.GetAllLogs();
+                List<LogEntryDto> errorFamilyEntries = new();
+
+                foreach (LogEntryDto entry in allEntries)
+                {
+                    if (!IsErrorFamilyEntry(entry))
+                    {
+                        continue;
+                    }
+
+                    if (string.Equals(entry.LogType, McpLogType.Error, StringComparison.OrdinalIgnoreCase))
+                    {
+                        errorFamilyEntries.Add(entry);
+                        continue;
+                    }
+
+                    LogEntryDto normalizedEntry = new(McpLogType.Error, entry.Message, entry.StackTrace);
+                    errorFamilyEntries.Add(normalizedEntry);
+                }
+
+                return errorFamilyEntries;
+            }
+
+            UnityEngine.LogType unityLogType = ConvertMcpLogTypeToLogType(normalizedLogType);
+            return LogRetriever.GetLogsByType(unityLogType);
+        }
+
         /// <summary>
         /// Converts McpLogType to Unity's LogType
         /// </summary>
@@ -26,7 +141,9 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Corresponding Unity LogType</returns>
         private static LogType ConvertMcpLogTypeToLogType(string mcpLogType)
         {
-            return mcpLogType switch
+            string normalizedLogType = NormalizeMcpLogType(mcpLogType);
+
+            return normalizedLogType switch
             {
                 McpLogType.Error => LogType.Error,
                 McpLogType.Warning => LogType.Warning,
@@ -61,19 +178,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>The filtered log data.</returns>
         public static LogDisplayDto GetConsoleLogsByType(string logType)
         {
-            System.Collections.Generic.List<LogEntryDto> allEntries;
-            
-            if (string.Equals(logType, McpLogType.All, StringComparison.OrdinalIgnoreCase))
-            {
-                allEntries = LogRetriever.GetAllLogs();
-            }
-            else
-            {
-                // Convert string logType to LogType for ConsoleLogRetriever
-                UnityEngine.LogType unityLogType = ConvertMcpLogTypeToLogType(logType);
-                allEntries = LogRetriever.GetLogsByType(unityLogType);
-            }
-            
+            List<LogEntryDto> allEntries = GetLogsByMcpLogType(logType);
             return new LogDisplayDto(allEntries.ToArray(), allEntries.Count);
         }
 
@@ -88,16 +193,7 @@ namespace io.github.hatayama.uLoopMCP
         public static LogDisplayDto SearchConsoleLogs(string logType, string searchText, bool useRegex, bool searchInStackTrace)
         {
             // Get logs based on type
-            System.Collections.Generic.List<LogEntryDto> allEntries;
-            if (string.Equals(logType, McpLogType.All, StringComparison.OrdinalIgnoreCase))
-            {
-                allEntries = LogRetriever.GetAllLogs();
-            }
-            else
-            {
-                UnityEngine.LogType unityLogType = ConvertMcpLogTypeToLogType(logType);
-                allEntries = LogRetriever.GetLogsByType(unityLogType);
-            }
+            List<LogEntryDto> allEntries = GetLogsByMcpLogType(logType);
             
             // Filter by search text if provided
             if (!string.IsNullOrEmpty(searchText))
