@@ -7,7 +7,12 @@
  * @jest-environment node
  */
 
-import { execSync, ExecSyncOptionsWithStringEncoding } from 'child_process';
+import {
+  execSync,
+  ExecSyncOptionsWithStringEncoding,
+  spawnSync,
+  SpawnSyncOptionsWithStringEncoding,
+} from 'child_process';
 import { join } from 'path';
 
 const CLI_PATH = join(__dirname, '../..', 'dist/cli.bundle.cjs');
@@ -19,6 +24,13 @@ const EXEC_OPTIONS: ExecSyncOptionsWithStringEncoding = {
   timeout: 60000,
   cwd: UNITY_PROJECT_ROOT,
   stdio: ['pipe', 'pipe', 'pipe'],
+};
+
+const SPAWN_OPTIONS: SpawnSyncOptionsWithStringEncoding = {
+  encoding: 'utf-8',
+  timeout: 60000,
+  cwd: UNITY_PROJECT_ROOT,
+  stdio: 'pipe',
 };
 
 const INTERVAL_MS = 1500;
@@ -54,6 +66,15 @@ function runCli(args: string): { stdout: string; stderr: string; exitCode: numbe
   }
 }
 
+function runCliParts(args: string[]): { stdout: string; stderr: string; exitCode: number } {
+  const result = spawnSync('node', [CLI_PATH, ...args], SPAWN_OPTIONS);
+  return {
+    stdout: result.stdout ?? '',
+    stderr: result.stderr ?? '',
+    exitCode: result.status ?? 1,
+  };
+}
+
 function runCliWithRetry(args: string): { stdout: string; stderr: string; exitCode: number } {
   for (let attempt = 0; attempt < DOMAIN_RELOAD_MAX_RETRIES; attempt++) {
     const result = runCli(args);
@@ -70,6 +91,27 @@ function runCliWithRetry(args: string): { stdout: string; stderr: string; exitCo
   }
 
   return runCli(args);
+}
+
+function runCliWithRetryParts(args: string[]): {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+} {
+  for (let attempt = 0; attempt < DOMAIN_RELOAD_MAX_RETRIES; attempt++) {
+    const result = runCliParts(args);
+    const output = result.stderr || result.stdout;
+
+    if (result.exitCode === 0 || !isDomainReloadError(output)) {
+      return result;
+    }
+
+    if (attempt < DOMAIN_RELOAD_MAX_RETRIES - 1) {
+      sleepSync(DOMAIN_RELOAD_RETRY_MS);
+    }
+  }
+
+  return runCliParts(args);
 }
 
 function runCliJson<T>(args: string): T {
@@ -129,7 +171,7 @@ describe('CLI E2E Tests (requires running Unity)', () => {
         `Debug.LogAssertion("${ERROR_FAMILY_PREFIX}_Assert_${token}");`,
         `Debug.LogWarning("${ERROR_FAMILY_PREFIX}_Warning_${token}");`,
       ].join(' ');
-      const result = runCliWithRetry(`execute-dynamic-code --code '${code}'`);
+      const result = runCliWithRetryParts(['execute-dynamic-code', '--code', code]);
       if (result.exitCode !== 0) {
         throw new Error(`execute-dynamic-code failed: ${result.stderr || result.stdout}`);
       }
@@ -144,7 +186,7 @@ describe('CLI E2E Tests (requires running Unity)', () => {
         `Debug.LogWarning("All assertions passed ${token}");`,
         `Debug.LogError("${ERROR_FAMILY_PREFIX}_ErrorOnly_${token}");`,
       ].join(' ');
-      const result = runCliWithRetry(`execute-dynamic-code --code '${code}'`);
+      const result = runCliWithRetryParts(['execute-dynamic-code', '--code', code]);
       if (result.exitCode !== 0) {
         throw new Error(`execute-dynamic-code failed: ${result.stderr || result.stdout}`);
       }
