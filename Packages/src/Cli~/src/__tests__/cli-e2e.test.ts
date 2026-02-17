@@ -127,8 +127,22 @@ describe('CLI E2E Tests (requires running Unity)', () => {
         `Debug.LogError("${ERROR_FAMILY_PREFIX}_Error_${token}");`,
         `Debug.LogException(new InvalidOperationException("${ERROR_FAMILY_PREFIX}_Exception_${token}"));`,
         `Debug.LogAssertion("${ERROR_FAMILY_PREFIX}_Assert_${token}");`,
-        `Debug.Log("${ERROR_FAMILY_PREFIX}_AssertLike_${token}");`,
         `Debug.LogWarning("${ERROR_FAMILY_PREFIX}_Warning_${token}");`,
+      ].join(' ');
+      const result = runCliWithRetry(`execute-dynamic-code --code '${code}'`);
+      if (result.exitCode !== 0) {
+        throw new Error(`execute-dynamic-code failed: ${result.stderr || result.stdout}`);
+      }
+      sleepSync(MENU_ITEM_WAIT_MS);
+    }
+
+    function setupAssertTextLogs(token: string): void {
+      runCliWithRetry('clear-console');
+      const code = [
+        'using UnityEngine;',
+        `Debug.Log("Please assert your identity ${token}");`,
+        `Debug.LogWarning("All assertions passed ${token}");`,
+        `Debug.LogError("${ERROR_FAMILY_PREFIX}_ErrorOnly_${token}");`,
       ].join(' ');
       const result = runCliWithRetry(`execute-dynamic-code --code '${code}'`);
       if (result.exitCode !== 0) {
@@ -208,7 +222,7 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       expect(messages.some((m) => m.includes('This is an error log'))).toBe(true);
     });
 
-    it('should include exception and assertion logs in Error filter', () => {
+    it('should include error and exception logs in Error filter', () => {
       const token = `${Date.now()}`;
       setupErrorFamilyLogs(token);
 
@@ -216,7 +230,7 @@ describe('CLI E2E Tests (requires running Unity)', () => {
         `get-logs --log-type Error --search-text "${token}" --max-count 20`,
       );
 
-      expect(result.Logs.length).toBeGreaterThanOrEqual(3);
+      expect(result.Logs.length).toBeGreaterThanOrEqual(2);
       for (const log of result.Logs) {
         expect(log.Type).toBe('Error');
       }
@@ -226,12 +240,29 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       expect(messages.some((m) => m.includes(`${ERROR_FAMILY_PREFIX}_Exception_${token}`))).toBe(
         true,
       );
-      expect(messages.some((m) => m.includes(`${ERROR_FAMILY_PREFIX}_AssertLike_${token}`))).toBe(
-        true,
-      );
       expect(messages.some((m) => m.includes(`${ERROR_FAMILY_PREFIX}_Warning_${token}`))).toBe(
         false,
       );
+    });
+
+    it('should not include plain assert text logs in Error filter', () => {
+      const token = `${Date.now()}`;
+      setupAssertTextLogs(token);
+
+      const result = runCliJson<{ Logs: Array<{ Type: string; Message: string }> }>(
+        `get-logs --log-type Error --search-text "${token}" --max-count 20`,
+      );
+
+      for (const log of result.Logs) {
+        expect(log.Type).toBe('Error');
+      }
+
+      const messages = result.Logs.map((log) => log.Message);
+      expect(messages.some((m) => m.includes(`${ERROR_FAMILY_PREFIX}_ErrorOnly_${token}`))).toBe(
+        true,
+      );
+      expect(messages.some((m) => m.includes(`Please assert your identity ${token}`))).toBe(false);
+      expect(messages.some((m) => m.includes(`All assertions passed ${token}`))).toBe(false);
     });
 
     it('should search logs by text', () => {

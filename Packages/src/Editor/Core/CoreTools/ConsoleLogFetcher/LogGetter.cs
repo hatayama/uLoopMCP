@@ -52,12 +52,6 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
 
-            if (!string.IsNullOrEmpty(entry.Message) &&
-                entry.Message.IndexOf("assert", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                return true;
-            }
-
             if (string.IsNullOrEmpty(entry.StackTrace))
             {
                 return false;
