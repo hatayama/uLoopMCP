@@ -2,7 +2,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     public static class McpVersion
     {
-        public const string VERSION = "0.64.0"; // x-release-please-version
+        public const string VERSION = "0.64.1"; // x-release-please-version
     }
 }
 
