@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.64.1](https://github.com/hatayama/uLoopMCP/compare/v0.64.0...v0.64.1) (2026-02-17)
+
+
+### Bug Fixes
+
+* normalize get-logs error filtering and harden CLI e2e parsing ([#643](https://github.com/hatayama/uLoopMCP/issues/643)) ([cc42ba9](https://github.com/hatayama/uLoopMCP/commit/cc42ba9f98e4c01ba82b7e7e79e39a826d674c30))
+
 ## [0.64.0](https://github.com/hatayama/uLoopMCP/compare/v0.63.0...v0.64.0) (2026-02-16)
 
 
