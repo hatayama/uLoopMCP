@@ -262,6 +262,7 @@ CLIの代わりに、MCP（Model Context Protocol）経由で接続すること�
 ### 1. compile - コンパイルの実行
 AssetDatabase.Refresh()をした後、コンパイルして結果を返却します。内蔵のLinterでは発見できないエラー・警告を見つける事ができます。
 差分コンパイルと強制全体コンパイルを選択できます。
+`ForceRecompile=true` と `WaitForDomainReload=true` を併用すると、Domain Reload完了後に結果を返せます。
 ```text
 → compile実行、エラー・警告内容を解析
 → 該当ファイルを自動修正

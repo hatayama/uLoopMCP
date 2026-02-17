@@ -10,6 +10,10 @@
           "ForceRecompile": {
             "type": "boolean",
             "description": "Force full recompilation"
+          },
+          "WaitForDomainReload": {
+            "type": "boolean",
+            "description": "Wait for domain reload completion before returning (effective only when ForceRecompile is true)"
           }
         }
       }

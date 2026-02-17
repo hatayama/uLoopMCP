@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Linq;
 using UnityEditor;
+using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -25,19 +26,22 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Compilation result</returns>
         public override async Task<CompileResponse> ExecuteAsync(CompileSchema parameters, CancellationToken ct)
         {
+            PrepareResultStorage(parameters);
+
             // 1. Play Mode preparation check
             PlayModeCompilationPreparationService preparationService = new();
             PreparationResult preparation = preparationService.DeterminePreparationAction();
 
             if (!preparation.CanProceed)
             {
-                return new CompileResponse(
+                CompileResponse response = new CompileResponse(
                     success: false,
                     errorCount: 1,
                     warningCount: 0,
                     errors: new[] { new CompileIssue(preparation.ErrorMessage, "", 0) },
                     warnings: Array.Empty<CompileIssue>()
                 );
+                return PersistResponseIfNeeded(parameters, response);
             }
 
             if (preparation.NeedsPlayModeStop)
@@ -46,13 +50,14 @@ namespace io.github.hatayama.uLoopMCP
                 bool exited = await WaitForPlayModeExitAsync(ct);
                 if (!exited)
                 {
-                    return new CompileResponse(
+                    CompileResponse response = new CompileResponse(
                         success: false,
                         errorCount: 1,
                         warningCount: 0,
                         errors: new[] { new CompileIssue("Play Mode did not exit within 5 seconds; compilation aborted.", "", 0) },
                         warnings: Array.Empty<CompileIssue>()
                     );
+                    return PersistResponseIfNeeded(parameters, response);
                 }
             }
 
@@ -62,13 +67,14 @@ namespace io.github.hatayama.uLoopMCP
             
             if (!validation.IsValid)
             {
-                return new CompileResponse(
+                CompileResponse response = new CompileResponse(
                     success: false,
                     errorCount: 1,
                     warningCount: 0,
                     errors: new[] { new CompileIssue(validation.ErrorMessage, "", 0) },
                     warnings: Array.Empty<CompileIssue>()
                 );
+                return PersistResponseIfNeeded(parameters, response);
             }
 
             // 3. Compilation execution
@@ -79,7 +85,7 @@ namespace io.github.hatayama.uLoopMCP
             // 4. Result formatting
             if (result.IsIndeterminate)
             {
-                return new CompileResponse(
+                CompileResponse response = new CompileResponse(
                     success: result.Success,
                     errorCount: null,
                     warningCount: null,
@@ -87,18 +93,20 @@ namespace io.github.hatayama.uLoopMCP
                     warnings: null,
                     message: result.Message ?? "Compilation status is indeterminate. Use get-logs tool to check results."
                 );
+                return PersistResponseIfNeeded(parameters, response);
             }
             
             CompileIssue[] errors = result.error?.Select(e => new CompileIssue(e.message, e.file, e.line)).ToArray();
             CompileIssue[] warnings = result.warning?.Select(w => new CompileIssue(w.message, w.file, w.line)).ToArray();
             
-            return new CompileResponse(
+            CompileResponse successResponse = new CompileResponse(
                 success: result.Success,
                 errorCount: result.error?.Length ?? 0,
                 warningCount: result.warning?.Length ?? 0,
                 errors: errors,
                 warnings: warnings
             );
+            return PersistResponseIfNeeded(parameters, successResponse);
         }
 
         private async Task<bool> WaitForPlayModeExitAsync(CancellationToken ct)
@@ -113,6 +121,51 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return !EditorApplication.isPlaying;
+        }
+
+        private static void PrepareResultStorage(CompileSchema parameters)
+        {
+            Debug.Assert(parameters != null, "parameters must not be null");
+
+            CompileResultPersistenceService.ClearAllStoredResults();
+
+            if (!parameters.WaitForDomainReload)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(parameters.RequestId))
+            {
+                return;
+            }
+
+            parameters.RequestId = CreateRequestId();
+        }
+
+        private static CompileResponse PersistResponseIfNeeded(CompileSchema parameters, CompileResponse response)
+        {
+            Debug.Assert(parameters != null, "parameters must not be null");
+            Debug.Assert(response != null, "response must not be null");
+
+            if (!parameters.WaitForDomainReload)
+            {
+                return response;
+            }
+
+            if (string.IsNullOrWhiteSpace(parameters.RequestId))
+            {
+                return response;
+            }
+
+            CompileResultPersistenceService.SaveResult(parameters.RequestId, response);
+            return response;
+        }
+
+        private static string CreateRequestId()
+        {
+            long unixTimeMilliseconds = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            string correlationId = McpConstants.GenerateCorrelationId();
+            return $"compile_{unixTimeMilliseconds}_{correlationId}";
         }
     }
 }

@@ -33,6 +33,10 @@ namespace io.github.hatayama.uLoopMCP
                 if (!property.CanWrite || property.SetMethod?.IsPublic != true)
                     continue;
 
+                BrowsableAttribute browsableAttribute = property.GetCustomAttribute<BrowsableAttribute>();
+                if (browsableAttribute != null && !browsableAttribute.Browsable)
+                    continue;
+
                 // Get JSON property name (fallback to property name)
                 string parameterName = GetJsonPropertyName(property);
                 

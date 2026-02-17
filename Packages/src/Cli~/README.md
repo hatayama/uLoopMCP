@@ -80,6 +80,9 @@ uloop sync
 # Execute compilation
 uloop compile
 
+# Force recompile and wait for domain reload completion
+uloop compile --force-recompile true --wait-for-domain-reload true
+
 # Get logs
 uloop get-logs --max-count 10
 
