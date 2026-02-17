@@ -7,7 +7,12 @@
  * @jest-environment node
  */
 
-import { execSync, ExecSyncOptionsWithStringEncoding } from 'child_process';
+import {
+  execSync,
+  ExecSyncOptionsWithStringEncoding,
+  spawnSync,
+  SpawnSyncOptionsWithStringEncoding,
+} from 'child_process';
 import { join } from 'path';
 
 const CLI_PATH = join(__dirname, '../..', 'dist/cli.bundle.cjs');
@@ -19,6 +24,13 @@ const EXEC_OPTIONS: ExecSyncOptionsWithStringEncoding = {
   timeout: 60000,
   cwd: UNITY_PROJECT_ROOT,
   stdio: ['pipe', 'pipe', 'pipe'],
+};
+
+const SPAWN_OPTIONS: SpawnSyncOptionsWithStringEncoding = {
+  encoding: 'utf-8',
+  timeout: 60000,
+  cwd: UNITY_PROJECT_ROOT,
+  stdio: 'pipe',
 };
 
 const INTERVAL_MS = 1500;
@@ -54,6 +66,15 @@ function runCli(args: string): { stdout: string; stderr: string; exitCode: numbe
   }
 }
 
+function runCliParts(args: string[]): { stdout: string; stderr: string; exitCode: number } {
+  const result = spawnSync('node', [CLI_PATH, ...args], SPAWN_OPTIONS);
+  return {
+    stdout: result.stdout ?? '',
+    stderr: result.stderr ?? '',
+    exitCode: result.status ?? 1,
+  };
+}
+
 function runCliWithRetry(args: string): { stdout: string; stderr: string; exitCode: number } {
   for (let attempt = 0; attempt < DOMAIN_RELOAD_MAX_RETRIES; attempt++) {
     const result = runCli(args);
@@ -72,12 +93,44 @@ function runCliWithRetry(args: string): { stdout: string; stderr: string; exitCo
   return runCli(args);
 }
 
+function runCliWithRetryParts(args: string[]): {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+} {
+  for (let attempt = 0; attempt < DOMAIN_RELOAD_MAX_RETRIES; attempt++) {
+    const result = runCliParts(args);
+    const output = result.stderr || result.stdout;
+
+    if (result.exitCode === 0 || !isDomainReloadError(output)) {
+      return result;
+    }
+
+    if (attempt < DOMAIN_RELOAD_MAX_RETRIES - 1) {
+      sleepSync(DOMAIN_RELOAD_RETRY_MS);
+    }
+  }
+
+  return runCliParts(args);
+}
+
 function runCliJson<T>(args: string): T {
   const { stdout, stderr, exitCode } = runCliWithRetry(args);
   if (exitCode !== 0) {
     throw new Error(`CLI failed with exit code ${exitCode}: ${stderr || stdout}`);
   }
-  return JSON.parse(stdout) as T;
+
+  const trimmedOutput = stdout.trim();
+  const jsonStartByLine = trimmedOutput.lastIndexOf('\n{');
+  const jsonStart = jsonStartByLine >= 0 ? jsonStartByLine + 1 : trimmedOutput.indexOf('{');
+  const jsonEnd = trimmedOutput.lastIndexOf('}');
+
+  if (jsonStart < 0 || jsonEnd < 0 || jsonEnd < jsonStart) {
+    throw new Error(`JSON payload not found in CLI output: ${trimmedOutput}`);
+  }
+
+  const jsonPayload = trimmedOutput.slice(jsonStart, jsonEnd + 1);
+  return JSON.parse(jsonPayload) as T;
 }
 
 describe('CLI E2E Tests (requires running Unity)', () => {
@@ -97,12 +150,45 @@ describe('CLI E2E Tests (requires running Unity)', () => {
   describe('get-logs', () => {
     const TEST_LOG_MENU_PATH = 'uLoopMCP/Debug/LogGetter Tests/Output Test Logs';
     const MENU_ITEM_WAIT_MS = 1000;
+    const ERROR_FAMILY_PREFIX = 'CliE2EErrorFamily';
 
     function setupTestLogs(): void {
       runCliWithRetry('clear-console');
       const result = runCliWithRetry(`execute-menu-item --menu-item-path "${TEST_LOG_MENU_PATH}"`);
       if (result.exitCode !== 0) {
         throw new Error(`execute-menu-item failed: ${result.stderr || result.stdout}`);
+      }
+      sleepSync(MENU_ITEM_WAIT_MS);
+    }
+
+    function setupErrorFamilyLogs(token: string): void {
+      runCliWithRetry('clear-console');
+      const code = [
+        'using UnityEngine;',
+        'using System;',
+        `Debug.LogError("${ERROR_FAMILY_PREFIX}_Error_${token}");`,
+        `Debug.LogException(new InvalidOperationException("${ERROR_FAMILY_PREFIX}_Exception_${token}"));`,
+        `Debug.LogAssertion("${ERROR_FAMILY_PREFIX}_Assert_${token}");`,
+        `Debug.LogWarning("${ERROR_FAMILY_PREFIX}_Warning_${token}");`,
+      ].join(' ');
+      const result = runCliWithRetryParts(['execute-dynamic-code', '--code', code]);
+      if (result.exitCode !== 0) {
+        throw new Error(`execute-dynamic-code failed: ${result.stderr || result.stdout}`);
+      }
+      sleepSync(MENU_ITEM_WAIT_MS);
+    }
+
+    function setupAssertTextLogs(token: string): void {
+      runCliWithRetry('clear-console');
+      const code = [
+        'using UnityEngine;',
+        `Debug.Log("Please assert your identity ${token}");`,
+        `Debug.LogWarning("All assertions passed ${token}");`,
+        `Debug.LogError("${ERROR_FAMILY_PREFIX}_ErrorOnly_${token}");`,
+      ].join(' ');
+      const result = runCliWithRetryParts(['execute-dynamic-code', '--code', code]);
+      if (result.exitCode !== 0) {
+        throw new Error(`execute-dynamic-code failed: ${result.stderr || result.stdout}`);
       }
       sleepSync(MENU_ITEM_WAIT_MS);
     }
@@ -161,6 +247,64 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       // Verify test error log exists
       const messages = result.Logs.map((log) => log.Message);
       expect(messages.some((m) => m.includes('This is an error log'))).toBe(true);
+    });
+
+    it('should filter by lowercase log type error', () => {
+      setupTestLogs();
+
+      const result = runCliJson<{ Logs: Array<{ Type: string; Message: string }> }>(
+        'get-logs --log-type error',
+      );
+
+      expect(result.Logs.length).toBeGreaterThan(0);
+      for (const log of result.Logs) {
+        expect(log.Type).toBe('Error');
+      }
+      const messages = result.Logs.map((log) => log.Message);
+      expect(messages.some((m) => m.includes('This is an error log'))).toBe(true);
+    });
+
+    it('should include error and exception logs in Error filter', () => {
+      const token = `${Date.now()}`;
+      setupErrorFamilyLogs(token);
+
+      const result = runCliJson<{ Logs: Array<{ Type: string; Message: string }> }>(
+        `get-logs --log-type Error --search-text "${token}" --max-count 20`,
+      );
+
+      expect(result.Logs.length).toBeGreaterThanOrEqual(2);
+      for (const log of result.Logs) {
+        expect(log.Type).toBe('Error');
+      }
+
+      const messages = result.Logs.map((log) => log.Message);
+      expect(messages.some((m) => m.includes(`${ERROR_FAMILY_PREFIX}_Error_${token}`))).toBe(true);
+      expect(messages.some((m) => m.includes(`${ERROR_FAMILY_PREFIX}_Exception_${token}`))).toBe(
+        true,
+      );
+      expect(messages.some((m) => m.includes(`${ERROR_FAMILY_PREFIX}_Warning_${token}`))).toBe(
+        false,
+      );
+    });
+
+    it('should not include plain assert text logs in Error filter', () => {
+      const token = `${Date.now()}`;
+      setupAssertTextLogs(token);
+
+      const result = runCliJson<{ Logs: Array<{ Type: string; Message: string }> }>(
+        `get-logs --log-type Error --search-text "${token}" --max-count 20`,
+      );
+
+      for (const log of result.Logs) {
+        expect(log.Type).toBe('Error');
+      }
+
+      const messages = result.Logs.map((log) => log.Message);
+      expect(messages.some((m) => m.includes(`${ERROR_FAMILY_PREFIX}_ErrorOnly_${token}`))).toBe(
+        true,
+      );
+      expect(messages.some((m) => m.includes(`Please assert your identity ${token}`))).toBe(false);
+      expect(messages.some((m) => m.includes(`All assertions passed ${token}`))).toBe(false);
     });
 
     it('should search logs by text', () => {
@@ -487,7 +631,7 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       const { stdout, exitCode } = runCli('launch --help');
 
       expect(exitCode).toBe(0);
-      expect(stdout).toContain('Launch Unity project');
+      expect(stdout).toContain('Open a Unity project');
       expect(stdout).toContain('--restart');
       expect(stdout).toContain('--platform');
       expect(stdout).toContain('--max-depth');

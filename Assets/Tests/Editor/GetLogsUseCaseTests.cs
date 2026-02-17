@@ -108,6 +108,130 @@ namespace io.github.hatayama.uLoopMCP
                 "Should find at least the 2 test info logs we created");
         }
 
+        /// <summary>
+        /// Verifies that lowercase error log type is handled as Error.
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithLowercaseErrorLogType_FiltersOnlyErrors()
+        {
+            // Arrange
+            string uniqueTestId = Guid.NewGuid().ToString("N")[..8];
+            string errorMessage = $"LowercaseError_{uniqueTestId}";
+            string warningMessage = $"LowercaseWarning_{uniqueTestId}";
+            string logMessage = $"LowercaseLog_{uniqueTestId}";
+
+            LogAssert.Expect(LogType.Error, errorMessage);
+            LogAssert.Expect(LogType.Warning, warningMessage);
+            LogAssert.Expect(LogType.Log, logMessage);
+
+            Debug.LogError(errorMessage);
+            Debug.LogWarning(warningMessage);
+            Debug.Log(logMessage);
+
+            GetLogsSchema schema = new()
+            {
+                LogType = "error",
+                MaxCount = 100,
+            };
+
+            // Act
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            Assert.Greater(result.Logs.Length, 0, "Expected at least one log for lowercase error filter");
+            Assert.IsTrue(result.Logs.All(log => log.Type == McpLogType.Error),
+                "All returned logs should be Error type when logType is 'error'");
+            Assert.IsTrue(result.Logs.Any(log => log.Message.Contains(errorMessage)),
+                "Expected the generated error log to be returned");
+        }
+
+        /// <summary>
+        /// Verifies that Error filter includes Error and Exception logs.
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithErrorLogType_IncludesErrorAndException()
+        {
+            // Arrange
+            string uniqueTestId = Guid.NewGuid().ToString("N")[..8];
+            string errorMessage = $"ErrorFamilyError_{uniqueTestId}";
+            string exceptionMessage = $"ErrorFamilyException_{uniqueTestId}";
+            string warningMessage = $"ErrorFamilyWarning_{uniqueTestId}";
+
+            LogAssert.Expect(LogType.Error, errorMessage);
+            LogAssert.Expect(LogType.Exception, new Regex($".*{Regex.Escape(exceptionMessage)}.*"));
+            LogAssert.Expect(LogType.Warning, warningMessage);
+
+            Debug.LogError(errorMessage);
+            Debug.LogException(new InvalidOperationException(exceptionMessage));
+            Debug.LogWarning(warningMessage);
+
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.Error,
+                MaxCount = 100,
+            };
+
+            // Act
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            Assert.Greater(result.Logs.Length, 0, "Expected at least one log for Error filter");
+            Assert.IsTrue(result.Logs.All(log => log.Type == McpLogType.Error),
+                "All returned logs should be normalized to Error type");
+            Assert.IsTrue(result.Logs.Any(log => log.Message.Contains(errorMessage)),
+                "Expected Error log to be included");
+            Assert.IsTrue(result.Logs.Any(log => log.Message.Contains(exceptionMessage)),
+                "Expected Exception log to be included in Error filter");
+            Assert.IsFalse(result.Logs.Any(log => log.Message.Contains(warningMessage)),
+                "Warning log should not be included in Error filter");
+        }
+
+        /// <summary>
+        /// Verifies that plain logs containing assert text are not treated as errors.
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithErrorLogType_DoesNotIncludePlainAssertTextLogs()
+        {
+            // Arrange
+            string uniqueTestId = Guid.NewGuid().ToString("N")[..8];
+            string normalAssertLikeMessage = $"Please assert your identity {uniqueTestId}";
+            string warningAssertLikeMessage = $"All assertions passed {uniqueTestId}";
+            string errorMessage = $"ErrorFamilyError_{uniqueTestId}";
+
+            LogAssert.Expect(LogType.Log, normalAssertLikeMessage);
+            LogAssert.Expect(LogType.Warning, warningAssertLikeMessage);
+            LogAssert.Expect(LogType.Error, errorMessage);
+
+            Debug.Log(normalAssertLikeMessage);
+            Debug.LogWarning(warningAssertLikeMessage);
+            Debug.LogError(errorMessage);
+
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.Error,
+                MaxCount = 100,
+            };
+
+            // Act
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            Assert.IsTrue(result.Logs.All(log => log.Type == McpLogType.Error),
+                "All returned logs should be normalized to Error type");
+            Assert.IsTrue(result.Logs.Any(log => log.Message.Contains(errorMessage)),
+                "Expected Error log to be included");
+            Assert.IsFalse(result.Logs.Any(log => log.Message.Contains(normalAssertLikeMessage)),
+                "Plain Log entries containing assert text should not be included");
+            Assert.IsFalse(result.Logs.Any(log => log.Message.Contains(warningAssertLikeMessage)),
+                "Warning entries containing assert text should not be included");
+        }
+
 
         /// <summary>
         /// Verifies correct search operation with SearchText

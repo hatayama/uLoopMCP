@@ -88,6 +88,8 @@ namespace io.github.hatayama.uLoopMCP
             return logType switch
             {
                 LogType.Error => McpLogType.Error,
+                LogType.Assert => McpLogType.Error,
+                LogType.Exception => McpLogType.Error,
                 LogType.Warning => McpLogType.Warning,
                 LogType.Log => McpLogType.Log,
                 _ => McpLogType.Log  // Default unknown types to Log
