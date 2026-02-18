@@ -226,10 +226,6 @@ export async function executeToolCommand(
       lastError = error;
       client.disconnect();
 
-      if (shouldWaitForDomainReload) {
-        break;
-      }
-
       if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
         break;
       }
@@ -241,20 +237,25 @@ export async function executeToolCommand(
   }
 
   if (shouldWaitForDomainReload && compileRequestId) {
-    const projectRootFromUnity =
-      immediateResult !== undefined
-        ? (immediateResult['ProjectRoot'] as string | undefined)
-        : undefined;
+    // Fail fast: request never reached Unity after all retries.
+    if (immediateResult === undefined) {
+      spinner.stop();
+      restoreStdin();
+      if (lastError instanceof Error) {
+        throw lastError;
+      }
+      throw new Error('Compile request did not reach Unity. Check connection and retry.');
+    }
+
+    const projectRootFromUnity = immediateResult['ProjectRoot'] as string | undefined;
     const effectiveProjectRoot: string | null = projectRootFromUnity ?? projectRoot;
 
     if (effectiveProjectRoot === null) {
-      if (immediateResult !== undefined) {
-        spinner.stop();
-        restoreStdin();
-        checkServerVersion(immediateResult);
-        console.log(JSON.stringify(stripInternalFields(immediateResult), null, 2));
-        return;
-      }
+      spinner.stop();
+      restoreStdin();
+      checkServerVersion(immediateResult);
+      console.log(JSON.stringify(stripInternalFields(immediateResult), null, 2));
+      return;
     } else {
       spinner.update('Waiting for domain reload to complete...');
       const { outcome, result: storedResult } = await waitForCompileCompletion<

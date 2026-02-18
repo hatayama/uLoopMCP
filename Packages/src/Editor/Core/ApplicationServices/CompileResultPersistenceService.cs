@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
@@ -10,6 +11,11 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class CompileResultPersistenceService
     {
+        // Concurrent clients may still be waiting on recent result files.
+        // Only delete files older than this threshold (longer than the 90-second wait timeout)
+        // to avoid destroying results that active waiters need.
+        private static readonly TimeSpan StaleResultThreshold = TimeSpan.FromMinutes(2);
+
         private static string ProjectRootPath => Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
         private static string CompileResultDirectoryPath => Path.Combine(
             ProjectRootPath,
@@ -18,7 +24,7 @@ namespace io.github.hatayama.uLoopMCP
             McpConstants.COMPILE_RESULTS_DIR
         );
 
-        public static void ClearAllStoredResults()
+        public static void ClearStaleResults()
         {
             if (!Directory.Exists(CompileResultDirectoryPath))
             {
@@ -27,9 +33,15 @@ namespace io.github.hatayama.uLoopMCP
 
             string searchPattern = $"*{McpConstants.JSON_FILE_EXTENSION}";
             string[] resultFiles = Directory.GetFiles(CompileResultDirectoryPath, searchPattern);
+            DateTime staleThreshold = DateTime.UtcNow - StaleResultThreshold;
+
             foreach (string resultFilePath in resultFiles)
             {
-                File.Delete(resultFilePath);
+                FileInfo fileInfo = new FileInfo(resultFilePath);
+                if (fileInfo.LastWriteTimeUtc < staleThreshold)
+                {
+                    File.Delete(resultFilePath);
+                }
             }
         }
 

@@ -29586,15 +29586,20 @@ var DynamicUnityCommandTool = class _DynamicUnityCommandTool extends BaseTool {
           isError: this.isUnityFailureResult(immediateResult)
         };
       }
+      if (executionError !== void 0) {
+        throw this.toError(executionError);
+      }
+      if (this.isUnityNotReadyResponse(immediateResult)) {
+        throw new Error(
+          typeof immediateResult === "string" ? immediateResult : "Unity is not ready to accept requests."
+        );
+      }
       const projectRootFromUnity = this.extractProjectRoot(immediateResult);
       const storedResult = await this.waitForStoredCompileResult(
         compileContext.requestId ?? "",
         projectRootFromUnity
       );
       const finalResult = storedResult ?? immediateResult;
-      if (finalResult === void 0 && executionError !== void 0) {
-        throw this.toError(executionError);
-      }
       if (finalResult === void 0) {
         throw new Error(
           "Compile result was unavailable after domain reload. Run compile again or use get-logs."
@@ -29690,6 +29695,12 @@ var DynamicUnityCommandTool = class _DynamicUnityCommandTool extends BaseTool {
       return new Error(error2);
     }
     return new Error("Unknown error");
+  }
+  isUnityNotReadyResponse(result) {
+    if (typeof result !== "string") {
+      return false;
+    }
+    return result.includes("Waiting for Unity to be ready");
   }
   isUnityFailureResult(result) {
     if (typeof result !== "object" || result === null) {

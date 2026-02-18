@@ -128,7 +128,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             Debug.Assert(parameters != null, "parameters must not be null");
 
-            CompileResultPersistenceService.ClearAllStoredResults();
+            CompileResultPersistenceService.ClearStaleResults();
 
             if (!parameters.WaitForDomainReload)
             {
