@@ -55,6 +55,10 @@ namespace io.github.hatayama.uLoopMCP
                 Directory.CreateDirectory(CompileResultDirectoryPath);
             }
 
+            string sanitizedFileName = Path.GetFileName(requestId);
+            Debug.Assert(sanitizedFileName == requestId,
+                $"requestId must not contain path separators: '{requestId}'");
+
             string resultJson = JsonConvert.SerializeObject(response, Formatting.None);
             string fileName = $"{requestId}{McpConstants.JSON_FILE_EXTENSION}";
             string filePath = Path.Combine(CompileResultDirectoryPath, fileName);

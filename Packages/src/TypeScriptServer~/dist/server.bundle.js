@@ -29320,9 +29320,11 @@ var BaseTool = class {
 };
 
 // src/compile/compile-domain-reload-helpers.ts
+import assert2 from "node:assert";
 import { existsSync as existsSync2, readFileSync } from "fs";
 import * as net2 from "net";
 import { join as join3 } from "path";
+var SAFE_REQUEST_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 var COMPILE_WAIT_FOR_DOMAIN_RELOAD_ARG_KEYS = [
   "WaitForDomainReload",
   "waitForDomainReload",
@@ -29356,13 +29358,19 @@ function createCompileRequestId() {
 function ensureCompileRequestId(args) {
   const existingRequestId = args["RequestId"];
   if (typeof existingRequestId === "string" && existingRequestId.length > 0) {
-    return existingRequestId;
+    if (SAFE_REQUEST_ID_PATTERN.test(existingRequestId)) {
+      return existingRequestId;
+    }
   }
   const requestId = createCompileRequestId();
   args["RequestId"] = requestId;
   return requestId;
 }
 function getCompileResultFilePath(projectRoot, requestId) {
+  assert2(
+    SAFE_REQUEST_ID_PATTERN.test(requestId),
+    `requestId contains unsafe characters: '${requestId}'`
+  );
   return join3(projectRoot, "Temp", "uLoopMCP", "compile-results", `${requestId}.json`);
 }
 function isUnityBusyByLockFiles(projectRoot) {
@@ -29589,11 +29597,6 @@ var DynamicUnityCommandTool = class _DynamicUnityCommandTool extends BaseTool {
       if (executionError !== void 0) {
         throw this.toError(executionError);
       }
-      if (this.isUnityNotReadyResponse(immediateResult)) {
-        throw new Error(
-          typeof immediateResult === "string" ? immediateResult : "Unity is not ready to accept requests."
-        );
-      }
       const projectRootFromUnity = this.extractProjectRoot(immediateResult);
       const storedResult = await this.waitForStoredCompileResult(
         compileContext.requestId ?? "",
@@ -29695,12 +29698,6 @@ var DynamicUnityCommandTool = class _DynamicUnityCommandTool extends BaseTool {
       return new Error(error2);
     }
     return new Error("Unknown error");
-  }
-  isUnityNotReadyResponse(result) {
-    if (typeof result !== "string") {
-      return false;
-    }
-    return result.includes("Waiting for Unity to be ready");
   }
   isUnityFailureResult(result) {
     if (typeof result !== "object" || result === null) {

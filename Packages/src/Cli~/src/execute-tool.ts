@@ -237,50 +237,49 @@ export async function executeToolCommand(
   }
 
   if (shouldWaitForDomainReload && compileRequestId) {
-    // Fail fast: request never reached Unity after all retries.
-    if (immediateResult === undefined) {
+    const projectRootFromUnity: string | undefined =
+      immediateResult !== undefined
+        ? (immediateResult['ProjectRoot'] as string | undefined)
+        : undefined;
+    const effectiveProjectRoot: string | null = projectRootFromUnity ?? projectRoot;
+
+    if (effectiveProjectRoot === null) {
       spinner.stop();
       restoreStdin();
+      if (immediateResult !== undefined) {
+        checkServerVersion(immediateResult);
+        console.log(JSON.stringify(stripInternalFields(immediateResult), null, 2));
+        return;
+      }
       if (lastError instanceof Error) {
         throw lastError;
       }
       throw new Error('Compile request did not reach Unity. Check connection and retry.');
     }
 
-    const projectRootFromUnity = immediateResult['ProjectRoot'] as string | undefined;
-    const effectiveProjectRoot: string | null = projectRootFromUnity ?? projectRoot;
+    spinner.update('Waiting for domain reload to complete...');
+    const { outcome, result: storedResult } = await waitForCompileCompletion<
+      Record<string, unknown>
+    >({
+      projectRoot: effectiveProjectRoot,
+      requestId: compileRequestId,
+      timeoutMs: COMPILE_WAIT_TIMEOUT_MS,
+      pollIntervalMs: COMPILE_WAIT_POLL_INTERVAL_MS,
+      unityPort: port,
+    });
 
-    if (effectiveProjectRoot === null) {
-      spinner.stop();
-      restoreStdin();
-      checkServerVersion(immediateResult);
-      console.log(JSON.stringify(stripInternalFields(immediateResult), null, 2));
-      return;
+    if (outcome === 'timed_out') {
+      lastError = new Error(
+        `Compile wait timed out after ${COMPILE_WAIT_TIMEOUT_MS}ms. Run 'uloop fix' and retry.`,
+      );
     } else {
-      spinner.update('Waiting for domain reload to complete...');
-      const { outcome, result: storedResult } = await waitForCompileCompletion<
-        Record<string, unknown>
-      >({
-        projectRoot: effectiveProjectRoot,
-        requestId: compileRequestId,
-        timeoutMs: COMPILE_WAIT_TIMEOUT_MS,
-        pollIntervalMs: COMPILE_WAIT_POLL_INTERVAL_MS,
-        unityPort: port,
-      });
-
-      if (outcome === 'timed_out') {
-        lastError = new Error(
-          `Compile wait timed out after ${COMPILE_WAIT_TIMEOUT_MS}ms. Run 'uloop fix' and retry.`,
-        );
-      } else {
-        const finalResult = storedResult ?? immediateResult;
-        if (finalResult !== undefined) {
-          spinner.stop();
-          restoreStdin();
-          checkServerVersion(finalResult);
-          console.log(JSON.stringify(stripInternalFields(finalResult), null, 2));
-          return;
-        }
+      const finalResult = storedResult ?? immediateResult;
+      if (finalResult !== undefined) {
+        spinner.stop();
+        restoreStdin();
+        checkServerVersion(finalResult);
+        console.log(JSON.stringify(stripInternalFields(finalResult), null, 2));
+        return;
       }
     }
   }

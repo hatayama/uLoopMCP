@@ -1,6 +1,10 @@
+import assert from 'node:assert';
 import { existsSync, readFileSync } from 'fs';
 import * as net from 'net';
 import { join } from 'path';
+
+// Only alphanumeric, underscore, and hyphen — blocks path separators and traversal sequences
+export const SAFE_REQUEST_ID_PATTERN: RegExp = /^[a-zA-Z0-9_-]+$/;
 
 export const COMPILE_FORCE_RECOMPILE_ARG_KEYS = [
   'ForceRecompile',
@@ -106,15 +110,21 @@ export function createCompileRequestId(): string {
 export function ensureCompileRequestId(args: Record<string, unknown>): string {
   const existingRequestId = args['RequestId'];
   if (typeof existingRequestId === 'string' && existingRequestId.length > 0) {
-    return existingRequestId;
+    if (SAFE_REQUEST_ID_PATTERN.test(existingRequestId)) {
+      return existingRequestId;
+    }
   }
 
-  const requestId = createCompileRequestId();
+  const requestId: string = createCompileRequestId();
   args['RequestId'] = requestId;
   return requestId;
 }
 
 export function getCompileResultFilePath(projectRoot: string, requestId: string): string {
+  assert(
+    SAFE_REQUEST_ID_PATTERN.test(requestId),
+    `requestId contains unsafe characters: '${requestId}'`,
+  );
   return join(projectRoot, 'Temp', 'uLoopMCP', 'compile-results', `${requestId}.json`);
 }
 

@@ -234,15 +234,6 @@ export class DynamicUnityCommandTool extends BaseTool {
         throw this.toError(executionError);
       }
 
-      // Fail fast: Unity returned a guidance string instead of processing the request.
-      if (this.isUnityNotReadyResponse(immediateResult)) {
-        throw new Error(
-          typeof immediateResult === 'string'
-            ? immediateResult
-            : 'Unity is not ready to accept requests.',
-        );
-      }
-
       const projectRootFromUnity = this.extractProjectRoot(immediateResult);
       const storedResult = await this.waitForStoredCompileResult(
         compileContext.requestId ?? '',
@@ -373,14 +364,6 @@ export class DynamicUnityCommandTool extends BaseTool {
     }
 
     return new Error('Unknown error');
-  }
-
-  private isUnityNotReadyResponse(result: unknown): boolean {
-    if (typeof result !== 'string') {
-      return false;
-    }
-
-    return result.includes('Waiting for Unity to be ready');
   }
 
   private isUnityFailureResult(result: unknown): boolean {

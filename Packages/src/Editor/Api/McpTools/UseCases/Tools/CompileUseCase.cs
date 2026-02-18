@@ -135,12 +135,26 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(parameters.RequestId))
+            if (!string.IsNullOrWhiteSpace(parameters.RequestId) && IsRequestIdSafe(parameters.RequestId))
             {
                 return;
             }
 
             parameters.RequestId = CreateRequestId();
+        }
+
+        private static bool IsRequestIdSafe(string requestId)
+        {
+            foreach (char c in requestId)
+            {
+                bool isSafe = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+                              || (c >= '0' && c <= '9') || c == '_' || c == '-';
+                if (!isSafe)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         private static CompileResponse PersistResponseIfNeeded(CompileSchema parameters, CompileResponse response)
