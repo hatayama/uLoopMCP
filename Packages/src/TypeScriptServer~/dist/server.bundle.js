@@ -29321,6 +29321,7 @@ var BaseTool = class {
 
 // src/compile/compile-domain-reload-helpers.ts
 import { existsSync as existsSync2, readFileSync } from "fs";
+import * as net2 from "net";
 import { join as join3 } from "path";
 var COMPILE_WAIT_FOR_DOMAIN_RELOAD_ARG_KEYS = [
   "WaitForDomainReload",
@@ -29403,11 +29404,17 @@ async function waitForCompileCompletion(options) {
       }
       const idleDuration = waitedMs - idleSinceMs;
       if (idleDuration >= LOCK_GRACE_PERIOD_MS) {
-        if (!options.isUnityReadyWhenIdle) {
-          return { outcome: "completed", result };
-        }
-        const isReady = await options.isUnityReadyWhenIdle();
-        if (isReady) {
+        if (options.unityPort !== void 0) {
+          const isReady = await canConnectToUnity(options.unityPort);
+          if (isReady) {
+            return { outcome: "completed", result };
+          }
+        } else if (options.isUnityReadyWhenIdle) {
+          const isReady = await options.isUnityReadyWhenIdle();
+          if (isReady) {
+            return { outcome: "completed", result };
+          }
+        } else {
           return { outcome: "completed", result };
         }
       }
@@ -29422,6 +29429,26 @@ async function waitForCompileCompletion(options) {
     return { outcome: "completed", result: lastResult };
   }
   return { outcome: "timed_out" };
+}
+var TCP_CHECK_TIMEOUT_MS = 500;
+var DEFAULT_HOST = "127.0.0.1";
+function canConnectToUnity(port) {
+  return new Promise((resolve4) => {
+    const socket = new net2.Socket();
+    const timer = setTimeout(() => {
+      socket.destroy();
+      resolve4(false);
+    }, TCP_CHECK_TIMEOUT_MS);
+    socket.connect(port, DEFAULT_HOST, () => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolve4(true);
+    });
+    socket.on("error", () => {
+      clearTimeout(timer);
+      resolve4(false);
+    });
+  });
 }
 function sleep(ms) {
   return new Promise((resolve4) => setTimeout(resolve4, ms));
@@ -29612,7 +29639,11 @@ var DynamicUnityCommandTool = class _DynamicUnityCommandTool extends BaseTool {
       projectRoot,
       requestId,
       timeoutMs: _DynamicUnityCommandTool.COMPILE_WAIT_TIMEOUT_MS,
-      pollIntervalMs: _DynamicUnityCommandTool.COMPILE_WAIT_POLL_INTERVAL_MS
+      pollIntervalMs: _DynamicUnityCommandTool.COMPILE_WAIT_POLL_INTERVAL_MS,
+      isUnityReadyWhenIdle: () => {
+        const isConnected = this.context.unityClient.connected;
+        return Promise.resolve(isConnected);
+      }
     });
     if (outcome === "timed_out") {
       throw new Error(

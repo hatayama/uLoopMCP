@@ -42,6 +42,7 @@ export interface ToolResponse {
  * Unity client interface for tool execution
  */
 export interface UnityClient {
+  readonly connected: boolean;
   executeTool(toolName: string, params?: Record<string, unknown>): Promise<unknown>;
 }
 

@@ -299,6 +299,10 @@ export class DynamicUnityCommandTool extends BaseTool {
       requestId,
       timeoutMs: DynamicUnityCommandTool.COMPILE_WAIT_TIMEOUT_MS,
       pollIntervalMs: DynamicUnityCommandTool.COMPILE_WAIT_POLL_INTERVAL_MS,
+      isUnityReadyWhenIdle: () => {
+        const isConnected: boolean = this.context.unityClient.connected;
+        return Promise.resolve(isConnected);
+      },
     });
 
     if (outcome === 'timed_out') {

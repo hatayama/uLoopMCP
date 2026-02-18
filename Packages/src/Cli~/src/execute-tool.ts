@@ -88,18 +88,6 @@ function getCompileExecutionOptions(
   return resolveCompileExecutionOptions(params);
 }
 
-async function canConnectToUnity(port: number): Promise<boolean> {
-  const client = new DirectUnityClient(port);
-  try {
-    await client.connect();
-    return true;
-  } catch {
-    return false;
-  } finally {
-    client.disconnect();
-  }
-}
-
 function isRetryableError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
@@ -276,9 +264,7 @@ export async function executeToolCommand(
         requestId: compileRequestId,
         timeoutMs: COMPILE_WAIT_TIMEOUT_MS,
         pollIntervalMs: COMPILE_WAIT_POLL_INTERVAL_MS,
-        isUnityReadyWhenIdle: async () => {
-          return await canConnectToUnity(port);
-        },
+        unityPort: port,
       });
 
       if (outcome === 'timed_out') {

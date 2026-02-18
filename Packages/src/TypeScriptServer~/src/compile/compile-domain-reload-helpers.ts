@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'fs';
+import * as net from 'net';
 import { join } from 'path';
 
 export const COMPILE_FORCE_RECOMPILE_ARG_KEYS = [
@@ -49,6 +50,7 @@ export interface CompileCompletionWaitOptions {
   requestId: string;
   timeoutMs: number;
   pollIntervalMs: number;
+  unityPort?: number;
   isUnityReadyWhenIdle?: () => Promise<boolean>;
 }
 
@@ -230,12 +232,17 @@ export async function waitForCompileCompletion<T>(
 
       const idleDuration = waitedMs - idleSinceMs;
       if (idleDuration >= LOCK_GRACE_PERIOD_MS) {
-        if (!options.isUnityReadyWhenIdle) {
-          return { outcome: 'completed', result };
-        }
-
-        const isReady = await options.isUnityReadyWhenIdle();
-        if (isReady) {
+        if (options.unityPort !== undefined) {
+          const isReady = await canConnectToUnity(options.unityPort);
+          if (isReady) {
+            return { outcome: 'completed', result };
+          }
+        } else if (options.isUnityReadyWhenIdle) {
+          const isReady = await options.isUnityReadyWhenIdle();
+          if (isReady) {
+            return { outcome: 'completed', result };
+          }
+        } else {
           return { outcome: 'completed', result };
         }
       }
@@ -253,6 +260,30 @@ export async function waitForCompileCompletion<T>(
   }
 
   return { outcome: 'timed_out' };
+}
+
+const TCP_CHECK_TIMEOUT_MS = 500;
+const DEFAULT_HOST = '127.0.0.1';
+
+function canConnectToUnity(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    const timer = setTimeout(() => {
+      socket.destroy();
+      resolve(false);
+    }, TCP_CHECK_TIMEOUT_MS);
+
+    socket.connect(port, DEFAULT_HOST, () => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolve(true);
+    });
+
+    socket.on('error', () => {
+      clearTimeout(timer);
+      resolve(false);
+    });
+  });
 }
 
 export function sleep(ms: number): Promise<void> {
