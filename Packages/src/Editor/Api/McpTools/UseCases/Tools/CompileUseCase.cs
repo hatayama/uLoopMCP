@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Linq;
@@ -151,6 +152,8 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return response;
             }
+
+            response.ProjectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
 
             if (string.IsNullOrWhiteSpace(parameters.RequestId))
             {

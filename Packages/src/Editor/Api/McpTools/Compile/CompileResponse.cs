@@ -66,6 +66,13 @@ namespace io.github.hatayama.uLoopMCP
         public string Message { get; set; }
 
         /// <summary>
+        /// Unity project root path (from Application.dataPath).
+        /// Set only when WaitForDomainReload=true so that TS/CLI can locate lock files
+        /// in the correct project even when connected to a remote Unity instance.
+        /// </summary>
+        public string ProjectRoot { get; set; }
+
+        /// <summary>
         /// Create a new CompileResponse
         /// </summary>
         public CompileResponse(

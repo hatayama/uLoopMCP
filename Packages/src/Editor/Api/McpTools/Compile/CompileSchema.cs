@@ -17,7 +17,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Whether to wait for domain reload completion before the caller returns.
         /// </summary>
-        [Description("Whether to wait for domain reload completion before returning. Effective only when ForceRecompile is true.")]
+        [Description("Whether to wait for domain reload completion before returning.")]
         public bool WaitForDomainReload { get; set; } = false;
 
         /// <summary>

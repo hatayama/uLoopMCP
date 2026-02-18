@@ -1,8 +1,12 @@
 import { BaseTool } from './base-tool.js';
 import { ToolContext, ToolResponse } from '../types/tool-types.js';
 import { PARAMETER_SCHEMA } from '../constants.js';
-import * as fs from 'fs';
-import * as path from 'path';
+import {
+  COMPILE_WAIT_FOR_DOMAIN_RELOAD_ARG_KEYS,
+  ensureCompileRequestId,
+  getCompileBooleanArg,
+  waitForCompileCompletion,
+} from '../compile/compile-domain-reload-helpers.js';
 import { VibeLogger } from '../utils/vibe-logger.js';
 
 // Type definitions for Unity parameter schema
@@ -45,8 +49,8 @@ interface CompileExecutionContext {
  * - BaseTool: Base class providing common tool functionality
  */
 export class DynamicUnityCommandTool extends BaseTool {
-  private static readonly DOMAIN_RELOAD_WAIT_TIMEOUT_MS = 10000;
-  private static readonly DOMAIN_RELOAD_WAIT_POLL_INTERVAL_MS = 100;
+  private static readonly COMPILE_WAIT_TIMEOUT_MS = 90000;
+  private static readonly COMPILE_WAIT_POLL_INTERVAL_MS = 100;
 
   public readonly name: string;
   public readonly description: string;
@@ -208,7 +212,7 @@ export class DynamicUnityCommandTool extends BaseTool {
 
       if (!compileContext.shouldWaitForDomainReload) {
         if (executionError !== undefined) {
-          throw executionError;
+          throw this.toError(executionError);
         }
 
         return {
@@ -225,10 +229,14 @@ export class DynamicUnityCommandTool extends BaseTool {
         };
       }
 
-      const storedResult = await this.waitForStoredCompileResult(compileContext.requestId ?? '');
+      const projectRootFromUnity = this.extractProjectRoot(immediateResult);
+      const storedResult = await this.waitForStoredCompileResult(
+        compileContext.requestId ?? '',
+        projectRootFromUnity,
+      );
       const finalResult = storedResult ?? immediateResult;
       if (finalResult === undefined && executionError !== undefined) {
-        throw executionError;
+        throw this.toError(executionError);
       }
 
       if (finalResult === undefined) {
@@ -237,144 +245,119 @@ export class DynamicUnityCommandTool extends BaseTool {
         );
       }
 
+      const cleanedResult = this.stripInternalFields(finalResult);
+
       return {
         content: [
           {
             type: 'text',
-            text: typeof finalResult === 'string' ? finalResult : JSON.stringify(finalResult, null, 2),
+            text:
+              typeof cleanedResult === 'string'
+                ? cleanedResult
+                : JSON.stringify(cleanedResult, null, 2),
           },
         ],
         // Treat Unity-side failure responses as MCP tool errors.
         // Otherwise tools that return { Success: false, ... } appear as "success" in MCP Inspector.
-        isError: this.isUnityFailureResult(finalResult),
+        isError: this.isUnityFailureResult(cleanedResult),
       };
     } catch (error) {
       return this.formatErrorResponse(error);
     }
   }
 
-  private prepareCompileExecutionContext(actualArgs: Record<string, unknown>): CompileExecutionContext {
+  private prepareCompileExecutionContext(
+    actualArgs: Record<string, unknown>,
+  ): CompileExecutionContext {
     if (this.toolName !== 'compile') {
       return { shouldWaitForDomainReload: false };
     }
 
-    const forceRecompile = this.toBoolean(actualArgs['ForceRecompile']);
-    const waitForDomainReload = this.toBoolean(actualArgs['WaitForDomainReload']);
-    const shouldWaitForDomainReload = forceRecompile && waitForDomainReload;
-
-    if (!shouldWaitForDomainReload) {
+    const waitForDomainReload = getCompileBooleanArg(
+      actualArgs,
+      COMPILE_WAIT_FOR_DOMAIN_RELOAD_ARG_KEYS,
+    );
+    if (!waitForDomainReload) {
       return { shouldWaitForDomainReload: false };
     }
 
-    const requestId = this.ensureCompileRequestId(actualArgs);
+    const requestId = ensureCompileRequestId(actualArgs);
     return {
       shouldWaitForDomainReload: true,
       requestId,
     };
   }
 
-  private toBoolean(value: unknown): boolean {
-    if (typeof value === 'boolean') {
-      return value;
-    }
+  private async waitForStoredCompileResult(
+    requestId: string,
+    projectRootFromUnity: string | undefined,
+  ): Promise<unknown> {
+    const projectRoot = projectRootFromUnity ?? this.resolveProjectRoot();
 
-    if (typeof value === 'string') {
-      return value.toLowerCase() === 'true';
-    }
+    const { outcome, result } = await waitForCompileCompletion<unknown>({
+      projectRoot,
+      requestId,
+      timeoutMs: DynamicUnityCommandTool.COMPILE_WAIT_TIMEOUT_MS,
+      pollIntervalMs: DynamicUnityCommandTool.COMPILE_WAIT_POLL_INTERVAL_MS,
+    });
 
-    return false;
-  }
-
-  private ensureCompileRequestId(actualArgs: Record<string, unknown>): string {
-    const existingRequestId = actualArgs['RequestId'];
-    if (typeof existingRequestId === 'string' && existingRequestId.length > 0) {
-      return existingRequestId;
-    }
-
-    const requestId = this.createCompileRequestId();
-    actualArgs['RequestId'] = requestId;
-    return requestId;
-  }
-
-  private createCompileRequestId(): string {
-    const timestamp = Date.now();
-    const randomToken = Math.floor(Math.random() * 1000000)
-      .toString()
-      .padStart(6, '0');
-    return `compile_${timestamp}_${randomToken}`;
-  }
-
-  private async waitForStoredCompileResult(requestId: string): Promise<unknown | undefined> {
-    const projectRoot = VibeLogger.getProjectRoot();
-    const resultFilePath = this.getCompileResultFilePath(projectRoot, requestId);
-
-    let waitedMs = 0;
-    let busyObserved = false;
-
-    while (waitedMs < DynamicUnityCommandTool.DOMAIN_RELOAD_WAIT_TIMEOUT_MS) {
-      const isBusy = this.isUnityBusyByLockFiles(projectRoot);
-      if (isBusy) {
-        busyObserved = true;
-      }
-
-      const storedResult = this.tryReadCompileResult(resultFilePath);
-      if (storedResult !== undefined && busyObserved && !isBusy) {
-        return storedResult;
-      }
-
-      await this.sleep(DynamicUnityCommandTool.DOMAIN_RELOAD_WAIT_POLL_INTERVAL_MS);
-      waitedMs += DynamicUnityCommandTool.DOMAIN_RELOAD_WAIT_POLL_INTERVAL_MS;
-    }
-
-    if (!busyObserved) {
+    if (outcome === 'timed_out') {
       throw new Error(
-        `Domain reload was not detected within ${DynamicUnityCommandTool.DOMAIN_RELOAD_WAIT_TIMEOUT_MS}ms for request '${requestId}'.`,
+        `Compile wait timed out after ${DynamicUnityCommandTool.COMPILE_WAIT_TIMEOUT_MS}ms for request '${requestId}'.`,
       );
     }
 
-    throw new Error(
-      `Domain reload wait timed out after ${DynamicUnityCommandTool.DOMAIN_RELOAD_WAIT_TIMEOUT_MS}ms for request '${requestId}'.`,
-    );
+    return result;
   }
 
-  private isUnityBusyByLockFiles(projectRoot: string): boolean {
-    const compilingLockPath = path.join(projectRoot, 'Temp', 'compiling.lock');
-    if (fs.existsSync(compilingLockPath)) {
-      return true;
+  private stripInternalFields(result: unknown): unknown {
+    if (typeof result !== 'object' || result === null) {
+      return result;
     }
 
-    const domainReloadLockPath = path.join(projectRoot, 'Temp', 'domainreload.lock');
-    if (fs.existsSync(domainReloadLockPath)) {
-      return true;
+    const obj = result as Record<string, unknown>;
+    if (!('ProjectRoot' in obj)) {
+      return result;
     }
 
-    const serverStartingLockPath = path.join(projectRoot, 'Temp', 'serverstarting.lock');
-    return fs.existsSync(serverStartingLockPath);
+    const cleaned = { ...obj };
+    delete cleaned['ProjectRoot'];
+    return cleaned;
   }
 
-  private getCompileResultFilePath(projectRoot: string, requestId: string): string {
-    return path.join(projectRoot, 'Temp', 'uLoopMCP', 'compile-results', `${requestId}.json`);
-  }
-
-  private tryReadCompileResult(resultFilePath: string): unknown | undefined {
-    if (!fs.existsSync(resultFilePath)) {
+  private extractProjectRoot(result: unknown): string | undefined {
+    if (typeof result !== 'object' || result === null) {
       return undefined;
     }
 
-    const content = fs.readFileSync(resultFilePath, 'utf-8');
-    return JSON.parse(this.stripUtf8Bom(content)) as unknown;
-  }
-
-  private stripUtf8Bom(content: string): string {
-    if (content.charCodeAt(0) === 0xfeff) {
-      return content.slice(1);
+    const obj = result as Record<string, unknown>;
+    const projectRoot = obj['ProjectRoot'];
+    if (typeof projectRoot === 'string' && projectRoot.length > 0) {
+      return projectRoot;
     }
 
-    return content;
+    return undefined;
   }
 
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+  private resolveProjectRoot(): string {
+    const logger = VibeLogger as unknown as { getProjectRoot?: () => string };
+    if (typeof logger.getProjectRoot === 'function') {
+      return logger.getProjectRoot();
+    }
+
+    return process.cwd();
+  }
+
+  private toError(error: unknown): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+
+    if (typeof error === 'string') {
+      return new Error(error);
+    }
+
+    return new Error('Unknown error');
   }
 
   private isUnityFailureResult(result: unknown): boolean {

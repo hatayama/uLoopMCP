@@ -21,7 +21,7 @@
 - **説明**: AssetDatabase.Refresh()を実行後、コンパイルを行います。詳細なタイミング情報付きでコンパイル結果を返します。
 - **パラメータ**:
   - `ForceRecompile` (boolean): 強制再コンパイルを実行するかどうか（デフォルト: false）
-  - `WaitForDomainReload` (boolean): Domain Reload完了まで待機するかどうか（`ForceRecompile=true` のときのみ有効、デフォルト: false）
+  - `WaitForDomainReload` (boolean): Domain Reload完了まで待機するかどうか（デフォルト: false）
 - **レスポンス**:
   - `Success` (boolean): コンパイルが成功したかどうか
   - `ErrorCount` (number): エラーの総数

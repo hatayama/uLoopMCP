@@ -8,7 +8,7 @@
 /* eslint-disable no-console, security/detect-object-injection, security/detect-non-literal-fs-filename */
 
 import * as readline from 'readline';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import * as semver from 'semver';
 import { DirectUnityClient } from './direct-unity-client.js';
@@ -17,6 +17,13 @@ import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './
 import { VERSION } from './version.js';
 import { createSpinner } from './spinner.js';
 import { findUnityProjectRoot } from './project-root.js';
+import {
+  type CompileExecutionOptions,
+  ensureCompileRequestId,
+  resolveCompileExecutionOptions,
+  sleep,
+  waitForCompileCompletion,
+} from '../../TypeScriptServer~/src/compile/compile-domain-reload-helpers.js';
 
 /**
  * Suppress stdin echo during async operation to prevent escape sequences from being displayed.
@@ -56,27 +63,16 @@ export interface GlobalOptions {
   port?: string;
 }
 
+function stripInternalFields(result: Record<string, unknown>): Record<string, unknown> {
+  const cleaned = { ...result };
+  delete cleaned['ProjectRoot'];
+  return cleaned;
+}
+
 const RETRY_DELAY_MS = 500;
 const MAX_RETRIES = 3;
-const DOMAIN_RELOAD_WAIT_TIMEOUT_MS = 10000;
-const DOMAIN_RELOAD_WAIT_POLL_INTERVAL_MS = 100;
-
-interface CompileExecutionOptions {
-  forceRecompile: boolean;
-  waitForDomainReload: boolean;
-}
-
-function toBoolean(value: unknown): boolean {
-  if (typeof value === 'boolean') {
-    return value;
-  }
-
-  if (typeof value === 'string') {
-    return value.toLowerCase() === 'true';
-  }
-
-  return false;
-}
+const COMPILE_WAIT_TIMEOUT_MS = 90000;
+const COMPILE_WAIT_POLL_INTERVAL_MS = 100;
 
 function getCompileExecutionOptions(
   toolName: string,
@@ -89,48 +85,7 @@ function getCompileExecutionOptions(
     };
   }
 
-  return {
-    forceRecompile: toBoolean(params['ForceRecompile']),
-    waitForDomainReload: toBoolean(params['WaitForDomainReload']),
-  };
-}
-
-function createCompileRequestId(): string {
-  const timestamp = Date.now();
-  const randomToken = Math.floor(Math.random() * 1000000)
-    .toString()
-    .padStart(6, '0');
-  return `compile_${timestamp}_${randomToken}`;
-}
-
-function ensureCompileRequestId(params: Record<string, unknown>): string {
-  const existingRequestId = params['RequestId'];
-  if (typeof existingRequestId === 'string' && existingRequestId.length > 0) {
-    return existingRequestId;
-  }
-
-  const requestId = createCompileRequestId();
-  params['RequestId'] = requestId;
-  return requestId;
-}
-
-function getCompileResultFilePath(projectRoot: string, requestId: string): string {
-  return join(projectRoot, 'Temp', 'uLoopMCP', 'compile-results', `${requestId}.json`);
-}
-
-function isUnityBusyByLockFiles(projectRoot: string): boolean {
-  const compilingLock = join(projectRoot, 'Temp', 'compiling.lock');
-  if (existsSync(compilingLock)) {
-    return true;
-  }
-
-  const domainReloadLock = join(projectRoot, 'Temp', 'domainreload.lock');
-  if (existsSync(domainReloadLock)) {
-    return true;
-  }
-
-  const serverStartingLock = join(projectRoot, 'Temp', 'serverstarting.lock');
-  return existsSync(serverStartingLock);
+  return resolveCompileExecutionOptions(params);
 }
 
 async function canConnectToUnity(port: number): Promise<boolean> {
@@ -143,68 +98,6 @@ async function canConnectToUnity(port: number): Promise<boolean> {
   } finally {
     client.disconnect();
   }
-}
-
-function tryReadCompileResult(
-  projectRoot: string,
-  requestId: string,
-): Record<string, unknown> | undefined {
-  const resultFilePath = getCompileResultFilePath(projectRoot, requestId);
-  if (!existsSync(resultFilePath)) {
-    return undefined;
-  }
-
-  const content = readFileSync(resultFilePath, 'utf-8');
-  const parsed = JSON.parse(stripUtf8Bom(content)) as unknown;
-  if (typeof parsed !== 'object' || parsed === null) {
-    throw new Error(`Invalid compile result format: ${resultFilePath}`);
-  }
-
-  return parsed as Record<string, unknown>;
-}
-
-function stripUtf8Bom(content: string): string {
-  if (content.charCodeAt(0) === 0xfeff) {
-    return content.slice(1);
-  }
-
-  return content;
-}
-
-async function waitForDomainReloadToSettle(projectRoot: string, port: number): Promise<void> {
-  let waitedMs = 0;
-  let busyObserved = false;
-
-  while (waitedMs < DOMAIN_RELOAD_WAIT_TIMEOUT_MS) {
-    const isBusy = isUnityBusyByLockFiles(projectRoot);
-    if (isBusy) {
-      busyObserved = true;
-    }
-
-    if (busyObserved && !isBusy) {
-      const reachable = await canConnectToUnity(port);
-      if (reachable) {
-        return;
-      }
-    }
-
-    await sleep(DOMAIN_RELOAD_WAIT_POLL_INTERVAL_MS);
-    waitedMs += DOMAIN_RELOAD_WAIT_POLL_INTERVAL_MS;
-  }
-
-  if (!busyObserved) {
-    throw new Error(
-      `Domain reload was not detected within ${DOMAIN_RELOAD_WAIT_TIMEOUT_MS}ms. Run 'uloop fix' and retry.`,
-    );
-  }
-
-  throw new Error(
-    `Domain reload wait timed out after ${DOMAIN_RELOAD_WAIT_TIMEOUT_MS}ms. Run 'uloop fix' and retry.`,
-  );
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function isRetryableError(error: unknown): boolean {
@@ -306,8 +199,7 @@ export async function executeToolCommand(
   }
   const port = await resolveUnityPort(portNumber);
   const compileOptions = getCompileExecutionOptions(toolName, params);
-  const shouldWaitForDomainReload =
-    compileOptions.forceRecompile && compileOptions.waitForDomainReload;
+  const shouldWaitForDomainReload = compileOptions.waitForDomainReload;
   const compileRequestId = shouldWaitForDomainReload ? ensureCompileRequestId(params) : undefined;
 
   const restoreStdin = suppressStdinEcho();
@@ -337,7 +229,7 @@ export async function executeToolCommand(
         restoreStdin();
 
         checkServerVersion(result);
-        console.log(JSON.stringify(result, null, 2));
+        console.log(JSON.stringify(stripInternalFields(result), null, 2));
         return;
       }
 
@@ -361,30 +253,47 @@ export async function executeToolCommand(
   }
 
   if (shouldWaitForDomainReload && compileRequestId) {
-    if (projectRoot === null) {
+    const projectRootFromUnity =
+      immediateResult !== undefined
+        ? (immediateResult['ProjectRoot'] as string | undefined)
+        : undefined;
+    const effectiveProjectRoot: string | null = projectRootFromUnity ?? projectRoot;
+
+    if (effectiveProjectRoot === null) {
       if (immediateResult !== undefined) {
         spinner.stop();
         restoreStdin();
         checkServerVersion(immediateResult);
-        console.log(JSON.stringify(immediateResult, null, 2));
+        console.log(JSON.stringify(stripInternalFields(immediateResult), null, 2));
         return;
       }
     } else {
-      try {
-        spinner.update('Waiting for domain reload to complete...');
-        await waitForDomainReloadToSettle(projectRoot, port);
+      spinner.update('Waiting for domain reload to complete...');
+      const { outcome, result: storedResult } = await waitForCompileCompletion<
+        Record<string, unknown>
+      >({
+        projectRoot: effectiveProjectRoot,
+        requestId: compileRequestId,
+        timeoutMs: COMPILE_WAIT_TIMEOUT_MS,
+        pollIntervalMs: COMPILE_WAIT_POLL_INTERVAL_MS,
+        isUnityReadyWhenIdle: async () => {
+          return await canConnectToUnity(port);
+        },
+      });
 
-        const storedResult = tryReadCompileResult(projectRoot, compileRequestId);
+      if (outcome === 'timed_out') {
+        lastError = new Error(
+          `Compile wait timed out after ${COMPILE_WAIT_TIMEOUT_MS}ms. Run 'uloop fix' and retry.`,
+        );
+      } else {
         const finalResult = storedResult ?? immediateResult;
         if (finalResult !== undefined) {
           spinner.stop();
           restoreStdin();
           checkServerVersion(finalResult);
-          console.log(JSON.stringify(finalResult, null, 2));
+          console.log(JSON.stringify(stripInternalFields(finalResult), null, 2));
           return;
         }
-      } catch (error) {
-        lastError = error;
       }
     }
   }
