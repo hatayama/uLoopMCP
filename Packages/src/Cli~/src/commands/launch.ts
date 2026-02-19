@@ -14,6 +14,7 @@ import { orchestrateLaunch } from 'launch-unity';
 interface LaunchCommandOptions {
   restart?: boolean;
   quit?: boolean;
+  deleteRecovery?: boolean;
   platform?: string;
   maxDepth?: string;
   addUnityHub?: boolean;
@@ -30,6 +31,7 @@ export function registerLaunchCommand(program: Command): void {
     )
     .argument('[project-path]', 'Path to Unity project')
     .option('-r, --restart', 'Kill running Unity and restart')
+    .option('-d, --delete-recovery', 'Delete Assets/_Recovery before launch')
     .option('-q, --quit', 'Gracefully quit running Unity')
     .option('-p, --platform <platform>', 'Build target (e.g., Android, iOS)')
     .option('--max-depth <n>', 'Search depth when project-path is omitted', '3')
@@ -66,6 +68,7 @@ async function runLaunchCommand(
     unityArgs: [],
     restart: options.restart === true,
     quit: options.quit === true,
+    deleteRecovery: options.deleteRecovery === true,
     addUnityHub: options.addUnityHub === true,
     favoriteUnityHub: options.favorite === true,
   });
