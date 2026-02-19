@@ -29592,10 +29592,10 @@ var DynamicUnityCommandTool = class _DynamicUnityCommandTool extends BaseTool {
         immediateResult = void 0;
         executionError = error2;
       }
+      if (executionError !== void 0) {
+        throw this.toError(executionError);
+      }
       if (!compileContext.shouldWaitForDomainReload) {
-        if (executionError !== void 0) {
-          throw this.toError(executionError);
-        }
         return {
           content: [
             {
@@ -29606,7 +29606,7 @@ var DynamicUnityCommandTool = class _DynamicUnityCommandTool extends BaseTool {
           isError: this.isUnityFailureResult(immediateResult)
         };
       }
-      const projectRootFromUnity = executionError === void 0 ? this.extractProjectRoot(immediateResult) : void 0;
+      const projectRootFromUnity = this.extractProjectRoot(immediateResult);
       const storedResult = await this.waitForStoredCompileResult(
         compileContext.requestId ?? "",
         projectRootFromUnity

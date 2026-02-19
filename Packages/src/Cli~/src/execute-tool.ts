@@ -197,6 +197,14 @@ export async function executeToolCommand(
   let immediateResult: Record<string, unknown> | undefined;
   const projectRoot = findUnityProjectRoot();
 
+  // Monotonically-increasing flag: once true, retries cannot reset it to false.
+  // The retry loop overwrites `lastError` and `immediateResult` on each attempt,
+  // which destroys the evidence of whether an earlier attempt successfully dispatched
+  // the request to Unity. This flag preserves that information across retries.
+  // See: git log cb3d63e..HEAD for the history of oscillating fixes caused by
+  // inferring dispatch status from `immediateResult` alone.
+  let requestDispatched = false;
+
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     checkUnityBusyState();
 
@@ -205,6 +213,10 @@ export async function executeToolCommand(
       await client.connect();
 
       spinner.update(`Executing ${toolName}...`);
+      // connect() succeeded: socket is established. sendRequest() calls socket.write()
+      // synchronously (direct-unity-client.ts:136), so the data reaches the kernel
+      // send buffer before any async error can occur. Safe to mark as dispatched here.
+      requestDispatched = true;
       const result = await client.sendRequest<Record<string, unknown>>(toolName, params);
 
       if (result === undefined || result === null) {
@@ -237,8 +249,27 @@ export async function executeToolCommand(
   }
 
   if (shouldWaitForDomainReload && compileRequestId) {
-    // TCP may drop during domain reload before the JSON-RPC response arrives,
-    // but Unity may have already persisted the result file.
+    // Fail fast when the compile request never reached Unity.
+    // Without this guard, unreachable Unity would cause a 90-second wait for a
+    // result file that will never be created.
+    // We check both conditions because:
+    //  - immediateResult === undefined: no JSON-RPC response was received
+    //  - !requestDispatched: no attempt ever successfully connected and called sendRequest()
+    // If requestDispatched is true but immediateResult is undefined, the request was sent
+    // but the TCP connection dropped before the response arrived (domain reload scenario).
+    // In that case, Unity may have already written the result file, so we proceed to
+    // file-based polling recovery.
+    if (immediateResult === undefined && !requestDispatched) {
+      spinner.stop();
+      restoreStdin();
+      if (lastError instanceof Error) {
+        throw lastError;
+      }
+      throw new Error(
+        'Compile request never reached Unity. Check that Unity is running and retry.',
+      );
+    }
+
     const projectRootFromUnity: string | undefined =
       immediateResult !== undefined
         ? (immediateResult['ProjectRoot'] as string | undefined)

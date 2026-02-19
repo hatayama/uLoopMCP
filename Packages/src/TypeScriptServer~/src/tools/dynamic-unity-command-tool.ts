@@ -210,11 +210,19 @@ export class DynamicUnityCommandTool extends BaseTool {
         executionError = error;
       }
 
-      if (!compileContext.shouldWaitForDomainReload) {
-        if (executionError !== undefined) {
-          throw this.toError(executionError);
-        }
+      // executeTool() uses throw vs return as a design contract (unity-client.ts:452-464):
+      //  - throw: permanent disconnection (never connected, editor quit)
+      //    → request never reached Unity → fail fast
+      //  - return: temporary state or successful response → recovery is possible
+      // When TCP drops *after* sendRequest(), clearPendingRequestsWithSuccess()
+      // (message-handler.ts:259,278) resolves the pending promise with a guidance string,
+      // so executeTool() returns normally — it does NOT throw.
+      // Therefore, executionError !== undefined reliably indicates "request never dispatched".
+      if (executionError !== undefined) {
+        throw this.toError(executionError);
+      }
 
+      if (!compileContext.shouldWaitForDomainReload) {
         return {
           content: [
             {
@@ -229,10 +237,10 @@ export class DynamicUnityCommandTool extends BaseTool {
         };
       }
 
-      // TCP may drop during domain reload before the response arrives,
-      // but Unity may have already persisted the result file.
-      const projectRootFromUnity: string | undefined =
-        executionError === undefined ? this.extractProjectRoot(immediateResult) : undefined;
+      // Both cases below are safe to proceed with file-based recovery:
+      //  - guidance string (domain reload in progress): file may or may not exist yet
+      //  - compile result object (normal response): file exists, will be found immediately
+      const projectRootFromUnity: string | undefined = this.extractProjectRoot(immediateResult);
       const storedResult = await this.waitForStoredCompileResult(
         compileContext.requestId ?? '',
         projectRootFromUnity,
