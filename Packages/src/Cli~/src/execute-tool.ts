@@ -17,6 +17,13 @@ import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './
 import { VERSION } from './version.js';
 import { createSpinner } from './spinner.js';
 import { findUnityProjectRoot } from './project-root.js';
+import {
+  type CompileExecutionOptions,
+  ensureCompileRequestId,
+  resolveCompileExecutionOptions,
+  sleep,
+  waitForCompileCompletion,
+} from './compile-helpers.js';
 
 /**
  * Suppress stdin echo during async operation to prevent escape sequences from being displayed.
@@ -56,11 +63,29 @@ export interface GlobalOptions {
   port?: string;
 }
 
+function stripInternalFields(result: Record<string, unknown>): Record<string, unknown> {
+  const cleaned = { ...result };
+  delete cleaned['ProjectRoot'];
+  return cleaned;
+}
+
 const RETRY_DELAY_MS = 500;
 const MAX_RETRIES = 3;
+const COMPILE_WAIT_TIMEOUT_MS = 90000;
+const COMPILE_WAIT_POLL_INTERVAL_MS = 100;
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function getCompileExecutionOptions(
+  toolName: string,
+  params: Record<string, unknown>,
+): CompileExecutionOptions {
+  if (toolName !== 'compile') {
+    return {
+      forceRecompile: false,
+      waitForDomainReload: false,
+    };
+  }
+
+  return resolveCompileExecutionOptions(params);
 }
 
 function isRetryableError(error: unknown): boolean {
@@ -73,6 +98,18 @@ function isRetryableError(error: unknown): boolean {
     message.includes('EADDRNOTAVAIL') ||
     message === 'UNITY_NO_RESPONSE'
   );
+}
+
+// Distinct from isRetryableError(): that function covers pre-connection failures
+// (ECONNREFUSED, EADDRNOTAVAIL) which cannot occur after dispatch.
+// This function covers post-dispatch TCP failures where Unity may have received
+// the request but the response was lost — file-based recovery is appropriate.
+export function isTransportDisconnectError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const message: string = error.message;
+  return message === 'UNITY_NO_RESPONSE' || message.startsWith('Connection lost:');
 }
 
 /**
@@ -161,11 +198,25 @@ export async function executeToolCommand(
     portNumber = parsed;
   }
   const port = await resolveUnityPort(portNumber);
+  const compileOptions = getCompileExecutionOptions(toolName, params);
+  const shouldWaitForDomainReload = compileOptions.waitForDomainReload;
+  const compileRequestId = shouldWaitForDomainReload ? ensureCompileRequestId(params) : undefined;
 
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
 
   let lastError: unknown;
+  let immediateResult: Record<string, unknown> | undefined;
+  const projectRoot = findUnityProjectRoot();
+
+  // Monotonically-increasing flag: once true, retries cannot reset it to false.
+  // The retry loop overwrites `lastError` and `immediateResult` on each attempt,
+  // which destroys the evidence of whether an earlier attempt successfully dispatched
+  // the request to Unity. This flag preserves that information across retries.
+  // See: git log cb3d63e..HEAD for the history of oscillating fixes caused by
+  // inferring dispatch status from `immediateResult` alone.
+  let requestDispatched = false;
+
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     checkUnityBusyState();
 
@@ -174,24 +225,50 @@ export async function executeToolCommand(
       await client.connect();
 
       spinner.update(`Executing ${toolName}...`);
+      // connect() succeeded: socket is established. sendRequest() calls socket.write()
+      // synchronously (direct-unity-client.ts:136), so the data reaches the kernel
+      // send buffer before any async error can occur. Safe to mark as dispatched here.
+      requestDispatched = true;
       const result = await client.sendRequest<Record<string, unknown>>(toolName, params);
 
       if (result === undefined || result === null) {
         throw new Error('UNITY_NO_RESPONSE');
       }
 
-      // Success - stop spinner and output result
-      spinner.stop();
-      restoreStdin();
+      immediateResult = result;
+      if (!shouldWaitForDomainReload) {
+        spinner.stop();
+        restoreStdin();
 
-      // Check server version and warn if mismatched
-      checkServerVersion(result);
+        checkServerVersion(result);
+        console.log(JSON.stringify(stripInternalFields(result), null, 2));
+        return;
+      }
 
-      console.log(JSON.stringify(result, null, 2));
-      return;
+      break;
     } catch (error) {
       lastError = error;
       client.disconnect();
+
+      // After a compile request has been dispatched, retrying is counterproductive:
+      // the next loop iteration calls checkUnityBusyState() OUTSIDE the try block,
+      // which throws UNITY_DOMAIN_RELOAD during domain reload and escapes the
+      // entire function — bypassing waitForCompileCompletion() recovery.
+      if (requestDispatched && shouldWaitForDomainReload) {
+        if (isTransportDisconnectError(error)) {
+          // Unity may have received the request before the TCP drop.
+          // Break out of retry loop → proceed to file-based recovery below.
+          spinner.update('Connection lost during compile. Waiting for result file...');
+          break;
+        }
+        // JSON-RPC error (e.g. "Unity error: ..."): Unity processed the request
+        // and returned an explicit error. No result file will be written
+        // (confirmed: CompileUseCase.ExecuteAsync() is not reached when
+        // JSON-RPC error occurs at parameter validation / security check).
+        spinner.stop();
+        restoreStdin();
+        throw error instanceof Error ? error : new Error(String(error));
+      }
 
       if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
         break;
@@ -203,9 +280,92 @@ export async function executeToolCommand(
     }
   }
 
+  if (shouldWaitForDomainReload && compileRequestId) {
+    // Fail fast when the compile request never reached Unity.
+    // Without this guard, unreachable Unity would cause a 90-second wait for a
+    // result file that will never be created.
+    // We check both conditions because:
+    //  - immediateResult === undefined: no JSON-RPC response was received
+    //  - !requestDispatched: no attempt ever successfully connected and called sendRequest()
+    // If requestDispatched is true but immediateResult is undefined, the request was sent
+    // but the TCP connection dropped before the response arrived (domain reload scenario).
+    // In that case, Unity may have already written the result file, so we proceed to
+    // file-based polling recovery.
+    if (immediateResult === undefined && !requestDispatched) {
+      spinner.stop();
+      restoreStdin();
+      if (lastError instanceof Error) {
+        throw lastError;
+      }
+      throw new Error(
+        'Compile request never reached Unity. Check that Unity is running and retry.',
+      );
+    }
+
+    const projectRootFromUnity: string | undefined =
+      immediateResult !== undefined
+        ? (immediateResult['ProjectRoot'] as string | undefined)
+        : undefined;
+    const effectiveProjectRoot: string | null = projectRootFromUnity ?? projectRoot;
+
+    // File-based polling requires a known project root
+    if (effectiveProjectRoot === null) {
+      spinner.stop();
+      restoreStdin();
+      if (immediateResult !== undefined) {
+        checkServerVersion(immediateResult);
+        console.log(JSON.stringify(stripInternalFields(immediateResult), null, 2));
+        return;
+      }
+      if (lastError instanceof Error) {
+        throw lastError;
+      }
+      throw new Error(
+        'Compile request failed and project root is unknown. Check connection and retry.',
+      );
+    }
+
+    spinner.update('Waiting for domain reload to complete...');
+    const { outcome, result: storedResult } = await waitForCompileCompletion<
+      Record<string, unknown>
+    >({
+      projectRoot: effectiveProjectRoot,
+      requestId: compileRequestId,
+      timeoutMs: COMPILE_WAIT_TIMEOUT_MS,
+      pollIntervalMs: COMPILE_WAIT_POLL_INTERVAL_MS,
+      unityPort: port,
+    });
+
+    if (outcome === 'timed_out') {
+      lastError = new Error(
+        `Compile wait timed out after ${COMPILE_WAIT_TIMEOUT_MS}ms. Run 'uloop fix' and retry.`,
+      );
+    } else {
+      const finalResult = storedResult ?? immediateResult;
+      if (finalResult !== undefined) {
+        spinner.stop();
+        restoreStdin();
+        checkServerVersion(finalResult);
+        console.log(JSON.stringify(stripInternalFields(finalResult), null, 2));
+        return;
+      }
+    }
+  }
+
   spinner.stop();
   restoreStdin();
-  throw lastError;
+  if (lastError === undefined) {
+    throw new Error('Tool execution failed without error details.');
+  }
+  if (lastError instanceof Error) {
+    throw lastError;
+  }
+  if (typeof lastError === 'string') {
+    throw new Error(lastError);
+  }
+
+  const serializedError = JSON.stringify(lastError);
+  throw new Error(serializedError ?? 'Unknown error');
 }
 
 export async function listAvailableTools(globalOptions: GlobalOptions): Promise<void> {

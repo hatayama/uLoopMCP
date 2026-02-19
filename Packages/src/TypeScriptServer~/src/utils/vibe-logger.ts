@@ -198,6 +198,13 @@ export class VibeLogger {
   }
 
   /**
+   * Get resolved Unity project root path.
+   */
+  static getProjectRoot(): string {
+    return VibeLogger.PROJECT_ROOT;
+  }
+
+  /**
    * Get logs for AI analysis (formatted for Claude Code)
    * Output directory: {project_root}/.uloop/outputs/VibeLogs/
    */

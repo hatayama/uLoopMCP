@@ -125,8 +125,11 @@ namespace io.github.hatayama.uLoopMCP
         public const string PACKAGES_DIR = "Packages";
         public const string SRC_DIR = "src";
         public const string LIBRARY_DIR = "Library";
+        public const string TEMP_DIR = "Temp";
         public const string PACKAGE_CACHE_DIR = "PackageCache";
         public const string ULOOPMCP_DIR = "uLoopMCP";
+        public const string COMPILE_RESULTS_DIR = "compile-results";
+        public const string JSON_FILE_EXTENSION = ".json";
         
         // File output directories
         public const string OUTPUT_ROOT_DIR = ".uloop/outputs";
@@ -163,6 +166,8 @@ namespace io.github.hatayama.uLoopMCP
         // Compile tool constants
         public const int COMPILE_START_TIMEOUT_MS = 5000; // Timeout to detect "compile did not start"
         public const int COMPILE_START_POLL_INTERVAL_MS = 100;
+        public const int COMPILE_DOMAIN_RELOAD_WAIT_TIMEOUT_MS = 10000;
+        public const int COMPILE_DOMAIN_RELOAD_WAIT_POLL_INTERVAL_MS = 100;
         
         // Security constants
         public const int MAX_JSON_SIZE_BYTES = 1024 * 1024; // 1MB limit for JSON files

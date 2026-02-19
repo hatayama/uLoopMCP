@@ -26690,6 +26690,12 @@ var VibeLogger = class _VibeLogger {
     return `ts_${v4_default().slice(0, 8)}_${timestamp}`;
   }
   /**
+   * Get resolved Unity project root path.
+   */
+  static getProjectRoot() {
+    return _VibeLogger.PROJECT_ROOT;
+  }
+  /**
    * Get logs for AI analysis (formatted for Claude Code)
    * Output directory: {project_root}/.uloop/outputs/VibeLogs/
    */
@@ -29313,8 +29319,198 @@ var BaseTool = class {
   }
 };
 
+// src/compile/compile-domain-reload-helpers.ts
+import assert2 from "node:assert";
+import { existsSync as existsSync2, readFileSync } from "fs";
+import * as net2 from "net";
+import { join as join3 } from "path";
+var SAFE_REQUEST_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+var COMPILE_WAIT_FOR_DOMAIN_RELOAD_ARG_KEYS = [
+  "WaitForDomainReload",
+  "waitForDomainReload",
+  "wait_for_domain_reload",
+  "wait-for-domain-reload"
+];
+var LOCK_GRACE_PERIOD_MS = 500;
+function toBoolean(value) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    return value.toLowerCase() === "true";
+  }
+  return false;
+}
+function getCompileBooleanArg(args, keys) {
+  for (const key of keys) {
+    if (!(key in args)) {
+      continue;
+    }
+    return toBoolean(args[key]);
+  }
+  return false;
+}
+function createCompileRequestId() {
+  const timestamp = Date.now();
+  const randomToken = Math.floor(Math.random() * 1e6).toString().padStart(6, "0");
+  return `compile_${timestamp}_${randomToken}`;
+}
+function ensureCompileRequestId(args) {
+  const existingRequestId = args["RequestId"];
+  if (typeof existingRequestId === "string" && existingRequestId.length > 0) {
+    if (SAFE_REQUEST_ID_PATTERN.test(existingRequestId)) {
+      return existingRequestId;
+    }
+  }
+  const requestId = createCompileRequestId();
+  args["RequestId"] = requestId;
+  return requestId;
+}
+function getCompileResultFilePath(projectRoot, requestId) {
+  assert2(
+    SAFE_REQUEST_ID_PATTERN.test(requestId),
+    `requestId contains unsafe characters: '${requestId}'`
+  );
+  return join3(projectRoot, "Temp", "uLoopMCP", "compile-results", `${requestId}.json`);
+}
+function isUnityBusyByLockFiles(projectRoot) {
+  const compilingLockPath = join3(projectRoot, "Temp", "compiling.lock");
+  if (existsSync2(compilingLockPath)) {
+    return true;
+  }
+  const domainReloadLockPath = join3(projectRoot, "Temp", "domainreload.lock");
+  if (existsSync2(domainReloadLockPath)) {
+    return true;
+  }
+  const serverStartingLockPath = join3(projectRoot, "Temp", "serverstarting.lock");
+  return existsSync2(serverStartingLockPath);
+}
+function stripUtf8Bom(content) {
+  if (content.charCodeAt(0) === 65279) {
+    return content.slice(1);
+  }
+  return content;
+}
+function tryReadCompileResult(projectRoot, requestId) {
+  const resultFilePath = getCompileResultFilePath(projectRoot, requestId);
+  if (!existsSync2(resultFilePath)) {
+    return void 0;
+  }
+  try {
+    const content = readFileSync(resultFilePath, "utf-8");
+    const parsed = JSON.parse(stripUtf8Bom(content));
+    return parsed;
+  } catch {
+    return void 0;
+  }
+}
+async function waitForCompileCompletion(options) {
+  const startTime = Date.now();
+  let idleSinceTimestamp = null;
+  while (Date.now() - startTime < options.timeoutMs) {
+    const result = tryReadCompileResult(options.projectRoot, options.requestId);
+    const isBusy = isUnityBusyByLockFiles(options.projectRoot);
+    if (result !== void 0 && !isBusy) {
+      const now = Date.now();
+      if (idleSinceTimestamp === null) {
+        idleSinceTimestamp = now;
+      }
+      const idleDuration = now - idleSinceTimestamp;
+      if (idleDuration >= LOCK_GRACE_PERIOD_MS) {
+        if (options.unityPort !== void 0) {
+          const isReady = await canSendRequestToUnity(options.unityPort);
+          if (isReady) {
+            return { outcome: "completed", result };
+          }
+        } else if (options.isUnityReadyWhenIdle) {
+          const isReady = await options.isUnityReadyWhenIdle();
+          if (isReady) {
+            return { outcome: "completed", result };
+          }
+        } else {
+          return { outcome: "completed", result };
+        }
+      }
+    } else {
+      idleSinceTimestamp = null;
+    }
+    await sleep(options.pollIntervalMs);
+  }
+  const lastResult = tryReadCompileResult(options.projectRoot, options.requestId);
+  if (lastResult !== void 0 && !isUnityBusyByLockFiles(options.projectRoot)) {
+    await sleep(LOCK_GRACE_PERIOD_MS);
+    if (isUnityBusyByLockFiles(options.projectRoot)) {
+      return { outcome: "timed_out" };
+    }
+    if (options.unityPort !== void 0) {
+      const isReady = await canSendRequestToUnity(options.unityPort);
+      if (isReady) {
+        return { outcome: "completed", result: lastResult };
+      }
+    } else if (options.isUnityReadyWhenIdle) {
+      const isReady = await options.isUnityReadyWhenIdle();
+      if (isReady) {
+        return { outcome: "completed", result: lastResult };
+      }
+    } else {
+      return { outcome: "completed", result: lastResult };
+    }
+  }
+  return { outcome: "timed_out" };
+}
+var READINESS_CHECK_TIMEOUT_MS = 3e3;
+var DEFAULT_HOST = "127.0.0.1";
+var CONTENT_LENGTH_HEADER = "Content-Length:";
+var HEADER_SEPARATOR = "\r\n\r\n";
+function canSendRequestToUnity(port) {
+  return new Promise((resolve4) => {
+    const socket = new net2.Socket();
+    const timer = setTimeout(() => {
+      socket.destroy();
+      resolve4(false);
+    }, READINESS_CHECK_TIMEOUT_MS);
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.destroy();
+    };
+    socket.connect(port, DEFAULT_HOST, () => {
+      const rpcRequest = JSON.stringify({
+        jsonrpc: "2.0",
+        method: "get-tool-details",
+        params: { IncludeDevelopmentOnly: false },
+        id: 0
+      });
+      const contentLength = Buffer.byteLength(rpcRequest, "utf8");
+      const frame = `${CONTENT_LENGTH_HEADER} ${contentLength}${HEADER_SEPARATOR}${rpcRequest}`;
+      socket.write(frame);
+    });
+    let buffer = Buffer.alloc(0);
+    socket.on("data", (chunk) => {
+      buffer = Buffer.concat([buffer, chunk]);
+      const sepIndex = buffer.indexOf(HEADER_SEPARATOR);
+      if (sepIndex !== -1) {
+        cleanup();
+        resolve4(true);
+      }
+    });
+    socket.on("error", () => {
+      cleanup();
+      resolve4(false);
+    });
+    socket.on("close", () => {
+      clearTimeout(timer);
+      resolve4(false);
+    });
+  });
+}
+function sleep(ms) {
+  return new Promise((resolve4) => setTimeout(resolve4, ms));
+}
+
 // src/tools/dynamic-unity-command-tool.ts
-var DynamicUnityCommandTool = class extends BaseTool {
+var DynamicUnityCommandTool = class _DynamicUnityCommandTool extends BaseTool {
+  static COMPILE_WAIT_TIMEOUT_MS = 9e4;
+  static COMPILE_WAIT_POLL_INTERVAL_MS = 100;
   name;
   description;
   inputSchema;
@@ -29420,21 +29616,147 @@ var DynamicUnityCommandTool = class extends BaseTool {
   async execute(args) {
     try {
       const actualArgs = this.validateArgs(args);
-      const result = await this.context.unityClient.executeTool(this.toolName, actualArgs);
+      const compileContext = this.prepareCompileExecutionContext(actualArgs);
+      const wasConnectedBeforeCall = this.context.unityClient.connected;
+      let immediateResult;
+      let executionError = void 0;
+      try {
+        immediateResult = await this.context.unityClient.executeTool(this.toolName, actualArgs);
+      } catch (error2) {
+        immediateResult = void 0;
+        executionError = error2;
+      }
+      if (executionError !== void 0) {
+        throw this.toError(executionError);
+      }
+      if (!compileContext.shouldWaitForDomainReload) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: typeof immediateResult === "string" ? immediateResult : JSON.stringify(immediateResult, null, 2)
+            }
+          ],
+          isError: this.isUnityFailureResult(immediateResult)
+        };
+      }
+      if (!wasConnectedBeforeCall && typeof immediateResult === "string") {
+        VibeLogger.logWarning(
+          "compile_not_dispatched",
+          "Compile request was not dispatched because Unity was disconnected before executeTool()",
+          { toolName: this.toolName }
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Unity is currently compiling or reloading. Please retry after the operation completes."
+            }
+          ],
+          isError: true
+        };
+      }
+      const projectRootFromUnity = this.extractProjectRoot(immediateResult);
+      const storedResult = await this.waitForStoredCompileResult(
+        compileContext.requestId ?? "",
+        projectRootFromUnity
+      );
+      const finalResult = storedResult ?? immediateResult;
+      if (finalResult === void 0) {
+        throw new Error(
+          "Compile result was unavailable after domain reload. Run compile again or use get-logs."
+        );
+      }
+      const cleanedResult = this.stripInternalFields(finalResult);
       return {
         content: [
           {
             type: "text",
-            text: typeof result === "string" ? result : JSON.stringify(result, null, 2)
+            text: typeof cleanedResult === "string" ? cleanedResult : JSON.stringify(cleanedResult, null, 2)
           }
         ],
         // Treat Unity-side failure responses as MCP tool errors.
         // Otherwise tools that return { Success: false, ... } appear as "success" in MCP Inspector.
-        isError: this.isUnityFailureResult(result)
+        isError: this.isUnityFailureResult(cleanedResult)
       };
     } catch (error2) {
       return this.formatErrorResponse(error2);
     }
+  }
+  prepareCompileExecutionContext(actualArgs) {
+    if (this.toolName !== "compile") {
+      return { shouldWaitForDomainReload: false };
+    }
+    const waitForDomainReload = getCompileBooleanArg(
+      actualArgs,
+      COMPILE_WAIT_FOR_DOMAIN_RELOAD_ARG_KEYS
+    );
+    if (!waitForDomainReload) {
+      return { shouldWaitForDomainReload: false };
+    }
+    const requestId = ensureCompileRequestId(actualArgs);
+    return {
+      shouldWaitForDomainReload: true,
+      requestId
+    };
+  }
+  async waitForStoredCompileResult(requestId, projectRootFromUnity) {
+    const projectRoot = projectRootFromUnity ?? this.resolveProjectRoot();
+    const { outcome, result } = await waitForCompileCompletion({
+      projectRoot,
+      requestId,
+      timeoutMs: _DynamicUnityCommandTool.COMPILE_WAIT_TIMEOUT_MS,
+      pollIntervalMs: _DynamicUnityCommandTool.COMPILE_WAIT_POLL_INTERVAL_MS,
+      isUnityReadyWhenIdle: () => {
+        const isConnected = this.context.unityClient.connected;
+        return Promise.resolve(isConnected);
+      }
+    });
+    if (outcome === "timed_out") {
+      throw new Error(
+        `Compile wait timed out after ${_DynamicUnityCommandTool.COMPILE_WAIT_TIMEOUT_MS}ms for request '${requestId}'.`
+      );
+    }
+    return result;
+  }
+  stripInternalFields(result) {
+    if (typeof result !== "object" || result === null) {
+      return result;
+    }
+    const obj = result;
+    if (!("ProjectRoot" in obj)) {
+      return result;
+    }
+    const cleaned = { ...obj };
+    delete cleaned["ProjectRoot"];
+    return cleaned;
+  }
+  extractProjectRoot(result) {
+    if (typeof result !== "object" || result === null) {
+      return void 0;
+    }
+    const obj = result;
+    const projectRoot = obj["ProjectRoot"];
+    if (typeof projectRoot === "string" && projectRoot.length > 0) {
+      return projectRoot;
+    }
+    return void 0;
+  }
+  resolveProjectRoot() {
+    const logger = VibeLogger;
+    if (typeof logger.getProjectRoot === "function") {
+      return logger.getProjectRoot();
+    }
+    return process.cwd();
+  }
+  toError(error2) {
+    if (error2 instanceof Error) {
+      return error2;
+    }
+    if (typeof error2 === "string") {
+      return new Error(error2);
+    }
+    return new Error("Unknown error");
   }
   isUnityFailureResult(result) {
     if (typeof result !== "object" || result === null) {
