@@ -40,7 +40,7 @@ uloop launch -r
 # Launch with build target
 uloop launch -p Android
 
-# Delete recovery directory before launch
+# Delete Assets/_Recovery directory before launch
 uloop launch -d
 
 # Restart and delete recovery directory
