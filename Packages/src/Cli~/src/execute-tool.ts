@@ -100,6 +100,18 @@ function isRetryableError(error: unknown): boolean {
   );
 }
 
+// Distinct from isRetryableError(): that function covers pre-connection failures
+// (ECONNREFUSED, EADDRNOTAVAIL) which cannot occur after dispatch.
+// This function covers post-dispatch TCP failures where Unity may have received
+// the request but the response was lost — file-based recovery is appropriate.
+export function isTransportDisconnectError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const message: string = error.message;
+  return message === 'UNITY_NO_RESPONSE' || message.startsWith('Connection lost:');
+}
+
 /**
  * Compare two semantic versions safely.
  * Returns true if v1 < v2, false otherwise.
@@ -237,6 +249,26 @@ export async function executeToolCommand(
     } catch (error) {
       lastError = error;
       client.disconnect();
+
+      // After a compile request has been dispatched, retrying is counterproductive:
+      // the next loop iteration calls checkUnityBusyState() OUTSIDE the try block,
+      // which throws UNITY_DOMAIN_RELOAD during domain reload and escapes the
+      // entire function — bypassing waitForCompileCompletion() recovery.
+      if (requestDispatched && shouldWaitForDomainReload) {
+        if (isTransportDisconnectError(error)) {
+          // Unity may have received the request before the TCP drop.
+          // Break out of retry loop → proceed to file-based recovery below.
+          spinner.update('Connection lost during compile. Waiting for result file...');
+          break;
+        }
+        // JSON-RPC error (e.g. "Unity error: ..."): Unity processed the request
+        // and returned an explicit error. No result file will be written
+        // (confirmed: CompileUseCase.ExecuteAsync() is not reached when
+        // JSON-RPC error occurs at parameter validation / security check).
+        spinner.stop();
+        restoreStdin();
+        throw error instanceof Error ? error : new Error(String(error));
+      }
 
       if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
         break;
