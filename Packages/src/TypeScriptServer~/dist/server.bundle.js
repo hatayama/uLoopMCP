@@ -29396,9 +29396,13 @@ function tryReadCompileResult(projectRoot, requestId) {
   if (!existsSync2(resultFilePath)) {
     return void 0;
   }
-  const content = readFileSync(resultFilePath, "utf-8");
-  const parsed = JSON.parse(stripUtf8Bom(content));
-  return parsed;
+  try {
+    const content = readFileSync(resultFilePath, "utf-8");
+    const parsed = JSON.parse(stripUtf8Bom(content));
+    return parsed;
+  } catch {
+    return void 0;
+  }
 }
 async function waitForCompileCompletion(options) {
   const startTime = Date.now();
@@ -29434,6 +29438,10 @@ async function waitForCompileCompletion(options) {
   }
   const lastResult = tryReadCompileResult(options.projectRoot, options.requestId);
   if (lastResult !== void 0 && !isUnityBusyByLockFiles(options.projectRoot)) {
+    await sleep(LOCK_GRACE_PERIOD_MS);
+    if (isUnityBusyByLockFiles(options.projectRoot)) {
+      return { outcome: "timed_out" };
+    }
     if (options.unityPort !== void 0) {
       const isReady = await canSendRequestToUnity(options.unityPort);
       if (isReady) {

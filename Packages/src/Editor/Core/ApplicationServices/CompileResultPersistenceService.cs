@@ -60,7 +60,7 @@ namespace io.github.hatayama.uLoopMCP
                 $"requestId must not contain path separators: '{requestId}'");
 
             string resultJson = JsonConvert.SerializeObject(response, Formatting.None);
-            string fileName = $"{requestId}{McpConstants.JSON_FILE_EXTENSION}";
+            string fileName = $"{sanitizedFileName}{McpConstants.JSON_FILE_EXTENSION}";
             string filePath = Path.Combine(CompileResultDirectoryPath, fileName);
             File.WriteAllText(filePath, resultJson, Encoding.UTF8);
         }

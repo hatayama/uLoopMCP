@@ -23,7 +23,7 @@ import {
   resolveCompileExecutionOptions,
   sleep,
   waitForCompileCompletion,
-} from '../../TypeScriptServer~/src/compile/compile-domain-reload-helpers.js';
+} from './compile-helpers.js';
 
 /**
  * Suppress stdin echo during async operation to prevent escape sequences from being displayed.

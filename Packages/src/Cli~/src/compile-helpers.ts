@@ -1,10 +1,21 @@
+/**
+ * Compile-related helpers duplicated from TypeScriptServer~ to avoid cross-project imports
+ * that violate CLI's rootDir boundary (TS6059).
+ *
+ * Source: TypeScriptServer~/src/compile/compile-domain-reload-helpers.ts
+ */
+
+// CLI tools output to console by design, object keys come from Unity tool responses which are trusted,
+// and lock file paths are constructed from trusted project root detection
+/* eslint-disable security/detect-object-injection, security/detect-non-literal-fs-filename */
+
 import assert from 'node:assert';
 import { existsSync, readFileSync } from 'fs';
 import * as net from 'net';
 import { join } from 'path';
 
 // Only alphanumeric, underscore, and hyphen — blocks path separators and traversal sequences
-export const SAFE_REQUEST_ID_PATTERN: RegExp = /^[a-zA-Z0-9_-]+$/;
+const SAFE_REQUEST_ID_PATTERN: RegExp = /^[a-zA-Z0-9_-]+$/;
 
 export const COMPILE_FORCE_RECOMPILE_ARG_KEYS = [
   'ForceRecompile',
@@ -25,37 +36,6 @@ export interface CompileExecutionOptions {
   waitForDomainReload: boolean;
 }
 
-export interface DomainReloadWaitOptions {
-  projectRoot: string;
-  timeoutMs: number;
-  pollIntervalMs: number;
-  isUnityReadyWhenIdle?: () => Promise<boolean>;
-}
-
-export type DomainReloadWaitOutcome = 'settled' | 'not_detected' | 'timed_out';
-
-export interface CompileResultWaitOptions {
-  projectRoot: string;
-  requestId: string;
-  timeoutMs: number;
-  pollIntervalMs: number;
-}
-
-export type CompileCompletionOutcome = 'completed' | 'timed_out';
-
-/**
- * Between compilationFinished and beforeAssemblyReload, there is a brief gap (~50ms measured)
- * where no lock files exist. This grace period prevents false "completed" detection during that gap.
- */
-const LOCK_GRACE_PERIOD_MS = 500;
-
-/**
- * After TcpListener.Start() the OS accepts TCP connections, but ServerLoopAsync
- * may not have called AcceptTcpClientAsync() yet. Requests arriving in this gap
- * get a TCP connection but no response. canSendRequestToUnity() verifies that
- * the server can actually process a request, not just accept a TCP connection.
- */
-
 export interface CompileCompletionWaitOptions {
   projectRoot: string;
   requestId: string;
@@ -65,12 +45,25 @@ export interface CompileCompletionWaitOptions {
   isUnityReadyWhenIdle?: () => Promise<boolean>;
 }
 
+export type CompileCompletionOutcome = 'completed' | 'timed_out';
+
 export interface CompileCompletionResult<T> {
   outcome: CompileCompletionOutcome;
   result?: T;
 }
 
-export function toBoolean(value: unknown): boolean {
+/**
+ * Between compilationFinished and beforeAssemblyReload, there is a brief gap (~50ms measured)
+ * where no lock files exist. This grace period prevents false "completed" detection during that gap.
+ */
+const LOCK_GRACE_PERIOD_MS = 500;
+
+const READINESS_CHECK_TIMEOUT_MS = 3000;
+const DEFAULT_HOST = '127.0.0.1';
+const CONTENT_LENGTH_HEADER = 'Content-Length:';
+const HEADER_SEPARATOR = '\r\n\r\n';
+
+function toBoolean(value: unknown): boolean {
   if (typeof value === 'boolean') {
     return value;
   }
@@ -82,10 +75,7 @@ export function toBoolean(value: unknown): boolean {
   return false;
 }
 
-export function getCompileBooleanArg(
-  args: Record<string, unknown>,
-  keys: readonly string[],
-): boolean {
+function getCompileBooleanArg(args: Record<string, unknown>, keys: readonly string[]): boolean {
   for (const key of keys) {
     if (!(key in args)) {
       continue;
@@ -106,7 +96,7 @@ export function resolveCompileExecutionOptions(
   };
 }
 
-export function createCompileRequestId(): string {
+function createCompileRequestId(): string {
   const timestamp = Date.now();
   const randomToken = Math.floor(Math.random() * 1000000)
     .toString()
@@ -127,7 +117,7 @@ export function ensureCompileRequestId(args: Record<string, unknown>): string {
   return requestId;
 }
 
-export function getCompileResultFilePath(projectRoot: string, requestId: string): string {
+function getCompileResultFilePath(projectRoot: string, requestId: string): string {
   assert(
     SAFE_REQUEST_ID_PATTERN.test(requestId),
     `requestId contains unsafe characters: '${requestId}'`,
@@ -135,7 +125,7 @@ export function getCompileResultFilePath(projectRoot: string, requestId: string)
   return join(projectRoot, 'Temp', 'uLoopMCP', 'compile-results', `${requestId}.json`);
 }
 
-export function isUnityBusyByLockFiles(projectRoot: string): boolean {
+function isUnityBusyByLockFiles(projectRoot: string): boolean {
   const compilingLockPath = join(projectRoot, 'Temp', 'compiling.lock');
   if (existsSync(compilingLockPath)) {
     return true;
@@ -150,7 +140,7 @@ export function isUnityBusyByLockFiles(projectRoot: string): boolean {
   return existsSync(serverStartingLockPath);
 }
 
-export function stripUtf8Bom(content: string): string {
+function stripUtf8Bom(content: string): string {
   if (content.charCodeAt(0) === 0xfeff) {
     return content.slice(1);
   }
@@ -158,7 +148,7 @@ export function stripUtf8Bom(content: string): string {
   return content;
 }
 
-export function tryReadCompileResult<T>(projectRoot: string, requestId: string): T | undefined {
+function tryReadCompileResult<T>(projectRoot: string, requestId: string): T | undefined {
   const resultFilePath = getCompileResultFilePath(projectRoot, requestId);
   if (!existsSync(resultFilePath)) {
     return undefined;
@@ -175,63 +165,59 @@ export function tryReadCompileResult<T>(projectRoot: string, requestId: string):
   }
 }
 
-export async function waitForDomainReloadToSettle(
-  options: DomainReloadWaitOptions,
-): Promise<DomainReloadWaitOutcome> {
-  const startTime: number = Date.now();
-  let busyObserved = false;
+/**
+ * Verify Unity server can actually process a JSON-RPC request, not just accept TCP.
+ * Sends a lightweight get-tool-details request and waits for any valid framed response.
+ */
+function canSendRequestToUnity(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    const timer = setTimeout(() => {
+      socket.destroy();
+      resolve(false);
+    }, READINESS_CHECK_TIMEOUT_MS);
 
-  while (Date.now() - startTime < options.timeoutMs) {
-    const isBusy: boolean = isUnityBusyByLockFiles(options.projectRoot);
-    if (isBusy) {
-      busyObserved = true;
-    }
+    const cleanup = (): void => {
+      clearTimeout(timer);
+      socket.destroy();
+    };
 
-    if (!busyObserved && !isBusy) {
-      return 'not_detected';
-    }
+    socket.connect(port, DEFAULT_HOST, () => {
+      const rpcRequest: string = JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'get-tool-details',
+        params: { IncludeDevelopmentOnly: false },
+        id: 0,
+      });
+      const contentLength: number = Buffer.byteLength(rpcRequest, 'utf8');
+      const frame: string = `${CONTENT_LENGTH_HEADER} ${contentLength}${HEADER_SEPARATOR}${rpcRequest}`;
+      socket.write(frame);
+    });
 
-    if (busyObserved && !isBusy) {
-      if (!options.isUnityReadyWhenIdle) {
-        return 'settled';
+    let buffer: Buffer = Buffer.alloc(0);
+    socket.on('data', (chunk: Buffer) => {
+      buffer = Buffer.concat([buffer, chunk]);
+      const sepIndex: number = buffer.indexOf(HEADER_SEPARATOR);
+      if (sepIndex !== -1) {
+        cleanup();
+        resolve(true);
       }
+    });
 
-      const isReady: boolean = await options.isUnityReadyWhenIdle();
-      if (isReady) {
-        return 'settled';
-      }
-    }
+    socket.on('error', () => {
+      cleanup();
+      resolve(false);
+    });
 
-    await sleep(options.pollIntervalMs);
-  }
-
-  if (!busyObserved) {
-    return 'not_detected';
-  }
-
-  return 'timed_out';
+    socket.on('close', () => {
+      clearTimeout(timer);
+      resolve(false);
+    });
+  });
 }
 
-export async function waitForCompileResult<T>(
-  options: CompileResultWaitOptions,
-): Promise<T | undefined> {
-  const startTime: number = Date.now();
-
-  while (true) {
-    const storedResult: T | undefined = tryReadCompileResult<T>(
-      options.projectRoot,
-      options.requestId,
-    );
-    if (storedResult !== undefined) {
-      return storedResult;
-    }
-
-    if (Date.now() - startTime >= options.timeoutMs) {
-      return undefined;
-    }
-
-    await sleep(options.pollIntervalMs);
-  }
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -302,64 +288,4 @@ export async function waitForCompileCompletion<T>(
   }
 
   return { outcome: 'timed_out' };
-}
-
-const READINESS_CHECK_TIMEOUT_MS = 3000;
-const DEFAULT_HOST = '127.0.0.1';
-const CONTENT_LENGTH_HEADER = 'Content-Length:';
-const HEADER_SEPARATOR = '\r\n\r\n';
-
-/**
- * Verify Unity server can actually process a JSON-RPC request, not just accept TCP.
- * Sends a lightweight get-tool-details request and waits for any valid framed response.
- */
-function canSendRequestToUnity(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const socket = new net.Socket();
-    const timer = setTimeout(() => {
-      socket.destroy();
-      resolve(false);
-    }, READINESS_CHECK_TIMEOUT_MS);
-
-    const cleanup = (): void => {
-      clearTimeout(timer);
-      socket.destroy();
-    };
-
-    socket.connect(port, DEFAULT_HOST, () => {
-      const rpcRequest: string = JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'get-tool-details',
-        params: { IncludeDevelopmentOnly: false },
-        id: 0,
-      });
-      const contentLength: number = Buffer.byteLength(rpcRequest, 'utf8');
-      const frame: string = `${CONTENT_LENGTH_HEADER} ${contentLength}${HEADER_SEPARATOR}${rpcRequest}`;
-      socket.write(frame);
-    });
-
-    let buffer: Buffer = Buffer.alloc(0);
-    socket.on('data', (chunk: Buffer) => {
-      buffer = Buffer.concat([buffer, chunk]);
-      const sepIndex: number = buffer.indexOf(HEADER_SEPARATOR);
-      if (sepIndex !== -1) {
-        cleanup();
-        resolve(true);
-      }
-    });
-
-    socket.on('error', () => {
-      cleanup();
-      resolve(false);
-    });
-
-    socket.on('close', () => {
-      clearTimeout(timer);
-      resolve(false);
-    });
-  });
-}
-
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
