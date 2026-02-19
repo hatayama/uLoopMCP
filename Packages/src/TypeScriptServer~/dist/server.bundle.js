@@ -29414,7 +29414,7 @@ async function waitForCompileCompletion(options) {
       const idleDuration = now - idleSinceTimestamp;
       if (idleDuration >= LOCK_GRACE_PERIOD_MS) {
         if (options.unityPort !== void 0) {
-          const isReady = await canConnectToUnity(options.unityPort);
+          const isReady = await canSendRequestToUnity(options.unityPort);
           if (isReady) {
             return { outcome: "completed", result };
           }
@@ -29435,7 +29435,7 @@ async function waitForCompileCompletion(options) {
   const lastResult = tryReadCompileResult(options.projectRoot, options.requestId);
   if (lastResult !== void 0 && !isUnityBusyByLockFiles(options.projectRoot)) {
     if (options.unityPort !== void 0) {
-      const isReady = await canConnectToUnity(options.unityPort);
+      const isReady = await canSendRequestToUnity(options.unityPort);
       if (isReady) {
         return { outcome: "completed", result: lastResult };
       }
@@ -29450,21 +29450,46 @@ async function waitForCompileCompletion(options) {
   }
   return { outcome: "timed_out" };
 }
-var TCP_CHECK_TIMEOUT_MS = 500;
+var READINESS_CHECK_TIMEOUT_MS = 3e3;
 var DEFAULT_HOST = "127.0.0.1";
-function canConnectToUnity(port) {
+var CONTENT_LENGTH_HEADER = "Content-Length:";
+var HEADER_SEPARATOR = "\r\n\r\n";
+function canSendRequestToUnity(port) {
   return new Promise((resolve4) => {
     const socket = new net2.Socket();
     const timer = setTimeout(() => {
       socket.destroy();
       resolve4(false);
-    }, TCP_CHECK_TIMEOUT_MS);
-    socket.connect(port, DEFAULT_HOST, () => {
+    }, READINESS_CHECK_TIMEOUT_MS);
+    const cleanup = () => {
       clearTimeout(timer);
       socket.destroy();
-      resolve4(true);
+    };
+    socket.connect(port, DEFAULT_HOST, () => {
+      const rpcRequest = JSON.stringify({
+        jsonrpc: "2.0",
+        method: "get-tool-details",
+        params: { IncludeDevelopmentOnly: false },
+        id: 0
+      });
+      const contentLength = Buffer.byteLength(rpcRequest, "utf8");
+      const frame = `${CONTENT_LENGTH_HEADER} ${contentLength}${HEADER_SEPARATOR}${rpcRequest}`;
+      socket.write(frame);
+    });
+    let buffer = Buffer.alloc(0);
+    socket.on("data", (chunk) => {
+      buffer = Buffer.concat([buffer, chunk]);
+      const sepIndex = buffer.indexOf(HEADER_SEPARATOR);
+      if (sepIndex !== -1) {
+        cleanup();
+        resolve4(true);
+      }
     });
     socket.on("error", () => {
+      cleanup();
+      resolve4(false);
+    });
+    socket.on("close", () => {
       clearTimeout(timer);
       resolve4(false);
     });
