@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.65.0](https://github.com/hatayama/uLoopMCP/compare/v0.64.1...v0.65.0) (2026-02-19)
+
+
+### Features
+
+* add -d/--delete-recovery option to launch command ([#653](https://github.com/hatayama/uLoopMCP/issues/653)) ([7c2eabe](https://github.com/hatayama/uLoopMCP/commit/7c2eabe7b019de7039543fbe68dfe1965b6fb342))
+* Add domain-reload wait option for compile tool with file-based recovery ([#650](https://github.com/hatayama/uLoopMCP/issues/650)) ([5536b1e](https://github.com/hatayama/uLoopMCP/commit/5536b1e2a8105710045d4b8320a1d8a944ab589c))
+
 ## [0.64.1](https://github.com/hatayama/uLoopMCP/compare/v0.64.0...v0.64.1) (2026-02-17)
 
 
