@@ -201,6 +201,11 @@ export class DynamicUnityCommandTool extends BaseTool {
       const actualArgs: Record<string, unknown> = this.validateArgs(args);
       const compileContext = this.prepareCompileExecutionContext(actualArgs);
 
+      // Record connection state before executeTool() to distinguish:
+      //  - wasConnected=true  → sendRequest() was called → recovery possible
+      //  - wasConnected=false → guidance string returned without dispatch → no recovery
+      const wasConnectedBeforeCall: boolean = this.context.unityClient.connected;
+
       let immediateResult: unknown;
       let executionError: unknown = undefined;
       try {
@@ -237,9 +242,30 @@ export class DynamicUnityCommandTool extends BaseTool {
         };
       }
 
+      // executeTool() returned without throwing, but no request was actually dispatched.
+      // This happens when Unity is temporarily disconnected (!connected && hasEverConnected):
+      // executeTool() returns a guidance string without calling sendRequest().
+      // Waiting for a result file that will never be created would block for 90 seconds.
+      if (!wasConnectedBeforeCall && typeof immediateResult === 'string') {
+        VibeLogger.logWarning(
+          'compile_not_dispatched',
+          'Compile request was not dispatched because Unity was disconnected before executeTool()',
+          { toolName: this.toolName },
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'Unity is currently compiling or reloading. Please retry after the operation completes.',
+            },
+          ],
+          isError: true,
+        };
+      }
+
       // Both cases below are safe to proceed with file-based recovery:
-      //  - guidance string (domain reload in progress): file may or may not exist yet
       //  - compile result object (normal response): file exists, will be found immediately
+      //  - guidance string (TCP drop after sendRequest): file may appear after domain reload
       const projectRootFromUnity: string | undefined = this.extractProjectRoot(immediateResult);
       const storedResult = await this.waitForStoredCompileResult(
         compileContext.requestId ?? '',

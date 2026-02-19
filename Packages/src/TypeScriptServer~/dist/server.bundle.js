@@ -29584,6 +29584,7 @@ var DynamicUnityCommandTool = class _DynamicUnityCommandTool extends BaseTool {
     try {
       const actualArgs = this.validateArgs(args);
       const compileContext = this.prepareCompileExecutionContext(actualArgs);
+      const wasConnectedBeforeCall = this.context.unityClient.connected;
       let immediateResult;
       let executionError = void 0;
       try {
@@ -29604,6 +29605,22 @@ var DynamicUnityCommandTool = class _DynamicUnityCommandTool extends BaseTool {
             }
           ],
           isError: this.isUnityFailureResult(immediateResult)
+        };
+      }
+      if (!wasConnectedBeforeCall && typeof immediateResult === "string") {
+        VibeLogger.logWarning(
+          "compile_not_dispatched",
+          "Compile request was not dispatched because Unity was disconnected before executeTool()",
+          { toolName: this.toolName }
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Unity is currently compiling or reloading. Please retry after the operation completes."
+            }
+          ],
+          isError: true
         };
       }
       const projectRootFromUnity = this.extractProjectRoot(immediateResult);
