@@ -72,7 +72,16 @@ export class DirectUnityClient {
 
     return new Promise((resolve, reject) => {
       const socket = this.socket!;
+
+      const cleanup = (): void => {
+        clearTimeout(timeoutId);
+        socket.off('data', onData);
+        socket.off('error', onError);
+        socket.off('close', onClose);
+      };
+
       const timeoutId = setTimeout(() => {
+        cleanup();
         reject(
           new Error(
             `Request timed out after ${NETWORK_TIMEOUT_MS}ms. Unity may be frozen or busy. [For AI] Run 'uloop focus-window' to bring Unity to the front, then retry the tool. If the issue persists, report this to the user and ask how to proceed. Do NOT kill Unity processes without user permission.`,
@@ -98,9 +107,7 @@ export class DirectUnityClient {
           return;
         }
 
-        clearTimeout(timeoutId);
-        socket.off('data', onData);
-
+        cleanup();
         this.receiveBuffer = extractResult.remainingData;
 
         const response = JSON.parse(extractResult.jsonContent) as JsonRpcResponse;
@@ -113,7 +120,19 @@ export class DirectUnityClient {
         resolve(response.result as T);
       };
 
+      const onError = (error: Error): void => {
+        cleanup();
+        reject(new Error(`Connection lost: ${error.message}`));
+      };
+
+      const onClose = (): void => {
+        cleanup();
+        reject(new Error('UNITY_NO_RESPONSE'));
+      };
+
       socket.on('data', onData);
+      socket.on('error', onError);
+      socket.on('close', onClose);
       socket.write(framedMessage);
     });
   }

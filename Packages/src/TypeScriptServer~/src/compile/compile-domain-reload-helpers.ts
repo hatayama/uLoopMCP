@@ -265,8 +265,20 @@ export async function waitForCompileCompletion<T>(
   }
 
   const lastResult = tryReadCompileResult<T>(options.projectRoot, options.requestId);
-  if (lastResult !== undefined) {
-    return { outcome: 'completed', result: lastResult };
+  if (lastResult !== undefined && !isUnityBusyByLockFiles(options.projectRoot)) {
+    if (options.unityPort !== undefined) {
+      const isReady = await canConnectToUnity(options.unityPort);
+      if (isReady) {
+        return { outcome: 'completed', result: lastResult };
+      }
+    } else if (options.isUnityReadyWhenIdle) {
+      const isReady = await options.isUnityReadyWhenIdle();
+      if (isReady) {
+        return { outcome: 'completed', result: lastResult };
+      }
+    } else {
+      return { outcome: 'completed', result: lastResult };
+    }
   }
 
   return { outcome: 'timed_out' };

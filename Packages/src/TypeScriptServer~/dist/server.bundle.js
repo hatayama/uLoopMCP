@@ -29433,8 +29433,20 @@ async function waitForCompileCompletion(options) {
     waitedMs += options.pollIntervalMs;
   }
   const lastResult = tryReadCompileResult(options.projectRoot, options.requestId);
-  if (lastResult !== void 0) {
-    return { outcome: "completed", result: lastResult };
+  if (lastResult !== void 0 && !isUnityBusyByLockFiles(options.projectRoot)) {
+    if (options.unityPort !== void 0) {
+      const isReady = await canConnectToUnity(options.unityPort);
+      if (isReady) {
+        return { outcome: "completed", result: lastResult };
+      }
+    } else if (options.isUnityReadyWhenIdle) {
+      const isReady = await options.isUnityReadyWhenIdle();
+      if (isReady) {
+        return { outcome: "completed", result: lastResult };
+      }
+    } else {
+      return { outcome: "completed", result: lastResult };
+    }
   }
   return { outcome: "timed_out" };
 }

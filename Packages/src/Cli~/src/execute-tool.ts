@@ -237,24 +237,24 @@ export async function executeToolCommand(
   }
 
   if (shouldWaitForDomainReload && compileRequestId) {
-    const projectRootFromUnity: string | undefined =
-      immediateResult !== undefined
-        ? (immediateResult['ProjectRoot'] as string | undefined)
-        : undefined;
+    if (immediateResult === undefined) {
+      spinner.stop();
+      restoreStdin();
+      if (lastError instanceof Error) {
+        throw lastError;
+      }
+      throw new Error('Compile request did not reach Unity. Check connection and retry.');
+    }
+
+    const projectRootFromUnity = immediateResult['ProjectRoot'] as string | undefined;
     const effectiveProjectRoot: string | null = projectRootFromUnity ?? projectRoot;
 
     if (effectiveProjectRoot === null) {
       spinner.stop();
       restoreStdin();
-      if (immediateResult !== undefined) {
-        checkServerVersion(immediateResult);
-        console.log(JSON.stringify(stripInternalFields(immediateResult), null, 2));
-        return;
-      }
-      if (lastError instanceof Error) {
-        throw lastError;
-      }
-      throw new Error('Compile request did not reach Unity. Check connection and retry.');
+      checkServerVersion(immediateResult);
+      console.log(JSON.stringify(stripInternalFields(immediateResult), null, 2));
+      return;
     }
 
     spinner.update('Waiting for domain reload to complete...');
