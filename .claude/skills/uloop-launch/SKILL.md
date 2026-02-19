@@ -19,6 +19,7 @@ uloop launch [project-path] [options]
 |-----------|------|-------------|
 | `project-path` | string | Path to Unity project (optional, searches current directory if omitted) |
 | `-r, --restart` | boolean | Kill running Unity and restart |
+| `-d, --delete-recovery` | boolean | Delete Assets/_Recovery before launch |
 | `-p, --platform <P>` | string | Build target (e.g., StandaloneOSX, Android, iOS) |
 | `--max-depth <N>` | number | Search depth when project-path is omitted (default: 3, -1 for unlimited) |
 | `-a, --add-unity-hub` | boolean | Add to Unity Hub only (does not launch) |
@@ -38,6 +39,12 @@ uloop launch -r
 
 # Launch with build target
 uloop launch -p Android
+
+# Delete recovery directory before launch
+uloop launch -d
+
+# Restart and delete recovery directory
+uloop launch -d -r
 
 # Add project to Unity Hub without launching
 uloop launch -a
