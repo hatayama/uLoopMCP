@@ -237,24 +237,29 @@ export async function executeToolCommand(
   }
 
   if (shouldWaitForDomainReload && compileRequestId) {
-    if (immediateResult === undefined) {
-      spinner.stop();
-      restoreStdin();
-      if (lastError instanceof Error) {
-        throw lastError;
-      }
-      throw new Error('Compile request did not reach Unity. Check connection and retry.');
-    }
-
-    const projectRootFromUnity = immediateResult['ProjectRoot'] as string | undefined;
+    // TCP may drop during domain reload before the JSON-RPC response arrives,
+    // but Unity may have already persisted the result file.
+    const projectRootFromUnity: string | undefined =
+      immediateResult !== undefined
+        ? (immediateResult['ProjectRoot'] as string | undefined)
+        : undefined;
     const effectiveProjectRoot: string | null = projectRootFromUnity ?? projectRoot;
 
+    // File-based polling requires a known project root
     if (effectiveProjectRoot === null) {
       spinner.stop();
       restoreStdin();
-      checkServerVersion(immediateResult);
-      console.log(JSON.stringify(stripInternalFields(immediateResult), null, 2));
-      return;
+      if (immediateResult !== undefined) {
+        checkServerVersion(immediateResult);
+        console.log(JSON.stringify(stripInternalFields(immediateResult), null, 2));
+        return;
+      }
+      if (lastError instanceof Error) {
+        throw lastError;
+      }
+      throw new Error(
+        'Compile request failed and project root is unknown. Check connection and retry.',
+      );
     }
 
     spinner.update('Waiting for domain reload to complete...');

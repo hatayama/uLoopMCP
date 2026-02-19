@@ -29401,16 +29401,17 @@ function tryReadCompileResult(projectRoot, requestId) {
   return parsed;
 }
 async function waitForCompileCompletion(options) {
-  let waitedMs = 0;
-  let idleSinceMs = null;
-  while (waitedMs < options.timeoutMs) {
+  const startTime = Date.now();
+  let idleSinceTimestamp = null;
+  while (Date.now() - startTime < options.timeoutMs) {
     const result = tryReadCompileResult(options.projectRoot, options.requestId);
     const isBusy = isUnityBusyByLockFiles(options.projectRoot);
     if (result !== void 0 && !isBusy) {
-      if (idleSinceMs === null) {
-        idleSinceMs = waitedMs;
+      const now = Date.now();
+      if (idleSinceTimestamp === null) {
+        idleSinceTimestamp = now;
       }
-      const idleDuration = waitedMs - idleSinceMs;
+      const idleDuration = now - idleSinceTimestamp;
       if (idleDuration >= LOCK_GRACE_PERIOD_MS) {
         if (options.unityPort !== void 0) {
           const isReady = await canConnectToUnity(options.unityPort);
@@ -29427,10 +29428,9 @@ async function waitForCompileCompletion(options) {
         }
       }
     } else {
-      idleSinceMs = null;
+      idleSinceTimestamp = null;
     }
     await sleep(options.pollIntervalMs);
-    waitedMs += options.pollIntervalMs;
   }
   const lastResult = tryReadCompileResult(options.projectRoot, options.requestId);
   if (lastResult !== void 0 && !isUnityBusyByLockFiles(options.projectRoot)) {
@@ -29606,10 +29606,7 @@ var DynamicUnityCommandTool = class _DynamicUnityCommandTool extends BaseTool {
           isError: this.isUnityFailureResult(immediateResult)
         };
       }
-      if (executionError !== void 0) {
-        throw this.toError(executionError);
-      }
-      const projectRootFromUnity = this.extractProjectRoot(immediateResult);
+      const projectRootFromUnity = executionError === void 0 ? this.extractProjectRoot(immediateResult) : void 0;
       const storedResult = await this.waitForStoredCompileResult(
         compileContext.requestId ?? "",
         projectRootFromUnity

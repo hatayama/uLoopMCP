@@ -165,11 +165,11 @@ export function tryReadCompileResult<T>(projectRoot: string, requestId: string):
 export async function waitForDomainReloadToSettle(
   options: DomainReloadWaitOptions,
 ): Promise<DomainReloadWaitOutcome> {
-  let waitedMs = 0;
+  const startTime: number = Date.now();
   let busyObserved = false;
 
-  while (waitedMs < options.timeoutMs) {
-    const isBusy = isUnityBusyByLockFiles(options.projectRoot);
+  while (Date.now() - startTime < options.timeoutMs) {
+    const isBusy: boolean = isUnityBusyByLockFiles(options.projectRoot);
     if (isBusy) {
       busyObserved = true;
     }
@@ -183,14 +183,13 @@ export async function waitForDomainReloadToSettle(
         return 'settled';
       }
 
-      const isReady = await options.isUnityReadyWhenIdle();
+      const isReady: boolean = await options.isUnityReadyWhenIdle();
       if (isReady) {
         return 'settled';
       }
     }
 
     await sleep(options.pollIntervalMs);
-    waitedMs += options.pollIntervalMs;
   }
 
   if (!busyObserved) {
@@ -203,20 +202,22 @@ export async function waitForDomainReloadToSettle(
 export async function waitForCompileResult<T>(
   options: CompileResultWaitOptions,
 ): Promise<T | undefined> {
-  let waitedMs = 0;
+  const startTime: number = Date.now();
 
   while (true) {
-    const storedResult = tryReadCompileResult<T>(options.projectRoot, options.requestId);
+    const storedResult: T | undefined = tryReadCompileResult<T>(
+      options.projectRoot,
+      options.requestId,
+    );
     if (storedResult !== undefined) {
       return storedResult;
     }
 
-    if (waitedMs >= options.timeoutMs) {
+    if (Date.now() - startTime >= options.timeoutMs) {
       return undefined;
     }
 
     await sleep(options.pollIntervalMs);
-    waitedMs += options.pollIntervalMs;
   }
 }
 
@@ -228,27 +229,28 @@ export async function waitForCompileResult<T>(
 export async function waitForCompileCompletion<T>(
   options: CompileCompletionWaitOptions,
 ): Promise<CompileCompletionResult<T>> {
-  let waitedMs = 0;
-  let idleSinceMs: number | null = null;
+  const startTime: number = Date.now();
+  let idleSinceTimestamp: number | null = null;
 
-  while (waitedMs < options.timeoutMs) {
-    const result = tryReadCompileResult<T>(options.projectRoot, options.requestId);
-    const isBusy = isUnityBusyByLockFiles(options.projectRoot);
+  while (Date.now() - startTime < options.timeoutMs) {
+    const result: T | undefined = tryReadCompileResult<T>(options.projectRoot, options.requestId);
+    const isBusy: boolean = isUnityBusyByLockFiles(options.projectRoot);
 
     if (result !== undefined && !isBusy) {
-      if (idleSinceMs === null) {
-        idleSinceMs = waitedMs;
+      const now: number = Date.now();
+      if (idleSinceTimestamp === null) {
+        idleSinceTimestamp = now;
       }
 
-      const idleDuration = waitedMs - idleSinceMs;
+      const idleDuration: number = now - idleSinceTimestamp;
       if (idleDuration >= LOCK_GRACE_PERIOD_MS) {
         if (options.unityPort !== undefined) {
-          const isReady = await canConnectToUnity(options.unityPort);
+          const isReady: boolean = await canConnectToUnity(options.unityPort);
           if (isReady) {
             return { outcome: 'completed', result };
           }
         } else if (options.isUnityReadyWhenIdle) {
-          const isReady = await options.isUnityReadyWhenIdle();
+          const isReady: boolean = await options.isUnityReadyWhenIdle();
           if (isReady) {
             return { outcome: 'completed', result };
           }
@@ -257,22 +259,21 @@ export async function waitForCompileCompletion<T>(
         }
       }
     } else {
-      idleSinceMs = null;
+      idleSinceTimestamp = null;
     }
 
     await sleep(options.pollIntervalMs);
-    waitedMs += options.pollIntervalMs;
   }
 
-  const lastResult = tryReadCompileResult<T>(options.projectRoot, options.requestId);
+  const lastResult: T | undefined = tryReadCompileResult<T>(options.projectRoot, options.requestId);
   if (lastResult !== undefined && !isUnityBusyByLockFiles(options.projectRoot)) {
     if (options.unityPort !== undefined) {
-      const isReady = await canConnectToUnity(options.unityPort);
+      const isReady: boolean = await canConnectToUnity(options.unityPort);
       if (isReady) {
         return { outcome: 'completed', result: lastResult };
       }
     } else if (options.isUnityReadyWhenIdle) {
-      const isReady = await options.isUnityReadyWhenIdle();
+      const isReady: boolean = await options.isUnityReadyWhenIdle();
       if (isReady) {
         return { outcome: 'completed', result: lastResult };
       }

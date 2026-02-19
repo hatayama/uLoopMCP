@@ -229,12 +229,10 @@ export class DynamicUnityCommandTool extends BaseTool {
         };
       }
 
-      // Fail fast: executeTool() threw, so the compile request never reached Unity.
-      if (executionError !== undefined) {
-        throw this.toError(executionError);
-      }
-
-      const projectRootFromUnity = this.extractProjectRoot(immediateResult);
+      // TCP may drop during domain reload before the response arrives,
+      // but Unity may have already persisted the result file.
+      const projectRootFromUnity: string | undefined =
+        executionError === undefined ? this.extractProjectRoot(immediateResult) : undefined;
       const storedResult = await this.waitForStoredCompileResult(
         compileContext.requestId ?? '',
         projectRootFromUnity,
