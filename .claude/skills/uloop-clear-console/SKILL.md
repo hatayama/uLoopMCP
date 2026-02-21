@@ -19,6 +19,13 @@ uloop clear-console [--add-confirmation-message]
 |-----------|------|---------|-------------|
 | `--add-confirmation-message` | boolean | `false` | Add confirmation message after clearing |
 
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
+
 ## Examples
 
 ```bash

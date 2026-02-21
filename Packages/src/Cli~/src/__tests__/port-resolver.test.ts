@@ -1,3 +1,4 @@
+import { tmpdir } from 'os';
 import {
   resolvePortFromUnitySettings,
   validateProjectPath,
@@ -74,7 +75,7 @@ describe('validateProjectPath', () => {
   });
 
   it('throws when path is not a Unity project', () => {
-    expect(() => validateProjectPath('/tmp')).toThrow('Not a Unity project');
+    expect(() => validateProjectPath(tmpdir())).toThrow('Not a Unity project');
   });
 });
 

@@ -50,8 +50,8 @@ You can also specify custom EditorWindow titles (e.g., "EditorWindow Capture Tes
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project. Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
-| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
 
 ## Examples
 
