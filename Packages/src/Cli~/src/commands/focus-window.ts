@@ -10,13 +10,18 @@
 import { Command } from 'commander';
 import { findRunningUnityProcess, focusUnityProcess } from 'launch-unity';
 import { findUnityProjectRoot } from '../project-root.js';
+import { validateProjectPath } from '../port-resolver.js';
 
 export function registerFocusWindowCommand(program: Command): void {
   program
     .command('focus-window')
     .description('Bring Unity Editor window to front using OS-level commands')
-    .action(async () => {
-      const projectRoot = findUnityProjectRoot();
+    .option('--project-path <path>', 'Unity project path')
+    .action(async (options: { projectPath?: string }) => {
+      const projectRoot =
+        options.projectPath !== undefined
+          ? validateProjectPath(options.projectPath)
+          : findUnityProjectRoot();
       if (projectRoot === null) {
         console.error(
           JSON.stringify({

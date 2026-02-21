@@ -8,8 +8,8 @@
 
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
-import { join } from 'path';
-import { findUnityProjectRoot } from './project-root.js';
+import { join, resolve } from 'path';
+import { findUnityProjectRoot, isUnityProject, hasUloopInstalled } from './project-root.js';
 
 const DEFAULT_PORT = 8700;
 
@@ -54,14 +54,52 @@ export function resolvePortFromUnitySettings(settings: UnityMcpSettings): number
   return null;
 }
 
-export async function resolveUnityPort(explicitPort?: number): Promise<number> {
+export function validateProjectPath(projectPath: string): string {
+  const resolved = resolve(projectPath);
+
+  if (!existsSync(resolved)) {
+    throw new Error(`Path does not exist: ${resolved}`);
+  }
+
+  if (!isUnityProject(resolved)) {
+    throw new Error(`Not a Unity project (Assets/ or ProjectSettings/ not found): ${resolved}`);
+  }
+
+  if (!hasUloopInstalled(resolved)) {
+    throw new Error(
+      `uLoopMCP is not installed in this project (UserSettings/UnityMcpSettings.json not found): ${resolved}`,
+    );
+  }
+
+  return resolved;
+}
+
+export async function resolveUnityPort(
+  explicitPort?: number,
+  projectPath?: string,
+): Promise<number> {
+  if (explicitPort !== undefined && projectPath !== undefined) {
+    throw new Error('Cannot specify both --port and --project-path. Use one or the other.');
+  }
+
   if (explicitPort !== undefined) {
     return explicitPort;
   }
 
+  if (projectPath !== undefined) {
+    const resolved = validateProjectPath(projectPath);
+    const settingsPort = await readPortFromSettings(resolved);
+    if (settingsPort !== null) {
+      return settingsPort;
+    }
+    return DEFAULT_PORT;
+  }
+
   const projectRoot = findUnityProjectRoot();
   if (projectRoot === null) {
-    throw new Error('Unity project not found. Use --port option to specify the port explicitly.');
+    throw new Error(
+      'Unity project not found. Use --port or --project-path option to specify the target.',
+    );
   }
 
   const settingsPort = await readPortFromSettings(projectRoot);

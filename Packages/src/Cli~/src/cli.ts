@@ -33,6 +33,7 @@ import { registerLaunchCommand } from './commands/launch.js';
 import { registerFocusWindowCommand } from './commands/focus-window.js';
 import { VERSION } from './version.js';
 import { findUnityProjectRoot } from './project-root.js';
+import { validateProjectPath } from './port-resolver.js';
 
 interface CliOptions extends GlobalOptions {
   [key: string]: unknown;
@@ -73,16 +74,18 @@ program
   .command('list')
   .description('List all available tools from Unity')
   .option('-p, --port <port>', 'Unity TCP port')
+  .option('--project-path <path>', 'Unity project path')
   .action(async (options: CliOptions) => {
-    await runWithErrorHandling(() => listAvailableTools(options));
+    await runWithErrorHandling(() => listAvailableTools(extractGlobalOptions(options)));
   });
 
 program
   .command('sync')
   .description('Sync tool definitions from Unity to local cache')
   .option('-p, --port <port>', 'Unity TCP port')
+  .option('--project-path <path>', 'Unity project path')
   .action(async (options: CliOptions) => {
-    await runWithErrorHandling(() => syncTools(options));
+    await runWithErrorHandling(() => syncTools(extractGlobalOptions(options)));
   });
 
 program
@@ -104,8 +107,9 @@ program
 program
   .command('fix')
   .description('Clean up stale lock files that may prevent CLI from connecting')
-  .action(() => {
-    cleanupLockFiles();
+  .option('--project-path <path>', 'Unity project path')
+  .action((options: { projectPath?: string }) => {
+    cleanupLockFiles(options.projectPath);
   });
 
 // Register skills subcommand
@@ -144,6 +148,7 @@ function registerToolCommand(tool: ToolDefinition): void {
 
   // Add global options
   cmd.option('-p, --port <port>', 'Unity TCP port');
+  cmd.option('--project-path <path>', 'Unity project path');
 
   cmd.action(async (options: CliOptions) => {
     const params = buildParams(options, properties);
@@ -294,6 +299,7 @@ function convertValue(value: unknown, propInfo: ToolProperty): unknown {
 function extractGlobalOptions(options: Record<string, unknown>): GlobalOptions {
   return {
     port: options['port'] as string | undefined,
+    projectPath: options['projectPath'] as string | undefined,
   };
 }
 
@@ -592,8 +598,9 @@ const LOCK_FILES = ['compiling.lock', 'domainreload.lock', 'serverstarting.lock'
 /**
  * Clean up stale lock files that may prevent CLI from connecting to Unity.
  */
-function cleanupLockFiles(): void {
-  const projectRoot = findUnityProjectRoot();
+function cleanupLockFiles(projectPath?: string): void {
+  const projectRoot =
+    projectPath !== undefined ? validateProjectPath(projectPath) : findUnityProjectRoot();
   if (projectRoot === null) {
     console.error('Could not find Unity project root.');
     process.exit(1);
@@ -757,22 +764,38 @@ function shouldSkipAutoSync(cmdName: string | undefined, args: string[]): boolea
 }
 
 function extractSyncGlobalOptions(args: string[]): GlobalOptions {
+  const options: GlobalOptions = {};
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--port' || arg === '-p') {
       const nextArg = args[i + 1];
       if (nextArg !== undefined && !nextArg.startsWith('-')) {
-        return { port: nextArg };
+        options.port = nextArg;
       }
       continue;
     }
 
     if (arg.startsWith('--port=')) {
-      return { port: arg.slice('--port='.length) };
+      options.port = arg.slice('--port='.length);
+      continue;
+    }
+
+    if (arg === '--project-path') {
+      const nextArg = args[i + 1];
+      if (nextArg !== undefined && !nextArg.startsWith('-')) {
+        options.projectPath = nextArg;
+      }
+      continue;
+    }
+
+    if (arg.startsWith('--project-path=')) {
+      options.projectPath = arg.slice('--project-path='.length);
+      continue;
     }
   }
 
-  return {};
+  return options;
 }
 
 /**

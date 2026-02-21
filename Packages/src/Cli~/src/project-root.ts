@@ -22,13 +22,13 @@ const EXCLUDED_DIRS = new Set([
   'Library',
 ]);
 
-function isUnityProject(dirPath: string): boolean {
+export function isUnityProject(dirPath: string): boolean {
   const hasAssets = existsSync(join(dirPath, 'Assets'));
   const hasProjectSettings = existsSync(join(dirPath, 'ProjectSettings'));
   return hasAssets && hasProjectSettings;
 }
 
-function hasUloopInstalled(dirPath: string): boolean {
+export function hasUloopInstalled(dirPath: string): boolean {
   return existsSync(join(dirPath, 'UserSettings/UnityMcpSettings.json'));
 }
 
