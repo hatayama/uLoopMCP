@@ -71,14 +71,14 @@
     "zod": "4.3.6"
   },
   "devDependencies": {
-    "@eslint/js": "9.39.2",
+    "@eslint/js": "10.0.1",
     "@microsoft/eslint-formatter-sarif": "3.1.0",
     "@types/jest": "30.0.0",
     "@types/node": "25.3.0",
     "@types/uuid": "11.0.0",
     "cross-env": "10.1.0",
     "esbuild": "0.27.3",
-    "eslint": "9.39.2",
+    "eslint": "10.0.1",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-prettier": "5.5.5",
     "eslint-plugin-security": "4.0.0",
@@ -90,5 +90,11 @@
     "tsx": "4.21.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.56.0"
+  },
+  "overrides": {
+    "minimatch": "10.2.2",
+    "@microsoft/eslint-formatter-sarif": {
+      "eslint": "$eslint"
+    }
   }
 }
