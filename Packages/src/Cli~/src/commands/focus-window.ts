@@ -18,10 +18,23 @@ export function registerFocusWindowCommand(program: Command): void {
     .description('Bring Unity Editor window to front using OS-level commands')
     .option('--project-path <path>', 'Unity project path')
     .action(async (options: { projectPath?: string }) => {
-      const projectRoot =
-        options.projectPath !== undefined
-          ? validateProjectPath(options.projectPath)
-          : findUnityProjectRoot();
+      let projectRoot: string | null;
+      if (options.projectPath !== undefined) {
+        try {
+          projectRoot = validateProjectPath(options.projectPath);
+        } catch (error) {
+          console.error(
+            JSON.stringify({
+              Success: false,
+              Message: error instanceof Error ? error.message : String(error),
+            }),
+          );
+          process.exit(1);
+          return;
+        }
+      } else {
+        projectRoot = findUnityProjectRoot();
+      }
       if (projectRoot === null) {
         console.error(
           JSON.stringify({

@@ -108,8 +108,11 @@ program
   .command('fix')
   .description('Clean up stale lock files that may prevent CLI from connecting')
   .option('--project-path <path>', 'Unity project path')
-  .action((options: { projectPath?: string }) => {
-    cleanupLockFiles(options.projectPath);
+  .action(async (options: { projectPath?: string }) => {
+    await runWithErrorHandling(() => {
+      cleanupLockFiles(options.projectPath);
+      return Promise.resolve();
+    });
   });
 
 // Register skills subcommand
