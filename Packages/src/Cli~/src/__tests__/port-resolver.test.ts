@@ -1,4 +1,9 @@
-import { resolvePortFromUnitySettings } from '../port-resolver.js';
+import { tmpdir } from 'os';
+import {
+  resolvePortFromUnitySettings,
+  validateProjectPath,
+  resolveUnityPort,
+} from '../port-resolver.js';
 
 describe('resolvePortFromUnitySettings', () => {
   it('returns serverPort when server is running and serverPort is valid', () => {
@@ -59,5 +64,30 @@ describe('resolvePortFromUnitySettings', () => {
     });
 
     expect(port).toBeNull();
+  });
+});
+
+describe('validateProjectPath', () => {
+  it('throws when path does not exist', () => {
+    expect(() => validateProjectPath('/nonexistent/path/to/project')).toThrow(
+      'Path does not exist: /nonexistent/path/to/project',
+    );
+  });
+
+  it('throws when path is not a Unity project', () => {
+    expect(() => validateProjectPath(tmpdir())).toThrow('Not a Unity project');
+  });
+});
+
+describe('resolveUnityPort', () => {
+  it('throws when both port and projectPath are specified', async () => {
+    await expect(resolveUnityPort(8700, '/some/path')).rejects.toThrow(
+      'Cannot specify both --port and --project-path',
+    );
+  });
+
+  it('returns explicit port when only port is specified', async () => {
+    const port = await resolveUnityPort(8711);
+    expect(port).toBe(8711);
   });
 });

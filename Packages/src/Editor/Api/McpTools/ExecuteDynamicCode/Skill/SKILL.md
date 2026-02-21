@@ -52,6 +52,13 @@ return x;
 - AssetDatabase.CreateFolder / file writes
 - Create/edit .cs/.asmdef files
 
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
+
 ## Examples
 
 ### bash / zsh / MINGW64 / Git Bash

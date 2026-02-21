@@ -24,6 +24,13 @@ uloop get-hierarchy [options]
 | `--include-paths` | boolean | `false` | Include full path information |
 | `--use-selection` | boolean | `false` | Use selected GameObject(s) as root(s). When true, `--root-path` is ignored. |
 
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
+
 ## Examples
 
 ```bash

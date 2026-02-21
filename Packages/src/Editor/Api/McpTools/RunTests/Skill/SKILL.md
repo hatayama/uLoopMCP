@@ -21,6 +21,13 @@ uloop run-tests [options]
 | `--filter-type` | string | `all` | Filter type: `all`, `exact`, `regex`, `assembly` |
 | `--filter-value` | string | - | Filter value (test name, pattern, or assembly) |
 
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
+
 ## Examples
 
 ```bash

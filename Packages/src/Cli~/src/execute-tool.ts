@@ -12,7 +12,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import * as semver from 'semver';
 import { DirectUnityClient } from './direct-unity-client.js';
-import { resolveUnityPort } from './port-resolver.js';
+import { resolveUnityPort, validateProjectPath } from './port-resolver.js';
 import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './tool-cache.js';
 import { VERSION } from './version.js';
 import { createSpinner } from './spinner.js';
@@ -61,6 +61,7 @@ function suppressStdinEcho(): () => void {
 
 export interface GlobalOptions {
   port?: string;
+  projectPath?: string;
 }
 
 function stripInternalFields(result: Record<string, unknown>): Record<string, unknown> {
@@ -162,8 +163,9 @@ function checkServerVersion(result: Record<string, unknown>): void {
  * Check if Unity is in a busy state (compiling, reloading, or server starting).
  * Throws an error with appropriate message if busy.
  */
-function checkUnityBusyState(): void {
-  const projectRoot = findUnityProjectRoot();
+function checkUnityBusyState(projectPath?: string): void {
+  const projectRoot =
+    projectPath !== undefined ? validateProjectPath(projectPath) : findUnityProjectRoot();
   if (projectRoot === null) {
     return;
   }
@@ -197,7 +199,7 @@ export async function executeToolCommand(
     }
     portNumber = parsed;
   }
-  const port = await resolveUnityPort(portNumber);
+  const port = await resolveUnityPort(portNumber, globalOptions.projectPath);
   const compileOptions = getCompileExecutionOptions(toolName, params);
   const shouldWaitForDomainReload = compileOptions.waitForDomainReload;
   const compileRequestId = shouldWaitForDomainReload ? ensureCompileRequestId(params) : undefined;
@@ -207,7 +209,10 @@ export async function executeToolCommand(
 
   let lastError: unknown;
   let immediateResult: Record<string, unknown> | undefined;
-  const projectRoot = findUnityProjectRoot();
+  const projectRoot =
+    globalOptions.projectPath !== undefined
+      ? validateProjectPath(globalOptions.projectPath)
+      : findUnityProjectRoot();
 
   // Monotonically-increasing flag: once true, retries cannot reset it to false.
   // The retry loop overwrites `lastError` and `immediateResult` on each attempt,
@@ -218,7 +223,7 @@ export async function executeToolCommand(
   let requestDispatched = false;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    checkUnityBusyState();
+    checkUnityBusyState(globalOptions.projectPath);
 
     const client = new DirectUnityClient(port);
     try {
@@ -377,14 +382,14 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
     }
     portNumber = parsed;
   }
-  const port = await resolveUnityPort(portNumber);
+  const port = await resolveUnityPort(portNumber, globalOptions.projectPath);
 
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
 
   let lastError: unknown;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    checkUnityBusyState();
+    checkUnityBusyState(globalOptions.projectPath);
 
     const client = new DirectUnityClient(port);
     try {
@@ -465,14 +470,14 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
     }
     portNumber = parsed;
   }
-  const port = await resolveUnityPort(portNumber);
+  const port = await resolveUnityPort(portNumber, globalOptions.projectPath);
 
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
 
   let lastError: unknown;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    checkUnityBusyState();
+    checkUnityBusyState(globalOptions.projectPath);
 
     const client = new DirectUnityClient(port);
     try {
