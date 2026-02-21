@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.66.1](https://github.com/hatayama/uLoopMCP/compare/v0.66.0...v0.66.1) (2026-02-21)
+
+
+### Bug Fixes
+
+* **deps:** upgrade eslint to v10 and resolve minimatch ReDoS vulnerability ([#660](https://github.com/hatayama/uLoopMCP/issues/660)) ([11e4b8b](https://github.com/hatayama/uLoopMCP/commit/11e4b8b0cbd80454f52f5ea9586c52a139cb73d9))
+
 ## [0.66.0](https://github.com/hatayama/uLoopMCP/compare/v0.65.0...v0.66.0) (2026-02-21)
 
 
