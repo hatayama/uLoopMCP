@@ -46,6 +46,13 @@ The window name is the text displayed in the window's title bar (tab). The user 
 
 You can also specify custom EditorWindow titles (e.g., "EditorWindow Capture Test").
 
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--project-path <path>` | Target a specific Unity project. Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
+
 ## Examples
 
 ```bash

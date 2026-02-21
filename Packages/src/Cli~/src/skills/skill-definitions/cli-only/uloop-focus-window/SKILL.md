@@ -17,6 +17,12 @@ uloop focus-window
 
 None.
 
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--project-path <path>` | Target a specific Unity project. Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
+
 ## Examples
 
 ```bash

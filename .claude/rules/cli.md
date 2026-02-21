@@ -35,6 +35,30 @@ src/
     └── cli-e2e.test.ts    # E2E tests
 ```
 
+## Global Options
+
+All commands that communicate with Unity support these global options:
+
+| Option | Description |
+|--------|-------------|
+| `-p, --port <port>` | Specify Unity TCP port directly |
+| `--project-path <path>` | Specify Unity project path to auto-resolve port |
+
+`--port` and `--project-path` are mutually exclusive.
+
+### --project-path
+
+Resolves the target Unity instance by reading `UserSettings/UnityMcpSettings.json` from the specified project directory. Path resolution follows the same rules as `cd` — absolute paths (starting with `/`) are used as-is, relative paths are resolved from the current working directory.
+
+```bash
+# Absolute path
+uloop compile --project-path /Users/foo/moorestech_server
+
+# Relative path (resolved from cwd)
+uloop compile --project-path ./moorestech_server
+uloop compile --project-path ../other/project
+```
+
 ## Build
 
 ```bash
