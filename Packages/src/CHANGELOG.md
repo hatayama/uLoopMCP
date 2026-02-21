@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.66.0](https://github.com/hatayama/uLoopMCP/compare/v0.65.0...v0.66.0) (2026-02-21)
+
+
+### Features
+
+* add --project-path option to CLI for targeting Unity instances by path ([#658](https://github.com/hatayama/uLoopMCP/issues/658)) ([c2073d5](https://github.com/hatayama/uLoopMCP/commit/c2073d5eb53394bbad434a8e8aedc53cbd5d9b74))
+
 ## [0.65.0](https://github.com/hatayama/uLoopMCP/compare/v0.64.1...v0.65.0) (2026-02-19)
 
 
