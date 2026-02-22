@@ -854,15 +854,7 @@ namespace io.github.hatayama.uLoopMCP
 
                     _cachedSettings = JsonUtility.FromJson<McpEditorSettingsData>(json);
 
-                    // Migrate legacy autoStartServer setting to isServerRunning.
-                    // Old versions always set isServerRunning=false on quit, so existing users
-                    // who had autoStartServer=true would lose auto-start behavior after upgrade.
-                    // SaveSettings removes the legacy field, making this a one-time migration.
-                    if (json.Contains("\"autoStartServer\"") && !_cachedSettings.isServerRunning)
-                    {
-                        _cachedSettings.isServerRunning = true;
-                        SaveSettings(_cachedSettings);
-                    }
+                    MigrateLegacyAutoStartIfNeeded(json);
                 }
                 else
                 {
@@ -879,6 +871,36 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
         
+        /// <summary>
+        /// One-time migration for legacy autoStartServer field.
+        /// Old versions persisted autoStartServer (true/false) and always set
+        /// isServerRunning=false on quit. New logic relies solely on isServerRunning,
+        /// so we translate the legacy intent: autoStartServer=true → isServerRunning=true.
+        /// After SaveSettings the legacy field disappears from JSON, preventing re-trigger.
+        /// </summary>
+        [Serializable]
+        private class LegacyAutoStartProbe
+        {
+            // Default matches old code's default (true), so missing field → true
+            public bool autoStartServer = true;
+        }
+
+        private static void MigrateLegacyAutoStartIfNeeded(string json)
+        {
+            LegacyAutoStartProbe probe = JsonUtility.FromJson<LegacyAutoStartProbe>(json);
+
+            // Field absent in JSON → probe uses default (true), but no legacy data exists
+            // Field present in JSON → real legacy value
+            bool hasLegacyField = json.Contains("\"autoStartServer\"");
+            if (!hasLegacyField)
+            {
+                return;
+            }
+
+            _cachedSettings.isServerRunning = probe.autoStartServer;
+            SaveSettings(_cachedSettings);
+        }
+
         /// <summary>
         /// Security: Validate if the settings file path is safe
         /// </summary>
