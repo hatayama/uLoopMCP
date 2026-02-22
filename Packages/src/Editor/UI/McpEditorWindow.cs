@@ -17,10 +17,15 @@ namespace io.github.hatayama.uLoopMCP
         private IEnumerable<ConnectedClient> _cachedStoredTools;
         private float _lastStoredToolsUpdateTime;
 
-        [MenuItem("Window/uLoopMCP")]
+        private bool _targetClaude = true;
+        private bool _targetCodex;
+        private bool _isInstallingCli;
+        private bool _isInstallingSkills;
+
+        [MenuItem("Window/uLoop")]
         public static void ShowWindow()
         {
-            McpEditorWindow window = GetWindow<McpEditorWindow>(McpConstants.PROJECT_NAME);
+            McpEditorWindow window = GetWindow<McpEditorWindow>("uLoop");
             window.Show();
         }
 
@@ -64,9 +69,15 @@ namespace io.github.hatayama.uLoopMCP
 
         private void SetupViewCallbacks()
         {
+            _view.OnConnectionModeChanged += UpdateConnectionMode;
             _view.OnToggleServer += ToggleServer;
             _view.OnAutoStartChanged += UpdateAutoStartServer;
             _view.OnPortChanged += UpdateCustomPort;
+            _view.OnInstallCli += HandleInstallCli;
+            _view.OnInstallSkills += HandleInstallSkills;
+            _view.OnTargetClaudeChanged += value => { _targetClaude = value; RefreshCliSetupSection(); };
+            _view.OnTargetCodexChanged += value => { _targetCodex = value; RefreshCliSetupSection(); };
+            _view.OnCliSetupFoldoutChanged += UpdateShowCliSetup;
             _view.OnConnectedToolsFoldoutChanged += UpdateShowConnectedTools;
             _view.OnEditorTypeChanged += UpdateSelectedEditorType;
             _view.OnLLMSettingsFoldoutChanged += UpdateShowLLMToolSettings;
@@ -194,8 +205,14 @@ namespace io.github.hatayama.uLoopMCP
             ServerStatusData statusData = CreateServerStatusData();
             _view.UpdateServerStatus(statusData);
 
+            ConnectionModeData modeData = new ConnectionModeData(_model.UI.ConnectionMode);
+            _view.UpdateConnectionMode(modeData);
+            _view.UpdateSectionVisibility(_model.UI.ConnectionMode);
+
             ServerControlsData controlsData = CreateServerControlsData();
             _view.UpdateServerControls(controlsData);
+
+            RefreshCliSetupSection();
 
             ConnectedToolsData toolsData = CreateConnectedToolsData();
             _view.UpdateConnectedTools(toolsData);
@@ -468,6 +485,11 @@ namespace io.github.hatayama.uLoopMCP
             RefreshAllSections();
         }
 
+        private void UpdateShowCliSetup(bool show)
+        {
+            _model.UpdateShowCliSetup(show);
+        }
+
         private void UpdateShowSecuritySettings(bool show)
         {
             _model.UpdateShowSecuritySettings(show);
@@ -497,6 +519,179 @@ namespace io.github.hatayama.uLoopMCP
         private void UpdateDynamicCodeSecurityLevel(DynamicCodeSecurityLevel level)
         {
             McpEditorSettings.SetDynamicCodeSecurityLevel(level);
+        }
+
+        private void UpdateConnectionMode(ConnectionMode mode)
+        {
+            _model.UpdateConnectionMode(mode);
+            _view.UpdateConnectionMode(new ConnectionModeData(mode));
+            _view.UpdateSectionVisibility(mode);
+            RefreshCliSetupSection();
+        }
+
+        private void RefreshCliSetupSection()
+        {
+            if (_view == null)
+            {
+                return;
+            }
+
+            CliSetupData cliData = CreateCliSetupData();
+            _view.UpdateCliSetup(cliData);
+        }
+
+        private CliSetupData CreateCliSetupData()
+        {
+            string cliVersion = CliInstallationDetector.GetCliVersion();
+            bool isCliInstalled = cliVersion != null;
+            string packageVersion = McpConstants.PackageInfo.version;
+            bool needsUpdate = isCliInstalled && cliVersion != packageVersion;
+            bool isClaudeInstalled = CliInstallationDetector.AreSkillsInstalled("claude");
+            bool isCodexInstalled = CliInstallationDetector.AreSkillsInstalled("codex");
+
+            return new CliSetupData(
+                isCliInstalled,
+                cliVersion,
+                packageVersion,
+                needsUpdate,
+                _isInstallingCli,
+                isClaudeInstalled,
+                isCodexInstalled,
+                _targetClaude,
+                _targetCodex,
+                _isInstallingSkills,
+                _model.UI.ShowCliSetup);
+        }
+
+        private async void HandleInstallCli()
+        {
+            string npmPath = NodeEnvironmentResolver.FindNpmPath();
+            if (string.IsNullOrEmpty(npmPath))
+            {
+                EditorUtility.DisplayDialog(
+                    "npm Not Found",
+                    "npm was not found on this system.\nPlease install Node.js first, then try again.",
+                    "OK");
+                return;
+            }
+
+            string packageVersion = McpConstants.PackageInfo.version;
+            string installTarget = $"{CliConstants.NPM_PACKAGE_NAME}@{packageVersion}";
+
+            _isInstallingCli = true;
+            RefreshCliSetupSection();
+
+            System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = npmPath,
+                Arguments = $"install -g {installTarget}",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            NodeEnvironmentResolver.SetupEnvironmentPath(startInfo, NodeEnvironmentResolver.FindNodePath());
+
+            bool success = false;
+            string errorOutput = "";
+
+            await Task.Run(() =>
+            {
+                using (System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo))
+                {
+                    if (process == null)
+                    {
+                        errorOutput = "Failed to start npm process";
+                        return;
+                    }
+
+                    process.StandardOutput.ReadToEnd();
+                    errorOutput = process.StandardError.ReadToEnd();
+                    process.WaitForExit(30000);
+                    success = process.ExitCode == 0;
+                }
+            });
+
+            _isInstallingCli = false;
+            CliInstallationDetector.InvalidateCache();
+
+            if (success)
+            {
+                EditorUtility.DisplayDialog("CLI Installed", $"uLoop CLI v{packageVersion} has been installed successfully.", "OK");
+            }
+            else
+            {
+                string manualCommand = $"npm install -g {installTarget}";
+                EditorUtility.DisplayDialog(
+                    "Installation Failed",
+                    $"Failed to install uLoop CLI.\n\n{errorOutput}\n\nYou can try manually:\n{manualCommand}",
+                    "OK");
+            }
+
+            RefreshAllSections();
+        }
+
+        private async void HandleInstallSkills()
+        {
+            _isInstallingSkills = true;
+            RefreshCliSetupSection();
+
+            string arguments = "skills install";
+            if (_targetClaude)
+            {
+                arguments += " --claude";
+            }
+            if (_targetCodex)
+            {
+                arguments += " --codex";
+            }
+
+            System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "uloop",
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            NodeEnvironmentResolver.SetupEnvironmentPath(startInfo, NodeEnvironmentResolver.FindNodePath());
+
+            bool success = false;
+            string errorOutput = "";
+
+            await Task.Run(() =>
+            {
+                using (System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo))
+                {
+                    if (process == null)
+                    {
+                        errorOutput = "Failed to start uloop process";
+                        return;
+                    }
+
+                    process.StandardOutput.ReadToEnd();
+                    errorOutput = process.StandardError.ReadToEnd();
+                    process.WaitForExit(30000);
+                    success = process.ExitCode == 0;
+                }
+            });
+
+            _isInstallingSkills = false;
+            CliInstallationDetector.InvalidateCache();
+
+            if (success)
+            {
+                EditorUtility.DisplayDialog("Skills Installed", "Skills have been installed successfully.", "OK");
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("Installation Failed", $"Failed to install skills.\n\n{errorOutput}", "OK");
+            }
+
+            RefreshAllSections();
         }
 
         private void ToggleServer()

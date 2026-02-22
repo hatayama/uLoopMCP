@@ -60,7 +60,9 @@ namespace io.github.hatayama.uLoopMCP
                 showSecuritySettings: settings.showSecuritySettings,
                 addRepositoryRoot: settings.addRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
-                showRepositoryRootToggle: ui.ShowRepositoryRootToggle));
+                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
+                connectionMode: (ConnectionMode)settings.connectionMode,
+                showCliSetup: ui.ShowCliSetup));
 
         }
 
@@ -71,7 +73,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             McpEditorSettings.SetCustomPort(UI.CustomPort);
             McpEditorSettings.SetAutoStartServer(UI.AutoStartServer);
-
+            McpEditorSettings.SetConnectionMode(UI.ConnectionMode);
         }
 
         /// <summary>
@@ -91,7 +93,9 @@ namespace io.github.hatayama.uLoopMCP
                 showSecuritySettings: ui.ShowSecuritySettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
-                showRepositoryRootToggle: ui.ShowRepositoryRootToggle));
+                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
+                connectionMode: ui.ConnectionMode,
+                showCliSetup: ui.ShowCliSetup));
         }
 
         /// <summary>
@@ -189,7 +193,9 @@ namespace io.github.hatayama.uLoopMCP
                 showSecuritySettings: ui.ShowSecuritySettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
-                showRepositoryRootToggle: ui.ShowRepositoryRootToggle));
+                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
+                connectionMode: ui.ConnectionMode,
+                showCliSetup: ui.ShowCliSetup));
             McpEditorSettings.SetAutoStartServer(autoStart);
         }
 
@@ -208,7 +214,9 @@ namespace io.github.hatayama.uLoopMCP
                 showSecuritySettings: ui.ShowSecuritySettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
-                showRepositoryRootToggle: ui.ShowRepositoryRootToggle));
+                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
+                connectionMode: ui.ConnectionMode,
+                showCliSetup: ui.ShowCliSetup));
             McpEditorSettings.SetCustomPort(port);
         }
 
@@ -227,7 +235,9 @@ namespace io.github.hatayama.uLoopMCP
                 showSecuritySettings: ui.ShowSecuritySettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
-                showRepositoryRootToggle: ui.ShowRepositoryRootToggle));
+                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
+                connectionMode: ui.ConnectionMode,
+                showCliSetup: ui.ShowCliSetup));
         }
 
         /// <summary>
@@ -245,7 +255,9 @@ namespace io.github.hatayama.uLoopMCP
                 showSecuritySettings: ui.ShowSecuritySettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
-                showRepositoryRootToggle: ui.ShowRepositoryRootToggle));
+                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
+                connectionMode: ui.ConnectionMode,
+                showCliSetup: ui.ShowCliSetup));
         }
 
         /// <summary>
@@ -263,7 +275,9 @@ namespace io.github.hatayama.uLoopMCP
                 showSecuritySettings: ui.ShowSecuritySettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
-                showRepositoryRootToggle: ui.ShowRepositoryRootToggle));
+                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
+                connectionMode: ui.ConnectionMode,
+                showCliSetup: ui.ShowCliSetup));
             McpEditorSettings.SetSelectedEditorType(type);
         }
 
@@ -282,7 +296,9 @@ namespace io.github.hatayama.uLoopMCP
                 showSecuritySettings: ui.ShowSecuritySettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
-                showRepositoryRootToggle: ui.ShowRepositoryRootToggle));
+                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
+                connectionMode: ui.ConnectionMode,
+                showCliSetup: ui.ShowCliSetup));
         }
 
         /// <summary>
@@ -300,7 +316,9 @@ namespace io.github.hatayama.uLoopMCP
                 showSecuritySettings: show,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
-                showRepositoryRootToggle: ui.ShowRepositoryRootToggle));
+                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
+                connectionMode: ui.ConnectionMode,
+                showCliSetup: ui.ShowCliSetup));
             McpEditorSettings.SetShowSecuritySettings(show);
         }
 
@@ -343,7 +361,9 @@ namespace io.github.hatayama.uLoopMCP
                 showSecuritySettings: ui.ShowSecuritySettings,
                 addRepositoryRoot: addRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
-                showRepositoryRootToggle: ui.ShowRepositoryRootToggle));
+                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
+                connectionMode: ui.ConnectionMode,
+                showCliSetup: ui.ShowCliSetup));
             McpEditorSettings.SetAddRepositoryRoot(addRepositoryRoot);
             UnityMcpPathResolver.InvalidateGitRootCache();
         }
@@ -363,7 +383,9 @@ namespace io.github.hatayama.uLoopMCP
                 showSecuritySettings: ui.ShowSecuritySettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: supportsToggle,
-                showRepositoryRootToggle: ui.ShowRepositoryRootToggle));
+                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
+                connectionMode: ui.ConnectionMode,
+                showCliSetup: ui.ShowCliSetup));
         }
 
         /// <summary>
@@ -381,8 +403,45 @@ namespace io.github.hatayama.uLoopMCP
                 showSecuritySettings: ui.ShowSecuritySettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
-                showRepositoryRootToggle: showToggle));
+                showRepositoryRootToggle: showToggle,
+                connectionMode: ui.ConnectionMode,
+                showCliSetup: ui.ShowCliSetup));
+        }
+
+        public void UpdateConnectionMode(ConnectionMode mode)
+        {
+            UpdateUIState(ui => new UIState(
+                customPort: ui.CustomPort,
+                autoStartServer: ui.AutoStartServer,
+                showLLMToolSettings: ui.ShowLLMToolSettings,
+                showConnectedTools: ui.ShowConnectedTools,
+                selectedEditorType: ui.SelectedEditorType,
+                mainScrollPosition: ui.MainScrollPosition,
+                showSecuritySettings: ui.ShowSecuritySettings,
+                addRepositoryRoot: ui.AddRepositoryRoot,
+                supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
+                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
+                connectionMode: mode,
+                showCliSetup: ui.ShowCliSetup));
+            McpEditorSettings.SetConnectionMode(mode);
+        }
+
+        public void UpdateShowCliSetup(bool show)
+        {
+            UpdateUIState(ui => new UIState(
+                customPort: ui.CustomPort,
+                autoStartServer: ui.AutoStartServer,
+                showLLMToolSettings: ui.ShowLLMToolSettings,
+                showConnectedTools: ui.ShowConnectedTools,
+                selectedEditorType: ui.SelectedEditorType,
+                mainScrollPosition: ui.MainScrollPosition,
+                showSecuritySettings: ui.ShowSecuritySettings,
+                addRepositoryRoot: ui.AddRepositoryRoot,
+                supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
+                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
+                connectionMode: ui.ConnectionMode,
+                showCliSetup: show));
         }
 
     }
-} 
+}

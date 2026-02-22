@@ -13,9 +13,12 @@ namespace io.github.hatayama.uLoopMCP
     /// - McpEditorModel: Model layer service for managing state transitions
     /// </summary>
 
-    /// <summary>
-    /// UI state data for McpEditorWindow
-    /// </summary>
+    public enum ConnectionMode
+    {
+        CLI = 0,
+        MCP = 1
+    }
+
     public record UIState
     {
         public int CustomPort { get; }
@@ -28,6 +31,8 @@ namespace io.github.hatayama.uLoopMCP
         public bool AddRepositoryRoot { get; }
         public bool SupportsRepositoryRootToggle { get; }
         public bool ShowRepositoryRootToggle { get; }
+        public ConnectionMode ConnectionMode { get; }
+        public bool ShowCliSetup { get; }
 
         public UIState(
             int customPort = McpServerConfig.DEFAULT_PORT,
@@ -39,7 +44,9 @@ namespace io.github.hatayama.uLoopMCP
             bool showSecuritySettings = false,
             bool addRepositoryRoot = false,
             bool supportsRepositoryRootToggle = false,
-            bool showRepositoryRootToggle = false)
+            bool showRepositoryRootToggle = false,
+            ConnectionMode connectionMode = ConnectionMode.CLI,
+            bool showCliSetup = true)
         {
             CustomPort = customPort;
             AutoStartServer = autoStartServer;
@@ -51,6 +58,8 @@ namespace io.github.hatayama.uLoopMCP
             AddRepositoryRoot = addRepositoryRoot;
             SupportsRepositoryRootToggle = supportsRepositoryRootToggle;
             ShowRepositoryRootToggle = showRepositoryRootToggle;
+            ConnectionMode = connectionMode;
+            ShowCliSetup = showCliSetup;
         }
     }
 

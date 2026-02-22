@@ -332,6 +332,75 @@
 }
 
 /* ===========================================
+   Block: Mode Toggle (segment control)
+   =========================================== */
+.mcp-mode-toggle {
+    flex-direction: row;
+    background-color: rgba(48, 48, 48, 0.6);
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: rgba(128, 128, 128, 0.2);
+    padding: 2px;
+}
+
+.mcp-mode-button {
+    flex-grow: 1;
+    height: 24px;
+    border-radius: 2px;
+    border-width: 0;
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.5);
+    -unity-font-style: normal;
+    margin: 0;
+}
+
+.mcp-mode-button:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.mcp-mode-button--active {
+    background-color: rgba(46, 90, 136, 0.8);
+    color: #ffffff;
+    border-width: 1px;
+    border-color: rgba(70, 130, 200, 0.4);
+}
+
+.mcp-mode-button--active:hover {
+    background-color: rgba(46, 90, 136, 0.9);
+}
+
+/* ===========================================
+   Block: CLI Setup
+   =========================================== */
+.mcp-cli-subsection-header {
+    -unity-font-style: bold;
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+
+.mcp-cli-status-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.mcp-cli-status-icon {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    margin-right: 6px;
+}
+
+.mcp-cli-status-icon--installed {
+    background-color: #4caf50;
+}
+
+.mcp-cli-status-icon--not-installed {
+    background-color: rgba(128, 128, 128, 0.5);
+}
+
+/* ===========================================
    Utility: Hidden
    =========================================== */
 .mcp-hidden {

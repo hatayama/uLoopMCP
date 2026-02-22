@@ -28,6 +28,42 @@
             </ui:VisualElement>
         </ui:VisualElement>
 
+        <!-- Connection Mode Section -->
+        <ui:VisualElement name="connection-mode-section" class="mcp-section">
+            <ui:VisualElement class="mcp-mode-toggle">
+                <ui:Button name="cli-mode-button" text="CLI Mode" class="mcp-mode-button mcp-mode-button--active" />
+                <ui:Button name="mcp-mode-button" text="MCP Mode" class="mcp-mode-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- CLI Setup Section -->
+        <ui:VisualElement name="cli-setup-section" class="mcp-section mcp-section--box mcp-hidden">
+            <ui:Foldout name="cli-setup-foldout" text="CLI Setup" class="mcp-foldout">
+                <ui:VisualElement class="mcp-cli-status-row">
+                    <ui:VisualElement name="cli-status-icon" class="mcp-cli-status-icon mcp-cli-status-icon--not-installed" />
+                    <ui:Label name="cli-status-label" text="uLoop CLI: Checking..." />
+                </ui:VisualElement>
+                <ui:Button name="install-cli-button" text="Install CLI" class="mcp-button mcp-button--configure" />
+
+                <ui:Label text="Skills" class="mcp-cli-subsection-header" />
+                <ui:VisualElement class="mcp-cli-status-row">
+                    <ui:VisualElement name="skills-status-icon" class="mcp-cli-status-icon mcp-cli-status-icon--not-installed" />
+                    <ui:Label name="skills-status-label" text="Skills: Checking..." />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="mcp-toggle-row">
+                    <ui:Toggle name="target-claude-toggle" class="mcp-toggle-row__toggle" value="true" />
+                    <ui:Label text="Claude Code" class="mcp-toggle-row__label" />
+                </ui:VisualElement>
+                <ui:VisualElement class="mcp-toggle-row">
+                    <ui:Toggle name="target-codex-toggle" class="mcp-toggle-row__toggle" />
+                    <ui:Label text="Codex CLI" class="mcp-toggle-row__label" />
+                </ui:VisualElement>
+
+                <ui:Button name="install-skills-button" text="Install Skills" class="mcp-button mcp-button--configure" />
+            </ui:Foldout>
+        </ui:VisualElement>
+
         <!-- Connected Tools Section -->
         <ui:VisualElement name="connected-tools-section" class="mcp-section mcp-section--box">
             <ui:Foldout name="connected-tools-foldout" text="Connected LLM Tools" class="mcp-foldout">

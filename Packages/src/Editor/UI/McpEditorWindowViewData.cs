@@ -109,4 +109,55 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 
-} 
+    public record ConnectionModeData
+    {
+        public readonly ConnectionMode Mode;
+
+        public ConnectionModeData(ConnectionMode mode)
+        {
+            Mode = mode;
+        }
+    }
+
+    public record CliSetupData
+    {
+        public readonly bool IsCliInstalled;
+        public readonly string CliVersion;
+        public readonly string PackageVersion;
+        public readonly bool NeedsUpdate;
+        public readonly bool IsInstallingCli;
+        public readonly bool IsClaudeSkillsInstalled;
+        public readonly bool IsCodexSkillsInstalled;
+        public readonly bool TargetClaude;
+        public readonly bool TargetCodex;
+        public readonly bool IsInstallingSkills;
+        public readonly bool ShowFoldout;
+
+        public CliSetupData(
+            bool isCliInstalled,
+            string cliVersion,
+            string packageVersion,
+            bool needsUpdate,
+            bool isInstallingCli,
+            bool isClaudeSkillsInstalled,
+            bool isCodexSkillsInstalled,
+            bool targetClaude,
+            bool targetCodex,
+            bool isInstallingSkills,
+            bool showFoldout)
+        {
+            IsCliInstalled = isCliInstalled;
+            CliVersion = cliVersion;
+            PackageVersion = packageVersion;
+            NeedsUpdate = needsUpdate;
+            IsInstallingCli = isInstallingCli;
+            IsClaudeSkillsInstalled = isClaudeSkillsInstalled;
+            IsCodexSkillsInstalled = isCodexSkillsInstalled;
+            TargetClaude = targetClaude;
+            TargetCodex = targetCodex;
+            IsInstallingSkills = isInstallingSkills;
+            ShowFoldout = showFoldout;
+        }
+    }
+
+}

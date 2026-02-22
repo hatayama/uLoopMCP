@@ -18,14 +18,26 @@ namespace io.github.hatayama.uLoopMCP
         private readonly VisualElement _root;
 
         private ServerStatusSection _serverStatusSection;
+        private ConnectionModeSection _connectionModeSection;
         private ServerControlsSection _serverControlsSection;
+        private CliSetupSection _cliSetupSection;
         private ConnectedToolsSection _connectedToolsSection;
         private EditorConfigSection _editorConfigSection;
         private SecuritySettingsSection _securitySettingsSection;
 
+        private VisualElement _cliSetupSectionRoot;
+        private VisualElement _connectedToolsSectionRoot;
+        private VisualElement _editorConfigSectionRoot;
+
+        public event Action<ConnectionMode> OnConnectionModeChanged;
         public event Action OnToggleServer;
         public event Action<bool> OnAutoStartChanged;
         public event Action<int> OnPortChanged;
+        public event Action OnInstallCli;
+        public event Action OnInstallSkills;
+        public event Action<bool> OnTargetClaudeChanged;
+        public event Action<bool> OnTargetCodexChanged;
+        public event Action<bool> OnCliSetupFoldoutChanged;
         public event Action<bool> OnConnectedToolsFoldoutChanged;
         public event Action<McpEditorType> OnEditorTypeChanged;
         public event Action<bool> OnLLMSettingsFoldoutChanged;
@@ -82,10 +94,25 @@ namespace io.github.hatayama.uLoopMCP
         {
             _serverStatusSection = new ServerStatusSection(_root);
 
+            _connectionModeSection = new ConnectionModeSection(_root);
+            _connectionModeSection.OnModeChanged += mode => OnConnectionModeChanged?.Invoke(mode);
+
             _serverControlsSection = new ServerControlsSection(_root);
             _serverControlsSection.OnToggleServer += () => OnToggleServer?.Invoke();
             _serverControlsSection.OnAutoStartChanged += value => OnAutoStartChanged?.Invoke(value);
             _serverControlsSection.OnPortChanged += value => OnPortChanged?.Invoke(value);
+
+            _cliSetupSection = new CliSetupSection(_root);
+            _cliSetupSection.SetupBindings();
+            _cliSetupSection.OnInstallCli += () => OnInstallCli?.Invoke();
+            _cliSetupSection.OnInstallSkills += () => OnInstallSkills?.Invoke();
+            _cliSetupSection.OnTargetClaudeChanged += value => OnTargetClaudeChanged?.Invoke(value);
+            _cliSetupSection.OnTargetCodexChanged += value => OnTargetCodexChanged?.Invoke(value);
+            _cliSetupSection.OnFoldoutChanged += value => OnCliSetupFoldoutChanged?.Invoke(value);
+
+            _cliSetupSectionRoot = _root.Q<VisualElement>("cli-setup-section");
+            _connectedToolsSectionRoot = _root.Q<VisualElement>("connected-tools-section");
+            _editorConfigSectionRoot = _root.Q<VisualElement>("editor-config-section");
 
             _connectedToolsSection = new ConnectedToolsSection(_root);
             _connectedToolsSection.OnFoldoutChanged += value => OnConnectedToolsFoldoutChanged?.Invoke(value);
@@ -130,10 +157,31 @@ namespace io.github.hatayama.uLoopMCP
             _securitySettingsSection?.Update(data);
         }
 
+        public void UpdateConnectionMode(ConnectionModeData data)
+        {
+            _connectionModeSection?.Update(data);
+        }
+
+        public void UpdateCliSetup(CliSetupData data)
+        {
+            _cliSetupSection?.Update(data);
+        }
+
+        public void UpdateSectionVisibility(ConnectionMode mode)
+        {
+            bool isMcp = mode == ConnectionMode.MCP;
+
+            ViewDataBinder.SetVisible(_connectedToolsSectionRoot, isMcp);
+            ViewDataBinder.SetVisible(_editorConfigSectionRoot, isMcp);
+            ViewDataBinder.SetVisible(_cliSetupSectionRoot, !isMcp);
+        }
+
         public void Dispose()
         {
             _serverStatusSection = null;
+            _connectionModeSection = null;
             _serverControlsSection = null;
+            _cliSetupSection = null;
             _connectedToolsSection = null;
             _editorConfigSection = null;
             _securitySettingsSection = null;
