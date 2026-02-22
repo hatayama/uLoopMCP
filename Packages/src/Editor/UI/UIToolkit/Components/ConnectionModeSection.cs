@@ -5,19 +5,23 @@ namespace io.github.hatayama.uLoopMCP
 {
     public class ConnectionModeSection
     {
-        private readonly Button _mcpModeButton;
-        private readonly Button _cliModeButton;
+        private readonly Foldout _foldout;
+        private readonly Button _mcpTabButton;
+        private readonly Button _cliTabButton;
         private ConnectionModeData _lastData;
 
         public event Action<ConnectionMode> OnModeChanged;
+        public event Action<bool> OnFoldoutChanged;
 
         public ConnectionModeSection(VisualElement root)
         {
-            _mcpModeButton = root.Q<Button>("mcp-mode-button");
-            _cliModeButton = root.Q<Button>("cli-mode-button");
+            _foldout = root.Q<Foldout>("configuration-foldout");
+            _mcpTabButton = root.Q<Button>("mcp-tab-button");
+            _cliTabButton = root.Q<Button>("cli-tab-button");
 
-            _mcpModeButton.clicked += () => OnModeChanged?.Invoke(ConnectionMode.MCP);
-            _cliModeButton.clicked += () => OnModeChanged?.Invoke(ConnectionMode.CLI);
+            _mcpTabButton.clicked += () => OnModeChanged?.Invoke(ConnectionMode.MCP);
+            _cliTabButton.clicked += () => OnModeChanged?.Invoke(ConnectionMode.CLI);
+            _foldout.RegisterValueChangedCallback(evt => OnFoldoutChanged?.Invoke(evt.newValue));
         }
 
         public void Update(ConnectionModeData data)
@@ -31,8 +35,13 @@ namespace io.github.hatayama.uLoopMCP
 
             bool isMcp = data.Mode == ConnectionMode.MCP;
 
-            ViewDataBinder.ToggleClass(_mcpModeButton, "mcp-mode-button--active", isMcp);
-            ViewDataBinder.ToggleClass(_cliModeButton, "mcp-mode-button--active", !isMcp);
+            ViewDataBinder.ToggleClass(_mcpTabButton, "mcp-tab-button--active", isMcp);
+            ViewDataBinder.ToggleClass(_cliTabButton, "mcp-tab-button--active", !isMcp);
+        }
+
+        public void UpdateFoldout(bool show)
+        {
+            ViewDataBinder.UpdateFoldout(_foldout, show);
         }
     }
 }

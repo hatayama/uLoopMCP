@@ -19,6 +19,15 @@ namespace io.github.hatayama.uLoopMCP
         MCP = 1
     }
 
+    public enum SkillsTarget
+    {
+        Claude = 0,
+        Codex = 1,
+        Cursor = 2,
+        Gemini = 3,
+        All = 4
+    }
+
     public record UIState
     {
         public int CustomPort { get; }
@@ -32,7 +41,7 @@ namespace io.github.hatayama.uLoopMCP
         public bool SupportsRepositoryRootToggle { get; }
         public bool ShowRepositoryRootToggle { get; }
         public ConnectionMode ConnectionMode { get; }
-        public bool ShowCliSetup { get; }
+        public bool ShowConfiguration { get; }
 
         public UIState(
             int customPort = McpServerConfig.DEFAULT_PORT,
@@ -46,7 +55,7 @@ namespace io.github.hatayama.uLoopMCP
             bool supportsRepositoryRootToggle = false,
             bool showRepositoryRootToggle = false,
             ConnectionMode connectionMode = ConnectionMode.CLI,
-            bool showCliSetup = true)
+            bool showConfiguration = true)
         {
             CustomPort = customPort;
             AutoStartServer = autoStartServer;
@@ -59,7 +68,7 @@ namespace io.github.hatayama.uLoopMCP
             SupportsRepositoryRootToggle = supportsRepositoryRootToggle;
             ShowRepositoryRootToggle = showRepositoryRootToggle;
             ConnectionMode = connectionMode;
-            ShowCliSetup = showCliSetup;
+            ShowConfiguration = showConfiguration;
         }
     }
 

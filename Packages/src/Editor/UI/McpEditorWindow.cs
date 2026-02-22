@@ -17,8 +17,7 @@ namespace io.github.hatayama.uLoopMCP
         private IEnumerable<ConnectedClient> _cachedStoredTools;
         private float _lastStoredToolsUpdateTime;
 
-        private bool _targetClaude = true;
-        private bool _targetCodex;
+        private SkillsTarget _skillsTarget = SkillsTarget.Claude;
         private bool _isInstallingCli;
         private bool _isInstallingSkills;
 
@@ -75,9 +74,8 @@ namespace io.github.hatayama.uLoopMCP
             _view.OnPortChanged += UpdateCustomPort;
             _view.OnInstallCli += HandleInstallCli;
             _view.OnInstallSkills += HandleInstallSkills;
-            _view.OnTargetClaudeChanged += value => { _targetClaude = value; RefreshCliSetupSection(); };
-            _view.OnTargetCodexChanged += value => { _targetCodex = value; RefreshCliSetupSection(); };
-            _view.OnCliSetupFoldoutChanged += UpdateShowCliSetup;
+            _view.OnSkillsTargetChanged += value => { _skillsTarget = value; RefreshCliSetupSection(); };
+            _view.OnConfigurationFoldoutChanged += UpdateShowConfiguration;
             _view.OnConnectedToolsFoldoutChanged += UpdateShowConnectedTools;
             _view.OnEditorTypeChanged += UpdateSelectedEditorType;
             _view.OnLLMSettingsFoldoutChanged += UpdateShowLLMToolSettings;
@@ -207,6 +205,7 @@ namespace io.github.hatayama.uLoopMCP
 
             ConnectionModeData modeData = new ConnectionModeData(_model.UI.ConnectionMode);
             _view.UpdateConnectionMode(modeData);
+            _view.UpdateConfigurationFoldout(_model.UI.ShowConfiguration);
             _view.UpdateSectionVisibility(_model.UI.ConnectionMode);
 
             ServerControlsData controlsData = CreateServerControlsData();
@@ -485,9 +484,9 @@ namespace io.github.hatayama.uLoopMCP
             RefreshAllSections();
         }
 
-        private void UpdateShowCliSetup(bool show)
+        private void UpdateShowConfiguration(bool show)
         {
-            _model.UpdateShowCliSetup(show);
+            _model.UpdateShowConfiguration(show);
         }
 
         private void UpdateShowSecuritySettings(bool show)
@@ -548,6 +547,8 @@ namespace io.github.hatayama.uLoopMCP
             bool needsUpdate = isCliInstalled && cliVersion != packageVersion;
             bool isClaudeInstalled = CliInstallationDetector.AreSkillsInstalled("claude");
             bool isCodexInstalled = CliInstallationDetector.AreSkillsInstalled("codex");
+            bool isCursorInstalled = CliInstallationDetector.AreSkillsInstalled("cursor");
+            bool isGeminiInstalled = CliInstallationDetector.AreSkillsInstalled("gemini");
 
             return new CliSetupData(
                 isCliInstalled,
@@ -557,10 +558,10 @@ namespace io.github.hatayama.uLoopMCP
                 _isInstallingCli,
                 isClaudeInstalled,
                 isCodexInstalled,
-                _targetClaude,
-                _targetCodex,
-                _isInstallingSkills,
-                _model.UI.ShowCliSetup);
+                isCursorInstalled,
+                isGeminiInstalled,
+                _skillsTarget,
+                _isInstallingSkills);
         }
 
         private async void HandleInstallCli()
@@ -637,15 +638,15 @@ namespace io.github.hatayama.uLoopMCP
             _isInstallingSkills = true;
             RefreshCliSetupSection();
 
-            string arguments = "skills install";
-            if (_targetClaude)
+            string arguments = _skillsTarget switch
             {
-                arguments += " --claude";
-            }
-            if (_targetCodex)
-            {
-                arguments += " --codex";
-            }
+                SkillsTarget.Claude => "skills install --claude",
+                SkillsTarget.Codex => "skills install --codex",
+                SkillsTarget.Cursor => "skills install --cursor",
+                SkillsTarget.Gemini => "skills install --gemini",
+                SkillsTarget.All => "skills install --claude --codex --cursor --gemini",
+                _ => "skills install --claude"
+            };
 
             System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
             {

@@ -28,71 +28,64 @@
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <!-- Connection Mode Section -->
-        <ui:VisualElement name="connection-mode-section" class="mcp-section">
-            <ui:VisualElement class="mcp-mode-toggle">
-                <ui:Button name="cli-mode-button" text="CLI Mode" class="mcp-mode-button mcp-mode-button--active" />
-                <ui:Button name="mcp-mode-button" text="MCP Mode" class="mcp-mode-button" />
-            </ui:VisualElement>
-        </ui:VisualElement>
-
-        <!-- CLI Setup Section -->
-        <ui:VisualElement name="cli-setup-section" class="mcp-section mcp-section--box mcp-hidden">
-            <ui:Foldout name="cli-setup-foldout" text="CLI Setup" class="mcp-foldout">
-                <ui:VisualElement class="mcp-cli-status-row">
-                    <ui:VisualElement name="cli-status-icon" class="mcp-cli-status-icon mcp-cli-status-icon--not-installed" />
-                    <ui:Label name="cli-status-label" text="uLoop CLI: Checking..." />
-                </ui:VisualElement>
-                <ui:Button name="install-cli-button" text="Install CLI" class="mcp-button mcp-button--configure" />
-
-                <ui:Label text="Skills" class="mcp-cli-subsection-header" />
-                <ui:VisualElement class="mcp-cli-status-row">
-                    <ui:VisualElement name="skills-status-icon" class="mcp-cli-status-icon mcp-cli-status-icon--not-installed" />
-                    <ui:Label name="skills-status-label" text="Skills: Checking..." />
+        <!-- Configuration Section -->
+        <ui:VisualElement name="configuration-section" class="mcp-section mcp-section--box">
+            <ui:Foldout name="configuration-foldout" text="Configuration" class="mcp-foldout">
+                <ui:VisualElement class="mcp-tab-toggle">
+                    <ui:Button name="cli-tab-button" text="CLI" class="mcp-tab-button mcp-tab-button--active" />
+                    <ui:Button name="mcp-tab-button" text="MCP" class="mcp-tab-button" />
                 </ui:VisualElement>
 
-                <ui:VisualElement class="mcp-toggle-row">
-                    <ui:Toggle name="target-claude-toggle" class="mcp-toggle-row__toggle" value="true" />
-                    <ui:Label text="Claude Code" class="mcp-toggle-row__label" />
-                </ui:VisualElement>
-                <ui:VisualElement class="mcp-toggle-row">
-                    <ui:Toggle name="target-codex-toggle" class="mcp-toggle-row__toggle" />
-                    <ui:Label text="Codex CLI" class="mcp-toggle-row__label" />
-                </ui:VisualElement>
+                <!-- CLI Content -->
+                <ui:VisualElement name="cli-content">
+                    <ui:VisualElement class="mcp-cli-status-row">
+                        <ui:VisualElement name="cli-status-icon" class="mcp-cli-status-icon mcp-cli-status-icon--not-installed" />
+                        <ui:Label name="cli-status-label" text="uLoop CLI: Checking..." />
+                    </ui:VisualElement>
+                    <ui:Button name="install-cli-button" text="Install CLI" class="mcp-button mcp-button--configure" />
 
-                <ui:Button name="install-skills-button" text="Install Skills" class="mcp-button mcp-button--configure" />
-            </ui:Foldout>
-        </ui:VisualElement>
+                    <ui:Label text="Skills" class="mcp-cli-subsection-header" />
+                    <ui:VisualElement class="mcp-cli-status-row">
+                        <ui:VisualElement name="skills-status-icon" class="mcp-cli-status-icon mcp-cli-status-icon--not-installed" />
+                        <ui:Label name="skills-status-label" text="Skills: Checking..." />
+                    </ui:VisualElement>
 
-        <!-- Connected Tools Section -->
-        <ui:VisualElement name="connected-tools-section" class="mcp-section mcp-section--box">
-            <ui:Foldout name="connected-tools-foldout" text="Connected LLM Tools" class="mcp-foldout">
-                <ui:VisualElement name="connected-tools-content">
-                    <ui:VisualElement name="clients-list" class="mcp-clients-list" />
-                    <ui:Label name="no-clients-message" text="No connected tools found." class="mcp-info-message" />
-                    <ui:Label name="server-not-running-message" text="Server is not running. Start the server to see connected tools." class="mcp-warning-message" />
-                </ui:VisualElement>
-            </ui:Foldout>
-        </ui:VisualElement>
-
-        <!-- LLM Tool Settings Section -->
-        <ui:VisualElement name="editor-config-section" class="mcp-section mcp-section--box">
-            <ui:Foldout name="llm-settings-foldout" text="LLM Tool Settings" class="mcp-foldout">
-                <ui:VisualElement name="llm-settings-content">
                     <ui:VisualElement class="mcp-target-row">
                         <ui:Label text="Target:" class="mcp-target-row__label" />
-                        <uie:EnumField name="editor-type-field" class="mcp-target-row__field" />
+                        <uie:EnumField name="skills-target-field" class="mcp-target-row__field" />
                     </ui:VisualElement>
 
-                    <ui:VisualElement name="repository-root-row" class="mcp-toggle-row">
-                        <ui:Toggle name="repository-root-toggle" class="mcp-toggle-row__toggle" />
-                        <ui:Label text="Use Repository Root" class="mcp-toggle-row__label" tooltip="When enabled, generates configuration file at the Git repository root" />
-                    </ui:VisualElement>
+                    <ui:Button name="install-skills-button" text="Install Skills" class="mcp-button mcp-button--configure" />
+                </ui:VisualElement>
 
-                    <ui:Label name="config-error-label" class="mcp-error-message" />
+                <!-- MCP Content -->
+                <ui:VisualElement name="mcp-content">
+                    <ui:Foldout name="llm-settings-foldout" text="LLM Tool Settings" class="mcp-foldout">
+                        <ui:VisualElement name="llm-settings-content">
+                            <ui:VisualElement class="mcp-target-row">
+                                <ui:Label text="Target:" class="mcp-target-row__label" />
+                                <uie:EnumField name="editor-type-field" class="mcp-target-row__field" />
+                            </ui:VisualElement>
 
-                    <ui:Button name="configure-button" text="Configure" class="mcp-button mcp-button--configure" />
-                    <ui:Button name="open-settings-button" text="Open Settings File" class="mcp-button" />
+                            <ui:VisualElement name="repository-root-row" class="mcp-toggle-row">
+                                <ui:Toggle name="repository-root-toggle" class="mcp-toggle-row__toggle" />
+                                <ui:Label text="Use Repository Root" class="mcp-toggle-row__label" tooltip="When enabled, generates configuration file at the Git repository root" />
+                            </ui:VisualElement>
+
+                            <ui:Label name="config-error-label" class="mcp-error-message" />
+
+                            <ui:Button name="configure-button" text="Configure" class="mcp-button mcp-button--configure" />
+                            <ui:Button name="open-settings-button" text="Open Settings File" class="mcp-button" />
+                        </ui:VisualElement>
+                    </ui:Foldout>
+
+                    <ui:Foldout name="connected-tools-foldout" text="Connected LLM Tools" class="mcp-foldout">
+                        <ui:VisualElement name="connected-tools-content">
+                            <ui:VisualElement name="clients-list" class="mcp-clients-list" />
+                            <ui:Label name="no-clients-message" text="No connected tools found." class="mcp-info-message" />
+                            <ui:Label name="server-not-running-message" text="Server is not running. Start the server to see connected tools." class="mcp-warning-message" />
+                        </ui:VisualElement>
+                    </ui:Foldout>
                 </ui:VisualElement>
             </ui:Foldout>
         </ui:VisualElement>

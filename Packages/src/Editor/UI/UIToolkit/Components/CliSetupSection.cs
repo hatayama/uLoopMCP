@@ -1,48 +1,41 @@
 using System;
+using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
 {
     public class CliSetupSection
     {
-        private readonly Foldout _foldout;
         private readonly VisualElement _cliStatusIcon;
         private readonly Label _cliStatusLabel;
         private readonly Button _installCliButton;
         private readonly VisualElement _skillsStatusIcon;
         private readonly Label _skillsStatusLabel;
-        private readonly Toggle _targetClaudeToggle;
-        private readonly Toggle _targetCodexToggle;
+        private readonly EnumField _skillsTargetField;
         private readonly Button _installSkillsButton;
 
         private CliSetupData _lastData;
+        private bool _isTargetFieldInitialized;
 
         public event Action OnInstallCli;
         public event Action OnInstallSkills;
-        public event Action<bool> OnTargetClaudeChanged;
-        public event Action<bool> OnTargetCodexChanged;
-        public event Action<bool> OnFoldoutChanged;
+        public event Action<SkillsTarget> OnSkillsTargetChanged;
 
         public CliSetupSection(VisualElement root)
         {
-            _foldout = root.Q<Foldout>("cli-setup-foldout");
             _cliStatusIcon = root.Q<VisualElement>("cli-status-icon");
             _cliStatusLabel = root.Q<Label>("cli-status-label");
             _installCliButton = root.Q<Button>("install-cli-button");
             _skillsStatusIcon = root.Q<VisualElement>("skills-status-icon");
             _skillsStatusLabel = root.Q<Label>("skills-status-label");
-            _targetClaudeToggle = root.Q<Toggle>("target-claude-toggle");
-            _targetCodexToggle = root.Q<Toggle>("target-codex-toggle");
+            _skillsTargetField = root.Q<EnumField>("skills-target-field");
             _installSkillsButton = root.Q<Button>("install-skills-button");
         }
 
         public void SetupBindings()
         {
-            _foldout.RegisterValueChangedCallback(evt => OnFoldoutChanged?.Invoke(evt.newValue));
             _installCliButton.clicked += () => OnInstallCli?.Invoke();
             _installSkillsButton.clicked += () => OnInstallSkills?.Invoke();
-            _targetClaudeToggle.RegisterValueChangedCallback(evt => OnTargetClaudeChanged?.Invoke(evt.newValue));
-            _targetCodexToggle.RegisterValueChangedCallback(evt => OnTargetCodexChanged?.Invoke(evt.newValue));
         }
 
         public void Update(CliSetupData data)
@@ -54,13 +47,11 @@ namespace io.github.hatayama.uLoopMCP
 
             _lastData = data;
 
-            ViewDataBinder.UpdateFoldout(_foldout, data.ShowFoldout);
             UpdateCliStatus(data);
             UpdateSkillsStatus(data);
             UpdateInstallCliButton(data);
+            InitializeTargetFieldIfNeeded(data);
             UpdateInstallSkillsButton(data);
-            ViewDataBinder.UpdateToggle(_targetClaudeToggle, data.TargetClaude);
-            ViewDataBinder.UpdateToggle(_targetCodexToggle, data.TargetCodex);
         }
 
         private void UpdateCliStatus(CliSetupData data)
@@ -80,26 +71,20 @@ namespace io.github.hatayama.uLoopMCP
 
         private void UpdateSkillsStatus(CliSetupData data)
         {
-            bool anyInstalled = data.IsClaudeSkillsInstalled || data.IsCodexSkillsInstalled;
+            bool anyInstalled = data.IsClaudeSkillsInstalled || data.IsCodexSkillsInstalled
+                || data.IsCursorSkillsInstalled || data.IsGeminiSkillsInstalled;
             ViewDataBinder.ToggleClass(_skillsStatusIcon, "mcp-cli-status-icon--installed", anyInstalled);
             ViewDataBinder.ToggleClass(_skillsStatusIcon, "mcp-cli-status-icon--not-installed", !anyInstalled);
 
-            if (data.IsClaudeSkillsInstalled && data.IsCodexSkillsInstalled)
-            {
-                _skillsStatusLabel.text = "Skills: Installed (Claude, Codex)";
-            }
-            else if (data.IsClaudeSkillsInstalled)
-            {
-                _skillsStatusLabel.text = "Skills: Installed (Claude)";
-            }
-            else if (data.IsCodexSkillsInstalled)
-            {
-                _skillsStatusLabel.text = "Skills: Installed (Codex)";
-            }
-            else
-            {
-                _skillsStatusLabel.text = "Skills: Not installed";
-            }
+            System.Collections.Generic.List<string> installed = new System.Collections.Generic.List<string>();
+            if (data.IsClaudeSkillsInstalled) installed.Add("Claude");
+            if (data.IsCodexSkillsInstalled) installed.Add("Codex");
+            if (data.IsCursorSkillsInstalled) installed.Add("Cursor");
+            if (data.IsGeminiSkillsInstalled) installed.Add("Gemini");
+
+            _skillsStatusLabel.text = installed.Count > 0
+                ? $"Skills: Installed ({string.Join(", ", installed)})"
+                : "Skills: Not installed";
         }
 
         private void UpdateInstallCliButton(CliSetupData data)
@@ -132,6 +117,26 @@ namespace io.github.hatayama.uLoopMCP
             ViewDataBinder.ToggleClass(_installCliButton, "mcp-button--disabled", !enabled);
         }
 
+        private void InitializeTargetFieldIfNeeded(CliSetupData data)
+        {
+            if (!_isTargetFieldInitialized)
+            {
+                _skillsTargetField.Init(data.SelectedTarget);
+                _skillsTargetField.RegisterValueChangedCallback(evt =>
+                {
+                    if (evt.newValue is SkillsTarget newValue)
+                    {
+                        OnSkillsTargetChanged?.Invoke(newValue);
+                    }
+                });
+                _isTargetFieldInitialized = true;
+            }
+            else
+            {
+                ViewDataBinder.UpdateEnumField(_skillsTargetField, data.SelectedTarget);
+            }
+        }
+
         private void UpdateInstallSkillsButton(CliSetupData data)
         {
             if (data.IsInstallingSkills)
@@ -146,16 +151,16 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            bool noTargetSelected = !data.TargetClaude && !data.TargetCodex;
-            if (noTargetSelected)
+            bool allSelectedInstalled = data.SelectedTarget switch
             {
-                SetSkillsButton("Install Skills", false);
-                return;
-            }
-
-            bool allSelectedInstalled =
-                (!data.TargetClaude || data.IsClaudeSkillsInstalled) &&
-                (!data.TargetCodex || data.IsCodexSkillsInstalled);
+                SkillsTarget.Claude => data.IsClaudeSkillsInstalled,
+                SkillsTarget.Codex => data.IsCodexSkillsInstalled,
+                SkillsTarget.Cursor => data.IsCursorSkillsInstalled,
+                SkillsTarget.Gemini => data.IsGeminiSkillsInstalled,
+                SkillsTarget.All => data.IsClaudeSkillsInstalled && data.IsCodexSkillsInstalled
+                    && data.IsCursorSkillsInstalled && data.IsGeminiSkillsInstalled,
+                _ => false
+            };
 
             if (allSelectedInstalled)
             {

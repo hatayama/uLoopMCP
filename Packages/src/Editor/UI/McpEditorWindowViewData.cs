@@ -128,10 +128,10 @@ namespace io.github.hatayama.uLoopMCP
         public readonly bool IsInstallingCli;
         public readonly bool IsClaudeSkillsInstalled;
         public readonly bool IsCodexSkillsInstalled;
-        public readonly bool TargetClaude;
-        public readonly bool TargetCodex;
+        public readonly bool IsCursorSkillsInstalled;
+        public readonly bool IsGeminiSkillsInstalled;
+        public readonly SkillsTarget SelectedTarget;
         public readonly bool IsInstallingSkills;
-        public readonly bool ShowFoldout;
 
         public CliSetupData(
             bool isCliInstalled,
@@ -141,10 +141,10 @@ namespace io.github.hatayama.uLoopMCP
             bool isInstallingCli,
             bool isClaudeSkillsInstalled,
             bool isCodexSkillsInstalled,
-            bool targetClaude,
-            bool targetCodex,
-            bool isInstallingSkills,
-            bool showFoldout)
+            bool isCursorSkillsInstalled,
+            bool isGeminiSkillsInstalled,
+            SkillsTarget selectedTarget,
+            bool isInstallingSkills)
         {
             IsCliInstalled = isCliInstalled;
             CliVersion = cliVersion;
@@ -153,10 +153,10 @@ namespace io.github.hatayama.uLoopMCP
             IsInstallingCli = isInstallingCli;
             IsClaudeSkillsInstalled = isClaudeSkillsInstalled;
             IsCodexSkillsInstalled = isCodexSkillsInstalled;
-            TargetClaude = targetClaude;
-            TargetCodex = targetCodex;
+            IsCursorSkillsInstalled = isCursorSkillsInstalled;
+            IsGeminiSkillsInstalled = isGeminiSkillsInstalled;
+            SelectedTarget = selectedTarget;
             IsInstallingSkills = isInstallingSkills;
-            ShowFoldout = showFoldout;
         }
     }
 

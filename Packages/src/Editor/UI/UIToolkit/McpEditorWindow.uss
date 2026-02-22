@@ -332,9 +332,9 @@
 }
 
 /* ===========================================
-   Block: Mode Toggle (segment control)
+   Block: Tab Toggle (segment control)
    =========================================== */
-.mcp-mode-toggle {
+.mcp-tab-toggle {
     flex-direction: row;
     background-color: rgba(48, 48, 48, 0.6);
     border-radius: 3px;
@@ -343,7 +343,7 @@
     padding: 2px;
 }
 
-.mcp-mode-button {
+.mcp-tab-button {
     flex-grow: 1;
     height: 24px;
     border-radius: 2px;
@@ -354,18 +354,18 @@
     margin: 0;
 }
 
-.mcp-mode-button:hover {
+.mcp-tab-button:hover {
     background-color: rgba(255, 255, 255, 0.05);
 }
 
-.mcp-mode-button--active {
+.mcp-tab-button--active {
     background-color: rgba(46, 90, 136, 0.8);
     color: #ffffff;
     border-width: 1px;
     border-color: rgba(70, 130, 200, 0.4);
 }
 
-.mcp-mode-button--active:hover {
+.mcp-tab-button--active:hover {
     background-color: rgba(46, 90, 136, 0.9);
 }
 

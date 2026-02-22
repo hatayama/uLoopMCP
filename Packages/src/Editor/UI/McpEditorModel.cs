@@ -62,7 +62,7 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
                 connectionMode: (ConnectionMode)settings.connectionMode,
-                showCliSetup: ui.ShowCliSetup));
+                showConfiguration: ui.ShowConfiguration));
 
         }
 
@@ -95,7 +95,7 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
                 connectionMode: ui.ConnectionMode,
-                showCliSetup: ui.ShowCliSetup));
+                showConfiguration: ui.ShowConfiguration));
         }
 
         /// <summary>
@@ -195,7 +195,7 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
                 connectionMode: ui.ConnectionMode,
-                showCliSetup: ui.ShowCliSetup));
+                showConfiguration: ui.ShowConfiguration));
             McpEditorSettings.SetAutoStartServer(autoStart);
         }
 
@@ -216,7 +216,7 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
                 connectionMode: ui.ConnectionMode,
-                showCliSetup: ui.ShowCliSetup));
+                showConfiguration: ui.ShowConfiguration));
             McpEditorSettings.SetCustomPort(port);
         }
 
@@ -237,7 +237,7 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
                 connectionMode: ui.ConnectionMode,
-                showCliSetup: ui.ShowCliSetup));
+                showConfiguration: ui.ShowConfiguration));
         }
 
         /// <summary>
@@ -257,7 +257,7 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
                 connectionMode: ui.ConnectionMode,
-                showCliSetup: ui.ShowCliSetup));
+                showConfiguration: ui.ShowConfiguration));
         }
 
         /// <summary>
@@ -277,7 +277,7 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
                 connectionMode: ui.ConnectionMode,
-                showCliSetup: ui.ShowCliSetup));
+                showConfiguration: ui.ShowConfiguration));
             McpEditorSettings.SetSelectedEditorType(type);
         }
 
@@ -298,7 +298,7 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
                 connectionMode: ui.ConnectionMode,
-                showCliSetup: ui.ShowCliSetup));
+                showConfiguration: ui.ShowConfiguration));
         }
 
         /// <summary>
@@ -318,7 +318,7 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
                 connectionMode: ui.ConnectionMode,
-                showCliSetup: ui.ShowCliSetup));
+                showConfiguration: ui.ShowConfiguration));
             McpEditorSettings.SetShowSecuritySettings(show);
         }
 
@@ -363,7 +363,7 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
                 connectionMode: ui.ConnectionMode,
-                showCliSetup: ui.ShowCliSetup));
+                showConfiguration: ui.ShowConfiguration));
             McpEditorSettings.SetAddRepositoryRoot(addRepositoryRoot);
             UnityMcpPathResolver.InvalidateGitRootCache();
         }
@@ -385,7 +385,7 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: supportsToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
                 connectionMode: ui.ConnectionMode,
-                showCliSetup: ui.ShowCliSetup));
+                showConfiguration: ui.ShowConfiguration));
         }
 
         /// <summary>
@@ -405,7 +405,7 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: showToggle,
                 connectionMode: ui.ConnectionMode,
-                showCliSetup: ui.ShowCliSetup));
+                showConfiguration: ui.ShowConfiguration));
         }
 
         public void UpdateConnectionMode(ConnectionMode mode)
@@ -422,11 +422,11 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
                 connectionMode: mode,
-                showCliSetup: ui.ShowCliSetup));
+                showConfiguration: ui.ShowConfiguration));
             McpEditorSettings.SetConnectionMode(mode);
         }
 
-        public void UpdateShowCliSetup(bool show)
+        public void UpdateShowConfiguration(bool show)
         {
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
@@ -440,7 +440,7 @@ namespace io.github.hatayama.uLoopMCP
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
                 connectionMode: ui.ConnectionMode,
-                showCliSetup: show));
+                showConfiguration: show));
         }
 
     }
