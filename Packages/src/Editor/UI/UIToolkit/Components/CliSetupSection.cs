@@ -9,8 +9,6 @@ namespace io.github.hatayama.uLoopMCP
         private readonly VisualElement _cliStatusIcon;
         private readonly Label _cliStatusLabel;
         private readonly Button _installCliButton;
-        private readonly VisualElement _skillsStatusIcon;
-        private readonly Label _skillsStatusLabel;
         private readonly EnumField _skillsTargetField;
         private readonly Button _installSkillsButton;
 
@@ -26,8 +24,6 @@ namespace io.github.hatayama.uLoopMCP
             _cliStatusIcon = root.Q<VisualElement>("cli-status-icon");
             _cliStatusLabel = root.Q<Label>("cli-status-label");
             _installCliButton = root.Q<Button>("install-cli-button");
-            _skillsStatusIcon = root.Q<VisualElement>("skills-status-icon");
-            _skillsStatusLabel = root.Q<Label>("skills-status-label");
             _skillsTargetField = root.Q<EnumField>("skills-target-field");
             _installSkillsButton = root.Q<Button>("install-skills-button");
         }
@@ -48,7 +44,6 @@ namespace io.github.hatayama.uLoopMCP
             _lastData = data;
 
             UpdateCliStatus(data);
-            UpdateSkillsStatus(data);
             UpdateInstallCliButton(data);
             InitializeTargetFieldIfNeeded(data);
             UpdateInstallSkillsButton(data);
@@ -67,25 +62,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 _cliStatusLabel.text = "uLoop CLI: Not installed";
             }
-        }
-
-        private void UpdateSkillsStatus(CliSetupData data)
-        {
-            bool anyInstalled = data.IsClaudeSkillsInstalled || data.IsCodexSkillsInstalled
-                || data.IsCursorSkillsInstalled || data.IsGeminiSkillsInstalled || data.IsWindsurfSkillsInstalled;
-            ViewDataBinder.ToggleClass(_skillsStatusIcon, "mcp-cli-status-icon--installed", anyInstalled);
-            ViewDataBinder.ToggleClass(_skillsStatusIcon, "mcp-cli-status-icon--not-installed", !anyInstalled);
-
-            System.Collections.Generic.List<string> installed = new System.Collections.Generic.List<string>();
-            if (data.IsClaudeSkillsInstalled) installed.Add("Claude");
-            if (data.IsCodexSkillsInstalled) installed.Add("Codex");
-            if (data.IsCursorSkillsInstalled) installed.Add("Cursor");
-            if (data.IsGeminiSkillsInstalled) installed.Add("Gemini");
-            if (data.IsWindsurfSkillsInstalled) installed.Add("Windsurf");
-
-            _skillsStatusLabel.text = installed.Count > 0
-                ? $"Skills: Installed ({string.Join(", ", installed)})"
-                : "Skills: Not installed";
         }
 
         private void UpdateInstallCliButton(CliSetupData data)
@@ -152,7 +128,7 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            bool allSelectedInstalled = data.SelectedTarget switch
+            bool hasSkills = data.SelectedTarget switch
             {
                 SkillsTarget.Claude => data.IsClaudeSkillsInstalled,
                 SkillsTarget.Codex => data.IsCodexSkillsInstalled,
@@ -162,14 +138,8 @@ namespace io.github.hatayama.uLoopMCP
                 _ => false
             };
 
-            if (allSelectedInstalled)
-            {
-                SetSkillsButton("Skills Installed", false);
-            }
-            else
-            {
-                SetSkillsButton("Install Skills", true);
-            }
+            string label = hasSkills ? "Update Skills" : "Install Skills";
+            SetSkillsButton(label, true);
         }
 
         private void SetSkillsButton(string text, bool enabled)

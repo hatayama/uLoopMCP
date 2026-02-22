@@ -79,7 +79,18 @@ namespace io.github.hatayama.uLoopMCP
 
             NodeEnvironmentResolver.SetupEnvironmentPath(startInfo, NodeEnvironmentResolver.FindNodePath());
 
-            using (Process process = Process.Start(startInfo))
+            Process process;
+            try
+            {
+                process = Process.Start(startInfo);
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // OS reports "command not found" as Win32Exception when executable is absent
+                return null;
+            }
+
+            using (process)
             {
                 if (process == null)
                 {

@@ -354,7 +354,8 @@
 }
 
 .mcp-tab-button:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(46, 90, 136, 0.3);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .mcp-tab-button--active {
@@ -365,7 +366,7 @@
 }
 
 .mcp-tab-button--active:hover {
-    background-color: rgba(46, 90, 136, 0.9);
+    background-color: rgba(46, 90, 136, 0.65);
 }
 
 /* ===========================================

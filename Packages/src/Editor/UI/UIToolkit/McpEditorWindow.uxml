@@ -45,11 +45,6 @@
                     <ui:Button name="install-cli-button" text="Install CLI" class="mcp-button mcp-button--configure" />
 
                     <ui:Label text="Skills" class="mcp-cli-subsection-header" />
-                    <ui:VisualElement class="mcp-cli-status-row">
-                        <ui:VisualElement name="skills-status-icon" class="mcp-cli-status-icon mcp-cli-status-icon--not-installed" />
-                        <ui:Label name="skills-status-label" text="Skills: Checking..." />
-                    </ui:VisualElement>
-
                     <ui:VisualElement class="mcp-target-row">
                         <ui:Label text="Target:" class="mcp-target-row__label" />
                         <uie:EnumField name="skills-target-field" class="mcp-target-row__field" />
