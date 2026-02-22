@@ -245,12 +245,17 @@ namespace io.github.hatayama.uLoopMCP
             _isRefreshingVersion = true;
             RefreshCliSetupSection();
 
-            Task forceRefresh = CliInstallationDetector.ForceRefreshCliVersionAsync(CancellationToken.None);
-            Task minimumDelay = Task.Delay(500);
-            await Task.WhenAll(forceRefresh, minimumDelay);
-
-            _isRefreshingVersion = false;
-            RefreshCliSetupSection();
+            try
+            {
+                Task forceRefresh = CliInstallationDetector.ForceRefreshCliVersionAsync(CancellationToken.None);
+                Task minimumDelay = Task.Delay(500);
+                await Task.WhenAll(forceRefresh, minimumDelay);
+            }
+            finally
+            {
+                _isRefreshingVersion = false;
+                RefreshCliSetupSection();
+            }
         }
 
         public void RefreshConnectedToolsSection()
@@ -641,7 +646,7 @@ namespace io.github.hatayama.uLoopMCP
 
                     if (!process.WaitForExit(30000))
                     {
-                        process.Kill();
+                        try { process.Kill(); } catch (System.InvalidOperationException) { }
                         process.Dispose();
                         errorOutput = "Installation timed out after 30 seconds";
                         return;
@@ -737,7 +742,7 @@ namespace io.github.hatayama.uLoopMCP
 
                     if (!process.WaitForExit(30000))
                     {
-                        process.Kill();
+                        try { process.Kill(); } catch (System.InvalidOperationException) { }
                         process.Dispose();
                         errorOutput = "Installation timed out after 30 seconds";
                         return;
