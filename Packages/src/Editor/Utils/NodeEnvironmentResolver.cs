@@ -55,6 +55,21 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
+        /// Finds an executable path using platform-appropriate resolution.
+        /// On Windows, resolves .cmd shims via 'where' command.
+        /// On Unix, resolves via 'which' command, common paths, and version managers.
+        /// </summary>
+        public static string FindExecutablePath(string executableName)
+        {
+            if (Application.platform == RuntimePlatform.WindowsEditor)
+            {
+                return FindExecutableWindows(executableName);
+            }
+
+            return FindExecutableUnix(executableName);
+        }
+
+        /// <summary>
         /// Finds the npm executable path using fallback strategy.
         /// Order: which command -> common paths -> version manager paths
         /// </summary>

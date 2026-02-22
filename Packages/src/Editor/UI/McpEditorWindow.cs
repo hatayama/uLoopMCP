@@ -708,9 +708,13 @@ namespace io.github.hatayama.uLoopMCP
                     _ => "skills install --claude"
                 };
 
+                string uloopPath = NodeEnvironmentResolver.FindExecutablePath(CliConstants.EXECUTABLE_NAME);
+                // FindExecutablePath resolves .cmd shims on Windows via 'where' command
+                string uloopFileName = uloopPath ?? CliConstants.EXECUTABLE_NAME;
+
                 System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = "uloop",
+                    FileName = uloopFileName,
                     Arguments = arguments,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,

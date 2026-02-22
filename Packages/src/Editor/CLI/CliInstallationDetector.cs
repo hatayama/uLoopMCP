@@ -93,9 +93,13 @@ namespace io.github.hatayama.uLoopMCP
         {
             TaskCompletionSource<string> tcs = new TaskCompletionSource<string>();
 
+            string executablePath = NodeEnvironmentResolver.FindExecutablePath(CliConstants.EXECUTABLE_NAME);
+            // FindExecutablePath resolves .cmd shims on Windows via 'where' command
+            string fileName = executablePath ?? CliConstants.EXECUTABLE_NAME;
+
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                FileName = CliConstants.EXECUTABLE_NAME,
+                FileName = fileName,
                 Arguments = CliConstants.VERSION_FLAG,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
