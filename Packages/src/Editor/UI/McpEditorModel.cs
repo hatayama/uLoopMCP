@@ -53,7 +53,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUIState(ui => new UIState(
                 customPort: settings.customPort,
                 autoStartServer: settings.autoStartServer,
-                showLLMToolSettings: ui.ShowLLMToolSettings,
+
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -86,7 +86,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
                 autoStartServer: ui.AutoStartServer,
-                showLLMToolSettings: ui.ShowLLMToolSettings,
+
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: selectedEditor,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -186,7 +186,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
                 autoStartServer: autoStart,
-                showLLMToolSettings: ui.ShowLLMToolSettings,
+
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -207,7 +207,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUIState(ui => new UIState(
                 customPort: port,
                 autoStartServer: ui.AutoStartServer,
-                showLLMToolSettings: ui.ShowLLMToolSettings,
+
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -228,28 +228,8 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
                 autoStartServer: ui.AutoStartServer,
-                showLLMToolSettings: ui.ShowLLMToolSettings,
-                showConnectedTools: show,
-                selectedEditorType: ui.SelectedEditorType,
-                mainScrollPosition: ui.MainScrollPosition,
-                showSecuritySettings: ui.ShowSecuritySettings,
-                addRepositoryRoot: ui.AddRepositoryRoot,
-                supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
-                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
-                connectionMode: ui.ConnectionMode,
-                showConfiguration: ui.ShowConfiguration));
-        }
 
-        /// <summary>
-        /// Update ShowLLMToolSettings setting
-        /// </summary>
-        public void UpdateShowLLMToolSettings(bool show)
-        {
-            UpdateUIState(ui => new UIState(
-                customPort: ui.CustomPort,
-                autoStartServer: ui.AutoStartServer,
-                showLLMToolSettings: show,
-                showConnectedTools: ui.ShowConnectedTools,
+                showConnectedTools: show,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: ui.ShowSecuritySettings,
@@ -268,7 +248,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
                 autoStartServer: ui.AutoStartServer,
-                showLLMToolSettings: ui.ShowLLMToolSettings,
+
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: type,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -289,7 +269,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
                 autoStartServer: ui.AutoStartServer,
-                showLLMToolSettings: ui.ShowLLMToolSettings,
+
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: position,
@@ -309,7 +289,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
                 autoStartServer: ui.AutoStartServer,
-                showLLMToolSettings: ui.ShowLLMToolSettings,
+
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -354,7 +334,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
                 autoStartServer: ui.AutoStartServer,
-                showLLMToolSettings: ui.ShowLLMToolSettings,
+
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -376,7 +356,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
                 autoStartServer: ui.AutoStartServer,
-                showLLMToolSettings: ui.ShowLLMToolSettings,
+
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -396,7 +376,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
                 autoStartServer: ui.AutoStartServer,
-                showLLMToolSettings: ui.ShowLLMToolSettings,
+
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -413,7 +393,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
                 autoStartServer: ui.AutoStartServer,
-                showLLMToolSettings: ui.ShowLLMToolSettings,
+
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -431,7 +411,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
                 autoStartServer: ui.AutoStartServer,
-                showLLMToolSettings: ui.ShowLLMToolSettings,
+
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,

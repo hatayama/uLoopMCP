@@ -60,32 +60,29 @@
 
                 <!-- MCP Content -->
                 <ui:VisualElement name="mcp-content">
-                    <ui:Foldout name="llm-settings-foldout" text="LLM Tool Settings" class="mcp-foldout">
-                        <ui:VisualElement name="llm-settings-content">
-                            <ui:VisualElement class="mcp-target-row">
-                                <ui:Label text="Target:" class="mcp-target-row__label" />
-                                <uie:EnumField name="editor-type-field" class="mcp-target-row__field" />
-                            </ui:VisualElement>
+                    <ui:VisualElement class="mcp-target-row">
+                        <ui:Label text="Target:" class="mcp-target-row__label" />
+                        <uie:EnumField name="editor-type-field" class="mcp-target-row__field" />
+                    </ui:VisualElement>
 
-                            <ui:VisualElement name="repository-root-row" class="mcp-toggle-row">
-                                <ui:Toggle name="repository-root-toggle" class="mcp-toggle-row__toggle" />
-                                <ui:Label text="Use Repository Root" class="mcp-toggle-row__label" tooltip="When enabled, generates configuration file at the Git repository root" />
-                            </ui:VisualElement>
+                    <ui:VisualElement name="repository-root-row" class="mcp-toggle-row">
+                        <ui:Toggle name="repository-root-toggle" class="mcp-toggle-row__toggle" />
+                        <ui:Label text="Use Repository Root" class="mcp-toggle-row__label" tooltip="When enabled, generates configuration file at the Git repository root" />
+                    </ui:VisualElement>
 
-                            <ui:Label name="config-error-label" class="mcp-error-message" />
+                    <ui:Label name="config-error-label" class="mcp-error-message" />
 
-                            <ui:Button name="configure-button" text="Configure" class="mcp-button mcp-button--configure" />
-                            <ui:Button name="open-settings-button" text="Open Settings File" class="mcp-button" />
-                        </ui:VisualElement>
-                    </ui:Foldout>
+                    <ui:Button name="configure-button" text="Configure" class="mcp-button mcp-button--configure" />
+                    <ui:Button name="open-settings-button" text="Open Settings File" class="mcp-button" />
+                </ui:VisualElement>
+            </ui:Foldout>
+        </ui:VisualElement>
 
-                    <ui:Foldout name="connected-tools-foldout" text="Connected LLM Tools" class="mcp-foldout">
-                        <ui:VisualElement name="connected-tools-content">
-                            <ui:VisualElement name="clients-list" class="mcp-clients-list" />
-                            <ui:Label name="no-clients-message" text="No connected tools found." class="mcp-info-message" />
-                            <ui:Label name="server-not-running-message" text="Server is not running. Start the server to see connected tools." class="mcp-warning-message" />
-                        </ui:VisualElement>
-                    </ui:Foldout>
+        <!-- Connected LLM Tools Section -->
+        <ui:VisualElement name="connected-tools-section" class="mcp-section mcp-section--box">
+            <ui:Foldout name="connected-tools-foldout" text="Connected LLM Tools (via MCP)" class="mcp-foldout">
+                <ui:VisualElement name="connected-tools-content">
+                    <ui:VisualElement name="clients-list" class="mcp-clients-list" />
                 </ui:VisualElement>
             </ui:Foldout>
         </ui:VisualElement>

@@ -50,20 +50,21 @@ namespace io.github.hatayama.uLoopMCP
         public readonly bool ShowFoldout;
         public readonly bool IsServerRunning;
         public readonly bool ShowReconnectingUI;
+        public readonly bool ShowSection;
 
-        public ConnectedToolsData(IReadOnlyCollection<ConnectedClient> clients, bool showFoldout, bool isServerRunning, bool showReconnectingUI)
+        public ConnectedToolsData(IReadOnlyCollection<ConnectedClient> clients, bool showFoldout, bool isServerRunning, bool showReconnectingUI, bool showSection)
         {
             Clients = clients;
             ShowFoldout = showFoldout;
             IsServerRunning = isServerRunning;
             ShowReconnectingUI = showReconnectingUI;
+            ShowSection = showSection;
         }
     }
     
     public record EditorConfigData
     {
         public readonly McpEditorType SelectedEditor;
-        public readonly bool ShowFoldout;
         public readonly bool IsServerRunning;
         public readonly int CurrentPort;
         public readonly bool IsConfigured;
@@ -74,10 +75,9 @@ namespace io.github.hatayama.uLoopMCP
         public readonly bool SupportsRepositoryRootToggle;
         public readonly bool ShowRepositoryRootToggle;
 
-        public EditorConfigData(McpEditorType selectedEditor, bool showFoldout, bool isServerRunning, int currentPort, bool isConfigured = false, bool hasPortMismatch = false, string configurationError = null, bool isUpdateNeeded = true, bool addRepositoryRoot = false, bool supportsRepositoryRootToggle = false, bool showRepositoryRootToggle = false)
+        public EditorConfigData(McpEditorType selectedEditor, bool isServerRunning, int currentPort, bool isConfigured = false, bool hasPortMismatch = false, string configurationError = null, bool isUpdateNeeded = true, bool addRepositoryRoot = false, bool supportsRepositoryRootToggle = false, bool showRepositoryRootToggle = false)
         {
             SelectedEditor = selectedEditor;
-            ShowFoldout = showFoldout;
             IsServerRunning = isServerRunning;
             CurrentPort = currentPort;
             IsConfigured = isConfigured;
@@ -130,6 +130,7 @@ namespace io.github.hatayama.uLoopMCP
         public readonly bool IsCodexSkillsInstalled;
         public readonly bool IsCursorSkillsInstalled;
         public readonly bool IsGeminiSkillsInstalled;
+        public readonly bool IsWindsurfSkillsInstalled;
         public readonly SkillsTarget SelectedTarget;
         public readonly bool IsInstallingSkills;
 
@@ -143,6 +144,7 @@ namespace io.github.hatayama.uLoopMCP
             bool isCodexSkillsInstalled,
             bool isCursorSkillsInstalled,
             bool isGeminiSkillsInstalled,
+            bool isWindsurfSkillsInstalled,
             SkillsTarget selectedTarget,
             bool isInstallingSkills)
         {
@@ -155,6 +157,7 @@ namespace io.github.hatayama.uLoopMCP
             IsCodexSkillsInstalled = isCodexSkillsInstalled;
             IsCursorSkillsInstalled = isCursorSkillsInstalled;
             IsGeminiSkillsInstalled = isGeminiSkillsInstalled;
+            IsWindsurfSkillsInstalled = isWindsurfSkillsInstalled;
             SelectedTarget = selectedTarget;
             IsInstallingSkills = isInstallingSkills;
         }

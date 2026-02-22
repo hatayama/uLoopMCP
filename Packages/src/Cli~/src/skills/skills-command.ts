@@ -21,6 +21,7 @@ interface SkillsOptions {
   codex?: boolean;
   cursor?: boolean;
   gemini?: boolean;
+  windsurf?: boolean;
 }
 
 export function registerSkillsCommand(program: Command): void {
@@ -36,6 +37,7 @@ export function registerSkillsCommand(program: Command): void {
     .option('--codex', 'Check Codex CLI installation')
     .option('--cursor', 'Check Cursor installation')
     .option('--gemini', 'Check Gemini CLI installation')
+    .option('--windsurf', 'Check Windsurf installation')
     .action((options: SkillsOptions) => {
       const targets = resolveTargets(options);
       const global = options.global ?? false;
@@ -50,6 +52,7 @@ export function registerSkillsCommand(program: Command): void {
     .option('--codex', 'Install to Codex CLI')
     .option('--cursor', 'Install to Cursor')
     .option('--gemini', 'Install to Gemini CLI')
+    .option('--windsurf', 'Install to Windsurf')
     .action((options: SkillsOptions) => {
       const targets = resolveTargets(options);
       if (targets.length === 0) {
@@ -67,6 +70,7 @@ export function registerSkillsCommand(program: Command): void {
     .option('--codex', 'Uninstall from Codex CLI')
     .option('--cursor', 'Uninstall from Cursor')
     .option('--gemini', 'Uninstall from Gemini CLI')
+    .option('--windsurf', 'Uninstall from Windsurf')
     .action((options: SkillsOptions) => {
       const targets = resolveTargets(options);
       if (targets.length === 0) {
@@ -91,6 +95,9 @@ function resolveTargets(options: SkillsOptions): TargetConfig[] {
   if (options.gemini) {
     targets.push(getTargetConfig('gemini'));
   }
+  if (options.windsurf) {
+    targets.push(getTargetConfig('windsurf'));
+  }
   return targets;
 }
 
@@ -102,6 +109,7 @@ function showTargetGuidance(command: string): void {
   console.log('  --codex    Codex CLI (.codex/skills/)');
   console.log('  --cursor   Cursor (.cursor/skills/)');
   console.log('  --gemini   Gemini CLI (.gemini/skills/)');
+  console.log('  --windsurf Windsurf (.windsurf/skills/)');
   console.log('');
   console.log('Options:');
   console.log('  -g, --global   Use global location');

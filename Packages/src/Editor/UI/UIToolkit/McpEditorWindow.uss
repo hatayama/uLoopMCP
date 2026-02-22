@@ -178,7 +178,6 @@
 .mcp-target-row {
     flex-direction: row;
     align-items: center;
-    margin-bottom: 8px;
     overflow: hidden;
 }
 
@@ -340,7 +339,7 @@
     border-radius: 3px;
     border-width: 1px;
     border-color: rgba(128, 128, 128, 0.2);
-    padding: 2px;
+    margin-bottom: 14px;
 }
 
 .mcp-tab-button {

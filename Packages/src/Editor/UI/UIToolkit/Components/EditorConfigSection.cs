@@ -10,7 +10,6 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class EditorConfigSection
     {
-        private readonly Foldout _foldout;
         private readonly EnumField _editorTypeField;
         private readonly VisualElement _repositoryRootRow;
         private readonly Toggle _repositoryRootToggle;
@@ -22,14 +21,12 @@ namespace io.github.hatayama.uLoopMCP
         private bool _isInitialized;
 
         public event Action<McpEditorType> OnEditorTypeChanged;
-        public event Action<bool> OnFoldoutChanged;
         public event Action<bool> OnRepositoryRootChanged;
         public event Action OnConfigureClicked;
         public event Action OnOpenSettingsClicked;
 
         public EditorConfigSection(VisualElement root)
         {
-            _foldout = root.Q<Foldout>("llm-settings-foldout");
             _editorTypeField = root.Q<EnumField>("editor-type-field");
             _repositoryRootRow = root.Q<VisualElement>("repository-root-row");
             _repositoryRootToggle = root.Q<Toggle>("repository-root-toggle");
@@ -42,7 +39,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private void SetupBindings()
         {
-            _foldout.RegisterValueChangedCallback(evt => OnFoldoutChanged?.Invoke(evt.newValue));
             _repositoryRootToggle.RegisterValueChangedCallback(evt => OnRepositoryRootChanged?.Invoke(evt.newValue));
             _configureButton.clicked += () => OnConfigureClicked?.Invoke();
             _openSettingsButton.clicked += () => OnOpenSettingsClicked?.Invoke();
@@ -56,8 +52,6 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             _lastData = data;
-
-            ViewDataBinder.UpdateFoldout(_foldout, data.ShowFoldout);
 
             InitializeEnumFieldIfNeeded(data);
 

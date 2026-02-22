@@ -72,7 +72,7 @@ namespace io.github.hatayama.uLoopMCP
         private void UpdateSkillsStatus(CliSetupData data)
         {
             bool anyInstalled = data.IsClaudeSkillsInstalled || data.IsCodexSkillsInstalled
-                || data.IsCursorSkillsInstalled || data.IsGeminiSkillsInstalled;
+                || data.IsCursorSkillsInstalled || data.IsGeminiSkillsInstalled || data.IsWindsurfSkillsInstalled;
             ViewDataBinder.ToggleClass(_skillsStatusIcon, "mcp-cli-status-icon--installed", anyInstalled);
             ViewDataBinder.ToggleClass(_skillsStatusIcon, "mcp-cli-status-icon--not-installed", !anyInstalled);
 
@@ -81,6 +81,7 @@ namespace io.github.hatayama.uLoopMCP
             if (data.IsCodexSkillsInstalled) installed.Add("Codex");
             if (data.IsCursorSkillsInstalled) installed.Add("Cursor");
             if (data.IsGeminiSkillsInstalled) installed.Add("Gemini");
+            if (data.IsWindsurfSkillsInstalled) installed.Add("Windsurf");
 
             _skillsStatusLabel.text = installed.Count > 0
                 ? $"Skills: Installed ({string.Join(", ", installed)})"
@@ -157,8 +158,7 @@ namespace io.github.hatayama.uLoopMCP
                 SkillsTarget.Codex => data.IsCodexSkillsInstalled,
                 SkillsTarget.Cursor => data.IsCursorSkillsInstalled,
                 SkillsTarget.Gemini => data.IsGeminiSkillsInstalled,
-                SkillsTarget.All => data.IsClaudeSkillsInstalled && data.IsCodexSkillsInstalled
-                    && data.IsCursorSkillsInstalled && data.IsGeminiSkillsInstalled,
+                SkillsTarget.Windsurf => data.IsWindsurfSkillsInstalled,
                 _ => false
             };
 

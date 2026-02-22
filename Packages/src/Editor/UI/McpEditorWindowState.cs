@@ -25,14 +25,13 @@ namespace io.github.hatayama.uLoopMCP
         Codex = 1,
         Cursor = 2,
         Gemini = 3,
-        All = 4
+        Windsurf = 4
     }
 
     public record UIState
     {
         public int CustomPort { get; }
         public bool AutoStartServer { get; }
-        public bool ShowLLMToolSettings { get; }
         public bool ShowConnectedTools { get; }
         public McpEditorType SelectedEditorType { get; }
         public Vector2 MainScrollPosition { get; }
@@ -46,7 +45,6 @@ namespace io.github.hatayama.uLoopMCP
         public UIState(
             int customPort = McpServerConfig.DEFAULT_PORT,
             bool autoStartServer = false,
-            bool showLLMToolSettings = true,
             bool showConnectedTools = true,
             McpEditorType selectedEditorType = McpEditorType.Cursor,
             Vector2 mainScrollPosition = default,
@@ -59,7 +57,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             CustomPort = customPort;
             AutoStartServer = autoStartServer;
-            ShowLLMToolSettings = showLLMToolSettings;
             ShowConnectedTools = showConnectedTools;
             SelectedEditorType = selectedEditorType;
             MainScrollPosition = mainScrollPosition;

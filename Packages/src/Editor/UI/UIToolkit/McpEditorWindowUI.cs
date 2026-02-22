@@ -38,7 +38,6 @@ namespace io.github.hatayama.uLoopMCP
         public event Action<bool> OnConfigurationFoldoutChanged;
         public event Action<bool> OnConnectedToolsFoldoutChanged;
         public event Action<McpEditorType> OnEditorTypeChanged;
-        public event Action<bool> OnLLMSettingsFoldoutChanged;
         public event Action<bool> OnRepositoryRootChanged;
         public event Action OnConfigureClicked;
         public event Action OnOpenSettingsClicked;
@@ -115,7 +114,6 @@ namespace io.github.hatayama.uLoopMCP
 
             _editorConfigSection = new EditorConfigSection(_root);
             _editorConfigSection.OnEditorTypeChanged += value => OnEditorTypeChanged?.Invoke(value);
-            _editorConfigSection.OnFoldoutChanged += value => OnLLMSettingsFoldoutChanged?.Invoke(value);
             _editorConfigSection.OnRepositoryRootChanged += value => OnRepositoryRootChanged?.Invoke(value);
             _editorConfigSection.OnConfigureClicked += () => OnConfigureClicked?.Invoke();
             _editorConfigSection.OnOpenSettingsClicked += () => OnOpenSettingsClicked?.Invoke();

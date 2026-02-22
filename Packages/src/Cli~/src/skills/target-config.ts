@@ -3,7 +3,7 @@
  * Supports Claude Code and Codex CLI, with extensibility for future targets.
  */
 
-export type TargetId = 'claude' | 'codex' | 'cursor' | 'gemini';
+export type TargetId = 'claude' | 'codex' | 'cursor' | 'gemini' | 'windsurf';
 
 export interface TargetConfig {
   id: TargetId;
@@ -37,9 +37,15 @@ export const TARGET_CONFIGS: Record<TargetId, TargetConfig> = {
     projectDir: '.gemini',
     skillFileName: 'SKILL.md',
   },
+  windsurf: {
+    id: 'windsurf',
+    displayName: 'Windsurf',
+    projectDir: '.windsurf',
+    skillFileName: 'SKILL.md',
+  },
 };
 
-export const ALL_TARGET_IDS: TargetId[] = ['claude', 'codex', 'cursor', 'gemini'];
+export const ALL_TARGET_IDS: TargetId[] = ['claude', 'codex', 'cursor', 'gemini', 'windsurf'];
 
 export function getTargetConfig(id: TargetId): TargetConfig {
   // eslint-disable-next-line security/detect-object-injection -- id is type-constrained to TargetId union type

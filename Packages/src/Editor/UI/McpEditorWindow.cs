@@ -78,7 +78,6 @@ namespace io.github.hatayama.uLoopMCP
             _view.OnConfigurationFoldoutChanged += UpdateShowConfiguration;
             _view.OnConnectedToolsFoldoutChanged += UpdateShowConnectedTools;
             _view.OnEditorTypeChanged += UpdateSelectedEditorType;
-            _view.OnLLMSettingsFoldoutChanged += UpdateShowLLMToolSettings;
             _view.OnRepositoryRootChanged += UpdateAddRepositoryRoot;
             _view.OnConfigureClicked += ConfigureEditor;
             _view.OnOpenSettingsClicked += OpenConfigurationFile;
@@ -333,7 +332,9 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorSettings.ClearPostCompileReconnectingUI();
             }
 
-            return new ConnectedToolsData(connectedClients, _model.UI.ShowConnectedTools, isServerRunning, showReconnectingUI);
+            bool showSection = isServerRunning && hasNamedClients;
+
+            return new ConnectedToolsData(connectedClients, _model.UI.ShowConnectedTools, isServerRunning, showReconnectingUI, showSection);
         }
 
         private EditorConfigData CreateEditorConfigData()
@@ -368,7 +369,6 @@ namespace io.github.hatayama.uLoopMCP
 
             return new EditorConfigData(
                 _model.UI.SelectedEditorType,
-                _model.UI.ShowLLMToolSettings,
                 isServerRunning,
                 currentPort,
                 isConfigured,
@@ -473,11 +473,6 @@ namespace io.github.hatayama.uLoopMCP
             _model.UpdateShowConnectedTools(show);
         }
 
-        private void UpdateShowLLMToolSettings(bool show)
-        {
-            _model.UpdateShowLLMToolSettings(show);
-        }
-
         private void UpdateSelectedEditorType(McpEditorType type)
         {
             _model.UpdateSelectedEditorType(type);
@@ -549,6 +544,7 @@ namespace io.github.hatayama.uLoopMCP
             bool isCodexInstalled = CliInstallationDetector.AreSkillsInstalled("codex");
             bool isCursorInstalled = CliInstallationDetector.AreSkillsInstalled("cursor");
             bool isGeminiInstalled = CliInstallationDetector.AreSkillsInstalled("gemini");
+            bool isWindsurfInstalled = CliInstallationDetector.AreSkillsInstalled("windsurf");
 
             return new CliSetupData(
                 isCliInstalled,
@@ -560,6 +556,7 @@ namespace io.github.hatayama.uLoopMCP
                 isCodexInstalled,
                 isCursorInstalled,
                 isGeminiInstalled,
+                isWindsurfInstalled,
                 _skillsTarget,
                 _isInstallingSkills);
         }
@@ -644,7 +641,7 @@ namespace io.github.hatayama.uLoopMCP
                 SkillsTarget.Codex => "skills install --codex",
                 SkillsTarget.Cursor => "skills install --cursor",
                 SkillsTarget.Gemini => "skills install --gemini",
-                SkillsTarget.All => "skills install --claude --codex --cursor --gemini",
+                SkillsTarget.Windsurf => "skills install --windsurf",
                 _ => "skills install --claude"
             };
 
