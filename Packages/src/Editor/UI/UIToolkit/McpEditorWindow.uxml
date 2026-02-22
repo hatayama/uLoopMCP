@@ -1,30 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
     <ui:ScrollView name="main-scroll-view" class="mcp-main-container">
-        <!-- Server Status Section -->
-        <ui:VisualElement name="server-status-section" class="mcp-section">
-            <ui:VisualElement class="mcp-status">
-                <ui:Label text="Status:" class="mcp-status__label" />
-                <ui:Label name="status-value" text="Stopped" class="mcp-status__value mcp-status__value--stopped" />
-            </ui:VisualElement>
-        </ui:VisualElement>
-
-        <!-- Server Controls Section -->
-        <ui:VisualElement name="server-controls-section" class="mcp-section mcp-section--box">
-            <ui:VisualElement class="mcp-port-row">
-                <ui:Label text="Port:" class="mcp-port-row__label" />
-                <uie:IntegerField name="port-field" value="8080" class="mcp-port-row__field" />
+        <!-- Server Section (merged status + controls) -->
+        <ui:VisualElement name="server-section" class="mcp-section mcp-section--box">
+            <ui:VisualElement class="mcp-server-status">
+                <ui:VisualElement name="server-status-indicator" class="mcp-server-status__indicator" />
+                <ui:Label name="status-value" text="Stopped" class="mcp-server-status__text mcp-server-status__text--stopped" />
+                <ui:VisualElement class="mcp-server-status__spacer" />
+                <ui:Label text="Port:" class="mcp-server-status__port-label" />
+                <uie:IntegerField name="port-field" value="8080" class="mcp-server-status__port-field" />
             </ui:VisualElement>
 
             <ui:VisualElement name="port-warning-container" class="mcp-warning-container">
                 <ui:Label name="port-warning-label" class="mcp-warning-label" />
             </ui:VisualElement>
 
-            <ui:Button name="toggle-server-button" text="Start Server" class="mcp-button mcp-button--large mcp-button--start" />
-
-            <ui:VisualElement class="mcp-toggle-row">
-                <ui:Toggle name="auto-start-toggle" class="mcp-toggle-row__toggle" />
-                <ui:Label text="Auto Start Server" class="mcp-toggle-row__label" />
+            <ui:VisualElement class="mcp-server-controls">
+                <ui:Button name="toggle-server-button" text="Start Server" class="mcp-button mcp-button--compact mcp-button--start" />
+                <ui:VisualElement class="mcp-server-controls__spacer" />
+                <ui:Toggle name="auto-start-toggle" class="mcp-server-controls__auto-start-toggle" />
+                <ui:Label text="Auto Start" class="mcp-server-controls__auto-start-label" />
             </ui:VisualElement>
         </ui:VisualElement>
 
@@ -40,7 +35,7 @@
                 <ui:VisualElement name="cli-content">
                     <ui:VisualElement class="mcp-cli-status-row">
                         <ui:VisualElement name="cli-status-icon" class="mcp-cli-status-icon mcp-cli-status-icon--not-installed" />
-                        <ui:Label name="cli-status-label" text="uLoop CLI: Checking..." />
+                        <ui:Label name="cli-status-label" text="uloop-cli: Checking..." />
                         <ui:Button name="refresh-cli-version-button" text="↻" class="mcp-button--refresh" />
                     </ui:VisualElement>
                     <ui:Button name="install-cli-button" text="Install CLI" class="mcp-button mcp-button--configure" />

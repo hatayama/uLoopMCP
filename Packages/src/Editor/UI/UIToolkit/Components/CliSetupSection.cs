@@ -61,17 +61,17 @@ namespace io.github.hatayama.uLoopMCP
 
             if (data.IsChecking)
             {
-                _cliStatusLabel.text = "uLoop CLI: Checking...";
+                _cliStatusLabel.text = "uloop-cli: Checking...";
                 return;
             }
 
             if (data.IsCliInstalled && data.CliVersion != null)
             {
-                _cliStatusLabel.text = $"uLoop CLI: v{data.CliVersion}";
+                _cliStatusLabel.text = $"uloop-cli: v{data.CliVersion}";
                 return;
             }
 
-            _cliStatusLabel.text = "uLoop CLI: Not installed";
+            _cliStatusLabel.text = "uloop-cli: Not installed";
         }
 
         private void UpdateRefreshButton(CliSetupData data)
