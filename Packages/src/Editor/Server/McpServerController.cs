@@ -124,11 +124,6 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorSettings.SetIsServerRunning(true);
                 McpEditorSettings.SetServerPort(mcpServer.Port);
 
-                // User has explicitly started the server, so mark first launch as completed
-                if (!McpEditorSettings.GetHasCompletedFirstLaunch())
-                {
-                    McpEditorSettings.SetHasCompletedFirstLaunch(true);
-                }
             }
             else
             {
@@ -262,29 +257,12 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
-            bool hasCompletedFirstLaunch = McpEditorSettings.GetHasCompletedFirstLaunch();
-
-            if (!hasCompletedFirstLaunch)
+            if (!wasRunning && !isAfterCompile)
             {
                 DeleteAllLockFiles();
                 return;
             }
 
-            if (!wasRunning && !autoStartEnabled)
-            {
-                DeleteAllLockFiles();
-                return;
-            }
-
-            if (!autoStartEnabled && !isAfterCompile)
-            {
-                DeleteAllLockFiles();
-                McpEditorSettings.ClearServerSession();
-                return;
-            }
-
-            // Use customPort when wasRunning=false (fresh auto-start), savedPort may not be set
             int portToUse = wasRunning ? savedPort : McpEditorSettings.GetCustomPort();
 
             // Centralized, coalesced startup request
@@ -362,10 +340,22 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Cleanup on Unity exit.
+        /// Disposes the TCP listener but preserves isServerRunning
+        /// so the server state can be restored on next Unity launch.
         /// </summary>
         private static void OnEditorQuitting()
         {
-            StopServer();
+            if (mcpServer != null)
+            {
+                try
+                {
+                    mcpServer.Dispose();
+                }
+                finally
+                {
+                    mcpServer = null;
+                }
+            }
         }
 
         /// <summary>

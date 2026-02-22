@@ -49,29 +49,14 @@ namespace io.github.hatayama.uLoopMCP
             // If server was running and is currently stopped, delegate to centralized controller logic
             if (wasRunning && (currentServer == null || !currentServer.IsRunning))
             {
-                bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
-                bool hasCompletedFirstLaunch = McpEditorSettings.GetHasCompletedFirstLaunch();
-
-                // Skip auto-start if first launch has not been completed (user must start manually first time)
-                if ((autoStartEnabled || isAfterCompile) && hasCompletedFirstLaunch)
+                _ = McpServerController.StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None).ContinueWith(task =>
                 {
-                    _ = McpServerController.StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None).ContinueWith(task =>
+                    if (task.IsFaulted)
                     {
-                        if (task.IsFaulted)
-                        {
-                            VibeLogger.LogError("server_startup_restore_failed", 
-                                $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
-                        }
-                    }, TaskScheduler.FromCurrentSynchronizationContext());
-                }
-                else
-                {
-                    // Server won't start, but lock files must be deleted so CLI doesn't think Unity is busy
-                    CompilationLockService.DeleteLockFile();
-                    DomainReloadDetectionService.DeleteLockFile();
-                    ServerStartingLockService.DeleteLockFile();
-                    McpEditorSettings.ClearServerSession();
-                }
+                        VibeLogger.LogError("server_startup_restore_failed",
+                            $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
+                    }
+                }, TaskScheduler.FromCurrentSynchronizationContext());
             }
 
             return ValidationResult.Success();

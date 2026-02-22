@@ -52,8 +52,6 @@ namespace io.github.hatayama.uLoopMCP
             
             UpdateUIState(ui => new UIState(
                 customPort: settings.customPort,
-                autoStartServer: settings.autoStartServer,
-
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -72,7 +70,6 @@ namespace io.github.hatayama.uLoopMCP
         public void SaveToSettings()
         {
             McpEditorSettings.SetCustomPort(UI.CustomPort);
-            McpEditorSettings.SetAutoStartServer(UI.AutoStartServer);
             McpEditorSettings.SetConnectionMode(UI.ConnectionMode);
         }
 
@@ -85,8 +82,6 @@ namespace io.github.hatayama.uLoopMCP
 
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
-                autoStartServer: ui.AutoStartServer,
-
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: selectedEditor,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -179,35 +174,12 @@ namespace io.github.hatayama.uLoopMCP
         // UIState-specific update methods with persistence
 
         /// <summary>
-        /// Update AutoStartServer setting with persistence
-        /// </summary>
-        public void UpdateAutoStartServer(bool autoStart)
-        {
-            UpdateUIState(ui => new UIState(
-                customPort: ui.CustomPort,
-                autoStartServer: autoStart,
-
-                showConnectedTools: ui.ShowConnectedTools,
-                selectedEditorType: ui.SelectedEditorType,
-                mainScrollPosition: ui.MainScrollPosition,
-                showSecuritySettings: ui.ShowSecuritySettings,
-                addRepositoryRoot: ui.AddRepositoryRoot,
-                supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
-                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
-                connectionMode: ui.ConnectionMode,
-                showConfiguration: ui.ShowConfiguration));
-            McpEditorSettings.SetAutoStartServer(autoStart);
-        }
-
-        /// <summary>
         /// Update CustomPort setting with persistence
         /// </summary>
         public void UpdateCustomPort(int port)
         {
             UpdateUIState(ui => new UIState(
                 customPort: port,
-                autoStartServer: ui.AutoStartServer,
-
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -227,8 +199,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
-                autoStartServer: ui.AutoStartServer,
-
                 showConnectedTools: show,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -247,8 +217,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
-                autoStartServer: ui.AutoStartServer,
-
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: type,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -268,8 +236,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
-                autoStartServer: ui.AutoStartServer,
-
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: position,
@@ -288,8 +254,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
-                autoStartServer: ui.AutoStartServer,
-
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -333,8 +297,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
-                autoStartServer: ui.AutoStartServer,
-
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -355,8 +317,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
-                autoStartServer: ui.AutoStartServer,
-
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -375,8 +335,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
-                autoStartServer: ui.AutoStartServer,
-
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -392,8 +350,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
-                autoStartServer: ui.AutoStartServer,
-
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
@@ -410,8 +366,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             UpdateUIState(ui => new UIState(
                 customPort: ui.CustomPort,
-                autoStartServer: ui.AutoStartServer,
-
                 showConnectedTools: ui.ShowConnectedTools,
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,

@@ -141,6 +141,12 @@ namespace io.github.hatayama.uLoopMCP
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
+            ct.Register(() =>
+            {
+                tcs.TrySetResult(null);
+                try { process.Kill(); } catch (System.InvalidOperationException) { }
+            });
+
             _ = Task.Run(() =>
             {
                 try
@@ -169,7 +175,7 @@ namespace io.github.hatayama.uLoopMCP
                     process.Dispose();
                     tcs.TrySetResult(null);
                 }
-            }, ct);
+            });
 
             return tcs.Task;
         }

@@ -34,7 +34,6 @@ namespace io.github.hatayama.uLoopMCP
                 // Act
                 var controlsData = new ServerControlsData(
                     customPort: testPort,
-                    autoStartServer: false,
                     isServerRunning: false,
                     portEditable: true,
                     hasPortWarning: hasPortWarning,
@@ -78,7 +77,6 @@ namespace io.github.hatayama.uLoopMCP
             // Act
             var controlsData = new ServerControlsData(
                 customPort: testPort,
-                autoStartServer: false,
                 isServerRunning: false,
                 portEditable: true,
                 hasPortWarning: hasPortWarning,
@@ -96,14 +94,12 @@ namespace io.github.hatayama.uLoopMCP
             // Act
             var controlsData = new ServerControlsData(
                 customPort: 7400,
-                autoStartServer: true,
                 isServerRunning: false,
                 portEditable: true
             );
-            
+
             // Assert
             Assert.AreEqual(7400, controlsData.CustomPort, "Custom port should be set correctly");
-            Assert.IsTrue(controlsData.AutoStartServer, "Auto start should be set correctly");
             Assert.IsFalse(controlsData.IsServerRunning, "Server running state should be set correctly");
             Assert.IsTrue(controlsData.PortEditable, "Port editable state should be set correctly");
             Assert.IsFalse(controlsData.HasPortWarning, "Default should have no warning");
