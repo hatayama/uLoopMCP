@@ -83,6 +83,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (data.IsChecking)
             {
+                SetCliButton("Checking...", false);
                 return;
             }
 
