@@ -1,5 +1,8 @@
 using System.Diagnostics;
 using System.IO;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
@@ -7,31 +10,30 @@ namespace io.github.hatayama.uLoopMCP
     public static class CliInstallationDetector
     {
         private const int PROCESS_TIMEOUT_MS = 5000;
-        private const double CACHE_TTL_SECONDS = 5.0;
 
-        // Empty string = checked but not installed, non-empty = version, null = not yet checked
         private static string _cachedCliVersion;
         private static bool _cacheInitialized;
-        private static double _cliCacheTime;
 
         public static bool IsCliInstalled()
         {
-            string version = GetCliVersion();
-            return version != null;
+            return GetCachedCliVersion() != null;
         }
 
-        public static string GetCliVersion()
+        public static string GetCachedCliVersion()
         {
-            double now = EditorTimestamp.Now();
-            if (_cacheInitialized && (now - _cliCacheTime) < CACHE_TTL_SECONDS)
-            {
-                return _cachedCliVersion;
-            }
+            return _cacheInitialized ? _cachedCliVersion : null;
+        }
 
-            _cachedCliVersion = DetectCliVersion();
+        public static bool IsCheckCompleted()
+        {
+            return _cacheInitialized;
+        }
+
+        public static async Task RefreshCliVersionAsync(CancellationToken ct)
+        {
+            string version = await DetectCliVersionAsync(ct);
+            _cachedCliVersion = version;
             _cacheInitialized = true;
-            _cliCacheTime = now;
-            return _cachedCliVersion;
         }
 
         public static bool AreSkillsInstalled(string target)
@@ -65,8 +67,10 @@ namespace io.github.hatayama.uLoopMCP
             _cacheInitialized = false;
         }
 
-        private static string DetectCliVersion()
+        private static Task<string> DetectCliVersionAsync(CancellationToken ct)
         {
+            TaskCompletionSource<string> tcs = new TaskCompletionSource<string>();
+
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = CliConstants.EXECUTABLE_NAME,
@@ -87,32 +91,53 @@ namespace io.github.hatayama.uLoopMCP
             catch (System.ComponentModel.Win32Exception)
             {
                 // OS reports "command not found" as Win32Exception when executable is absent
-                return null;
+                tcs.SetResult(null);
+                return tcs.Task;
             }
 
-            using (process)
+            if (process == null)
             {
-                if (process == null)
+                tcs.SetResult(null);
+                return tcs.Task;
+            }
+
+            StringBuilder outputBuilder = new StringBuilder();
+
+            process.OutputDataReceived += (sender, e) =>
+            {
+                if (e.Data != null)
                 {
-                    return null;
+                    outputBuilder.Append(e.Data);
                 }
+            };
+            process.ErrorDataReceived += (sender, e) => { };
 
-                string output = process.StandardOutput.ReadToEnd().Trim();
-                process.StandardError.ReadToEnd();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
 
-                if (!process.WaitForExit(PROCESS_TIMEOUT_MS))
+            Task.Run(() =>
+            {
+                bool exited = process.WaitForExit(PROCESS_TIMEOUT_MS);
+
+                if (!exited)
                 {
                     process.Kill();
-                    return null;
+                    process.Dispose();
+                    tcs.TrySetResult(null);
+                    return;
                 }
 
-                if (process.ExitCode != 0 || string.IsNullOrEmpty(output))
-                {
-                    return null;
-                }
+                // Parameterless WaitForExit flushes async output buffers
+                process.WaitForExit();
 
-                return output;
-            }
+                string output = outputBuilder.ToString().Trim();
+                bool failed = process.ExitCode != 0 || string.IsNullOrEmpty(output);
+                process.Dispose();
+
+                tcs.TrySetResult(failed ? null : output);
+            }, ct);
+
+            return tcs.Task;
         }
     }
 

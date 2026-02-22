@@ -3,6 +3,7 @@ using UnityEditor;
 using System.Linq;
 using System.Collections.Generic;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace io.github.hatayama.uLoopMCP
@@ -211,6 +212,7 @@ namespace io.github.hatayama.uLoopMCP
             _view.UpdateServerControls(controlsData);
 
             RefreshCliSetupSection();
+            RefreshCliVersionInBackground();
 
             ConnectedToolsData toolsData = CreateConnectedToolsData();
             _view.UpdateConnectedTools(toolsData);
@@ -220,6 +222,12 @@ namespace io.github.hatayama.uLoopMCP
 
             SecuritySettingsData securityData = CreateSecuritySettingsData();
             _view.UpdateSecuritySettings(securityData);
+        }
+
+        private async void RefreshCliVersionInBackground()
+        {
+            await CliInstallationDetector.RefreshCliVersionAsync(CancellationToken.None);
+            RefreshCliSetupSection();
         }
 
         public void RefreshConnectedToolsSection()
@@ -536,8 +544,9 @@ namespace io.github.hatayama.uLoopMCP
 
         private CliSetupData CreateCliSetupData()
         {
-            string cliVersion = CliInstallationDetector.GetCliVersion();
+            string cliVersion = CliInstallationDetector.GetCachedCliVersion();
             bool isCliInstalled = cliVersion != null;
+            bool isChecking = !CliInstallationDetector.IsCheckCompleted();
             string packageVersion = McpConstants.PackageInfo.version;
             bool needsUpdate = isCliInstalled && cliVersion != packageVersion;
             bool isClaudeInstalled = CliInstallationDetector.AreSkillsInstalled("claude");
@@ -552,6 +561,7 @@ namespace io.github.hatayama.uLoopMCP
                 packageVersion,
                 needsUpdate,
                 _isInstallingCli,
+                isChecking,
                 isClaudeInstalled,
                 isCodexInstalled,
                 isCursorInstalled,
@@ -596,19 +606,31 @@ namespace io.github.hatayama.uLoopMCP
 
             await Task.Run(() =>
             {
-                using (System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo))
+                System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo);
+                if (process == null)
                 {
-                    if (process == null)
-                    {
-                        errorOutput = "Failed to start npm process";
-                        return;
-                    }
-
-                    process.StandardOutput.ReadToEnd();
-                    errorOutput = process.StandardError.ReadToEnd();
-                    process.WaitForExit(30000);
-                    success = process.ExitCode == 0;
+                    errorOutput = "Failed to start npm process";
+                    return;
                 }
+
+                System.Text.StringBuilder errorBuilder = new System.Text.StringBuilder();
+                process.OutputDataReceived += (s, e) => { };
+                process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                if (!process.WaitForExit(30000))
+                {
+                    process.Kill();
+                    process.Dispose();
+                    errorOutput = "Installation timed out after 30 seconds";
+                    return;
+                }
+
+                process.WaitForExit();
+                errorOutput = errorBuilder.ToString();
+                success = process.ExitCode == 0;
+                process.Dispose();
             });
 
             _isInstallingCli = false;
@@ -662,19 +684,31 @@ namespace io.github.hatayama.uLoopMCP
 
             await Task.Run(() =>
             {
-                using (System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo))
+                System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo);
+                if (process == null)
                 {
-                    if (process == null)
-                    {
-                        errorOutput = "Failed to start uloop process";
-                        return;
-                    }
-
-                    process.StandardOutput.ReadToEnd();
-                    errorOutput = process.StandardError.ReadToEnd();
-                    process.WaitForExit(30000);
-                    success = process.ExitCode == 0;
+                    errorOutput = "Failed to start uloop process";
+                    return;
                 }
+
+                System.Text.StringBuilder errorBuilder = new System.Text.StringBuilder();
+                process.OutputDataReceived += (s, e) => { };
+                process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                if (!process.WaitForExit(30000))
+                {
+                    process.Kill();
+                    process.Dispose();
+                    errorOutput = "Installation timed out after 30 seconds";
+                    return;
+                }
+
+                process.WaitForExit();
+                errorOutput = errorBuilder.ToString();
+                success = process.ExitCode == 0;
+                process.Dispose();
             });
 
             _isInstallingSkills = false;

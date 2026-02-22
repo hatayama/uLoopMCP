@@ -126,6 +126,7 @@ namespace io.github.hatayama.uLoopMCP
         public readonly string PackageVersion;
         public readonly bool NeedsUpdate;
         public readonly bool IsInstallingCli;
+        public readonly bool IsChecking;
         public readonly bool IsClaudeSkillsInstalled;
         public readonly bool IsCodexSkillsInstalled;
         public readonly bool IsCursorSkillsInstalled;
@@ -140,6 +141,7 @@ namespace io.github.hatayama.uLoopMCP
             string packageVersion,
             bool needsUpdate,
             bool isInstallingCli,
+            bool isChecking,
             bool isClaudeSkillsInstalled,
             bool isCodexSkillsInstalled,
             bool isCursorSkillsInstalled,
@@ -153,6 +155,7 @@ namespace io.github.hatayama.uLoopMCP
             PackageVersion = packageVersion;
             NeedsUpdate = needsUpdate;
             IsInstallingCli = isInstallingCli;
+            IsChecking = isChecking;
             IsClaudeSkillsInstalled = isClaudeSkillsInstalled;
             IsCodexSkillsInstalled = isCodexSkillsInstalled;
             IsCursorSkillsInstalled = isCursorSkillsInstalled;
