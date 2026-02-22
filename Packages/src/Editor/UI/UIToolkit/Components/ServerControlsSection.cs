@@ -14,12 +14,10 @@ namespace io.github.hatayama.uLoopMCP
         private readonly VisualElement _portWarningContainer;
         private readonly Label _portWarningLabel;
         private readonly Button _toggleServerButton;
-        private readonly Toggle _autoStartToggle;
 
         private ServerControlsData _lastData;
 
         public event Action OnToggleServer;
-        public event Action<bool> OnAutoStartChanged;
         public event Action<int> OnPortChanged;
 
         public ServerControlsSection(VisualElement root)
@@ -28,7 +26,6 @@ namespace io.github.hatayama.uLoopMCP
             _portWarningContainer = root.Q<VisualElement>("port-warning-container");
             _portWarningLabel = root.Q<Label>("port-warning-label");
             _toggleServerButton = root.Q<Button>("toggle-server-button");
-            _autoStartToggle = root.Q<Toggle>("auto-start-toggle");
 
             SetupBindings();
         }
@@ -37,7 +34,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             _portField.RegisterValueChangedCallback(evt => OnPortChanged?.Invoke(evt.newValue));
             _toggleServerButton.clicked += () => OnToggleServer?.Invoke();
-            _autoStartToggle.RegisterValueChangedCallback(evt => OnAutoStartChanged?.Invoke(evt.newValue));
         }
 
         public void Update(ServerControlsData data)
@@ -51,8 +47,6 @@ namespace io.github.hatayama.uLoopMCP
 
             ViewDataBinder.UpdateIntegerField(_portField, data.CustomPort);
             _portField.SetEnabled(!data.IsServerRunning);
-
-            ViewDataBinder.UpdateToggle(_autoStartToggle, data.AutoStartServer);
 
             UpdatePortWarning(data);
             UpdateToggleButton(data);

@@ -49,11 +49,7 @@ namespace io.github.hatayama.uLoopMCP
             // If server was running and is currently stopped, delegate to centralized controller logic
             if (wasRunning && (currentServer == null || !currentServer.IsRunning))
             {
-                bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
-                bool hasCompletedFirstLaunch = McpEditorSettings.GetHasCompletedFirstLaunch();
-
-                // Skip auto-start if first launch has not been completed (user must start manually first time)
-                if ((autoStartEnabled || isAfterCompile) && hasCompletedFirstLaunch)
+                if (wasRunning || isAfterCompile)
                 {
                     _ = McpServerController.StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None).ContinueWith(task =>
                     {

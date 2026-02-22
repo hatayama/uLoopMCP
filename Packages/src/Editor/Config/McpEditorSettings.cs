@@ -27,7 +27,6 @@ namespace io.github.hatayama.uLoopMCP
     public record McpEditorSettingsData
     {
         public int customPort = McpServerConfig.DEFAULT_PORT;
-        public bool autoStartServer = true;
         public bool showDeveloperTools = false;
         public bool enableMcpLogs = false;
         public bool enableCommunicationLogs = false;
@@ -49,11 +48,9 @@ namespace io.github.hatayama.uLoopMCP
         // Repository Root Toggle
         public bool addRepositoryRoot = false;
         
-        // First Launch Completion Flag
-        public bool hasCompletedFirstLaunch = false;
-        
         // Session State Settings (moved from McpSessionManager)
-        public bool isServerRunning = false;
+        // Default to true so the server starts automatically on fresh install
+        public bool isServerRunning = true;
         public int serverPort = McpServerConfig.DEFAULT_PORT;
         public bool isAfterCompile = false;
         public bool isDomainReloadInProgress = false;
@@ -157,24 +154,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             McpEditorSettingsData settings = GetSettings();
             McpEditorSettingsData updatedSettings = settings with { customPort = port };
-            SaveSettings(updatedSettings);
-        }
-
-        /// <summary>
-        /// Gets the auto-start setting.
-        /// </summary>
-        public static bool GetAutoStartServer()
-        {
-            return GetSettings().autoStartServer;
-        }
-
-        /// <summary>
-        /// Saves the auto-start setting.
-        /// </summary>
-        public static void SetAutoStartServer(bool autoStart)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData updatedSettings = settings with { autoStartServer = autoStart };
             SaveSettings(updatedSettings);
         }
 
@@ -328,24 +307,6 @@ namespace io.github.hatayama.uLoopMCP
             SaveSettings(newSettings);
         }
 
-        /// <summary>
-        /// Gets the first launch completion flag.
-        /// </summary>
-        public static bool GetHasCompletedFirstLaunch()
-        {
-            return GetSettings().hasCompletedFirstLaunch;
-        }
-
-        /// <summary>
-        /// Sets the first launch completion flag.
-        /// </summary>
-        public static void SetHasCompletedFirstLaunch(bool hasCompletedFirstLaunch)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { hasCompletedFirstLaunch = hasCompletedFirstLaunch };
-            SaveSettings(newSettings);
-        }
-        
         // Session State Settings Methods (moved from McpSessionManager)
 
         /// <summary>
@@ -891,18 +852,7 @@ namespace io.github.hatayama.uLoopMCP
                         throw new InvalidDataException("Settings file contains invalid JSON content");
                     }
 
-                    // JsonUtility uses default field values when keys are missing from JSON,
-                    // so hasCompletedFirstLaunch will be false for legacy configs that lack the field.
-                    bool isLegacyConfig = !json.Contains("hasCompletedFirstLaunch");
-                    
                     _cachedSettings = JsonUtility.FromJson<McpEditorSettingsData>(json);
-                    
-                    // Existing users upgrading from older versions should retain auto-start behavior
-                    if (isLegacyConfig)
-                    {
-                        _cachedSettings = _cachedSettings with { hasCompletedFirstLaunch = true };
-                        SaveSettings(_cachedSettings);
-                    }
                 }
                 else
                 {
