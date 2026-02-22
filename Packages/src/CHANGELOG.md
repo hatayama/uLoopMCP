@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.67.0](https://github.com/hatayama/uLoopMCP/compare/v0.66.1...v0.67.0) (2026-02-22)
+
+
+### Features
+
+* improve EditorWindow UI — merge server sections, compact controls, add CLI/MCP tabs ([#662](https://github.com/hatayama/uLoopMCP/issues/662)) ([3301d8c](https://github.com/hatayama/uLoopMCP/commit/3301d8cb3551f748ab6f5658ed1a006c3a148eac))
+
 ## [0.66.1](https://github.com/hatayama/uLoopMCP/compare/v0.66.0...v0.66.1) (2026-02-21)
 
 
