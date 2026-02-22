@@ -41,6 +41,7 @@
                     <ui:VisualElement class="mcp-cli-status-row">
                         <ui:VisualElement name="cli-status-icon" class="mcp-cli-status-icon mcp-cli-status-icon--not-installed" />
                         <ui:Label name="cli-status-label" text="uLoop CLI: Checking..." />
+                        <ui:Button name="refresh-cli-version-button" text="↻" class="mcp-button--refresh" />
                     </ui:VisualElement>
                     <ui:Button name="install-cli-button" text="Install CLI" class="mcp-button mcp-button--configure" />
 

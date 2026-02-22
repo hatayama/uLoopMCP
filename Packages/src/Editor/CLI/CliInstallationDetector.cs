@@ -69,6 +69,13 @@ namespace io.github.hatayama.uLoopMCP
             return false;
         }
 
+        public static async Task ForceRefreshCliVersionAsync(CancellationToken ct)
+        {
+            string version = await DetectCliVersionAsync(ct);
+            _cachedCliVersion = version;
+            _cacheInitialized = true;
+        }
+
         public static void InvalidateCache()
         {
             _cachedCliVersion = null;

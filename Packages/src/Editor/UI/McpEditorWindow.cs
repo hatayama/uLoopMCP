@@ -21,6 +21,7 @@ namespace io.github.hatayama.uLoopMCP
         private SkillsTarget _skillsTarget = SkillsTarget.Claude;
         private bool _isInstallingCli;
         private bool _isInstallingSkills;
+        private bool _isRefreshingVersion;
 
         [MenuItem("Window/uLoop")]
         public static void ShowWindow()
@@ -73,6 +74,7 @@ namespace io.github.hatayama.uLoopMCP
             _view.OnToggleServer += ToggleServer;
             _view.OnAutoStartChanged += UpdateAutoStartServer;
             _view.OnPortChanged += UpdateCustomPort;
+            _view.OnRefreshCliVersion += HandleRefreshCliVersion;
             _view.OnInstallCli += HandleInstallCli;
             _view.OnInstallSkills += HandleInstallSkills;
             _view.OnSkillsTargetChanged += value => { _skillsTarget = value; RefreshCliSetupSection(); };
@@ -232,6 +234,24 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             await CliInstallationDetector.RefreshCliVersionAsync(CancellationToken.None);
+            RefreshCliSetupSection();
+        }
+
+        private async void HandleRefreshCliVersion()
+        {
+            if (_isRefreshingVersion)
+            {
+                return;
+            }
+
+            _isRefreshingVersion = true;
+            RefreshCliSetupSection();
+
+            Task forceRefresh = CliInstallationDetector.ForceRefreshCliVersionAsync(CancellationToken.None);
+            Task minimumDelay = Task.Delay(500);
+            await Task.WhenAll(forceRefresh, minimumDelay);
+
+            _isRefreshingVersion = false;
             RefreshCliSetupSection();
         }
 
@@ -551,7 +571,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             string cliVersion = CliInstallationDetector.GetCachedCliVersion();
             bool isCliInstalled = cliVersion != null;
-            bool isChecking = !CliInstallationDetector.IsCheckCompleted();
+            bool isChecking = !CliInstallationDetector.IsCheckCompleted() || _isRefreshingVersion;
             string packageVersion = McpConstants.PackageInfo.version;
             bool needsUpdate = isCliInstalled && cliVersion != packageVersion;
             bool isClaudeInstalled = CliInstallationDetector.AreSkillsInstalled("claude");

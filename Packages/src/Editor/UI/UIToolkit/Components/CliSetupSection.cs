@@ -8,6 +8,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         private readonly VisualElement _cliStatusIcon;
         private readonly Label _cliStatusLabel;
+        private readonly Button _refreshCliVersionButton;
         private readonly Button _installCliButton;
         private readonly EnumField _skillsTargetField;
         private readonly Button _installSkillsButton;
@@ -15,6 +16,7 @@ namespace io.github.hatayama.uLoopMCP
         private CliSetupData _lastData;
         private bool _isTargetFieldInitialized;
 
+        public event Action OnRefreshCliVersion;
         public event Action OnInstallCli;
         public event Action OnInstallSkills;
         public event Action<SkillsTarget> OnSkillsTargetChanged;
@@ -23,6 +25,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             _cliStatusIcon = root.Q<VisualElement>("cli-status-icon");
             _cliStatusLabel = root.Q<Label>("cli-status-label");
+            _refreshCliVersionButton = root.Q<Button>("refresh-cli-version-button");
             _installCliButton = root.Q<Button>("install-cli-button");
             _skillsTargetField = root.Q<EnumField>("skills-target-field");
             _installSkillsButton = root.Q<Button>("install-skills-button");
@@ -30,6 +33,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public void SetupBindings()
         {
+            _refreshCliVersionButton.clicked += () => OnRefreshCliVersion?.Invoke();
             _installCliButton.clicked += () => OnInstallCli?.Invoke();
             _installSkillsButton.clicked += () => OnInstallSkills?.Invoke();
         }
@@ -44,6 +48,7 @@ namespace io.github.hatayama.uLoopMCP
             _lastData = data;
 
             UpdateCliStatus(data);
+            UpdateRefreshButton(data);
             UpdateInstallCliButton(data);
             InitializeTargetFieldIfNeeded(data);
             UpdateInstallSkillsButton(data);
@@ -69,8 +74,18 @@ namespace io.github.hatayama.uLoopMCP
             _cliStatusLabel.text = "uLoop CLI: Not installed";
         }
 
+        private void UpdateRefreshButton(CliSetupData data)
+        {
+            _refreshCliVersionButton.SetEnabled(!data.IsChecking);
+        }
+
         private void UpdateInstallCliButton(CliSetupData data)
         {
+            if (data.IsChecking)
+            {
+                return;
+            }
+
             if (data.IsInstallingCli)
             {
                 SetCliButton("Installing...", false);

@@ -389,6 +389,10 @@
     margin-bottom: 4px;
 }
 
+#cli-status-label {
+    flex-grow: 1;
+}
+
 .mcp-cli-status-icon {
     width: 8px;
     height: 8px;
@@ -402,6 +406,17 @@
 
 .mcp-cli-status-icon--not-installed {
     background-color: rgba(128, 128, 128, 0.5);
+}
+
+.mcp-button--refresh {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    margin: 0 3px 0 4px;
+    padding: 0;
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    border-radius: 2px;
 }
 
 /* ===========================================

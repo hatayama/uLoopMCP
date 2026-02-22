@@ -32,6 +32,7 @@ namespace io.github.hatayama.uLoopMCP
         public event Action OnToggleServer;
         public event Action<bool> OnAutoStartChanged;
         public event Action<int> OnPortChanged;
+        public event Action OnRefreshCliVersion;
         public event Action OnInstallCli;
         public event Action OnInstallSkills;
         public event Action<SkillsTarget> OnSkillsTargetChanged;
@@ -102,6 +103,7 @@ namespace io.github.hatayama.uLoopMCP
 
             _cliSetupSection = new CliSetupSection(_root);
             _cliSetupSection.SetupBindings();
+            _cliSetupSection.OnRefreshCliVersion += () => OnRefreshCliVersion?.Invoke();
             _cliSetupSection.OnInstallCli += () => OnInstallCli?.Invoke();
             _cliSetupSection.OnInstallSkills += () => OnInstallSkills?.Invoke();
             _cliSetupSection.OnSkillsTargetChanged += value => OnSkillsTargetChanged?.Invoke(value);
