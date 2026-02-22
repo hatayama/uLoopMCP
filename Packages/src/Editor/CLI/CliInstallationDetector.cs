@@ -38,10 +38,16 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             _isRefreshing = true;
-            string version = await DetectCliVersionAsync(ct);
-            _cachedCliVersion = version;
-            _cacheInitialized = true;
-            _isRefreshing = false;
+            try
+            {
+                string version = await DetectCliVersionAsync(ct);
+                _cachedCliVersion = version;
+                _cacheInitialized = true;
+            }
+            finally
+            {
+                _isRefreshing = false;
+            }
         }
 
         public static bool AreSkillsInstalled(string target)

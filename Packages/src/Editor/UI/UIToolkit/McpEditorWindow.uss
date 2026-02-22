@@ -380,7 +380,8 @@
     flex-grow: 1;
     height: 20px;
     border-radius: 2px;
-    border-width: 0;
+    border-width: 1px;
+    border-color: transparent;
     background-color: transparent;
     color: rgba(255, 255, 255, 0.5);
     -unity-font-style: normal;

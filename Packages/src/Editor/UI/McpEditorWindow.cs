@@ -614,141 +614,160 @@ namespace io.github.hatayama.uLoopMCP
             _isInstallingCli = true;
             RefreshCliSetupSection();
 
-            System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
+            try
             {
-                FileName = npmPath,
-                Arguments = $"install -g {installTarget}",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            NodeEnvironmentResolver.SetupEnvironmentPath(startInfo, NodeEnvironmentResolver.FindNodePath());
-
-            bool success = false;
-            string errorOutput = "";
-
-            await Task.Run(() =>
-            {
-                System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo);
-                if (process == null)
+                System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
                 {
-                    errorOutput = "Failed to start npm process";
-                    return;
-                }
+                    FileName = npmPath,
+                    Arguments = $"install -g {installTarget}",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
 
-                System.Text.StringBuilder errorBuilder = new System.Text.StringBuilder();
-                process.OutputDataReceived += (s, e) => { };
-                process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
+                NodeEnvironmentResolver.SetupEnvironmentPath(startInfo, NodeEnvironmentResolver.FindNodePath());
 
-                if (!process.WaitForExit(30000))
+                bool success = false;
+                string errorOutput = "";
+
+                await Task.Run(() =>
                 {
-                    process.Kill();
+                    System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo);
+                    if (process == null)
+                    {
+                        errorOutput = "Failed to start npm process";
+                        return;
+                    }
+
+                    System.Text.StringBuilder errorBuilder = new System.Text.StringBuilder();
+                    process.OutputDataReceived += (s, e) => { };
+                    process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
+                    process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
+
+                    if (!process.WaitForExit(30000))
+                    {
+                        process.Kill();
+                        process.Dispose();
+                        errorOutput = "Installation timed out after 30 seconds";
+                        return;
+                    }
+
+                    process.WaitForExit();
+                    errorOutput = errorBuilder.ToString();
+                    success = process.ExitCode == 0;
                     process.Dispose();
-                    errorOutput = "Installation timed out after 30 seconds";
-                    return;
+                });
+
+                CliInstallationDetector.InvalidateCache();
+
+                if (success)
+                {
+                    EditorUtility.DisplayDialog("CLI Installed", $"uLoop CLI v{packageVersion} has been installed successfully.", "OK");
                 }
-
-                process.WaitForExit();
-                errorOutput = errorBuilder.ToString();
-                success = process.ExitCode == 0;
-                process.Dispose();
-            });
-
-            _isInstallingCli = false;
-            CliInstallationDetector.InvalidateCache();
-
-            if (success)
-            {
-                EditorUtility.DisplayDialog("CLI Installed", $"uLoop CLI v{packageVersion} has been installed successfully.", "OK");
+                else
+                {
+                    string manualCommand = $"npm install -g {installTarget}";
+                    EditorUtility.DisplayDialog(
+                        "Installation Failed",
+                        $"Failed to install uLoop CLI.\n\n{errorOutput}\n\nYou can try manually:\n{manualCommand}",
+                        "OK");
+                }
             }
-            else
+            finally
             {
-                string manualCommand = $"npm install -g {installTarget}";
-                EditorUtility.DisplayDialog(
-                    "Installation Failed",
-                    $"Failed to install uLoop CLI.\n\n{errorOutput}\n\nYou can try manually:\n{manualCommand}",
-                    "OK");
+                _isInstallingCli = false;
+                RefreshAllSections();
             }
-
-            RefreshAllSections();
         }
 
         private async void HandleInstallSkills()
         {
+            if (!CliInstallationDetector.IsCliInstalled())
+            {
+                EditorUtility.DisplayDialog(
+                    "CLI Not Found",
+                    "uloop-cli is not installed. Please install the CLI first.",
+                    "OK");
+                return;
+            }
+
             _isInstallingSkills = true;
             RefreshCliSetupSection();
 
-            string arguments = _skillsTarget switch
+            try
             {
-                SkillsTarget.Claude => "skills install --claude",
-                SkillsTarget.Codex => "skills install --codex",
-                SkillsTarget.Cursor => "skills install --cursor",
-                SkillsTarget.Gemini => "skills install --gemini",
-                SkillsTarget.Windsurf => "skills install --windsurf",
-                _ => "skills install --claude"
-            };
-
-            System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = "uloop",
-                Arguments = arguments,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            NodeEnvironmentResolver.SetupEnvironmentPath(startInfo, NodeEnvironmentResolver.FindNodePath());
-
-            bool success = false;
-            string errorOutput = "";
-
-            await Task.Run(() =>
-            {
-                System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo);
-                if (process == null)
+                string arguments = _skillsTarget switch
                 {
-                    errorOutput = "Failed to start uloop process";
-                    return;
-                }
+                    SkillsTarget.Claude => "skills install --claude",
+                    SkillsTarget.Codex => "skills install --codex",
+                    SkillsTarget.Cursor => "skills install --cursor",
+                    SkillsTarget.Gemini => "skills install --gemini",
+                    SkillsTarget.Windsurf => "skills install --windsurf",
+                    _ => "skills install --claude"
+                };
 
-                System.Text.StringBuilder errorBuilder = new System.Text.StringBuilder();
-                process.OutputDataReceived += (s, e) => { };
-                process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-
-                if (!process.WaitForExit(30000))
+                System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
                 {
-                    process.Kill();
+                    FileName = "uloop",
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                NodeEnvironmentResolver.SetupEnvironmentPath(startInfo, NodeEnvironmentResolver.FindNodePath());
+
+                bool success = false;
+                string errorOutput = "";
+
+                await Task.Run(() =>
+                {
+                    System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo);
+                    if (process == null)
+                    {
+                        errorOutput = "Failed to start uloop process";
+                        return;
+                    }
+
+                    System.Text.StringBuilder errorBuilder = new System.Text.StringBuilder();
+                    process.OutputDataReceived += (s, e) => { };
+                    process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
+                    process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
+
+                    if (!process.WaitForExit(30000))
+                    {
+                        process.Kill();
+                        process.Dispose();
+                        errorOutput = "Installation timed out after 30 seconds";
+                        return;
+                    }
+
+                    process.WaitForExit();
+                    errorOutput = errorBuilder.ToString();
+                    success = process.ExitCode == 0;
                     process.Dispose();
-                    errorOutput = "Installation timed out after 30 seconds";
-                    return;
+                });
+
+                CliInstallationDetector.InvalidateCache();
+
+                if (success)
+                {
+                    EditorUtility.DisplayDialog("Skills Installed", "Skills have been installed successfully.", "OK");
                 }
-
-                process.WaitForExit();
-                errorOutput = errorBuilder.ToString();
-                success = process.ExitCode == 0;
-                process.Dispose();
-            });
-
-            _isInstallingSkills = false;
-            CliInstallationDetector.InvalidateCache();
-
-            if (success)
-            {
-                EditorUtility.DisplayDialog("Skills Installed", "Skills have been installed successfully.", "OK");
+                else
+                {
+                    EditorUtility.DisplayDialog("Installation Failed", $"Failed to install skills.\n\n{errorOutput}", "OK");
+                }
             }
-            else
+            finally
             {
-                EditorUtility.DisplayDialog("Installation Failed", $"Failed to install skills.\n\n{errorOutput}", "OK");
+                _isInstallingSkills = false;
+                RefreshAllSections();
             }
-
-            RefreshAllSections();
         }
 
         private void ToggleServer()
