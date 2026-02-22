@@ -853,6 +853,16 @@ namespace io.github.hatayama.uLoopMCP
                     }
 
                     _cachedSettings = JsonUtility.FromJson<McpEditorSettingsData>(json);
+
+                    // Migrate legacy autoStartServer setting to isServerRunning.
+                    // Old versions always set isServerRunning=false on quit, so existing users
+                    // who had autoStartServer=true would lose auto-start behavior after upgrade.
+                    // SaveSettings removes the legacy field, making this a one-time migration.
+                    if (json.Contains("\"autoStartServer\"") && !_cachedSettings.isServerRunning)
+                    {
+                        _cachedSettings.isServerRunning = true;
+                        SaveSettings(_cachedSettings);
+                    }
                 }
                 else
                 {

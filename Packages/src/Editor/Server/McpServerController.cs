@@ -347,8 +347,14 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (mcpServer != null)
             {
-                mcpServer.Dispose();
-                mcpServer = null;
+                try
+                {
+                    mcpServer.Dispose();
+                }
+                finally
+                {
+                    mcpServer = null;
+                }
             }
         }
 
