@@ -141,26 +141,34 @@ namespace io.github.hatayama.uLoopMCP
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            Task.Run(() =>
+            _ = Task.Run(() =>
             {
-                bool exited = process.WaitForExit(PROCESS_TIMEOUT_MS);
-
-                if (!exited)
+                try
                 {
-                    process.Kill();
+                    bool exited = process.WaitForExit(PROCESS_TIMEOUT_MS);
+
+                    if (!exited)
+                    {
+                        try { process.Kill(); } catch (System.InvalidOperationException) { }
+                        process.Dispose();
+                        tcs.TrySetResult(null);
+                        return;
+                    }
+
+                    // Parameterless WaitForExit flushes async output buffers
+                    process.WaitForExit();
+
+                    string output = outputBuilder.ToString().Trim();
+                    bool failed = process.ExitCode != 0 || string.IsNullOrEmpty(output);
+                    process.Dispose();
+
+                    tcs.TrySetResult(failed ? null : output);
+                }
+                catch
+                {
                     process.Dispose();
                     tcs.TrySetResult(null);
-                    return;
                 }
-
-                // Parameterless WaitForExit flushes async output buffers
-                process.WaitForExit();
-
-                string output = outputBuilder.ToString().Trim();
-                bool failed = process.ExitCode != 0 || string.IsNullOrEmpty(output);
-                process.Dispose();
-
-                tcs.TrySetResult(failed ? null : output);
             }, ct);
 
             return tcs.Task;
