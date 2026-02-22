@@ -19,6 +19,9 @@ interface SkillsOptions {
   global?: boolean;
   claude?: boolean;
   codex?: boolean;
+  cursor?: boolean;
+  gemini?: boolean;
+  windsurf?: boolean;
 }
 
 export function registerSkillsCommand(program: Command): void {
@@ -32,6 +35,9 @@ export function registerSkillsCommand(program: Command): void {
     .option('-g, --global', 'Check global installation')
     .option('--claude', 'Check Claude Code installation')
     .option('--codex', 'Check Codex CLI installation')
+    .option('--cursor', 'Check Cursor installation')
+    .option('--gemini', 'Check Gemini CLI installation')
+    .option('--windsurf', 'Check Windsurf installation')
     .action((options: SkillsOptions) => {
       const targets = resolveTargets(options);
       const global = options.global ?? false;
@@ -44,6 +50,9 @@ export function registerSkillsCommand(program: Command): void {
     .option('-g, --global', 'Install to global location')
     .option('--claude', 'Install to Claude Code')
     .option('--codex', 'Install to Codex CLI')
+    .option('--cursor', 'Install to Cursor')
+    .option('--gemini', 'Install to Gemini CLI')
+    .option('--windsurf', 'Install to Windsurf')
     .action((options: SkillsOptions) => {
       const targets = resolveTargets(options);
       if (targets.length === 0) {
@@ -59,6 +68,9 @@ export function registerSkillsCommand(program: Command): void {
     .option('-g, --global', 'Uninstall from global location')
     .option('--claude', 'Uninstall from Claude Code')
     .option('--codex', 'Uninstall from Codex CLI')
+    .option('--cursor', 'Uninstall from Cursor')
+    .option('--gemini', 'Uninstall from Gemini CLI')
+    .option('--windsurf', 'Uninstall from Windsurf')
     .action((options: SkillsOptions) => {
       const targets = resolveTargets(options);
       if (targets.length === 0) {
@@ -77,6 +89,15 @@ function resolveTargets(options: SkillsOptions): TargetConfig[] {
   if (options.codex) {
     targets.push(getTargetConfig('codex'));
   }
+  if (options.cursor) {
+    targets.push(getTargetConfig('cursor'));
+  }
+  if (options.gemini) {
+    targets.push(getTargetConfig('gemini'));
+  }
+  if (options.windsurf) {
+    targets.push(getTargetConfig('windsurf'));
+  }
   return targets;
 }
 
@@ -86,14 +107,17 @@ function showTargetGuidance(command: string): void {
   console.log('Available targets:');
   console.log('  --claude   Claude Code (.claude/skills/)');
   console.log('  --codex    Codex CLI (.codex/skills/)');
+  console.log('  --cursor   Cursor (.cursor/skills/)');
+  console.log('  --gemini   Gemini CLI (.gemini/skills/)');
+  console.log('  --windsurf Windsurf (.windsurf/skills/)');
   console.log('');
   console.log('Options:');
-  console.log('  -g, --global   Use global location (~/.claude/ or ~/.codex/)');
+  console.log('  -g, --global   Use global location');
   console.log('');
   console.log('Examples:');
   console.log(`  uloop skills ${command} --claude`);
-  console.log(`  uloop skills ${command} --codex --global`);
-  console.log(`  uloop skills ${command} --claude --codex`);
+  console.log(`  uloop skills ${command} --cursor --global`);
+  console.log(`  uloop skills ${command} --claude --codex --cursor --gemini`);
 }
 
 function listSkills(targets: TargetConfig[], global: boolean): void {

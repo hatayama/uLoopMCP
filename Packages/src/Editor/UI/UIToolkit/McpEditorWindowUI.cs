@@ -18,17 +18,27 @@ namespace io.github.hatayama.uLoopMCP
         private readonly VisualElement _root;
 
         private ServerStatusSection _serverStatusSection;
+        private ConnectionModeSection _connectionModeSection;
         private ServerControlsSection _serverControlsSection;
+        private CliSetupSection _cliSetupSection;
         private ConnectedToolsSection _connectedToolsSection;
         private EditorConfigSection _editorConfigSection;
         private SecuritySettingsSection _securitySettingsSection;
 
+        private VisualElement _cliContent;
+        private VisualElement _mcpContent;
+
+        public event Action<ConnectionMode> OnConnectionModeChanged;
         public event Action OnToggleServer;
         public event Action<bool> OnAutoStartChanged;
         public event Action<int> OnPortChanged;
+        public event Action OnRefreshCliVersion;
+        public event Action OnInstallCli;
+        public event Action OnInstallSkills;
+        public event Action<SkillsTarget> OnSkillsTargetChanged;
+        public event Action<bool> OnConfigurationFoldoutChanged;
         public event Action<bool> OnConnectedToolsFoldoutChanged;
         public event Action<McpEditorType> OnEditorTypeChanged;
-        public event Action<bool> OnLLMSettingsFoldoutChanged;
         public event Action<bool> OnRepositoryRootChanged;
         public event Action OnConfigureClicked;
         public event Action OnOpenSettingsClicked;
@@ -82,17 +92,30 @@ namespace io.github.hatayama.uLoopMCP
         {
             _serverStatusSection = new ServerStatusSection(_root);
 
+            _connectionModeSection = new ConnectionModeSection(_root);
+            _connectionModeSection.OnModeChanged += mode => OnConnectionModeChanged?.Invoke(mode);
+            _connectionModeSection.OnFoldoutChanged += value => OnConfigurationFoldoutChanged?.Invoke(value);
+
             _serverControlsSection = new ServerControlsSection(_root);
             _serverControlsSection.OnToggleServer += () => OnToggleServer?.Invoke();
             _serverControlsSection.OnAutoStartChanged += value => OnAutoStartChanged?.Invoke(value);
             _serverControlsSection.OnPortChanged += value => OnPortChanged?.Invoke(value);
+
+            _cliSetupSection = new CliSetupSection(_root);
+            _cliSetupSection.SetupBindings();
+            _cliSetupSection.OnRefreshCliVersion += () => OnRefreshCliVersion?.Invoke();
+            _cliSetupSection.OnInstallCli += () => OnInstallCli?.Invoke();
+            _cliSetupSection.OnInstallSkills += () => OnInstallSkills?.Invoke();
+            _cliSetupSection.OnSkillsTargetChanged += value => OnSkillsTargetChanged?.Invoke(value);
+
+            _cliContent = _root.Q<VisualElement>("cli-content");
+            _mcpContent = _root.Q<VisualElement>("mcp-content");
 
             _connectedToolsSection = new ConnectedToolsSection(_root);
             _connectedToolsSection.OnFoldoutChanged += value => OnConnectedToolsFoldoutChanged?.Invoke(value);
 
             _editorConfigSection = new EditorConfigSection(_root);
             _editorConfigSection.OnEditorTypeChanged += value => OnEditorTypeChanged?.Invoke(value);
-            _editorConfigSection.OnFoldoutChanged += value => OnLLMSettingsFoldoutChanged?.Invoke(value);
             _editorConfigSection.OnRepositoryRootChanged += value => OnRepositoryRootChanged?.Invoke(value);
             _editorConfigSection.OnConfigureClicked += () => OnConfigureClicked?.Invoke();
             _editorConfigSection.OnOpenSettingsClicked += () => OnOpenSettingsClicked?.Invoke();
@@ -130,10 +153,35 @@ namespace io.github.hatayama.uLoopMCP
             _securitySettingsSection?.Update(data);
         }
 
+        public void UpdateConnectionMode(ConnectionModeData data)
+        {
+            _connectionModeSection?.Update(data);
+        }
+
+        public void UpdateConfigurationFoldout(bool show)
+        {
+            _connectionModeSection?.UpdateFoldout(show);
+        }
+
+        public void UpdateCliSetup(CliSetupData data)
+        {
+            _cliSetupSection?.Update(data);
+        }
+
+        public void UpdateSectionVisibility(ConnectionMode mode)
+        {
+            bool isMcp = mode == ConnectionMode.MCP;
+
+            ViewDataBinder.SetVisible(_mcpContent, isMcp);
+            ViewDataBinder.SetVisible(_cliContent, !isMcp);
+        }
+
         public void Dispose()
         {
             _serverStatusSection = null;
+            _connectionModeSection = null;
             _serverControlsSection = null;
+            _cliSetupSection = null;
             _connectedToolsSection = null;
             _editorConfigSection = null;
             _securitySettingsSection = null;

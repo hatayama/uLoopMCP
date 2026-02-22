@@ -1,48 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
     <ui:ScrollView name="main-scroll-view" class="mcp-main-container">
-        <!-- Server Status Section -->
-        <ui:VisualElement name="server-status-section" class="mcp-section">
-            <ui:VisualElement class="mcp-status">
-                <ui:Label text="Status:" class="mcp-status__label" />
-                <ui:Label name="status-value" text="Stopped" class="mcp-status__value mcp-status__value--stopped" />
-            </ui:VisualElement>
-        </ui:VisualElement>
-
-        <!-- Server Controls Section -->
-        <ui:VisualElement name="server-controls-section" class="mcp-section mcp-section--box">
-            <ui:VisualElement class="mcp-port-row">
-                <ui:Label text="Port:" class="mcp-port-row__label" />
-                <uie:IntegerField name="port-field" value="8080" class="mcp-port-row__field" />
+        <!-- Server Section (merged status + controls) -->
+        <ui:VisualElement name="server-section" class="mcp-section mcp-section--box">
+            <ui:VisualElement class="mcp-server-status">
+                <ui:VisualElement name="server-status-indicator" class="mcp-server-status__indicator" />
+                <ui:Label name="status-value" text="Stopped" class="mcp-server-status__text mcp-server-status__text--stopped" />
+                <ui:VisualElement class="mcp-server-status__spacer" />
+                <ui:Label text="Port:" class="mcp-server-status__port-label" />
+                <uie:IntegerField name="port-field" value="8080" class="mcp-server-status__port-field" />
             </ui:VisualElement>
 
             <ui:VisualElement name="port-warning-container" class="mcp-warning-container">
                 <ui:Label name="port-warning-label" class="mcp-warning-label" />
             </ui:VisualElement>
 
-            <ui:Button name="toggle-server-button" text="Start Server" class="mcp-button mcp-button--large mcp-button--start" />
-
-            <ui:VisualElement class="mcp-toggle-row">
-                <ui:Toggle name="auto-start-toggle" class="mcp-toggle-row__toggle" />
-                <ui:Label text="Auto Start Server" class="mcp-toggle-row__label" />
+            <ui:VisualElement class="mcp-server-controls">
+                <ui:Button name="toggle-server-button" text="Start Server" class="mcp-button mcp-button--compact mcp-button--start" />
+                <ui:VisualElement class="mcp-server-controls__spacer" />
+                <ui:Toggle name="auto-start-toggle" class="mcp-server-controls__auto-start-toggle" />
+                <ui:Label text="Auto Start" class="mcp-server-controls__auto-start-label" />
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <!-- Connected Tools Section -->
-        <ui:VisualElement name="connected-tools-section" class="mcp-section mcp-section--box">
-            <ui:Foldout name="connected-tools-foldout" text="Connected LLM Tools" class="mcp-foldout">
-                <ui:VisualElement name="connected-tools-content">
-                    <ui:VisualElement name="clients-list" class="mcp-clients-list" />
-                    <ui:Label name="no-clients-message" text="No connected tools found." class="mcp-info-message" />
-                    <ui:Label name="server-not-running-message" text="Server is not running. Start the server to see connected tools." class="mcp-warning-message" />
+        <!-- Configuration Section -->
+        <ui:VisualElement name="configuration-section" class="mcp-section mcp-section--box">
+            <ui:Foldout name="configuration-foldout" text="Configuration" class="mcp-foldout">
+                <ui:VisualElement class="mcp-tab-toggle">
+                    <ui:Button name="cli-tab-button" text="CLI" class="mcp-tab-button mcp-tab-button--active" />
+                    <ui:Button name="mcp-tab-button" text="MCP" class="mcp-tab-button" />
                 </ui:VisualElement>
-            </ui:Foldout>
-        </ui:VisualElement>
 
-        <!-- LLM Tool Settings Section -->
-        <ui:VisualElement name="editor-config-section" class="mcp-section mcp-section--box">
-            <ui:Foldout name="llm-settings-foldout" text="LLM Tool Settings" class="mcp-foldout">
-                <ui:VisualElement name="llm-settings-content">
+                <!-- CLI Content -->
+                <ui:VisualElement name="cli-content">
+                    <ui:VisualElement class="mcp-cli-status-row">
+                        <ui:VisualElement name="cli-status-icon" class="mcp-cli-status-icon mcp-cli-status-icon--not-installed" />
+                        <ui:Label name="cli-status-label" text="uloop-cli: Checking..." />
+                        <ui:Button name="refresh-cli-version-button" text="↻" class="mcp-button--refresh" />
+                    </ui:VisualElement>
+                    <ui:Button name="install-cli-button" text="Install CLI" class="mcp-button mcp-button--configure" />
+
+                    <ui:Label text="Skills" class="mcp-cli-subsection-header" />
+                    <ui:VisualElement class="mcp-target-row">
+                        <ui:Label text="Target:" class="mcp-target-row__label" />
+                        <uie:EnumField name="skills-target-field" class="mcp-target-row__field" />
+                    </ui:VisualElement>
+
+                    <ui:Button name="install-skills-button" text="Install Skills" class="mcp-button mcp-button--configure" />
+                </ui:VisualElement>
+
+                <!-- MCP Content -->
+                <ui:VisualElement name="mcp-content">
                     <ui:VisualElement class="mcp-target-row">
                         <ui:Label text="Target:" class="mcp-target-row__label" />
                         <uie:EnumField name="editor-type-field" class="mcp-target-row__field" />
@@ -57,6 +65,15 @@
 
                     <ui:Button name="configure-button" text="Configure" class="mcp-button mcp-button--configure" />
                     <ui:Button name="open-settings-button" text="Open Settings File" class="mcp-button" />
+                </ui:VisualElement>
+            </ui:Foldout>
+        </ui:VisualElement>
+
+        <!-- Connected LLM Tools Section -->
+        <ui:VisualElement name="connected-tools-section" class="mcp-section mcp-section--box">
+            <ui:Foldout name="connected-tools-foldout" text="Connected LLM Tools (via MCP)" class="mcp-foldout">
+                <ui:VisualElement name="connected-tools-content">
+                    <ui:VisualElement name="clients-list" class="mcp-clients-list" />
                 </ui:VisualElement>
             </ui:Foldout>
         </ui:VisualElement>

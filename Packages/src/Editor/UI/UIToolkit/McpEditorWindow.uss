@@ -29,48 +29,78 @@
 }
 
 /* ===========================================
-   Block: Status
+   Block: Server Status (prominent status row)
    =========================================== */
-.mcp-status {
-    flex-direction: row;
-    align-items: center;
-}
-
-.mcp-status__label {
-    width: 50px;
-    -unity-font-style: bold;
-}
-
-.mcp-status__value {
-    -unity-font-style: bold;
-    max-width: 50px;
-}
-
-.mcp-status__value--running {
-    color: #4caf50;
-}
-
-.mcp-status__value--stopped {
-    color: #c62828;
-}
-
-/* ===========================================
-   Block: Port Row
-   =========================================== */
-.mcp-port-row {
+.mcp-server-status {
     flex-direction: row;
     align-items: center;
     margin-bottom: 8px;
+    margin-left: 7px;
 }
 
-.mcp-port-row__label {
-    width: 30px;
+.mcp-server-status__indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    margin-right: 6px;
+    flex-shrink: 0;
 }
 
-.mcp-port-row__field {
-    width: 50px;
+.mcp-server-status__indicator--running {
+    background-color: #4caf50;
+}
+
+.mcp-server-status__indicator--stopped {
+    background-color: #c62828;
+}
+
+.mcp-server-status__text {
+    -unity-font-style: bold;
+}
+
+.mcp-server-status__text--running {
+    color: #4caf50;
+}
+
+.mcp-server-status__text--stopped {
+    color: #c62828;
+}
+
+.mcp-server-status__spacer {
+    flex-grow: 1;
+}
+
+.mcp-server-status__port-label {
+    margin-right: 4px;
+}
+
+.mcp-server-status__port-field {
+    width: 60px;
     -unity-text-align: middle-right;
 }
+
+/* ===========================================
+   Block: Server Controls (compact row)
+   =========================================== */
+.mcp-server-controls {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 4px;
+    padding-left: 10px;
+}
+
+.mcp-server-controls__spacer {
+    flex-grow: 1;
+}
+
+.mcp-server-controls__auto-start-toggle {
+    width: 20px;
+    margin-right: 2px;
+}
+
+.mcp-server-controls__auto-start-label {
+}
+
 
 /* ===========================================
    Block: Warning Container
@@ -102,10 +132,14 @@
     margin-bottom: 4px;
 }
 
-.mcp-button--large {
-    height: 30px;
-    margin-top: 8px;
-    margin-bottom: 8px;
+.mcp-button--compact {
+    height: 22px;
+    padding-left: 12px;
+    padding-right: 12px;
+    font-size: 11px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    margin-left: 0;
 }
 
 .mcp-button--start {
@@ -119,13 +153,13 @@
 }
 
 .mcp-button--stop {
-    background-color: #7b1a1a;
-    border-color: #a33;
-    color: #ffffff;
+    background-color: #4a4a4a;
+    border-color: #666666;
+    color: #ff6b6b;
 }
 
 .mcp-button--stop:hover {
-    background-color: #922222;
+    background-color: #555555;
 }
 
 .mcp-button--warning {
@@ -178,7 +212,6 @@
 .mcp-target-row {
     flex-direction: row;
     align-items: center;
-    margin-bottom: 8px;
     overflow: hidden;
 }
 
@@ -329,6 +362,97 @@
     background-color: #5c4a00;
     border-color: #7a6400;
     color: #ffcc00;
+}
+
+/* ===========================================
+   Block: Tab Toggle (segment control)
+   =========================================== */
+.mcp-tab-toggle {
+    flex-direction: row;
+    background-color: rgba(48, 48, 48, 0.6);
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: rgba(128, 128, 128, 0.2);
+    margin-bottom: 14px;
+}
+
+.mcp-tab-button {
+    flex-grow: 1;
+    height: 20px;
+    border-radius: 2px;
+    border-width: 1px;
+    border-color: transparent;
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.5);
+    -unity-font-style: normal;
+    font-size: 11px;
+    margin: 0;
+}
+
+.mcp-tab-button:hover {
+    background-color: rgba(46, 90, 136, 0.3);
+    color: rgba(255, 255, 255, 0.7);
+    border-width: 1px;
+    border-color: rgba(70, 130, 200, 0.4);
+}
+
+.mcp-tab-button--active {
+    background-color: rgba(46, 90, 136, 0.8);
+    color: #ffffff;
+    border-width: 1px;
+    border-color: rgba(70, 130, 200, 0.4);
+}
+
+.mcp-tab-button--active:hover {
+    background-color: rgba(46, 90, 136, 0.8);
+    color: #ffffff;
+    border-color: rgba(70, 130, 200, 0.4);
+}
+
+/* ===========================================
+   Block: CLI Setup
+   =========================================== */
+.mcp-cli-subsection-header {
+    -unity-font-style: bold;
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+
+.mcp-cli-status-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+#cli-status-label {
+    flex-grow: 1;
+}
+
+.mcp-cli-status-icon {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    margin-right: 6px;
+}
+
+.mcp-cli-status-icon--installed {
+    background-color: #4caf50;
+}
+
+.mcp-cli-status-icon--not-installed {
+    background-color: rgba(128, 128, 128, 0.5);
+}
+
+.mcp-button--refresh {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    margin: 0 3px 0 4px;
+    padding: 0;
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    border-radius: 2px;
 }
 
 /* ===========================================

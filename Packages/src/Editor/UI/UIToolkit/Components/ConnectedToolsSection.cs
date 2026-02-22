@@ -4,16 +4,11 @@ using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    /// <summary>
-    /// UI section displaying connected LLM tools list.
-    /// Dynamically creates client items and handles reconnection UI state.
-    /// </summary>
     public class ConnectedToolsSection
     {
+        private readonly VisualElement _sectionContainer;
         private readonly Foldout _foldout;
         private readonly VisualElement _clientsList;
-        private readonly Label _noClientsMessage;
-        private readonly Label _serverNotRunningMessage;
 
         private bool _hasLastValidData;
         private ConnectedToolsData _lastData;
@@ -22,10 +17,9 @@ namespace io.github.hatayama.uLoopMCP
 
         public ConnectedToolsSection(VisualElement root)
         {
+            _sectionContainer = root.Q<VisualElement>("connected-tools-section");
             _foldout = root.Q<Foldout>("connected-tools-foldout");
             _clientsList = root.Q<VisualElement>("clients-list");
-            _noClientsMessage = root.Q<Label>("no-clients-message");
-            _serverNotRunningMessage = root.Q<Label>("server-not-running-message");
 
             SetupBindings();
         }
@@ -37,16 +31,20 @@ namespace io.github.hatayama.uLoopMCP
 
         public void Update(ConnectedToolsData data)
         {
-            // During reconnection, keep showing the last valid client list to avoid UI flicker
+            ViewDataBinder.SetVisible(_sectionContainer, data.ShowSection);
+
+            if (!data.ShowSection)
+            {
+                return;
+            }
+
             if (data.ShowReconnectingUI && _hasLastValidData)
             {
                 return;
             }
 
             ViewDataBinder.UpdateFoldout(_foldout, data.ShowFoldout);
-
             UpdateClientsList(data);
-
             _lastData = data;
         }
 
@@ -54,40 +52,23 @@ namespace io.github.hatayama.uLoopMCP
         {
             _clientsList.Clear();
 
-            bool hasValidClients = false;
-
-            if (!data.IsServerRunning)
+            if (data.Clients == null || data.Clients.Count == 0)
             {
-                ViewDataBinder.SetVisible(_serverNotRunningMessage, true);
-                ViewDataBinder.SetVisible(_noClientsMessage, false);
-                ViewDataBinder.SetVisible(_clientsList, false);
                 _hasLastValidData = false;
                 return;
             }
 
-            ViewDataBinder.SetVisible(_serverNotRunningMessage, false);
+            System.Collections.Generic.List<ConnectedClient> validClients = data.Clients
+                .Where(client => IsValidClientName(client.ClientName))
+                .ToList();
 
-            if (data.Clients != null && data.Clients.Count > 0)
+            foreach (ConnectedClient client in validClients)
             {
-                System.Collections.Generic.List<ConnectedClient> validClients = data.Clients
-                    .Where(client => IsValidClientName(client.ClientName))
-                    .ToList();
-
-                if (validClients.Count > 0)
-                {
-                    hasValidClients = true;
-                    foreach (ConnectedClient client in validClients)
-                    {
-                        VisualElement clientItem = CreateClientItem(client);
-                        _clientsList.Add(clientItem);
-                    }
-                }
+                VisualElement clientItem = CreateClientItem(client);
+                _clientsList.Add(clientItem);
             }
 
-            ViewDataBinder.SetVisible(_clientsList, hasValidClients);
-            ViewDataBinder.SetVisible(_noClientsMessage, !hasValidClients);
-
-            _hasLastValidData = hasValidClients;
+            _hasLastValidData = validClients.Count > 0;
         }
 
         private VisualElement CreateClientItem(ConnectedClient client)

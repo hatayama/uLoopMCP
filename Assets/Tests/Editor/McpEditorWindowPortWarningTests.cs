@@ -116,7 +116,6 @@ namespace io.github.hatayama.uLoopMCP
             // Act
             var configData = new EditorConfigData(
                 selectedEditor: McpEditorType.Cursor,
-                showFoldout: true,
                 isServerRunning: true,
                 currentPort: 7401,
                 isConfigured: true,
@@ -137,7 +136,6 @@ namespace io.github.hatayama.uLoopMCP
             // Act
             var configData = new EditorConfigData(
                 selectedEditor: McpEditorType.VSCode,
-                showFoldout: false,
                 isServerRunning: false,
                 currentPort: 7400,
                 isConfigured: false,

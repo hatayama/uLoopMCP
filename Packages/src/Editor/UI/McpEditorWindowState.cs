@@ -13,14 +13,25 @@ namespace io.github.hatayama.uLoopMCP
     /// - McpEditorModel: Model layer service for managing state transitions
     /// </summary>
 
-    /// <summary>
-    /// UI state data for McpEditorWindow
-    /// </summary>
+    public enum ConnectionMode
+    {
+        CLI = 0,
+        MCP = 1
+    }
+
+    public enum SkillsTarget
+    {
+        Claude = 0,
+        Codex = 1,
+        Cursor = 2,
+        Gemini = 3,
+        Windsurf = 4
+    }
+
     public record UIState
     {
         public int CustomPort { get; }
         public bool AutoStartServer { get; }
-        public bool ShowLLMToolSettings { get; }
         public bool ShowConnectedTools { get; }
         public McpEditorType SelectedEditorType { get; }
         public Vector2 MainScrollPosition { get; }
@@ -28,22 +39,24 @@ namespace io.github.hatayama.uLoopMCP
         public bool AddRepositoryRoot { get; }
         public bool SupportsRepositoryRootToggle { get; }
         public bool ShowRepositoryRootToggle { get; }
+        public ConnectionMode ConnectionMode { get; }
+        public bool ShowConfiguration { get; }
 
         public UIState(
             int customPort = McpServerConfig.DEFAULT_PORT,
             bool autoStartServer = false,
-            bool showLLMToolSettings = true,
             bool showConnectedTools = true,
             McpEditorType selectedEditorType = McpEditorType.Cursor,
             Vector2 mainScrollPosition = default,
             bool showSecuritySettings = false,
             bool addRepositoryRoot = false,
             bool supportsRepositoryRootToggle = false,
-            bool showRepositoryRootToggle = false)
+            bool showRepositoryRootToggle = false,
+            ConnectionMode connectionMode = ConnectionMode.CLI,
+            bool showConfiguration = true)
         {
             CustomPort = customPort;
             AutoStartServer = autoStartServer;
-            ShowLLMToolSettings = showLLMToolSettings;
             ShowConnectedTools = showConnectedTools;
             SelectedEditorType = selectedEditorType;
             MainScrollPosition = mainScrollPosition;
@@ -51,6 +64,8 @@ namespace io.github.hatayama.uLoopMCP
             AddRepositoryRoot = addRepositoryRoot;
             SupportsRepositoryRootToggle = supportsRepositoryRootToggle;
             ShowRepositoryRootToggle = showRepositoryRootToggle;
+            ConnectionMode = connectionMode;
+            ShowConfiguration = showConfiguration;
         }
     }
 

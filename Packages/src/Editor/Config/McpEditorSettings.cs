@@ -61,6 +61,7 @@ namespace io.github.hatayama.uLoopMCP
         public bool showReconnectingUI = false;
         public bool showPostCompileReconnectingUI = false;
         public int selectedEditorType = (int)McpEditorType.Cursor;
+        public int connectionMode = (int)ConnectionMode.CLI;
         public float communicationLogHeight = McpUIConstants.DEFAULT_COMMUNICATION_LOG_HEIGHT;
         public string communicationLogsJson = "[]";
         public string pendingRequestsJson = "{}";
@@ -488,6 +489,18 @@ namespace io.github.hatayama.uLoopMCP
         {
             McpEditorSettingsData settings = GetSettings();
             McpEditorSettingsData newSettings = settings with { selectedEditorType = (int)selectedEditorType };
+            SaveSettings(newSettings);
+        }
+
+        public static ConnectionMode GetConnectionMode()
+        {
+            return (ConnectionMode)GetSettings().connectionMode;
+        }
+
+        public static void SetConnectionMode(ConnectionMode mode)
+        {
+            McpEditorSettingsData settings = GetSettings();
+            McpEditorSettingsData newSettings = settings with { connectionMode = (int)mode };
             SaveSettings(newSettings);
         }
 

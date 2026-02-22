@@ -50,20 +50,21 @@ namespace io.github.hatayama.uLoopMCP
         public readonly bool ShowFoldout;
         public readonly bool IsServerRunning;
         public readonly bool ShowReconnectingUI;
+        public readonly bool ShowSection;
 
-        public ConnectedToolsData(IReadOnlyCollection<ConnectedClient> clients, bool showFoldout, bool isServerRunning, bool showReconnectingUI)
+        public ConnectedToolsData(IReadOnlyCollection<ConnectedClient> clients, bool showFoldout, bool isServerRunning, bool showReconnectingUI, bool showSection)
         {
             Clients = clients;
             ShowFoldout = showFoldout;
             IsServerRunning = isServerRunning;
             ShowReconnectingUI = showReconnectingUI;
+            ShowSection = showSection;
         }
     }
     
     public record EditorConfigData
     {
         public readonly McpEditorType SelectedEditor;
-        public readonly bool ShowFoldout;
         public readonly bool IsServerRunning;
         public readonly int CurrentPort;
         public readonly bool IsConfigured;
@@ -74,10 +75,9 @@ namespace io.github.hatayama.uLoopMCP
         public readonly bool SupportsRepositoryRootToggle;
         public readonly bool ShowRepositoryRootToggle;
 
-        public EditorConfigData(McpEditorType selectedEditor, bool showFoldout, bool isServerRunning, int currentPort, bool isConfigured = false, bool hasPortMismatch = false, string configurationError = null, bool isUpdateNeeded = true, bool addRepositoryRoot = false, bool supportsRepositoryRootToggle = false, bool showRepositoryRootToggle = false)
+        public EditorConfigData(McpEditorType selectedEditor, bool isServerRunning, int currentPort, bool isConfigured = false, bool hasPortMismatch = false, string configurationError = null, bool isUpdateNeeded = true, bool addRepositoryRoot = false, bool supportsRepositoryRootToggle = false, bool showRepositoryRootToggle = false)
         {
             SelectedEditor = selectedEditor;
-            ShowFoldout = showFoldout;
             IsServerRunning = isServerRunning;
             CurrentPort = currentPort;
             IsConfigured = isConfigured;
@@ -109,4 +109,61 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 
-} 
+    public record ConnectionModeData
+    {
+        public readonly ConnectionMode Mode;
+
+        public ConnectionModeData(ConnectionMode mode)
+        {
+            Mode = mode;
+        }
+    }
+
+    public record CliSetupData
+    {
+        public readonly bool IsCliInstalled;
+        public readonly string CliVersion;
+        public readonly string PackageVersion;
+        public readonly bool NeedsUpdate;
+        public readonly bool IsInstallingCli;
+        public readonly bool IsChecking;
+        public readonly bool IsClaudeSkillsInstalled;
+        public readonly bool IsCodexSkillsInstalled;
+        public readonly bool IsCursorSkillsInstalled;
+        public readonly bool IsGeminiSkillsInstalled;
+        public readonly bool IsWindsurfSkillsInstalled;
+        public readonly SkillsTarget SelectedTarget;
+        public readonly bool IsInstallingSkills;
+
+        public CliSetupData(
+            bool isCliInstalled,
+            string cliVersion,
+            string packageVersion,
+            bool needsUpdate,
+            bool isInstallingCli,
+            bool isChecking,
+            bool isClaudeSkillsInstalled,
+            bool isCodexSkillsInstalled,
+            bool isCursorSkillsInstalled,
+            bool isGeminiSkillsInstalled,
+            bool isWindsurfSkillsInstalled,
+            SkillsTarget selectedTarget,
+            bool isInstallingSkills)
+        {
+            IsCliInstalled = isCliInstalled;
+            CliVersion = cliVersion;
+            PackageVersion = packageVersion;
+            NeedsUpdate = needsUpdate;
+            IsInstallingCli = isInstallingCli;
+            IsChecking = isChecking;
+            IsClaudeSkillsInstalled = isClaudeSkillsInstalled;
+            IsCodexSkillsInstalled = isCodexSkillsInstalled;
+            IsCursorSkillsInstalled = isCursorSkillsInstalled;
+            IsGeminiSkillsInstalled = isGeminiSkillsInstalled;
+            IsWindsurfSkillsInstalled = isWindsurfSkillsInstalled;
+            SelectedTarget = selectedTarget;
+            IsInstallingSkills = isInstallingSkills;
+        }
+    }
+
+}
