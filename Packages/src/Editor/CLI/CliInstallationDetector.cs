@@ -13,6 +13,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static string _cachedCliVersion;
         private static bool _cacheInitialized;
+        private static bool _isRefreshing;
 
         public static bool IsCliInstalled()
         {
@@ -31,9 +32,16 @@ namespace io.github.hatayama.uLoopMCP
 
         public static async Task RefreshCliVersionAsync(CancellationToken ct)
         {
+            if (_cacheInitialized || _isRefreshing)
+            {
+                return;
+            }
+
+            _isRefreshing = true;
             string version = await DetectCliVersionAsync(ct);
             _cachedCliVersion = version;
             _cacheInitialized = true;
+            _isRefreshing = false;
         }
 
         public static bool AreSkillsInstalled(string target)
@@ -65,6 +73,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             _cachedCliVersion = null;
             _cacheInitialized = false;
+            _isRefreshing = false;
         }
 
         private static Task<string> DetectCliVersionAsync(CancellationToken ct)

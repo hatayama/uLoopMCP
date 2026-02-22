@@ -226,6 +226,11 @@ namespace io.github.hatayama.uLoopMCP
 
         private async void RefreshCliVersionInBackground()
         {
+            if (CliInstallationDetector.IsCheckCompleted())
+            {
+                return;
+            }
+
             await CliInstallationDetector.RefreshCliVersionAsync(CancellationToken.None);
             RefreshCliSetupSection();
         }
