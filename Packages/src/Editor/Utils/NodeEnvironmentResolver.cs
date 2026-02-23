@@ -121,14 +121,14 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        // Login shell (-l) loads .zshrc/.bashrc, giving the same PATH as the user's terminal
+        // Interactive login shell (-l -i) loads .zprofile and .zshrc/.bashrc, matching the user's terminal
         private static string TryWhichCommand(string executableName)
         {
             string shell = GetUserShell();
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = shell,
-                Arguments = $"-l -c \"which {executableName}\"",
+                Arguments = $"-l -i -c \"which {executableName}\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -202,6 +202,10 @@ namespace io.github.hatayama.uLoopMCP
             return null;
         }
 
+        private const string PATH_START_MARKER = "__PATH_START__";
+        private const string PATH_END_MARKER = "__PATH_END__";
+
+        // Uses markers to extract PATH value, ignoring any banner/echo output from shell startup files
         private static string GetLoginShellPath()
         {
             if (Application.platform == RuntimePlatform.WindowsEditor)
@@ -213,14 +217,27 @@ namespace io.github.hatayama.uLoopMCP
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = shell,
-                Arguments = "-l -c \"echo $PATH\"",
+                Arguments = "-l -i -c \"echo " + PATH_START_MARKER + "${PATH}" + PATH_END_MARKER + "\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
 
-            return ExecuteAndGetOutput(startInfo);
+            string output = ExecuteAndGetOutput(startInfo);
+            if (string.IsNullOrEmpty(output))
+            {
+                return null;
+            }
+
+            int startIndex = output.IndexOf(PATH_START_MARKER);
+            int endIndex = output.IndexOf(PATH_END_MARKER);
+            if (startIndex < 0 || endIndex < 0 || endIndex <= startIndex)
+            {
+                return null;
+            }
+
+            return output.Substring(startIndex + PATH_START_MARKER.Length, endIndex - startIndex - PATH_START_MARKER.Length);
         }
 
         private static string GetUserShell()
