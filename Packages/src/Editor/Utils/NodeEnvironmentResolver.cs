@@ -126,6 +126,7 @@ namespace io.github.hatayama.uLoopMCP
 
         // Interactive login shell (-l -i) loads .zprofile and .zshrc/.bashrc, matching the user's terminal
         // Markers isolate which output from shell startup banners; ExtractAbsolutePathLine filters alias text
+        // executableName is not shell-escaped because all callers pass hardcoded constants (YAGNI)
         private static string TryWhichCommand(string executableName)
         {
             string shell = GetUserShell();
@@ -308,6 +309,10 @@ namespace io.github.hatayama.uLoopMCP
             return null;
         }
 
+        // Falls back to /bin/sh when $SHELL is unset or invalid. /bin/sh won't load
+        // .zshrc/.bashrc, so version-manager paths may be missed — but $SHELL being unset
+        // is extremely rare on macOS/Linux and there is no reliable way to detect the user's
+        // preferred shell without it.
         private static string GetUserShell()
         {
             string shell = System.Environment.GetEnvironmentVariable("SHELL");
