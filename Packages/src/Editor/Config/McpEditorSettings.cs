@@ -51,7 +51,6 @@ namespace io.github.hatayama.uLoopMCP
         // Session State Settings (moved from McpSessionManager)
         // Default to true so the server starts automatically on fresh install
         public bool isServerRunning = true;
-        public int serverPort = McpServerConfig.DEFAULT_PORT;
         public bool isAfterCompile = false;
         public bool isDomainReloadInProgress = false;
         public bool isReconnecting = false;
@@ -324,24 +323,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             McpEditorSettingsData settings = GetSettings();
             McpEditorSettingsData newSettings = settings with { isServerRunning = isServerRunning };
-            SaveSettings(newSettings);
-        }
-
-        /// <summary>
-        /// Gets the server port.
-        /// </summary>
-        public static int GetServerPort()
-        {
-            return GetSettings().serverPort;
-        }
-
-        /// <summary>
-        /// Sets the server port.
-        /// </summary>
-        public static void SetServerPort(int serverPort)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { serverPort = serverPort };
             SaveSettings(newSettings);
         }
 
@@ -898,19 +879,6 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             _cachedSettings.isServerRunning = probe.autoStartServer;
-
-            // Old McpServerShutdownUseCase.ExecuteAsync always called
-            // UpdateSessionState(false, 0), persisting serverPort=0 on every quit.
-            // Without normalization, recovery binds port 0 and becomes unreachable.
-            if (!McpPortValidator.ValidatePort(_cachedSettings.serverPort))
-            {
-                int fallbackPort = McpPortValidator.ValidatePort(_cachedSettings.customPort)
-                    ? _cachedSettings.customPort
-                    : McpServerConfig.DEFAULT_PORT;
-                Debug.LogWarning(
-                    $"[{McpConstants.PROJECT_NAME}] Legacy migration: serverPort={_cachedSettings.serverPort} is invalid, using {fallbackPort}");
-                _cachedSettings.serverPort = fallbackPort;
-            }
 
             SaveSettings(_cachedSettings);
         }

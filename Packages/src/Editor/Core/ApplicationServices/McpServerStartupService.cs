@@ -53,14 +53,19 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Updates session manager with server state.
+        /// On shutdown (isRunning=false), only the running flag is cleared — customPort is preserved
+        /// so recovery can rebind to the same port after domain reload or editor restart.
         /// </summary>
         /// <param name="isRunning">Whether the server is running</param>
-        /// <param name="port">Server port number</param>
+        /// <param name="port">Server port number (only written when isRunning=true)</param>
         /// <returns>Success indicator</returns>
-        public ServiceResult<bool> UpdateSessionState(bool isRunning, int port)
+        public ServiceResult<bool> UpdateSessionState(bool isRunning, int port = -1)
         {
             McpEditorSettings.SetIsServerRunning(isRunning);
-            McpEditorSettings.SetServerPort(port);
+            if (isRunning && port > 0)
+            {
+                McpEditorSettings.SetCustomPort(port);
+            }
             return ServiceResult<bool>.SuccessResult(true);
         }
     }

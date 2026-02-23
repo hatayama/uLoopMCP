@@ -122,7 +122,7 @@ namespace io.github.hatayama.uLoopMCP
                 // Sync session state with the running server to enable domain reload recovery
                 // even if mcpServer instance becomes null unexpectedly
                 McpEditorSettings.SetIsServerRunning(true);
-                McpEditorSettings.SetServerPort(mcpServer.Port);
+                McpEditorSettings.SetCustomPort(mcpServer.Port);
 
             }
             else
@@ -231,7 +231,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             bool wasRunning = McpEditorSettings.GetIsServerRunning();
-            int savedPort = McpEditorSettings.GetServerPort();
+            int savedPort = McpEditorSettings.GetCustomPort();
             bool isAfterCompile = McpEditorSettings.GetIsAfterCompile();
 
             // If the server is already running (e.g., started from McpEditorWindow).
@@ -263,7 +263,7 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            int portToUse = wasRunning ? savedPort : McpEditorSettings.GetCustomPort();
+            int portToUse = savedPort;
 
             // Centralized, coalesced startup request
             // Store the task so McpEditorWindow can await it to prevent race conditions
@@ -301,9 +301,9 @@ namespace io.github.hatayama.uLoopMCP
                 mcpServer.StartServer(port);
 
                 // Update settings with the actual port used (same as requested)
-                if (McpEditorSettings.GetServerPort() != port)
+                if (McpEditorSettings.GetCustomPort() != port)
                 {
-                    McpEditorSettings.SetServerPort(port);
+                    McpEditorSettings.SetCustomPort(port);
                 }
 
                 // Clear server-side reconnecting flag on successful restoration
@@ -682,10 +682,9 @@ namespace io.github.hatayama.uLoopMCP
 
                 // Mark running and update settings
                 McpEditorSettings.SetIsServerRunning(true);
-                if (McpEditorSettings.GetServerPort() != chosenPort)
+                if (McpEditorSettings.GetCustomPort() != chosenPort)
                 {
-                    // Defer aggressive external updates; only update internal setting here
-                    McpEditorSettings.SetServerPort(chosenPort);
+                    McpEditorSettings.SetCustomPort(chosenPort);
                 }
 
                 // Clear reconnection-related flags on successful recovery

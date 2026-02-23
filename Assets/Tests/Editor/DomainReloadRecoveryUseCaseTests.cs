@@ -28,7 +28,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Save original session state
             _originalIsServerRunning = McpEditorSettings.GetIsServerRunning();
-            _originalServerPort = McpEditorSettings.GetServerPort();
+            _originalServerPort = McpEditorSettings.GetCustomPort();
         }
 
         [TearDown]
@@ -36,7 +36,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Restore original session state
             McpEditorSettings.SetIsServerRunning(_originalIsServerRunning);
-            McpEditorSettings.SetServerPort(_originalServerPort);
+            McpEditorSettings.SetCustomPort(_originalServerPort);
             McpEditorSettings.SetIsAfterCompile(false);
             McpEditorSettings.SetIsDomainReloadInProgress(false);
             McpEditorSettings.SetIsReconnecting(false);
@@ -53,7 +53,7 @@ namespace io.github.hatayama.uLoopMCP
             // Arrange
             int expectedPort = 7499;
             McpEditorSettings.SetIsServerRunning(true);
-            McpEditorSettings.SetServerPort(expectedPort);
+            McpEditorSettings.SetCustomPort(expectedPort);
 
             DomainReloadRecoveryUseCase useCase = new();
 
@@ -63,7 +63,7 @@ namespace io.github.hatayama.uLoopMCP
             // Assert
             Assert.IsTrue(result.Success, "ExecuteBeforeDomainReload should succeed");
             Assert.IsTrue(McpEditorSettings.GetIsAfterCompile(), "IsAfterCompile should be set to true");
-            Assert.AreEqual(expectedPort, McpEditorSettings.GetServerPort(), "Server port should be preserved from session state");
+            Assert.AreEqual(expectedPort, McpEditorSettings.GetCustomPort(), "Server port should be preserved from session state");
         }
 
         [Test]
@@ -71,7 +71,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Arrange
             McpEditorSettings.SetIsServerRunning(false);
-            McpEditorSettings.SetServerPort(7400);
+            McpEditorSettings.SetCustomPort(7400);
             McpEditorSettings.SetIsAfterCompile(false);
 
             DomainReloadRecoveryUseCase useCase = new();
@@ -91,7 +91,7 @@ namespace io.github.hatayama.uLoopMCP
             int sessionPort = GetFreePort();
             int instancePort = GetFreePort();
             McpEditorSettings.SetIsServerRunning(true);
-            McpEditorSettings.SetServerPort(sessionPort);
+            McpEditorSettings.SetCustomPort(sessionPort);
 
             // Create a running server instance
             McpBridgeServer server = null;
@@ -107,7 +107,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 // Assert
                 Assert.IsTrue(result.Success, "ExecuteBeforeDomainReload should succeed");
-                Assert.AreEqual(instancePort, McpEditorSettings.GetServerPort(),
+                Assert.AreEqual(instancePort, McpEditorSettings.GetCustomPort(),
                     "Server port should be from running instance, not session state");
             }
             finally

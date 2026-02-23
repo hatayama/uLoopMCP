@@ -21,7 +21,7 @@ namespace io.github.hatayama.uLoopMCP
         public static ValidationResult RestoreServerStateIfNeeded()
         {
             bool wasRunning = McpEditorSettings.GetIsServerRunning();
-            int savedPort = McpEditorSettings.GetServerPort();
+            int savedPort = McpEditorSettings.GetCustomPort();
             bool isAfterCompile = McpEditorSettings.GetIsAfterCompile();
 
             // If server is already running
@@ -89,7 +89,7 @@ namespace io.github.hatayama.uLoopMCP
                 // Update session state
                 McpEditorSettings.UpdateSettings(s => s with
                 {
-                    serverPort = availablePort,
+                    customPort = availablePort,
                     isReconnecting = false
                 });
 

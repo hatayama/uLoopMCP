@@ -54,7 +54,7 @@ namespace io.github.hatayama.uLoopMCP
                 cancellationToken.ThrowIfCancellationRequested();
                 
                 // 3. Session state clear
-                var sessionUpdateResult = _startupService.UpdateSessionState(false, 0);
+                var sessionUpdateResult = _startupService.UpdateSessionState(false);
                 if (!sessionUpdateResult.Success)
                 {
                     response.Success = false;

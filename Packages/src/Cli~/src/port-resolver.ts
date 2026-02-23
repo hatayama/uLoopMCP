@@ -15,7 +15,6 @@ const DEFAULT_PORT = 8700;
 
 interface UnityMcpSettings {
   isServerRunning?: boolean;
-  serverPort?: number;
   customPort?: number;
 }
 
@@ -36,19 +35,10 @@ function normalizePort(port: unknown): number | null {
 }
 
 export function resolvePortFromUnitySettings(settings: UnityMcpSettings): number | null {
-  const serverPort = normalizePort(settings.serverPort);
   const customPort = normalizePort(settings.customPort);
-
-  if (settings.isServerRunning === true && serverPort !== null) {
-    return serverPort;
-  }
 
   if (customPort !== null) {
     return customPort;
-  }
-
-  if (serverPort !== null) {
-    return serverPort;
   }
 
   return null;

@@ -75,7 +75,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     isDomainReloadInProgress = true,
                     isServerRunning = true,
-                    serverPort = port,
+                    customPort = port,
                     isAfterCompile = true,
                     isReconnecting = true,
                     showReconnectingUI = true,
@@ -122,7 +122,7 @@ namespace io.github.hatayama.uLoopMCP
             VibeLogger.LogInfo(
                 "domain_reload_complete",
                 "Domain reload completed - starting server recovery process",
-                new { session_server_port = McpEditorSettings.GetServerPort() },
+                new { session_server_port = McpEditorSettings.GetCustomPort() },
                 correlationId
             );
         }
