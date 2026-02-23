@@ -122,20 +122,23 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         // Interactive login shell (-l -i) loads .zprofile and .zshrc/.bashrc, matching the user's terminal
+        // Markers isolate which output from shell startup banners; ExtractAbsolutePathLine filters alias text
         private static string TryWhichCommand(string executableName)
         {
             string shell = GetUserShell();
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = shell,
-                Arguments = $"-l -i -c \"which {executableName}\"",
+                Arguments = "-l -i -c \"echo " + WHICH_START_MARKER + "; which " + executableName + "; echo " + WHICH_END_MARKER + "\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
 
-            return ExecuteAndGetOutput(startInfo);
+            string output = ExecuteAndGetOutput(startInfo);
+            string block = ExtractBetweenMarkers(output, WHICH_START_MARKER, WHICH_END_MARKER);
+            return ExtractAbsolutePathLine(block);
         }
 
         private static string TryWhereCommand(string executableName)
@@ -204,6 +207,8 @@ namespace io.github.hatayama.uLoopMCP
 
         private const string PATH_START_MARKER = "__PATH_START__";
         private const string PATH_END_MARKER = "__PATH_END__";
+        private const string WHICH_START_MARKER = "__WHICH_START__";
+        private const string WHICH_END_MARKER = "__WHICH_END__";
 
         // Uses markers to extract PATH value, ignoring any banner/echo output from shell startup files
         private static string GetLoginShellPath()
@@ -225,19 +230,44 @@ namespace io.github.hatayama.uLoopMCP
             };
 
             string output = ExecuteAndGetOutput(startInfo);
+            return ExtractBetweenMarkers(output, PATH_START_MARKER, PATH_END_MARKER);
+        }
+
+        private static string ExtractBetweenMarkers(string output, string startMarker, string endMarker)
+        {
             if (string.IsNullOrEmpty(output))
             {
                 return null;
             }
 
-            int startIndex = output.IndexOf(PATH_START_MARKER);
-            int endIndex = output.IndexOf(PATH_END_MARKER);
+            int startIndex = output.IndexOf(startMarker);
+            int endIndex = output.IndexOf(endMarker);
             if (startIndex < 0 || endIndex < 0 || endIndex <= startIndex)
             {
                 return null;
             }
 
-            return output.Substring(startIndex + PATH_START_MARKER.Length, endIndex - startIndex - PATH_START_MARKER.Length);
+            return output.Substring(startIndex + startMarker.Length, endIndex - startIndex - startMarker.Length).Trim();
+        }
+
+        private static string ExtractAbsolutePathLine(string block)
+        {
+            if (string.IsNullOrEmpty(block))
+            {
+                return null;
+            }
+
+            string[] lines = block.Split('\n');
+            foreach (string rawLine in lines)
+            {
+                string line = rawLine.Trim();
+                if (!string.IsNullOrEmpty(line) && Path.IsPathRooted(line))
+                {
+                    return line;
+                }
+            }
+
+            return null;
         }
 
         private static string GetUserShell()
