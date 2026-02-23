@@ -29,7 +29,7 @@ namespace io.github.hatayama.uLoopMCP
             // Handles case where mcpServer instance became null unexpectedly
             if (currentServer == null && McpEditorSettings.GetIsServerRunning())
             {
-                int sessionPort = McpEditorSettings.GetServerPort();
+                int sessionPort = McpEditorSettings.GetCustomPort();
                 if (NetworkUtility.IsValidPort(sessionPort))
                 {
                     serverRunning = true;
