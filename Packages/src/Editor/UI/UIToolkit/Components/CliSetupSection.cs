@@ -107,6 +107,12 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            if (data.NeedsDowngrade)
+            {
+                SetCliButton($"Downgrade CLI (v{data.CliVersion} \u2192 v{data.PackageVersion})", true);
+                return;
+            }
+
             SetCliButton("Up to date", false);
         }
 
