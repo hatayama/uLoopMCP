@@ -305,7 +305,13 @@ namespace io.github.hatayama.uLoopMCP
         private static string GetUserShell()
         {
             string shell = System.Environment.GetEnvironmentVariable("SHELL");
-            return string.IsNullOrEmpty(shell) ? "/bin/sh" : shell;
+            // $SHELL is external input — validate the path exists to avoid Process.Start exceptions
+            if (!string.IsNullOrEmpty(shell) && File.Exists(shell))
+            {
+                return shell;
+            }
+
+            return "/bin/sh";
         }
     }
 }
