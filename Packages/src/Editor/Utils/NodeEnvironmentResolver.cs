@@ -97,6 +97,9 @@ namespace io.github.hatayama.uLoopMCP
             return TryWhereCommand(executableName);
         }
 
+        // Only returns the login shell's which result — no hardcoded fallback paths.
+        // Scanning version-manager directories directly caused false positives (e.g. detecting
+        // an uninstalled CLI version), which was the original bug this PR fixes.
         private static IEnumerable<string> FindAllExecutablePathsUnix(string executableName)
         {
             string whichPath = TryWhichCommand(executableName);
