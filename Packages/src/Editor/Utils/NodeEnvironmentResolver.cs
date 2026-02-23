@@ -145,10 +145,30 @@ namespace io.github.hatayama.uLoopMCP
             return ExtractAbsolutePathLine(block);
         }
 
+        /// <summary>
+        /// Finds the first executable path for the given name using the Windows 'where' command.
+        /// Prioritizes .cmd/.exe over extensionless entries because npm generates both a bash shim
+        /// (extensionless) and a Windows cmd shim (.cmd); the bash shim cannot be launched via Process.Start.
+        /// </summary>
         private static string TryWhereCommand(string executableName)
         {
             string[] paths = TryWhereCommandAll(executableName);
-            return paths != null && paths.Length > 0 ? paths[0] : null;
+            if (paths == null || paths.Length == 0)
+            {
+                return null;
+            }
+
+            foreach (string path in paths)
+            {
+                string extension = Path.GetExtension(path);
+                if (string.Equals(extension, ".cmd", System.StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(extension, ".exe", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return path;
+                }
+            }
+
+            return paths[0];
         }
 
         private static string[] TryWhereCommandAll(string executableName)
