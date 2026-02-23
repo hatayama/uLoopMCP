@@ -3,6 +3,11 @@
    Using BEM naming convention and Unity theme variables
    =========================================== */
 
+:root {
+    --mcp-color-success: #4caf50;
+    --mcp-color-danger: #ef5350;
+}
+
 /* Main Container */
 .mcp-main-container {
     padding: 4px;
@@ -47,11 +52,11 @@
 }
 
 .mcp-server-status__indicator--running {
-    background-color: #4caf50;
+    background-color: var(--mcp-color-success);
 }
 
 .mcp-server-status__indicator--stopped {
-    background-color: #c62828;
+    background-color: var(--mcp-color-danger);
 }
 
 .mcp-server-status__text {
@@ -59,11 +64,19 @@
 }
 
 .mcp-server-status__text--running {
-    color: #4caf50;
+    color: var(--mcp-color-success);
+    border-color: var(--mcp-color-success);
+    border-width: 1px;
+    border-radius: 3px;
+    padding: 2px 6px;
 }
 
 .mcp-server-status__text--stopped {
-    color: #c62828;
+    color: var(--mcp-color-danger);
+    border-color: var(--mcp-color-danger);
+    border-width: 1px;
+    border-radius: 3px;
+    padding: 2px 6px;
 }
 
 .mcp-server-status__spacer {
@@ -83,24 +96,13 @@
    Block: Server Controls (compact row)
    =========================================== */
 .mcp-server-controls {
-    flex-direction: row;
-    align-items: center;
     margin-top: 4px;
-    padding-left: 10px;
+    padding-left: 8px;
 }
 
-.mcp-server-controls__spacer {
+.mcp-server-controls .mcp-button {
     flex-grow: 1;
 }
-
-.mcp-server-controls__auto-start-toggle {
-    width: 20px;
-    margin-right: 2px;
-}
-
-.mcp-server-controls__auto-start-label {
-}
-
 
 /* ===========================================
    Block: Warning Container
@@ -144,7 +146,7 @@
 
 .mcp-button--start {
     background-color: #2e7d32;
-    border-color: #4caf50;
+    border-color: var(--mcp-color-success);
     color: #ffffff;
 }
 
@@ -203,7 +205,7 @@
 }
 
 .mcp-toggle-row__label--danger {
-    color: #d84315;
+    color: var(--mcp-color-danger);
 }
 
 /* ===========================================
@@ -255,7 +257,7 @@
 }
 
 .mcp-client__icon {
-    color: #4caf50;
+    color: var(--mcp-color-success);
     margin-right: 4px;
 }
 
@@ -340,7 +342,7 @@
 }
 
 .mcp-section-header--danger {
-    color: #d84315;
+    color: var(--mcp-color-danger);
 }
 
 .mcp-security-level-field {
@@ -437,7 +439,7 @@
 }
 
 .mcp-cli-status-icon--installed {
-    background-color: #4caf50;
+    background-color: var(--mcp-color-success);
 }
 
 .mcp-cli-status-icon--not-installed {

@@ -49,29 +49,14 @@ namespace io.github.hatayama.uLoopMCP
             // If server was running and is currently stopped, delegate to centralized controller logic
             if (wasRunning && (currentServer == null || !currentServer.IsRunning))
             {
-                bool autoStartEnabled = McpEditorSettings.GetAutoStartServer();
-                bool hasCompletedFirstLaunch = McpEditorSettings.GetHasCompletedFirstLaunch();
-
-                // Skip auto-start if first launch has not been completed (user must start manually first time)
-                if ((autoStartEnabled || isAfterCompile) && hasCompletedFirstLaunch)
+                _ = McpServerController.StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None).ContinueWith(task =>
                 {
-                    _ = McpServerController.StartRecoveryIfNeededAsync(savedPort, isAfterCompile, CancellationToken.None).ContinueWith(task =>
+                    if (task.IsFaulted)
                     {
-                        if (task.IsFaulted)
-                        {
-                            VibeLogger.LogError("server_startup_restore_failed", 
-                                $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
-                        }
-                    }, TaskScheduler.FromCurrentSynchronizationContext());
-                }
-                else
-                {
-                    // Server won't start, but lock files must be deleted so CLI doesn't think Unity is busy
-                    CompilationLockService.DeleteLockFile();
-                    DomainReloadDetectionService.DeleteLockFile();
-                    ServerStartingLockService.DeleteLockFile();
-                    McpEditorSettings.ClearServerSession();
-                }
+                        VibeLogger.LogError("server_startup_restore_failed",
+                            $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
+                    }
+                }, TaskScheduler.FromCurrentSynchronizationContext());
             }
 
             return ValidationResult.Success();
@@ -135,40 +120,6 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Restore server after compilation (asynchronous)
-        /// </summary>
-        /// <param name="port">Port number to recover</param>
-        private static async Task RestoreServerAfterCompileAsync(int port)
-        {
-            await EditorDelay.DelayFrame(1);
-            _ = McpServerController.StartRecoveryIfNeededAsync(port, true, CancellationToken.None).ContinueWith(task =>
-            {
-                if (task.IsFaulted)
-                {
-                    VibeLogger.LogError("server_startup_restore_failed",
-                        $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
-                }
-            }, TaskScheduler.FromCurrentSynchronizationContext());
-        }
-
-        /// <summary>
-        /// Restore server at startup (asynchronous)
-        /// </summary>
-        /// <param name="port">Port number to recover</param>
-        private static async Task RestoreServerOnStartupAsync(int port)
-        {
-            await EditorDelay.DelayFrame(1);
-            _ = McpServerController.StartRecoveryIfNeededAsync(port, false, CancellationToken.None).ContinueWith(task =>
-            {
-                if (task.IsFaulted)
-                {
-                    VibeLogger.LogError("server_startup_restore_failed",
-                        $"Failed to restore server: {task.Exception?.GetBaseException().Message}");
-                }
-            }, TaskScheduler.FromCurrentSynchronizationContext());
-        }
-
-        /// <summary>
         /// Retry server recovery (asynchronous)
         /// </summary>
         /// <param name="port">Port number to recover</param>
@@ -191,7 +142,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public static void ClearReconnectingFlag()
         {
-                        bool wasReconnecting = McpEditorSettings.GetIsReconnecting();
+            bool wasReconnecting = McpEditorSettings.GetIsReconnecting();
             bool wasShowingUI = McpEditorSettings.GetShowReconnectingUI();
 
             if (wasReconnecting || wasShowingUI)
@@ -209,7 +160,7 @@ namespace io.github.hatayama.uLoopMCP
             int timeoutFrames = McpConstants.RECONNECTION_TIMEOUT_SECONDS * 60;
             await EditorDelay.DelayFrame(timeoutFrames);
 
-                        bool isStillShowingUI = McpEditorSettings.GetShowReconnectingUI();
+            bool isStillShowingUI = McpEditorSettings.GetShowReconnectingUI();
             if (isStillShowingUI)
             {
                 McpEditorSettings.ClearReconnectingFlags();

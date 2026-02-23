@@ -56,14 +56,16 @@ namespace io.github.hatayama.uLoopMCP
 
         private void UpdateCliStatus(CliSetupData data)
         {
-            ViewDataBinder.ToggleClass(_cliStatusIcon, "mcp-cli-status-icon--installed", data.IsCliInstalled);
-            ViewDataBinder.ToggleClass(_cliStatusIcon, "mcp-cli-status-icon--not-installed", !data.IsCliInstalled);
-
             if (data.IsChecking)
             {
+                ViewDataBinder.ToggleClass(_cliStatusIcon, "mcp-cli-status-icon--installed", false);
+                ViewDataBinder.ToggleClass(_cliStatusIcon, "mcp-cli-status-icon--not-installed", false);
                 _cliStatusLabel.text = "uloop-cli: Checking...";
                 return;
             }
+
+            ViewDataBinder.ToggleClass(_cliStatusIcon, "mcp-cli-status-icon--installed", data.IsCliInstalled);
+            ViewDataBinder.ToggleClass(_cliStatusIcon, "mcp-cli-status-icon--not-installed", !data.IsCliInstalled);
 
             if (data.IsCliInstalled && data.CliVersion != null)
             {

@@ -30,7 +30,6 @@ namespace io.github.hatayama.uLoopMCP
 
         public event Action<ConnectionMode> OnConnectionModeChanged;
         public event Action OnToggleServer;
-        public event Action<bool> OnAutoStartChanged;
         public event Action<int> OnPortChanged;
         public event Action OnRefreshCliVersion;
         public event Action OnInstallCli;
@@ -98,7 +97,6 @@ namespace io.github.hatayama.uLoopMCP
 
             _serverControlsSection = new ServerControlsSection(_root);
             _serverControlsSection.OnToggleServer += () => OnToggleServer?.Invoke();
-            _serverControlsSection.OnAutoStartChanged += value => OnAutoStartChanged?.Invoke(value);
             _serverControlsSection.OnPortChanged += value => OnPortChanged?.Invoke(value);
 
             _cliSetupSection = new CliSetupSection(_root);

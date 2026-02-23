@@ -27,16 +27,14 @@ namespace io.github.hatayama.uLoopMCP
     public record ServerControlsData
     {
         public readonly int CustomPort;
-        public readonly bool AutoStartServer;
         public readonly bool IsServerRunning;
         public readonly bool PortEditable;
         public readonly bool HasPortWarning;
         public readonly string PortWarningMessage;
 
-        public ServerControlsData(int customPort, bool autoStartServer, bool isServerRunning, bool portEditable, bool hasPortWarning = false, string portWarningMessage = null)
+        public ServerControlsData(int customPort, bool isServerRunning, bool portEditable, bool hasPortWarning = false, string portWarningMessage = null)
         {
             CustomPort = customPort;
-            AutoStartServer = autoStartServer;
             IsServerRunning = isServerRunning;
             PortEditable = portEditable;
             HasPortWarning = hasPortWarning;

@@ -72,7 +72,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             _view.OnConnectionModeChanged += UpdateConnectionMode;
             _view.OnToggleServer += ToggleServer;
-            _view.OnAutoStartChanged += UpdateAutoStartServer;
             _view.OnPortChanged += UpdateCustomPort;
             _view.OnRefreshCliVersion += HandleRefreshCliVersion;
             _view.OnInstallCli += HandleInstallCli;
@@ -159,11 +158,10 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            bool shouldStartAutomatically = _model.UI.AutoStartServer;
+            bool wasRunning = McpEditorSettings.GetIsServerRunning();
             bool serverNotRunning = !McpServerController.IsServerRunning;
             bool isRecoveryInProgress = McpServerController.IsStartupProtectionActive();
-            bool hasCompletedFirstLaunch = McpEditorSettings.GetHasCompletedFirstLaunch();
-            bool shouldStartServer = shouldStartAutomatically && serverNotRunning && !isRecoveryInProgress && hasCompletedFirstLaunch;
+            bool shouldStartServer = wasRunning && serverNotRunning && !isRecoveryInProgress;
 
             if (shouldStartServer)
             {
@@ -247,12 +245,17 @@ namespace io.github.hatayama.uLoopMCP
             _isRefreshingVersion = true;
             RefreshCliSetupSection();
 
-            Task forceRefresh = CliInstallationDetector.ForceRefreshCliVersionAsync(CancellationToken.None);
-            Task minimumDelay = Task.Delay(500);
-            await Task.WhenAll(forceRefresh, minimumDelay);
-
-            _isRefreshingVersion = false;
-            RefreshCliSetupSection();
+            try
+            {
+                Task forceRefresh = CliInstallationDetector.ForceRefreshCliVersionAsync(CancellationToken.None);
+                Task minimumDelay = Task.Delay(500);
+                await Task.WhenAll(forceRefresh, minimumDelay);
+            }
+            finally
+            {
+                _isRefreshingVersion = false;
+                RefreshCliSetupSection();
+            }
         }
 
         public void RefreshConnectedToolsSection()
@@ -314,7 +317,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            return new ServerControlsData(_model.UI.CustomPort, _model.UI.AutoStartServer, isRunning, !isRunning, hasPortWarning, portWarningMessage);
+            return new ServerControlsData(_model.UI.CustomPort, isRunning, !isRunning, hasPortWarning, portWarningMessage);
         }
 
         private IEnumerable<ConnectedClient> GetCachedStoredTools()
@@ -490,11 +493,6 @@ namespace io.github.hatayama.uLoopMCP
             return _configServiceFactory.GetConfigService(editorType);
         }
 
-        private void UpdateAutoStartServer(bool autoStart)
-        {
-            _model.UpdateAutoStartServer(autoStart);
-        }
-
         private void UpdateCustomPort(int port)
         {
             _model.UpdateCustomPort(port);
@@ -648,7 +646,7 @@ namespace io.github.hatayama.uLoopMCP
 
                     if (!process.WaitForExit(30000))
                     {
-                        process.Kill();
+                        try { process.Kill(); } catch (System.InvalidOperationException) { }
                         process.Dispose();
                         errorOutput = "Installation timed out after 30 seconds";
                         return;
@@ -744,7 +742,7 @@ namespace io.github.hatayama.uLoopMCP
 
                     if (!process.WaitForExit(30000))
                     {
-                        process.Kill();
+                        try { process.Kill(); } catch (System.InvalidOperationException) { }
                         process.Dispose();
                         errorOutput = "Installation timed out after 30 seconds";
                         return;

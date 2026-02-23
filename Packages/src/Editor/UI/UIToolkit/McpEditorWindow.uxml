@@ -17,9 +17,6 @@
 
             <ui:VisualElement class="mcp-server-controls">
                 <ui:Button name="toggle-server-button" text="Start Server" class="mcp-button mcp-button--compact mcp-button--start" />
-                <ui:VisualElement class="mcp-server-controls__spacer" />
-                <ui:Toggle name="auto-start-toggle" class="mcp-server-controls__auto-start-toggle" />
-                <ui:Label text="Auto Start" class="mcp-server-controls__auto-start-label" />
             </ui:VisualElement>
         </ui:VisualElement>
 
@@ -82,7 +79,7 @@
         <ui:VisualElement name="security-settings-section" class="mcp-section mcp-section--box">
             <ui:Foldout name="security-foldout" text="Security Settings" class="mcp-foldout">
                 <ui:VisualElement name="security-content">
-                    <ui:Label text="These settings control dangerous MCP operations. Only enable if you trust the AI system.&#10;&#10;For safer operation, consider using sandbox environments or containers.&#10;&#10;Changes take effect immediately - no server restart required." class="mcp-security-warning" />
+                    <ui:Label text="These settings control dangerous operations. Only enable if you trust the AI system.&#10;&#10;For safer operation, consider using sandbox environments or containers.&#10;&#10;Changes take effect immediately - no server restart required." class="mcp-security-warning" />
 
                     <ui:Label text="Additional Security Options" class="mcp-section-header" />
 
