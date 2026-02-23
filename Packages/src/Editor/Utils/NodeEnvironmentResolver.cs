@@ -210,10 +210,15 @@ namespace io.github.hatayama.uLoopMCP
 
                 if (!process.WaitForExit(PROCESS_TIMEOUT_MS))
                 {
-                    if (!process.HasExited)
+                    // Process may exit between WaitForExit(timeout) and Kill() (TOCTOU race)
+                    try
                     {
                         process.Kill();
                         process.WaitForExit(1000);
+                    }
+                    catch (System.InvalidOperationException)
+                    {
+                        UnityEngine.Debug.Log("Process already exited before Kill() was called");
                     }
 
                     return null;
