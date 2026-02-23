@@ -178,10 +178,12 @@ namespace io.github.hatayama.uLoopMCP
             return null;
         }
 
-        // Drains stderr asynchronously to prevent pipe-buffer deadlock when interactive login shell
-        // startup files (.zshrc, conda hooks, etc.) write large amounts to stderr
         private static string ExecuteAndGetOutput(ProcessStartInfo startInfo)
         {
+            UnityEngine.Debug.Assert(startInfo != null, "startInfo must not be null");
+            UnityEngine.Debug.Assert(startInfo.RedirectStandardOutput, "RedirectStandardOutput must be true");
+            UnityEngine.Debug.Assert(startInfo.RedirectStandardError, "RedirectStandardError must be true");
+
             using (Process process = Process.Start(startInfo))
             {
                 if (process == null)
@@ -189,17 +191,35 @@ namespace io.github.hatayama.uLoopMCP
                     return null;
                 }
 
-                System.Threading.Tasks.Task<string> stderrTask = System.Threading.Tasks.Task.Run(
-                    () => process.StandardError.ReadToEnd());
-                string output = process.StandardOutput.ReadToEnd().Trim();
-                stderrTask.Wait();
+                System.Text.StringBuilder stdoutBuilder = new System.Text.StringBuilder();
+
+                process.OutputDataReceived += (sender, e) =>
+                {
+                    if (e.Data != null)
+                    {
+                        stdoutBuilder.AppendLine(e.Data);
+                    }
+                };
+                process.ErrorDataReceived += (sender, e) => { };
+
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
 
                 if (!process.WaitForExit(PROCESS_TIMEOUT_MS))
                 {
-                    process.Kill();
+                    if (!process.HasExited)
+                    {
+                        process.Kill();
+                        process.WaitForExit(1000);
+                    }
+
                     return null;
                 }
 
+                // Parameterless WaitForExit flushes async output buffers
+                process.WaitForExit();
+
+                string output = stdoutBuilder.ToString().Trim();
                 if (process.ExitCode == 0 && !string.IsNullOrEmpty(output))
                 {
                     return output;
