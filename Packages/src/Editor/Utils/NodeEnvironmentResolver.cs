@@ -6,30 +6,13 @@ using UnityEngine;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Utility class for detecting Node.js and npm executables across various installation methods.
-    /// Supports standard installations and version managers (nvm, volta, asdf, fnm).
+    /// Utility class for detecting Node.js and npm executables.
+    /// Uses login shell to resolve PATH, matching the user's terminal environment.
     /// </summary>
     public static class NodeEnvironmentResolver
     {
         private const int PROCESS_TIMEOUT_MS = 5000;
 
-        private static readonly string[] COMMON_BIN_PATHS = {
-            "/usr/local/bin",
-            "/opt/homebrew/bin",
-            "/usr/bin"
-        };
-
-        private static readonly (string basePath, string binSubPath)[] VERSION_MANAGERS = {
-            (".nvm/versions/node", "bin"),
-            (".volta/tools/image/node", "bin"),
-            (".asdf/installs/nodejs", "bin"),
-            (".local/share/fnm/node-versions", "installation/bin"),
-        };
-
-        /// <summary>
-        /// Finds the Node.js executable path using fallback strategy.
-        /// Order: which command -> common paths -> version manager paths
-        /// </summary>
         public static string FindNodePath()
         {
             if (Application.platform == RuntimePlatform.WindowsEditor)
@@ -40,10 +23,6 @@ namespace io.github.hatayama.uLoopMCP
             return FindExecutableUnix("node");
         }
 
-        /// <summary>
-        /// Enumerates all candidate Node.js executable paths.
-        /// Order: which command -> common paths -> version manager paths
-        /// </summary>
         public static IEnumerable<string> FindAllNodePaths()
         {
             if (Application.platform == RuntimePlatform.WindowsEditor)
@@ -57,7 +36,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Finds an executable path using platform-appropriate resolution.
         /// On Windows, resolves .cmd shims via 'where' command.
-        /// On Unix, resolves via 'which' command, common paths, and version managers.
+        /// On Unix, resolves via login shell 'which' command.
         /// </summary>
         public static string FindExecutablePath(string executableName)
         {
@@ -69,10 +48,6 @@ namespace io.github.hatayama.uLoopMCP
             return FindExecutableUnix(executableName);
         }
 
-        /// <summary>
-        /// Finds the npm executable path using fallback strategy.
-        /// Order: which command -> common paths -> version manager paths
-        /// </summary>
         public static string FindNpmPath()
         {
             if (Application.platform == RuntimePlatform.WindowsEditor)
@@ -84,7 +59,8 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Sets up the PATH environment variable for a process to include Node.js paths.
+        /// Sets up the PATH environment variable for a process.
+        /// On Unix, retrieves PATH from login shell to match the user's terminal environment.
         /// </summary>
         public static void SetupEnvironmentPath(ProcessStartInfo startInfo, string executablePath)
         {
@@ -94,130 +70,65 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             string executableDir = Path.GetDirectoryName(executablePath);
-            string currentPath = System.Environment.GetEnvironmentVariable("PATH") ?? "";
+            string loginShellPath = GetLoginShellPath();
+            string basePath = !string.IsNullOrEmpty(loginShellPath)
+                ? loginShellPath
+                : (System.Environment.GetEnvironmentVariable("PATH") ?? "");
 
-            List<string> additionalPaths = new List<string>();
+            string separator = Application.platform == RuntimePlatform.WindowsEditor ? ";" : ":";
 
             if (!string.IsNullOrEmpty(executableDir))
             {
-                additionalPaths.Add(executableDir);
+                startInfo.EnvironmentVariables["PATH"] = executableDir + separator + basePath;
             }
-
-            foreach (string path in COMMON_BIN_PATHS)
+            else
             {
-                if (Directory.Exists(path) && !additionalPaths.Contains(path))
-                {
-                    additionalPaths.Add(path);
-                }
+                startInfo.EnvironmentVariables["PATH"] = basePath;
             }
-
-            AddVersionManagerPaths(additionalPaths);
-
-            string separator = Application.platform == RuntimePlatform.WindowsEditor ? ";" : ":";
-            string newPath = string.Join(separator, additionalPaths) + separator + currentPath;
-
-            startInfo.EnvironmentVariables["PATH"] = newPath;
         }
 
         private static string FindExecutableUnix(string executableName)
         {
-            string path = TryWhichCommand(executableName);
-            if (!string.IsNullOrEmpty(path))
-            {
-                return path;
-            }
-
-            path = SearchCommonPaths(executableName);
-            if (!string.IsNullOrEmpty(path))
-            {
-                return path;
-            }
-
-            path = SearchVersionManagerPaths(executableName);
-            if (!string.IsNullOrEmpty(path))
-            {
-                return path;
-            }
-
-            return null;
+            return TryWhichCommand(executableName);
         }
 
         private static string FindExecutableWindows(string executableName)
         {
-            string path = TryWhereCommand(executableName);
-            if (!string.IsNullOrEmpty(path))
-            {
-                return path;
-            }
-
-            path = SearchVersionManagerPaths(executableName);
-            if (!string.IsNullOrEmpty(path))
-            {
-                return path;
-            }
-
-            return null;
+            return TryWhereCommand(executableName);
         }
 
         private static IEnumerable<string> FindAllExecutablePathsUnix(string executableName)
         {
-            HashSet<string> seen = new HashSet<string>();
-
             string whichPath = TryWhichCommand(executableName);
-            if (!string.IsNullOrEmpty(whichPath) && seen.Add(whichPath))
+            if (!string.IsNullOrEmpty(whichPath))
             {
                 yield return whichPath;
-            }
-
-            foreach (string binPath in COMMON_BIN_PATHS)
-            {
-                string fullPath = Path.Combine(binPath, executableName);
-                if (File.Exists(fullPath) && seen.Add(fullPath))
-                {
-                    yield return fullPath;
-                }
-            }
-
-            foreach (string path in EnumerateVersionManagerPaths(executableName))
-            {
-                if (seen.Add(path))
-                {
-                    yield return path;
-                }
             }
         }
 
         private static IEnumerable<string> FindAllExecutablePathsWindows(string executableName)
         {
-            HashSet<string> seen = new HashSet<string>();
-
             string[] wherePaths = TryWhereCommandAll(executableName);
             if (wherePaths != null)
             {
                 foreach (string path in wherePaths)
                 {
-                    if (!string.IsNullOrEmpty(path) && seen.Add(path))
+                    if (!string.IsNullOrEmpty(path))
                     {
                         yield return path;
                     }
                 }
             }
-
-            foreach (string path in EnumerateVersionManagerPaths(executableName))
-            {
-                if (seen.Add(path))
-                {
-                    yield return path;
-                }
-            }
         }
 
+        // Login shell (-l) loads .zshrc/.bashrc, giving the same PATH as the user's terminal
         private static string TryWhichCommand(string executableName)
         {
+            string shell = GetUserShell();
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                FileName = "which",
-                Arguments = executableName,
+                FileName = shell,
+                Arguments = $"-l -c \"which {executableName}\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -291,78 +202,31 @@ namespace io.github.hatayama.uLoopMCP
             return null;
         }
 
-        private static string SearchCommonPaths(string executableName)
+        private static string GetLoginShellPath()
         {
-            foreach (string binPath in COMMON_BIN_PATHS)
+            if (Application.platform == RuntimePlatform.WindowsEditor)
             {
-                string fullPath = Path.Combine(binPath, executableName);
-                if (File.Exists(fullPath))
-                {
-                    return fullPath;
-                }
+                return null;
             }
 
-            return null;
+            string shell = GetUserShell();
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = shell,
+                Arguments = "-l -c \"echo $PATH\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            return ExecuteAndGetOutput(startInfo);
         }
 
-        private static string SearchVersionManagerPaths(string executableName)
+        private static string GetUserShell()
         {
-            foreach (string path in EnumerateVersionManagerPaths(executableName))
-            {
-                return path;
-            }
-            return null;
-        }
-
-        private static IEnumerable<string> EnumerateVersionManagerPaths(string executableName)
-        {
-            string home = System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile);
-
-            foreach ((string basePath, string binSubPath) in VERSION_MANAGERS)
-            {
-                string fullBasePath = Path.Combine(home, basePath);
-                if (!Directory.Exists(fullBasePath))
-                {
-                    continue;
-                }
-
-                string[] versionDirs = Directory.GetDirectories(fullBasePath);
-                System.Array.Sort(versionDirs);
-                System.Array.Reverse(versionDirs);
-
-                foreach (string versionDir in versionDirs)
-                {
-                    string executablePath = Path.Combine(versionDir, binSubPath, executableName);
-                    if (File.Exists(executablePath))
-                    {
-                        yield return executablePath;
-                    }
-                }
-            }
-        }
-
-        private static void AddVersionManagerPaths(List<string> paths)
-        {
-            string home = System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile);
-
-            foreach ((string basePath, string binSubPath) in VERSION_MANAGERS)
-            {
-                string fullBasePath = Path.Combine(home, basePath);
-                if (!Directory.Exists(fullBasePath))
-                {
-                    continue;
-                }
-
-                string[] versionDirs = Directory.GetDirectories(fullBasePath);
-                foreach (string versionDir in versionDirs)
-                {
-                    string binPath = Path.Combine(versionDir, binSubPath);
-                    if (Directory.Exists(binPath) && !paths.Contains(binPath))
-                    {
-                        paths.Add(binPath);
-                    }
-                }
-            }
+            string shell = System.Environment.GetEnvironmentVariable("SHELL");
+            return string.IsNullOrEmpty(shell) ? "/bin/zsh" : shell;
         }
     }
 }
