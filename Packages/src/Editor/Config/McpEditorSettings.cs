@@ -898,6 +898,20 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             _cachedSettings.isServerRunning = probe.autoStartServer;
+
+            // Old McpServerShutdownUseCase.ExecuteAsync always called
+            // UpdateSessionState(false, 0), persisting serverPort=0 on every quit.
+            // Without normalization, recovery binds port 0 and becomes unreachable.
+            if (!McpPortValidator.ValidatePort(_cachedSettings.serverPort))
+            {
+                int fallbackPort = McpPortValidator.ValidatePort(_cachedSettings.customPort)
+                    ? _cachedSettings.customPort
+                    : McpServerConfig.DEFAULT_PORT;
+                Debug.LogWarning(
+                    $"[{McpConstants.PROJECT_NAME}] Legacy migration: serverPort={_cachedSettings.serverPort} is invalid, using {fallbackPort}");
+                _cachedSettings.serverPort = fallbackPort;
+            }
+
             SaveSettings(_cachedSettings);
         }
 
