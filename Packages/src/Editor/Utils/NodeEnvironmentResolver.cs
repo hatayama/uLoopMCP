@@ -246,7 +246,7 @@ namespace io.github.hatayama.uLoopMCP
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = shell,
-                Arguments = "-l -i -c \"echo " + PATH_START_MARKER + "${PATH}" + PATH_END_MARKER + "\"",
+                Arguments = "-l -i -c \"echo " + PATH_START_MARKER + "; printenv PATH; echo " + PATH_END_MARKER + "\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
