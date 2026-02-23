@@ -178,6 +178,8 @@ namespace io.github.hatayama.uLoopMCP
             return null;
         }
 
+        // Drains stderr asynchronously to prevent pipe-buffer deadlock when interactive login shell
+        // startup files (.zshrc, conda hooks, etc.) write large amounts to stderr
         private static string ExecuteAndGetOutput(ProcessStartInfo startInfo)
         {
             using (Process process = Process.Start(startInfo))
@@ -187,8 +189,10 @@ namespace io.github.hatayama.uLoopMCP
                     return null;
                 }
 
+                System.Threading.Tasks.Task<string> stderrTask = System.Threading.Tasks.Task.Run(
+                    () => process.StandardError.ReadToEnd());
                 string output = process.StandardOutput.ReadToEnd().Trim();
-                process.StandardError.ReadToEnd();
+                stderrTask.Wait();
 
                 if (!process.WaitForExit(PROCESS_TIMEOUT_MS))
                 {
@@ -273,7 +277,7 @@ namespace io.github.hatayama.uLoopMCP
         private static string GetUserShell()
         {
             string shell = System.Environment.GetEnvironmentVariable("SHELL");
-            return string.IsNullOrEmpty(shell) ? "/bin/zsh" : shell;
+            return string.IsNullOrEmpty(shell) ? "/bin/sh" : shell;
         }
     }
 }
