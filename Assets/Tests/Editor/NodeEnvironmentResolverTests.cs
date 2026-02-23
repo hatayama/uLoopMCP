@@ -60,6 +60,16 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
+        public void ExtractBetweenMarkers_EndMarkerInBannerBeforeStartMarker_ReturnsValueBetween()
+        {
+            string output = "__END__ banner text\n__START__/usr/local/bin/node__END__";
+
+            string result = NodeEnvironmentResolver.ExtractBetweenMarkers(output, "__START__", "__END__");
+
+            Assert.AreEqual("/usr/local/bin/node", result);
+        }
+
+        [Test]
         public void ExtractBetweenMarkers_ValidMarkers_ReturnsValueBetween()
         {
             string result = NodeEnvironmentResolver.ExtractBetweenMarkers(

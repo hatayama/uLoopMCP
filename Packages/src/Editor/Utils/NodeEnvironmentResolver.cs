@@ -272,9 +272,15 @@ namespace io.github.hatayama.uLoopMCP
                 return null;
             }
 
-            int startIndex = output.IndexOf(startMarker);
-            int endIndex = output.IndexOf(endMarker);
-            if (startIndex < 0 || endIndex < 0 || endIndex <= startIndex)
+            int startIndex = output.IndexOf(startMarker, System.StringComparison.Ordinal);
+            if (startIndex < 0)
+            {
+                return null;
+            }
+
+            int searchFrom = startIndex + startMarker.Length;
+            int endIndex = output.IndexOf(endMarker, searchFrom, System.StringComparison.Ordinal);
+            if (endIndex < 0)
             {
                 return null;
             }
