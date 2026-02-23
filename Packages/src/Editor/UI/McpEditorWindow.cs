@@ -571,7 +571,15 @@ namespace io.github.hatayama.uLoopMCP
             bool isCliInstalled = cliVersion != null;
             bool isChecking = !CliInstallationDetector.IsCheckCompleted() || _isRefreshingVersion;
             string packageVersion = McpConstants.PackageInfo.version;
-            bool needsUpdate = isCliInstalled && cliVersion != packageVersion;
+            bool needsUpdate = false;
+            bool needsDowngrade = false;
+            if (isCliInstalled)
+            {
+                System.Version cliVer = new System.Version(cliVersion);
+                System.Version pkgVer = new System.Version(packageVersion);
+                needsUpdate = cliVer < pkgVer;
+                needsDowngrade = cliVer > pkgVer;
+            }
             bool isClaudeInstalled = CliInstallationDetector.AreSkillsInstalled("claude");
             bool isCodexInstalled = CliInstallationDetector.AreSkillsInstalled("codex");
             bool isCursorInstalled = CliInstallationDetector.AreSkillsInstalled("cursor");
@@ -583,6 +591,7 @@ namespace io.github.hatayama.uLoopMCP
                 cliVersion,
                 packageVersion,
                 needsUpdate,
+                needsDowngrade,
                 _isInstallingCli,
                 isChecking,
                 isClaudeInstalled,
