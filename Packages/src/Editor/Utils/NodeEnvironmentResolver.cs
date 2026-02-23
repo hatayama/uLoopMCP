@@ -257,7 +257,7 @@ namespace io.github.hatayama.uLoopMCP
             return ExtractBetweenMarkers(output, PATH_START_MARKER, PATH_END_MARKER);
         }
 
-        private static string ExtractBetweenMarkers(string output, string startMarker, string endMarker)
+        internal static string ExtractBetweenMarkers(string output, string startMarker, string endMarker)
         {
             if (string.IsNullOrEmpty(output))
             {
@@ -274,7 +274,7 @@ namespace io.github.hatayama.uLoopMCP
             return output.Substring(startIndex + startMarker.Length, endIndex - startIndex - startMarker.Length).Trim();
         }
 
-        private static string ExtractAbsolutePathLine(string block)
+        internal static string ExtractAbsolutePathLine(string block)
         {
             if (string.IsNullOrEmpty(block))
             {
