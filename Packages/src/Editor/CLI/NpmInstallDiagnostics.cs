@@ -152,14 +152,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return "npm does not have permission to write to the global directory.\n\n"
-                 + "Solutions:\n"
-                 + "1. Open a terminal as Administrator and run:\n"
-                 + "   " + manualCommand + "\n\n"
-                 + "2. Or change npm's global prefix to a user-writable directory:\n"
-                 + "   Step 1: Open a terminal and run:\n"
-                 + "      npm config set prefix \"%USERPROFILE%\\.npm-global\"\n"
-                 + "   Step 2: Add %USERPROFILE%\\.npm-global to your PATH\n"
-                 + "      (System Settings > Environment Variables > Path)";
+                 + BuildPermissionSolutions(manualCommand);
         }
 
         /// <summary>
@@ -172,6 +165,24 @@ namespace io.github.hatayama.uLoopMCP
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(rawStderr), "rawStderr must not be null or empty");
 
             return guidance + "\n\n--- npm output ---\n" + rawStderr;
+        }
+
+        /// <summary>
+        /// Builds the common "Solutions" block shared by the pre-flight dialog and
+        /// the post-install error classifier.
+        /// </summary>
+        public static string BuildPermissionSolutions(string manualCommand)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(manualCommand), "manualCommand must not be null or empty");
+
+            return "Solutions:\n"
+                 + "1. Open a terminal as Administrator and run:\n"
+                 + "   " + manualCommand + "\n\n"
+                 + "2. Or change npm's global prefix to a user-writable directory:\n"
+                 + "   Step 1: Open a terminal and run:\n"
+                 + "      npm config set prefix \"%USERPROFILE%\\.npm-global\"\n"
+                 + "   Step 2: Add %USERPROFILE%\\.npm-global to your PATH\n"
+                 + "      (System Settings > Environment Variables > Path)";
         }
 
         internal static bool IsPermissionError(string stderrOutput)

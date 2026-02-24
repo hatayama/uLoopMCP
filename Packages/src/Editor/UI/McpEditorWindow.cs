@@ -628,13 +628,7 @@ namespace io.github.hatayama.uLoopMCP
                     EditorUtility.DisplayDialog(
                         "Permission Issue Detected",
                         $"npm's global directory ({globalPrefix}) requires elevated permissions.\n\n"
-                        + "Solutions:\n"
-                        + $"1. Open a terminal as Administrator and run:\n   {manualCommand}\n\n"
-                        + "2. Or change npm's global prefix to a user-writable directory:\n"
-                        + "   Step 1: Open a terminal and run:\n"
-                        + "      npm config set prefix \"%USERPROFILE%\\.npm-global\"\n"
-                        + "   Step 2: Add %USERPROFILE%\\.npm-global to your PATH\n"
-                        + "      (System Settings > Environment Variables > Path)",
+                        + NpmInstallDiagnostics.BuildPermissionSolutions(manualCommand),
                         "OK");
                     return;
                 }
