@@ -618,6 +618,26 @@ namespace io.github.hatayama.uLoopMCP
             string packageVersion = McpConstants.PackageInfo.version;
             string installTarget = $"{CliConstants.NPM_PACKAGE_NAME}@{packageVersion}";
 
+            // Windows: npm global prefix often points to admin-only directories (e.g. C:\Program Files\nodejs)
+            if (Application.platform == RuntimePlatform.WindowsEditor)
+            {
+                string globalPrefix = NpmInstallDiagnostics.GetGlobalPrefix(npmPath);
+                if (!string.IsNullOrEmpty(globalPrefix) && !NpmInstallDiagnostics.IsGlobalPrefixWritable(globalPrefix))
+                {
+                    string manualCommand = $"npm install -g {installTarget}";
+                    EditorUtility.DisplayDialog(
+                        "Permission Issue Detected",
+                        $"npm's global directory ({globalPrefix}) requires elevated permissions.\n\n"
+                        + "Solutions:\n"
+                        + $"1. Open a terminal as Administrator and run:\n   {manualCommand}\n\n"
+                        + "2. Or change npm's global prefix to a user-writable directory:\n"
+                        + "   npm config set prefix \"%USERPROFILE%\\.npm-global\"\n"
+                        + "   Then add %USERPROFILE%\\.npm-global to your system PATH",
+                        "OK");
+                    return;
+                }
+            }
+
             _isInstallingCli = true;
             RefreshCliSetupSection();
 
@@ -676,10 +696,25 @@ namespace io.github.hatayama.uLoopMCP
                 else
                 {
                     string manualCommand = $"npm install -g {installTarget}";
-                    EditorUtility.DisplayDialog(
-                        "Installation Failed",
-                        $"Failed to install uLoop CLI.\n\n{errorOutput}\n\nYou can try manually:\n{manualCommand}",
-                        "OK");
+
+                    // Classifier emits Windows-specific remediation with the command embedded;
+                    // on other platforms (or unrecognized errors) show raw stderr + manual command footer
+                    string guidance = Application.platform == RuntimePlatform.WindowsEditor
+                        ? NpmInstallDiagnostics.ClassifyInstallError(errorOutput, manualCommand)
+                        : null;
+
+                    string message;
+                    if (guidance != null && !string.IsNullOrEmpty(errorOutput))
+                    {
+                        message = "Failed to install uLoop CLI.\n\n"
+                            + NpmInstallDiagnostics.BuildInstallErrorMessage(guidance, errorOutput);
+                    }
+                    else
+                    {
+                        message = $"Failed to install uLoop CLI.\n\n{errorOutput}\n\nYou can try manually:\n{manualCommand}";
+                    }
+
+                    EditorUtility.DisplayDialog("Installation Failed", message, "OK");
                 }
             }
             finally
