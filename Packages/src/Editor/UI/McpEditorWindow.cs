@@ -631,7 +631,8 @@ namespace io.github.hatayama.uLoopMCP
                         + "Solutions:\n"
                         + $"1. Open a terminal as Administrator and run:\n   {manualCommand}\n\n"
                         + "2. Or change npm's global prefix to a user-writable directory:\n"
-                        + "   npm config set prefix \"%USERPROFILE%\\.npm-global\"",
+                        + "   npm config set prefix \"%USERPROFILE%\\.npm-global\"\n"
+                        + "   Then add %USERPROFILE%\\.npm-global to your system PATH",
                         "OK");
                     return;
                 }
@@ -695,9 +696,10 @@ namespace io.github.hatayama.uLoopMCP
                 else
                 {
                     string manualCommand = $"npm install -g {installTarget}";
-                    string classifiedGuidance = NpmInstallDiagnostics.ClassifyInstallError(errorOutput);
-                    string errorDetail = classifiedGuidance != null
-                        ? classifiedGuidance
+
+                    // Classifier emits Windows-specific remediation; on other platforms show raw stderr
+                    string errorDetail = Application.platform == RuntimePlatform.WindowsEditor
+                        ? (NpmInstallDiagnostics.ClassifyInstallError(errorOutput) ?? errorOutput)
                         : errorOutput;
 
                     EditorUtility.DisplayDialog(
