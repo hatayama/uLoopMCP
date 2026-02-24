@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.67.0](https://github.com/hatayama/uLoopMCP/compare/v0.66.1...v0.67.0) (2026-02-24)
+
+
+### Features
+
+* add Windows npm install permission pre-check and error classification ([#677](https://github.com/hatayama/uLoopMCP/issues/677)) ([d73077c](https://github.com/hatayama/uLoopMCP/commit/d73077c3ee771162043557a4172783bacd2f24a6))
+* improve CLI integration UI and replace Auto Start with server state restoration ([#664](https://github.com/hatayama/uLoopMCP/issues/664)) ([c9ca4d7](https://github.com/hatayama/uLoopMCP/commit/c9ca4d79cb08390e0a07273b107c277b685b3eb7))
+* improve EditorWindow UI — merge server sections, compact controls, add CLI/MCP tabs ([#662](https://github.com/hatayama/uLoopMCP/issues/662)) ([3301d8c](https://github.com/hatayama/uLoopMCP/commit/3301d8cb3551f748ab6f5658ed1a006c3a148eac))
+
+
+### Bug Fixes
+
+* consolidate serverPort and customPort into single customPort field ([#666](https://github.com/hatayama/uLoopMCP/issues/666)) ([1ffcbdf](https://github.com/hatayama/uLoopMCP/commit/1ffcbdfc042431a759b6eef8c9e8901ff067d07d))
+* distinguish Downgrade CLI from Update CLI in version mismatch display ([#668](https://github.com/hatayama/uLoopMCP/issues/668)) ([28c8ead](https://github.com/hatayama/uLoopMCP/commit/28c8eadf877114a8993c73f104a64a3258f5656d))
+* prioritize .cmd/.exe over extensionless shims in Windows executable detection ([#669](https://github.com/hatayama/uLoopMCP/issues/669)) ([25fc66b](https://github.com/hatayama/uLoopMCP/commit/25fc66bb2462fb1fb6643b84e449de3c0be1a20e))
+* simplify timeout error message by removing verbose AI instructions ([#670](https://github.com/hatayama/uLoopMCP/issues/670)) ([97780a4](https://github.com/hatayama/uLoopMCP/commit/97780a4489ad7fcbbd191f7d18aec28758136260))
+* suppress unnecessary 'Multiple Unity projects' warning for non-project commands ([#671](https://github.com/hatayama/uLoopMCP/issues/671)) ([36bc1ca](https://github.com/hatayama/uLoopMCP/commit/36bc1cae5b5a9b59c266f4e76ef5011c5dbd5983))
+* use interactive login shell for executable detection to match terminal environment ([#667](https://github.com/hatayama/uLoopMCP/issues/667)) ([13ac67a](https://github.com/hatayama/uLoopMCP/commit/13ac67a001cf57454ac95c363fa0c07361d8288e))
+
 ## [0.66.1](https://github.com/hatayama/uLoopMCP/compare/v0.66.0...v0.66.1) (2026-02-21)
 
 
