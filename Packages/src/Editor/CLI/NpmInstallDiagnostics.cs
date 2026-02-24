@@ -137,8 +137,10 @@ namespace io.github.hatayama.uLoopMCP
         /// Analyzes npm stderr output and returns a user-friendly guidance message.
         /// Returns null if no specific pattern is matched (caller falls back to raw error).
         /// </summary>
-        public static string ClassifyInstallError(string stderrOutput)
+        public static string ClassifyInstallError(string stderrOutput, string manualCommand)
         {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(manualCommand), "manualCommand must not be null or empty");
+
             if (string.IsNullOrEmpty(stderrOutput))
             {
                 return null;
@@ -151,7 +153,8 @@ namespace io.github.hatayama.uLoopMCP
 
             return "npm does not have permission to write to the global directory.\n\n"
                  + "Solutions:\n"
-                 + "1. Open a terminal as Administrator and run the manual command below\n"
+                 + "1. Open a terminal as Administrator and run:\n"
+                 + "   " + manualCommand + "\n\n"
                  + "2. Or change npm's global prefix to a user-writable directory:\n"
                  + "   npm config set prefix \"%USERPROFILE%\\.npm-global\"\n"
                  + "   Then add %USERPROFILE%\\.npm-global to your system PATH";

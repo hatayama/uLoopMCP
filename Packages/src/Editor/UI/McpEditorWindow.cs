@@ -697,18 +697,24 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     string manualCommand = $"npm install -g {installTarget}";
 
-                    // Classifier emits Windows-specific remediation; on other platforms show raw stderr
+                    // Classifier emits Windows-specific remediation with the command embedded;
+                    // on other platforms (or unrecognized errors) show raw stderr + manual command footer
                     string guidance = Application.platform == RuntimePlatform.WindowsEditor
-                        ? NpmInstallDiagnostics.ClassifyInstallError(errorOutput)
+                        ? NpmInstallDiagnostics.ClassifyInstallError(errorOutput, manualCommand)
                         : null;
-                    string errorDetail = (guidance != null && !string.IsNullOrEmpty(errorOutput))
-                        ? NpmInstallDiagnostics.BuildInstallErrorMessage(guidance, errorOutput)
-                        : (guidance ?? errorOutput);
 
-                    EditorUtility.DisplayDialog(
-                        "Installation Failed",
-                        $"Failed to install uLoop CLI.\n\n{errorDetail}\n\nYou can try manually:\n{manualCommand}",
-                        "OK");
+                    string message;
+                    if (guidance != null && !string.IsNullOrEmpty(errorOutput))
+                    {
+                        message = "Failed to install uLoop CLI.\n\n"
+                            + NpmInstallDiagnostics.BuildInstallErrorMessage(guidance, errorOutput);
+                    }
+                    else
+                    {
+                        message = $"Failed to install uLoop CLI.\n\n{errorOutput}\n\nYou can try manually:\n{manualCommand}";
+                    }
+
+                    EditorUtility.DisplayDialog("Installation Failed", message, "OK");
                 }
             }
             finally

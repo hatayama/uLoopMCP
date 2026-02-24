@@ -5,12 +5,14 @@ namespace io.github.hatayama.uLoopMCP
     [TestFixture]
     public class NpmInstallDiagnosticsTests
     {
+        private const string DUMMY_COMMAND = "npm install -g uloop-cli@1.0.0";
+
         // --- ClassifyInstallError ---
 
         [Test]
         public void ClassifyInstallError_NullInput_ReturnsNull()
         {
-            string result = NpmInstallDiagnostics.ClassifyInstallError(null);
+            string result = NpmInstallDiagnostics.ClassifyInstallError(null, DUMMY_COMMAND);
 
             Assert.IsNull(result);
         }
@@ -18,7 +20,7 @@ namespace io.github.hatayama.uLoopMCP
         [Test]
         public void ClassifyInstallError_EmptyInput_ReturnsNull()
         {
-            string result = NpmInstallDiagnostics.ClassifyInstallError("");
+            string result = NpmInstallDiagnostics.ClassifyInstallError("", DUMMY_COMMAND);
 
             Assert.IsNull(result);
         }
@@ -28,7 +30,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             string stderr = "npm ERR! Error: EPERM: operation not permitted, rename 'C:\\Users\\test'";
 
-            string result = NpmInstallDiagnostics.ClassifyInstallError(stderr);
+            string result = NpmInstallDiagnostics.ClassifyInstallError(stderr, DUMMY_COMMAND);
 
             Assert.IsNotNull(result);
             Assert.That(result, Does.Contain("permission"));
@@ -39,7 +41,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             string stderr = "npm ERR! Error: EACCES: permission denied, access '/usr/lib/node_modules'";
 
-            string result = NpmInstallDiagnostics.ClassifyInstallError(stderr);
+            string result = NpmInstallDiagnostics.ClassifyInstallError(stderr, DUMMY_COMMAND);
 
             Assert.IsNotNull(result);
             Assert.That(result, Does.Contain("permission"));
@@ -50,7 +52,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             string stderr = "npm ERR! Error: operation not permitted, mkdir 'C:\\Program Files\\nodejs'";
 
-            string result = NpmInstallDiagnostics.ClassifyInstallError(stderr);
+            string result = NpmInstallDiagnostics.ClassifyInstallError(stderr, DUMMY_COMMAND);
 
             Assert.IsNotNull(result);
             Assert.That(result, Does.Contain("permission"));
@@ -61,9 +63,20 @@ namespace io.github.hatayama.uLoopMCP
         {
             string stderr = "npm ERR! 404 Not Found - GET https://registry.npmjs.org/nonexistent";
 
-            string result = NpmInstallDiagnostics.ClassifyInstallError(stderr);
+            string result = NpmInstallDiagnostics.ClassifyInstallError(stderr, DUMMY_COMMAND);
 
             Assert.IsNull(result);
+        }
+
+        [Test]
+        public void ClassifyInstallError_EmbedsManualCommandInline()
+        {
+            string stderr = "npm ERR! Error: EPERM: operation not permitted";
+            string command = "npm install -g uloop-cli@2.0.0";
+
+            string result = NpmInstallDiagnostics.ClassifyInstallError(stderr, command);
+
+            Assert.That(result, Does.Contain(command));
         }
 
         // --- IsPermissionError ---
