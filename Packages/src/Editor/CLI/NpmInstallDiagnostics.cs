@@ -119,6 +119,18 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return false;
             }
+            // npm prefix -g output is external input — malformed paths throw these exceptions
+            // Return true (indeterminate) to skip pre-flight and let npm attempt the actual install
+            catch (System.ArgumentException e)
+            {
+                UnityEngine.Debug.LogWarning("[uLoopMCP] Cannot validate npm global prefix path: " + e.Message);
+                return true;
+            }
+            catch (System.NotSupportedException e)
+            {
+                UnityEngine.Debug.LogWarning("[uLoopMCP] Cannot validate npm global prefix path: " + e.Message);
+                return true;
+            }
         }
 
         /// <summary>
@@ -143,6 +155,18 @@ namespace io.github.hatayama.uLoopMCP
                  + "2. Or change npm's global prefix to a user-writable directory:\n"
                  + "   npm config set prefix \"%USERPROFILE%\\.npm-global\"\n"
                  + "   Then add %USERPROFILE%\\.npm-global to your system PATH";
+        }
+
+        /// <summary>
+        /// Combines classified guidance with the raw npm stderr so users see both
+        /// the actionable suggestion and the original error details.
+        /// </summary>
+        public static string BuildInstallErrorMessage(string guidance, string rawStderr)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(guidance), "guidance must not be null or empty");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(rawStderr), "rawStderr must not be null or empty");
+
+            return guidance + "\n\n--- npm output ---\n" + rawStderr;
         }
 
         internal static bool IsPermissionError(string stderrOutput)

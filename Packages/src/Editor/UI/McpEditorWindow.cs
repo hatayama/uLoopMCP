@@ -698,9 +698,12 @@ namespace io.github.hatayama.uLoopMCP
                     string manualCommand = $"npm install -g {installTarget}";
 
                     // Classifier emits Windows-specific remediation; on other platforms show raw stderr
-                    string errorDetail = Application.platform == RuntimePlatform.WindowsEditor
-                        ? (NpmInstallDiagnostics.ClassifyInstallError(errorOutput) ?? errorOutput)
-                        : errorOutput;
+                    string guidance = Application.platform == RuntimePlatform.WindowsEditor
+                        ? NpmInstallDiagnostics.ClassifyInstallError(errorOutput)
+                        : null;
+                    string errorDetail = (guidance != null && !string.IsNullOrEmpty(errorOutput))
+                        ? NpmInstallDiagnostics.BuildInstallErrorMessage(guidance, errorOutput)
+                        : (guidance ?? errorOutput);
 
                     EditorUtility.DisplayDialog(
                         "Installation Failed",
