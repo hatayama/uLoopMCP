@@ -94,16 +94,18 @@ namespace io.github.hatayama.uLoopMCP
         {
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(globalPrefixPath), "globalPrefixPath must not be null or empty");
 
-            if (!Directory.Exists(globalPrefixPath))
-            {
-                return false;
-            }
-
-            string testFilePath = Path.Combine(
-                globalPrefixPath,
-                ".uloop_write_test_" + System.Guid.NewGuid().ToString("N").Substring(0, 8));
             try
             {
+                // npm creates the prefix directory on first install, so a non-existent directory
+                // does not mean non-writable — test by creating it (no-op if it already exists)
+                if (!Directory.Exists(globalPrefixPath))
+                {
+                    Directory.CreateDirectory(globalPrefixPath);
+                }
+
+                string testFilePath = Path.Combine(
+                    globalPrefixPath,
+                    ".uloop_write_test_" + System.Guid.NewGuid().ToString("N").Substring(0, 8));
                 File.WriteAllText(testFilePath, "");
                 File.Delete(testFilePath);
                 return true;
