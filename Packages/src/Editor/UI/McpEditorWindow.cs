@@ -691,11 +691,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 CliInstallationDetector.InvalidateCache();
 
-                if (success)
-                {
-                    EditorUtility.DisplayDialog("CLI Installed", $"uLoop CLI v{packageVersion} has been installed successfully.", "OK");
-                }
-                else
+                if (!success)
                 {
                     string manualCommand = $"npm install -g {installTarget}";
 
