@@ -179,8 +179,9 @@ namespace io.github.hatayama.uLoopMCP
                  + "1. Open a terminal as Administrator and run:\n"
                  + "   " + manualCommand + "\n\n"
                  + "2. Or change npm's global prefix to a user-writable directory:\n"
-                 + "   Step 1: Open a terminal and run:\n"
+                 + "   Step 1: Open Command Prompt (cmd.exe) and run:\n"
                  + "      npm config set prefix \"%USERPROFILE%\\.npm-global\"\n"
+                 + "      (PowerShell: npm config set prefix \"$env:USERPROFILE\\.npm-global\")\n"
                  + "   Step 2: Add %USERPROFILE%\\.npm-global to your PATH\n"
                  + "      (System Settings > Environment Variables > Path)";
         }
