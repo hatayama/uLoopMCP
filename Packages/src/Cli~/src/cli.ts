@@ -23,6 +23,7 @@ import {
 import {
   loadToolsCache,
   hasCacheFile,
+  getDefaultTools,
   ToolDefinition,
   ToolProperty,
   getCachedServerVersion,
@@ -61,7 +62,8 @@ const program = new Command();
 program
   .name('uloop')
   .description('Unity MCP CLI - Direct communication with Unity Editor')
-  .version(VERSION, '-v, --version', 'Output the version number');
+  .version(VERSION, '-v, --version', 'Output the version number')
+  .showHelpAfterError('(run with -h for available options)');
 
 // --list-commands: Output command names for shell completion
 program.option('--list-commands', 'List all command names (for shell completion)');
@@ -812,6 +814,20 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const cmdName = args.find((arg) => !arg.startsWith('-'));
   const syncGlobalOptions = extractSyncGlobalOptions(args);
+
+  // No command name = no Unity operation; skip project detection
+  const NO_PROJECT_COMMANDS = [UPDATE_COMMAND, 'completion'] as const;
+  const skipProjectDetection =
+    cmdName === undefined || (NO_PROJECT_COMMANDS as readonly string[]).includes(cmdName);
+
+  if (skipProjectDetection) {
+    const defaultTools = getDefaultTools();
+    for (const tool of defaultTools.tools) {
+      registerToolCommand(tool);
+    }
+    program.parse();
+    return;
+  }
 
   if (!shouldSkipAutoSync(cmdName, args)) {
     // Check if cache version is outdated and auto-sync if needed
