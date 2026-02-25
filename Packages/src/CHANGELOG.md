@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.67.1](https://github.com/hatayama/uLoopMCP/compare/v0.67.0...v0.67.1) (2026-02-24)
+
+
+### Bug Fixes
+
+* improve Windows error message clarity and remove CLI install success dialog ([#678](https://github.com/hatayama/uLoopMCP/issues/678)) ([9052eba](https://github.com/hatayama/uLoopMCP/commit/9052ebaea8afa0c580295302a7ae75d190ebc3ee))
+
 ## [0.67.0](https://github.com/hatayama/uLoopMCP/compare/v0.66.1...v0.67.0) (2026-02-24)
 
 
