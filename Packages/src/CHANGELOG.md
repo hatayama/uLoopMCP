@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.67.2](https://github.com/hatayama/uLoopMCP/compare/v0.67.1...v0.67.2) (2026-02-25)
+
+
+### Bug Fixes
+
+* disable Skills subsection when CLI is not installed ([#681](https://github.com/hatayama/uLoopMCP/issues/681)) ([3814154](https://github.com/hatayama/uLoopMCP/commit/381415449281f955e7c302d56c2a52e2db97dc2b))
+
 ## [0.67.1](https://github.com/hatayama/uLoopMCP/compare/v0.67.0...v0.67.1) (2026-02-24)
 
 
