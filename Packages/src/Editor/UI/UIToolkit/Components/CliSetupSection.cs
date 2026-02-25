@@ -12,6 +12,7 @@ namespace io.github.hatayama.uLoopMCP
         private readonly Button _installCliButton;
         private readonly EnumField _skillsTargetField;
         private readonly Button _installSkillsButton;
+        private readonly VisualElement _skillsSubsection;
 
         private CliSetupData _lastData;
         private bool _isTargetFieldInitialized;
@@ -29,6 +30,7 @@ namespace io.github.hatayama.uLoopMCP
             _installCliButton = root.Q<Button>("install-cli-button");
             _skillsTargetField = root.Q<EnumField>("skills-target-field");
             _installSkillsButton = root.Q<Button>("install-skills-button");
+            _skillsSubsection = root.Q<VisualElement>("skills-subsection");
         }
 
         public void SetupBindings()
@@ -51,6 +53,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateRefreshButton(data);
             UpdateInstallCliButton(data);
             InitializeTargetFieldIfNeeded(data);
+            UpdateSkillsSubsection(data);
             UpdateInstallSkillsButton(data);
         }
 
@@ -141,6 +144,12 @@ namespace io.github.hatayama.uLoopMCP
             {
                 ViewDataBinder.UpdateEnumField(_skillsTargetField, data.SelectedTarget);
             }
+        }
+
+        private void UpdateSkillsSubsection(CliSetupData data)
+        {
+            bool enabled = data.IsCliInstalled && !data.IsChecking;
+            _skillsSubsection.SetEnabled(enabled);
         }
 
         private void UpdateInstallSkillsButton(CliSetupData data)
