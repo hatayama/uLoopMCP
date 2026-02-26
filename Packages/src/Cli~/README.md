@@ -72,6 +72,25 @@ Custom skills defined in your project are also automatically detected.
 
 You can also call the CLI directly without using Skills.
 
+### Project Path / Port Specification
+
+If `--project-path` / `--port` is omitted, the port is automatically selected from the Unity project detected in the current directory.
+
+To operate multiple Unity instances from a single LLM tool, explicitly specify a project path or port:
+
+```bash
+# Specify by project path (absolute or relative)
+uloop compile --project-path /Users/foo/my-unity-project
+uloop compile --project-path ../other-project
+
+# Specify by port number
+uloop compile --port {target-port}
+```
+
+> [!NOTE]
+> - `--project-path` and `--port` cannot be used together.
+> - You can find the port number in each Unity's uLoopMCP Window.
+
 ### Utility Commands
 
 ```bash
@@ -321,25 +340,6 @@ uloop completion --install
 uloop completion --shell bash --install        # Git Bash / MINGW64
 uloop completion --shell powershell --install  # PowerShell
 ```
-
-## Project Path / Port Specification
-
-If `--project-path` / `--port` is omitted, the port is automatically selected from the Unity project detected in the current directory.
-
-To operate multiple Unity instances from a single LLM tool, explicitly specify a project path or port:
-
-```bash
-# Specify by project path (absolute or relative)
-uloop compile --project-path /Users/foo/my-unity-project
-uloop compile --project-path ../other-project
-
-# Specify by port number
-uloop compile --port {target-port}
-```
-
-> [!NOTE]
-> - `--project-path` and `--port` cannot be used together.
-> - You can find the port number in each Unity's uLoopMCP Window.
 
 ## Requirements
 
