@@ -19,7 +19,7 @@ uloop execute-dynamic-code --code '<c# code>'
 |-----------|------|-------------|
 | `--code` | string | C# code to execute (direct statements, no class wrapper) |
 | `--compile-only` | boolean | Compile without execution |
-| `--auto-qualify-unity-types-once` | boolean | Auto-qualify Unity types |
+| `--parameters` | object | Runtime parameters passed to the snippet (advanced; usually unnecessary) |
 
 ## Code Format
 
