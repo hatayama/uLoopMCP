@@ -268,6 +268,35 @@
   - `Message` (string): 操作結果メッセージ
   - `ErrorMessage` (string): 操作が失敗した場合のエラーメッセージ
 
+### 13. capture-window
+- **説明**: Unity EditorWindowをキャプチャしてPNG画像として保存します。名前による柔軟なマッチングモードで任意のEditorWindowをキャプチャ可能です
+- **パラメータ**:
+  - `WindowName` (string): キャプチャするウィンドウ名（例: "Game", "Scene", "Console", "Inspector", "Project", "Hierarchy"）（デフォルト: "Game"）
+  - `ResolutionScale` (number): キャプチャ画像の解像度スケール、0.1〜1.0（デフォルト: 1）
+  - `MatchMode` (enum): ウィンドウ名のマッチングモード（すべて大文字小文字を区別しない） - "exact", "prefix", "contains"（デフォルト: "exact"）
+    - `exact`: ウィンドウ名が完全に一致する必要があります
+    - `prefix`: ウィンドウ名が入力で始まる必要があります
+    - `contains`: ウィンドウ名に入力が含まれている必要があります
+- **レスポンス**:
+  - `CapturedCount` (number): キャプチャされたウィンドウの数
+  - `CapturedWindows` (array): キャプチャされたウィンドウ情報の配列
+    - `ImagePath` (string): 保存されたPNGファイルの絶対パス
+    - `FileSizeBytes` (number): 保存されたファイルのサイズ（バイト）
+    - `Width` (number): キャプチャ画像の幅（ピクセル）
+    - `Height` (number): キャプチャ画像の高さ（ピクセル）
+
+### 14. control-play-mode
+- **説明**: Unity Editorのプレイモードを制御します（再生/停止/一時停止）
+- **パラメータ**:
+  - `Action` (enum): 実行するアクション - "Play", "Stop", "Pause"（デフォルト: "Play"）
+    - `Play`: プレイモードを開始（一時停止からの再開も含む）
+    - `Stop`: プレイモードを終了し、エディットモードに戻る
+    - `Pause`: プレイモードのまま一時停止する
+- **レスポンス**:
+  - `IsPlaying` (boolean): Unityが現在プレイモードかどうか
+  - `IsPaused` (boolean): プレイモードが一時停止中かどうか
+  - `Message` (string): 実行されたアクションの説明
+
 ---
 
 ## 関連ドキュメント
