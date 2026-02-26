@@ -24,12 +24,15 @@ namespace io.github.hatayama.uLoopMCP
             // Use SerializedObject to get only Inspector-visible properties
             SerializedObject serializedObject = new SerializedObject(component);
             SerializedProperty iterator = serializedObject.GetIterator();
-            
-            // Skip the first property (m_Script)
+
             if (iterator.NextVisible(true))
             {
-                while (iterator.NextVisible(false))
+                do
                 {
+                    // m_Script is an internal reference, not a user-facing property
+                    if (iterator.name == "m_Script")
+                        continue;
+
                     object value = GetSerializedPropertyValue(iterator);
                     if (value != null)
                     {
@@ -39,10 +42,10 @@ namespace io.github.hatayama.uLoopMCP
                             type = iterator.propertyType.ToString(),
                             value = SerializeValue(value)
                         };
-                        
+
                         propertyInfos.Add(info);
                     }
-                }
+                } while (iterator.NextVisible(false));
             }
             
             return propertyInfos.ToArray();
@@ -79,6 +82,8 @@ namespace io.github.hatayama.uLoopMCP
                     return property.quaternionValue;
                 case SerializedPropertyType.Enum:
                     return property.enumNames[property.enumValueIndex];
+                case SerializedPropertyType.LayerMask:
+                    return property.intValue;
                 case SerializedPropertyType.ObjectReference:
                     UnityEngine.Object obj = property.objectReferenceValue;
                     if (obj == null)
