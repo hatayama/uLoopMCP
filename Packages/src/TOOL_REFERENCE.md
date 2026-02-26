@@ -1,3 +1,5 @@
+[日本語](TOOL_REFERENCE_ja.md)
+
 # uLoopMCP Tool Reference
 
 This document provides detailed specifications for all uLoopMCP tools.
@@ -21,6 +23,7 @@ All tools automatically include the following property:
 - **Description**: Executes compilation after AssetDatabase.Refresh(). Returns compilation results with detailed timing information.
 - **Parameters**:
   - `ForceRecompile` (boolean): Whether to perform forced recompilation (default: false)
+  - `WaitForDomainReload` (boolean): Whether to wait for domain reload completion before returning (default: false)
 - **Response**:
   - `Success` (boolean): Whether compilation was successful
   - `ErrorCount` (number): Total number of errors
@@ -44,7 +47,7 @@ All tools automatically include the following property:
   - `SearchText` (string): Text to search within log messages (retrieve all if empty) (default: "")
   - `UseRegex` (boolean): Whether to use regular expression for search (default: false)
   - `SearchInStackTrace` (boolean): Whether to search within stack trace as well (default: false)
-  - `IncludeStackTrace` (boolean): Whether to display stack traces (default: true)
+  - `IncludeStackTrace` (boolean): Whether to display stack traces (default: false)
 - **Response**:
   - `TotalCount` (number): Total number of logs available
   - `DisplayedCount` (number): Number of logs displayed in this response
@@ -95,7 +98,7 @@ All tools automatically include the following property:
 - **Description**: Find multiple GameObjects with advanced search criteria (component type, tag, layer, etc.)
 - **Parameters**:
   - `NamePattern` (string): GameObject name pattern to search for (default: "")
-  - `SearchMode` (enum): Search mode - "Exact", "Path", "Regex", "Contains" (default: "Exact")
+  - `SearchMode` (enum): Search mode - "Exact", "Path", "Regex", "Contains", "Selected" (default: "Exact")
   - `RequiredComponents` (array): Array of component type names that GameObjects must have (default: [])
   - `Tag` (string): Tag filter (default: "")
   - `Layer` (number): Layer filter (default: null)
@@ -164,7 +167,9 @@ All tools automatically include the following property:
   - `MaxDepth` (number): Maximum depth to traverse the hierarchy (-1 for unlimited depth) (default: -1)
   - `RootPath` (string): Root GameObject path to start hierarchy traversal from (empty/null for all root objects) (default: null)
   - `IncludeComponents` (boolean): Whether to include component information for each GameObject in the hierarchy (default: true)
-  - `MaxResponseSizeKB` (number): Maximum response size in KB before saving to file (default: 100KB)
+  - `IncludePaths` (boolean): Whether to include path information for nodes (default: false)
+  - `UseComponentsLut` (string): Use LUT for components - "auto", "true", "false" (default: "auto")
+  - `UseSelection` (boolean): Whether to use currently selected GameObject(s) as root(s). When true, RootPath is ignored (default: false)
 - **Response**:
   - **Small hierarchies** (<=100KB): Direct nested JSON structure
     - `hierarchy` (array): Array of root level GameObjects in nested format
@@ -264,6 +269,35 @@ All tools automatically include the following property:
   - `Success` (boolean): Whether the operation was successful
   - `Message` (string): Operation result message
   - `ErrorMessage` (string): Error message if operation failed
+
+### 13. capture-window
+- **Description**: Capture Unity EditorWindow and save as PNG image. Supports capturing any open EditorWindow by name with flexible matching modes
+- **Parameters**:
+  - `WindowName` (string): Window name to capture (e.g., "Game", "Scene", "Console", "Inspector", "Project", "Hierarchy") (default: "Game")
+  - `ResolutionScale` (number): Resolution scale for the captured image, 0.1 to 1.0 (default: 1)
+  - `MatchMode` (enum): Window name matching mode (all case-insensitive) - "exact", "prefix", "contains" (default: "exact")
+    - `exact`: Window name must match exactly
+    - `prefix`: Window name must start with the input
+    - `contains`: Window name must contain the input anywhere
+- **Response**:
+  - `CapturedCount` (number): Number of windows captured
+  - `CapturedWindows` (array): Array of captured window info
+    - `ImagePath` (string): Absolute path to the saved PNG file
+    - `FileSizeBytes` (number): Size of the saved file in bytes
+    - `Width` (number): Captured image width in pixels
+    - `Height` (number): Captured image height in pixels
+
+### 14. control-play-mode
+- **Description**: Control Unity Editor play mode (play/stop/pause)
+- **Parameters**:
+  - `Action` (enum): Action to perform - "Play", "Stop", "Pause" (default: "Play")
+    - `Play`: Start play mode (also resumes from pause)
+    - `Stop`: Exit play mode and return to edit mode
+    - `Pause`: Pause the game while remaining in play mode
+- **Response**:
+  - `IsPlaying` (boolean): Whether Unity is currently in play mode
+  - `IsPaused` (boolean): Whether play mode is paused
+  - `Message` (string): Description of the action performed
 
 ---
 
