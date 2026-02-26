@@ -162,6 +162,7 @@ Get Unity Hierarchy structure.
 | `--include-components` | boolean | `true` | Include component information |
 | `--include-inactive` | boolean | `true` | Include inactive GameObjects |
 | `--include-paths` | boolean | `false` | Include path information |
+| `--use-components-lut` | string | `auto` | Use LUT for components: `auto`, `true`, `false` |
 | `--use-selection` | boolean | `false` | Use selected GameObject(s) as root(s) |
 
 ```bash
@@ -179,7 +180,15 @@ Search Unity project.
 | `--search-query` | string | | Search query (Unity Search syntax) |
 | `--providers` | array | | Search providers (e.g., `asset`, `scene`, `menu`) |
 | `--max-results` | integer | `50` | Maximum number of results |
+| `--include-description` | boolean | `true` | Include detailed descriptions in results |
+| `--include-metadata` | boolean | `false` | Include file metadata (size, modified date) |
+| `--search-flags` | enum | `Default` | Search flags: `Default`, `Synchronous`, `WantsMore`, `Packages`, `Sorted` |
 | `--save-to-file` | boolean | `false` | Save results to file |
+| `--output-format` | enum | `JSON` | Output format when saving: `JSON`, `CSV`, `TSV` |
+| `--auto-save-threshold` | integer | `100` | Auto-save threshold (0 to disable) |
+| `--file-extensions` | array | | Filter by file extension (e.g., `cs`, `prefab`, `mat`) |
+| `--asset-types` | array | | Filter by asset type (e.g., `Texture2D`, `GameObject`) |
+| `--path-filter` | string | | Filter by path pattern (supports wildcards) |
 
 ```bash
 uloop unity-search --search-query "*.prefab"
@@ -224,12 +233,13 @@ Find GameObjects with search criteria.
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--name-pattern` | string | | Name pattern to search |
-| `--search-mode` | enum | `Contains` | Search mode: `Exact`, `Path`, `Regex`, `Contains` |
+| `--search-mode` | enum | `Exact` | Search mode: `Exact`, `Path`, `Regex`, `Contains`, `Selected` |
 | `--required-components` | array | | Required component type names |
 | `--tag` | string | | Tag filter |
-| `--layer` | string | | Layer filter |
+| `--layer` | integer | | Layer filter |
 | `--max-results` | integer | `20` | Maximum number of results |
 | `--include-inactive` | boolean | `false` | Include inactive GameObjects |
+| `--include-inherited-properties` | boolean | `false` | Include inherited properties |
 
 ```bash
 uloop find-game-objects --name-pattern "Player"
@@ -260,6 +270,7 @@ Execute C# code in Unity Editor.
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--code` | string | | C# code to execute |
+| `--parameters` | object | | Runtime parameters for execution |
 | `--compile-only` | boolean | `false` | Compile only without execution |
 
 ```bash

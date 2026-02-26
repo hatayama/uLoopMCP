@@ -162,6 +162,7 @@ Unity Hierarchy 構造を取得します。
 | `--include-components` | boolean | `true` | コンポーネント情報を含める |
 | `--include-inactive` | boolean | `true` | 非アクティブな GameObject を含める |
 | `--include-paths` | boolean | `false` | パス情報を含める |
+| `--use-components-lut` | string | `auto` | コンポーネント用 LUT の使用: `auto`, `true`, `false` |
 | `--use-selection` | boolean | `false` | 選択中の GameObject をルートとして使用 |
 
 ```bash
@@ -179,7 +180,15 @@ Unity プロジェクトを検索します。
 | `--search-query` | string | | 検索クエリ（Unity Search 構文） |
 | `--providers` | array | | 検索プロバイダー（例: `asset`, `scene`, `menu`） |
 | `--max-results` | integer | `50` | 結果の最大数 |
+| `--include-description` | boolean | `true` | 結果に詳細な説明を含める |
+| `--include-metadata` | boolean | `false` | ファイルメタデータ（サイズ、更新日）を含める |
+| `--search-flags` | enum | `Default` | 検索フラグ: `Default`, `Synchronous`, `WantsMore`, `Packages`, `Sorted` |
 | `--save-to-file` | boolean | `false` | 結果をファイルに保存 |
+| `--output-format` | enum | `JSON` | 保存時の出力形式: `JSON`, `CSV`, `TSV` |
+| `--auto-save-threshold` | integer | `100` | 自動保存の閾値（0 で無効化） |
+| `--file-extensions` | array | | ファイル拡張子でフィルタ（例: `cs`, `prefab`, `mat`） |
+| `--asset-types` | array | | アセットタイプでフィルタ（例: `Texture2D`, `GameObject`） |
+| `--path-filter` | string | | パスパターンでフィルタ（ワイルドカード対応） |
 
 ```bash
 uloop unity-search --search-query "*.prefab"
@@ -224,12 +233,13 @@ uloop execute-menu-item --menu-item-path "GameObject/Create Empty"
 | フラグ | 型 | デフォルト | 説明 |
 |--------|------|---------|-------------|
 | `--name-pattern` | string | | 検索する名前パターン |
-| `--search-mode` | enum | `Contains` | 検索モード: `Exact`, `Path`, `Regex`, `Contains` |
+| `--search-mode` | enum | `Exact` | 検索モード: `Exact`, `Path`, `Regex`, `Contains`, `Selected` |
 | `--required-components` | array | | 必須コンポーネントタイプ名 |
 | `--tag` | string | | タグフィルター |
-| `--layer` | string | | レイヤーフィルター |
+| `--layer` | integer | | レイヤーフィルター |
 | `--max-results` | integer | `20` | 結果の最大数 |
 | `--include-inactive` | boolean | `false` | 非アクティブな GameObject を含める |
+| `--include-inherited-properties` | boolean | `false` | 継承プロパティを含める |
 
 ```bash
 uloop find-game-objects --name-pattern "Player"
@@ -260,6 +270,7 @@ Unity Editor 内で C# コードを実行します。
 | フラグ | 型 | デフォルト | 説明 |
 |--------|------|---------|-------------|
 | `--code` | string | | 実行する C# コード |
+| `--parameters` | object | | 実行時パラメータ |
 | `--compile-only` | boolean | `false` | コンパイルのみ（実行はしない） |
 
 ```bash
