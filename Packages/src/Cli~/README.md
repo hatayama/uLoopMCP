@@ -91,6 +91,15 @@ uloop compile --port {target-port}
 > - `--project-path` and `--port` cannot be used together.
 > - You can find the port number in each Unity's uLoopMCP Window.
 
+### Chaining Commands
+
+Chain commands with `&&` to automate a sequence of operations:
+
+```bash
+# Compile → wait for Domain Reload → play → focus Unity
+uloop compile --wait-for-domain-reload true && uloop control-play-mode --action Play && uloop focus-window
+```
+
 ### Utility Commands
 
 ```bash

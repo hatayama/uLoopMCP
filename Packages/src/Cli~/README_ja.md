@@ -91,6 +91,15 @@ uloop compile --port {target-port}
 > - `--project-path` と `--port` は同時に指定できません。
 > - ポート番号は各Unityの uLoopMCP Window で確認できます。
 
+### コマンドの連携
+
+`&&` でコマンドを連結することで、一連の操作を自動化できます：
+
+```bash
+# コンパイル → Domain Reload 待機 → 再生 → Unity にフォーカス
+uloop compile --wait-for-domain-reload true && uloop control-play-mode --action Play && uloop focus-window
+```
+
 ### ユーティリティコマンド
 
 ```bash
