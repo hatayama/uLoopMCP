@@ -1,3 +1,5 @@
+[日本語](README_ja.md)
+
 # uloop-cli
 
 [![npm version](https://img.shields.io/npm/v/uloop-cli.svg)](https://www.npmjs.com/package/uloop-cli)
