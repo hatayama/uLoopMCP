@@ -186,18 +186,24 @@ uloop completion
 
 </details>
 
-## Port Specification
+## Project Path / Port Specification
 
-If `--port` is omitted, the port configured for the project is automatically selected.
+If `--project-path` / `--port` is omitted, the port is automatically selected from the Unity project detected in the current directory.
 
-By explicitly specifying the `--port` option, a single LLM tool can operate multiple Unity instances:
+To operate multiple Unity instances from a single LLM tool, explicitly specify a project path or port:
 
 ```bash
+# Specify by project path (absolute or relative)
+uloop compile --project-path /Users/foo/my-unity-project
+uloop compile --project-path ../other-project
+
+# Specify by port number
 uloop compile --port {target-port}
 ```
 
 > [!NOTE]
-> You can find the port number in each Unity's uLoopMCP Window.
+> - `--project-path` and `--port` cannot be used together.
+> - You can find the port number in each Unity's uLoopMCP Window.
 
 ## MCP Connection (CLI Alternative)
 

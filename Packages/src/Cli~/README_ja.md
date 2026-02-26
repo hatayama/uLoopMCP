@@ -322,18 +322,24 @@ uloop completion --shell bash --install        # Git Bash / MINGW64
 uloop completion --shell powershell --install  # PowerShell
 ```
 
-## ポートの指定
+## プロジェクトパス指定 / ポート指定
 
-`--port` オプションを指定することで、複数の Unity インスタンスを操作できます：
+`--project-path` / `--port` を省略した場合は、カレントディレクトリの Unity プロジェクトで設定されたポートが自動選択されます。
+
+一つのLLMツールから複数のUnityインスタンスを操作したい場合、プロジェクトパスまたはポートを明示的に指定します：
 
 ```bash
-uloop compile --port 8700
-uloop compile --port 8701
+# プロジェクトパスで指定（絶対パス・相対パスどちらも可）
+uloop compile --project-path /Users/foo/my-unity-project
+uloop compile --project-path ../other-project
+
+# ポート番号で指定
+uloop compile --port {target-port}
 ```
 
-`--port` を省略した場合、現在のプロジェクトに設定されたポートが自動的に使用されます。
-
-ポート番号は各 Unity の uLoopMCP Window で確認できます。
+> [!NOTE]
+> - `--project-path` と `--port` は同時に指定できません。
+> - ポート番号は各Unityの uLoopMCP Window で確認できます。
 
 ## 動作要件
 
