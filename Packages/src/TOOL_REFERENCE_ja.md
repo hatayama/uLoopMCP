@@ -47,7 +47,7 @@
   - `SearchText` (string): ログメッセージ内で検索するテキスト（空の場合はすべて取得）（デフォルト: ""）
   - `UseRegex` (boolean): 検索に正規表現を使用するかどうか（デフォルト: false）
   - `SearchInStackTrace` (boolean): スタックトレース内も検索対象に含めるかどうか（デフォルト: false）
-  - `IncludeStackTrace` (boolean): スタックトレースを表示するかどうか（デフォルト: true）
+  - `IncludeStackTrace` (boolean): スタックトレースを表示するかどうか（デフォルト: false）
 - **レスポンス**:
   - `TotalCount` (number): 利用可能なログの総数
   - `DisplayedCount` (number): このレスポンスで表示されるログの数
@@ -98,7 +98,7 @@
 - **説明**: 高度な検索条件（コンポーネントタイプ、タグ、レイヤーなど）で複数のGameObjectを検索します
 - **パラメータ**:
   - `NamePattern` (string): 検索するGameObject名のパターン（デフォルト: ""）
-  - `SearchMode` (enum): 検索モード - "Exact", "Path", "Regex", "Contains"（デフォルト: "Exact"）
+  - `SearchMode` (enum): 検索モード - "Exact", "Path", "Regex", "Contains", "Selected"（デフォルト: "Exact"）
   - `RequiredComponents` (array): GameObjectが持つ必要のあるコンポーネントタイプ名の配列（デフォルト: []）
   - `Tag` (string): タグフィルター（デフォルト: ""）
   - `Layer` (number): レイヤーフィルター（デフォルト: null）
@@ -167,7 +167,9 @@
   - `MaxDepth` (number): 階層を探索する最大深度（無制限深度の場合は-1）（デフォルト: -1）
   - `RootPath` (string): 階層探索を開始するルートGameObjectパス（すべてのルートオブジェクトの場合は空/null）（デフォルト: null）
   - `IncludeComponents` (boolean): 階層内の各GameObjectのコンポーネント情報を含めるかどうか（デフォルト: true）
-  - `MaxResponseSizeKB` (number): ファイルに保存する前の最大レスポンスサイズ（KB）（デフォルト: 100KB）
+  - `IncludePaths` (boolean): ノードのパス情報を含めるかどうか（デフォルト: false）
+  - `UseComponentsLut` (string): コンポーネント用LUTの使用 - "auto", "true", "false"（デフォルト: "auto"）
+  - `UseSelection` (boolean): 現在選択中のGameObjectをルートとして使用するかどうか。trueの場合、RootPathは無視されます（デフォルト: false）
 - **レスポンス**:
   - **小さな階層**（<=100KB）: 直接的なネストされたJSON構造
     - `hierarchy` (array): ネスト形式のルートレベルGameObjectの配列

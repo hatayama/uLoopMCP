@@ -47,7 +47,7 @@ All tools automatically include the following property:
   - `SearchText` (string): Text to search within log messages (retrieve all if empty) (default: "")
   - `UseRegex` (boolean): Whether to use regular expression for search (default: false)
   - `SearchInStackTrace` (boolean): Whether to search within stack trace as well (default: false)
-  - `IncludeStackTrace` (boolean): Whether to display stack traces (default: true)
+  - `IncludeStackTrace` (boolean): Whether to display stack traces (default: false)
 - **Response**:
   - `TotalCount` (number): Total number of logs available
   - `DisplayedCount` (number): Number of logs displayed in this response
@@ -98,7 +98,7 @@ All tools automatically include the following property:
 - **Description**: Find multiple GameObjects with advanced search criteria (component type, tag, layer, etc.)
 - **Parameters**:
   - `NamePattern` (string): GameObject name pattern to search for (default: "")
-  - `SearchMode` (enum): Search mode - "Exact", "Path", "Regex", "Contains" (default: "Exact")
+  - `SearchMode` (enum): Search mode - "Exact", "Path", "Regex", "Contains", "Selected" (default: "Exact")
   - `RequiredComponents` (array): Array of component type names that GameObjects must have (default: [])
   - `Tag` (string): Tag filter (default: "")
   - `Layer` (number): Layer filter (default: null)
@@ -167,7 +167,9 @@ All tools automatically include the following property:
   - `MaxDepth` (number): Maximum depth to traverse the hierarchy (-1 for unlimited depth) (default: -1)
   - `RootPath` (string): Root GameObject path to start hierarchy traversal from (empty/null for all root objects) (default: null)
   - `IncludeComponents` (boolean): Whether to include component information for each GameObject in the hierarchy (default: true)
-  - `MaxResponseSizeKB` (number): Maximum response size in KB before saving to file (default: 100KB)
+  - `IncludePaths` (boolean): Whether to include path information for nodes (default: false)
+  - `UseComponentsLut` (string): Use LUT for components - "auto", "true", "false" (default: "auto")
+  - `UseSelection` (boolean): Whether to use currently selected GameObject(s) as root(s). When true, RootPath is ignored (default: false)
 - **Response**:
   - **Small hierarchies** (<=100KB): Direct nested JSON structure
     - `hierarchy` (array): Array of root level GameObjects in nested format
