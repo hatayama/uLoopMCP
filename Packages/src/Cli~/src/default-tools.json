@@ -1,5 +1,5 @@
 {
-  "version": "0.67.1",
+  "version": "0.67.3",
   "tools": [
     {
       "name": "compile",
@@ -143,6 +143,11 @@
             "type": "boolean",
             "description": "Include path information"
           },
+          "UseComponentsLut": {
+            "type": "string",
+            "description": "Use LUT for components (auto|true|false)",
+            "default": "auto"
+          },
           "UseSelection": {
             "type": "boolean",
             "description": "Use selected GameObject(s) as root(s). When true, RootPath is ignored.",
@@ -173,9 +178,63 @@
             "description": "Maximum number of results",
             "default": 50
           },
+          "IncludeDescription": {
+            "type": "boolean",
+            "description": "Include detailed descriptions in results",
+            "default": true
+          },
+          "IncludeMetadata": {
+            "type": "boolean",
+            "description": "Include file metadata (size, modified date)"
+          },
+          "SearchFlags": {
+            "type": "string",
+            "description": "Search flags (Default, Synchronous, WantsMore, Packages, Sorted)",
+            "enum": [
+              "Default",
+              "Synchronous",
+              "WantsMore",
+              "Packages",
+              "Sorted"
+            ],
+            "default": "Default"
+          },
           "SaveToFile": {
             "type": "boolean",
             "description": "Save results to file"
+          },
+          "OutputFormat": {
+            "type": "string",
+            "description": "Output file format when SaveToFile is enabled",
+            "enum": [
+              "JSON",
+              "CSV",
+              "TSV"
+            ],
+            "default": "JSON"
+          },
+          "AutoSaveThreshold": {
+            "type": "integer",
+            "description": "Threshold for automatic file saving (0 to disable)",
+            "default": 100
+          },
+          "FileExtensions": {
+            "type": "array",
+            "description": "Filter results by file extension (e.g., cs, prefab, mat)",
+            "items": {
+              "type": "string"
+            }
+          },
+          "AssetTypes": {
+            "type": "array",
+            "description": "Filter results by asset type (e.g., Texture2D, GameObject, MonoScript)",
+            "items": {
+              "type": "string"
+            }
+          },
+          "PathFilter": {
+            "type": "string",
+            "description": "Filter results by path pattern (supports wildcards)"
           }
         }
       }
@@ -247,9 +306,10 @@
               "Exact",
               "Path",
               "Regex",
-              "Contains"
+              "Contains",
+              "Selected"
             ],
-            "default": "Contains"
+            "default": "Exact"
           },
           "RequiredComponents": {
             "type": "array",
@@ -263,7 +323,7 @@
             "description": "Tag filter"
           },
           "Layer": {
-            "type": "string",
+            "type": "integer",
             "description": "Layer filter"
           },
           "MaxResults": {
@@ -274,6 +334,10 @@
           "IncludeInactive": {
             "type": "boolean",
             "description": "Include inactive GameObjects"
+          },
+          "IncludeInheritedProperties": {
+            "type": "boolean",
+            "description": "Include inherited properties"
           }
         }
       }
@@ -316,6 +380,10 @@
           "Code": {
             "type": "string",
             "description": "C# code to execute"
+          },
+          "Parameters": {
+            "type": "object",
+            "description": "Runtime parameters for execution"
           },
           "CompileOnly": {
             "type": "boolean",

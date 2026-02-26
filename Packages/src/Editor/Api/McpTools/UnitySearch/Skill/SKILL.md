@@ -17,10 +17,18 @@ uloop unity-search [options]
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `--search-query` | string | - | Search query |
-| `--providers` | array | - | Search providers (e.g., `asset`, `scene`, `find`) |
+| `--search-query` | string | - | Search query (supports Unity Search syntax) |
+| `--providers` | array | - | Search providers (e.g., `asset`, `scene`, `menu`, `settings`, `packages`) |
 | `--max-results` | integer | `50` | Maximum number of results |
+| `--include-description` | boolean | `true` | Include detailed descriptions in results |
+| `--include-metadata` | boolean | `false` | Include file metadata (size, modified date) |
+| `--search-flags` | enum | `Default` | Search flags: `Default`, `Synchronous`, `WantsMore`, `Packages`, `Sorted` |
 | `--save-to-file` | boolean | `false` | Save results to file |
+| `--output-format` | enum | `JSON` | Output format when saving to file: `JSON`, `CSV`, `TSV` |
+| `--auto-save-threshold` | integer | `100` | Auto-save to file when results exceed this count (0 to disable) |
+| `--file-extensions` | array | - | Filter by file extension (e.g., `cs`, `prefab`, `mat`) |
+| `--asset-types` | array | - | Filter by asset type (e.g., `Texture2D`, `GameObject`, `MonoScript`) |
+| `--path-filter` | string | - | Filter by path pattern (supports wildcards) |
 
 ## Global Options
 

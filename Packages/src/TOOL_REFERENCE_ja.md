@@ -1,3 +1,5 @@
+[English](TOOL_REFERENCE.md)
+
 # uLoopMCP ツールリファレンス
 
 このドキュメントでは、全uLoopMCPツールの詳細仕様を提供します。
@@ -45,7 +47,7 @@
   - `SearchText` (string): ログメッセージ内で検索するテキスト（空の場合はすべて取得）（デフォルト: ""）
   - `UseRegex` (boolean): 検索に正規表現を使用するかどうか（デフォルト: false）
   - `SearchInStackTrace` (boolean): スタックトレース内も検索対象に含めるかどうか（デフォルト: false）
-  - `IncludeStackTrace` (boolean): スタックトレースを表示するかどうか（デフォルト: true）
+  - `IncludeStackTrace` (boolean): スタックトレースを表示するかどうか（デフォルト: false）
 - **レスポンス**:
   - `TotalCount` (number): 利用可能なログの総数
   - `DisplayedCount` (number): このレスポンスで表示されるログの数
@@ -96,7 +98,7 @@
 - **説明**: 高度な検索条件（コンポーネントタイプ、タグ、レイヤーなど）で複数のGameObjectを検索します
 - **パラメータ**:
   - `NamePattern` (string): 検索するGameObject名のパターン（デフォルト: ""）
-  - `SearchMode` (enum): 検索モード - "Exact", "Path", "Regex", "Contains"（デフォルト: "Exact"）
+  - `SearchMode` (enum): 検索モード - "Exact", "Path", "Regex", "Contains", "Selected"（デフォルト: "Exact"）
   - `RequiredComponents` (array): GameObjectが持つ必要のあるコンポーネントタイプ名の配列（デフォルト: []）
   - `Tag` (string): タグフィルター（デフォルト: ""）
   - `Layer` (number): レイヤーフィルター（デフォルト: null）
@@ -126,15 +128,16 @@
 - **パラメータ**:
   - `SearchQuery` (string): 検索クエリ文字列（Unity Search構文をサポート）（デフォルト: ""）
     - 例: "*.cs", "t:Texture2D", "ref:MyScript", "p:MyPackage"
+    - Unity Search詳細ドキュメント: https://docs.unity3d.com/6000.1/Documentation/Manual/search-expressions.html および https://docs.unity3d.com/6000.0/Documentation/Manual/search-query-operators.html 。よく使うクエリ: "*.cs"（全C#ファイル）, "t:Texture2D"（Texture2Dアセット）, "ref:MyScript"（MyScriptを参照するアセット）, "p:MyPackage"（パッケージ内検索）, "t:MonoScript *.cs"（C#スクリプトのみ）, "Assets/Scripts/*.cs"（特定フォルダのC#ファイル）。日本語ガイド: https://light11.hatenadiary.com/entry/2022/12/12/193119
   - `Providers` (array): 使用する特定の検索プロバイダー（空 = すべてのアクティブプロバイダー）（デフォルト: []）
     - 一般的なプロバイダー: "asset", "scene", "menu", "settings", "packages"
   - `MaxResults` (number): 返す検索結果の最大数（デフォルト: 50）
   - `IncludeDescription` (boolean): 結果に詳細な説明を含めるかどうか（デフォルト: true）
   - `IncludeMetadata` (boolean): ファイルメタデータ（サイズ、更新日）を含めるかどうか（デフォルト: false）
-  - `SearchFlags` (enum): Unity Search動作を制御する検索フラグ（デフォルト: "Default"）
-  - `SaveToFile` (boolean): 検索結果を外部ファイルに保存するかどうか（デフォルト: false）
-  - `OutputFormat` (enum): SaveToFileが有効な場合の出力ファイル形式 - "JSON", "CSV", "TSV"（デフォルト: "JSON"）
-  - `AutoSaveThreshold` (number): 自動ファイル保存の閾値（デフォルト: 100）
+  - `SearchFlags` (enum): Unity Search動作を制御する検索フラグ（デフォルト: "Default"(0), "Synchronous"(1), "WantsMore"(2), "Packages"(4), "Sorted"(8)）
+  - `SaveToFile` (boolean): 大量の結果セットを扱う際のトークン消費を抑えるため、検索結果を外部ファイルに保存するかどうか。結果はJSON/CSVファイルとして保存されます（デフォルト: false）
+  - `OutputFormat` (enum): SaveToFileが有効な場合の出力ファイル形式（デフォルト: "JSON"(0), "CSV"(1), "TSV"(2)）
+  - `AutoSaveThreshold` (number): 自動ファイル保存の閾値（結果数がこの値を超えると自動的にファイルに保存）。0に設定すると自動保存を無効化（デフォルト: 100）
   - `FileExtensions` (array): ファイル拡張子で結果をフィルタ（例: "cs", "prefab", "mat"）（デフォルト: []）
   - `AssetTypes` (array): アセットタイプで結果をフィルタ（例: "Texture2D", "GameObject", "MonoScript"）（デフォルト: []）
   - `PathFilter` (string): パスパターンで結果をフィルタ（ワイルドカードサポート）（デフォルト: ""）
@@ -164,7 +167,9 @@
   - `MaxDepth` (number): 階層を探索する最大深度（無制限深度の場合は-1）（デフォルト: -1）
   - `RootPath` (string): 階層探索を開始するルートGameObjectパス（すべてのルートオブジェクトの場合は空/null）（デフォルト: null）
   - `IncludeComponents` (boolean): 階層内の各GameObjectのコンポーネント情報を含めるかどうか（デフォルト: true）
-  - `MaxResponseSizeKB` (number): ファイルに保存する前の最大レスポンスサイズ（KB）（デフォルト: 100KB）
+  - `IncludePaths` (boolean): ノードのパス情報を含めるかどうか（デフォルト: false）
+  - `UseComponentsLut` (string): コンポーネント用LUTの使用 - "auto", "true", "false"（デフォルト: "auto"）
+  - `UseSelection` (boolean): 現在選択中のGameObjectをルートとして使用するかどうか。trueの場合、RootPathは無視されます（デフォルト: false）
 - **レスポンス**:
   - **小さな階層**（<=100KB）: 直接的なネストされたJSON構造
     - `hierarchy` (array): ネスト形式のルートレベルGameObjectの配列
@@ -264,6 +269,35 @@
   - `Success` (boolean): 操作が成功したかどうか
   - `Message` (string): 操作結果メッセージ
   - `ErrorMessage` (string): 操作が失敗した場合のエラーメッセージ
+
+### 13. capture-window
+- **説明**: Unity EditorWindowをキャプチャしてPNG画像として保存します。名前による柔軟なマッチングモードで任意のEditorWindowをキャプチャ可能です
+- **パラメータ**:
+  - `WindowName` (string): キャプチャするウィンドウ名（例: "Game", "Scene", "Console", "Inspector", "Project", "Hierarchy"）（デフォルト: "Game"）
+  - `ResolutionScale` (number): キャプチャ画像の解像度スケール、0.1〜1.0（デフォルト: 1）
+  - `MatchMode` (enum): ウィンドウ名のマッチングモード（すべて大文字小文字を区別しない） - "exact", "prefix", "contains"（デフォルト: "exact"）
+    - `exact`: ウィンドウ名が完全に一致する必要があります
+    - `prefix`: ウィンドウ名が入力で始まる必要があります
+    - `contains`: ウィンドウ名に入力が含まれている必要があります
+- **レスポンス**:
+  - `CapturedCount` (number): キャプチャされたウィンドウの数
+  - `CapturedWindows` (array): キャプチャされたウィンドウ情報の配列
+    - `ImagePath` (string): 保存されたPNGファイルの絶対パス
+    - `FileSizeBytes` (number): 保存されたファイルのサイズ（バイト）
+    - `Width` (number): キャプチャ画像の幅（ピクセル）
+    - `Height` (number): キャプチャ画像の高さ（ピクセル）
+
+### 14. control-play-mode
+- **説明**: Unity Editorのプレイモードを制御します（再生/停止/一時停止）
+- **パラメータ**:
+  - `Action` (enum): 実行するアクション - "Play", "Stop", "Pause"（デフォルト: "Play"）
+    - `Play`: プレイモードを開始（一時停止からの再開も含む）
+    - `Stop`: プレイモードを終了し、エディットモードに戻る
+    - `Pause`: プレイモードのまま一時停止する
+- **レスポンス**:
+  - `IsPlaying` (boolean): Unityが現在プレイモードかどうか
+  - `IsPaused` (boolean): プレイモードが一時停止中かどうか
+  - `Message` (string): 実行されたアクションの説明
 
 ---
 

@@ -37,13 +37,14 @@
                     </ui:VisualElement>
                     <ui:Button name="install-cli-button" text="Install CLI" class="mcp-button mcp-button--configure" />
 
-                    <ui:Label text="Skills" class="mcp-cli-subsection-header" />
-                    <ui:VisualElement class="mcp-target-row">
-                        <ui:Label text="Target:" class="mcp-target-row__label" />
-                        <uie:EnumField name="skills-target-field" class="mcp-target-row__field" />
+                    <ui:VisualElement name="skills-subsection">
+                        <ui:Label text="Skills" class="mcp-cli-subsection-header" />
+                        <ui:VisualElement class="mcp-target-row">
+                            <ui:Label text="Target:" class="mcp-target-row__label" />
+                            <uie:EnumField name="skills-target-field" class="mcp-target-row__field" />
+                        </ui:VisualElement>
+                        <ui:Button name="install-skills-button" text="Install Skills" class="mcp-button mcp-button--configure" />
                     </ui:VisualElement>
-
-                    <ui:Button name="install-skills-button" text="Install Skills" class="mcp-button mcp-button--configure" />
                 </ui:VisualElement>
 
                 <!-- MCP Content -->
