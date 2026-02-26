@@ -80,11 +80,11 @@ uLoopMCP provides two connection methods: **CLI** and **MCP**. Both offer the sa
 
 Select Window > uLoop. A dedicated window will open — confirm that the **CLI** button is highlighted in blue.
 
-Press the **Install CLI** button.
+Press the **Install CLI** button.  
 <img width="277" height="327" alt="CleanShot 2026-02-26 at 20 14 25" src="https://github.com/user-attachments/assets/680b9586-6323-4bde-a2f0-1c3166f0c224" />
 
 
-If you see the following display, the installation was successful.
+If you see the following display, the installation was successful.  
 <img width="272" height="332" alt="CleanShot 2026-02-26 at 20 17 08" src="https://github.com/user-attachments/assets/1681b124-fac8-4ac9-8ea3-3e8651be9128" />
 
 
@@ -99,7 +99,7 @@ npm install -g uloop-cli
 
 ## Step 2: Install Skills (CLI users only)
 
-Select your target (Claude Code, Codex, etc.) and press the **Install Skills** button.
+Select your target (Claude Code, Codex, etc.) and press the **Install Skills** button.  
 <img width="272" height="328" alt="CleanShot 2026-02-26 at 20 20 42" src="https://github.com/user-attachments/assets/79b9514c-cdbf-4eb6-89e9-650ecd3f6f85" />
 
 
