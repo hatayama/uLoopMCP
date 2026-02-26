@@ -1,3 +1,5 @@
+[日本語](TOOL_REFERENCE_ja.md)
+
 # uLoopMCP Tool Reference
 
 This document provides detailed specifications for all uLoopMCP tools.

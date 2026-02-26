@@ -1,3 +1,5 @@
+[English](TOOL_REFERENCE.md)
+
 # uLoopMCP ツールリファレンス
 
 このドキュメントでは、全uLoopMCPツールの詳細仕様を提供します。
