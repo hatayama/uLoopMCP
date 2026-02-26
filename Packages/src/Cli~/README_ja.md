@@ -130,7 +130,7 @@ uloop compile --port 8701
 ## リンク
 
 - [uLoopMCP リポジトリ](https://github.com/hatayama/uLoopMCP) - メインパッケージとドキュメント
-- [ツールリファレンス](https://github.com/hatayama/uLoopMCP/blob/main/Packages/src/TOOL_REFERENCE.md) - 詳細なツール仕様
+- [ツールリファレンス](../TOOL_REFERENCE.md) - 詳細なツール仕様
 
 ## ライセンス
 

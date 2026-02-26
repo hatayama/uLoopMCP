@@ -130,7 +130,7 @@ You can find the port number in each Unity's uLoopMCP Window.
 ## Links
 
 - [uLoopMCP Repository](https://github.com/hatayama/uLoopMCP) - Main package and documentation
-- [Tool Reference](https://github.com/hatayama/uLoopMCP/blob/main/Packages/src/TOOL_REFERENCE.md) - Detailed tool specifications
+- [Tool Reference](../TOOL_REFERENCE.md) - Detailed tool specifications
 
 ## License
 
