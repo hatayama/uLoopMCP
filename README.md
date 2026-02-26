@@ -70,32 +70,53 @@ uLoopMCP provides two connection methods: **CLI** and **MCP**. Both offer the sa
 | **CLI (uloop)** Recommended | Auto-recognized by Skills-compatible LLM tools. No MCP config needed | Claude Code, Codex, and other Skills-compatible tools |
 | **MCP** | Connect as an MCP server from LLM tools | Cursor, Windsurf, and other MCP-compatible tools |
 
-## Step 1: Start the uLoopMCP Server
-After installation, open `Window > uLoopMCP` in Unity and press the `Start Server` button to launch the server.
-
-<div align="center">
-<img width="800" height="495" alt="uloopmcp" src="https://github.com/user-attachments/assets/08053248-7f0c-4618-8d1f-7e0560341548" />
-</div>
-
-> For MCP connection, only Step 1 is needed. No CLI or Skills installation required.
+> For MCP connection, CLI and Skills installation is not required.
 > Proceed to [MCP Connection Steps](#mcp-connection-cli-alternative).
 
-## Step 2: Install the CLI (CLI users only)
+## Step 1: Install the CLI (CLI users only)
+
+> **💡 CLI and MCP Relationship**
+> CLI provides all MCP functionality plus additional CLI-specific features such as launching and restarting Unity.
+
+Select Window > uLoop. A dedicated window will open — confirm that the **CLI** button is highlighted in blue.
+
+Press the **Install CLI** button.
+<img width="277" height="327" alt="CleanShot 2026-02-26 at 20 14 25" src="https://github.com/user-attachments/assets/680b9586-6323-4bde-a2f0-1c3166f0c224" />
+
+
+If you see the following display, the installation was successful.
+<img width="272" height="332" alt="CleanShot 2026-02-26 at 20 17 08" src="https://github.com/user-attachments/assets/1681b124-fac8-4ac9-8ea3-3e8651be9128" />
+
+
+
+<details>
+<summary>To install from terminal</summary>
+
 ```bash
 npm install -g uloop-cli
 ```
+</details>
 
-## Step 3: Install Skills (CLI users only)
+## Step 2: Install Skills (CLI users only)
+
+Select your target (Claude Code, Codex, etc.) and press the **Install Skills** button.
+<img width="272" height="328" alt="CleanShot 2026-02-26 at 20 20 42" src="https://github.com/user-attachments/assets/79b9514c-cdbf-4eb6-89e9-650ecd3f6f85" />
+
+
+<details>
+<summary>To install from terminal</summary>
+
 ```bash
-# Install to project for Claude Code (recommended)
+# Install for Claude Code project
 uloop skills install --claude
 
-# Install to project for OpenAI Codex
+# Install for OpenAI Codex project
 uloop skills install --codex
 
 # Or install globally
 uloop skills install --claude --global
 ```
+</details>
 
 That's it! After installing Skills, LLM tools can automatically handle instructions like these:
 
@@ -155,6 +176,9 @@ uloop launch -r
 # Execute compilation
 uloop compile
 
+# Compile and wait for Domain Reload to complete
+uloop compile --wait-for-domain-reload true
+
 # Get logs
 uloop get-logs --max-count 10
 
@@ -209,13 +233,10 @@ uloop compile --port {target-port}
 
 You can also connect via MCP (Model Context Protocol) instead of CLI. No CLI or Skills installation required.
 
-> **💡 CLI and MCP Relationship**
-> CLI provides all MCP functionality plus additional CLI-specific features such as launching and restarting Unity.
-
 ### MCP Connection Steps
 
-1. Select Window > uLoopMCP. A dedicated window will open, so press the "Start Server" button.
-<img width="335" alt="image" src="https://github.com/user-attachments/assets/38c67d7b-6bbf-4876-ab40-6bc700842dc4" />
+1. Select Window > uLoop. A dedicated window will open — press the **MCP** button.
+<img width="274" height="289" alt="CleanShot 2026-02-26 at 20 37 16" src="https://github.com/user-attachments/assets/5f2fc5db-fd33-4b5d-9f0e-3e2e0d134cf6" />
 
 2. Next, select the target IDE in the LLM Tool Settings section. Press the yellow "Configure {LLM Tool Name}" button to automatically connect to the IDE.
 <img width="335" alt="image" src="https://github.com/user-attachments/assets/25f1f4f9-e3c8-40a5-a2f3-903f9ed5f45b" />
