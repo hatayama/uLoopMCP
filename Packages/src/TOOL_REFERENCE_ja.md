@@ -128,15 +128,16 @@
 - **パラメータ**:
   - `SearchQuery` (string): 検索クエリ文字列（Unity Search構文をサポート）（デフォルト: ""）
     - 例: "*.cs", "t:Texture2D", "ref:MyScript", "p:MyPackage"
+    - Unity Search詳細ドキュメント: https://docs.unity3d.com/6000.1/Documentation/Manual/search-expressions.html および https://docs.unity3d.com/6000.0/Documentation/Manual/search-query-operators.html 。よく使うクエリ: "*.cs"（全C#ファイル）, "t:Texture2D"（Texture2Dアセット）, "ref:MyScript"（MyScriptを参照するアセット）, "p:MyPackage"（パッケージ内検索）, "t:MonoScript *.cs"（C#スクリプトのみ）, "Assets/Scripts/*.cs"（特定フォルダのC#ファイル）。日本語ガイド: https://light11.hatenadiary.com/entry/2022/12/12/193119
   - `Providers` (array): 使用する特定の検索プロバイダー（空 = すべてのアクティブプロバイダー）（デフォルト: []）
     - 一般的なプロバイダー: "asset", "scene", "menu", "settings", "packages"
   - `MaxResults` (number): 返す検索結果の最大数（デフォルト: 50）
   - `IncludeDescription` (boolean): 結果に詳細な説明を含めるかどうか（デフォルト: true）
   - `IncludeMetadata` (boolean): ファイルメタデータ（サイズ、更新日）を含めるかどうか（デフォルト: false）
-  - `SearchFlags` (enum): Unity Search動作を制御する検索フラグ（デフォルト: "Default"）
-  - `SaveToFile` (boolean): 検索結果を外部ファイルに保存するかどうか（デフォルト: false）
-  - `OutputFormat` (enum): SaveToFileが有効な場合の出力ファイル形式 - "JSON", "CSV", "TSV"（デフォルト: "JSON"）
-  - `AutoSaveThreshold` (number): 自動ファイル保存の閾値（デフォルト: 100）
+  - `SearchFlags` (enum): Unity Search動作を制御する検索フラグ（デフォルト: "Default"(0), "Synchronous"(1), "WantsMore"(2), "Packages"(4), "Sorted"(8)）
+  - `SaveToFile` (boolean): 大量の結果セットを扱う際のトークン消費を抑えるため、検索結果を外部ファイルに保存するかどうか。結果はJSON/CSVファイルとして保存されます（デフォルト: false）
+  - `OutputFormat` (enum): SaveToFileが有効な場合の出力ファイル形式（デフォルト: "JSON"(0), "CSV"(1), "TSV"(2)）
+  - `AutoSaveThreshold` (number): 自動ファイル保存の閾値（結果数がこの値を超えると自動的にファイルに保存）。0に設定すると自動保存を無効化（デフォルト: 100）
   - `FileExtensions` (array): ファイル拡張子で結果をフィルタ（例: "cs", "prefab", "mat"）（デフォルト: []）
   - `AssetTypes` (array): アセットタイプで結果をフィルタ（例: "Texture2D", "GameObject", "MonoScript"）（デフォルト: []）
   - `PathFilter` (string): パスパターンで結果をフィルタ（ワイルドカードサポート）（デフォルト: ""）
