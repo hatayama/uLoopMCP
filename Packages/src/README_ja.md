@@ -178,6 +178,9 @@ uloop launch -r
 # コンパイルを実行
 uloop compile
 
+# コンパイルしてDomain Reload完了まで待つ
+uloop compile --wait-for-domain-reload true
+
 # ログを取得
 uloop get-logs --max-count 10
 
