@@ -35,7 +35,7 @@ import { registerFocusWindowCommand } from './commands/focus-window.js';
 import { VERSION } from './version.js';
 import { findUnityProjectRoot } from './project-root.js';
 import { validateProjectPath } from './port-resolver.js';
-import { filterEnabledTools } from './tool-settings-loader.js';
+import { filterEnabledTools, isToolEnabled } from './tool-settings-loader.js';
 
 interface CliOptions extends GlobalOptions {
   [key: string]: unknown;
@@ -311,6 +311,11 @@ function extractGlobalOptions(options: Record<string, unknown>): GlobalOptions {
 
 function isConnectionError(message: string): boolean {
   return message.includes('ECONNREFUSED') || message.includes('EADDRNOTAVAIL');
+}
+
+function printToolDisabledError(cmdName: string): void {
+  console.error(`\x1b[33mTool '${cmdName}' is disabled.\x1b[0m`);
+  console.error('You can enable it in Unity: Window > uLoop > Tool Settings');
 }
 
 function printConnectionError(): void {
@@ -862,6 +867,11 @@ async function main(): Promise<void> {
   }
 
   if (cmdName && !commandExists(cmdName)) {
+    if (!isToolEnabled(cmdName)) {
+      printToolDisabledError(cmdName);
+      process.exit(1);
+    }
+
     console.log(`\x1b[33mUnknown command '${cmdName}'. Syncing tools from Unity...\x1b[0m`);
     try {
       await syncTools(syncGlobalOptions);
