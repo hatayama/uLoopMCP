@@ -65,6 +65,11 @@ namespace io.github.hatayama.uLoopMCP
 
         private static McpEditorSettingsData _cachedSettings;
 
+        internal static void InvalidateCache()
+        {
+            _cachedSettings = null;
+        }
+
         /// <summary>
         /// Gets the settings data.
         /// </summary>
