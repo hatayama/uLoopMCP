@@ -113,7 +113,14 @@ namespace io.github.hatayama.uLoopMCP
                     return;
                 }
 
-                _cachedSettings = JsonUtility.FromJson<ToolSettingsData>(json);
+                ToolSettingsData loaded = JsonUtility.FromJson<ToolSettingsData>(json);
+                // disabledTools can be null when JSON is hand-edited with "disabledTools": null
+                if (loaded == null || loaded.disabledTools == null)
+                {
+                    _cachedSettings = new ToolSettingsData();
+                    return;
+                }
+                _cachedSettings = loaded;
                 return;
             }
 

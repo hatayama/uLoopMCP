@@ -30,6 +30,9 @@ namespace io.github.hatayama.uLoopMCP
                 Directory.CreateDirectory(uloopDir);
             }
 
+            // Neutralize existing files so backup recovery doesn't leak across tests
+            DeleteIfExists(SettingsFilePath);
+            DeleteIfExists(SettingsBackupPath);
             ToolSettings.InvalidateCache();
         }
 

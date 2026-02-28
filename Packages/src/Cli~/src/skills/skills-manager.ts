@@ -147,13 +147,13 @@ export function getSkillStatus(
 }
 
 export function parseFrontmatter(content: string): Record<string, string | boolean> {
-  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+  const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!frontmatterMatch) {
     return {};
   }
 
   const frontmatterMap = new Map<string, string | boolean>();
-  const lines = frontmatterMatch[1].split('\n');
+  const lines = frontmatterMatch[1].split(/\r?\n/);
 
   for (const line of lines) {
     const colonIndex = line.indexOf(':');
