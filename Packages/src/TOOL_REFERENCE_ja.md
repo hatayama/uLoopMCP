@@ -270,8 +270,8 @@
   - `Message` (string): 操作結果メッセージ
   - `ErrorMessage` (string): 操作が失敗した場合のエラーメッセージ
 
-### 13. capture-window
-- **説明**: Unity EditorWindowをキャプチャしてPNG画像として保存します。名前による柔軟なマッチングモードで任意のEditorWindowをキャプチャ可能です
+### 13. screenshot
+- **説明**: Unity EditorWindowのスクリーンショットを撮影してPNG画像として保存します。名前による柔軟なマッチングモードで任意のEditorWindowをキャプチャ可能です
 - **パラメータ**:
   - `WindowName` (string): キャプチャするウィンドウ名（例: "Game", "Scene", "Console", "Inspector", "Project", "Hierarchy"）（デフォルト: "Game"）
   - `ResolutionScale` (number): キャプチャ画像の解像度スケール、0.1〜1.0（デフォルト: 1）
@@ -280,8 +280,8 @@
     - `prefix`: ウィンドウ名が入力で始まる必要があります
     - `contains`: ウィンドウ名に入力が含まれている必要があります
 - **レスポンス**:
-  - `CapturedCount` (number): キャプチャされたウィンドウの数
-  - `CapturedWindows` (array): キャプチャされたウィンドウ情報の配列
+  - `ScreenshotCount` (number): キャプチャされたウィンドウの数
+  - `Screenshots` (array): スクリーンショット情報の配列
     - `ImagePath` (string): 保存されたPNGファイルの絶対パス
     - `FileSizeBytes` (number): 保存されたファイルのサイズ（バイト）
     - `Width` (number): キャプチャ画像の幅（ピクセル）

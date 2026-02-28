@@ -24,7 +24,7 @@ Tasks that humans typically handle manually—compiling, running the Test Runner
 uLoopMCP is built around two core ideas:
 
 1. **Provide a "self-hosted development loop" where an AI can repeatedly compile, run tests, inspect logs, and fix issues using tools like `compile`, `run-tests`, `get-logs`, and `clear-console`.**
-2. **Allow AI to operate the Unity Editor itself—creating objects, calling menu items, inspecting scenes, and refining UI layouts from screenshots—via tools like `execute-dynamic-code`, `execute-menu-item`, and `capture-window`.**
+2. **Allow AI to operate the Unity Editor itself—creating objects, calling menu items, inspecting scenes, and refining UI layouts from screenshots—via tools like `execute-dynamic-code`, `execute-menu-item`, and `screenshot`.**
 
 https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 
@@ -379,12 +379,12 @@ Retrieve information about the currently active Hierarchy in nested JSON format.
 Ensures the Unity Editor window associated with the active MCP session becomes the foreground application on macOS and Windows Editor builds.
 Great for keeping visual feedback in sync after other apps steal focus. (Linux is currently unsupported.)
 
-### 12. capture-window - Capture EditorWindow
-Capture any EditorWindow as a PNG. Specify the window name (the text displayed in the title bar/tab) to capture.
+### 12. screenshot - Take a Screenshot of EditorWindow
+Take a screenshot of any EditorWindow as a PNG. Specify the window name (the text displayed in the title bar/tab) to capture.
 When multiple windows of the same type are open (e.g., 3 Inspector windows), all windows are saved with numbered filenames.
 Supports three matching modes: `exact` (default), `prefix`, and `contains` - all case-insensitive.
 ```text
-→ capture-window (WindowName: "Console")
+→ screenshot (WindowName: "Console")
 → Save Console window state as PNG
 → Provide visual feedback to AI
 ```

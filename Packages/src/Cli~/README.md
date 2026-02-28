@@ -61,7 +61,7 @@ Skills are dynamically loaded from the uLoopMCP package in your Unity project. T
 - `/uloop-get-menu-items` - Get menu items
 - `/uloop-execute-menu-item` - Execute menu item
 - `/uloop-find-game-objects` - Find GameObjects
-- `/uloop-capture-window` - Capture EditorWindow
+- `/uloop-screenshot` - Take a screenshot of EditorWindow
 - `/uloop-control-play-mode` - Control Play Mode
 - `/uloop-execute-dynamic-code` - Execute dynamic C# code
 - `/uloop-get-provider-details` - Get search provider details
@@ -275,9 +275,9 @@ uloop find-game-objects --required-components "Camera" --include-inactive true
 uloop find-game-objects --tag "Enemy" --max-results 50
 ```
 
-### capture-window
+### screenshot
 
-Capture Unity EditorWindow and save as PNG.
+Take a screenshot of Unity EditorWindow and save as PNG.
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
@@ -286,9 +286,9 @@ Capture Unity EditorWindow and save as PNG.
 | `--match-mode` | enum | `exact` | Matching mode: `exact`, `prefix`, `contains` (case-insensitive) |
 
 ```bash
-uloop capture-window
-uloop capture-window --window-name Scene
-uloop capture-window --window-name Project --match-mode prefix
+uloop screenshot
+uloop screenshot --window-name Scene
+uloop screenshot --window-name Project --match-mode prefix
 ```
 
 ### execute-dynamic-code

@@ -343,8 +343,8 @@
       }
     },
     {
-      "name": "capture-window",
-      "description": "Capture Unity EditorWindow and save as PNG",
+      "name": "screenshot",
+      "description": "Take a screenshot of Unity EditorWindow and save as PNG",
       "inputSchema": {
         "type": "object",
         "properties": {

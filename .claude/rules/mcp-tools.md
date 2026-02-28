@@ -341,5 +341,5 @@ uloop sync
 
 - Simple tool: `ClearConsole/`
 - Tool with enum parameter: `ControlPlayMode/`
-- Complex tool with async operations: `CaptureUnityWindow/`
+- Complex tool with async operations: `Screenshot/`
 - Tool with file output: `UnitySearch/`
