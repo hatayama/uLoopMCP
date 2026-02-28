@@ -1,11 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Security;
 
 using UnityEditor;
-using UnityEditor.Build;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
@@ -32,19 +29,10 @@ namespace io.github.hatayama.uLoopMCP
         public bool enableCommunicationLogs = false;
         public bool enableDevelopmentMode = false;
         public string lastUsedConfigPath = "";
-        
-        // Security Settings - Safe-by-Default
-        public bool enableTestsExecution = false;
-        public bool allowMenuItemExecution = false;
-        public bool allowThirdPartyTools = false;
-        
-        
+
         // UI State Settings
         public bool showSecuritySettings = false;
-        
-        // Dynamic Code Security Settings
-        public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Disabled;
-        
+
         // Repository Root Toggle
         public bool addRepositoryRoot = false;
         
@@ -73,11 +61,14 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class McpEditorSettings
     {
-        private const string ROSLYN_SYMBOL = "ULOOPMCP_HAS_ROSLYN";
-
         private static string SettingsFilePath => Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
 
         private static McpEditorSettingsData _cachedSettings;
+
+        internal static void InvalidateCache()
+        {
+            _cachedSettings = null;
+        }
 
         /// <summary>
         /// Gets the settings data.
@@ -118,11 +109,11 @@ namespace io.github.hatayama.uLoopMCP
                 throw new SecurityException("Settings JSON content exceeds size limit");
             }
             
-            WriteSettingsFileAtomic(SettingsFilePath, json);
+            AtomicFileWriter.Write(SettingsFilePath, json);
             _cachedSettings = settings;
 
             // Best-effort cleanup: even if this fails, .bak is overwritten on next save
-            CleanupBackupFile(SettingsFilePath + ".bak");
+            AtomicFileWriter.CleanupBackup(SettingsFilePath + ".bak");
         }
 
         /// <summary>
@@ -211,64 +202,6 @@ namespace io.github.hatayama.uLoopMCP
             McpEditorSettingsData newSettings = settings with { enableCommunicationLogs = enableCommunicationLogs };
             SaveSettings(newSettings);
         }
-
-        // Security Settings Methods
-
-        /// <summary>
-        /// Gets the tests execution enabled flag.
-        /// </summary>
-        public static bool GetEnableTestsExecution()
-        {
-            return GetSettings().enableTestsExecution;
-        }
-
-        /// <summary>
-        /// Sets the tests execution enabled flag.
-        /// </summary>
-        public static void SetEnableTestsExecution(bool enableTestsExecution)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { enableTestsExecution = enableTestsExecution };
-            SaveSettings(newSettings);
-        }
-
-        /// <summary>
-        /// Gets the menu item execution allowed flag.
-        /// </summary>
-        public static bool GetAllowMenuItemExecution()
-        {
-            return GetSettings().allowMenuItemExecution;
-        }
-
-        /// <summary>
-        /// Sets the menu item execution allowed flag.
-        /// </summary>
-        public static void SetAllowMenuItemExecution(bool allowMenuItemExecution)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { allowMenuItemExecution = allowMenuItemExecution };
-            SaveSettings(newSettings);
-        }
-
-        /// <summary>
-        /// Gets the third party tools execution allowed flag.
-        /// </summary>
-        public static bool GetAllowThirdPartyTools()
-        {
-            return GetSettings().allowThirdPartyTools;
-        }
-
-        /// <summary>
-        /// Sets the third party tools execution allowed flag.
-        /// </summary>
-        public static void SetAllowThirdPartyTools(bool allowThirdPartyTools)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { allowThirdPartyTools = allowThirdPartyTools };
-            SaveSettings(newSettings);
-        }
-
-        
 
         /// <summary>
         /// Gets the show security settings flag.
@@ -767,36 +700,6 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Gets the dynamic code security level.
-        /// </summary>
-        public static DynamicCodeSecurityLevel GetDynamicCodeSecurityLevel()
-        {
-            return (DynamicCodeSecurityLevel)GetSettings().dynamicCodeSecurityLevel;
-        }
-
-        /// <summary>
-        /// Sets the dynamic code security level.
-        /// </summary>
-        public static void SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel level)
-        {
-            McpEditorSettingsData settings = GetSettings();
-            McpEditorSettingsData newSettings = settings with { dynamicCodeSecurityLevel = (int)level };
-            SaveSettings(newSettings);
-            
-            // Manage ULOOPMCP_HAS_ROSLYN Define Symbol
-            UpdateRoslynDefineSymbol(level);
-            
-            VibeLogger.LogInfo(
-                "editor_settings_security_level_changed",
-                $"Security level changed to: {level}",
-                new { level = level.ToString() },
-                correlationId: McpConstants.GenerateCorrelationId(),
-                humanNote: "Security level updated in editor settings",
-                aiTodo: "Monitor security level changes"
-            );
-        }
-
-        /// <summary>
         /// Loads the settings file.
         /// </summary>
         private static void LoadSettings()
@@ -834,6 +737,11 @@ namespace io.github.hatayama.uLoopMCP
                     }
 
                     _cachedSettings = JsonUtility.FromJson<McpEditorSettingsData>(json);
+
+                    // Migrate security fields before any potential SaveSettings call from this class.
+                    // If SaveSettings runs first, legacy security fields are stripped from JSON
+                    // because McpEditorSettingsData no longer defines them.
+                    ULoopSettings.GetSettings();
 
                     MigrateLegacyAutoStartIfNeeded(json);
                 }
@@ -907,157 +815,5 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        /// <summary>
-        /// Writes settings file atomically via temp file + rename.
-        /// Prevents external processes (CLI) from reading a partially-written file.
-        /// </summary>
-        private static void WriteSettingsFileAtomic(string filePath, string content)
-        {
-            string tempFilePath = filePath + ".tmp";
-            string backupFilePath = filePath + ".bak";
-            File.WriteAllText(tempFilePath, content);
-
-            // .NET Framework 4.7.1 lacks File.Move(src, dst, overwrite), so we
-            // rotate old → .bak before moving .tmp → target to minimize the window
-            // where the target file is absent for external readers (CLI).
-            if (File.Exists(filePath))
-            {
-                if (File.Exists(backupFilePath))
-                {
-                    File.Delete(backupFilePath);
-                }
-                File.Move(filePath, backupFilePath);
-            }
-            File.Move(tempFilePath, filePath);
-        }
-
-        private static void CleanupBackupFile(string backupFilePath)
-        {
-            if (File.Exists(backupFilePath))
-            {
-                File.Delete(backupFilePath);
-            }
-        }
-
-        /// <summary>
-/// Retrieve NamedBuildTarget for configured platforms
-        /// </summary>
-        private static NamedBuildTarget[] GetAllKnownTargets()
-        {
-            List<NamedBuildTarget> targets = new();
-
-            // Always include the active build target (even if it has no symbols yet)
-            BuildTargetGroup activeGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
-            if (activeGroup == BuildTargetGroup.Unknown)
-            {
-                activeGroup = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
-            }
-            
-            if (activeGroup != BuildTargetGroup.Unknown)
-            {
-                NamedBuildTarget activeTarget = NamedBuildTarget.FromBuildTargetGroup(activeGroup);
-                if (!targets.Contains(activeTarget))
-                {
-                    targets.Add(activeTarget);
-                }
-            }
-            else
-            {
-                // Fallback to Standalone when no active group is detected
-                if (!targets.Contains(NamedBuildTarget.Standalone))
-                {
-                    targets.Add(NamedBuildTarget.Standalone);
-                }
-            }
-
-            // Platforms supported in Unity 2022.3 LTS
-            NamedBuildTarget[] candidateTargets = new[]
-            {
-                NamedBuildTarget.Standalone,
-                NamedBuildTarget.Server,
-                NamedBuildTarget.iOS,
-                NamedBuildTarget.Android,
-                NamedBuildTarget.WebGL,
-                NamedBuildTarget.WindowsStoreApps,
-                NamedBuildTarget.tvOS,
-                NamedBuildTarget.PS4,
-                NamedBuildTarget.XboxOne,
-            };
-            
-
-            foreach (NamedBuildTarget target in candidateTargets)
-            {
-                string symbols = PlayerSettings.GetScriptingDefineSymbols(target);
-                if (!string.IsNullOrEmpty(symbols) && !targets.Contains(target))
-                {
-                    targets.Add(target);
-                }
-            }
-            
-
-            return targets.ToArray();
-        }
-        
-        /// <summary>
-        /// Updates ULOOPMCP_HAS_ROSLYN Define Symbol based on security level
-        /// </summary>
-        private static void UpdateRoslynDefineSymbol(DynamicCodeSecurityLevel level)
-        {
-            string correlationId = McpConstants.GenerateCorrelationId();
-            
-            // Retrieve all configured platforms
-            NamedBuildTarget[] targets = GetAllKnownTargets();
-            
-            foreach (NamedBuildTarget target in targets)
-            {
-                string currentSymbols = PlayerSettings.GetScriptingDefineSymbols(target);
-                List<string> symbols = currentSymbols
-                    .Split(';')
-                    .Where(s => !string.IsNullOrEmpty(s))
-                    .ToList();
-                
-                bool hasRoslynSymbol = symbols.Contains(ROSLYN_SYMBOL);
-                bool shouldAddSymbol = level != DynamicCodeSecurityLevel.Disabled;
-                
-                // Add symbol only for levels other than Disabled, when symbol does not yet exist
-                // Do not remove symbol when changing to Disabled (as per specification)
-                if (shouldAddSymbol && !hasRoslynSymbol)
-                {
-                    // Add Roslyn symbol
-                    symbols.Add(ROSLYN_SYMBOL);
-                    string newSymbols = string.Join(";", symbols);
-                    PlayerSettings.SetScriptingDefineSymbols(target, newSymbols);
-                    
-                    VibeLogger.LogInfo(
-                        "roslyn_symbol_added_to_platform",
-                        $"Added {ROSLYN_SYMBOL} to {target}",
-                        new { 
-                            platform = target.ToString(),
-                            symbols = newSymbols,
-                            level = level.ToString()
-                        },
-                        correlationId: correlationId,
-                        humanNote: $"Activate Roslyn functionality on {target} platform",
-                        aiTodo: "Verify symbol addition per platform"
-                    );
-                }
-                // Note: Do not remove symbol even when changing to Disabled level (as per specification)
-            }
-        }
-        
-        /// <summary>
-        /// Symbol check and automatic addition after domain reload
-        /// </summary>
-        [InitializeOnLoadMethod]
-        private static void CheckRoslynSymbolOnDomainReload()
-        {
-            EditorApplication.delayCall += () =>
-            {
-                DynamicCodeSecurityLevel currentLevel = GetDynamicCodeSecurityLevel();
-                
-                // Add symbol unless Disabled (do not remove even in Disabled state)
-                UpdateRoslynDefineSymbol(currentLevel);
-            };
-        }
     }
 }

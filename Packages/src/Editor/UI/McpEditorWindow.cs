@@ -420,9 +420,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             return new SecuritySettingsData(
                 _model.UI.ShowSecuritySettings,
-                McpEditorSettings.GetEnableTestsExecution(),
-                McpEditorSettings.GetAllowMenuItemExecution(),
-                McpEditorSettings.GetAllowThirdPartyTools());
+                ULoopSettings.GetEnableTestsExecution(),
+                ULoopSettings.GetAllowMenuItemExecution(),
+                ULoopSettings.GetAllowThirdPartyTools());
         }
 
         private void ConfigureEditor()
@@ -543,7 +543,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void UpdateDynamicCodeSecurityLevel(DynamicCodeSecurityLevel level)
         {
-            McpEditorSettings.SetDynamicCodeSecurityLevel(level);
+            ULoopSettings.SetDynamicCodeSecurityLevel(level);
         }
 
         private void UpdateConnectionMode(ConnectionMode mode)

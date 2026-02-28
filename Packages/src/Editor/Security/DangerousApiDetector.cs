@@ -171,7 +171,7 @@ namespace io.github.hatayama.uLoopMCP
                 "InitializeFromSettings"  // Changing security levels is dangerous (CurrentLevel is read-only, so permitted)
             },
             
-            ["io.github.hatayama.uLoopMCP.McpEditorSettings"] = new() 
+            ["io.github.hatayama.uLoopMCP.ULoopSettings"] = new()
             {
                 "SetDynamicCodeSecurityLevel"  // Security level manipulation is dangerous
             }

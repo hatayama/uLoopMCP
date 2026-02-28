@@ -92,7 +92,7 @@
     "typescript-eslint": "8.56.1"
   },
   "overrides": {
-    "minimatch": "10.2.2",
+    "minimatch": "10.2.4",
     "@microsoft/eslint-formatter-sarif": {
       "eslint": "$eslint"
     }

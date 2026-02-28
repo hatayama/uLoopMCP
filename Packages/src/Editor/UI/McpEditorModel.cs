@@ -271,7 +271,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void UpdateEnableTestsExecution(bool enable)
         {
-            McpEditorSettings.SetEnableTestsExecution(enable);
+            ULoopSettings.SetEnableTestsExecution(enable);
         }
 
         /// <summary>
@@ -279,7 +279,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void UpdateAllowMenuItemExecution(bool allow)
         {
-            McpEditorSettings.SetAllowMenuItemExecution(allow);
+            ULoopSettings.SetAllowMenuItemExecution(allow);
         }
 
         /// <summary>
@@ -287,7 +287,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public void UpdateAllowThirdPartyTools(bool allow)
         {
-            McpEditorSettings.SetAllowThirdPartyTools(allow);
+            ULoopSettings.SetAllowThirdPartyTools(allow);
         }
 
         /// <summary>
