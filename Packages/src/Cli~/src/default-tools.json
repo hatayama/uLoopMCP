@@ -367,6 +367,11 @@
               "contains"
             ],
             "default": "exact"
+          },
+          "OutputDirectory": {
+            "type": "string",
+            "description": "Output directory path for saving screenshots. When empty, uses default path (.uloop/outputs/Screenshots/). Accepts absolute paths.",
+            "default": ""
           }
         }
       }

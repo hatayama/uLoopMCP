@@ -24,7 +24,7 @@ namespace io.github.hatayama.uLoopMCP
             VibeLogger.LogInfo(
                 "screenshot_start",
                 "Unity window screenshot started",
-                new { WindowName = parameters.WindowName, ResolutionScale = parameters.ResolutionScale, MatchMode = parameters.MatchMode.ToString() },
+                new { WindowName = parameters.WindowName, ResolutionScale = parameters.ResolutionScale, MatchMode = parameters.MatchMode.ToString(), OutputDirectory = parameters.OutputDirectory },
                 correlationId: correlationId,
                 humanNote: "User requested Unity window screenshot",
                 aiTodo: "Monitor capture performance and file size"
@@ -43,7 +43,7 @@ namespace io.github.hatayama.uLoopMCP
                 return new ScreenshotResponse();
             }
 
-            string outputDirectory = EnsureOutputDirectoryExists();
+            string outputDirectory = EnsureOutputDirectoryExists(parameters.OutputDirectory);
             string safeWindowName = SanitizeFileName(parameters.WindowName);
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
             List<ScreenshotInfo> screenshots = new List<ScreenshotInfo>();
@@ -116,17 +116,23 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private string EnsureOutputDirectoryExists()
+        private string EnsureOutputDirectoryExists(string outputDirectory)
         {
-            string projectRoot = Application.dataPath.Replace("/Assets", "");
-            string outputDirectory = Path.Combine(projectRoot, McpConstants.OUTPUT_ROOT_DIR, McpConstants.SCREENSHOTS_DIR);
+            string resolvedDirectory;
 
-            if (!Directory.Exists(outputDirectory))
+            if (string.IsNullOrEmpty(outputDirectory))
             {
-                Directory.CreateDirectory(outputDirectory);
+                string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+                resolvedDirectory = Path.Combine(projectRoot, McpConstants.OUTPUT_ROOT_DIR, McpConstants.SCREENSHOTS_DIR);
+            }
+            else
+            {
+                resolvedDirectory = Path.GetFullPath(outputDirectory);
             }
 
-            return outputDirectory;
+            Directory.CreateDirectory(resolvedDirectory);
+
+            return resolvedDirectory;
         }
 
         private string SanitizeFileName(string name)

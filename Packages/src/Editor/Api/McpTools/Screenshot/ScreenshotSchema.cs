@@ -33,5 +33,8 @@ namespace io.github.hatayama.uLoopMCP
 
         [Description("Window name matching mode: exact(0)=exact match, prefix(1)=starts with, contains(2)=partial match. All modes are case-insensitive.")]
         public WindowMatchMode MatchMode { get; set; } = WindowMatchMode.exact;
+
+        [Description("Output directory path for saving screenshots. When empty, uses default path (.uloop/outputs/Screenshots/). Accepts absolute paths.")]
+        public string OutputDirectory { get; set; } = "";
     }
 }
