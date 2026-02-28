@@ -1,6 +1,5 @@
 ---
 name: uloop-compile
-toolName: compile
 description: "Compile Unity project. Use when: verifying code compiles after edits, checking for compile errors, or when user asks to compile. Returns error/warning counts."
 ---
 

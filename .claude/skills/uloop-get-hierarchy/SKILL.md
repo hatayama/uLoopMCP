@@ -1,6 +1,5 @@
 ---
 name: uloop-get-hierarchy
-toolName: get-hierarchy
 description: "Get Unity Hierarchy structure. Use when: inspecting scene structure, exploring GameObjects, checking parent-child relationships, or when user asks about hierarchy. Returns the scene's GameObject tree with components."
 ---
 
@@ -23,7 +22,6 @@ uloop get-hierarchy [options]
 | `--include-components` | boolean | `true` | Include component information |
 | `--include-inactive` | boolean | `true` | Include inactive GameObjects |
 | `--include-paths` | boolean | `false` | Include full path information |
-| `--use-components-lut` | string | `auto` | Use LUT for components (`auto`, `true`, `false`) |
 | `--use-selection` | boolean | `false` | Use selected GameObject(s) as root(s). When true, `--root-path` is ignored. |
 
 ## Global Options
