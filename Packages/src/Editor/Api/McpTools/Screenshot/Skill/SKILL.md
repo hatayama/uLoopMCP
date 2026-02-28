@@ -10,7 +10,7 @@ Take a screenshot of any Unity EditorWindow by name and save as PNG.
 ## Usage
 
 ```bash
-uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mode <mode>]
+uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mode <mode>] [--output-directory <path>]
 ```
 
 ## Parameters
@@ -20,6 +20,7 @@ uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mo
 | `--window-name` | string | `Game` | Window name to capture (e.g., "Game", "Scene", "Console", "Inspector", "Project", "Hierarchy", or any EditorWindow title) |
 | `--resolution-scale` | number | `1.0` | Resolution scale (0.1 to 1.0) |
 | `--match-mode` | enum | `exact` | Window name matching mode: `exact`, `prefix`, or `contains`. All modes are case-insensitive. |
+| `--output-directory` | string | `""` | Output directory path for saving screenshots. When empty, uses default path (.uloop/outputs/Screenshots/). Accepts absolute paths. |
 
 ## Match Modes
 
@@ -79,6 +80,12 @@ uloop screenshot --window-name Project --match-mode prefix
 
 # Take a screenshot of custom EditorWindow by title
 uloop screenshot --window-name "My Custom Window"
+
+# Save screenshot to a specific directory
+uloop screenshot --output-directory /tmp/screenshots
+
+# Combine with other options
+uloop screenshot --window-name Scene --resolution-scale 0.5 --output-directory /tmp/screenshots
 ```
 
 ## Output
