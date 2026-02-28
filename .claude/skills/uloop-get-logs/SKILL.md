@@ -1,5 +1,6 @@
 ---
 name: uloop-get-logs
+toolName: get-logs
 description: "Check Unity Console logs. Use when: checking logs, debugging errors, investigating failures, or when user asks about console output. Key options: --log-type (Error/Warning/Log/All), --max-count, --search-text. Retrieves errors, warnings, and Debug.Log messages."
 ---
 

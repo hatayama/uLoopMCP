@@ -481,7 +481,13 @@ namespace io.github.hatayama.uLoopMCP
             _model.UpdateShowToolSettings(show);
         }
 
-        private async void HandleToolToggled(string toolName, bool enabled)
+        private void HandleToolToggled(string toolName, bool enabled)
+        {
+            // Let the UI repaint the toggle visual immediately before running heavy work
+            EditorApplication.delayCall += () => ApplyToolToggle(toolName, enabled);
+        }
+
+        private async void ApplyToolToggle(string toolName, bool enabled)
         {
             _model.UpdateToolEnabled(toolName, enabled);
             ClientNotificationService.TriggerToolChangeNotification();
