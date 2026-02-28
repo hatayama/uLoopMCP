@@ -713,10 +713,11 @@ function handleCompletion(install: boolean, shellOverride?: string): void {
  */
 function handleCompletionOptions(): boolean {
   const args = process.argv.slice(2);
+  const projectPath: string | undefined = extractSyncGlobalOptions(args).projectPath;
 
   if (args.includes('--list-commands')) {
     const tools = loadToolsCache();
-    const enabledTools = filterEnabledTools(tools.tools);
+    const enabledTools = filterEnabledTools(tools.tools, projectPath);
     const allCommands = [...BUILTIN_COMMANDS, ...enabledTools.map((t) => t.name)];
     console.log(allCommands.join('\n'));
     return true;
@@ -725,7 +726,7 @@ function handleCompletionOptions(): boolean {
   const listOptionsIdx = args.indexOf('--list-options');
   if (listOptionsIdx !== -1 && args[listOptionsIdx + 1]) {
     const cmdName = args[listOptionsIdx + 1];
-    listOptionsForCommand(cmdName);
+    listOptionsForCommand(cmdName, projectPath);
     return true;
   }
 
@@ -735,7 +736,7 @@ function handleCompletionOptions(): boolean {
 /**
  * List options for a specific command.
  */
-function listOptionsForCommand(cmdName: string): void {
+function listOptionsForCommand(cmdName: string, projectPath?: string): void {
   // Built-in commands have no tool-specific options
   if (BUILTIN_COMMANDS.includes(cmdName as (typeof BUILTIN_COMMANDS)[number])) {
     return;
@@ -743,7 +744,7 @@ function listOptionsForCommand(cmdName: string): void {
 
   // Tool commands - only output tool-specific options
   const tools = loadToolsCache();
-  const tool = filterEnabledTools(tools.tools).find((t) => t.name === cmdName);
+  const tool = filterEnabledTools(tools.tools, projectPath).find((t) => t.name === cmdName);
   if (!tool) {
     return;
   }
@@ -760,12 +761,12 @@ function listOptionsForCommand(cmdName: string): void {
 /**
  * Check if a command exists in the current program.
  */
-function commandExists(cmdName: string): boolean {
+function commandExists(cmdName: string, projectPath?: string): boolean {
   if (BUILTIN_COMMANDS.includes(cmdName as (typeof BUILTIN_COMMANDS)[number])) {
     return true;
   }
   const tools = loadToolsCache();
-  return filterEnabledTools(tools.tools).some((t) => t.name === cmdName);
+  return filterEnabledTools(tools.tools, projectPath).some((t) => t.name === cmdName);
 }
 
 function shouldSkipAutoSync(cmdName: string | undefined, args: string[]): boolean {
@@ -829,7 +830,7 @@ async function main(): Promise<void> {
 
   if (skipProjectDetection) {
     const defaultTools = getDefaultTools();
-    for (const tool of filterEnabledTools(defaultTools.tools)) {
+    for (const tool of filterEnabledTools(defaultTools.tools, syncGlobalOptions.projectPath)) {
       registerToolCommand(tool);
     }
     program.parse();
@@ -862,12 +863,13 @@ async function main(): Promise<void> {
 
   // Register tool commands from cache (after potential auto-sync)
   const toolsCache = loadToolsCache();
-  for (const tool of filterEnabledTools(toolsCache.tools)) {
+  const projectPath: string | undefined = syncGlobalOptions.projectPath;
+  for (const tool of filterEnabledTools(toolsCache.tools, projectPath)) {
     registerToolCommand(tool);
   }
 
-  if (cmdName && !commandExists(cmdName)) {
-    if (!isToolEnabled(cmdName)) {
+  if (cmdName && !commandExists(cmdName, projectPath)) {
+    if (!isToolEnabled(cmdName, projectPath)) {
       printToolDisabledError(cmdName);
       process.exit(1);
     }
@@ -876,7 +878,7 @@ async function main(): Promise<void> {
     try {
       await syncTools(syncGlobalOptions);
       const newCache = loadToolsCache();
-      const tool = filterEnabledTools(newCache.tools).find((t) => t.name === cmdName);
+      const tool = filterEnabledTools(newCache.tools, projectPath).find((t) => t.name === cmdName);
       if (tool) {
         registerToolCommand(tool);
         console.log(`\x1b[32m✓ Found '${cmdName}' after sync.\x1b[0m\n`);

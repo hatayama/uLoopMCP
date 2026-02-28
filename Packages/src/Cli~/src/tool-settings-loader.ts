@@ -7,7 +7,7 @@
 /* eslint-disable security/detect-non-literal-fs-filename */
 
 import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { findUnityProjectRoot } from './project-root.js';
 import type { ToolDefinition } from './tool-cache.js';
 
@@ -18,8 +18,9 @@ interface ToolSettingsData {
   disabledTools: string[];
 }
 
-export function loadDisabledTools(): string[] {
-  const projectRoot: string | null = findUnityProjectRoot();
+export function loadDisabledTools(projectPath?: string): string[] {
+  const projectRoot: string | null =
+    projectPath !== undefined ? resolve(projectPath) : findUnityProjectRoot();
   if (projectRoot === null) {
     return [];
   }
@@ -53,13 +54,16 @@ export function loadDisabledTools(): string[] {
   return data.disabledTools;
 }
 
-export function isToolEnabled(toolName: string): boolean {
-  const disabledTools: string[] = loadDisabledTools();
+export function isToolEnabled(toolName: string, projectPath?: string): boolean {
+  const disabledTools: string[] = loadDisabledTools(projectPath);
   return !disabledTools.includes(toolName);
 }
 
-export function filterEnabledTools(tools: ToolDefinition[]): ToolDefinition[] {
-  const disabledTools: string[] = loadDisabledTools();
+export function filterEnabledTools(
+  tools: ToolDefinition[],
+  projectPath?: string,
+): ToolDefinition[] {
+  const disabledTools: string[] = loadDisabledTools(projectPath);
   if (disabledTools.length === 0) {
     return tools;
   }

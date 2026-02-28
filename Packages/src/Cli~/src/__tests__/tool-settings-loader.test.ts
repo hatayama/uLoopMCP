@@ -177,4 +177,84 @@ describe('tool-settings-loader', () => {
       expect(result).toHaveLength(3);
     });
   });
+
+  // ── projectPath override ────────────────────────────────────────
+
+  describe('projectPath override', () => {
+    let otherDir: string;
+
+    beforeEach(() => {
+      otherDir = join(tmpdir(), `uloop-other-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      mkdirSync(join(otherDir, '.uloop'), { recursive: true });
+    });
+
+    afterEach(() => {
+      rmSync(otherDir, { recursive: true, force: true });
+    });
+
+    it('should load settings from projectPath instead of cwd project root', () => {
+      writeFileSync(
+        join(otherDir, '.uloop', 'settings.tools.json'),
+        JSON.stringify({ disabledTools: ['get-logs'] }),
+      );
+
+      const result: string[] = loadDisabledTools(otherDir);
+
+      expect(result).toEqual(['get-logs']);
+    });
+
+    it('should ignore cwd project root when projectPath is provided', () => {
+      writeFileSync(
+        join(testDir, '.uloop', 'settings.tools.json'),
+        JSON.stringify({ disabledTools: ['compile'] }),
+      );
+      writeFileSync(
+        join(otherDir, '.uloop', 'settings.tools.json'),
+        JSON.stringify({ disabledTools: ['get-logs'] }),
+      );
+
+      expect(loadDisabledTools(otherDir)).toEqual(['get-logs']);
+      expect(loadDisabledTools()).toEqual(['compile']);
+    });
+
+    it('should pass projectPath through isToolEnabled', () => {
+      writeFileSync(
+        join(otherDir, '.uloop', 'settings.tools.json'),
+        JSON.stringify({ disabledTools: ['compile'] }),
+      );
+
+      expect(isToolEnabled('compile', otherDir)).toBe(false);
+      expect(isToolEnabled('get-logs', otherDir)).toBe(true);
+    });
+
+    it('should pass projectPath through filterEnabledTools', () => {
+      const mockTools: ToolDefinition[] = [
+        {
+          name: 'compile',
+          description: 'Compile',
+          inputSchema: { type: 'object', properties: {} },
+        },
+        {
+          name: 'get-logs',
+          description: 'Get logs',
+          inputSchema: { type: 'object', properties: {} },
+        },
+      ];
+      writeFileSync(
+        join(otherDir, '.uloop', 'settings.tools.json'),
+        JSON.stringify({ disabledTools: ['compile'] }),
+      );
+
+      const result: ToolDefinition[] = filterEnabledTools(mockTools, otherDir);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('get-logs');
+    });
+
+    it('should return empty array when projectPath has no settings file', () => {
+      const result: string[] = loadDisabledTools(otherDir);
+
+      expect(result).toEqual([]);
+    });
+  });
 });
