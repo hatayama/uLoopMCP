@@ -12,7 +12,7 @@ namespace io.github.hatayama.uLoopMCP
     public class ToolSettingsSection
     {
         private readonly Foldout _foldout;
-        private readonly ScrollView _toolListContainer;
+        private readonly VisualElement _toolListContainer;
         private readonly Dictionary<string, Toggle> _togglesByToolName = new();
 
         public event Action<bool> OnFoldoutChanged;
@@ -21,7 +21,7 @@ namespace io.github.hatayama.uLoopMCP
         public ToolSettingsSection(VisualElement root)
         {
             _foldout = root.Q<Foldout>("tool-settings-foldout");
-            _toolListContainer = root.Q<ScrollView>("tool-list-container");
+            _toolListContainer = root.Q<VisualElement>("tool-list-container");
 
             SetupBindings();
         }

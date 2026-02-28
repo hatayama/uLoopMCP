@@ -336,10 +336,6 @@
     margin-bottom: 8px;
 }
 
-.mcp-tool-list-container {
-    max-height: 300px;
-}
-
 .mcp-tool-group-header {
     -unity-font-style: bold;
     margin-top: 6px;
