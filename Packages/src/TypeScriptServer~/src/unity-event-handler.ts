@@ -37,7 +37,6 @@ export class UnityEventHandler
   private readonly isDevelopment: boolean;
   private shuttingDown: boolean = false;
   private isNotifying: boolean = false;
-  private hasSentListChangedNotification: boolean = false;
   private isInitializationCompleted: boolean = false;
   private pendingToolsChangedNotification: boolean = false;
 
@@ -61,10 +60,6 @@ export class UnityEventHandler
   onInitializationCompleted(): void {
     this.isInitializationCompleted = true;
 
-    // Reset the flag before sending, so the queued notification can be sent
-    this.hasSentListChangedNotification = false;
-
-    // Send queued notification if any (this will be the first and only list_changed)
     if (this.pendingToolsChangedNotification) {
       this.pendingToolsChangedNotification = false;
       this.sendToolsChangedNotification();
@@ -128,18 +123,14 @@ export class UnityEventHandler
   }
 
   /**
-   * Send tools changed notification (with duplicate prevention and initialization check)
-   *
-   * BUG WORKAROUND: Cursor disconnects when list_changed fires multiple times.
-   * Therefore, list_changed is sent only ONCE per MCP server lifetime.
+   * Send tools changed notification (with concurrent call prevention and initialization check)
    *
    * Notification timing rules:
    * 1. Before initialization completed: queue the notification
-   * 2. After initialization completed: send queued notification (first and only time)
-   * 3. Subsequent calls: blocked by hasSentListChangedNotification flag
+   * 2. After initialization completed: send immediately
+   * 3. Concurrent calls: prevented by isNotifying flag
    */
   sendToolsChangedNotification(): void {
-    // Queue notification if initialization is not yet completed
     if (!this.isInitializationCompleted) {
       this.pendingToolsChangedNotification = true;
       if (this.isDevelopment) {
@@ -149,21 +140,6 @@ export class UnityEventHandler
           undefined,
           undefined,
           'Notification will be sent after initialization completes',
-        );
-      }
-      return;
-    }
-
-    // BUG WORKAROUND: Cursor disconnects when list_changed fires multiple times.
-    // Send only once per MCP server lifetime.
-    if (this.hasSentListChangedNotification) {
-      if (this.isDevelopment) {
-        VibeLogger.logDebug(
-          'tools_notification_skipped_already_sent',
-          'sendToolsChangedNotification skipped: list_changed already sent',
-          undefined,
-          undefined,
-          'Subsequent list_changed notification suppressed',
         );
       }
       return;
@@ -188,7 +164,6 @@ export class UnityEventHandler
         method: NOTIFICATION_METHODS.TOOLS_LIST_CHANGED,
         params: {},
       });
-      this.hasSentListChangedNotification = true;
       if (this.isDevelopment) {
         VibeLogger.logInfo(
           'tools_notification_sent',

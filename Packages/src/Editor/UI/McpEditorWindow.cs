@@ -494,6 +494,7 @@ namespace io.github.hatayama.uLoopMCP
                 await ToolSkillSynchronizer.InstallSkillFiles();
             }
 
+            ClientNotificationService.TriggerToolChangeNotification();
             RefreshAllSections();
         }
 
