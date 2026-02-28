@@ -13,6 +13,7 @@ import { homedir } from 'os';
 import { TargetConfig } from './target-config.js';
 import { findUnityProjectRoot, getUnityProjectStatus } from '../project-root.js';
 import { DEPRECATED_SKILLS } from './deprecated-skills.js';
+import { loadDisabledTools } from '../tool-settings-loader.js';
 
 export type SkillStatus = 'installed' | 'not_installed' | 'outdated';
 
@@ -25,6 +26,7 @@ export interface SkillInfo {
 
 export interface SkillDefinition {
   name: string;
+  toolName?: string;
   dirName: string;
   content: string;
   sourcePath: string;
@@ -145,13 +147,13 @@ export function getSkillStatus(
 }
 
 export function parseFrontmatter(content: string): Record<string, string | boolean> {
-  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+  const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!frontmatterMatch) {
     return {};
   }
 
   const frontmatterMap = new Map<string, string | boolean>();
-  const lines = frontmatterMatch[1].split('\n');
+  const lines = frontmatterMatch[1].split(/\r?\n/);
 
   for (const line of lines) {
     const colonIndex = line.indexOf(':');
@@ -239,10 +241,13 @@ function scanEditorFolderForSkills(
         }
 
         const name = typeof frontmatter.name === 'string' ? frontmatter.name : entry.name;
+        const toolName =
+          typeof frontmatter.toolName === 'string' ? frontmatter.toolName : undefined;
         const additionalFiles = collectSkillFolderFiles(skillDir);
 
         skills.push({
           name,
+          toolName,
           dirName: name,
           content,
           sourcePath: skillMdPath,
@@ -399,11 +404,19 @@ export function installAllSkills(target: TargetConfig, global: boolean): Install
     }
   }
 
+  // Global installs ignore project-local tool settings
+  const disabledTools: string[] = global ? [] : loadDisabledTools();
+
   const allSkills = collectAllSkills();
   const projectSkills = allSkills.filter((skill) => skill.sourceType === 'project');
   const nonProjectSkills = allSkills.filter((skill) => skill.sourceType !== 'project');
 
   for (const skill of allSkills) {
+    if (isSkillDisabledByToolSettings(skill, disabledTools)) {
+      uninstallSkill(skill, target, global);
+      continue;
+    }
+
     const status = getSkillStatus(skill, target, global);
 
     if (status === 'not_installed') {
@@ -420,6 +433,19 @@ export function installAllSkills(target: TargetConfig, global: boolean): Install
   result.projectCount = projectSkills.length;
 
   return result;
+}
+
+function isSkillDisabledByToolSettings(skill: SkillDefinition, disabledTools: string[]): boolean {
+  if (disabledTools.length === 0) {
+    return false;
+  }
+
+  const toolName: string | null =
+    skill.toolName ?? (skill.name.startsWith('uloop-') ? skill.name.slice('uloop-'.length) : null);
+  if (toolName === null) {
+    return false;
+  }
+  return disabledTools.includes(toolName);
 }
 
 export interface UninstallResult {

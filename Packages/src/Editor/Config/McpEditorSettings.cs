@@ -32,6 +32,7 @@ namespace io.github.hatayama.uLoopMCP
 
         // UI State Settings
         public bool showSecuritySettings = false;
+        public bool showToolSettings = false;
 
         // Repository Root Toggle
         public bool addRepositoryRoot = false;
@@ -220,7 +221,19 @@ namespace io.github.hatayama.uLoopMCP
             McpEditorSettingsData newSettings = settings with { showSecuritySettings = showSecuritySettings };
             SaveSettings(newSettings);
         }
-        
+
+        public static bool GetShowToolSettings()
+        {
+            return GetSettings().showToolSettings;
+        }
+
+        public static void SetShowToolSettings(bool showToolSettings)
+        {
+            McpEditorSettingsData settings = GetSettings();
+            McpEditorSettingsData newSettings = settings with { showToolSettings = showToolSettings };
+            SaveSettings(newSettings);
+        }
+
         /// <summary>
         /// Gets the repository root usage flag.
         /// </summary>

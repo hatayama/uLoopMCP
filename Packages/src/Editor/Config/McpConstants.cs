@@ -134,6 +134,7 @@ namespace io.github.hatayama.uLoopMCP
         // .uloop directory
         public const string ULOOP_DIR = ".uloop";
         public const string ULOOP_SETTINGS_FILE_NAME = "settings.security.json";
+        public const string ULOOP_TOOL_SETTINGS_FILE_NAME = "settings.tools.json";
 
         // File output directories
         public const string OUTPUT_ROOT_DIR = ".uloop/outputs";

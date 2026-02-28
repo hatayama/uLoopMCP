@@ -35,6 +35,7 @@ import { registerFocusWindowCommand } from './commands/focus-window.js';
 import { VERSION } from './version.js';
 import { findUnityProjectRoot } from './project-root.js';
 import { validateProjectPath } from './port-resolver.js';
+import { filterEnabledTools, isToolEnabled } from './tool-settings-loader.js';
 
 interface CliOptions extends GlobalOptions {
   [key: string]: unknown;
@@ -310,6 +311,11 @@ function extractGlobalOptions(options: Record<string, unknown>): GlobalOptions {
 
 function isConnectionError(message: string): boolean {
   return message.includes('ECONNREFUSED') || message.includes('EADDRNOTAVAIL');
+}
+
+function printToolDisabledError(cmdName: string): void {
+  console.error(`\x1b[33mTool '${cmdName}' is disabled.\x1b[0m`);
+  console.error('You can enable it in Unity: Window > uLoop > Tool Settings');
 }
 
 function printConnectionError(): void {
@@ -707,10 +713,15 @@ function handleCompletion(install: boolean, shellOverride?: string): void {
  */
 function handleCompletionOptions(): boolean {
   const args = process.argv.slice(2);
+  const projectPath: string | undefined = extractSyncGlobalOptions(args).projectPath;
 
   if (args.includes('--list-commands')) {
     const tools = loadToolsCache();
-    const allCommands = [...BUILTIN_COMMANDS, ...tools.tools.map((t) => t.name)];
+    // Only filter disabled tools when --project-path is explicitly provided;
+    // without it, loadDisabledTools would trigger findUnityProjectRoot() scanning
+    const enabledTools: ToolDefinition[] =
+      projectPath !== undefined ? filterEnabledTools(tools.tools, projectPath) : tools.tools;
+    const allCommands = [...BUILTIN_COMMANDS, ...enabledTools.map((t) => t.name)];
     console.log(allCommands.join('\n'));
     return true;
   }
@@ -718,7 +729,7 @@ function handleCompletionOptions(): boolean {
   const listOptionsIdx = args.indexOf('--list-options');
   if (listOptionsIdx !== -1 && args[listOptionsIdx + 1]) {
     const cmdName = args[listOptionsIdx + 1];
-    listOptionsForCommand(cmdName);
+    listOptionsForCommand(cmdName, projectPath);
     return true;
   }
 
@@ -728,15 +739,20 @@ function handleCompletionOptions(): boolean {
 /**
  * List options for a specific command.
  */
-function listOptionsForCommand(cmdName: string): void {
+function listOptionsForCommand(cmdName: string, projectPath?: string): void {
   // Built-in commands have no tool-specific options
   if (BUILTIN_COMMANDS.includes(cmdName as (typeof BUILTIN_COMMANDS)[number])) {
     return;
   }
 
   // Tool commands - only output tool-specific options
+  // Only filter disabled tools when --project-path is explicitly provided;
+  // without it, loadDisabledTools would trigger findUnityProjectRoot() scanning
   const tools = loadToolsCache();
-  const tool = tools.tools.find((t) => t.name === cmdName);
+  const tool: ToolDefinition | undefined =
+    projectPath !== undefined
+      ? filterEnabledTools(tools.tools, projectPath).find((t) => t.name === cmdName)
+      : tools.tools.find((t) => t.name === cmdName);
   if (!tool) {
     return;
   }
@@ -753,12 +769,12 @@ function listOptionsForCommand(cmdName: string): void {
 /**
  * Check if a command exists in the current program.
  */
-function commandExists(cmdName: string): boolean {
+function commandExists(cmdName: string, projectPath?: string): boolean {
   if (BUILTIN_COMMANDS.includes(cmdName as (typeof BUILTIN_COMMANDS)[number])) {
     return true;
   }
   const tools = loadToolsCache();
-  return tools.tools.some((t) => t.name === cmdName);
+  return filterEnabledTools(tools.tools, projectPath).some((t) => t.name === cmdName);
 }
 
 function shouldSkipAutoSync(cmdName: string | undefined, args: string[]): boolean {
@@ -822,7 +838,13 @@ async function main(): Promise<void> {
 
   if (skipProjectDetection) {
     const defaultTools = getDefaultTools();
-    for (const tool of defaultTools.tools) {
+    // Only filter disabled tools when --project-path is explicitly provided;
+    // without it, filterEnabledTools would trigger findUnityProjectRoot() scanning
+    const tools: ToolDefinition[] =
+      syncGlobalOptions.projectPath !== undefined
+        ? filterEnabledTools(defaultTools.tools, syncGlobalOptions.projectPath)
+        : defaultTools.tools;
+    for (const tool of tools) {
       registerToolCommand(tool);
     }
     program.parse();
@@ -855,16 +877,22 @@ async function main(): Promise<void> {
 
   // Register tool commands from cache (after potential auto-sync)
   const toolsCache = loadToolsCache();
-  for (const tool of toolsCache.tools) {
+  const projectPath: string | undefined = syncGlobalOptions.projectPath;
+  for (const tool of filterEnabledTools(toolsCache.tools, projectPath)) {
     registerToolCommand(tool);
   }
 
-  if (cmdName && !commandExists(cmdName)) {
+  if (cmdName && !commandExists(cmdName, projectPath)) {
+    if (!isToolEnabled(cmdName, projectPath)) {
+      printToolDisabledError(cmdName);
+      process.exit(1);
+    }
+
     console.log(`\x1b[33mUnknown command '${cmdName}'. Syncing tools from Unity...\x1b[0m`);
     try {
       await syncTools(syncGlobalOptions);
       const newCache = loadToolsCache();
-      const tool = newCache.tools.find((t) => t.name === cmdName);
+      const tool = filterEnabledTools(newCache.tools, projectPath).find((t) => t.name === cmdName);
       if (tool) {
         registerToolCommand(tool);
         console.log(`\x1b[32m✓ Found '${cmdName}' after sync.\x1b[0m\n`);

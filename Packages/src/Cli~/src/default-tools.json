@@ -393,33 +393,6 @@
       }
     },
     {
-      "name": "get-provider-details",
-      "description": "Get Unity Search provider details",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "ProviderId": {
-            "type": "string",
-            "description": "Specific provider ID"
-          },
-          "ActiveOnly": {
-            "type": "boolean",
-            "description": "Only active providers"
-          },
-          "IncludeDescriptions": {
-            "type": "boolean",
-            "description": "Include descriptions",
-            "default": true
-          },
-          "SortByPriority": {
-            "type": "boolean",
-            "description": "Sort by priority",
-            "default": true
-          }
-        }
-      }
-    },
-    {
       "name": "get-project-info",
       "description": "Get Unity project information",
       "inputSchema": {

@@ -117,6 +117,38 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 
+    public record ToolToggleItem
+    {
+        public readonly string ToolName;
+        public readonly string Description;
+        public readonly bool IsEnabled;
+        public readonly bool IsThirdParty;
+
+        public ToolToggleItem(string toolName, string description, bool isEnabled, bool isThirdParty)
+        {
+            ToolName = toolName;
+            Description = description;
+            IsEnabled = isEnabled;
+            IsThirdParty = isThirdParty;
+        }
+    }
+
+    public record ToolSettingsSectionData
+    {
+        public readonly bool ShowToolSettings;
+        public readonly ToolToggleItem[] BuiltInTools;
+        public readonly ToolToggleItem[] ThirdPartyTools;
+        public readonly bool IsRegistryAvailable;
+
+        public ToolSettingsSectionData(bool showToolSettings, ToolToggleItem[] builtInTools, ToolToggleItem[] thirdPartyTools, bool isRegistryAvailable)
+        {
+            ShowToolSettings = showToolSettings;
+            BuiltInTools = builtInTools;
+            ThirdPartyTools = thirdPartyTools;
+            IsRegistryAvailable = isRegistryAvailable;
+        }
+    }
+
     public record CliSetupData
     {
         public readonly bool IsCliInstalled;

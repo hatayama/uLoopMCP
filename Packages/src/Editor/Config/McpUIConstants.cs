@@ -28,5 +28,8 @@ namespace io.github.hatayama.uLoopMCP
         public const float CLIENT_ITEM_SPACING = 3f;
         public const string CONNECTED_TOOLS_FOLDOUT_TEXT = "Connected LLM Tools";
         public const string CLIENT_ICON = "● ";
+
+        // Tool Settings
+        public const string TOOL_SETTINGS_MENU_PATH = "Window > uLoop > Tool Settings";
     }
 }

@@ -23,6 +23,7 @@ namespace io.github.hatayama.uLoopMCP
         private CliSetupSection _cliSetupSection;
         private ConnectedToolsSection _connectedToolsSection;
         private EditorConfigSection _editorConfigSection;
+        private ToolSettingsSection _toolSettingsSection;
         private SecuritySettingsSection _securitySettingsSection;
 
         private VisualElement _cliContent;
@@ -41,6 +42,8 @@ namespace io.github.hatayama.uLoopMCP
         public event Action<bool> OnRepositoryRootChanged;
         public event Action OnConfigureClicked;
         public event Action OnOpenSettingsClicked;
+        public event Action<bool> OnToolSettingsFoldoutChanged;
+        public event Action<string, bool> OnToolToggled;
         public event Action<bool> OnSecurityFoldoutChanged;
         public event Action<bool> OnEnableTestsChanged;
         public event Action<bool> OnAllowMenuChanged;
@@ -118,6 +121,10 @@ namespace io.github.hatayama.uLoopMCP
             _editorConfigSection.OnConfigureClicked += () => OnConfigureClicked?.Invoke();
             _editorConfigSection.OnOpenSettingsClicked += () => OnOpenSettingsClicked?.Invoke();
 
+            _toolSettingsSection = new ToolSettingsSection(_root);
+            _toolSettingsSection.OnFoldoutChanged += value => OnToolSettingsFoldoutChanged?.Invoke(value);
+            _toolSettingsSection.OnToolToggled += (toolName, enabled) => OnToolToggled?.Invoke(toolName, enabled);
+
             _securitySettingsSection = new SecuritySettingsSection(_root);
             _securitySettingsSection.OnFoldoutChanged += value => OnSecurityFoldoutChanged?.Invoke(value);
             _securitySettingsSection.OnEnableTestsChanged += value => OnEnableTestsChanged?.Invoke(value);
@@ -144,6 +151,16 @@ namespace io.github.hatayama.uLoopMCP
         public void UpdateEditorConfig(EditorConfigData data)
         {
             _editorConfigSection?.Update(data);
+        }
+
+        public void UpdateToolSettings(ToolSettingsSectionData data)
+        {
+            _toolSettingsSection?.Update(data);
+        }
+
+        public void UpdateSingleToolToggle(string toolName, bool enabled)
+        {
+            _toolSettingsSection?.UpdateSingleToggle(toolName, enabled);
         }
 
         public void UpdateSecuritySettings(SecuritySettingsData data)
@@ -182,6 +199,7 @@ namespace io.github.hatayama.uLoopMCP
             _cliSetupSection = null;
             _connectedToolsSection = null;
             _editorConfigSection = null;
+            _toolSettingsSection = null;
             _securitySettingsSection = null;
         }
     }
