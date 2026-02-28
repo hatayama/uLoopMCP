@@ -781,6 +781,11 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            // SaveSettings below re-serializes McpEditorSettingsData which no longer
+            // contains security fields, so the legacy file loses them. Trigger
+            // ULoopSettings migration NOW while the file still has them intact.
+            ULoopSettings.GetSettings();
+
             _cachedSettings.isServerRunning = probe.autoStartServer;
 
             SaveSettings(_cachedSettings);

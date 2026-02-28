@@ -309,6 +309,45 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsFalse(File.Exists(SettingsBackupPath), ".bak should be consumed by recovery");
         }
 
+        // ── Test 8: Real-world domain reload scenario ────────────────
+
+        [Test]
+        public void Migration_WhenMcpEditorSettingsLoadedFirst_ShouldStillPreserveSecurityValues()
+        {
+            DeleteIfExists(SettingsFilePath);
+
+            // Simulate old-format JSON that includes autoStartServer (triggers
+            // MigrateLegacyAutoStartIfNeeded which calls SaveSettings, stripping
+            // security fields from the file since McpEditorSettingsData no longer
+            // contains them).
+            string oldFormatJson = JsonUtility.ToJson(new OldFormatSettingsFixture
+            {
+                enableTestsExecution = true,
+                allowMenuItemExecution = true,
+                allowThirdPartyTools = true,
+                dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted,
+                autoStartServer = true,
+                customPort = 18080
+            }, true);
+            File.WriteAllText(LegacySettingsFilePath, oldFormatJson);
+            InvalidateBothCaches();
+
+            // During domain reload, McpEditorSettings is typically accessed first
+            // (e.g. by McpEditorWindow or other [InitializeOnLoadMethod] code).
+            // This triggers LoadSettings → MigrateLegacyAutoStartIfNeeded →
+            // SaveSettings, which rewrites the file WITHOUT security fields.
+            McpEditorSettings.GetSettings();
+
+            // Then ULoopSettings migration runs.
+            ULoopSettingsData result = ULoopSettings.GetSettings();
+
+            Assert.IsTrue(result.enableTestsExecution, "enableTestsExecution should be migrated");
+            Assert.IsTrue(result.allowMenuItemExecution, "allowMenuItemExecution should be migrated");
+            Assert.IsTrue(result.allowThirdPartyTools, "allowThirdPartyTools should be migrated");
+            Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel,
+                "dynamicCodeSecurityLevel should be migrated");
+        }
+
         /// <summary>
         /// Fixture that includes both security and non-security fields,
         /// matching the legacy UserSettings/UnityMcpSettings.json structure.
@@ -323,5 +362,22 @@ namespace io.github.hatayama.uLoopMCP
             public int customPort = McpServerConfig.DEFAULT_PORT;
             public bool showDeveloperTools = false;
         }
+
+        /// <summary>
+        /// Fixture that matches the FULL old-version McpEditorSettingsData format,
+        /// including autoStartServer which triggers MigrateLegacyAutoStartIfNeeded.
+        /// </summary>
+        [System.Serializable]
+        private class OldFormatSettingsFixture
+        {
+            public bool enableTestsExecution = false;
+            public bool allowMenuItemExecution = false;
+            public bool allowThirdPartyTools = false;
+            public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Disabled;
+            public bool autoStartServer = true;
+            public int customPort = McpServerConfig.DEFAULT_PORT;
+            public bool showDeveloperTools = false;
+        }
     }
 }
+
