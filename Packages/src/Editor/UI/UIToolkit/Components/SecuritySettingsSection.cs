@@ -91,7 +91,7 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            DynamicCodeSecurityLevel currentLevel = McpEditorSettings.GetDynamicCodeSecurityLevel();
+            DynamicCodeSecurityLevel currentLevel = ULoopSettings.GetDynamicCodeSecurityLevel();
             _securityLevelField.Init(currentLevel);
 
             _securityLevelField.RegisterValueChangedCallback(evt =>
@@ -145,7 +145,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void UpdateSecurityLevelDescription()
         {
-            DynamicCodeSecurityLevel currentLevel = McpEditorSettings.GetDynamicCodeSecurityLevel();
+            DynamicCodeSecurityLevel currentLevel = ULoopSettings.GetDynamicCodeSecurityLevel();
 
             string description = currentLevel switch
             {

@@ -131,6 +131,10 @@ namespace io.github.hatayama.uLoopMCP
         public const string COMPILE_RESULTS_DIR = "compile-results";
         public const string JSON_FILE_EXTENSION = ".json";
         
+        // .uloop directory
+        public const string ULOOP_DIR = ".uloop";
+        public const string ULOOP_SETTINGS_FILE_NAME = "settings.json";
+
         // File output directories
         public const string OUTPUT_ROOT_DIR = ".uloop/outputs";
         public const string TEST_RESULTS_DIR = "TestResults";
@@ -146,7 +150,7 @@ namespace io.github.hatayama.uLoopMCP
         // Error message constants
         public const string ERROR_EXECUTION_DISABLED = "EXECUTION_DISABLED";
         public const string ERROR_COMPILATION_DISABLED_LEVEL0 = "COMPILATION_DISABLED_AT_LEVEL0";
-        public const string ERROR_MESSAGE_EXECUTION_DISABLED = "Dynamic code execution is currently disabled. Enable in McpEditorSettings > Security Level.";
+        public const string ERROR_MESSAGE_EXECUTION_DISABLED = "Dynamic code execution is currently disabled. Enable in .uloop/settings.json or uLoopMCP Security Settings UI.";
         public const string ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0 = "Compilation is disabled at isolation level 0. Raise to level 1+ to compile.";
         public const string ERROR_MESSAGE_DUPLICATE_ASMDEF = "Duplicate asmdef assembly name detected. Unity may not start compilation until duplicates are removed.";
         

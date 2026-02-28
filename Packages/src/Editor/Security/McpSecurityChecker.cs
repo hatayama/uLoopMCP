@@ -10,7 +10,7 @@ namespace io.github.hatayama.uLoopMCP
     /// Design document reference: Packages/src/Editor/Security/SECURITY.md
     /// 
     /// Related classes:
-    /// - McpEditorSettings: Persistent security settings storage
+    /// - ULoopSettings: Persistent security settings storage (.uloop/settings.json)
     /// - McpSecurityException: Custom exception for security violations
     /// - UnityToolRegistry: Tool registration and execution
     /// - McpBridgeServer: Server that executes tools
@@ -203,7 +203,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>True if tests execution is allowed</returns>
         private static bool IsTestsExecutionAllowed()
         {
-            return McpEditorSettings.GetEnableTestsExecution();
+            return ULoopSettings.GetEnableTestsExecution();
         }
 
         /// <summary>
@@ -212,7 +212,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>True if menu item execution is allowed</returns>
         private static bool IsMenuItemExecutionAllowed()
         {
-            return McpEditorSettings.GetAllowMenuItemExecution();
+            return ULoopSettings.GetAllowMenuItemExecution();
         }
 
         
@@ -223,7 +223,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>True if third party tools execution is allowed</returns>
         private static bool IsThirdPartyToolsAllowed()
         {
-            return McpEditorSettings.GetAllowThirdPartyTools();
+            return ULoopSettings.GetAllowThirdPartyTools();
         }
 
         /// <summary>

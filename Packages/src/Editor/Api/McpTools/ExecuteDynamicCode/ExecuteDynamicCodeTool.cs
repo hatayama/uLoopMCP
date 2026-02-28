@@ -68,7 +68,7 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             try
             {
 #if ULOOPMCP_HAS_ROSLYN
-                DynamicCodeSecurityLevel editorLevel = McpEditorSettings.GetDynamicCodeSecurityLevel();
+                DynamicCodeSecurityLevel editorLevel = ULoopSettings.GetDynamicCodeSecurityLevel();
                 
                 // Recreate Executor only when editor settings change (cache for performance)
                 if (_executor == null || editorLevel != _currentSecurityLevel)

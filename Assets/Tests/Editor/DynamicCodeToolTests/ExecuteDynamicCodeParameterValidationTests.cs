@@ -38,8 +38,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task ExecuteAsync_WithObjectParameters_ShouldSucceedInCompileOnly()
         {
             // Arrange
-            DynamicCodeSecurityLevel prev = McpEditorSettings.GetDynamicCodeSecurityLevel();
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeSecurityLevel prev = ULoopSettings.GetDynamicCodeSecurityLevel();
+            ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeTool tool = new ExecuteDynamicCodeTool();
             JObject paramsToken = new JObject
             {
@@ -56,7 +56,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             }
             finally
             {
-                McpEditorSettings.SetDynamicCodeSecurityLevel(prev);
+                ULoopSettings.SetDynamicCodeSecurityLevel(prev);
             }
             ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
 
@@ -70,8 +70,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task ExecuteAsync_CodeWithoutReturn_ShouldAutoReturnAndSucceed()
         {
             // Arrange
-            DynamicCodeSecurityLevel prev = McpEditorSettings.GetDynamicCodeSecurityLevel();
-            McpEditorSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeSecurityLevel prev = ULoopSettings.GetDynamicCodeSecurityLevel();
+            ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
             ExecuteDynamicCodeTool tool = new ExecuteDynamicCodeTool();
             JObject paramsToken = new JObject
             {
@@ -87,7 +87,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             }
             finally
             {
-                McpEditorSettings.SetDynamicCodeSecurityLevel(prev);
+                ULoopSettings.SetDynamicCodeSecurityLevel(prev);
             }
             ExecuteDynamicCodeResponse response = baseResponse as ExecuteDynamicCodeResponse;
 
