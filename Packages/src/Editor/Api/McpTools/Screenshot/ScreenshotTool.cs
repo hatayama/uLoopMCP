@@ -8,15 +8,13 @@ using UnityEditor;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    [McpTool(Description = "Capture Unity EditorWindow and save as PNG")]
-    public class CaptureWindowTool : AbstractUnityTool<CaptureWindowSchema, CaptureWindowResponse>
+    [McpTool(Description = "Take a screenshot of Unity EditorWindow and save as PNG")]
+    public class ScreenshotTool : AbstractUnityTool<ScreenshotSchema, ScreenshotResponse>
     {
-        public override string ToolName => "capture-window";
+        public override string ToolName => "screenshot";
 
-        private const string OUTPUT_DIRECTORY_NAME = "UnityWindowCaptures";
-
-        protected override async Task<CaptureWindowResponse> ExecuteAsync(
-            CaptureWindowSchema parameters,
+        protected override async Task<ScreenshotResponse> ExecuteAsync(
+            ScreenshotSchema parameters,
             CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
@@ -24,8 +22,8 @@ namespace io.github.hatayama.uLoopMCP
             string correlationId = McpConstants.GenerateCorrelationId();
 
             VibeLogger.LogInfo(
-                "capture_window_start",
-                "Unity window capture started",
+                "screenshot_start",
+                "Unity window screenshot started",
                 new { WindowName = parameters.WindowName, ResolutionScale = parameters.ResolutionScale, MatchMode = parameters.MatchMode.ToString() },
                 correlationId: correlationId,
                 humanNote: "User requested Unity window screenshot",
@@ -38,17 +36,17 @@ namespace io.github.hatayama.uLoopMCP
             if (windows.Length == 0)
             {
                 VibeLogger.LogError(
-                    "capture_window_not_found",
+                    "screenshot_window_not_found",
                     $"Window '{parameters.WindowName}' not found (MatchMode: {parameters.MatchMode})",
                     correlationId: correlationId
                 );
-                return new CaptureWindowResponse();
+                return new ScreenshotResponse();
             }
 
             string outputDirectory = EnsureOutputDirectoryExists();
             string safeWindowName = SanitizeFileName(parameters.WindowName);
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
-            List<CapturedWindowInfo> capturedWindows = new List<CapturedWindowInfo>();
+            List<ScreenshotInfo> screenshots = new List<ScreenshotInfo>();
 
             for (int i = 0; i < windows.Length; i++)
             {
@@ -57,7 +55,7 @@ namespace io.github.hatayama.uLoopMCP
                 if (texture == null)
                 {
                     VibeLogger.LogWarning(
-                        "capture_window_failed",
+                        "screenshot_failed",
                         $"Failed to capture window index {i}",
                         correlationId: correlationId
                     );
@@ -77,13 +75,13 @@ namespace io.github.hatayama.uLoopMCP
                     SaveTextureAsPng(texture, savedPath);
 
                     FileInfo savedFileInfo = new FileInfo(savedPath);
-                    capturedWindows.Add(new CapturedWindowInfo(savedPath, savedFileInfo.Length, width, height));
+                    screenshots.Add(new ScreenshotInfo(savedPath, savedFileInfo.Length, width, height));
                 }
                 catch (Exception ex)
                 {
                     // File I/O is external resource access; catch to continue processing remaining windows
                     VibeLogger.LogWarning(
-                        "capture_save_exception",
+                        "screenshot_save_exception",
                         $"Exception saving window index {i}: {ex.Message}",
                         correlationId: correlationId
                     );
@@ -95,16 +93,16 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             VibeLogger.LogInfo(
-                "capture_window_success",
-                $"Captured {capturedWindows.Count} window(s)",
-                new { WindowName = parameters.WindowName, CapturedCount = capturedWindows.Count },
+                "screenshot_success",
+                $"Captured {screenshots.Count} window(s)",
+                new { WindowName = parameters.WindowName, ScreenshotCount = screenshots.Count },
                 correlationId: correlationId
             );
 
-            return new CaptureWindowResponse(capturedWindows);
+            return new ScreenshotResponse(screenshots);
         }
 
-        private void ValidateParameters(CaptureWindowSchema parameters)
+        private void ValidateParameters(ScreenshotSchema parameters)
         {
             if (string.IsNullOrEmpty(parameters.WindowName))
             {
@@ -121,7 +119,7 @@ namespace io.github.hatayama.uLoopMCP
         private string EnsureOutputDirectoryExists()
         {
             string projectRoot = Application.dataPath.Replace("/Assets", "");
-            string outputDirectory = Path.Combine(projectRoot, McpConstants.OUTPUT_ROOT_DIR, OUTPUT_DIRECTORY_NAME);
+            string outputDirectory = Path.Combine(projectRoot, McpConstants.OUTPUT_ROOT_DIR, McpConstants.SCREENSHOTS_DIR);
 
             if (!Directory.Exists(outputDirectory))
             {

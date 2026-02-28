@@ -23,7 +23,7 @@ namespace io.github.hatayama.uLoopMCP
         contains = 2
     }
 
-    public class CaptureWindowSchema : BaseToolSchema
+    public class ScreenshotSchema : BaseToolSchema
     {
         [Description("Window name to capture (e.g., 'Game', 'Scene', 'Console', 'Inspector', 'Project', 'Hierarchy', or any EditorWindow title)")]
         public string WindowName { get; set; } = "Game";

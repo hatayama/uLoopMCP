@@ -4,14 +4,14 @@ using System.Collections.Generic;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    public class CapturedWindowInfo
+    public class ScreenshotInfo
     {
         public string ImagePath { get; set; } = "";
         public long FileSizeBytes { get; set; }
         public int Width { get; set; }
         public int Height { get; set; }
 
-        public CapturedWindowInfo(string imagePath, long fileSizeBytes, int width, int height)
+        public ScreenshotInfo(string imagePath, long fileSizeBytes, int width, int height)
         {
             ImagePath = imagePath;
             FileSizeBytes = fileSizeBytes;
@@ -19,23 +19,23 @@ namespace io.github.hatayama.uLoopMCP
             Height = height;
         }
 
-        public CapturedWindowInfo()
+        public ScreenshotInfo()
         {
         }
     }
 
-    public class CaptureWindowResponse : BaseToolResponse
+    public class ScreenshotResponse : BaseToolResponse
     {
-        public List<CapturedWindowInfo> CapturedWindows { get; set; } = new();
+        public List<ScreenshotInfo> Screenshots { get; set; } = new();
 
-        public int CapturedCount => CapturedWindows.Count;
+        public int ScreenshotCount => Screenshots.Count;
 
-        public CaptureWindowResponse(List<CapturedWindowInfo> capturedWindows)
+        public ScreenshotResponse(List<ScreenshotInfo> screenshots)
         {
-            CapturedWindows = capturedWindows;
+            Screenshots = screenshots;
         }
 
-        public CaptureWindowResponse()
+        public ScreenshotResponse()
         {
         }
     }

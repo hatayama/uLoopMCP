@@ -117,7 +117,7 @@ namespace io.github.hatayama.uLoopMCP
                 DestroyImmediate(_previewTexture);
             }
 
-            string outputDir = Path.Combine(Application.dataPath.Replace("/Assets", ""), McpConstants.OUTPUT_ROOT_DIR, "UnityWindowCaptures");
+            string outputDir = Path.Combine(Application.dataPath.Replace("/Assets", ""), McpConstants.OUTPUT_ROOT_DIR, McpConstants.SCREENSHOTS_DIR);
             if (!Directory.Exists(outputDir))
             {
                 Directory.CreateDirectory(outputDir);
@@ -176,7 +176,7 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void OpenOutputFolder()
         {
-            string outputDir = Path.Combine(Application.dataPath.Replace("/Assets", ""), McpConstants.OUTPUT_ROOT_DIR, "UnityWindowCaptures");
+            string outputDir = Path.Combine(Application.dataPath.Replace("/Assets", ""), McpConstants.OUTPUT_ROOT_DIR, McpConstants.SCREENSHOTS_DIR);
             if (!Directory.Exists(outputDir))
             {
                 Directory.CreateDirectory(outputDir);
