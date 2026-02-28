@@ -91,7 +91,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static string ParseToolNameFromFrontmatter(string content)
         {
-            Match frontmatterMatch = Regex.Match(content, @"^---\n([\s\S]*?)\n---");
+            Match frontmatterMatch = Regex.Match(content, @"^---\r?\n([\s\S]*?)\r?\n---");
             if (!frontmatterMatch.Success)
             {
                 return null;
