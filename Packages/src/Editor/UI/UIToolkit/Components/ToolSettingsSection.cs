@@ -85,10 +85,14 @@ namespace io.github.hatayama.uLoopMCP
             label.tooltip = item.Description;
             label.RegisterCallback<ClickEvent>(evt =>
             {
+                evt.StopPropagation();
                 bool newValue = !toggle.value;
                 toggle.SetValueWithoutNotify(newValue);
                 OnToolToggled?.Invoke(toolName, newValue);
             });
+
+            // Prevent clicks on the row from propagating to the parent Foldout
+            row.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
 
             row.Add(toggle);
             row.Add(label);

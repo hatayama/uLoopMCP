@@ -349,12 +349,12 @@
 .mcp-tool-toggle-row {
     flex-direction: row;
     align-items: center;
-    margin-top: 2px;
-    margin-bottom: 2px;
+    padding: 2px 4px;
+    margin-top: 1px;
+    margin-bottom: 1px;
 }
 
 .mcp-tool-toggle-row__toggle {
-    width: 20px;
     margin-right: 4px;
 }
 
