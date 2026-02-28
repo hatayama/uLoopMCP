@@ -158,6 +158,11 @@ namespace io.github.hatayama.uLoopMCP
             _toolSettingsSection?.Update(data);
         }
 
+        public void UpdateSingleToolToggle(string toolName, bool enabled)
+        {
+            _toolSettingsSection?.UpdateSingleToggle(toolName, enabled);
+        }
+
         public void UpdateSecuritySettings(SecuritySettingsData data)
         {
             _securitySettingsSection?.Update(data);

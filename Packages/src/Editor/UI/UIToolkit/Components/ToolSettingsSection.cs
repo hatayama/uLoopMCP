@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
@@ -6,11 +7,13 @@ namespace io.github.hatayama.uLoopMCP
     /// <summary>
     /// UI section for per-tool enable/disable toggles.
     /// Groups tools into Built-in and Third Party categories.
+    /// Uses differential updates to avoid full rebuild on each toggle change.
     /// </summary>
     public class ToolSettingsSection
     {
         private readonly Foldout _foldout;
         private readonly ScrollView _toolListContainer;
+        private readonly Dictionary<string, Toggle> _togglesByToolName = new();
 
         public event Action<bool> OnFoldoutChanged;
         public event Action<string, bool> OnToolToggled;
@@ -32,15 +35,39 @@ namespace io.github.hatayama.uLoopMCP
         {
             ViewDataBinder.UpdateFoldout(_foldout, data.ShowToolSettings);
 
-            _toolListContainer.Clear();
-
             if (!data.IsRegistryAvailable)
             {
-                Label unavailableLabel = new Label("Tool registry not yet initialized. Start the server first.");
-                unavailableLabel.AddToClassList("mcp-tool-registry-unavailable");
-                _toolListContainer.Add(unavailableLabel);
+                RebuildUnavailable();
                 return;
             }
+
+            Rebuild(data);
+        }
+
+        /// <summary>
+        /// Update a single toggle value without rebuilding the entire list.
+        /// </summary>
+        public void UpdateSingleToggle(string toolName, bool enabled)
+        {
+            if (_togglesByToolName.TryGetValue(toolName, out Toggle toggle))
+            {
+                toggle.SetValueWithoutNotify(enabled);
+            }
+        }
+
+        private void RebuildUnavailable()
+        {
+            _toolListContainer.Clear();
+            _togglesByToolName.Clear();
+            Label unavailableLabel = new Label("Tool registry not yet initialized. Start the server first.");
+            unavailableLabel.AddToClassList("mcp-tool-registry-unavailable");
+            _toolListContainer.Add(unavailableLabel);
+        }
+
+        private void Rebuild(ToolSettingsSectionData data)
+        {
+            _toolListContainer.Clear();
+            _togglesByToolName.Clear();
 
             if (data.BuiltInTools.Length > 0)
             {
@@ -100,6 +127,7 @@ namespace io.github.hatayama.uLoopMCP
             row.Add(toggle);
             row.Add(label);
             _toolListContainer.Add(row);
+            _togglesByToolName[toolName] = toggle;
         }
     }
 }

@@ -484,6 +484,7 @@ namespace io.github.hatayama.uLoopMCP
         private async void HandleToolToggled(string toolName, bool enabled)
         {
             _model.UpdateToolEnabled(toolName, enabled);
+            ClientNotificationService.TriggerToolChangeNotification();
 
             if (!enabled)
             {
@@ -493,9 +494,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 await ToolSkillSynchronizer.InstallSkillFiles();
             }
-
-            ClientNotificationService.TriggerToolChangeNotification();
-            RefreshAllSections();
         }
 
         private void ConfigureEditor()
