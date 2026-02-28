@@ -86,7 +86,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return new TranslationOutput
                 {
-                    FriendlyMessage = $"Tool '{disabledException.ToolName}' is disabled",
+                    FriendlyMessage = $"Tool '{disabledException.ToolName}' is disabled. To enable it, go to {McpUIConstants.TOOL_SETTINGS_MENU_PATH}",
                     Explanation = "This tool has been disabled in project settings.",
                     Solutions = new List<string>
                     {
