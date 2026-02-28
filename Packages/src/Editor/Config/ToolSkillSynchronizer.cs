@@ -132,9 +132,11 @@ namespace io.github.hatayama.uLoopMCP
                     return;
                 }
 
-                // Drain redirected streams to prevent buffer deadlock
+                // Read stderr asynchronously to prevent buffer deadlock
+                // when stdout and stderr are both redirected
+                Task<string> stderrTask = process.StandardError.ReadToEndAsync();
                 string stdout = process.StandardOutput.ReadToEnd();
-                string stderr = process.StandardError.ReadToEnd();
+                string stderr = stderrTask.Result;
                 process.WaitForExit();
 
                 if (process.ExitCode != 0)
