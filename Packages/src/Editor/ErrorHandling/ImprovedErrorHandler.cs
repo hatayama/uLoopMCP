@@ -82,6 +82,19 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
+            if (exception is ToolDisabledException disabledException)
+            {
+                return new TranslationOutput
+                {
+                    FriendlyMessage = $"Tool '{disabledException.ToolName}' is disabled",
+                    Explanation = "This tool has been disabled in project settings.",
+                    Solutions = new List<string>
+                    {
+                        $"Enable '{disabledException.ToolName}' in {McpUIConstants.TOOL_SETTINGS_MENU_PATH}"
+                    }
+                };
+            }
+
             if (exception is ParameterValidationException)
             {
                 return new TranslationOutput
@@ -176,6 +189,10 @@ namespace io.github.hatayama.uLoopMCP
                     return ErrorSeverity.High;
                 }
                 if (exception is TimeoutException)
+                {
+                    return ErrorSeverity.Medium;
+                }
+                if (exception is ToolDisabledException)
                 {
                     return ErrorSeverity.Medium;
                 }

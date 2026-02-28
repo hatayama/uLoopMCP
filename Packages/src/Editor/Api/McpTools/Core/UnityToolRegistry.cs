@@ -212,10 +212,9 @@ namespace io.github.hatayama.uLoopMCP
                 throw new ArgumentException($"Unknown tool: {toolName}");
             }
 
-            // Disabled tools are treated as unknown to hide their existence
             if (!ToolSettings.IsToolEnabled(toolName))
             {
-                throw new ArgumentException($"Unknown tool: {toolName}");
+                throw new ToolDisabledException(toolName);
             }
 
             // Security check - validate tool before execution
