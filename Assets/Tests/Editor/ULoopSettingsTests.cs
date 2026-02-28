@@ -348,6 +348,45 @@ namespace io.github.hatayama.uLoopMCP
                 "dynamicCodeSecurityLevel should be migrated");
         }
 
+        // ── Test 9: Real-world restore path without autoStartServer ───────
+
+        [Test]
+        public void Migration_WhenLegacyHasNoAutoStartButAfterCompileFlag_ShouldStillPreserveSecurityValues()
+        {
+            DeleteIfExists(SettingsFilePath);
+
+            // Simulate old-format JSON that does not contain autoStartServer.
+            // RestoreServerStateIfNeeded can still trigger SaveSettings via
+            // ClearAfterCompileFlag when isAfterCompile=true.
+            string oldFormatJson = JsonUtility.ToJson(new LegacyWithoutAutoStartFixture
+            {
+                enableTestsExecution = true,
+                allowMenuItemExecution = true,
+                allowThirdPartyTools = true,
+                dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted,
+                isAfterCompile = true,
+                customPort = 18080
+            }, true);
+            File.WriteAllText(LegacySettingsFilePath, oldFormatJson);
+            InvalidateBothCaches();
+
+            // Mimic McpServerController.RestoreServerStateIfNeeded call sequence.
+            McpEditorSettings.GetIsServerRunning();
+            McpEditorSettings.GetCustomPort();
+            if (McpEditorSettings.GetIsAfterCompile())
+            {
+                McpEditorSettings.ClearAfterCompileFlag();
+            }
+
+            ULoopSettingsData result = ULoopSettings.GetSettings();
+
+            Assert.IsTrue(result.enableTestsExecution, "enableTestsExecution should be migrated");
+            Assert.IsTrue(result.allowMenuItemExecution, "allowMenuItemExecution should be migrated");
+            Assert.IsTrue(result.allowThirdPartyTools, "allowThirdPartyTools should be migrated");
+            Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel,
+                "dynamicCodeSecurityLevel should be migrated");
+        }
+
         /// <summary>
         /// Fixture that includes both security and non-security fields,
         /// matching the legacy UserSettings/UnityMcpSettings.json structure.
@@ -378,6 +417,21 @@ namespace io.github.hatayama.uLoopMCP
             public int customPort = McpServerConfig.DEFAULT_PORT;
             public bool showDeveloperTools = false;
         }
+
+        /// <summary>
+        /// Fixture for migration race scenario where autoStartServer is absent
+        /// but another path (isAfterCompile) can trigger SaveSettings first.
+        /// </summary>
+        [System.Serializable]
+        private class LegacyWithoutAutoStartFixture
+        {
+            public bool enableTestsExecution = false;
+            public bool allowMenuItemExecution = false;
+            public bool allowThirdPartyTools = false;
+            public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Disabled;
+            public bool isAfterCompile = false;
+            public int customPort = McpServerConfig.DEFAULT_PORT;
+            public bool showDeveloperTools = false;
+        }
     }
 }
-
