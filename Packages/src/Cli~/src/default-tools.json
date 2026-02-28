@@ -343,8 +343,8 @@
       }
     },
     {
-      "name": "capture-window",
-      "description": "Capture Unity EditorWindow and save as PNG",
+      "name": "screenshot",
+      "description": "Take a screenshot of Unity EditorWindow and save as PNG",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -367,6 +367,11 @@
               "contains"
             ],
             "default": "exact"
+          },
+          "OutputDirectory": {
+            "type": "string",
+            "description": "Output directory path for saving screenshots. When empty, uses default path (.uloop/outputs/Screenshots/). Accepts absolute paths.",
+            "default": ""
           }
         }
       }

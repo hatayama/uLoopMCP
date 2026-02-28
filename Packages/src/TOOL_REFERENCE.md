@@ -270,8 +270,8 @@ All tools automatically include the following property:
   - `Message` (string): Operation result message
   - `ErrorMessage` (string): Error message if operation failed
 
-### 13. capture-window
-- **Description**: Capture Unity EditorWindow and save as PNG image. Supports capturing any open EditorWindow by name with flexible matching modes
+### 13. screenshot
+- **Description**: Take a screenshot of Unity EditorWindow and save as PNG. Supports capturing any open EditorWindow by name with flexible matching modes
 - **Parameters**:
   - `WindowName` (string): Window name to capture (e.g., "Game", "Scene", "Console", "Inspector", "Project", "Hierarchy") (default: "Game")
   - `ResolutionScale` (number): Resolution scale for the captured image, 0.1 to 1.0 (default: 1)
@@ -280,8 +280,8 @@ All tools automatically include the following property:
     - `prefix`: Window name must start with the input
     - `contains`: Window name must contain the input anywhere
 - **Response**:
-  - `CapturedCount` (number): Number of windows captured
-  - `CapturedWindows` (array): Array of captured window info
+  - `ScreenshotCount` (number): Number of windows captured
+  - `Screenshots` (array): Array of screenshot info
     - `ImagePath` (string): Absolute path to the saved PNG file
     - `FileSizeBytes` (number): Size of the saved file in bytes
     - `Width` (number): Captured image width in pixels
