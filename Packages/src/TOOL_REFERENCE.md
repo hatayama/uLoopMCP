@@ -271,7 +271,7 @@ All tools automatically include the following property:
   - `ErrorMessage` (string): Error message if operation failed
 
 ### 13. screenshot
-- **Description**: Take a screenshot of Unity EditorWindow and save as PNG image. Supports capturing any open EditorWindow by name with flexible matching modes
+- **Description**: Take a screenshot of Unity EditorWindow and save as PNG. Supports capturing any open EditorWindow by name with flexible matching modes
 - **Parameters**:
   - `WindowName` (string): Window name to capture (e.g., "Game", "Scene", "Console", "Inspector", "Project", "Hierarchy") (default: "Game")
   - `ResolutionScale` (number): Resolution scale for the captured image, 0.1 to 1.0 (default: 1)
