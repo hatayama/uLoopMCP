@@ -125,7 +125,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsTrue(result.allowMenuItemExecution);
             Assert.IsTrue(result.allowThirdPartyTools);
             Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel);
-            Assert.IsTrue(File.Exists(SettingsFilePath), ".uloop/settings.json should be created by migration");
+            Assert.IsTrue(File.Exists(SettingsFilePath), ".uloop/settings.security.json should be created by migration");
         }
 
         // ── Test 2: Idempotency ──────────────────────────────────────────
@@ -161,7 +161,7 @@ namespace io.github.hatayama.uLoopMCP
             File.WriteAllText(LegacySettingsFilePath, alteredLegacy);
             InvalidateBothCaches();
 
-            // Second call should read from .uloop/settings.json, not re-migrate
+            // Second call should read from .uloop/settings.security.json, not re-migrate
             ULoopSettingsData result = ULoopSettings.GetSettings();
 
             Assert.IsTrue(result.enableTestsExecution, "Should retain original migrated value, not the altered legacy");
@@ -198,7 +198,7 @@ namespace io.github.hatayama.uLoopMCP
 
             ULoopSettingsData result = ULoopSettings.GetSettings();
 
-            Assert.IsTrue(result.enableTestsExecution, "Should read from .uloop/settings.json");
+            Assert.IsTrue(result.enableTestsExecution, "Should read from .uloop/settings.security.json");
             Assert.IsFalse(result.allowMenuItemExecution);
             Assert.IsTrue(result.allowThirdPartyTools);
             Assert.AreEqual((int)DynamicCodeSecurityLevel.FullAccess, result.dynamicCodeSecurityLevel);
@@ -301,7 +301,7 @@ namespace io.github.hatayama.uLoopMCP
 
             ULoopSettingsData result = ULoopSettings.GetSettings();
 
-            Assert.IsTrue(File.Exists(SettingsFilePath), ".uloop/settings.json should be recovered from .bak");
+            Assert.IsTrue(File.Exists(SettingsFilePath), ".uloop/settings.security.json should be recovered from .bak");
             Assert.IsTrue(result.enableTestsExecution);
             Assert.IsTrue(result.allowMenuItemExecution);
             Assert.IsFalse(result.allowThirdPartyTools);

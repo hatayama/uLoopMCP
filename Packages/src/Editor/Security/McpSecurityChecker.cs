@@ -10,7 +10,7 @@ namespace io.github.hatayama.uLoopMCP
     /// Design document reference: Packages/src/Editor/Security/SECURITY.md
     /// 
     /// Related classes:
-    /// - ULoopSettings: Persistent security settings storage (.uloop/settings.json)
+    /// - ULoopSettings: Persistent security settings storage (.uloop/settings.security.json)
     /// - McpSecurityException: Custom exception for security violations
     /// - UnityToolRegistry: Tool registration and execution
     /// - McpBridgeServer: Server that executes tools

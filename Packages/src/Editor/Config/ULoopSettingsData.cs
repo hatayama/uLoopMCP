@@ -3,7 +3,7 @@ using System;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Security settings stored in .uloop/settings.json.
+    /// Security settings stored in .uloop/settings.security.json.
     /// This file can be git-tracked for team-wide security policy sharing.
     /// </summary>
     [Serializable]
