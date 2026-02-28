@@ -717,7 +717,10 @@ function handleCompletionOptions(): boolean {
 
   if (args.includes('--list-commands')) {
     const tools = loadToolsCache();
-    const enabledTools = filterEnabledTools(tools.tools, projectPath);
+    // Only filter disabled tools when --project-path is explicitly provided;
+    // without it, loadDisabledTools would trigger findUnityProjectRoot() scanning
+    const enabledTools: ToolDefinition[] =
+      projectPath !== undefined ? filterEnabledTools(tools.tools, projectPath) : tools.tools;
     const allCommands = [...BUILTIN_COMMANDS, ...enabledTools.map((t) => t.name)];
     console.log(allCommands.join('\n'));
     return true;
@@ -743,8 +746,13 @@ function listOptionsForCommand(cmdName: string, projectPath?: string): void {
   }
 
   // Tool commands - only output tool-specific options
+  // Only filter disabled tools when --project-path is explicitly provided;
+  // without it, loadDisabledTools would trigger findUnityProjectRoot() scanning
   const tools = loadToolsCache();
-  const tool = filterEnabledTools(tools.tools, projectPath).find((t) => t.name === cmdName);
+  const tool: ToolDefinition | undefined =
+    projectPath !== undefined
+      ? filterEnabledTools(tools.tools, projectPath).find((t) => t.name === cmdName)
+      : tools.tools.find((t) => t.name === cmdName);
   if (!tool) {
     return;
   }
@@ -830,7 +838,13 @@ async function main(): Promise<void> {
 
   if (skipProjectDetection) {
     const defaultTools = getDefaultTools();
-    for (const tool of filterEnabledTools(defaultTools.tools, syncGlobalOptions.projectPath)) {
+    // Only filter disabled tools when --project-path is explicitly provided;
+    // without it, filterEnabledTools would trigger findUnityProjectRoot() scanning
+    const tools: ToolDefinition[] =
+      syncGlobalOptions.projectPath !== undefined
+        ? filterEnabledTools(defaultTools.tools, syncGlobalOptions.projectPath)
+        : defaultTools.tools;
+    for (const tool of tools) {
       registerToolCommand(tool);
     }
     program.parse();

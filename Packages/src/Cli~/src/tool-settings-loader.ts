@@ -6,7 +6,7 @@
 // File paths are constructed from Unity project root, not from untrusted user input
 /* eslint-disable security/detect-non-literal-fs-filename */
 
-import { existsSync, readFileSync } from 'fs';
+import { readFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { findUnityProjectRoot } from './project-root.js';
 import type { ToolDefinition } from './tool-cache.js';
@@ -26,11 +26,14 @@ export function loadDisabledTools(projectPath?: string): string[] {
   }
 
   const settingsPath: string = join(projectRoot, ULOOP_DIR, TOOL_SETTINGS_FILE);
-  if (!existsSync(settingsPath)) {
+
+  let content: string;
+  try {
+    content = readFileSync(settingsPath, 'utf-8');
+  } catch {
     return [];
   }
 
-  const content: string = readFileSync(settingsPath, 'utf-8');
   if (!content.trim()) {
     return [];
   }
