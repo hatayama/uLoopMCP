@@ -22,6 +22,7 @@ uloop get-hierarchy [options]
 | `--include-components` | boolean | `true` | Include component information |
 | `--include-inactive` | boolean | `true` | Include inactive GameObjects |
 | `--include-paths` | boolean | `false` | Include full path information |
+| `--use-components-lut` | string | `auto` | Use LUT for components (`auto`, `true`, `false`) |
 | `--use-selection` | boolean | `false` | Use selected GameObject(s) as root(s). When true, `--root-path` is ignored. |
 
 ## Global Options
