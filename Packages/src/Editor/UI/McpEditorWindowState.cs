@@ -35,6 +35,7 @@ namespace io.github.hatayama.uLoopMCP
         public McpEditorType SelectedEditorType { get; }
         public Vector2 MainScrollPosition { get; }
         public bool ShowSecuritySettings { get; }
+        public bool ShowToolSettings { get; }
         public bool AddRepositoryRoot { get; }
         public bool SupportsRepositoryRootToggle { get; }
         public bool ShowRepositoryRootToggle { get; }
@@ -47,6 +48,7 @@ namespace io.github.hatayama.uLoopMCP
             McpEditorType selectedEditorType = McpEditorType.Cursor,
             Vector2 mainScrollPosition = default,
             bool showSecuritySettings = false,
+            bool showToolSettings = false,
             bool addRepositoryRoot = false,
             bool supportsRepositoryRootToggle = false,
             bool showRepositoryRootToggle = false,
@@ -58,6 +60,7 @@ namespace io.github.hatayama.uLoopMCP
             SelectedEditorType = selectedEditorType;
             MainScrollPosition = mainScrollPosition;
             ShowSecuritySettings = showSecuritySettings;
+            ShowToolSettings = showToolSettings;
             AddRepositoryRoot = addRepositoryRoot;
             SupportsRepositoryRootToggle = supportsRepositoryRootToggle;
             ShowRepositoryRootToggle = showRepositoryRootToggle;

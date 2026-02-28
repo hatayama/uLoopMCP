@@ -56,6 +56,7 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: settings.showSecuritySettings,
+                showToolSettings: settings.showToolSettings,
                 addRepositoryRoot: settings.addRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
@@ -86,6 +87,7 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: selectedEditor,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: ui.ShowSecuritySettings,
+                showToolSettings: ui.ShowToolSettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
@@ -184,6 +186,7 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: ui.ShowSecuritySettings,
+                showToolSettings: ui.ShowToolSettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
@@ -203,6 +206,7 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: ui.ShowSecuritySettings,
+                showToolSettings: ui.ShowToolSettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
@@ -221,6 +225,7 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: type,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: ui.ShowSecuritySettings,
+                showToolSettings: ui.ShowToolSettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
@@ -240,6 +245,7 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: position,
                 showSecuritySettings: ui.ShowSecuritySettings,
+                showToolSettings: ui.ShowToolSettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
@@ -258,12 +264,35 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: show,
+                showToolSettings: ui.ShowToolSettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
                 connectionMode: ui.ConnectionMode,
                 showConfiguration: ui.ShowConfiguration));
             McpEditorSettings.SetShowSecuritySettings(show);
+        }
+
+        public void UpdateShowToolSettings(bool show)
+        {
+            UpdateUIState(ui => new UIState(
+                customPort: ui.CustomPort,
+                showConnectedTools: ui.ShowConnectedTools,
+                selectedEditorType: ui.SelectedEditorType,
+                mainScrollPosition: ui.MainScrollPosition,
+                showSecuritySettings: ui.ShowSecuritySettings,
+                showToolSettings: show,
+                addRepositoryRoot: ui.AddRepositoryRoot,
+                supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
+                showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
+                connectionMode: ui.ConnectionMode,
+                showConfiguration: ui.ShowConfiguration));
+            McpEditorSettings.SetShowToolSettings(show);
+        }
+
+        public void UpdateToolEnabled(string toolName, bool enabled)
+        {
+            ToolSettings.SetToolEnabled(toolName, enabled);
         }
 
         /// <summary>
@@ -301,6 +330,7 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: ui.ShowSecuritySettings,
+                showToolSettings: ui.ShowToolSettings,
                 addRepositoryRoot: addRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
@@ -321,6 +351,7 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: ui.ShowSecuritySettings,
+                showToolSettings: ui.ShowToolSettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: supportsToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
@@ -339,6 +370,7 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: ui.ShowSecuritySettings,
+                showToolSettings: ui.ShowToolSettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: showToggle,
@@ -354,6 +386,7 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: ui.ShowSecuritySettings,
+                showToolSettings: ui.ShowToolSettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,
@@ -370,6 +403,7 @@ namespace io.github.hatayama.uLoopMCP
                 selectedEditorType: ui.SelectedEditorType,
                 mainScrollPosition: ui.MainScrollPosition,
                 showSecuritySettings: ui.ShowSecuritySettings,
+                showToolSettings: ui.ShowToolSettings,
                 addRepositoryRoot: ui.AddRepositoryRoot,
                 supportsRepositoryRootToggle: ui.SupportsRepositoryRootToggle,
                 showRepositoryRootToggle: ui.ShowRepositoryRootToggle,

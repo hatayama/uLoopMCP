@@ -83,6 +83,8 @@ namespace io.github.hatayama.uLoopMCP
             _view.OnRepositoryRootChanged += UpdateAddRepositoryRoot;
             _view.OnConfigureClicked += ConfigureEditor;
             _view.OnOpenSettingsClicked += OpenConfigurationFile;
+            _view.OnToolSettingsFoldoutChanged += UpdateShowToolSettings;
+            _view.OnToolToggled += HandleToolToggled;
             _view.OnSecurityFoldoutChanged += UpdateShowSecuritySettings;
             _view.OnEnableTestsChanged += UpdateEnableTestsExecution;
             _view.OnAllowMenuChanged += UpdateAllowMenuItemExecution;
@@ -219,6 +221,9 @@ namespace io.github.hatayama.uLoopMCP
 
             EditorConfigData configData = CreateEditorConfigData();
             _view.UpdateEditorConfig(configData);
+
+            ToolSettingsSectionData toolSettingsData = CreateToolSettingsData();
+            _view.UpdateToolSettings(toolSettingsData);
 
             SecuritySettingsData securityData = CreateSecuritySettingsData();
             _view.UpdateSecuritySettings(securityData);
@@ -423,6 +428,73 @@ namespace io.github.hatayama.uLoopMCP
                 ULoopSettings.GetEnableTestsExecution(),
                 ULoopSettings.GetAllowMenuItemExecution(),
                 ULoopSettings.GetAllowThirdPartyTools());
+        }
+
+        private ToolSettingsSectionData CreateToolSettingsData()
+        {
+            UnityToolRegistry registry = CustomToolManager.GetRegistry();
+            if (registry == null)
+            {
+                return new ToolSettingsSectionData(
+                    _model.UI.ShowToolSettings,
+                    System.Array.Empty<ToolToggleItem>(),
+                    System.Array.Empty<ToolToggleItem>(),
+                    false);
+            }
+
+            ToolInfo[] allTools = registry.GetAllRegisteredToolInfos();
+
+            System.Collections.Generic.List<ToolToggleItem> builtIn = new();
+            System.Collections.Generic.List<ToolToggleItem> thirdParty = new();
+
+            foreach (ToolInfo tool in allTools)
+            {
+                // Internal tools are always enabled and hidden from UI
+                if (tool.DisplayDevelopmentOnly)
+                {
+                    continue;
+                }
+
+                bool isEnabled = ToolSettings.IsToolEnabled(tool.Name);
+                bool isThirdPartyTool = registry.IsThirdPartyTool(tool.Name);
+
+                ToolToggleItem item = new ToolToggleItem(tool.Name, tool.Description, isEnabled, isThirdPartyTool);
+                if (isThirdPartyTool)
+                {
+                    thirdParty.Add(item);
+                }
+                else
+                {
+                    builtIn.Add(item);
+                }
+            }
+
+            return new ToolSettingsSectionData(
+                _model.UI.ShowToolSettings,
+                builtIn.ToArray(),
+                thirdParty.ToArray(),
+                true);
+        }
+
+        private void UpdateShowToolSettings(bool show)
+        {
+            _model.UpdateShowToolSettings(show);
+        }
+
+        private async void HandleToolToggled(string toolName, bool enabled)
+        {
+            _model.UpdateToolEnabled(toolName, enabled);
+
+            if (!enabled)
+            {
+                ToolSkillSynchronizer.RemoveSkillFiles(toolName);
+            }
+            else
+            {
+                await ToolSkillSynchronizer.InstallSkillFiles();
+            }
+
+            RefreshAllSections();
         }
 
         private void ConfigureEditor()

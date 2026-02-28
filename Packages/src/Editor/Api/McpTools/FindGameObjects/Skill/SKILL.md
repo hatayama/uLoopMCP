@@ -1,5 +1,6 @@
 ---
 name: uloop-find-game-objects
+toolName: find-game-objects
 description: "Find specific GameObjects in scene. Use when: searching for objects by name, finding objects with specific components, locating tagged/layered objects, getting currently selected GameObjects in Unity Editor, or when user asks to find GameObjects. Returns matching GameObjects with paths and components."
 ---
 

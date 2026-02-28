@@ -212,6 +212,12 @@ namespace io.github.hatayama.uLoopMCP
                 throw new ArgumentException($"Unknown tool: {toolName}");
             }
 
+            // Disabled tools are treated as unknown to hide their existence
+            if (!ToolSettings.IsToolEnabled(toolName))
+            {
+                throw new ArgumentException($"Unknown tool: {toolName}");
+            }
+
             // Security check - validate tool before execution
             if (!McpSecurityChecker.IsToolAllowed(toolName))
             {
@@ -228,7 +234,9 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>Array of tool information</returns>
         public ToolInfo[] GetRegisteredTools()
         {
-            return _tools.Values.Select(tool => 
+            return _tools.Values
+                .Where(tool => ToolSettings.IsToolEnabled(tool.ToolName))
+                .Select(tool =>
             {
                 // Check if tool has McpTool attribute with DisplayDevelopmentOnly
                 bool displayDevelopmentOnly = false;
@@ -252,6 +260,33 @@ namespace io.github.hatayama.uLoopMCP
                 
                 return new ToolInfo(tool.ToolName, description, tool.ParameterSchema, displayDevelopmentOnly);
             }).ToArray();
+        }
+
+        /// <summary>
+        /// Get all tools including disabled ones. Used by Tool Settings UI.
+        /// </summary>
+        public ToolInfo[] GetAllRegisteredToolInfos()
+        {
+            return _tools.Values.Select(tool =>
+            {
+                McpToolAttribute attribute = tool.GetType().GetCustomAttribute<McpToolAttribute>();
+                string description = attribute?.Description ?? "";
+                bool displayDevelopmentOnly = attribute?.DisplayDevelopmentOnly ?? false;
+                return new ToolInfo(tool.ToolName, description, tool.ParameterSchema, displayDevelopmentOnly);
+            }).ToArray();
+        }
+
+        /// <summary>
+        /// Check if a tool belongs to a third-party assembly.
+        /// </summary>
+        public bool IsThirdPartyTool(string toolName)
+        {
+            if (!_tools.TryGetValue(toolName, out IUnityTool tool))
+            {
+                return true;
+            }
+            string assemblyName = tool.GetType().Assembly.GetName().Name;
+            return assemblyName != "uLoopMCP.Editor";
         }
 
         /// <summary>

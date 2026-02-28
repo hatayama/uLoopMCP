@@ -35,6 +35,7 @@ import { registerFocusWindowCommand } from './commands/focus-window.js';
 import { VERSION } from './version.js';
 import { findUnityProjectRoot } from './project-root.js';
 import { validateProjectPath } from './port-resolver.js';
+import { filterEnabledTools } from './tool-settings-loader.js';
 
 interface CliOptions extends GlobalOptions {
   [key: string]: unknown;
@@ -710,7 +711,8 @@ function handleCompletionOptions(): boolean {
 
   if (args.includes('--list-commands')) {
     const tools = loadToolsCache();
-    const allCommands = [...BUILTIN_COMMANDS, ...tools.tools.map((t) => t.name)];
+    const enabledTools = filterEnabledTools(tools.tools);
+    const allCommands = [...BUILTIN_COMMANDS, ...enabledTools.map((t) => t.name)];
     console.log(allCommands.join('\n'));
     return true;
   }
@@ -736,7 +738,7 @@ function listOptionsForCommand(cmdName: string): void {
 
   // Tool commands - only output tool-specific options
   const tools = loadToolsCache();
-  const tool = tools.tools.find((t) => t.name === cmdName);
+  const tool = filterEnabledTools(tools.tools).find((t) => t.name === cmdName);
   if (!tool) {
     return;
   }
@@ -758,7 +760,7 @@ function commandExists(cmdName: string): boolean {
     return true;
   }
   const tools = loadToolsCache();
-  return tools.tools.some((t) => t.name === cmdName);
+  return filterEnabledTools(tools.tools).some((t) => t.name === cmdName);
 }
 
 function shouldSkipAutoSync(cmdName: string | undefined, args: string[]): boolean {
@@ -822,7 +824,7 @@ async function main(): Promise<void> {
 
   if (skipProjectDetection) {
     const defaultTools = getDefaultTools();
-    for (const tool of defaultTools.tools) {
+    for (const tool of filterEnabledTools(defaultTools.tools)) {
       registerToolCommand(tool);
     }
     program.parse();
@@ -855,7 +857,7 @@ async function main(): Promise<void> {
 
   // Register tool commands from cache (after potential auto-sync)
   const toolsCache = loadToolsCache();
-  for (const tool of toolsCache.tools) {
+  for (const tool of filterEnabledTools(toolsCache.tools)) {
     registerToolCommand(tool);
   }
 
@@ -864,7 +866,7 @@ async function main(): Promise<void> {
     try {
       await syncTools(syncGlobalOptions);
       const newCache = loadToolsCache();
-      const tool = newCache.tools.find((t) => t.name === cmdName);
+      const tool = filterEnabledTools(newCache.tools).find((t) => t.name === cmdName);
       if (tool) {
         registerToolCommand(tool);
         console.log(`\x1b[32m✓ Found '${cmdName}' after sync.\x1b[0m\n`);

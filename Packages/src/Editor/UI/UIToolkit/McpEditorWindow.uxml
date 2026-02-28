@@ -76,6 +76,17 @@
             </ui:Foldout>
         </ui:VisualElement>
 
+        <!-- Tool Settings Section -->
+        <ui:VisualElement name="tool-settings-section" class="mcp-section mcp-section--box">
+            <ui:Foldout name="tool-settings-foldout" text="Tool Settings" class="mcp-foldout">
+                <ui:VisualElement name="tool-settings-content">
+                    <ui:Label text="Enable or disable individual tools. Disabled tools are completely hidden from AI agents." class="mcp-tool-settings-info" />
+                    <ui:Label text="MCP clients will reflect changes on next connection." class="mcp-tool-settings-note" />
+                    <ui:ScrollView name="tool-list-container" class="mcp-tool-list-container" />
+                </ui:VisualElement>
+            </ui:Foldout>
+        </ui:VisualElement>
+
         <!-- Security Settings Section -->
         <ui:VisualElement name="security-settings-section" class="mcp-section mcp-section--box">
             <ui:Foldout name="security-foldout" text="Security Settings" class="mcp-foldout">

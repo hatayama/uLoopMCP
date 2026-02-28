@@ -1,5 +1,6 @@
 ---
 name: uloop-unity-search
+toolName: unity-search
 description: "Search Unity project for assets. Use when: finding scenes, prefabs, scripts, materials, or other assets by name/type, or when user asks to search project files. Returns asset paths and metadata."
 ---
 

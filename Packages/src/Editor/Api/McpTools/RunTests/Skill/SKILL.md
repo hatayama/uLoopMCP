@@ -1,5 +1,6 @@
 ---
 name: uloop-run-tests
+toolName: run-tests
 description: "Execute Unity Test Runner and get detailed results. Use when: (1) running unit tests (EditMode/PlayMode), (2) verifying code changes, (3) diagnosing test failures — NUnit XML with error messages and stack traces is auto-saved when tests fail."
 ---
 

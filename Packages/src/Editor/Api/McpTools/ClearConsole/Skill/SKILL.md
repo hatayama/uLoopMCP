@@ -1,5 +1,6 @@
 ---
 name: uloop-clear-console
+toolName: clear-console
 description: "Clear Unity console logs. Use when: clearing console before tests, starting fresh debugging session, or when user asks to clear logs. Removes all log entries from Unity Console."
 ---
 
