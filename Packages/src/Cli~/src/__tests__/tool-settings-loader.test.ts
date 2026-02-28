@@ -90,7 +90,10 @@ describe('tool-settings-loader', () => {
     });
 
     it('should return empty array when disabledTools key is missing', () => {
-      writeFileSync(join(testDir, '.uloop', 'settings.tools.json'), JSON.stringify({ other: 'data' }));
+      writeFileSync(
+        join(testDir, '.uloop', 'settings.tools.json'),
+        JSON.stringify({ other: 'data' }),
+      );
 
       const result: string[] = loadDisabledTools();
 
@@ -128,9 +131,21 @@ describe('tool-settings-loader', () => {
 
   describe('filterEnabledTools', () => {
     const mockTools: ToolDefinition[] = [
-      { name: 'compile', description: 'Compile', inputSchema: { type: 'object', properties: {} } },
-      { name: 'get-logs', description: 'Get logs', inputSchema: { type: 'object', properties: {} } },
-      { name: 'clear-console', description: 'Clear', inputSchema: { type: 'object', properties: {} } },
+      {
+        name: 'compile',
+        description: 'Compile',
+        inputSchema: { type: 'object', properties: {} },
+      },
+      {
+        name: 'get-logs',
+        description: 'Get logs',
+        inputSchema: { type: 'object', properties: {} },
+      },
+      {
+        name: 'clear-console',
+        description: 'Clear',
+        inputSchema: { type: 'object', properties: {} },
+      },
     ];
 
     it('should filter out disabled tools', () => {
