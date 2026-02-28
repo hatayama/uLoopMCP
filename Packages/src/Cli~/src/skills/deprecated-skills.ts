@@ -6,4 +6,5 @@
  */
 export const DEPRECATED_SKILLS: string[] = [
   'uloop-capture-window', // renamed to uloop-screenshot in v0.54.0
+  'uloop-get-provider-details', // internal development-only tool, not for end users
 ];
