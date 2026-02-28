@@ -78,7 +78,13 @@ namespace io.github.hatayama.uLoopMCP
             toggle.SetValueWithoutNotify(item.IsEnabled);
 
             string toolName = item.ToolName;
-            toggle.RegisterValueChangedCallback(evt => OnToolToggled?.Invoke(toolName, evt.newValue));
+            toggle.RegisterValueChangedCallback(evt =>
+            {
+                // Foldout uses an internal Toggle that listens for ChangeEvent<bool>.
+                // Without StopPropagation, this event bubbles up and collapses the Foldout.
+                evt.StopPropagation();
+                OnToolToggled?.Invoke(toolName, evt.newValue);
+            });
 
             Label label = new Label(item.ToolName);
             label.AddToClassList("mcp-tool-toggle-row__label");
@@ -90,9 +96,6 @@ namespace io.github.hatayama.uLoopMCP
                 toggle.SetValueWithoutNotify(newValue);
                 OnToolToggled?.Invoke(toolName, newValue);
             });
-
-            // Prevent clicks on the row from propagating to the parent Foldout
-            row.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
 
             row.Add(toggle);
             row.Add(label);
