@@ -68,7 +68,8 @@ Skills are dynamically loaded from the uLoopMCP package in your Unity project. T
 
 Custom skills defined in your project are also automatically detected.
 
-## CLI Command Reference ([日本語](README_ja.md#cli-コマンドリファレンス-english))
+## CLI Command Reference  
+([日本語](README_ja.md#cli-コマンドリファレンス-english))
 
 You can also call the CLI directly without using Skills.
 
