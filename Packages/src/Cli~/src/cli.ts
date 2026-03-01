@@ -832,11 +832,12 @@ async function main(): Promise<void> {
 
   if (skipProjectDetection) {
     const defaultTools = getDefaultTools();
-    // Filter disabled tools for help output; skip for -v/--version to avoid
-    // unnecessary findUnityProjectRoot() scanning and potential multi-project warnings
-    const isHelpRequest: boolean = args.includes('-h') || args.includes('--help');
+    // Only filter disabled tools for top-level help (uloop --help); subcommand help
+    // (e.g. uloop completion --help) does not list dynamic tools, so scanning is unnecessary
+    const isTopLevelHelp: boolean =
+      cmdName === undefined && (args.includes('-h') || args.includes('--help'));
     const tools: ToolDefinition[] =
-      syncGlobalOptions.projectPath !== undefined || isHelpRequest
+      syncGlobalOptions.projectPath !== undefined || isTopLevelHelp
         ? filterEnabledTools(defaultTools.tools, syncGlobalOptions.projectPath)
         : defaultTools.tools;
     for (const tool of tools) {
