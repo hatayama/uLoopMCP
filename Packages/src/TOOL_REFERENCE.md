@@ -4,12 +4,9 @@
 
 This document provides detailed specifications for all uLoopMCP tools.
 
-## Common Parameters & Response Format
+## Common Response Format
 
 All Unity MCP tools share the following common elements:
-
-### Common Parameters
-- `TimeoutSeconds` (number): Tool execution timeout in seconds
 
 ### Common Response Properties
 All tools automatically include the following property:
@@ -25,19 +22,19 @@ All tools automatically include the following property:
   - `ForceRecompile` (boolean): Whether to perform forced recompilation (default: false)
   - `WaitForDomainReload` (boolean): Whether to wait for domain reload completion before returning (default: false)
 - **Response**:
-  - `Success` (boolean): Whether compilation was successful
-  - `ErrorCount` (number): Total number of errors
-  - `WarningCount` (number): Total number of warnings
-  - `CompletedAt` (string): Compilation completion timestamp (ISO format)
-  - `Errors` (array): Array of compilation errors (if any)
+  - `Success` (boolean | null): Whether compilation was successful. Null when ForceRecompile=true because results are unavailable until domain reload completes
+  - `ErrorCount` (number | null): Total number of errors. Null when ForceRecompile=true
+  - `WarningCount` (number | null): Total number of warnings. Null when ForceRecompile=true
+  - `Errors` (array | null): Array of compilation errors. Null when ForceRecompile=true
     - `Message` (string): Error message
     - `File` (string): File path where error occurred
     - `Line` (number): Line number where error occurred
-  - `Warnings` (array): Array of compilation warnings (if any)
+  - `Warnings` (array | null): Array of compilation warnings. Null when ForceRecompile=true
     - `Message` (string): Warning message
     - `File` (string): File path where warning occurred
     - `Line` (number): Line number where warning occurred
   - `Message` (string): Optional message for additional information
+  - `ProjectRoot` (string): Unity project root path. Set only when WaitForDomainReload=true
 
 ### 2. get-logs
 - **Description**: Retrieves log information from Unity console with filtering and advanced search capabilities
@@ -83,7 +80,7 @@ All tools automatically include the following property:
 ### 4. clear-console
 - **Description**: Clears Unity console logs for clean development workflow
 - **Parameters**:
-  - `AddConfirmationMessage` (boolean): Whether to add a confirmation log message after clearing (default: true)
+  - `AddConfirmationMessage` (boolean): Whether to add a confirmation log message after clearing (default: false)
 - **Response**:
   - `Success` (boolean): Whether the console clear operation was successful
   - `ClearedLogCount` (number): Number of logs that were cleared from the console
@@ -113,11 +110,17 @@ All tools automatically include the following property:
     - `tag` (string): GameObject tag
     - `layer` (number): GameObject layer
     - `components` (array): Array of components on the GameObject
-      - `TypeName` (string): Component type name
-      - `AssemblyQualifiedName` (string): Full assembly qualified name
-      - `Properties` (object): Component properties (if IncludeInheritedProperties is true)
+      - `type` (string): Component type name
+      - `fullTypeName` (string): Full assembly qualified type name
+      - `properties` (array): Component properties (if IncludeInheritedProperties is true)
   - `totalFound` (number): Total number of GameObjects found
   - `errorMessage` (string): Error message if search failed
+  - `resultsFilePath` (string): File path where results were saved (when results are exported to file)
+  - `message` (string): Operation message
+  - `processingErrors` (array): Array of objects that failed to serialize
+    - `gameObjectName` (string): Name of the GameObject that failed
+    - `gameObjectPath` (string): Path of the GameObject that failed
+    - `error` (string): Error description
 
 ---
 
@@ -171,46 +174,10 @@ All tools automatically include the following property:
   - `UseComponentsLut` (string): Use LUT for components - "auto", "true", "false" (default: "auto")
   - `UseSelection` (boolean): Whether to use currently selected GameObject(s) as root(s). When true, RootPath is ignored (default: false)
 - **Response**:
-  - **Small hierarchies** (<=100KB): Direct nested JSON structure
-    - `hierarchy` (array): Array of root level GameObjects in nested format
-      - `id` (number): Unity's GetInstanceID() - unique within session
-      - `name` (string): GameObject name
-      - `depth` (number): Depth level in hierarchy (0 for root)
-      - `isActive` (boolean): Whether the GameObject is active
-      - `components` (array): Array of component type names attached to this GameObject
-      - `children` (array): Recursive array of child GameObjects with same structure
-    - `context` (object): Context information about the hierarchy
-      - `sceneType` (string): Scene type ("editor", "runtime", "prefab")
-      - `sceneName` (string): Scene name or prefab path
-      - `nodeCount` (number): Total number of nodes in hierarchy
-      - `maxDepth` (number): Maximum depth reached during traversal
-  - **Large hierarchies** (>100KB): Automatic file export
-    - `hierarchySavedToFile` (boolean): Always true for large hierarchies
-    - `hierarchyFilePath` (string): Relative path to saved hierarchy file (e.g., "{project_root}/.uloop/outputs/HierarchyResults/hierarchy_2025-07-10_21-30-15.json")
-    - `saveToFileReason` (string): Reason for file export ("auto_threshold")
-    - `context` (object): Same context information as above
-  - `Message` (string): Operation message
-  - `ErrorMessage` (string): Error message if operation failed
+  - `message` (string): Human-readable guidance for clients to locate and read the JSON file
+  - `hierarchyFilePath` (string): File path where hierarchy data was saved (e.g., "{project_root}/.uloop/outputs/HierarchyResults/hierarchy_2025-07-10_21-30-15.json"). The exported JSON file contains `hierarchy` (nested array of GameObjects) and `context` (scene info, node count, max depth)
 
-### 8. get-provider-details
-- **Description**: Get detailed information about Unity Search providers including display names, descriptions, active status, and capabilities
-- **Parameters**:
-  - `ProviderId` (string): Specific provider ID to get details for (empty = all providers) (default: "")
-    - Examples: "asset", "scene", "menu", "settings"
-  - `ActiveOnly` (boolean): Whether to include only active providers (default: false)
-  - `SortByPriority` (boolean): Sort providers by priority (lower number = higher priority) (default: true)
-  - `IncludeDescriptions` (boolean): Include detailed descriptions for each provider (default: true)
-- **Response**:
-  - `Providers` (array): Array of provider information
-  - `TotalCount` (number): Total number of providers found
-  - `ActiveCount` (number): Number of active providers
-  - `InactiveCount` (number): Number of inactive providers
-  - `Success` (boolean): Whether the request was successful
-  - `ErrorMessage` (string): Error message if request failed
-  - `AppliedFilter` (string): Filter applied (specific provider ID or "all")
-  - `SortedByPriority` (boolean): Whether results are sorted by priority
-
-### 9. get-menu-items
+### 8. get-menu-items
 - **Description**: Retrieve Unity MenuItems with detailed metadata for programmatic execution. Unlike Unity Search menu provider, this provides implementation details (method names, assemblies, execution compatibility) needed for automation and debugging
 - **Parameters**:
   - `FilterText` (string): Text to filter MenuItem paths (empty for all items) (default: "")
@@ -225,12 +192,14 @@ All tools automatically include the following property:
     - `AssemblyName` (string): Assembly name
     - `Priority` (number): Menu item priority
     - `IsValidateFunction` (boolean): Whether it's a validation function
+    - `CanExecuteViaEditorApplication` (boolean): Whether the menu item can be executed via EditorApplication.ExecuteMenuItem
+    - `WarningMessage` (string): Warning message if there are issues with this MenuItem (e.g., duplicate attributes)
   - `TotalCount` (number): Total number of MenuItems discovered before filtering
   - `FilteredCount` (number): Number of MenuItems returned after filtering
   - `AppliedFilter` (string): The filter text that was applied
   - `AppliedFilterType` (string): The filter type that was applied
 
-### 10. execute-menu-item
+### 9. execute-menu-item
 - **Description**: Execute Unity MenuItem by path
 - **Parameters**:
   - `MenuItemPath` (string): The menu item path to execute (e.g., "GameObject/Create Empty") (default: "")
@@ -242,8 +211,9 @@ All tools automatically include the following property:
   - `ErrorMessage` (string): Error message if execution failed
   - `Details` (string): Additional information about the execution
   - `MenuItemFound` (boolean): Whether the menu item was found in the system
+  - `WarningMessage` (string): Warning message if there are issues with this MenuItem (e.g., duplicate attributes)
 
-### 11. execute-dynamic-code
+### 10. execute-dynamic-code
 - **Description**: Execute C# code dynamically within Unity Editor. Implements security levels and automatic using statement processing with enhanced error messaging
 - **Parameters**:
   - `Code` (string): The C# code to execute (default: "")
@@ -258,11 +228,17 @@ All tools automatically include the following property:
     - `Line` (number): Line number where error occurred
     - `Column` (number): Column number where error occurred
     - `ErrorCode` (string): Compiler error code (e.g., CS0103)
+    - `Hint` (string): Optional hint for resolving the error
+    - `Suggestions` (array of string): Suggested fixes (e.g., add using or qualify)
+    - `Context` (string): Context lines around the error with a caret pointer
+    - `PointerColumn` (number): Pointer column for caret rendering (1-based)
   - `ErrorMessage` (string): Error message (if failed)
   - `SecurityLevel` (string): Current security level ("Disabled", "Restricted", "FullAccess")
   - `UpdatedCode` (string): Updated code (after applying fixes)
+  - `DiagnosticsSummary` (string): Summary of diagnostics (unique count, total count, first error brief)
+  - `Diagnostics` (array): Structured diagnostics for rich clients (same structure as CompilationErrors)
 
-### 12. focus-window
+### 11. focus-window
 - **Description**: Brings Unity Editor window to front on macOS and Windows
 - **Parameters**: None
 - **Response**:
@@ -270,7 +246,7 @@ All tools automatically include the following property:
   - `Message` (string): Operation result message
   - `ErrorMessage` (string): Error message if operation failed
 
-### 13. screenshot
+### 12. screenshot
 - **Description**: Take a screenshot of Unity EditorWindow and save as PNG. Supports capturing any open EditorWindow by name with flexible matching modes
 - **Parameters**:
   - `WindowName` (string): Window name to capture (e.g., "Game", "Scene", "Console", "Inspector", "Project", "Hierarchy") (default: "Game")
@@ -279,6 +255,7 @@ All tools automatically include the following property:
     - `exact`: Window name must match exactly
     - `prefix`: Window name must start with the input
     - `contains`: Window name must contain the input anywhere
+  - `OutputDirectory` (string): Output directory path for saving screenshots. When empty, uses default path (.uloop/outputs/Screenshots/). Accepts absolute paths (default: "")
 - **Response**:
   - `ScreenshotCount` (number): Number of windows captured
   - `Screenshots` (array): Array of screenshot info
@@ -287,7 +264,7 @@ All tools automatically include the following property:
     - `Width` (number): Captured image width in pixels
     - `Height` (number): Captured image height in pixels
 
-### 14. control-play-mode
+### 13. control-play-mode
 - **Description**: Control Unity Editor play mode (play/stop/pause)
 - **Parameters**:
   - `Action` (enum): Action to perform - "Play", "Stop", "Pause" (default: "Play")
