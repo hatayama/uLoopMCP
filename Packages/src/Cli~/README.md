@@ -64,7 +64,7 @@ Skills are dynamically loaded from the uLoopMCP package in your Unity project. T
 - `/uloop-screenshot` - Take a screenshot of EditorWindow
 - `/uloop-control-play-mode` - Control Play Mode
 - `/uloop-execute-dynamic-code` - Execute dynamic C# code
-- `/uloop-get-provider-details` - Get search provider details
+- `/uloop-launch` - Launch Unity project with matching Editor version
 
 Custom skills defined in your project are also automatically detected.
 
@@ -281,9 +281,10 @@ Take a screenshot of Unity EditorWindow and save as PNG.
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--window-name` | string | `Game` | Window name (e.g., "Game", "Scene", "Console", "Inspector") |
+| `--window-name` | string | `Game` | Window name (e.g., "Game", "Scene", "Console", "Inspector", "Project", "Hierarchy") |
 | `--resolution-scale` | number | `1` | Resolution scale (0.1 to 1.0) |
 | `--match-mode` | enum | `exact` | Matching mode: `exact`, `prefix`, `contains` (case-insensitive) |
+| `--output-directory` | string | | Output directory path (uses .uloop/outputs/Screenshots/ when empty) |
 
 ```bash
 uloop screenshot
@@ -306,23 +307,6 @@ uloop execute-dynamic-code --code 'using UnityEngine; Debug.Log("Hello!");'
 uloop execute-dynamic-code --code 'Selection.activeGameObject.name' --compile-only true
 ```
 
-### get-provider-details
-
-Get Unity Search provider details.
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--provider-id` | string | | Specific provider ID (e.g., "asset", "scene") |
-| `--active-only` | boolean | `false` | Only active providers |
-| `--include-descriptions` | boolean | `true` | Include descriptions |
-| `--sort-by-priority` | boolean | `true` | Sort by priority |
-
-```bash
-uloop get-provider-details
-uloop get-provider-details --provider-id asset
-uloop get-provider-details --active-only true
-```
-
 ### control-play-mode
 
 Control Unity Editor play mode.
@@ -335,6 +319,28 @@ Control Unity Editor play mode.
 uloop control-play-mode --action Play
 uloop control-play-mode --action Stop
 uloop control-play-mode --action Pause
+```
+
+### launch
+
+Open a Unity project with the matching Editor version.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `[project-path]` | string | | Path to Unity project (searches current directory if omitted) |
+| `-r, --restart` | flag | | Kill running Unity and restart |
+| `-q, --quit` | flag | | Gracefully quit running Unity |
+| `-d, --delete-recovery` | flag | | Delete Assets/_Recovery before launch |
+| `-p, --platform <platform>` | string | | Build target (e.g., Android, iOS, StandaloneOSX) |
+| `--max-depth <n>` | number | `3` | Search depth when project-path is omitted (-1 for unlimited) |
+| `-a, --add-unity-hub` | flag | | Add to Unity Hub only (does not launch) |
+| `-f, --favorite` | flag | | Add to Unity Hub as favorite (does not launch) |
+
+```bash
+uloop launch
+uloop launch /path/to/project
+uloop launch -r
+uloop launch -p Android
 ```
 
 ## Shell Completion
