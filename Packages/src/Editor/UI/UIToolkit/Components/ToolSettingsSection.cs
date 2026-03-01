@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
@@ -14,6 +15,9 @@ namespace io.github.hatayama.uLoopMCP
         private readonly Foldout _foldout;
         private readonly VisualElement _toolListContainer;
         private readonly Dictionary<string, Toggle> _togglesByToolName = new();
+        private bool _isRegistryAvailable;
+        private bool _isUnavailableStateShown;
+        private string _layoutSignature = string.Empty;
 
         public event Action<bool> OnFoldoutChanged;
         public event Action<string, bool> OnToolToggled;
@@ -37,11 +41,11 @@ namespace io.github.hatayama.uLoopMCP
 
             if (!data.IsRegistryAvailable)
             {
-                RebuildUnavailable();
+                UpdateUnavailableState();
                 return;
             }
 
-            Rebuild(data);
+            UpdateToolList(data);
         }
 
         /// <summary>
@@ -53,6 +57,38 @@ namespace io.github.hatayama.uLoopMCP
             {
                 toggle.SetValueWithoutNotify(enabled);
             }
+        }
+
+        private void UpdateUnavailableState()
+        {
+            if (_isRegistryAvailable || !_isUnavailableStateShown)
+            {
+                RebuildUnavailable();
+            }
+
+            _isRegistryAvailable = false;
+            _isUnavailableStateShown = true;
+            _layoutSignature = string.Empty;
+        }
+
+        private void UpdateToolList(ToolSettingsSectionData data)
+        {
+            string layoutSignature = CreateLayoutSignature(data);
+            bool shouldRebuild = !_isRegistryAvailable || _layoutSignature != layoutSignature;
+
+            if (shouldRebuild)
+            {
+                Rebuild(data);
+                _layoutSignature = layoutSignature;
+            }
+            else
+            {
+                UpdateToggleStates(data.BuiltInTools);
+                UpdateToggleStates(data.ThirdPartyTools);
+            }
+
+            _isRegistryAvailable = true;
+            _isUnavailableStateShown = false;
         }
 
         private void RebuildUnavailable()
@@ -86,6 +122,38 @@ namespace io.github.hatayama.uLoopMCP
                     AddToolToggle(item);
                 }
             }
+        }
+
+        private void UpdateToggleStates(IReadOnlyList<ToolToggleItem> items)
+        {
+            for (int i = 0; i < items.Count; i++)
+            {
+                ToolToggleItem item = items[i];
+                UpdateSingleToggle(item.ToolName, item.IsEnabled);
+            }
+        }
+
+        private static string CreateLayoutSignature(ToolSettingsSectionData data)
+        {
+            StringBuilder builder = new StringBuilder();
+            AppendGroupSignature(builder, data.BuiltInTools, "B");
+            AppendGroupSignature(builder, data.ThirdPartyTools, "T");
+            return builder.ToString();
+        }
+
+        private static void AppendGroupSignature(StringBuilder builder, IReadOnlyList<ToolToggleItem> items, string group)
+        {
+            builder.Append(group);
+            builder.Append(':');
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                ToolToggleItem item = items[i];
+                builder.Append(item.ToolName);
+                builder.Append('|');
+            }
+
+            builder.Append(';');
         }
 
         private void AddGroupHeader(string text)

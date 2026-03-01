@@ -483,13 +483,15 @@ namespace io.github.hatayama.uLoopMCP
 
         private void HandleToolToggled(string toolName, bool enabled)
         {
-            // Let the UI repaint the toggle visual immediately before running heavy work
-            EditorApplication.delayCall += () => ApplyToolToggle(toolName, enabled);
+            _model.UpdateToolEnabled(toolName, enabled);
+            _view?.UpdateSingleToolToggle(toolName, enabled);
+
+            // Skill synchronization can touch many files, so defer it to keep UI input responsive.
+            EditorApplication.delayCall += () => ApplyToolToggleSideEffects(toolName, enabled);
         }
 
-        private async void ApplyToolToggle(string toolName, bool enabled)
+        private async void ApplyToolToggleSideEffects(string toolName, bool enabled)
         {
-            _model.UpdateToolEnabled(toolName, enabled);
             ClientNotificationService.TriggerToolChangeNotification();
 
             if (!enabled)
