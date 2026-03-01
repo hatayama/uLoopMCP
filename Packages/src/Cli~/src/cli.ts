@@ -717,10 +717,7 @@ function handleCompletionOptions(): boolean {
 
   if (args.includes('--list-commands')) {
     const tools = loadToolsCache();
-    // Only filter disabled tools when --project-path is explicitly provided;
-    // without it, loadDisabledTools would trigger findUnityProjectRoot() scanning
-    const enabledTools: ToolDefinition[] =
-      projectPath !== undefined ? filterEnabledTools(tools.tools, projectPath) : tools.tools;
+    const enabledTools: ToolDefinition[] = filterEnabledTools(tools.tools, projectPath);
     const allCommands = [...BUILTIN_COMMANDS, ...enabledTools.map((t) => t.name)];
     console.log(allCommands.join('\n'));
     return true;
@@ -746,13 +743,10 @@ function listOptionsForCommand(cmdName: string, projectPath?: string): void {
   }
 
   // Tool commands - only output tool-specific options
-  // Only filter disabled tools when --project-path is explicitly provided;
-  // without it, loadDisabledTools would trigger findUnityProjectRoot() scanning
   const tools = loadToolsCache();
-  const tool: ToolDefinition | undefined =
-    projectPath !== undefined
-      ? filterEnabledTools(tools.tools, projectPath).find((t) => t.name === cmdName)
-      : tools.tools.find((t) => t.name === cmdName);
+  const tool: ToolDefinition | undefined = filterEnabledTools(tools.tools, projectPath).find(
+    (t) => t.name === cmdName,
+  );
   if (!tool) {
     return;
   }
@@ -838,10 +832,11 @@ async function main(): Promise<void> {
 
   if (skipProjectDetection) {
     const defaultTools = getDefaultTools();
-    // Only filter disabled tools when --project-path is explicitly provided;
-    // without it, filterEnabledTools would trigger findUnityProjectRoot() scanning
+    // Filter disabled tools for help output; skip for -v/--version to avoid
+    // unnecessary findUnityProjectRoot() scanning and potential multi-project warnings
+    const isHelpRequest: boolean = args.includes('-h') || args.includes('--help');
     const tools: ToolDefinition[] =
-      syncGlobalOptions.projectPath !== undefined
+      syncGlobalOptions.projectPath !== undefined || isHelpRequest
         ? filterEnabledTools(defaultTools.tools, syncGlobalOptions.projectPath)
         : defaultTools.tools;
     for (const tool of tools) {
