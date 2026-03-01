@@ -52,6 +52,33 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
+        public static bool IsSkillInstalled(string toolName)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(toolName), "toolName must not be null or empty");
+
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+
+            foreach (string targetDir in SkillTargetDirs)
+            {
+                string skillsRoot = Path.Combine(projectRoot, targetDir, "skills");
+                if (!Directory.Exists(skillsRoot))
+                {
+                    continue;
+                }
+
+                string[] skillDirs = Directory.GetDirectories(skillsRoot, "uloop-*");
+                foreach (string skillDir in skillDirs)
+                {
+                    if (SkillMatchesTool(skillDir, toolName))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// Re-install skills for all installed targets.
         /// Detects which targets have skill directories and runs `uloop skills install` for each.
