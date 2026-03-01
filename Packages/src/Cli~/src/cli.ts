@@ -65,7 +65,8 @@ program
   .name('uloop')
   .description('Unity MCP CLI - Direct communication with Unity Editor')
   .version(VERSION, '-v, --version', 'Output the version number')
-  .showHelpAfterError('(run with -h for available options)');
+  .showHelpAfterError('(run with -h for available options)')
+  .configureHelp({ sortSubcommands: true });
 
 // --list-commands: Output command names for shell completion
 program.option('--list-commands', 'List all command names (for shell completion)');
@@ -725,7 +726,7 @@ function handleCompletionOptions(): boolean {
       ),
       ...enabledTools.map((t) => t.name),
     ];
-    console.log(allCommands.join('\n'));
+    console.log(allCommands.sort().join('\n'));
     return true;
   }
 
