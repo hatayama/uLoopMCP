@@ -460,16 +460,16 @@ describe('CLI E2E Tests (requires running Unity)', () => {
     });
   });
 
-  describe('get-provider-details', () => {
+  describe('get-unity-search-providers', () => {
     it('should retrieve search providers', () => {
-      const result = runCliJson<{ Providers: unknown[] }>('get-provider-details');
+      const result = runCliJson<{ Providers: unknown[] }>('get-unity-search-providers');
 
       expect(Array.isArray(result.Providers)).toBe(true);
     });
 
     it('should support --include-descriptions false to exclude descriptions', () => {
       const result = runCliJson<{ Providers: unknown[] }>(
-        'get-provider-details --include-descriptions false',
+        'get-unity-search-providers --include-descriptions false',
       );
 
       expect(Array.isArray(result.Providers)).toBe(true);
@@ -477,7 +477,7 @@ describe('CLI E2E Tests (requires running Unity)', () => {
 
     it('should support --sort-by-priority false to disable priority sorting', () => {
       const result = runCliJson<{ Providers: unknown[] }>(
-        'get-provider-details --sort-by-priority false',
+        'get-unity-search-providers --sort-by-priority false',
       );
 
       expect(Array.isArray(result.Providers)).toBe(true);

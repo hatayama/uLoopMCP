@@ -1,17 +1,16 @@
 ---
-name: uloop-get-provider-details
+name: uloop-get-unity-search-providers
 description: "Get Unity Search provider details via uloop CLI. Use when you need to: (1) Discover available search providers, (2) Understand search capabilities and filters, (3) Configure searches with specific provider options."
-internal: true
 ---
 
-# uloop get-provider-details
+# uloop get-unity-search-providers
 
 Get detailed information about Unity Search providers.
 
 ## Usage
 
 ```bash
-uloop get-provider-details [options]
+uloop get-unity-search-providers [options]
 ```
 
 ## Parameters
@@ -34,13 +33,13 @@ uloop get-provider-details [options]
 
 ```bash
 # List all providers
-uloop get-provider-details
+uloop get-unity-search-providers
 
 # Get specific provider
-uloop get-provider-details --provider-id asset
+uloop get-unity-search-providers --provider-id asset
 
 # Active providers only
-uloop get-provider-details --active-only
+uloop get-unity-search-providers --active-only
 ```
 
 ## Output

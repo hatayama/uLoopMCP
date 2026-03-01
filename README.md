@@ -151,7 +151,7 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 - `/uloop-screenshot` - Capture EditorWindow
 - `/uloop-control-play-mode` - Control Play Mode
 - `/uloop-execute-dynamic-code` - Execute dynamic C# code
-- `/uloop-get-provider-details` - Get search provider details
+- `/uloop-get-unity-search-providers` - Get search provider details
 
 </details>
 
@@ -338,7 +338,7 @@ You can use [UnitySearch](https://docs.unity3d.com/Manual/search-overview.html).
 → Identify problematic prefabs
 ```
 
-### 6. get-provider-details - Check UnitySearch Search Providers
+### 6. get-unity-search-providers - Check UnitySearch Search Providers
 Retrieve search providers offered by UnitySearch.
 ```text
 → Understand each provider's capabilities, choose optimal search method

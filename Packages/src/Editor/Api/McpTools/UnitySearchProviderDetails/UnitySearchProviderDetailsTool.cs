@@ -4,10 +4,10 @@ using System.Threading.Tasks;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    [McpTool(Description = "Get detailed information about Unity Search providers including display names, descriptions, active status, and capabilities", DisplayDevelopmentOnly = true)]
+    [McpTool(Description = "Get detailed information about Unity Search providers including display names, descriptions, active status, and capabilities")]
     public class UnitySearchProviderDetailsTool : AbstractUnityTool<UnitySearchProviderDetailsSchema, UnitySearchProviderDetailsResponse>
     {
-        public override string ToolName => "get-provider-details";
+        public override string ToolName => "get-unity-search-providers";
 
         protected override Task<UnitySearchProviderDetailsResponse> ExecuteAsync(UnitySearchProviderDetailsSchema parameters, CancellationToken cancellationToken)
         {

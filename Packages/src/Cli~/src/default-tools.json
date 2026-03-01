@@ -240,6 +240,34 @@
       }
     },
     {
+      "name": "get-unity-search-providers",
+      "description": "Get detailed information about Unity Search providers including display names, descriptions, active status, and capabilities",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ProviderId": {
+            "type": "string",
+            "description": "Specific provider ID to get details for (empty = all providers). Examples: 'asset', 'scene', 'menu', 'settings'"
+          },
+          "ActiveOnly": {
+            "type": "boolean",
+            "description": "Whether to include only active providers",
+            "default": false
+          },
+          "SortByPriority": {
+            "type": "boolean",
+            "description": "Sort providers by priority (lower number = higher priority)",
+            "default": true
+          },
+          "IncludeDescriptions": {
+            "type": "boolean",
+            "description": "Include detailed descriptions for each provider",
+            "default": true
+          }
+        }
+      }
+    },
+    {
       "name": "get-menu-items",
       "description": "Retrieve Unity MenuItems",
       "inputSchema": {
