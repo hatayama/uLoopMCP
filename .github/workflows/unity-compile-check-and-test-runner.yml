@@ -18,6 +18,9 @@ jobs:
   compile-check-and-test:
     name: Compile Check & Test Runner (Linux)
     runs-on: ubuntu-latest
+    # Dependabot PRs cannot access repository secrets (UNITY_LICENSE etc.)
+    env:
+      HAS_UNITY_LICENSE: ${{ secrets.UNITY_LICENSE != '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -25,6 +28,7 @@ jobs:
           lfs: true
 
       - name: Cache Library folder
+        if: env.HAS_UNITY_LICENSE == 'true'
         uses: actions/cache@v5
         with:
           path: Library
@@ -33,6 +37,7 @@ jobs:
             Library-2022.3.62f1-
 
       - name: Compile Unity project
+        if: env.HAS_UNITY_LICENSE == 'true'
         id: compile
         uses: game-ci/unity-builder@v4
         timeout-minutes: 30
@@ -48,6 +53,7 @@ jobs:
         continue-on-error: true
 
       - name: Check for compile errors and warnings
+        if: env.HAS_UNITY_LICENSE == 'true'
         run: |
           LOG_FILE=$(find . -name "*.log" -path "*/build/*" -o -name "Editor.log" 2>/dev/null | head -1)
 
@@ -103,6 +109,7 @@ jobs:
           fi
 
       - name: Run EditMode tests
+        if: env.HAS_UNITY_LICENSE == 'true'
         uses: game-ci/unity-test-runner@v4
         timeout-minutes: 30
         env:
@@ -116,8 +123,8 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload test results
-        uses: actions/upload-artifact@v6
-        if: always()
+        uses: actions/upload-artifact@v7
+        if: always() && env.HAS_UNITY_LICENSE == 'true'
         with:
           name: Unity test results
           path: artifacts
