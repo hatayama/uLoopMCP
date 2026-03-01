@@ -13,7 +13,7 @@ import {
   spawnSync,
   SpawnSyncOptionsWithStringEncoding,
 } from 'child_process';
-import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs';
+import { readFileSync, writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
 const CLI_PATH = join(__dirname, '../..', 'dist/cli.bundle.cjs');
@@ -672,7 +672,15 @@ describe('CLI E2E Tests (requires running Unity)', () => {
     let originalSettings: string | null;
 
     beforeAll(() => {
-      originalSettings = existsSync(settingsPath) ? readFileSync(settingsPath, 'utf-8') : null;
+      try {
+        originalSettings = readFileSync(settingsPath, 'utf-8');
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          originalSettings = null;
+        } else {
+          throw error;
+        }
+      }
       writeFileSync(settingsPath, JSON.stringify({ disabledTools: ['get-logs'] }));
     });
 
