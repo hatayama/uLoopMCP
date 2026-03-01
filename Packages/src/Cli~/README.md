@@ -122,6 +122,11 @@ uloop compile
 uloop compile --force-recompile true --wait-for-domain-reload true
 ```
 
+**Output:**
+- `Success` (boolean) - Compilation succeeded (`null` when `--force-recompile` is used)
+- `ErrorCount` / `WarningCount` (integer) - Number of errors/warnings
+- `Errors` / `Warnings` (array) - Issues with `Message`, `File`, `Line` fields
+
 ### get-logs
 
 Retrieve logs from Unity Console.
@@ -141,6 +146,11 @@ uloop get-logs --log-type Error --max-count 10
 uloop get-logs --search-text "NullReference" --include-stack-trace true
 ```
 
+**Output:**
+- `TotalCount` (integer) - Total available logs matching filter
+- `DisplayedCount` (integer) - Number of logs returned
+- `Logs` (array) - Log entries with `Type` (Error/Warning/Log), `Message`, `StackTrace` fields
+
 ### run-tests
 
 Execute Unity Test Runner.
@@ -157,6 +167,11 @@ uloop run-tests --test-mode EditMode --filter-type regex --filter-value "MyTests
 uloop run-tests --filter-type assembly --filter-value "MyApp.Tests.Editor"
 ```
 
+**Output:**
+- `Success` (boolean) - All tests passed
+- `TestCount` / `PassedCount` / `FailedCount` / `SkippedCount` (integer) - Test result counts
+- `XmlPath` (string) - Path to NUnit XML result file (saved on failure)
+
 ### clear-console
 
 Clear Unity console logs.
@@ -169,6 +184,10 @@ Clear Unity console logs.
 uloop clear-console
 ```
 
+**Output:**
+- `Success` (boolean) - Operation succeeded
+- `ClearedLogCount` (integer) - Number of logs cleared
+
 ### focus-window
 
 Bring Unity Editor window to front.
@@ -178,6 +197,10 @@ No parameters.
 ```bash
 uloop focus-window
 ```
+
+**Output:**
+- `Success` (boolean) - Operation succeeded
+- `Message` (string) - Result message
 
 ### get-hierarchy
 
@@ -198,6 +221,9 @@ uloop get-hierarchy
 uloop get-hierarchy --root-path "Canvas" --max-depth 3
 uloop get-hierarchy --use-selection true
 ```
+
+**Output:**
+- `hierarchyFilePath` (string) - Path to saved JSON file containing hierarchy data
 
 ### unity-search
 
@@ -224,6 +250,13 @@ uloop unity-search --search-query "t:Texture2D" --max-results 10
 uloop unity-search --search-query "t:MonoScript *.cs" --save-to-file true
 ```
 
+**Output:**
+- `TotalCount` (integer) - Total results found
+- `DisplayedCount` (integer) - Results returned
+- `Results` (array) - Search result items
+- `SearchDurationMs` (integer) - Search time in milliseconds
+- `ResultsFilePath` (string) - File path when results are saved to file
+
 ### get-menu-items
 
 Retrieve Unity MenuItems.
@@ -240,6 +273,11 @@ uloop get-menu-items
 uloop get-menu-items --filter-text "GameObject" --filter-type startswith
 ```
 
+**Output:**
+- `TotalCount` (integer) - Total MenuItems before filtering
+- `FilteredCount` (integer) - MenuItems after filtering
+- `MenuItems` (array) - Items with `Path`, `Priority`, `MethodName` fields
+
 ### execute-menu-item
 
 Execute Unity MenuItem by path.
@@ -253,6 +291,11 @@ Execute Unity MenuItem by path.
 uloop execute-menu-item --menu-item-path "File/Save"
 uloop execute-menu-item --menu-item-path "GameObject/Create Empty"
 ```
+
+**Output:**
+- `Success` (boolean) - Execution succeeded
+- `MenuItemPath` (string) - Executed menu path
+- `ExecutionMethod` (string) - Method used (EditorApplication or Reflection)
 
 ### find-game-objects
 
@@ -275,6 +318,10 @@ uloop find-game-objects --required-components "Camera" --include-inactive true
 uloop find-game-objects --tag "Enemy" --max-results 50
 ```
 
+**Output:**
+- `totalFound` (integer) - Total GameObjects found
+- `results` (array) - GameObjects with `name`, `path`, `isActive`, `tag`, `layer`, `components` fields
+
 ### screenshot
 
 Take a screenshot of Unity EditorWindow and save as PNG.
@@ -292,6 +339,10 @@ uloop screenshot --window-name Scene
 uloop screenshot --window-name Project --match-mode prefix
 ```
 
+**Output:**
+- `ScreenshotCount` (integer) - Number of windows captured
+- `Screenshots` (array) - Items with `ImagePath`, `Width`, `Height`, `FileSizeBytes` fields
+
 ### execute-dynamic-code
 
 Execute C# code in Unity Editor.
@@ -307,6 +358,12 @@ uloop execute-dynamic-code --code 'using UnityEngine; Debug.Log("Hello!");'
 uloop execute-dynamic-code --code 'Selection.activeGameObject.name' --compile-only true
 ```
 
+**Output:**
+- `Success` (boolean) - Execution succeeded
+- `Result` (string) - Return value of executed code
+- `Logs` (array) - Log messages emitted during execution
+- `CompilationErrors` (array) - Errors with `Message`, `Line`, `Column`, `Hint` fields
+
 ### control-play-mode
 
 Control Unity Editor play mode.
@@ -320,6 +377,11 @@ uloop control-play-mode --action Play
 uloop control-play-mode --action Stop
 uloop control-play-mode --action Pause
 ```
+
+**Output:**
+- `IsPlaying` (boolean) - Currently in play mode
+- `IsPaused` (boolean) - Currently paused
+- `Message` (string) - Action description
 
 ### launch
 

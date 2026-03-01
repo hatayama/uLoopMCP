@@ -122,6 +122,11 @@ uloop compile
 uloop compile --force-recompile true --wait-for-domain-reload true
 ```
 
+**Output:**
+- `Success` (boolean) - コンパイル成功（`--force-recompile` 使用時は `null`）
+- `ErrorCount` / `WarningCount` (integer) - エラー数/警告数
+- `Errors` / `Warnings` (array) - `Message`, `File`, `Line` フィールドを含む問題一覧
+
 ### get-logs
 
 Unity コンソールからログを取得します。
@@ -141,6 +146,11 @@ uloop get-logs --log-type Error --max-count 10
 uloop get-logs --search-text "NullReference" --include-stack-trace true
 ```
 
+**Output:**
+- `TotalCount` (integer) - フィルタに一致するログの総数
+- `DisplayedCount` (integer) - 返されたログ数
+- `Logs` (array) - `Type` (Error/Warning/Log), `Message`, `StackTrace` フィールドを含むログエントリ
+
 ### run-tests
 
 Unity Test Runner を実行します。
@@ -157,6 +167,11 @@ uloop run-tests --test-mode EditMode --filter-type regex --filter-value "MyTests
 uloop run-tests --filter-type assembly --filter-value "MyApp.Tests.Editor"
 ```
 
+**Output:**
+- `Success` (boolean) - 全テスト合格
+- `TestCount` / `PassedCount` / `FailedCount` / `SkippedCount` (integer) - テスト結果の件数
+- `XmlPath` (string) - NUnit XML 結果ファイルのパス（失敗時に保存）
+
 ### clear-console
 
 Unity コンソールログをクリアします。
@@ -169,6 +184,10 @@ Unity コンソールログをクリアします。
 uloop clear-console
 ```
 
+**Output:**
+- `Success` (boolean) - 操作成功
+- `ClearedLogCount` (integer) - クリアされたログ数
+
 ### focus-window
 
 Unity Editor ウィンドウを前面に表示します。
@@ -178,6 +197,10 @@ Unity Editor ウィンドウを前面に表示します。
 ```bash
 uloop focus-window
 ```
+
+**Output:**
+- `Success` (boolean) - 操作成功
+- `Message` (string) - 結果メッセージ
 
 ### get-hierarchy
 
@@ -198,6 +221,9 @@ uloop get-hierarchy
 uloop get-hierarchy --root-path "Canvas" --max-depth 3
 uloop get-hierarchy --use-selection true
 ```
+
+**Output:**
+- `hierarchyFilePath` (string) - 階層データを含む JSON ファイルのパス
 
 ### unity-search
 
@@ -224,6 +250,13 @@ uloop unity-search --search-query "t:Texture2D" --max-results 10
 uloop unity-search --search-query "t:MonoScript *.cs" --save-to-file true
 ```
 
+**Output:**
+- `TotalCount` (integer) - 見つかった結果の総数
+- `DisplayedCount` (integer) - 返された結果数
+- `Results` (array) - 検索結果アイテム
+- `SearchDurationMs` (integer) - 検索時間（ミリ秒）
+- `ResultsFilePath` (string) - ファイル保存時のファイルパス
+
 ### get-menu-items
 
 Unity MenuItem を取得します。
@@ -240,6 +273,11 @@ uloop get-menu-items
 uloop get-menu-items --filter-text "GameObject" --filter-type startswith
 ```
 
+**Output:**
+- `TotalCount` (integer) - フィルタ前の MenuItem 総数
+- `FilteredCount` (integer) - フィルタ後の MenuItem 数
+- `MenuItems` (array) - `Path`, `Priority`, `MethodName` フィールドを含むアイテム
+
 ### execute-menu-item
 
 パスを指定して Unity MenuItem を実行します。
@@ -253,6 +291,11 @@ uloop get-menu-items --filter-text "GameObject" --filter-type startswith
 uloop execute-menu-item --menu-item-path "File/Save"
 uloop execute-menu-item --menu-item-path "GameObject/Create Empty"
 ```
+
+**Output:**
+- `Success` (boolean) - 実行成功
+- `MenuItemPath` (string) - 実行されたメニューパス
+- `ExecutionMethod` (string) - 実行方式（EditorApplication または Reflection）
 
 ### find-game-objects
 
@@ -275,6 +318,10 @@ uloop find-game-objects --required-components "Camera" --include-inactive true
 uloop find-game-objects --tag "Enemy" --max-results 50
 ```
 
+**Output:**
+- `totalFound` (integer) - 見つかった GameObject の総数
+- `results` (array) - `name`, `path`, `isActive`, `tag`, `layer`, `components` フィールドを含む GameObject
+
 ### screenshot
 
 Unity EditorWindow のスクリーンショットを撮影して PNG として保存します。
@@ -292,6 +339,10 @@ uloop screenshot --window-name Scene
 uloop screenshot --window-name Project --match-mode prefix
 ```
 
+**Output:**
+- `ScreenshotCount` (integer) - キャプチャされたウィンドウ数
+- `Screenshots` (array) - `ImagePath`, `Width`, `Height`, `FileSizeBytes` フィールドを含むアイテム
+
 ### execute-dynamic-code
 
 Unity Editor 内で C# コードを実行します。
@@ -307,6 +358,12 @@ uloop execute-dynamic-code --code 'using UnityEngine; Debug.Log("Hello!");'
 uloop execute-dynamic-code --code 'Selection.activeGameObject.name' --compile-only true
 ```
 
+**Output:**
+- `Success` (boolean) - 実行成功
+- `Result` (string) - 実行コードの戻り値
+- `Logs` (array) - 実行中に出力されたログメッセージ
+- `CompilationErrors` (array) - `Message`, `Line`, `Column`, `Hint` フィールドを含むエラー
+
 ### control-play-mode
 
 Unity Editor のプレイモードを制御します。
@@ -320,6 +377,11 @@ uloop control-play-mode --action Play
 uloop control-play-mode --action Stop
 uloop control-play-mode --action Pause
 ```
+
+**Output:**
+- `IsPlaying` (boolean) - プレイモード中
+- `IsPaused` (boolean) - 一時停止中
+- `Message` (string) - アクション説明
 
 ### launch
 
