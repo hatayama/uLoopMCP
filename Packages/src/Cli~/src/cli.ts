@@ -41,6 +41,7 @@ interface CliOptions extends GlobalOptions {
   [key: string]: unknown;
 }
 
+const FOCUS_WINDOW_COMMAND = 'focus-window' as const;
 const LAUNCH_COMMAND = 'launch' as const;
 const UPDATE_COMMAND = 'update' as const;
 
@@ -55,7 +56,7 @@ const BUILTIN_COMMANDS = [
   'fix',
   'skills',
   LAUNCH_COMMAND,
-  'focus-window',
+  FOCUS_WINDOW_COMMAND,
 ] as const;
 
 const program = new Command();
@@ -124,8 +125,8 @@ registerSkillsCommand(program);
 // Register launch subcommand
 registerLaunchCommand(program);
 
-// Register focus-window subcommand
-registerFocusWindowCommand(program);
+// focus-window is registered conditionally in main() based on tool settings,
+// since it corresponds to an MCP tool that can be disabled via Tool Settings UI
 
 /**
  * Register a tool as a CLI command dynamically.
@@ -718,7 +719,12 @@ function handleCompletionOptions(): boolean {
   if (args.includes('--list-commands')) {
     const tools = loadToolsCache();
     const enabledTools: ToolDefinition[] = filterEnabledTools(tools.tools, projectPath);
-    const allCommands = [...BUILTIN_COMMANDS, ...enabledTools.map((t) => t.name)];
+    const allCommands = [
+      ...BUILTIN_COMMANDS.filter(
+        (cmd) => cmd !== FOCUS_WINDOW_COMMAND || isToolEnabled(cmd, projectPath),
+      ),
+      ...enabledTools.map((t) => t.name),
+    ];
     console.log(allCommands.join('\n'));
     return true;
   }
@@ -764,6 +770,9 @@ function listOptionsForCommand(cmdName: string, projectPath?: string): void {
  * Check if a command exists in the current program.
  */
 function commandExists(cmdName: string, projectPath?: string): boolean {
+  if (cmdName === FOCUS_WINDOW_COMMAND) {
+    return isToolEnabled(FOCUS_WINDOW_COMMAND, projectPath);
+  }
   if (BUILTIN_COMMANDS.includes(cmdName as (typeof BUILTIN_COMMANDS)[number])) {
     return true;
   }
@@ -836,10 +845,13 @@ async function main(): Promise<void> {
     // (e.g. uloop completion --help) does not list dynamic tools, so scanning is unnecessary
     const isTopLevelHelp: boolean =
       cmdName === undefined && (args.includes('-h') || args.includes('--help'));
-    const tools: ToolDefinition[] =
-      syncGlobalOptions.projectPath !== undefined || isTopLevelHelp
-        ? filterEnabledTools(defaultTools.tools, syncGlobalOptions.projectPath)
-        : defaultTools.tools;
+    const shouldFilter: boolean = syncGlobalOptions.projectPath !== undefined || isTopLevelHelp;
+    const tools: ToolDefinition[] = shouldFilter
+      ? filterEnabledTools(defaultTools.tools, syncGlobalOptions.projectPath)
+      : defaultTools.tools;
+    if (!shouldFilter || isToolEnabled(FOCUS_WINDOW_COMMAND, syncGlobalOptions.projectPath)) {
+      registerFocusWindowCommand(program);
+    }
     for (const tool of tools) {
       registerToolCommand(tool);
     }
@@ -874,6 +886,9 @@ async function main(): Promise<void> {
   // Register tool commands from cache (after potential auto-sync)
   const toolsCache = loadToolsCache();
   const projectPath: string | undefined = syncGlobalOptions.projectPath;
+  if (isToolEnabled(FOCUS_WINDOW_COMMAND, projectPath)) {
+    registerFocusWindowCommand(program);
+  }
   for (const tool of filterEnabledTools(toolsCache.tools, projectPath)) {
     registerToolCommand(tool);
   }
