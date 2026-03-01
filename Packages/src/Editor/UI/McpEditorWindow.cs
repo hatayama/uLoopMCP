@@ -469,6 +469,10 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
+            Comparison<ToolToggleItem> compareByName = (a, b) => string.Compare(a.ToolName, b.ToolName, StringComparison.Ordinal);
+            builtIn.Sort(compareByName);
+            thirdParty.Sort(compareByName);
+
             return new ToolSettingsSectionData(
                 _model.UI.ShowToolSettings,
                 builtIn.ToArray(),
