@@ -5,7 +5,7 @@ description: "Bring Unity Editor window to front via uloop CLI. Use when you nee
 
 # uloop focus-window
 
-Bring Unity Editor window to front.
+Bring Unity Editor window to front using OS-level commands.
 
 ## Usage
 
@@ -16,6 +16,13 @@ uloop focus-window
 ## Parameters
 
 None.
+
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
 
 ## Examples
 
@@ -30,5 +37,7 @@ Returns JSON confirming the window was focused.
 
 ## Notes
 
+- **Works even when Unity is busy** (compiling, domain reload, etc.)
+- Uses OS-level commands (osascript on macOS, PowerShell on Windows)
 - Useful before `uloop capture-unity-window` to ensure the target window is visible
 - Brings the main Unity Editor window to the foreground

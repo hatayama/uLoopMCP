@@ -41,6 +41,7 @@ interface CliOptions extends GlobalOptions {
   [key: string]: unknown;
 }
 
+const FOCUS_WINDOW_COMMAND = 'focus-window' as const;
 const LAUNCH_COMMAND = 'launch' as const;
 const UPDATE_COMMAND = 'update' as const;
 
@@ -55,7 +56,7 @@ const BUILTIN_COMMANDS = [
   'fix',
   'skills',
   LAUNCH_COMMAND,
-  'focus-window',
+  FOCUS_WINDOW_COMMAND,
 ] as const;
 
 const program = new Command();
@@ -64,7 +65,8 @@ program
   .name('uloop')
   .description('Unity MCP CLI - Direct communication with Unity Editor')
   .version(VERSION, '-v, --version', 'Output the version number')
-  .showHelpAfterError('(run with -h for available options)');
+  .showHelpAfterError('(run with -h for available options)')
+  .configureHelp({ sortSubcommands: true });
 
 // --list-commands: Output command names for shell completion
 program.option('--list-commands', 'List all command names (for shell completion)');
@@ -124,8 +126,8 @@ registerSkillsCommand(program);
 // Register launch subcommand
 registerLaunchCommand(program);
 
-// Register focus-window subcommand
-registerFocusWindowCommand(program);
+// focus-window is registered conditionally in main() based on tool settings,
+// since it corresponds to an MCP tool that can be disabled via Tool Settings UI
 
 /**
  * Register a tool as a CLI command dynamically.
@@ -717,12 +719,14 @@ function handleCompletionOptions(): boolean {
 
   if (args.includes('--list-commands')) {
     const tools = loadToolsCache();
-    // Only filter disabled tools when --project-path is explicitly provided;
-    // without it, loadDisabledTools would trigger findUnityProjectRoot() scanning
-    const enabledTools: ToolDefinition[] =
-      projectPath !== undefined ? filterEnabledTools(tools.tools, projectPath) : tools.tools;
-    const allCommands = [...BUILTIN_COMMANDS, ...enabledTools.map((t) => t.name)];
-    console.log(allCommands.join('\n'));
+    const enabledTools: ToolDefinition[] = filterEnabledTools(tools.tools, projectPath);
+    const allCommands = [
+      ...BUILTIN_COMMANDS.filter(
+        (cmd) => cmd !== FOCUS_WINDOW_COMMAND || isToolEnabled(cmd, projectPath),
+      ),
+      ...enabledTools.map((t) => t.name),
+    ];
+    console.log(allCommands.sort().join('\n'));
     return true;
   }
 
@@ -746,13 +750,10 @@ function listOptionsForCommand(cmdName: string, projectPath?: string): void {
   }
 
   // Tool commands - only output tool-specific options
-  // Only filter disabled tools when --project-path is explicitly provided;
-  // without it, loadDisabledTools would trigger findUnityProjectRoot() scanning
   const tools = loadToolsCache();
-  const tool: ToolDefinition | undefined =
-    projectPath !== undefined
-      ? filterEnabledTools(tools.tools, projectPath).find((t) => t.name === cmdName)
-      : tools.tools.find((t) => t.name === cmdName);
+  const tool: ToolDefinition | undefined = filterEnabledTools(tools.tools, projectPath).find(
+    (t) => t.name === cmdName,
+  );
   if (!tool) {
     return;
   }
@@ -770,6 +771,9 @@ function listOptionsForCommand(cmdName: string, projectPath?: string): void {
  * Check if a command exists in the current program.
  */
 function commandExists(cmdName: string, projectPath?: string): boolean {
+  if (cmdName === FOCUS_WINDOW_COMMAND) {
+    return isToolEnabled(FOCUS_WINDOW_COMMAND, projectPath);
+  }
   if (BUILTIN_COMMANDS.includes(cmdName as (typeof BUILTIN_COMMANDS)[number])) {
     return true;
   }
@@ -838,12 +842,17 @@ async function main(): Promise<void> {
 
   if (skipProjectDetection) {
     const defaultTools = getDefaultTools();
-    // Only filter disabled tools when --project-path is explicitly provided;
-    // without it, filterEnabledTools would trigger findUnityProjectRoot() scanning
-    const tools: ToolDefinition[] =
-      syncGlobalOptions.projectPath !== undefined
-        ? filterEnabledTools(defaultTools.tools, syncGlobalOptions.projectPath)
-        : defaultTools.tools;
+    // Only filter disabled tools for top-level help (uloop --help); subcommand help
+    // (e.g. uloop completion --help) does not list dynamic tools, so scanning is unnecessary
+    const isTopLevelHelp: boolean =
+      cmdName === undefined && (args.includes('-h') || args.includes('--help'));
+    const shouldFilter: boolean = syncGlobalOptions.projectPath !== undefined || isTopLevelHelp;
+    const tools: ToolDefinition[] = shouldFilter
+      ? filterEnabledTools(defaultTools.tools, syncGlobalOptions.projectPath)
+      : defaultTools.tools;
+    if (!shouldFilter || isToolEnabled(FOCUS_WINDOW_COMMAND, syncGlobalOptions.projectPath)) {
+      registerFocusWindowCommand(program);
+    }
     for (const tool of tools) {
       registerToolCommand(tool);
     }
@@ -878,6 +887,9 @@ async function main(): Promise<void> {
   // Register tool commands from cache (after potential auto-sync)
   const toolsCache = loadToolsCache();
   const projectPath: string | undefined = syncGlobalOptions.projectPath;
+  if (isToolEnabled(FOCUS_WINDOW_COMMAND, projectPath)) {
+    registerFocusWindowCommand(program);
+  }
   for (const tool of filterEnabledTools(toolsCache.tools, projectPath)) {
     registerToolCommand(tool);
   }

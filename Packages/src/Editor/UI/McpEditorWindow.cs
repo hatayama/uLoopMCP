@@ -501,6 +501,15 @@ namespace io.github.hatayama.uLoopMCP
             else
             {
                 await ToolSkillSynchronizer.InstallSkillFiles();
+
+                if (!ToolSkillSynchronizer.IsSkillInstalled(toolName))
+                {
+                    Debug.LogWarning(
+                        $"[uLoopMCP] Skill for '{toolName}' was not installed after enabling. " +
+                        "The skill source may have an incorrect directory structure " +
+                        "(expected: <ToolDir>/Skill/SKILL.md). Run 'uloop skills list' for details."
+                    );
+                }
             }
         }
 

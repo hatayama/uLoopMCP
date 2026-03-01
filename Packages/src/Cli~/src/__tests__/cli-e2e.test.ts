@@ -13,6 +13,7 @@ import {
   spawnSync,
   SpawnSyncOptionsWithStringEncoding,
 } from 'child_process';
+import { readFileSync, writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
 const CLI_PATH = join(__dirname, '../..', 'dist/cli.bundle.cjs');
@@ -663,6 +664,56 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       expect(exitCode).toBe(0);
       // Should either find and focus existing Unity or report no Unity found
       expect(stdout).toMatch(/Unity process already running|Selected project/);
+    });
+  });
+
+  describe('tool-settings', () => {
+    const settingsPath: string = join(UNITY_PROJECT_ROOT, '.uloop', 'settings.tools.json');
+    let originalSettings: string | null;
+
+    beforeAll(() => {
+      try {
+        originalSettings = readFileSync(settingsPath, 'utf-8');
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          originalSettings = null;
+        } else {
+          throw error;
+        }
+      }
+      writeFileSync(settingsPath, JSON.stringify({ disabledTools: ['get-logs'] }));
+    });
+
+    afterAll(() => {
+      if (originalSettings !== null) {
+        writeFileSync(settingsPath, originalSettings);
+      } else {
+        unlinkSync(settingsPath);
+      }
+    });
+
+    it('should not display disabled tools in --help', () => {
+      const { stdout, exitCode } = runCli('--help');
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('compile');
+      expect(stdout).not.toContain('get-logs');
+    });
+
+    it('should not include disabled tools in --list-commands', () => {
+      const { stdout, exitCode } = runCli('--list-commands');
+
+      expect(exitCode).toBe(0);
+      const commands: string[] = stdout.trim().split('\n').filter(Boolean);
+      expect(commands).toContain('compile');
+      expect(commands).not.toContain('get-logs');
+    });
+
+    it('should output nothing for --list-options on disabled tool', () => {
+      const { stdout, exitCode } = runCli('--list-options get-logs');
+
+      expect(exitCode).toBe(0);
+      expect(stdout.trim()).toBe('');
     });
   });
 
