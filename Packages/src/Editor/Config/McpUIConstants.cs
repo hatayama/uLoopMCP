@@ -31,5 +31,6 @@ namespace io.github.hatayama.uLoopMCP
 
         // Tool Settings
         public const string TOOL_SETTINGS_MENU_PATH = "Window > uLoop > Tool Settings";
+        public const string TOOL_REFERENCE_URL = "https://github.com/hatayama/uLoopMCP/blob/main/Packages/src/TOOL_REFERENCE.md";
     }
 }

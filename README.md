@@ -482,7 +482,7 @@ Async support:
 
 ## Tool Reference
 
-For detailed specifications of all tools (parameters, responses, examples), see **[TOOL_REFERENCE.md](TOOL_REFERENCE.md)**.
+For detailed specifications of all tools (parameters, responses, examples), see **[TOOL_REFERENCE.md](/Packages/src/TOOL_REFERENCE.md)**.
 
 ## uLoopMCP Extension Development
 uLoopMCP enables efficient development of project-specific tools without requiring changes to the core package.

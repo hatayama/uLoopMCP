@@ -336,6 +336,19 @@
     margin-bottom: 8px;
 }
 
+.mcp-tool-settings-link {
+    font-size: 10px;
+    color: #4C7EF3;
+    white-space: normal;
+    margin-bottom: 8px;
+    cursor: link;
+    -unity-font-style: italic;
+}
+
+.mcp-tool-settings-link:hover {
+    color: #6B9AFF;
+}
+
 .mcp-tool-group-header {
     -unity-font-style: bold;
     margin-top: 6px;
