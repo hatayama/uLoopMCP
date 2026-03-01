@@ -28,8 +28,8 @@ namespace io.github.hatayama.uLoopMCP
             _foldout = root.Q<Foldout>("tool-settings-foldout");
             _toolListContainer = root.Q<VisualElement>("tool-list-container");
 
-            Label toolReferenceLink = root.Q<Label>("tool-reference-link");
-            toolReferenceLink.RegisterCallback<ClickEvent>(_ => Application.OpenURL(McpUIConstants.TOOL_REFERENCE_URL));
+            Label cliReferenceLink = root.Q<Label>("cli-reference-link");
+            cliReferenceLink.RegisterCallback<ClickEvent>(_ => Application.OpenURL(McpUIConstants.CLI_COMMAND_REFERENCE_URL));
 
             SetupBindings();
         }
