@@ -1,13 +1,8 @@
 {
-    "name": "uLoopMCP.Editor",
-    "rootNamespace": "",
-    "references": [
-        "GUID:5079a8d3a72924a81aa1cbc25f65ed1b",
-        "uLoopMCP.Shared"
-    ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "name": "uLoopMCP.Shared",
+    "rootNamespace": "io.github.hatayama.uLoopMCP",
+    "references": [],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
