@@ -125,7 +125,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsTrue(result.allowMenuItemExecution);
             Assert.IsTrue(result.allowThirdPartyTools);
             Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel);
-            Assert.IsTrue(File.Exists(SettingsFilePath), ".uloop/settings.permissions.json should be created by migration");
+            Assert.IsTrue(File.Exists(SettingsFilePath), $"{SettingsFilePath} should be created by migration");
         }
 
         // ── Test 2: Idempotency ──────────────────────────────────────────
@@ -301,7 +301,7 @@ namespace io.github.hatayama.uLoopMCP
 
             ULoopSettingsData result = ULoopSettings.GetSettings();
 
-            Assert.IsTrue(File.Exists(SettingsFilePath), ".uloop/settings.permissions.json should be recovered from .bak");
+            Assert.IsTrue(File.Exists(SettingsFilePath), $"{SettingsFilePath} should be recovered from .bak");
             Assert.IsTrue(result.enableTestsExecution);
             Assert.IsTrue(result.allowMenuItemExecution);
             Assert.IsFalse(result.allowThirdPartyTools);
