@@ -908,7 +908,7 @@ async function main(): Promise<void> {
     const shouldFilter: boolean = syncGlobalOptions.projectPath !== undefined || isTopLevelHelp;
     // Use cache to include third-party tools in help output; falls back to defaults when no cache exists
     const sourceTools: ToolDefinition[] = shouldFilter
-      ? loadToolsCache().tools
+      ? loadToolsCache(syncGlobalOptions.projectPath).tools
       : getDefaultTools().tools;
     const tools: ToolDefinition[] = shouldFilter
       ? filterEnabledTools(sourceTools, syncGlobalOptions.projectPath)
