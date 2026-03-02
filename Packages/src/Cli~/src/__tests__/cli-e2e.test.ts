@@ -501,6 +501,25 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       expect(stdout).toContain('--force-recompile');
     });
 
+    it('should display grouped help with category headings', () => {
+      const { stdout, exitCode } = runCli('--help');
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('Built-in Tools:');
+      expect(stdout).toContain('CLI Commands:');
+      // CLI Commands should appear before Built-in Tools
+      const cliIndex: number = stdout.indexOf('CLI Commands:');
+      const builtInIndex: number = stdout.indexOf('Built-in Tools:');
+      expect(cliIndex).toBeLessThan(builtInIndex);
+    });
+
+    it('should not display Third-party Tools section when no third-party tools exist', () => {
+      const { stdout, exitCode } = runCli('--help');
+
+      expect(exitCode).toBe(0);
+      expect(stdout).not.toContain('Third-party Tools:');
+    });
+
     it('should display boolean options with value format in get-hierarchy help', () => {
       const { stdout, exitCode } = runCli('get-hierarchy --help');
 

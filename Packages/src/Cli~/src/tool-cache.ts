@@ -108,6 +108,15 @@ export function getCacheFilePath(): string {
 }
 
 /**
+ * Get the set of default tool names bundled with npm package.
+ * Used to distinguish built-in tools from third-party tools.
+ */
+export function getDefaultToolNames(): ReadonlySet<string> {
+  const defaultTools: ToolsCache = getDefaultTools();
+  return new Set(defaultTools.tools.map((tool: ToolDefinition) => tool.name));
+}
+
+/**
  * Get the Unity server version from cache file.
  * Returns undefined if cache doesn't exist, is corrupted, or serverVersion is missing.
  */

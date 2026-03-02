@@ -12,7 +12,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from '
 import { join, basename, dirname } from 'path';
 import { homedir } from 'os';
 import { spawn } from 'child_process';
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import {
   executeToolCommand,
   listAvailableTools,
@@ -24,6 +24,7 @@ import {
   loadToolsCache,
   hasCacheFile,
   getDefaultTools,
+  getDefaultToolNames,
   ToolDefinition,
   ToolProperty,
   getCachedServerVersion,
@@ -44,6 +45,16 @@ interface CliOptions extends GlobalOptions {
 const FOCUS_WINDOW_COMMAND = 'focus-window' as const;
 const LAUNCH_COMMAND = 'launch' as const;
 const UPDATE_COMMAND = 'update' as const;
+
+const HELP_GROUP_BUILTIN_TOOLS = 'Built-in Tools:' as const;
+const HELP_GROUP_THIRD_PARTY_TOOLS = 'Third-party Tools:' as const;
+const HELP_GROUP_CLI_COMMANDS = 'CLI Commands:' as const;
+
+const HELP_GROUP_ORDER = [
+  HELP_GROUP_CLI_COMMANDS,
+  HELP_GROUP_BUILTIN_TOOLS,
+  HELP_GROUP_THIRD_PARTY_TOOLS,
+] as const;
 
 // commander.js built-in flags that exit immediately without needing Unity
 const NO_SYNC_FLAGS = ['-v', '--version', '-h', '--help'] as const;
@@ -66,13 +77,56 @@ program
   .description('Unity MCP CLI - Direct communication with Unity Editor')
   .version(VERSION, '-v, --version', 'Output the version number')
   .showHelpAfterError('(run with -h for available options)')
-  .configureHelp({ sortSubcommands: true });
+  .configureHelp({
+    sortSubcommands: true,
+    // commander.js default groupItems determines group display order by registration order,
+    // but CLI commands are registered at module level (before tools), so the default order
+    // would be wrong. We re-implement to enforce HELP_GROUP_ORDER.
+    groupItems<T extends Command | Option>(
+      unsortedItems: T[],
+      visibleItems: T[],
+      getGroup: (item: T) => string,
+    ): Map<string, T[]> {
+      const groupMap = new Map<string, T[]>();
+      for (const item of unsortedItems) {
+        const group: string = getGroup(item);
+        if (!groupMap.has(group)) {
+          groupMap.set(group, []);
+        }
+      }
+      for (const item of visibleItems) {
+        const group: string = getGroup(item);
+        if (!groupMap.has(group)) {
+          groupMap.set(group, []);
+        }
+        groupMap.get(group)!.push(item);
+      }
+      const ordered = new Map<string, T[]>();
+      for (const key of HELP_GROUP_ORDER) {
+        const items: T[] | undefined = groupMap.get(key);
+        if (items !== undefined) {
+          ordered.set(key, items);
+          groupMap.delete(key);
+        }
+      }
+      for (const [key, value] of groupMap) {
+        ordered.set(key, value);
+      }
+      return ordered;
+    },
+  });
 
 // --list-commands: Output command names for shell completion
 program.option('--list-commands', 'List all command names (for shell completion)');
 
 // --list-options <cmd>: Output options for a specific command (for shell completion)
 program.option('--list-options <cmd>', 'List options for a command (for shell completion)');
+
+// Set default help group for CLI commands registered at module level
+program.commandsGroup(HELP_GROUP_CLI_COMMANDS);
+// Eagerly initialize the implicit help command so it inherits the CLI Commands group.
+// Without this, the lazy-created help command skips _initCommandGroup and falls into "Commands:" group.
+program.helpCommand(true);
 
 // Built-in commands (not from tools.json)
 program
@@ -132,12 +186,12 @@ registerLaunchCommand(program);
 /**
  * Register a tool as a CLI command dynamically.
  */
-function registerToolCommand(tool: ToolDefinition): void {
+function registerToolCommand(tool: ToolDefinition, helpGroup: string): void {
   // Skip if already registered as a built-in command
   if (BUILTIN_COMMANDS.includes(tool.name as (typeof BUILTIN_COMMANDS)[number])) {
     return;
   }
-  const cmd = program.command(tool.name).description(tool.description);
+  const cmd = program.command(tool.name).description(tool.description).helpGroup(helpGroup);
 
   // Add options from inputSchema.properties
   const properties = tool.inputSchema.properties;
@@ -302,6 +356,10 @@ function convertValue(value: unknown, propInfo: ToolProperty): unknown {
   }
 
   return value;
+}
+
+function getToolHelpGroup(toolName: string, defaultToolNames: ReadonlySet<string>): string {
+  return defaultToolNames.has(toolName) ? HELP_GROUP_BUILTIN_TOOLS : HELP_GROUP_THIRD_PARTY_TOOLS;
 }
 
 function extractGlobalOptions(options: Record<string, unknown>): GlobalOptions {
@@ -842,6 +900,9 @@ async function main(): Promise<void> {
 
   if (skipProjectDetection) {
     const defaultTools = getDefaultTools();
+    const defaultToolNames: ReadonlySet<string> = new Set(
+      defaultTools.tools.map((t: ToolDefinition) => t.name),
+    );
     // Only filter disabled tools for top-level help (uloop --help); subcommand help
     // (e.g. uloop completion --help) does not list dynamic tools, so scanning is unnecessary
     const isTopLevelHelp: boolean =
@@ -851,10 +912,10 @@ async function main(): Promise<void> {
       ? filterEnabledTools(defaultTools.tools, syncGlobalOptions.projectPath)
       : defaultTools.tools;
     if (!shouldFilter || isToolEnabled(FOCUS_WINDOW_COMMAND, syncGlobalOptions.projectPath)) {
-      registerFocusWindowCommand(program);
+      registerFocusWindowCommand(program, HELP_GROUP_BUILTIN_TOOLS);
     }
     for (const tool of tools) {
-      registerToolCommand(tool);
+      registerToolCommand(tool, getToolHelpGroup(tool.name, defaultToolNames));
     }
     program.parse();
     return;
@@ -887,11 +948,12 @@ async function main(): Promise<void> {
   // Register tool commands from cache (after potential auto-sync)
   const toolsCache = loadToolsCache();
   const projectPath: string | undefined = syncGlobalOptions.projectPath;
+  const defaultToolNames: ReadonlySet<string> = getDefaultToolNames();
   if (isToolEnabled(FOCUS_WINDOW_COMMAND, projectPath)) {
-    registerFocusWindowCommand(program);
+    registerFocusWindowCommand(program, HELP_GROUP_BUILTIN_TOOLS);
   }
   for (const tool of filterEnabledTools(toolsCache.tools, projectPath)) {
-    registerToolCommand(tool);
+    registerToolCommand(tool, getToolHelpGroup(tool.name, defaultToolNames));
   }
 
   if (cmdName && !commandExists(cmdName, projectPath)) {
@@ -906,7 +968,7 @@ async function main(): Promise<void> {
       const newCache = loadToolsCache();
       const tool = filterEnabledTools(newCache.tools, projectPath).find((t) => t.name === cmdName);
       if (tool) {
-        registerToolCommand(tool);
+        registerToolCommand(tool, getToolHelpGroup(tool.name, defaultToolNames));
         console.log(`\x1b[32m✓ Found '${cmdName}' after sync.\x1b[0m\n`);
       } else {
         console.error(`\x1b[31mError: Command '${cmdName}' not found even after sync.\x1b[0m`);

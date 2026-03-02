@@ -12,66 +12,71 @@ import { findRunningUnityProcess, focusUnityProcess } from 'launch-unity';
 import { findUnityProjectRoot } from '../project-root.js';
 import { validateProjectPath } from '../port-resolver.js';
 
-export function registerFocusWindowCommand(program: Command): void {
-  program
+export function registerFocusWindowCommand(program: Command, helpGroup?: string): void {
+  const cmd = program
     .command('focus-window')
     .description('Bring Unity Editor window to front using OS-level commands')
-    .option('--project-path <path>', 'Unity project path')
-    .action(async (options: { projectPath?: string }) => {
-      let projectRoot: string | null;
-      if (options.projectPath !== undefined) {
-        try {
-          projectRoot = validateProjectPath(options.projectPath);
-        } catch (error) {
-          console.error(
-            JSON.stringify({
-              Success: false,
-              Message: error instanceof Error ? error.message : String(error),
-            }),
-          );
-          process.exit(1);
-          return;
-        }
-      } else {
-        projectRoot = findUnityProjectRoot();
-      }
-      if (projectRoot === null) {
-        console.error(
-          JSON.stringify({
-            Success: false,
-            Message: 'Unity project not found',
-          }),
-        );
-        process.exit(1);
-      }
+    .option('--project-path <path>', 'Unity project path');
 
-      const runningProcess = await findRunningUnityProcess(projectRoot);
-      if (!runningProcess) {
-        console.error(
-          JSON.stringify({
-            Success: false,
-            Message: 'No running Unity process found for this project',
-          }),
-        );
-        process.exit(1);
-      }
+  if (helpGroup !== undefined) {
+    cmd.helpGroup(helpGroup);
+  }
 
+  cmd.action(async (options: { projectPath?: string }) => {
+    let projectRoot: string | null;
+    if (options.projectPath !== undefined) {
       try {
-        await focusUnityProcess(runningProcess.pid);
-        console.log(
-          JSON.stringify({
-            Success: true,
-            Message: `Unity Editor window focused (PID: ${runningProcess.pid})`,
-          }),
-        );
+        projectRoot = validateProjectPath(options.projectPath);
       } catch (error) {
         console.error(
           JSON.stringify({
             Success: false,
-            Message: `Failed to focus Unity window: ${error instanceof Error ? error.message : String(error)}`,
+            Message: error instanceof Error ? error.message : String(error),
           }),
         );
         process.exit(1);
+        return;
       }
-    });
+    } else {
+      projectRoot = findUnityProjectRoot();
+    }
+    if (projectRoot === null) {
+      console.error(
+        JSON.stringify({
+          Success: false,
+          Message: 'Unity project not found',
+        }),
+      );
+      process.exit(1);
+    }
+
+    const runningProcess = await findRunningUnityProcess(projectRoot);
+    if (!runningProcess) {
+      console.error(
+        JSON.stringify({
+          Success: false,
+          Message: 'No running Unity process found for this project',
+        }),
+      );
+      process.exit(1);
+    }
+
+    try {
+      await focusUnityProcess(runningProcess.pid);
+      console.log(
+        JSON.stringify({
+          Success: true,
+          Message: `Unity Editor window focused (PID: ${runningProcess.pid})`,
+        }),
+      );
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          Success: false,
+          Message: `Failed to focus Unity window: ${error instanceof Error ? error.message : String(error)}`,
+        }),
+      );
+      process.exit(1);
+    }
+  });
 }
