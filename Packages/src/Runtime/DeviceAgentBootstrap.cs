@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -13,7 +14,11 @@ namespace io.github.hatayama.uLoopMCP
     {
         private static DeviceAgentBootstrap _instance;
         private DeviceAgentServer _server;
+        private DeviceToolRegistry _registry;
         private Stopwatch _uptime;
+
+        // Session-scoped object ID map shared across tools
+        private readonly Dictionary<int, GameObject> _objectIdMap = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void AutoStart()
@@ -45,15 +50,18 @@ namespace io.github.hatayama.uLoopMCP
         {
             _uptime = Stopwatch.StartNew();
 
-            DeviceToolRegistry registry = new();
+            _registry = new DeviceToolRegistry();
 
             // Register built-in tools
-            registry.Register(new PingTool(_uptime));
+            _registry.Register(new PingTool(_uptime));
+            _registry.Register(new FindGameObjectsTool(_objectIdMap));
+            _registry.Register(new GetHierarchyTool());
+            _registry.Register(new GetScreenshotTool());
 
             // Auth token: read from Resources if available, otherwise use a default dev token
             string token = LoadAuthToken();
 
-            _server = new DeviceAgentServer(registry, token);
+            _server = new DeviceAgentServer(_registry, token);
             _server.Start();
         }
 
@@ -71,16 +79,8 @@ namespace io.github.hatayama.uLoopMCP
             return sessionToken;
         }
 
-        /// <summary>
-        /// Provides access to the tool registry for external tool registration (e.g., from Phase 2/3).
-        /// </summary>
-        public static DeviceToolRegistry Registry => _instance?._server != null ? GetRegistry() : null;
-
-        private static DeviceToolRegistry GetRegistry()
-        {
-            // Registry is created during StartAgent; accessible via server
-            return null; // Will be properly wired when needed
-        }
+        public static DeviceToolRegistry Registry => _instance?._registry;
+        public static Dictionary<int, GameObject> ObjectIdMap => _instance?._objectIdMap;
 
         private void OnDestroy()
         {
