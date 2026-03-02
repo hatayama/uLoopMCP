@@ -33,6 +33,12 @@ import { pascalToKebabCase } from './arg-parser.js';
 import { registerSkillsCommand } from './skills/skills-command.js';
 import { registerLaunchCommand } from './commands/launch.js';
 import { registerFocusWindowCommand } from './commands/focus-window.js';
+import { registerDeviceConnectCommand } from './commands/device-connect.js';
+import { registerDeviceListCommand } from './commands/device-list.js';
+import { registerDeviceInstallCommand } from './commands/device-install.js';
+import { registerDeviceLaunchCommand } from './commands/device-launch.js';
+import { registerDeviceLogsCommand } from './commands/device-logs.js';
+import { registerDeviceToolCommands } from './commands/device-tools.js';
 import { VERSION } from './version.js';
 import { findUnityProjectRoot } from './project-root.js';
 import { validateProjectPath } from './port-resolver.js';
@@ -179,6 +185,14 @@ registerSkillsCommand(program);
 
 // Register launch subcommand
 registerLaunchCommand(program);
+
+// Register device commands
+registerDeviceConnectCommand(program);
+registerDeviceListCommand(program);
+registerDeviceInstallCommand(program);
+registerDeviceLaunchCommand(program);
+registerDeviceLogsCommand(program);
+registerDeviceToolCommands(program);
 
 // focus-window is registered conditionally in main() based on tool settings,
 // since it corresponds to an MCP tool that can be disabled via Tool Settings UI
