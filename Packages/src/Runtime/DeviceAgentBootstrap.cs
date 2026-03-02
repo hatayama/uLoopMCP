@@ -57,6 +57,11 @@ namespace io.github.hatayama.uLoopMCP
             _registry.Register(new FindGameObjectsTool(_objectIdMap));
             _registry.Register(new GetHierarchyTool());
             _registry.Register(new GetScreenshotTool());
+            _registry.Register(new TapObjectTool(_objectIdMap));
+            _registry.Register(new TapCoordinateTool());
+            _registry.Register(new SwipeTool());
+            _registry.Register(new InputTextTool());
+            _registry.Register(new KeyInputTool());
 
             // Auth token: read from Resources if available, otherwise use a default dev token
             string token = LoadAuthToken();
