@@ -1,0 +1,14 @@
+{
+    "name": "uLoopMCP.Shared",
+    "rootNamespace": "io.github.hatayama.uLoopMCP",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}
