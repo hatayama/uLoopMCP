@@ -460,16 +460,16 @@ describe('CLI E2E Tests (requires running Unity)', () => {
     });
   });
 
-  describe('get-provider-details', () => {
+  describe('get-unity-search-providers', () => {
     it('should retrieve search providers', () => {
-      const result = runCliJson<{ Providers: unknown[] }>('get-provider-details');
+      const result = runCliJson<{ Providers: unknown[] }>('get-unity-search-providers');
 
       expect(Array.isArray(result.Providers)).toBe(true);
     });
 
     it('should support --include-descriptions false to exclude descriptions', () => {
       const result = runCliJson<{ Providers: unknown[] }>(
-        'get-provider-details --include-descriptions false',
+        'get-unity-search-providers --include-descriptions false',
       );
 
       expect(Array.isArray(result.Providers)).toBe(true);
@@ -477,7 +477,7 @@ describe('CLI E2E Tests (requires running Unity)', () => {
 
     it('should support --sort-by-priority false to disable priority sorting', () => {
       const result = runCliJson<{ Providers: unknown[] }>(
-        'get-provider-details --sort-by-priority false',
+        'get-unity-search-providers --sort-by-priority false',
       );
 
       expect(Array.isArray(result.Providers)).toBe(true);
@@ -499,6 +499,48 @@ describe('CLI E2E Tests (requires running Unity)', () => {
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain('--force-recompile');
+    });
+
+    it('should display grouped help with category headings', () => {
+      const { stdout, exitCode } = runCli('--help');
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('Built-in Tools:');
+      expect(stdout).toContain('CLI Commands:');
+      // CLI Commands should appear before Built-in Tools
+      const cliIndex: number = stdout.indexOf('CLI Commands:');
+      const builtInIndex: number = stdout.indexOf('Built-in Tools:');
+      expect(cliIndex).toBeLessThan(builtInIndex);
+    });
+
+    it('should display Third-party Tools section when cache contains third-party tools', () => {
+      const { stdout, exitCode } = runCli('--help');
+
+      expect(exitCode).toBe(0);
+      // hello-world is a third-party tool present in the local cache but not in default-tools.json
+      if (stdout.includes('hello-world')) {
+        expect(stdout).toContain('Third-party Tools:');
+        const builtInIndex: number = stdout.indexOf('Built-in Tools:');
+        const thirdPartyIndex: number = stdout.indexOf('Third-party Tools:');
+        expect(builtInIndex).toBeLessThan(thirdPartyIndex);
+      }
+    });
+
+    it('should resolve tool cache via --project-path', () => {
+      const withProjectPath = runCli(`--help --project-path "${UNITY_PROJECT_ROOT}"`);
+      const withoutProjectPath = runCli('--help');
+
+      expect(withProjectPath.exitCode).toBe(0);
+      expect(withoutProjectPath.exitCode).toBe(0);
+
+      // Both should show the same category headings
+      expect(withProjectPath.stdout).toContain('Built-in Tools:');
+      expect(withProjectPath.stdout).toContain('CLI Commands:');
+
+      // Third-party tools visible in normal help should also appear with --project-path
+      if (withoutProjectPath.stdout.includes('Third-party Tools:')) {
+        expect(withProjectPath.stdout).toContain('Third-party Tools:');
+      }
     });
 
     it('should display boolean options with value format in get-hierarchy help', () => {

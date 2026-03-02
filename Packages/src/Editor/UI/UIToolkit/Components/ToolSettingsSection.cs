@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
@@ -26,6 +27,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             _foldout = root.Q<Foldout>("tool-settings-foldout");
             _toolListContainer = root.Q<VisualElement>("tool-list-container");
+
+            Label cliReferenceLink = root.Q<Label>("cli-reference-link");
+            cliReferenceLink.RegisterCallback<ClickEvent>(_ => Application.OpenURL(McpUIConstants.CLI_COMMAND_REFERENCE_URL));
 
             SetupBindings();
         }

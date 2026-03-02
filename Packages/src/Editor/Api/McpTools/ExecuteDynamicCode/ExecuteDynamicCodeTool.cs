@@ -13,7 +13,7 @@ namespace io.github.hatayama.uLoopMCP
     /// Regenerates Executor only when security level changes, otherwise caches and reuses
     /// Related Classes: IDynamicCodeExecutor, DynamicCodeExecutorFactory
     /// </summary>
-    [McpTool(Description = @"Editor automation only — no file I/O, no script authoring.
+    [McpTool(Description = @"Execute C# code dynamically in Unity Editor for editor automation.
 
 Direct statements only (no classes/namespaces/methods); return is optional (auto 'return null;' if omitted).
 

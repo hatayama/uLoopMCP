@@ -41,7 +41,10 @@ export interface ToolsCache {
 const CACHE_DIR = '.uloop';
 const CACHE_FILE = 'tools.json';
 
-function getCacheDir(): string {
+function getCacheDir(projectPath?: string): string {
+  if (projectPath !== undefined) {
+    return join(projectPath, CACHE_DIR);
+  }
   const projectRoot = findUnityProjectRoot();
   if (projectRoot === null) {
     return join(process.cwd(), CACHE_DIR);
@@ -49,8 +52,8 @@ function getCacheDir(): string {
   return join(projectRoot, CACHE_DIR);
 }
 
-function getCachePath(): string {
-  return join(getCacheDir(), CACHE_FILE);
+function getCachePath(projectPath?: string): string {
+  return join(getCacheDir(projectPath), CACHE_FILE);
 }
 
 /**
@@ -62,9 +65,10 @@ export function getDefaultTools(): ToolsCache {
 
 /**
  * Load tools from cache file, falling back to default tools if cache doesn't exist.
+ * When projectPath is specified, reads cache from that project directory.
  */
-export function loadToolsCache(): ToolsCache {
-  const cachePath = getCachePath();
+export function loadToolsCache(projectPath?: string): ToolsCache {
+  const cachePath = getCachePath(projectPath);
 
   if (existsSync(cachePath)) {
     try {
@@ -105,6 +109,15 @@ export function hasCacheFile(): boolean {
  */
 export function getCacheFilePath(): string {
   return getCachePath();
+}
+
+/**
+ * Get the set of default tool names bundled with npm package.
+ * Used to distinguish built-in tools from third-party tools.
+ */
+export function getDefaultToolNames(): ReadonlySet<string> {
+  const defaultTools: ToolsCache = getDefaultTools();
+  return new Set(defaultTools.tools.map((tool: ToolDefinition) => tool.name));
 }
 
 /**

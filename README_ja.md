@@ -153,7 +153,7 @@ uloop skills install --claude --global
 - `/uloop-screenshot` - EditorWindowのキャプチャ
 - `/uloop-control-play-mode` - Play Modeの制御
 - `/uloop-execute-dynamic-code` - 動的C#コード実行
-- `/uloop-get-provider-details` - 検索プロバイダー詳細
+- `/uloop-get-unity-search-providers` - 検索プロバイダー詳細
 
 </details>
 
@@ -341,7 +341,7 @@ log検索時、ノイズのとなるlogをクリアする事ができます。
 → 問題のあるPrefabを特定する
 ```
 
-### 6. get-provider-details - UnitySearch検索プロバイダーの確認
+### 6. get-unity-search-providers - UnitySearch検索プロバイダーの確認
 UnitySearchが提供する検索プロバイダーを取得します
 ```text
 → 各プロバイダーの機能を理解、最適な検索方法を選択

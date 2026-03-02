@@ -4,12 +4,9 @@
 
 このドキュメントでは、全uLoopMCPツールの詳細仕様を提供します。
 
-## 共通パラメータ・レスポンス形式
+## 共通レスポンス形式
 
 すべてのUnity MCPツールは以下の共通要素を持ちます：
-
-### 共通パラメータ
-- `TimeoutSeconds` (number): ツール実行のタイムアウト時間（秒）
 
 ### 共通レスポンスプロパティ
 すべてのツールには以下のプロパティが自動的に含まれます：
@@ -25,19 +22,19 @@
   - `ForceRecompile` (boolean): 強制再コンパイルを実行するかどうか（デフォルト: false）
   - `WaitForDomainReload` (boolean): Domain Reload完了まで待機するかどうか（デフォルト: false）
 - **レスポンス**:
-  - `Success` (boolean): コンパイルが成功したかどうか
-  - `ErrorCount` (number): エラーの総数
-  - `WarningCount` (number): 警告の総数
-  - `CompletedAt` (string): コンパイル完了時刻（ISO形式）
-  - `Errors` (array): コンパイルエラーの配列（存在する場合）
+  - `Success` (boolean | null): コンパイルが成功したかどうか。ForceRecompile=true時はDomain Reload完了まで結果が取得できないためnull
+  - `ErrorCount` (number | null): エラーの総数。ForceRecompile=true時はnull
+  - `WarningCount` (number | null): 警告の総数。ForceRecompile=true時はnull
+  - `Errors` (array | null): コンパイルエラーの配列。ForceRecompile=true時はnull
     - `Message` (string): エラーメッセージ
     - `File` (string): エラーが発生したファイルパス
     - `Line` (number): エラーが発生した行番号
-  - `Warnings` (array): コンパイル警告の配列（存在する場合）
+  - `Warnings` (array | null): コンパイル警告の配列。ForceRecompile=true時はnull
     - `Message` (string): 警告メッセージ
     - `File` (string): 警告が発生したファイルパス
     - `Line` (number): 警告が発生した行番号
   - `Message` (string): 追加情報のためのオプションメッセージ
+  - `ProjectRoot` (string): Unityプロジェクトのルートパス。WaitForDomainReload=true時のみセットされる
 
 ### 2. get-logs
 - **説明**: フィルタリングおよび高度な検索機能付きでUnityコンソールからログ情報を取得します
@@ -83,7 +80,7 @@
 ### 4. clear-console
 - **説明**: クリーンな開発ワークフローのためにUnityコンソールログをクリアします
 - **パラメータ**:
-  - `AddConfirmationMessage` (boolean): クリア後に確認ログメッセージを追加するかどうか（デフォルト: true）
+  - `AddConfirmationMessage` (boolean): クリア後に確認ログメッセージを追加するかどうか（デフォルト: false）
 - **レスポンス**:
   - `Success` (boolean): コンソールクリア操作が成功したかどうか
   - `ClearedLogCount` (number): コンソールからクリアされたログの数
@@ -113,11 +110,17 @@
     - `tag` (string): GameObjectタグ
     - `layer` (number): GameObjectレイヤー
     - `components` (array): GameObject上のコンポーネントの配列
-      - `TypeName` (string): コンポーネントタイプ名
-      - `AssemblyQualifiedName` (string): 完全なアセンブリ修飾名
-      - `Properties` (object): コンポーネントプロパティ（IncludeInheritedPropertiesがtrueの場合）
+      - `type` (string): コンポーネントタイプ名
+      - `fullTypeName` (string): 完全なアセンブリ修飾タイプ名
+      - `properties` (array): コンポーネントプロパティ（IncludeInheritedPropertiesがtrueの場合）
   - `totalFound` (number): 見つかったGameObjectの総数
   - `errorMessage` (string): 検索が失敗した場合のエラーメッセージ
+  - `resultsFilePath` (string): 結果がファイルにエクスポートされた場合のファイルパス
+  - `message` (string): 操作メッセージ
+  - `processingErrors` (array): シリアライズに失敗したオブジェクトの配列
+    - `gameObjectName` (string): 失敗したGameObjectの名前
+    - `gameObjectPath` (string): 失敗したGameObjectのパス
+    - `error` (string): エラーの説明
 
 ---
 
@@ -171,46 +174,10 @@
   - `UseComponentsLut` (string): コンポーネント用LUTの使用 - "auto", "true", "false"（デフォルト: "auto"）
   - `UseSelection` (boolean): 現在選択中のGameObjectをルートとして使用するかどうか。trueの場合、RootPathは無視されます（デフォルト: false）
 - **レスポンス**:
-  - **小さな階層**（<=100KB）: 直接的なネストされたJSON構造
-    - `hierarchy` (array): ネスト形式のルートレベルGameObjectの配列
-      - `id` (number): UnityのGetInstanceID() - セッション内で一意
-      - `name` (string): GameObject名
-      - `depth` (number): 階層内の深度レベル（ルートは0）
-      - `isActive` (boolean): GameObjectがアクティブかどうか
-      - `components` (array): このGameObjectにアタッチされたコンポーネントタイプ名の配列
-      - `children` (array): 同じ構造を持つ子GameObjectの再帰的配列
-    - `context` (object): 階層に関するコンテキスト情報
-      - `sceneType` (string): シーンタイプ（"editor", "runtime", "prefab"）
-      - `sceneName` (string): シーン名またはプレハブパス
-      - `nodeCount` (number): 階層内のノードの総数
-      - `maxDepth` (number): 探索中に到達した最大深度
-  - **大きな階層**（>100KB）: 自動ファイルエクスポート
-    - `hierarchySavedToFile` (boolean): 大きな階層では常にtrue
-    - `hierarchyFilePath` (string): 保存された階層ファイルの相対パス（例: "{project_root}/.uloop/outputs/HierarchyResults/hierarchy_2025-07-10_21-30-15.json"）
-    - `saveToFileReason` (string): ファイルエクスポートの理由（"auto_threshold"）
-    - `context` (object): 上記と同じコンテキスト情報
-  - `Message` (string): 操作メッセージ
-  - `ErrorMessage` (string): 操作が失敗した場合のエラーメッセージ
+  - `message` (string): クライアントがJSONファイルを参照するための案内メッセージ
+  - `hierarchyFilePath` (string): 階層データが保存されたファイルパス（例: "{project_root}/.uloop/outputs/HierarchyResults/hierarchy_2025-07-10_21-30-15.json"）。エクスポートされたJSONファイルには `hierarchy`（GameObjectのネスト配列）と `context`（シーン情報、ノード数、最大深度）が含まれる
 
-### 8. get-provider-details
-- **説明**: 表示名、説明、アクティブ状態、機能を含むUnity Searchプロバイダーの詳細情報を取得します
-- **パラメータ**:
-  - `ProviderId` (string): 詳細を取得する特定のプロバイダーID（空 = すべてのプロバイダー）（デフォルト: ""）
-    - 例: "asset", "scene", "menu", "settings"
-  - `ActiveOnly` (boolean): アクティブなプロバイダーのみを含めるかどうか（デフォルト: false）
-  - `SortByPriority` (boolean): 優先度でプロバイダーをソート（数値が小さい = 優先度が高い）（デフォルト: true）
-  - `IncludeDescriptions` (boolean): 各プロバイダーの詳細な説明を含める（デフォルト: true）
-- **レスポンス**:
-  - `Providers` (array): プロバイダー情報の配列
-  - `TotalCount` (number): 見つかったプロバイダーの総数
-  - `ActiveCount` (number): アクティブなプロバイダーの数
-  - `InactiveCount` (number): 非アクティブなプロバイダーの数
-  - `Success` (boolean): リクエストが成功したかどうか
-  - `ErrorMessage` (string): リクエストが失敗した場合のエラーメッセージ
-  - `AppliedFilter` (string): 適用されたフィルタ（特定のプロバイダーIDまたは"all"）
-  - `SortedByPriority` (boolean): 結果が優先度でソートされているかどうか
-
-### 9. get-menu-items
+### 8. get-menu-items
 - **説明**: プログラム実行のための詳細なメタデータ付きでUnity MenuItemsを取得します。Unity Searchのメニュープロバイダーとは異なり、自動化とデバッグに必要な実装詳細（メソッド名、アセンブリ、実行互換性）を提供します
 - **パラメータ**:
   - `FilterText` (string): MenuItemパスをフィルタするテキスト（すべてのアイテムの場合は空）（デフォルト: ""）
@@ -225,12 +192,14 @@
     - `AssemblyName` (string): アセンブリ名
     - `Priority` (number): メニューアイテムの優先度
     - `IsValidateFunction` (boolean): 検証関数かどうか
+    - `CanExecuteViaEditorApplication` (boolean): EditorApplication.ExecuteMenuItemで実行可能かどうか
+    - `WarningMessage` (string): MenuItemに問題がある場合の警告メッセージ（例: 属性の重複）
   - `TotalCount` (number): フィルタリング前に発見されたMenuItemsの総数
   - `FilteredCount` (number): フィルタリング後に返されたMenuItemsの数
   - `AppliedFilter` (string): 適用されたフィルタテキスト
   - `AppliedFilterType` (string): 適用されたフィルタタイプ
 
-### 10. execute-menu-item
+### 9. execute-menu-item
 - **説明**: パスによってUnity MenuItemを実行します
 - **パラメータ**:
   - `MenuItemPath` (string): 実行するメニューアイテムパス（例: "GameObject/Create Empty"）（デフォルト: ""）
@@ -242,8 +211,9 @@
   - `ErrorMessage` (string): 実行が失敗した場合のエラーメッセージ
   - `Details` (string): 実行に関する追加情報
   - `MenuItemFound` (boolean): メニューアイテムがシステムで見つかったかどうか
+  - `WarningMessage` (string): MenuItemに問題がある場合の警告メッセージ（例: 属性の重複）
 
-### 11. execute-dynamic-code
+### 10. execute-dynamic-code
 - **説明**: Unity Editor内で動的C#コードを実行します。セキュリティレベルに応じてAPI利用を制限し、using文の自動処理やエラーメッセージの改善機能を提供します
 - **パラメータ**:
   - `Code` (string): 実行するC#コード（デフォルト: ""）
@@ -258,11 +228,17 @@
     - `Line` (number): エラーが発生した行番号
     - `Column` (number): エラーが発生した列番号
     - `ErrorCode` (string): コンパイラーエラーコード（CS0103など）
+    - `Hint` (string): エラー解決のためのオプションヒント
+    - `Suggestions` (array of string): 修正候補（例: usingの追加や完全修飾名の使用）
+    - `Context` (string): エラー周辺のコード行とキャレットポインタ
+    - `PointerColumn` (number): キャレット描画用のポインタカラム（1-based）
   - `ErrorMessage` (string): エラーメッセージ（失敗時）
   - `SecurityLevel` (string): 現在のセキュリティレベル（"Disabled", "Restricted", "FullAccess"）
   - `UpdatedCode` (string): 更新されたコード（修正適用後）
+  - `DiagnosticsSummary` (string): 診断情報のサマリー（ユニークエラー数、総数、最初のエラー概要）
+  - `Diagnostics` (array): リッチクライアント向けの構造化された診断情報（CompilationErrorsと同じ構造）
 
-### 12. focus-window
+### 11. focus-window
 - **説明**: macOSおよびWindowsでUnity Editorウィンドウを前面に表示します
 - **パラメータ**: なし
 - **レスポンス**:
@@ -270,7 +246,7 @@
   - `Message` (string): 操作結果メッセージ
   - `ErrorMessage` (string): 操作が失敗した場合のエラーメッセージ
 
-### 13. screenshot
+### 12. screenshot
 - **説明**: Unity EditorWindowのスクリーンショットを撮影してPNG画像として保存します。名前による柔軟なマッチングモードで任意のEditorWindowをキャプチャ可能です
 - **パラメータ**:
   - `WindowName` (string): キャプチャするウィンドウ名（例: "Game", "Scene", "Console", "Inspector", "Project", "Hierarchy"）（デフォルト: "Game"）
@@ -279,6 +255,7 @@
     - `exact`: ウィンドウ名が完全に一致する必要があります
     - `prefix`: ウィンドウ名が入力で始まる必要があります
     - `contains`: ウィンドウ名に入力が含まれている必要があります
+  - `OutputDirectory` (string): スクリーンショット保存先のディレクトリパス。空の場合はデフォルトパス（.uloop/outputs/Screenshots/）を使用。絶対パスも指定可能（デフォルト: ""）
 - **レスポンス**:
   - `ScreenshotCount` (number): キャプチャされたウィンドウの数
   - `Screenshots` (array): スクリーンショット情報の配列
@@ -287,7 +264,7 @@
     - `Width` (number): キャプチャ画像の幅（ピクセル）
     - `Height` (number): キャプチャ画像の高さ（ピクセル）
 
-### 14. control-play-mode
+### 13. control-play-mode
 - **説明**: Unity Editorのプレイモードを制御します（再生/停止/一時停止）
 - **パラメータ**:
   - `Action` (enum): 実行するアクション - "Play", "Stop", "Pause"（デフォルト: "Play"）

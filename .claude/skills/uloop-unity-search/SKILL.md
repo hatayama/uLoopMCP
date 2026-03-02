@@ -56,4 +56,4 @@ Returns JSON array of search results with paths and metadata.
 
 ## Notes
 
-Use `uloop get-provider-details` to discover available search providers.
+Use `uloop get-unity-search-providers` to discover available search providers.
