@@ -79,8 +79,14 @@ namespace io.github.hatayama.uLoopMCP
                 name = "tool-list-container"
             };
 
+            Label cliReferenceLink = new Label
+            {
+                name = "cli-reference-link"
+            };
+
             foldout.Add(container);
             root.Add(foldout);
+            root.Add(cliReferenceLink);
             return root;
         }
 
