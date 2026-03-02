@@ -191,7 +191,8 @@ function registerToolCommand(tool: ToolDefinition, helpGroup: string): void {
   if (BUILTIN_COMMANDS.includes(tool.name as (typeof BUILTIN_COMMANDS)[number])) {
     return;
   }
-  const cmd = program.command(tool.name).description(tool.description).helpGroup(helpGroup);
+  const firstLine: string = tool.description.split('\n')[0];
+  const cmd = program.command(tool.name).description(firstLine).helpGroup(helpGroup);
 
   // Add options from inputSchema.properties
   const properties = tool.inputSchema.properties;
