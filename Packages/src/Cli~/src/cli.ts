@@ -33,6 +33,8 @@ import { pascalToKebabCase } from './arg-parser.js';
 import { registerSkillsCommand } from './skills/skills-command.js';
 import { registerLaunchCommand } from './commands/launch.js';
 import { registerFocusWindowCommand } from './commands/focus-window.js';
+import { registerDeviceConnectCommand } from './commands/device-connect.js';
+import { registerDeviceListCommand } from './commands/device-list.js';
 import { VERSION } from './version.js';
 import { findUnityProjectRoot } from './project-root.js';
 import { validateProjectPath } from './port-resolver.js';
@@ -45,6 +47,8 @@ interface CliOptions extends GlobalOptions {
 const FOCUS_WINDOW_COMMAND = 'focus-window' as const;
 const LAUNCH_COMMAND = 'launch' as const;
 const UPDATE_COMMAND = 'update' as const;
+const DEVICE_CONNECT_COMMAND = 'device-connect' as const;
+const DEVICE_LIST_COMMAND = 'device-list' as const;
 
 const HELP_GROUP_BUILTIN_TOOLS = 'Built-in Tools:' as const;
 const HELP_GROUP_THIRD_PARTY_TOOLS = 'Third-party Tools:' as const;
@@ -68,6 +72,8 @@ const BUILTIN_COMMANDS = [
   'skills',
   LAUNCH_COMMAND,
   FOCUS_WINDOW_COMMAND,
+  DEVICE_CONNECT_COMMAND,
+  DEVICE_LIST_COMMAND,
 ] as const;
 
 const program = new Command();
@@ -179,6 +185,10 @@ registerSkillsCommand(program);
 
 // Register launch subcommand
 registerLaunchCommand(program);
+
+// Register device commands
+registerDeviceConnectCommand(program);
+registerDeviceListCommand(program);
 
 // focus-window is registered conditionally in main() based on tool settings,
 // since it corresponds to an MCP tool that can be disabled via Tool Settings UI
@@ -841,7 +851,12 @@ function commandExists(cmdName: string, projectPath?: string): boolean {
 }
 
 function shouldSkipAutoSync(cmdName: string | undefined, args: string[]): boolean {
-  if (cmdName === LAUNCH_COMMAND || cmdName === UPDATE_COMMAND) {
+  if (
+    cmdName === LAUNCH_COMMAND ||
+    cmdName === UPDATE_COMMAND ||
+    cmdName === DEVICE_CONNECT_COMMAND ||
+    cmdName === DEVICE_LIST_COMMAND
+  ) {
     return true;
   }
   return args.some((arg) => (NO_SYNC_FLAGS as readonly string[]).includes(arg));
@@ -915,7 +930,12 @@ async function main(): Promise<void> {
   const cmdName = findCommandName(args);
 
   // No command name = no Unity operation; skip project detection
-  const NO_PROJECT_COMMANDS = [UPDATE_COMMAND, 'completion'] as const;
+  const NO_PROJECT_COMMANDS = [
+    UPDATE_COMMAND,
+    'completion',
+    DEVICE_CONNECT_COMMAND,
+    DEVICE_LIST_COMMAND,
+  ] as const;
   const skipProjectDetection =
     cmdName === undefined || (NO_PROJECT_COMMANDS as readonly string[]).includes(cmdName);
 
