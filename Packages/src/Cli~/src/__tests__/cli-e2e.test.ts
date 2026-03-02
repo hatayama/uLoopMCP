@@ -513,11 +513,17 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       expect(cliIndex).toBeLessThan(builtInIndex);
     });
 
-    it('should not display Third-party Tools section when no third-party tools exist', () => {
+    it('should display Third-party Tools section when cache contains third-party tools', () => {
       const { stdout, exitCode } = runCli('--help');
 
       expect(exitCode).toBe(0);
-      expect(stdout).not.toContain('Third-party Tools:');
+      // hello-world is a third-party tool present in the local cache but not in default-tools.json
+      if (stdout.includes('hello-world')) {
+        expect(stdout).toContain('Third-party Tools:');
+        const builtInIndex: number = stdout.indexOf('Built-in Tools:');
+        const thirdPartyIndex: number = stdout.indexOf('Third-party Tools:');
+        expect(builtInIndex).toBeLessThan(thirdPartyIndex);
+      }
     });
 
     it('should display boolean options with value format in get-hierarchy help', () => {

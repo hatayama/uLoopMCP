@@ -899,18 +899,19 @@ async function main(): Promise<void> {
     cmdName === undefined || (NO_PROJECT_COMMANDS as readonly string[]).includes(cmdName);
 
   if (skipProjectDetection) {
-    const defaultTools = getDefaultTools();
-    const defaultToolNames: ReadonlySet<string> = new Set(
-      defaultTools.tools.map((t: ToolDefinition) => t.name),
-    );
+    const defaultToolNames: ReadonlySet<string> = getDefaultToolNames();
     // Only filter disabled tools for top-level help (uloop --help); subcommand help
     // (e.g. uloop completion --help) does not list dynamic tools, so scanning is unnecessary
     const isTopLevelHelp: boolean =
       cmdName === undefined && (args.includes('-h') || args.includes('--help'));
     const shouldFilter: boolean = syncGlobalOptions.projectPath !== undefined || isTopLevelHelp;
+    // Use cache to include third-party tools in help output; falls back to defaults when no cache exists
+    const sourceTools: ToolDefinition[] = shouldFilter
+      ? loadToolsCache().tools
+      : getDefaultTools().tools;
     const tools: ToolDefinition[] = shouldFilter
-      ? filterEnabledTools(defaultTools.tools, syncGlobalOptions.projectPath)
-      : defaultTools.tools;
+      ? filterEnabledTools(sourceTools, syncGlobalOptions.projectPath)
+      : sourceTools;
     if (!shouldFilter || isToolEnabled(FOCUS_WINDOW_COMMAND, syncGlobalOptions.projectPath)) {
       registerFocusWindowCommand(program, HELP_GROUP_BUILTIN_TOOLS);
     }
