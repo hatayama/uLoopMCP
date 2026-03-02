@@ -124,9 +124,9 @@ uloop compile --force-recompile true --wait-for-domain-reload true
 ```
 
 **Output:**
-- `Success` (boolean) - Compilation succeeded (`null` when `--force-recompile` is used)
-- `ErrorCount` / `WarningCount` (integer) - Number of errors/warnings
-- `Errors` / `Warnings` (array) - Issues with `Message`, `File`, `Line` fields
+- `Success` (boolean | null) - Compilation succeeded (`null` when `--force-recompile` is used)
+- `ErrorCount` / `WarningCount` (integer | null) - Number of errors/warnings (`null` when `--force-recompile` is used)
+- `Errors` / `Warnings` (array | null) - Issues with `Message`, `File`, `Line` fields (`null` when `--force-recompile` is used)
 
 ### get-logs
 
