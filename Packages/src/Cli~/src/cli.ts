@@ -847,6 +847,26 @@ function shouldSkipAutoSync(cmdName: string | undefined, args: string[]): boolea
   return args.some((arg) => (NO_SYNC_FLAGS as readonly string[]).includes(arg));
 }
 
+// Options that consume the next argument as a value
+const OPTIONS_WITH_VALUE: ReadonlySet<string> = new Set(['--port', '-p', '--project-path']);
+
+/**
+ * Find the first non-option argument that is not a value of a known option.
+ */
+function findCommandName(args: readonly string[]): string | undefined {
+  for (let i = 0; i < args.length; i++) {
+    const arg: string = args[i];
+    if (arg.startsWith('-')) {
+      if (OPTIONS_WITH_VALUE.has(arg)) {
+        i++; // skip the next arg (option value)
+      }
+      continue;
+    }
+    return arg;
+  }
+  return undefined;
+}
+
 function extractSyncGlobalOptions(args: string[]): GlobalOptions {
   const options: GlobalOptions = {};
 
@@ -891,8 +911,8 @@ async function main(): Promise<void> {
   }
 
   const args = process.argv.slice(2);
-  const cmdName = args.find((arg) => !arg.startsWith('-'));
   const syncGlobalOptions = extractSyncGlobalOptions(args);
+  const cmdName = findCommandName(args);
 
   // No command name = no Unity operation; skip project detection
   const NO_PROJECT_COMMANDS = [UPDATE_COMMAND, 'completion'] as const;

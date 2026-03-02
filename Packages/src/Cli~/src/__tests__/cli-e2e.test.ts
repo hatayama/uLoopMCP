@@ -526,6 +526,23 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       }
     });
 
+    it('should resolve tool cache via --project-path', () => {
+      const withProjectPath = runCli(`--help --project-path "${UNITY_PROJECT_ROOT}"`);
+      const withoutProjectPath = runCli('--help');
+
+      expect(withProjectPath.exitCode).toBe(0);
+      expect(withoutProjectPath.exitCode).toBe(0);
+
+      // Both should show the same category headings
+      expect(withProjectPath.stdout).toContain('Built-in Tools:');
+      expect(withProjectPath.stdout).toContain('CLI Commands:');
+
+      // Third-party tools visible in normal help should also appear with --project-path
+      if (withoutProjectPath.stdout.includes('Third-party Tools:')) {
+        expect(withProjectPath.stdout).toContain('Third-party Tools:');
+      }
+    });
+
     it('should display boolean options with value format in get-hierarchy help', () => {
       const { stdout, exitCode } = runCli('get-hierarchy --help');
 
