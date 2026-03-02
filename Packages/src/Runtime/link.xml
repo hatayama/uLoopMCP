@@ -1,0 +1,7 @@
+<linker>
+  <!-- Preserve Newtonsoft.Json types used by Device Agent JSON-RPC processing -->
+  <assembly fullname="Newtonsoft.Json" preserve="all" />
+  <!-- Preserve Device Agent types for reflection-based JSON serialization -->
+  <assembly fullname="uLoopMCP.Runtime" preserve="all" />
+  <assembly fullname="uLoopMCP.Shared" preserve="all" />
+</linker>

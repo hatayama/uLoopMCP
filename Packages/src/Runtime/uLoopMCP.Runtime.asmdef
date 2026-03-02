@@ -1,0 +1,20 @@
+{
+    "name": "uLoopMCP.Runtime",
+    "rootNamespace": "io.github.hatayama.uLoopMCP",
+    "references": [
+        "GUID:b50cc411207904ba0b9e20e2c4a593be"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [
+        "Editor"
+    ],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "ULOOP_DEVICE_AGENT"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
