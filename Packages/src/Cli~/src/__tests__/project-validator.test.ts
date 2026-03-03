@@ -72,6 +72,26 @@ describe('validateConnectedProject', () => {
       'Unity error: some other error',
     );
   });
+
+  it('logs warning and continues when DataPath is missing from response', async () => {
+    const client = createMockClient({});
+    const stderrSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    await expect(validateConnectedProject(client, tempDirA)).resolves.toBeUndefined();
+
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('invalid get-version response'));
+    stderrSpy.mockRestore();
+  });
+
+  it('logs warning and continues when DataPath is empty string', async () => {
+    const client = createMockClient({ DataPath: '' });
+    const stderrSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    await expect(validateConnectedProject(client, tempDirA)).resolves.toBeUndefined();
+
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('invalid get-version response'));
+    stderrSpy.mockRestore();
+  });
 });
 
 describe('ProjectMismatchError', () => {

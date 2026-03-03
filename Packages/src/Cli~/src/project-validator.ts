@@ -51,6 +51,11 @@ export async function validateConnectedProject(
     throw error;
   }
 
+  if (typeof response?.DataPath !== 'string' || response.DataPath.length === 0) {
+    console.error('Warning: Could not verify project identity (invalid get-version response).');
+    return;
+  }
+
   const connectedProjectRoot = dirname(response.DataPath);
   const normalizedExpected = await normalizePath(expectedProjectRoot);
   const normalizedConnected = await normalizePath(connectedProjectRoot);
