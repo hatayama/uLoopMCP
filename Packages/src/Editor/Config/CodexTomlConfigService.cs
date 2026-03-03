@@ -125,6 +125,25 @@ namespace io.github.hatayama.uLoopMCP
             return port.Value;
         }
 
+        public void DeleteConfiguration()
+        {
+            string path = UnityMcpPathResolver.GetCodexConfigPath();
+            if (!File.Exists(path))
+            {
+                return;
+            }
+
+            string content = File.ReadAllText(path);
+            string result = SectionRegex.Replace(content, string.Empty);
+            if (ReferenceEquals(content, result))
+            {
+                return;
+            }
+
+            result = Regex.Replace(result, @"(\r?\n){3,}", System.Environment.NewLine + System.Environment.NewLine);
+            File.WriteAllText(path, result);
+        }
+
         public void UpdateDevelopmentSettings(int port, bool developmentMode, bool enableMcpLogs)
         {
             string path = UnityMcpPathResolver.GetCodexConfigPath();

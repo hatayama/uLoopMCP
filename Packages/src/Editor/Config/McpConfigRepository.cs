@@ -297,6 +297,62 @@ namespace io.github.hatayama.uLoopMCP
             return uloopServers;
         }
 
+        public void DeleteULoopMCPEntries(string configPath)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(configPath), "configPath must not be null or empty");
+
+            if (!File.Exists(configPath))
+            {
+                return;
+            }
+
+            string existingContent = File.ReadAllText(configPath);
+
+            if (string.IsNullOrWhiteSpace(existingContent) || existingContent.Length > McpConstants.MAX_JSON_SIZE_BYTES)
+            {
+                return;
+            }
+
+            Dictionary<string, object> jsonStructure =
+                JsonConvert.DeserializeObject<Dictionary<string, object>>(existingContent, SafeJsonSettings);
+
+            if (jsonStructure == null || !jsonStructure.ContainsKey(McpConstants.JSON_KEY_MCP_SERVERS))
+            {
+                return;
+            }
+
+            JObject existingServers = JObject.FromObject(jsonStructure[McpConstants.JSON_KEY_MCP_SERVERS]);
+
+            List<string> keysToRemove = new();
+            foreach (JProperty serverEntry in existingServers.Properties())
+            {
+                if (!serverEntry.Name.StartsWith(McpConstants.PROJECT_NAME))
+                {
+                    continue;
+                }
+
+                JToken envToken = serverEntry.Value?[McpConstants.JSON_KEY_ENV];
+                if (envToken?[McpConstants.UNITY_TCP_PORT_ENV_KEY] != null)
+                {
+                    keysToRemove.Add(serverEntry.Name);
+                }
+            }
+
+            if (keysToRemove.Count == 0)
+            {
+                return;
+            }
+
+            foreach (string key in keysToRemove)
+            {
+                existingServers.Remove(key);
+            }
+
+            jsonStructure[McpConstants.JSON_KEY_MCP_SERVERS] = existingServers;
+            string newJsonContent = JsonConvert.SerializeObject(jsonStructure, Formatting.Indented, SafeJsonSettings);
+            File.WriteAllText(configPath, newJsonContent);
+        }
+
         /// <summary>
         /// JObject preserves insertion order, unlike Dictionary on .NET Framework 4.x.
         /// </summary>

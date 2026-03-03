@@ -11,6 +11,7 @@ namespace io.github.hatayama.uLoopMCP
         void AutoConfigure(int port);
         int GetConfiguredPort();
         void UpdateDevelopmentSettings(int port, bool developmentMode, bool enableMcpLogs);
+        void DeleteConfiguration();
     }
 }
 

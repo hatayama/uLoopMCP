@@ -82,6 +82,7 @@ namespace io.github.hatayama.uLoopMCP
             _view.OnEditorTypeChanged += UpdateSelectedEditorType;
             _view.OnRepositoryRootChanged += UpdateAddRepositoryRoot;
             _view.OnConfigureClicked += ConfigureEditor;
+            _view.OnDeleteConfigClicked += DeleteEditorConfiguration;
             _view.OnOpenSettingsClicked += OpenConfigurationFile;
             _view.OnToolSettingsFoldoutChanged += UpdateShowToolSettings;
             _view.OnToolToggled += HandleToolToggled;
@@ -524,6 +525,28 @@ namespace io.github.hatayama.uLoopMCP
             int portToUse = isServerRunning ? McpServerController.ServerPort : _model.UI.CustomPort;
 
             configService.AutoConfigure(portToUse);
+            RefreshAllSections();
+        }
+
+        private void DeleteEditorConfiguration()
+        {
+            string editorName = GetEditorDisplayName(_model.UI.SelectedEditorType);
+
+            bool confirmed = EditorUtility.DisplayDialog(
+                "Delete MCP Configuration",
+                $"Are you sure you want to delete the {editorName} MCP configuration?\n\n" +
+                "This will remove the uLoopMCP entry from the configuration file. " +
+                "Other MCP server configurations will not be affected.",
+                "Delete",
+                "Cancel");
+
+            if (!confirmed)
+            {
+                return;
+            }
+
+            IMcpConfigService configService = GetConfigService(_model.UI.SelectedEditorType);
+            configService.DeleteConfiguration();
             RefreshAllSections();
         }
 
