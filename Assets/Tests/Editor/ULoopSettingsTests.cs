@@ -62,6 +62,12 @@ namespace io.github.hatayama.uLoopMCP
                 Directory.CreateDirectory(McpConstants.USER_SETTINGS_FOLDER);
             }
 
+            // Old-filename artifacts must not exist during tests; their presence
+            // would trigger the rename migration and break unrelated test assumptions.
+            // State is already saved above and will be restored in TearDown.
+            DeleteIfExists(OldSettingsFilePath);
+            DeleteIfExists(OldSettingsBackupPath);
+
             ULoopSettings.InvalidateCache();
             McpEditorSettings.InvalidateCache();
         }
