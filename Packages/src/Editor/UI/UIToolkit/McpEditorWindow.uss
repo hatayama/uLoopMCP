@@ -178,13 +178,13 @@
 }
 
 .mcp-button--delete {
-    background-color: #5c2020;
-    border-color: var(--mcp-color-danger);
-    color: var(--mcp-color-danger);
+    background-color: #4a4a4a;
+    border-color: #666666;
+    color: #ff6b6b;
 }
 
 .mcp-button--delete:hover {
-    background-color: #7a2e2e;
+    background-color: #555555;
 }
 
 .mcp-button--disabled {
