@@ -1,8 +1,18 @@
 #!/usr/bin/env sh
+
+changed_server_ts="$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^Packages/src/TypeScriptServer~/src/.*\.(ts|tsx)$' || true)"
+changed_cli_ts="$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^Packages/src/Cli~/src/.*\.(ts|tsx)$' || true)"
+
 cd Packages/src/TypeScriptServer~
 npx lint-staged
 
-changed_ts_files="$(git diff --cached --name-only --diff-filter=ACM | grep -E '^Packages/src/TypeScriptServer~/src/.*\.(ts|tsx)$' || true)"
-if [ -n "$changed_ts_files" ]; then
+if [ -n "$changed_server_ts" ]; then
   npx tsc --noEmit
+  npx knip
+fi
+
+cd ../Cli~
+
+if [ -n "$changed_cli_ts" ]; then
+  npx knip
 fi

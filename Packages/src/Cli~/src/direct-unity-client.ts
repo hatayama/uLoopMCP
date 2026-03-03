@@ -13,14 +13,14 @@ const JSONRPC_VERSION = '2.0';
 const DEFAULT_HOST = '127.0.0.1';
 const NETWORK_TIMEOUT_MS = 180000;
 
-export interface JsonRpcRequest {
+interface JsonRpcRequest {
   jsonrpc: string;
   method: string;
   params?: Record<string, unknown>;
   id: number;
 }
 
-export interface JsonRpcResponse {
+interface JsonRpcResponse {
   jsonrpc: string;
   result?: unknown;
   error?: {

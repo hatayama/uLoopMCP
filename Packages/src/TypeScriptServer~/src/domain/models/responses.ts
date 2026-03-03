@@ -29,30 +29,3 @@ export interface RefreshToolsResponse {
   tools: DomainTool[];
   refreshedAt: string;
 }
-
-/**
- * Response for server initialization UseCase
- */
-export interface InitializeServerResponse {
-  protocolVersion: string;
-  capabilities: object;
-  serverInfo: object;
-  tools?: DomainTool[];
-}
-
-/**
- * Response for connection handling UseCase
- */
-export interface HandleConnectionResponse {
-  connected: boolean;
-  port: number;
-  connectionTime: string;
-}
-
-/**
- * Response for notification processing UseCase
- */
-export interface ProcessNotificationResponse {
-  processed: boolean;
-  notificationsSent?: string[];
-}

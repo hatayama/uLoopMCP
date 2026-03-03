@@ -17,14 +17,14 @@ import { join } from 'path';
 // Only alphanumeric, underscore, and hyphen — blocks path separators and traversal sequences
 const SAFE_REQUEST_ID_PATTERN: RegExp = /^[a-zA-Z0-9_-]+$/;
 
-export const COMPILE_FORCE_RECOMPILE_ARG_KEYS = [
+const COMPILE_FORCE_RECOMPILE_ARG_KEYS = [
   'ForceRecompile',
   'forceRecompile',
   'force_recompile',
   'force-recompile',
 ] as const;
 
-export const COMPILE_WAIT_FOR_DOMAIN_RELOAD_ARG_KEYS = [
+const COMPILE_WAIT_FOR_DOMAIN_RELOAD_ARG_KEYS = [
   'WaitForDomainReload',
   'waitForDomainReload',
   'wait_for_domain_reload',
@@ -36,7 +36,7 @@ export interface CompileExecutionOptions {
   waitForDomainReload: boolean;
 }
 
-export interface CompileCompletionWaitOptions {
+interface CompileCompletionWaitOptions {
   projectRoot: string;
   requestId: string;
   timeoutMs: number;
@@ -45,9 +45,9 @@ export interface CompileCompletionWaitOptions {
   isUnityReadyWhenIdle?: () => Promise<boolean>;
 }
 
-export type CompileCompletionOutcome = 'completed' | 'timed_out';
+type CompileCompletionOutcome = 'completed' | 'timed_out';
 
-export interface CompileCompletionResult<T> {
+interface CompileCompletionResult<T> {
   outcome: CompileCompletionOutcome;
   result?: T;
 }

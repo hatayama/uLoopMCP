@@ -11,7 +11,7 @@ export function createFrame(jsonContent: string): string {
   return `${CONTENT_LENGTH_HEADER} ${contentLength}${HEADER_SEPARATOR}${jsonContent}`;
 }
 
-export interface FrameParseResult {
+interface FrameParseResult {
   contentLength: number;
   headerLength: number;
   isComplete: boolean;
@@ -43,7 +43,7 @@ export function parseFrameFromBuffer(data: Buffer): FrameParseResult {
   return { contentLength, headerLength, isComplete };
 }
 
-export interface FrameExtractionResult {
+interface FrameExtractionResult {
   jsonContent: string | null;
   remainingData: Buffer;
 }

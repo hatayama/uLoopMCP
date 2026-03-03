@@ -81,34 +81,6 @@ export const TIMEOUTS = {
   CONNECTION_WAIT: 180000, // 3 minutes - Timeout for waiting Unity connection to be established
 } as const;
 
-// Log configuration
-export const LOG_CONFIG = {
-  TYPES: ['Error', 'Warning', 'Log', 'All'] as const,
-  DEFAULT_TYPE: 'All',
-  DEFAULT_MAX_COUNT: 100,
-  DEFAULT_SEARCH_TEXT: '',
-  DEFAULT_INCLUDE_STACK_TRACE: true,
-} as const;
-
-// Test configuration
-export const TEST_CONFIG = {
-  FILTER_TYPES: ['all', 'fullclassname', 'namespace', 'testname', 'assembly'] as const,
-  DEFAULT_FILTER_TYPE: 'all',
-  DEFAULT_FILTER_VALUE: '',
-  DEFAULT_SAVE_XML: false,
-} as const;
-
-// Compile configuration
-export const COMPILE_CONFIG = {
-  DEFAULT_FORCE_RECOMPILE: false,
-} as const;
-
-// Default messages
-export const DEFAULT_MESSAGES = {
-  PING: 'Hello Unity MCP!',
-  UNITY_PING: 'Hello from TypeScript MCP Server',
-} as const;
-
 // Client Name Constants
 export const DEFAULT_CLIENT_NAME = ''; // Empty string to avoid showing default names
 
@@ -135,12 +107,6 @@ export const POLLING = {
   INITIAL_ATTEMPTS: 1, // Number of initial attempts with fast polling
   INITIAL_INTERVAL_MS: 1000, // Fast polling interval for initial attempts
   EXTENDED_INTERVAL_MS: 10000, // Slower polling interval after initial attempts
-} as const;
-
-// Log messages
-export const LOG_MESSAGES = {
-  SERVER_LOG_START_PREFIX: '=== Unity MCP Server Log Started at',
-  CONNECTION_RECOVERY_POLLING: 'Starting connection recovery polling',
 } as const;
 
 // List of clients that support list_changed notifications

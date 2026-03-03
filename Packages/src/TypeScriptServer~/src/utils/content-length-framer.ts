@@ -5,7 +5,7 @@
 
 import { VibeLogger } from './vibe-logger.js';
 
-export interface FrameParseResult {
+interface FrameParseResult {
   contentLength: number;
   headerLength: number;
   isComplete: boolean;

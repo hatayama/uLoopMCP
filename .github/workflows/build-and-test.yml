@@ -46,6 +46,14 @@ jobs:
       working-directory: Packages/src/Cli~
       run: npx tsc --noEmit
 
+    - name: Run knip on TypeScript Server
+      working-directory: Packages/src/TypeScriptServer~
+      run: npx knip
+
+    - name: Run knip on CLI
+      working-directory: Packages/src/Cli~
+      run: npx knip
+
     - name: Build TypeScript Server
       working-directory: Packages/src/TypeScriptServer~
       env:
