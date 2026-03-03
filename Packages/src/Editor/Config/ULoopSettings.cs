@@ -128,10 +128,23 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void LoadSettings()
         {
-            // v0.68.0 used "settings.security.json"; rename once so existing users keep their settings.
-            // This migration block can be removed after a few releases.
             string oldSettingsPath = Path.Combine(McpConstants.ULOOP_DIR, "settings.security.json");
             string oldBackupPath = oldSettingsPath + ".bak";
+
+            // When upgrading directly from v0.67 (or earlier) to v0.69+, the legacy
+            // file still contains security fields because v0.68's extraction never ran.
+            // Legacy file takes priority over any settings.security.json which may hold
+            // stale default values.
+            if (!File.Exists(SettingsFilePath) && LegacyFileHasSecurityFields())
+            {
+                MigrateFromLegacySettings();
+                DeleteIfExists(oldSettingsPath);
+                DeleteIfExists(oldBackupPath);
+                return;
+            }
+
+            // v0.68.0 used "settings.security.json"; rename once so existing users keep their settings.
+            // This migration block can be removed after a few releases.
             if (!File.Exists(SettingsFilePath))
             {
                 if (File.Exists(oldSettingsPath))
@@ -171,6 +184,25 @@ namespace io.github.hatayama.uLoopMCP
 
             // .uloop/settings.permissions.json does not exist yet — attempt migration from legacy file
             MigrateFromLegacySettings();
+        }
+
+        private static bool LegacyFileHasSecurityFields()
+        {
+            if (!File.Exists(LegacySettingsFilePath))
+            {
+                return false;
+            }
+
+            string json = File.ReadAllText(LegacySettingsFilePath);
+            return json.Contains($"\"{nameof(LegacySecuritySettingsProbe.enableTestsExecution)}\"");
+        }
+
+        private static void DeleteIfExists(string path)
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
         }
 
         /// <summary>
