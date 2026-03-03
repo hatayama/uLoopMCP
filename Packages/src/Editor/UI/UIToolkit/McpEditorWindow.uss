@@ -179,13 +179,11 @@
 
 .mcp-button--delete {
     margin-top: 12px;
-    background-color: #4a4a4a;
-    border-color: #666666;
     color: #ff6b6b;
 }
 
 .mcp-button--delete:hover {
-    background-color: #555555;
+    color: #ff8a8a;
 }
 
 .mcp-button--disabled {
