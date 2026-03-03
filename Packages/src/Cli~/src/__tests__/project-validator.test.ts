@@ -31,6 +31,7 @@ describe('validateConnectedProject', () => {
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     rmSync(tempDirA, { recursive: true });
     rmSync(tempDirB, { recursive: true });
   });
@@ -62,7 +63,6 @@ describe('validateConnectedProject', () => {
     expect(stderrSpy).toHaveBeenCalledWith(
       expect.stringContaining('Could not verify project identity'),
     );
-    stderrSpy.mockRestore();
   });
 
   it('re-throws non-Method-not-found errors', async () => {
@@ -80,7 +80,6 @@ describe('validateConnectedProject', () => {
     await expect(validateConnectedProject(client, tempDirA)).resolves.toBeUndefined();
 
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('invalid get-version response'));
-    stderrSpy.mockRestore();
   });
 
   it('logs warning and continues when DataPath is empty string', async () => {
@@ -90,7 +89,6 @@ describe('validateConnectedProject', () => {
     await expect(validateConnectedProject(client, tempDirA)).resolves.toBeUndefined();
 
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('invalid get-version response'));
-    stderrSpy.mockRestore();
   });
 });
 

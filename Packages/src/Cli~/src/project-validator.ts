@@ -42,7 +42,11 @@ export async function validateConnectedProject(
     response = await client.sendRequest<GetVersionResponse>('get-version', {});
   } catch (error) {
     // Method not found: old uLoopMCP version without get-version tool
-    if (error instanceof Error && error.message.includes(`${JSON_RPC_METHOD_NOT_FOUND}`)) {
+    if (
+      error instanceof Error &&
+      (error.message.includes(`${JSON_RPC_METHOD_NOT_FOUND}`) ||
+        /method not found/i.test(error.message))
+    ) {
       console.error(
         'Warning: Could not verify project identity (get-version not available). Consider updating uLoopMCP package.',
       );

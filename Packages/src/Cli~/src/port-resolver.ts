@@ -119,12 +119,17 @@ async function readPortFromSettingsOrThrow(projectRoot: string): Promise<number>
     throw createSettingsReadError(projectRoot);
   }
 
-  let settings: UnityMcpSettings;
+  let parsed: unknown;
   try {
-    settings = JSON.parse(content) as UnityMcpSettings;
+    parsed = JSON.parse(content);
   } catch {
     throw createSettingsReadError(projectRoot);
   }
+
+  if (typeof parsed !== 'object' || parsed === null) {
+    throw createSettingsReadError(projectRoot);
+  }
+  const settings = parsed as UnityMcpSettings;
 
   // Only block when isServerRunning is explicitly false (Unity clean shutdown).
   // undefined/missing means old settings format — proceed to next validation stage.
