@@ -42,7 +42,13 @@ namespace io.github.hatayama.uLoopMCP
 
         private void SetupBindings()
         {
-            _repositoryRootToggle.RegisterValueChangedCallback(evt => OnRepositoryRootChanged?.Invoke(evt.newValue));
+            _repositoryRootToggle.RegisterValueChangedCallback(evt =>
+            {
+                // Foldout uses an internal Toggle that listens for ChangeEvent<bool>.
+                // Without StopPropagation, this event bubbles up and collapses the Foldout.
+                evt.StopPropagation();
+                OnRepositoryRootChanged?.Invoke(evt.newValue);
+            });
             _configureButton.clicked += () => OnConfigureClicked?.Invoke();
             _deleteConfigButton.clicked += () => OnDeleteConfigClicked?.Invoke();
             _openSettingsButton.clicked += () => OnOpenSettingsClicked?.Invoke();
