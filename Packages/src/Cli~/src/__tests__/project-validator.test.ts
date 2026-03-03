@@ -65,6 +65,20 @@ describe('validateConnectedProject', () => {
     );
   });
 
+  it('logs warning and continues when get-version returns Unknown tool error', async () => {
+    const client = createMockClient(
+      undefined,
+      new Error('Unity error: Internal error (Unknown tool: get-version)'),
+    );
+    const stderrSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    await expect(validateConnectedProject(client, tempDirA)).resolves.toBeUndefined();
+
+    expect(stderrSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Could not verify project identity'),
+    );
+  });
+
   it('re-throws non-Method-not-found errors', async () => {
     const client = createMockClient(undefined, new Error('Unity error: some other error'));
 

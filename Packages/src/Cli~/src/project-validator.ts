@@ -45,7 +45,8 @@ export async function validateConnectedProject(
     if (
       error instanceof Error &&
       (error.message.includes(`${JSON_RPC_METHOD_NOT_FOUND}`) ||
-        /method not found/i.test(error.message))
+        /method not found/i.test(error.message) ||
+        /unknown tool/i.test(error.message))
     ) {
       console.error(
         'Warning: Could not verify project identity (get-version not available). Consider updating uLoopMCP package.',
