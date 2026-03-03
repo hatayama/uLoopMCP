@@ -65,6 +65,24 @@ const HELP_GROUP_ORDER = [
 // commander.js built-in flags that exit immediately without needing Unity
 const NO_SYNC_FLAGS = ['-v', '--version', '-h', '--help'] as const;
 
+// Device commands don't come from Unity tool cache, so they must be registered as built-in
+const DEVICE_COMMANDS = [
+  'device-connect',
+  'device-list',
+  'device-install',
+  'device-launch',
+  'device-logs',
+  'device-ping',
+  'device-find-game-objects',
+  'device-get-hierarchy',
+  'device-get-screenshot',
+  'device-tap-object',
+  'device-tap-coordinate',
+  'device-swipe',
+  'device-input-text',
+  'device-key-input',
+] as const;
+
 const BUILTIN_COMMANDS = [
   'list',
   'sync',
@@ -74,6 +92,7 @@ const BUILTIN_COMMANDS = [
   'skills',
   LAUNCH_COMMAND,
   FOCUS_WINDOW_COMMAND,
+  ...DEVICE_COMMANDS,
 ] as const;
 
 const program = new Command();

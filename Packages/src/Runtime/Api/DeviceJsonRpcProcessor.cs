@@ -36,7 +36,23 @@ namespace io.github.hatayama.uLoopMCP
         {
             object requestId = null;
 
-            JObject request = JObject.Parse(requestJson);
+            // Network input may be malformed; JSON-RPC spec requires -32700 PARSE_ERROR for invalid JSON
+            JToken parsedToken;
+            try
+            {
+                parsedToken = JToken.Parse(requestJson);
+            }
+            catch (JsonReaderException)
+            {
+                return CreateErrorResponse(null, DeviceAgentConstants.ErrorCodes.PARSE_ERROR, "Invalid JSON");
+            }
+
+            if (parsedToken.Type != JTokenType.Object)
+            {
+                return CreateErrorResponse(null, DeviceAgentConstants.ErrorCodes.INVALID_REQUEST, "Request must be a JSON object");
+            }
+
+            JObject request = (JObject)parsedToken;
             requestId = request["id"]?.ToObject<object>();
             string method = request["method"]?.ToString();
             JToken paramsToken = request["params"];
