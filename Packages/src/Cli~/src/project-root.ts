@@ -143,7 +143,7 @@ export function findUnityProjectRoot(startPath: string = process.cwd()): string 
   return findUnityProjectInParents(startPath);
 }
 
-export interface UnityProjectStatus {
+interface UnityProjectStatus {
   found: boolean;
   path: string | null;
   hasUloop: boolean;

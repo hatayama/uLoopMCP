@@ -12,7 +12,7 @@ export interface TargetConfig {
   skillFileName: string;
 }
 
-export const TARGET_CONFIGS: Record<TargetId, TargetConfig> = {
+const TARGET_CONFIGS: Record<TargetId, TargetConfig> = {
   claude: {
     id: 'claude',
     displayName: 'Claude Code',

@@ -17,7 +17,7 @@
  *   // or when process exits
  */
 
-export class SafeTimer {
+class SafeTimer {
   private static activeTimers = new Set<SafeTimer>();
   private static cleanupHandlersInstalled = false;
 
@@ -136,13 +136,6 @@ export function safeSetTimeout(callback: () => void, delay: number): SafeTimer {
 }
 
 /**
- * Create a safe setInterval that automatically cleans up
- */
-export function safeSetInterval(callback: () => void, delay: number): SafeTimer {
-  return new SafeTimer(callback, delay, true);
-}
-
-/**
  * Stop and clean up a SafeTimer instance safely
  */
 export function stopSafeTimer(timer: SafeTimer | null | undefined): void {
@@ -151,13 +144,4 @@ export function stopSafeTimer(timer: SafeTimer | null | undefined): void {
   }
 
   timer.stop();
-}
-
-/**
- * Promise-based delay with automatic cleanup
- */
-export function safeDelay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    new SafeTimer(resolve, ms, false);
-  });
 }

@@ -14,7 +14,6 @@
  * - ToolHandler interface for all tools
  * - ToolResponse type for MCP-compliant responses
  * - ToolContext for Unity client access
- * - ToolDefinition for tool metadata
  */
 
 /**
@@ -51,13 +50,4 @@ export interface UnityClient {
  */
 export interface ToolContext {
   unityClient: UnityClient;
-}
-
-/**
- * Tool definition type
- */
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  inputSchema: object;
 }

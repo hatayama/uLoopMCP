@@ -8,7 +8,6 @@
  * - IConnectionService (application/interfaces/connection-service.ts)
  * - IToolManagementService (application/interfaces/tool-management-service.ts)
  * - IToolQueryService (application/interfaces/tool-query-service.ts)
- * - ServiceLocator (infrastructure/service-locator.ts)
  */
 
 import { UseCase } from '../base-interfaces.js';

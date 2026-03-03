@@ -21,7 +21,7 @@ import { OUTPUT_DIRECTORIES } from '../constants.js';
  * - Correlation ID tracking for related operations
  */
 
-export interface VibeLogEntry {
+interface VibeLogEntry {
   timestamp: string;
   level: string;
   operation: string;
@@ -34,7 +34,7 @@ export interface VibeLogEntry {
   environment: EnvironmentInfo;
 }
 
-export interface EnvironmentInfo {
+interface EnvironmentInfo {
   node_version: string;
   platform: string;
   process_id: number;
@@ -750,6 +750,3 @@ export class VibeLogger {
     return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
   }
 }
-
-// Export singleton instance for convenience
-export const vibeLogger = VibeLogger;
