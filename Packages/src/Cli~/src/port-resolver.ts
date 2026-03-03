@@ -11,7 +11,11 @@ import { existsSync } from 'fs';
 import { join, resolve } from 'path';
 import { findUnityProjectRoot, isUnityProject, hasUloopInstalled } from './project-root.js';
 
-const DEFAULT_PORT = 8700;
+export class UnityNotRunningError extends Error {
+  constructor(public readonly projectRoot: string) {
+    super('UNITY_NOT_RUNNING');
+  }
+}
 
 interface UnityMcpSettings {
   isServerRunning?: boolean;
@@ -78,11 +82,7 @@ export async function resolveUnityPort(
 
   if (projectPath !== undefined) {
     const resolved = validateProjectPath(projectPath);
-    const settingsPort = await readPortFromSettings(resolved);
-    if (settingsPort !== null) {
-      return settingsPort;
-    }
-    return DEFAULT_PORT;
+    return await readPortFromSettingsOrThrow(resolved);
   }
 
   const projectRoot = findUnityProjectRoot();
@@ -92,34 +92,50 @@ export async function resolveUnityPort(
     );
   }
 
-  const settingsPort = await readPortFromSettings(projectRoot);
-  if (settingsPort !== null) {
-    return settingsPort;
-  }
-
-  return DEFAULT_PORT;
+  return await readPortFromSettingsOrThrow(projectRoot);
 }
 
-async function readPortFromSettings(projectRoot: string): Promise<number | null> {
+function createSettingsReadError(projectRoot: string): Error {
+  const settingsPath = join(projectRoot, 'UserSettings/UnityMcpSettings.json');
+  return new Error(
+    `Could not read Unity server port from settings.\n\n` +
+      `  Settings file: ${settingsPath}\n\n` +
+      `Run 'uloop launch -r' to restart Unity, or use --port to specify the port directly.`,
+  );
+}
+
+// File I/O and JSON parsing can fail for external reasons (permissions, corruption, concurrent writes)
+async function readPortFromSettingsOrThrow(projectRoot: string): Promise<number> {
   const settingsPath = join(projectRoot, 'UserSettings/UnityMcpSettings.json');
 
   if (!existsSync(settingsPath)) {
-    return null;
+    throw createSettingsReadError(projectRoot);
   }
 
   let content: string;
   try {
     content = await readFile(settingsPath, 'utf-8');
   } catch {
-    return null;
+    throw createSettingsReadError(projectRoot);
   }
 
   let settings: UnityMcpSettings;
   try {
     settings = JSON.parse(content) as UnityMcpSettings;
   } catch {
-    return null;
+    throw createSettingsReadError(projectRoot);
   }
 
-  return resolvePortFromUnitySettings(settings);
+  // Only block when isServerRunning is explicitly false (Unity clean shutdown).
+  // undefined/missing means old settings format — proceed to next validation stage.
+  if (settings.isServerRunning === false) {
+    throw new UnityNotRunningError(projectRoot);
+  }
+
+  const port = resolvePortFromUnitySettings(settings);
+  if (port === null) {
+    throw createSettingsReadError(projectRoot);
+  }
+
+  return port;
 }
