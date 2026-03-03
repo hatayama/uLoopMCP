@@ -1,8 +1,11 @@
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { join } from 'path';
 import { tmpdir } from 'os';
 import {
   resolvePortFromUnitySettings,
   validateProjectPath,
   resolveUnityPort,
+  UnityNotRunningError,
 } from '../port-resolver.js';
 
 describe('resolvePortFromUnitySettings', () => {
@@ -73,5 +76,70 @@ describe('resolveUnityPort', () => {
   it('returns explicit port when only port is specified', async () => {
     const port = await resolveUnityPort(8711);
     expect(port).toBe(8711);
+  });
+});
+
+describe('resolveUnityPort with project settings', () => {
+  let tempProjectRoot: string;
+
+  beforeEach(() => {
+    tempProjectRoot = mkdtempSync(join(tmpdir(), 'unity-port-test-'));
+    mkdirSync(join(tempProjectRoot, 'Assets'));
+    mkdirSync(join(tempProjectRoot, 'ProjectSettings'));
+    mkdirSync(join(tempProjectRoot, 'UserSettings'));
+  });
+
+  afterEach(() => {
+    rmSync(tempProjectRoot, { recursive: true });
+  });
+
+  it('throws UnityNotRunningError when isServerRunning is false', async () => {
+    writeFileSync(
+      join(tempProjectRoot, 'UserSettings/UnityMcpSettings.json'),
+      JSON.stringify({ isServerRunning: false, customPort: 8700 }),
+    );
+
+    await expect(resolveUnityPort(undefined, tempProjectRoot)).rejects.toThrow(
+      UnityNotRunningError,
+    );
+  });
+
+  it('returns port when isServerRunning is true', async () => {
+    writeFileSync(
+      join(tempProjectRoot, 'UserSettings/UnityMcpSettings.json'),
+      JSON.stringify({ isServerRunning: true, customPort: 8711 }),
+    );
+
+    const port = await resolveUnityPort(undefined, tempProjectRoot);
+    expect(port).toBe(8711);
+  });
+
+  it('returns port when isServerRunning is undefined (old settings format)', async () => {
+    writeFileSync(
+      join(tempProjectRoot, 'UserSettings/UnityMcpSettings.json'),
+      JSON.stringify({ customPort: 8711 }),
+    );
+
+    const port = await resolveUnityPort(undefined, tempProjectRoot);
+    expect(port).toBe(8711);
+  });
+
+  it('throws when settings file has no valid port', async () => {
+    writeFileSync(
+      join(tempProjectRoot, 'UserSettings/UnityMcpSettings.json'),
+      JSON.stringify({ isServerRunning: true }),
+    );
+
+    await expect(resolveUnityPort(undefined, tempProjectRoot)).rejects.toThrow(
+      'Could not read Unity server port from settings',
+    );
+  });
+
+  it('throws when settings file contains invalid JSON', async () => {
+    writeFileSync(join(tempProjectRoot, 'UserSettings/UnityMcpSettings.json'), 'not valid json{{{');
+
+    await expect(resolveUnityPort(undefined, tempProjectRoot)).rejects.toThrow(
+      'Could not read Unity server port from settings',
+    );
   });
 });
