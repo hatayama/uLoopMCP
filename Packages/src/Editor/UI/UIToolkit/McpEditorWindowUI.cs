@@ -41,6 +41,7 @@ namespace io.github.hatayama.uLoopMCP
         public event Action<McpEditorType> OnEditorTypeChanged;
         public event Action<bool> OnRepositoryRootChanged;
         public event Action OnConfigureClicked;
+        public event Action OnDeleteConfigClicked;
         public event Action OnOpenSettingsClicked;
         public event Action<bool> OnToolSettingsFoldoutChanged;
         public event Action<string, bool> OnToolToggled;
@@ -119,6 +120,7 @@ namespace io.github.hatayama.uLoopMCP
             _editorConfigSection.OnEditorTypeChanged += value => OnEditorTypeChanged?.Invoke(value);
             _editorConfigSection.OnRepositoryRootChanged += value => OnRepositoryRootChanged?.Invoke(value);
             _editorConfigSection.OnConfigureClicked += () => OnConfigureClicked?.Invoke();
+            _editorConfigSection.OnDeleteConfigClicked += () => OnDeleteConfigClicked?.Invoke();
             _editorConfigSection.OnOpenSettingsClicked += () => OnOpenSettingsClicked?.Invoke();
 
             _toolSettingsSection = new ToolSettingsSection(_root);

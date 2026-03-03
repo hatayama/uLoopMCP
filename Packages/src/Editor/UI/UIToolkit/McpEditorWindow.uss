@@ -177,6 +177,16 @@
     margin-top: 8px;
 }
 
+.mcp-button--delete {
+    background-color: #5c2020;
+    border-color: var(--mcp-color-danger);
+    color: var(--mcp-color-danger);
+}
+
+.mcp-button--delete:hover {
+    background-color: #7a2e2e;
+}
+
 .mcp-button--disabled {
     background-color: #4a4a4a;
     border-width: 1px;

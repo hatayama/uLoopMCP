@@ -154,6 +154,12 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
+        public void DeleteConfiguration()
+        {
+            string configPath = UnityMcpPathResolver.GetConfigPath(_editorType);
+            _repository.DeleteULoopMCPEntries(configPath);
+        }
+
         /// <summary>
         /// Finds existing Unity MCP configuration key in the loaded config.
         /// Returns the first found uLoopMCP configuration key, or null if none exists.

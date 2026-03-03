@@ -62,6 +62,7 @@
                     <ui:Label name="config-error-label" class="mcp-error-message" />
 
                     <ui:Button name="configure-button" text="Configure" class="mcp-button mcp-button--configure" />
+                    <ui:Button name="delete-config-button" text="Delete Configuration" class="mcp-button mcp-button--delete" />
                     <ui:Button name="open-settings-button" text="Open Settings File" class="mcp-button" />
                 </ui:VisualElement>
             </ui:Foldout>
