@@ -128,6 +128,22 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void LoadSettings()
         {
+            // v0.68.0 used "settings.security.json"; rename once so existing users keep their settings.
+            // This migration block can be removed after a few releases.
+            string oldSettingsPath = Path.Combine(McpConstants.ULOOP_DIR, "settings.security.json");
+            string oldBackupPath = oldSettingsPath + ".bak";
+            if (!File.Exists(SettingsFilePath))
+            {
+                if (File.Exists(oldSettingsPath))
+                {
+                    File.Move(oldSettingsPath, SettingsFilePath);
+                }
+                else if (File.Exists(oldBackupPath))
+                {
+                    File.Move(oldBackupPath, SettingsFilePath);
+                }
+            }
+
             // Recover from interrupted atomic write
             string backupPath = SettingsFilePath + ".bak";
             if (!File.Exists(SettingsFilePath) && File.Exists(backupPath))
