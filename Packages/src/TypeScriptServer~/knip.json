@@ -1,8 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "entry": ["src/server.ts"],
   "project": ["src/**/*.ts"],
-  "ignore": ["dist/**", "sandbox/**"],
   "ignoreDependencies": [
     "@microsoft/eslint-formatter-sarif",
     "eslint-formatter-@microsoft",

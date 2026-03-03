@@ -1,7 +1,4 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "entry": ["src/cli.ts"],
-  "project": ["src/**/*.ts"],
-  "ignore": ["dist/**"],
-  "ignoreDependencies": ["tsx"]
+  "project": ["src/**/*.ts"]
 }
