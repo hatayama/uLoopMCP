@@ -113,7 +113,12 @@ export class DirectUnityClient {
         const response = JSON.parse(extractResult.jsonContent) as JsonRpcResponse;
 
         if (response.error) {
-          reject(new Error(`Unity error: ${response.error.message}`));
+          const data = response.error.data;
+          const dataMessage =
+            data !== null && data !== undefined && typeof data === 'object' && 'message' in data
+              ? ` (${(data as { message: string }).message})`
+              : '';
+          reject(new Error(`Unity error: ${response.error.message}${dataMessage}`));
           return;
         }
 
