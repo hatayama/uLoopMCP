@@ -12,9 +12,8 @@
  * clean themselves up when the object is destroyed or when the process exits.
  *
  * Usage:
- *   const timer = new SafeTimer(() => console.log('tick'), 1000);
- *   // Timer automatically cleans up when timer goes out of scope
- *   // or when process exits
+ *   const timer = safeSetTimeout(() => console.log('tick'), 1000);
+ *   // Timer automatically cleans up when process exits
  */
 
 class SafeTimer {
