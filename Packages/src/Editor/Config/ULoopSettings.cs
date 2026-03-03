@@ -10,7 +10,7 @@ using UnityEngine;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Security settings management for .uloop/settings.security.json.
+    /// Security settings management for .uloop/settings.permissions.json.
     /// This file is stored in the project root so it can be git-tracked
     /// and shared across team members as a security policy.
     /// </summary>
@@ -128,6 +128,22 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void LoadSettings()
         {
+            // v0.68.0 used "settings.security.json"; rename once so existing users keep their settings.
+            // This migration block can be removed after a few releases.
+            string oldSettingsPath = Path.Combine(McpConstants.ULOOP_DIR, "settings.security.json");
+            string oldBackupPath = oldSettingsPath + ".bak";
+            if (!File.Exists(SettingsFilePath))
+            {
+                if (File.Exists(oldSettingsPath))
+                {
+                    File.Move(oldSettingsPath, SettingsFilePath);
+                }
+                else if (File.Exists(oldBackupPath))
+                {
+                    File.Move(oldBackupPath, SettingsFilePath);
+                }
+            }
+
             // Recover from interrupted atomic write
             string backupPath = SettingsFilePath + ".bak";
             if (!File.Exists(SettingsFilePath) && File.Exists(backupPath))
@@ -153,7 +169,7 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // .uloop/settings.security.json does not exist yet — attempt migration from legacy file
+            // .uloop/settings.permissions.json does not exist yet — attempt migration from legacy file
             MigrateFromLegacySettings();
         }
 
@@ -171,7 +187,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// One-time migration: .uloop/settings.security.json absence is used as the trigger
+        /// One-time migration: .uloop/settings.permissions.json absence is used as the trigger
         /// to guarantee this runs exactly once — after migration the file exists and
         /// this path is never taken again.
         /// </summary>
