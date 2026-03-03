@@ -113,10 +113,9 @@ command = ""python""
 args = ['app.py']
 ";
 
-            Regex sectionRegex = GetSectionRegex();
-            bool hasMatch = sectionRegex.IsMatch(toml);
+            string result = SimulateDelete(toml);
 
-            Assert.IsFalse(hasMatch, "SectionRegex should not match non-uLoopMCP sections");
+            Assert.AreEqual(toml, result, "Content without uLoopMCP section should remain unchanged");
         }
     }
 }
