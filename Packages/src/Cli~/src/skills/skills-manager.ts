@@ -15,16 +15,16 @@ import { findUnityProjectRoot, getUnityProjectStatus } from '../project-root.js'
 import { DEPRECATED_SKILLS } from './deprecated-skills.js';
 import { loadDisabledTools } from '../tool-settings-loader.js';
 
-export type SkillStatus = 'installed' | 'not_installed' | 'outdated';
+type SkillStatus = 'installed' | 'not_installed' | 'outdated';
 
-export interface SkillInfo {
+interface SkillInfo {
   name: string;
   status: SkillStatus;
   path?: string;
   source?: 'bundled' | 'project';
 }
 
-export interface SkillDefinition {
+interface SkillDefinition {
   name: string;
   toolName?: string;
   dirName: string;
@@ -132,7 +132,7 @@ function isSkillOutdated(skill: SkillDefinition, target: TargetConfig, global: b
   return false;
 }
 
-export function getSkillStatus(
+function getSkillStatus(
   skill: SkillDefinition,
   target: TargetConfig,
   global: boolean,
@@ -290,7 +290,7 @@ function findEditorFolders(basePath: string, maxDepth: number = 2): string[] {
   return editorFolders;
 }
 
-export function collectProjectSkills(excludedRoots: string[] = []): SkillDefinition[] {
+function collectProjectSkills(excludedRoots: string[] = []): SkillDefinition[] {
   const projectRoot = findUnityProjectRoot();
   if (!projectRoot) {
     return [];
@@ -342,7 +342,7 @@ export function getAllSkillStatuses(target: TargetConfig, global: boolean): Skil
   }));
 }
 
-export function installSkill(skill: SkillDefinition, target: TargetConfig, global: boolean): void {
+function installSkill(skill: SkillDefinition, target: TargetConfig, global: boolean): void {
   const baseDir = global ? getGlobalSkillsDir(target) : getProjectSkillsDir(target);
   const skillDir = join(baseDir, skill.dirName);
   const skillPath = join(skillDir, target.skillFileName);
@@ -360,11 +360,7 @@ export function installSkill(skill: SkillDefinition, target: TargetConfig, globa
   }
 }
 
-export function uninstallSkill(
-  skill: SkillDefinition,
-  target: TargetConfig,
-  global: boolean,
-): boolean {
+function uninstallSkill(skill: SkillDefinition, target: TargetConfig, global: boolean): boolean {
   const baseDir = global ? getGlobalSkillsDir(target) : getProjectSkillsDir(target);
   const skillDir = join(baseDir, skill.dirName);
 
@@ -376,7 +372,7 @@ export function uninstallSkill(
   return true;
 }
 
-export interface InstallResult {
+interface InstallResult {
   installed: number;
   updated: number;
   skipped: number;
@@ -448,7 +444,7 @@ function isSkillDisabledByToolSettings(skill: SkillDefinition, disabledTools: st
   return disabledTools.includes(toolName);
 }
 
-export interface UninstallResult {
+interface UninstallResult {
   removed: number;
   notFound: number;
 }

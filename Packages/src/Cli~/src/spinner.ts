@@ -8,7 +8,7 @@
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'] as const;
 const FRAME_INTERVAL_MS = 80;
 
-export interface Spinner {
+interface Spinner {
   update(message: string): void;
   stop(): void;
 }

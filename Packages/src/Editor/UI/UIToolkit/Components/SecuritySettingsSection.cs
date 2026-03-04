@@ -48,9 +48,23 @@ namespace io.github.hatayama.uLoopMCP
         private void SetupBindings()
         {
             _foldout.RegisterValueChangedCallback(evt => OnFoldoutChanged?.Invoke(evt.newValue));
-            _enableTestsToggle.RegisterValueChangedCallback(evt => OnEnableTestsChanged?.Invoke(evt.newValue));
-            _allowMenuToggle.RegisterValueChangedCallback(evt => OnAllowMenuChanged?.Invoke(evt.newValue));
-            _allowThirdPartyToggle.RegisterValueChangedCallback(evt => OnAllowThirdPartyChanged?.Invoke(evt.newValue));
+            _enableTestsToggle.RegisterValueChangedCallback(evt =>
+            {
+                // Foldout uses an internal Toggle that listens for ChangeEvent<bool>.
+                // Without StopPropagation, this event bubbles up and collapses the Foldout.
+                evt.StopPropagation();
+                OnEnableTestsChanged?.Invoke(evt.newValue);
+            });
+            _allowMenuToggle.RegisterValueChangedCallback(evt =>
+            {
+                evt.StopPropagation();
+                OnAllowMenuChanged?.Invoke(evt.newValue);
+            });
+            _allowThirdPartyToggle.RegisterValueChangedCallback(evt =>
+            {
+                evt.StopPropagation();
+                OnAllowThirdPartyChanged?.Invoke(evt.newValue);
+            });
 
             // Labels need click handlers because UI Toolkit toggles don't natively support label clicks
             _enableTestsLabel.RegisterCallback<ClickEvent>(evt => ToggleValue(_enableTestsToggle, OnEnableTestsChanged));

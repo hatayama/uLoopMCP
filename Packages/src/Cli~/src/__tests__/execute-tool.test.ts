@@ -1,4 +1,6 @@
 import { isTransportDisconnectError } from '../execute-tool.js';
+import { UnityNotRunningError } from '../port-resolver.js';
+import { ProjectMismatchError } from '../project-validator.js';
 
 describe('isTransportDisconnectError', () => {
   it('returns true for UNITY_NO_RESPONSE', () => {
@@ -27,5 +29,13 @@ describe('isTransportDisconnectError', () => {
     expect(isTransportDisconnectError('UNITY_NO_RESPONSE')).toBe(false);
     expect(isTransportDisconnectError(null)).toBe(false);
     expect(isTransportDisconnectError(undefined)).toBe(false);
+  });
+
+  it('returns false for UnityNotRunningError', () => {
+    expect(isTransportDisconnectError(new UnityNotRunningError('/project'))).toBe(false);
+  });
+
+  it('returns false for ProjectMismatchError', () => {
+    expect(isTransportDisconnectError(new ProjectMismatchError('/a', '/b'))).toBe(false);
   });
 });

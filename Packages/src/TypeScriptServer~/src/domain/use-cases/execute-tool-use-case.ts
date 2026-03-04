@@ -7,8 +7,6 @@
  * Related classes:
  * - IConnectionService (application/interfaces/connection-service.ts)
  * - IToolQueryService (application/interfaces/tool-query-service.ts)
- * - IMessageService (application/interfaces/message-service.ts)
- * - ServiceLocator (infrastructure/service-locator.ts)
  */
 
 import { UseCase } from '../base-interfaces.js';

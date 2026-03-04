@@ -15,6 +15,7 @@ namespace io.github.hatayama.uLoopMCP
         private readonly Toggle _repositoryRootToggle;
         private readonly Label _configErrorLabel;
         private readonly Button _configureButton;
+        private readonly Button _deleteConfigButton;
         private readonly Button _openSettingsButton;
 
         private EditorConfigData _lastData;
@@ -23,6 +24,7 @@ namespace io.github.hatayama.uLoopMCP
         public event Action<McpEditorType> OnEditorTypeChanged;
         public event Action<bool> OnRepositoryRootChanged;
         public event Action OnConfigureClicked;
+        public event Action OnDeleteConfigClicked;
         public event Action OnOpenSettingsClicked;
 
         public EditorConfigSection(VisualElement root)
@@ -32,6 +34,7 @@ namespace io.github.hatayama.uLoopMCP
             _repositoryRootToggle = root.Q<Toggle>("repository-root-toggle");
             _configErrorLabel = root.Q<Label>("config-error-label");
             _configureButton = root.Q<Button>("configure-button");
+            _deleteConfigButton = root.Q<Button>("delete-config-button");
             _openSettingsButton = root.Q<Button>("open-settings-button");
 
             SetupBindings();
@@ -39,8 +42,15 @@ namespace io.github.hatayama.uLoopMCP
 
         private void SetupBindings()
         {
-            _repositoryRootToggle.RegisterValueChangedCallback(evt => OnRepositoryRootChanged?.Invoke(evt.newValue));
+            _repositoryRootToggle.RegisterValueChangedCallback(evt =>
+            {
+                // Foldout uses an internal Toggle that listens for ChangeEvent<bool>.
+                // Without StopPropagation, this event bubbles up and collapses the Foldout.
+                evt.StopPropagation();
+                OnRepositoryRootChanged?.Invoke(evt.newValue);
+            });
             _configureButton.clicked += () => OnConfigureClicked?.Invoke();
+            _deleteConfigButton.clicked += () => OnDeleteConfigClicked?.Invoke();
             _openSettingsButton.clicked += () => OnOpenSettingsClicked?.Invoke();
         }
 
@@ -58,6 +68,7 @@ namespace io.github.hatayama.uLoopMCP
             UpdateRepositoryRootRow(data);
             UpdateConfigError(data);
             UpdateConfigureButton(data);
+            UpdateDeleteButton(data);
             UpdateOpenSettingsButton(data);
         }
 
@@ -159,6 +170,17 @@ namespace io.github.hatayama.uLoopMCP
             else if (!data.IsConfigured || data.HasPortMismatch)
             {
                 _configureButton.AddToClassList("mcp-button--warning");
+            }
+        }
+
+        private void UpdateDeleteButton(EditorConfigData data)
+        {
+            ViewDataBinder.SetVisible(_deleteConfigButton, data.IsConfigured);
+
+            if (data.IsConfigured)
+            {
+                string editorName = GetEditorDisplayName(data.SelectedEditor);
+                _deleteConfigButton.text = $"Delete {editorName} Configuration";
             }
         }
 

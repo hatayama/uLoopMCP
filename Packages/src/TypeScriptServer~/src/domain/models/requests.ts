@@ -23,29 +23,3 @@ export interface ExecuteToolRequest {
 export interface RefreshToolsRequest {
   includeDevelopmentOnly?: boolean;
 }
-
-/**
- * Request for server initialization UseCase
- */
-export interface InitializeServerRequest {
-  clientInfo?: {
-    name: string;
-    version?: string;
-  };
-}
-
-/**
- * Request for connection handling UseCase
- */
-export interface HandleConnectionRequest {
-  port?: number;
-  timeout?: number;
-}
-
-/**
- * Request for notification processing UseCase
- */
-export interface ProcessNotificationRequest {
-  method: string;
-  params: unknown;
-}

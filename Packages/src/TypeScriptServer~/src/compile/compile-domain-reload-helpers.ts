@@ -4,14 +4,7 @@ import * as net from 'net';
 import { join } from 'path';
 
 // Only alphanumeric, underscore, and hyphen — blocks path separators and traversal sequences
-export const SAFE_REQUEST_ID_PATTERN: RegExp = /^[a-zA-Z0-9_-]+$/;
-
-export const COMPILE_FORCE_RECOMPILE_ARG_KEYS = [
-  'ForceRecompile',
-  'forceRecompile',
-  'force_recompile',
-  'force-recompile',
-] as const;
+const SAFE_REQUEST_ID_PATTERN: RegExp = /^[a-zA-Z0-9_-]+$/;
 
 export const COMPILE_WAIT_FOR_DOMAIN_RELOAD_ARG_KEYS = [
   'WaitForDomainReload',
@@ -20,28 +13,7 @@ export const COMPILE_WAIT_FOR_DOMAIN_RELOAD_ARG_KEYS = [
   'wait-for-domain-reload',
 ] as const;
 
-export interface CompileExecutionOptions {
-  forceRecompile: boolean;
-  waitForDomainReload: boolean;
-}
-
-export interface DomainReloadWaitOptions {
-  projectRoot: string;
-  timeoutMs: number;
-  pollIntervalMs: number;
-  isUnityReadyWhenIdle?: () => Promise<boolean>;
-}
-
-export type DomainReloadWaitOutcome = 'settled' | 'not_detected' | 'timed_out';
-
-export interface CompileResultWaitOptions {
-  projectRoot: string;
-  requestId: string;
-  timeoutMs: number;
-  pollIntervalMs: number;
-}
-
-export type CompileCompletionOutcome = 'completed' | 'timed_out';
+type CompileCompletionOutcome = 'completed' | 'timed_out';
 
 /**
  * Between compilationFinished and beforeAssemblyReload, there is a brief gap (~50ms measured)
@@ -56,7 +28,7 @@ const LOCK_GRACE_PERIOD_MS = 500;
  * the server can actually process a request, not just accept a TCP connection.
  */
 
-export interface CompileCompletionWaitOptions {
+interface CompileCompletionWaitOptions {
   projectRoot: string;
   requestId: string;
   timeoutMs: number;
@@ -65,12 +37,12 @@ export interface CompileCompletionWaitOptions {
   isUnityReadyWhenIdle?: () => Promise<boolean>;
 }
 
-export interface CompileCompletionResult<T> {
+interface CompileCompletionResult<T> {
   outcome: CompileCompletionOutcome;
   result?: T;
 }
 
-export function toBoolean(value: unknown): boolean {
+function toBoolean(value: unknown): boolean {
   if (typeof value === 'boolean') {
     return value;
   }
@@ -97,16 +69,7 @@ export function getCompileBooleanArg(
   return false;
 }
 
-export function resolveCompileExecutionOptions(
-  args: Record<string, unknown>,
-): CompileExecutionOptions {
-  return {
-    forceRecompile: getCompileBooleanArg(args, COMPILE_FORCE_RECOMPILE_ARG_KEYS),
-    waitForDomainReload: getCompileBooleanArg(args, COMPILE_WAIT_FOR_DOMAIN_RELOAD_ARG_KEYS),
-  };
-}
-
-export function createCompileRequestId(): string {
+function createCompileRequestId(): string {
   const timestamp = Date.now();
   const randomToken = Math.floor(Math.random() * 1000000)
     .toString()
@@ -127,7 +90,7 @@ export function ensureCompileRequestId(args: Record<string, unknown>): string {
   return requestId;
 }
 
-export function getCompileResultFilePath(projectRoot: string, requestId: string): string {
+function getCompileResultFilePath(projectRoot: string, requestId: string): string {
   assert(
     SAFE_REQUEST_ID_PATTERN.test(requestId),
     `requestId contains unsafe characters: '${requestId}'`,
@@ -135,7 +98,7 @@ export function getCompileResultFilePath(projectRoot: string, requestId: string)
   return join(projectRoot, 'Temp', 'uLoopMCP', 'compile-results', `${requestId}.json`);
 }
 
-export function isUnityBusyByLockFiles(projectRoot: string): boolean {
+function isUnityBusyByLockFiles(projectRoot: string): boolean {
   const compilingLockPath = join(projectRoot, 'Temp', 'compiling.lock');
   if (existsSync(compilingLockPath)) {
     return true;
@@ -150,7 +113,7 @@ export function isUnityBusyByLockFiles(projectRoot: string): boolean {
   return existsSync(serverStartingLockPath);
 }
 
-export function stripUtf8Bom(content: string): string {
+function stripUtf8Bom(content: string): string {
   if (content.charCodeAt(0) === 0xfeff) {
     return content.slice(1);
   }
@@ -158,7 +121,7 @@ export function stripUtf8Bom(content: string): string {
   return content;
 }
 
-export function tryReadCompileResult<T>(projectRoot: string, requestId: string): T | undefined {
+function tryReadCompileResult<T>(projectRoot: string, requestId: string): T | undefined {
   const resultFilePath = getCompileResultFilePath(projectRoot, requestId);
   if (!existsSync(resultFilePath)) {
     return undefined;
@@ -172,65 +135,6 @@ export function tryReadCompileResult<T>(projectRoot: string, requestId: string):
     // File may be partially written by Unity or deleted between existsSync and readFileSync (TOCTOU).
     // Return undefined so the polling loop retries on the next tick.
     return undefined;
-  }
-}
-
-export async function waitForDomainReloadToSettle(
-  options: DomainReloadWaitOptions,
-): Promise<DomainReloadWaitOutcome> {
-  const startTime: number = Date.now();
-  let busyObserved = false;
-
-  while (Date.now() - startTime < options.timeoutMs) {
-    const isBusy: boolean = isUnityBusyByLockFiles(options.projectRoot);
-    if (isBusy) {
-      busyObserved = true;
-    }
-
-    if (!busyObserved && !isBusy) {
-      return 'not_detected';
-    }
-
-    if (busyObserved && !isBusy) {
-      if (!options.isUnityReadyWhenIdle) {
-        return 'settled';
-      }
-
-      const isReady: boolean = await options.isUnityReadyWhenIdle();
-      if (isReady) {
-        return 'settled';
-      }
-    }
-
-    await sleep(options.pollIntervalMs);
-  }
-
-  if (!busyObserved) {
-    return 'not_detected';
-  }
-
-  return 'timed_out';
-}
-
-export async function waitForCompileResult<T>(
-  options: CompileResultWaitOptions,
-): Promise<T | undefined> {
-  const startTime: number = Date.now();
-
-  while (true) {
-    const storedResult: T | undefined = tryReadCompileResult<T>(
-      options.projectRoot,
-      options.requestId,
-    );
-    if (storedResult !== undefined) {
-      return storedResult;
-    }
-
-    if (Date.now() - startTime >= options.timeoutMs) {
-      return undefined;
-    }
-
-    await sleep(options.pollIntervalMs);
   }
 }
 
@@ -360,6 +264,6 @@ function canSendRequestToUnity(port: number): Promise<boolean> {
   });
 }
 
-export function sleep(ms: number): Promise<void> {
+function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

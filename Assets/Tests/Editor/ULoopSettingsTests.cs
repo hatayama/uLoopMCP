@@ -16,10 +16,16 @@ namespace io.github.hatayama.uLoopMCP
         private static readonly string LegacyBackupPath = LegacySettingsFilePath + ".bak";
         private static readonly string LegacyTmpPath = LegacySettingsFilePath + ".tmp";
 
+        // v0.68.0 used this filename; rename migration tests reference it
+        private static readonly string OldSettingsFilePath =
+            Path.Combine(McpConstants.ULOOP_DIR, "settings.security.json");
+        private static readonly string OldSettingsBackupPath = OldSettingsFilePath + ".bak";
+
         // Sidecar file paths to backup/restore
         private static readonly string[] AllSidecarPaths = new[]
         {
-            SettingsBackupPath, SettingsTmpPath, LegacyBackupPath, LegacyTmpPath
+            SettingsBackupPath, SettingsTmpPath, LegacyBackupPath, LegacyTmpPath,
+            OldSettingsFilePath, OldSettingsBackupPath
         };
 
         private bool _settingsFileExisted;
@@ -55,6 +61,12 @@ namespace io.github.hatayama.uLoopMCP
             {
                 Directory.CreateDirectory(McpConstants.USER_SETTINGS_FOLDER);
             }
+
+            // Old-filename artifacts must not exist during tests; their presence
+            // would trigger the rename migration and break unrelated test assumptions.
+            // State is already saved above and will be restored in TearDown.
+            DeleteIfExists(OldSettingsFilePath);
+            DeleteIfExists(OldSettingsBackupPath);
 
             ULoopSettings.InvalidateCache();
             McpEditorSettings.InvalidateCache();
@@ -125,7 +137,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsTrue(result.allowMenuItemExecution);
             Assert.IsTrue(result.allowThirdPartyTools);
             Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel);
-            Assert.IsTrue(File.Exists(SettingsFilePath), ".uloop/settings.security.json should be created by migration");
+            Assert.IsTrue(File.Exists(SettingsFilePath), $"{SettingsFilePath} should be created by migration");
         }
 
         // ── Test 2: Idempotency ──────────────────────────────────────────
@@ -161,7 +173,7 @@ namespace io.github.hatayama.uLoopMCP
             File.WriteAllText(LegacySettingsFilePath, alteredLegacy);
             InvalidateBothCaches();
 
-            // Second call should read from .uloop/settings.security.json, not re-migrate
+            // Second call should read from .uloop/settings.permissions.json, not re-migrate
             ULoopSettingsData result = ULoopSettings.GetSettings();
 
             Assert.IsTrue(result.enableTestsExecution, "Should retain original migrated value, not the altered legacy");
@@ -198,7 +210,7 @@ namespace io.github.hatayama.uLoopMCP
 
             ULoopSettingsData result = ULoopSettings.GetSettings();
 
-            Assert.IsTrue(result.enableTestsExecution, "Should read from .uloop/settings.security.json");
+            Assert.IsTrue(result.enableTestsExecution, "Should read from .uloop/settings.permissions.json");
             Assert.IsFalse(result.allowMenuItemExecution);
             Assert.IsTrue(result.allowThirdPartyTools);
             Assert.AreEqual((int)DynamicCodeSecurityLevel.FullAccess, result.dynamicCodeSecurityLevel);
@@ -301,7 +313,7 @@ namespace io.github.hatayama.uLoopMCP
 
             ULoopSettingsData result = ULoopSettings.GetSettings();
 
-            Assert.IsTrue(File.Exists(SettingsFilePath), ".uloop/settings.security.json should be recovered from .bak");
+            Assert.IsTrue(File.Exists(SettingsFilePath), $"{SettingsFilePath} should be recovered from .bak");
             Assert.IsTrue(result.enableTestsExecution);
             Assert.IsTrue(result.allowMenuItemExecution);
             Assert.IsFalse(result.allowThirdPartyTools);
@@ -309,7 +321,64 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsFalse(File.Exists(SettingsBackupPath), ".bak should be consumed by recovery");
         }
 
-        // ── Test 8: Real-world domain reload scenario ────────────────
+        // ── Test 8: Rename migration from v0.68.0 old filename ────────
+
+        [Test]
+        public void GetSettings_WhenOldSecurityJsonExists_ShouldRenameToPermissions()
+        {
+            DeleteIfExists(SettingsFilePath);
+            DeleteIfExists(LegacySettingsFilePath);
+
+            ULoopSettingsData oldData = new ULoopSettingsData
+            {
+                enableTestsExecution = true,
+                allowMenuItemExecution = true,
+                allowThirdPartyTools = false,
+                dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
+            };
+            File.WriteAllText(OldSettingsFilePath, JsonUtility.ToJson(oldData, true));
+            InvalidateBothCaches();
+
+            ULoopSettingsData result = ULoopSettings.GetSettings();
+
+            Assert.IsTrue(File.Exists(SettingsFilePath), "New settings file should exist after rename");
+            Assert.IsFalse(File.Exists(OldSettingsFilePath), "Old settings file should be removed after rename");
+            Assert.IsTrue(result.enableTestsExecution);
+            Assert.IsTrue(result.allowMenuItemExecution);
+            Assert.IsFalse(result.allowThirdPartyTools);
+            Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel);
+        }
+
+        // ── Test 9: Rename migration from v0.68.0 old .bak ──────────
+
+        [Test]
+        public void GetSettings_WhenOldSecurityBakExists_ShouldRecoverFromOldBackup()
+        {
+            DeleteIfExists(SettingsFilePath);
+            DeleteIfExists(OldSettingsFilePath);
+            DeleteIfExists(LegacySettingsFilePath);
+
+            ULoopSettingsData oldData = new ULoopSettingsData
+            {
+                enableTestsExecution = true,
+                allowMenuItemExecution = false,
+                allowThirdPartyTools = true,
+                dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.FullAccess
+            };
+            File.WriteAllText(OldSettingsBackupPath, JsonUtility.ToJson(oldData, true));
+            InvalidateBothCaches();
+
+            ULoopSettingsData result = ULoopSettings.GetSettings();
+
+            Assert.IsTrue(File.Exists(SettingsFilePath), "New settings file should exist after recovery");
+            Assert.IsFalse(File.Exists(OldSettingsBackupPath), "Old .bak should be removed after recovery");
+            Assert.IsTrue(result.enableTestsExecution);
+            Assert.IsFalse(result.allowMenuItemExecution);
+            Assert.IsTrue(result.allowThirdPartyTools);
+            Assert.AreEqual((int)DynamicCodeSecurityLevel.FullAccess, result.dynamicCodeSecurityLevel);
+        }
+
+        // ── Test 10: Real-world domain reload scenario ────────────────
 
         [Test]
         public void Migration_WhenMcpEditorSettingsLoadedFirst_ShouldStillPreserveSecurityValues()
@@ -348,7 +417,7 @@ namespace io.github.hatayama.uLoopMCP
                 "dynamicCodeSecurityLevel should be migrated");
         }
 
-        // ── Test 9: Real-world restore path without autoStartServer ───────
+        // ── Test 11: Real-world restore path without autoStartServer ──
 
         [Test]
         public void Migration_WhenLegacyHasNoAutoStartButAfterCompileFlag_ShouldStillPreserveSecurityValues()
@@ -385,6 +454,86 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsTrue(result.allowThirdPartyTools, "allowThirdPartyTools should be migrated");
             Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel,
                 "dynamicCodeSecurityLevel should be migrated");
+        }
+
+        // ── Test 12: Plain legacy migration via McpEditorSettings first ──
+
+        [Test]
+        public void Migration_WhenLegacyHasSecurityValuesAndNoSpecialFields_ShouldInheritValues()
+        {
+            DeleteIfExists(SettingsFilePath);
+
+            // Plain legacy JSON: security fields only, no autoStartServer or isAfterCompile
+            string legacyJson = JsonUtility.ToJson(new LegacySettingsFixture
+            {
+                enableTestsExecution = true,
+                allowMenuItemExecution = true,
+                allowThirdPartyTools = true,
+                dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted,
+                customPort = 18080
+            }, true);
+            File.WriteAllText(LegacySettingsFilePath, legacyJson);
+            InvalidateBothCaches();
+
+            // Real-world order: McpEditorSettings loads first during domain reload
+            McpEditorSettings.GetSettings();
+
+            ULoopSettingsData result = ULoopSettings.GetSettings();
+
+            Assert.IsTrue(result.enableTestsExecution, "enableTestsExecution should be inherited from legacy");
+            Assert.IsTrue(result.allowMenuItemExecution, "allowMenuItemExecution should be inherited from legacy");
+            Assert.IsTrue(result.allowThirdPartyTools, "allowThirdPartyTools should be inherited from legacy");
+            Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel,
+                "dynamicCodeSecurityLevel should be inherited from legacy");
+
+            // Verify file contents directly (not just cache)
+            Assert.IsTrue(File.Exists(SettingsFilePath), "settings.permissions.json should be created");
+            string permissionsJson = File.ReadAllText(SettingsFilePath);
+            ULoopSettingsData fileData = JsonUtility.FromJson<ULoopSettingsData>(permissionsJson);
+            Assert.IsTrue(fileData.enableTestsExecution, "File should persist enableTestsExecution=true");
+            Assert.IsTrue(fileData.allowMenuItemExecution, "File should persist allowMenuItemExecution=true");
+            Assert.IsTrue(fileData.allowThirdPartyTools, "File should persist allowThirdPartyTools=true");
+            Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, fileData.dynamicCodeSecurityLevel,
+                "File should persist correct dynamicCodeSecurityLevel");
+        }
+
+        // ── Test 13: Rename migration should not shadow legacy migration ──
+
+        [Test]
+        public void Migration_WhenOldSecurityJsonHasDefaultsAndLegacyHasValues_ShouldNotLoseValues()
+        {
+            DeleteIfExists(SettingsFilePath);
+
+            // settings.security.json exists with DEFAULT values (v0.68 created it but user
+            // never changed defaults, OR v0.68 migration extracted defaults)
+            ULoopSettingsData defaultSecurityData = new ULoopSettingsData();
+            File.WriteAllText(OldSettingsFilePath, JsonUtility.ToJson(defaultSecurityData, true));
+
+            // Legacy file has non-default security values that the user actually configured
+            string legacyJson = JsonUtility.ToJson(new LegacySettingsFixture
+            {
+                enableTestsExecution = true,
+                allowMenuItemExecution = true,
+                allowThirdPartyTools = true,
+                dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted,
+                customPort = 18080
+            }, true);
+            File.WriteAllText(LegacySettingsFilePath, legacyJson);
+            InvalidateBothCaches();
+
+            ULoopSettingsData result = ULoopSettings.GetSettings();
+
+            // The rename migration converts settings.security.json (defaults) to
+            // settings.permissions.json, then returns early — legacy values are lost.
+            // This test documents the expected behavior: legacy values should be preserved.
+            Assert.IsTrue(result.enableTestsExecution,
+                "enableTestsExecution should not be reset to default by rename migration");
+            Assert.IsTrue(result.allowMenuItemExecution,
+                "allowMenuItemExecution should not be reset to default by rename migration");
+            Assert.IsTrue(result.allowThirdPartyTools,
+                "allowThirdPartyTools should not be reset to default by rename migration");
+            Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel,
+                "dynamicCodeSecurityLevel should not be reset to default by rename migration");
         }
 
         /// <summary>

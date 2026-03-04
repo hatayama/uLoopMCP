@@ -13,6 +13,7 @@ import { join } from 'path';
 import * as semver from 'semver';
 import { DirectUnityClient } from './direct-unity-client.js';
 import { resolveUnityPort, validateProjectPath } from './port-resolver.js';
+import { validateConnectedProject } from './project-validator.js';
 import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './tool-cache.js';
 import { VERSION } from './version.js';
 import { createSpinner } from './spinner.js';
@@ -214,6 +215,9 @@ export async function executeToolCommand(
       ? validateProjectPath(globalOptions.projectPath)
       : findUnityProjectRoot();
 
+  // Validate project identity only when port was auto-resolved (not --port) and project root is known
+  const shouldValidateProject = portNumber === undefined && projectRoot !== null;
+
   // Monotonically-increasing flag: once true, retries cannot reset it to false.
   // The retry loop overwrites `lastError` and `immediateResult` on each attempt,
   // which destroys the evidence of whether an earlier attempt successfully dispatched
@@ -228,6 +232,10 @@ export async function executeToolCommand(
     const client = new DirectUnityClient(port);
     try {
       await client.connect();
+
+      if (shouldValidateProject) {
+        await validateConnectedProject(client, projectRoot);
+      }
 
       spinner.update(`Executing ${toolName}...`);
       // connect() succeeded: socket is established. sendRequest() calls socket.write()
@@ -383,6 +391,11 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
     portNumber = parsed;
   }
   const port = await resolveUnityPort(portNumber, globalOptions.projectPath);
+  const projectRoot =
+    globalOptions.projectPath !== undefined
+      ? validateProjectPath(globalOptions.projectPath)
+      : findUnityProjectRoot();
+  const shouldValidateProject = portNumber === undefined && projectRoot !== null;
 
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
@@ -394,6 +407,10 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
     const client = new DirectUnityClient(port);
     try {
       await client.connect();
+
+      if (shouldValidateProject) {
+        await validateConnectedProject(client, projectRoot);
+      }
 
       spinner.update('Fetching tool list...');
       const result = await client.sendRequest<{
@@ -471,6 +488,11 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
     portNumber = parsed;
   }
   const port = await resolveUnityPort(portNumber, globalOptions.projectPath);
+  const projectRoot =
+    globalOptions.projectPath !== undefined
+      ? validateProjectPath(globalOptions.projectPath)
+      : findUnityProjectRoot();
+  const shouldValidateProject = portNumber === undefined && projectRoot !== null;
 
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
@@ -482,6 +504,10 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
     const client = new DirectUnityClient(port);
     try {
       await client.connect();
+
+      if (shouldValidateProject) {
+        await validateConnectedProject(client, projectRoot);
+      }
 
       spinner.update('Syncing tools...');
       const result = await client.sendRequest<{

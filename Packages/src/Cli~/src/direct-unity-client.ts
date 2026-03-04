@@ -13,14 +13,14 @@ const JSONRPC_VERSION = '2.0';
 const DEFAULT_HOST = '127.0.0.1';
 const NETWORK_TIMEOUT_MS = 180000;
 
-export interface JsonRpcRequest {
+interface JsonRpcRequest {
   jsonrpc: string;
   method: string;
   params?: Record<string, unknown>;
   id: number;
 }
 
-export interface JsonRpcResponse {
+interface JsonRpcResponse {
   jsonrpc: string;
   result?: unknown;
   error?: {
@@ -113,7 +113,12 @@ export class DirectUnityClient {
         const response = JSON.parse(extractResult.jsonContent) as JsonRpcResponse;
 
         if (response.error) {
-          reject(new Error(`Unity error: ${response.error.message}`));
+          const data = response.error.data;
+          const dataMessage =
+            data !== null && data !== undefined && typeof data === 'object' && 'message' in data
+              ? ` (${(data as { message: string }).message})`
+              : '';
+          reject(new Error(`Unity error: ${response.error.message}${dataMessage}`));
           return;
         }
 

@@ -41,7 +41,8 @@ import { registerDeviceLogsCommand } from './commands/device-logs.js';
 import { registerDeviceToolCommands } from './commands/device-tools.js';
 import { VERSION } from './version.js';
 import { findUnityProjectRoot } from './project-root.js';
-import { validateProjectPath } from './port-resolver.js';
+import { validateProjectPath, UnityNotRunningError } from './port-resolver.js';
+import { ProjectMismatchError } from './project-validator.js';
 import { filterEnabledTools, isToolEnabled } from './tool-settings-loader.js';
 
 interface CliOptions extends GlobalOptions {
@@ -455,6 +456,28 @@ async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
   try {
     await fn();
   } catch (error) {
+    if (error instanceof UnityNotRunningError) {
+      console.error('\x1b[31mError: Unity Editor for this project is not running.\x1b[0m');
+      console.error('');
+      console.error(`  Project: ${error.projectRoot}`);
+      console.error('');
+      console.error('Start the Unity Editor for this project and try again.');
+      process.exit(1);
+    }
+
+    if (error instanceof ProjectMismatchError) {
+      console.error('\x1b[31mError: Unity Editor for this project is not running.\x1b[0m');
+      console.error('');
+      console.error(`  Project:      ${error.expectedProjectRoot}`);
+      console.error(`  Connected to: ${error.connectedProjectRoot}`);
+      console.error('');
+      console.error('Another Unity instance was found, but it belongs to a different project.');
+      console.error(
+        'Start the Unity Editor for this project, or use --port to specify the target.',
+      );
+      process.exit(1);
+    }
+
     const message = error instanceof Error ? error.message : String(error);
 
     // Unity busy states have clear causes - no version diagnostic needed
