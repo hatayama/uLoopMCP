@@ -6,11 +6,17 @@ on:
     paths:
       - 'Packages/src/**/*.cs'
       - 'Assets/**/*.cs'
+      - 'Packages/src/TypeScriptServer~/**/*.ts'
+      - 'Packages/src/TypeScriptServer~/package.json'
+      - 'Packages/src/TypeScriptServer~/package-lock.json'
   pull_request:
     branches: [ main ]
     paths:
       - 'Packages/src/**/*.cs'
       - 'Assets/**/*.cs'
+      - 'Packages/src/TypeScriptServer~/**/*.ts'
+      - 'Packages/src/TypeScriptServer~/package.json'
+      - 'Packages/src/TypeScriptServer~/package-lock.json'
   workflow_dispatch:
 
 jobs:
