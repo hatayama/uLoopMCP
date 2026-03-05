@@ -1,6 +1,6 @@
 ---
 name: uloop-screenshot
-description: "Take a screenshot of Unity Editor windows and save as PNG. Use when you need to: (1) Screenshot the Game View, Scene View, Console, Inspector, or other windows, (2) Capture current visual state for debugging or documentation, (3) Save what the Editor looks like as an image file."
+description: "Capture screenshots of Unity Editor windows as PNG files. Use when you need to: (1) Screenshot Game View, Scene View, Console, Inspector, or other windows, (2) Capture current visual state for debugging or documentation, (3) Save editor window appearance as image files."
 ---
 
 # uloop screenshot
@@ -32,59 +32,31 @@ uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mo
 
 ## Window Name
 
-The window name is the text displayed in the window's title bar (tab). The user (human) will tell you which window to capture. Common window names include:
-
-- **Game**: Game View window
-- **Scene**: Scene View window
-- **Console**: Console window
-- **Inspector**: Inspector window
-- **Project**: Project browser window
-- **Hierarchy**: Hierarchy window
-- **Animation**: Animation window
-- **Animator**: Animator window
-- **Profiler**: Profiler window
-- **Audio Mixer**: Audio Mixer window
-
-You can also specify custom EditorWindow titles (e.g., "EditorWindow Capture Test").
+The window name is the text displayed in the window's title bar (tab). Common names: Game, Scene, Console, Inspector, Project, Hierarchy, Animation, Animator, Profiler. Custom EditorWindow titles are also supported.
 
 ## Global Options
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
-| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`) |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
 
 ## Examples
 
 ```bash
-# Take a screenshot of Game View at full resolution
+# Take a screenshot of Game View (default)
 uloop screenshot
-
-# Take a screenshot of Game View at half resolution
-uloop screenshot --window-name Game --resolution-scale 0.5
 
 # Take a screenshot of Scene View
 uloop screenshot --window-name Scene
 
-# Take a screenshot of Console window
-uloop screenshot --window-name Console
-
-# Take a screenshot of Inspector window
-uloop screenshot --window-name Inspector
-
-# Take a screenshot of Project browser (exact match - won't match "Project Settings")
-uloop screenshot --window-name Project
-
-# Take a screenshot of all windows starting with "Project" (prefix match)
+# Capture all windows starting with "Project" (prefix match)
 uloop screenshot --window-name Project --match-mode prefix
-
-# Take a screenshot of custom EditorWindow by title
-uloop screenshot --window-name "My Custom Window"
 
 # Save screenshot to a specific directory
 uloop screenshot --output-directory /tmp/screenshots
 
-# Combine with other options
+# Combine options
 uloop screenshot --window-name Scene --resolution-scale 0.5 --output-directory /tmp/screenshots
 ```
 
