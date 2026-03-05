@@ -152,23 +152,26 @@ namespace io.github.hatayama.uLoopMCP
 
             await Task.Run(() =>
             {
-                using Process process = Process.Start(startInfo);
+                Process process = ProcessStartHelper.TryStart(startInfo);
                 if (process == null)
                 {
                     Debug.LogWarning($"[uLoopMCP] Failed to start uloop process for: skills install {targetFlag}");
                     return;
                 }
 
-                // Read stderr asynchronously to prevent buffer deadlock
-                // when stdout and stderr are both redirected
-                Task<string> stderrTask = process.StandardError.ReadToEndAsync();
-                string stdout = process.StandardOutput.ReadToEnd();
-                string stderr = stderrTask.Result;
-                process.WaitForExit();
-
-                if (process.ExitCode != 0)
+                using (process)
                 {
-                    Debug.LogWarning($"[uLoopMCP] uloop skills install {targetFlag} exited with code {process.ExitCode}: {stderr}");
+                    // Read stderr asynchronously to prevent buffer deadlock
+                    // when stdout and stderr are both redirected
+                    Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+                    string stdout = process.StandardOutput.ReadToEnd();
+                    string stderr = stderrTask.Result;
+                    process.WaitForExit();
+
+                    if (process.ExitCode != 0)
+                    {
+                        Debug.LogWarning($"[uLoopMCP] uloop skills install {targetFlag} exited with code {process.ExitCode}: {stderr}");
+                    }
                 }
             });
         }
