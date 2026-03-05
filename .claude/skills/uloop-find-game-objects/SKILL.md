@@ -1,6 +1,6 @@
 ---
 name: uloop-find-game-objects
-description: "Find specific GameObjects in scene. Use when: searching for objects by name, finding objects with specific components, locating tagged/layered objects, getting currently selected GameObjects in Unity Editor, or when user asks to find GameObjects. Returns matching GameObjects with paths and components."
+description: "Find GameObjects in the active scene by various criteria. Use when you need to: (1) Search for objects by name, regex, or path, (2) Find objects with specific components, tags, or layers, (3) Get currently selected GameObjects in Unity Editor. Returns matching GameObjects with hierarchy paths and components."
 ---
 
 # uloop find-game-objects
@@ -40,8 +40,8 @@ uloop find-game-objects [options]
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
-| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`) |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
 
 ## Examples
 

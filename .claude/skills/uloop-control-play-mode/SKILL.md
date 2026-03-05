@@ -1,6 +1,6 @@
 ---
 name: uloop-control-play-mode
-description: "Control Unity Editor play mode. Use when: starting/stopping/pausing play mode, testing game behavior, or when user asks to play or stop. Controls play/stop/pause of Unity Editor."
+description: "Control Unity Editor play mode (play/stop/pause). Use when you need to: (1) Start play mode to test game behavior, (2) Stop play mode to return to edit mode, (3) Pause play mode for frame-by-frame inspection."
 ---
 
 # uloop control-play-mode
@@ -23,8 +23,8 @@ uloop control-play-mode [options]
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
-| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`) |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
 
 ## Examples
 

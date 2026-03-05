@@ -1,6 +1,6 @@
 ---
 name: uloop-compile
-description: "Compile Unity project. Use when: verifying code compiles after edits, checking for compile errors, or when user asks to compile. Returns error/warning counts."
+description: "Compile Unity project and report errors/warnings. Use when you need to: (1) Verify code compiles after C# file edits, (2) Check for compile errors before testing, (3) Force full recompilation with Domain Reload. Returns error and warning counts."
 ---
 
 # uloop compile
@@ -15,17 +15,17 @@ uloop compile [--force-recompile] [--wait-for-domain-reload]
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `--force-recompile` | boolean | Force full recompilation (triggers Domain Reload) |
-| `--wait-for-domain-reload` | boolean | Wait until Domain Reload completes before returning |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `--force-recompile` | boolean | `false` | Force full recompilation (triggers Domain Reload) |
+| `--wait-for-domain-reload` | boolean | `false` | Wait until Domain Reload completes before returning |
 
 ## Global Options
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
-| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`) |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
 
 ## Examples
 

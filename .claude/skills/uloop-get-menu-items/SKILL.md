@@ -1,6 +1,6 @@
 ---
 name: uloop-get-menu-items
-description: "Retrieve Unity MenuItems via uloop CLI. Use when you need to: (1) Discover available menu commands in Unity Editor, (2) Find menu paths for automation, (3) Prepare for executing menu items programmatically."
+description: "Discover available Unity Editor menu items. Use when you need to: (1) Find available menu commands and their paths, (2) Search for specific menu items by name, (3) Prepare menu item paths for execute-menu-item. Returns menu item list."
 ---
 
 # uloop get-menu-items
@@ -26,8 +26,8 @@ uloop get-menu-items [options]
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
-| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`) |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
 
 ## Examples
 
