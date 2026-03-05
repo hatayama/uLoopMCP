@@ -878,7 +878,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 await Task.Run(() =>
                 {
-                    System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo);
+                    System.Diagnostics.Process process = ProcessStartHelper.TryStart(startInfo);
                     if (process == null)
                     {
                         errorOutput = "Failed to start uloop process";
