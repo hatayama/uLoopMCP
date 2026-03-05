@@ -1,6 +1,6 @@
 ---
 name: uloop-run-tests
-description: "Execute Unity Test Runner and get detailed results. Use when: (1) running unit tests (EditMode/PlayMode), (2) verifying code changes, (3) diagnosing test failures — NUnit XML with error messages and stack traces is auto-saved when tests fail."
+description: "Execute Unity Test Runner and get detailed results. Use when you need to: (1) Run EditMode or PlayMode unit tests, (2) Verify code changes pass all tests, (3) Diagnose test failures with error messages and stack traces. Auto-saves NUnit XML results on failure."
 ---
 
 # uloop run-tests
@@ -25,8 +25,8 @@ uloop run-tests [options]
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
-| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`) |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
 
 ## Examples
 

@@ -1,6 +1,6 @@
 ---
 name: uloop-execute-dynamic-code
-description: "Execute C# code dynamically in Unity Editor via uloop CLI. Use for editor automation: (1) Prefab/material wiring and AddComponent operations, (2) Reference wiring with SerializedObject, (3) Scene/hierarchy edits and batch operations. NOT for file I/O or script authoring."
+description: "Execute C# code dynamically in Unity Editor. Use when you need to: (1) Wire prefab/material references and AddComponent operations, (2) Edit SerializedObject properties and reference wiring, (3) Perform scene/hierarchy edits and batch operations. NOT for file I/O or script authoring."
 ---
 
 # uloop execute-dynamic-code
@@ -15,11 +15,11 @@ uloop execute-dynamic-code --code '<c# code>'
 
 ## Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `--code` | string | C# code to execute (direct statements, no class wrapper) |
-| `--compile-only` | boolean | Compile without execution |
-| `--parameters` | object | Runtime parameters passed to the snippet (advanced; usually unnecessary) |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `--code` | string | - | C# code to execute (direct statements, no class wrapper) |
+| `--compile-only` | boolean | `false` | Compile without execution |
+| `--parameters` | object | - | Runtime parameters passed to the snippet (advanced; usually unnecessary) |
 
 ## Code Format
 
@@ -36,7 +36,7 @@ return x;
 
 | Shell | Method |
 |-------|--------|
-| bash/zsh/MINGW64/Git Bash | `'Debug.Log("Hello!");'` |
+| bash/zsh | `'Debug.Log("Hello!");'` |
 | PowerShell | `'Debug.Log(""Hello!"");'` |
 
 ## Allowed Operations
@@ -56,12 +56,12 @@ return x;
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
-| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`) |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
 
 ## Examples
 
-### bash / zsh / MINGW64 / Git Bash
+### bash / zsh
 
 ```bash
 uloop execute-dynamic-code --code 'return Selection.activeGameObject?.name;'

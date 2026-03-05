@@ -1,6 +1,6 @@
 ---
 name: uloop-get-hierarchy
-description: "Get Unity Hierarchy structure. Use when: inspecting scene structure, exploring GameObjects, checking parent-child relationships, or when user asks about hierarchy. Returns the scene's GameObject tree with components."
+description: "Get Unity scene hierarchy as a structured tree. Use when you need to: (1) Inspect scene structure and parent-child relationships, (2) Explore GameObjects and their components, (3) Get hierarchy from a specific root path or selected objects. Returns the scene's GameObject tree."
 ---
 
 # uloop get-hierarchy
@@ -29,8 +29,8 @@ uloop get-hierarchy [options]
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
-| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`) |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
 
 ## Examples
 

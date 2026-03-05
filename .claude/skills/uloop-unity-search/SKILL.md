@@ -1,6 +1,6 @@
 ---
 name: uloop-unity-search
-description: "Search Unity project for assets. Use when: finding scenes, prefabs, scripts, materials, or other assets by name/type, or when user asks to search project files. Returns asset paths and metadata."
+description: "Search Unity project assets using Unity Search engine. Use when you need to: (1) Find scenes, prefabs, scripts, materials, or other assets, (2) Filter assets by file extension or type, (3) Search with Unity Search query syntax and specific providers. Returns asset paths and metadata."
 ---
 
 # uloop unity-search
@@ -34,8 +34,8 @@ uloop unity-search [options]
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
-| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`) |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
 
 ## Examples
 

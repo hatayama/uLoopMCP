@@ -1,6 +1,6 @@
 ---
 name: uloop-clear-console
-description: "Clear Unity console logs. Use when: clearing console before tests, starting fresh debugging session, or when user asks to clear logs. Removes all log entries from Unity Console."
+description: "Clear all Unity Console log entries. Use when you need to: (1) Clear console before running tests or compilation, (2) Start a fresh debugging session, (3) Remove noisy logs to isolate specific output."
 ---
 
 # uloop clear-console
@@ -23,8 +23,8 @@ uloop clear-console [--add-confirmation-message]
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`). Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
-| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`). |
+| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`) |
+| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
 
 ## Examples
 
