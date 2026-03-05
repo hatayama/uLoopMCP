@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using NUnit.Framework;
 
 namespace io.github.hatayama.uLoopMCP
@@ -24,10 +25,11 @@ namespace io.github.hatayama.uLoopMCP
         [Test]
         public void TryStart_ValidExecutable_ReturnsNonNullProcess()
         {
+            bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                FileName = "/bin/echo",
-                Arguments = "test",
+                FileName = isWindows ? "cmd.exe" : "/bin/echo",
+                Arguments = isWindows ? "/c echo test" : "test",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 CreateNoWindow = true
