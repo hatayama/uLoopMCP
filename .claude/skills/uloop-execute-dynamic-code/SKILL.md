@@ -114,6 +114,8 @@ For detailed code examples, refer to these files:
   - Undo-aware operations: RecordObject, AddComponent, SetParent, grouping
 - **Selection operations**: See [references/selection-operations.md](references/selection-operations.md)
   - Get/set selection, multi-select, filter by type/editability
+- **PlayMode automation**: See [references/playmode-automation.md](references/playmode-automation.md)
+  - Click UI buttons, raycast interaction, invoke methods, set fields at runtime
 
 ## Workflow
 
