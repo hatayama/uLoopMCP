@@ -346,9 +346,11 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private static EnvironmentInfo GetEnvironmentInfo()
         {
+            bool isDomainReloadInProgress = EditorApplication.isCompiling || DomainReloadStateRegistry.IsDomainReloadInProgress();
+
             return new EnvironmentInfo
             {
-                domain_reload_state = EditorApplication.isCompiling ? "InProgress" : "Idle"
+                domain_reload_state = isDomainReloadInProgress ? "InProgress" : "Idle"
             };
         }
     }

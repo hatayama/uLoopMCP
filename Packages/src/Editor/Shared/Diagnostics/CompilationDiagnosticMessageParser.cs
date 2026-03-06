@@ -8,6 +8,11 @@ namespace io.github.hatayama.uLoopMCP
 
         public static string ExtractTypeNameFromMessage(string message)
         {
+            if (message == null)
+            {
+                return null;
+            }
+
             Match match = TypeNamePattern.Match(message);
             if (!match.Success)
             {
