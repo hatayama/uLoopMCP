@@ -384,11 +384,7 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             switch (e.ErrorCode)
             {
                 case "CS0246": // type or namespace name could not be found
-#if ULOOPMCP_HAS_ROSLYN
-                    string typeName = UsingDirectiveResolver.ExtractTypeNameFromMessage(e.Message);
-#else
-                    string typeName = (string)null;
-#endif
+                    string typeName = CompilationDiagnosticMessageParser.ExtractTypeNameFromMessage(e.Message);
                     if (typeName != null
                         && ambiguousCandidates != null
                         && ambiguousCandidates.TryGetValue(typeName, out List<string> candidates))
@@ -408,11 +404,7 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     }
                     break;
                 case "CS0103": // name does not exist in the current context
-#if ULOOPMCP_HAS_ROSLYN
-                    string identifierName = UsingDirectiveResolver.ExtractTypeNameFromMessage(e.Message);
-#else
-                    string identifierName = (string)null;
-#endif
+                    string identifierName = CompilationDiagnosticMessageParser.ExtractTypeNameFromMessage(e.Message);
                     if (identifierName != null
                         && ambiguousCandidates != null
                         && ambiguousCandidates.TryGetValue(identifierName, out List<string> cs0103Candidates))

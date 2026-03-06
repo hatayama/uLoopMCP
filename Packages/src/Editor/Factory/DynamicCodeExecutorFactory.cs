@@ -2,80 +2,53 @@ namespace io.github.hatayama.uLoopMCP.Factory
 {
     /// <summary>
     /// Factory for creating DynamicCodeExecutor instances
-    /// Related classes: DynamicCodeExecutor, DynamicCodeExecutorStub, RoslynCompiler, SecurityValidator, CommandRunner
+    /// Related classes: DynamicCodeExecutor, DynamicCodeExecutorStub, CommandRunner
     /// </summary>
     public static class DynamicCodeExecutorFactory
     {
         /// <summary>
-        /// Create DynamicCodeExecutor with specified security level
-        /// Returns Stub implementation when Roslyn is disabled
+        /// Returns a stub when the compilation provider is not registered.
+        /// The main editor assembly must stay independent from Roslyn implementation details.
         /// </summary>
         public static IDynamicCodeExecutor Create(DynamicCodeSecurityLevel securityLevel)
         {
-#if ULOOPMCP_HAS_ROSLYN
             string correlationId = McpConstants.GenerateCorrelationId();
-
-            try
+            IDynamicCompilationService compiler;
+            if (!DynamicCompilationServiceRegistry.TryCreate(securityLevel, out compiler))
             {
-                // Initialize compiler (with explicit security level specification)
-                RoslynCompiler compiler = new(securityLevel);
-
-                // Initialize security validator (with explicit security level specification)
-                SecurityValidator validator = new(securityLevel);
-
-                // Initialize command runner
-                CommandRunner runner = new();
-
-                // Create integrated executor
-                DynamicCodeExecutor executor = new(compiler, validator, securityLevel, runner);
-
-                VibeLogger.LogInfo(
-                    "dynamic_executor_created",
-                    $"DynamicCodeExecutor created with security level: {securityLevel}",
+                VibeLogger.LogWarning(
+                    "dynamic_executor_stub_created",
+                    "DynamicCodeExecutorStub created (compilation provider unavailable)",
                     new
                     {
-                        security_level = securityLevel.ToString(),
-                        compiler_type = compiler.GetType().Name,
-                        validator_type = validator.GetType().Name,
-                        runner_type = runner.GetType().Name
+                        security_level = securityLevel.ToString()
                     },
                     correlationId,
-                    "Dynamic code execution system initialization completed",
-                    "Ready for execution"
+                    "Dynamic code execution provider was not registered",
+                    "Verify Roslyn assembly loading and define configuration"
                 );
 
-                return executor;
+                return new DynamicCodeExecutorStub();
             }
-            catch (System.Exception ex)
-            {
-                VibeLogger.LogError(
-                    "dynamic_executor_creation_failed",
-                    "Failed to create DynamicCodeExecutor",
-                    new
-                    {
-                        error_type = ex.GetType().Name,
-                        error_message = ex.Message
-                    },
-                    correlationId,
-                    "Dynamic code execution system initialization failed",
-                    "Investigate dependency issues"
-                );
 
-                throw;
-            }
-#else
-            // Return Stub implementation when Roslyn is disabled
+            CommandRunner runner = new CommandRunner();
+            DynamicCodeExecutor executor = new DynamicCodeExecutor(compiler, securityLevel, runner);
+
             VibeLogger.LogInfo(
-                "dynamic_executor_stub_created",
-                "DynamicCodeExecutorStub created (Roslyn disabled)",
-                new { },
-                McpConstants.GenerateCorrelationId(),
-                "Using Stub implementation due to Roslyn being disabled",
-                "Dynamic code execution is not available"
+                "dynamic_executor_created",
+                $"DynamicCodeExecutor created with security level: {securityLevel}",
+                new
+                {
+                    security_level = securityLevel.ToString(),
+                    compiler_type = compiler.GetType().Name,
+                    runner_type = runner.GetType().Name
+                },
+                correlationId,
+                "Dynamic code execution system initialization completed",
+                "Ready for execution"
             );
-            
-            return new DynamicCodeExecutorStub();
-#endif
+
+            return executor;
         }
     }
 }

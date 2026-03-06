@@ -5,14 +5,11 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace io.github.hatayama.uLoopMCP
 {
     public class UsingDirectiveResolver
     {
-        private static readonly Regex TypeNamePattern = new Regex(@"['""]([^'""]+)['""]", RegexOptions.Compiled);
-
         private readonly Dictionary<string, List<string>> _typeNameToNamespacesCache = new();
         private readonly Dictionary<string, List<string>> _typeNameMemberToNamespacesCache = new();
 
@@ -132,11 +129,7 @@ namespace io.github.hatayama.uLoopMCP
                 return typeNameFromLocation;
             }
 
-            string message = diagnostic.GetMessage();
-            Match match = TypeNamePattern.Match(message);
-            if (!match.Success) return null;
-
-            return NormalizeTypeName(match.Groups[1].Value);
+            return CompilationDiagnosticMessageParser.ExtractTypeNameFromMessage(diagnostic.GetMessage());
         }
 
         private string ExtractTypeNameFromLocation(Diagnostic diagnostic)
@@ -174,10 +167,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public static string ExtractTypeNameFromMessage(string message)
         {
-            Match match = TypeNamePattern.Match(message);
-            if (!match.Success) return null;
-
-            return NormalizeTypeName(match.Groups[1].Value);
+            return CompilationDiagnosticMessageParser.ExtractTypeNameFromMessage(message);
         }
 
         private static string NormalizeTypeName(string rawName)

@@ -77,6 +77,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     // 4.4. Error notification
                     ClientNotificationService.LogServerShutdownError(correlationId, ex, portToSave);
+                    DomainReloadDetectionService.RollbackDomainReloadStart(correlationId);
 
                     // Server stop failure is a critical error (causes port conflicts)
                     throw new System.InvalidOperationException(

@@ -87,6 +87,8 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorSettings.SetIsDomainReloadInProgress(true);
             }
 
+            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(true);
+
             // Log recording
             VibeLogger.LogInfo(
                 "domain_reload_start",
@@ -117,6 +119,7 @@ namespace io.github.hatayama.uLoopMCP
 
             // Clear Domain Reload completion flag
             McpEditorSettings.ClearDomainReloadFlag();
+            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
 
             // Log recording
             VibeLogger.LogInfo(
@@ -124,6 +127,32 @@ namespace io.github.hatayama.uLoopMCP
                 "Domain reload completed - starting server recovery process",
                 new { session_server_port = McpEditorSettings.GetCustomPort() },
                 correlationId
+            );
+        }
+
+        internal static void RollbackDomainReloadStart(string correlationId)
+        {
+            if (IsBackgroundUnityProcess())
+            {
+                VibeLogger.LogInfo("domain_reload_rollback_ignored", "background_process", correlationId: correlationId);
+                return;
+            }
+
+            McpEditorSettings.UpdateSettings(s => s with
+            {
+                isDomainReloadInProgress = false,
+                isAfterCompile = false,
+                isReconnecting = false,
+                showReconnectingUI = false,
+                showPostCompileReconnectingUI = false
+            });
+            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
+            DeleteLockFile();
+
+            VibeLogger.LogWarning(
+                "domain_reload_start_rollback",
+                "Rolled back domain reload start state after pre-reload failure.",
+                correlationId: correlationId
             );
         }
 
