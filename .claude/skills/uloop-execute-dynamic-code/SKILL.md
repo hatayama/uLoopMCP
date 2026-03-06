@@ -2,93 +2,73 @@
 name: uloop-execute-dynamic-code
 description: "Execute C# code dynamically in Unity Editor. Use when you need to: (1) Wire prefab/material references and AddComponent operations, (2) Edit SerializedObject properties and reference wiring, (3) Perform scene/hierarchy edits and batch operations. NOT for file I/O or script authoring."
 context: fork
-agent: Explore
-allowed-tools:
-  - Read
-  - Bash
-  - Grep
-  - Glob
 ---
 
-# uloop execute-dynamic-code
+# Task
 
-Execute C# code dynamically in Unity Editor.
+Execute the following request using `uloop execute-dynamic-code`: $ARGUMENTS
 
-## Usage
+## Workflow
+
+1. Read the relevant reference file(s) from the Code Examples section below
+2. Construct C# code based on the reference examples
+3. Execute via Bash: `uloop execute-dynamic-code --code '<code>'`
+4. If execution fails, adjust code and retry
+5. Report the execution result
+
+## Tool Reference
 
 ```bash
 uloop execute-dynamic-code --code '<c# code>'
 ```
 
-## Parameters
+### Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `--code` | string | - | C# code to execute (direct statements, no class wrapper) |
 | `--compile-only` | boolean | `false` | Compile without execution |
-| `--parameters` | object | - | Runtime parameters passed to the snippet (advanced; usually unnecessary) |
 
-## Code Format
+### Code Format
 
 Write direct statements only (no classes/namespaces/methods). Return is optional.
 
 ```csharp
-// Using directives at top are hoisted
 using UnityEngine;
 var x = Mathf.PI;
 return x;
 ```
 
-## String Literals (Shell-specific)
+### String Literals (Shell-specific)
 
 | Shell | Method |
 |-------|--------|
 | bash/zsh | `'Debug.Log("Hello!");'` |
 | PowerShell | `'Debug.Log(""Hello!"");'` |
 
-## Allowed Operations
+### Allowed Operations
 
 - Prefab/material wiring (PrefabUtility)
 - AddComponent + reference wiring (SerializedObject)
 - Scene/hierarchy edits
 - Inspector modifications
 
-## Forbidden Operations
+### Forbidden Operations
 
 - System.IO.* (File/Directory/Path)
 - AssetDatabase.CreateFolder / file writes
 - Create/edit .cs/.asmdef files
 
-## Global Options
+### Global Options
 
 | Option | Description |
 |--------|-------------|
 | `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`) |
 | `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
 
-## Examples
-
-### bash / zsh
-
-```bash
-uloop execute-dynamic-code --code 'return Selection.activeGameObject?.name;'
-uloop execute-dynamic-code --code 'new GameObject("MyObject");'
-uloop execute-dynamic-code --code 'UnityEngine.Debug.Log("Hello from CLI!");'
-```
-
-### PowerShell
-
-```powershell
-uloop execute-dynamic-code --code 'return Selection.activeGameObject?.name;'
-uloop execute-dynamic-code --code 'new GameObject(""MyObject"");'
-uloop execute-dynamic-code --code 'UnityEngine.Debug.Log(""Hello from CLI!"");'
-```
-
-## Output
+### Output
 
 Returns JSON with execution result or compile errors.
-
-## Notes
 
 For file/directory operations, use terminal commands instead.
 
@@ -116,12 +96,3 @@ For detailed code examples, refer to these files:
   - Get/set selection, multi-select, filter by type/editability
 - **PlayMode automation**: See [references/playmode-automation.md](references/playmode-automation.md)
   - Click UI buttons, raycast interaction, invoke methods, set fields at runtime
-
-## Workflow
-
-1. Identify the user's intent from $ARGUMENTS
-2. Select and read the relevant reference file(s) from the list above
-3. Construct C# code based on the reference examples
-4. Execute via `uloop execute-dynamic-code --code '<code>'`
-5. If execution fails, adjust code and retry
-6. Report the execution result
