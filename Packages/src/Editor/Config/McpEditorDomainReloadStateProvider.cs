@@ -4,7 +4,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     public sealed class McpEditorDomainReloadStateProvider : IDomainReloadStateProvider
     {
-        private static bool _isDomainReloadInProgress;
+        private static volatile bool _isDomainReloadInProgress;
 
         public bool IsDomainReloadInProgress()
         {

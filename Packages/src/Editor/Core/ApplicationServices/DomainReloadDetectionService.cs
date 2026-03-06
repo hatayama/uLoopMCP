@@ -130,6 +130,31 @@ namespace io.github.hatayama.uLoopMCP
             );
         }
 
+        internal static void RollbackDomainReloadStart(string correlationId)
+        {
+            if (IsBackgroundUnityProcess())
+            {
+                VibeLogger.LogInfo("domain_reload_rollback_ignored", "background_process", correlationId: correlationId);
+                return;
+            }
+
+            McpEditorSettings.UpdateSettings(s => s with
+            {
+                isDomainReloadInProgress = false,
+                isAfterCompile = false,
+                isReconnecting = false,
+                showReconnectingUI = false,
+                showPostCompileReconnectingUI = false
+            });
+            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
+
+            VibeLogger.LogWarning(
+                "domain_reload_start_rollback",
+                "Rolled back domain reload start state after pre-reload failure.",
+                correlationId: correlationId
+            );
+        }
+
         /// <summary>
         /// Check if currently in Domain Reload
         /// </summary>

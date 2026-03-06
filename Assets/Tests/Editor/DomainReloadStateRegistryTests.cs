@@ -9,12 +9,14 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         [SetUp]
         public void SetUp()
         {
+            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
             _previousProvider = DomainReloadStateRegistry.SwapProviderForTests(null);
         }
 
         [TearDown]
         public void TearDown()
         {
+            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
             DomainReloadStateRegistry.SwapProviderForTests(_previousProvider);
         }
 
@@ -39,14 +41,17 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         [Test]
         public void Provider_ReturnsUpdatedInMemoryFlag()
         {
-            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(true);
+            McpEditorDomainReloadStateProvider provider = new McpEditorDomainReloadStateProvider();
+
             try
             {
-                McpEditorDomainReloadStateProvider provider = new McpEditorDomainReloadStateProvider();
+                Assert.That(provider.IsDomainReloadInProgress(), Is.False);
 
-                bool result = provider.IsDomainReloadInProgress();
+                McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(true);
+                Assert.That(provider.IsDomainReloadInProgress(), Is.True);
 
-                Assert.That(result, Is.True);
+                McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
+                Assert.That(provider.IsDomainReloadInProgress(), Is.False);
             }
             finally
             {
