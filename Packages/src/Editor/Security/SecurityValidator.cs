@@ -2,9 +2,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using System.Collections.Generic;
-#if !UNITY_6000_0_OR_NEWER
 using System.Collections.Immutable;
-#endif
 using System.Linq;
 
 namespace io.github.hatayama.uLoopMCP
@@ -82,23 +80,14 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             
-            foreach (Diagnostic diagnostic in GetErrorDiagnostics(compilation))
+            // Also check diagnostic information
+            ImmutableArray<Diagnostic> diagnostics = compilation.GetDiagnostics();
+            foreach (Diagnostic diagnostic in diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error))
             {
                 result.CompilationErrors.Add(diagnostic.GetMessage());
             }
             
             return result;
-        }
-
-        private IEnumerable<Diagnostic> GetErrorDiagnostics(CSharpCompilation compilation)
-        {
-#if UNITY_6000_0_OR_NEWER
-            return compilation.GetDiagnostics()
-                .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
-#else
-            ImmutableArray<Diagnostic> diagnostics = compilation.GetDiagnostics();
-            return diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
-#endif
         }
     }
 }
