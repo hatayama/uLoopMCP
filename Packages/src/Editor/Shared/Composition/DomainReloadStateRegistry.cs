@@ -19,15 +19,18 @@ namespace io.github.hatayama.uLoopMCP
 
         public static bool IsDomainReloadInProgress()
         {
+            IDomainReloadStateProvider provider;
             lock (SyncRoot)
             {
-                if (_provider == null)
-                {
-                    return false;
-                }
-
-                return _provider.IsDomainReloadInProgress();
+                provider = _provider;
             }
+
+            if (provider == null)
+            {
+                return false;
+            }
+
+            return provider.IsDomainReloadInProgress();
         }
 
         public static IDomainReloadStateProvider SwapProviderForTests(IDomainReloadStateProvider provider)

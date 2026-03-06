@@ -87,6 +87,8 @@ namespace io.github.hatayama.uLoopMCP
                 McpEditorSettings.SetIsDomainReloadInProgress(true);
             }
 
+            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(true);
+
             // Log recording
             VibeLogger.LogInfo(
                 "domain_reload_start",
@@ -117,6 +119,7 @@ namespace io.github.hatayama.uLoopMCP
 
             // Clear Domain Reload completion flag
             McpEditorSettings.ClearDomainReloadFlag();
+            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
 
             // Log recording
             VibeLogger.LogInfo(

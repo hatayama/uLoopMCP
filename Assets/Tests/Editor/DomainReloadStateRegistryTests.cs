@@ -36,6 +36,19 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             Assert.That(result, Is.True);
         }
 
+        [Test]
+        public void Provider_ReturnsUpdatedInMemoryFlag()
+        {
+            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(true);
+            McpEditorDomainReloadStateProvider provider = new McpEditorDomainReloadStateProvider();
+
+            bool result = provider.IsDomainReloadInProgress();
+
+            Assert.That(result, Is.True);
+
+            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
+        }
+
         private sealed class StubDomainReloadStateProvider : IDomainReloadStateProvider
         {
             private readonly bool _isDomainReloadInProgress;

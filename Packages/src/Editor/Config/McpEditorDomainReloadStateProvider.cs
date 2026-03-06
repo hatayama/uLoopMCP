@@ -4,9 +4,16 @@ namespace io.github.hatayama.uLoopMCP
 {
     public sealed class McpEditorDomainReloadStateProvider : IDomainReloadStateProvider
     {
+        private static bool _isDomainReloadInProgress;
+
         public bool IsDomainReloadInProgress()
         {
-            return McpEditorSettings.GetIsDomainReloadInProgress();
+            return _isDomainReloadInProgress;
+        }
+
+        public static void SetDomainReloadInProgressFromMainThread(bool isDomainReloadInProgress)
+        {
+            _isDomainReloadInProgress = isDomainReloadInProgress;
         }
     }
 
@@ -15,6 +22,8 @@ namespace io.github.hatayama.uLoopMCP
         [InitializeOnLoadMethod]
         private static void Register()
         {
+            McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(
+                McpEditorSettings.GetIsDomainReloadInProgress());
             DomainReloadStateRegistry.RegisterProvider(new McpEditorDomainReloadStateProvider());
         }
     }
