@@ -96,3 +96,7 @@ For detailed code examples, refer to these files:
   - Get/set selection, multi-select, filter by type/editability
 - **PlayMode automation**: See [references/playmode-automation.md](references/playmode-automation.md)
   - Click UI buttons, raycast interaction, invoke methods, set fields at runtime
+- **PlayMode UI controls**: See [references/playmode-ui-controls.md](references/playmode-ui-controls.md)
+  - InputField, Slider, Toggle, Dropdown, ScrollRect, drag & drop simulation
+- **PlayMode inspection**: See [references/playmode-inspection.md](references/playmode-inspection.md)
+  - Animator state, AudioSource, scene info, game state via reflection, physics state
