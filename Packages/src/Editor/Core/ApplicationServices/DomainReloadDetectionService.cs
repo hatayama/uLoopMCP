@@ -147,6 +147,7 @@ namespace io.github.hatayama.uLoopMCP
                 showPostCompileReconnectingUI = false
             });
             McpEditorDomainReloadStateProvider.SetDomainReloadInProgressFromMainThread(false);
+            DeleteLockFile();
 
             VibeLogger.LogWarning(
                 "domain_reload_start_rollback",

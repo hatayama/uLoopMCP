@@ -41,7 +41,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
-        public void RollbackDomainReloadStart_ClearsTemporaryFlagsAndProviderState()
+        public void RollbackDomainReloadStart_ClearsTemporaryFlagsProviderStateAndLockFile()
         {
             const int serverPort = 7410;
             const string correlationId = "test-correlation";
@@ -57,6 +57,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(McpEditorSettings.GetShowReconnectingUI(), Is.True);
             Assert.That(McpEditorSettings.GetShowPostCompileReconnectingUI(), Is.True);
             Assert.That(provider.IsDomainReloadInProgress(), Is.True);
+            Assert.That(DomainReloadDetectionService.IsLockFilePresent(), Is.True);
 
             DomainReloadDetectionService.RollbackDomainReloadStart(correlationId);
 
@@ -68,6 +69,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(McpEditorSettings.GetShowReconnectingUI(), Is.False);
             Assert.That(McpEditorSettings.GetShowPostCompileReconnectingUI(), Is.False);
             Assert.That(provider.IsDomainReloadInProgress(), Is.False);
+            Assert.That(DomainReloadDetectionService.IsLockFilePresent(), Is.False);
         }
     }
 }
