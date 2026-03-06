@@ -341,6 +341,45 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsFalse(result.IsValid, "Dangerous code should be invalid");
             Assert.IsTrue(result.Violations.Count > 0, "Should have violations");
         }
+
+        [Test]
+        public void TestSecurityValidatorCollectsCompilationErrors()
+        {
+            SecurityValidator validator = new(DynamicCodeSecurityLevel.Restricted);
+
+            string invalidCode = @"
+                public class Test {
+                    public void Method() {
+                        MissingType value = new MissingType();
+                    }
+                }
+            ";
+
+            List<Microsoft.CodeAnalysis.MetadataReference> references = new()
+            {
+                Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(System.Console).Assembly.Location),
+                Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location)
+            };
+
+            Microsoft.CodeAnalysis.SyntaxTree syntaxTree =
+                Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(invalidCode);
+
+            Microsoft.CodeAnalysis.CSharp.CSharpCompilation compilation =
+                Microsoft.CodeAnalysis.CSharp.CSharpCompilation.Create(
+                    "InvalidTestAssembly",
+                    new[] { syntaxTree },
+                    references,
+                    new Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions(
+                        Microsoft.CodeAnalysis.OutputKind.DynamicallyLinkedLibrary
+                    )
+                );
+
+            SecurityValidationResult result = validator.ValidateCompilation(compilation);
+
+            Assert.IsTrue(result.CompilationErrors.Count > 0, "Compilation errors should be collected");
+            StringAssert.Contains("MissingType", result.CompilationErrors.First());
+        }
         
         /// <summary>
         /// Verify that AssemblyReferencePolicy returns all assemblies
