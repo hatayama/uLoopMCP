@@ -69,7 +69,7 @@ namespace io.github.hatayama.uLoopMCP
                             new
                             {
                                 type = violation.Type.ToString(),
-                                location = violation.Location?.ToString(),
+                                location = violation.Location,
                                 apiName = violation.ApiName
                             },
                             correlationId,

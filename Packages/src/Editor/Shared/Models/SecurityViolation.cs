@@ -24,13 +24,8 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>API Name Involved in the Violation</summary>
         public string ApiName { get; set; }
         
-#if ULOOPMCP_HAS_ROSLYN
         /// <summary>Location of the Violation</summary>
-        public Microsoft.CodeAnalysis.Location Location { get; set; }
-#else
-        /// <summary>Location (object when Roslyn is disabled)</summary>
-        public object Location { get; set; }
-#endif
+        public string Location { get; set; }
     }
 
     /// <summary>
