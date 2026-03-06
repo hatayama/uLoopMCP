@@ -16,33 +16,6 @@ input.onEndEdit.Invoke(input.text);
 return $"Set InputField text to: {input.text}";
 ```
 
-## Set TMP InputField Text
-
-```csharp
-using System.Linq;
-
-// TMPro may not be directly accessible; use reflection
-var inputFields = Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None)
-    .Where(mb => mb.GetType().Name == "TMP_InputField")
-    .ToArray();
-
-if (inputFields.Length == 0) return "No TMP_InputField found";
-
-MonoBehaviour input = inputFields.First(i => i.gameObject.name == "NameInput");
-if (input == null) return "NameInput not found";
-
-var textProp = input.GetType().GetProperty("text");
-textProp.SetValue(input, "Player1");
-
-var onEndEdit = input.GetType().GetField("onEndEdit");
-if (onEndEdit != null)
-{
-    var evt = onEndEdit.GetValue(input);
-    evt.GetType().GetMethod("Invoke", new[] { typeof(string) })?.Invoke(evt, new object[] { "Player1" });
-}
-return $"Set TMP_InputField text to: Player1";
-```
-
 ## Set Slider Value
 
 ```csharp
@@ -154,33 +127,6 @@ for (int i = 0; i < dropdown.options.Count; i++)
     sb.AppendLine($"  [{i}] {dropdown.options[i].text}{marker}");
 }
 return sb.ToString();
-```
-
-## Scroll ScrollRect to Position
-
-```csharp
-using UnityEngine.UI;
-
-ScrollRect scroll = GameObject.Find("Canvas/ItemList")?.GetComponent<ScrollRect>();
-if (scroll == null) return "ScrollRect not found";
-
-scroll.normalizedPosition = new Vector2(0f, 0f);
-return "Scrolled to bottom";
-```
-
-## Scroll ScrollRect to Top/Bottom
-
-```csharp
-using UnityEngine.UI;
-using System.Linq;
-
-ScrollRect[] scrolls = Object.FindObjectsByType<ScrollRect>(FindObjectsSortMode.None);
-ScrollRect target = scrolls.FirstOrDefault(s => s.gameObject.name == "ItemList");
-if (target == null) return $"ItemList not found. Available: {string.Join(", ", scrolls.Select(s => s.gameObject.name))}";
-
-// normalizedPosition: (0,1) = top, (0,0) = bottom
-target.normalizedPosition = new Vector2(0f, 1f);
-return $"Scrolled {target.gameObject.name} to top";
 ```
 
 ## Simulate Drag on UI Element

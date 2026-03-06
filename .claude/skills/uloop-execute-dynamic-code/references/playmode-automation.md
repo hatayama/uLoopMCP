@@ -29,25 +29,6 @@ target.onClick.Invoke();
 return $"Clicked {target.gameObject.name}";
 ```
 
-## Click TMP Button (TextMeshPro)
-
-```csharp
-using UnityEngine.UI;
-using TMPro;
-using System.Linq;
-
-Button[] buttons = Object.FindObjectsByType<Button>(FindObjectsSortMode.None);
-Button target = buttons.FirstOrDefault(b =>
-{
-    TMP_Text label = b.GetComponentInChildren<TMP_Text>();
-    return label != null && label.text == "Start Game";
-});
-if (target == null) return "Button with 'Start Game' label not found";
-
-target.onClick.Invoke();
-return $"Clicked button with label: {target.GetComponentInChildren<TMP_Text>().text}";
-```
-
 ## Raycast from Camera Center
 
 ```csharp
@@ -130,50 +111,6 @@ if (field == null) return "moveSpeed field not found";
 
 field.SetValue(script, 20f);
 return $"Set moveSpeed to 20 on {player.name}";
-```
-
-## List All Active Buttons in Scene
-
-```csharp
-using UnityEngine.UI;
-using TMPro;
-using System.Text;
-
-Button[] buttons = Object.FindObjectsByType<Button>(FindObjectsSortMode.None);
-StringBuilder sb = new StringBuilder();
-sb.AppendLine($"Found {buttons.Length} buttons:");
-
-foreach (Button btn in buttons)
-{
-    string label = "";
-    TMP_Text tmp = btn.GetComponentInChildren<TMP_Text>();
-    if (tmp != null) label = tmp.text;
-    else
-    {
-        Text legacyText = btn.GetComponentInChildren<Text>();
-        if (legacyText != null) label = legacyText.text;
-    }
-
-    string path = GetPath(btn.transform);
-    sb.AppendLine($"  [{path}] label=\"{label}\" interactable={btn.interactable}");
-}
-return sb.ToString();
-
-string GetPath(Transform t)
-{
-    if (t.parent == null) return t.name;
-    return GetPath(t.parent) + "/" + t.name;
-}
-```
-
-## Trigger Animation State
-
-```csharp
-Animator animator = GameObject.Find("Character")?.GetComponent<Animator>();
-if (animator == null) return "Animator not found on Character";
-
-animator.SetTrigger("Jump");
-return "Triggered Jump animation";
 ```
 
 ## Move Player to Position
