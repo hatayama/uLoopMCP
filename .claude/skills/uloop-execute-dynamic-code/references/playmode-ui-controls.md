@@ -87,7 +87,6 @@ if (targetIndex >= dropdown.options.Count)
     return $"Index {targetIndex} out of range. Options count: {dropdown.options.Count}";
 
 dropdown.value = targetIndex;
-dropdown.onValueChanged.Invoke(targetIndex);
 return $"Selected: {dropdown.options[targetIndex].text} (index {targetIndex})";
 ```
 
@@ -106,7 +105,6 @@ if (index < 0)
     return $"'{targetText}' not found. Available: {string.Join(", ", dropdown.options.Select(o => o.text))}";
 
 dropdown.value = index;
-dropdown.onValueChanged.Invoke(index);
 return $"Selected: {targetText} (index {index})";
 ```
 
@@ -176,7 +174,7 @@ sb.AppendLine($"Toggles ({toggles.Length}):");
 foreach (Toggle t in toggles) sb.AppendLine($"  {t.gameObject.name} = {t.isOn}");
 
 sb.AppendLine($"Dropdowns ({dropdowns.Length}):");
-foreach (Dropdown d in dropdowns) sb.AppendLine($"  {d.gameObject.name} = {d.options[d.value].text} (index {d.value})");
+foreach (Dropdown d in dropdowns) sb.AppendLine($"  {d.gameObject.name} = {(d.options.Count > 0 ? d.options[d.value].text : "(empty)")} (index {d.value})");
 
 sb.AppendLine($"InputFields ({inputs.Length}):");
 foreach (InputField i in inputs) sb.AppendLine($"  {i.gameObject.name} = \"{i.text}\"");

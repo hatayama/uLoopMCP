@@ -51,6 +51,7 @@ using System.Collections.Generic;
 
 Camera cam = Camera.main;
 if (cam == null) return "Main camera not found";
+if (EventSystem.current == null) return "EventSystem not found";
 
 PointerEventData pointerData = new PointerEventData(EventSystem.current)
 {
