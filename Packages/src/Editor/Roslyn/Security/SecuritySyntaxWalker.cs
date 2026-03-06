@@ -48,7 +48,7 @@ namespace io.github.hatayama.uLoopMCP
                             Type = SecurityViolationType.DangerousInheritance,
                             Description = $"Class inherits from dangerous type: {typeSymbol}",
                             Message = $"Class inherits from dangerous type: {typeSymbol}",
-                            Location = node.GetLocation(),
+                            Location = node.GetLocation().ToString(),
                             ApiName = typeSymbol.ToDisplayString()
                         });
                     }
@@ -177,7 +177,7 @@ namespace io.github.hatayama.uLoopMCP
                         Type = SecurityViolationType.DangerousApiCall,
                         Description = $"Dangerous API detected: {fullName}",
                         Message = $"Dangerous API detected: {fullName}",
-                        Location = node.GetLocation(),
+                        Location = node.GetLocation().ToString(),
                         ApiName = fullName
                     });
                 }
@@ -206,7 +206,7 @@ namespace io.github.hatayama.uLoopMCP
                         Type = SecurityViolationType.DangerousApiCall,
                         Description = $"Dangerous type usage detected: {fullName}",
                         Message = $"Dangerous type usage detected: {fullName}",
-                        Location = node.GetLocation(),
+                        Location = node.GetLocation().ToString(),
                         ApiName = fullName
                     });
                 }
@@ -232,7 +232,7 @@ namespace io.github.hatayama.uLoopMCP
                     Type = SecurityViolationType.DangerousTypeCreation,
                     Description = $"Creating instance of dangerous type: {typeSymbol}",
                     Message = $"Creating instance of dangerous type: {typeSymbol}",
-                    Location = node.GetLocation(),
+                    Location = node.GetLocation().ToString(),
                     ApiName = typeSymbol.ToDisplayString()
                 });
             }
@@ -260,7 +260,7 @@ namespace io.github.hatayama.uLoopMCP
                         Type = SecurityViolationType.DangerousApiCall,
                         Description = $"Dangerous method call detected: {fullName}",
                         Message = $"Dangerous method call detected: {fullName}",
-                        Location = node.GetLocation(),
+                        Location = node.GetLocation().ToString(),
                         ApiName = fullName
                     });
                 }
@@ -290,7 +290,7 @@ namespace io.github.hatayama.uLoopMCP
                         Type = SecurityViolationType.DangerousApiCall,
                         Description = $"Dangerous property assignment detected: {apiName}",
                         Message = $"Dangerous property assignment detected: {apiName}",
-                        Location = node.GetLocation(),
+                        Location = node.GetLocation().ToString(),
                         ApiName = apiName
                     });
                 }
