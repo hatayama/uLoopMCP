@@ -49,8 +49,6 @@ return "No hit";
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
 
-Camera cam = Camera.main;
-if (cam == null) return "Main camera not found";
 if (EventSystem.current == null) return "EventSystem not found";
 
 PointerEventData pointerData = new PointerEventData(EventSystem.current)
@@ -244,6 +242,12 @@ uloop get-logs --log-type Log --search-text "damage"
 ## Full Automation: Play → Act → Capture → Stop
 
 End-to-end test flow: start Play mode, perform actions, capture evidence, stop.
+
+**Step 0**: Clear console to isolate this run
+
+```bash
+uloop clear-console
+```
 
 **Step 1**: Start Play mode
 
