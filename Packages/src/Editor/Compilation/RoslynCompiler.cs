@@ -16,7 +16,7 @@ namespace io.github.hatayama.uLoopMCP
     /// Dynamic C# compilation functionality using Roslyn
     /// Related Classes: CompilationRequest, CompilationResult, DynamicCodeSecurityManager
     /// </summary>
-    public class RoslynCompiler : IDynamicCompilationService, IDisposable
+    public class RoslynCompiler : IDisposable
     {
         // Compilation result cache management (avoiding recompilation of the same code)
         private readonly CompilationCacheManager _cacheManager = new();

@@ -13,7 +13,7 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class DynamicCodeExecutor : IDynamicCodeExecutor
     {
-        private readonly IDynamicCompilationService _compiler;
+        private readonly RoslynCompiler _compiler;
         private readonly DynamicCodeSecurityLevel _securityLevel;
         private readonly CommandRunner _runner;
         private readonly ExecutionStatistics _statistics;
@@ -21,7 +21,8 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>Constructor</summary>
         public DynamicCodeExecutor(
-            IDynamicCompilationService compiler,
+            RoslynCompiler compiler,
+            SecurityValidator validator,
             DynamicCodeSecurityLevel securityLevel,
             CommandRunner runner)
         {

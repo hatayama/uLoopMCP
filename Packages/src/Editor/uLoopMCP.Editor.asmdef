@@ -2,9 +2,7 @@
     "name": "uLoopMCP.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:5079a8d3a72924a81aa1cbc25f65ed1b",
-        "uLoopMCP.Editor.Shared",
-        "uLoopMCP.Editor.Roslyn"
+        "GUID:5079a8d3a72924a81aa1cbc25f65ed1b"
     ],
     "includePlatforms": [
         "Editor"

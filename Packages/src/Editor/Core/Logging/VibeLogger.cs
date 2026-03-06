@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
-using UnityEditor;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
@@ -348,7 +347,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             return new EnvironmentInfo
             {
-                domain_reload_state = EditorApplication.isCompiling ? "InProgress" : "Idle"
+                domain_reload_state = McpEditorSettings.GetIsDomainReloadInProgress() ? "InProgress" : "Idle"
             };
         }
     }
