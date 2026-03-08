@@ -1,4 +1,4 @@
-[English](/Packages/src/README.md)
+[English](README.md)
 
 [![Unity](https://img.shields.io/badge/Unity-2022.3+-red.svg)](https://unity3d.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)<br>
