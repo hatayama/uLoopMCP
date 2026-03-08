@@ -8,6 +8,7 @@ on:
       - 'README_ja.md'
       - 'Packages/src/README.md'
       - 'Packages/src/README_ja.md'
+      - 'scripts/sync-readmes.sh'
 
 jobs:
   check-sync:

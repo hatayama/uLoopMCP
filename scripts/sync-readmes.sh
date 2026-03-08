@@ -1,4 +1,5 @@
 #!/usr/bin/env sh
+set -e
 # Root README files are the canonical source.
 # This script copies them to Packages/src/ and stages the copies.
 
