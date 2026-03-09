@@ -459,6 +459,52 @@
           }
         }
       }
+    },
+    {
+      "name": "simulate-mouse",
+      "description": "Simulate mouse click and drag on PlayMode UI elements via screen coordinates",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "Action": {
+            "type": "string",
+            "description": "Mouse action: Click - left click, Drag - one-shot drag, DragStart - begin drag and hold, DragMove - move while holding drag, DragEnd - release drag",
+            "enum": [
+              "Click",
+              "Drag",
+              "DragStart",
+              "DragMove",
+              "DragEnd"
+            ],
+            "default": "Click"
+          },
+          "X": {
+            "type": "number",
+            "description": "X position in screen pixels (origin: bottom-left)",
+            "default": 0
+          },
+          "Y": {
+            "type": "number",
+            "description": "Y position in screen pixels (origin: bottom-left)",
+            "default": 0
+          },
+          "EndX": {
+            "type": "number",
+            "description": "End X position for Drag action (origin: bottom-left)",
+            "default": 0
+          },
+          "EndY": {
+            "type": "number",
+            "description": "End Y position for Drag action (origin: bottom-left)",
+            "default": 0
+          },
+          "DragSteps": {
+            "type": "integer",
+            "description": "Intermediate drag steps for Drag action (each step = 1 frame)",
+            "default": 5
+          }
+        }
+      }
     }
   ]
 }
