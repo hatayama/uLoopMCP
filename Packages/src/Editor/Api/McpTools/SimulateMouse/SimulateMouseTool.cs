@@ -91,20 +91,45 @@ namespace io.github.hatayama.uLoopMCP
         private SimulateMouseResponse ExecuteClick(SimulateMouseSchema parameters, EventSystem eventSystem)
         {
             Vector2 screenPos = new Vector2(parameters.X, parameters.Y);
-            GameObject? target = RaycastUI(screenPos, eventSystem);
+            RaycastResult? hit = RaycastUI(screenPos, eventSystem);
 
             PointerEventData pointerData = new PointerEventData(eventSystem)
             {
                 position = screenPos,
+                pressPosition = screenPos,
                 button = PointerEventData.InputButton.Left
             };
 
-            if (target != null)
+            GameObject? target = null;
+
+            if (hit != null)
             {
-                // ExecuteEvents dispatches only the specified handler; Button requires all three to transition visual state correctly
-                ExecuteEvents.Execute(target, pointerData, ExecuteEvents.pointerDownHandler);
-                ExecuteEvents.Execute(target, pointerData, ExecuteEvents.pointerUpHandler);
-                ExecuteEvents.Execute(target, pointerData, ExecuteEvents.pointerClickHandler);
+                GameObject rawTarget = hit.Value.gameObject;
+                pointerData.pointerCurrentRaycast = hit.Value;
+                pointerData.pointerPressRaycast = hit.Value;
+
+                // Execute dispatches only to the exact target; composite controls (Button with Text child) need hierarchy traversal
+                GameObject? pressTarget = ExecuteEvents.ExecuteHierarchy(
+                    rawTarget, pointerData, ExecuteEvents.pointerDownHandler);
+                GameObject? clickTarget = ExecuteEvents.GetEventHandler<IPointerClickHandler>(rawTarget);
+
+                target = pressTarget ?? clickTarget;
+
+                if (target != null)
+                {
+                    pointerData.pointerPress = target;
+                    pointerData.rawPointerPress = rawTarget;
+                }
+
+                if (pressTarget != null)
+                {
+                    ExecuteEvents.Execute(pressTarget, pointerData, ExecuteEvents.pointerUpHandler);
+                }
+
+                if (clickTarget != null)
+                {
+                    ExecuteEvents.Execute(clickTarget, pointerData, ExecuteEvents.pointerClickHandler);
+                }
             }
 
             return new SimulateMouseResponse
@@ -120,6 +145,34 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
+        private PointerEventData InitiateDrag(
+            EventSystem eventSystem,
+            Vector2 screenPos,
+            RaycastResult raycastResult,
+            GameObject dragTarget)
+        {
+            PointerEventData pointerData = new PointerEventData(eventSystem)
+            {
+                position = screenPos,
+                pressPosition = screenPos,
+                button = PointerEventData.InputButton.Left,
+                pointerCurrentRaycast = raycastResult,
+                pointerPressRaycast = raycastResult,
+                pointerDrag = dragTarget,
+                rawPointerPress = raycastResult.gameObject
+            };
+
+            // Slider.OnPointerDown initializes m_Offset for handle positioning
+            GameObject? pressTarget = ExecuteEvents.ExecuteHierarchy(
+                raycastResult.gameObject, pointerData, ExecuteEvents.pointerDownHandler);
+            pointerData.pointerPress = pressTarget;
+
+            // ScrollRect.OnInitializePotentialDrag clears inertia, Slider sets useDragThreshold=false
+            ExecuteEvents.Execute(dragTarget, pointerData, ExecuteEvents.initializePotentialDrag);
+
+            return pointerData;
+        }
+
         private async Task<SimulateMouseResponse> ExecuteDragOneShot(
             SimulateMouseSchema parameters, EventSystem eventSystem, CancellationToken ct)
         {
@@ -127,14 +180,19 @@ namespace io.github.hatayama.uLoopMCP
 
             Vector2 startPos = new Vector2(parameters.X, parameters.Y);
             Vector2 endPos = new Vector2(parameters.EndX, parameters.EndY);
-            GameObject? target = RaycastUI(startPos, eventSystem);
+            RaycastResult? hit = RaycastUI(startPos, eventSystem);
+
+            // Execute dispatches only to the exact target; resolve the actual drag handler up the hierarchy
+            GameObject? target = hit != null
+                ? ExecuteEvents.GetEventHandler<IDragHandler>(hit.Value.gameObject)
+                : null;
 
             if (target == null)
             {
                 return new SimulateMouseResponse
                 {
                     Success = true,
-                    Message = $"No UI element at ({startPos.x:F1}, {startPos.y:F1}) - drag not performed",
+                    Message = $"No draggable UI element at ({startPos.x:F1}, {startPos.y:F1}) - drag not performed",
                     Action = MouseAction.Drag.ToString(),
                     PositionX = startPos.x,
                     PositionY = startPos.y,
@@ -143,15 +201,7 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            PointerEventData pointerData = new PointerEventData(eventSystem)
-            {
-                position = startPos,
-                button = PointerEventData.InputButton.Left,
-                pressPosition = startPos,
-                // Some UI components (e.g. ScrollRect) reference pointerDrag internally
-                pointerDrag = target
-            };
-
+            PointerEventData pointerData = InitiateDrag(eventSystem, startPos, hit!.Value, target);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
 
             // Each drag step and EndDrag run on separate frames so Unity processes layout/physics between events
@@ -163,7 +213,11 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 catch (OperationCanceledException)
                 {
-                    // Cancellation mid-drag must still fire EndDrag to avoid leaving UI in a half-dragged state
+                    // Cancellation mid-drag must still complete the lifecycle to avoid leaving UI in a half-dragged state
+                    if (pointerData.pointerPress != null)
+                    {
+                        ExecuteEvents.Execute(pointerData.pointerPress, pointerData, ExecuteEvents.pointerUpHandler);
+                    }
                     ExecuteEvents.Execute(target, pointerData, ExecuteEvents.endDragHandler);
                     throw;
                 }
@@ -179,6 +233,12 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             await EditorDelay.DelayFrame(1, ct);
+
+            if (pointerData.pointerPress != null)
+            {
+                ExecuteEvents.Execute(pointerData.pointerPress, pointerData, ExecuteEvents.pointerUpHandler);
+            }
+
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.endDragHandler);
 
             return new SimulateMouseResponse
@@ -209,29 +269,25 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             Vector2 screenPos = new Vector2(parameters.X, parameters.Y);
-            GameObject? target = RaycastUI(screenPos, eventSystem);
+            RaycastResult? hit = RaycastUI(screenPos, eventSystem);
+
+            GameObject? target = hit != null
+                ? ExecuteEvents.GetEventHandler<IDragHandler>(hit.Value.gameObject)
+                : null;
 
             if (target == null)
             {
                 return new SimulateMouseResponse
                 {
                     Success = false,
-                    Message = $"No UI element at ({screenPos.x:F1}, {screenPos.y:F1}). Use find-game-objects or screenshot to verify positions.",
+                    Message = $"No draggable UI element at ({screenPos.x:F1}, {screenPos.y:F1}). Use find-game-objects or screenshot to verify positions.",
                     Action = MouseAction.DragStart.ToString(),
                     PositionX = screenPos.x,
                     PositionY = screenPos.y
                 };
             }
 
-            PointerEventData pointerData = new PointerEventData(eventSystem)
-            {
-                position = screenPos,
-                button = PointerEventData.InputButton.Left,
-                pressPosition = screenPos,
-                // Some UI components (e.g. ScrollRect) reference pointerDrag internally
-                pointerDrag = target
-            };
-
+            PointerEventData pointerData = InitiateDrag(eventSystem, screenPos, hit!.Value, target);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
 
             MouseDragState.Target = target;
@@ -306,6 +362,15 @@ namespace io.github.hatayama.uLoopMCP
 
             string targetName = MouseDragState.Target!.name;
 
+            // pointerUp must fire before endDrag to match StandaloneInputModule lifecycle
+            if (MouseDragState.PointerData.pointerPress != null)
+            {
+                ExecuteEvents.Execute(
+                    MouseDragState.PointerData.pointerPress,
+                    MouseDragState.PointerData,
+                    ExecuteEvents.pointerUpHandler);
+            }
+
             ExecuteEvents.Execute(MouseDragState.Target, MouseDragState.PointerData, ExecuteEvents.endDragHandler);
 
             MouseDragState.Clear();
@@ -321,7 +386,7 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        private GameObject? RaycastUI(Vector2 screenPosition, EventSystem eventSystem)
+        private RaycastResult? RaycastUI(Vector2 screenPosition, EventSystem eventSystem)
         {
             PointerEventData pointerData = new PointerEventData(eventSystem)
             {
@@ -329,7 +394,7 @@ namespace io.github.hatayama.uLoopMCP
             };
             List<RaycastResult> results = new List<RaycastResult>();
             eventSystem.RaycastAll(pointerData, results);
-            return results.Count > 0 ? results[0].gameObject : null;
+            return results.Count > 0 ? results[0] : (RaycastResult?)null;
         }
     }
 }
