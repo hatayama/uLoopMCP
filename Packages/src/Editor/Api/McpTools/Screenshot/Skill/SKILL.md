@@ -10,7 +10,7 @@ Take a screenshot of any Unity EditorWindow by name and save as PNG.
 ## Usage
 
 ```bash
-uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mode <mode>] [--capture-mode <mode>] [--output-directory <path>]
+uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mode <mode>] [--capture-mode <mode>] [--annotate-elements] [--output-directory <path>]
 ```
 
 ## Parameters

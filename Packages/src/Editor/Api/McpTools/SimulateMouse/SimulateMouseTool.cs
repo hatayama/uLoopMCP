@@ -47,6 +47,16 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
+            if (parameters.Action != MouseAction.Click && parameters.DragSpeed < 0f)
+            {
+                return new SimulateMouseResponse
+                {
+                    Success = false,
+                    Message = $"DragSpeed must be non-negative, got: {parameters.DragSpeed}",
+                    Action = parameters.Action.ToString()
+                };
+            }
+
             VibeLogger.LogInfo(
                 "simulate_mouse_start",
                 "Mouse simulation started",
@@ -241,7 +251,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 return new SimulateMouseResponse
                 {
-                    Success = true,
+                    Success = false,
                     Message = $"No draggable UI element at ({inputStart.x:F1}, {inputStart.y:F1}) - drag not performed",
                     Action = MouseAction.Drag.ToString(),
                     PositionX = inputStart.x,
@@ -257,10 +267,9 @@ namespace io.github.hatayama.uLoopMCP
             SimulateMouseOverlayState.Update(
                 MouseAction.Drag, inputStart, inputStart, target.name);
 
-            await PlayExpandAnimation(ct);
-
             try
             {
+                await PlayExpandAnimation(ct);
                 await InterpolateDragPosition(pointerData, target, screenEnd, parameters.DragSpeed, ct);
                 await EditorDelay.DelayFrame(1, ct);
             }
@@ -415,7 +424,21 @@ namespace io.github.hatayama.uLoopMCP
             SimulateMouseOverlayState.Update(
                 MouseAction.DragStart, inputPos, inputPos, target.name);
 
-            await PlayExpandAnimation(ct);
+            bool animationCompleted = false;
+            try
+            {
+                await PlayExpandAnimation(ct);
+                animationCompleted = true;
+            }
+            finally
+            {
+                // Cancellation during animation leaves beginDrag dispatched; clean up
+                if (!animationCompleted)
+                {
+                    FinalizeDrag(pointerData, target);
+                    MouseDragState.Clear();
+                }
+            }
 
             return new SimulateMouseResponse
             {

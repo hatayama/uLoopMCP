@@ -53,12 +53,12 @@ namespace io.github.hatayama.uLoopMCP
 
             if (_circleSprite != null)
             {
-                DestroyImmediate(_circleSprite);
+                Destroy(_circleSprite);
             }
 
             if (_circleTexture != null)
             {
-                DestroyImmediate(_circleTexture);
+                Destroy(_circleTexture);
             }
         }
 

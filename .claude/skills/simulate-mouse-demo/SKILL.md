@@ -8,14 +8,25 @@ context: fork
 
 Run the SimulateMouse demo scenario: $ARGUMENTS
 
-## Prerequisites
+## What
+
+Automate the SimulateMouse demo scene by clicking buttons and dragging colored boxes to a drop zone, exercising both click and drag capabilities of the simulate-mouse tool.
+
+## When
+
+Use when you need to:
+1. Run the simulate-mouse demo to verify click and drag functionality
+2. Test mouse simulation on the demo scene after code changes
+3. Exercise the demo scene end-to-end (buttons + drag-and-drop)
+
+## How
+
+### Prerequisites
 
 - Unity must be running with **SimulateMouseDemoScene** loaded
 - **PlayMode** must be active
 
 If PlayMode is not active, start it with `uloop control-play-mode --action Play` and wait a moment for the scene to initialize.
-
-## Scenario
 
 ### Step 1: Discover UI element coordinates
 
@@ -33,11 +44,11 @@ From the `AnnotatedElements` array in the response, extract `SimX` and `SimY` fo
 - **GreenBox** — green draggable box
 - **BlueBox** — blue draggable box
 
-### Step 2: Click buttons and drag boxes — fire everything at once
+### Step 2: Click buttons — sequential execution
 
-Launch **all 13 commands below as background tasks in a single message** — do not wait for any command to finish before launching the next. The goal is maximum parallelism with zero gaps between clicks and drags.
+Run each click **one at a time**, waiting for the previous command to finish before starting the next. The simulate-mouse tool uses a single-pointer model, so concurrent actions would produce nondeterministic results.
 
-**Clicks** — alternate ClickButton1 and ClickButton2, 10 times total:
+Alternate ClickButton1 and ClickButton2, 10 times total:
 
 ```bash
 uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
@@ -52,7 +63,9 @@ uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.Si
 uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY>
 ```
 
-**Drags** — drag each box to the DropZone at `--drag-speed 1000`. Offset drop X by -50/0/+50 so the boxes converge slightly toward center:
+### Step 3: Drag boxes — sequential execution
+
+Drag each box to the DropZone **one at a time** at `--drag-speed 1000`. Offset drop X by -50/0/+50 so the boxes converge slightly toward center:
 
 ```bash
 uloop simulate-mouse --action Drag \
@@ -70,4 +83,3 @@ uloop simulate-mouse --action Drag \
     --end-x <DropZone.SimX + 50> --end-y <DropZone.SimY> \
     --drag-speed 1000
 ```
-

@@ -26,10 +26,15 @@ namespace io.github.hatayama.uLoopMCP
             button = GetComponent<Button>();
         }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            totalClickCount = 0;
+        }
+
         // Runtime listener registration (AddListener in scene generation is not serialized)
         private void OnEnable()
         {
-            totalClickCount = 0;
             button.onClick.AddListener(OnClick);
         }
 
