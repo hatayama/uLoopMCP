@@ -26,18 +26,23 @@ uloop screenshot --capture-mode rendering --annotate-elements
 ```
 
 From the `AnnotatedElements` array in the response, extract `SimX` and `SimY` for:
-- **ClickButton1** — the button to click
+- **ClickButton1** — red button
+- **ClickButton2** — blue button
 - **DropZone** — the drag target area
 - **RedBox** — red draggable box
 - **GreenBox** — green draggable box
 - **BlueBox** — blue draggable box
 
-### Step 2: Click the button 10 times
+### Step 2: Alternate-click both buttons 10 times total
 
-Click **ClickButton1** 10 times:
+Click **ClickButton1** and **ClickButton2** alternately (5 times each, 10 total). Fire all clicks as fast as possible — launch each click command immediately without waiting for output or adding delays:
 
 ```bash
 uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
+uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY>
+uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
+uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY>
+...
 ```
 
 ### Step 3: Drag each colored box to the DropZone
