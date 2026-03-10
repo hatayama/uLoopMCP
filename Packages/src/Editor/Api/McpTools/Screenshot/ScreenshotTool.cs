@@ -56,18 +56,18 @@ namespace io.github.hatayama.uLoopMCP
             List<UIElementInfo> annotatedElements = new List<UIElementInfo>();
             GameObject annotationOverlay = null;
 
-            if (parameters.AnnotateElements)
-            {
-                annotatedElements = UIElementAnnotator.CollectInteractiveElements();
-                annotationOverlay = UIElementAnnotator.CreateAnnotationOverlay(annotatedElements);
-                // Wait 1 frame for the overlay Canvas to render into the RT
-                await EditorDelay.DelayFrame(1, ct);
-            }
-
             Texture2D texture;
             int yOffset;
             try
             {
+                if (parameters.AnnotateElements)
+                {
+                    annotatedElements = UIElementAnnotator.CollectInteractiveElements();
+                    annotationOverlay = UIElementAnnotator.CreateAnnotationOverlay(annotatedElements);
+                    // Wait 1 frame for the overlay Canvas to render into the RT
+                    await EditorDelay.DelayFrame(1, ct);
+                }
+
                 (texture, yOffset) = await EditorWindowCaptureUtility.CaptureGameRenderingAsync(
                     parameters.ResolutionScale, ct);
             }

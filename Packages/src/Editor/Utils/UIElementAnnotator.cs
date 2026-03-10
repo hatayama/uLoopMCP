@@ -138,7 +138,7 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            if (!GetScreenCorners(rectTransform, canvas.rootCanvas))
+            if (!GetScreenCorners(rectTransform, canvas))
             {
                 return;
             }
@@ -172,11 +172,11 @@ namespace io.github.hatayama.uLoopMCP
         // For ScreenSpaceOverlay: world corners == screen pixels.
         // For Camera/WorldSpace: projects through the canvas camera.
         // Returns false when the canvas camera is unavailable for non-overlay canvases.
-        private static bool GetScreenCorners(RectTransform rectTransform, Canvas rootCanvas)
+        private static bool GetScreenCorners(RectTransform rectTransform, Canvas canvas)
         {
             rectTransform.GetWorldCorners(SharedWorldCorners);
 
-            if (rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            if (canvas.renderMode == RenderMode.ScreenSpaceOverlay)
             {
                 for (int i = 0; i < 4; i++)
                 {
@@ -185,7 +185,17 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                Camera cam = rootCanvas.worldCamera;
+                // Prefer the rendering canvas's camera; fall back to root canvas, then Camera.main
+                Camera cam = canvas.worldCamera;
+                if (cam == null)
+                {
+                    Canvas rootCanvas = canvas.rootCanvas;
+                    if (rootCanvas != canvas)
+                    {
+                        cam = rootCanvas.worldCamera;
+                    }
+                }
+
                 if (cam == null)
                 {
                     cam = Camera.main;

@@ -251,8 +251,8 @@ namespace io.github.hatayama.uLoopMCP
 
                 return new SimulateMouseResponse
                 {
-                    Success = false,
-                    Message = $"No draggable UI element at ({inputStart.x:F1}, {inputStart.y:F1}) - drag not performed",
+                    Success = true,
+                    Message = $"Dragged from ({inputStart.x:F1}, {inputStart.y:F1}) to ({inputEnd.x:F1}, {inputEnd.y:F1}) - no draggable UI element hit",
                     Action = MouseAction.Drag.ToString(),
                     PositionX = inputStart.x,
                     PositionY = inputStart.y,
