@@ -34,23 +34,15 @@ From the `AnnotatedElements` array in the response, extract `SimX` and `SimY` fo
 
 ### Step 2: Click the button 10 times
 
-Click **ClickButton1** 10 times to bring Total Clicks to 10:
+Click **ClickButton1** 10 times:
 
 ```bash
 uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
 ```
 
-Repeat 10 times. After all clicks, take a verification screenshot:
-
-```bash
-uloop screenshot --capture-mode rendering
-```
-
-Confirm the counter shows 10.
-
 ### Step 3: Drag each colored box to the DropZone
 
-Drag each box to the DropZone at `--drag-speed 500` (moderate speed for visibility):
+Drag each box to the DropZone at `--drag-speed 500`:
 
 ```bash
 uloop simulate-mouse --action Drag \
@@ -69,12 +61,6 @@ uloop simulate-mouse --action Drag \
     --drag-speed 500
 ```
 
-### Step 4: Final verification
+### Step 4: Report
 
-Take a final screenshot and confirm all 3 boxes have been moved to the DropZone:
-
-```bash
-uloop screenshot --capture-mode rendering
-```
-
-Report the results: how many clicks were registered and whether all boxes reached the DropZone.
+Report the results from each command's response (hit element names, success/failure).

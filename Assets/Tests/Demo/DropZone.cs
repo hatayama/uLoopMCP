@@ -1,11 +1,12 @@
 #nullable enable
 using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    public class DropZone : MonoBehaviour
+    public class DropZone : MonoBehaviour, IDropHandler
     {
         [SerializeField] private Text? statusText;
         [SerializeField] private Color highlightColor = new Color(0.5f, 1f, 0.5f, 1f);
@@ -24,6 +25,16 @@ namespace io.github.hatayama.uLoopMCP
         public bool ContainsScreenPoint(Vector2 screenPoint)
         {
             return RectTransformUtility.RectangleContainsScreenPoint(rectTransform, screenPoint);
+        }
+
+        // UIElementAnnotator detects IDropHandler to list this as a "DropTarget" in annotated screenshots
+        public void OnDrop(PointerEventData eventData)
+        {
+            GameObject? dragged = eventData.pointerDrag;
+            if (dragged != null)
+            {
+                OnItemDropped(dragged);
+            }
         }
 
         public void OnItemDropped(GameObject item)
