@@ -44,36 +44,18 @@ From the `AnnotatedElements` array in the response, extract `SimX` and `SimY` fo
 - **GreenBox** — green draggable box
 - **BlueBox** — blue draggable box
 
-### Step 2: Click buttons — sequential execution
+### Step 2: Click buttons and drag boxes — chain all in one Bash call
 
-Run each click **one at a time**, waiting for the previous command to finish before starting the next. The simulate-mouse tool uses a single-pointer model, so concurrent actions would produce nondeterministic results.
+**IMPORTANT**: Chain all commands with `&&` in a **single Bash tool call** to eliminate round-trip latency between operations. The simulate-mouse tool uses a single-pointer model, so commands must run sequentially (not in parallel), but chaining avoids AI round-trip delays.
 
-Alternate ClickButton1 and ClickButton2, 4 times total:
-
-```bash
-uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
-uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY>
-uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
-uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY>
-```
-
-### Step 3: Drag boxes — sequential execution
-
-Drag each box to the DropZone **one at a time** at `--drag-speed 1000`. Offset drop X by -50/0/+50 so the boxes converge slightly toward center:
+Alternate ClickButton1 and ClickButton2 4 times, then drag each box to the DropZone at `--drag-speed 1000`. Offset drop X by -50/0/+50 so the boxes converge slightly toward center:
 
 ```bash
-uloop simulate-mouse --action Drag \
-    --x <RedBox.SimX> --y <RedBox.SimY> \
-    --end-x <DropZone.SimX - 50> --end-y <DropZone.SimY> \
-    --drag-speed 1000
-
-uloop simulate-mouse --action Drag \
-    --x <GreenBox.SimX> --y <GreenBox.SimY> \
-    --end-x <DropZone.SimX> --end-y <DropZone.SimY> \
-    --drag-speed 1000
-
-uloop simulate-mouse --action Drag \
-    --x <BlueBox.SimX> --y <BlueBox.SimY> \
-    --end-x <DropZone.SimX + 50> --end-y <DropZone.SimY> \
-    --drag-speed 1000
+uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && \
+uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && \
+uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && \
+uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && \
+uloop simulate-mouse --action Drag --x <RedBox.SimX> --y <RedBox.SimY> --end-x <DropZone.SimX - 50> --end-y <DropZone.SimY> --drag-speed 1000 && \
+uloop simulate-mouse --action Drag --x <GreenBox.SimX> --y <GreenBox.SimY> --end-x <DropZone.SimX> --end-y <DropZone.SimY> --drag-speed 1000 && \
+uloop simulate-mouse --action Drag --x <BlueBox.SimX> --y <BlueBox.SimY> --end-x <DropZone.SimX + 50> --end-y <DropZone.SimY> --drag-speed 1000
 ```
