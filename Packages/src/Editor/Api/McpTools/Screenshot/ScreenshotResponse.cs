@@ -11,14 +11,21 @@ namespace io.github.hatayama.uLoopMCP
         public int Width { get; set; }
         public int Height { get; set; }
 
-        // "gameView": pixel coordinates match simulate-mouse input (divide by ResolutionScale if != 1.0)
+        // "gameView": image from game RenderTexture. Convert to simulate-mouse coords:
+        //   sim_x = image_x / ResolutionScale
+        //   sim_y = image_y / ResolutionScale + YOffset
         // "window": EditorWindow capture including toolbar
         public string CoordinateSystem { get; set; } = McpConstants.COORDINATE_SYSTEM_WINDOW;
 
         public float ResolutionScale { get; set; } = 1.0f;
 
+        // Y offset to add to image pixel Y to get simulate-mouse Y coordinate.
+        // Only meaningful when CoordinateSystem == "gameView".
+        public int YOffset { get; set; }
+
         public ScreenshotInfo(string imagePath, long fileSizeBytes, int width, int height,
-            string coordinateSystem = McpConstants.COORDINATE_SYSTEM_WINDOW, float resolutionScale = 1.0f)
+            string coordinateSystem = McpConstants.COORDINATE_SYSTEM_WINDOW,
+            float resolutionScale = 1.0f, int yOffset = 0)
         {
             ImagePath = imagePath;
             FileSizeBytes = fileSizeBytes;
@@ -26,6 +33,7 @@ namespace io.github.hatayama.uLoopMCP
             Height = height;
             CoordinateSystem = coordinateSystem;
             ResolutionScale = resolutionScale;
+            YOffset = yOffset;
         }
 
         public ScreenshotInfo()

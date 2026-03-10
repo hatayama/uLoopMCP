@@ -135,25 +135,48 @@ namespace io.github.hatayama.uLoopMCP
             return names.ToArray();
         }
 
-        // Captures game rendering via ScreenCapture API (PlayMode only).
-        // Output size = Screen.width × Screen.height, matching simulate-mouse coordinate space.
-        public static async Task<Texture2D> CaptureGameRenderingAsync(float resolutionScale, CancellationToken ct)
+        // Captures game rendering by reading GameView's composited RenderTexture (PlayMode only).
+        // Contains all cameras + Screen Space Overlay Canvas, without tab bar or borders.
+        // Coordinate mapping to simulate-mouse:
+        //   sim_x = image_x / resolutionScale, sim_y = image_y / resolutionScale + YOffset
+        // where YOffset = Screen.height - RenderTexture.height (returned in the tuple).
+        public static async Task<(Texture2D texture, int yOffset)> CaptureGameRenderingAsync(float resolutionScale, CancellationToken ct)
         {
             Debug.Assert(UnityEditor.EditorApplication.isPlaying, "CaptureGameRenderingAsync requires PlayMode");
 
-            // ScreenCapture captures the last rendered frame; wait 2 frames to ensure
-            // the game camera has completed at least one full render cycle after any state change
+            // Wait for the game camera to complete at least one full render cycle after any state change
             await EditorDelay.DelayFrame(2, ct);
 
-            Texture2D texture = ScreenCapture.CaptureScreenshotAsTexture();
-            Debug.Assert(texture != null, "ScreenCapture.CaptureScreenshotAsTexture() must return a valid texture in PlayMode");
+            RenderTexture rt = GameViewBridge.GetRenderTexture();
+            Debug.Assert(rt != null, "GameView RenderTexture must be available in PlayMode");
+
+            int yOffset = Screen.height - rt.height;
+
+            // RenderTexture uses bottom-left origin; flip vertically for standard top-left image format
+            RenderTextureDescriptor flipDescriptor = new RenderTextureDescriptor(rt.width, rt.height, rt.format, 0);
+            if (QualitySettings.activeColorSpace == ColorSpace.Linear)
+            {
+                flipDescriptor.sRGB = false;
+            }
+            RenderTexture flipped = RenderTexture.GetTemporary(flipDescriptor);
+            Graphics.Blit(rt, flipped, new Vector2(1f, -1f), new Vector2(0f, 1f));
+
+            RenderTexture previousActive = RenderTexture.active;
+            RenderTexture.active = flipped;
+
+            Texture2D texture = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
+            texture.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+            texture.Apply();
+
+            RenderTexture.active = previousActive;
+            RenderTexture.ReleaseTemporary(flipped);
 
             if (!Mathf.Approximately(resolutionScale, 1.0f))
             {
                 texture = ApplyResolutionScaling(texture, resolutionScale);
             }
 
-            return texture;
+            return (texture, yOffset);
         }
 
         private static Texture2D ApplyResolutionScaling(Texture2D originalTexture, float scale)

@@ -403,7 +403,7 @@
           },
           "CaptureMode": {
             "type": "string",
-            "description": "Capture mode: window=capture EditorWindow including toolbar, rendering=capture game rendering only (PlayMode required, coordinates match simulate-mouse). Response includes CoordinateSystem ('gameView' or 'window') and ResolutionScale fields.",
+            "description": "Capture mode: window=capture EditorWindow including toolbar, rendering=capture game rendering only (PlayMode required). Response includes CoordinateSystem ('gameView' or 'window'), ResolutionScale, and YOffset. For gameView: sim_x = image_x / ResolutionScale, sim_y = image_y / ResolutionScale + YOffset.",
             "enum": [
               "window",
               "rendering"

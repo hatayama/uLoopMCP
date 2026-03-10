@@ -73,8 +73,20 @@ Returns JSON with:
   - `FileSizeBytes`: Size of the saved file in bytes
   - `Width`: Captured image width in pixels
   - `Height`: Captured image height in pixels
-  - `CoordinateSystem`: `"gameView"` (pixel coords match simulate-mouse) or `"window"` (EditorWindow capture)
-  - `ResolutionScale`: Resolution scale used for capture (divide pixel coords by this value for simulate-mouse coords when != 1.0)
+  - `CoordinateSystem`: `"gameView"` (pixel coords usable with simulate-mouse) or `"window"` (EditorWindow capture)
+  - `ResolutionScale`: Resolution scale used for capture
+  - `YOffset`: Y offset to add to image pixel Y to get simulate-mouse Y coordinate (only meaningful when `CoordinateSystem` is `"gameView"`)
+
+### Coordinate Conversion (gameView)
+
+When `CoordinateSystem` is `"gameView"`, convert image pixel coordinates to simulate-mouse coordinates:
+
+```
+sim_x = image_x / ResolutionScale
+sim_y = image_y / ResolutionScale + YOffset
+```
+
+When `ResolutionScale` is 1.0, this simplifies to `sim_x = image_x`, `sim_y = image_y + YOffset`.
 
 When multiple windows match (e.g., multiple Inspector windows or when using `contains` mode), all matching windows are captured with numbered filenames (e.g., `Inspector_1_*.png`, `Inspector_2_*.png`).
 

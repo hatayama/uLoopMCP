@@ -53,7 +53,7 @@ namespace io.github.hatayama.uLoopMCP
                 return new ScreenshotResponse();
             }
 
-            Texture2D texture = await EditorWindowCaptureUtility.CaptureGameRenderingAsync(
+            (Texture2D texture, int yOffset) = await EditorWindowCaptureUtility.CaptureGameRenderingAsync(
                 parameters.ResolutionScale, ct);
 
             string outputDirectory = EnsureOutputDirectoryExists(parameters.OutputDirectory);
@@ -71,7 +71,7 @@ namespace io.github.hatayama.uLoopMCP
                 FileInfo savedFileInfo = new FileInfo(savedPath);
                 screenshots.Add(new ScreenshotInfo(
                     savedPath, savedFileInfo.Length, width, height,
-                    McpConstants.COORDINATE_SYSTEM_GAME_VIEW, parameters.ResolutionScale));
+                    McpConstants.COORDINATE_SYSTEM_GAME_VIEW, parameters.ResolutionScale, yOffset));
             }
             catch (Exception ex)
             {
