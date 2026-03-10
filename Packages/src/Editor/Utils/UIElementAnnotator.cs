@@ -28,7 +28,7 @@ namespace io.github.hatayama.uLoopMCP
             HashSet<GameObject> processedObjects = new HashSet<GameObject>();
 
             CollectSelectables(elements, processedObjects);
-            CollectDragAndDropHandlers(elements, processedObjects);
+            CollectEventHandlers(elements, processedObjects);
 
             return elements;
         }
@@ -77,7 +77,9 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private static void CollectDragAndDropHandlers(List<UIElementInfo> elements, HashSet<GameObject> processedObjects)
+        // Collects non-Selectable MonoBehaviours that implement pointer/drag event interfaces.
+        // Priority: IDragHandler > IDropHandler > IPointerClickHandler > IPointerDownHandler
+        private static void CollectEventHandlers(List<UIElementInfo> elements, HashSet<GameObject> processedObjects)
         {
             MonoBehaviour[] allBehaviours = Object.FindObjectsOfType<MonoBehaviour>();
             foreach (MonoBehaviour behaviour in allBehaviours)
@@ -92,19 +94,24 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
                 }
 
-                // IDragHandler takes precedence over IDropHandler because drag interaction
-                // is the primary action an AI agent would perform on the element
-                if (behaviour is IDragHandler)
+                string type = ClassifyEventHandler(behaviour);
+                if (type == null)
                 {
-                    processedObjects.Add(behaviour.gameObject);
-                    AddElementInfo(elements, behaviour.gameObject, behaviour.name, "Draggable");
+                    continue;
                 }
-                else if (behaviour is IDropHandler)
-                {
-                    processedObjects.Add(behaviour.gameObject);
-                    AddElementInfo(elements, behaviour.gameObject, behaviour.name, "DropTarget");
-                }
+
+                processedObjects.Add(behaviour.gameObject);
+                AddElementInfo(elements, behaviour.gameObject, behaviour.name, type);
             }
+        }
+
+        private static string ClassifyEventHandler(MonoBehaviour behaviour)
+        {
+            if (behaviour is IDragHandler) return "Draggable";
+            if (behaviour is IDropHandler) return "DropTarget";
+            if (behaviour is IPointerClickHandler) return "Button";
+            if (behaviour is IPointerDownHandler) return "Button";
+            return null;
         }
 
         private static string ClassifySelectable(Selectable selectable)

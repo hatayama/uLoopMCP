@@ -263,6 +263,7 @@ namespace io.github.hatayama.uLoopMCP
 
             PointerEventData pointerData = InitiateDrag(eventSystem, screenStart, hit!.Value, target);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
+            pointerData.dragging = true;
 
             SimulateMouseOverlayState.Update(
                 MouseAction.Drag, inputStart, inputStart, target.name);
@@ -313,6 +314,7 @@ namespace io.github.hatayama.uLoopMCP
                 ExecuteEvents.ExecuteHierarchy(dropTarget, pointerData, ExecuteEvents.dropHandler);
             }
 
+            pointerData.dragging = false;
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.endDragHandler);
         }
 
@@ -417,6 +419,7 @@ namespace io.github.hatayama.uLoopMCP
 
             PointerEventData pointerData = InitiateDrag(eventSystem, screenPos, hit!.Value, target);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
+            pointerData.dragging = true;
 
             MouseDragState.Target = target;
             MouseDragState.PointerData = pointerData;
