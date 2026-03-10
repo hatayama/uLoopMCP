@@ -23,6 +23,8 @@ namespace io.github.hatayama.uLoopMCP
         {
             startPosition = rectTransform.anchoredPosition;
             canvasGroup.alpha = 0.6f;
+            // Let raycasts pass through to the DropZone underneath during drag
+            canvasGroup.blocksRaycasts = false;
             rectTransform.localScale = Vector3.one * 1.1f;
 
             Debug.Log($"[Demo] BeginDrag: {gameObject.name} at {startPosition}");
@@ -35,6 +37,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public void OnEndDrag(PointerEventData eventData)
         {
+            canvasGroup.blocksRaycasts = true;
             canvasGroup.alpha = 1f;
             rectTransform.localScale = Vector3.one;
 
