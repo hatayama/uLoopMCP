@@ -65,7 +65,7 @@ namespace io.github.hatayama.uLoopMCP
             Selectable[] selectables = Selectable.allSelectablesArray;
             foreach (Selectable selectable in selectables)
             {
-                if (!selectable.IsInteractable() || !selectable.gameObject.activeInHierarchy)
+                if (!selectable.IsInteractable() || !selectable.isActiveAndEnabled)
                 {
                     continue;
                 }
@@ -82,7 +82,7 @@ namespace io.github.hatayama.uLoopMCP
             MonoBehaviour[] allBehaviours = Object.FindObjectsOfType<MonoBehaviour>();
             foreach (MonoBehaviour behaviour in allBehaviours)
             {
-                if (!behaviour.gameObject.activeInHierarchy)
+                if (!behaviour.isActiveAndEnabled)
                 {
                     continue;
                 }
@@ -138,6 +138,12 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            // EventSystem.RaycastAll only hits elements under a Canvas with an enabled GraphicRaycaster
+            if (!HasActiveGraphicRaycaster(canvas))
+            {
+                return;
+            }
+
             if (!GetScreenCorners(rectTransform, canvas))
             {
                 return;
@@ -166,6 +172,12 @@ namespace io.github.hatayama.uLoopMCP
                 BoundsMaxX = maxX,
                 BoundsMaxY = Screen.height - minY
             });
+        }
+
+        private static bool HasActiveGraphicRaycaster(Canvas canvas)
+        {
+            GraphicRaycaster raycaster = canvas.GetComponent<GraphicRaycaster>();
+            return raycaster != null && raycaster.isActiveAndEnabled;
         }
 
         // Writes 4 corners into SharedScreenCorners in screen pixel coordinates (bottom-left origin).

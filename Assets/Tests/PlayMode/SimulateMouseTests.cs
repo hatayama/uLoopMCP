@@ -168,22 +168,24 @@ namespace Tests.PlayMode
             yield return null;
 
             Vector2 screenPos = GetScreenPosition(tracker.gameObject);
-            float endX = screenPos.x + 150f;
-            float endY = screenPos.y + 50f;
+            Vector2 endScreenPos = screenPos + new Vector2(150f, 50f);
+
+            // simulate-mouse uses top-left origin; convert from Unity screen space (bottom-left origin)
+            Vector2 startInputPos = ScreenToInput(screenPos);
+            Vector2 endInputPos = ScreenToInput(endScreenPos);
 
             yield return RunTool(new JObject
             {
                 ["action"] = MouseAction.Drag.ToString(),
-                ["x"] = screenPos.x,
-                ["y"] = screenPos.y,
-                ["endX"] = endX,
-                ["endY"] = endY,
+                ["x"] = startInputPos.x,
+                ["y"] = startInputPos.y,
+                ["endX"] = endInputPos.x,
+                ["endY"] = endInputPos.y,
                 ["dragSpeed"] = 1000f
             });
 
             Assert.IsTrue(lastResponse.Success);
-            Vector2 expectedEnd = new Vector2(endX, endY);
-            Assert.AreEqual(expectedEnd, tracker.LastDragPosition, "Final drag position should match end position exactly");
+            Assert.AreEqual(endScreenPos, tracker.LastDragPosition, "Final drag position should match end position exactly");
         }
 
         #endregion
@@ -394,6 +396,12 @@ namespace Tests.PlayMode
         private Vector2 GetScreenPosition(GameObject go)
         {
             return (Vector2)go.GetComponent<RectTransform>().position;
+        }
+
+        // simulate-mouse uses top-left origin; Unity screen space uses bottom-left origin
+        private Vector2 ScreenToInput(Vector2 screenPos)
+        {
+            return new Vector2(screenPos.x, Screen.height - screenPos.y);
         }
 
         private DragTracker lastDragTracker = null!;
