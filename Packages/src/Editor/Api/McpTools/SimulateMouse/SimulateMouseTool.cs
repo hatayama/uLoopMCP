@@ -88,6 +88,18 @@ namespace io.github.hatayama.uLoopMCP
             return response;
         }
 
+        private static void EnsureOverlayExists()
+        {
+            if (SimulateMouseOverlay.Instance != null)
+            {
+                return;
+            }
+
+            GameObject overlayGo = new GameObject("SimulateMouseOverlay");
+            overlayGo.hideFlags = HideFlags.HideAndDontSave;
+            overlayGo.AddComponent<SimulateMouseOverlay>();
+        }
+
         private SimulateMouseResponse ExecuteClick(SimulateMouseSchema parameters, EventSystem eventSystem)
         {
             Vector2 screenPos = new Vector2(parameters.X, parameters.Y);
@@ -101,6 +113,10 @@ namespace io.github.hatayama.uLoopMCP
             };
 
             GameObject? target = null;
+
+            EnsureOverlayExists();
+            SimulateMouseOverlayState.Update(
+                MouseAction.Click, screenPos, null, null);
 
             if (hit != null)
             {
@@ -131,6 +147,10 @@ namespace io.github.hatayama.uLoopMCP
                     ExecuteEvents.Execute(clickTarget, pointerData, ExecuteEvents.pointerClickHandler);
                 }
             }
+
+            SimulateMouseOverlayState.Update(
+                MouseAction.Click, screenPos, null,
+                target != null ? target.name : null);
 
             return new SimulateMouseResponse
             {
@@ -199,8 +219,13 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
+            EnsureOverlayExists();
+
             PointerEventData pointerData = InitiateDrag(eventSystem, startPos, hit!.Value, target);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
+
+            SimulateMouseOverlayState.Update(
+                MouseAction.Drag, startPos, startPos, target.name);
 
             try
             {
@@ -210,6 +235,8 @@ namespace io.github.hatayama.uLoopMCP
             finally
             {
                 FinalizeDrag(pointerData, target);
+                SimulateMouseOverlayState.Update(
+                    MouseAction.Drag, endPos, startPos, target.name);
             }
 
             return new SimulateMouseResponse
@@ -257,6 +284,8 @@ namespace io.github.hatayama.uLoopMCP
                 pointerData.position = endPos;
                 pointerData.delta = endPos - previousPosition;
                 ExecuteEvents.Execute(target, pointerData, ExecuteEvents.dragHandler);
+
+                SimulateMouseOverlayState.UpdatePosition(endPos);
             }
             else
             {
@@ -276,6 +305,8 @@ namespace io.github.hatayama.uLoopMCP
                     pointerData.delta = currentPosition - previousPosition;
 
                     ExecuteEvents.Execute(target, pointerData, ExecuteEvents.dragHandler);
+
+                    SimulateMouseOverlayState.UpdatePosition(currentPosition);
                 }
                 while (t < 1.0f);
             }
@@ -314,11 +345,16 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
+            EnsureOverlayExists();
+
             PointerEventData pointerData = InitiateDrag(eventSystem, screenPos, hit!.Value, target);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
 
             MouseDragState.Target = target;
             MouseDragState.PointerData = pointerData;
+
+            SimulateMouseOverlayState.Update(
+                MouseAction.DragStart, screenPos, screenPos, target.name);
 
             return new SimulateMouseResponse
             {
@@ -350,6 +386,12 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(MouseDragState.PointerData != null, "PointerData must not be null when IsDragging is true");
 
             Vector2 endPos = new Vector2(parameters.X, parameters.Y);
+
+            SimulateMouseOverlayState.Update(
+                MouseAction.DragMove,
+                MouseDragState.PointerData!.position,
+                SimulateMouseOverlayState.DragStartPosition,
+                MouseDragState.Target!.name);
 
             // Cancellation leaves drag state intact so the user can continue with DragMove/DragEnd
             await InterpolateDragPosition(
@@ -388,6 +430,12 @@ namespace io.github.hatayama.uLoopMCP
             Vector2 endPos = new Vector2(parameters.X, parameters.Y);
             string targetName = MouseDragState.Target!.name;
 
+            SimulateMouseOverlayState.Update(
+                MouseAction.DragEnd,
+                MouseDragState.PointerData!.position,
+                SimulateMouseOverlayState.DragStartPosition,
+                targetName);
+
             try
             {
                 await InterpolateDragPosition(
@@ -399,6 +447,9 @@ namespace io.github.hatayama.uLoopMCP
             {
                 FinalizeDrag(MouseDragState.PointerData!, MouseDragState.Target!);
                 MouseDragState.Clear();
+
+                SimulateMouseOverlayState.Update(
+                    MouseAction.DragEnd, endPos, null, targetName);
             }
 
             return new SimulateMouseResponse

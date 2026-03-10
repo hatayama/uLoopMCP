@@ -5,6 +5,7 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "uLoopMCP.Editor",
+        "uLoopMCP.Runtime",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

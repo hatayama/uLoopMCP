@@ -2,15 +2,6 @@ using System.ComponentModel;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    public enum MouseAction
-    {
-        Click = 0,
-        Drag = 1,
-        DragStart = 2,
-        DragMove = 3,
-        DragEnd = 4
-    }
-
     public class SimulateMouseSchema : BaseToolSchema
     {
         [Description("Mouse action: Click(0) - left click, Drag(1) - one-shot drag, DragStart(2) - begin drag and hold, DragMove(3) - move while holding drag, DragEnd(4) - release drag")]

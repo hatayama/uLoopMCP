@@ -31,6 +31,7 @@ namespace io.github.hatayama.uLoopMCP
             if (state == PlayModeStateChange.ExitingPlayMode)
             {
                 Clear();
+                SimulateMouseOverlayState.Clear();
             }
         }
     }

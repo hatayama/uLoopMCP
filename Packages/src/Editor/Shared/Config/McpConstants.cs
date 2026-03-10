@@ -169,7 +169,7 @@ namespace io.github.hatayama.uLoopMCP
         // Test constants
         public const int TEST_COMPILE_TIMEOUT_MS = 5000; // 5 seconds for test compilation
 
-        // SimulateMouse drag constants
+        // SimulateMouse constants
         public const float SIMULATE_MOUSE_DEFAULT_DRAG_SPEED = 2000f;
 
         // Compile tool constants
