@@ -28,7 +28,7 @@ namespace io.github.hatayama.uLoopMCP
         [Description("End Y position in screen pixels for Drag action (origin: bottom-left)")]
         public float EndY { get; set; } = 0f;
 
-        [Description("Number of intermediate drag steps for Drag action (higher = smoother, each step = 1 frame)")]
-        public int DragSteps { get; set; } = 5;
+        [Description("Drag speed in pixels per second (0 for instant). Applies to Drag action only.")]
+        public float DragSpeed { get; set; } = McpConstants.SIMULATE_MOUSE_DEFAULT_DRAG_SPEED;
     }
 }

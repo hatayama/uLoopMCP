@@ -22,7 +22,7 @@ uloop simulate-mouse --action <action> --x <x> --y <y> [options]
 | `--y` | number | `0` | Y position in screen pixels (origin: bottom-left) |
 | `--end-x` | number | `0` | End X position for Drag action |
 | `--end-y` | number | `0` | End Y position for Drag action |
-| `--drag-steps` | number | `5` | Intermediate steps for Drag action (each step = 1 frame) |
+| `--drag-speed` | number | `1000` | Drag speed in pixels per second (0 for instant). Applies to Drag action only. |
 
 ## Global Options
 
@@ -36,7 +36,7 @@ uloop simulate-mouse --action <action> --x <x> --y <y> [options]
 | Action | Event Fired | Description |
 |--------|-------------|-------------|
 | `Click` | PointerDown → PointerUp → PointerClick | Left click at (x, y) |
-| `Drag` | BeginDrag → Drag×N → EndDrag | One-shot drag from (x, y) to (endX, endY), spread across frames |
+| `Drag` | BeginDrag → Drag×N → EndDrag | One-shot drag from (x, y) to (endX, endY) at the specified speed |
 | `DragStart` | BeginDrag | Begin drag at (x, y) and hold |
 | `DragMove` | Drag | Move while holding drag to (x, y) |
 | `DragEnd` | EndDrag | Release drag at (x, y) |
@@ -55,6 +55,9 @@ uloop simulate-mouse --action Click --x 400 --y 300
 
 # One-shot drag (start to end in one call)
 uloop simulate-mouse --action Drag --x 400 --y 300 --end-x 600 --end-y 300
+
+# Slow drag for visual inspection
+uloop simulate-mouse --action Drag --x 400 --y 300 --end-x 600 --end-y 300 --drag-speed 200
 
 # Split drag with hold (for inspection between steps)
 uloop simulate-mouse --action DragStart --x 400 --y 300
@@ -77,6 +80,6 @@ Returns JSON with:
 
 - All positions use screen pixel coordinates with bottom-left as origin (0, 0)
 - Click and DragStart use `EventSystem.RaycastAll()` to find the UI element at the given position
-- One-shot Drag spreads events across multiple frames (1 frame per step) for correct UI updates
+- One-shot Drag interpolates position every frame at the specified speed (pixels/sec), so short and long drags move at the same visual speed
 - DragStart/DragMove/DragEnd maintain state between calls for hold-and-inspect workflows
 - Use `find-game-objects` or `get-hierarchy` to discover scene objects, and `screenshot` to see their positions

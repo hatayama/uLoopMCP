@@ -98,7 +98,6 @@ namespace Tests.PlayMode
             Vector2 screenPos = GetScreenPosition(tracker.gameObject);
             float endX = screenPos.x + 100f;
             float endY = screenPos.y;
-            int dragSteps = 3;
 
             yield return RunTool(new JObject
             {
@@ -107,12 +106,12 @@ namespace Tests.PlayMode
                 ["y"] = screenPos.y,
                 ["endX"] = endX,
                 ["endY"] = endY,
-                ["dragSteps"] = dragSteps
+                ["dragSpeed"] = 1000f
             });
 
             Assert.IsTrue(lastResponse.Success);
             Assert.IsTrue(tracker.BeginDragCalled, "BeginDrag should be fired");
-            Assert.AreEqual(dragSteps, tracker.DragCallCount, $"Drag should be fired {dragSteps} times");
+            Assert.IsTrue(tracker.DragCallCount >= 1, "At least one drag event should be fired");
             Assert.IsTrue(tracker.EndDragCalled, "EndDrag should be fired");
             Assert.AreEqual("DragTarget", lastResponse.HitGameObjectName);
         }
@@ -129,11 +128,62 @@ namespace Tests.PlayMode
                 ["y"] = 1,
                 ["endX"] = 100,
                 ["endY"] = 100,
-                ["dragSteps"] = 3
+                ["dragSpeed"] = 1000f
             });
 
             Assert.IsTrue(lastResponse.Success);
             Assert.IsNull(lastResponse.HitGameObjectName);
+        }
+
+        [UnityTest]
+        public IEnumerator DragOneShot_WithZeroSpeed_Should_CompleteInMinimalFrames()
+        {
+            DragTracker tracker = CreateDraggableElement("DragTarget", Vector2.zero, new Vector2(200, 100));
+            yield return null;
+
+            Vector2 screenPos = GetScreenPosition(tracker.gameObject);
+            float endX = screenPos.x + 100f;
+            float endY = screenPos.y;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = MouseAction.Drag.ToString(),
+                ["x"] = screenPos.x,
+                ["y"] = screenPos.y,
+                ["endX"] = endX,
+                ["endY"] = endY,
+                ["dragSpeed"] = 0f
+            });
+
+            Assert.IsTrue(lastResponse.Success);
+            Assert.IsTrue(tracker.BeginDragCalled, "BeginDrag should be fired");
+            Assert.AreEqual(1, tracker.DragCallCount, "Exactly one drag event should be fired for instant drag");
+            Assert.IsTrue(tracker.EndDragCalled, "EndDrag should be fired");
+        }
+
+        [UnityTest]
+        public IEnumerator DragOneShot_Should_EndAtExactPosition()
+        {
+            DragTracker tracker = CreateDraggableElement("DragTarget", Vector2.zero, new Vector2(200, 100));
+            yield return null;
+
+            Vector2 screenPos = GetScreenPosition(tracker.gameObject);
+            float endX = screenPos.x + 150f;
+            float endY = screenPos.y + 50f;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = MouseAction.Drag.ToString(),
+                ["x"] = screenPos.x,
+                ["y"] = screenPos.y,
+                ["endX"] = endX,
+                ["endY"] = endY,
+                ["dragSpeed"] = 1000f
+            });
+
+            Assert.IsTrue(lastResponse.Success);
+            Vector2 expectedEnd = new Vector2(endX, endY);
+            Assert.AreEqual(expectedEnd, tracker.LastDragPosition, "Final drag position should match end position exactly");
         }
 
         #endregion
@@ -311,6 +361,7 @@ namespace Tests.PlayMode
         public bool BeginDragCalled { get; private set; }
         public bool EndDragCalled { get; private set; }
         public int DragCallCount { get; private set; }
+        public Vector2 LastDragPosition { get; private set; }
 
         private RectTransform rectTransform = null!;
         private Canvas canvas = null!;
@@ -326,6 +377,7 @@ namespace Tests.PlayMode
         public void OnDrag(PointerEventData eventData)
         {
             DragCallCount++;
+            LastDragPosition = eventData.position;
             rectTransform.anchoredPosition += eventData.delta / canvas.scaleFactor;
         }
 

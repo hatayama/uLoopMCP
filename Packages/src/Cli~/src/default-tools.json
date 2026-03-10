@@ -498,10 +498,10 @@
             "description": "End Y position for Drag action (origin: bottom-left)",
             "default": 0
           },
-          "DragSteps": {
-            "type": "integer",
-            "description": "Intermediate drag steps for Drag action (each step = 1 frame)",
-            "default": 5
+          "DragSpeed": {
+            "type": "number",
+            "description": "Drag speed in pixels per second (0 for instant). Applies to Drag action only.",
+            "default": 1000
           }
         }
       }

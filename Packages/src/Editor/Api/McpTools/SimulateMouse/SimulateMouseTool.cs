@@ -176,7 +176,7 @@ namespace io.github.hatayama.uLoopMCP
         private async Task<SimulateMouseResponse> ExecuteDragOneShot(
             SimulateMouseSchema parameters, EventSystem eventSystem, CancellationToken ct)
         {
-            Debug.Assert(parameters.DragSteps > 0, "DragSteps must be positive");
+            Debug.Assert(parameters.DragSpeed >= 0f, "DragSpeed must be non-negative");
 
             Vector2 startPos = new Vector2(parameters.X, parameters.Y);
             Vector2 endPos = new Vector2(parameters.EndX, parameters.EndY);
@@ -204,47 +204,49 @@ namespace io.github.hatayama.uLoopMCP
             PointerEventData pointerData = InitiateDrag(eventSystem, startPos, hit!.Value, target);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
 
-            // Each drag step and EndDrag run on separate frames so Unity processes layout/physics between events
-            for (int i = 1; i <= parameters.DragSteps; i++)
+            float distance = Vector2.Distance(startPos, endPos);
+            float duration = parameters.DragSpeed > 0f ? distance / parameters.DragSpeed : 0f;
+
+            if (duration <= 0f)
             {
-                try
-                {
-                    await EditorDelay.DelayFrame(1, ct);
-                }
-                catch (OperationCanceledException)
-                {
-                    // Cancellation mid-drag must still complete the lifecycle to avoid leaving UI in a half-dragged state
-                    if (pointerData.pointerPress != null)
-                    {
-                        ExecuteEvents.Execute(pointerData.pointerPress, pointerData, ExecuteEvents.pointerUpHandler);
-                    }
-                    ExecuteEvents.Execute(target, pointerData, ExecuteEvents.endDragHandler);
-                    throw;
-                }
+                // Speed=0 or distance=0: skip interpolation but still fire one Drag event on a separate frame
+                await DelayFrameWithDragSafety(pointerData, target, ct);
 
-                float t = (float)i / parameters.DragSteps;
                 Vector2 previousPosition = pointerData.position;
-                Vector2 currentPosition = Vector2.Lerp(startPos, endPos, t);
-
-                pointerData.position = currentPosition;
-                pointerData.delta = currentPosition - previousPosition;
-
+                pointerData.position = endPos;
+                pointerData.delta = endPos - previousPosition;
                 ExecuteEvents.Execute(target, pointerData, ExecuteEvents.dragHandler);
+            }
+            else
+            {
+                float startTime = Time.realtimeSinceStartup;
+                float t;
+
+                do
+                {
+                    await DelayFrameWithDragSafety(pointerData, target, ct);
+
+                    float elapsed = Time.realtimeSinceStartup - startTime;
+                    t = Mathf.Clamp01(elapsed / duration);
+                    Vector2 previousPosition = pointerData.position;
+                    Vector2 currentPosition = Vector2.Lerp(startPos, endPos, t);
+
+                    pointerData.position = currentPosition;
+                    pointerData.delta = currentPosition - previousPosition;
+
+                    ExecuteEvents.Execute(target, pointerData, ExecuteEvents.dragHandler);
+                }
+                while (t < 1.0f);
             }
 
             await EditorDelay.DelayFrame(1, ct);
 
-            if (pointerData.pointerPress != null)
-            {
-                ExecuteEvents.Execute(pointerData.pointerPress, pointerData, ExecuteEvents.pointerUpHandler);
-            }
-
-            ExecuteEvents.Execute(target, pointerData, ExecuteEvents.endDragHandler);
+            FinalizeDrag(pointerData, target);
 
             return new SimulateMouseResponse
             {
                 Success = true,
-                Message = $"Dragged '{target.name}' from ({startPos.x:F1}, {startPos.y:F1}) to ({endPos.x:F1}, {endPos.y:F1}) in {parameters.DragSteps} steps",
+                Message = $"Dragged '{target.name}' from ({startPos.x:F1}, {startPos.y:F1}) to ({endPos.x:F1}, {endPos.y:F1}) at {parameters.DragSpeed:F0} px/s",
                 Action = MouseAction.Drag.ToString(),
                 HitGameObjectName = target.name,
                 PositionX = startPos.x,
@@ -252,6 +254,32 @@ namespace io.github.hatayama.uLoopMCP
                 EndPositionX = endPos.x,
                 EndPositionY = endPos.y
             };
+        }
+
+        // pointerUp must fire before endDrag to match StandaloneInputModule lifecycle
+        private void FinalizeDrag(PointerEventData pointerData, GameObject target)
+        {
+            if (pointerData.pointerPress != null)
+            {
+                ExecuteEvents.Execute(pointerData.pointerPress, pointerData, ExecuteEvents.pointerUpHandler);
+            }
+
+            ExecuteEvents.Execute(target, pointerData, ExecuteEvents.endDragHandler);
+        }
+
+        // Cancellation mid-drag must still complete the lifecycle to avoid leaving UI in a half-dragged state
+        private async Task DelayFrameWithDragSafety(
+            PointerEventData pointerData, GameObject target, CancellationToken ct)
+        {
+            try
+            {
+                await EditorDelay.DelayFrame(1, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                FinalizeDrag(pointerData, target);
+                throw;
+            }
         }
 
         private SimulateMouseResponse ExecuteDragStart(SimulateMouseSchema parameters, EventSystem eventSystem)
@@ -362,16 +390,7 @@ namespace io.github.hatayama.uLoopMCP
 
             string targetName = MouseDragState.Target!.name;
 
-            // pointerUp must fire before endDrag to match StandaloneInputModule lifecycle
-            if (MouseDragState.PointerData.pointerPress != null)
-            {
-                ExecuteEvents.Execute(
-                    MouseDragState.PointerData.pointerPress,
-                    MouseDragState.PointerData,
-                    ExecuteEvents.pointerUpHandler);
-            }
-
-            ExecuteEvents.Execute(MouseDragState.Target, MouseDragState.PointerData, ExecuteEvents.endDragHandler);
+            FinalizeDrag(MouseDragState.PointerData, MouseDragState.Target);
 
             MouseDragState.Clear();
 
