@@ -7,8 +7,6 @@ namespace io.github.hatayama.uLoopMCP
 {
     public class DemoDraggableItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
-        [SerializeField] private DropZone? dropZone;
-
         private RectTransform rectTransform = null!;
         private Canvas canvas = null!;
         private CanvasGroup canvasGroup = null!;
@@ -39,12 +37,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             canvasGroup.alpha = 1f;
             rectTransform.localScale = Vector3.one;
-
-            // Position-based drop detection (SimulateMouseTool does not dispatch IDropHandler events)
-            if (dropZone != null && dropZone.ContainsScreenPoint(eventData.position))
-            {
-                dropZone.OnItemDropped(gameObject);
-            }
 
             Debug.Log($"[Demo] EndDrag: {gameObject.name} moved from {startPosition} to {rectTransform.anchoredPosition}");
         }

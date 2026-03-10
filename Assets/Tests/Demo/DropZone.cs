@@ -13,18 +13,11 @@ namespace io.github.hatayama.uLoopMCP
 
         private Image image = null!;
         private Color normalColor;
-        private RectTransform rectTransform = null!;
 
         private void Awake()
         {
             image = GetComponent<Image>();
             normalColor = image.color;
-            rectTransform = GetComponent<RectTransform>();
-        }
-
-        public bool ContainsScreenPoint(Vector2 screenPoint)
-        {
-            return RectTransformUtility.RectangleContainsScreenPoint(rectTransform, screenPoint);
         }
 
         // UIElementAnnotator detects IDropHandler to list this as a "DropTarget" in annotated screenshots

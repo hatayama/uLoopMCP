@@ -287,15 +287,34 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        // pointerUp must fire before endDrag to match StandaloneInputModule lifecycle
+        // Lifecycle must match StandaloneInputModule: raycast → pointerUp → drop → endDrag
         private void FinalizeDrag(PointerEventData pointerData, GameObject target)
         {
+            UpdatePointerRaycast(pointerData);
+
             if (pointerData.pointerPress != null)
             {
                 ExecuteEvents.Execute(pointerData.pointerPress, pointerData, ExecuteEvents.pointerUpHandler);
             }
 
+            // Standard IDropHandler dispatch so Unity drop targets respond without manual workarounds
+            GameObject? dropTarget = pointerData.pointerCurrentRaycast.gameObject;
+            if (dropTarget != null)
+            {
+                ExecuteEvents.ExecuteHierarchy(dropTarget, pointerData, ExecuteEvents.dropHandler);
+            }
+
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.endDragHandler);
+        }
+
+        private void UpdatePointerRaycast(PointerEventData pointerData)
+        {
+            List<RaycastResult> results = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(pointerData, results);
+
+            pointerData.pointerCurrentRaycast = results.Count > 0
+                ? results[0]
+                : new RaycastResult();
         }
 
         private async Task InterpolateDragPosition(
@@ -539,13 +558,13 @@ namespace io.github.hatayama.uLoopMCP
             while (elapsed < DISSIPATE_DURATION)
             {
                 float t = elapsed / DISSIPATE_DURATION;
-                overlay.SetCursorScale(Mathf.Lerp(1f, 0f, t));
-                overlay.SetAlpha(Mathf.Lerp(1f, 0f, t));
+                overlay!.SetCursorScale(Mathf.Lerp(1f, 0f, t));
+                overlay!.SetAlpha(Mathf.Lerp(1f, 0f, t));
                 await EditorDelay.DelayFrame(1, ct);
                 elapsed = Time.realtimeSinceStartup - startTime;
             }
-            overlay.SetCursorScale(0f);
-            overlay.SetAlpha(0f);
+            overlay!.SetCursorScale(0f);
+            overlay!.SetAlpha(0f);
         }
 
         private RaycastResult? RaycastUI(Vector2 screenPosition, EventSystem eventSystem)

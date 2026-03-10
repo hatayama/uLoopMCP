@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -61,7 +62,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <param name="resolutionScale">Resolution scale (0.1 to 1.0)</param>
         /// <param name="ct">Cancellation token</param>
         /// <returns>Captured Texture2D, or null if capture failed</returns>
-        public static async Task<Texture2D> CaptureWindowAsync(EditorWindow window, float resolutionScale, CancellationToken ct)
+        public static async Task<Texture2D?> CaptureWindowAsync(EditorWindow window, float resolutionScale, CancellationToken ct)
         {
             if (window == null)
             {
@@ -76,7 +77,7 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Internal capture logic shared by sync and async methods.
         /// </summary>
-        private static Texture2D CaptureWindowInternal(EditorWindow window, float resolutionScale)
+        private static Texture2D? CaptureWindowInternal(EditorWindow window, float resolutionScale)
         {
             float scale = EditorGUIUtility.pixelsPerPoint;
             int width = Mathf.RoundToInt(window.position.width * scale);
@@ -140,7 +141,7 @@ namespace io.github.hatayama.uLoopMCP
         // Coordinate mapping to simulate-mouse:
         //   sim_x = image_x / resolutionScale, sim_y = image_y / resolutionScale + YOffset
         // where YOffset = Screen.height - RenderTexture.height (returned in the tuple).
-        public static async Task<(Texture2D texture, int yOffset)> CaptureGameRenderingAsync(float resolutionScale, CancellationToken ct)
+        public static async Task<(Texture2D? texture, int yOffset)> CaptureGameRenderingAsync(float resolutionScale, CancellationToken ct)
         {
             Debug.Assert(UnityEditor.EditorApplication.isPlaying, "CaptureGameRenderingAsync requires PlayMode");
 
@@ -148,7 +149,11 @@ namespace io.github.hatayama.uLoopMCP
             await EditorDelay.DelayFrame(2, ct);
 
             RenderTexture rt = GameViewBridge.GetRenderTexture();
-            Debug.Assert(rt != null, "GameView RenderTexture must be available in PlayMode");
+            if (rt == null)
+            {
+                Debug.LogWarning("[EditorWindowCaptureUtility] GameView RenderTexture is not available");
+                return (null, 0);
+            }
 
             int yOffset = Screen.height - rt.height;
 

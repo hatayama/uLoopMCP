@@ -76,6 +76,16 @@ namespace io.github.hatayama.uLoopMCP
                 UIElementAnnotator.DestroyAnnotationOverlay(annotationOverlay);
             }
 
+            if (texture == null)
+            {
+                VibeLogger.LogError(
+                    "screenshot_rendering_unavailable",
+                    "GameView RenderTexture is not available. Open the Game view and wait for a frame before retrying.",
+                    correlationId: correlationId
+                );
+                return new ScreenshotResponse();
+            }
+
             string outputDirectory = EnsureOutputDirectoryExists(parameters.OutputDirectory);
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
             string savedPath = Path.Combine(outputDirectory, $"Rendering_{timestamp}.png");
@@ -197,7 +207,8 @@ namespace io.github.hatayama.uLoopMCP
 
         private void ValidateParameters(ScreenshotSchema parameters)
         {
-            if (string.IsNullOrEmpty(parameters.WindowName))
+            if (parameters.CaptureMode != CaptureMode.rendering &&
+                string.IsNullOrEmpty(parameters.WindowName))
             {
                 throw new ArgumentException("WindowName cannot be null or empty");
             }
