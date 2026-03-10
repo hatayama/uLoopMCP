@@ -32,7 +32,7 @@ uloop simulate-mouse --action <action> --x <x> --y <y> [options]
 | `--y` | number | `0` | Y position in screen pixels (origin: top-left) |
 | `--end-x` | number | `0` | End X position for Drag action |
 | `--end-y` | number | `0` | End Y position for Drag action |
-| `--drag-speed` | number | `2000` | Drag speed in pixels per second (0 for instant). Applies to Drag, DragMove, and DragEnd actions. |
+| `--drag-speed` | number | `2000` | Drag speed in pixels per second (0 for instant). 2000 is fast (default), 200 is slow enough to watch. Applies to Drag, DragMove, and DragEnd actions. |
 
 ### Actions
 
@@ -43,6 +43,12 @@ uloop simulate-mouse --action <action> --x <x> --y <y> [options]
 | `DragStart` | BeginDrag | Begin drag at (x, y) and hold |
 | `DragMove` | Drag×N | Animate from current position to (x, y) at the specified speed |
 | `DragEnd` | Drag×N → EndDrag | Animate to (x, y) at the specified speed, then release drag |
+
+### Split Drag Rules
+
+- `DragStart` must be called before `DragMove` or `DragEnd`
+- `DragEnd` must be called to release an active drag — failing to call it leaves drag state stuck
+- Calling `DragMove` or `DragEnd` without an active drag returns an error
 
 ### Global Options
 
@@ -56,6 +62,7 @@ uloop simulate-mouse --action <action> --x <x> --y <y> [options]
 - Origin is **top-left** (0, 0)
 - All positions are in **screen pixels**
 - Identify coordinates visually from screenshots — do NOT look up GameObject positions
+- Clicking or dragging on empty space (no UI element) still succeeds with a message indicating no element was hit
 
 ## Examples
 

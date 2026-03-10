@@ -14,6 +14,10 @@ namespace io.github.hatayama.uLoopMCP
     {
         public override string ToolName => "simulate-mouse";
 
+        private const float EXPAND_DURATION = 0.1f;
+        private const float EXPAND_START_SCALE = 1.5f;
+        private const float DISSIPATE_DURATION = 0.1f;
+
         protected override async Task<SimulateMouseResponse> ExecuteAsync(
             SimulateMouseSchema parameters,
             CancellationToken ct)
@@ -50,12 +54,14 @@ namespace io.github.hatayama.uLoopMCP
                 correlationId: correlationId
             );
 
+            EnsureOverlayExists();
+
             SimulateMouseResponse response;
 
             switch (parameters.Action)
             {
                 case MouseAction.Click:
-                    response = ExecuteClick(parameters, eventSystem);
+                    response = await ExecuteClick(parameters, eventSystem, ct);
                     break;
 
                 case MouseAction.Drag:
@@ -63,7 +69,7 @@ namespace io.github.hatayama.uLoopMCP
                     break;
 
                 case MouseAction.DragStart:
-                    response = ExecuteDragStart(parameters, eventSystem);
+                    response = await ExecuteDragStart(parameters, eventSystem, ct);
                     break;
 
                 case MouseAction.DragMove:
@@ -111,7 +117,8 @@ namespace io.github.hatayama.uLoopMCP
             return new Vector2(screenPos.x, Screen.height - screenPos.y);
         }
 
-        private SimulateMouseResponse ExecuteClick(SimulateMouseSchema parameters, EventSystem eventSystem)
+        private async Task<SimulateMouseResponse> ExecuteClick(
+            SimulateMouseSchema parameters, EventSystem eventSystem, CancellationToken ct)
         {
             Vector2 inputPos = new Vector2(parameters.X, parameters.Y);
             Vector2 screenPos = InputToScreen(inputPos);
@@ -125,10 +132,8 @@ namespace io.github.hatayama.uLoopMCP
             };
 
             GameObject? target = null;
-
-            EnsureOverlayExists();
-            SimulateMouseOverlayState.Update(
-                MouseAction.Click, inputPos, null, null);
+            GameObject? pressTarget = null;
+            GameObject? clickTarget = null;
 
             if (hit != null)
             {
@@ -137,10 +142,8 @@ namespace io.github.hatayama.uLoopMCP
                 pointerData.pointerPressRaycast = hit.Value;
 
                 // Execute dispatches only to the exact target; composite controls (Button with Text child) need hierarchy traversal
-                GameObject? pressTarget = ExecuteEvents.ExecuteHierarchy(
-                    rawTarget, pointerData, ExecuteEvents.pointerDownHandler);
-                GameObject? clickTarget = ExecuteEvents.GetEventHandler<IPointerClickHandler>(rawTarget);
-
+                pressTarget = ExecuteEvents.GetEventHandler<IPointerDownHandler>(rawTarget);
+                clickTarget = ExecuteEvents.GetEventHandler<IPointerClickHandler>(rawTarget);
                 target = pressTarget ?? clickTarget;
 
                 if (target != null)
@@ -148,9 +151,21 @@ namespace io.github.hatayama.uLoopMCP
                     pointerData.pointerPress = target;
                     pointerData.rawPointerPress = rawTarget;
                 }
+            }
 
+            SimulateMouseOverlayState.Update(
+                MouseAction.Click, inputPos, null,
+                target?.name);
+
+            await PlayExpandAnimation(ct);
+
+            // Fire click events after expand animation so the user sees where the click lands
+            if (hit != null)
+            {
                 if (pressTarget != null)
                 {
+                    ExecuteEvents.ExecuteHierarchy(
+                        hit.Value.gameObject, pointerData, ExecuteEvents.pointerDownHandler);
                     ExecuteEvents.Execute(pressTarget, pointerData, ExecuteEvents.pointerUpHandler);
                 }
 
@@ -160,9 +175,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            SimulateMouseOverlayState.Update(
-                MouseAction.Click, inputPos, null,
-                target != null ? target.name : null);
+            await PlayDissipateAnimation(ct);
 
             return new SimulateMouseResponse
             {
@@ -171,7 +184,7 @@ namespace io.github.hatayama.uLoopMCP
                     ? $"Clicked '{target.name}' at ({inputPos.x:F1}, {inputPos.y:F1})"
                     : $"Clicked at ({inputPos.x:F1}, {inputPos.y:F1}) - no UI element hit",
                 Action = MouseAction.Click.ToString(),
-                HitGameObjectName = target != null ? target.name : null,
+                HitGameObjectName = target?.name,
                 PositionX = inputPos.x,
                 PositionY = inputPos.y
             };
@@ -221,6 +234,11 @@ namespace io.github.hatayama.uLoopMCP
 
             if (target == null)
             {
+                SimulateMouseOverlayState.Update(
+                    MouseAction.Drag, inputStart, null, null);
+                await PlayExpandAnimation(ct);
+                await PlayDissipateAnimation(ct);
+
                 return new SimulateMouseResponse
                 {
                     Success = true,
@@ -233,13 +251,13 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            EnsureOverlayExists();
-
             PointerEventData pointerData = InitiateDrag(eventSystem, screenStart, hit!.Value, target);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
 
             SimulateMouseOverlayState.Update(
                 MouseAction.Drag, inputStart, inputStart, target.name);
+
+            await PlayExpandAnimation(ct);
 
             try
             {
@@ -249,9 +267,12 @@ namespace io.github.hatayama.uLoopMCP
             finally
             {
                 FinalizeDrag(pointerData, target);
-                SimulateMouseOverlayState.Update(
-                    MouseAction.Drag, inputEnd, inputStart, target.name);
             }
+
+            SimulateMouseOverlayState.Update(
+                MouseAction.Drag, inputEnd, inputStart, target.name);
+
+            await PlayDissipateAnimation(ct);
 
             return new SimulateMouseResponse
             {
@@ -326,7 +347,8 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private SimulateMouseResponse ExecuteDragStart(SimulateMouseSchema parameters, EventSystem eventSystem)
+        private async Task<SimulateMouseResponse> ExecuteDragStart(
+            SimulateMouseSchema parameters, EventSystem eventSystem, CancellationToken ct)
         {
             if (MouseDragState.IsDragging)
             {
@@ -350,6 +372,11 @@ namespace io.github.hatayama.uLoopMCP
 
             if (target == null)
             {
+                SimulateMouseOverlayState.Update(
+                    MouseAction.DragStart, inputPos, null, null);
+                await PlayExpandAnimation(ct);
+                await PlayDissipateAnimation(ct);
+
                 return new SimulateMouseResponse
                 {
                     Success = false,
@@ -360,8 +387,6 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            EnsureOverlayExists();
-
             PointerEventData pointerData = InitiateDrag(eventSystem, screenPos, hit!.Value, target);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
 
@@ -370,6 +395,8 @@ namespace io.github.hatayama.uLoopMCP
 
             SimulateMouseOverlayState.Update(
                 MouseAction.DragStart, inputPos, inputPos, target.name);
+
+            await PlayExpandAnimation(ct);
 
             return new SimulateMouseResponse
             {
@@ -464,10 +491,12 @@ namespace io.github.hatayama.uLoopMCP
             {
                 FinalizeDrag(MouseDragState.PointerData!, MouseDragState.Target!);
                 MouseDragState.Clear();
-
-                SimulateMouseOverlayState.Update(
-                    MouseAction.DragEnd, inputEnd, null, targetName);
             }
+
+            SimulateMouseOverlayState.Update(
+                MouseAction.DragEnd, inputEnd, null, targetName);
+
+            await PlayDissipateAnimation(ct);
 
             return new SimulateMouseResponse
             {
@@ -478,6 +507,45 @@ namespace io.github.hatayama.uLoopMCP
                 PositionX = inputEnd.x,
                 PositionY = inputEnd.y
             };
+        }
+
+        private static async Task PlayExpandAnimation(CancellationToken ct)
+        {
+            SimulateMouseOverlay? overlay = SimulateMouseOverlay.Instance;
+            Debug.Assert(overlay != null, "Overlay must exist before playing animation");
+
+            // Previous dissipate sets alpha to 0; restore before expand starts
+            overlay!.SetAlpha(1f);
+
+            float startTime = Time.realtimeSinceStartup;
+            float elapsed = 0f;
+            while (elapsed < EXPAND_DURATION)
+            {
+                float t = elapsed / EXPAND_DURATION;
+                overlay.SetCursorScale(Mathf.Lerp(EXPAND_START_SCALE, 1f, t));
+                await EditorDelay.DelayFrame(1, ct);
+                elapsed = Time.realtimeSinceStartup - startTime;
+            }
+            overlay.SetCursorScale(1f);
+        }
+
+        private static async Task PlayDissipateAnimation(CancellationToken ct)
+        {
+            SimulateMouseOverlay? overlay = SimulateMouseOverlay.Instance;
+            Debug.Assert(overlay != null, "Overlay must exist before playing animation");
+
+            float startTime = Time.realtimeSinceStartup;
+            float elapsed = 0f;
+            while (elapsed < DISSIPATE_DURATION)
+            {
+                float t = elapsed / DISSIPATE_DURATION;
+                overlay.SetCursorScale(Mathf.Lerp(1f, 0f, t));
+                overlay.SetAlpha(Mathf.Lerp(1f, 0f, t));
+                await EditorDelay.DelayFrame(1, ct);
+                elapsed = Time.realtimeSinceStartup - startTime;
+            }
+            overlay.SetCursorScale(0f);
+            overlay.SetAlpha(0f);
         }
 
         private RaycastResult? RaycastUI(Vector2 screenPosition, EventSystem eventSystem)

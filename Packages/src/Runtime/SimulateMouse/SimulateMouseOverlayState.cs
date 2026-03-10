@@ -12,6 +12,9 @@ namespace io.github.hatayama.uLoopMCP
         public static string? HitGameObjectName { get; private set; }
         public static float LastUpdateTime { get; private set; }
 
+        // Screen.width/height at the time positions were recorded (Editor context may differ from Game context)
+        public static Vector2 SourceScreenSize { get; private set; }
+
         public static void Update(
             MouseAction action,
             Vector2 currentPosition,
@@ -23,6 +26,7 @@ namespace io.github.hatayama.uLoopMCP
             CurrentPosition = currentPosition;
             DragStartPosition = dragStartPosition;
             HitGameObjectName = hitGameObjectName;
+            SourceScreenSize = new Vector2(Screen.width, Screen.height);
             LastUpdateTime = Time.realtimeSinceStartup;
         }
 
@@ -39,6 +43,7 @@ namespace io.github.hatayama.uLoopMCP
             CurrentPosition = Vector2.zero;
             DragStartPosition = null;
             HitGameObjectName = null;
+            SourceScreenSize = Vector2.zero;
             LastUpdateTime = 0f;
         }
 

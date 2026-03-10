@@ -1,31 +1,47 @@
 #nullable enable
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    // OnGUI overlay that visualizes SimulateMouse cursor position and drag state on Game View.
+    // Canvas-based overlay that visualizes SimulateMouse cursor position and drag state on Game View.
+    // Animation is driven externally via SetCursorScale/SetAlpha from async functions in SimulateMouseTool.
     public class SimulateMouseOverlay : MonoBehaviour
     {
         public static SimulateMouseOverlay? Instance { get; private set; }
 
         private const float OVERLAY_TIMEOUT_SECONDS = 2.0f;
-        private const float CROSSHAIR_SIZE = 15f;
-        private const float CROSSHAIR_THICKNESS = 2f;
-        private const float START_MARKER_SIZE = 8f;
-        private const float LABEL_PADDING = 8f;
+        private const int CANVAS_SORT_ORDER = 32000;
 
+        private const float CURSOR_CIRCLE_DIAMETER = 70f;
+        private const float CURSOR_CROSSHAIR_SIZE = 20f;
+        private const float CURSOR_CROSSHAIR_THICKNESS = 3f;
+        private const int CIRCLE_TEXTURE_SIZE = 64;
+
+        private const float START_MARKER_SIZE = 8f;
+        private const float LINE_THICKNESS = 2f;
+
+        private static readonly Color CURSOR_COLOR = new Color(1f, 1f, 1f, 0.8f);
         private static readonly Color CLICK_COLOR = new Color(0f, 1f, 0.4f, 0.9f);
         private static readonly Color DRAG_COLOR = new Color(1f, 0.6f, 0f, 0.9f);
-        private static readonly Color LABEL_BG_COLOR = new Color(0f, 0f, 0f, 0.7f);
 
-        private GUIStyle? _labelStyle;
-        private Texture2D? _bgTexture;
-        private Material? _lineMaterial;
+        private Canvas _canvas = null!;
+        private CanvasGroup _canvasGroup = null!;
+        private RectTransform _cursorGroup = null!;
+        private Image _circleImage = null!;
+        private Image _crosshairH = null!;
+        private Image _crosshairV = null!;
+        private Image _dragLine = null!;
+        private Image _dragStartMarker = null!;
+
+        private Texture2D? _circleTexture;
+        private Sprite? _circleSprite;
 
         private void Awake()
         {
             Debug.Assert(Instance == null, "SimulateMouseOverlay instance already exists");
             Instance = this;
+            BuildCanvasHierarchy();
         }
 
         private void OnDestroy()
@@ -35,43 +51,104 @@ namespace io.github.hatayama.uLoopMCP
                 Instance = null;
             }
 
-            if (_bgTexture != null)
+            if (_circleSprite != null)
             {
-                DestroyImmediate(_bgTexture);
+                DestroyImmediate(_circleSprite);
             }
 
-            if (_lineMaterial != null)
+            if (_circleTexture != null)
             {
-                DestroyImmediate(_lineMaterial);
+                DestroyImmediate(_circleTexture);
             }
         }
 
-        private void OnGUI()
+        private void LateUpdate()
         {
-            if (Event.current.type != EventType.Repaint)
-            {
-                return;
-            }
-
             if (!SimulateMouseOverlayState.IsActive)
             {
+                if (_canvas.enabled) _canvas.enabled = false;
                 return;
             }
 
             if (SimulateMouseOverlayState.IsExpired(OVERLAY_TIMEOUT_SECONDS))
             {
                 SimulateMouseOverlayState.Clear();
+                if (_canvas.enabled) _canvas.enabled = false;
                 return;
             }
 
-            EnsureStyles();
+            _canvas.enabled = true;
+            UpdateCursorPosition();
+            UpdateDragLine();
+            UpdateDragStartMarker();
+        }
 
-            Color activeColor = GetActiveColor();
+        public void SetCursorScale(float scale)
+        {
+            _cursorGroup.localScale = Vector3.one * scale;
+        }
 
-            DrawDragLine(activeColor);
-            DrawDragStartMarker(activeColor);
-            DrawCrosshair(SimulateMouseOverlayState.CurrentPosition, activeColor);
-            DrawStateLabel();
+        public void SetAlpha(float alpha)
+        {
+            _canvasGroup.alpha = alpha;
+        }
+
+        // sim coordinate: simX = screen pixel X, simY = EditorScreen.height - canvasY (top-left origin)
+        // Canvas Screen Space Overlay position: bottom-left origin
+        private static Vector2 SimToScreen(Vector2 simPos)
+        {
+            Vector2 srcSize = SimulateMouseOverlayState.SourceScreenSize;
+            Debug.Assert(srcSize.x > 0f && srcSize.y > 0f, "SourceScreenSize must be set before SimToScreen is called");
+            return new Vector2(simPos.x, srcSize.y - simPos.y);
+        }
+
+        private void UpdateCursorPosition()
+        {
+            Vector2 screenPos = SimToScreen(SimulateMouseOverlayState.CurrentPosition);
+            _cursorGroup.position = new Vector3(screenPos.x, screenPos.y, 0f);
+        }
+
+        private void UpdateDragLine()
+        {
+            if (!SimulateMouseOverlayState.DragStartPosition.HasValue)
+            {
+                _dragLine.enabled = false;
+                return;
+            }
+
+            Vector2 startScreen = SimToScreen(SimulateMouseOverlayState.DragStartPosition.Value);
+            Vector2 endScreen = SimToScreen(SimulateMouseOverlayState.CurrentPosition);
+            Vector2 delta = endScreen - startScreen;
+            float length = delta.magnitude;
+
+            if (length < 1f)
+            {
+                _dragLine.enabled = false;
+                return;
+            }
+
+            _dragLine.enabled = true;
+            _dragLine.color = GetActiveColor();
+            float angle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg;
+
+            RectTransform lineRect = _dragLine.rectTransform;
+            lineRect.position = new Vector3(startScreen.x, startScreen.y, 0f);
+            lineRect.sizeDelta = new Vector2(length, LINE_THICKNESS);
+            lineRect.localRotation = Quaternion.Euler(0f, 0f, angle);
+        }
+
+        private void UpdateDragStartMarker()
+        {
+            if (!SimulateMouseOverlayState.DragStartPosition.HasValue)
+            {
+                _dragStartMarker.enabled = false;
+                return;
+            }
+
+            _dragStartMarker.enabled = true;
+            _dragStartMarker.color = GetActiveColor();
+            Vector2 startScreen = SimToScreen(SimulateMouseOverlayState.DragStartPosition.Value);
+            _dragStartMarker.rectTransform.position = new Vector3(startScreen.x, startScreen.y, 0f);
         }
 
         private Color GetActiveColor()
@@ -81,129 +158,92 @@ namespace io.github.hatayama.uLoopMCP
                 : DRAG_COLOR;
         }
 
-        private void DrawCrosshair(Vector2 guiPos, Color color)
+        private void BuildCanvasHierarchy()
         {
-            Color previousColor = GUI.color;
-            GUI.color = color;
+            _canvas = gameObject.AddComponent<Canvas>();
+            _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            _canvas.sortingOrder = CANVAS_SORT_ORDER;
+            // No GraphicRaycaster — overlay must not block UI interaction behind it
 
-            GUI.DrawTexture(
-                new Rect(guiPos.x - CROSSHAIR_SIZE, guiPos.y - CROSSHAIR_THICKNESS / 2f,
-                    CROSSHAIR_SIZE * 2f, CROSSHAIR_THICKNESS),
-                Texture2D.whiteTexture);
+            _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            _canvasGroup.interactable = false;
+            _canvasGroup.blocksRaycasts = false;
 
-            GUI.DrawTexture(
-                new Rect(guiPos.x - CROSSHAIR_THICKNESS / 2f, guiPos.y - CROSSHAIR_SIZE,
-                    CROSSHAIR_THICKNESS, CROSSHAIR_SIZE * 2f),
-                Texture2D.whiteTexture);
+            _dragLine = CreateImage("DragLine", gameObject.transform);
+            _dragLine.rectTransform.pivot = new Vector2(0f, 0.5f);
+            _dragLine.rectTransform.sizeDelta = Vector2.zero;
+            _dragLine.enabled = false;
 
-            GUI.color = previousColor;
+            _dragStartMarker = CreateImage("DragStartMarker", gameObject.transform);
+            _dragStartMarker.rectTransform.sizeDelta = new Vector2(START_MARKER_SIZE, START_MARKER_SIZE);
+            _dragStartMarker.enabled = false;
+
+            GameObject cursorGroupGo = new GameObject("CursorGroup");
+            cursorGroupGo.transform.SetParent(gameObject.transform, false);
+            _cursorGroup = cursorGroupGo.AddComponent<RectTransform>();
+            _cursorGroup.sizeDelta = Vector2.zero;
+
+            _circleImage = CreateImage("Circle", _cursorGroup);
+            _circleImage.rectTransform.sizeDelta = new Vector2(CURSOR_CIRCLE_DIAMETER, CURSOR_CIRCLE_DIAMETER);
+            _circleImage.color = CURSOR_COLOR;
+            EnsureCircleSprite();
+            _circleImage.sprite = _circleSprite;
+
+            _crosshairH = CreateImage("CrosshairH", _cursorGroup);
+            _crosshairH.rectTransform.sizeDelta = new Vector2(CURSOR_CROSSHAIR_SIZE * 2f, CURSOR_CROSSHAIR_THICKNESS);
+            _crosshairH.color = Color.black;
+
+            _crosshairV = CreateImage("CrosshairV", _cursorGroup);
+            _crosshairV.rectTransform.sizeDelta = new Vector2(CURSOR_CROSSHAIR_THICKNESS, CURSOR_CROSSHAIR_SIZE * 2f);
+            _crosshairV.color = Color.black;
         }
 
-        private void DrawDragStartMarker(Color color)
+        private static Image CreateImage(string name, Transform parent)
         {
-            if (SimulateMouseOverlayState.DragStartPosition == null)
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            RectTransform rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.zero;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            Image image = go.AddComponent<Image>();
+            image.raycastTarget = false;
+            return image;
+        }
+
+        private void EnsureCircleSprite()
+        {
+            if (_circleSprite != null)
             {
                 return;
             }
 
-            Vector2 startPos = SimulateMouseOverlayState.DragStartPosition.Value;
-            Color previousColor = GUI.color;
-            GUI.color = color;
+            _circleTexture = new Texture2D(CIRCLE_TEXTURE_SIZE, CIRCLE_TEXTURE_SIZE, TextureFormat.RGBA32, false);
+            _circleTexture.hideFlags = HideFlags.HideAndDontSave;
 
-            GUI.DrawTexture(
-                new Rect(startPos.x - START_MARKER_SIZE / 2f, startPos.y - START_MARKER_SIZE / 2f,
-                    START_MARKER_SIZE, START_MARKER_SIZE),
-                Texture2D.whiteTexture);
+            float center = CIRCLE_TEXTURE_SIZE / 2f;
+            float radius = center - 1f;
 
-            GUI.color = previousColor;
-        }
-
-        private void DrawDragLine(Color color)
-        {
-            if (SimulateMouseOverlayState.DragStartPosition == null)
+            for (int y = 0; y < CIRCLE_TEXTURE_SIZE; y++)
             {
-                return;
+                for (int x = 0; x < CIRCLE_TEXTURE_SIZE; x++)
+                {
+                    float dx = x + 0.5f - center;
+                    float dy = y + 0.5f - center;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+
+                    float alpha = Mathf.Clamp01(radius - dist + 1f);
+                    _circleTexture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
             }
 
-            EnsureLineMaterial();
+            _circleTexture.Apply();
 
-            Vector2 startPos = SimulateMouseOverlayState.DragStartPosition.Value;
-            Vector2 endPos = SimulateMouseOverlayState.CurrentPosition;
-
-            GL.PushMatrix();
-            _lineMaterial!.SetPass(0);
-            // GL.LoadPixelMatrix() defaults to bottom-left origin, but OnGUI positions use top-left origin
-            GL.LoadPixelMatrix(0, Screen.width, Screen.height, 0);
-            GL.Begin(GL.LINES);
-            GL.Color(color);
-            GL.Vertex3(startPos.x, startPos.y, 0f);
-            GL.Vertex3(endPos.x, endPos.y, 0f);
-            GL.End();
-            GL.PopMatrix();
+            _circleSprite = Sprite.Create(
+                _circleTexture,
+                new Rect(0, 0, CIRCLE_TEXTURE_SIZE, CIRCLE_TEXTURE_SIZE),
+                new Vector2(0.5f, 0.5f));
+            _circleSprite.hideFlags = HideFlags.HideAndDontSave;
         }
-
-        private void DrawStateLabel()
-        {
-            string label = BuildLabel();
-            Vector2 labelSize = _labelStyle!.CalcSize(new GUIContent(label));
-
-            Rect labelRect = new Rect(
-                LABEL_PADDING,
-                LABEL_PADDING,
-                labelSize.x + LABEL_PADDING * 2f,
-                labelSize.y + LABEL_PADDING);
-
-            GUI.Label(labelRect, label, _labelStyle);
-        }
-
-        private string BuildLabel()
-        {
-            Vector2 pos = SimulateMouseOverlayState.CurrentPosition;
-            string posText = $"({pos.x:F0}, {pos.y:F0})";
-
-            string? targetName = SimulateMouseOverlayState.HitGameObjectName;
-            string targetText = targetName != null ? $" -> \"{targetName}\"" : "";
-
-            return $"[SimulateMouse] {SimulateMouseOverlayState.Action} {posText}{targetText}";
-        }
-
-        private void EnsureStyles()
-        {
-            if (_labelStyle != null)
-            {
-                return;
-            }
-
-            _bgTexture = new Texture2D(1, 1);
-            _bgTexture.SetPixel(0, 0, LABEL_BG_COLOR);
-            _bgTexture.Apply();
-
-            _labelStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 14,
-                fontStyle = FontStyle.Bold,
-                padding = new RectOffset(
-                    (int)LABEL_PADDING, (int)LABEL_PADDING,
-                    (int)(LABEL_PADDING / 2f), (int)(LABEL_PADDING / 2f))
-            };
-            _labelStyle.normal.textColor = Color.white;
-            _labelStyle.normal.background = _bgTexture;
-        }
-
-        private void EnsureLineMaterial()
-        {
-            if (_lineMaterial != null)
-            {
-                return;
-            }
-
-            Shader shader = Shader.Find("Hidden/Internal-Colored");
-            Debug.Assert(shader != null, "Hidden/Internal-Colored shader must exist in Unity");
-            _lineMaterial = new Material(shader)
-            {
-                hideFlags = HideFlags.HideAndDontSave
-            };
-        }
-
     }
 }
