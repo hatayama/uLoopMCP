@@ -132,7 +132,8 @@ namespace io.github.hatayama.uLoopMCP
 
             GL.PushMatrix();
             _lineMaterial!.SetPass(0);
-            GL.LoadPixelMatrix();
+            // GL.LoadPixelMatrix() defaults to bottom-left origin, but OnGUI positions use top-left origin
+            GL.LoadPixelMatrix(0, Screen.width, Screen.height, 0);
             GL.Begin(GL.LINES);
             GL.Color(color);
             GL.Vertex3(startPos.x, startPos.y, 0f);
