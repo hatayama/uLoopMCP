@@ -80,7 +80,7 @@ Returns JSON with:
   - `CoordinateSystem`: `"gameView"` (pixel coords usable with simulate-mouse) or `"window"` (EditorWindow capture)
   - `ResolutionScale`: Resolution scale used for capture
   - `YOffset`: Y offset to add to image pixel Y to get simulate-mouse Y coordinate (only meaningful when `CoordinateSystem` is `"gameView"`)
-  - `AnnotatedElements`: Array of annotated UI element metadata (only when `--annotate-elements` is used), each containing:
+  - `AnnotatedElements`: Array of annotated UI element metadata. Empty unless `--annotate-elements` is used. Each item contains:
     - `Name`: Element name
     - `Type`: Element type (`Button`, `Toggle`, `Slider`, `Dropdown`, `InputField`, `Scrollbar`, `Draggable`, `DropTarget`, `Selectable`)
     - `SimX`, `SimY`: Center position in simulate-mouse coordinates (use directly with `--x` and `--y`)
@@ -90,7 +90,7 @@ Returns JSON with:
 
 When `CoordinateSystem` is `"gameView"`, convert image pixel coordinates to simulate-mouse coordinates:
 
-```
+```text
 sim_x = image_x / ResolutionScale
 sim_y = image_y / ResolutionScale + YOffset
 ```
