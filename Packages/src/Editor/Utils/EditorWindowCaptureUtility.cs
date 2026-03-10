@@ -135,6 +135,27 @@ namespace io.github.hatayama.uLoopMCP
             return names.ToArray();
         }
 
+        // Captures game rendering via ScreenCapture API (PlayMode only).
+        // Output size = Screen.width × Screen.height, matching simulate-mouse coordinate space.
+        public static async Task<Texture2D> CaptureGameRenderingAsync(float resolutionScale, CancellationToken ct)
+        {
+            Debug.Assert(UnityEditor.EditorApplication.isPlaying, "CaptureGameRenderingAsync requires PlayMode");
+
+            // ScreenCapture captures the last rendered frame; wait 2 frames to ensure
+            // the game camera has completed at least one full render cycle after any state change
+            await EditorDelay.DelayFrame(2, ct);
+
+            Texture2D texture = ScreenCapture.CaptureScreenshotAsTexture();
+            Debug.Assert(texture != null, "ScreenCapture.CaptureScreenshotAsTexture() must return a valid texture in PlayMode");
+
+            if (!Mathf.Approximately(resolutionScale, 1.0f))
+            {
+                texture = ApplyResolutionScaling(texture, resolutionScale);
+            }
+
+            return texture;
+        }
+
         private static Texture2D ApplyResolutionScaling(Texture2D originalTexture, float scale)
         {
             int newWidth = Mathf.RoundToInt(originalTexture.width * scale);

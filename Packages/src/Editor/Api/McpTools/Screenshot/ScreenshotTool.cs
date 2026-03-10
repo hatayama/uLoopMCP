@@ -32,6 +32,77 @@ namespace io.github.hatayama.uLoopMCP
 
             ValidateParameters(parameters);
 
+            if (parameters.CaptureMode == CaptureMode.rendering)
+            {
+                return await CaptureRenderingAsync(parameters, correlationId, ct);
+            }
+
+            return await CaptureWindowsAsync(parameters, correlationId, ct);
+        }
+
+        private async Task<ScreenshotResponse> CaptureRenderingAsync(
+            ScreenshotSchema parameters, string correlationId, CancellationToken ct)
+        {
+            if (!EditorApplication.isPlaying)
+            {
+                VibeLogger.LogError(
+                    "screenshot_rendering_requires_playmode",
+                    "CaptureMode.rendering requires PlayMode",
+                    correlationId: correlationId
+                );
+                return new ScreenshotResponse();
+            }
+
+            Texture2D texture = await EditorWindowCaptureUtility.CaptureGameRenderingAsync(
+                parameters.ResolutionScale, ct);
+
+            string outputDirectory = EnsureOutputDirectoryExists(parameters.OutputDirectory);
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
+            string savedPath = Path.Combine(outputDirectory, $"Rendering_{timestamp}.png");
+
+            int width = texture.width;
+            int height = texture.height;
+            List<ScreenshotInfo> screenshots = new List<ScreenshotInfo>();
+
+            try
+            {
+                SaveTextureAsPng(texture, savedPath);
+
+                FileInfo savedFileInfo = new FileInfo(savedPath);
+                screenshots.Add(new ScreenshotInfo(
+                    savedPath, savedFileInfo.Length, width, height,
+                    McpConstants.COORDINATE_SYSTEM_GAME_VIEW, parameters.ResolutionScale));
+            }
+            catch (Exception ex)
+            {
+                // File I/O is external resource access; catch to report save failure
+                VibeLogger.LogWarning(
+                    "screenshot_save_exception",
+                    $"Exception saving rendering screenshot: {ex.Message}",
+                    correlationId: correlationId
+                );
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(texture);
+            }
+
+            if (screenshots.Count > 0)
+            {
+                VibeLogger.LogInfo(
+                    "screenshot_success",
+                    $"Captured game rendering ({width}x{height})",
+                    new { CaptureMode = "rendering", ScreenshotCount = screenshots.Count },
+                    correlationId: correlationId
+                );
+            }
+
+            return new ScreenshotResponse(screenshots);
+        }
+
+        private async Task<ScreenshotResponse> CaptureWindowsAsync(
+            ScreenshotSchema parameters, string correlationId, CancellationToken ct)
+        {
             EditorWindow[] windows = EditorWindowCaptureUtility.FindWindowsByName(parameters.WindowName, parameters.MatchMode);
             if (windows.Length == 0)
             {

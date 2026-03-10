@@ -10,16 +10,17 @@ Take a screenshot of any Unity EditorWindow by name and save as PNG.
 ## Usage
 
 ```bash
-uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mode <mode>] [--output-directory <path>]
+uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mode <mode>] [--capture-mode <mode>] [--output-directory <path>]
 ```
 
 ## Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `--window-name` | string | `Game` | Window name to capture (e.g., "Game", "Scene", "Console", "Inspector", "Project", "Hierarchy", or any EditorWindow title) |
+| `--window-name` | string | `Game` | Window name to capture. Ignored when `--capture-mode rendering`. |
 | `--resolution-scale` | number | `1.0` | Resolution scale (0.1 to 1.0) |
-| `--match-mode` | enum | `exact` | Window name matching mode: `exact`, `prefix`, or `contains`. All modes are case-insensitive. |
+| `--match-mode` | enum | `exact` | Window name matching mode: `exact`, `prefix`, or `contains`. Ignored when `--capture-mode rendering`. |
+| `--capture-mode` | enum | `window` | `window`=capture EditorWindow including toolbar, `rendering`=capture game rendering only (PlayMode required, coordinates match simulate-mouse) |
 | `--output-directory` | string | `""` | Output directory path for saving screenshots. When empty, uses default path (.uloop/outputs/Screenshots/). Accepts absolute paths. |
 
 ## Match Modes
@@ -47,6 +48,9 @@ The window name is the text displayed in the window's title bar (tab). Common na
 # Take a screenshot of Game View (default)
 uloop screenshot
 
+# Capture game rendering (coordinates match simulate-mouse, PlayMode required)
+uloop screenshot --capture-mode rendering
+
 # Take a screenshot of Scene View
 uloop screenshot --window-name Scene
 
@@ -69,6 +73,8 @@ Returns JSON with:
   - `FileSizeBytes`: Size of the saved file in bytes
   - `Width`: Captured image width in pixels
   - `Height`: Captured image height in pixels
+  - `CoordinateSystem`: `"gameView"` (pixel coords match simulate-mouse) or `"window"` (EditorWindow capture)
+  - `ResolutionScale`: Resolution scale used for capture (divide pixel coords by this value for simulate-mouse coords when != 1.0)
 
 When multiple windows match (e.g., multiple Inspector windows or when using `contains` mode), all matching windows are captured with numbered filenames (e.g., `Inspector_1_*.png`, `Inspector_2_*.png`).
 

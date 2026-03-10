@@ -400,6 +400,15 @@
             "type": "string",
             "description": "Output directory path for saving screenshots. When empty, uses default path (.uloop/outputs/Screenshots/). Accepts absolute paths.",
             "default": ""
+          },
+          "CaptureMode": {
+            "type": "string",
+            "description": "Capture mode: window=capture EditorWindow including toolbar, rendering=capture game rendering only (PlayMode required, coordinates match simulate-mouse). Response includes CoordinateSystem ('gameView' or 'window') and ResolutionScale fields.",
+            "enum": [
+              "window",
+              "rendering"
+            ],
+            "default": "window"
           }
         }
       }
