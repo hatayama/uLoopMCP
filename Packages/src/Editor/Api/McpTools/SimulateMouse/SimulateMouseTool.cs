@@ -67,11 +67,11 @@ namespace io.github.hatayama.uLoopMCP
                     break;
 
                 case MouseAction.DragMove:
-                    response = ExecuteDragMove(parameters);
+                    response = await ExecuteDragMove(parameters, ct);
                     break;
 
                 case MouseAction.DragEnd:
-                    response = ExecuteDragEnd(parameters);
+                    response = await ExecuteDragEnd(parameters, ct);
                     break;
 
                 default:
@@ -176,8 +176,6 @@ namespace io.github.hatayama.uLoopMCP
         private async Task<SimulateMouseResponse> ExecuteDragOneShot(
             SimulateMouseSchema parameters, EventSystem eventSystem, CancellationToken ct)
         {
-            Debug.Assert(parameters.DragSpeed >= 0f, "DragSpeed must be non-negative");
-
             Vector2 startPos = new Vector2(parameters.X, parameters.Y);
             Vector2 endPos = new Vector2(parameters.EndX, parameters.EndY);
             RaycastResult? hit = RaycastUI(startPos, eventSystem);
@@ -204,44 +202,15 @@ namespace io.github.hatayama.uLoopMCP
             PointerEventData pointerData = InitiateDrag(eventSystem, startPos, hit!.Value, target);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
 
-            float distance = Vector2.Distance(startPos, endPos);
-            float duration = parameters.DragSpeed > 0f ? distance / parameters.DragSpeed : 0f;
-
-            if (duration <= 0f)
+            try
             {
-                // Speed=0 or distance=0: skip interpolation but still fire one Drag event on a separate frame
-                await DelayFrameWithDragSafety(pointerData, target, ct);
-
-                Vector2 previousPosition = pointerData.position;
-                pointerData.position = endPos;
-                pointerData.delta = endPos - previousPosition;
-                ExecuteEvents.Execute(target, pointerData, ExecuteEvents.dragHandler);
+                await InterpolateDragPosition(pointerData, target, endPos, parameters.DragSpeed, ct);
+                await EditorDelay.DelayFrame(1, ct);
             }
-            else
+            finally
             {
-                float startTime = Time.realtimeSinceStartup;
-                float t;
-
-                do
-                {
-                    await DelayFrameWithDragSafety(pointerData, target, ct);
-
-                    float elapsed = Time.realtimeSinceStartup - startTime;
-                    t = Mathf.Clamp01(elapsed / duration);
-                    Vector2 previousPosition = pointerData.position;
-                    Vector2 currentPosition = Vector2.Lerp(startPos, endPos, t);
-
-                    pointerData.position = currentPosition;
-                    pointerData.delta = currentPosition - previousPosition;
-
-                    ExecuteEvents.Execute(target, pointerData, ExecuteEvents.dragHandler);
-                }
-                while (t < 1.0f);
+                FinalizeDrag(pointerData, target);
             }
-
-            await EditorDelay.DelayFrame(1, ct);
-
-            FinalizeDrag(pointerData, target);
 
             return new SimulateMouseResponse
             {
@@ -267,18 +236,48 @@ namespace io.github.hatayama.uLoopMCP
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.endDragHandler);
         }
 
-        // Cancellation mid-drag must still complete the lifecycle to avoid leaving UI in a half-dragged state
-        private async Task DelayFrameWithDragSafety(
-            PointerEventData pointerData, GameObject target, CancellationToken ct)
+        private async Task InterpolateDragPosition(
+            PointerEventData pointerData,
+            GameObject target,
+            Vector2 endPos,
+            float dragSpeed,
+            CancellationToken ct)
         {
-            try
+            Debug.Assert(dragSpeed >= 0f, "dragSpeed must be non-negative");
+
+            Vector2 startPos = pointerData.position;
+            float distance = Vector2.Distance(startPos, endPos);
+            float duration = dragSpeed > 0f ? distance / dragSpeed : 0f;
+
+            if (duration <= 0f)
             {
                 await EditorDelay.DelayFrame(1, ct);
+
+                Vector2 previousPosition = pointerData.position;
+                pointerData.position = endPos;
+                pointerData.delta = endPos - previousPosition;
+                ExecuteEvents.Execute(target, pointerData, ExecuteEvents.dragHandler);
             }
-            catch (OperationCanceledException)
+            else
             {
-                FinalizeDrag(pointerData, target);
-                throw;
+                float startTime = Time.realtimeSinceStartup;
+                float t;
+
+                do
+                {
+                    await EditorDelay.DelayFrame(1, ct);
+
+                    float elapsed = Time.realtimeSinceStartup - startTime;
+                    t = Mathf.Clamp01(elapsed / duration);
+                    Vector2 previousPosition = pointerData.position;
+                    Vector2 currentPosition = Vector2.Lerp(startPos, endPos, t);
+
+                    pointerData.position = currentPosition;
+                    pointerData.delta = currentPosition - previousPosition;
+
+                    ExecuteEvents.Execute(target, pointerData, ExecuteEvents.dragHandler);
+                }
+                while (t < 1.0f);
             }
         }
 
@@ -332,7 +331,8 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        private SimulateMouseResponse ExecuteDragMove(SimulateMouseSchema parameters)
+        private async Task<SimulateMouseResponse> ExecuteDragMove(
+            SimulateMouseSchema parameters, CancellationToken ct)
         {
             if (!MouseDragState.IsDragging)
             {
@@ -349,26 +349,26 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(MouseDragState.Target != null, "Target must not be null when IsDragging is true");
             Debug.Assert(MouseDragState.PointerData != null, "PointerData must not be null when IsDragging is true");
 
-            Vector2 newPos = new Vector2(parameters.X, parameters.Y);
-            Vector2 previousPosition = MouseDragState.PointerData!.position;
+            Vector2 endPos = new Vector2(parameters.X, parameters.Y);
 
-            MouseDragState.PointerData.position = newPos;
-            MouseDragState.PointerData.delta = newPos - previousPosition;
-
-            ExecuteEvents.Execute(MouseDragState.Target!, MouseDragState.PointerData, ExecuteEvents.dragHandler);
+            // Cancellation leaves drag state intact so the user can continue with DragMove/DragEnd
+            await InterpolateDragPosition(
+                MouseDragState.PointerData!, MouseDragState.Target!, endPos,
+                parameters.DragSpeed, ct);
 
             return new SimulateMouseResponse
             {
                 Success = true,
-                Message = $"Drag moved on '{MouseDragState.Target!.name}' to ({newPos.x:F1}, {newPos.y:F1})",
+                Message = $"Drag moved on '{MouseDragState.Target!.name}' to ({endPos.x:F1}, {endPos.y:F1}) at {parameters.DragSpeed:F0} px/s",
                 Action = MouseAction.DragMove.ToString(),
                 HitGameObjectName = MouseDragState.Target.name,
-                PositionX = newPos.x,
-                PositionY = newPos.y
+                PositionX = endPos.x,
+                PositionY = endPos.y
             };
         }
 
-        private SimulateMouseResponse ExecuteDragEnd(SimulateMouseSchema parameters)
+        private async Task<SimulateMouseResponse> ExecuteDragEnd(
+            SimulateMouseSchema parameters, CancellationToken ct)
         {
             if (!MouseDragState.IsDragging)
             {
@@ -386,18 +386,25 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(MouseDragState.PointerData != null, "PointerData must not be null when IsDragging is true");
 
             Vector2 endPos = new Vector2(parameters.X, parameters.Y);
-            MouseDragState.PointerData!.position = endPos;
-
             string targetName = MouseDragState.Target!.name;
 
-            FinalizeDrag(MouseDragState.PointerData, MouseDragState.Target);
-
-            MouseDragState.Clear();
+            try
+            {
+                await InterpolateDragPosition(
+                    MouseDragState.PointerData!, MouseDragState.Target!, endPos,
+                    parameters.DragSpeed, ct);
+                await EditorDelay.DelayFrame(1, ct);
+            }
+            finally
+            {
+                FinalizeDrag(MouseDragState.PointerData!, MouseDragState.Target!);
+                MouseDragState.Clear();
+            }
 
             return new SimulateMouseResponse
             {
                 Success = true,
-                Message = $"Drag ended on '{targetName}' at ({endPos.x:F1}, {endPos.y:F1})",
+                Message = $"Drag ended on '{targetName}' at ({endPos.x:F1}, {endPos.y:F1}) at {parameters.DragSpeed:F0} px/s",
                 Action = MouseAction.DragEnd.ToString(),
                 HitGameObjectName = targetName,
                 PositionX = endPos.x,

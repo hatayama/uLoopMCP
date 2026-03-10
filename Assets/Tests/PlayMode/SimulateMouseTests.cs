@@ -215,7 +215,7 @@ namespace Tests.PlayMode
                 ["y"] = screenPos.y
             });
             Assert.IsTrue(lastResponse.Success);
-            Assert.AreEqual(1, tracker.DragCallCount, "Drag should be fired once");
+            Assert.IsTrue(tracker.DragCallCount >= 1, "At least one drag event should be fired");
 
             yield return RunTool(new JObject
             {
@@ -283,6 +283,62 @@ namespace Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator DragMove_Should_InterpolateAtSpeed()
+        {
+            yield return StartDragOnNewElement();
+            lastDragTracker.DragCallCount = 0;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = MouseAction.DragMove.ToString(),
+                ["x"] = lastDragScreenPos.x + 100f,
+                ["y"] = lastDragScreenPos.y,
+                ["dragSpeed"] = 1000f
+            });
+            Assert.IsTrue(lastResponse.Success);
+            Assert.IsTrue(lastDragTracker.DragCallCount >= 1, "At least one drag event should be fired during interpolation");
+
+            yield return EndDragInstant(lastDragScreenPos.x + 100f, lastDragScreenPos.y);
+        }
+
+        [UnityTest]
+        public IEnumerator DragMove_WithZeroSpeed_Should_MoveInstantly()
+        {
+            yield return StartDragOnNewElement();
+            lastDragTracker.DragCallCount = 0;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = MouseAction.DragMove.ToString(),
+                ["x"] = lastDragScreenPos.x + 100f,
+                ["y"] = lastDragScreenPos.y,
+                ["dragSpeed"] = 0f
+            });
+            Assert.IsTrue(lastResponse.Success);
+            Assert.AreEqual(1, lastDragTracker.DragCallCount, "Exactly one drag event should be fired for instant move");
+
+            yield return EndDragInstant(lastDragScreenPos.x + 100f, lastDragScreenPos.y);
+        }
+
+        [UnityTest]
+        public IEnumerator DragEnd_Should_InterpolateBeforeRelease()
+        {
+            yield return StartDragOnNewElement();
+            lastDragTracker.DragCallCount = 0;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = MouseAction.DragEnd.ToString(),
+                ["x"] = lastDragScreenPos.x + 100f,
+                ["y"] = lastDragScreenPos.y,
+                ["dragSpeed"] = 1000f
+            });
+            Assert.IsTrue(lastResponse.Success);
+            Assert.IsTrue(lastDragTracker.DragCallCount >= 1, "Drag events should be fired during interpolation before EndDrag");
+            Assert.IsTrue(lastDragTracker.EndDragCalled, "EndDrag should be fired after interpolation");
+        }
+
+        [UnityTest]
         public IEnumerator DragStart_AtEmptyPosition_Should_ReturnFailure()
         {
             yield return null;
@@ -340,6 +396,37 @@ namespace Tests.PlayMode
             return (Vector2)go.GetComponent<RectTransform>().position;
         }
 
+        private DragTracker lastDragTracker = null!;
+        private Vector2 lastDragScreenPos;
+
+        private IEnumerator StartDragOnNewElement()
+        {
+            lastDragTracker = CreateDraggableElement("DragTarget", Vector2.zero, new Vector2(200, 100));
+            yield return null;
+
+            lastDragScreenPos = GetScreenPosition(lastDragTracker.gameObject);
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = MouseAction.DragStart.ToString(),
+                ["x"] = lastDragScreenPos.x,
+                ["y"] = lastDragScreenPos.y
+            });
+            Assert.IsTrue(lastResponse.Success);
+        }
+
+        private IEnumerator EndDragInstant(float x, float y)
+        {
+            yield return RunTool(new JObject
+            {
+                ["action"] = MouseAction.DragEnd.ToString(),
+                ["x"] = x,
+                ["y"] = y,
+                ["dragSpeed"] = 0f
+            });
+            Assert.IsTrue(lastResponse.Success);
+        }
+
         #endregion
     }
 
@@ -360,7 +447,7 @@ namespace Tests.PlayMode
     {
         public bool BeginDragCalled { get; private set; }
         public bool EndDragCalled { get; private set; }
-        public int DragCallCount { get; private set; }
+        public int DragCallCount { get; set; }
         public Vector2 LastDragPosition { get; private set; }
 
         private RectTransform rectTransform = null!;

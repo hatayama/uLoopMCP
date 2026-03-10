@@ -500,7 +500,7 @@
           },
           "DragSpeed": {
             "type": "number",
-            "description": "Drag speed in pixels per second (0 for instant). Applies to Drag action only.",
+            "description": "Drag speed in pixels per second (0 for instant). Applies to Drag, DragMove, and DragEnd actions.",
             "default": 2000
           }
         }

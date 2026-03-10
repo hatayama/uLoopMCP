@@ -22,7 +22,7 @@ uloop simulate-mouse --action <action> --x <x> --y <y> [options]
 | `--y` | number | `0` | Y position in screen pixels (origin: bottom-left) |
 | `--end-x` | number | `0` | End X position for Drag action |
 | `--end-y` | number | `0` | End Y position for Drag action |
-| `--drag-speed` | number | `2000` | Drag speed in pixels per second (0 for instant). Applies to Drag action only. |
+| `--drag-speed` | number | `2000` | Drag speed in pixels per second (0 for instant). Applies to Drag, DragMove, and DragEnd actions. |
 
 ## Global Options
 
@@ -38,8 +38,8 @@ uloop simulate-mouse --action <action> --x <x> --y <y> [options]
 | `Click` | PointerDown → PointerUp → PointerClick | Left click at (x, y) |
 | `Drag` | BeginDrag → Drag×N → EndDrag | One-shot drag from (x, y) to (endX, endY) at the specified speed |
 | `DragStart` | BeginDrag | Begin drag at (x, y) and hold |
-| `DragMove` | Drag | Move while holding drag to (x, y) |
-| `DragEnd` | EndDrag | Release drag at (x, y) |
+| `DragMove` | Drag×N | Animate from current position to (x, y) at the specified speed |
+| `DragEnd` | Drag×N → EndDrag | Animate to (x, y) at the specified speed, then release drag |
 
 ## Prerequisites
 
@@ -89,4 +89,5 @@ This tool operates entirely on screen pixel coordinates — no need to look up G
 - All positions use screen pixel coordinates with bottom-left as origin (0, 0)
 - Click and DragStart use `EventSystem.RaycastAll()` to find the UI element at the given position
 - One-shot Drag interpolates position every frame at the specified speed (pixels/sec), so short and long drags move at the same visual speed
+- DragMove/DragEnd also interpolate at the specified speed, consistent with one-shot Drag
 - DragStart/DragMove/DragEnd maintain state between calls for hold-and-inspect workflows
