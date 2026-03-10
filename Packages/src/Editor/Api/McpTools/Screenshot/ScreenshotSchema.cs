@@ -45,5 +45,8 @@ namespace io.github.hatayama.uLoopMCP
 
         [Description("Capture mode: window(0)=capture EditorWindow including toolbar, rendering(1)=capture game rendering only (PlayMode required, coordinates match simulate-mouse)")]
         public CaptureMode CaptureMode { get; set; } = CaptureMode.window;
+
+        [Description("Annotate interactive UI elements with names and simulate-mouse coordinates on the screenshot. Only works with CaptureMode=rendering in PlayMode.")]
+        public bool AnnotateElements { get; set; } = false;
     }
 }

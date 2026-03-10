@@ -22,6 +22,7 @@ uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mo
 | `--match-mode` | enum | `exact` | Window name matching mode: `exact`, `prefix`, or `contains`. Ignored when `--capture-mode rendering`. |
 | `--capture-mode` | enum | `window` | `window`=capture EditorWindow including toolbar, `rendering`=capture game rendering only (PlayMode required, coordinates match simulate-mouse) |
 | `--output-directory` | string | `""` | Output directory path for saving screenshots. When empty, uses default path (.uloop/outputs/Screenshots/). Accepts absolute paths. |
+| `--annotate-elements` | boolean | `false` | Annotate interactive UI elements with names and simulate-mouse coordinates on the screenshot. Only works with `--capture-mode rendering` in PlayMode. |
 
 ## Match Modes
 
@@ -51,6 +52,9 @@ uloop screenshot
 # Capture game rendering (coordinates match simulate-mouse, PlayMode required)
 uloop screenshot --capture-mode rendering
 
+# Annotate interactive UI elements with names and coordinates (for simulate-mouse workflow)
+uloop screenshot --capture-mode rendering --annotate-elements
+
 # Take a screenshot of Scene View
 uloop screenshot --window-name Scene
 
@@ -76,6 +80,11 @@ Returns JSON with:
   - `CoordinateSystem`: `"gameView"` (pixel coords usable with simulate-mouse) or `"window"` (EditorWindow capture)
   - `ResolutionScale`: Resolution scale used for capture
   - `YOffset`: Y offset to add to image pixel Y to get simulate-mouse Y coordinate (only meaningful when `CoordinateSystem` is `"gameView"`)
+  - `AnnotatedElements`: Array of annotated UI element metadata (only when `--annotate-elements` is used), each containing:
+    - `Name`: Element name
+    - `Type`: Element type (`Button`, `Toggle`, `Slider`, `Dropdown`, `InputField`, `Scrollbar`, `Draggable`, `DropTarget`, `Selectable`)
+    - `SimX`, `SimY`: Center position in simulate-mouse coordinates (use directly with `--x` and `--y`)
+    - `BoundsMinX`, `BoundsMinY`, `BoundsMaxX`, `BoundsMaxY`: Bounding box in simulate-mouse coordinates
 
 ### Coordinate Conversion (gameView)
 

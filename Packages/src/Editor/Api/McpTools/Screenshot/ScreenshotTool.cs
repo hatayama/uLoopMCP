@@ -53,8 +53,28 @@ namespace io.github.hatayama.uLoopMCP
                 return new ScreenshotResponse();
             }
 
-            (Texture2D texture, int yOffset) = await EditorWindowCaptureUtility.CaptureGameRenderingAsync(
-                parameters.ResolutionScale, ct);
+            List<UIElementInfo> annotatedElements = new List<UIElementInfo>();
+            GameObject annotationOverlay = null;
+
+            if (parameters.AnnotateElements)
+            {
+                annotatedElements = UIElementAnnotator.CollectInteractiveElements();
+                annotationOverlay = UIElementAnnotator.CreateAnnotationOverlay(annotatedElements);
+                // Wait 1 frame for the overlay Canvas to render into the RT
+                await EditorDelay.DelayFrame(1, ct);
+            }
+
+            Texture2D texture;
+            int yOffset;
+            try
+            {
+                (texture, yOffset) = await EditorWindowCaptureUtility.CaptureGameRenderingAsync(
+                    parameters.ResolutionScale, ct);
+            }
+            finally
+            {
+                UIElementAnnotator.DestroyAnnotationOverlay(annotationOverlay);
+            }
 
             string outputDirectory = EnsureOutputDirectoryExists(parameters.OutputDirectory);
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
@@ -69,9 +89,11 @@ namespace io.github.hatayama.uLoopMCP
                 SaveTextureAsPng(texture, savedPath);
 
                 FileInfo savedFileInfo = new FileInfo(savedPath);
-                screenshots.Add(new ScreenshotInfo(
+                ScreenshotInfo info = new ScreenshotInfo(
                     savedPath, savedFileInfo.Length, width, height,
-                    McpConstants.COORDINATE_SYSTEM_GAME_VIEW, parameters.ResolutionScale, yOffset));
+                    McpConstants.COORDINATE_SYSTEM_GAME_VIEW, parameters.ResolutionScale, yOffset);
+                info.AnnotatedElements = annotatedElements;
+                screenshots.Add(info);
             }
             catch (Exception ex)
             {
@@ -92,7 +114,7 @@ namespace io.github.hatayama.uLoopMCP
                 VibeLogger.LogInfo(
                     "screenshot_success",
                     $"Captured game rendering ({width}x{height})",
-                    new { CaptureMode = "rendering", ScreenshotCount = screenshots.Count },
+                    new { CaptureMode = "rendering", ScreenshotCount = screenshots.Count, AnnotatedElements = annotatedElements.Count },
                     correlationId: correlationId
                 );
             }

@@ -409,6 +409,11 @@
               "rendering"
             ],
             "default": "window"
+          },
+          "AnnotateElements": {
+            "type": "boolean",
+            "description": "Annotate interactive UI elements with names and simulate-mouse coordinates on the screenshot. Only works with CaptureMode=rendering in PlayMode. Response includes AnnotatedElements array with element metadata.",
+            "default": false
           }
         }
       }

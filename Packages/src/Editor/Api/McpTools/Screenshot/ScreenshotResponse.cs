@@ -23,6 +23,8 @@ namespace io.github.hatayama.uLoopMCP
         // Only meaningful when CoordinateSystem == "gameView".
         public int YOffset { get; set; }
 
+        public List<UIElementInfo> AnnotatedElements { get; set; } = new();
+
         public ScreenshotInfo(string imagePath, long fileSizeBytes, int width, int height,
             string coordinateSystem = McpConstants.COORDINATE_SYSTEM_WINDOW,
             float resolutionScale = 1.0f, int yOffset = 0)

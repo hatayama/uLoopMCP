@@ -11,8 +11,8 @@ Simulate mouse interaction on Unity PlayMode UI: $ARGUMENTS
 ## Workflow
 
 1. Ensure Unity is in PlayMode (use `uloop control-play-mode --action Play` if not)
-2. Take a screenshot: `uloop screenshot --capture-mode rendering`
-3. Read the screenshot to visually identify target positions — when `CoordinateSystem` is `"gameView"`, convert image pixel coordinates: `sim_x = image_x / ResolutionScale`, `sim_y = image_y / ResolutionScale + YOffset`
+2. Take an annotated screenshot: `uloop screenshot --capture-mode rendering --annotate-elements`
+3. Use the `AnnotatedElements` array from the response to get exact simulate-mouse coordinates (`SimX`, `SimY`) for each interactive UI element. The screenshot image also shows bounding boxes and labels with coordinates overlaid on each element.
 4. Execute the appropriate `uloop simulate-mouse` command
 5. Take another screenshot to verify the result
 6. Report what happened
