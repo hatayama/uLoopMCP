@@ -33,21 +33,26 @@ From the `AnnotatedElements` array in the response, extract `SimX` and `SimY` fo
 - **GreenBox** — green draggable box
 - **BlueBox** — blue draggable box
 
-### Step 2: Alternate-click both buttons 10 times total
+### Step 2: Click buttons and drag boxes — fire everything at once
 
-Click **ClickButton1** and **ClickButton2** alternately (5 times each, 10 total). Fire all clicks as fast as possible — launch each click command immediately without waiting for output or adding delays:
+Launch **all 13 commands below as background tasks in a single message** — do not wait for any command to finish before launching the next. The goal is maximum parallelism with zero gaps between clicks and drags.
+
+**Clicks** — alternate ClickButton1 and ClickButton2, 10 times total:
 
 ```bash
 uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
 uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY>
 uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
 uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY>
-...
+uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
+uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY>
+uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
+uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY>
+uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
+uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY>
 ```
 
-### Step 3: Drag each colored box to the DropZone
-
-Drag each box to the DropZone at `--drag-speed 1000` (fast). Fire each drag immediately without waiting. Offset the drop position by -50/0/+50 pixels in X so the boxes don't stack but converge slightly toward the DropZone center:
+**Drags** — drag each box to the DropZone at `--drag-speed 1000`. Offset drop X by -50/0/+50 so the boxes converge slightly toward center:
 
 ```bash
 uloop simulate-mouse --action Drag \
@@ -66,6 +71,3 @@ uloop simulate-mouse --action Drag \
     --drag-speed 1000
 ```
 
-### Step 4: Report
-
-Report the results from each command's response (hit element names, success/failure).
