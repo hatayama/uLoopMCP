@@ -51,11 +51,11 @@ From the `AnnotatedElements` array in the response, extract `SimX` and `SimY` fo
 Alternate ClickButton1 and ClickButton2 4 times, then drag each box to the DropZone at `--drag-speed 1000`. Offset drop X by -50/0/+50 so the boxes converge slightly toward center:
 
 ```bash
-uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && \
-uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && \
-uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && \
-uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && \
-uloop simulate-mouse --action Drag --x <RedBox.SimX> --y <RedBox.SimY> --end-x <DropZone.SimX - 50> --end-y <DropZone.SimY> --drag-speed 1000 && \
-uloop simulate-mouse --action Drag --x <GreenBox.SimX> --y <GreenBox.SimY> --end-x <DropZone.SimX> --end-y <DropZone.SimY> --drag-speed 1000 && \
+uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && sleep 0.3 && \
+uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && sleep 0.3 && \
+uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && sleep 0.3 && \
+uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && sleep 0.3 && \
+uloop simulate-mouse --action Drag --x <RedBox.SimX> --y <RedBox.SimY> --end-x <DropZone.SimX - 50> --end-y <DropZone.SimY> --drag-speed 1000 && sleep 0.3 && \
+uloop simulate-mouse --action Drag --x <GreenBox.SimX> --y <GreenBox.SimY> --end-x <DropZone.SimX> --end-y <DropZone.SimY> --drag-speed 1000 && sleep 0.3 && \
 uloop simulate-mouse --action Drag --x <BlueBox.SimX> --y <BlueBox.SimY> --end-x <DropZone.SimX + 50> --end-y <DropZone.SimY> --drag-speed 1000
 ```
