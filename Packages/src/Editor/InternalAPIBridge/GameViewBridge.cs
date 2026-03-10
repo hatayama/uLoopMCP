@@ -44,6 +44,17 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return null;
             }
+
+            // Prefer focused window to match editor's active view context
+            foreach (UnityEngine.Object gv in gameViews)
+            {
+                EditorWindow window = gv as EditorWindow;
+                if (window != null && window.hasFocus)
+                {
+                    return window;
+                }
+            }
+
             return gameViews[0] as EditorWindow;
         }
 

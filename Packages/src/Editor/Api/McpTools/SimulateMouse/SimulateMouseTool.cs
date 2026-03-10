@@ -66,6 +66,18 @@ namespace io.github.hatayama.uLoopMCP
 
             EnsureOverlayExists();
 
+            // Single-pointer model: Click and one-shot Drag are invalid while a split drag is held
+            if (MouseDragState.IsDragging &&
+                (parameters.Action == MouseAction.Click || parameters.Action == MouseAction.Drag))
+            {
+                return new SimulateMouseResponse
+                {
+                    Success = false,
+                    Message = $"Cannot {parameters.Action.ToString()} while a split drag is active. Call DragEnd first.",
+                    Action = parameters.Action.ToString()
+                };
+            }
+
             SimulateMouseResponse response;
 
             switch (parameters.Action)

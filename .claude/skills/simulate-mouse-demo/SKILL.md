@@ -1,6 +1,6 @@
 ---
 name: simulate-mouse-demo
-description: "Run the SimulateMouse demo scenario on SimulateMouseDemoScene. Clicks a button 10 times, then drags 3 colored boxes to a drop zone. Use when the user asks to run the simulate-mouse demo, test mouse simulation, or exercise the demo scene."
+description: "Run the SimulateMouse demo scenario on SimulateMouseDemoScene. Clicks a button 4 times, then drags 3 colored boxes to a drop zone. Use when the user asks to run the simulate-mouse demo, test mouse simulation, or exercise the demo scene."
 context: fork
 ---
 
@@ -48,15 +48,9 @@ From the `AnnotatedElements` array in the response, extract `SimX` and `SimY` fo
 
 Run each click **one at a time**, waiting for the previous command to finish before starting the next. The simulate-mouse tool uses a single-pointer model, so concurrent actions would produce nondeterministic results.
 
-Alternate ClickButton1 and ClickButton2, 10 times total:
+Alternate ClickButton1 and ClickButton2, 4 times total:
 
 ```bash
-uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
-uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY>
-uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
-uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY>
-uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
-uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY>
 uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
 uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY>
 uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY>
