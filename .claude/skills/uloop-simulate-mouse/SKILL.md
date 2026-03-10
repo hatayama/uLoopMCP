@@ -12,7 +12,7 @@ Simulate mouse interaction on Unity PlayMode UI: $ARGUMENTS
 
 1. Ensure Unity is in PlayMode (use `uloop control-play-mode --action Play` if not)
 2. Take a screenshot: `uloop screenshot --window-name Game`
-3. Read the screenshot to visually identify target positions (coordinates use **bottom-left origin**)
+3. Read the screenshot to visually identify target positions (coordinates use **top-left origin**)
 4. Execute the appropriate `uloop simulate-mouse` command
 5. Take another screenshot to verify the result
 6. Report what happened
@@ -28,8 +28,8 @@ uloop simulate-mouse --action <action> --x <x> --y <y> [options]
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `--action` | enum | `Click` | `Click`, `Drag`, `DragStart`, `DragMove`, `DragEnd` |
-| `--x` | number | `0` | X position in screen pixels (origin: bottom-left) |
-| `--y` | number | `0` | Y position in screen pixels (origin: bottom-left) |
+| `--x` | number | `0` | X position in screen pixels (origin: top-left) |
+| `--y` | number | `0` | Y position in screen pixels (origin: top-left) |
 | `--end-x` | number | `0` | End X position for Drag action |
 | `--end-y` | number | `0` | End Y position for Drag action |
 | `--drag-speed` | number | `2000` | Drag speed in pixels per second (0 for instant). Applies to Drag, DragMove, and DragEnd actions. |
@@ -53,7 +53,7 @@ uloop simulate-mouse --action <action> --x <x> --y <y> [options]
 
 ## Coordinate System
 
-- Origin is **bottom-left** (0, 0)
+- Origin is **top-left** (0, 0)
 - All positions are in **screen pixels**
 - Identify coordinates visually from screenshots — do NOT look up GameObject positions
 

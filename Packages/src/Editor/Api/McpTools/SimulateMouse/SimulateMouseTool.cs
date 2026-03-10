@@ -100,9 +100,21 @@ namespace io.github.hatayama.uLoopMCP
             overlayGo.AddComponent<SimulateMouseOverlay>();
         }
 
+        // Input coordinates use top-left origin; Unity Screen space uses bottom-left origin
+        private static Vector2 InputToScreen(Vector2 inputPos)
+        {
+            return new Vector2(inputPos.x, Screen.height - inputPos.y);
+        }
+
+        private static Vector2 ScreenToInput(Vector2 screenPos)
+        {
+            return new Vector2(screenPos.x, Screen.height - screenPos.y);
+        }
+
         private SimulateMouseResponse ExecuteClick(SimulateMouseSchema parameters, EventSystem eventSystem)
         {
-            Vector2 screenPos = new Vector2(parameters.X, parameters.Y);
+            Vector2 inputPos = new Vector2(parameters.X, parameters.Y);
+            Vector2 screenPos = InputToScreen(inputPos);
             RaycastResult? hit = RaycastUI(screenPos, eventSystem);
 
             PointerEventData pointerData = new PointerEventData(eventSystem)
@@ -116,7 +128,7 @@ namespace io.github.hatayama.uLoopMCP
 
             EnsureOverlayExists();
             SimulateMouseOverlayState.Update(
-                MouseAction.Click, screenPos, null, null);
+                MouseAction.Click, inputPos, null, null);
 
             if (hit != null)
             {
@@ -149,19 +161,19 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             SimulateMouseOverlayState.Update(
-                MouseAction.Click, screenPos, null,
+                MouseAction.Click, inputPos, null,
                 target != null ? target.name : null);
 
             return new SimulateMouseResponse
             {
                 Success = true,
                 Message = target != null
-                    ? $"Clicked '{target.name}' at ({screenPos.x:F1}, {screenPos.y:F1})"
-                    : $"Clicked at ({screenPos.x:F1}, {screenPos.y:F1}) - no UI element hit",
+                    ? $"Clicked '{target.name}' at ({inputPos.x:F1}, {inputPos.y:F1})"
+                    : $"Clicked at ({inputPos.x:F1}, {inputPos.y:F1}) - no UI element hit",
                 Action = MouseAction.Click.ToString(),
                 HitGameObjectName = target != null ? target.name : null,
-                PositionX = screenPos.x,
-                PositionY = screenPos.y
+                PositionX = inputPos.x,
+                PositionY = inputPos.y
             };
         }
 
@@ -196,9 +208,11 @@ namespace io.github.hatayama.uLoopMCP
         private async Task<SimulateMouseResponse> ExecuteDragOneShot(
             SimulateMouseSchema parameters, EventSystem eventSystem, CancellationToken ct)
         {
-            Vector2 startPos = new Vector2(parameters.X, parameters.Y);
-            Vector2 endPos = new Vector2(parameters.EndX, parameters.EndY);
-            RaycastResult? hit = RaycastUI(startPos, eventSystem);
+            Vector2 inputStart = new Vector2(parameters.X, parameters.Y);
+            Vector2 inputEnd = new Vector2(parameters.EndX, parameters.EndY);
+            Vector2 screenStart = InputToScreen(inputStart);
+            Vector2 screenEnd = InputToScreen(inputEnd);
+            RaycastResult? hit = RaycastUI(screenStart, eventSystem);
 
             // Execute dispatches only to the exact target; resolve the actual drag handler up the hierarchy
             GameObject? target = hit != null
@@ -210,45 +224,45 @@ namespace io.github.hatayama.uLoopMCP
                 return new SimulateMouseResponse
                 {
                     Success = true,
-                    Message = $"No draggable UI element at ({startPos.x:F1}, {startPos.y:F1}) - drag not performed",
+                    Message = $"No draggable UI element at ({inputStart.x:F1}, {inputStart.y:F1}) - drag not performed",
                     Action = MouseAction.Drag.ToString(),
-                    PositionX = startPos.x,
-                    PositionY = startPos.y,
-                    EndPositionX = endPos.x,
-                    EndPositionY = endPos.y
+                    PositionX = inputStart.x,
+                    PositionY = inputStart.y,
+                    EndPositionX = inputEnd.x,
+                    EndPositionY = inputEnd.y
                 };
             }
 
             EnsureOverlayExists();
 
-            PointerEventData pointerData = InitiateDrag(eventSystem, startPos, hit!.Value, target);
+            PointerEventData pointerData = InitiateDrag(eventSystem, screenStart, hit!.Value, target);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
 
             SimulateMouseOverlayState.Update(
-                MouseAction.Drag, startPos, startPos, target.name);
+                MouseAction.Drag, inputStart, inputStart, target.name);
 
             try
             {
-                await InterpolateDragPosition(pointerData, target, endPos, parameters.DragSpeed, ct);
+                await InterpolateDragPosition(pointerData, target, screenEnd, parameters.DragSpeed, ct);
                 await EditorDelay.DelayFrame(1, ct);
             }
             finally
             {
                 FinalizeDrag(pointerData, target);
                 SimulateMouseOverlayState.Update(
-                    MouseAction.Drag, endPos, startPos, target.name);
+                    MouseAction.Drag, inputEnd, inputStart, target.name);
             }
 
             return new SimulateMouseResponse
             {
                 Success = true,
-                Message = $"Dragged '{target.name}' from ({startPos.x:F1}, {startPos.y:F1}) to ({endPos.x:F1}, {endPos.y:F1}) at {parameters.DragSpeed:F0} px/s",
+                Message = $"Dragged '{target.name}' from ({inputStart.x:F1}, {inputStart.y:F1}) to ({inputEnd.x:F1}, {inputEnd.y:F1}) at {parameters.DragSpeed:F0} px/s",
                 Action = MouseAction.Drag.ToString(),
                 HitGameObjectName = target.name,
-                PositionX = startPos.x,
-                PositionY = startPos.y,
-                EndPositionX = endPos.x,
-                EndPositionY = endPos.y
+                PositionX = inputStart.x,
+                PositionY = inputStart.y,
+                EndPositionX = inputEnd.x,
+                EndPositionY = inputEnd.y
             };
         }
 
@@ -285,7 +299,7 @@ namespace io.github.hatayama.uLoopMCP
                 pointerData.delta = endPos - previousPosition;
                 ExecuteEvents.Execute(target, pointerData, ExecuteEvents.dragHandler);
 
-                SimulateMouseOverlayState.UpdatePosition(endPos);
+                SimulateMouseOverlayState.UpdatePosition(ScreenToInput(endPos));
             }
             else
             {
@@ -306,7 +320,7 @@ namespace io.github.hatayama.uLoopMCP
 
                     ExecuteEvents.Execute(target, pointerData, ExecuteEvents.dragHandler);
 
-                    SimulateMouseOverlayState.UpdatePosition(currentPosition);
+                    SimulateMouseOverlayState.UpdatePosition(ScreenToInput(currentPosition));
                 }
                 while (t < 1.0f);
             }
@@ -326,7 +340,8 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            Vector2 screenPos = new Vector2(parameters.X, parameters.Y);
+            Vector2 inputPos = new Vector2(parameters.X, parameters.Y);
+            Vector2 screenPos = InputToScreen(inputPos);
             RaycastResult? hit = RaycastUI(screenPos, eventSystem);
 
             GameObject? target = hit != null
@@ -338,10 +353,10 @@ namespace io.github.hatayama.uLoopMCP
                 return new SimulateMouseResponse
                 {
                     Success = false,
-                    Message = $"No draggable UI element at ({screenPos.x:F1}, {screenPos.y:F1}). Use find-game-objects or screenshot to verify positions.",
+                    Message = $"No draggable UI element at ({inputPos.x:F1}, {inputPos.y:F1}). Use find-game-objects or screenshot to verify positions.",
                     Action = MouseAction.DragStart.ToString(),
-                    PositionX = screenPos.x,
-                    PositionY = screenPos.y
+                    PositionX = inputPos.x,
+                    PositionY = inputPos.y
                 };
             }
 
@@ -354,16 +369,16 @@ namespace io.github.hatayama.uLoopMCP
             MouseDragState.PointerData = pointerData;
 
             SimulateMouseOverlayState.Update(
-                MouseAction.DragStart, screenPos, screenPos, target.name);
+                MouseAction.DragStart, inputPos, inputPos, target.name);
 
             return new SimulateMouseResponse
             {
                 Success = true,
-                Message = $"Drag started on '{target.name}' at ({screenPos.x:F1}, {screenPos.y:F1})",
+                Message = $"Drag started on '{target.name}' at ({inputPos.x:F1}, {inputPos.y:F1})",
                 Action = MouseAction.DragStart.ToString(),
                 HitGameObjectName = target.name,
-                PositionX = screenPos.x,
-                PositionY = screenPos.y
+                PositionX = inputPos.x,
+                PositionY = inputPos.y
             };
         }
 
@@ -385,27 +400,28 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(MouseDragState.Target != null, "Target must not be null when IsDragging is true");
             Debug.Assert(MouseDragState.PointerData != null, "PointerData must not be null when IsDragging is true");
 
-            Vector2 endPos = new Vector2(parameters.X, parameters.Y);
+            Vector2 inputEnd = new Vector2(parameters.X, parameters.Y);
+            Vector2 screenEnd = InputToScreen(inputEnd);
 
             SimulateMouseOverlayState.Update(
                 MouseAction.DragMove,
-                MouseDragState.PointerData!.position,
+                ScreenToInput(MouseDragState.PointerData!.position),
                 SimulateMouseOverlayState.DragStartPosition,
                 MouseDragState.Target!.name);
 
             // Cancellation leaves drag state intact so the user can continue with DragMove/DragEnd
             await InterpolateDragPosition(
-                MouseDragState.PointerData!, MouseDragState.Target!, endPos,
+                MouseDragState.PointerData!, MouseDragState.Target!, screenEnd,
                 parameters.DragSpeed, ct);
 
             return new SimulateMouseResponse
             {
                 Success = true,
-                Message = $"Drag moved on '{MouseDragState.Target!.name}' to ({endPos.x:F1}, {endPos.y:F1}) at {parameters.DragSpeed:F0} px/s",
+                Message = $"Drag moved on '{MouseDragState.Target!.name}' to ({inputEnd.x:F1}, {inputEnd.y:F1}) at {parameters.DragSpeed:F0} px/s",
                 Action = MouseAction.DragMove.ToString(),
                 HitGameObjectName = MouseDragState.Target.name,
-                PositionX = endPos.x,
-                PositionY = endPos.y
+                PositionX = inputEnd.x,
+                PositionY = inputEnd.y
             };
         }
 
@@ -427,19 +443,20 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(MouseDragState.Target != null, "Target must not be null when IsDragging is true");
             Debug.Assert(MouseDragState.PointerData != null, "PointerData must not be null when IsDragging is true");
 
-            Vector2 endPos = new Vector2(parameters.X, parameters.Y);
+            Vector2 inputEnd = new Vector2(parameters.X, parameters.Y);
+            Vector2 screenEnd = InputToScreen(inputEnd);
             string targetName = MouseDragState.Target!.name;
 
             SimulateMouseOverlayState.Update(
                 MouseAction.DragEnd,
-                MouseDragState.PointerData!.position,
+                ScreenToInput(MouseDragState.PointerData!.position),
                 SimulateMouseOverlayState.DragStartPosition,
                 targetName);
 
             try
             {
                 await InterpolateDragPosition(
-                    MouseDragState.PointerData!, MouseDragState.Target!, endPos,
+                    MouseDragState.PointerData!, MouseDragState.Target!, screenEnd,
                     parameters.DragSpeed, ct);
                 await EditorDelay.DelayFrame(1, ct);
             }
@@ -449,17 +466,17 @@ namespace io.github.hatayama.uLoopMCP
                 MouseDragState.Clear();
 
                 SimulateMouseOverlayState.Update(
-                    MouseAction.DragEnd, endPos, null, targetName);
+                    MouseAction.DragEnd, inputEnd, null, targetName);
             }
 
             return new SimulateMouseResponse
             {
                 Success = true,
-                Message = $"Drag ended on '{targetName}' at ({endPos.x:F1}, {endPos.y:F1}) at {parameters.DragSpeed:F0} px/s",
+                Message = $"Drag ended on '{targetName}' at ({inputEnd.x:F1}, {inputEnd.y:F1}) at {parameters.DragSpeed:F0} px/s",
                 Action = MouseAction.DragEnd.ToString(),
                 HitGameObjectName = targetName,
-                PositionX = endPos.x,
-                PositionY = endPos.y
+                PositionX = inputEnd.x,
+                PositionY = inputEnd.y
             };
         }
 

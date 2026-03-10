@@ -480,22 +480,22 @@
           },
           "X": {
             "type": "number",
-            "description": "X position in screen pixels (origin: bottom-left)",
+            "description": "X position in screen pixels (origin: top-left)",
             "default": 0
           },
           "Y": {
             "type": "number",
-            "description": "Y position in screen pixels (origin: bottom-left)",
+            "description": "Y position in screen pixels (origin: top-left)",
             "default": 0
           },
           "EndX": {
             "type": "number",
-            "description": "End X position for Drag action (origin: bottom-left)",
+            "description": "End X position for Drag action (origin: top-left)",
             "default": 0
           },
           "EndY": {
             "type": "number",
-            "description": "End Y position for Drag action (origin: bottom-left)",
+            "description": "End Y position for Drag action (origin: top-left)",
             "default": 0
           },
           "DragSpeed": {

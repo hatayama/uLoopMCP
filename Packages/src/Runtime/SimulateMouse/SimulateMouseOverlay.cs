@@ -67,11 +67,10 @@ namespace io.github.hatayama.uLoopMCP
             EnsureStyles();
 
             Color activeColor = GetActiveColor();
-            Vector2 guiPos = ScreenToGUI(SimulateMouseOverlayState.CurrentPosition);
 
             DrawDragLine(activeColor);
             DrawDragStartMarker(activeColor);
-            DrawCrosshair(guiPos, activeColor);
+            DrawCrosshair(SimulateMouseOverlayState.CurrentPosition, activeColor);
             DrawStateLabel();
         }
 
@@ -107,12 +106,12 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            Vector2 startGui = ScreenToGUI(SimulateMouseOverlayState.DragStartPosition.Value);
+            Vector2 startPos = SimulateMouseOverlayState.DragStartPosition.Value;
             Color previousColor = GUI.color;
             GUI.color = color;
 
             GUI.DrawTexture(
-                new Rect(startGui.x - START_MARKER_SIZE / 2f, startGui.y - START_MARKER_SIZE / 2f,
+                new Rect(startPos.x - START_MARKER_SIZE / 2f, startPos.y - START_MARKER_SIZE / 2f,
                     START_MARKER_SIZE, START_MARKER_SIZE),
                 Texture2D.whiteTexture);
 
@@ -128,16 +127,16 @@ namespace io.github.hatayama.uLoopMCP
 
             EnsureLineMaterial();
 
-            Vector2 startGui = ScreenToGUI(SimulateMouseOverlayState.DragStartPosition.Value);
-            Vector2 endGui = ScreenToGUI(SimulateMouseOverlayState.CurrentPosition);
+            Vector2 startPos = SimulateMouseOverlayState.DragStartPosition.Value;
+            Vector2 endPos = SimulateMouseOverlayState.CurrentPosition;
 
             GL.PushMatrix();
             _lineMaterial!.SetPass(0);
             GL.LoadPixelMatrix();
             GL.Begin(GL.LINES);
             GL.Color(color);
-            GL.Vertex3(startGui.x, startGui.y, 0f);
-            GL.Vertex3(endGui.x, endGui.y, 0f);
+            GL.Vertex3(startPos.x, startPos.y, 0f);
+            GL.Vertex3(endPos.x, endPos.y, 0f);
             GL.End();
             GL.PopMatrix();
         }
@@ -205,9 +204,5 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        private static Vector2 ScreenToGUI(Vector2 screenPos)
-        {
-            return new Vector2(screenPos.x, Screen.height - screenPos.y);
-        }
     }
 }
