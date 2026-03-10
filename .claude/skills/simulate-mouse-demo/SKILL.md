@@ -47,12 +47,12 @@ uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.Si
 
 ### Step 3: Drag each colored box to the DropZone
 
-Drag each box to the DropZone at `--drag-speed 2000` (fast). Fire each drag immediately without waiting:
+Drag each box to the DropZone at `--drag-speed 2000` (fast). Fire each drag immediately without waiting. Offset the drop position by -100/0/+100 pixels in X so the boxes don't stack on top of each other:
 
 ```bash
 uloop simulate-mouse --action Drag \
     --x <RedBox.SimX> --y <RedBox.SimY> \
-    --end-x <DropZone.SimX> --end-y <DropZone.SimY> \
+    --end-x <DropZone.SimX - 100> --end-y <DropZone.SimY> \
     --drag-speed 2000
 
 uloop simulate-mouse --action Drag \
@@ -62,7 +62,7 @@ uloop simulate-mouse --action Drag \
 
 uloop simulate-mouse --action Drag \
     --x <BlueBox.SimX> --y <BlueBox.SimY> \
-    --end-x <DropZone.SimX> --end-y <DropZone.SimY> \
+    --end-x <DropZone.SimX + 100> --end-y <DropZone.SimY> \
     --drag-speed 2000
 ```
 
