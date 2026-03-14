@@ -329,6 +329,17 @@ namespace io.github.hatayama.uLoopMCP
         private async Task<SimulateMouseResponse> ExecuteDragOneShot(
             SimulateMouseSchema parameters, EventSystem eventSystem, CancellationToken ct)
         {
+            // FromX/FromY default to 0 — reject if the caller forgot to specify them
+            if (parameters.FromX == 0f && parameters.FromY == 0f && (parameters.X != 0f || parameters.Y != 0f))
+            {
+                return new SimulateMouseResponse
+                {
+                    Success = false,
+                    Message = "Drag action requires FromX/FromY (start position). Both are 0 which likely means they were omitted.",
+                    Action = MouseAction.Drag.ToString()
+                };
+            }
+
             Vector2 inputStart = new Vector2(parameters.FromX, parameters.FromY);
             Vector2 inputEnd = new Vector2(parameters.X, parameters.Y);
             Vector2 screenStart = InputToScreen(inputStart);
@@ -349,8 +360,8 @@ namespace io.github.hatayama.uLoopMCP
 
                 return new SimulateMouseResponse
                 {
-                    Success = true,
-                    Message = $"Dragged from ({inputStart.x:F1}, {inputStart.y:F1}) to ({inputEnd.x:F1}, {inputEnd.y:F1}) - no draggable UI element hit",
+                    Success = false,
+                    Message = $"No draggable UI element at ({inputStart.x:F1}, {inputStart.y:F1}). Use find-game-objects or screenshot to verify positions.",
                     Action = MouseAction.Drag.ToString(),
                     PositionX = inputStart.x,
                     PositionY = inputStart.y,
@@ -421,9 +432,15 @@ namespace io.github.hatayama.uLoopMCP
             List<RaycastResult> results = new List<RaycastResult>();
             EventSystem.current.RaycastAll(pointerData, results);
 
-            pointerData.pointerCurrentRaycast = results.Count > 0
-                ? results[0]
-                : new RaycastResult();
+            if (results.Count > 0)
+            {
+                pointerData.pointerCurrentRaycast = results[0];
+                return;
+            }
+
+            // Same Canvas-space fallback as RaycastUI for scaled Game view
+            RaycastResult? fallback = RaycastCanvasSpace(pointerData.position);
+            pointerData.pointerCurrentRaycast = fallback ?? new RaycastResult();
         }
 
         private async Task InterpolateDragPosition(

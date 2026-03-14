@@ -45,13 +45,7 @@ From the `AnnotatedElements` array in the response, extract `SimX` and `SimY` fo
 - **BlueBox** — blue draggable box
 - **LongPressButton** — purple long-press button
 
-Also locate the **VirtualPadBackground** using `find-game-objects`:
-
-```bash
-uloop find-game-objects --name-pattern VirtualPadBackground --search-mode Exact
-```
-
-Compute its sim coordinates from the world position: `SimX = position.x`, `SimY = targetHeight - position.y` (where targetHeight comes from the Game view resolution, e.g. 1080 for 1920x1080).
+**VirtualPadBackground** is also listed in the `AnnotatedElements` output (Type: "Draggable"). Extract its `SimX` and `SimY` directly — no manual coordinate computation needed.
 
 ### Step 2: Click buttons, one-shot drag, and split drag — chain all in one Bash call
 

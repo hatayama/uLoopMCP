@@ -226,12 +226,12 @@ namespace io.github.hatayama.uLoopMCP
             if (parameters.CaptureMode != CaptureMode.rendering &&
                 string.IsNullOrEmpty(parameters.WindowName))
             {
-                throw new ArgumentException("WindowName cannot be null or empty");
+                throw new ParameterValidationException("WindowName cannot be null or empty");
             }
 
             if (parameters.ResolutionScale < 0.1f || parameters.ResolutionScale > 1.0f)
             {
-                throw new ArgumentException(
+                throw new ParameterValidationException(
                     $"ResolutionScale must be between 0.1 and 1.0, got: {parameters.ResolutionScale}");
             }
 
@@ -240,18 +240,18 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (parameters.AnnotateElements)
                 {
-                    throw new ArgumentException("AnnotateElements is only supported when CaptureMode=rendering");
+                    throw new ParameterValidationException("AnnotateElements is only supported when CaptureMode=rendering");
                 }
 
                 if (parameters.ElementsOnly)
                 {
-                    throw new ArgumentException("ElementsOnly is only supported when CaptureMode=rendering");
+                    throw new ParameterValidationException("ElementsOnly is only supported when CaptureMode=rendering");
                 }
             }
 
             if (parameters.ElementsOnly && !parameters.AnnotateElements)
             {
-                throw new ArgumentException("ElementsOnly requires AnnotateElements=true");
+                throw new ParameterValidationException("ElementsOnly requires AnnotateElements=true");
             }
         }
 

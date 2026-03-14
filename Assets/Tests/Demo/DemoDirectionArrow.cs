@@ -17,12 +17,21 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnEnable()
         {
-            Debug.Assert(virtualPad != null, "virtualPad must not be null on enable");
-            virtualPad!.OnDirectionChanged += HandleDirectionChanged;
+            if (virtualPad == null)
+            {
+                return;
+            }
+
+            virtualPad.OnDirectionChanged += HandleDirectionChanged;
         }
 
         private void OnDisable()
         {
+            if (virtualPad == null)
+            {
+                return;
+            }
+
             virtualPad.OnDirectionChanged -= HandleDirectionChanged;
         }
 

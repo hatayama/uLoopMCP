@@ -134,6 +134,8 @@ namespace io.github.hatayama.uLoopMCP
                 _dragStartMarker.enabled = false;
                 HidePool(_pathSegments);
                 HidePool(_waypointMarkers);
+                TrimPool(_pathSegments, 0);
+                TrimPool(_waypointMarkers, 0);
                 return;
             }
 
@@ -221,6 +223,17 @@ namespace io.github.hatayama.uLoopMCP
             for (int i = 0; i < pool.Count; i++)
             {
                 pool[i].enabled = false;
+            }
+        }
+
+        // Pools only grow via EnsurePoolCount; trim excess to prevent unbounded accumulation
+        private static void TrimPool(List<Image> pool, int maxRetain)
+        {
+            while (pool.Count > maxRetain)
+            {
+                Image excess = pool[pool.Count - 1];
+                pool.RemoveAt(pool.Count - 1);
+                Destroy(excess.gameObject);
             }
         }
 
