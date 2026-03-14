@@ -278,6 +278,34 @@ All tools automatically include the following property:
 
 ---
 
+### 14. simulate-mouse
+- **Description**: Simulate mouse click, long-press, and drag on PlayMode UI elements via screen coordinates. Uses EventSystem and ExecuteEvents to dispatch pointer events directly — works independently of both old and new Input System
+- **Parameters**:
+  - `Action` (enum): Mouse action - "Click", "Drag", "DragStart", "DragMove", "DragEnd", "LongPress" (default: "Click")
+    - `Click`: Left click at (X, Y). Fires PointerDown → PointerUp → PointerClick
+    - `LongPress`: Press and hold at (X, Y) for Duration seconds, then release. No PointerClick fired
+    - `Drag`: One-shot drag from (FromX, FromY) to (X, Y). Fires BeginDrag → Drag×N → EndDrag
+    - `DragStart`: Begin drag at (X, Y) and hold
+    - `DragMove`: Animate from current position to (X, Y) at the specified speed
+    - `DragEnd`: Animate to (X, Y), then release drag
+  - `X` (number): Target X position in screen pixels, origin: top-left (default: 0)
+  - `Y` (number): Target Y position in screen pixels, origin: top-left (default: 0)
+  - `FromX` (number): Start X position for Drag action (default: 0)
+  - `FromY` (number): Start Y position for Drag action (default: 0)
+  - `DragSpeed` (number): Drag speed in pixels per second, 0 for instant (default: 2000)
+  - `Duration` (number): Hold duration in seconds for LongPress action (default: 0.5)
+- **Response**:
+  - `Success` (boolean): Whether the action completed successfully
+  - `Message` (string): Description of the action performed
+  - `Action` (string): The action that was executed
+  - `HitGameObjectName` (string): Name of the UI element hit (null if none)
+  - `PositionX` (number): X position used
+  - `PositionY` (number): Y position used
+  - `EndPositionX` (number): End X position (for Drag actions)
+  - `EndPositionY` (number): End Y position (for Drag actions)
+
+---
+
 ## Related Documentation
 
 - [Main README](README.md) - Project overview and setup

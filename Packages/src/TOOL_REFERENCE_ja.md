@@ -276,6 +276,32 @@
   - `IsPaused` (boolean): プレイモードが一時停止中かどうか
   - `Message` (string): 実行されたアクションの説明
 
+### 14. simulate-mouse
+- **説明**: PlayMode中のUI要素に対してマウスクリック・長押し・ドラッグをシミュレーション。EventSystemとExecuteEventsを使ってポインタイベントを直接ディスパッチするため、旧・新Input Systemの両方に依存せず動作
+- **パラメータ**:
+  - `Action` (enum): マウスアクション - "Click", "Drag", "DragStart", "DragMove", "DragEnd", "LongPress"（デフォルト: "Click"）
+    - `Click`: (X, Y)で左クリック。PointerDown → PointerUp → PointerClick を発火
+    - `LongPress`: (X, Y)でDuration秒間押し続けてからリリース。PointerClickは発火しない
+    - `Drag`: (FromX, FromY)から(X, Y)へのワンショットドラッグ
+    - `DragStart`: (X, Y)でドラッグを開始しホールド
+    - `DragMove`: 現在位置から(X, Y)へ指定速度でアニメーション移動
+    - `DragEnd`: (X, Y)へ移動後、ドラッグをリリース
+  - `X` (number): ターゲットX座標（スクリーンピクセル、原点: 左上）（デフォルト: 0）
+  - `Y` (number): ターゲットY座標（スクリーンピクセル、原点: 左上）（デフォルト: 0）
+  - `FromX` (number): Dragアクションの開始X座標（デフォルト: 0）
+  - `FromY` (number): Dragアクションの開始Y座標（デフォルト: 0）
+  - `DragSpeed` (number): ドラッグ速度（ピクセル/秒）、0で即時移動（デフォルト: 2000）
+  - `Duration` (number): LongPressアクションのホールド秒数（デフォルト: 0.5）
+- **レスポンス**:
+  - `Success` (boolean): アクションが正常に完了したかどうか
+  - `Message` (string): 実行されたアクションの説明
+  - `Action` (string): 実行されたアクション
+  - `HitGameObjectName` (string): ヒットしたUI要素の名前（ヒットなしの場合null）
+  - `PositionX` (number): 使用されたX座標
+  - `PositionY` (number): 使用されたY座標
+  - `EndPositionX` (number): 終了X座標（Dragアクション用）
+  - `EndPositionY` (number): 終了Y座標（Dragアクション用）
+
 ---
 
 ## 関連ドキュメント
