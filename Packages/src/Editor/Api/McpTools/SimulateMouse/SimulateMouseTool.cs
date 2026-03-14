@@ -498,6 +498,8 @@ namespace io.github.hatayama.uLoopMCP
                 MouseDragState.PointerData!, MouseDragState.Target!, screenEnd,
                 parameters.DragSpeed, ct);
 
+            SimulateMouseOverlayState.AddWaypoint(inputEnd);
+
             return new SimulateMouseResponse
             {
                 Success = true,
@@ -603,6 +605,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             overlay!.SetCursorScale(0f);
             overlay!.SetAlpha(0f);
+            SimulateMouseOverlayState.Clear();
         }
 
         private RaycastResult? RaycastUI(Vector2 screenPosition, EventSystem eventSystem)

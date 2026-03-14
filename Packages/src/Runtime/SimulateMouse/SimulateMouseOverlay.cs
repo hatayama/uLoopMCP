@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,7 +11,6 @@ namespace io.github.hatayama.uLoopMCP
     {
         public static SimulateMouseOverlay? Instance { get; private set; }
 
-        private const float OVERLAY_TIMEOUT_SECONDS = 2.0f;
         private const int CANVAS_SORT_ORDER = 32000;
 
         private const float CURSOR_CIRCLE_DIAMETER = 70f;
@@ -19,6 +19,7 @@ namespace io.github.hatayama.uLoopMCP
         private const int CIRCLE_TEXTURE_SIZE = 64;
 
         private const float START_MARKER_SIZE = 8f;
+        private const float WAYPOINT_MARKER_DIAMETER = 12f;
         private const float LINE_THICKNESS = 2f;
 
         private static readonly Color CURSOR_COLOR = new Color(1f, 1f, 1f, 0.8f);
@@ -31,8 +32,9 @@ namespace io.github.hatayama.uLoopMCP
         private Image _circleImage = null!;
         private Image _crosshairH = null!;
         private Image _crosshairV = null!;
-        private Image _dragLine = null!;
         private Image _dragStartMarker = null!;
+        private readonly List<Image> _pathSegments = new List<Image>();
+        private readonly List<Image> _waypointMarkers = new List<Image>();
 
         private Texture2D? _circleTexture;
         private Sprite? _circleSprite;
@@ -70,17 +72,9 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            if (SimulateMouseOverlayState.IsExpired(OVERLAY_TIMEOUT_SECONDS))
-            {
-                SimulateMouseOverlayState.Clear();
-                if (_canvas.enabled) _canvas.enabled = false;
-                return;
-            }
-
             _canvas.enabled = true;
             UpdateCursorPosition();
-            UpdateDragLine();
-            UpdateDragStartMarker();
+            UpdateDragPath();
         }
 
         public void SetCursorScale(float scale)
@@ -108,47 +102,109 @@ namespace io.github.hatayama.uLoopMCP
             _cursorGroup.position = new Vector3(screenPos.x, screenPos.y, 0f);
         }
 
-        private void UpdateDragLine()
-        {
-            if (!SimulateMouseOverlayState.DragStartPosition.HasValue)
-            {
-                _dragLine.enabled = false;
-                return;
-            }
-
-            Vector2 startScreen = SimToScreen(SimulateMouseOverlayState.DragStartPosition.Value);
-            Vector2 endScreen = SimToScreen(SimulateMouseOverlayState.CurrentPosition);
-            Vector2 delta = endScreen - startScreen;
-            float length = delta.magnitude;
-
-            if (length < 1f)
-            {
-                _dragLine.enabled = false;
-                return;
-            }
-
-            _dragLine.enabled = true;
-            _dragLine.color = GetActiveColor();
-            float angle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg;
-
-            RectTransform lineRect = _dragLine.rectTransform;
-            lineRect.position = new Vector3(startScreen.x, startScreen.y, 0f);
-            lineRect.sizeDelta = new Vector2(length, LINE_THICKNESS);
-            lineRect.localRotation = Quaternion.Euler(0f, 0f, angle);
-        }
-
-        private void UpdateDragStartMarker()
+        private void UpdateDragPath()
         {
             if (!SimulateMouseOverlayState.DragStartPosition.HasValue)
             {
                 _dragStartMarker.enabled = false;
+                HidePool(_pathSegments);
+                HidePool(_waypointMarkers);
                 return;
             }
 
-            _dragStartMarker.enabled = true;
-            _dragStartMarker.color = GetActiveColor();
+            Color activeColor = GetActiveColor();
+
+            // Start marker
             Vector2 startScreen = SimToScreen(SimulateMouseOverlayState.DragStartPosition.Value);
+            _dragStartMarker.enabled = true;
+            _dragStartMarker.color = activeColor;
             _dragStartMarker.rectTransform.position = new Vector3(startScreen.x, startScreen.y, 0f);
+
+            // Polyline: start → waypoints → current
+            IReadOnlyList<Vector2> waypoints = SimulateMouseOverlayState.DragWaypoints;
+            Vector2 currentScreen = SimToScreen(SimulateMouseOverlayState.CurrentPosition);
+
+            int segmentCount = waypoints.Count + 1;
+            EnsurePoolCount(_pathSegments, segmentCount, CreatePooledSegment);
+            EnsurePoolCount(_waypointMarkers, waypoints.Count, CreatePooledWaypointMarker);
+
+            Vector2 prev = startScreen;
+            for (int i = 0; i < waypoints.Count; i++)
+            {
+                Vector2 wp = SimToScreen(waypoints[i]);
+                DrawSegment(_pathSegments[i], prev, wp, activeColor);
+                _waypointMarkers[i].enabled = true;
+                _waypointMarkers[i].color = activeColor;
+                _waypointMarkers[i].rectTransform.position = new Vector3(wp.x, wp.y, 0f);
+                prev = wp;
+            }
+            DrawSegment(_pathSegments[waypoints.Count], prev, currentScreen, activeColor);
+            HidePoolFrom(_pathSegments, segmentCount);
+            HidePoolFrom(_waypointMarkers, waypoints.Count);
+        }
+
+        private void DrawSegment(Image line, Vector2 from, Vector2 to, Color color)
+        {
+            Vector2 delta = to - from;
+            float length = delta.magnitude;
+
+            if (length < 1f)
+            {
+                line.enabled = false;
+                return;
+            }
+
+            line.enabled = true;
+            line.color = color;
+            float angle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg;
+
+            RectTransform rect = line.rectTransform;
+            rect.position = new Vector3(from.x, from.y, 0f);
+            rect.sizeDelta = new Vector2(length, LINE_THICKNESS);
+            rect.localRotation = Quaternion.Euler(0f, 0f, angle);
+        }
+
+        private Image CreatePooledSegment()
+        {
+            Image line = CreateImage("PathSegment", gameObject.transform);
+            line.rectTransform.pivot = new Vector2(0f, 0.5f);
+            line.rectTransform.sizeDelta = Vector2.zero;
+            line.enabled = false;
+            return line;
+        }
+
+        private Image CreatePooledWaypointMarker()
+        {
+            EnsureCircleSprite();
+            Image marker = CreateImage("WaypointMarker", gameObject.transform);
+            marker.rectTransform.sizeDelta = new Vector2(WAYPOINT_MARKER_DIAMETER, WAYPOINT_MARKER_DIAMETER);
+            marker.sprite = _circleSprite;
+            marker.enabled = false;
+            return marker;
+        }
+
+        private void EnsurePoolCount(List<Image> pool, int count, System.Func<Image> factory)
+        {
+            while (pool.Count < count)
+            {
+                pool.Add(factory());
+            }
+        }
+
+        private static void HidePool(List<Image> pool)
+        {
+            for (int i = 0; i < pool.Count; i++)
+            {
+                pool[i].enabled = false;
+            }
+        }
+
+        private static void HidePoolFrom(List<Image> pool, int startIndex)
+        {
+            for (int i = startIndex; i < pool.Count; i++)
+            {
+                pool[i].enabled = false;
+            }
         }
 
         private Color GetActiveColor()
@@ -168,11 +224,6 @@ namespace io.github.hatayama.uLoopMCP
             _canvasGroup = gameObject.AddComponent<CanvasGroup>();
             _canvasGroup.interactable = false;
             _canvasGroup.blocksRaycasts = false;
-
-            _dragLine = CreateImage("DragLine", gameObject.transform);
-            _dragLine.rectTransform.pivot = new Vector2(0f, 0.5f);
-            _dragLine.rectTransform.sizeDelta = Vector2.zero;
-            _dragLine.enabled = false;
 
             _dragStartMarker = CreateImage("DragStartMarker", gameObject.transform);
             _dragStartMarker.rectTransform.sizeDelta = new Vector2(START_MARKER_SIZE, START_MARKER_SIZE);

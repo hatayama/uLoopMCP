@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
@@ -10,10 +11,14 @@ namespace io.github.hatayama.uLoopMCP
         public static Vector2 CurrentPosition { get; private set; }
         public static Vector2? DragStartPosition { get; private set; }
         public static string? HitGameObjectName { get; private set; }
-        public static float LastUpdateTime { get; private set; }
 
         // Screen.width/height at the time positions were recorded (Editor context may differ from Game context)
         public static Vector2 SourceScreenSize { get; private set; }
+
+        private static readonly List<Vector2> _dragWaypoints = new List<Vector2>();
+
+        // Intermediate positions where DragMove stopped, forming a polyline path
+        public static IReadOnlyList<Vector2> DragWaypoints => _dragWaypoints;
 
         public static void Update(
             MouseAction action,
@@ -21,19 +26,29 @@ namespace io.github.hatayama.uLoopMCP
             Vector2? dragStartPosition,
             string? hitGameObjectName)
         {
+            // PlayDissipateAnimation calls Clear() on normal completion, but a cancelled or stuck drag
+            // may leave stale waypoints — defensive clear ensures a fresh start
+            if (action == MouseAction.DragStart || action == MouseAction.Drag)
+            {
+                _dragWaypoints.Clear();
+            }
+
             IsActive = true;
             Action = action;
             CurrentPosition = currentPosition;
             DragStartPosition = dragStartPosition;
             HitGameObjectName = hitGameObjectName;
             SourceScreenSize = new Vector2(Screen.width, Screen.height);
-            LastUpdateTime = Time.realtimeSinceStartup;
         }
 
         public static void UpdatePosition(Vector2 position)
         {
             CurrentPosition = position;
-            LastUpdateTime = Time.realtimeSinceStartup;
+        }
+
+        public static void AddWaypoint(Vector2 position)
+        {
+            _dragWaypoints.Add(position);
         }
 
         public static void Clear()
@@ -44,12 +59,7 @@ namespace io.github.hatayama.uLoopMCP
             DragStartPosition = null;
             HitGameObjectName = null;
             SourceScreenSize = Vector2.zero;
-            LastUpdateTime = 0f;
-        }
-
-        public static bool IsExpired(float timeoutSeconds)
-        {
-            return Time.realtimeSinceStartup - LastUpdateTime > timeoutSeconds;
+            _dragWaypoints.Clear();
         }
     }
 }
