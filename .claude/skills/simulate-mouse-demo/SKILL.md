@@ -58,25 +58,29 @@ Compute its sim coordinates from the world position: `SimX = position.x`, `SimY 
 
 **Phase 1 — Button clicks**: Alternate ClickButton1 and ClickButton2 four times.
 
-**Phase 2 — One-shot Drag**: Drag RedBox directly to DropZone (offset X -50).
+**Phase 2 — One-shot Drag**: Drag RedBox to DropZone top area (Y offset -80 from center) so it doesn't overlap subsequent drops.
 
-**Phase 3 — Split drag with DragMove**: Use DragStart on GreenBox, then DragMove through 3 waypoints that zigzag across the screen, and finally DragEnd at the DropZone. Use `--drag-speed 400` for DragMove/DragEnd so the movement is slow enough to observe the cursor overlay and trail line.
+**Phase 3 — Split drag with DragMove**: Use DragStart on GreenBox, then DragMove through 3 waypoints that zigzag across the screen, and finally DragEnd at the DropZone center. Use `--drag-speed 400` for DragMove/DragEnd so the movement is slow enough to observe the cursor overlay and trail line.
 
 Waypoint design (relative to the midpoint between GreenBox and DropZone):
 - Waypoint 1: far right, slightly above — tests horizontal sweep
 - Waypoint 2: far left, below — tests direction reversal
 - Waypoint 3: above DropZone — tests vertical approach
-- DragEnd: at DropZone center
+- DragEnd: at DropZone center (Y offset 0)
 
-**Phase 4 — One-shot Drag**: Drag BlueBox directly to DropZone (offset X +50).
+**Phase 4 — One-shot Drag**: Drag BlueBox to DropZone bottom area (Y offset +80 from center) so it doesn't overlap previous drops.
 
-**Phase 5 — Virtual Pad**: Use DragStart on VirtualPadBackground center, then DragMove through 4+ random directions within padRadius (80px from center) to exercise the joystick, and DragEnd back at center. Use `--drag-speed 300` for visible movement. The direction arrow should rotate to follow each DragMove direction.
+**Phase 5 — Virtual Pad**: Use DragStart on VirtualPadBackground center, then DragMove through 8 random directions within padRadius (80px from center) to exercise the joystick, and DragEnd back at center. Use `--drag-speed 300` for visible movement. The direction arrow should rotate to follow each DragMove direction.
 
 Waypoint design (offsets from VirtualPadBackground center):
 - Move 1: upper-right (+60, -60 in sim coords)
 - Move 2: lower-left (-70, +50)
 - Move 3: straight up (0, -75)
 - Move 4: straight right (+80, 0)
+- Move 5: lower-right (+50, +60)
+- Move 6: straight left (-80, 0)
+- Move 7: upper-left (-55, -65)
+- Move 8: straight down (0, +75)
 - DragEnd: back to center (0, 0)
 
 ```bash
@@ -84,18 +88,22 @@ uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.Si
 uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && sleep 0.3 && \
 uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && sleep 0.3 && \
 uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && sleep 0.3 && \
-uloop simulate-mouse --action Drag --from-x <RedBox.SimX> --from-y <RedBox.SimY> --x <DropZone.SimX - 50> --y <DropZone.SimY> --drag-speed 700 && sleep 0.3 && \
+uloop simulate-mouse --action Drag --from-x <RedBox.SimX> --from-y <RedBox.SimY> --x <RedBox.SimX> --y <DropZone.SimY - 80> --drag-speed 700 && sleep 0.3 && \
 uloop simulate-mouse --action DragStart --x <GreenBox.SimX> --y <GreenBox.SimY> && sleep 0.3 && \
 uloop simulate-mouse --action DragMove --x <DropZone.SimX + 150> --y <GreenBox.SimY - 50> --drag-speed 400 && sleep 0.3 && \
 uloop simulate-mouse --action DragMove --x <DropZone.SimX - 150> --y <DropZone.SimY + 50> --drag-speed 400 && sleep 0.3 && \
 uloop simulate-mouse --action DragMove --x <DropZone.SimX> --y <DropZone.SimY - 80> --drag-speed 400 && sleep 0.3 && \
 uloop simulate-mouse --action DragEnd --x <DropZone.SimX> --y <DropZone.SimY> --drag-speed 400 && sleep 0.3 && \
-uloop simulate-mouse --action Drag --from-x <BlueBox.SimX> --from-y <BlueBox.SimY> --x <DropZone.SimX + 50> --y <DropZone.SimY> --drag-speed 700 && sleep 0.3 && \
+uloop simulate-mouse --action Drag --from-x <BlueBox.SimX> --from-y <BlueBox.SimY> --x <BlueBox.SimX> --y <DropZone.SimY + 80> --drag-speed 700 && sleep 0.3 && \
 uloop simulate-mouse --action DragStart --x <Pad.SimX> --y <Pad.SimY> && sleep 0.3 && \
-uloop simulate-mouse --action DragMove --x <Pad.SimX + 60> --y <Pad.SimY - 60> --drag-speed 300 && sleep 0.5 && \
-uloop simulate-mouse --action DragMove --x <Pad.SimX - 70> --y <Pad.SimY + 50> --drag-speed 300 && sleep 0.5 && \
-uloop simulate-mouse --action DragMove --x <Pad.SimX> --y <Pad.SimY - 75> --drag-speed 300 && sleep 0.5 && \
-uloop simulate-mouse --action DragMove --x <Pad.SimX + 80> --y <Pad.SimY> --drag-speed 300 && sleep 0.5 && \
+uloop simulate-mouse --action DragMove --x <Pad.SimX + 60> --y <Pad.SimY - 60> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse --action DragMove --x <Pad.SimX - 70> --y <Pad.SimY + 50> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse --action DragMove --x <Pad.SimX> --y <Pad.SimY - 75> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse --action DragMove --x <Pad.SimX + 80> --y <Pad.SimY> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse --action DragMove --x <Pad.SimX + 50> --y <Pad.SimY + 60> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse --action DragMove --x <Pad.SimX - 80> --y <Pad.SimY> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse --action DragMove --x <Pad.SimX - 55> --y <Pad.SimY - 65> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse --action DragMove --x <Pad.SimX> --y <Pad.SimY + 75> --drag-speed 300 && sleep 0.4 && \
 uloop simulate-mouse --action DragEnd --x <Pad.SimX> --y <Pad.SimY> --drag-speed 300
 ```
 
