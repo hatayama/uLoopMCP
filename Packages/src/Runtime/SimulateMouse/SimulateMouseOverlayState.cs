@@ -15,6 +15,8 @@ namespace io.github.hatayama.uLoopMCP
         // Screen.width/height at the time positions were recorded (Editor context may differ from Game context)
         public static Vector2 SourceScreenSize { get; private set; }
 
+        public static float LongPressElapsed { get; private set; }
+
         private const int MAX_DRAG_WAYPOINTS = 10;
 
         private static readonly List<Vector2> _dragWaypoints = new List<Vector2>();
@@ -44,6 +46,11 @@ namespace io.github.hatayama.uLoopMCP
             SourceScreenSize = sourceScreenSize;
         }
 
+        public static void UpdateLongPressElapsed(float elapsed)
+        {
+            LongPressElapsed = elapsed;
+        }
+
         public static void UpdatePosition(Vector2 position)
         {
             CurrentPosition = position;
@@ -68,6 +75,7 @@ namespace io.github.hatayama.uLoopMCP
             DragStartPosition = null;
             HitGameObjectName = null;
             SourceScreenSize = Vector2.zero;
+            LongPressElapsed = 0f;
             _dragWaypoints.Clear();
         }
     }

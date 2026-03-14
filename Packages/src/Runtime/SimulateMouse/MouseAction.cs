@@ -6,6 +6,7 @@ namespace io.github.hatayama.uLoopMCP
         Drag = 1,
         DragStart = 2,
         DragMove = 3,
-        DragEnd = 4
+        DragEnd = 4,
+        LongPress = 5
     }
 }

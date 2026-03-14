@@ -48,7 +48,7 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            if (parameters.Action != MouseAction.Click && parameters.DragSpeed < 0f)
+            if (parameters.Action != MouseAction.Click && parameters.Action != MouseAction.LongPress && parameters.DragSpeed < 0f)
             {
                 return new SimulateMouseResponse
                 {
@@ -67,9 +67,9 @@ namespace io.github.hatayama.uLoopMCP
 
             EnsureOverlayExists();
 
-            // Single-pointer model: Click and one-shot Drag are invalid while a split drag is held
+            // Single-pointer model: Click, one-shot Drag, and LongPress are invalid while a split drag is held
             if (MouseDragState.IsDragging &&
-                (parameters.Action == MouseAction.Click || parameters.Action == MouseAction.Drag))
+                (parameters.Action == MouseAction.Click || parameters.Action == MouseAction.Drag || parameters.Action == MouseAction.LongPress))
             {
                 return new SimulateMouseResponse
                 {
@@ -101,6 +101,10 @@ namespace io.github.hatayama.uLoopMCP
 
                 case MouseAction.DragEnd:
                     response = await ExecuteDragEnd(parameters, ct);
+                    break;
+
+                case MouseAction.LongPress:
+                    response = await ExecuteLongPress(parameters, eventSystem, ct);
                     break;
 
                 default:
@@ -211,6 +215,83 @@ namespace io.github.hatayama.uLoopMCP
                     ? $"Clicked '{target.name}' at ({inputPos.x:F1}, {inputPos.y:F1})"
                     : $"Clicked at ({inputPos.x:F1}, {inputPos.y:F1}) - no UI element hit",
                 Action = MouseAction.Click.ToString(),
+                HitGameObjectName = target?.name,
+                PositionX = inputPos.x,
+                PositionY = inputPos.y
+            };
+        }
+
+        private async Task<SimulateMouseResponse> ExecuteLongPress(
+            SimulateMouseSchema parameters, EventSystem eventSystem, CancellationToken ct)
+        {
+            Debug.Assert(parameters.Duration > 0f, "Duration must be positive for LongPress");
+
+            Vector2 inputPos = new Vector2(parameters.X, parameters.Y);
+            Vector2 screenPos = InputToScreen(inputPos);
+            RaycastResult? hit = RaycastUI(screenPos, eventSystem);
+
+            PointerEventData pointerData = new PointerEventData(eventSystem)
+            {
+                position = screenPos,
+                pressPosition = screenPos,
+                button = PointerEventData.InputButton.Left
+            };
+
+            GameObject? target = null;
+
+            if (hit != null)
+            {
+                GameObject rawTarget = hit.Value.gameObject;
+                pointerData.pointerCurrentRaycast = hit.Value;
+                pointerData.pointerPressRaycast = hit.Value;
+
+                target = ExecuteEvents.GetEventHandler<IPointerDownHandler>(rawTarget)
+                         ?? ExecuteEvents.GetEventHandler<IPointerClickHandler>(rawTarget);
+
+                if (target != null)
+                {
+                    pointerData.pointerPress = target;
+                    pointerData.rawPointerPress = rawTarget;
+                }
+            }
+
+            SimulateMouseOverlayState.Update(
+                MouseAction.LongPress, inputPos, null,
+                target?.name, Handles.GetMainGameViewSize());
+
+            await PlayExpandAnimation(ct);
+
+            if (hit != null && target != null)
+            {
+                ExecuteEvents.ExecuteHierarchy(
+                    hit.Value.gameObject, pointerData, ExecuteEvents.pointerDownHandler);
+            }
+
+            // Hold for Duration seconds, updating elapsed time each frame for overlay display
+            float startTime = Time.realtimeSinceStartup;
+            float elapsed = 0f;
+            while (elapsed < parameters.Duration)
+            {
+                SimulateMouseOverlayState.UpdateLongPressElapsed(elapsed);
+                await EditorDelay.DelayFrame(1, ct);
+                elapsed = Time.realtimeSinceStartup - startTime;
+            }
+            SimulateMouseOverlayState.UpdateLongPressElapsed(parameters.Duration);
+
+            if (hit != null && target != null)
+            {
+                ExecuteEvents.Execute(target, pointerData, ExecuteEvents.pointerUpHandler);
+            }
+
+            await PlayDissipateAnimation(ct);
+
+            return new SimulateMouseResponse
+            {
+                Success = true,
+                Message = target != null
+                    ? $"Long-pressed '{target.name}' at ({inputPos.x:F1}, {inputPos.y:F1}) for {parameters.Duration:F1}s"
+                    : $"Long-pressed at ({inputPos.x:F1}, {inputPos.y:F1}) for {parameters.Duration:F1}s - no UI element hit",
+                Action = MouseAction.LongPress.ToString(),
                 HitGameObjectName = target?.name,
                 PositionX = inputPos.x,
                 PositionY = inputPos.y

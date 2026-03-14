@@ -1,6 +1,6 @@
 ---
 name: simulate-mouse-demo
-description: "Run the SimulateMouse demo scenario on SimulateMouseDemoScene. Clicks buttons, drags boxes, split-drags through waypoints, and operates the virtual pad. Use when the user asks to run the simulate-mouse demo, test mouse simulation, or exercise the demo scene."
+description: "Run the SimulateMouse demo scenario on SimulateMouseDemoScene. Clicks buttons, long-presses, drags boxes, split-drags through waypoints, and operates the virtual pad. Use when the user asks to run the simulate-mouse demo, test mouse simulation, or exercise the demo scene."
 context: fork
 ---
 
@@ -43,6 +43,7 @@ From the `AnnotatedElements` array in the response, extract `SimX` and `SimY` fo
 - **RedBox** — red draggable box
 - **GreenBox** — green draggable box
 - **BlueBox** — blue draggable box
+- **LongPressButton** — purple long-press button
 
 Also locate the **VirtualPadBackground** using `find-game-objects`:
 
@@ -57,6 +58,8 @@ Compute its sim coordinates from the world position: `SimX = position.x`, `SimY 
 **IMPORTANT**: Chain all commands with `&&` in a **single Bash tool call** to eliminate round-trip latency between operations. The simulate-mouse tool uses a single-pointer model, so commands must run sequentially (not in parallel), but chaining avoids AI round-trip delays.
 
 **Phase 1 — Button clicks**: Alternate ClickButton1 and ClickButton2 four times.
+
+**Phase 1.5 — LongPress**: LongPress on LongPressButton for 5 seconds. The button should gradually change color from purple to orange during the hold, and display "Activated!" after release.
 
 **Phase 2 — One-shot Drag**: Drag RedBox to DropZone top area (Y offset -80 from center) so it doesn't overlap subsequent drops.
 
@@ -88,6 +91,7 @@ uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.Si
 uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && sleep 0.3 && \
 uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && sleep 0.3 && \
 uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && sleep 0.3 && \
+uloop simulate-mouse --action LongPress --x <LongPressButton.SimX> --y <LongPressButton.SimY> --duration 5.0 && sleep 0.3 && \
 uloop simulate-mouse --action Drag --from-x <RedBox.SimX> --from-y <RedBox.SimY> --x <RedBox.SimX> --y <DropZone.SimY - 80> --drag-speed 700 && sleep 0.3 && \
 uloop simulate-mouse --action DragStart --x <GreenBox.SimX> --y <GreenBox.SimY> && sleep 0.3 && \
 uloop simulate-mouse --action DragMove --x <DropZone.SimX + 150> --y <GreenBox.SimY - 50> --drag-speed 400 && sleep 0.3 && \

@@ -32,6 +32,8 @@ namespace io.github.hatayama.uLoopMCP
         private Image _circleImage = null!;
         private Image _crosshairH = null!;
         private Image _crosshairV = null!;
+        private Text _longPressText = null!;
+        private Outline _longPressOutline = null!;
         private Image _dragStartMarker = null!;
         private readonly List<Image> _pathSegments = new List<Image>();
         private readonly List<Image> _waypointMarkers = new List<Image>();
@@ -74,6 +76,7 @@ namespace io.github.hatayama.uLoopMCP
 
             _canvas.enabled = true;
             UpdateCursorPosition();
+            UpdateCursorMode();
             UpdateDragPath();
         }
 
@@ -100,6 +103,28 @@ namespace io.github.hatayama.uLoopMCP
         {
             Vector2 screenPos = SimToScreen(SimulateMouseOverlayState.CurrentPosition);
             _cursorGroup.position = new Vector3(screenPos.x, screenPos.y, 0f);
+        }
+
+        private void UpdateCursorMode()
+        {
+            bool isLongPress = SimulateMouseOverlayState.Action == MouseAction.LongPress;
+            _crosshairH.enabled = !isLongPress;
+            _crosshairV.enabled = !isLongPress;
+            _longPressText.enabled = isLongPress;
+
+            if (isLongPress)
+            {
+                _longPressText.text = SimulateMouseOverlayState.LongPressElapsed.ToString("F1") + "s";
+
+                // Pulse the circle between 1.0x and 1.2x scale over a 2-second cycle
+                float t = Mathf.PingPong(SimulateMouseOverlayState.LongPressElapsed, 2f) / 2f;
+                float scale = Mathf.Lerp(1.0f, 1.2f, t);
+                _circleImage.rectTransform.localScale = Vector3.one * scale;
+            }
+            else
+            {
+                _circleImage.rectTransform.localScale = Vector3.one;
+            }
         }
 
         private void UpdateDragPath()
@@ -247,6 +272,22 @@ namespace io.github.hatayama.uLoopMCP
             _crosshairV = CreateImage("CrosshairV", _cursorGroup);
             _crosshairV.rectTransform.sizeDelta = new Vector2(CURSOR_CROSSHAIR_THICKNESS, CURSOR_CROSSHAIR_SIZE * 2f);
             _crosshairV.color = Color.black;
+
+            GameObject textGo = new GameObject("LongPressText");
+            textGo.transform.SetParent(_cursorGroup, false);
+            RectTransform textRect = textGo.AddComponent<RectTransform>();
+            textRect.sizeDelta = new Vector2(CURSOR_CIRCLE_DIAMETER * 2f, CURSOR_CIRCLE_DIAMETER);
+            _longPressText = textGo.AddComponent<Text>();
+            _longPressText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _longPressText.fontSize = 28;
+            _longPressText.alignment = TextAnchor.MiddleCenter;
+            _longPressText.color = Color.black;
+            _longPressText.raycastTarget = false;
+            _longPressText.enabled = false;
+
+            _longPressOutline = textGo.AddComponent<Outline>();
+            _longPressOutline.effectColor = Color.white;
+            _longPressOutline.effectDistance = new Vector2(1.5f, -1.5f);
         }
 
         private static Image CreateImage(string name, Transform parent)
