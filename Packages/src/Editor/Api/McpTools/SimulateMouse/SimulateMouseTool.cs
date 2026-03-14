@@ -224,7 +224,7 @@ namespace io.github.hatayama.uLoopMCP
         private async Task<SimulateMouseResponse> ExecuteLongPress(
             SimulateMouseSchema parameters, EventSystem eventSystem, CancellationToken ct)
         {
-            if (parameters.Duration <= 0f || float.IsNaN(parameters.Duration))
+            if (parameters.Duration <= 0f || float.IsNaN(parameters.Duration) || float.IsInfinity(parameters.Duration))
             {
                 return new SimulateMouseResponse
                 {
