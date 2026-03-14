@@ -485,6 +485,22 @@ Scope(s): org.nuget
 >
 > **注意**: これらの機能を使ってAIによるコード生成を扱う際は、予期せぬ動作やセキュリティリスクに備えるため、sandbox環境やコンテナ上での実行を強く推奨します。
 
+### 15. simulate-mouse - PlayMode UIのマウス操作シミュレーション
+PlayMode中のUI要素に対してマウスクリック・長押し・ドラッグをシミュレーションします。EventSystemとExecuteEventsを使ってポインタイベントを直接ディスパッチするため、旧Input System・新Input Systemの両方に依存せず動作します。
+
+6つのアクションに対応: Click、LongPress、Drag（ワンショット）、DragStart/DragMove/DragEnd（分割ドラッグ）
+
+```text
+→ screenshot (CaptureMode: rendering, AnnotateElements: true)
+→ AnnotatedElementsから要素の座標（SimX/SimY）を取得
+→ simulate-mouse (Action: Click, X: 400, Y: 300)
+→ simulate-mouse (Action: LongPress, X: 400, Y: 300, Duration: 5.0)
+→ simulate-mouse (Action: Drag, FromX: 100, FromY: 500, X: 400, Y: 300)
+→ simulate-mouse (Action: DragStart, X: 100, Y: 500)
+→ simulate-mouse (Action: DragMove, X: 200, Y: 400, DragSpeed: 300)
+→ simulate-mouse (Action: DragEnd, X: 400, Y: 300)
+```
+
 ## ツールリファレンス
 
 全ツールの詳細仕様（パラメータ、レスポンス、使用例）については **[TOOL_REFERENCE_ja.md](TOOL_REFERENCE_ja.md)** を参照してください。
