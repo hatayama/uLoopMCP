@@ -480,6 +480,22 @@ Async support:
 >
 > **Warning**: When using these features for AI-driven code generation, we strongly recommend running in sandbox environments or containers to prepare for unexpected behavior and security risks.
 
+### 15. simulate-mouse - Simulate Mouse Input on PlayMode UI
+Simulate mouse click, long-press, and drag on PlayMode UI elements. Uses EventSystem and ExecuteEvents to dispatch pointer events directly — works independently of both old and new Input System.
+
+Supports 6 actions: Click, LongPress, Drag (one-shot), DragStart/DragMove/DragEnd (split drag).
+
+```text
+→ screenshot (CaptureMode: rendering, AnnotateElements: true)
+→ Get element coordinates from AnnotatedElements (SimX/SimY)
+→ simulate-mouse (Action: Click, X: 400, Y: 300)
+→ simulate-mouse (Action: LongPress, X: 400, Y: 300, Duration: 5.0)
+→ simulate-mouse (Action: Drag, FromX: 100, FromY: 500, X: 400, Y: 300)
+→ simulate-mouse (Action: DragStart, X: 100, Y: 500)
+→ simulate-mouse (Action: DragMove, X: 200, Y: 400, DragSpeed: 300)
+→ simulate-mouse (Action: DragEnd, X: 400, Y: 300)
+```
+
 ## Tool Reference
 
 For detailed specifications of all tools (parameters, responses, examples), see **[TOOL_REFERENCE.md](/Packages/src/TOOL_REFERENCE.md)**.
