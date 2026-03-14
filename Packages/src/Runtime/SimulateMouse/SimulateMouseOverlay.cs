@@ -155,13 +155,17 @@ namespace io.github.hatayama.uLoopMCP
             EnsurePoolCount(_pathSegments, segmentCount, CreatePooledSegment);
             EnsurePoolCount(_waypointMarkers, waypoints.Count, CreatePooledWaypointMarker);
 
+            // Older segments fade out — the first segment is nearly invisible, the latest is fully opaque
             Vector2 prev = startScreen;
             for (int i = 0; i < waypoints.Count; i++)
             {
                 Vector2 wp = SimToScreen(waypoints[i]);
-                DrawSegment(_pathSegments[i], prev, wp, activeColor);
+                float alpha = (float)(i + 1) / segmentCount;
+                Color fadedColor = activeColor;
+                fadedColor.a = activeColor.a * alpha;
+                DrawSegment(_pathSegments[i], prev, wp, fadedColor);
                 _waypointMarkers[i].enabled = true;
-                _waypointMarkers[i].color = activeColor;
+                _waypointMarkers[i].color = fadedColor;
                 _waypointMarkers[i].rectTransform.position = new Vector3(wp.x, wp.y, 0f);
                 prev = wp;
             }
