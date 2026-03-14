@@ -63,20 +63,16 @@ Waypoint design (relative to the midpoint between GreenBox and DropZone):
 **Phase 4 — One-shot Drag**: Drag BlueBox directly to DropZone (offset X +50).
 
 ```bash
-# Phase 1: Button clicks
 uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && sleep 0.3 && \
 uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && sleep 0.3 && \
 uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && sleep 0.3 && \
 uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && sleep 0.3 && \
-# Phase 2: One-shot drag RedBox
 uloop simulate-mouse --action Drag --from-x <RedBox.SimX> --from-y <RedBox.SimY> --x <DropZone.SimX - 50> --y <DropZone.SimY> --drag-speed 700 && sleep 0.3 && \
-# Phase 3: Split drag GreenBox through waypoints
 uloop simulate-mouse --action DragStart --x <GreenBox.SimX> --y <GreenBox.SimY> && sleep 0.3 && \
 uloop simulate-mouse --action DragMove --x <DropZone.SimX + 150> --y <GreenBox.SimY - 50> --drag-speed 400 && sleep 0.3 && \
 uloop simulate-mouse --action DragMove --x <DropZone.SimX - 150> --y <DropZone.SimY + 50> --drag-speed 400 && sleep 0.3 && \
 uloop simulate-mouse --action DragMove --x <DropZone.SimX> --y <DropZone.SimY - 80> --drag-speed 400 && sleep 0.3 && \
 uloop simulate-mouse --action DragEnd --x <DropZone.SimX> --y <DropZone.SimY> --drag-speed 400 && sleep 0.3 && \
-# Phase 4: One-shot drag BlueBox
 uloop simulate-mouse --action Drag --from-x <BlueBox.SimX> --from-y <BlueBox.SimY> --x <DropZone.SimX + 50> --y <DropZone.SimY> --drag-speed 700
 ```
 

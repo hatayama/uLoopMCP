@@ -102,16 +102,16 @@ namespace io.github.hatayama.uLoopMCP
                 return new ScreenshotResponse();
             }
 
-            string outputDirectory = EnsureOutputDirectoryExists(parameters.OutputDirectory);
-            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
-            string savedPath = Path.Combine(outputDirectory, $"Rendering_{timestamp}.png");
-
             int width = texture.width;
             int height = texture.height;
             List<ScreenshotInfo> screenshots = new List<ScreenshotInfo>();
 
             try
             {
+                string outputDirectory = EnsureOutputDirectoryExists(parameters.OutputDirectory);
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
+                string savedPath = Path.Combine(outputDirectory, $"Rendering_{timestamp}.png");
+
                 SaveTextureAsPng(texture, savedPath);
 
                 FileInfo savedFileInfo = new FileInfo(savedPath);
