@@ -15,6 +15,8 @@ namespace io.github.hatayama.uLoopMCP
         // Screen.width/height at the time positions were recorded (Editor context may differ from Game context)
         public static Vector2 SourceScreenSize { get; private set; }
 
+        private const int MAX_DRAG_WAYPOINTS = 10;
+
         private static readonly List<Vector2> _dragWaypoints = new List<Vector2>();
 
         // Intermediate positions where DragMove stopped, forming a polyline path
@@ -48,6 +50,12 @@ namespace io.github.hatayama.uLoopMCP
 
         public static void AddWaypoint(Vector2 position)
         {
+            // Keep only the most recent waypoints to bound overlay draw cost during long drags
+            if (_dragWaypoints.Count >= MAX_DRAG_WAYPOINTS)
+            {
+                _dragWaypoints.RemoveAt(0);
+            }
+
             _dragWaypoints.Add(position);
         }
 
