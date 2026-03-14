@@ -499,22 +499,22 @@
           },
           "X": {
             "type": "number",
-            "description": "X position in screen pixels (origin: top-left)",
+            "description": "Target X position in screen pixels (origin: top-left). For Drag action, this is the destination.",
             "default": 0
           },
           "Y": {
             "type": "number",
-            "description": "Y position in screen pixels (origin: top-left)",
+            "description": "Target Y position in screen pixels (origin: top-left). For Drag action, this is the destination.",
             "default": 0
           },
-          "EndX": {
+          "FromX": {
             "type": "number",
-            "description": "End X position for Drag action (origin: top-left)",
+            "description": "Start X position for Drag action (origin: top-left). Drag starts here and moves to X,Y.",
             "default": 0
           },
-          "EndY": {
+          "FromY": {
             "type": "number",
-            "description": "End Y position for Drag action (origin: top-left)",
+            "description": "Start Y position for Drag action (origin: top-left). Drag starts here and moves to X,Y.",
             "default": 0
           },
           "DragSpeed": {

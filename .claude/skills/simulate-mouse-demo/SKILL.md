@@ -69,7 +69,7 @@ uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.Si
 uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && sleep 0.3 && \
 uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && sleep 0.3 && \
 # Phase 2: One-shot drag RedBox
-uloop simulate-mouse --action Drag --x <RedBox.SimX> --y <RedBox.SimY> --end-x <DropZone.SimX - 50> --end-y <DropZone.SimY> --drag-speed 700 && sleep 0.3 && \
+uloop simulate-mouse --action Drag --from-x <RedBox.SimX> --from-y <RedBox.SimY> --x <DropZone.SimX - 50> --y <DropZone.SimY> --drag-speed 700 && sleep 0.3 && \
 # Phase 3: Split drag GreenBox through waypoints
 uloop simulate-mouse --action DragStart --x <GreenBox.SimX> --y <GreenBox.SimY> && sleep 0.3 && \
 uloop simulate-mouse --action DragMove --x <DropZone.SimX + 150> --y <GreenBox.SimY - 50> --drag-speed 400 && sleep 0.3 && \
@@ -77,7 +77,7 @@ uloop simulate-mouse --action DragMove --x <DropZone.SimX - 150> --y <DropZone.S
 uloop simulate-mouse --action DragMove --x <DropZone.SimX> --y <DropZone.SimY - 80> --drag-speed 400 && sleep 0.3 && \
 uloop simulate-mouse --action DragEnd --x <DropZone.SimX> --y <DropZone.SimY> --drag-speed 400 && sleep 0.3 && \
 # Phase 4: One-shot drag BlueBox
-uloop simulate-mouse --action Drag --x <BlueBox.SimX> --y <BlueBox.SimY> --end-x <DropZone.SimX + 50> --end-y <DropZone.SimY> --drag-speed 700
+uloop simulate-mouse --action Drag --from-x <BlueBox.SimX> --from-y <BlueBox.SimY> --x <DropZone.SimX + 50> --y <DropZone.SimY> --drag-speed 700
 ```
 
 ### Step 3: Verify results

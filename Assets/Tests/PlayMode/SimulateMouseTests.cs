@@ -96,16 +96,16 @@ namespace Tests.PlayMode
             yield return null;
 
             Vector2 screenPos = GetScreenPosition(tracker.gameObject);
-            float endX = screenPos.x + 100f;
-            float endY = screenPos.y;
+            float destX = screenPos.x + 100f;
+            float destY = screenPos.y;
 
             yield return RunTool(new JObject
             {
                 ["action"] = MouseAction.Drag.ToString(),
-                ["x"] = screenPos.x,
-                ["y"] = screenPos.y,
-                ["endX"] = endX,
-                ["endY"] = endY,
+                ["fromX"] = screenPos.x,
+                ["fromY"] = screenPos.y,
+                ["x"] = destX,
+                ["y"] = destY,
                 ["dragSpeed"] = 1000f
             });
 
@@ -124,10 +124,10 @@ namespace Tests.PlayMode
             yield return RunTool(new JObject
             {
                 ["action"] = MouseAction.Drag.ToString(),
-                ["x"] = 1,
-                ["y"] = 1,
-                ["endX"] = 100,
-                ["endY"] = 100,
+                ["fromX"] = 1,
+                ["fromY"] = 1,
+                ["x"] = 100,
+                ["y"] = 100,
                 ["dragSpeed"] = 1000f
             });
 
@@ -142,16 +142,16 @@ namespace Tests.PlayMode
             yield return null;
 
             Vector2 screenPos = GetScreenPosition(tracker.gameObject);
-            float endX = screenPos.x + 100f;
-            float endY = screenPos.y;
+            float destX = screenPos.x + 100f;
+            float destY = screenPos.y;
 
             yield return RunTool(new JObject
             {
                 ["action"] = MouseAction.Drag.ToString(),
-                ["x"] = screenPos.x,
-                ["y"] = screenPos.y,
-                ["endX"] = endX,
-                ["endY"] = endY,
+                ["fromX"] = screenPos.x,
+                ["fromY"] = screenPos.y,
+                ["x"] = destX,
+                ["y"] = destY,
                 ["dragSpeed"] = 0f
             });
 
@@ -177,10 +177,10 @@ namespace Tests.PlayMode
             yield return RunTool(new JObject
             {
                 ["action"] = MouseAction.Drag.ToString(),
-                ["x"] = startInputPos.x,
-                ["y"] = startInputPos.y,
-                ["endX"] = endInputPos.x,
-                ["endY"] = endInputPos.y,
+                ["fromX"] = startInputPos.x,
+                ["fromY"] = startInputPos.y,
+                ["x"] = endInputPos.x,
+                ["y"] = endInputPos.y,
                 ["dragSpeed"] = 1000f
             });
 

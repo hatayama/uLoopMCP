@@ -7,17 +7,17 @@ namespace io.github.hatayama.uLoopMCP
         [Description("Mouse action: Click(0) - left click, Drag(1) - one-shot drag, DragStart(2) - begin drag and hold, DragMove(3) - move while holding drag, DragEnd(4) - release drag")]
         public MouseAction Action { get; set; } = MouseAction.Click;
 
-        [Description("X position in screen pixels (origin: top-left)")]
+        [Description("Target X position in screen pixels (origin: top-left). For Drag action, this is the destination.")]
         public float X { get; set; } = 0f;
 
-        [Description("Y position in screen pixels (origin: top-left)")]
+        [Description("Target Y position in screen pixels (origin: top-left). For Drag action, this is the destination.")]
         public float Y { get; set; } = 0f;
 
-        [Description("End X position in screen pixels for Drag action (origin: top-left)")]
-        public float EndX { get; set; } = 0f;
+        [Description("Start X position in screen pixels for Drag action (origin: top-left). Drag starts here and moves to X,Y.")]
+        public float FromX { get; set; } = 0f;
 
-        [Description("End Y position in screen pixels for Drag action (origin: top-left)")]
-        public float EndY { get; set; } = 0f;
+        [Description("Start Y position in screen pixels for Drag action (origin: top-left). Drag starts here and moves to X,Y.")]
+        public float FromY { get; set; } = 0f;
 
         [Description("Drag speed in pixels per second (0 for instant). Applies to Drag, DragMove, and DragEnd actions.")]
         public float DragSpeed { get; set; } = McpConstants.SIMULATE_MOUSE_DEFAULT_DRAG_SPEED;

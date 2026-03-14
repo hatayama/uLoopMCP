@@ -243,8 +243,8 @@ namespace io.github.hatayama.uLoopMCP
         private async Task<SimulateMouseResponse> ExecuteDragOneShot(
             SimulateMouseSchema parameters, EventSystem eventSystem, CancellationToken ct)
         {
-            Vector2 inputStart = new Vector2(parameters.X, parameters.Y);
-            Vector2 inputEnd = new Vector2(parameters.EndX, parameters.EndY);
+            Vector2 inputStart = new Vector2(parameters.FromX, parameters.FromY);
+            Vector2 inputEnd = new Vector2(parameters.X, parameters.Y);
             Vector2 screenStart = InputToScreen(inputStart);
             Vector2 screenEnd = InputToScreen(inputEnd);
             RaycastResult? hit = RaycastUI(screenStart, eventSystem);
@@ -484,6 +484,12 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(MouseDragState.Target != null, "Target must not be null when IsDragging is true");
             Debug.Assert(MouseDragState.PointerData != null, "PointerData must not be null when IsDragging is true");
 
+            SimulateMouseResponse? invalidResponse = ValidateDragStillActive(parameters.Action);
+            if (invalidResponse != null)
+            {
+                return invalidResponse;
+            }
+
             Vector2 inputEnd = new Vector2(parameters.X, parameters.Y);
             Vector2 screenEnd = InputToScreen(inputEnd);
 
@@ -529,6 +535,12 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(MouseDragState.Target != null, "Target must not be null when IsDragging is true");
             Debug.Assert(MouseDragState.PointerData != null, "PointerData must not be null when IsDragging is true");
 
+            SimulateMouseResponse? invalidResponse = ValidateDragStillActive(parameters.Action);
+            if (invalidResponse != null)
+            {
+                return invalidResponse;
+            }
+
             Vector2 inputEnd = new Vector2(parameters.X, parameters.Y);
             Vector2 screenEnd = InputToScreen(inputEnd);
             string targetName = MouseDragState.Target!.name;
@@ -566,6 +578,38 @@ namespace io.github.hatayama.uLoopMCP
                 PositionX = inputEnd.x,
                 PositionY = inputEnd.y
             };
+        }
+
+        // User input during a CLI drag can cause Unity's StandaloneInputModule to
+        // release or reassign the drag, leaving MouseDragState stale.
+        private SimulateMouseResponse? ValidateDragStillActive(MouseAction action)
+        {
+            if (!MouseDragState.Target!.activeInHierarchy)
+            {
+                MouseDragState.Clear();
+                SimulateMouseOverlayState.Clear();
+                return new SimulateMouseResponse
+                {
+                    Success = false,
+                    Message = "Drag target was destroyed or deactivated during drag.",
+                    Action = action.ToString()
+                };
+            }
+
+            if (!MouseDragState.PointerData!.dragging ||
+                MouseDragState.PointerData.pointerDrag != MouseDragState.Target)
+            {
+                MouseDragState.Clear();
+                SimulateMouseOverlayState.Clear();
+                return new SimulateMouseResponse
+                {
+                    Success = false,
+                    Message = "Drag was interrupted by user input or system event.",
+                    Action = action.ToString()
+                };
+            }
+
+            return null;
         }
 
         private static async Task PlayExpandAnimation(CancellationToken ct)
