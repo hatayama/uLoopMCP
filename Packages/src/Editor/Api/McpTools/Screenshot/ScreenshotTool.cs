@@ -54,16 +54,29 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             List<UIElementInfo> annotatedElements = new List<UIElementInfo>();
-            GameObject annotationOverlay = null;
 
+            if (parameters.AnnotateElements)
+            {
+                annotatedElements = UIElementAnnotator.CollectInteractiveElements();
+                UIElementAnnotator.AssignLabels(annotatedElements);
+            }
+
+            if (parameters.ElementsOnly)
+            {
+                UIElementAnnotator.ConvertToSimCoordinates(annotatedElements, Screen.height);
+                ScreenshotInfo elementsOnlyInfo = new ScreenshotInfo();
+                elementsOnlyInfo.CoordinateSystem = McpConstants.COORDINATE_SYSTEM_GAME_VIEW;
+                elementsOnlyInfo.AnnotatedElements = annotatedElements;
+                return new ScreenshotResponse(new List<ScreenshotInfo> { elementsOnlyInfo });
+            }
+
+            GameObject annotationOverlay = null;
             Texture2D texture;
             int yOffset;
             try
             {
                 if (parameters.AnnotateElements)
                 {
-                    annotatedElements = UIElementAnnotator.CollectInteractiveElements();
-                    UIElementAnnotator.AssignLabels(annotatedElements);
                     annotationOverlay = UIElementAnnotator.CreateAnnotationOverlay(annotatedElements);
                     // Wait 1 frame for the overlay Canvas to render into the RT
                     await EditorDelay.DelayFrame(1, ct);
@@ -220,6 +233,11 @@ namespace io.github.hatayama.uLoopMCP
             {
                 throw new ArgumentException(
                     $"ResolutionScale must be between 0.1 and 1.0, got: {parameters.ResolutionScale}");
+            }
+
+            if (parameters.ElementsOnly && !parameters.AnnotateElements)
+            {
+                throw new ArgumentException("ElementsOnly requires AnnotateElements=true");
             }
         }
 

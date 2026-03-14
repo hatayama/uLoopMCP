@@ -48,5 +48,8 @@ namespace io.github.hatayama.uLoopMCP
 
         [Description("Annotate interactive UI elements with names and simulate-mouse coordinates on the screenshot. Only works with CaptureMode=rendering in PlayMode.")]
         public bool AnnotateElements { get; set; } = false;
+
+        [Description("Return only annotated element JSON without capturing a screenshot image. Requires AnnotateElements=true and CaptureMode=rendering in PlayMode.")]
+        public bool ElementsOnly { get; set; } = false;
     }
 }
