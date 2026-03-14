@@ -171,6 +171,9 @@ namespace io.github.hatayama.uLoopMCP
         // Reusable buffers to avoid per-element allocations in AddElementInfo → GetScreenCorners
         private static readonly Vector3[] SharedWorldCorners = new Vector3[4];
         private static readonly Vector2[] SharedScreenCorners = new Vector2[4];
+        private static readonly List<RaycastResult> SharedRaycastResults = new List<RaycastResult>();
+        private static PointerEventData SharedPointerEventData;
+        private static EventSystem SharedPointerEventSystem;
 
         private static void AddElementInfo(List<UIElementInfo> elements, GameObject go, string name, string type)
         {
@@ -205,6 +208,11 @@ namespace io.github.hatayama.uLoopMCP
             float centerX = (minX + maxX) / 2f;
             float centerY = (minY + maxY) / 2f;
 
+            if (!IsRaycastReachable(go, centerX, centerY))
+            {
+                return;
+            }
+
             elements.Add(new UIElementInfo
             {
                 Name = name,
@@ -224,6 +232,40 @@ namespace io.github.hatayama.uLoopMCP
         {
             GraphicRaycaster raycaster = canvas.GetComponent<GraphicRaycaster>();
             return raycaster != null && raycaster.isActiveAndEnabled;
+        }
+
+        // simulate-mouse uses EventSystem.RaycastAll, so only advertise elements whose
+        // center point is actually hittable. Skips the check when no EventSystem exists
+        // (e.g. annotation-only scenes without interaction).
+        private static bool IsRaycastReachable(GameObject go, float centerX, float centerY)
+        {
+            EventSystem eventSystem = EventSystem.current;
+            if (eventSystem == null)
+            {
+                return true;
+            }
+
+            if (SharedPointerEventData == null || SharedPointerEventSystem != eventSystem)
+            {
+                SharedPointerEventData = new PointerEventData(eventSystem);
+                SharedPointerEventSystem = eventSystem;
+            }
+            SharedPointerEventData.position = new Vector2(centerX, centerY);
+
+            SharedRaycastResults.Clear();
+            eventSystem.RaycastAll(SharedPointerEventData, SharedRaycastResults);
+
+            Transform targetTransform = go.transform;
+            foreach (RaycastResult raycastResult in SharedRaycastResults)
+            {
+                Transform hitTransform = raycastResult.gameObject.transform;
+                if (hitTransform == targetTransform || hitTransform.IsChildOf(targetTransform))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // Writes 4 corners into SharedScreenCorners in screen pixel coordinates (bottom-left origin).

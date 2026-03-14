@@ -235,6 +235,20 @@ namespace io.github.hatayama.uLoopMCP
                     $"ResolutionScale must be between 0.1 and 1.0, got: {parameters.ResolutionScale}");
             }
 
+            // AnnotateElements and ElementsOnly rely on PlayMode rendering pipeline
+            if (parameters.CaptureMode != CaptureMode.rendering)
+            {
+                if (parameters.AnnotateElements)
+                {
+                    throw new ArgumentException("AnnotateElements is only supported when CaptureMode=rendering");
+                }
+
+                if (parameters.ElementsOnly)
+                {
+                    throw new ArgumentException("ElementsOnly is only supported when CaptureMode=rendering");
+                }
+            }
+
             if (parameters.ElementsOnly && !parameters.AnnotateElements)
             {
                 throw new ArgumentException("ElementsOnly requires AnnotateElements=true");
