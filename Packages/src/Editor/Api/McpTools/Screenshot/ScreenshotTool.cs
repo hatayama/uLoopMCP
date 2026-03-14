@@ -77,6 +77,8 @@ namespace io.github.hatayama.uLoopMCP
                 UIElementAnnotator.DestroyAnnotationOverlay(annotationOverlay);
             }
 
+            UIElementAnnotator.ConvertToSimCoordinates(annotatedElements, Screen.height);
+
             if (texture == null)
             {
                 VibeLogger.LogError(

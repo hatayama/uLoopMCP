@@ -33,19 +33,15 @@ namespace io.github.hatayama.uLoopMCP
             return elements;
         }
 
-        // Sorts in-place so labels follow visual reading order (top-to-bottom, left-to-right);
-        // without this, label letters would be arbitrary and hard to correlate with on-screen positions
+        // Sorts by z-order (frontmost = A) so the AI can reason about occlusion from label order alone
         public static void AssignLabels(List<UIElementInfo> elements)
         {
             elements.Sort((a, b) =>
             {
-                int yCompare = a.SimY.CompareTo(b.SimY);
-                if (yCompare != 0) return yCompare;
+                int sortOrderCompare = b.SortingOrder.CompareTo(a.SortingOrder);
+                if (sortOrderCompare != 0) return sortOrderCompare;
 
-                int xCompare = a.SimX.CompareTo(b.SimX);
-                if (xCompare != 0) return xCompare;
-
-                return a.SortingOrder.CompareTo(b.SortingOrder);
+                return b.SiblingIndex.CompareTo(a.SiblingIndex);
             });
 
             for (int i = 0; i < elements.Count; i++)
@@ -65,6 +61,17 @@ namespace io.github.hatayama.uLoopMCP
             } while (remaining >= 0);
 
             return label;
+        }
+
+        public static void ConvertToSimCoordinates(List<UIElementInfo> elements, int screenHeight)
+        {
+            foreach (UIElementInfo element in elements)
+            {
+                element.SimY = screenHeight - element.SimY;
+                float originalMinY = element.BoundsMinY;
+                element.BoundsMinY = screenHeight - element.BoundsMaxY;
+                element.BoundsMaxY = screenHeight - originalMinY;
+            }
         }
 
         public static GameObject CreateAnnotationOverlay(List<UIElementInfo> elements)
@@ -198,20 +205,16 @@ namespace io.github.hatayama.uLoopMCP
             float centerX = (minX + maxX) / 2f;
             float centerY = (minY + maxY) / 2f;
 
-            // Convert from screen space (bottom-left origin) to sim coordinates (top-left origin)
-            float simX = centerX;
-            float simY = Screen.height - centerY;
-
             elements.Add(new UIElementInfo
             {
                 Name = name,
                 Type = type,
-                SimX = simX,
-                SimY = simY,
+                SimX = centerX,
+                SimY = centerY,
                 BoundsMinX = minX,
-                BoundsMinY = Screen.height - maxY,
+                BoundsMinY = minY,
                 BoundsMaxX = maxX,
-                BoundsMaxY = Screen.height - minY,
+                BoundsMaxY = maxY,
                 SortingOrder = canvas.sortingOrder,
                 SiblingIndex = go.transform.GetSiblingIndex()
             });
@@ -272,12 +275,10 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void CreateAnnotationForElement(Transform parent, UIElementInfo element, Font font)
         {
-            // UIElementInfo stores sim coordinates (top-left origin) for the API response;
-            // Canvas positioning needs screen coordinates (bottom-left origin), so invert Y back
             float screenMinX = element.BoundsMinX;
             float screenMaxX = element.BoundsMaxX;
-            float screenMinY = Screen.height - element.BoundsMaxY;
-            float screenMaxY = Screen.height - element.BoundsMinY;
+            float screenMinY = element.BoundsMinY;
+            float screenMaxY = element.BoundsMaxY;
 
             Color color = GetColorForType(element.Type);
 
