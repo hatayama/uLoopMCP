@@ -63,6 +63,7 @@ namespace io.github.hatayama.uLoopMCP
                 if (parameters.AnnotateElements)
                 {
                     annotatedElements = UIElementAnnotator.CollectInteractiveElements();
+                    UIElementAnnotator.AssignLabels(annotatedElements);
                     annotationOverlay = UIElementAnnotator.CreateAnnotationOverlay(annotatedElements);
                     // Wait 1 frame for the overlay Canvas to render into the RT
                     await EditorDelay.DelayFrame(1, ct);

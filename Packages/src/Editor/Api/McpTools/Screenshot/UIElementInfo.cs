@@ -10,5 +10,8 @@ namespace io.github.hatayama.uLoopMCP
         public float BoundsMinY { get; set; }
         public float BoundsMaxX { get; set; }
         public float BoundsMaxY { get; set; }
+        public string Label { get; set; } = "";
+        public int SortingOrder { get; set; }
+        public int SiblingIndex { get; set; }
     }
 }

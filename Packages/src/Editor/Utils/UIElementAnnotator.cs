@@ -11,7 +11,7 @@ namespace io.github.hatayama.uLoopMCP
     public static class UIElementAnnotator
     {
         private const int OVERLAY_SORT_ORDER = 32767;
-        private const int LABEL_FONT_SIZE = 14;
+        private const int LABEL_FONT_SIZE = 18;
         private const float BORDER_THICKNESS = 2f;
         private const int LABEL_PADDING_H = 4;
         private const int LABEL_PADDING_V = 2;
@@ -31,6 +31,40 @@ namespace io.github.hatayama.uLoopMCP
             CollectEventHandlers(elements, processedObjects);
 
             return elements;
+        }
+
+        // Sorts in-place so labels follow visual reading order (top-to-bottom, left-to-right);
+        // without this, label letters would be arbitrary and hard to correlate with on-screen positions
+        public static void AssignLabels(List<UIElementInfo> elements)
+        {
+            elements.Sort((a, b) =>
+            {
+                int yCompare = a.SimY.CompareTo(b.SimY);
+                if (yCompare != 0) return yCompare;
+
+                int xCompare = a.SimX.CompareTo(b.SimX);
+                if (xCompare != 0) return xCompare;
+
+                return a.SortingOrder.CompareTo(b.SortingOrder);
+            });
+
+            for (int i = 0; i < elements.Count; i++)
+            {
+                elements[i].Label = GenerateLabel(i);
+            }
+        }
+
+        private static string GenerateLabel(int index)
+        {
+            string label = "";
+            int remaining = index;
+            do
+            {
+                label = (char)('A' + remaining % 26) + label;
+                remaining = remaining / 26 - 1;
+            } while (remaining >= 0);
+
+            return label;
         }
 
         public static GameObject CreateAnnotationOverlay(List<UIElementInfo> elements)
@@ -177,7 +211,9 @@ namespace io.github.hatayama.uLoopMCP
                 BoundsMinX = minX,
                 BoundsMinY = Screen.height - maxY,
                 BoundsMaxX = maxX,
-                BoundsMaxY = Screen.height - minY
+                BoundsMaxY = Screen.height - minY,
+                SortingOrder = canvas.sortingOrder,
+                SiblingIndex = go.transform.GetSiblingIndex()
             });
         }
 
@@ -253,7 +289,7 @@ namespace io.github.hatayama.uLoopMCP
             CreateBorderEdge(parent, "Left", screenMinX, screenMinY, BORDER_THICKNESS, boxHeight, color);
             CreateBorderEdge(parent, "Right", screenMaxX - BORDER_THICKNESS, screenMinY, BORDER_THICKNESS, boxHeight, color);
 
-            string labelText = $"{element.Name} ({element.SimX:F0},{element.SimY:F0})";
+            string labelText = element.Label;
             CreateLabel(parent, labelText, screenMinX, screenMaxY + BORDER_THICKNESS, color, font);
         }
 
