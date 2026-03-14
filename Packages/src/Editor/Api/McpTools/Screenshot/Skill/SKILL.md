@@ -10,7 +10,7 @@ Take a screenshot of any Unity EditorWindow by name and save as PNG.
 ## Usage
 
 ```bash
-uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mode <mode>] [--capture-mode <mode>] [--annotate-elements] [--output-directory <path>]
+uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mode <mode>] [--capture-mode <mode>] [--annotate-elements] [--elements-only] [--output-directory <path>]
 ```
 
 ## Parameters
@@ -22,7 +22,8 @@ uloop screenshot [--window-name <name>] [--resolution-scale <scale>] [--match-mo
 | `--match-mode` | enum | `exact` | Window name matching mode: `exact`, `prefix`, or `contains`. Ignored when `--capture-mode rendering`. |
 | `--capture-mode` | enum | `window` | `window`=capture EditorWindow including toolbar, `rendering`=capture game rendering only (PlayMode required, coordinates match simulate-mouse) |
 | `--output-directory` | string | `""` | Output directory path for saving screenshots. When empty, uses default path (.uloop/outputs/Screenshots/). Accepts absolute paths. |
-| `--annotate-elements` | boolean | `false` | Annotate interactive UI elements with names and simulate-mouse coordinates on the screenshot. Only works with `--capture-mode rendering` in PlayMode. |
+| `--annotate-elements` | boolean | `false` | Annotate interactive UI elements with index labels (A, B, C...) on the screenshot. Only works with `--capture-mode rendering` in PlayMode. |
+| `--elements-only` | boolean | `false` | Return only annotated element JSON without capturing a screenshot image. Requires `--annotate-elements`. |
 
 ## Match Modes
 
@@ -52,8 +53,11 @@ uloop screenshot
 # Capture game rendering (coordinates match simulate-mouse, PlayMode required)
 uloop screenshot --capture-mode rendering
 
-# Annotate interactive UI elements with names and coordinates (for simulate-mouse workflow)
+# Annotate interactive UI elements with index labels (for simulate-mouse workflow)
 uloop screenshot --capture-mode rendering --annotate-elements
+
+# Get UI element coordinates without capturing an image (fastest)
+uloop screenshot --capture-mode rendering --annotate-elements --elements-only
 
 # Take a screenshot of Scene View
 uloop screenshot --window-name Scene
@@ -80,11 +84,14 @@ Returns JSON with:
   - `CoordinateSystem`: `"gameView"` (pixel coords usable with simulate-mouse) or `"window"` (EditorWindow capture)
   - `ResolutionScale`: Resolution scale used for capture
   - `YOffset`: Y offset to add to image pixel Y to get simulate-mouse Y coordinate (only meaningful when `CoordinateSystem` is `"gameView"`)
-  - `AnnotatedElements`: Array of annotated UI element metadata. Empty unless `--annotate-elements` is used. Each item contains:
+  - `AnnotatedElements`: Array of annotated UI element metadata. Empty unless `--annotate-elements` is used. Sorted by z-order (frontmost first). Each item contains:
+    - `Label`: Index label shown on the screenshot (`A`=frontmost, `B`=next, ...)
     - `Name`: Element name
     - `Type`: Element type (`Button`, `Toggle`, `Slider`, `Dropdown`, `InputField`, `Scrollbar`, `Draggable`, `DropTarget`, `Selectable`)
     - `SimX`, `SimY`: Center position in simulate-mouse coordinates (use directly with `--x` and `--y`)
     - `BoundsMinX`, `BoundsMinY`, `BoundsMaxX`, `BoundsMaxY`: Bounding box in simulate-mouse coordinates
+    - `SortingOrder`: Canvas sorting order (higher = in front)
+    - `SiblingIndex`: Transform sibling index (higher = in front within same Canvas)
 
 ### Coordinate Conversion (gameView)
 

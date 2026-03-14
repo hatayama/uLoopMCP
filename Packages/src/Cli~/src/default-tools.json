@@ -412,7 +412,12 @@
           },
           "AnnotateElements": {
             "type": "boolean",
-            "description": "Annotate interactive UI elements with names and simulate-mouse coordinates on the screenshot. Only works with CaptureMode=rendering in PlayMode. Response includes AnnotatedElements array with element metadata.",
+            "description": "Annotate interactive UI elements with index labels (A, B, C...) on the screenshot. Only works with CaptureMode=rendering in PlayMode. Response includes AnnotatedElements array with element metadata sorted by z-order.",
+            "default": false
+          },
+          "ElementsOnly": {
+            "type": "boolean",
+            "description": "Return only annotated element JSON without capturing a screenshot image. Requires AnnotateElements=true and CaptureMode=rendering in PlayMode.",
             "default": false
           }
         }
