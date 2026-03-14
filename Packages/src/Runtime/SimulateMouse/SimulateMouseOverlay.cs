@@ -134,8 +134,9 @@ namespace io.github.hatayama.uLoopMCP
                 _dragStartMarker.enabled = false;
                 HidePool(_pathSegments);
                 HidePool(_waypointMarkers);
-                TrimPool(_pathSegments, 0);
-                TrimPool(_waypointMarkers, 0);
+                // Keep a reasonable number of pooled objects for reuse across drags
+                TrimPool(_pathSegments, 11);
+                TrimPool(_waypointMarkers, 10);
                 return;
             }
 

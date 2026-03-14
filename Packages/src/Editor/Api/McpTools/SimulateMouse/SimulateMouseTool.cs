@@ -224,7 +224,15 @@ namespace io.github.hatayama.uLoopMCP
         private async Task<SimulateMouseResponse> ExecuteLongPress(
             SimulateMouseSchema parameters, EventSystem eventSystem, CancellationToken ct)
         {
-            Debug.Assert(parameters.Duration > 0f, "Duration must be positive for LongPress");
+            if (parameters.Duration <= 0f || float.IsNaN(parameters.Duration))
+            {
+                return new SimulateMouseResponse
+                {
+                    Success = false,
+                    Message = $"Duration must be positive, got: {parameters.Duration}",
+                    Action = MouseAction.LongPress.ToString()
+                };
+            }
 
             Vector2 inputPos = new Vector2(parameters.X, parameters.Y);
             Vector2 screenPos = InputToScreen(inputPos);
@@ -267,20 +275,26 @@ namespace io.github.hatayama.uLoopMCP
                     hit.Value.gameObject, pointerData, ExecuteEvents.pointerDownHandler);
             }
 
-            // Hold for Duration seconds, updating elapsed time each frame for overlay display
-            float startTime = Time.realtimeSinceStartup;
-            float elapsed = 0f;
-            while (elapsed < parameters.Duration)
+            try
             {
-                SimulateMouseOverlayState.UpdateLongPressElapsed(elapsed);
-                await EditorDelay.DelayFrame(1, ct);
-                elapsed = Time.realtimeSinceStartup - startTime;
+                // Hold for Duration seconds, updating elapsed time each frame for overlay display
+                float startTime = Time.realtimeSinceStartup;
+                float elapsed = 0f;
+                while (elapsed < parameters.Duration)
+                {
+                    SimulateMouseOverlayState.UpdateLongPressElapsed(elapsed);
+                    await EditorDelay.DelayFrame(1, ct);
+                    elapsed = Time.realtimeSinceStartup - startTime;
+                }
+                SimulateMouseOverlayState.UpdateLongPressElapsed(parameters.Duration);
             }
-            SimulateMouseOverlayState.UpdateLongPressElapsed(parameters.Duration);
-
-            if (hit != null && target != null)
+            finally
             {
-                ExecuteEvents.Execute(target, pointerData, ExecuteEvents.pointerUpHandler);
+                // Ensure pointerUp fires even if the hold loop is cancelled
+                if (hit != null && target != null)
+                {
+                    ExecuteEvents.Execute(target, pointerData, ExecuteEvents.pointerUpHandler);
+                }
             }
 
             await PlayDissipateAnimation(ct);

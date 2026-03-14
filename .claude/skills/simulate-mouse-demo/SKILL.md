@@ -45,7 +45,7 @@ From the `AnnotatedElements` array in the response, extract `SimX` and `SimY` fo
 - **BlueBox** — blue draggable box
 - **LongPressButton** — purple long-press button
 
-**VirtualPadBackground** is also listed in the `AnnotatedElements` output (Type: "Draggable"). Extract its `SimX` and `SimY` directly — no manual coordinate computation needed.
+**VirtualPadBackground** is also listed in the `AnnotatedElements` output (Type: "Draggable"). Extract its `SimX` and `SimY` directly — these are used as `<Pad.SimX>` and `<Pad.SimY>` in the command examples below.
 
 ### Step 2: Click buttons, one-shot drag, and split drag — chain all in one Bash call
 
@@ -53,7 +53,7 @@ From the `AnnotatedElements` array in the response, extract `SimX` and `SimY` fo
 
 **Phase 1 — Button clicks**: Alternate ClickButton1 and ClickButton2 four times.
 
-**Phase 1.5 — LongPress**: LongPress on LongPressButton for 5 seconds. The button should gradually change color from purple to orange during the hold, and display "Activated!" after release.
+**Phase 1.5 — LongPress**: LongPress on LongPressButton for 5 seconds. The button gradually changes color during the hold. On first activation it turns orange and shows "Activated!"; on second activation it toggles back to purple and shows "Hold 5s".
 
 **Phase 2 — One-shot Drag**: Drag RedBox to DropZone top area (Y offset -80 from center) so it doesn't overlap subsequent drops.
 
