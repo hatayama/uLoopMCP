@@ -153,7 +153,8 @@ namespace io.github.hatayama.uLoopMCP
             
             JObject paramsJson = new JObject
             {
-                ["Tag"] = "Untagged"
+                ["Tag"] = "Untagged",
+                ["MaxResults"] = 100
             };
             
             // Act

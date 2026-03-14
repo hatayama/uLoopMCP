@@ -265,6 +265,15 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
+            // EventSystem clips at Screen.width/height which can be smaller than the
+            // Canvas layout space (Game view target resolution). Check Canvas space directly.
+            RectTransform rectTransform = go.GetComponent<RectTransform>();
+            if (rectTransform != null)
+            {
+                return RectTransformUtility.RectangleContainsScreenPoint(
+                    rectTransform, new Vector2(centerX, centerY), null);
+            }
+
             return false;
         }
 

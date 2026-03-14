@@ -63,7 +63,7 @@ namespace io.github.hatayama.uLoopMCP
 
             if (parameters.ElementsOnly)
             {
-                UIElementAnnotator.ConvertToSimCoordinates(annotatedElements, Screen.height);
+                UIElementAnnotator.ConvertToSimCoordinates(annotatedElements, (int)Handles.GetMainGameViewSize().y);
                 ScreenshotInfo elementsOnlyInfo = new ScreenshotInfo();
                 elementsOnlyInfo.CoordinateSystem = McpConstants.COORDINATE_SYSTEM_GAME_VIEW;
                 elementsOnlyInfo.AnnotatedElements = annotatedElements;
@@ -90,7 +90,7 @@ namespace io.github.hatayama.uLoopMCP
                 UIElementAnnotator.DestroyAnnotationOverlay(annotationOverlay);
             }
 
-            UIElementAnnotator.ConvertToSimCoordinates(annotatedElements, Screen.height);
+            UIElementAnnotator.ConvertToSimCoordinates(annotatedElements, (int)Handles.GetMainGameViewSize().y);
 
             if (texture == null)
             {

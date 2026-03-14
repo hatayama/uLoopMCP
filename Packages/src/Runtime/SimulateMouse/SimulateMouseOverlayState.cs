@@ -26,7 +26,8 @@ namespace io.github.hatayama.uLoopMCP
             MouseAction action,
             Vector2 currentPosition,
             Vector2? dragStartPosition,
-            string? hitGameObjectName)
+            string? hitGameObjectName,
+            Vector2 sourceScreenSize)
         {
             // PlayDissipateAnimation calls Clear() on normal completion, but a cancelled or stuck drag
             // may leave stale waypoints — defensive clear ensures a fresh start
@@ -40,7 +41,7 @@ namespace io.github.hatayama.uLoopMCP
             CurrentPosition = currentPosition;
             DragStartPosition = dragStartPosition;
             HitGameObjectName = hitGameObjectName;
-            SourceScreenSize = new Vector2(Screen.width, Screen.height);
+            SourceScreenSize = sourceScreenSize;
         }
 
         public static void UpdatePosition(Vector2 position)

@@ -155,7 +155,7 @@ namespace io.github.hatayama.uLoopMCP
                 return (null, 0);
             }
 
-            int yOffset = Screen.height - rt.height;
+            int yOffset = (int)Handles.GetMainGameViewSize().y - rt.height;
 
             // RenderTexture uses bottom-left origin; flip vertically for standard top-left image format
             RenderTextureDescriptor flipDescriptor = new RenderTextureDescriptor(rt.width, rt.height, rt.format, 0);
