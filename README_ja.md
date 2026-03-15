@@ -4,8 +4,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)<br>
 ![ClaudeCode](https://img.shields.io/badge/Claude_Code-555?logo=claude)
 ![Cursor](https://img.shields.io/badge/Cursor-111?logo=Cursor)
-![OpenAICodex](https://img.shields.io/badge/OpenAI_Codex-111?logo=openai)
-![GoogleGemini](https://img.shields.io/badge/Google_Gemini-111?logo=googlegemini)
+![Codex](https://img.shields.io/badge/Codex-111?logo=openai)
 ![GitHubCopilot](https://img.shields.io/badge/GitHub_Copilot-111?logo=githubcopilot)
 ![Antigravity](https://img.shields.io/badge/Antigravity-111?logo=google)
 
