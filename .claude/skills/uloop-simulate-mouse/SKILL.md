@@ -27,18 +27,20 @@ uloop simulate-mouse --action <action> --x <x> --y <y> [options]
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `--action` | enum | `Click` | `Click`, `Drag`, `DragStart`, `DragMove`, `DragEnd` |
+| `--action` | enum | `Click` | `Click`, `Drag`, `DragStart`, `DragMove`, `DragEnd`, `LongPress` |
 | `--x` | number | `0` | Target X position in screen pixels (origin: top-left). For Drag action, this is the destination. |
 | `--y` | number | `0` | Target Y position in screen pixels (origin: top-left). For Drag action, this is the destination. |
 | `--from-x` | number | `0` | Start X position for Drag action. Drag starts here and moves to x,y. |
 | `--from-y` | number | `0` | Start Y position for Drag action. Drag starts here and moves to x,y. |
 | `--drag-speed` | number | `2000` | Drag speed in pixels per second (0 for instant). 2000 is fast (default), 200 is slow enough to watch. Applies to Drag, DragMove, and DragEnd actions. |
+| `--duration` | number | `0.5` | Hold duration in seconds for LongPress action. |
 
 ### Actions
 
 | Action | Event Fired | Description |
 |--------|-------------|-------------|
 | `Click` | PointerDown → PointerUp → PointerClick | Left click at (x, y) |
+| `LongPress` | PointerDown → (hold) → PointerUp | Press and hold at (x, y) for `--duration` seconds, then release. No PointerClick is fired. |
 | `Drag` | BeginDrag → Drag×N → EndDrag | One-shot drag from (fromX, fromY) to (x, y) at the specified speed |
 | `DragStart` | BeginDrag | Begin drag at (x, y) and hold |
 | `DragMove` | Drag×N | Animate from current position to (x, y) at the specified speed |
