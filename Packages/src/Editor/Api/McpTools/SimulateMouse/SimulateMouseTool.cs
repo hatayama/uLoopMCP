@@ -343,17 +343,6 @@ namespace io.github.hatayama.uLoopMCP
         private async Task<SimulateMouseResponse> ExecuteDragOneShot(
             SimulateMouseSchema parameters, EventSystem eventSystem, CancellationToken ct)
         {
-            // FromX/FromY default to 0 — reject if the caller forgot to specify them
-            if (parameters.FromX == 0f && parameters.FromY == 0f && (parameters.X != 0f || parameters.Y != 0f))
-            {
-                return new SimulateMouseResponse
-                {
-                    Success = false,
-                    Message = "Drag action requires FromX/FromY (start position). Both are 0 which likely means they were omitted.",
-                    Action = MouseAction.Drag.ToString()
-                };
-            }
-
             Vector2 inputStart = new Vector2(parameters.FromX, parameters.FromY);
             Vector2 inputEnd = new Vector2(parameters.X, parameters.Y);
             Vector2 screenStart = InputToScreen(inputStart);
