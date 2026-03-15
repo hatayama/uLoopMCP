@@ -10,6 +10,7 @@
 ![Windsurf](https://img.shields.io/badge/Windsurf-111?logo=Windsurf)
 
 <h1 align="center">Unity CLI Loop</h1>
+<img width="1000" alt="logo" align="center" src="https://github.com/user-attachments/assets/f7784412-31f2-4654-9b6c-d37c1727b2c2" />
 
 Let an AI agent compile, test, and operate your Unity project from popular LLM tools via CLI.
 
