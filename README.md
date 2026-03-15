@@ -1,3 +1,4 @@
+# Unity CLI Loop
 [日本語](README_ja.md)
 
 [![Unity](https://img.shields.io/badge/Unity-2022.3+-red.svg)](https://unity3d.com/)
@@ -11,9 +12,12 @@
 <img width="1000" alt="logo" align="center" src="https://github.com/user-attachments/assets/864aa12e-8fd0-4b3a-9794-15cecdf95f94" />
 <p align="right"><sub>(Logo inspired by Daft Punk's <i>Homework</i> album art)</sub></p>
 
+
 Let an AI agent compile, test, and operate your Unity project from popular LLM tools via CLI.
 
 Designed to keep AI-driven development loops running autonomously inside your existing Unity projects.
+
+> **Note**: This project was formerly known as **uLoopMCP**.
 
 # Concept
 Unity CLI Loop is a Unity integration tool designed so that **AI can drive your Unity project forward with minimal human intervention**.
@@ -81,6 +85,8 @@ If you see the following display, the installation was successful.
 ```bash
 npm install -g uloop-cli
 ```
+
+See [uloop-cli on npm](https://www.npmjs.com/package/uloop-cli) for details.
 </details>
 
 ## Step 2: Install Skills
@@ -279,6 +285,7 @@ You can also connect via MCP (Model Context Protocol). CLI and Skills installati
 ### 1. compile - Execute Compilation
 Performs AssetDatabase.Refresh() and then compiles, returning the results. Can detect errors and warnings that built-in linters cannot find.
 You can choose between incremental compilation and forced full compilation.
+With `WaitForDomainReload=true`, results are returned after Domain Reload completes, regardless of the `ForceRecompile` value.
 ```text
 → Execute compile, analyze error and warning content
 → Automatically fix relevant files
@@ -306,7 +313,7 @@ Executes Unity Test Runner and retrieves test results. You can set conditions wi
 Test results can be output as xml. The output path is returned so AI can read it.
 This is also a strategy to avoid consuming context.
 ```text
-→ run-tests (FilterType: exact, FilterValue: "io.github.hatayama.uLoopMCP.ConsoleLogRetrieverTests.GetAllLogs_WithMaskAllOff_StillReturnsAllLogs")
+→ run-tests (FilterType: exact, FilterValue: "PlayerControllerTests.TestJump")
 → Check failed tests, fix implementation to pass tests
 ```
 > [!WARNING]
