@@ -13,9 +13,9 @@
 <img width="1000" alt="logo" align="center" src="https://github.com/user-attachments/assets/864aa12e-8fd0-4b3a-9794-15cecdf95f94" />
 <p align="right"><sub>(Logo inspired by Daft Punk's <i>Homework</i> album art)</sub></p>
 
-CLIを通じて、様々なLLMツールからUnity Editorを操作できます。
+CLIを通じて、AIエージェントがUnityプロジェクトのコンパイル・テスト・操作を各種LLMツールから実行できるようにします。
 
-AIによる開発サイクルを高速に回すことで、継続的な改善Loopを実現します。
+AI駆動の開発ループを既存のUnityプロジェクト内で自律的に回し続けるために設計されています。
 
 # コンセプト
 Unity CLI Loopは、「AIがUnityプロジェクトの実装をできるだけ人手を介さずに進められる」ことを目指して作られた Unity連携ツールです。
@@ -84,6 +84,8 @@ Window > uLoopを選択します。専用ウィンドウが開くので **CLI** 
 ```bash
 npm install -g uloop-cli
 ```
+
+詳細は [npm の uloop-cli パッケージ](https://www.npmjs.com/package/uloop-cli) を参照してください。
 </details>
 
 ## ステップ2: Skillsのインストール
@@ -305,12 +307,12 @@ LogTypeや検索対象の文字列で絞り込む事ができます。また、s
 
 ### 3. run-tests - TestRunnerの実行 (PlayMode, EditMode対応)
 Unity Test Runnerを実行し、テスト結果を取得します。FilterTypeとFilterValueで条件を設定できます。
-- FilterType: all（全テスト）、fullclassname（完全クラス名）など
+- FilterType: all（全テスト）、exact（個別テストメソッド名）、regex（クラス名や名前空間）、assembly（アセンブリ名）
 - FilterValue: フィルタータイプに応じた値（クラス名、名前空間など）
 テスト結果をxmlで出力する事が可能です。出力pathを返すので、それをAIに読み取ってもらう事ができます。
 これもコンテキストを圧迫しないための工夫です。
 ```text
-→ run-tests (FilterType: fullclassname, FilterValue: "PlayerControllerTests")
+→ run-tests (FilterType: exact, FilterValue: "io.github.hatayama.uLoopMCP.ConsoleLogRetrieverTests.GetAllLogs_WithMaskAllOff_StillReturnsAllLogs")
 → 失敗したテストを確認、実装を修正してテストをパス
 ```
 > [!WARNING]

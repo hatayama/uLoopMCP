@@ -83,6 +83,8 @@ If you see the following display, the installation was successful.
 ```bash
 npm install -g uloop-cli
 ```
+
+See [uloop-cli on npm](https://www.npmjs.com/package/uloop-cli) for details.
 </details>
 
 ## Step 2: Install Skills
@@ -281,6 +283,7 @@ You can also connect via MCP (Model Context Protocol). CLI and Skills installati
 ### 1. compile - Execute Compilation
 Performs AssetDatabase.Refresh() and then compiles, returning the results. Can detect errors and warnings that built-in linters cannot find.
 You can choose between incremental compilation and forced full compilation.
+With `WaitForDomainReload=true`, results are returned after Domain Reload completes, regardless of the `ForceRecompile` value.
 ```text
 → Execute compile, analyze error and warning content
 → Automatically fix relevant files
