@@ -323,6 +323,11 @@ Unity Search プロバイダーの詳細情報を取得します。
   - `Description` (string): プロバイダーの説明
   - `IsActive` (boolean): プロバイダーがアクティブかどうか
   - `Priority` (integer): プロバイダーの優先度
+- `TotalCount` (integer): 返されたプロバイダーの総数
+- `ActiveCount` (integer): アクティブなプロバイダーの数
+- `InactiveCount` (integer): 非アクティブなプロバイダーの数
+- `Success` (boolean): リクエストが成功したかどうか
+- `ErrorMessage` (string): リクエスト失敗時のエラーメッセージ
 - `AppliedFilter` (string): 適用されたフィルター
 - `SortedByPriority` (boolean): 優先度でソートされているか
 

@@ -325,6 +325,11 @@ Get detailed information about available Unity Search providers.
   - `Description` (string): Provider description
   - `IsActive` (boolean): Whether the provider is active
   - `Priority` (integer): Provider priority
+- `TotalCount` (integer): Total number of providers returned
+- `ActiveCount` (integer): Number of active providers in the result
+- `InactiveCount` (integer): Number of inactive providers in the result
+- `Success` (boolean): Whether the request succeeded
+- `ErrorMessage` (string): Error message if the request failed
 - `AppliedFilter` (string): Filter that was applied
 - `SortedByPriority` (boolean): Whether results are sorted by priority
 

@@ -486,6 +486,7 @@ Supports 6 actions: Click, LongPress, Drag (one-shot), DragStart/DragMove/DragEn
 → simulate-mouse (Action: DragMove, X: 200, Y: 400, DragSpeed: 300)
 → simulate-mouse (Action: DragEnd, X: 400, Y: 300)
 ```
+https://github.com/user-attachments/assets/c7ee9103-c282-4f90-8b01-64bb17400f3e
 
 ## Tool Reference
 
