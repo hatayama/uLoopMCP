@@ -1,4 +1,6 @@
 # Unity CLI Loop
+<img width="1000" alt="logo" align="center" src="https://github.com/user-attachments/assets/864aa12e-8fd0-4b3a-9794-15cecdf95f94" />
+<p align="right"><sub>(Logo inspired by Daft Punk's <i>Homework</i> album art)</sub></p>
 
 [日本語](README_ja.md)
 
@@ -10,12 +12,12 @@
 ![Antigravity](https://img.shields.io/badge/Antigravity-111?logo=google)
 ![GitHubCopilot](https://img.shields.io/badge/GitHub_Copilot-111?logo=githubcopilot)
 
-<img width="1000" alt="logo" align="center" src="https://github.com/user-attachments/assets/864aa12e-8fd0-4b3a-9794-15cecdf95f94" />
-<p align="right"><sub>(Logo inspired by Daft Punk's <i>Homework</i> album art)</sub></p>
 
 Let an AI agent compile, test, and operate your Unity project from popular LLM tools via CLI.
 
 Designed to keep AI-driven development loops running autonomously inside your existing Unity projects.
+
+> **Note**: This project was formerly known as **uLoopMCP**.
 
 # Concept
 Unity CLI Loop is a Unity integration tool designed so that **AI can drive your Unity project forward with minimal human intervention**.
@@ -311,7 +313,7 @@ Executes Unity Test Runner and retrieves test results. You can set conditions wi
 Test results can be output as xml. The output path is returned so AI can read it.
 This is also a strategy to avoid consuming context.
 ```text
-→ run-tests (FilterType: exact, FilterValue: "io.github.hatayama.uLoopMCP.ConsoleLogRetrieverTests.GetAllLogs_WithMaskAllOff_StillReturnsAllLogs")
+→ run-tests (FilterType: exact, FilterValue: "PlayerControllerTests.TestJump")
 → Check failed tests, fix implementation to pass tests
 ```
 > [!WARNING]

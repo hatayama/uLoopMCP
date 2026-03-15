@@ -17,6 +17,8 @@ Let an AI agent compile, test, and operate your Unity project from popular LLM t
 
 Designed to keep AI-driven development loops running autonomously inside your existing Unity projects.
 
+> **Note**: This project was formerly known as **uLoopMCP**.
+
 # Concept
 Unity CLI Loop is a Unity integration tool designed so that **AI can drive your Unity project forward with minimal human intervention**.
 Tasks that humans typically handle manually—compiling, running the Test Runner, checking logs, editing scenes, and capturing windows to verify UI layouts—are exposed as tools that LLMs can orchestrate.
@@ -311,7 +313,7 @@ Executes Unity Test Runner and retrieves test results. You can set conditions wi
 Test results can be output as xml. The output path is returned so AI can read it.
 This is also a strategy to avoid consuming context.
 ```text
-→ run-tests (FilterType: exact, FilterValue: "io.github.hatayama.uLoopMCP.ConsoleLogRetrieverTests.GetAllLogs_WithMaskAllOff_StillReturnsAllLogs")
+→ run-tests (FilterType: exact, FilterValue: "PlayerControllerTests.TestJump")
 → Check failed tests, fix implementation to pass tests
 ```
 > [!WARNING]
