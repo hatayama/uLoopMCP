@@ -16,22 +16,9 @@ Execute the following request using `uloop execute-dynamic-code`: $ARGUMENTS
 4. If execution fails, adjust code and retry
 5. Report the execution result
 
-## Tool Reference
+## Code Rules
 
-```bash
-uloop execute-dynamic-code --code '<c# code>'
-```
-
-### Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `--code` | string | - | C# code to execute (direct statements, no class wrapper) |
-| `--compile-only` | boolean | `false` | Compile without execution |
-
-### Code Format
-
-Write direct statements only (no classes/namespaces/methods). Return is optional.
+Write direct statements only — no class/namespace/method wrappers. Return is optional.
 
 ```csharp
 using UnityEngine;
@@ -39,38 +26,9 @@ var x = Mathf.PI;
 return x;
 ```
 
-### String Literals (Shell-specific)
+**Shell quoting**: bash/zsh uses single quotes (`'Debug.Log("Hello!");'`), PowerShell doubles inner quotes (`'Debug.Log(""Hello!"");'`).
 
-| Shell | Method |
-|-------|--------|
-| bash/zsh | `'Debug.Log("Hello!");'` |
-| PowerShell | `'Debug.Log(""Hello!"");'` |
-
-### Allowed Operations
-
-- Prefab/material wiring (PrefabUtility)
-- AddComponent + reference wiring (SerializedObject)
-- Scene/hierarchy edits
-- Inspector modifications
-
-### Forbidden Operations
-
-- System.IO.* (File/Directory/Path)
-- AssetDatabase.CreateFolder / file writes
-- Create/edit .cs/.asmdef files
-
-### Global Options
-
-| Option | Description |
-|--------|-------------|
-| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`) |
-| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
-
-### Output
-
-Returns JSON with execution result or compile errors.
-
-For file/directory operations, use terminal commands instead.
+**Forbidden** — these will be rejected at compile time: `System.IO.*`, `AssetDatabase.CreateFolder`, creating/editing `.cs`/`.asmdef` files. Use terminal commands for file operations instead.
 
 ## Code Examples by Category
 
