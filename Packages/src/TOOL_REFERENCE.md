@@ -304,6 +304,30 @@ All tools automatically include the following property:
   - `EndPositionX` (number): End X position (for Drag actions)
   - `EndPositionY` (number): End Y position (for Drag actions)
 
+### 15. get-unity-search-providers
+
+Get detailed information about available Unity Search providers.
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `ProviderId` | string | `""` | Specific provider ID (empty = all providers). Examples: `asset`, `scene`, `menu`, `settings` |
+| `ActiveOnly` | boolean | `false` | Return only active providers |
+| `SortByPriority` | boolean | `true` | Sort by priority (lower = higher priority) |
+| `IncludeDescriptions` | boolean | `true` | Include detailed descriptions |
+
+**Response:**
+
+- `Providers` (array): Provider details
+  - `Id` (string): Provider identifier
+  - `DisplayName` (string): Display name
+  - `Description` (string): Provider description
+  - `IsActive` (boolean): Whether the provider is active
+  - `Priority` (integer): Provider priority
+- `AppliedFilter` (string): Filter that was applied
+- `SortedByPriority` (boolean): Whether results are sorted by priority
+
 ---
 
 ## Related Documentation
