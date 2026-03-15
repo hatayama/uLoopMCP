@@ -15,8 +15,10 @@ namespace io.github.hatayama.uLoopMCP
     {
         private static readonly ConsoleLogRetriever LogRetriever;
 
-        // csc.rsp compiler diagnostics are logged as LogType.Log by Unity,
-        // so we need message-based detection to classify them correctly.
+        // Unity classifies csc.rsp compiler diagnostics as LogType.Log internally,
+        // so without message-based detection they would be invisible to Error/Warning filters.
+        // Note: Debug.Log messages matching ": error CSxxxx" / ": warning CSxxxx" will also
+        // be treated as compiler diagnostics. This is by design.
         private static readonly Regex CompilerErrorPattern = new Regex(@":\s*error CS\d+\b", RegexOptions.Compiled);
         private static readonly Regex CompilerWarningPattern = new Regex(@":\s*warning CS\d+\b", RegexOptions.Compiled);
 
