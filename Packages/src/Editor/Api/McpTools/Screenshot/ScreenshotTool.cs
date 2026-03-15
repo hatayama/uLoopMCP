@@ -32,6 +32,125 @@ namespace io.github.hatayama.uLoopMCP
 
             ValidateParameters(parameters);
 
+            if (parameters.CaptureMode == CaptureMode.rendering)
+            {
+                return await CaptureRenderingAsync(parameters, correlationId, ct);
+            }
+
+            return await CaptureWindowsAsync(parameters, correlationId, ct);
+        }
+
+        private async Task<ScreenshotResponse> CaptureRenderingAsync(
+            ScreenshotSchema parameters, string correlationId, CancellationToken ct)
+        {
+            if (!EditorApplication.isPlaying)
+            {
+                VibeLogger.LogError(
+                    "screenshot_rendering_requires_playmode",
+                    "CaptureMode.rendering requires PlayMode",
+                    correlationId: correlationId
+                );
+                return new ScreenshotResponse();
+            }
+
+            List<UIElementInfo> annotatedElements = new List<UIElementInfo>();
+
+            if (parameters.AnnotateElements)
+            {
+                annotatedElements = UIElementAnnotator.CollectInteractiveElements();
+                UIElementAnnotator.AssignLabels(annotatedElements);
+            }
+
+            if (parameters.ElementsOnly)
+            {
+                UIElementAnnotator.ConvertToSimCoordinates(annotatedElements, (int)Handles.GetMainGameViewSize().y);
+                ScreenshotInfo elementsOnlyInfo = new ScreenshotInfo();
+                elementsOnlyInfo.CoordinateSystem = McpConstants.COORDINATE_SYSTEM_GAME_VIEW;
+                elementsOnlyInfo.AnnotatedElements = annotatedElements;
+                return new ScreenshotResponse(new List<ScreenshotInfo> { elementsOnlyInfo });
+            }
+
+            GameObject annotationOverlay = null;
+            Texture2D texture;
+            int yOffset;
+            try
+            {
+                if (parameters.AnnotateElements)
+                {
+                    annotationOverlay = UIElementAnnotator.CreateAnnotationOverlay(annotatedElements);
+                    // Wait 1 frame for the overlay Canvas to render into the RT
+                    await EditorDelay.DelayFrame(1, ct);
+                }
+
+                (texture, yOffset) = await EditorWindowCaptureUtility.CaptureGameRenderingAsync(
+                    parameters.ResolutionScale, ct);
+            }
+            finally
+            {
+                UIElementAnnotator.DestroyAnnotationOverlay(annotationOverlay);
+            }
+
+            UIElementAnnotator.ConvertToSimCoordinates(annotatedElements, (int)Handles.GetMainGameViewSize().y);
+
+            if (texture == null)
+            {
+                VibeLogger.LogError(
+                    "screenshot_rendering_unavailable",
+                    "GameView RenderTexture is not available. Open the Game view and wait for a frame before retrying.",
+                    correlationId: correlationId
+                );
+                return new ScreenshotResponse();
+            }
+
+            int width = texture.width;
+            int height = texture.height;
+            List<ScreenshotInfo> screenshots = new List<ScreenshotInfo>();
+
+            try
+            {
+                string outputDirectory = EnsureOutputDirectoryExists(parameters.OutputDirectory);
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
+                string savedPath = Path.Combine(outputDirectory, $"Rendering_{timestamp}.png");
+
+                SaveTextureAsPng(texture, savedPath);
+
+                FileInfo savedFileInfo = new FileInfo(savedPath);
+                ScreenshotInfo info = new ScreenshotInfo(
+                    savedPath, savedFileInfo.Length, width, height,
+                    McpConstants.COORDINATE_SYSTEM_GAME_VIEW, parameters.ResolutionScale, yOffset);
+                info.AnnotatedElements = annotatedElements;
+                screenshots.Add(info);
+            }
+            catch (Exception ex)
+            {
+                // File I/O is external resource access; catch to report save failure
+                VibeLogger.LogWarning(
+                    "screenshot_save_exception",
+                    $"Exception saving rendering screenshot: {ex.Message}",
+                    correlationId: correlationId
+                );
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(texture);
+            }
+
+            if (screenshots.Count > 0)
+            {
+                VibeLogger.LogInfo(
+                    "screenshot_success",
+                    $"Captured game rendering ({width}x{height})",
+                    new { CaptureMode = "rendering", ScreenshotCount = screenshots.Count, AnnotatedElements = annotatedElements.Count },
+                    correlationId: correlationId
+                );
+            }
+
+            return new ScreenshotResponse(screenshots);
+        }
+
+        private async Task<ScreenshotResponse> CaptureWindowsAsync(
+            ScreenshotSchema parameters, string correlationId, CancellationToken ct)
+        {
             EditorWindow[] windows = EditorWindowCaptureUtility.FindWindowsByName(parameters.WindowName, parameters.MatchMode);
             if (windows.Length == 0)
             {
@@ -104,15 +223,35 @@ namespace io.github.hatayama.uLoopMCP
 
         private void ValidateParameters(ScreenshotSchema parameters)
         {
-            if (string.IsNullOrEmpty(parameters.WindowName))
+            if (parameters.CaptureMode != CaptureMode.rendering &&
+                string.IsNullOrEmpty(parameters.WindowName))
             {
-                throw new ArgumentException("WindowName cannot be null or empty");
+                throw new ParameterValidationException("WindowName cannot be null or empty");
             }
 
             if (parameters.ResolutionScale < 0.1f || parameters.ResolutionScale > 1.0f)
             {
-                throw new ArgumentException(
+                throw new ParameterValidationException(
                     $"ResolutionScale must be between 0.1 and 1.0, got: {parameters.ResolutionScale}");
+            }
+
+            // AnnotateElements and ElementsOnly rely on PlayMode rendering pipeline
+            if (parameters.CaptureMode != CaptureMode.rendering)
+            {
+                if (parameters.AnnotateElements)
+                {
+                    throw new ParameterValidationException("AnnotateElements is only supported when CaptureMode=rendering");
+                }
+
+                if (parameters.ElementsOnly)
+                {
+                    throw new ParameterValidationException("ElementsOnly is only supported when CaptureMode=rendering");
+                }
+            }
+
+            if (parameters.ElementsOnly && !parameters.AnnotateElements)
+            {
+                throw new ParameterValidationException("ElementsOnly requires AnnotateElements=true");
             }
         }
 

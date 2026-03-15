@@ -400,6 +400,25 @@
             "type": "string",
             "description": "Output directory path for saving screenshots. When empty, uses default path (.uloop/outputs/Screenshots/). Accepts absolute paths.",
             "default": ""
+          },
+          "CaptureMode": {
+            "type": "string",
+            "description": "Capture mode: window=capture EditorWindow including toolbar, rendering=capture game rendering only (PlayMode required). Response includes CoordinateSystem ('gameView' or 'window'), ResolutionScale, and YOffset. For gameView: sim_x = image_x / ResolutionScale, sim_y = image_y / ResolutionScale + YOffset.",
+            "enum": [
+              "window",
+              "rendering"
+            ],
+            "default": "window"
+          },
+          "AnnotateElements": {
+            "type": "boolean",
+            "description": "Annotate interactive UI elements with index labels (A, B, C...) on the screenshot. Only works with CaptureMode=rendering in PlayMode. Response includes AnnotatedElements array with element metadata sorted by z-order.",
+            "default": false
+          },
+          "ElementsOnly": {
+            "type": "boolean",
+            "description": "Return only annotated element JSON without capturing a screenshot image. Requires AnnotateElements=true and CaptureMode=rendering in PlayMode.",
+            "default": false
           }
         }
       }
@@ -456,6 +475,58 @@
               "Pause"
             ],
             "default": "Play"
+          }
+        }
+      }
+    },
+    {
+      "name": "simulate-mouse",
+      "description": "Simulate mouse click and drag on PlayMode UI elements via screen coordinates",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "Action": {
+            "type": "string",
+            "description": "Mouse action: Click - left click, Drag - one-shot drag, DragStart - begin drag and hold, DragMove - move while holding drag, DragEnd - release drag, LongPress - press and hold for Duration seconds",
+            "enum": [
+              "Click",
+              "Drag",
+              "DragStart",
+              "DragMove",
+              "DragEnd",
+              "LongPress"
+            ],
+            "default": "Click"
+          },
+          "X": {
+            "type": "number",
+            "description": "Target X position in screen pixels (origin: top-left). For Drag action, this is the destination.",
+            "default": 0
+          },
+          "Y": {
+            "type": "number",
+            "description": "Target Y position in screen pixels (origin: top-left). For Drag action, this is the destination.",
+            "default": 0
+          },
+          "FromX": {
+            "type": "number",
+            "description": "Start X position for Drag action (origin: top-left). Drag starts here and moves to X,Y.",
+            "default": 0
+          },
+          "FromY": {
+            "type": "number",
+            "description": "Start Y position for Drag action (origin: top-left). Drag starts here and moves to X,Y.",
+            "default": 0
+          },
+          "DragSpeed": {
+            "type": "number",
+            "description": "Drag speed in pixels per second (0 for instant). Applies to Drag, DragMove, and DragEnd actions.",
+            "default": 2000
+          },
+          "Duration": {
+            "type": "number",
+            "description": "Hold duration in seconds for LongPress action.",
+            "default": 0.5
           }
         }
       }

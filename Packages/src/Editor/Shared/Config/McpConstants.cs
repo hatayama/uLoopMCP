@@ -169,6 +169,13 @@ namespace io.github.hatayama.uLoopMCP
         // Test constants
         public const int TEST_COMPILE_TIMEOUT_MS = 5000; // 5 seconds for test compilation
 
+        // Screenshot coordinate system values
+        public const string COORDINATE_SYSTEM_GAME_VIEW = "gameView";
+        public const string COORDINATE_SYSTEM_WINDOW = "window";
+
+        // SimulateMouse constants
+        public const float SIMULATE_MOUSE_DEFAULT_DRAG_SPEED = 2000f;
+
         // Compile tool constants
         public const int COMPILE_START_TIMEOUT_MS = 5000; // Timeout to detect "compile did not start"
         public const int COMPILE_START_POLL_INTERVAL_MS = 100;

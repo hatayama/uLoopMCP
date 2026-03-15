@@ -135,7 +135,7 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 > **No MCP configuration required!** As long as the server is running in the uLoopMCP Window and you have installed the CLI and Skills, LLM tools communicate directly with Unity.
 
 <details>
-<summary>All 15 Bundled Skills</summary>
+<summary>All 16 Bundled Skills</summary>
 
 - `/uloop-launch` - Launch Unity with correct version
 - `/uloop-compile` - Execute compilation
@@ -149,6 +149,7 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 - `/uloop-execute-menu-item` - Execute menu item
 - `/uloop-find-game-objects` - Find GameObjects
 - `/uloop-screenshot` - Capture EditorWindow
+- `/uloop-simulate-mouse` - Simulate mouse input on PlayMode UI
 - `/uloop-control-play-mode` - Control Play Mode
 - `/uloop-execute-dynamic-code` - Execute dynamic C# code
 - `/uloop-get-unity-search-providers` - Get search provider details
@@ -479,6 +480,22 @@ Async support:
 > Setting changes take effect immediately without server restart.
 >
 > **Warning**: When using these features for AI-driven code generation, we strongly recommend running in sandbox environments or containers to prepare for unexpected behavior and security risks.
+
+### 15. simulate-mouse - Simulate Mouse Input on PlayMode UI
+Simulate mouse click, long-press, and drag on PlayMode UI elements. Uses EventSystem and ExecuteEvents to dispatch pointer events directly — works independently of both old and new Input System.
+
+Supports 6 actions: Click, LongPress, Drag (one-shot), DragStart/DragMove/DragEnd (split drag).
+
+```text
+→ screenshot (CaptureMode: rendering, AnnotateElements: true)
+→ Get element coordinates from AnnotatedElements (SimX/SimY)
+→ simulate-mouse (Action: Click, X: 400, Y: 300)
+→ simulate-mouse (Action: LongPress, X: 400, Y: 300, Duration: 5.0)
+→ simulate-mouse (Action: Drag, FromX: 100, FromY: 500, X: 400, Y: 300)
+→ simulate-mouse (Action: DragStart, X: 100, Y: 500)
+→ simulate-mouse (Action: DragMove, X: 200, Y: 400, DragSpeed: 300)
+→ simulate-mouse (Action: DragEnd, X: 400, Y: 300)
+```
 
 ## Tool Reference
 

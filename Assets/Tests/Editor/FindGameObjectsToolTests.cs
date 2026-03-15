@@ -153,6 +153,8 @@ namespace io.github.hatayama.uLoopMCP
             
             JObject paramsJson = new JObject
             {
+                ["NamePattern"] = "TestObject|AnotherObject",
+                ["SearchMode"] = "Regex",
                 ["Tag"] = "Untagged"
             };
             

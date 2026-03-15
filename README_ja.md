@@ -139,7 +139,7 @@ uloop skills install --claude --global
 > **MCP設定は不要です！** uLoopMCP Windowでサーバーを起動し、CLIとSkillsをインストールしていれば、LLMツールが直接Unityと通信します。
 
 <details>
-<summary>バンドルされている全15個のSkills一覧</summary>
+<summary>バンドルされている全16個のSkills一覧</summary>
 
 - `/uloop-launch` - 正しいバージョンでUnityを起動
 - `/uloop-compile` - コンパイルの実行
@@ -153,6 +153,7 @@ uloop skills install --claude --global
 - `/uloop-execute-menu-item` - メニュー項目の実行
 - `/uloop-find-game-objects` - GameObject検索
 - `/uloop-screenshot` - EditorWindowのキャプチャ
+- `/uloop-simulate-mouse` - PlayMode UIのマウス操作シミュレーション
 - `/uloop-control-play-mode` - Play Modeの制御
 - `/uloop-execute-dynamic-code` - 動的C#コード実行
 - `/uloop-get-unity-search-providers` - 検索プロバイダー詳細
@@ -484,6 +485,22 @@ Scope(s): org.nuget
 > 設定変更は即座に反映され、サーバー再起動は不要です。
 >
 > **注意**: これらの機能を使ってAIによるコード生成を扱う際は、予期せぬ動作やセキュリティリスクに備えるため、sandbox環境やコンテナ上での実行を強く推奨します。
+
+### 15. simulate-mouse - PlayMode UIのマウス操作シミュレーション
+PlayMode中のUI要素に対してマウスクリック・長押し・ドラッグをシミュレーションします。EventSystemとExecuteEventsを使ってポインタイベントを直接ディスパッチするため、旧Input System・新Input Systemの両方に依存せず動作します。
+
+6つのアクションに対応: Click、LongPress、Drag（ワンショット）、DragStart/DragMove/DragEnd（分割ドラッグ）
+
+```text
+→ screenshot (CaptureMode: rendering, AnnotateElements: true)
+→ AnnotatedElementsから要素の座標（SimX/SimY）を取得
+→ simulate-mouse (Action: Click, X: 400, Y: 300)
+→ simulate-mouse (Action: LongPress, X: 400, Y: 300, Duration: 5.0)
+→ simulate-mouse (Action: Drag, FromX: 100, FromY: 500, X: 400, Y: 300)
+→ simulate-mouse (Action: DragStart, X: 100, Y: 500)
+→ simulate-mouse (Action: DragMove, X: 200, Y: 400, DragSpeed: 300)
+→ simulate-mouse (Action: DragEnd, X: 400, Y: 300)
+```
 
 ## ツールリファレンス
 
