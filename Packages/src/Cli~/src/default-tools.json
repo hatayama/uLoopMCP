@@ -1,5 +1,5 @@
 {
-  "version": "0.70.1",
+  "version": "1.0.0",
   "tools": [
     {
       "name": "compile",

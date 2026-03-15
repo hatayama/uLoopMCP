@@ -6,9 +6,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 
-**CLI companion for [uLoopMCP](https://github.com/hatayama/uLoopMCP)** - Let AI agents compile, test, and operate your Unity project.
+**CLI companion for [Unity CLI Loop](https://github.com/hatayama/uLoopMCP)** - Let AI agents compile, test, and operate your Unity project.
 
-> **Prerequisites**: This CLI requires [uLoopMCP](https://github.com/hatayama/uLoopMCP) to be installed in your Unity project and the server running. See the [main repository](https://github.com/hatayama/uLoopMCP) for setup instructions.
+> **Prerequisites**: This CLI requires [Unity CLI Loop](https://github.com/hatayama/uLoopMCP) to be installed in your Unity project and the server running. See the [main repository](https://github.com/hatayama/uLoopMCP) for setup instructions.
 
 ## Installation
 

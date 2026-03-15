@@ -1,8 +1,8 @@
 {
   "name": "io.github.hatayama.uloopmcp",
-  "version": "0.70.1",
-  "displayName": "uLoopMCP",
-  "description": "Connect your Unity Editor to LLMs using the Model Context Protocol.",
+  "version": "1.0.0",
+  "displayName": "Unity CLI Loop",
+  "description": "AI-driven development loop for Unity via CLI and MCP.",
   "unity": "2022.3",
   "documentationUrl": "https://github.com/hatayama/uLoopMCP/blob/main/Packages/src/README.md",
   "licensesUrl": "https://github.com/hatayama/uLoopMCP/blob/main/LICENSE.md",
@@ -15,6 +15,7 @@
     "com.unity.nuget.newtonsoft-json": "3.2.1"
   },
   "keywords": [
+    "Unity CLI Loop",
     "uLoopMCP",
     "MCP",
     "Cursor",

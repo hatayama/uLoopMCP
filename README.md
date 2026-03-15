@@ -9,19 +9,17 @@
 ![GitHubCopilot](https://img.shields.io/badge/GitHub_Copilot-111?logo=githubcopilot)
 ![Windsurf](https://img.shields.io/badge/Windsurf-111?logo=Windsurf)
 
-<h1 align="center">
-    <img width="500" alt="uLoopMCP" src="https://github.com/user-attachments/assets/a8b53cca-5444-445d-aa39-9024d41763e6" />
-</h1>
+<h1 align="center">Unity CLI Loop</h1>
 
-Let an AI agent compile, test, and operate your Unity project from popular LLM tools via CLI (recommended) or MCP.
+Let an AI agent compile, test, and operate your Unity project from popular LLM tools via CLI.
 
 Designed to keep AI-driven development loops running autonomously inside your existing Unity projects.
 
 # Concept
-uLoopMCP is a Unity integration tool designed so that **AI can drive your Unity project forward with minimal human intervention**.
+Unity CLI Loop is a Unity integration tool designed so that **AI can drive your Unity project forward with minimal human intervention**.
 Tasks that humans typically handle manually—compiling, running the Test Runner, checking logs, editing scenes, and capturing windows to verify UI layouts—are exposed as tools that LLMs can orchestrate.
 
-uLoopMCP is built around two core ideas:
+Unity CLI Loop is built around two core ideas:
 
 1. **Provide a "self-hosted development loop" where an AI can repeatedly compile, run tests, inspect logs, and fix issues using tools like `compile`, `run-tests`, `get-logs`, and `clear-console`.**
 2. **Allow AI to operate the Unity Editor itself—creating objects, calling menu items, inspecting scenes, and refining UI layouts from screenshots—via tools like `execute-dynamic-code`, `execute-menu-item`, and `screenshot`.**
@@ -63,20 +61,7 @@ Scope(s): io.github.hatayama.uloopmcp
 
 # Quickstart
 
-uLoopMCP provides two connection methods: **CLI** and **MCP**. Both offer the same core functionality.
-
-| Connection | Characteristics | Recommended For |
-|---------|------|-----------|
-| **CLI (uloop)** Recommended | Auto-recognized by Skills-compatible LLM tools. No MCP config needed | Claude Code, Codex, and other Skills-compatible tools |
-| **MCP** | Connect as an MCP server from LLM tools | Cursor, Windsurf, and other MCP-compatible tools |
-
-> For MCP connection, CLI and Skills installation is not required.
-> Proceed to [MCP Connection Steps](#mcp-connection-cli-alternative).
-
-## Step 1: Install the CLI (CLI users only)
-
-> **💡 CLI and MCP Relationship**
-> CLI provides all MCP functionality plus additional CLI-specific features such as launching and restarting Unity.
+## Step 1: Install the CLI
 
 Select Window > uLoop. A dedicated window will open — confirm that the **CLI** button is highlighted in blue.
 
@@ -97,7 +82,7 @@ npm install -g uloop-cli
 ```
 </details>
 
-## Step 2: Install Skills (CLI users only)
+## Step 2: Install Skills
 
 Select your target (Claude Code, Codex, etc.) and press the **Install Skills** button.  
 <img width="272" height="328" alt="CleanShot 2026-02-26 at 20 20 42" src="https://github.com/user-attachments/assets/79b9514c-cdbf-4eb6-89e9-650ecd3f6f85" />
@@ -131,8 +116,6 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 | "Bulk-update prefab parameters" | `/uloop-execute-dynamic-code` |
 | "Take a screenshot of Game View and adjust the UI layout" | `/uloop-screenshot` + `/uloop-execute-dynamic-code` |
 
-> [!TIP]
-> **No MCP configuration required!** As long as the server is running in the uLoopMCP Window and you have installed the CLI and Skills, LLM tools communicate directly with Unity.
 
 <details>
 <summary>All 16 Bundled Skills</summary>
@@ -230,9 +213,13 @@ uloop compile --port {target-port}
 > - `--project-path` and `--port` cannot be used together.
 > - You can find the port number in each Unity's uLoopMCP Window.
 
-## MCP Connection (CLI Alternative)
+<details>
+<summary>Using MCP instead of CLI</summary>
 
-You can also connect via MCP (Model Context Protocol) instead of CLI. No CLI or Skills installation required.
+> [!WARNING]
+> MCP connection may be deprecated or removed in a future release. We recommend using the CLI instead.
+
+You can also connect via MCP (Model Context Protocol). CLI and Skills installation is not required for MCP.
 
 ### MCP Connection Steps
 
@@ -283,6 +270,8 @@ You can also connect via MCP (Model Context Protocol) instead of CLI. No CLI or 
 ### Multiple Unity Instance Support
 > [!NOTE]
 > Multiple Unity instances can be supported by changing port numbers. uLoopMCP automatically assigns unused ports when starting up.
+
+</details>
 
 # Key Features
 ## Development Loop Tools

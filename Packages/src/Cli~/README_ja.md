@@ -6,9 +6,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 
-**[uLoopMCP](https://github.com/hatayama/uLoopMCP) の CLI コンパニオン** - AIエージェントにUnityプロジェクトのコンパイル、テスト、操作を任せましょう。
+**[Unity CLI Loop](https://github.com/hatayama/uLoopMCP) の CLI コンパニオン** - AIエージェントにUnityプロジェクトのコンパイル、テスト、操作を任せましょう。
 
-> **前提条件**: このCLIを使用するには、Unityプロジェクトに [uLoopMCP](https://github.com/hatayama/uLoopMCP) がインストールされ、サーバーが起動している必要があります。セットアップ手順は [メインリポジトリ](https://github.com/hatayama/uLoopMCP) を参照してください。
+> **前提条件**: このCLIを使用するには、Unityプロジェクトに [Unity CLI Loop](https://github.com/hatayama/uLoopMCP) がインストールされ、サーバーが起動している必要があります。セットアップ手順は [メインリポジトリ](https://github.com/hatayama/uLoopMCP) を参照してください。
 
 ## インストール
 
