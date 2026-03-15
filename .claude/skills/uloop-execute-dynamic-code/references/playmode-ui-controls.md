@@ -141,6 +141,10 @@ PointerEventData pointerData = new PointerEventData(EventSystem.current)
     position = new Vector2(Screen.width / 2f, Screen.height / 2f)
 };
 
+// Verify target handles drag events
+if (!ExecuteEvents.CanHandleEvent<IDragHandler>(target))
+    return $"{target.name} does not handle drag events";
+
 // Begin drag
 ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
 

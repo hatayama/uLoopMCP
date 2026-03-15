@@ -62,7 +62,7 @@ EventSystem.current.RaycastAll(pointerData, results);
 if (results.Count == 0) return "No UI element at screen center";
 
 GameObject target = results[0].gameObject;
-ExecuteEvents.Execute(target, pointerData, ExecuteEvents.pointerClickHandler);
+ExecuteEvents.ExecuteHierarchy(target, pointerData, ExecuteEvents.pointerClickHandler);
 return $"Clicked UI element: {target.name}";
 ```
 
