@@ -14,7 +14,14 @@ namespace io.github.hatayama.uLoopMCP
     public static class LogGetter
     {
         private static readonly ConsoleLogRetriever LogRetriever;
-        
+
+        // Unity classifies csc.rsp compiler diagnostics as LogType.Log internally,
+        // so without message-based detection they would be invisible to Error/Warning filters.
+        // Note: Debug.Log messages matching ": error CSxxxx" / ": warning CSxxxx" will also
+        // be treated as compiler diagnostics. This is by design.
+        private static readonly Regex CompilerErrorPattern = new Regex(@":\s*error CS\d+\b", RegexOptions.Compiled);
+        private static readonly Regex CompilerWarningPattern = new Regex(@":\s*warning CS\d+\b", RegexOptions.Compiled);
+
         static LogGetter()
         {
             LogRetriever = new ConsoleLogRetriever();
@@ -75,6 +82,21 @@ namespace io.github.hatayama.uLoopMCP
             return entry.StackTrace.IndexOf("Debug.Assert", StringComparison.Ordinal) >= 0;
         }
 
+        private static bool IsCompilerDiagnosticMessage(LogEntryDto entry, Regex pattern)
+        {
+            if (entry == null)
+            {
+                return false;
+            }
+
+            if (!string.Equals(entry.LogType, McpLogType.Log, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return pattern.IsMatch(entry.Message);
+        }
+
         private static bool IsErrorFamilyEntry(LogEntryDto entry)
         {
             if (entry == null)
@@ -87,7 +109,54 @@ namespace io.github.hatayama.uLoopMCP
                 return true;
             }
 
-            return IsAssertionLikeEntry(entry);
+            if (IsAssertionLikeEntry(entry))
+            {
+                return true;
+            }
+
+            return IsCompilerDiagnosticMessage(entry, CompilerErrorPattern);
+        }
+
+        private static bool IsWarningFamilyEntry(LogEntryDto entry)
+        {
+            if (entry == null)
+            {
+                return false;
+            }
+
+            if (string.Equals(entry.LogType, McpLogType.Warning, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return IsCompilerDiagnosticMessage(entry, CompilerWarningPattern);
+        }
+
+        private static List<LogEntryDto> GetFamilyEntries(
+            List<LogEntryDto> allEntries,
+            Func<LogEntryDto, bool> familyPredicate,
+            string targetLogType)
+        {
+            List<LogEntryDto> familyEntries = new(allEntries.Count);
+
+            foreach (LogEntryDto entry in allEntries)
+            {
+                if (!familyPredicate(entry))
+                {
+                    continue;
+                }
+
+                if (string.Equals(entry.LogType, targetLogType, StringComparison.OrdinalIgnoreCase))
+                {
+                    familyEntries.Add(entry);
+                    continue;
+                }
+
+                LogEntryDto normalizedEntry = new(targetLogType, entry.Message, entry.StackTrace);
+                familyEntries.Add(normalizedEntry);
+            }
+
+            return familyEntries;
         }
 
         private static List<LogEntryDto> GetLogsByMcpLogType(string logType)
@@ -102,26 +171,13 @@ namespace io.github.hatayama.uLoopMCP
             if (string.Equals(normalizedLogType, McpLogType.Error, StringComparison.Ordinal))
             {
                 List<LogEntryDto> allEntries = LogRetriever.GetAllLogs();
-                List<LogEntryDto> errorFamilyEntries = new();
+                return GetFamilyEntries(allEntries, IsErrorFamilyEntry, McpLogType.Error);
+            }
 
-                foreach (LogEntryDto entry in allEntries)
-                {
-                    if (!IsErrorFamilyEntry(entry))
-                    {
-                        continue;
-                    }
-
-                    if (string.Equals(entry.LogType, McpLogType.Error, StringComparison.OrdinalIgnoreCase))
-                    {
-                        errorFamilyEntries.Add(entry);
-                        continue;
-                    }
-
-                    LogEntryDto normalizedEntry = new(McpLogType.Error, entry.Message, entry.StackTrace);
-                    errorFamilyEntries.Add(normalizedEntry);
-                }
-
-                return errorFamilyEntries;
+            if (string.Equals(normalizedLogType, McpLogType.Warning, StringComparison.Ordinal))
+            {
+                List<LogEntryDto> allEntries = LogRetriever.GetAllLogs();
+                return GetFamilyEntries(allEntries, IsWarningFamilyEntry, McpLogType.Warning);
             }
 
             UnityEngine.LogType unityLogType = ConvertMcpLogTypeToLogType(normalizedLogType);

@@ -232,6 +232,83 @@ namespace io.github.hatayama.uLoopMCP
                 "Warning entries containing assert text should not be included");
         }
 
+        /// <summary>
+        /// Verifies that Error filter includes compiler error messages from csc.rsp
+        /// that Unity classifies as LogType.Log (issue #761)
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithErrorLogType_IncludesCompilerErrorMessages()
+        {
+            // Arrange
+            string uniqueTestId = Guid.NewGuid().ToString("N")[..8];
+            string compilerErrorMessage = $"Assets/Scripts/Test.cs(10,15): error CS8618: Non-nullable field 'name' {uniqueTestId}";
+            string normalLogMessage = $"NormalLog_{uniqueTestId}";
+
+            LogAssert.Expect(LogType.Log, compilerErrorMessage);
+            LogAssert.Expect(LogType.Log, normalLogMessage);
+
+            // csc.rsp compiler errors are logged as LogType.Log by Unity
+            Debug.Log(compilerErrorMessage);
+            Debug.Log(normalLogMessage);
+
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.Error,
+                MaxCount = 100,
+            };
+
+            // Act
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            Assert.IsTrue(result.Logs.Any(log => log.Message.Contains(uniqueTestId) && log.Message.Contains("error CS8618")),
+                "Compiler error message should be included in Error filter");
+            Assert.IsTrue(result.Logs.Where(log => log.Message.Contains(uniqueTestId)).All(log => log.Type == McpLogType.Error),
+                "Compiler error messages should be normalized to Error type");
+            Assert.IsFalse(result.Logs.Any(log => log.Message.Contains(normalLogMessage)),
+                "Normal Log entries should not be included in Error filter");
+        }
+
+        /// <summary>
+        /// Verifies that Warning filter includes compiler warning messages from csc.rsp
+        /// that Unity classifies as LogType.Log (issue #761)
+        /// </summary>
+        [Test]
+        public async Task ExecuteAsync_WithWarningLogType_IncludesCompilerWarningMessages()
+        {
+            // Arrange
+            string uniqueTestId = Guid.NewGuid().ToString("N")[..8];
+            string compilerWarningMessage = $"Assets/Scripts/Test.cs(10,15): warning CS8618: Non-nullable field 'name' {uniqueTestId}";
+            string normalLogMessage = $"NormalLog_{uniqueTestId}";
+
+            LogAssert.Expect(LogType.Log, compilerWarningMessage);
+            LogAssert.Expect(LogType.Log, normalLogMessage);
+
+            // csc.rsp compiler warnings are logged as LogType.Log by Unity
+            Debug.Log(compilerWarningMessage);
+            Debug.Log(normalLogMessage);
+
+            GetLogsSchema schema = new()
+            {
+                LogType = McpLogType.Warning,
+                MaxCount = 100,
+            };
+
+            // Act
+            GetLogsResponse result = await _useCase.ExecuteAsync(schema, _cancellationTokenSource.Token);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Logs);
+            Assert.IsTrue(result.Logs.Any(log => log.Message.Contains(uniqueTestId) && log.Message.Contains("warning CS8618")),
+                "Compiler warning message should be included in Warning filter");
+            Assert.IsTrue(result.Logs.Where(log => log.Message.Contains(uniqueTestId)).All(log => log.Type == McpLogType.Warning),
+                "Compiler warning messages should be normalized to Warning type");
+            Assert.IsFalse(result.Logs.Any(log => log.Message.Contains(normalLogMessage)),
+                "Normal Log entries should not be included in Warning filter");
+        }
 
         /// <summary>
         /// Verifies correct search operation with SearchText
