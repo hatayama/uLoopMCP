@@ -82,6 +82,93 @@ using (PrefabUtility.EditPrefabContentsScope scope = new PrefabUtility.EditPrefa
 return "Modified prefab properties";
 ```
 
+## Wire SerializedField Reference in Prefab
+
+```csharp
+using UnityEditor;
+
+string prefabPath = "Assets/Prefabs/Player.prefab";
+string weaponPrefabPath = "Assets/Prefabs/Weapon.prefab";
+GameObject weaponPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(weaponPrefabPath);
+if (weaponPrefab == null)
+{
+    return $"Asset not found at {weaponPrefabPath}";
+}
+
+GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+if (prefab == null)
+{
+    return $"Prefab not found at {prefabPath}";
+}
+
+using (PrefabUtility.EditPrefabContentsScope scope = new PrefabUtility.EditPrefabContentsScope(prefabPath))
+{
+    GameObject root = scope.prefabContentsRoot;
+    MonoBehaviour script = root.GetComponent("PlayerController") as MonoBehaviour;
+    if (script == null)
+    {
+        return "PlayerController not found on prefab root";
+    }
+
+    SerializedObject so = new SerializedObject(script);
+    SerializedProperty prop = so.FindProperty("weaponPrefab");
+    if (prop == null)
+    {
+        return "Property 'weaponPrefab' not found";
+    }
+
+    prop.objectReferenceValue = weaponPrefab;
+    so.ApplyModifiedProperties();
+}
+return "Wired weaponPrefab reference in Player prefab";
+```
+
+## Wire Multiple References in Prefab
+
+```csharp
+using UnityEditor;
+
+string prefabPath = "Assets/Prefabs/Enemy.prefab";
+GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+if (prefab == null)
+{
+    return $"Prefab not found at {prefabPath}";
+}
+
+int wiredCount = 0;
+
+using (PrefabUtility.EditPrefabContentsScope scope = new PrefabUtility.EditPrefabContentsScope(prefabPath))
+{
+    GameObject root = scope.prefabContentsRoot;
+    MonoBehaviour script = root.GetComponent("EnemyController") as MonoBehaviour;
+    if (script == null)
+    {
+        return "EnemyController not found";
+    }
+
+    SerializedObject so = new SerializedObject(script);
+
+    SerializedProperty matProp = so.FindProperty("bodyMaterial");
+    Material mat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/EnemyBody.mat");
+    if (matProp != null && mat != null)
+    {
+        matProp.objectReferenceValue = mat;
+        wiredCount++;
+    }
+
+    SerializedProperty clipProp = so.FindProperty("deathSound");
+    AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Death.wav");
+    if (clipProp != null && clip != null)
+    {
+        clipProp.objectReferenceValue = clip;
+        wiredCount++;
+    }
+
+    so.ApplyModifiedProperties();
+}
+return $"Wired {wiredCount}/2 references in Enemy prefab";
+```
+
 ## Find All Prefab Instances in Scene
 
 ```csharp

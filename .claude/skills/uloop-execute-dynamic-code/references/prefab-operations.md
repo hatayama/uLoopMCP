@@ -95,6 +95,12 @@ if (weaponPrefab == null)
     return $"Asset not found at {weaponPrefabPath}";
 }
 
+GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+if (prefab == null)
+{
+    return $"Prefab not found at {prefabPath}";
+}
+
 using (PrefabUtility.EditPrefabContentsScope scope = new PrefabUtility.EditPrefabContentsScope(prefabPath))
 {
     GameObject root = scope.prefabContentsRoot;
@@ -123,6 +129,13 @@ return "Wired weaponPrefab reference in Player prefab";
 using UnityEditor;
 
 string prefabPath = "Assets/Prefabs/Enemy.prefab";
+GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+if (prefab == null)
+{
+    return $"Prefab not found at {prefabPath}";
+}
+
+int wiredCount = 0;
 
 using (PrefabUtility.EditPrefabContentsScope scope = new PrefabUtility.EditPrefabContentsScope(prefabPath))
 {
@@ -140,6 +153,7 @@ using (PrefabUtility.EditPrefabContentsScope scope = new PrefabUtility.EditPrefa
     if (matProp != null && mat != null)
     {
         matProp.objectReferenceValue = mat;
+        wiredCount++;
     }
 
     SerializedProperty clipProp = so.FindProperty("deathSound");
@@ -147,11 +161,12 @@ using (PrefabUtility.EditPrefabContentsScope scope = new PrefabUtility.EditPrefa
     if (clipProp != null && clip != null)
     {
         clipProp.objectReferenceValue = clip;
+        wiredCount++;
     }
 
     so.ApplyModifiedProperties();
 }
-return "Wired multiple references in Enemy prefab";
+return $"Wired {wiredCount}/2 references in Enemy prefab";
 ```
 
 ## Find All Prefab Instances in Scene

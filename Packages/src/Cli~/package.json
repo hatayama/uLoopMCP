@@ -1,8 +1,8 @@
 {
   "name": "uloop-cli",
-  "version": "0.70.1",
+  "version": "1.0.0",
   "//version": "x-release-please-version",
-  "description": "CLI tool for Unity Editor communication via uLoopMCP",
+  "description": "CLI tool for Unity Editor communication via Unity CLI Loop",
   "main": "dist/cli.bundle.cjs",
   "bin": {
     "uloop": "./dist/cli.bundle.cjs"
@@ -35,7 +35,7 @@
   },
   "homepage": "https://github.com/hatayama/uLoopMCP#readme",
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.0.0"
   },
   "publishConfig": {
     "access": "public",

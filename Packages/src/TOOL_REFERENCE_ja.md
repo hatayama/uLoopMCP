@@ -302,6 +302,35 @@
   - `EndPositionX` (number): 終了X座標（Dragアクション用）
   - `EndPositionY` (number): 終了Y座標（Dragアクション用）
 
+### 15. get-unity-search-providers
+
+Unity Search プロバイダーの詳細情報を取得します。
+
+**パラメータ:**
+
+| パラメータ | 型 | デフォルト | 説明 |
+|-----------|------|---------|-------------|
+| `ProviderId` | string | `""` | 特定のプロバイダーID（空 = 全プロバイダー）。例: `asset`, `scene`, `menu`, `settings` |
+| `ActiveOnly` | boolean | `false` | アクティブなプロバイダーのみ返す |
+| `SortByPriority` | boolean | `true` | 優先度でソート（低い値 = 高優先度） |
+| `IncludeDescriptions` | boolean | `true` | 詳細な説明を含める |
+
+**レスポンス:**
+
+- `Providers` (array): プロバイダー詳細
+  - `Id` (string): プロバイダー識別子
+  - `DisplayName` (string): 表示名
+  - `Description` (string): プロバイダーの説明
+  - `IsActive` (boolean): プロバイダーがアクティブかどうか
+  - `Priority` (integer): プロバイダーの優先度
+- `TotalCount` (integer): 返されたプロバイダーの総数
+- `ActiveCount` (integer): アクティブなプロバイダーの数
+- `InactiveCount` (integer): 非アクティブなプロバイダーの数
+- `Success` (boolean): リクエストが成功したかどうか
+- `ErrorMessage` (string): リクエスト失敗時のエラーメッセージ
+- `AppliedFilter` (string): 適用されたフィルター
+- `SortedByPriority` (boolean): 優先度でソートされているか
+
 ---
 
 ## 関連ドキュメント

@@ -3,7 +3,7 @@
  * Supports Claude Code and Codex CLI, with extensibility for future targets.
  */
 
-export type TargetId = 'claude' | 'codex' | 'cursor' | 'gemini' | 'windsurf';
+export type TargetId = 'claude' | 'codex' | 'cursor' | 'gemini' | 'windsurf' | 'antigravity';
 
 export interface TargetConfig {
   id: TargetId;
@@ -22,7 +22,7 @@ const TARGET_CONFIGS: Record<TargetId, TargetConfig> = {
   codex: {
     id: 'codex',
     displayName: 'Codex CLI',
-    projectDir: '.codex',
+    projectDir: '.agents',
     skillFileName: 'SKILL.md',
   },
   cursor: {
@@ -34,18 +34,31 @@ const TARGET_CONFIGS: Record<TargetId, TargetConfig> = {
   gemini: {
     id: 'gemini',
     displayName: 'Gemini CLI',
-    projectDir: '.gemini',
+    projectDir: '.agents',
     skillFileName: 'SKILL.md',
   },
   windsurf: {
     id: 'windsurf',
     displayName: 'Windsurf',
-    projectDir: '.windsurf',
+    projectDir: '.agents',
+    skillFileName: 'SKILL.md',
+  },
+  antigravity: {
+    id: 'antigravity',
+    displayName: 'Antigravity',
+    projectDir: '.agent',
     skillFileName: 'SKILL.md',
   },
 };
 
-export const ALL_TARGET_IDS: TargetId[] = ['claude', 'codex', 'cursor', 'gemini', 'windsurf'];
+export const ALL_TARGET_IDS: TargetId[] = [
+  'claude',
+  'codex',
+  'cursor',
+  'gemini',
+  'windsurf',
+  'antigravity',
+];
 
 export function getTargetConfig(id: TargetId): TargetConfig {
   // eslint-disable-next-line security/detect-object-injection -- id is type-constrained to TargetId union type

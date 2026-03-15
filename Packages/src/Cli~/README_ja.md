@@ -4,11 +4,11 @@
 
 [![npm version](https://img.shields.io/npm/v/uloop-cli.svg)](https://www.npmjs.com/package/uloop-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-22+-green.svg)](https://nodejs.org/)
 
-**[uLoopMCP](https://github.com/hatayama/uLoopMCP) の CLI コンパニオン** - AIエージェントにUnityプロジェクトのコンパイル、テスト、操作を任せましょう。
+**[Unity CLI Loop](https://github.com/hatayama/uLoopMCP) の CLI コンパニオン** - AIエージェントにUnityプロジェクトのコンパイル、テスト、操作を任せましょう。
 
-> **前提条件**: このCLIを使用するには、Unityプロジェクトに [uLoopMCP](https://github.com/hatayama/uLoopMCP) がインストールされ、サーバーが起動している必要があります。セットアップ手順は [メインリポジトリ](https://github.com/hatayama/uLoopMCP) を参照してください。
+> **前提条件**: このCLIを使用するには、Unityプロジェクトに [Unity CLI Loop](https://github.com/hatayama/uLoopMCP) がインストールされ、サーバーが起動している必要があります。セットアップ手順は [メインリポジトリ](https://github.com/hatayama/uLoopMCP) を参照してください。
 
 ## インストール
 
@@ -421,7 +421,7 @@ uloop completion --shell powershell --install  # PowerShell
 
 ## 動作要件
 
-- **Node.js 20.0 以降**
+- **Node.js 22.0 以降**
 - **Unity 2022.3 以降**（[uLoopMCP](https://github.com/hatayama/uLoopMCP) がインストール済みであること）
 - uLoopMCP サーバーが起動していること（Window > uLoopMCP > Start Server）
 

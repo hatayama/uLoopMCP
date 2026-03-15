@@ -4,27 +4,26 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.md)<br>
 ![ClaudeCode](https://img.shields.io/badge/Claude_Code-555?logo=claude)
 ![Cursor](https://img.shields.io/badge/Cursor-111?logo=Cursor)
-![OpenAICodex](https://img.shields.io/badge/OpenAI_Codex-111?logo=openai)
-![GoogleGemini](https://img.shields.io/badge/Google_Gemini-111?logo=googlegemini)
+![Codex](https://img.shields.io/badge/Codex-111?logo=data:image/svg+xml;base64,PHN2ZyByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTIyLjI4MTkgOS44MjExYTUuOTg0NyA1Ljk4NDcgMCAwIDAtLjUxNTctNC45MTA4IDYuMDQ2MiA2LjA0NjIgMCAwIDAtNi41MDk4LTIuOUE2LjA2NTEgNi4wNjUxIDAgMCAwIDQuOTgwNyA0LjE4MThhNS45ODQ3IDUuOTg0NyAwIDAgMC0zLjk5NzcgMi45IDYuMDQ2MiA2LjA0NjIgMCAwIDAgLjc0MjcgNy4wOTY2IDUuOTggNS45OCAwIDAgMCAuNTExIDQuOTEwNyA2LjA1MSA2LjA1MSAwIDAgMCA2LjUxNDYgMi45MDAxQTUuOTg0NyA1Ljk4NDcgMCAwIDAgMTMuMjU5OSAyNGE2LjA1NTcgNi4wNTU3IDAgMCAwIDUuNzcxOC00LjIwNTggNS45ODk0IDUuOTg5NCAwIDAgMCAzLjk5NzctMi45MDAxIDYuMDU1NyA2LjA1NTcgMCAwIDAtLjc0NzUtNy4wNzI5em0tOS4wMjIgMTIuNjA4MWE0LjQ3NTUgNC40NzU1IDAgMCAxLTIuODc2NC0xLjA0MDhsLjE0MTktLjA4MDQgNC43NzgzLTIuNzU4MmEuNzk0OC43OTQ4IDAgMCAwIC4zOTI3LS42ODEzdi02LjczNjlsMi4wMiAxLjE2ODZhLjA3MS4wNzEgMCAwIDEgLjAzOC4wNTJ2NS41ODI2YTQuNTA0IDQuNTA0IDAgMCAxLTQuNDk0NSA0LjQ5NDR6bS05LjY2MDctNC4xMjU0YTQuNDcwOCA0LjQ3MDggMCAwIDEtLjUzNDYtMy4wMTM3bC4xNDIuMDg1MiA0Ljc4MyAyLjc1ODJhLjc3MTIuNzcxMiAwIDAgMCAuNzgwNiAwbDUuODQyOC0zLjM2ODV2Mi4zMzI0YS4wODA0LjA4MDQgMCAwIDEtLjAzMzIuMDYxNUw5Ljc0IDE5Ljk1MDJhNC40OTkyIDQuNDk5MiAwIDAgMS02LjE0MDgtMS42NDY0ek0yLjM0MDggNy44OTU2YTQuNDg1IDQuNDg1IDAgMCAxIDIuMzY1NS0xLjk3MjhWMTEuNmEuNzY2NC43NjY0IDAgMCAwIC4zODc5LjY3NjVsNS44MTQ0IDMuMzU0My0yLjAyMDEgMS4xNjg1YS4wNzU3LjA3NTcgMCAwIDEtLjA3MSAwbC00LjgzMDMtMi43ODY1QTQuNTA0IDQuNTA0IDAgMCAxIDIuMzQwOCA3Ljg3MnptMTYuNTk2MyAzLjg1NThMMTMuMTAzOCA4LjM2NCAxNS4xMTkyIDcuMmEuMDc1Ny4wNzU3IDAgMCAxIC4wNzEgMGw0LjgzMDMgMi43OTEzYTQuNDk0NCA0LjQ5NDQgMCAwIDEtLjY3NjUgOC4xMDQydi01LjY3NzJhLjc5Ljc5IDAgMCAwLS40MDctLjY2N3ptMi4wMTA3LTMuMDIzMWwtLjE0Mi0uMDg1Mi00Ljc3MzUtMi43ODE4YS43NzU5Ljc3NTkgMCAwIDAtLjc4NTQgMEw5LjQwOSA5LjIyOTdWNi44OTc0YS4wNjYyLjA2NjIgMCAwIDEgLjAyODQtLjA2MTVsNC44MzAzLTIuNzg2NmE0LjQ5OTIgNC40OTkyIDAgMCAxIDYuNjgwMiA0LjY2ek04LjMwNjUgMTIuODYzbC0yLjAyLTEuMTYzOGEuMDgwNC4wODA0IDAgMCAxLS4wMzgtLjA1NjdWNi4wNzQyYTQuNDk5MiA0LjQ5OTIgMCAwIDEgNy4zNzU3LTMuNDUzN2wtLjE0Mi4wODA1TDguNzA0IDUuNDU5YS43OTQ4Ljc5NDggMCAwIDAtLjM5MjcuNjgxM3ptMS4wOTc2LTIuMzY1NGwyLjYwMi0xLjQ5OTggMi42MDY5IDEuNDk5OHYyLjk5OTRsLTIuNTk3NCAxLjQ5OTctMi42MDY3LTEuNDk5N1oiLz48L3N2Zz4=)
+![Antigravity](https://img.shields.io/badge/Antigravity-111?logo=google)
 ![GitHubCopilot](https://img.shields.io/badge/GitHub_Copilot-111?logo=githubcopilot)
-![Windsurf](https://img.shields.io/badge/Windsurf-111?logo=Windsurf)
 
-<h1 align="center">
-    <img width="500" alt="uLoopMCP" src="https://github.com/user-attachments/assets/a8b53cca-5444-445d-aa39-9024d41763e6" />
-</h1>
+<img width="1000" alt="logo" align="center" src="https://github.com/user-attachments/assets/864aa12e-8fd0-4b3a-9794-15cecdf95f94" />
+<p align="right"><sub>(Logo inspired by Daft Punk's <i>Homework</i> album art)</sub></p>
 
-Let an AI agent compile, test, and operate your Unity project from popular LLM tools via CLI (recommended) or MCP.
+Let an AI agent compile, test, and operate your Unity project from popular LLM tools via CLI.
 
 Designed to keep AI-driven development loops running autonomously inside your existing Unity projects.
 
 # Concept
-uLoopMCP is a Unity integration tool designed so that **AI can drive your Unity project forward with minimal human intervention**.
+Unity CLI Loop is a Unity integration tool designed so that **AI can drive your Unity project forward with minimal human intervention**.
 Tasks that humans typically handle manually—compiling, running the Test Runner, checking logs, editing scenes, and capturing windows to verify UI layouts—are exposed as tools that LLMs can orchestrate.
 
-uLoopMCP is built around two core ideas:
+Unity CLI Loop is built around three core ideas:
 
-1. **Provide a "self-hosted development loop" where an AI can repeatedly compile, run tests, inspect logs, and fix issues using tools like `compile`, `run-tests`, `get-logs`, and `clear-console`.**
-2. **Allow AI to operate the Unity Editor itself—creating objects, calling menu items, inspecting scenes, and refining UI layouts from screenshots—via tools like `execute-dynamic-code`, `execute-menu-item`, and `screenshot`.**
+1. **A self-hosted development loop where AI autonomously compiles, tests, inspects logs, and fixes issues.** Uses `compile`, `run-tests`, `get-logs`, `clear-console`.
+2. **AI-driven Unity Editor operation—scene building, object manipulation, menu execution, and UI refinement from screenshots.** Uses `execute-dynamic-code`, `execute-menu-item`, `screenshot`.
+3. **PlayMode automated testing—AI clicks buttons, drags elements, and verifies game behavior.** (Currently focused on mouse simulation, with plans to expand to keyboard input, touch gestures, and more.) Uses `simulate-mouse`, `execute-dynamic-code`, `screenshot`.
 
 https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 
@@ -34,7 +33,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 > The following software is required
 >
 > - **Unity 2022.3 or later**
-> - **Node.js 22.0 or later** - Required for CLI and MCP server execution
+> - **Node.js 22.0 or later** - Required for CLI execution
 > - Install via the [official site](https://nodejs.org/en/download) or your preferred version manager
 
 ## Via Unity Package Manager
@@ -59,24 +58,11 @@ URL: https://package.openupm.com
 Scope(s): io.github.hatayama.uloopmcp
 ```
 
-3. Open Package Manager window and select OpenUPM in the My Registries section. uLoopMCP will be displayed.
+3. Open Package Manager window and select OpenUPM in the My Registries section. Unity CLI Loop will be displayed.
 
 # Quickstart
 
-uLoopMCP provides two connection methods: **CLI** and **MCP**. Both offer the same core functionality.
-
-| Connection | Characteristics | Recommended For |
-|---------|------|-----------|
-| **CLI (uloop)** Recommended | Auto-recognized by Skills-compatible LLM tools. No MCP config needed | Claude Code, Codex, and other Skills-compatible tools |
-| **MCP** | Connect as an MCP server from LLM tools | Cursor, Windsurf, and other MCP-compatible tools |
-
-> For MCP connection, CLI and Skills installation is not required.
-> Proceed to [MCP Connection Steps](#mcp-connection-cli-alternative).
-
-## Step 1: Install the CLI (CLI users only)
-
-> **💡 CLI and MCP Relationship**
-> CLI provides all MCP functionality plus additional CLI-specific features such as launching and restarting Unity.
+## Step 1: Install the CLI
 
 Select Window > uLoop. A dedicated window will open — confirm that the **CLI** button is highlighted in blue.
 
@@ -97,7 +83,7 @@ npm install -g uloop-cli
 ```
 </details>
 
-## Step 2: Install Skills (CLI users only)
+## Step 2: Install Skills
 
 Select your target (Claude Code, Codex, etc.) and press the **Install Skills** button.  
 <img width="272" height="328" alt="CleanShot 2026-02-26 at 20 20 42" src="https://github.com/user-attachments/assets/79b9514c-cdbf-4eb6-89e9-650ecd3f6f85" />
@@ -131,8 +117,6 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 | "Bulk-update prefab parameters" | `/uloop-execute-dynamic-code` |
 | "Take a screenshot of Game View and adjust the UI layout" | `/uloop-screenshot` + `/uloop-execute-dynamic-code` |
 
-> [!TIP]
-> **No MCP configuration required!** As long as the server is running in the uLoopMCP Window and you have installed the CLI and Skills, LLM tools communicate directly with Unity.
 
 <details>
 <summary>All 16 Bundled Skills</summary>
@@ -230,9 +214,13 @@ uloop compile --port {target-port}
 > - `--project-path` and `--port` cannot be used together.
 > - You can find the port number in each Unity's uLoopMCP Window.
 
-## MCP Connection (CLI Alternative)
+<details>
+<summary>Using MCP instead of CLI</summary>
 
-You can also connect via MCP (Model Context Protocol) instead of CLI. No CLI or Skills installation required.
+> [!WARNING]
+> MCP connection may be deprecated or removed in a future release. We recommend using the CLI instead.
+
+You can also connect via MCP (Model Context Protocol). CLI and Skills installation is not required for MCP.
 
 ### MCP Connection Steps
 
@@ -282,7 +270,9 @@ You can also connect via MCP (Model Context Protocol) instead of CLI. No CLI or 
 
 ### Multiple Unity Instance Support
 > [!NOTE]
-> Multiple Unity instances can be supported by changing port numbers. uLoopMCP automatically assigns unused ports when starting up.
+> Multiple Unity instances can be supported by changing port numbers. Unity CLI Loop automatically assigns unused ports when starting up.
+
+</details>
 
 # Key Features
 ## Development Loop Tools
@@ -367,7 +357,7 @@ Retrieve objects and examine component parameters. Also retrieve information abo
 
 ### 10. get-hierarchy - Analyze Scene Structure
 Retrieve information about the currently active Hierarchy in nested JSON format. Works at runtime as well.
-**Automatic File Export**: Retrieved hierarchy data is always saved as JSON in `{project_root}/.uloop/outputs/HierarchyResults/` directory. The MCP response only returns the file path, minimizing token consumption even for large datasets.
+**Automatic File Export**: Retrieved hierarchy data is always saved as JSON in `{project_root}/.uloop/outputs/HierarchyResults/` directory. The response only returns the file path, minimizing token consumption even for large datasets.
 **Selection Mode**: Use `UseSelection: true` to get hierarchy starting from currently selected GameObject(s) in Unity Editor. Supports multiple selection - when parent and child are both selected, only the parent is used as root to avoid duplicate traversal.
 ```text
 → Understand parent-child relationships between GameObjects, discover and fix structural issues
@@ -377,7 +367,7 @@ Retrieve information about the currently active Hierarchy in nested JSON format.
 ```
 
 ### 11. focus-window - Bring Unity Editor Window to Front (macOS & Windows)
-Ensures the Unity Editor window associated with the active MCP session becomes the foreground application on macOS and Windows Editor builds.
+Ensures the Unity Editor window becomes the foreground application on macOS and Windows Editor builds.
 Great for keeping visual feedback in sync after other apps steal focus. (Linux is currently unsupported.)
 
 ### 12. screenshot - Take a Screenshot of EditorWindow
@@ -479,8 +469,8 @@ Async support:
 >
 > Setting changes take effect immediately without server restart.
 >
-> **Warning**: When using these features for AI-driven code generation, we strongly recommend running in sandbox environments or containers to prepare for unexpected behavior and security risks.
 
+### PlayMode Automated Testing Tools
 ### 15. simulate-mouse - Simulate Mouse Input on PlayMode UI
 Simulate mouse click, long-press, and drag on PlayMode UI elements. Uses EventSystem and ExecuteEvents to dispatch pointer events directly — works independently of both old and new Input System.
 
@@ -496,13 +486,14 @@ Supports 6 actions: Click, LongPress, Drag (one-shot), DragStart/DragMove/DragEn
 → simulate-mouse (Action: DragMove, X: 200, Y: 400, DragSpeed: 300)
 → simulate-mouse (Action: DragEnd, X: 400, Y: 300)
 ```
+https://github.com/user-attachments/assets/c7ee9103-c282-4f90-8b01-64bb17400f3e
 
 ## Tool Reference
 
 For detailed specifications of all tools (parameters, responses, examples), see **[TOOL_REFERENCE.md](/Packages/src/TOOL_REFERENCE.md)**.
 
-## uLoopMCP Extension Development
-uLoopMCP enables efficient development of project-specific tools without requiring changes to the core package.
+## Unity CLI Loop Extension Development
+Unity CLI Loop enables efficient development of project-specific tools without requiring changes to the core package.
 The type-safe design allows for reliable custom tool implementation in minimal time.
 (If you ask AI, they should be able to make it for you soon ✨)
 

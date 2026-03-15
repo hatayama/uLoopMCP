@@ -696,10 +696,9 @@ namespace io.github.hatayama.uLoopMCP
                 needsDowngrade = cliVer > pkgVer;
             }
             bool isClaudeInstalled = CliInstallationDetector.AreSkillsInstalled("claude");
-            bool isCodexInstalled = CliInstallationDetector.AreSkillsInstalled("codex");
+            bool isAgentsInstalled = CliInstallationDetector.AreSkillsInstalled("codex");
             bool isCursorInstalled = CliInstallationDetector.AreSkillsInstalled("cursor");
-            bool isGeminiInstalled = CliInstallationDetector.AreSkillsInstalled("gemini");
-            bool isWindsurfInstalled = CliInstallationDetector.AreSkillsInstalled("windsurf");
+            bool isAntigravityInstalled = CliInstallationDetector.AreSkillsInstalled("antigravity");
 
             return new CliSetupData(
                 isCliInstalled,
@@ -710,10 +709,9 @@ namespace io.github.hatayama.uLoopMCP
                 _isInstallingCli,
                 isChecking,
                 isClaudeInstalled,
-                isCodexInstalled,
+                isAgentsInstalled,
                 isCursorInstalled,
-                isGeminiInstalled,
-                isWindsurfInstalled,
+                isAntigravityInstalled,
                 _skillsTarget,
                 _isInstallingSkills);
         }
@@ -850,10 +848,9 @@ namespace io.github.hatayama.uLoopMCP
                 string arguments = _skillsTarget switch
                 {
                     SkillsTarget.Claude => "skills install --claude",
-                    SkillsTarget.Codex => "skills install --codex",
+                    SkillsTarget.Agents => "skills install --codex",
                     SkillsTarget.Cursor => "skills install --cursor",
-                    SkillsTarget.Gemini => "skills install --gemini",
-                    SkillsTarget.Windsurf => "skills install --windsurf",
+                    SkillsTarget.Antigravity => "skills install --antigravity",
                     _ => "skills install --claude"
                 };
 

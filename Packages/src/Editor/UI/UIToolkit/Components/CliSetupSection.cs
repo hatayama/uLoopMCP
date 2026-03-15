@@ -169,10 +169,9 @@ namespace io.github.hatayama.uLoopMCP
             bool hasSkills = data.SelectedTarget switch
             {
                 SkillsTarget.Claude => data.IsClaudeSkillsInstalled,
-                SkillsTarget.Codex => data.IsCodexSkillsInstalled,
+                SkillsTarget.Agents => data.IsAgentsSkillsInstalled,
                 SkillsTarget.Cursor => data.IsCursorSkillsInstalled,
-                SkillsTarget.Gemini => data.IsGeminiSkillsInstalled,
-                SkillsTarget.Windsurf => data.IsWindsurfSkillsInstalled,
+                SkillsTarget.Antigravity => data.IsAntigravitySkillsInstalled,
                 _ => false
             };
 

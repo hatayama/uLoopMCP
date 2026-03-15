@@ -1,6 +1,6 @@
 ---
 name: uloop-simulate-mouse
-description: "Simulate mouse click and drag on PlayMode UI elements via screen coordinates. Use when you need to: (1) Click buttons or interactive UI elements during PlayMode testing, (2) Drag UI elements from one position to another, (3) Hold a drag at a position for inspection before releasing."
+description: "Simulate mouse click, long-press, and drag on PlayMode UI elements via screen coordinates. Use when you need to: (1) Click buttons or interactive UI elements during PlayMode testing, (2) Drag UI elements from one position to another, (3) Hold a drag at a position for inspection before releasing, (4) Long-press UI elements that respond to sustained pointer-down."
 context: fork
 ---
 
@@ -11,10 +11,10 @@ Simulate mouse interaction on Unity PlayMode UI: $ARGUMENTS
 ## Workflow
 
 1. Ensure Unity is in PlayMode (use `uloop control-play-mode --action Play` if not)
-2. Take an annotated screenshot: `uloop screenshot --capture-mode rendering --annotate-elements`
-3. Use the `AnnotatedElements` array from the response to get exact simulate-mouse coordinates (`SimX`, `SimY`) for each interactive UI element. The screenshot image also shows bounding boxes and labels with coordinates overlaid on each element.
+2. Get UI element info: `uloop screenshot --capture-mode rendering --annotate-elements --elements-only`
+3. Use the `AnnotatedElements` array to find the target element by `Name` or `Label` (A=frontmost, B=next, ...). Use `SimX`/`SimY` directly as `--x`/`--y` coordinates.
 4. Execute the appropriate `uloop simulate-mouse` command
-5. Take another screenshot to verify the result
+5. Take a screenshot to verify the result: `uloop screenshot --capture-mode rendering --annotate-elements`
 6. Report what happened
 
 ## Tool Reference
@@ -63,7 +63,7 @@ uloop simulate-mouse --action <action> --x <x> --y <y> [options]
 
 - Origin is **top-left** (0, 0)
 - All positions are in **screen pixels**
-- Identify coordinates visually from screenshots — do NOT look up GameObject positions
+- Get coordinates from `AnnotatedElements` JSON (`SimX`/`SimY`) — do NOT look up GameObject positions
 - Clicking or long-pressing on empty space (no UI element) still succeeds with a message indicating no element was hit
 - Dragging on empty space (no draggable UI element) returns `Success = false`
 
@@ -72,6 +72,9 @@ uloop simulate-mouse --action <action> --x <x> --y <y> [options]
 ```bash
 # Click a button at screen position
 uloop simulate-mouse --action Click --x 400 --y 300
+
+# Long-press a button for 3 seconds
+uloop simulate-mouse --action LongPress --x 400 --y 300 --duration 3.0
 
 # One-shot drag (start to end in one call)
 uloop simulate-mouse --action Drag --from-x 400 --from-y 300 --x 600 --y 300

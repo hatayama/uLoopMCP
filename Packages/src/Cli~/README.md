@@ -4,11 +4,11 @@
 
 [![npm version](https://img.shields.io/npm/v/uloop-cli.svg)](https://www.npmjs.com/package/uloop-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-22+-green.svg)](https://nodejs.org/)
 
-**CLI companion for [uLoopMCP](https://github.com/hatayama/uLoopMCP)** - Let AI agents compile, test, and operate your Unity project.
+**CLI companion for [Unity CLI Loop](https://github.com/hatayama/uLoopMCP)** - Let AI agents compile, test, and operate your Unity project.
 
-> **Prerequisites**: This CLI requires [uLoopMCP](https://github.com/hatayama/uLoopMCP) to be installed in your Unity project and the server running. See the [main repository](https://github.com/hatayama/uLoopMCP) for setup instructions.
+> **Prerequisites**: This CLI requires [Unity CLI Loop](https://github.com/hatayama/uLoopMCP) to be installed in your Unity project and the server running. See the [main repository](https://github.com/hatayama/uLoopMCP) for setup instructions.
 
 ## Installation
 
@@ -421,7 +421,7 @@ uloop completion --shell powershell --install  # PowerShell
 
 ## Requirements
 
-- **Node.js 20.0 or later**
+- **Node.js 22.0 or later**
 - **Unity 2022.3 or later** with [uLoopMCP](https://github.com/hatayama/uLoopMCP) installed
 - uLoopMCP server running (Window > uLoopMCP > Start Server)
 
