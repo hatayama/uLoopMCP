@@ -10,7 +10,7 @@
 ![Windsurf](https://img.shields.io/badge/Windsurf-111?logo=Windsurf)
 
 <h1 align="center">Unity CLI Loop</h1>
-<img width="1000" alt="logo" align="center" src="https://github.com/user-attachments/assets/f7784412-31f2-4654-9b6c-d37c1727b2c2" />
+<img width="1000" alt="logo" align="center" src="https://github.com/user-attachments/assets/02769e90-8c71-48d5-8ad9-9f0e84baa3f8" />
 
 CLIを通じて、様々なLLMツールからUnity Editorを操作できます。
 
