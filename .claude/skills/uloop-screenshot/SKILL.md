@@ -81,9 +81,9 @@ Returns JSON with:
   - `FileSizeBytes`: Size of the saved file in bytes
   - `Width`: Captured image width in pixels
   - `Height`: Captured image height in pixels
-  - `CoordinateSystem`: `"gameView"` (pixel coords usable with simulate-mouse) or `"window"` (EditorWindow capture)
+  - `CoordinateSystem`: `"gameView"` (image pixel coords that must be converted with `ResolutionScale` and `YOffset` before using with `simulate-mouse`) or `"window"` (EditorWindow capture)
   - `ResolutionScale`: Resolution scale used for capture
-  - `YOffset`: Y offset to add to image pixel Y to get simulate-mouse Y coordinate (only meaningful when `CoordinateSystem` is `"gameView"`)
+  - `YOffset`: Y offset used in `sim_y = image_y / ResolutionScale + YOffset` when `CoordinateSystem` is `"gameView"`
   - `AnnotatedElements`: Array of annotated UI element metadata. Empty unless `--annotate-elements` is used. Sorted by z-order (frontmost first). Each item contains:
     - `Label`: Index label shown on the screenshot (`A`=frontmost, `B`=next, ...)
     - `Name`: Element name
@@ -91,7 +91,7 @@ Returns JSON with:
     - `SimX`, `SimY`: Center position in simulate-mouse coordinates (use directly with `--x` and `--y`)
     - `BoundsMinX`, `BoundsMinY`, `BoundsMaxX`, `BoundsMaxY`: Bounding box in simulate-mouse coordinates
     - `SortingOrder`: Canvas sorting order (higher = in front)
-    - `SiblingIndex`: Transform sibling index (higher = in front within same Canvas)
+    - `SiblingIndex`: Transform sibling index under the element's direct parent (not a reliable z-order signal across nested UI hierarchies)
 
 ### Coordinate Conversion (gameView)
 

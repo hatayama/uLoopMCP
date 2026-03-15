@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/uloop-cli.svg)](https://www.npmjs.com/package/uloop-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-22+-green.svg)](https://nodejs.org/)
 
 **[Unity CLI Loop](https://github.com/hatayama/uLoopMCP) の CLI コンパニオン** - AIエージェントにUnityプロジェクトのコンパイル、テスト、操作を任せましょう。
 

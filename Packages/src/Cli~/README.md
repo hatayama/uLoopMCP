@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/uloop-cli.svg)](https://www.npmjs.com/package/uloop-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-22+-green.svg)](https://nodejs.org/)
 
 **CLI companion for [Unity CLI Loop](https://github.com/hatayama/uLoopMCP)** - Let AI agents compile, test, and operate your Unity project.
 

@@ -99,7 +99,7 @@ return $"Score = {value}";
 using System.Linq;
 
 string targetName = "Enemy";
-GameObject[] all = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+GameObject[] all = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 GameObject[] matches = all.Where(g => g.name.Contains(targetName)).ToArray();
 
 if (matches.Length == 0) return $"No GameObjects containing '{targetName}' found";
@@ -123,8 +123,7 @@ return $"{target.name}: pos={t.position}, rot={t.rotation.eulerAngles}, scale={t
 Rigidbody rb = GameObject.Find("TargetCube")?.GetComponent<Rigidbody>();
 if (rb == null) return "Rigidbody not found on TargetCube";
 
-// Use rb.velocity for Unity < 6, rb.linearVelocity for Unity 6+
-return $"velocity={rb.linearVelocity}, angularVelocity={rb.angularVelocity}, isKinematic={rb.isKinematic}, useGravity={rb.useGravity}, isSleeping={rb.IsSleeping()}";
+return $"velocity={rb.velocity}, angularVelocity={rb.angularVelocity}, isKinematic={rb.isKinematic}, useGravity={rb.useGravity}, isSleeping={rb.IsSleeping()}";
 ```
 
 ## Find GameObjects by Tag
