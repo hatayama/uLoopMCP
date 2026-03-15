@@ -7,7 +7,7 @@
 ![OpenAICodex](https://img.shields.io/badge/OpenAI_Codex-111?logo=openai)
 ![GoogleGemini](https://img.shields.io/badge/Google_Gemini-111?logo=googlegemini)
 ![GitHubCopilot](https://img.shields.io/badge/GitHub_Copilot-111?logo=githubcopilot)
-![Windsurf](https://img.shields.io/badge/Windsurf-111?logo=Windsurf)
+![Antigravity](https://img.shields.io/badge/Antigravity-111?logo=google)
 
 <h1 align="center">Unity CLI Loop</h1>
 <img width="1000" alt="logo" align="center" src="https://github.com/user-attachments/assets/02769e90-8c71-48d5-8ad9-9f0e84baa3f8" />
