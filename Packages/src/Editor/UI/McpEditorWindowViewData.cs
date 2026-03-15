@@ -159,10 +159,8 @@ namespace io.github.hatayama.uLoopMCP
         public readonly bool IsInstallingCli;
         public readonly bool IsChecking;
         public readonly bool IsClaudeSkillsInstalled;
-        public readonly bool IsCodexSkillsInstalled;
+        public readonly bool IsAgentsSkillsInstalled;
         public readonly bool IsCursorSkillsInstalled;
-        public readonly bool IsGeminiSkillsInstalled;
-        public readonly bool IsWindsurfSkillsInstalled;
         public readonly bool IsAntigravitySkillsInstalled;
         public readonly SkillsTarget SelectedTarget;
         public readonly bool IsInstallingSkills;
@@ -176,10 +174,8 @@ namespace io.github.hatayama.uLoopMCP
             bool isInstallingCli,
             bool isChecking,
             bool isClaudeSkillsInstalled,
-            bool isCodexSkillsInstalled,
+            bool isAgentsSkillsInstalled,
             bool isCursorSkillsInstalled,
-            bool isGeminiSkillsInstalled,
-            bool isWindsurfSkillsInstalled,
             bool isAntigravitySkillsInstalled,
             SkillsTarget selectedTarget,
             bool isInstallingSkills)
@@ -192,10 +188,8 @@ namespace io.github.hatayama.uLoopMCP
             IsInstallingCli = isInstallingCli;
             IsChecking = isChecking;
             IsClaudeSkillsInstalled = isClaudeSkillsInstalled;
-            IsCodexSkillsInstalled = isCodexSkillsInstalled;
+            IsAgentsSkillsInstalled = isAgentsSkillsInstalled;
             IsCursorSkillsInstalled = isCursorSkillsInstalled;
-            IsGeminiSkillsInstalled = isGeminiSkillsInstalled;
-            IsWindsurfSkillsInstalled = isWindsurfSkillsInstalled;
             IsAntigravitySkillsInstalled = isAntigravitySkillsInstalled;
             SelectedTarget = selectedTarget;
             IsInstallingSkills = isInstallingSkills;
