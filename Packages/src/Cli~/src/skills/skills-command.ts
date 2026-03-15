@@ -22,6 +22,7 @@ interface SkillsOptions {
   cursor?: boolean;
   gemini?: boolean;
   windsurf?: boolean;
+  antigravity?: boolean;
 }
 
 export function registerSkillsCommand(program: Command): void {
@@ -38,6 +39,7 @@ export function registerSkillsCommand(program: Command): void {
     .option('--cursor', 'Check Cursor installation')
     .option('--gemini', 'Check Gemini CLI installation')
     .option('--windsurf', 'Check Windsurf installation')
+    .option('--antigravity', 'Check Antigravity installation')
     .action((options: SkillsOptions) => {
       const targets = resolveTargets(options);
       const global = options.global ?? false;
@@ -53,6 +55,7 @@ export function registerSkillsCommand(program: Command): void {
     .option('--cursor', 'Install to Cursor')
     .option('--gemini', 'Install to Gemini CLI')
     .option('--windsurf', 'Install to Windsurf')
+    .option('--antigravity', 'Install to Antigravity')
     .action((options: SkillsOptions) => {
       const targets = resolveTargets(options);
       if (targets.length === 0) {
@@ -71,6 +74,7 @@ export function registerSkillsCommand(program: Command): void {
     .option('--cursor', 'Uninstall from Cursor')
     .option('--gemini', 'Uninstall from Gemini CLI')
     .option('--windsurf', 'Uninstall from Windsurf')
+    .option('--antigravity', 'Uninstall from Antigravity')
     .action((options: SkillsOptions) => {
       const targets = resolveTargets(options);
       if (targets.length === 0) {
@@ -98,6 +102,9 @@ function resolveTargets(options: SkillsOptions): TargetConfig[] {
   if (options.windsurf) {
     targets.push(getTargetConfig('windsurf'));
   }
+  if (options.antigravity) {
+    targets.push(getTargetConfig('antigravity'));
+  }
   return targets;
 }
 
@@ -105,11 +112,12 @@ function showTargetGuidance(command: string): void {
   console.log(`\nPlease specify at least one target for '${command}':`);
   console.log('');
   console.log('Available targets:');
-  console.log('  --claude   Claude Code (.claude/skills/)');
-  console.log('  --codex    Codex CLI (.codex/skills/)');
-  console.log('  --cursor   Cursor (.cursor/skills/)');
-  console.log('  --gemini   Gemini CLI (.gemini/skills/)');
-  console.log('  --windsurf Windsurf (.windsurf/skills/)');
+  console.log('  --claude        Claude Code (.claude/skills/)');
+  console.log('  --codex         Codex CLI (.agents/skills/)');
+  console.log('  --cursor        Cursor (.cursor/skills/)');
+  console.log('  --gemini        Gemini CLI (.agents/skills/)');
+  console.log('  --windsurf      Windsurf (.agents/skills/)');
+  console.log('  --antigravity   Antigravity (.agent/skills/)');
   console.log('');
   console.log('Options:');
   console.log('  -g, --global   Use global location');

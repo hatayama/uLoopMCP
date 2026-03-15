@@ -25,7 +25,8 @@ namespace io.github.hatayama.uLoopMCP
         Codex = 1,
         Cursor = 2,
         Gemini = 3,
-        Windsurf = 4
+        Windsurf = 4,
+        Antigravity = 5
     }
 
     public record UIState

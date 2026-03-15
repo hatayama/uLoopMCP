@@ -700,6 +700,7 @@ namespace io.github.hatayama.uLoopMCP
             bool isCursorInstalled = CliInstallationDetector.AreSkillsInstalled("cursor");
             bool isGeminiInstalled = CliInstallationDetector.AreSkillsInstalled("gemini");
             bool isWindsurfInstalled = CliInstallationDetector.AreSkillsInstalled("windsurf");
+            bool isAntigravityInstalled = CliInstallationDetector.AreSkillsInstalled("antigravity");
 
             return new CliSetupData(
                 isCliInstalled,
@@ -714,6 +715,7 @@ namespace io.github.hatayama.uLoopMCP
                 isCursorInstalled,
                 isGeminiInstalled,
                 isWindsurfInstalled,
+                isAntigravityInstalled,
                 _skillsTarget,
                 _isInstallingSkills);
         }
@@ -854,6 +856,7 @@ namespace io.github.hatayama.uLoopMCP
                     SkillsTarget.Cursor => "skills install --cursor",
                     SkillsTarget.Gemini => "skills install --gemini",
                     SkillsTarget.Windsurf => "skills install --windsurf",
+                    SkillsTarget.Antigravity => "skills install --antigravity",
                     _ => "skills install --claude"
                 };
 

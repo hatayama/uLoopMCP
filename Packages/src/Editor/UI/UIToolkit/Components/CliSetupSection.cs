@@ -173,6 +173,7 @@ namespace io.github.hatayama.uLoopMCP
                 SkillsTarget.Cursor => data.IsCursorSkillsInstalled,
                 SkillsTarget.Gemini => data.IsGeminiSkillsInstalled,
                 SkillsTarget.Windsurf => data.IsWindsurfSkillsInstalled,
+                SkillsTarget.Antigravity => data.IsAntigravitySkillsInstalled,
                 _ => false
             };
 
