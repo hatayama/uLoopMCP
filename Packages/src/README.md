@@ -135,7 +135,7 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 > **No MCP configuration required!** As long as the server is running in the uLoopMCP Window and you have installed the CLI and Skills, LLM tools communicate directly with Unity.
 
 <details>
-<summary>All 15 Bundled Skills</summary>
+<summary>All 16 Bundled Skills</summary>
 
 - `/uloop-launch` - Launch Unity with correct version
 - `/uloop-compile` - Execute compilation
@@ -149,6 +149,7 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 - `/uloop-execute-menu-item` - Execute menu item
 - `/uloop-find-game-objects` - Find GameObjects
 - `/uloop-screenshot` - Capture EditorWindow
+- `/uloop-simulate-mouse` - Simulate mouse input on PlayMode UI
 - `/uloop-control-play-mode` - Control Play Mode
 - `/uloop-execute-dynamic-code` - Execute dynamic C# code
 - `/uloop-get-unity-search-providers` - Get search provider details

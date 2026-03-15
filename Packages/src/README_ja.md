@@ -139,7 +139,7 @@ uloop skills install --claude --global
 > **MCP設定は不要です！** uLoopMCP Windowでサーバーを起動し、CLIとSkillsをインストールしていれば、LLMツールが直接Unityと通信します。
 
 <details>
-<summary>バンドルされている全15個のSkills一覧</summary>
+<summary>バンドルされている全16個のSkills一覧</summary>
 
 - `/uloop-launch` - 正しいバージョンでUnityを起動
 - `/uloop-compile` - コンパイルの実行
@@ -153,6 +153,7 @@ uloop skills install --claude --global
 - `/uloop-execute-menu-item` - メニュー項目の実行
 - `/uloop-find-game-objects` - GameObject検索
 - `/uloop-screenshot` - EditorWindowのキャプチャ
+- `/uloop-simulate-mouse` - PlayMode UIのマウス操作シミュレーション
 - `/uloop-control-play-mode` - Play Modeの制御
 - `/uloop-execute-dynamic-code` - 動的C#コード実行
 - `/uloop-get-unity-search-providers` - 検索プロバイダー詳細

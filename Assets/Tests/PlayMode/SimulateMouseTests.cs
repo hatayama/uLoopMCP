@@ -117,7 +117,7 @@ namespace Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator DragOneShot_AtEmptyPosition_Should_SucceedWithNoDrag()
+        public IEnumerator DragOneShot_AtEmptyPosition_Should_ReturnFailure()
         {
             yield return null;
 
@@ -131,7 +131,7 @@ namespace Tests.PlayMode
                 ["dragSpeed"] = 1000f
             });
 
-            Assert.IsTrue(lastResponse.Success);
+            Assert.IsFalse(lastResponse.Success);
             Assert.IsNull(lastResponse.HitGameObjectName);
         }
 

@@ -487,13 +487,14 @@
         "properties": {
           "Action": {
             "type": "string",
-            "description": "Mouse action: Click - left click, Drag - one-shot drag, DragStart - begin drag and hold, DragMove - move while holding drag, DragEnd - release drag",
+            "description": "Mouse action: Click - left click, Drag - one-shot drag, DragStart - begin drag and hold, DragMove - move while holding drag, DragEnd - release drag, LongPress - press and hold for Duration seconds",
             "enum": [
               "Click",
               "Drag",
               "DragStart",
               "DragMove",
-              "DragEnd"
+              "DragEnd",
+              "LongPress"
             ],
             "default": "Click"
           },
@@ -521,6 +522,11 @@
             "type": "number",
             "description": "Drag speed in pixels per second (0 for instant). Applies to Drag, DragMove, and DragEnd actions.",
             "default": 2000
+          },
+          "Duration": {
+            "type": "number",
+            "description": "Hold duration in seconds for LongPress action.",
+            "default": 0.5
           }
         }
       }

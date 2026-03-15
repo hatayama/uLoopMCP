@@ -64,7 +64,8 @@ uloop simulate-mouse --action <action> --x <x> --y <y> [options]
 - Origin is **top-left** (0, 0)
 - All positions are in **screen pixels**
 - Get coordinates from `AnnotatedElements` JSON (`SimX`/`SimY`) — do NOT look up GameObject positions
-- Clicking or dragging on empty space (no UI element) still succeeds with a message indicating no element was hit
+- Clicking or long-pressing on empty space (no UI element) still succeeds with a message indicating no element was hit
+- Dragging on empty space (no draggable UI element) returns `Success = false`
 
 ## Examples
 
