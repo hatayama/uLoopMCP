@@ -51,6 +51,13 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 https://github.com/hatayama/unity-cli-loop.git?path=/Packages/src
 ```
 
+> **Note for existing users**: The repository was renamed from `uLoopMCP` to `unity-cli-loop` in v1.0.0. If you installed via git URL, please update your `manifest.json`:
+> ```
+> Old: https://github.com/hatayama/uLoopMCP.git?path=/Packages/src
+> New: https://github.com/hatayama/unity-cli-loop.git?path=/Packages/src
+> ```
+> The old URL still works via GitHub redirect, but updating is recommended. OpenUPM users are not affected.
+
 ## Via OpenUPM (Recommended)
 
 ## Using Scoped registry in Unity Package Manager
