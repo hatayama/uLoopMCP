@@ -6,7 +6,6 @@ using UnityEditor;
 using UnityEngine;
 #if ULOOPMCP_HAS_INPUT_SYSTEM
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.LowLevel;
 #endif
 
 namespace io.github.hatayama.uLoopMCP
@@ -150,21 +149,17 @@ namespace io.github.hatayama.uLoopMCP
             string keyName = key.ToString();
             SimulateKeyboardOverlayState.ShowPress(keyName);
 
-            if (duration <= 0f)
+            float effectiveDuration = duration <= 0f
+                ? McpConstants.SIMULATE_KEYBOARD_DEFAULT_PRESS_DURATION
+                : duration;
+
             {
-                KeyboardKeyState.QueueKeyEvent(keyboard, key, true);
-                await EditorDelay.DelayFrame(1, ct);
-                KeyboardKeyState.QueueKeyEvent(keyboard, key, false);
-                await EditorDelay.DelayFrame(1, ct);
-            }
-            else
-            {
-                KeyboardKeyState.QueueKeyEvent(keyboard, key, true);
+                KeyboardKeyState.SetKeyState(keyboard, key, true);
                 try
                 {
                     float startTime = Time.realtimeSinceStartup;
                     float elapsed = 0f;
-                    while (elapsed < duration)
+                    while (elapsed < effectiveDuration)
                     {
                         await EditorDelay.DelayFrame(1, ct);
                         elapsed = Time.realtimeSinceStartup - startTime;
@@ -172,7 +167,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 finally
                 {
-                    KeyboardKeyState.QueueKeyEvent(keyboard, key, false);
+                    KeyboardKeyState.SetKeyState(keyboard, key, false);
                 }
                 await EditorDelay.DelayFrame(1, ct);
             }
@@ -204,7 +199,7 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            KeyboardKeyState.QueueKeyEvent(keyboard, key, true);
+            KeyboardKeyState.SetKeyState(keyboard, key, true);
             KeyboardKeyState.SetKeyDown(key);
             SimulateKeyboardOverlayState.AddHeldKey(keyName);
 
@@ -232,7 +227,7 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            KeyboardKeyState.QueueKeyEvent(keyboard, key, false);
+            KeyboardKeyState.SetKeyState(keyboard, key, false);
             KeyboardKeyState.SetKeyUp(key);
             SimulateKeyboardOverlayState.RemoveHeldKey(keyName);
 

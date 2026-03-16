@@ -39,10 +39,18 @@ namespace io.github.hatayama.uLoopMCP
             _heldKeys.Clear();
         }
 
-        public static void QueueKeyEvent(Keyboard keyboard, Key key, bool pressed)
+        // Keyboard keys are stored as a bitfield, so StateEvent.From captures
+        // the entire keyboard state. To support simultaneous key holds, we write
+        // ALL currently held keys into every event — not just the target key.
+        public static void SetKeyState(Keyboard keyboard, Key key, bool pressed)
         {
             using (StateEvent.From(keyboard, out InputEventPtr eventPtr))
             {
+                foreach (Key heldKey in _heldKeys)
+                {
+                    keyboard[heldKey].WriteValueIntoEvent(1f, eventPtr);
+                }
+
                 keyboard[key].WriteValueIntoEvent(pressed ? 1f : 0f, eventPtr);
                 InputSystem.QueueEvent(eventPtr);
             }
@@ -57,9 +65,14 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            foreach (Key key in _heldKeys)
+            // Single event with all keys released
+            using (StateEvent.From(keyboard, out InputEventPtr eventPtr))
             {
-                QueueKeyEvent(keyboard, key, false);
+                foreach (Key key in _heldKeys)
+                {
+                    keyboard[key].WriteValueIntoEvent(0f, eventPtr);
+                }
+                InputSystem.QueueEvent(eventPtr);
             }
 
             _heldKeys.Clear();

@@ -176,6 +176,9 @@ namespace io.github.hatayama.uLoopMCP
         // SimulateMouse constants
         public const float SIMULATE_MOUSE_DEFAULT_DRAG_SPEED = 2000f;
 
+        // SimulateKeyboard constants
+        public const float SIMULATE_KEYBOARD_DEFAULT_PRESS_DURATION = 0.15f;
+
         // Compile tool constants
         public const int COMPILE_START_TIMEOUT_MS = 5000; // Timeout to detect "compile did not start"
         public const int COMPILE_START_POLL_INTERVAL_MS = 100;
