@@ -1,5 +1,5 @@
 #!/bin/sh
-# Automated UnityChan demo - walk, run, jump around the center
+# Keyboard input test script for UnityChan locomotion and action playback
 
 set -e
 
@@ -32,7 +32,7 @@ release() {
     uloop simulate-keyboard --action KeyUp --key "$1"
 }
 
-echo "=== UnityChan Demo ==="
+echo "=== UnityChan Keyboard Input Test ==="
 
 uloop control-play-mode --action Play
 sleep 2
@@ -81,4 +81,4 @@ sleep 0.01
 press Enter 0.1
 sleep 5
 
-echo "=== Demo Complete! ==="
+echo "=== Keyboard Input Test Complete! ==="
