@@ -6,7 +6,8 @@
         "UnityEditor.TestRunner",
         "uLoopMCP.Editor",
         "uLoopMCP.Runtime",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "GUID:75469ad4d38634e559750d17036d5f7c"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -20,6 +21,12 @@
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS"
     ],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "",
+            "define": "ULOOPMCP_HAS_INPUT_SYSTEM"
+        }
+    ],
     "noEngineReferences": false
 }

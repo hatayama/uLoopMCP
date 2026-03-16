@@ -1,0 +1,78 @@
+#if ULOOPMCP_HAS_INPUT_SYSTEM
+#nullable enable
+using System.Collections.Generic;
+using UnityEditor;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
+
+namespace io.github.hatayama.uLoopMCP
+{
+    // Tool instances are created fresh per invocation, so held-key state
+    // between KeyDown/KeyUp must be held statically.
+    [InitializeOnLoad]
+    internal static class KeyboardKeyState
+    {
+        private static readonly HashSet<Key> _heldKeys = new();
+
+        public static bool IsKeyHeld(Key key) => _heldKeys.Contains(key);
+        public static IReadOnlyCollection<Key> HeldKeys => _heldKeys;
+
+        static KeyboardKeyState()
+        {
+            // Guard against duplicate subscriptions on domain reload
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
+
+        public static void SetKeyDown(Key key)
+        {
+            _heldKeys.Add(key);
+        }
+
+        public static void SetKeyUp(Key key)
+        {
+            _heldKeys.Remove(key);
+        }
+
+        public static void Clear()
+        {
+            _heldKeys.Clear();
+        }
+
+        public static void QueueKeyEvent(Keyboard keyboard, Key key, bool pressed)
+        {
+            using (StateEvent.From(keyboard, out InputEventPtr eventPtr))
+            {
+                keyboard[key].WriteValueIntoEvent(pressed ? 1f : 0f, eventPtr);
+                InputSystem.QueueEvent(eventPtr);
+            }
+        }
+
+        public static void ReleaseAllKeys()
+        {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                _heldKeys.Clear();
+                return;
+            }
+
+            foreach (Key key in _heldKeys)
+            {
+                QueueKeyEvent(keyboard, key, false);
+            }
+
+            _heldKeys.Clear();
+        }
+
+        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingPlayMode)
+            {
+                ReleaseAllKeys();
+                SimulateKeyboardOverlayState.Clear();
+            }
+        }
+    }
+}
+#endif

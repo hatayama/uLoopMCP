@@ -1,0 +1,255 @@
+#if ULOOPMCP_HAS_INPUT_SYSTEM
+#nullable enable
+using System.Collections;
+using System.Threading.Tasks;
+using io.github.hatayama.uLoopMCP;
+using Newtonsoft.Json.Linq;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.TestTools;
+
+namespace Tests.PlayMode
+{
+    public class SimulateKeyboardTests : InputTestFixture
+    {
+        private GameObject eventSystemGo = null!;
+        private SimulateKeyboardTool tool = null!;
+        private SimulateKeyboardResponse lastResponse = null!;
+        private Keyboard keyboard = null!;
+
+        public override void Setup()
+        {
+            base.Setup();
+
+            eventSystemGo = new GameObject("TestEventSystem");
+            eventSystemGo.AddComponent<EventSystem>();
+
+            tool = new SimulateKeyboardTool();
+            keyboard = InputSystem.AddDevice<Keyboard>();
+        }
+
+        public override void TearDown()
+        {
+            KeyboardKeyState.Clear();
+            Object.Destroy(eventSystemGo);
+            base.TearDown();
+        }
+
+        #region Press Tests
+
+        [UnityTest]
+        public IEnumerator Press_Should_InjectKeyDownAndUp()
+        {
+            yield return null;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.Press.ToString(),
+                ["key"] = "W"
+            });
+
+            Assert.IsTrue(lastResponse.Success);
+            Assert.AreEqual("Press", lastResponse.Action);
+            Assert.AreEqual("W", lastResponse.KeyName);
+            // After press completes, key should be released
+            Assert.IsFalse(keyboard[Key.W].isPressed, "Key should be released after press");
+        }
+
+        [UnityTest]
+        public IEnumerator Press_WithDuration_Should_HoldKey()
+        {
+            yield return null;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.Press.ToString(),
+                ["key"] = "Space",
+                ["duration"] = 0.1f
+            });
+
+            Assert.IsTrue(lastResponse.Success);
+            Assert.AreEqual("Space", lastResponse.KeyName);
+        }
+
+        [UnityTest]
+        public IEnumerator Press_WithInvalidKey_Should_ReturnFailure()
+        {
+            yield return null;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.Press.ToString(),
+                ["key"] = "InvalidKeyName"
+            });
+
+            Assert.IsFalse(lastResponse.Success);
+            StringAssert.Contains("Invalid key name", lastResponse.Message);
+        }
+
+        [UnityTest]
+        public IEnumerator Press_WithEmptyKey_Should_ReturnFailure()
+        {
+            yield return null;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.Press.ToString(),
+                ["key"] = ""
+            });
+
+            Assert.IsFalse(lastResponse.Success);
+            StringAssert.Contains("Key parameter is required", lastResponse.Message);
+        }
+
+        #endregion
+
+        #region KeyDown / KeyUp Tests
+
+        [UnityTest]
+        public IEnumerator KeyDown_Should_HoldKeyUntilKeyUp()
+        {
+            yield return null;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.KeyDown.ToString(),
+                ["key"] = "W"
+            });
+
+            Assert.IsTrue(lastResponse.Success);
+            Assert.IsTrue(KeyboardKeyState.IsKeyHeld(Key.W), "Key should be held after KeyDown");
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.KeyUp.ToString(),
+                ["key"] = "W"
+            });
+
+            Assert.IsTrue(lastResponse.Success);
+            Assert.IsFalse(KeyboardKeyState.IsKeyHeld(Key.W), "Key should be released after KeyUp");
+        }
+
+        [UnityTest]
+        public IEnumerator KeyDown_WhenAlreadyHeld_Should_ReturnFailure()
+        {
+            yield return null;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.KeyDown.ToString(),
+                ["key"] = "W"
+            });
+            Assert.IsTrue(lastResponse.Success);
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.KeyDown.ToString(),
+                ["key"] = "W"
+            });
+            Assert.IsFalse(lastResponse.Success);
+            StringAssert.Contains("already held", lastResponse.Message);
+        }
+
+        [UnityTest]
+        public IEnumerator KeyUp_WhenNotHeld_Should_ReturnFailure()
+        {
+            yield return null;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.KeyUp.ToString(),
+                ["key"] = "W"
+            });
+
+            Assert.IsFalse(lastResponse.Success);
+            StringAssert.Contains("not currently held", lastResponse.Message);
+        }
+
+        [UnityTest]
+        public IEnumerator MultipleKeys_Should_SupportSimultaneousHold()
+        {
+            yield return null;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.KeyDown.ToString(),
+                ["key"] = "LeftShift"
+            });
+            Assert.IsTrue(lastResponse.Success);
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.KeyDown.ToString(),
+                ["key"] = "W"
+            });
+            Assert.IsTrue(lastResponse.Success);
+
+            Assert.IsTrue(KeyboardKeyState.IsKeyHeld(Key.LeftShift), "LeftShift should be held");
+            Assert.IsTrue(KeyboardKeyState.IsKeyHeld(Key.W), "W should be held");
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.KeyUp.ToString(),
+                ["key"] = "W"
+            });
+            Assert.IsTrue(lastResponse.Success);
+            Assert.IsTrue(KeyboardKeyState.IsKeyHeld(Key.LeftShift), "LeftShift should still be held");
+            Assert.IsFalse(KeyboardKeyState.IsKeyHeld(Key.W), "W should be released");
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.KeyUp.ToString(),
+                ["key"] = "LeftShift"
+            });
+            Assert.IsTrue(lastResponse.Success);
+        }
+
+        #endregion
+
+        #region State Management Tests
+
+        [UnityTest]
+        public IEnumerator ReleaseAllKeys_Should_ClearAllHeldKeys()
+        {
+            yield return null;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.KeyDown.ToString(),
+                ["key"] = "W"
+            });
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.KeyDown.ToString(),
+                ["key"] = "LeftShift"
+            });
+
+            Assert.IsTrue(KeyboardKeyState.IsKeyHeld(Key.W));
+            Assert.IsTrue(KeyboardKeyState.IsKeyHeld(Key.LeftShift));
+
+            KeyboardKeyState.ReleaseAllKeys();
+
+            Assert.IsFalse(KeyboardKeyState.IsKeyHeld(Key.W));
+            Assert.IsFalse(KeyboardKeyState.IsKeyHeld(Key.LeftShift));
+            Assert.AreEqual(0, KeyboardKeyState.HeldKeys.Count);
+        }
+
+        #endregion
+
+        #region Helpers
+
+        private IEnumerator RunTool(JObject parameters)
+        {
+            Task<BaseToolResponse> task = tool.ExecuteAsync(parameters);
+            yield return new WaitUntil(() => task.IsCompleted);
+            Assert.IsFalse(task.IsFaulted, $"Tool execution should not fault: {task.Exception}");
+            lastResponse = (SimulateKeyboardResponse)task.Result;
+        }
+
+        #endregion
+    }
+}
+#endif

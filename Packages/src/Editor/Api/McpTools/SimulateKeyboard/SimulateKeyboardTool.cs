@@ -1,0 +1,249 @@
+#nullable enable
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using UnityEditor;
+using UnityEngine;
+#if ULOOPMCP_HAS_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
+#endif
+
+namespace io.github.hatayama.uLoopMCP
+{
+    [McpTool(Description = "Simulate keyboard key input in PlayMode via Input System. Supports one-shot press, key-down hold, and key-up release for game controls (WASD, Space, etc.). Requires the Input System package (com.unity.inputsystem).")]
+    public class SimulateKeyboardTool : AbstractUnityTool<SimulateKeyboardSchema, SimulateKeyboardResponse>
+    {
+        public override string ToolName => "simulate-keyboard";
+
+        protected override
+#if !ULOOPMCP_HAS_INPUT_SYSTEM
+#pragma warning disable CS1998
+#endif
+            async Task<SimulateKeyboardResponse> ExecuteAsync(
+            SimulateKeyboardSchema parameters,
+            CancellationToken ct)
+#if !ULOOPMCP_HAS_INPUT_SYSTEM
+#pragma warning restore CS1998
+#endif
+        {
+            ct.ThrowIfCancellationRequested();
+
+#if !ULOOPMCP_HAS_INPUT_SYSTEM
+            return new SimulateKeyboardResponse
+            {
+                Success = false,
+                Message = "simulate-keyboard requires the Input System package (com.unity.inputsystem). Install it via Package Manager and set Active Input Handling to 'Input System Package (New)' or 'Both' in Player Settings.",
+                Action = parameters.Action.ToString()
+            };
+#else
+            string correlationId = McpConstants.GenerateCorrelationId();
+
+            if (!EditorApplication.isPlaying)
+            {
+                return new SimulateKeyboardResponse
+                {
+                    Success = false,
+                    Message = "PlayMode is not active. Use control-play-mode tool to start PlayMode first.",
+                    Action = parameters.Action.ToString()
+                };
+            }
+
+            if (string.IsNullOrEmpty(parameters.Key))
+            {
+                return new SimulateKeyboardResponse
+                {
+                    Success = false,
+                    Message = "Key parameter is required. Examples: \"W\", \"Space\", \"LeftShift\", \"A\", \"Return\".",
+                    Action = parameters.Action.ToString()
+                };
+            }
+
+            if (!Enum.TryParse<Key>(parameters.Key, ignoreCase: true, out Key key) || key == Key.None)
+            {
+                return new SimulateKeyboardResponse
+                {
+                    Success = false,
+                    Message = $"Invalid key name: \"{parameters.Key}\". Use Input System Key enum names (e.g. \"W\", \"Space\", \"LeftShift\", \"A\", \"Return\").",
+                    Action = parameters.Action.ToString()
+                };
+            }
+
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                return new SimulateKeyboardResponse
+                {
+                    Success = false,
+                    Message = "No keyboard device found in Input System. Ensure the Input System package is properly configured.",
+                    Action = parameters.Action.ToString()
+                };
+            }
+
+            VibeLogger.LogInfo(
+                "simulate_keyboard_start",
+                "Keyboard simulation started",
+                new { Action = parameters.Action.ToString(), Key = parameters.Key },
+                correlationId: correlationId
+            );
+
+            EnsureOverlayExists();
+
+            SimulateKeyboardResponse response;
+
+            switch (parameters.Action)
+            {
+                case KeyboardAction.Press:
+                    response = await ExecutePress(keyboard, key, parameters.Duration, ct);
+                    break;
+
+                case KeyboardAction.KeyDown:
+                    response = ExecuteKeyDown(keyboard, key);
+                    break;
+
+                case KeyboardAction.KeyUp:
+                    response = ExecuteKeyUp(keyboard, key);
+                    break;
+
+                default:
+                    throw new ArgumentException($"Unknown keyboard action: {parameters.Action}");
+            }
+
+            VibeLogger.LogInfo(
+                "simulate_keyboard_complete",
+                $"Keyboard simulation completed: {response.Message}",
+                new { Action = parameters.Action.ToString(), Success = response.Success },
+                correlationId: correlationId
+            );
+
+            return response;
+#endif
+        }
+
+#if ULOOPMCP_HAS_INPUT_SYSTEM
+        private static void EnsureOverlayExists()
+        {
+            if (SimulateKeyboardOverlay.Instance != null)
+            {
+                return;
+            }
+
+            GameObject overlayGo = new GameObject("SimulateKeyboardOverlay");
+            overlayGo.hideFlags = HideFlags.HideAndDontSave;
+            overlayGo.AddComponent<SimulateKeyboardOverlay>();
+        }
+
+        private async Task<SimulateKeyboardResponse> ExecutePress(
+            Keyboard keyboard, Key key, float duration, CancellationToken ct)
+        {
+            if (duration < 0f || float.IsNaN(duration) || float.IsInfinity(duration))
+            {
+                return new SimulateKeyboardResponse
+                {
+                    Success = false,
+                    Message = $"Duration must be non-negative, got: {duration}",
+                    Action = KeyboardAction.Press.ToString(),
+                    KeyName = key.ToString()
+                };
+            }
+
+            string keyName = key.ToString();
+            SimulateKeyboardOverlayState.ShowPress(keyName);
+
+            if (duration <= 0f)
+            {
+                KeyboardKeyState.QueueKeyEvent(keyboard, key, true);
+                await EditorDelay.DelayFrame(1, ct);
+                KeyboardKeyState.QueueKeyEvent(keyboard, key, false);
+                await EditorDelay.DelayFrame(1, ct);
+            }
+            else
+            {
+                KeyboardKeyState.QueueKeyEvent(keyboard, key, true);
+                try
+                {
+                    float startTime = Time.realtimeSinceStartup;
+                    float elapsed = 0f;
+                    while (elapsed < duration)
+                    {
+                        await EditorDelay.DelayFrame(1, ct);
+                        elapsed = Time.realtimeSinceStartup - startTime;
+                    }
+                }
+                finally
+                {
+                    KeyboardKeyState.QueueKeyEvent(keyboard, key, false);
+                }
+                await EditorDelay.DelayFrame(1, ct);
+            }
+
+            SimulateKeyboardOverlayState.Clear();
+
+            string durationText = duration > 0f ? $" for {duration:F1}s" : "";
+            return new SimulateKeyboardResponse
+            {
+                Success = true,
+                Message = $"Pressed '{keyName}'{durationText}",
+                Action = KeyboardAction.Press.ToString(),
+                KeyName = keyName
+            };
+        }
+
+        private SimulateKeyboardResponse ExecuteKeyDown(Keyboard keyboard, Key key)
+        {
+            string keyName = key.ToString();
+
+            if (KeyboardKeyState.IsKeyHeld(key))
+            {
+                return new SimulateKeyboardResponse
+                {
+                    Success = false,
+                    Message = $"Key '{keyName}' is already held down. Call KeyUp first.",
+                    Action = KeyboardAction.KeyDown.ToString(),
+                    KeyName = keyName
+                };
+            }
+
+            KeyboardKeyState.QueueKeyEvent(keyboard, key, true);
+            KeyboardKeyState.SetKeyDown(key);
+            SimulateKeyboardOverlayState.AddHeldKey(keyName);
+
+            return new SimulateKeyboardResponse
+            {
+                Success = true,
+                Message = $"Key '{keyName}' held down",
+                Action = KeyboardAction.KeyDown.ToString(),
+                KeyName = keyName
+            };
+        }
+
+        private SimulateKeyboardResponse ExecuteKeyUp(Keyboard keyboard, Key key)
+        {
+            string keyName = key.ToString();
+
+            if (!KeyboardKeyState.IsKeyHeld(key))
+            {
+                return new SimulateKeyboardResponse
+                {
+                    Success = false,
+                    Message = $"Key '{keyName}' is not currently held. Call KeyDown first.",
+                    Action = KeyboardAction.KeyUp.ToString(),
+                    KeyName = keyName
+                };
+            }
+
+            KeyboardKeyState.QueueKeyEvent(keyboard, key, false);
+            KeyboardKeyState.SetKeyUp(key);
+            SimulateKeyboardOverlayState.RemoveHeldKey(keyName);
+
+            return new SimulateKeyboardResponse
+            {
+                Success = true,
+                Message = $"Key '{keyName}' released",
+                Action = KeyboardAction.KeyUp.ToString(),
+                KeyName = keyName
+            };
+        }
+#endif
+    }
+}
