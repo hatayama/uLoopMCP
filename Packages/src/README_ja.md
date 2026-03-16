@@ -48,7 +48,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 4. 「Add package from git URL」を選択
 5. 以下のURLを入力：
 ```text
-https://github.com/hatayama/uLoopMCP.git?path=/Packages/src
+https://github.com/hatayama/unity-cli-loop.git?path=/Packages/src
 ```
 
 ## OpenUPM経由（推奨）
