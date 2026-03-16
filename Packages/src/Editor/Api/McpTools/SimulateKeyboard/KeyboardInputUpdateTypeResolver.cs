@@ -1,5 +1,6 @@
 #nullable enable
 #if ULOOPMCP_HAS_INPUT_SYSTEM
+using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 
@@ -21,7 +22,9 @@ namespace io.github.hatayama.uLoopMCP
             switch (updateMode)
             {
                 case InputSettings.UpdateMode.ProcessEventsInFixedUpdate:
-                    return InputUpdateType.Fixed;
+                    // Paused screens commonly set timeScale to 0, which stops fixed ticks entirely.
+                    // Falling back to Dynamic keeps keyboard simulation responsive for those menus.
+                    return IsPausedFixedUpdate(settings) ? InputUpdateType.Dynamic : InputUpdateType.Fixed;
 
                 case InputSettings.UpdateMode.ProcessEventsManually:
                     return InputUpdateType.Manual;
@@ -39,6 +42,28 @@ namespace io.github.hatayama.uLoopMCP
         public static bool RequiresExplicitManualUpdate(InputUpdateType updateType)
         {
             return updateType == InputUpdateType.Manual;
+        }
+
+        public static bool RequiresExplicitUpdate()
+        {
+            InputSettings? settings = InputSystem.settings;
+            if (settings == null)
+            {
+                return false;
+            }
+
+            InputSettings.UpdateMode updateMode = settings.updateMode;
+            if (updateMode == InputSettings.UpdateMode.ProcessEventsManually)
+            {
+                return true;
+            }
+
+            return IsPausedFixedUpdate(settings);
+        }
+
+        private static bool IsPausedFixedUpdate(InputSettings settings)
+        {
+            return settings.updateMode == InputSettings.UpdateMode.ProcessEventsInFixedUpdate && Time.timeScale <= 0f;
         }
     }
 }

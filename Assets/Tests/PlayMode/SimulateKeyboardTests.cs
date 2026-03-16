@@ -21,18 +21,22 @@ namespace Tests.PlayMode
         private SimulateKeyboardResponse lastResponse = null!;
         private Keyboard keyboard = null!;
         private FramePressObserver framePressObserver = null!;
+        private FrameStateObserver frameStateObserver = null!;
         private InputSettings.UpdateMode originalUpdateMode;
+        private float originalTimeScale;
 
         public override void Setup()
         {
             base.Setup();
             InputSettings settings = RequireInputSettings();
             originalUpdateMode = settings.updateMode;
+            originalTimeScale = Time.timeScale;
 
             eventSystemGo = new GameObject("TestEventSystem");
             eventSystemGo.AddComponent<EventSystem>();
             framePressObserverGo = new GameObject("FramePressObserver");
             framePressObserver = framePressObserverGo.AddComponent<FramePressObserver>();
+            frameStateObserver = framePressObserverGo.AddComponent<FrameStateObserver>();
 
             tool = new SimulateKeyboardTool();
             keyboard = InputSystem.AddDevice<Keyboard>();
@@ -42,6 +46,7 @@ namespace Tests.PlayMode
         {
             InputSettings settings = RequireInputSettings();
             settings.updateMode = originalUpdateMode;
+            Time.timeScale = originalTimeScale;
             KeyboardKeyState.ReleaseAllKeys();
             Object.Destroy(framePressObserverGo);
             Object.Destroy(eventSystemGo);
@@ -119,6 +124,27 @@ namespace Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Press_Should_KeepHeldOverlayKeys()
+        {
+            yield return null;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.KeyDown.ToString(),
+                ["key"] = "LeftShift"
+            });
+            Assert.IsTrue(lastResponse.Success);
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.Press.ToString(),
+                ["key"] = "Space"
+            });
+
+            CollectionAssert.Contains(SimulateKeyboardOverlayState.HeldKeys, "LeftShift", "Press should not clear held-key overlay badges");
+        }
+
+        [UnityTest]
         public IEnumerator Press_Enter_Should_SetWasPressedThisFrame()
         {
             yield return null;
@@ -153,6 +179,26 @@ namespace Tests.PlayMode
             Assert.IsTrue(lastResponse.Success);
             Assert.Greater(framePressObserver.EnterPressedFrameCount, 0, "Manual-mode press should advance input and register the tap");
             Assert.IsFalse(keyboard[Key.Enter].isPressed, "Manual-mode press should release the key after the tap");
+        }
+
+        [UnityTest]
+        public IEnumerator Press_InPausedFixedMode_Should_NotHang()
+        {
+            yield return null;
+
+            InputSettings settings = RequireInputSettings();
+            settings.updateMode = InputSettings.UpdateMode.ProcessEventsInFixedUpdate;
+            Time.timeScale = 0f;
+            framePressObserver.ResetCount();
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.Press.ToString(),
+                ["key"] = "Enter"
+            });
+
+            Assert.IsTrue(lastResponse.Success);
+            Assert.IsFalse(keyboard[Key.Enter].isPressed, "Paused fixed-update press should release the key after the tap");
         }
 
         [UnityTest]
@@ -194,6 +240,8 @@ namespace Tests.PlayMode
         {
             yield return null;
 
+            frameStateObserver.ResetCounts();
+
             yield return RunTool(new JObject
             {
                 ["action"] = KeyboardAction.KeyDown.ToString(),
@@ -202,7 +250,9 @@ namespace Tests.PlayMode
 
             Assert.IsTrue(lastResponse.Success);
             Assert.IsTrue(KeyboardKeyState.IsKeyHeld(Key.W), "Key should be held after KeyDown");
+            Assert.Greater(frameStateObserver.WPressedUpdateCount, 0, "KeyDown should wait until Update observed the pressed key");
 
+            frameStateObserver.ResetCounts();
             yield return RunTool(new JObject
             {
                 ["action"] = KeyboardAction.KeyUp.ToString(),
@@ -211,6 +261,7 @@ namespace Tests.PlayMode
 
             Assert.IsTrue(lastResponse.Success);
             Assert.IsFalse(KeyboardKeyState.IsKeyHeld(Key.W), "Key should be released after KeyUp");
+            Assert.Greater(frameStateObserver.WReleasedUpdateCount, 0, "KeyUp should wait until Update observed the released key");
         }
 
         [UnityTest]
@@ -396,6 +447,35 @@ namespace Tests.PlayMode
         {
             SpacePressedFrameCount = 0;
             EnterPressedFrameCount = 0;
+        }
+    }
+
+    public class FrameStateObserver : MonoBehaviour
+    {
+        public int WPressedUpdateCount { get; private set; }
+        public int WReleasedUpdateCount { get; private set; }
+
+        private void Update()
+        {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                return;
+            }
+
+            if (keyboard.wKey.isPressed)
+            {
+                WPressedUpdateCount++;
+                return;
+            }
+
+            WReleasedUpdateCount++;
+        }
+
+        public void ResetCounts()
+        {
+            WPressedUpdateCount = 0;
+            WReleasedUpdateCount = 0;
         }
     }
 }

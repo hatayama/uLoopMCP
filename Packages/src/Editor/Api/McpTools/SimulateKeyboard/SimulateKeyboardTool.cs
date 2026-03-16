@@ -181,7 +181,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), ct);
                 await EditorDelay.DelayFrame(1, ct);
-                SimulateKeyboardOverlayState.Clear();
+                SimulateKeyboardOverlayState.ClearPress();
             }
 
             string durationText = duration > 0f ? $" for {duration:F1}s" : "";
@@ -212,6 +212,7 @@ namespace io.github.hatayama.uLoopMCP
             await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
             KeyboardKeyState.SetKeyDown(key);
             SimulateKeyboardOverlayState.AddHeldKey(keyName);
+            await EditorDelay.DelayFrame(1, ct);
 
             return new SimulateKeyboardResponse
             {
@@ -240,6 +241,7 @@ namespace io.github.hatayama.uLoopMCP
             await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), ct);
             KeyboardKeyState.SetKeyUp(key);
             SimulateKeyboardOverlayState.RemoveHeldKey(keyName);
+            await EditorDelay.DelayFrame(1, ct);
 
             return new SimulateKeyboardResponse
             {
@@ -262,9 +264,9 @@ namespace io.github.hatayama.uLoopMCP
         private static Task ApplyOnNextConfiguredUpdate(Action apply, CancellationToken ct)
         {
             InputUpdateType targetUpdateType = KeyboardInputUpdateTypeResolver.Resolve();
-            if (KeyboardInputUpdateTypeResolver.RequiresExplicitManualUpdate(targetUpdateType))
+            if (KeyboardInputUpdateTypeResolver.RequiresExplicitUpdate())
             {
-                return ApplyOnManualUpdate(apply, ct);
+                return ApplyOnExplicitUpdate(apply, targetUpdateType, ct);
             }
 
             TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
@@ -300,7 +302,7 @@ namespace io.github.hatayama.uLoopMCP
             return tcs.Task;
         }
 
-        private static Task ApplyOnManualUpdate(Action apply, CancellationToken ct)
+        private static Task ApplyOnExplicitUpdate(Action apply, InputUpdateType targetUpdateType, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
 
@@ -335,6 +337,16 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             InputSystem.Update();
+            if (!tcs.Task.IsCompleted)
+            {
+                Debug.Assert(callback != null, "callback must be assigned before explicit update fallback");
+                InputSystem.onBeforeUpdate -= callback;
+                registration.Dispose();
+                apply();
+                InputSystem.Update();
+                tcs.TrySetResult(true);
+            }
+
             return tcs.Task;
         }
 #endif
