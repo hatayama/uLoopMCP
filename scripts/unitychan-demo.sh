@@ -1,6 +1,6 @@
 #!/bin/sh
-# Automated UnityChan demo - plays ALL available motions
-# Stays near center using back-and-forth patterns
+# Automated UnityChan demo - walk, run, jump around the center
+# Moves in short loops to stay on the ground plane
 
 set -e
 
@@ -25,20 +25,15 @@ hold_for() {
     done
 }
 
-# CrossFade to a named animator state, wait for it to finish
-play_motion() {
-    name="$1"
-    wait_time="$2"
-    echo "  -> $name (${wait_time}s)"
-    uloop execute-dynamic-code --code "
-        var go = UnityEngine.GameObject.Find(\"unitychan\");
-        var animator = go.GetComponent<UnityEngine.Animator>();
-        animator.CrossFade(\"$name\", 0.25f);
-    "
-    sleep "$wait_time"
+hold() {
+    uloop simulate-keyboard --action KeyDown --key "$1"
 }
 
-echo "=== UnityChan Full Motion Demo ==="
+release() {
+    uloop simulate-keyboard --action KeyUp --key "$1"
+}
+
+echo "=== UnityChan Demo ==="
 
 echo "[Setup] Starting PlayMode..."
 uloop control-play-mode --action Play
@@ -46,100 +41,91 @@ sleep 2
 uloop focus-window
 sleep 0.5
 
-# ===== Part 1: Movement motions (WASD controlled) =====
-echo ""
-echo "[Part 1] Movement motions"
-
-echo "  Idle (WAIT00)"
+# --- Idle jump ---
+echo "[1] Idle jump"
+press Space 0.3
 sleep 2.0
 
-echo "  Walk forward (Shift+W)"
-hold_for 2.0 LeftShift W
+# --- Walk a small circle (W→D→S→A) ---
+echo "[2] Walk circle"
+hold LeftShift
+hold_for 1.0 W
+hold_for 1.0 D
+hold_for 1.0 S
+hold_for 1.0 A
+release LeftShift
 sleep 0.3
-hold_for 2.0 LeftShift S
+
+# --- Walk forward, jump mid-walk, walk back ---
+echo "[3] Walking jump"
+hold LeftShift
+hold W
+sleep 1.0
+press Space 0.3
+sleep 2.0
+release W
+hold_for 1.0 S
+release LeftShift
+sleep 0.3
+
+# --- Run a small circle (W→D→S→A) ---
+echo "[4] Run circle"
+hold_for 0.8 W
+hold_for 0.8 D
+hold_for 0.8 S
+hold_for 0.8 A
+sleep 0.3
+
+# --- Run forward, jump, run back ---
+echo "[5] Running jump"
+hold W
+sleep 0.8
+press Space 0.3
+sleep 2.0
+release W
+hold_for 0.8 S
+sleep 0.3
+
+# --- Diagonal walk circle (WD→DS→SA→AW) ---
+echo "[6] Diagonal walk circle"
+hold LeftShift
+hold_for 1.0 W D
+hold_for 1.0 D S
+hold_for 1.0 S A
+hold_for 1.0 A W
+release LeftShift
+sleep 0.3
+
+# --- Run diagonal with jump ---
+echo "[7] Diagonal run + jump"
+hold_for 0.8 W D
+press Space 0.3
+sleep 2.0
+hold_for 0.8 S A
+sleep 0.3
+
+# --- Final lap: run circle with double jump ---
+echo "[Finale] Run circle with jumps"
+hold W
+sleep 0.8
+press Space 0.3
+sleep 2.0
+release W
+hold D
+sleep 0.8
+release D
+hold S
+sleep 0.8
+press Space 0.3
+sleep 2.0
+release S
+hold_for 0.8 A
 sleep 0.5
 
-echo "  Run forward (W)"
-hold_for 1.5 W
-sleep 0.3
-hold_for 1.5 S
-sleep 0.5
-
-echo "  Walk backward (Shift+S)"
-hold_for 2.0 LeftShift S
-sleep 0.3
-hold_for 2.0 LeftShift W
-sleep 0.5
-
-echo "  Jump from idle (Space)"
+# --- End with idle jump ---
+echo "  Final jump!"
 press Space 0.3
 sleep 2.5
 
-echo "  Running jump (W + Space)"
-hold_for 1.0 W
-press Space 0.3
-sleep 2.0
-hold_for 1.0 S
-sleep 0.5
-
-# ===== Part 2: Idle variants =====
 echo ""
-echo "[Part 2] Idle variants"
-
-play_motion WAIT00 3.0
-play_motion WAIT01 4.0
-play_motion WAIT02 4.0
-play_motion WAIT03 3.0
-play_motion WAIT04 3.0
-
-# ===== Part 3: Walk variants =====
-echo ""
-echo "[Part 3] Walk variants"
-
-play_motion WALK00_F 2.0
-play_motion WALK00_B 2.5
-play_motion WALK00_L 2.0
-play_motion WALK00_R 2.0
-
-# ===== Part 4: Run variants =====
-echo ""
-echo "[Part 4] Run variants"
-
-play_motion RUN00_F 1.5
-play_motion RUN00_L 1.5
-play_motion RUN00_R 1.5
-
-# ===== Part 5: Jump variants =====
-echo ""
-echo "[Part 5] Jump variants"
-
-play_motion JUMP00 2.5
-play_motion JUMP00B 2.5
-play_motion JUMP01 2.5
-play_motion JUMP01B 2.5
-
-# ===== Part 6: Action motions =====
-echo ""
-echo "[Part 6] Action motions"
-
-play_motion HANDUP00_R 1.5
-play_motion SLIDE00 2.0
-play_motion UMATOBI00 2.0
-play_motion REFLESH00 4.0
-
-# ===== Part 7: Reaction motions =====
-echo ""
-echo "[Part 7] Reaction motions"
-
-play_motion DAMAGED00 1.8
-play_motion DAMAGED01 4.0
-play_motion LOSE00 4.0
-
-# ===== Part 8: Finale =====
-echo ""
-echo "[Part 8] Finale"
-
-play_motion WIN00 4.5
-
-echo ""
-echo "=== All 25 motions demonstrated! ==="
+echo "=== Demo Complete! ==="
