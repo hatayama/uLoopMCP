@@ -15,9 +15,9 @@ namespace io.github.hatayama.uLoopMCP
         private const float BADGE_HEIGHT = 36f;
         private const float BADGE_SPACING = 8f;
         private const float MARGIN = 16f;
+        private static readonly Color BadgeBackgroundColor = new Color(0f, 0f, 0f, 0.7f);
 
         private Canvas _canvas = null!;
-        private CanvasGroup _canvasGroup = null!;
         private readonly List<BadgeEntry> _badgePool = new();
         private readonly List<string> _displayKeys = new();
 
@@ -29,10 +29,6 @@ namespace io.github.hatayama.uLoopMCP
             _canvas = gameObject.AddComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             _canvas.sortingOrder = 32000;
-
-            _canvasGroup = gameObject.AddComponent<CanvasGroup>();
-            _canvasGroup.interactable = false;
-            _canvasGroup.blocksRaycasts = false;
 
             gameObject.AddComponent<CanvasScaler>();
         }
@@ -83,17 +79,8 @@ namespace io.github.hatayama.uLoopMCP
 
             for (int i = 0; i < _displayKeys.Count; i++)
             {
-                UpdateBadge(_badgePool[i], _displayKeys[i], i);
-            }
-
-            if (pressKey != null && pressElapsed > PRESS_DISPLAY_DURATION)
-            {
-                float fadeT = Mathf.Clamp01((pressElapsed - PRESS_DISPLAY_DURATION) / FADE_DURATION);
-                _canvasGroup.alpha = 1f - fadeT;
-            }
-            else if (_canvasGroup.alpha < 1f)
-            {
-                _canvasGroup.alpha = 1f;
+                float alpha = GetBadgeAlpha(_displayKeys[i], pressKey, pressElapsed);
+                UpdateBadge(_badgePool[i], _displayKeys[i], i, alpha);
             }
         }
 
@@ -122,7 +109,7 @@ namespace io.github.hatayama.uLoopMCP
             rect.pivot = Vector2.zero;
 
             Image bg = badge.AddComponent<Image>();
-            bg.color = new Color(0f, 0f, 0f, 0.7f);
+            bg.color = BadgeBackgroundColor;
 
             GameObject textGo = new GameObject("KeyText");
             textGo.transform.SetParent(badge.transform, false);
@@ -140,26 +127,45 @@ namespace io.github.hatayama.uLoopMCP
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleCenter;
 
-            return new BadgeEntry(badge, rect, text);
+            return new BadgeEntry(badge, rect, bg, text);
         }
 
-        private void UpdateBadge(BadgeEntry badge, string keyName, int index)
+        private void UpdateBadge(BadgeEntry badge, string keyName, int index, float alpha)
         {
             float xPos = MARGIN + index * (BADGE_WIDTH + BADGE_SPACING);
             badge.Rect.anchoredPosition = new Vector2(xPos, MARGIN);
+            badge.Background.color = new Color(
+                BadgeBackgroundColor.r,
+                BadgeBackgroundColor.g,
+                BadgeBackgroundColor.b,
+                BadgeBackgroundColor.a * alpha);
+            badge.Text.color = new Color(Color.white.r, Color.white.g, Color.white.b, alpha);
             badge.Text.text = keyName;
+        }
+
+        private static float GetBadgeAlpha(string keyName, string? pressKey, float pressElapsed)
+        {
+            if (pressKey == null || keyName != pressKey || pressElapsed <= PRESS_DISPLAY_DURATION)
+            {
+                return 1f;
+            }
+
+            float fadeT = Mathf.Clamp01((pressElapsed - PRESS_DISPLAY_DURATION) / FADE_DURATION);
+            return 1f - fadeT;
         }
 
         private readonly struct BadgeEntry
         {
             public readonly GameObject Root;
             public readonly RectTransform Rect;
+            public readonly Image Background;
             public readonly Text Text;
 
-            public BadgeEntry(GameObject root, RectTransform rect, Text text)
+            public BadgeEntry(GameObject root, RectTransform rect, Image background, Text text)
             {
                 Root = root;
                 Rect = rect;
+                Background = background;
                 Text = text;
             }
         }

@@ -9,6 +9,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
+using UnityEngine.UI;
 using UnityEngine.TestTools;
 
 namespace Tests.PlayMode
@@ -48,6 +49,11 @@ namespace Tests.PlayMode
             settings.updateMode = originalUpdateMode;
             Time.timeScale = originalTimeScale;
             KeyboardKeyState.ReleaseAllKeys();
+            SimulateKeyboardOverlayState.Clear();
+            if (SimulateKeyboardOverlay.Instance != null)
+            {
+                Object.Destroy(SimulateKeyboardOverlay.Instance.gameObject);
+            }
             Object.Destroy(framePressObserverGo);
             Object.Destroy(eventSystemGo);
             base.TearDown();
@@ -142,6 +148,34 @@ namespace Tests.PlayMode
             });
 
             CollectionAssert.Contains(SimulateKeyboardOverlayState.HeldKeys, "LeftShift", "Press should not clear held-key overlay badges");
+        }
+
+        [UnityTest]
+        public IEnumerator OverlayFade_Should_NotDimHeldKeyBadge()
+        {
+            yield return null;
+
+            SimulateKeyboardOverlayState.AddHeldKey("LeftShift");
+            SimulateKeyboardOverlayState.ShowPress("Space");
+
+            GameObject overlayGo = new GameObject("OverlayFadeTest");
+            overlayGo.AddComponent<SimulateKeyboardOverlay>();
+
+            yield return null;
+            yield return new WaitForSecondsRealtime(0.55f);
+            yield return null;
+
+            Image[] images = overlayGo.GetComponentsInChildren<Image>();
+            Text[] texts = overlayGo.GetComponentsInChildren<Text>();
+
+            Assert.AreEqual(2, images.Length, "Overlay should render held and pressed badges");
+            Assert.AreEqual(2, texts.Length, "Overlay should render held and pressed text labels");
+            Assert.AreEqual("LeftShift", texts[0].text);
+            Assert.AreEqual("Space", texts[1].text);
+            Assert.AreEqual(0.7f, images[0].color.a, 0.01f, "Held-key badge should keep full opacity");
+            Assert.Less(images[1].color.a, 0.7f, "Transient press badge should fade out");
+            Assert.AreEqual(1f, texts[0].color.a, 0.01f, "Held-key text should keep full opacity");
+            Assert.Less(texts[1].color.a, 1f, "Transient press text should fade out");
         }
 
         [UnityTest]

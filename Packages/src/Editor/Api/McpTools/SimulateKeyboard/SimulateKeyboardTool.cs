@@ -49,6 +49,16 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
+            if (EditorApplication.isPaused)
+            {
+                return new SimulateKeyboardResponse
+                {
+                    Success = false,
+                    Message = "PlayMode is paused. Resume PlayMode before simulating keyboard input.",
+                    Action = parameters.Action.ToString()
+                };
+            }
+
             if (string.IsNullOrEmpty(parameters.Key))
             {
                 return new SimulateKeyboardResponse
