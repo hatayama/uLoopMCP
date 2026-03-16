@@ -1,11 +1,10 @@
 #!/bin/sh
 # Automated UnityChan demo choreography
-# Showcases all available motions: idle, walk, run, jump, 8-directional movement
+# Moves in loops around the center to stay on the ground plane
 
 set -e
 
 cleanup() {
-    # Release any stuck keys and stop PlayMode on interruption
     uloop control-play-mode --action Stop 2>/dev/null
 }
 trap cleanup EXIT INT TERM
@@ -14,7 +13,6 @@ press() {
     uloop simulate-keyboard --action Press --key "$1" --duration "${2:-0.5}"
 }
 
-# Hold keys for a duration, then auto-release all of them
 hold_for() {
     duration="$1"
     shift
@@ -27,7 +25,6 @@ hold_for() {
     done
 }
 
-# Hold keys without releasing (for combining with press mid-hold)
 hold() {
     uloop simulate-keyboard --action KeyDown --key "$1"
 }
@@ -36,137 +33,73 @@ release() {
     uloop simulate-keyboard --action KeyUp --key "$1"
 }
 
-echo "=== UnityChan Demo Choreography ==="
-echo ""
+echo "=== UnityChan Demo ==="
 
-# --- Ensure PlayMode and focus ---
-echo "[Setup] Starting PlayMode and focusing window..."
+echo "[Setup] Starting PlayMode..."
 uloop control-play-mode --action Play
 sleep 2
 uloop focus-window
 sleep 0.5
 
-# --- Act 1: Idle Jump ---
-echo "[Act 1] Idle jump - showing off from standstill"
+# --- Idle jump ---
+echo "[1] Idle jump"
 press Space 0.3
 sleep 2.0
 
-# --- Act 2: Gentle walk forward ---
-echo "[Act 2] Elegant walk forward"
-hold_for 3.0 LeftShift W
-sleep 0.5
-
-# --- Act 3: Sprint forward ---
-echo "[Act 3] Break into a sprint!"
-hold W
-sleep 2.0
-
-# --- Act 4: Running jump ---
-echo "[Act 4] Running jump!"
-press Space 0.3
-sleep 2.0
-release W
-sleep 0.5
-
-# --- Act 5: Strafe right while walking ---
-echo "[Act 5] Walk to the right"
-hold_for 2.5 LeftShift D
-sleep 0.5
-
-# --- Act 6: Sprint left ---
-echo "[Act 6] Sprint to the left"
-hold A
-sleep 2.0
-
-# --- Act 7: Jump while sprinting left ---
-echo "[Act 7] Jump while sprinting left!"
-press Space 0.3
-sleep 2.0
-release A
-sleep 0.5
-
-# --- Act 8: Diagonal run (forward-right) ---
-echo "[Act 8] Diagonal sprint forward-right"
-hold W
-hold D
-sleep 2.5
-
-# --- Act 9: Jump mid-diagonal sprint ---
-echo "[Act 9] Jump during diagonal sprint!"
-press Space 0.3
-sleep 2.0
-release D
-release W
-sleep 0.5
-
-# --- Act 10: Walk backward ---
-echo "[Act 10] Walk backward"
+# --- Walk forward, then walk back (return to center) ---
+echo "[2] Walk forward and back"
+hold_for 2.0 LeftShift W
+sleep 0.3
 hold_for 2.0 LeftShift S
 sleep 0.5
 
-# --- Act 11: Sprint backward ---
-echo "[Act 11] Sprint backward"
-hold_for 1.5 S
-sleep 0.5
-
-# --- Act 12: Quick direction changes (zig-zag) ---
-echo "[Act 12] Zig-zag sprint!"
-hold W
+# --- Sprint right, jump, sprint back left ---
+echo "[3] Sprint right with jump"
 hold D
-sleep 0.8
+sleep 1.5
+press Space 0.3
+sleep 2.0
 release D
-hold A
-sleep 0.8
-release A
-hold D
-sleep 0.8
-release D
-release W
-sleep 0.5
-
-# --- Act 13: Walk in a square ---
-echo "[Act 13] Walk in a square"
-hold LeftShift
-hold_for 1.5 W
-hold_for 1.5 D
-hold_for 1.5 S
 hold_for 1.5 A
+sleep 0.5
+
+# --- Diagonal sprint: forward-right, then back-left (return) ---
+echo "[4] Diagonal sprint loop"
+hold_for 1.5 W D
+sleep 0.3
+hold_for 1.5 S A
+sleep 0.5
+
+# --- Walk a square (stays in same area) ---
+echo "[5] Walk in a square"
+hold LeftShift
+hold_for 1.2 W
+hold_for 1.2 D
+hold_for 1.2 S
+hold_for 1.2 A
 release LeftShift
 sleep 0.5
 
-# --- Act 14: Arrow keys - run forward with arrow ---
-echo "[Act 14] Arrow key sprint forward"
-hold UpArrow
-sleep 2.0
-
-# --- Act 15: Arrow key jump ---
-echo "[Act 15] Arrow key running jump!"
-press Space 0.3
-sleep 2.0
-release UpArrow
-sleep 0.5
-
-# --- Act 16: Diagonal arrow keys ---
-echo "[Act 16] Diagonal arrow keys"
-hold_for 2.0 UpArrow RightArrow
-sleep 0.5
-
-# --- Grand Finale: Sprint forward, jump, land, idle jump ---
-echo "[Finale] Grand finale!"
+# --- Sprint forward, double jump, sprint back ---
+echo "[6] Sprint and double jump"
 hold W
-sleep 1.5
-echo "  Jump 1!"
+sleep 1.0
 press Space 0.3
 sleep 2.0
-echo "  Jump 2!"
 press Space 0.3
 sleep 2.0
 release W
-sleep 1.0
-echo "  Final idle jump!"
+hold_for 2.0 S
+sleep 0.5
+
+# --- Finale: diagonal walk, then idle jump ---
+echo "[Finale] Closing"
+hold_for 1.5 LeftShift W D
+sleep 0.3
+hold_for 1.5 LeftShift S A
+sleep 0.5
 press Space 0.3
 sleep 2.5
 
-# --- Cleanup handled by trap ---
 echo ""
 echo "=== Demo Complete! ==="
