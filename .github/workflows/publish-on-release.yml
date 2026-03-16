@@ -1,12 +1,8 @@
-name: manual-npm-publish
+name: publish-on-release
 
 on:
-  workflow_dispatch:
-    inputs:
-      dry-run:
-        description: 'Dry run (skip actual publish)'
-        type: boolean
-        default: false
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -15,9 +11,12 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    if: startsWith(github.event.release.tag_name, 'v')
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
 
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v6
@@ -25,8 +24,8 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: 📋 Check version
-        id: version
+      - name: 📋 Check if already published
+        id: check
         run: |
           CLI_VERSION=$(jq -r '.version' Packages/src/Cli~/package.json)
           echo "version=${CLI_VERSION}" >> "$GITHUB_OUTPUT"
@@ -34,27 +33,25 @@ jobs:
 
           PUBLISHED=$(npm view uloop-cli versions --json 2>/dev/null || echo '[]')
           if echo "$PUBLISHED" | jq -e ". | index(\"${CLI_VERSION}\")" > /dev/null 2>&1; then
-            echo "❌ Version ${CLI_VERSION} already exists on npm"
-            exit 1
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+            echo "⏭️ Version ${CLI_VERSION} already exists on npm, skipping"
+          else
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+            echo "✅ Version ${CLI_VERSION} is not yet published"
           fi
-          echo "✅ Version ${CLI_VERSION} is not yet published"
 
       - name: 📦 Build CLI
+        if: steps.check.outputs.already_published == 'false'
         run: |
           cd Packages/src/Cli~
           npm ci
           npm run build
 
       - name: 🚀 Publish CLI to npm
-        if: ${{ inputs.dry-run == false }}
+        if: steps.check.outputs.already_published == 'false'
         run: |
           cd Packages/src/Cli~
           npm install -g npm@latest
+          echo "📋 npm version: $(npm --version)"
           npm publish --access public --provenance
-          echo "✅ CLI v${{ steps.version.outputs.version }} published to npm"
-
-      - name: 🧪 Dry run - skip publish
-        if: ${{ inputs.dry-run == true }}
-        run: |
-          echo "🧪 Dry run mode - skipping actual publish"
-          echo "Would publish uloop-cli@${{ steps.version.outputs.version }}"
+          echo "✅ CLI v${{ steps.check.outputs.version }} published to npm with provenance"
