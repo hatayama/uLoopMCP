@@ -43,30 +43,38 @@ sleep 0.5
 press Space 0.3
 sleep 2.0
 
-# Walk circle with jump
+# Walk circle with jump mid-walk
 hold LeftShift
-hold_for 1.0 W
+hold W
+sleep 1.0
 press Space 0.3
 sleep 2.0
+release W
 hold_for 1.0 D
 hold_for 1.0 S
 hold_for 1.0 A
 release LeftShift
 sleep 0.3
 
-# Run circle with jump
-hold_for 0.8 W
+# Run circle with jump mid-run
+hold W
+sleep 0.8
 press Space 0.3
 sleep 2.0
+release W
 hold_for 0.8 D
 hold_for 0.8 S
 hold_for 0.8 A
 sleep 0.3
 
-# Diagonal run + jump, return
-hold_for 0.8 W D
+# Diagonal run + jump mid-run, return
+hold W
+hold D
+sleep 0.8
 press Space 0.3
 sleep 2.0
+release D
+release W
 hold_for 0.8 S A
 sleep 0.5
 
