@@ -168,7 +168,7 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                await ApplyOnNextDynamicUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
+                await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
                 float startTime = Time.realtimeSinceStartup;
                 float elapsed = 0f;
                 while (elapsed < effectiveDuration)
@@ -179,7 +179,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
-                await ApplyOnNextDynamicUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), ct);
+                await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), ct);
                 await EditorDelay.DelayFrame(1, ct);
                 SimulateKeyboardOverlayState.Clear();
             }
@@ -209,7 +209,7 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            await ApplyOnNextDynamicUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
+            await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
             KeyboardKeyState.SetKeyDown(key);
             SimulateKeyboardOverlayState.AddHeldKey(keyName);
 
@@ -237,7 +237,7 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            await ApplyOnNextDynamicUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), ct);
+            await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), ct);
             KeyboardKeyState.SetKeyUp(key);
             SimulateKeyboardOverlayState.RemoveHeldKey(keyName);
 
@@ -259,15 +259,17 @@ namespace io.github.hatayama.uLoopMCP
             return keyName;
         }
 
-        private static Task ApplyOnNextDynamicUpdate(Action apply, CancellationToken ct)
+        private static Task ApplyOnNextConfiguredUpdate(Action apply, CancellationToken ct)
         {
+            InputUpdateType targetUpdateType = KeyboardInputUpdateTypeResolver.Resolve();
             TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
             CancellationTokenRegistration registration = default;
             Action? callback = null;
 
             callback = () =>
             {
-                if (InputState.currentUpdateType != InputUpdateType.Dynamic)
+                InputUpdateType currentUpdateType = InputState.currentUpdateType;
+                if (!KeyboardInputUpdateTypeResolver.IsMatch(currentUpdateType, targetUpdateType))
                 {
                     return;
                 }

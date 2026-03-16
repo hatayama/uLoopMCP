@@ -44,6 +44,7 @@ namespace io.github.hatayama.uLoopMCP
         // ALL currently held keys into every event — not just the target key.
         public static void SetKeyState(Keyboard keyboard, Key key, bool pressed)
         {
+            InputUpdateType updateType = KeyboardInputUpdateTypeResolver.Resolve();
             using (StateEvent.From(keyboard, out InputEventPtr eventPtr))
             {
                 foreach (Key heldKey in _heldKeys)
@@ -53,9 +54,8 @@ namespace io.github.hatayama.uLoopMCP
 
                 keyboard[key].WriteValueIntoEvent(pressed ? 1f : 0f, eventPtr);
                 // Updating player state directly avoids editor focus-dependent routing.
-                InputState.Change(keyboard, eventPtr, InputUpdateType.Dynamic);
+                InputState.Change(keyboard, eventPtr, updateType);
             }
-
         }
 
         public static void ReleaseAllKeys()
@@ -74,7 +74,8 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     keyboard[key].WriteValueIntoEvent(0f, eventPtr);
                 }
-                InputState.Change(keyboard, eventPtr, InputUpdateType.Dynamic);
+                InputUpdateType updateType = KeyboardInputUpdateTypeResolver.Resolve();
+                InputState.Change(keyboard, eventPtr, updateType);
             }
 
             _heldKeys.Clear();

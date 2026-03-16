@@ -26,7 +26,7 @@ uloop simulate-keyboard --action <action> --key <key> [options]
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `--action` | enum | `Press` | `Press`, `KeyDown`, `KeyUp` |
-| `--key` | string | (required) | Key name matching Input System Key enum (e.g. `W`, `Space`, `LeftShift`, `A`, `Return`). Case-insensitive. |
+| `--key` | string | (required) | Key name matching Input System Key enum (e.g. `W`, `Space`, `LeftShift`, `A`, `Enter`). Case-insensitive. |
 | `--duration` | number | `0` | Hold duration in seconds for Press action (0 = one-shot tap). Ignored by KeyDown/KeyUp. |
 
 ### Actions

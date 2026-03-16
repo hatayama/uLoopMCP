@@ -36,7 +36,7 @@ namespace Tests.PlayMode
 
         public override void TearDown()
         {
-            KeyboardKeyState.Clear();
+            KeyboardKeyState.ReleaseAllKeys();
             Object.Destroy(framePressObserverGo);
             Object.Destroy(eventSystemGo);
             base.TearDown();
