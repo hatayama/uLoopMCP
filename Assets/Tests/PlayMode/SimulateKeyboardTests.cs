@@ -15,9 +15,11 @@ namespace Tests.PlayMode
     public class SimulateKeyboardTests : InputTestFixture
     {
         private GameObject eventSystemGo = null!;
+        private GameObject framePressObserverGo = null!;
         private SimulateKeyboardTool tool = null!;
         private SimulateKeyboardResponse lastResponse = null!;
         private Keyboard keyboard = null!;
+        private FramePressObserver framePressObserver = null!;
 
         public override void Setup()
         {
@@ -25,6 +27,8 @@ namespace Tests.PlayMode
 
             eventSystemGo = new GameObject("TestEventSystem");
             eventSystemGo.AddComponent<EventSystem>();
+            framePressObserverGo = new GameObject("FramePressObserver");
+            framePressObserver = framePressObserverGo.AddComponent<FramePressObserver>();
 
             tool = new SimulateKeyboardTool();
             keyboard = InputSystem.AddDevice<Keyboard>();
@@ -33,6 +37,7 @@ namespace Tests.PlayMode
         public override void TearDown()
         {
             KeyboardKeyState.Clear();
+            Object.Destroy(framePressObserverGo);
             Object.Destroy(eventSystemGo);
             base.TearDown();
         }
@@ -71,6 +76,40 @@ namespace Tests.PlayMode
 
             Assert.IsTrue(lastResponse.Success);
             Assert.AreEqual("Space", lastResponse.KeyName);
+        }
+
+        [UnityTest]
+        public IEnumerator Press_Space_Should_SetWasPressedThisFrame()
+        {
+            yield return null;
+
+            framePressObserver.ResetCount();
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.Press.ToString(),
+                ["key"] = "Space",
+                ["duration"] = 0.1f
+            });
+
+            Assert.Greater(framePressObserver.SpacePressedFrameCount, 0, "Space press should be visible via wasPressedThisFrame");
+        }
+
+        [UnityTest]
+        public IEnumerator Press_Enter_Should_SetWasPressedThisFrame()
+        {
+            yield return null;
+
+            framePressObserver.ResetCount();
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.Press.ToString(),
+                ["key"] = "Enter",
+                ["duration"] = 0.1f
+            });
+
+            Assert.Greater(framePressObserver.EnterPressedFrameCount, 0, "Enter press should be visible via wasPressedThisFrame");
         }
 
         [UnityTest]
@@ -258,6 +297,37 @@ namespace Tests.PlayMode
         }
 
         #endregion
+    }
+
+    public class FramePressObserver : MonoBehaviour
+    {
+        public int SpacePressedFrameCount { get; private set; }
+        public int EnterPressedFrameCount { get; private set; }
+
+        private void Update()
+        {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                return;
+            }
+
+            if (keyboard.spaceKey.wasPressedThisFrame)
+            {
+                SpacePressedFrameCount++;
+            }
+
+            if (keyboard.enterKey.wasPressedThisFrame)
+            {
+                EnterPressedFrameCount++;
+            }
+        }
+
+        public void ResetCount()
+        {
+            SpacePressedFrameCount = 0;
+            EnterPressedFrameCount = 0;
+        }
     }
 }
 #endif

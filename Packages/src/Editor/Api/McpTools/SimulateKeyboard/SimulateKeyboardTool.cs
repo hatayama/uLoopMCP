@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEngine;
 #if ULOOPMCP_HAS_INPUT_SYSTEM
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 #endif
 
 namespace io.github.hatayama.uLoopMCP
@@ -98,11 +99,11 @@ namespace io.github.hatayama.uLoopMCP
                     break;
 
                 case KeyboardAction.KeyDown:
-                    response = ExecuteKeyDown(keyboard, key);
+                    response = await ExecuteKeyDown(keyboard, key, ct);
                     break;
 
                 case KeyboardAction.KeyUp:
-                    response = ExecuteKeyUp(keyboard, key);
+                    response = await ExecuteKeyUp(keyboard, key, ct);
                     break;
 
                 default:
@@ -167,7 +168,7 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                KeyboardKeyState.SetKeyState(keyboard, key, true);
+                await ApplyOnNextDynamicUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
                 float startTime = Time.realtimeSinceStartup;
                 float elapsed = 0f;
                 while (elapsed < effectiveDuration)
@@ -178,7 +179,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
-                KeyboardKeyState.SetKeyState(keyboard, key, false);
+                await ApplyOnNextDynamicUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), ct);
                 await EditorDelay.DelayFrame(1, ct);
                 SimulateKeyboardOverlayState.Clear();
             }
@@ -193,7 +194,7 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        private SimulateKeyboardResponse ExecuteKeyDown(Keyboard keyboard, Key key)
+        private async Task<SimulateKeyboardResponse> ExecuteKeyDown(Keyboard keyboard, Key key, CancellationToken ct)
         {
             string keyName = key.ToString();
 
@@ -208,7 +209,7 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            KeyboardKeyState.SetKeyState(keyboard, key, true);
+            await ApplyOnNextDynamicUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
             KeyboardKeyState.SetKeyDown(key);
             SimulateKeyboardOverlayState.AddHeldKey(keyName);
 
@@ -221,7 +222,7 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        private SimulateKeyboardResponse ExecuteKeyUp(Keyboard keyboard, Key key)
+        private async Task<SimulateKeyboardResponse> ExecuteKeyUp(Keyboard keyboard, Key key, CancellationToken ct)
         {
             string keyName = key.ToString();
 
@@ -236,7 +237,7 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            KeyboardKeyState.SetKeyState(keyboard, key, false);
+            await ApplyOnNextDynamicUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), ct);
             KeyboardKeyState.SetKeyUp(key);
             SimulateKeyboardOverlayState.RemoveHeldKey(keyName);
 
@@ -256,6 +257,40 @@ namespace io.github.hatayama.uLoopMCP
                 return Key.Enter.ToString();
             }
             return keyName;
+        }
+
+        private static Task ApplyOnNextDynamicUpdate(Action apply, CancellationToken ct)
+        {
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+            CancellationTokenRegistration registration = default;
+            Action? callback = null;
+
+            callback = () =>
+            {
+                if (InputState.currentUpdateType != InputUpdateType.Dynamic)
+                {
+                    return;
+                }
+
+                Debug.Assert(callback != null, "callback must be assigned before subscription");
+                InputSystem.onBeforeUpdate -= callback;
+                registration.Dispose();
+                apply();
+                tcs.TrySetResult(true);
+            };
+
+            InputSystem.onBeforeUpdate += callback;
+            if (ct.CanBeCanceled)
+            {
+                registration = ct.Register(() =>
+                {
+                    Debug.Assert(callback != null, "callback must be assigned before cancellation");
+                    InputSystem.onBeforeUpdate -= callback;
+                    tcs.TrySetCanceled(ct);
+                });
+            }
+
+            return tcs.Task;
         }
 #endif
     }

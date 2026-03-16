@@ -21,6 +21,7 @@ namespace UnityChan
         private static readonly int IdleState = Animator.StringToHash("Base Layer.Idle");
         private static readonly int LocoState = Animator.StringToHash("Base Layer.Locomotion");
         private static readonly int JumpState = Animator.StringToHash("Base Layer.Jump");
+        private static readonly int DamagedState = Animator.StringToHash("Base Layer.DAMAGED01");
 
         private float rotationVelocity;
         private bool jumpRequested;
@@ -41,14 +42,21 @@ namespace UnityChan
             orgColCenter = col.center;
         }
 
-        // wasPressedThisFrame is frame-based; FixedUpdate can miss it
+        // wasPressedThisFrame is frame-based; FixedUpdate can miss one-frame inputs such as Space and Enter.
         private void Update()
         {
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
 
             if (keyboard.spaceKey.wasPressedThisFrame)
+            {
                 jumpRequested = true;
+            }
+
+            if (keyboard.enterKey.wasPressedThisFrame)
+            {
+                RestartDamagedMotion();
+            }
         }
 
         private void FixedUpdate()
@@ -117,8 +125,9 @@ namespace UnityChan
         {
             int stateHash = currentState.fullPathHash;
 
-            if (stateHash == LocoState || stateHash == IdleState)
+            if (stateHash == LocoState || stateHash == IdleState || stateHash == DamagedState)
             {
+                rb.useGravity = true;
                 if (colliderDirty)
                 {
                     col.height = orgColHeight;
@@ -141,6 +150,13 @@ namespace UnityChan
 
                 animator.SetBool(JumpHash, false);
             }
+        }
+
+        private void RestartDamagedMotion()
+        {
+            Debug.Assert(animator != null, "animator must be initialized before damaged motion is requested");
+            // Play with normalizedTime = 0 so repeated Enter presses restart the motion immediately.
+            animator.Play(DamagedState, 0, 0f);
         }
     }
 }

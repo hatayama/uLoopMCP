@@ -62,24 +62,23 @@ sleep 0.8
 press Space 0.3
 sleep 2.0
 release W
-hold_for 0.8 D
-hold_for 0.8 S
-hold_for 0.8 A
+hold_for 0.8 RightArrow
+hold_for 0.8 DownArrow
+hold_for 0.8 LeftArrow
 sleep 0.3
 
-# Diagonal run + jump mid-run, return
-hold W
-hold D
-sleep 0.8
-press Space 0.3
-sleep 2.0
-release D
-release W
-hold_for 0.8 S A
-sleep 0.5
-
 # Final idle jump
-press Space 0.3
-sleep 2.5
+press Enter 0.1
+sleep 0.01
+press Enter 0.1
+sleep 0.01
+press Enter 0.1
+sleep 0.01
+press Enter 0.1
+sleep 0.01
+press Enter 0.1
+sleep 0.01
+press Enter 0.1
+sleep 5
 
 echo "=== Demo Complete! ==="
