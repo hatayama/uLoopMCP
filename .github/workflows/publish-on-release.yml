@@ -1,0 +1,69 @@
+name: publish-on-release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write  # Required for npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.release.tag_name, 'v')
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 📋 Check if already published
+        id: check
+        run: |
+          CLI_VERSION=$(jq -r '.version' Packages/src/Cli~/package.json)
+          if ! echo "${CLI_VERSION}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
+            echo "❌ Invalid semver: ${CLI_VERSION}"
+            exit 1
+          fi
+          echo "version=${CLI_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "📋 CLI version: ${CLI_VERSION}"
+
+          PUBLISHED=$(npm view uloop-cli versions --json 2>/dev/null || echo '[]')
+          if echo "$PUBLISHED" | jq -e ". | index(\"${CLI_VERSION}\")" > /dev/null 2>&1; then
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+            echo "⏭️ Version ${CLI_VERSION} already exists on npm, skipping"
+          else
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+            echo "✅ Version ${CLI_VERSION} is not yet published"
+          fi
+
+      - name: 📦 Build CLI
+        if: steps.check.outputs.already_published == 'false'
+        run: |
+          cd Packages/src/Cli~
+          npm ci
+          npm run build
+
+      - name: 🔍 Verify npm package contents
+        if: steps.check.outputs.already_published == 'false'
+        run: |
+          cd Packages/src/Cli~
+          npm pack --dry-run --json > /tmp/pack.json
+          jq -e '.[0].files[] | select(.path=="dist/cli.bundle.cjs")' /tmp/pack.json > /dev/null
+          echo "✅ dist/cli.bundle.cjs found in package"
+
+      - name: 🚀 Publish CLI to npm
+        if: steps.check.outputs.already_published == 'false'
+        run: |
+          cd Packages/src/Cli~
+          npm install -g npm@latest
+          echo "📋 npm version: $(npm --version)"
+          npm publish --access public --provenance
+          echo "✅ CLI v${{ steps.check.outputs.version }} published to npm with provenance"
