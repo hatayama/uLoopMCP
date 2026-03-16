@@ -51,7 +51,7 @@ https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 https://github.com/hatayama/unity-cli-loop.git?path=/Packages/src
 ```
 
-> **既存ユーザーの方へ**: v1.0.0でリポジトリ名が `uLoopMCP` から `unity-cli-loop` に変更されました。git URL でインストールされている場合は、`manifest.json` の URL を更新してください：
+> **git URL でインストールされた方へ**: v1.0.0でリポジトリ名が `uLoopMCP` から `unity-cli-loop` に変更されました。`manifest.json` の URL を更新してください：
 > ```
 > 旧: https://github.com/hatayama/uLoopMCP.git?path=/Packages/src
 > 新: https://github.com/hatayama/unity-cli-loop.git?path=/Packages/src
