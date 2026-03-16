@@ -1,6 +1,6 @@
 #!/bin/sh
-# Automated UnityChan demo choreography
-# Moves in loops around the center to stay on the ground plane
+# Automated UnityChan demo - plays ALL available motions
+# Stays near center using back-and-forth patterns
 
 set -e
 
@@ -25,15 +25,20 @@ hold_for() {
     done
 }
 
-hold() {
-    uloop simulate-keyboard --action KeyDown --key "$1"
+# CrossFade to a named animator state, wait for it to finish
+play_motion() {
+    name="$1"
+    wait_time="$2"
+    echo "  -> $name (${wait_time}s)"
+    uloop execute-dynamic-code --code "
+        var go = UnityEngine.GameObject.Find(\"unitychan\");
+        var animator = go.GetComponent<UnityEngine.Animator>();
+        animator.CrossFade(\"$name\", 0.25f);
+    "
+    sleep "$wait_time"
 }
 
-release() {
-    uloop simulate-keyboard --action KeyUp --key "$1"
-}
-
-echo "=== UnityChan Demo ==="
+echo "=== UnityChan Full Motion Demo ==="
 
 echo "[Setup] Starting PlayMode..."
 uloop control-play-mode --action Play
@@ -41,65 +46,100 @@ sleep 2
 uloop focus-window
 sleep 0.5
 
-# --- Idle jump ---
-echo "[1] Idle jump"
-press Space 0.3
+# ===== Part 1: Movement motions (WASD controlled) =====
+echo ""
+echo "[Part 1] Movement motions"
+
+echo "  Idle (WAIT00)"
 sleep 2.0
 
-# --- Walk forward, then walk back (return to center) ---
-echo "[2] Walk forward and back"
+echo "  Walk forward (Shift+W)"
 hold_for 2.0 LeftShift W
 sleep 0.3
 hold_for 2.0 LeftShift S
 sleep 0.5
 
-# --- Sprint right, jump, sprint back left ---
-echo "[3] Sprint right with jump"
-hold D
-sleep 1.5
-press Space 0.3
-sleep 2.0
-release D
-hold_for 1.5 A
-sleep 0.5
-
-# --- Diagonal sprint: forward-right, then back-left (return) ---
-echo "[4] Diagonal sprint loop"
-hold_for 1.5 W D
+echo "  Run forward (W)"
+hold_for 1.5 W
 sleep 0.3
-hold_for 1.5 S A
+hold_for 1.5 S
 sleep 0.5
 
-# --- Walk a square (stays in same area) ---
-echo "[5] Walk in a square"
-hold LeftShift
-hold_for 1.2 W
-hold_for 1.2 D
-hold_for 1.2 S
-hold_for 1.2 A
-release LeftShift
-sleep 0.5
-
-# --- Sprint forward, double jump, sprint back ---
-echo "[6] Sprint and double jump"
-hold W
-sleep 1.0
-press Space 0.3
-sleep 2.0
-press Space 0.3
-sleep 2.0
-release W
-hold_for 2.0 S
-sleep 0.5
-
-# --- Finale: diagonal walk, then idle jump ---
-echo "[Finale] Closing"
-hold_for 1.5 LeftShift W D
+echo "  Walk backward (Shift+S)"
+hold_for 2.0 LeftShift S
 sleep 0.3
-hold_for 1.5 LeftShift S A
+hold_for 2.0 LeftShift W
 sleep 0.5
+
+echo "  Jump from idle (Space)"
 press Space 0.3
 sleep 2.5
 
+echo "  Running jump (W + Space)"
+hold_for 1.0 W
+press Space 0.3
+sleep 2.0
+hold_for 1.0 S
+sleep 0.5
+
+# ===== Part 2: Idle variants =====
 echo ""
-echo "=== Demo Complete! ==="
+echo "[Part 2] Idle variants"
+
+play_motion WAIT00 3.0
+play_motion WAIT01 4.0
+play_motion WAIT02 4.0
+play_motion WAIT03 3.0
+play_motion WAIT04 3.0
+
+# ===== Part 3: Walk variants =====
+echo ""
+echo "[Part 3] Walk variants"
+
+play_motion WALK00_F 2.0
+play_motion WALK00_B 2.5
+play_motion WALK00_L 2.0
+play_motion WALK00_R 2.0
+
+# ===== Part 4: Run variants =====
+echo ""
+echo "[Part 4] Run variants"
+
+play_motion RUN00_F 1.5
+play_motion RUN00_L 1.5
+play_motion RUN00_R 1.5
+
+# ===== Part 5: Jump variants =====
+echo ""
+echo "[Part 5] Jump variants"
+
+play_motion JUMP00 2.5
+play_motion JUMP00B 2.5
+play_motion JUMP01 2.5
+play_motion JUMP01B 2.5
+
+# ===== Part 6: Action motions =====
+echo ""
+echo "[Part 6] Action motions"
+
+play_motion HANDUP00_R 1.5
+play_motion SLIDE00 2.0
+play_motion UMATOBI00 2.0
+play_motion REFLESH00 4.0
+
+# ===== Part 7: Reaction motions =====
+echo ""
+echo "[Part 7] Reaction motions"
+
+play_motion DAMAGED00 1.8
+play_motion DAMAGED01 4.0
+play_motion LOSE00 4.0
+
+# ===== Part 8: Finale =====
+echo ""
+echo "[Part 8] Finale"
+
+play_motion WIN00 4.5
+
+echo ""
+echo "=== All 25 motions demonstrated! ==="
