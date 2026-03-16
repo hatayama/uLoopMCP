@@ -319,9 +319,9 @@ namespace Tests.PlayMode
         // observer must sample wasPressedThisFrame from the same update loop.
         private void HandleAfterUpdate()
         {
-            InputUpdateType expectedUpdateType = ResolveExpectedUpdateType();
+            InputUpdateType expectedUpdateType = KeyboardInputUpdateTypeResolver.Resolve();
             InputUpdateType currentUpdateType = InputState.currentUpdateType;
-            if ((currentUpdateType & expectedUpdateType) != expectedUpdateType)
+            if (!KeyboardInputUpdateTypeResolver.IsMatch(currentUpdateType, expectedUpdateType))
             {
                 return;
             }
@@ -347,28 +347,6 @@ namespace Tests.PlayMode
         {
             SpacePressedFrameCount = 0;
             EnterPressedFrameCount = 0;
-        }
-
-        private static InputUpdateType ResolveExpectedUpdateType()
-        {
-            InputSettings? settings = InputSystem.settings;
-            if (settings == null)
-            {
-                return InputUpdateType.Dynamic;
-            }
-
-            InputSettings.UpdateMode updateMode = settings.updateMode;
-            switch (updateMode)
-            {
-                case InputSettings.UpdateMode.ProcessEventsInFixedUpdate:
-                    return InputUpdateType.Fixed;
-
-                case InputSettings.UpdateMode.ProcessEventsManually:
-                    return InputUpdateType.Manual;
-
-                default:
-                    return InputUpdateType.Dynamic;
-            }
         }
     }
 }
