@@ -8,6 +8,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.TestTools;
 
 namespace Tests.PlayMode
@@ -304,8 +305,27 @@ namespace Tests.PlayMode
         public int SpacePressedFrameCount { get; private set; }
         public int EnterPressedFrameCount { get; private set; }
 
-        private void Update()
+        private void OnEnable()
         {
+            InputSystem.onAfterUpdate += HandleAfterUpdate;
+        }
+
+        private void OnDisable()
+        {
+            InputSystem.onAfterUpdate -= HandleAfterUpdate;
+        }
+
+        // The tool follows the configured Input System update mode, so the
+        // observer must sample wasPressedThisFrame from the same update loop.
+        private void HandleAfterUpdate()
+        {
+            InputUpdateType expectedUpdateType = ResolveExpectedUpdateType();
+            InputUpdateType currentUpdateType = InputState.currentUpdateType;
+            if ((currentUpdateType & expectedUpdateType) != expectedUpdateType)
+            {
+                return;
+            }
+
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null)
             {
@@ -327,6 +347,28 @@ namespace Tests.PlayMode
         {
             SpacePressedFrameCount = 0;
             EnterPressedFrameCount = 0;
+        }
+
+        private static InputUpdateType ResolveExpectedUpdateType()
+        {
+            InputSettings? settings = InputSystem.settings;
+            if (settings == null)
+            {
+                return InputUpdateType.Dynamic;
+            }
+
+            InputSettings.UpdateMode updateMode = settings.updateMode;
+            switch (updateMode)
+            {
+                case InputSettings.UpdateMode.ProcessEventsInFixedUpdate:
+                    return InputUpdateType.Fixed;
+
+                case InputSettings.UpdateMode.ProcessEventsManually:
+                    return InputUpdateType.Manual;
+
+                default:
+                    return InputUpdateType.Dynamic;
+            }
         }
     }
 }
