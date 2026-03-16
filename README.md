@@ -52,7 +52,7 @@ https://github.com/hatayama/unity-cli-loop.git?path=/Packages/src
 ```
 
 > **If you installed via git URL before v1.0.0**: The repository was renamed from `uLoopMCP` to `unity-cli-loop` in v1.0.0. Please update your `manifest.json`:
-> ```
+> ```text
 > Old: https://github.com/hatayama/uLoopMCP.git?path=/Packages/src
 > New: https://github.com/hatayama/unity-cli-loop.git?path=/Packages/src
 > ```
