@@ -19,6 +19,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v6
@@ -35,6 +36,10 @@ jobs:
         id: version
         run: |
           CLI_VERSION=$(jq -r '.version' Packages/src/Cli~/package.json)
+          if ! echo "${CLI_VERSION}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
+            echo "❌ Invalid semver: ${CLI_VERSION}"
+            exit 1
+          fi
           echo "version=${CLI_VERSION}" >> "$GITHUB_OUTPUT"
           echo "📋 CLI version: ${CLI_VERSION}"
 
@@ -50,6 +55,13 @@ jobs:
           cd Packages/src/Cli~
           npm ci
           npm run build
+
+      - name: 🔍 Verify npm package contents
+        run: |
+          cd Packages/src/Cli~
+          npm pack --dry-run --json > /tmp/pack.json
+          jq -e '.[0].files[] | select(.path=="dist/cli.bundle.cjs")' /tmp/pack.json > /dev/null
+          echo "✅ dist/cli.bundle.cjs found in package"
 
       - name: 🚀 Publish CLI to npm
         if: ${{ inputs.dry-run == false }}
