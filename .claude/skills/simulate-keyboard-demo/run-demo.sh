@@ -3,6 +3,10 @@
 
 set -e
 
+# Unity must be focused for Input System to process injected key events
+uloop focus-window
+sleep 0.5
+
 # Phase 1: Single key presses
 uloop simulate-keyboard --action Press --key W --duration 0.5 && sleep 0.2
 uloop simulate-keyboard --action Press --key A --duration 0.5 && sleep 0.2

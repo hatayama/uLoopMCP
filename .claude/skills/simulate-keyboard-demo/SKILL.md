@@ -46,6 +46,8 @@ If PlayMode is not active, start it with `uloop control-play-mode --action Play`
 **Phase 6 — Combo keys**: Hold LeftCtrl + LeftAlt + Space simultaneously, then release all.
 
 ```bash
+# Unity must be focused for Input System to process injected key events
+uloop focus-window && sleep 0.5 && \
 # Phase 1: Single key presses (--duration 0.5 so each key lights up visibly)
 uloop simulate-keyboard --action Press --key W --duration 0.5 && sleep 0.2 && \
 uloop simulate-keyboard --action Press --key A --duration 0.5 && sleep 0.2 && \
