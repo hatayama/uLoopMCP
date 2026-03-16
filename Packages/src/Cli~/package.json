@@ -27,7 +27,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hatayama/uLoopMCP.git",
+    "url": "git+https://github.com/hatayama/unity-cli-loop.git",
     "directory": "Packages/src/Cli~"
   },
   "bugs": {
