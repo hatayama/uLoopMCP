@@ -362,7 +362,10 @@ namespace Tests.PlayMode
         private IEnumerator RunTool(JObject parameters)
         {
             Task<BaseToolResponse> task = tool.ExecuteAsync(parameters);
-            yield return new WaitUntil(() => task.IsCompleted);
+            float timeoutAt = Time.realtimeSinceStartup + 5f;
+            yield return new WaitUntil(() =>
+                task.IsCompleted || Time.realtimeSinceStartup >= timeoutAt);
+            Assert.IsTrue(task.IsCompleted, "Tool execution timed out.");
             Assert.IsFalse(task.IsFaulted, $"Tool execution should not fault: {task.Exception}");
             lastResponse = (SimulateMouseResponse)task.Result;
         }

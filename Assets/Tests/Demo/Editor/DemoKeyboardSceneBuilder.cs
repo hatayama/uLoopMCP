@@ -64,7 +64,8 @@ namespace io.github.hatayama.uLoopMCP
             CreateKeyboard(canvasGo.transform);
             CreateStatusText(canvasGo.transform);
 
-            EditorSceneManager.SaveScene(scene, SCENE_PATH);
+            bool saved = EditorSceneManager.SaveScene(scene, SCENE_PATH);
+            Debug.Assert(saved, $"[DemoKeyboardSceneBuilder] Failed to save scene to {SCENE_PATH}");
             Debug.Log($"[DemoKeyboardSceneBuilder] Scene saved to {SCENE_PATH}");
         }
 
