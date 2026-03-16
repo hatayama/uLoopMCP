@@ -54,6 +54,7 @@ namespace io.github.hatayama.uLoopMCP
                 keyboard[key].WriteValueIntoEvent(pressed ? 1f : 0f, eventPtr);
                 InputSystem.QueueEvent(eventPtr);
             }
+
         }
 
         public static void ReleaseAllKeys()
