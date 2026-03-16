@@ -36,8 +36,8 @@ echo "=== UnityChan Demo ==="
 
 uloop control-play-mode --action Play
 sleep 2
-uloop focus-window
-sleep 0.5
+# uloop focus-window
+# sleep 0.5
 
 # Idle jump
 press Space 0.3

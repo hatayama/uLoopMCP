@@ -165,9 +165,9 @@ namespace io.github.hatayama.uLoopMCP
                 ? McpConstants.SIMULATE_KEYBOARD_DEFAULT_PRESS_DURATION
                 : duration;
 
-            KeyboardKeyState.SetKeyState(keyboard, key, true);
             try
             {
+                KeyboardKeyState.SetKeyState(keyboard, key, true);
                 float startTime = Time.realtimeSinceStartup;
                 float elapsed = 0f;
                 while (elapsed < effectiveDuration)
@@ -179,10 +179,9 @@ namespace io.github.hatayama.uLoopMCP
             finally
             {
                 KeyboardKeyState.SetKeyState(keyboard, key, false);
+                await EditorDelay.DelayFrame(1, ct);
+                SimulateKeyboardOverlayState.Clear();
             }
-            await EditorDelay.DelayFrame(1, ct);
-
-            SimulateKeyboardOverlayState.Clear();
 
             string durationText = duration > 0f ? $" for {duration:F1}s" : "";
             return new SimulateKeyboardResponse

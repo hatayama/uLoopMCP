@@ -52,7 +52,8 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 keyboard[key].WriteValueIntoEvent(pressed ? 1f : 0f, eventPtr);
-                InputSystem.QueueEvent(eventPtr);
+                // Updating player state directly avoids editor focus-dependent routing.
+                InputState.Change(keyboard, eventPtr, InputUpdateType.Dynamic);
             }
 
         }
@@ -73,7 +74,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     keyboard[key].WriteValueIntoEvent(0f, eventPtr);
                 }
-                InputSystem.QueueEvent(eventPtr);
+                InputState.Change(keyboard, eventPtr, InputUpdateType.Dynamic);
             }
 
             _heldKeys.Clear();
