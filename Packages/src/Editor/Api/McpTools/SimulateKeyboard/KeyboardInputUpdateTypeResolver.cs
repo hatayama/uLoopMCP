@@ -35,6 +35,11 @@ namespace io.github.hatayama.uLoopMCP
         {
             return (current & expected) == expected;
         }
+
+        public static bool RequiresExplicitManualUpdate(InputUpdateType updateType)
+        {
+            return updateType == InputUpdateType.Manual;
+        }
     }
 }
 #endif

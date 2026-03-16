@@ -21,10 +21,13 @@ namespace Tests.PlayMode
         private SimulateKeyboardResponse lastResponse = null!;
         private Keyboard keyboard = null!;
         private FramePressObserver framePressObserver = null!;
+        private InputSettings.UpdateMode originalUpdateMode;
 
         public override void Setup()
         {
             base.Setup();
+            InputSettings settings = RequireInputSettings();
+            originalUpdateMode = settings.updateMode;
 
             eventSystemGo = new GameObject("TestEventSystem");
             eventSystemGo.AddComponent<EventSystem>();
@@ -37,6 +40,8 @@ namespace Tests.PlayMode
 
         public override void TearDown()
         {
+            InputSettings settings = RequireInputSettings();
+            settings.updateMode = originalUpdateMode;
             KeyboardKeyState.ReleaseAllKeys();
             Object.Destroy(framePressObserverGo);
             Object.Destroy(eventSystemGo);
@@ -97,6 +102,23 @@ namespace Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Press_WithoutDuration_Should_BehaveAsTap()
+        {
+            yield return null;
+
+            framePressObserver.ResetCount();
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.Press.ToString(),
+                ["key"] = "Space"
+            });
+
+            Assert.Greater(framePressObserver.SpacePressedFrameCount, 0, "Zero-duration press should still be visible as a tap");
+            Assert.IsFalse(keyboard[Key.Space].isPressed, "Zero-duration press should release the key after the tap");
+        }
+
+        [UnityTest]
         public IEnumerator Press_Enter_Should_SetWasPressedThisFrame()
         {
             yield return null;
@@ -111,6 +133,26 @@ namespace Tests.PlayMode
             });
 
             Assert.Greater(framePressObserver.EnterPressedFrameCount, 0, "Enter press should be visible via wasPressedThisFrame");
+        }
+
+        [UnityTest]
+        public IEnumerator Press_InManualMode_Should_NotHang()
+        {
+            yield return null;
+
+            InputSettings settings = RequireInputSettings();
+            settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
+            framePressObserver.ResetCount();
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.Press.ToString(),
+                ["key"] = "Enter"
+            });
+
+            Assert.IsTrue(lastResponse.Success);
+            Assert.Greater(framePressObserver.EnterPressedFrameCount, 0, "Manual-mode press should advance input and register the tap");
+            Assert.IsFalse(keyboard[Key.Enter].isPressed, "Manual-mode press should release the key after the tap");
         }
 
         [UnityTest]
@@ -295,6 +337,13 @@ namespace Tests.PlayMode
                 task.IsCompleted || Time.realtimeSinceStartup >= timeoutAt);
             Assert.IsTrue(task.IsCompleted, "Tool execution timed out.");
             Assert.IsFalse(task.IsFaulted, $"Tool execution should not fault: {task.Exception}");
+        }
+
+        private static InputSettings RequireInputSettings()
+        {
+            InputSettings? settings = InputSystem.settings;
+            Debug.Assert(settings != null, "InputSystem.settings must be available in SimulateKeyboardTests");
+            return settings!;
         }
 
         #endregion

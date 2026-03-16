@@ -162,19 +162,19 @@ namespace io.github.hatayama.uLoopMCP
 
             SimulateKeyboardOverlayState.ShowPress(keyName);
 
-            float effectiveDuration = duration <= 0f
-                ? McpConstants.SIMULATE_KEYBOARD_DEFAULT_PRESS_DURATION
-                : duration;
-
             try
             {
                 await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
-                float startTime = Time.realtimeSinceStartup;
-                float elapsed = 0f;
-                while (elapsed < effectiveDuration)
+
+                if (duration > 0f)
                 {
-                    await EditorDelay.DelayFrame(1, ct);
-                    elapsed = Time.realtimeSinceStartup - startTime;
+                    float startTime = Time.realtimeSinceStartup;
+                    float elapsed = 0f;
+                    while (elapsed < duration)
+                    {
+                        await EditorDelay.DelayFrame(1, ct);
+                        elapsed = Time.realtimeSinceStartup - startTime;
+                    }
                 }
             }
             finally
@@ -262,6 +262,11 @@ namespace io.github.hatayama.uLoopMCP
         private static Task ApplyOnNextConfiguredUpdate(Action apply, CancellationToken ct)
         {
             InputUpdateType targetUpdateType = KeyboardInputUpdateTypeResolver.Resolve();
+            if (KeyboardInputUpdateTypeResolver.RequiresExplicitManualUpdate(targetUpdateType))
+            {
+                return ApplyOnManualUpdate(apply, ct);
+            }
+
             TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
             CancellationTokenRegistration registration = default;
             Action? callback = null;
@@ -292,6 +297,44 @@ namespace io.github.hatayama.uLoopMCP
                 });
             }
 
+            return tcs.Task;
+        }
+
+        private static Task ApplyOnManualUpdate(Action apply, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+            CancellationTokenRegistration registration = default;
+            Action? callback = null;
+
+            callback = () =>
+            {
+                InputUpdateType currentUpdateType = InputState.currentUpdateType;
+                if (!KeyboardInputUpdateTypeResolver.IsMatch(currentUpdateType, InputUpdateType.Manual))
+                {
+                    return;
+                }
+
+                Debug.Assert(callback != null, "callback must be assigned before subscription");
+                InputSystem.onBeforeUpdate -= callback;
+                registration.Dispose();
+                apply();
+                tcs.TrySetResult(true);
+            };
+
+            InputSystem.onBeforeUpdate += callback;
+            if (ct.CanBeCanceled)
+            {
+                registration = ct.Register(() =>
+                {
+                    Debug.Assert(callback != null, "callback must be assigned before cancellation");
+                    InputSystem.onBeforeUpdate -= callback;
+                    tcs.TrySetCanceled(ct);
+                });
+            }
+
+            InputSystem.Update();
             return tcs.Task;
         }
 #endif
