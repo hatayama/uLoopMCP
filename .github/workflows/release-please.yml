@@ -15,7 +15,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
-  # npm publish (including OIDC id-token) is handled by publish-on-release.yml
+  id-token: write  # Required for npm OIDC trusted publishing
 
 jobs:
   release:
@@ -85,6 +85,49 @@ jobs:
             echo "✅ Server bundle rebuilt and pushed to PR"
           fi
 
-      # npm publish is handled by publish-on-release.yml (triggered by GitHub Release events).
-      # This decoupling ensures publishing works regardless of whether the release was
-      # created by release-please or manually.
+      # ── Publish to npm when release is created ──────────────────
+      # GITHUB_TOKEN-created releases do NOT trigger other workflows (e.g. publish-on-release.yml),
+      # so npm publish must run inline here for release-please releases.
+      # publish-on-release.yml handles manually-created GitHub Releases.
+      - name: 🔧 Setup Node.js for npm publish
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 📋 Validate CLI version
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        id: cli_version
+        run: |
+          CLI_VERSION=$(jq -r '.version' Packages/src/Cli~/package.json)
+          if ! echo "${CLI_VERSION}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
+            echo "❌ Invalid semver: ${CLI_VERSION}"
+            exit 1
+          fi
+          echo "version=${CLI_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "📋 CLI version: ${CLI_VERSION}"
+
+      - name: 📦 Build CLI
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        run: |
+          cd Packages/src/Cli~
+          npm ci
+          npm run build
+
+      - name: 🔍 Verify npm package contents
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        run: |
+          cd Packages/src/Cli~
+          npm pack --dry-run --json > /tmp/pack.json
+          jq -e '.[0].files[] | select(.path=="dist/cli.bundle.cjs")' /tmp/pack.json > /dev/null
+          echo "✅ dist/cli.bundle.cjs found in package"
+
+      - name: 🚀 Publish CLI to npm
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        run: |
+          cd Packages/src/Cli~
+          npm install -g npm@latest
+          echo "📋 npm version: $(npm --version)"
+          npm publish --access public --provenance
+          echo "✅ CLI v${{ steps.cli_version.outputs.version }} published to npm with provenance"
