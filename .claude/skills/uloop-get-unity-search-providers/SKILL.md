@@ -1,6 +1,6 @@
 ---
 name: uloop-get-unity-search-providers
-description: "Get details about available Unity Search providers. Use when you need to: (1) Discover available search providers and their IDs, (2) Understand search capabilities and filters, (3) Configure unity-search with specific provider options. Returns provider metadata."
+description: "List Unity Search provider names, IDs, and supported filter syntax. Use when you need to: (1) Discover available search providers and their IDs, (2) Understand search capabilities and filters, (3) Configure unity-search with specific provider options. Useful for asset search configuration and project search API exploration. Returns provider metadata."
 ---
 
 # uloop get-unity-search-providers

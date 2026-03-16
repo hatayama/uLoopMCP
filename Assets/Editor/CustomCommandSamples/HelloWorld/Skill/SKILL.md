@@ -1,6 +1,6 @@
 ---
 name: uloop-hello-world
-description: "Sample hello world tool via uloop CLI. Use when you need to test the MCP tool system or see an example of custom tool implementation."
+description: "Test MCP tool connectivity by sending a greeting request and verifying the response. Use when you need to: (1) Check if uloop tools work and Unity is responding, (2) Debug or troubleshoot MCP connection issues, (3) See an example of custom tool parameter handling with multi-language support."
 ---
 
 # uloop hello-world

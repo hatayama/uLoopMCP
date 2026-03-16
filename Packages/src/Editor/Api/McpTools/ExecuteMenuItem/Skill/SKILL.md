@@ -1,6 +1,6 @@
 ---
 name: uloop-execute-menu-item
-description: "Execute Unity Editor menu commands programmatically. Use when you need to: (1) Trigger menu commands like save, build, or refresh, (2) Automate editor actions via menu paths, (3) Run custom menu items defined in project scripts."
+description: "Execute Unity Editor menu commands programmatically. Use when you need to: (1) Trigger Unity menu commands like save, build, or refresh, (2) Automate editor actions or toolbar operations via menu paths, (3) Run custom menu items defined in project scripts. Invoke any Unity menu item by path."
 ---
 
 # uloop execute-menu-item

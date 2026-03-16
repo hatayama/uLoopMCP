@@ -50,6 +50,18 @@ Returns JSON:
 - `ErrorCount`: number
 - `WarningCount`: number
 
+## Typical Workflow
+
+```bash
+# 1. Compile and check for errors
+result=$(uloop compile)
+# 2. Check ErrorCount in JSON output: {"Success":true,"ErrorCount":0,"WarningCount":2}
+#    If ErrorCount > 0, fix issues and recompile
+uloop compile
+# 3. Force full recompilation when needed
+uloop compile --force-recompile true --wait-for-domain-reload true
+```
+
 ## Troubleshooting
 
 If CLI hangs or shows "Unity is busy" errors after compilation, stale lock files may be preventing connection. Run the following to clean them up:

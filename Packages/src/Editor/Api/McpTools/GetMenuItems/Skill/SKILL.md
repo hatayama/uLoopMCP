@@ -1,6 +1,6 @@
 ---
 name: uloop-get-menu-items
-description: "Discover available Unity Editor menu items. Use when you need to: (1) Find available menu commands and their paths, (2) Search for specific menu items by name, (3) Prepare menu item paths for execute-menu-item. Returns menu item list."
+description: "Discover available Unity Editor menu items and toolbar commands. Use when you need to: (1) Find available menu commands and their paths, (2) Search for specific Unity menu items by name, (3) Prepare menu item paths for execute-menu-item. Browse Unity menus and editor commands. Returns menu item list."
 ---
 
 # uloop get-menu-items

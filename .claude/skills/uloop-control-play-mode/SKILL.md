@@ -1,6 +1,6 @@
 ---
 name: uloop-control-play-mode
-description: "Control Unity Editor play mode (play/stop/pause). Use when you need to: (1) Start play mode to test game behavior, (2) Stop play mode to return to edit mode, (3) Pause play mode for frame-by-frame inspection."
+description: "Control Unity Editor play mode (play/stop/pause). Use when you need to: (1) Start play mode to run or playtest the game, (2) Stop play mode to return to edit mode, (3) Pause play mode for frame-by-frame inspection. Supports run game, debug scene, and test scene workflows."
 ---
 
 # uloop control-play-mode

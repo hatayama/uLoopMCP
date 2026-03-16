@@ -53,4 +53,18 @@ uloop get-hierarchy --use-selection
 
 ## Output
 
-Returns JSON with hierarchical structure of GameObjects and their components.
+Returns JSON with hierarchical structure of GameObjects and their components:
+
+```json
+{
+  "Hierarchy": [
+    {
+      "Name": "Canvas",
+      "Components": ["Canvas", "CanvasScaler", "GraphicRaycaster"],
+      "Children": [
+        { "Name": "Button", "Components": ["Button", "Image"] }
+      ]
+    }
+  ]
+}
+```

@@ -8,17 +8,6 @@ context: fork
 
 Run the SimulateMouse demo scenario: $ARGUMENTS
 
-## What
-
-Automate the SimulateMouse demo scene by clicking buttons, one-shot dragging boxes, split-dragging a box through multiple waypoints to the drop zone, and operating the virtual pad with DragStart/DragMove/DragEnd. Exercises Click, Drag, DragStart, DragMove, and DragEnd across all interactive elements.
-
-## When
-
-Use when you need to:
-1. Run the simulate-mouse demo to verify click, drag, split-drag, and virtual pad functionality
-2. Test mouse simulation on the demo scene after code changes
-3. Exercise the demo scene end-to-end (buttons + one-shot drag + split drag + virtual pad)
-
 ## How
 
 ### Prerequisites
@@ -59,26 +48,9 @@ From the `AnnotatedElements` array in the response, extract `SimX` and `SimY` fo
 
 **Phase 3 — Split drag with DragMove**: Use DragStart on GreenBox, then DragMove through 3 waypoints that zigzag across the screen, and finally DragEnd at the DropZone center. Use `--drag-speed 400` for DragMove/DragEnd so the movement is slow enough to observe the cursor overlay and trail line.
 
-Waypoint design (relative to the midpoint between GreenBox and DropZone):
-- Waypoint 1: far right, slightly above — tests horizontal sweep
-- Waypoint 2: far left, below — tests direction reversal
-- Waypoint 3: above DropZone — tests vertical approach
-- DragEnd: at DropZone center (Y offset 0)
-
 **Phase 4 — One-shot Drag**: Drag BlueBox to DropZone bottom area (Y offset +80 from center) so it doesn't overlap previous drops.
 
-**Phase 5 — Virtual Pad**: Use DragStart on VirtualPadBackground center, then DragMove through 8 random directions within padRadius (80px from center) to exercise the joystick, and DragEnd back at center. Use `--drag-speed 300` for visible movement. The direction arrow should rotate to follow each DragMove direction.
-
-Waypoint design (offsets from VirtualPadBackground center):
-- Move 1: upper-right (+60, -60 in sim coords)
-- Move 2: lower-left (-70, +50)
-- Move 3: straight up (0, -75)
-- Move 4: straight right (+80, 0)
-- Move 5: lower-right (+50, +60)
-- Move 6: straight left (-80, 0)
-- Move 7: upper-left (-55, -65)
-- Move 8: straight down (0, +75)
-- DragEnd: back to center (0, 0)
+**Phase 5 — Virtual Pad**: Use DragStart on VirtualPadBackground center, then DragMove through 8 directions within padRadius (80px from center) to exercise the joystick, and DragEnd back at center. Use `--drag-speed 300` for visible movement.
 
 ```bash
 uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && sleep 0.3 && \
