@@ -1,0 +1,60 @@
+name: manual-npm-publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Dry run (skip actual publish)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write  # Required for npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v6
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 📋 Check version
+        id: version
+        run: |
+          CLI_VERSION=$(jq -r '.version' Packages/src/Cli~/package.json)
+          echo "version=${CLI_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "📋 CLI version: ${CLI_VERSION}"
+
+          PUBLISHED=$(npm view uloop-cli versions --json 2>/dev/null || echo '[]')
+          if echo "$PUBLISHED" | jq -e ". | index(\"${CLI_VERSION}\")" > /dev/null 2>&1; then
+            echo "❌ Version ${CLI_VERSION} already exists on npm"
+            exit 1
+          fi
+          echo "✅ Version ${CLI_VERSION} is not yet published"
+
+      - name: 📦 Build CLI
+        run: |
+          cd Packages/src/Cli~
+          npm ci
+          npm run build
+
+      - name: 🚀 Publish CLI to npm
+        if: ${{ inputs.dry-run == false }}
+        run: |
+          cd Packages/src/Cli~
+          npm install -g npm@latest
+          npm publish --access public --provenance
+          echo "✅ CLI v${{ steps.version.outputs.version }} published to npm"
+
+      - name: 🧪 Dry run - skip publish
+        if: ${{ inputs.dry-run == true }}
+        run: |
+          echo "🧪 Dry run mode - skipping actual publish"
+          echo "Would publish uloop-cli@${{ steps.version.outputs.version }}"
