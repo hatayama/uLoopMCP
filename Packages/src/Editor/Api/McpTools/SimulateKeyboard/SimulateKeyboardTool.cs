@@ -53,17 +53,18 @@ namespace io.github.hatayama.uLoopMCP
                 return new SimulateKeyboardResponse
                 {
                     Success = false,
-                    Message = "Key parameter is required. Examples: \"W\", \"Space\", \"LeftShift\", \"A\", \"Return\".",
+                    Message = "Key parameter is required. Examples: \"W\", \"Space\", \"LeftShift\", \"A\", \"Enter\".",
                     Action = parameters.Action.ToString()
                 };
             }
 
-            if (!Enum.TryParse<Key>(parameters.Key, ignoreCase: true, out Key key) || key == Key.None)
+            string normalizedKey = NormalizeKeyName(parameters.Key);
+            if (!Enum.TryParse<Key>(normalizedKey, ignoreCase: true, out Key key) || key == Key.None)
             {
                 return new SimulateKeyboardResponse
                 {
                     Success = false,
-                    Message = $"Invalid key name: \"{parameters.Key}\". Use Input System Key enum names (e.g. \"W\", \"Space\", \"LeftShift\", \"A\", \"Return\").",
+                    Message = $"Invalid key name: \"{parameters.Key}\". Use Input System Key enum names (e.g. \"W\", \"Space\", \"LeftShift\", \"A\", \"Enter\").",
                     Action = parameters.Action.ToString()
                 };
             }
@@ -147,30 +148,39 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             string keyName = key.ToString();
+            if (KeyboardKeyState.IsKeyHeld(key))
+            {
+                return new SimulateKeyboardResponse
+                {
+                    Success = false,
+                    Message = $"Key '{keyName}' is already held down. Call KeyUp first.",
+                    Action = KeyboardAction.Press.ToString(),
+                    KeyName = keyName
+                };
+            }
+
             SimulateKeyboardOverlayState.ShowPress(keyName);
 
             float effectiveDuration = duration <= 0f
                 ? McpConstants.SIMULATE_KEYBOARD_DEFAULT_PRESS_DURATION
                 : duration;
 
+            KeyboardKeyState.SetKeyState(keyboard, key, true);
+            try
             {
-                KeyboardKeyState.SetKeyState(keyboard, key, true);
-                try
+                float startTime = Time.realtimeSinceStartup;
+                float elapsed = 0f;
+                while (elapsed < effectiveDuration)
                 {
-                    float startTime = Time.realtimeSinceStartup;
-                    float elapsed = 0f;
-                    while (elapsed < effectiveDuration)
-                    {
-                        await EditorDelay.DelayFrame(1, ct);
-                        elapsed = Time.realtimeSinceStartup - startTime;
-                    }
+                    await EditorDelay.DelayFrame(1, ct);
+                    elapsed = Time.realtimeSinceStartup - startTime;
                 }
-                finally
-                {
-                    KeyboardKeyState.SetKeyState(keyboard, key, false);
-                }
-                await EditorDelay.DelayFrame(1, ct);
             }
+            finally
+            {
+                KeyboardKeyState.SetKeyState(keyboard, key, false);
+            }
+            await EditorDelay.DelayFrame(1, ct);
 
             SimulateKeyboardOverlayState.Clear();
 
@@ -238,6 +248,15 @@ namespace io.github.hatayama.uLoopMCP
                 Action = KeyboardAction.KeyUp.ToString(),
                 KeyName = keyName
             };
+        }
+
+        private static string NormalizeKeyName(string keyName)
+        {
+            if (string.Equals(keyName, "Return", StringComparison.OrdinalIgnoreCase))
+            {
+                return Key.Enter.ToString();
+            }
+            return keyName;
         }
 #endif
     }
