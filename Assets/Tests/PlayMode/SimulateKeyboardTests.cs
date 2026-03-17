@@ -232,6 +232,7 @@ namespace Tests.PlayMode
             });
 
             Assert.IsTrue(lastResponse.Success);
+            Assert.Greater(framePressObserver.EnterPressedFrameCount, 0, "Paused fixed-update presses should follow the resolved dynamic update");
             Assert.IsFalse(keyboard[Key.Enter].isPressed, "Paused fixed-update press should release the key after the tap");
         }
 
@@ -402,6 +403,17 @@ namespace Tests.PlayMode
             Assert.IsFalse(KeyboardKeyState.IsKeyHeld(Key.W));
             Assert.IsFalse(KeyboardKeyState.IsKeyHeld(Key.LeftShift));
             Assert.AreEqual(0, KeyboardKeyState.HeldKeys.Count);
+        }
+
+        [UnityTest]
+        public IEnumerator ReleaseAllKeys_Should_ClearTransientPressKeys()
+        {
+            yield return null;
+
+            KeyboardKeyState.RegisterTransientKey(Key.Space);
+            KeyboardKeyState.ReleaseAllKeys();
+
+            Assert.IsFalse(keyboard[Key.Space].isPressed, "ReleaseAllKeys should release transient press keys");
         }
 
         #endregion

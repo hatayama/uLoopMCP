@@ -52,8 +52,7 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
 
-            InputSettings.UpdateMode updateMode = settings.updateMode;
-            if (updateMode == InputSettings.UpdateMode.ProcessEventsManually)
+            if (settings.updateMode == InputSettings.UpdateMode.ProcessEventsManually)
             {
                 return true;
             }

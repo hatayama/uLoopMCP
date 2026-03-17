@@ -13,6 +13,7 @@ namespace io.github.hatayama.uLoopMCP
     internal static class KeyboardKeyState
     {
         private static readonly HashSet<Key> _heldKeys = new();
+        private static readonly HashSet<Key> _transientKeys = new();
 
         public static bool IsKeyHeld(Key key) => _heldKeys.Contains(key);
         public static IReadOnlyCollection<Key> HeldKeys => _heldKeys;
@@ -34,9 +35,20 @@ namespace io.github.hatayama.uLoopMCP
             _heldKeys.Remove(key);
         }
 
+        public static void RegisterTransientKey(Key key)
+        {
+            _transientKeys.Add(key);
+        }
+
+        public static void UnregisterTransientKey(Key key)
+        {
+            _transientKeys.Remove(key);
+        }
+
         public static void Clear()
         {
             _heldKeys.Clear();
+            _transientKeys.Clear();
         }
 
         // Keyboard keys are stored as a bitfield, so StateEvent.From captures
@@ -50,6 +62,11 @@ namespace io.github.hatayama.uLoopMCP
                 foreach (Key heldKey in _heldKeys)
                 {
                     keyboard[heldKey].WriteValueIntoEvent(1f, eventPtr);
+                }
+
+                foreach (Key transientKey in _transientKeys)
+                {
+                    keyboard[transientKey].WriteValueIntoEvent(1f, eventPtr);
                 }
 
                 keyboard[key].WriteValueIntoEvent(pressed ? 1f : 0f, eventPtr);
@@ -74,11 +91,18 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     keyboard[key].WriteValueIntoEvent(0f, eventPtr);
                 }
+
+                foreach (Key key in _transientKeys)
+                {
+                    keyboard[key].WriteValueIntoEvent(0f, eventPtr);
+                }
+
                 InputUpdateType updateType = KeyboardInputUpdateTypeResolver.Resolve();
                 InputState.Change(keyboard, eventPtr, updateType);
             }
 
             _heldKeys.Clear();
+            _transientKeys.Clear();
         }
 
         private static void OnPlayModeStateChanged(PlayModeStateChange state)

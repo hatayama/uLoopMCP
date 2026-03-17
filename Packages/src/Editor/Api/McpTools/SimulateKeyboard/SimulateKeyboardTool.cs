@@ -171,6 +171,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             SimulateKeyboardOverlayState.ShowPress(keyName);
+            KeyboardKeyState.RegisterTransientKey(key);
 
             try
             {
@@ -189,8 +190,13 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
-                await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), ct);
-                await EditorDelay.DelayFrame(1, ct);
+                if (EditorApplication.isPlaying && !EditorApplication.isPaused)
+                {
+                    await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), CancellationToken.None);
+                    await EditorDelay.DelayFrame(1, CancellationToken.None);
+                }
+
+                KeyboardKeyState.UnregisterTransientKey(key);
                 SimulateKeyboardOverlayState.ClearPress();
             }
 
@@ -323,7 +329,7 @@ namespace io.github.hatayama.uLoopMCP
             callback = () =>
             {
                 InputUpdateType currentUpdateType = InputState.currentUpdateType;
-                if (!KeyboardInputUpdateTypeResolver.IsMatch(currentUpdateType, InputUpdateType.Manual))
+                if (!KeyboardInputUpdateTypeResolver.IsMatch(currentUpdateType, targetUpdateType))
                 {
                     return;
                 }
@@ -346,18 +352,68 @@ namespace io.github.hatayama.uLoopMCP
                 });
             }
 
-            InputSystem.Update();
+            RunExplicitUpdate(targetUpdateType);
             if (!tcs.Task.IsCompleted)
             {
                 Debug.Assert(callback != null, "callback must be assigned before explicit update fallback");
                 InputSystem.onBeforeUpdate -= callback;
                 registration.Dispose();
                 apply();
-                InputSystem.Update();
+                RunExplicitUpdate(targetUpdateType);
                 tcs.TrySetResult(true);
             }
 
             return tcs.Task;
+        }
+
+        private static void RunExplicitUpdate(InputUpdateType targetUpdateType)
+        {
+            InputSettings? settings = InputSystem.settings;
+            if (settings == null)
+            {
+                InputSystem.Update();
+                return;
+            }
+
+            InputSettings.UpdateMode originalUpdateMode = settings.updateMode;
+            InputSettings.UpdateMode targetUpdateMode = GetExplicitUpdateMode(targetUpdateType, originalUpdateMode);
+            if (targetUpdateMode == originalUpdateMode)
+            {
+                InputSystem.Update();
+                return;
+            }
+
+            settings.updateMode = targetUpdateMode;
+            try
+            {
+                InputSystem.Update();
+            }
+            finally
+            {
+                settings.updateMode = originalUpdateMode;
+            }
+        }
+
+        private static InputSettings.UpdateMode GetExplicitUpdateMode(
+            InputUpdateType targetUpdateType,
+            InputSettings.UpdateMode fallbackUpdateMode)
+        {
+            if (targetUpdateType == InputUpdateType.Dynamic)
+            {
+                return InputSettings.UpdateMode.ProcessEventsInDynamicUpdate;
+            }
+
+            if (targetUpdateType == InputUpdateType.Fixed)
+            {
+                return InputSettings.UpdateMode.ProcessEventsInFixedUpdate;
+            }
+
+            if (targetUpdateType == InputUpdateType.Manual)
+            {
+                return InputSettings.UpdateMode.ProcessEventsManually;
+            }
+
+            return fallbackUpdateMode;
         }
 #endif
     }
