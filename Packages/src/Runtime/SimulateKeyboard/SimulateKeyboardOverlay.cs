@@ -18,7 +18,7 @@ namespace io.github.hatayama.uLoopMCP
         private const float CONTAINER_PADDING_H = 24f;
         private const float CONTAINER_PADDING_V = 16f;
         private const float KEY_SPACING = 8f;
-        private const int FONT_SIZE = 36;
+        private const int FONT_SIZE = 48;
         private const int CORNER_RADIUS = 16;
         private const int ROUNDED_RECT_TEXTURE_SIZE = 64;
         private static readonly Color ContainerBackgroundColor = new Color(0.15f, 0.15f, 0.15f, CONTAINER_BACKGROUND_ALPHA);

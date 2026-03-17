@@ -18,8 +18,6 @@ namespace io.github.hatayama.uLoopMCP
             { "RightArrow", "\u2192" },      // →
             { "LeftCtrl", "Ctrl" },
             { "RightCtrl", "Ctrl" },
-            { "LeftAlt", "Alt" },
-            { "RightAlt", "Alt" },
             { "Tab", "\u21E5" },             // ⇥
             { "Escape", "Esc" },
             { "Backspace", "\u232B" },       // ⌫
@@ -41,6 +39,11 @@ namespace io.github.hatayama.uLoopMCP
             if (keyName == "LeftMeta" || keyName == "RightMeta")
             {
                 return IsMac ? "\u2318" : "\u229E"; // ⌘ or ⊞
+            }
+
+            if (keyName == "LeftAlt" || keyName == "RightAlt")
+            {
+                return IsMac ? "\u2325" : "Alt"; // ⌥ or Alt
             }
 
             if (Symbols.TryGetValue(keyName, out string symbol))
