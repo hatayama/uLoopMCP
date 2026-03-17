@@ -213,8 +213,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private void UpdateBadge(BadgeEntry badge, int index, string keyName, float alpha)
         {
-            // Badge Image stays transparent but carries alpha for test compatibility
-            badge.Background.color = new Color(0f, 0f, 0f, CONTAINER_BACKGROUND_ALPHA * alpha);
             badge.Text.color = new Color(1f, 1f, 1f, alpha);
 
             if (_cachedKeyNames[index] == keyName)

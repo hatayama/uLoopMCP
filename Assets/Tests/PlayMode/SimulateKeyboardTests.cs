@@ -206,9 +206,11 @@ namespace Tests.PlayMode
             BadgeVisual heldBadgeAfterRelease = RequireBadgeVisual("LeftShift");
             BadgeVisual pressBadgeAfterRelease = RequireBadgeVisual("Space");
 
-            Assert.AreEqual(SimulateKeyboardOverlay.CONTAINER_BACKGROUND_ALPHA, heldBadgeAfterRelease.BackgroundAlpha, 0.01f, "Held-key badge should remain fully visible while transient presses fade.");
+            Assert.AreEqual(SimulateKeyboardOverlay.CONTAINER_BACKGROUND_ALPHA, heldBadgeAfterRelease.BackgroundAlpha, 0.01f, "Container background should stay full while a held key exists.");
             Assert.AreEqual(1f, heldBadgeAfterRelease.TextAlpha, 0.01f, "Held-key text should remain fully visible while transient presses fade.");
-            Assert.Less(pressBadgeAfterRelease.BackgroundAlpha, SimulateKeyboardOverlay.CONTAINER_BACKGROUND_ALPHA, "Transient press badge should fade only after release.");
+            // Container background stays full because held key keeps it opaque;
+            // only the press key's text alpha fades.
+            Assert.AreEqual(SimulateKeyboardOverlay.CONTAINER_BACKGROUND_ALPHA, pressBadgeAfterRelease.BackgroundAlpha, 0.01f, "Container background should stay full while a held key exists.");
             Assert.Less(pressBadgeAfterRelease.TextAlpha, 1f, "Transient press text should fade only after release.");
         }
 
@@ -540,8 +542,13 @@ namespace Tests.PlayMode
             Debug.Assert(overlay != null, "SimulateKeyboardOverlay must exist before reading badge visuals.");
             Assert.IsNotNull(overlay, "SimulateKeyboardOverlay must exist before reading badge visuals.");
 
+            // Container Image holds the shared background alpha for all badges
+            Image? containerImage = overlay!.GetComponentInChildren<Image>(true);
+            Assert.IsNotNull(containerImage, "Container background image should exist.");
+            float containerAlpha = containerImage!.color.a;
+
             string symbol = KeySymbolMap.GetSymbol(keyName);
-            Text[] texts = overlay!.gameObject.GetComponentsInChildren<Text>(true);
+            Text[] texts = overlay.gameObject.GetComponentsInChildren<Text>(true);
             for (int i = 0; i < texts.Length; i++)
             {
                 if (texts[i].text != symbol)
@@ -549,9 +556,7 @@ namespace Tests.PlayMode
                     continue;
                 }
 
-                Image? image = texts[i].transform.parent.GetComponent<Image>();
-                Assert.IsNotNull(image, $"Badge '{keyName}' should have a background image.");
-                return new BadgeVisual(image!.color.a, texts[i].color.a);
+                return new BadgeVisual(containerAlpha, texts[i].color.a);
             }
 
             Assert.Fail($"Badge '{keyName}' (symbol: '{symbol}') was not found.");
