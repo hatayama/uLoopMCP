@@ -18,6 +18,13 @@ namespace io.github.hatayama.uLoopMCP
         private void Awake()
         {
             _image = GetComponent<Image>();
+
+            // Scene file bakes the label for one platform; fix it at runtime
+            Text text = GetComponentInChildren<Text>();
+            if (text != null)
+            {
+                text.text = KeySymbolMap.GetSymbol(targetKey.ToString());
+            }
         }
 
         public void Init(Key key, string label)
