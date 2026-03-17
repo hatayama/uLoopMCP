@@ -1,0 +1,25 @@
+{
+    "name": "uLoopMCP.Tests.Demo.Editor",
+    "rootNamespace": "",
+    "references": [
+        "uLoopMCP.Tests.Demo",
+        "GUID:75469ad4d38634e559750d17036d5f7c"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "",
+            "define": "ULOOPMCP_HAS_INPUT_SYSTEM"
+        }
+    ],
+    "noEngineReferences": false
+}
