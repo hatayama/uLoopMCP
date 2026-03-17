@@ -305,7 +305,7 @@ All tools automatically include the following property:
   - `EndPositionY` (number): End Y position (for Drag actions)
 
 ### 15. simulate-keyboard
-- **Description**: Simulate keyboard key input in PlayMode via Input System. Supports single key taps, sustained holds, and multi-key combinations. Requires the Input System package. Game code must read input via Input System API (e.g. `Keyboard.current[Key.W].isPressed`), not legacy `Input.GetKey()`
+- **Description**: Simulate keyboard key input in PlayMode via Input System. Supports single key taps, sustained holds, and multi-key combinations. Requires the Input System package, and Active Input Handling must be set to `Input System Package (New)` or `Both` in Player Settings. Game code must read input via Input System API (e.g. `Keyboard.current[Key.W].isPressed`), not legacy `Input.GetKey()`
 - **Parameters**:
   - `Action` (enum): Keyboard action - "Press", "KeyDown", "KeyUp" (default: "Press")
     - `Press`: One-shot key tap (KeyDown then KeyUp). Use `Duration` for timed holds

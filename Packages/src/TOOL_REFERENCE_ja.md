@@ -303,7 +303,7 @@
   - `EndPositionY` (number): 終了Y座標（Dragアクション用）
 
 ### 15. simulate-keyboard
-- **説明**: Input System経由でPlayMode中のキーボード入力をシミュレーション。単発のキータップ、長押し、複数キーの同時押しに対応。Input Systemパッケージが必要。ゲームコードがInput System API（例: `Keyboard.current[Key.W].isPressed`）で入力を読み取っている必要があり、レガシーの `Input.GetKey()` には非対応
+- **説明**: Input System経由でPlayMode中のキーボード入力をシミュレーション。単発のキータップ、長押し、複数キーの同時押しに対応。Input Systemパッケージが必要で、Player SettingsのActive Input Handlingを `Input System Package (New)` または `Both` に設定する必要がある。ゲームコードがInput System API（例: `Keyboard.current[Key.W].isPressed`）で入力を読み取っている必要があり、レガシーの `Input.GetKey()` には非対応
 - **パラメータ**:
   - `Action` (enum): キーボードアクション - "Press", "KeyDown", "KeyUp"（デフォルト: "Press"）
     - `Press`: ワンショットキータップ（KeyDown→KeyUp）。`Duration`で長押し時間を指定可能
