@@ -132,7 +132,7 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 
 
 <details>
-<summary>All 16 Bundled Skills</summary>
+<summary>All 17 Bundled Skills</summary>
 
 - `/uloop-launch` - Launch Unity with correct version
 - `/uloop-compile` - Execute compilation
@@ -147,6 +147,7 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 - `/uloop-find-game-objects` - Find GameObjects
 - `/uloop-screenshot` - Capture EditorWindow
 - `/uloop-simulate-mouse` - Simulate mouse input on PlayMode UI
+- `/uloop-simulate-keyboard` - Simulate keyboard input in PlayMode via Input System
 - `/uloop-control-play-mode` - Control Play Mode
 - `/uloop-execute-dynamic-code` - Execute dynamic C# code
 - `/uloop-get-unity-search-providers` - Get search provider details
@@ -501,6 +502,21 @@ Supports 6 actions: Click, LongPress, Drag (one-shot), DragStart/DragMove/DragEn
 → simulate-mouse (Action: DragEnd, X: 400, Y: 300)
 ```
 https://github.com/user-attachments/assets/c7ee9103-c282-4f90-8b01-64bb17400f3e
+
+### 16. simulate-keyboard - Simulate Keyboard Input in PlayMode
+Simulate keyboard key input in PlayMode via Input System. Supports single key taps, sustained holds, and multi-key combinations (e.g. Shift+W for sprinting). Requires the Input System package, and Active Input Handling must be set to `Input System Package (New)` or `Both` in Player Settings. Game code must read input via Input System API (e.g. `Keyboard.current[Key.W].isPressed`), not legacy `Input.GetKey()`.
+
+Supports 3 actions: Press (one-shot tap or timed hold), KeyDown (hold key down), KeyUp (release held key).
+
+```text
+→ simulate-keyboard (Action: Press, Key: Space)
+→ simulate-keyboard (Action: Press, Key: W, Duration: 2.0)
+→ simulate-keyboard (Action: KeyDown, Key: LeftShift)
+→ simulate-keyboard (Action: KeyDown, Key: W)
+→ screenshot (CaptureMode: rendering)
+→ simulate-keyboard (Action: KeyUp, Key: W)
+→ simulate-keyboard (Action: KeyUp, Key: LeftShift)
+```
 
 ## Tool Reference
 
