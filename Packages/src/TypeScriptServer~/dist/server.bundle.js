@@ -26564,7 +26564,7 @@ var POLLING = {
   EXTENDED_INTERVAL_MS: 1e4
   // Slower polling interval after initial attempts
 };
-var LIST_CHANGED_SUPPORTED_CLIENTS = ["cursor", "mcp-inspector"];
+var LIST_CHANGED_SUPPORTED_CLIENTS = ["cursor", "claude", "mcp-inspector"];
 var OUTPUT_DIRECTORIES = {
   ROOT: ".uloop/outputs",
   VIBE_LOGS: "VibeLogs"
@@ -30661,7 +30661,6 @@ var UnityEventHandler = class {
   isDevelopment;
   shuttingDown = false;
   isNotifying = false;
-  hasSentListChangedNotification = false;
   isInitializationCompleted = false;
   pendingToolsChangedNotification = false;
   constructor(server2, unityClient, connectionManager, keepaliveService) {
@@ -30677,7 +30676,6 @@ var UnityEventHandler = class {
    */
   onInitializationCompleted() {
     this.isInitializationCompleted = true;
-    this.hasSentListChangedNotification = false;
     if (this.pendingToolsChangedNotification) {
       this.pendingToolsChangedNotification = false;
       this.sendToolsChangedNotification();
@@ -30721,15 +30719,12 @@ var UnityEventHandler = class {
     });
   }
   /**
-   * Send tools changed notification (with duplicate prevention and initialization check)
-   *
-   * BUG WORKAROUND: Cursor disconnects when list_changed fires multiple times.
-   * Therefore, list_changed is sent only ONCE per MCP server lifetime.
+   * Send tools changed notification (with concurrent call prevention and initialization check)
    *
    * Notification timing rules:
    * 1. Before initialization completed: queue the notification
-   * 2. After initialization completed: send queued notification (first and only time)
-   * 3. Subsequent calls: blocked by hasSentListChangedNotification flag
+   * 2. After initialization completed: send immediately
+   * 3. Concurrent calls: prevented by isNotifying flag
    */
   sendToolsChangedNotification() {
     if (!this.isInitializationCompleted) {
@@ -30741,18 +30736,6 @@ var UnityEventHandler = class {
           void 0,
           void 0,
           "Notification will be sent after initialization completes"
-        );
-      }
-      return;
-    }
-    if (this.hasSentListChangedNotification) {
-      if (this.isDevelopment) {
-        VibeLogger.logDebug(
-          "tools_notification_skipped_already_sent",
-          "sendToolsChangedNotification skipped: list_changed already sent",
-          void 0,
-          void 0,
-          "Subsequent list_changed notification suppressed"
         );
       }
       return;
@@ -30775,7 +30758,6 @@ var UnityEventHandler = class {
         method: NOTIFICATION_METHODS.TOOLS_LIST_CHANGED,
         params: {}
       });
-      this.hasSentListChangedNotification = true;
       if (this.isDevelopment) {
         VibeLogger.logInfo(
           "tools_notification_sent",
@@ -31068,7 +31050,7 @@ var McpKeepaliveService = class {
 };
 
 // src/version.ts
-var VERSION = "0.67.0";
+var VERSION = "1.0.2";
 
 // src/server.ts
 var UnityMcpServer = class {
