@@ -74,6 +74,12 @@ try {
     HoldFor -Duration 0.8 -Keys LeftArrow
     Start-Sleep -Seconds 0.3
 
+    # Backspace and Delete overlay test
+    Press -Key Backspace -Duration 0.3
+    Start-Sleep -Seconds 1
+    Press -Key Delete -Duration 0.3
+    Start-Sleep -Seconds 1
+
     # Final idle jump
     Press -Key Enter -Duration 0.1
     Start-Sleep -Milliseconds 10

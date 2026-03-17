@@ -16,8 +16,6 @@ namespace io.github.hatayama.uLoopMCP
             { "RightArrow", "\u2192" },      // →
             { "Tab", "\u21E5" },             // ⇥
             { "Escape", "Esc" },
-            { "Backspace", "\u232B" },       // ⌫
-            { "Delete", "\u2326" },          // ⌦
             { "ContextMenu", "Menu" },
             { "PrintScreen", "PrtSc" },
             { "ScrollLock", "ScrLk" },
@@ -50,6 +48,16 @@ namespace io.github.hatayama.uLoopMCP
             if (keyName == "LeftShift" || keyName == "RightShift")
             {
                 return IsMac ? "\u21E7" : "Shift"; // ⇧ or Shift
+            }
+
+            if (keyName == "Backspace")
+            {
+                return IsMac ? "\u232B" : "BS"; // ⌫ or BS
+            }
+
+            if (keyName == "Delete")
+            {
+                return IsMac ? "\u2326" : "Del"; // ⌦ or Del
             }
 
             if (Symbols.TryGetValue(keyName, out string symbol))

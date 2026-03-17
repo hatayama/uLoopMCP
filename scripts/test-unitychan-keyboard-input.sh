@@ -67,6 +67,12 @@ hold_for 0.8 DownArrow
 hold_for 0.8 LeftArrow
 sleep 0.3
 
+# Backspace and Delete overlay test
+press Backspace 0.3
+sleep 1
+press Delete 0.3
+sleep 1
+
 # Final idle jump
 press Enter 0.1
 sleep 0.01

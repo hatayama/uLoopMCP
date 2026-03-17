@@ -207,6 +207,7 @@ namespace io.github.hatayama.uLoopMCP
             text.fontStyle = FontStyle.Bold;
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleCenter;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
             text.raycastTarget = false;
 
             // Thicken glyph strokes so Unicode symbols don't look too thin
