@@ -17,7 +17,7 @@ namespace io.github.hatayama.uLoopMCP
         private const float BOTTOM_MARGIN = 48f;
         private const float CONTAINER_PADDING_H = 24f;
         private const float CONTAINER_PADDING_V = 16f;
-        private const float KEY_SPACING = 16f;
+        private const float KEY_SPACING = 8f;
         private const int FONT_SIZE = 36;
         private const int CORNER_RADIUS = 16;
         private const int ROUNDED_RECT_TEXTURE_SIZE = 64;
@@ -207,6 +207,11 @@ namespace io.github.hatayama.uLoopMCP
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleCenter;
             text.raycastTarget = false;
+
+            // Thicken glyph strokes so Unicode symbols don't look too thin
+            Outline outline = textGo.AddComponent<Outline>();
+            outline.effectColor = Color.white;
+            outline.effectDistance = new Vector2(1f, -1f);
 
             return new BadgeEntry(badge, bg, text, layoutElement);
         }
