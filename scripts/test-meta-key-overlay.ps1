@@ -15,8 +15,6 @@ function Cleanup {
     uloop control-play-mode --action Stop 2>$null
 }
 
-trap { Cleanup } EXIT
-
 function Hold {
     param([string]$Key)
     uloop simulate-keyboard --action KeyDown --key $Key

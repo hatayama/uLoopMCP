@@ -6,8 +6,6 @@ function Cleanup {
     uloop control-play-mode --action Stop 2>$null
 }
 
-trap { Cleanup } EXIT
-
 function Press {
     param(
         [string]$Key,
