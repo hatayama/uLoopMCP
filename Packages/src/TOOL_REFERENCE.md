@@ -305,7 +305,7 @@ All tools automatically include the following property:
   - `EndPositionY` (number): End Y position (for Drag actions)
 
 ### 15. simulate-keyboard
-- **Description**: Simulate keyboard key input in PlayMode via Input System. Supports single key taps, sustained holds, and multi-key combinations. Requires Input System package. Game code must read input via Input System API (e.g. `Keyboard.current[Key.W].isPressed`), not legacy `Input.GetKey()`
+- **Description**: Simulate keyboard key input in PlayMode via Input System. Supports single key taps, sustained holds, and multi-key combinations. Requires the Input System package. Game code must read input via Input System API (e.g. `Keyboard.current[Key.W].isPressed`), not legacy `Input.GetKey()`
 - **Parameters**:
   - `Action` (enum): Keyboard action - "Press", "KeyDown", "KeyUp" (default: "Press")
     - `Press`: One-shot key tap (KeyDown then KeyUp). Use `Duration` for timed holds
@@ -317,7 +317,7 @@ All tools automatically include the following property:
   - `Success` (boolean): Whether the action completed successfully
   - `Message` (string): Description of the action performed
   - `Action` (string): The action that was executed
-  - `KeyName` (string): Name of the key that was acted upon
+  - `KeyName` (string, nullable): Name of the key that was acted upon
 
 ### 16. get-unity-search-providers
 

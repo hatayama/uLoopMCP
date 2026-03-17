@@ -315,7 +315,7 @@
   - `Success` (boolean): アクションが正常に完了したかどうか
   - `Message` (string): 実行されたアクションの説明
   - `Action` (string): 実行されたアクション
-  - `KeyName` (string): 操作対象のキー名
+  - `KeyName` (string, nullable): 操作対象のキー名
 
 ### 16. get-unity-search-providers
 
