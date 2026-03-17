@@ -172,10 +172,12 @@ namespace io.github.hatayama.uLoopMCP
 
             SimulateKeyboardOverlayState.ShowPress(keyName);
             KeyboardKeyState.RegisterTransientKey(key);
+            bool pressWasApplied = false;
 
             try
             {
                 await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
+                pressWasApplied = true;
 
                 if (duration > 0f)
                 {
@@ -190,14 +192,18 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
-                if (EditorApplication.isPlaying && !EditorApplication.isPaused)
+                if (pressWasApplied && EditorApplication.isPlaying && !EditorApplication.isPaused)
                 {
                     await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), CancellationToken.None);
+                    KeyboardKeyState.UnregisterTransientKey(key);
+                    SimulateKeyboardOverlayState.ReleasePress();
                     await EditorDelay.DelayFrame(1, CancellationToken.None);
                 }
-
-                KeyboardKeyState.UnregisterTransientKey(key);
-                SimulateKeyboardOverlayState.ClearPress();
+                else
+                {
+                    KeyboardKeyState.UnregisterTransientKey(key);
+                    SimulateKeyboardOverlayState.ClearPress();
+                }
             }
 
             string durationText = duration > 0f ? $" for {duration:F1}s" : "";

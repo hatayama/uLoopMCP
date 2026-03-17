@@ -45,12 +45,13 @@ namespace io.github.hatayama.uLoopMCP
         {
             bool hasHeldKeys = SimulateKeyboardOverlayState.HeldKeys.Count > 0;
             string? pressKey = SimulateKeyboardOverlayState.PressKey;
-            float pressElapsed = 0f;
+            bool isPressHeld = SimulateKeyboardOverlayState.IsPressHeld;
+            float pressElapsedSinceRelease = 0f;
 
-            if (pressKey != null)
+            if (pressKey != null && !isPressHeld)
             {
-                pressElapsed = Time.realtimeSinceStartup - SimulateKeyboardOverlayState.PressStartTime;
-                if (pressElapsed > PRESS_DISPLAY_DURATION + FADE_DURATION)
+                pressElapsedSinceRelease = Time.realtimeSinceStartup - SimulateKeyboardOverlayState.PressReleasedTime;
+                if (pressElapsedSinceRelease > PRESS_DISPLAY_DURATION + FADE_DURATION)
                 {
                     SimulateKeyboardOverlayState.ClearPress();
                     pressKey = null;
@@ -79,7 +80,7 @@ namespace io.github.hatayama.uLoopMCP
 
             for (int i = 0; i < _displayKeys.Count; i++)
             {
-                float alpha = GetBadgeAlpha(_displayKeys[i], pressKey, pressElapsed);
+                float alpha = GetBadgeAlpha(_displayKeys[i], pressKey, isPressHeld, pressElapsedSinceRelease);
                 UpdateBadge(_badgePool[i], _displayKeys[i], i, alpha);
             }
         }
@@ -143,14 +144,18 @@ namespace io.github.hatayama.uLoopMCP
             badge.Text.text = keyName;
         }
 
-        private static float GetBadgeAlpha(string keyName, string? pressKey, float pressElapsed)
+        private static float GetBadgeAlpha(
+            string keyName,
+            string? pressKey,
+            bool isPressHeld,
+            float pressElapsedSinceRelease)
         {
-            if (pressKey == null || keyName != pressKey || pressElapsed <= PRESS_DISPLAY_DURATION)
+            if (pressKey == null || keyName != pressKey || isPressHeld || pressElapsedSinceRelease <= PRESS_DISPLAY_DURATION)
             {
                 return 1f;
             }
 
-            float fadeT = Mathf.Clamp01((pressElapsed - PRESS_DISPLAY_DURATION) / FADE_DURATION);
+            float fadeT = Mathf.Clamp01((pressElapsedSinceRelease - PRESS_DISPLAY_DURATION) / FADE_DURATION);
             return 1f - fadeT;
         }
 
