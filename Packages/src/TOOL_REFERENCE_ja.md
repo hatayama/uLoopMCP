@@ -302,7 +302,22 @@
   - `EndPositionX` (number): 終了X座標（Dragアクション用）
   - `EndPositionY` (number): 終了Y座標（Dragアクション用）
 
-### 15. get-unity-search-providers
+### 15. simulate-keyboard
+- **説明**: Input System経由でPlayMode中のキーボード入力をシミュレーション。単発のキータップ、長押し、複数キーの同時押しに対応。Input Systemパッケージが必要。ゲームコードがInput System API（例: `Keyboard.current[Key.W].isPressed`）で入力を読み取っている必要があり、レガシーの `Input.GetKey()` には非対応
+- **パラメータ**:
+  - `Action` (enum): キーボードアクション - "Press", "KeyDown", "KeyUp"（デフォルト: "Press"）
+    - `Press`: ワンショットキータップ（KeyDown→KeyUp）。`Duration`で長押し時間を指定可能
+    - `KeyDown`: KeyUpで明示的に解放するまでキーを押し続ける
+    - `KeyUp`: KeyDownで押下中のキーを解放
+  - `Key` (string): Input SystemのKey enumに対応するキー名（例: "W", "Space", "LeftShift", "Enter"）。大文字小文字を区別しない
+  - `Duration` (number): Pressアクションのホールド秒数、0でワンショットタップ（デフォルト: 0）。KeyDown/KeyUpでは無視される
+- **レスポンス**:
+  - `Success` (boolean): アクションが正常に完了したかどうか
+  - `Message` (string): 実行されたアクションの説明
+  - `Action` (string): 実行されたアクション
+  - `KeyName` (string): 操作対象のキー名
+
+### 16. get-unity-search-providers
 
 Unity Search プロバイダーの詳細情報を取得します。
 
