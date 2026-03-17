@@ -19,6 +19,7 @@ namespace io.github.hatayama.uLoopMCP
         private const float CONTAINER_PADDING_V = 16f;
         private const float KEY_SPACING = 8f;
         private const int FONT_SIZE = 48;
+        private const int GLYPH_FONT_SIZE = 64;
         private const int CORNER_RADIUS = 16;
         private const int ROUNDED_RECT_TEXTURE_SIZE = 64;
         private static readonly Color ContainerBackgroundColor = new Color(0.15f, 0.15f, 0.15f, CONTAINER_BACKGROUND_ALPHA);
@@ -228,6 +229,7 @@ namespace io.github.hatayama.uLoopMCP
             _cachedKeyNames[index] = keyName;
             string symbol = KeySymbolMap.GetSymbol(keyName);
             badge.Text.text = symbol;
+            badge.Text.fontSize = KeySymbolMap.IsGlyphSymbol(symbol) ? GLYPH_FONT_SIZE : FONT_SIZE;
 
             TextGenerationSettings settings = badge.Text.GetGenerationSettings(new Vector2(float.MaxValue, float.MaxValue));
             float preferredWidth = badge.Text.cachedTextGeneratorForLayout.GetPreferredWidth(symbol, settings);

@@ -16,8 +16,6 @@ namespace io.github.hatayama.uLoopMCP
             { "DownArrow", "\u2193" },       // ↓
             { "LeftArrow", "\u2190" },       // ←
             { "RightArrow", "\u2192" },      // →
-            { "LeftCtrl", "Ctrl" },
-            { "RightCtrl", "Ctrl" },
             { "Tab", "\u21E5" },             // ⇥
             { "Escape", "Esc" },
             { "Backspace", "\u232B" },       // ⌫
@@ -41,6 +39,11 @@ namespace io.github.hatayama.uLoopMCP
                 return IsMac ? "\u2318" : "\u229E"; // ⌘ or ⊞
             }
 
+            if (keyName == "LeftCtrl" || keyName == "RightCtrl")
+            {
+                return IsMac ? "\u2303" : "Ctrl"; // ⌃ or Ctrl
+            }
+
             if (keyName == "LeftAlt" || keyName == "RightAlt")
             {
                 return IsMac ? "\u2325" : "Alt"; // ⌥ or Alt
@@ -52,6 +55,12 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return keyName;
+        }
+
+        // Single non-ASCII characters render smaller than text in most fonts
+        public static bool IsGlyphSymbol(string symbol)
+        {
+            return symbol.Length == 1 && symbol[0] > 127;
         }
     }
 }
