@@ -906,7 +906,11 @@ namespace io.github.hatayama.uLoopMCP
 
                 if (success)
                 {
+#if UNITY_6000_0_OR_NEWER
+                    EditorDialog.DisplayAlertDialog("Skills Installed", "Skills have been installed successfully.", "OK", DialogIconType.Info);
+#else
                     EditorUtility.DisplayDialog("Skills Installed", "Skills have been installed successfully.", "OK");
+#endif
                 }
                 else
                 {
