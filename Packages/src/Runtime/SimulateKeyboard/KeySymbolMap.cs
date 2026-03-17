@@ -20,8 +20,6 @@ namespace io.github.hatayama.uLoopMCP
             { "Escape", "Esc" },
             { "Backspace", "\u232B" },       // ⌫
             { "Delete", "\u2326" },          // ⌦
-            { "LeftWindows", "\u229E" },     // ⊞
-            { "RightWindows", "\u229E" },    // ⊞
             { "ContextMenu", "Menu" },
             { "PrintScreen", "PrtSc" },
             { "ScrollLock", "ScrLk" },
@@ -34,7 +32,9 @@ namespace io.github.hatayama.uLoopMCP
 
         public static string GetSymbol(string keyName)
         {
-            if (keyName == "LeftMeta" || keyName == "RightMeta")
+            // Key.LeftMeta.ToString() returns "LeftWindows" in Input System
+            if (keyName == "LeftMeta" || keyName == "RightMeta" ||
+                keyName == "LeftWindows" || keyName == "RightWindows")
             {
                 return IsMac ? "\u2318" : "\u229E"; // ⌘ or ⊞
             }
