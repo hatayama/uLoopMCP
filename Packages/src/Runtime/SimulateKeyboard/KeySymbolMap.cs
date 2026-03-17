@@ -9,8 +9,6 @@ namespace io.github.hatayama.uLoopMCP
         private static readonly Dictionary<string, string> Symbols = new()
         {
             { "Space", "\u2423" },           // ␣
-            { "LeftShift", "\u21E7" },       // ⇧
-            { "RightShift", "\u21E7" },      // ⇧
             { "Enter", "\u23CE" },           // ⏎
             { "UpArrow", "\u2191" },         // ↑
             { "DownArrow", "\u2193" },       // ↓
@@ -47,6 +45,11 @@ namespace io.github.hatayama.uLoopMCP
             if (keyName == "LeftAlt" || keyName == "RightAlt")
             {
                 return IsMac ? "\u2325" : "Alt"; // ⌥ or Alt
+            }
+
+            if (keyName == "LeftShift" || keyName == "RightShift")
+            {
+                return IsMac ? "\u21E7" : "Shift"; // ⇧ or Shift
             }
 
             if (Symbols.TryGetValue(keyName, out string symbol))
