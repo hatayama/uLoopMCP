@@ -19,6 +19,10 @@ namespace io.github.hatayama.uLoopMCP
         private const float ROW_GAP = 6f;
         private const string SCENE_PATH = "Assets/Scenes/SimulateKeyboardDemoScene.unity";
 
+        private static bool IsMac =>
+            Application.platform == RuntimePlatform.OSXEditor ||
+            Application.platform == RuntimePlatform.OSXPlayer;
+
         private struct KeyDef
         {
             public Key Key;
@@ -192,14 +196,19 @@ namespace io.github.hatayama.uLoopMCP
             };
             BuildRow(panel.transform, row4, row4Y);
 
-            // Row 5: LCtrl LAlt Space RAlt RCtrl
+            // Row 5: LCtrl LAlt LMeta Space RMeta RAlt RCtrl
             float row5Y = row4Y - (KEY_SIZE + ROW_GAP);
+            string metaLabel = IsMac ? "\u2318" : "Win";
+            string altLabel = IsMac ? "\u2325" : "Alt";
+            string ctrlLabel = IsMac ? "\u2303" : "Ctrl";
             KeyDef[] row5 = {
-                new KeyDef(Key.LeftCtrl, "Ctrl", 140f),
-                new KeyDef(Key.LeftAlt, "Alt", 140f),
-                new KeyDef(Key.Space, "Space", 500f),
-                new KeyDef(Key.RightAlt, "Alt", 140f),
-                new KeyDef(Key.RightCtrl, "Ctrl", 140f),
+                new KeyDef(Key.LeftCtrl, ctrlLabel, 120f),
+                new KeyDef(Key.LeftAlt, altLabel, 120f),
+                new KeyDef(Key.LeftMeta, metaLabel, 120f),
+                new KeyDef(Key.Space, "Space", 380f),
+                new KeyDef(Key.RightMeta, metaLabel, 120f),
+                new KeyDef(Key.RightAlt, altLabel, 120f),
+                new KeyDef(Key.RightCtrl, ctrlLabel, 120f),
             };
             BuildRow(panel.transform, row5, row5Y);
 
