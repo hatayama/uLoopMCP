@@ -24,5 +24,8 @@ namespace io.github.hatayama.uLoopMCP
 
         [Description("Hold duration in seconds for LongPress action (default: 0.5).")]
         public float Duration { get; set; } = 0.5f;
+
+        [Description("Mouse button: Left(0, default), Right(1), Middle(2).")]
+        public MouseButton Button { get; set; } = MouseButton.Left;
     }
 }

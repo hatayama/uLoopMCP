@@ -56,7 +56,7 @@ namespace io.github.hatayama.uLoopMCP
         // ALL currently held keys into every event — not just the target key.
         public static void SetKeyState(Keyboard keyboard, Key key, bool pressed)
         {
-            InputUpdateType updateType = KeyboardInputUpdateTypeResolver.Resolve();
+            InputUpdateType updateType = InputUpdateTypeResolver.Resolve();
             using (StateEvent.From(keyboard, out InputEventPtr eventPtr))
             {
                 foreach (Key heldKey in _heldKeys)
@@ -98,7 +98,7 @@ namespace io.github.hatayama.uLoopMCP
                     keyboard[key].WriteValueIntoEvent(0f, eventPtr);
                 }
 
-                InputUpdateType updateType = KeyboardInputUpdateTypeResolver.Resolve();
+                InputUpdateType updateType = InputUpdateTypeResolver.Resolve();
                 InputState.Change(keyboard, eventPtr, updateType);
             }
 

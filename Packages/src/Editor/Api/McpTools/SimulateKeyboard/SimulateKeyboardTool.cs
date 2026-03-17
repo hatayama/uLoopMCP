@@ -6,7 +6,6 @@ using UnityEditor;
 using UnityEngine;
 #if ULOOPMCP_HAS_INPUT_SYSTEM
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.LowLevel;
 #endif
 
 namespace io.github.hatayama.uLoopMCP
@@ -176,9 +175,9 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
+                await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
                 pressWasApplied = true;
-                await WaitForPressLifetime(duration, ct);
+                await InputSystemUpdateHelper.WaitForPressLifetime(duration, ct);
             }
             finally
             {
@@ -225,11 +224,11 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
+                await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
                 keyDownApplied = true;
                 KeyboardKeyState.SetKeyDown(key);
                 SimulateKeyboardOverlayState.AddHeldKey(keyName);
-                await WaitForObservationFrames(ct);
+                await InputSystemUpdateHelper.WaitForObservationFrames(ct);
                 committed = true;
             }
             finally
@@ -264,10 +263,10 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), ct);
+            await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), ct);
             KeyboardKeyState.SetKeyUp(key);
             SimulateKeyboardOverlayState.RemoveHeldKey(keyName);
-            await WaitForObservationFrames(ct);
+            await InputSystemUpdateHelper.WaitForObservationFrames(ct);
 
             return new SimulateKeyboardResponse
             {
@@ -285,26 +284,6 @@ namespace io.github.hatayama.uLoopMCP
                 return Key.Enter.ToString();
             }
             return keyName;
-        }
-
-        private static async Task WaitForPressLifetime(float duration, CancellationToken ct)
-        {
-            int minimumObservationFrames = GetMinimumObservationFrameCount();
-            int observedFrames = 0;
-            float startTime = Time.realtimeSinceStartup;
-            float elapsed = 0f;
-
-            while (observedFrames < minimumObservationFrames || elapsed < duration)
-            {
-                await EditorDelay.DelayFrame(1, ct);
-                observedFrames++;
-                elapsed = Time.realtimeSinceStartup - startTime;
-            }
-        }
-
-        private static async Task WaitForObservationFrames(CancellationToken ct)
-        {
-            await EditorDelay.DelayFrame(GetMinimumObservationFrameCount(), ct);
         }
 
         private static async Task FinalizePressOverlay(CancellationToken ct)
@@ -333,156 +312,12 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), CancellationToken.None);
+            await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), CancellationToken.None);
         }
 
         private static bool CanInjectKeyboardState(Keyboard keyboard)
         {
             return EditorApplication.isPlaying && !EditorApplication.isPaused && Keyboard.current == keyboard;
-        }
-
-        private static int GetMinimumObservationFrameCount()
-        {
-            return KeyboardInputUpdateTypeResolver.RequiresExplicitUpdate() ? 2 : 1;
-        }
-
-        private static Task ApplyOnNextConfiguredUpdate(Action apply, CancellationToken ct)
-        {
-            InputUpdateType targetUpdateType = KeyboardInputUpdateTypeResolver.Resolve();
-            if (KeyboardInputUpdateTypeResolver.RequiresExplicitUpdate())
-            {
-                return ApplyOnExplicitUpdate(apply, targetUpdateType, ct);
-            }
-
-            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
-            CancellationTokenRegistration registration = default;
-            Action? callback = null;
-
-            callback = () =>
-            {
-                InputUpdateType currentUpdateType = InputState.currentUpdateType;
-                if (!KeyboardInputUpdateTypeResolver.IsMatch(currentUpdateType, targetUpdateType))
-                {
-                    return;
-                }
-
-                Debug.Assert(callback != null, "callback must be assigned before subscription");
-                InputSystem.onBeforeUpdate -= callback;
-                registration.Dispose();
-                apply();
-                tcs.TrySetResult(true);
-            };
-
-            InputSystem.onBeforeUpdate += callback;
-            if (ct.CanBeCanceled)
-            {
-                registration = ct.Register(() =>
-                {
-                    Debug.Assert(callback != null, "callback must be assigned before cancellation");
-                    InputSystem.onBeforeUpdate -= callback;
-                    tcs.TrySetCanceled(ct);
-                });
-            }
-
-            return tcs.Task;
-        }
-
-        private static Task ApplyOnExplicitUpdate(Action apply, InputUpdateType targetUpdateType, CancellationToken ct)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
-            CancellationTokenRegistration registration = default;
-            Action? callback = null;
-
-            callback = () =>
-            {
-                InputUpdateType currentUpdateType = InputState.currentUpdateType;
-                if (!KeyboardInputUpdateTypeResolver.IsMatch(currentUpdateType, targetUpdateType))
-                {
-                    return;
-                }
-
-                Debug.Assert(callback != null, "callback must be assigned before subscription");
-                InputSystem.onBeforeUpdate -= callback;
-                registration.Dispose();
-                apply();
-                tcs.TrySetResult(true);
-            };
-
-            InputSystem.onBeforeUpdate += callback;
-            if (ct.CanBeCanceled)
-            {
-                registration = ct.Register(() =>
-                {
-                    Debug.Assert(callback != null, "callback must be assigned before cancellation");
-                    InputSystem.onBeforeUpdate -= callback;
-                    tcs.TrySetCanceled(ct);
-                });
-            }
-
-            RunExplicitUpdate(targetUpdateType);
-            if (!tcs.Task.IsCompleted)
-            {
-                Debug.Assert(callback != null, "callback must be assigned before explicit update fallback");
-                InputSystem.onBeforeUpdate -= callback;
-                registration.Dispose();
-                apply();
-                RunExplicitUpdate(targetUpdateType);
-                tcs.TrySetResult(true);
-            }
-
-            return tcs.Task;
-        }
-
-        private static void RunExplicitUpdate(InputUpdateType targetUpdateType)
-        {
-            InputSettings? settings = InputSystem.settings;
-            if (settings == null)
-            {
-                InputSystem.Update();
-                return;
-            }
-
-            InputSettings.UpdateMode originalUpdateMode = settings.updateMode;
-            InputSettings.UpdateMode targetUpdateMode = GetExplicitUpdateMode(targetUpdateType, originalUpdateMode);
-            if (targetUpdateMode == originalUpdateMode)
-            {
-                InputSystem.Update();
-                return;
-            }
-
-            settings.updateMode = targetUpdateMode;
-            try
-            {
-                InputSystem.Update();
-            }
-            finally
-            {
-                settings.updateMode = originalUpdateMode;
-            }
-        }
-
-        private static InputSettings.UpdateMode GetExplicitUpdateMode(
-            InputUpdateType targetUpdateType,
-            InputSettings.UpdateMode fallbackUpdateMode)
-        {
-            if (targetUpdateType == InputUpdateType.Dynamic)
-            {
-                return InputSettings.UpdateMode.ProcessEventsInDynamicUpdate;
-            }
-
-            if (targetUpdateType == InputUpdateType.Fixed)
-            {
-                return InputSettings.UpdateMode.ProcessEventsInFixedUpdate;
-            }
-
-            if (targetUpdateType == InputUpdateType.Manual)
-            {
-                return InputSettings.UpdateMode.ProcessEventsManually;
-            }
-
-            return fallbackUpdateMode;
         }
 #endif
     }

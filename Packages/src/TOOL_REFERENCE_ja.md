@@ -276,11 +276,11 @@
   - `IsPaused` (boolean): プレイモードが一時停止中かどうか
   - `Message` (string): 実行されたアクションの説明
 
-### 14. simulate-mouse
-- **説明**: PlayMode中のUI要素に対してマウスクリック・長押し・ドラッグをシミュレーション。EventSystemとExecuteEventsを使ってポインタイベントを直接ディスパッチするため、旧・新Input Systemの両方に依存せず動作
+### 14. simulate-mouse-ui
+- **説明**: PlayMode中のUI要素に対してマウスクリック・長押し・ドラッグをシミュレーション。EventSystemとExecuteEventsを使ってポインタイベントを直接ディスパッチするため、旧・新Input Systemの両方に依存せず動作。Input Systemを読むゲームロジック（`Mouse.current.leftButton.wasPressedThisFrame`等）には `simulate-mouse-input` を使用
 - **パラメータ**:
   - `Action` (enum): マウスアクション - "Click", "Drag", "DragStart", "DragMove", "DragEnd", "LongPress"（デフォルト: "Click"）
-    - `Click`: (X, Y)で左クリック。PointerDown → PointerUp → PointerClick を発火
+    - `Click`: (X, Y)でクリック。PointerDown → PointerUp → PointerClick を発火
     - `LongPress`: (X, Y)でDuration秒間押し続けてからリリース。PointerClickは発火しない
     - `Drag`: (FromX, FromY)から(X, Y)へのワンショットドラッグ
     - `DragStart`: (X, Y)でドラッグを開始しホールド
@@ -292,6 +292,7 @@
   - `FromY` (number): Dragアクションの開始Y座標（デフォルト: 0）
   - `DragSpeed` (number): ドラッグ速度（ピクセル/秒）、0で即時移動（デフォルト: 2000）
   - `Duration` (number): LongPressアクションのホールド秒数（デフォルト: 0.5）
+  - `Button` (enum): マウスボタン - "Left", "Right", "Middle"（デフォルト: "Left"）
 - **レスポンス**:
   - `Success` (boolean): アクションが正常に完了したかどうか
   - `Message` (string): 実行されたアクションの説明
@@ -302,7 +303,31 @@
   - `EndPositionX` (number): 終了X座標（Dragアクション用）
   - `EndPositionY` (number): 終了Y座標（Dragアクション用）
 
-### 15. simulate-keyboard
+### 15. simulate-mouse-input
+- **説明**: Input System経由でPlayMode中のマウス入力をシミュレーション。ボタンクリック、マウスデルタ、スクロールホイールを `Mouse.current` に直接注入。`wasPressedThisFrame`や`Mouse.current.delta`等を読むゲームロジック向け。Input Systemパッケージが必要。IPointerClickHandler等のUI要素には `simulate-mouse-ui` を使用
+- **パラメータ**:
+  - `Action` (enum): マウス入力アクション - "Click", "LongPress", "MoveDelta", "Scroll"（デフォルト: "Click"）
+    - `Click`: ボタンのpress+releaseを注入し、`wasPressedThisFrame`がtrueを返すようにする
+    - `LongPress`: Duration秒間ボタンをホールド
+    - `MoveDelta`: マウスデルタを注入（FPSカメラ操作等）
+    - `Scroll`: スクロールホイールを注入（ホットバー切替、ズーム等）
+  - `X` (number): ターゲットX座標（スクリーンピクセル、原点: 左上）。ClickとLongPressで使用（デフォルト: 0）
+  - `Y` (number): ターゲットY座標（スクリーンピクセル、原点: 左上）。ClickとLongPressで使用（デフォルト: 0）
+  - `Button` (enum): マウスボタン - "Left", "Right", "Middle"（デフォルト: "Left"）。ClickとLongPressで使用
+  - `Duration` (number): LongPressのホールド秒数、またはClickの最小ホールド時間。0=ワンショットタップ（デフォルト: 0）
+  - `DeltaX` (number): MoveDeltaアクションのデルタX（ピクセル）。正=右（デフォルト: 0）
+  - `DeltaY` (number): MoveDeltaアクションのデルタY（ピクセル）。正=上（デフォルト: 0）
+  - `ScrollX` (number): Scrollアクションの水平スクロールデルタ（デフォルト: 0）
+  - `ScrollY` (number): Scrollアクションの垂直スクロールデルタ。正=上、通常1ノッチ=120（デフォルト: 0）
+- **レスポンス**:
+  - `Success` (boolean): アクションが正常に完了したかどうか
+  - `Message` (string): 実行されたアクションの説明
+  - `Action` (string): 実行されたアクション
+  - `Button` (string): 使用されたボタン（Click/LongPress用）
+  - `PositionX` (number): 使用されたX座標
+  - `PositionY` (number): 使用されたY座標
+
+### 16. simulate-keyboard
 - **説明**: Input System経由でPlayMode中のキーボード入力をシミュレーション。単発のキータップ、長押し、複数キーの同時押しに対応。Input Systemパッケージが必要で、Player SettingsのActive Input Handlingを `Input System Package (New)` または `Both` に設定する必要がある。ゲームコードがInput System API（例: `Keyboard.current[Key.W].isPressed`）で入力を読み取っている必要があり、レガシーの `Input.GetKey()` には非対応
 - **パラメータ**:
   - `Action` (enum): キーボードアクション - "Press", "KeyDown", "KeyUp"（デフォルト: "Press"）
@@ -317,7 +342,7 @@
   - `Action` (string): 実行されたアクション
   - `KeyName` (string, nullable): 操作対象のキー名
 
-### 16. get-unity-search-providers
+### 17. get-unity-search-providers
 
 Unity Search プロバイダーの詳細情報を取得します。
 

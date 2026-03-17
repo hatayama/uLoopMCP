@@ -10,10 +10,10 @@ using UnityEngine.UI;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    [McpTool(Description = "Simulate mouse click and drag on PlayMode UI elements via screen coordinates")]
+    [McpTool(Description = "Simulate mouse click, long-press, and drag on PlayMode UI elements via EventSystem screen coordinates")]
     public class SimulateMouseTool : AbstractUnityTool<SimulateMouseSchema, SimulateMouseResponse>
     {
-        public override string ToolName => "simulate-mouse";
+        public override string ToolName => "simulate-mouse-ui";
 
         private const float EXPAND_DURATION = 0.1f;
         private const float EXPAND_START_SCALE = 1.5f;
@@ -133,6 +133,19 @@ namespace io.github.hatayama.uLoopMCP
             overlayGo.AddComponent<SimulateMouseOverlay>();
         }
 
+        private static PointerEventData.InputButton ToInputButton(MouseButton button)
+        {
+            switch (button)
+            {
+                case MouseButton.Right:
+                    return PointerEventData.InputButton.Right;
+                case MouseButton.Middle:
+                    return PointerEventData.InputButton.Middle;
+                default:
+                    return PointerEventData.InputButton.Left;
+            }
+        }
+
         // Input coordinates use top-left origin; Unity Screen space uses bottom-left origin.
         // Handles.GetMainGameViewSize() returns the Game view's target resolution (e.g. 1920x1080),
         // which matches the Canvas layout space — unlike Screen.height which returns the window pixel size.
@@ -155,11 +168,12 @@ namespace io.github.hatayama.uLoopMCP
             Vector2 screenPos = InputToScreen(inputPos);
             RaycastResult? hit = RaycastUI(screenPos, eventSystem);
 
+            PointerEventData.InputButton inputButton = ToInputButton(parameters.Button);
             PointerEventData pointerData = new PointerEventData(eventSystem)
             {
                 position = screenPos,
                 pressPosition = screenPos,
-                button = PointerEventData.InputButton.Left
+                button = inputButton
             };
 
             GameObject? target = null;
@@ -238,11 +252,12 @@ namespace io.github.hatayama.uLoopMCP
             Vector2 screenPos = InputToScreen(inputPos);
             RaycastResult? hit = RaycastUI(screenPos, eventSystem);
 
+            PointerEventData.InputButton inputButton = ToInputButton(parameters.Button);
             PointerEventData pointerData = new PointerEventData(eventSystem)
             {
                 position = screenPos,
                 pressPosition = screenPos,
-                button = PointerEventData.InputButton.Left
+                button = inputButton
             };
 
             GameObject? target = null;

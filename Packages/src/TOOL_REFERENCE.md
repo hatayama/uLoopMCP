@@ -278,11 +278,11 @@ All tools automatically include the following property:
 
 ---
 
-### 14. simulate-mouse
-- **Description**: Simulate mouse click, long-press, and drag on PlayMode UI elements via screen coordinates. Uses EventSystem and ExecuteEvents to dispatch pointer events directly — works independently of both old and new Input System
+### 14. simulate-mouse-ui
+- **Description**: Simulate mouse click, long-press, and drag on PlayMode UI elements via EventSystem screen coordinates. Uses EventSystem and ExecuteEvents to dispatch pointer events directly — works independently of both old and new Input System. For game logic that reads Input System (e.g. `Mouse.current.leftButton.wasPressedThisFrame`), use `simulate-mouse-input` instead
 - **Parameters**:
   - `Action` (enum): Mouse action - "Click", "Drag", "DragStart", "DragMove", "DragEnd", "LongPress" (default: "Click")
-    - `Click`: Left click at (X, Y). Fires PointerDown → PointerUp → PointerClick
+    - `Click`: Click at (X, Y). Fires PointerDown → PointerUp → PointerClick
     - `LongPress`: Press and hold at (X, Y) for Duration seconds, then release. No PointerClick fired
     - `Drag`: One-shot drag from (FromX, FromY) to (X, Y). Fires BeginDrag → Drag×N → EndDrag
     - `DragStart`: Begin drag at (X, Y) and hold
@@ -294,6 +294,7 @@ All tools automatically include the following property:
   - `FromY` (number): Start Y position for Drag action (default: 0)
   - `DragSpeed` (number): Drag speed in pixels per second, 0 for instant (default: 2000)
   - `Duration` (number): Hold duration in seconds for LongPress action (default: 0.5)
+  - `Button` (enum): Mouse button - "Left", "Right", "Middle" (default: "Left")
 - **Response**:
   - `Success` (boolean): Whether the action completed successfully
   - `Message` (string): Description of the action performed
@@ -304,7 +305,31 @@ All tools automatically include the following property:
   - `EndPositionX` (number): End X position (for Drag actions)
   - `EndPositionY` (number): End Y position (for Drag actions)
 
-### 15. simulate-keyboard
+### 15. simulate-mouse-input
+- **Description**: Simulate mouse input in PlayMode via Input System. Injects button clicks, mouse delta, and scroll wheel directly into `Mouse.current` for game logic that reads Input System (e.g. `wasPressedThisFrame`, `Mouse.current.delta`). Requires the Input System package. For UI elements with IPointerClickHandler, use `simulate-mouse-ui` instead
+- **Parameters**:
+  - `Action` (enum): Mouse input action - "Click", "LongPress", "MoveDelta", "Scroll" (default: "Click")
+    - `Click`: Inject button press and release so `wasPressedThisFrame` returns true
+    - `LongPress`: Inject button hold for Duration seconds
+    - `MoveDelta`: Inject mouse delta (for FPS camera/look control)
+    - `Scroll`: Inject scroll wheel (for hotbar switching, zoom, etc.)
+  - `X` (number): Target X position in screen pixels, origin: top-left. Used by Click and LongPress (default: 0)
+  - `Y` (number): Target Y position in screen pixels, origin: top-left. Used by Click and LongPress (default: 0)
+  - `Button` (enum): Mouse button - "Left", "Right", "Middle" (default: "Left"). Used by Click and LongPress
+  - `Duration` (number): Hold duration for LongPress, or minimum hold time for Click. 0 = one-shot tap (default: 0)
+  - `DeltaX` (number): Delta X in pixels for MoveDelta. Positive = right (default: 0)
+  - `DeltaY` (number): Delta Y in pixels for MoveDelta. Positive = up (default: 0)
+  - `ScrollX` (number): Horizontal scroll delta for Scroll action (default: 0)
+  - `ScrollY` (number): Vertical scroll delta for Scroll action. Positive = up, typically 120 per notch (default: 0)
+- **Response**:
+  - `Success` (boolean): Whether the action completed successfully
+  - `Message` (string): Description of the action performed
+  - `Action` (string): The action that was executed
+  - `Button` (string): The button used (for Click/LongPress)
+  - `PositionX` (number): X position used
+  - `PositionY` (number): Y position used
+
+### 16. simulate-keyboard
 - **Description**: Simulate keyboard key input in PlayMode via Input System. Supports single key taps, sustained holds, and multi-key combinations. Requires the Input System package, and Active Input Handling must be set to `Input System Package (New)` or `Both` in Player Settings. Game code must read input via Input System API (e.g. `Keyboard.current[Key.W].isPressed`), not legacy `Input.GetKey()`
 - **Parameters**:
   - `Action` (enum): Keyboard action - "Press", "KeyDown", "KeyUp" (default: "Press")
@@ -319,7 +344,7 @@ All tools automatically include the following property:
   - `Action` (string): The action that was executed
   - `KeyName` (string, nullable): Name of the key that was acted upon
 
-### 16. get-unity-search-providers
+### 17. get-unity-search-providers
 
 Get detailed information about available Unity Search providers.
 
