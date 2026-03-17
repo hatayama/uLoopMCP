@@ -19,11 +19,16 @@ namespace io.github.hatayama.uLoopMCP
         {
             _image = GetComponent<Image>();
 
-            // Scene file bakes the label for one platform; fix it at runtime
-            Text text = GetComponentInChildren<Text>();
-            if (text != null)
+            // Scene file bakes modifier labels for one platform; fix at runtime
+            string rawName = targetKey.ToString();
+            string symbol = KeySymbolMap.GetSymbol(rawName);
+            if (rawName != symbol)
             {
-                text.text = KeySymbolMap.GetSymbol(targetKey.ToString());
+                Text text = GetComponentInChildren<Text>();
+                if (text != null)
+                {
+                    text.text = symbol;
+                }
             }
         }
 
