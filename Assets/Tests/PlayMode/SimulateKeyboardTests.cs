@@ -171,7 +171,7 @@ namespace Tests.PlayMode
             yield return null;
 
             BadgeVisual badge = RequireBadgeVisual("Space");
-            Assert.AreEqual(0.7f, badge.BackgroundAlpha, 0.01f, "Released press badge should still be fully visible right after the tool returns.");
+            Assert.AreEqual(SimulateKeyboardOverlay.CONTAINER_BACKGROUND_ALPHA, badge.BackgroundAlpha, 0.01f, "Released press badge should still be fully visible right after the tool returns.");
             Assert.AreEqual(1f, badge.TextAlpha, 0.01f, "Released press text should still be fully visible right after the tool returns.");
         }
 
@@ -193,9 +193,9 @@ namespace Tests.PlayMode
             BadgeVisual heldBadgeWhilePressHeld = RequireBadgeVisual("LeftShift");
             BadgeVisual pressBadgeWhileHeld = RequireBadgeVisual("Space");
 
-            Assert.AreEqual(0.7f, heldBadgeWhilePressHeld.BackgroundAlpha, 0.01f, "Held-key badge should keep full opacity while another key is held.");
+            Assert.AreEqual(SimulateKeyboardOverlay.CONTAINER_BACKGROUND_ALPHA, heldBadgeWhilePressHeld.BackgroundAlpha, 0.01f, "Held-key badge should keep full opacity while another key is held.");
             Assert.AreEqual(1f, heldBadgeWhilePressHeld.TextAlpha, 0.01f, "Held-key text should keep full opacity while another key is held.");
-            Assert.AreEqual(0.7f, pressBadgeWhileHeld.BackgroundAlpha, 0.01f, "Long presses should stay visible until the key is released.");
+            Assert.AreEqual(SimulateKeyboardOverlay.CONTAINER_BACKGROUND_ALPHA, pressBadgeWhileHeld.BackgroundAlpha, 0.01f, "Long presses should stay visible until the key is released.");
             Assert.AreEqual(1f, pressBadgeWhileHeld.TextAlpha, 0.01f, "Long-press text should stay visible until the key is released.");
 
             SimulateKeyboardOverlayState.ReleasePress();
@@ -206,9 +206,9 @@ namespace Tests.PlayMode
             BadgeVisual heldBadgeAfterRelease = RequireBadgeVisual("LeftShift");
             BadgeVisual pressBadgeAfterRelease = RequireBadgeVisual("Space");
 
-            Assert.AreEqual(0.7f, heldBadgeAfterRelease.BackgroundAlpha, 0.01f, "Held-key badge should remain fully visible while transient presses fade.");
+            Assert.AreEqual(SimulateKeyboardOverlay.CONTAINER_BACKGROUND_ALPHA, heldBadgeAfterRelease.BackgroundAlpha, 0.01f, "Held-key badge should remain fully visible while transient presses fade.");
             Assert.AreEqual(1f, heldBadgeAfterRelease.TextAlpha, 0.01f, "Held-key text should remain fully visible while transient presses fade.");
-            Assert.Less(pressBadgeAfterRelease.BackgroundAlpha, 0.7f, "Transient press badge should fade only after release.");
+            Assert.Less(pressBadgeAfterRelease.BackgroundAlpha, SimulateKeyboardOverlay.CONTAINER_BACKGROUND_ALPHA, "Transient press badge should fade only after release.");
             Assert.Less(pressBadgeAfterRelease.TextAlpha, 1f, "Transient press text should fade only after release.");
         }
 
@@ -540,10 +540,11 @@ namespace Tests.PlayMode
             Debug.Assert(overlay != null, "SimulateKeyboardOverlay must exist before reading badge visuals.");
             Assert.IsNotNull(overlay, "SimulateKeyboardOverlay must exist before reading badge visuals.");
 
+            string symbol = KeySymbolMap.GetSymbol(keyName);
             Text[] texts = overlay!.gameObject.GetComponentsInChildren<Text>(true);
             for (int i = 0; i < texts.Length; i++)
             {
-                if (texts[i].text != keyName)
+                if (texts[i].text != symbol)
                 {
                     continue;
                 }
@@ -553,7 +554,7 @@ namespace Tests.PlayMode
                 return new BadgeVisual(image!.color.a, texts[i].color.a);
             }
 
-            Assert.Fail($"Badge '{keyName}' was not found.");
+            Assert.Fail($"Badge '{keyName}' (symbol: '{symbol}') was not found.");
             return default;
         }
 
