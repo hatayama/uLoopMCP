@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -19,16 +20,29 @@ namespace io.github.hatayama.uLoopMCP
             { "RightCtrl", "Ctrl" },
             { "LeftAlt", "Alt" },
             { "RightAlt", "Alt" },
-            { "LeftMeta", "\u2318" },        // ⌘
-            { "RightMeta", "\u2318" },       // ⌘
             { "Tab", "\u21E5" },             // ⇥
             { "Escape", "Esc" },
             { "Backspace", "\u232B" },       // ⌫
             { "Delete", "\u2326" },          // ⌦
+            { "LeftWindows", "\u229E" },     // ⊞
+            { "RightWindows", "\u229E" },    // ⊞
+            { "ContextMenu", "Menu" },
+            { "PrintScreen", "PrtSc" },
+            { "ScrollLock", "ScrLk" },
         };
+
+        // Meta key maps to ⌘ on macOS, ⊞ on Windows/Linux
+        private static bool IsMac =>
+            Application.platform == RuntimePlatform.OSXEditor ||
+            Application.platform == RuntimePlatform.OSXPlayer;
 
         public static string GetSymbol(string keyName)
         {
+            if (keyName == "LeftMeta" || keyName == "RightMeta")
+            {
+                return IsMac ? "\u2318" : "\u229E"; // ⌘ or ⊞
+            }
+
             if (Symbols.TryGetValue(keyName, out string symbol))
             {
                 return symbol;
