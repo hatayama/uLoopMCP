@@ -178,26 +178,15 @@ namespace io.github.hatayama.uLoopMCP
             {
                 await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
                 pressWasApplied = true;
-
-                if (duration > 0f)
-                {
-                    float startTime = Time.realtimeSinceStartup;
-                    float elapsed = 0f;
-                    while (elapsed < duration)
-                    {
-                        await EditorDelay.DelayFrame(1, ct);
-                        elapsed = Time.realtimeSinceStartup - startTime;
-                    }
-                }
+                await WaitForPressLifetime(duration, ct);
             }
             finally
             {
-                if (pressWasApplied && EditorApplication.isPlaying && !EditorApplication.isPaused)
+                if (pressWasApplied)
                 {
-                    await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), CancellationToken.None);
+                    await ReleaseKeyStateIfPossible(keyboard, key);
                     KeyboardKeyState.UnregisterTransientKey(key);
-                    SimulateKeyboardOverlayState.ReleasePress();
-                    await EditorDelay.DelayFrame(1, CancellationToken.None);
+                    await FinalizePressOverlay(ct);
                 }
                 else
                 {
@@ -231,10 +220,25 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
-            KeyboardKeyState.SetKeyDown(key);
-            SimulateKeyboardOverlayState.AddHeldKey(keyName);
-            await EditorDelay.DelayFrame(1, ct);
+            bool keyDownApplied = false;
+            bool committed = false;
+
+            try
+            {
+                await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, true), ct);
+                keyDownApplied = true;
+                KeyboardKeyState.SetKeyDown(key);
+                SimulateKeyboardOverlayState.AddHeldKey(keyName);
+                await WaitForObservationFrames(ct);
+                committed = true;
+            }
+            finally
+            {
+                if (keyDownApplied && !committed)
+                {
+                    await RollbackHeldKey(keyboard, key, keyName);
+                }
+            }
 
             return new SimulateKeyboardResponse
             {
@@ -263,7 +267,7 @@ namespace io.github.hatayama.uLoopMCP
             await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), ct);
             KeyboardKeyState.SetKeyUp(key);
             SimulateKeyboardOverlayState.RemoveHeldKey(keyName);
-            await EditorDelay.DelayFrame(1, ct);
+            await WaitForObservationFrames(ct);
 
             return new SimulateKeyboardResponse
             {
@@ -281,6 +285,65 @@ namespace io.github.hatayama.uLoopMCP
                 return Key.Enter.ToString();
             }
             return keyName;
+        }
+
+        private static async Task WaitForPressLifetime(float duration, CancellationToken ct)
+        {
+            int minimumObservationFrames = GetMinimumObservationFrameCount();
+            int observedFrames = 0;
+            float startTime = Time.realtimeSinceStartup;
+            float elapsed = 0f;
+
+            while (observedFrames < minimumObservationFrames || elapsed < duration)
+            {
+                await EditorDelay.DelayFrame(1, ct);
+                observedFrames++;
+                elapsed = Time.realtimeSinceStartup - startTime;
+            }
+        }
+
+        private static async Task WaitForObservationFrames(CancellationToken ct)
+        {
+            await EditorDelay.DelayFrame(GetMinimumObservationFrameCount(), ct);
+        }
+
+        private static async Task FinalizePressOverlay(CancellationToken ct)
+        {
+            if (ct.IsCancellationRequested)
+            {
+                SimulateKeyboardOverlayState.ClearPress();
+                return;
+            }
+
+            SimulateKeyboardOverlayState.ReleasePress();
+            await EditorDelay.DelayFrame(1, CancellationToken.None);
+        }
+
+        private static async Task RollbackHeldKey(Keyboard keyboard, Key key, string keyName)
+        {
+            await ReleaseKeyStateIfPossible(keyboard, key);
+            KeyboardKeyState.SetKeyUp(key);
+            SimulateKeyboardOverlayState.RemoveHeldKey(keyName);
+        }
+
+        private static async Task ReleaseKeyStateIfPossible(Keyboard keyboard, Key key)
+        {
+            if (!CanInjectKeyboardState(keyboard))
+            {
+                return;
+            }
+
+            await ApplyOnNextConfiguredUpdate(() => KeyboardKeyState.SetKeyState(keyboard, key, false), CancellationToken.None);
+        }
+
+        private static bool CanInjectKeyboardState(Keyboard keyboard)
+        {
+            return EditorApplication.isPlaying && !EditorApplication.isPaused && Keyboard.current == keyboard;
+        }
+
+        private static int GetMinimumObservationFrameCount()
+        {
+            return KeyboardInputUpdateTypeResolver.RequiresExplicitUpdate() ? 2 : 1;
         }
 
         private static Task ApplyOnNextConfiguredUpdate(Action apply, CancellationToken ct)

@@ -81,6 +81,7 @@ namespace io.github.hatayama.uLoopMCP
             if (keyboard == null)
             {
                 _heldKeys.Clear();
+                _transientKeys.Clear();
                 return;
             }
 

@@ -1,6 +1,7 @@
 #if ULOOPMCP_HAS_INPUT_SYSTEM
 #nullable enable
 using System.Collections;
+using System.Threading;
 using System.Threading.Tasks;
 using io.github.hatayama.uLoopMCP;
 using Newtonsoft.Json.Linq;
@@ -18,11 +19,12 @@ namespace Tests.PlayMode
     {
         private GameObject eventSystemGo = null!;
         private GameObject framePressObserverGo = null!;
-        private SimulateKeyboardTool tool = null!;
+        private TestableSimulateKeyboardTool tool = null!;
         private SimulateKeyboardResponse lastResponse = null!;
         private Keyboard keyboard = null!;
         private FramePressObserver framePressObserver = null!;
         private FrameStateObserver frameStateObserver = null!;
+        private ManualModeFramePressObserver manualModeFramePressObserver = null!;
         private InputSettings.UpdateMode originalUpdateMode;
         private float originalTimeScale;
 
@@ -38,8 +40,9 @@ namespace Tests.PlayMode
             framePressObserverGo = new GameObject("FramePressObserver");
             framePressObserver = framePressObserverGo.AddComponent<FramePressObserver>();
             frameStateObserver = framePressObserverGo.AddComponent<FrameStateObserver>();
+            manualModeFramePressObserver = framePressObserverGo.AddComponent<ManualModeFramePressObserver>();
 
-            tool = new SimulateKeyboardTool();
+            tool = new TestableSimulateKeyboardTool();
             keyboard = InputSystem.AddDevice<Keyboard>();
         }
 
@@ -234,6 +237,7 @@ namespace Tests.PlayMode
             InputSettings settings = RequireInputSettings();
             settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
             framePressObserver.ResetCount();
+            manualModeFramePressObserver.ResetCount();
 
             yield return RunTool(new JObject
             {
@@ -243,6 +247,7 @@ namespace Tests.PlayMode
 
             Assert.IsTrue(lastResponse.Success);
             Assert.Greater(framePressObserver.EnterPressedFrameCount, 0, "Manual-mode press should advance input and register the tap");
+            Assert.Greater(manualModeFramePressObserver.EnterPressedStateCount, 0, "Manual-mode zero-duration press should remain visible to the project's own manual update loop.");
             Assert.IsFalse(keyboard[Key.Enter].isPressed, "Manual-mode press should release the key after the tap");
         }
 
@@ -447,6 +452,57 @@ namespace Tests.PlayMode
             Assert.IsFalse(keyboard[Key.Space].isPressed, "ReleaseAllKeys should release transient press keys");
         }
 
+        [UnityTest]
+        public IEnumerator ReleaseAllKeys_WithoutKeyboard_Should_ClearTransientKeys()
+        {
+            yield return null;
+
+            KeyboardKeyState.RegisterTransientKey(Key.Space);
+            InputSystem.RemoveDevice(keyboard);
+
+            KeyboardKeyState.ReleaseAllKeys();
+
+            Keyboard recreatedKeyboard = InputSystem.AddDevice<Keyboard>();
+            KeyboardKeyState.SetKeyState(recreatedKeyboard, Key.W, true);
+
+            Assert.IsFalse(recreatedKeyboard[Key.Space].isPressed, "Cleanup without a keyboard should not leak transient keys into later events.");
+            Assert.IsTrue(recreatedKeyboard[Key.W].isPressed, "Later simulated events should still apply to the intended key.");
+        }
+
+        [UnityTest]
+        public IEnumerator KeyDown_Cancellation_Should_RollBackHeldState()
+        {
+            yield return null;
+
+            SimulateKeyboardSchema parameters = new SimulateKeyboardSchema
+            {
+                Action = KeyboardAction.KeyDown,
+                Key = "W"
+            };
+            CancellationTokenSource cts = new CancellationTokenSource();
+            Task<SimulateKeyboardResponse> task = tool.ExecuteWithCancellationAsync(parameters, cts.Token);
+
+            yield return new WaitUntil(() => KeyboardKeyState.IsKeyHeld(Key.W) || task.IsCompleted);
+
+            Assert.IsTrue(KeyboardKeyState.IsKeyHeld(Key.W), "Cancellation test must wait until key-down state is applied.");
+            Assert.IsFalse(task.IsCompleted, "Cancellation test must interrupt the frame-wait phase, not a completed key-down.");
+
+            cts.Cancel();
+            yield return WaitForTask(task, allowCanceled: true);
+
+            Assert.IsTrue(task.IsCanceled, "KeyDown should preserve cancellation outward after cleanup.");
+            Assert.IsFalse(KeyboardKeyState.IsKeyHeld(Key.W), "Canceled KeyDown should roll back held-key bookkeeping.");
+            CollectionAssert.DoesNotContain(SimulateKeyboardOverlayState.HeldKeys, "W", "Canceled KeyDown should clear the overlay badge.");
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.KeyDown.ToString(),
+                ["key"] = "W"
+            });
+
+            Assert.IsTrue(lastResponse.Success, "Canceled KeyDown cleanup should leave later key-down requests usable.");
+        }
+
         #endregion
 
         #region Helpers
@@ -458,12 +514,16 @@ namespace Tests.PlayMode
             lastResponse = (SimulateKeyboardResponse)task.Result;
         }
 
-        private static IEnumerator WaitForTask(Task task)
+        private static IEnumerator WaitForTask(Task task, bool allowCanceled = false)
         {
             float timeoutAt = Time.realtimeSinceStartup + 5f;
             yield return new WaitUntil(() =>
                 task.IsCompleted || Time.realtimeSinceStartup >= timeoutAt);
             Assert.IsTrue(task.IsCompleted, "Tool execution timed out.");
+            if (!allowCanceled)
+            {
+                Assert.IsFalse(task.IsCanceled, "Tool execution should not be canceled.");
+            }
             Assert.IsFalse(task.IsFaulted, $"Tool execution should not fault: {task.Exception}");
         }
 
@@ -588,6 +648,48 @@ namespace Tests.PlayMode
         {
             WPressedUpdateCount = 0;
             WReleasedUpdateCount = 0;
+        }
+    }
+
+    public class ManualModeFramePressObserver : MonoBehaviour
+    {
+        public int EnterPressedStateCount { get; private set; }
+
+        private void Update()
+        {
+            InputSettings? settings = InputSystem.settings;
+            if (settings == null || settings.updateMode != InputSettings.UpdateMode.ProcessEventsManually)
+            {
+                return;
+            }
+
+            InputSystem.Update();
+
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                return;
+            }
+
+            if (keyboard.enterKey.isPressed)
+            {
+                EnterPressedStateCount++;
+            }
+        }
+
+        public void ResetCount()
+        {
+            EnterPressedStateCount = 0;
+        }
+    }
+
+    public class TestableSimulateKeyboardTool : SimulateKeyboardTool
+    {
+        public Task<SimulateKeyboardResponse> ExecuteWithCancellationAsync(
+            SimulateKeyboardSchema parameters,
+            CancellationToken ct)
+        {
+            return ExecuteAsync(parameters, ct);
         }
     }
 }
