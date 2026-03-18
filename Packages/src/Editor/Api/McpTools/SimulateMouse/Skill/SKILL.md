@@ -53,12 +53,14 @@ uloop simulate-mouse-ui --action <action> --x <x> --y <y> [options]
 - `DragEnd` must be called to release an active drag — failing to call it leaves drag state stuck
 - Calling `DragMove` or `DragEnd` without an active drag returns an error
 
-### Global Options
+### Global Options (all optional)
+
+Usually not needed — the CLI auto-detects the Unity project from the current working directory.
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`) |
-| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
+| `--project-path <path>` | Override auto-detection to target a specific Unity project |
+| `-p, --port <port>` | Specify Unity TCP port directly |
 
 ## Coordinate System
 
