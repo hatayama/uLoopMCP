@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "tools": [
     {
       "name": "compile",
@@ -531,7 +531,11 @@
           "Button": {
             "type": "string",
             "description": "Mouse button: Left (default), Right, Middle.",
-            "enum": ["Left", "Right", "Middle"],
+            "enum": [
+              "Left",
+              "Right",
+              "Middle"
+            ],
             "default": "Left"
           }
         }
@@ -568,7 +572,11 @@
           "Button": {
             "type": "string",
             "description": "Mouse button: Left (default), Right, Middle. Used by Click and LongPress.",
-            "enum": ["Left", "Right", "Middle"],
+            "enum": [
+              "Left",
+              "Right",
+              "Middle"
+            ],
             "default": "Left"
           },
           "Duration": {
