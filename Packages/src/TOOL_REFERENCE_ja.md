@@ -325,8 +325,8 @@
   - `Message` (string): 実行されたアクションの説明
   - `Action` (string): 実行されたアクション
   - `Button` (string): 使用されたボタン（Click/LongPress用）
-  - `PositionX` (number): 使用されたX座標
-  - `PositionY` (number): 使用されたY座標
+  - `PositionX` (number, nullable): 使用されたX座標（位置を使わないアクションではnull）
+  - `PositionY` (number, nullable): 使用されたY座標（位置を使わないアクションではnull）
 
 ### 16. simulate-keyboard
 - **説明**: Input System経由でPlayMode中のキーボード入力をシミュレーション。単発のキータップ、長押し、複数キーの同時押しに対応。Input Systemパッケージが必要で、Player SettingsのActive Input Handlingを `Input System Package (New)` または `Both` に設定する必要がある。ゲームコードがInput System API（例: `Keyboard.current[Key.W].isPressed`）で入力を読み取っている必要があり、レガシーの `Input.GetKey()` には非対応

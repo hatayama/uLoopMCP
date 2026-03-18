@@ -23,6 +23,8 @@ namespace io.github.hatayama.uLoopMCP
         private float _originalDistance;
         private float _originalY;
         private float _originalTrackedY;
+        private CursorLockMode _previousCursorLockState;
+        private bool _previousCursorVisible;
 
         private void Awake()
         {
@@ -50,16 +52,18 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private void Start()
+        private void OnEnable()
         {
+            _previousCursorLockState = Cursor.lockState;
+            _previousCursorVisible = Cursor.visible;
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
 
         private void OnDisable()
         {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            Cursor.lockState = _previousCursorLockState;
+            Cursor.visible = _previousCursorVisible;
         }
 
         private void Update()

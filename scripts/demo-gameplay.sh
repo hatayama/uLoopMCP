@@ -14,6 +14,12 @@ if [ "$1" = "--project-path" ] && [ -n "$2" ]; then
     PROJECT_PATH="$2"
 fi
 
+cleanup() {
+    printf "\033[36m[gameplay]\033[0m Stopping PlayMode (cleanup)...\n"
+    run_uloop control-play-mode --action Stop > /dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
 run_uloop() {
     if [ -n "$PROJECT_PATH" ]; then
         uloop "$@" --project-path "$PROJECT_PATH"
@@ -163,6 +169,3 @@ key_up W
 wait_sec 0.5
 
 log "=== Gameplay Demo Complete ==="
-
-log "Stopping PlayMode..."
-run_uloop control-play-mode --action Stop > /dev/null

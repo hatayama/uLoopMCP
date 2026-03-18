@@ -4,7 +4,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     public class SimulateMouseSchema : BaseToolSchema
     {
-        [Description("Mouse action: Click(0) - left click, Drag(1) - one-shot drag, DragStart(2) - begin drag and hold, DragMove(3) - move while holding drag, DragEnd(4) - release drag, LongPress(5) - press and hold for Duration seconds")]
+        [Description("Mouse action: Click(0) - click with selected Button, Drag(1) - one-shot drag, DragStart(2) - begin drag and hold, DragMove(3) - move while holding drag, DragEnd(4) - release drag, LongPress(5) - press and hold for Duration seconds")]
         public MouseAction Action { get; set; } = MouseAction.Click;
 
         [Description("Target X position in screen pixels (origin: top-left). For Drag action, this is the destination.")]

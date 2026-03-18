@@ -332,9 +332,14 @@ namespace io.github.hatayama.uLoopMCP
                     break;
                 }
 
-                // Explicit/manual update can complete synchronously, so one editor
-                // frame must pass or the whole smooth delta collapses into a burst.
-                await EditorDelay.DelayFrame(1, ct);
+                // Explicit/manual update completes synchronously, so an extra
+                // frame delay is needed to prevent the loop from collapsing into
+                // a single burst. Dynamic/Fixed modes already yield naturally via
+                // ApplyOnNextConfiguredUpdate's onBeforeUpdate callback.
+                if (InputUpdateTypeResolver.RequiresExplicitUpdate())
+                {
+                    await EditorDelay.DelayFrame(1, ct);
+                }
             }
 
             // Reset delta to zero after the smooth operation completes

@@ -573,17 +573,17 @@
           },
           "Duration": {
             "type": "number",
-            "description": "Hold duration in seconds for LongPress, or minimum hold time for Click (0 = one-shot tap).",
+            "description": "Duration in seconds for LongPress hold, SmoothDelta interpolation, or minimum hold time for Click (0 = one-shot tap).",
             "default": 0
           },
           "DeltaX": {
             "type": "number",
-            "description": "Delta X in pixels for MoveDelta action. Positive = right.",
+            "description": "Delta X in pixels for MoveDelta/SmoothDelta action. Positive = right.",
             "default": 0
           },
           "DeltaY": {
             "type": "number",
-            "description": "Delta Y in pixels for MoveDelta action. Positive = up.",
+            "description": "Delta Y in pixels for MoveDelta/SmoothDelta action. Positive = up.",
             "default": 0
           },
           "ScrollX": {

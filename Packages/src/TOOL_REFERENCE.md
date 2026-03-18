@@ -327,8 +327,8 @@ All tools automatically include the following property:
   - `Message` (string): Description of the action performed
   - `Action` (string): The action that was executed
   - `Button` (string): The button used (for Click/LongPress)
-  - `PositionX` (number): X position used
-  - `PositionY` (number): Y position used
+  - `PositionX` (number, nullable): X position used (null for non-positional actions)
+  - `PositionY` (number, nullable): Y position used (null for non-positional actions)
 
 ### 16. simulate-keyboard
 - **Description**: Simulate keyboard key input in PlayMode via Input System. Supports single key taps, sustained holds, and multi-key combinations. Requires the Input System package, and Active Input Handling must be set to `Input System Package (New)` or `Both` in Player Settings. Game code must read input via Input System API (e.g. `Keyboard.current[Key.W].isPressed`), not legacy `Input.GetKey()`

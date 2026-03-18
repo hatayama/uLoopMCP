@@ -389,8 +389,8 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            PointerEventData.InputButton inputButton = ToInputButton(parameters.Button);
-            PointerEventData pointerData = InitiateDrag(eventSystem, screenStart, hit!.Value, target, inputButton);
+            // uGUI drag controls (ScrollRect, Slider) only respond to left-button drags
+            PointerEventData pointerData = InitiateDrag(eventSystem, screenStart, hit!.Value, target, PointerEventData.InputButton.Left);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
             pointerData.dragging = true;
 
@@ -552,8 +552,7 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            PointerEventData.InputButton inputButton = ToInputButton(parameters.Button);
-            PointerEventData pointerData = InitiateDrag(eventSystem, screenPos, hit!.Value, target, inputButton);
+            PointerEventData pointerData = InitiateDrag(eventSystem, screenPos, hit!.Value, target, PointerEventData.InputButton.Left);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
             pointerData.dragging = true;
 

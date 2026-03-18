@@ -26,13 +26,13 @@ uloop simulate-mouse-input --action <action> [options]
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `--action` | enum | `Click` | `Click`, `LongPress`, `MoveDelta`, `Scroll` |
+| `--action` | enum | `Click` | `Click`, `LongPress`, `MoveDelta`, `SmoothDelta`, `Scroll` |
 | `--x` | number | `0` | Target X position (origin: top-left). Used by Click and LongPress. |
 | `--y` | number | `0` | Target Y position (origin: top-left). Used by Click and LongPress. |
 | `--button` | enum | `Left` | Mouse button: `Left`, `Right`, `Middle`. Used by Click and LongPress. |
-| `--duration` | number | `0` | Hold duration for LongPress (seconds). For Click, 0 = one-shot tap. |
-| `--delta-x` | number | `0` | Delta X in pixels for MoveDelta. Positive = right. |
-| `--delta-y` | number | `0` | Delta Y in pixels for MoveDelta. Positive = up. |
+| `--duration` | number | `0` | Hold duration for LongPress, or interpolation duration for SmoothDelta (seconds). For Click, 0 = one-shot tap. |
+| `--delta-x` | number | `0` | Delta X in pixels for MoveDelta/SmoothDelta. Positive = right. |
+| `--delta-y` | number | `0` | Delta Y in pixels for MoveDelta/SmoothDelta. Positive = up. |
 | `--scroll-x` | number | `0` | Horizontal scroll delta for Scroll action. |
 | `--scroll-y` | number | `0` | Vertical scroll delta for Scroll action. Typically 120 per notch. |
 
@@ -46,7 +46,7 @@ uloop simulate-mouse-input --action <action> [options]
 | `SmoothDelta` | Mouse.current.delta (per-frame) | Inject mouse delta smoothly over `--duration` seconds (human-like camera pan) |
 | `Scroll` | Mouse.current.scroll | Inject scroll wheel input (e.g. for hotbar or zoom) |
 
-### Global Options (all optional)
+### Global Options (all optional, mutually exclusive)
 
 Usually not needed — the CLI auto-detects the Unity project from the current working directory.
 
@@ -86,6 +86,9 @@ uloop simulate-mouse-input --action Scroll --scroll-y 120
 
 # Scroll down (e.g. next hotbar slot)
 uloop simulate-mouse-input --action Scroll --scroll-y -120
+
+# Smooth camera pan right over 0.5 seconds
+uloop simulate-mouse-input --action SmoothDelta --delta-x 300 --delta-y 0 --duration 0.5
 ```
 
 ## Prerequisites

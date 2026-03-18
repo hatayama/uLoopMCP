@@ -53,7 +53,7 @@ uloop simulate-mouse-ui --action <action> --x <x> --y <y> [options]
 - `DragEnd` must be called to release an active drag — failing to call it leaves drag state stuck
 - Calling `DragMove` or `DragEnd` without an active drag returns an error
 
-### Global Options (all optional)
+### Global Options (all optional, mutually exclusive)
 
 Usually not needed — the CLI auto-detects the Unity project from the current working directory.
 
