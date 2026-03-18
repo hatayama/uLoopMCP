@@ -46,8 +46,11 @@ wait_sec() {
 }
 
 # ============================================================
+log "Starting PlayMode..."
+uloop control-play-mode --action Play $PROJECT_ARGS > /dev/null 2>&1
+wait_sec 2
+
 log "=== Gameplay Demo Start ==="
-wait_sec 1
 
 # --- Phase 1: Look around ---
 log "Looking around..."
@@ -157,3 +160,6 @@ key_up W
 wait_sec 0.5
 
 log "=== Gameplay Demo Complete ==="
+
+log "Stopping PlayMode..."
+uloop control-play-mode --action Stop $PROJECT_ARGS > /dev/null 2>&1
