@@ -9,7 +9,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         [SerializeField] private float bulletSpeed = 20f;
         [SerializeField] private float bulletLifetime = 3f;
-        [SerializeField] private float bulletSpawnOffset = 1.2f;
+        [SerializeField] private float bulletSpawnOffset = 0.3f;
 
         private void Update()
         {
@@ -27,7 +27,9 @@ namespace io.github.hatayama.uLoopMCP
 
         private void FireBullet()
         {
-            Vector3 spawnPosition = transform.position + transform.forward * bulletSpawnOffset + Vector3.up * 1f;
+            Vector3 fireDirection = transform.forward;
+
+            Vector3 spawnPosition = transform.position + fireDirection * bulletSpawnOffset + Vector3.up;
             GameObject bullet = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             bullet.name = "Bullet";
             bullet.transform.position = spawnPosition;
@@ -39,7 +41,7 @@ namespace io.github.hatayama.uLoopMCP
             Rigidbody rb = bullet.AddComponent<Rigidbody>();
             rb.useGravity = true;
             rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-            rb.AddForce(transform.forward * bulletSpeed, ForceMode.VelocityChange);
+            rb.AddForce(fireDirection * bulletSpeed, ForceMode.VelocityChange);
 
             Destroy(bullet, bulletLifetime);
         }

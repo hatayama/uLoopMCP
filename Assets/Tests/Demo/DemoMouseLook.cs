@@ -2,23 +2,52 @@
 #nullable enable
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Cinemachine;
 
 namespace io.github.hatayama.uLoopMCP
 {
+    // Orbits the Cinemachine camera around the character without rotating the character.
+    // Mouse delta.x rotates the camera's FollowOffset around Y axis,
+    // mouse delta.y tilts the camera pitch via the Composer's TrackedObjectOffset.
     public class DemoMouseLook : MonoBehaviour
     {
-        [SerializeField] private float sensitivity = 0.2f;
-        [SerializeField] private float minPitch = -60f;
-        [SerializeField] private float maxPitch = 60f;
+        [SerializeField] private float horizontalSensitivity = 0.4f;
+        [SerializeField] private float verticalSensitivity = 0.05f;
+        [SerializeField] private float minPitch = -2f;
+        [SerializeField] private float maxPitch = 3f;
 
-        private Transform _cameraTransform = null!;
+        private CinemachineTransposer? _transposer;
+        private CinemachineComposer? _composer;
+        private float _yaw;
         private float _pitch;
+        private float _originalDistance;
+        private float _originalY;
+        private float _originalTrackedY;
 
         private void Awake()
         {
-            Camera? cam = GetComponentInChildren<Camera>();
-            Debug.Assert(cam != null, "DemoMouseLook requires a Camera in children");
-            _cameraTransform = cam!.transform;
+            CinemachineVirtualCamera? vcam = FindObjectOfType<CinemachineVirtualCamera>();
+            if (vcam == null)
+            {
+                return;
+            }
+
+            _transposer = vcam.GetCinemachineComponent<CinemachineTransposer>();
+            _composer = vcam.GetCinemachineComponent<CinemachineComposer>();
+
+            if (_transposer != null)
+            {
+                Vector3 offset = _transposer.m_FollowOffset;
+                _originalDistance = new Vector2(offset.x, offset.z).magnitude;
+                _originalY = offset.y;
+                _yaw = Mathf.Atan2(offset.x, offset.z) * Mathf.Rad2Deg;
+            }
+
+            if (_composer != null)
+            {
+                _originalTrackedY = _composer.m_TrackedObjectOffset.y;
+                _pitch = 0f;
+            }
         }
 
         private void Start()
@@ -29,6 +58,11 @@ namespace io.github.hatayama.uLoopMCP
 
         private void Update()
         {
+            if (_transposer == null)
+            {
+                return;
+            }
+
             Mouse? mouse = Mouse.current;
             if (mouse == null)
             {
@@ -41,16 +75,26 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // Horizontal: rotate character around Y axis
-            float yaw = delta.x * sensitivity;
-            transform.Rotate(0f, yaw, 0f, Space.World);
+            // Horizontal: orbit camera around character
+            _yaw += delta.x * horizontalSensitivity;
 
-            // Vertical: pitch camera only (TPS look up/down)
-            _pitch -= delta.y * sensitivity;
-            _pitch = Mathf.Clamp(_pitch, minPitch, maxPitch);
-            Vector3 cameraEuler = _cameraTransform.localEulerAngles;
-            cameraEuler.x = _pitch;
-            _cameraTransform.localEulerAngles = cameraEuler;
+            float yawRad = _yaw * Mathf.Deg2Rad;
+            _transposer.m_FollowOffset = new Vector3(
+                Mathf.Sin(yawRad) * _originalDistance,
+                _originalY,
+                Mathf.Cos(yawRad) * _originalDistance
+            );
+
+            // Vertical: shift look target up/down
+            if (_composer != null)
+            {
+                _pitch -= delta.y * verticalSensitivity;
+                _pitch = Mathf.Clamp(_pitch, minPitch, maxPitch);
+
+                Vector3 trackedOffset = _composer.m_TrackedObjectOffset;
+                trackedOffset.y = _originalTrackedY + _pitch;
+                _composer.m_TrackedObjectOffset = trackedOffset;
+            }
         }
     }
 }
