@@ -29,18 +29,10 @@ key_up() {
     uloop simulate-keyboard --action KeyUp --key "$1" $PROJECT_ARGS > /dev/null 2>&1
 }
 
-# Smooth camera pan: splits a large delta into small steps with short delays.
-# Usage: look <total_delta_x> <steps>
+# Smooth camera pan using SmoothDelta (frame-interpolated inside Unity).
+# Usage: look <total_delta_x> <duration_sec>
 look() {
-    total=$1
-    steps=${2:-10}
-    step_delta=$((total / steps))
-    i=0
-    while [ "$i" -lt "$steps" ]; do
-        uloop simulate-mouse-input --action MoveDelta --delta-x "$step_delta" --delta-y 0 $PROJECT_ARGS > /dev/null 2>&1
-        sleep 0.05
-        i=$((i + 1))
-    done
+    uloop simulate-mouse-input --action SmoothDelta --delta-x "$1" --delta-y 0 --duration "${2:-0.5}" $PROJECT_ARGS > /dev/null 2>&1
 }
 
 shoot() {
@@ -64,12 +56,12 @@ log "=== Gameplay Demo Start ==="
 
 # --- Phase 1: Look around ---
 log "Looking around..."
-look 300 15
+look 300 0.8
+wait_sec 0.2
+look -600 1.2
+wait_sec 0.2
+look 300 0.8
 wait_sec 0.3
-look -600 20
-wait_sec 0.3
-look 300 15
-wait_sec 0.5
 
 # --- Phase 2: Walk forward toward targets ---
 log "Walking forward..."
@@ -80,8 +72,8 @@ wait_sec 0.3
 
 # --- Phase 3: Shoot! ---
 log "Taking aim..."
-look 50 5
-wait_sec 0.2
+look 50 0.3
+wait_sec 0.1
 
 log "Fire!"
 shoot
@@ -99,8 +91,8 @@ key_up D
 wait_sec 0.2
 
 log "Turning to target..."
-look -200 10
-wait_sec 0.3
+look -200 0.6
+wait_sec 0.2
 
 log "Fire!"
 shoot
@@ -119,8 +111,8 @@ wait_sec 0.3
 
 # --- Phase 6: Look around panorama ---
 log "Panoramic view..."
-look 750 30
-wait_sec 0.5
+look 750 2.0
+wait_sec 0.3
 
 # --- Phase 7: Rapid fire while backing up ---
 log "Suppressive fire while retreating!"
@@ -129,12 +121,12 @@ shoot
 wait_sec 0.2
 shoot
 wait_sec 0.2
-look -100 8
+look -100 0.3
 shoot
 wait_sec 0.2
 shoot
 wait_sec 0.2
-look 100 8
+look 100 0.3
 shoot
 key_up S
 wait_sec 0.5
@@ -152,7 +144,7 @@ wait_sec 0.5
 log "Final charge!"
 key_down W
 wait_sec 0.5
-look -50 5
+look -50 0.3
 shoot
 wait_sec 0.15
 shoot

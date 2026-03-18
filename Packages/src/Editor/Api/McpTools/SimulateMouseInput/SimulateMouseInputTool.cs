@@ -96,6 +96,10 @@ namespace io.github.hatayama.uLoopMCP
                     response = await ExecuteScroll(mouse, parameters, ct);
                     break;
 
+                case MouseInputAction.SmoothDelta:
+                    response = await ExecuteSmoothDelta(mouse, parameters, ct);
+                    break;
+
                 default:
                     throw new ArgumentException($"Unknown mouse input action: {parameters.Action}");
             }
@@ -269,6 +273,53 @@ namespace io.github.hatayama.uLoopMCP
                 Success = true,
                 Message = $"Scroll injected: ({parameters.ScrollX:F1}, {parameters.ScrollY:F1})",
                 Action = MouseInputAction.Scroll.ToString()
+            };
+        }
+
+        // Distributes totalDelta across frames over duration for human-like smooth movement.
+        // Each frame injects a proportional fraction of the total delta.
+        private async Task<SimulateMouseInputResponse> ExecuteSmoothDelta(
+            Mouse mouse, SimulateMouseInputSchema parameters, CancellationToken ct)
+        {
+            if (parameters.Duration <= 0f || float.IsNaN(parameters.Duration) || float.IsInfinity(parameters.Duration))
+            {
+                return new SimulateMouseInputResponse
+                {
+                    Success = false,
+                    Message = $"Duration must be positive for SmoothDelta, got: {parameters.Duration}",
+                    Action = MouseInputAction.SmoothDelta.ToString()
+                };
+            }
+
+            Vector2 totalDelta = new Vector2(parameters.DeltaX, parameters.DeltaY);
+            float duration = parameters.Duration;
+            float startTime = Time.realtimeSinceStartup;
+            float previousT = 0f;
+
+            while (true)
+            {
+                await EditorDelay.DelayFrame(1, ct);
+
+                float elapsed = Time.realtimeSinceStartup - startTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+
+                float frameFraction = t - previousT;
+                Vector2 frameDelta = totalDelta * frameFraction;
+                MouseInputState.SetDeltaState(mouse, frameDelta);
+
+                previousT = t;
+
+                if (t >= 1f)
+                {
+                    break;
+                }
+            }
+
+            return new SimulateMouseInputResponse
+            {
+                Success = true,
+                Message = $"Smooth delta ({parameters.DeltaX:F1}, {parameters.DeltaY:F1}) over {duration:F2}s",
+                Action = MouseInputAction.SmoothDelta.ToString()
             };
         }
 

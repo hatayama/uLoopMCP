@@ -545,11 +545,12 @@
         "properties": {
           "Action": {
             "type": "string",
-            "description": "Mouse input action: Click - inject button press+release, LongPress - inject button hold for Duration seconds, MoveDelta - inject mouse delta for camera/look, Scroll - inject scroll wheel",
+            "description": "Mouse input action: Click - inject button press+release, LongPress - inject button hold for Duration seconds, MoveDelta - inject mouse delta (one-shot), SmoothDelta - inject mouse delta smoothly over Duration seconds, Scroll - inject scroll wheel",
             "enum": [
               "Click",
               "LongPress",
               "MoveDelta",
+              "SmoothDelta",
               "Scroll"
             ],
             "default": "Click"
