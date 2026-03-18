@@ -11,12 +11,12 @@ using UnityEngine.UI;
 
 namespace Tests.PlayMode
 {
-    public class SimulateMouseTests
+    public class SimulateMouseUiTests
     {
         private GameObject canvasGo = null!;
         private GameObject eventSystemGo = null!;
-        private SimulateMouseTool tool = null!;
-        private SimulateMouseResponse lastResponse = null!;
+        private SimulateMouseUiTool tool = null!;
+        private SimulateMouseUiResponse lastResponse = null!;
 
         [UnitySetUp]
         public IEnumerator SetUp()
@@ -31,7 +31,7 @@ namespace Tests.PlayMode
             eventSystemGo.AddComponent<EventSystem>();
             eventSystemGo.AddComponent<StandaloneInputModule>();
 
-            tool = new SimulateMouseTool();
+            tool = new SimulateMouseUiTool();
 
             yield return null;
         }
@@ -367,7 +367,7 @@ namespace Tests.PlayMode
                 task.IsCompleted || Time.realtimeSinceStartup >= timeoutAt);
             Assert.IsTrue(task.IsCompleted, "Tool execution timed out.");
             Assert.IsFalse(task.IsFaulted, $"Tool execution should not fault: {task.Exception}");
-            lastResponse = (SimulateMouseResponse)task.Result;
+            lastResponse = (SimulateMouseUiResponse)task.Result;
         }
 
         private ClickTracker CreateClickableElement(string name, Vector2 anchoredPosition, Vector2 sizeDelta)

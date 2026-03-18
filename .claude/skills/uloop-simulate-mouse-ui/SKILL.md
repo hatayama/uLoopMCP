@@ -1,5 +1,5 @@
 ---
-name: uloop-simulate-mouse
+name: uloop-simulate-mouse-ui
 description: "Simulate mouse click, long-press, and drag on PlayMode UI elements via screen coordinates. Use when you need to: (1) Click buttons or interactive UI elements during PlayMode testing, (2) Drag UI elements from one position to another, (3) Hold a drag at a position for inspection before releasing, (4) Long-press UI elements that respond to sustained pointer-down."
 context: fork
 ---
@@ -13,14 +13,14 @@ Simulate mouse interaction on Unity PlayMode UI: $ARGUMENTS
 1. Ensure Unity is in PlayMode (use `uloop control-play-mode --action Play` if not)
 2. Get UI element info: `uloop screenshot --capture-mode rendering --annotate-elements --elements-only`
 3. Use the `AnnotatedElements` array to find the target element by `Name` or `Label` (A=frontmost, B=next, ...). Use `SimX`/`SimY` directly as `--x`/`--y` coordinates.
-4. Execute the appropriate `uloop simulate-mouse` command
+4. Execute the appropriate `uloop simulate-mouse-ui` command
 5. Take a screenshot to verify the result: `uloop screenshot --capture-mode rendering --annotate-elements`
 6. Report what happened
 
 ## Tool Reference
 
 ```bash
-uloop simulate-mouse --action <action> --x <x> --y <y> [options]
+uloop simulate-mouse-ui --action <action> --x <x> --y <y> [options]
 ```
 
 ### Parameters
@@ -71,22 +71,22 @@ uloop simulate-mouse --action <action> --x <x> --y <y> [options]
 
 ```bash
 # Click a button at screen position
-uloop simulate-mouse --action Click --x 400 --y 300
+uloop simulate-mouse-ui --action Click --x 400 --y 300
 
 # Long-press a button for 3 seconds
-uloop simulate-mouse --action LongPress --x 400 --y 300 --duration 3.0
+uloop simulate-mouse-ui --action LongPress --x 400 --y 300 --duration 3.0
 
 # One-shot drag (start to end in one call)
-uloop simulate-mouse --action Drag --from-x 400 --from-y 300 --x 600 --y 300
+uloop simulate-mouse-ui --action Drag --from-x 400 --from-y 300 --x 600 --y 300
 
 # Slow drag for visual inspection
-uloop simulate-mouse --action Drag --from-x 400 --from-y 300 --x 600 --y 300 --drag-speed 200
+uloop simulate-mouse-ui --action Drag --from-x 400 --from-y 300 --x 600 --y 300 --drag-speed 200
 
 # Split drag with hold (for inspection between steps)
-uloop simulate-mouse --action DragStart --x 400 --y 300
+uloop simulate-mouse-ui --action DragStart --x 400 --y 300
 uloop screenshot --window-name Game
-uloop simulate-mouse --action DragMove --x 500 --y 300
-uloop simulate-mouse --action DragEnd --x 600 --y 300
+uloop simulate-mouse-ui --action DragMove --x 500 --y 300
+uloop simulate-mouse-ui --action DragEnd --x 600 --y 300
 ```
 
 ## Prerequisites
