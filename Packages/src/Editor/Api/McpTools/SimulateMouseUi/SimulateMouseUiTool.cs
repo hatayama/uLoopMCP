@@ -58,6 +58,17 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
+            // uGUI drag controls (ScrollRect, Slider) only respond to left-button drags
+            if (IsDragAction(parameters.Action) && parameters.Button != MouseButton.Left)
+            {
+                return new SimulateMouseUiResponse
+                {
+                    Success = false,
+                    Message = $"Drag actions only support Left button (uGUI ignores non-left drags), got: {parameters.Button}",
+                    Action = parameters.Action.ToString()
+                };
+            }
+
             VibeLogger.LogInfo(
                 "simulate_mouse_start",
                 "Mouse simulation started",
@@ -858,6 +869,14 @@ namespace io.github.hatayama.uLoopMCP
                 gameObject = bestHit.gameObject,
                 sortingOrder = bestSortingOrder
             };
+        }
+
+        private static bool IsDragAction(MouseAction action)
+        {
+            return action == MouseAction.Drag
+                || action == MouseAction.DragStart
+                || action == MouseAction.DragMove
+                || action == MouseAction.DragEnd;
         }
     }
 }
