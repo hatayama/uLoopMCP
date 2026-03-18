@@ -315,6 +315,10 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     break;
                 }
+
+                // Explicit/manual update can complete synchronously, so one editor
+                // frame must pass or the whole smooth delta collapses into a burst.
+                await EditorDelay.DelayFrame(1, ct);
             }
 
             // Reset delta to zero after the smooth operation completes

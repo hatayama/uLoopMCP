@@ -1,5 +1,6 @@
 #if ULOOPMCP_HAS_INPUT_SYSTEM
 #nullable enable
+using Cinemachine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -53,7 +54,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private static GameObject CreatePlayer()
         {
-            // Player body (capsule as Unity-chan stand-in)
             GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             player.name = "UnityChan";
             player.transform.position = new Vector3(0f, 1f, 0f);
@@ -64,18 +64,38 @@ namespace io.github.hatayama.uLoopMCP
             player.AddComponent<DemoMouseShooter>();
             player.AddComponent<DemoMouseLook>();
 
-            // TPS Camera (behind and above)
+            CreateFollowCamera(player.transform);
+
+            return player;
+        }
+
+        // DemoMouseLook expects CinemachineVirtualCamera + Transposer + Composer
+        private static void CreateFollowCamera(Transform target)
+        {
             GameObject cameraGo = new GameObject("Main Camera");
             cameraGo.tag = "MainCamera";
             Camera camera = cameraGo.AddComponent<Camera>();
             camera.clearFlags = CameraClearFlags.Skybox;
             camera.fieldOfView = 60f;
+            cameraGo.AddComponent<CinemachineBrain>();
 
-            cameraGo.transform.SetParent(player.transform, false);
-            cameraGo.transform.localPosition = new Vector3(0f, 2f, -4f);
-            cameraGo.transform.localRotation = Quaternion.Euler(15f, 0f, 0f);
+            GameObject vcamGo = new GameObject("CM vcam - UnityChan Follow");
+            CinemachineVirtualCamera vcam = vcamGo.AddComponent<CinemachineVirtualCamera>();
+            vcam.Follow = target;
+            vcam.LookAt = target;
+            vcam.m_Lens.FieldOfView = 60f;
 
-            return player;
+            CinemachineTransposer transposer = vcam.AddCinemachineComponent<CinemachineTransposer>();
+            transposer.m_BindingMode = CinemachineTransposer.BindingMode.WorldSpace;
+            transposer.m_FollowOffset = new Vector3(0f, 2f, -4f);
+            transposer.m_XDamping = 0f;
+            transposer.m_YDamping = 0f;
+            transposer.m_ZDamping = 0f;
+
+            CinemachineComposer composer = vcam.AddCinemachineComponent<CinemachineComposer>();
+            composer.m_TrackedObjectOffset = new Vector3(0f, 0.8f, 0f);
+            composer.m_HorizontalDamping = 0f;
+            composer.m_VerticalDamping = 0f;
         }
 
         private static void CreateTargets(Vector3 playerPosition)
