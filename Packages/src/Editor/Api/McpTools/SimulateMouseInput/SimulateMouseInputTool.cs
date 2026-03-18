@@ -137,10 +137,11 @@ namespace io.github.hatayama.uLoopMCP
 
 #if ULOOPMCP_HAS_INPUT_SYSTEM
         // Input coordinates use top-left origin; Unity Screen space uses bottom-left origin.
+        // Uses Screen.height (runtime resolution) because Mouse.current.position is in
+        // runtime screen space, not the editor Game view target resolution.
         private static Vector2 InputToScreen(Vector2 inputPos)
         {
-            float targetHeight = Handles.GetMainGameViewSize().y;
-            return new Vector2(inputPos.x, targetHeight - inputPos.y);
+            return new Vector2(inputPos.x, Screen.height - inputPos.y);
         }
 
         private async Task<SimulateMouseInputResponse> ExecuteClick(
@@ -233,14 +234,9 @@ namespace io.github.hatayama.uLoopMCP
                     () => MouseInputState.SetButtonState(mouse, button, true), ct);
                 pressWasApplied = true;
 
-                // Hold for Duration seconds
-                float startTime = Time.realtimeSinceStartup;
-                float elapsed = 0f;
-                while (elapsed < parameters.Duration)
-                {
-                    await EditorDelay.DelayFrame(1, ct);
-                    elapsed = Time.realtimeSinceStartup - startTime;
-                }
+                // Hold for at least the minimum observation frames so the press
+                // is visible to game code, then continue until duration elapses.
+                await InputSystemUpdateHelper.WaitForPressLifetime(parameters.Duration, ct);
             }
             finally
             {
