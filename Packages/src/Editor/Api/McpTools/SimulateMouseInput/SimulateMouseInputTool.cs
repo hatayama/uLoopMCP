@@ -277,7 +277,8 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         // Distributes totalDelta across frames over duration for human-like smooth movement.
-        // Each frame injects a proportional fraction of the total delta.
+        // Uses ApplyOnNextConfiguredUpdate per frame so the delta is visible to game code
+        // in the same Input System update cycle. Resets delta to zero only after the final frame.
         private async Task<SimulateMouseInputResponse> ExecuteSmoothDelta(
             Mouse mouse, SimulateMouseInputSchema parameters, CancellationToken ct)
         {
@@ -298,14 +299,15 @@ namespace io.github.hatayama.uLoopMCP
 
             while (true)
             {
-                await EditorDelay.DelayFrame(1, ct);
-
                 float elapsed = Time.realtimeSinceStartup - startTime;
                 float t = Mathf.Clamp01(elapsed / duration);
 
                 float frameFraction = t - previousT;
                 Vector2 frameDelta = totalDelta * frameFraction;
-                MouseInputState.SetDeltaState(mouse, frameDelta);
+
+                // Inject delta just before the next Input System update so game code reads it
+                await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(
+                    () => MouseInputState.InjectDelta(mouse, frameDelta), ct);
 
                 previousT = t;
 
@@ -314,6 +316,10 @@ namespace io.github.hatayama.uLoopMCP
                     break;
                 }
             }
+
+            // Reset delta to zero after the smooth operation completes
+            await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(
+                () => MouseInputState.InjectDelta(mouse, Vector2.zero), ct);
 
             return new SimulateMouseInputResponse
             {

@@ -63,13 +63,19 @@ namespace io.github.hatayama.uLoopMCP
 
         public static void SetDeltaState(Mouse mouse, Vector2 delta)
         {
+            InjectDelta(mouse, delta);
+            SchedulePerFrameReset(mouse!, mouse!.delta, isDelta: true);
+        }
+
+        // Inject delta without scheduling a reset. Used by SmoothDelta which
+        // manages its own lifecycle — resetting only after the final frame.
+        public static void InjectDelta(Mouse mouse, Vector2 delta)
+        {
             Debug.Assert(mouse != null, "mouse must not be null");
             ApplyStateEvent(mouse!, eventPtr =>
             {
                 mouse!.delta.WriteValueIntoEvent(delta, eventPtr);
             });
-
-            SchedulePerFrameReset(mouse!, mouse!.delta, isDelta: true);
         }
 
         public static void SetScrollState(Mouse mouse, Vector2 scroll)
