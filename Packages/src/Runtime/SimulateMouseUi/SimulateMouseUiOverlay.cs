@@ -5,11 +5,11 @@ using UnityEngine.UI;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    // Canvas-based overlay that visualizes SimulateMouse cursor position and drag state on Game View.
-    // Animation is driven externally via SetCursorScale/SetAlpha from async functions in SimulateMouseTool.
-    public class SimulateMouseOverlay : MonoBehaviour
+    // Canvas-based overlay that visualizes SimulateMouseUi cursor position and drag state on Game View.
+    // Animation is driven externally via SetCursorScale/SetAlpha from async functions in SimulateMouseUiTool.
+    public class SimulateMouseUiOverlay : MonoBehaviour
     {
-        public static SimulateMouseOverlay? Instance { get; private set; }
+        public static SimulateMouseUiOverlay? Instance { get; private set; }
 
         private const int CANVAS_SORT_ORDER = 32000;
 
@@ -43,7 +43,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void Awake()
         {
-            Debug.Assert(Instance == null, "SimulateMouseOverlay instance already exists");
+            Debug.Assert(Instance == null, "SimulateMouseUiOverlay instance already exists");
             Instance = this;
             BuildCanvasHierarchy();
         }
@@ -68,7 +68,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void LateUpdate()
         {
-            if (!SimulateMouseOverlayState.IsActive)
+            if (!SimulateMouseUiOverlayState.IsActive)
             {
                 if (_canvas.enabled) _canvas.enabled = false;
                 return;
@@ -94,30 +94,30 @@ namespace io.github.hatayama.uLoopMCP
         // Canvas Screen Space Overlay position: bottom-left origin
         private static Vector2 SimToScreen(Vector2 simPos)
         {
-            Vector2 srcSize = SimulateMouseOverlayState.SourceScreenSize;
+            Vector2 srcSize = SimulateMouseUiOverlayState.SourceScreenSize;
             Debug.Assert(srcSize.x > 0f && srcSize.y > 0f, "SourceScreenSize must be set before SimToScreen is called");
             return new Vector2(simPos.x, srcSize.y - simPos.y);
         }
 
         private void UpdateCursorPosition()
         {
-            Vector2 screenPos = SimToScreen(SimulateMouseOverlayState.CurrentPosition);
+            Vector2 screenPos = SimToScreen(SimulateMouseUiOverlayState.CurrentPosition);
             _cursorGroup.position = new Vector3(screenPos.x, screenPos.y, 0f);
         }
 
         private void UpdateCursorMode()
         {
-            bool isLongPress = SimulateMouseOverlayState.Action == MouseAction.LongPress;
+            bool isLongPress = SimulateMouseUiOverlayState.Action == MouseAction.LongPress;
             _crosshairH.enabled = !isLongPress;
             _crosshairV.enabled = !isLongPress;
             _longPressText.enabled = isLongPress;
 
             if (isLongPress)
             {
-                _longPressText.text = SimulateMouseOverlayState.LongPressElapsed.ToString("F1") + "s";
+                _longPressText.text = SimulateMouseUiOverlayState.LongPressElapsed.ToString("F1") + "s";
 
                 // Pulse the circle between 1.0x and 1.2x scale over a 2-second cycle
-                float t = Mathf.PingPong(SimulateMouseOverlayState.LongPressElapsed, 2f) / 2f;
+                float t = Mathf.PingPong(SimulateMouseUiOverlayState.LongPressElapsed, 2f) / 2f;
                 float scale = Mathf.Lerp(1.0f, 1.2f, t);
                 _circleImage.rectTransform.localScale = Vector3.one * scale;
             }
@@ -129,7 +129,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void UpdateDragPath()
         {
-            if (!SimulateMouseOverlayState.DragStartPosition.HasValue)
+            if (!SimulateMouseUiOverlayState.DragStartPosition.HasValue)
             {
                 _dragStartMarker.enabled = false;
                 HidePool(_pathSegments);
@@ -143,14 +143,14 @@ namespace io.github.hatayama.uLoopMCP
             Color activeColor = GetActiveColor();
 
             // Start marker
-            Vector2 startScreen = SimToScreen(SimulateMouseOverlayState.DragStartPosition.Value);
+            Vector2 startScreen = SimToScreen(SimulateMouseUiOverlayState.DragStartPosition.Value);
             _dragStartMarker.enabled = true;
             _dragStartMarker.color = activeColor;
             _dragStartMarker.rectTransform.position = new Vector3(startScreen.x, startScreen.y, 0f);
 
             // Polyline: start → waypoints → current
-            IReadOnlyList<Vector2> waypoints = SimulateMouseOverlayState.DragWaypoints;
-            Vector2 currentScreen = SimToScreen(SimulateMouseOverlayState.CurrentPosition);
+            IReadOnlyList<Vector2> waypoints = SimulateMouseUiOverlayState.DragWaypoints;
+            Vector2 currentScreen = SimToScreen(SimulateMouseUiOverlayState.CurrentPosition);
 
             int segmentCount = waypoints.Count + 1;
             EnsurePoolCount(_pathSegments, segmentCount, CreatePooledSegment);
@@ -252,7 +252,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private Color GetActiveColor()
         {
-            return SimulateMouseOverlayState.Action == MouseAction.Click
+            return SimulateMouseUiOverlayState.Action == MouseAction.Click
                 ? CLICK_COLOR
                 : DRAG_COLOR;
         }

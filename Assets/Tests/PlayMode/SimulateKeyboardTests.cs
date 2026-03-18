@@ -597,9 +597,9 @@ namespace Tests.PlayMode
         // observer must sample wasPressedThisFrame from the same update loop.
         private void HandleAfterUpdate()
         {
-            InputUpdateType expectedUpdateType = KeyboardInputUpdateTypeResolver.Resolve();
+            InputUpdateType expectedUpdateType = InputUpdateTypeResolver.Resolve();
             InputUpdateType currentUpdateType = InputState.currentUpdateType;
-            if (!KeyboardInputUpdateTypeResolver.IsMatch(currentUpdateType, expectedUpdateType))
+            if (!InputUpdateTypeResolver.IsMatch(currentUpdateType, expectedUpdateType))
             {
                 return;
             }

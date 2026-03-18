@@ -173,8 +173,8 @@ namespace io.github.hatayama.uLoopMCP
         public const string COORDINATE_SYSTEM_GAME_VIEW = "gameView";
         public const string COORDINATE_SYSTEM_WINDOW = "window";
 
-        // SimulateMouse constants
-        public const float SIMULATE_MOUSE_DEFAULT_DRAG_SPEED = 2000f;
+        // SimulateMouseUi constants
+        public const float SIMULATE_MOUSE_UI_DEFAULT_DRAG_SPEED = 2000f;
 
         // Compile tool constants
         public const int COMPILE_START_TIMEOUT_MS = 5000; // Timeout to detect "compile did not start"

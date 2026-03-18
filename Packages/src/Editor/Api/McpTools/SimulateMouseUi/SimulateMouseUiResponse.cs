@@ -2,7 +2,7 @@
 
 namespace io.github.hatayama.uLoopMCP
 {
-    public class SimulateMouseResponse : BaseToolResponse
+    public class SimulateMouseUiResponse : BaseToolResponse
     {
         public bool Success { get; set; }
         public string Message { get; set; } = "";
@@ -13,7 +13,7 @@ namespace io.github.hatayama.uLoopMCP
         public float? EndPositionX { get; set; }
         public float? EndPositionY { get; set; }
 
-        public SimulateMouseResponse()
+        public SimulateMouseUiResponse()
         {
         }
     }

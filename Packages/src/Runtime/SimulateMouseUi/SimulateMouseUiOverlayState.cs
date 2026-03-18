@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    public static class SimulateMouseOverlayState
+    public static class SimulateMouseUiOverlayState
     {
         public static bool IsActive { get; private set; }
         public static MouseAction Action { get; private set; }
