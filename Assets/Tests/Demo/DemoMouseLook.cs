@@ -56,6 +56,12 @@ namespace io.github.hatayama.uLoopMCP
             Cursor.visible = false;
         }
 
+        private void OnDisable()
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+
         private void Update()
         {
             if (_transposer == null)

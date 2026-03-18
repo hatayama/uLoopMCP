@@ -1,46 +1,55 @@
 #!/bin/sh
+set -e
 # Automated gameplay demo using simulate-keyboard and simulate-mouse-input tools.
 # Demonstrates a player exploring the scene, looking around, and shooting targets.
 #
 # Usage: sh scripts/demo-gameplay.sh [--project-path <path>]
 #
 # Prerequisites:
-#   - Unity must be in PlayMode on SimulateKeyboardDemoScene
+#   - SimulateKeyboardDemoScene must be open in Unity
 #   - uloop CLI must be installed
 
-PROJECT_ARGS=""
-if [ -n "$1" ] && [ "$1" = "--project-path" ] && [ -n "$2" ]; then
-    PROJECT_ARGS="--project-path $2"
+PROJECT_PATH=""
+if [ "$1" = "--project-path" ] && [ -n "$2" ]; then
+    PROJECT_PATH="$2"
 fi
+
+run_uloop() {
+    if [ -n "$PROJECT_PATH" ]; then
+        uloop "$@" --project-path "$PROJECT_PATH"
+    else
+        uloop "$@"
+    fi
+}
 
 log() {
     printf "\033[36m[gameplay]\033[0m %s\n" "$1"
 }
 
 key_press() {
-    uloop simulate-keyboard --action Press --key "$1" --duration "${2:-0.1}" $PROJECT_ARGS > /dev/null 2>&1
+    run_uloop simulate-keyboard --action Press --key "$1" --duration "${2:-0.1}" > /dev/null
 }
 
 key_down() {
-    uloop simulate-keyboard --action KeyDown --key "$1" $PROJECT_ARGS > /dev/null 2>&1
+    run_uloop simulate-keyboard --action KeyDown --key "$1" > /dev/null
 }
 
 key_up() {
-    uloop simulate-keyboard --action KeyUp --key "$1" $PROJECT_ARGS > /dev/null 2>&1
+    run_uloop simulate-keyboard --action KeyUp --key "$1" > /dev/null
 }
 
 # Smooth camera pan using SmoothDelta (frame-interpolated inside Unity).
 # Usage: look <total_delta_x> <duration_sec>
 look() {
-    uloop simulate-mouse-input --action SmoothDelta --delta-x "$1" --delta-y 0 --duration "${2:-0.5}" $PROJECT_ARGS > /dev/null 2>&1
+    run_uloop simulate-mouse-input --action SmoothDelta --delta-x "$1" --delta-y 0 --duration "${2:-0.5}" > /dev/null
 }
 
 shoot() {
-    uloop simulate-mouse-input --action Click --x 400 --y 300 $PROJECT_ARGS > /dev/null 2>&1
+    run_uloop simulate-mouse-input --action Click --x 400 --y 300 > /dev/null
 }
 
 scroll() {
-    uloop simulate-mouse-input --action Scroll --scroll-y "$1" $PROJECT_ARGS > /dev/null 2>&1
+    run_uloop simulate-mouse-input --action Scroll --scroll-y "$1" > /dev/null
 }
 
 wait_sec() {
@@ -49,7 +58,7 @@ wait_sec() {
 
 # ============================================================
 log "Starting PlayMode..."
-uloop control-play-mode --action Play $PROJECT_ARGS > /dev/null 2>&1
+run_uloop control-play-mode --action Play > /dev/null
 wait_sec 2
 
 log "=== Gameplay Demo Start ==="
@@ -156,4 +165,4 @@ wait_sec 0.5
 log "=== Gameplay Demo Complete ==="
 
 log "Stopping PlayMode..."
-uloop control-play-mode --action Stop $PROJECT_ARGS > /dev/null 2>&1
+run_uloop control-play-mode --action Stop > /dev/null

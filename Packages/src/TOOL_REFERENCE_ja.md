@@ -304,12 +304,13 @@
   - `EndPositionY` (number): 終了Y座標（Dragアクション用）
 
 ### 15. simulate-mouse-input
-- **説明**: Input System経由でPlayMode中のマウス入力をシミュレーション。ボタンクリック、マウスデルタ、スクロールホイールを `Mouse.current` に直接注入。`wasPressedThisFrame`や`Mouse.current.delta`等を読むゲームロジック向け。Input Systemパッケージが必要。IPointerClickHandler等のUI要素には `simulate-mouse-ui` を使用
+- **説明**: Input System経由でPlayMode中のマウス入力をシミュレーション。ボタンクリック、マウスデルタ、スクロールホイールを `Mouse.current` に直接注入。`wasPressedThisFrame`や`Mouse.current.delta`等を読むゲームロジック向け。Input Systemパッケージが必要で、Player SettingsのActive Input Handlingを `Input System Package (New)` または `Both` に設定する必要がある。IPointerClickHandler等のUI要素には `simulate-mouse-ui` を使用
 - **パラメータ**:
-  - `Action` (enum): マウス入力アクション - "Click", "LongPress", "MoveDelta", "Scroll"（デフォルト: "Click"）
+  - `Action` (enum): マウス入力アクション - "Click", "LongPress", "MoveDelta", "SmoothDelta", "Scroll"（デフォルト: "Click"）
     - `Click`: ボタンのpress+releaseを注入し、`wasPressedThisFrame`がtrueを返すようにする
     - `LongPress`: Duration秒間ボタンをホールド
-    - `MoveDelta`: マウスデルタを注入（FPSカメラ操作等）
+    - `MoveDelta`: マウスデルタを注入（ワンショット、FPSカメラ操作等）
+    - `SmoothDelta`: Duration秒かけて滑らかにマウスデルタを注入（人間的なカメラ旋回）
     - `Scroll`: スクロールホイールを注入（ホットバー切替、ズーム等）
   - `X` (number): ターゲットX座標（スクリーンピクセル、原点: 左上）。ClickとLongPressで使用（デフォルト: 0）
   - `Y` (number): ターゲットY座標（スクリーンピクセル、原点: 左上）。ClickとLongPressで使用（デフォルト: 0）

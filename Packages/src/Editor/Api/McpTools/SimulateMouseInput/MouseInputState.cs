@@ -143,13 +143,23 @@ namespace io.github.hatayama.uLoopMCP
                 InputSystem.onBeforeUpdate -= previousReset;
             }
 
+            // Capture the target update type so the reset only fires in the same
+            // Input System update phase that gameplay code reads, preventing an
+            // Editor or BeforeRender update from clearing the value prematurely.
+            InputUpdateType targetUpdateType = InputUpdateTypeResolver.Resolve();
+
             Action? resetCallback = null;
             resetCallback = () =>
             {
+                InputUpdateType currentUpdateType = InputState.currentUpdateType;
+                if (!InputUpdateTypeResolver.IsMatch(currentUpdateType, targetUpdateType))
+                {
+                    return;
+                }
+
                 Debug.Assert(resetCallback != null, "resetCallback must be assigned before subscription");
                 InputSystem.onBeforeUpdate -= resetCallback;
 
-                // Clear the tracked reference since this callback has fired
                 if (isDelta && _pendingDeltaReset == resetCallback)
                 {
                     _pendingDeltaReset = null;

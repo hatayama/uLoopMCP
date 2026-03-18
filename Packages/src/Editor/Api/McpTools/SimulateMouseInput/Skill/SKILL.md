@@ -40,9 +40,10 @@ uloop simulate-mouse-input --action <action> [options]
 
 | Action | What it injects | Description |
 |--------|----------------|-------------|
-| `Click` | Mouse.current button press → release | Inject a button click so game logic detects `WasPressedThisFrame()` |
+| `Click` | Mouse.current button press → release | Inject a button click so game logic detects `wasPressedThisFrame` |
 | `LongPress` | Mouse.current button press → hold → release | Hold a button for `--duration` seconds |
-| `MoveDelta` | Mouse.current.delta | Inject mouse movement delta (e.g. for FPS camera look) |
+| `MoveDelta` | Mouse.current.delta | Inject mouse movement delta one-shot (e.g. for FPS camera look) |
+| `SmoothDelta` | Mouse.current.delta (per-frame) | Inject mouse delta smoothly over `--duration` seconds (human-like camera pan) |
 | `Scroll` | Mouse.current.scroll | Inject scroll wheel input (e.g. for hotbar or zoom) |
 
 ### Global Options

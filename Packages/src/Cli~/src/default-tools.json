@@ -539,7 +539,7 @@
     },
     {
       "name": "simulate-mouse-input",
-      "description": "Simulate mouse input in PlayMode via Input System. Injects button clicks, mouse delta, and scroll wheel directly into Mouse.current for game logic that reads Input System. Requires the Input System package.",
+      "description": "Simulate mouse input in PlayMode via Input System. Injects button clicks, mouse delta, and scroll wheel directly into Mouse.current for game logic that reads Input System. Requires the Input System package and Active Input Handling set to 'Input System Package (New)' or 'Both'.",
       "inputSchema": {
         "type": "object",
         "properties": {

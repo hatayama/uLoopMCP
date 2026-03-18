@@ -40,7 +40,7 @@ uloop simulate-mouse-ui --action <action> --x <x> --y <y> [options]
 
 | Action | Event Fired | Description |
 |--------|-------------|-------------|
-| `Click` | PointerDown → PointerUp → PointerClick | Left click at (x, y) |
+| `Click` | PointerDown → PointerUp → PointerClick | Click at (x, y) with the selected `--button` |
 | `LongPress` | PointerDown → (hold) → PointerUp | Press and hold at (x, y) for `--duration` seconds, then release. No PointerClick is fired. |
 | `Drag` | BeginDrag → Drag×N → EndDrag | One-shot drag from (fromX, fromY) to (x, y) at the specified speed |
 | `DragStart` | BeginDrag | Begin drag at (x, y) and hold |

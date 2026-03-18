@@ -58,6 +58,26 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
+            if (!System.Enum.IsDefined(typeof(MouseInputAction), parameters.Action))
+            {
+                return new SimulateMouseInputResponse
+                {
+                    Success = false,
+                    Message = $"Invalid Action value: {(int)parameters.Action}. Use Click, LongPress, MoveDelta, Scroll, or SmoothDelta.",
+                    Action = parameters.Action.ToString()
+                };
+            }
+
+            if (!System.Enum.IsDefined(typeof(MouseButton), parameters.Button))
+            {
+                return new SimulateMouseInputResponse
+                {
+                    Success = false,
+                    Message = $"Invalid Button value: {(int)parameters.Button}. Use Left, Right, or Middle.",
+                    Action = parameters.Action.ToString()
+                };
+            }
+
             Mouse? mouse = Mouse.current;
             if (mouse == null)
             {

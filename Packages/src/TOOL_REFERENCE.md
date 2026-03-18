@@ -306,12 +306,13 @@ All tools automatically include the following property:
   - `EndPositionY` (number): End Y position (for Drag actions)
 
 ### 15. simulate-mouse-input
-- **Description**: Simulate mouse input in PlayMode via Input System. Injects button clicks, mouse delta, and scroll wheel directly into `Mouse.current` for game logic that reads Input System (e.g. `wasPressedThisFrame`, `Mouse.current.delta`). Requires the Input System package. For UI elements with IPointerClickHandler, use `simulate-mouse-ui` instead
+- **Description**: Simulate mouse input in PlayMode via Input System. Injects button clicks, mouse delta, and scroll wheel directly into `Mouse.current` for game logic that reads Input System (e.g. `wasPressedThisFrame`, `Mouse.current.delta`). Requires the Input System package and Active Input Handling set to `Input System Package (New)` or `Both` in Player Settings. For UI elements with IPointerClickHandler, use `simulate-mouse-ui` instead
 - **Parameters**:
-  - `Action` (enum): Mouse input action - "Click", "LongPress", "MoveDelta", "Scroll" (default: "Click")
+  - `Action` (enum): Mouse input action - "Click", "LongPress", "MoveDelta", "SmoothDelta", "Scroll" (default: "Click")
     - `Click`: Inject button press and release so `wasPressedThisFrame` returns true
     - `LongPress`: Inject button hold for Duration seconds
-    - `MoveDelta`: Inject mouse delta (for FPS camera/look control)
+    - `MoveDelta`: Inject mouse delta one-shot (for FPS camera/look control)
+    - `SmoothDelta`: Inject mouse delta smoothly over Duration seconds (human-like camera pan)
     - `Scroll`: Inject scroll wheel (for hotbar switching, zoom, etc.)
   - `X` (number): Target X position in screen pixels, origin: top-left. Used by Click and LongPress (default: 0)
   - `Y` (number): Target Y position in screen pixels, origin: top-left. Used by Click and LongPress (default: 0)

@@ -331,13 +331,14 @@ namespace io.github.hatayama.uLoopMCP
             EventSystem eventSystem,
             Vector2 screenPos,
             RaycastResult raycastResult,
-            GameObject dragTarget)
+            GameObject dragTarget,
+            PointerEventData.InputButton inputButton)
         {
             PointerEventData pointerData = new PointerEventData(eventSystem)
             {
                 position = screenPos,
                 pressPosition = screenPos,
-                button = PointerEventData.InputButton.Left,
+                button = inputButton,
                 pointerCurrentRaycast = raycastResult,
                 pointerPressRaycast = raycastResult,
                 pointerDrag = dragTarget,
@@ -388,7 +389,8 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            PointerEventData pointerData = InitiateDrag(eventSystem, screenStart, hit!.Value, target);
+            PointerEventData.InputButton inputButton = ToInputButton(parameters.Button);
+            PointerEventData pointerData = InitiateDrag(eventSystem, screenStart, hit!.Value, target, inputButton);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
             pointerData.dragging = true;
 
@@ -550,7 +552,8 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            PointerEventData pointerData = InitiateDrag(eventSystem, screenPos, hit!.Value, target);
+            PointerEventData.InputButton inputButton = ToInputButton(parameters.Button);
+            PointerEventData pointerData = InitiateDrag(eventSystem, screenPos, hit!.Value, target, inputButton);
             ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
             pointerData.dragging = true;
 
