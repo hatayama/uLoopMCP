@@ -96,6 +96,8 @@ namespace io.github.hatayama.uLoopMCP
                 correlationId: correlationId
             );
 
+            EnsureOverlayExists();
+
             SimulateMouseInputResponse response;
 
             switch (parameters.Action)
@@ -136,6 +138,35 @@ namespace io.github.hatayama.uLoopMCP
         }
 
 #if ULOOPMCP_HAS_INPUT_SYSTEM
+        private const string OVERLAY_PREFAB_PATH = "Packages/io.github.hatayama.uloopmcp/Runtime/SimulateMouseInput/SimulateMouseInputOverlay.prefab";
+
+        private static void EnsureOverlayExists()
+        {
+            if (SimulateMouseInputOverlay.Instance != null)
+            {
+                return;
+            }
+
+            GameObject? prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(OVERLAY_PREFAB_PATH);
+            Debug.Assert(prefab != null, $"SimulateMouseInputOverlay prefab not found at {OVERLAY_PREFAB_PATH}");
+
+            Transform parentTransform = CreateOverlayCanvas().transform;
+            GameObject instance = (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab, parentTransform);
+            instance.hideFlags = HideFlags.DontSave;
+        }
+
+        private static Canvas CreateOverlayCanvas()
+        {
+            GameObject canvasGo = new GameObject("SimulateMouseInputOverlayCanvas");
+            canvasGo.hideFlags = HideFlags.DontSave;
+
+            Canvas canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 32000;
+
+            return canvas;
+        }
+
         // Input coordinates use top-left origin; Unity Screen space uses bottom-left origin.
         // Uses Screen.height (runtime resolution) because Mouse.current.position is in
         // runtime screen space, not the editor Game view target resolution.
@@ -168,6 +199,7 @@ namespace io.github.hatayama.uLoopMCP
 
             // Press button
             MouseInputState.SetButtonDown(button);
+            SimulateMouseInputOverlayState.SetButtonHeld(button, true);
             bool pressWasApplied = false;
 
             try
@@ -188,6 +220,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     MouseInputState.SetButtonUp(button);
                 }
+                SimulateMouseInputOverlayState.SetButtonHeld(button, false);
             }
 
             string durationText = parameters.Duration > 0f ? $" for {parameters.Duration:F1}s" : "";
@@ -226,6 +259,7 @@ namespace io.github.hatayama.uLoopMCP
 
             // Press button
             MouseInputState.SetButtonDown(button);
+            SimulateMouseInputOverlayState.SetButtonHeld(button, true);
             bool pressWasApplied = false;
 
             try
@@ -245,6 +279,7 @@ namespace io.github.hatayama.uLoopMCP
                     await ReleaseButtonIfPossible(mouse, button);
                 }
                 MouseInputState.SetButtonUp(button);
+                SimulateMouseInputOverlayState.SetButtonHeld(button, false);
             }
 
             return new SimulateMouseInputResponse
@@ -262,6 +297,7 @@ namespace io.github.hatayama.uLoopMCP
             Mouse mouse, SimulateMouseInputSchema parameters, CancellationToken ct)
         {
             Vector2 delta = new Vector2(parameters.DeltaX, parameters.DeltaY);
+            SimulateMouseInputOverlayState.SetMoveDelta(delta);
 
             await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(
                 () => MouseInputState.SetDeltaState(mouse, delta), ct);
@@ -279,6 +315,9 @@ namespace io.github.hatayama.uLoopMCP
             Mouse mouse, SimulateMouseInputSchema parameters, CancellationToken ct)
         {
             Vector2 scroll = new Vector2(parameters.ScrollX, parameters.ScrollY);
+
+            int scrollDir = parameters.ScrollY > 0f ? 1 : parameters.ScrollY < 0f ? -1 : 0;
+            SimulateMouseInputOverlayState.SetScrollDirection(scrollDir);
 
             await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(
                 () => MouseInputState.SetScrollState(mouse, scroll), ct);
@@ -320,8 +359,8 @@ namespace io.github.hatayama.uLoopMCP
 
                 float frameFraction = t - previousT;
                 Vector2 frameDelta = totalDelta * frameFraction;
+                SimulateMouseInputOverlayState.SetMoveDelta(frameDelta);
 
-                // Inject delta just before the next Input System update so game code reads it
                 await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(
                     () => MouseInputState.InjectDelta(mouse, frameDelta), ct);
 

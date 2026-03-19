@@ -10,6 +10,14 @@ namespace io.github.hatayama.uLoopMCP
         [SerializeField] private float bulletSpeed = 20f;
         [SerializeField] private float bulletLifetime = 3f;
         [SerializeField] private float bulletSpawnOffset = 0.3f;
+        [SerializeField] private float jumpPower = 5f;
+
+        private DemoWeaponSelector? _weaponSelector;
+
+        private void Awake()
+        {
+            _weaponSelector = GetComponent<DemoWeaponSelector>();
+        }
 
         private void Update()
         {
@@ -23,6 +31,11 @@ namespace io.github.hatayama.uLoopMCP
             {
                 FireBullet();
             }
+
+            if (mouse.middleButton.wasPressedThisFrame)
+            {
+                Jump();
+            }
         }
 
         private void FireBullet()
@@ -35,8 +48,9 @@ namespace io.github.hatayama.uLoopMCP
             bullet.transform.position = spawnPosition;
             bullet.transform.localScale = Vector3.one * 0.3f;
 
+            Color bulletColor = _weaponSelector != null ? _weaponSelector.SelectedColor : Color.yellow;
             Renderer renderer = bullet.GetComponent<Renderer>();
-            renderer.material.color = Color.yellow;
+            renderer.material.color = bulletColor;
 
             Rigidbody rb = bullet.AddComponent<Rigidbody>();
             rb.useGravity = true;
@@ -44,6 +58,25 @@ namespace io.github.hatayama.uLoopMCP
             rb.AddForce(fireDirection * bulletSpeed, ForceMode.VelocityChange);
 
             Destroy(bullet, bulletLifetime);
+        }
+
+        private static readonly int JumpTrigger = Animator.StringToHash("Jump");
+
+        private void Jump()
+        {
+            Rigidbody? rb = GetComponent<Rigidbody>();
+            if (rb == null)
+            {
+                return;
+            }
+
+            rb.AddForce(Vector3.up * jumpPower, ForceMode.VelocityChange);
+
+            Animator? animator = GetComponent<Animator>();
+            if (animator != null)
+            {
+                animator.SetTrigger(JumpTrigger);
+            }
         }
     }
 }
