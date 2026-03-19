@@ -9,12 +9,12 @@ namespace io.github.hatayama.uLoopMCP
     {
         public static SimulateKeyboardOverlay? Instance { get; private set; }
 
-        public const float CONTAINER_BACKGROUND_ALPHA = 0.85f;
+        public const float CONTAINER_BACKGROUND_ALPHA = 0.8f;
 
         private const int CANVAS_SORT_ORDER = 32000;
         private const float PRESS_DISPLAY_DURATION = 0.5f;
         private const float FADE_DURATION = 0.2f;
-        private const float BOTTOM_MARGIN = 48f;
+        private const float BOTTOM_MARGIN = 100f;
         private const float CONTAINER_PADDING_H = 24f;
         private const float CONTAINER_PADDING_V = 16f;
         private const float KEY_SPACING = 8f;
