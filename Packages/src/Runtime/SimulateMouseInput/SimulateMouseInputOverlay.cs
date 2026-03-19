@@ -48,6 +48,7 @@ namespace io.github.hatayama.uLoopMCP
             _canvasGroup.interactable = false;
             _canvasGroup.blocksRaycasts = false;
 
+            SetVisible(false);
             CaptureIdleColors();
         }
 
