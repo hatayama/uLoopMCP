@@ -96,6 +96,8 @@ namespace io.github.hatayama.uLoopMCP
                 correlationId: correlationId
             );
 
+            EnsureOverlayExists();
+
             SimulateMouseInputResponse response;
 
             switch (parameters.Action)
@@ -136,6 +138,18 @@ namespace io.github.hatayama.uLoopMCP
         }
 
 #if ULOOPMCP_HAS_INPUT_SYSTEM
+        private static void EnsureOverlayExists()
+        {
+            if (SimulateMouseInputOverlay.Instance != null)
+            {
+                return;
+            }
+
+            GameObject overlayGo = new GameObject("SimulateMouseInputOverlay");
+            overlayGo.hideFlags = HideFlags.HideAndDontSave;
+            overlayGo.AddComponent<SimulateMouseInputOverlay>();
+        }
+
         // Input coordinates use top-left origin; Unity Screen space uses bottom-left origin.
         // Uses Screen.height (runtime resolution) because Mouse.current.position is in
         // runtime screen space, not the editor Game view target resolution.
@@ -168,6 +182,7 @@ namespace io.github.hatayama.uLoopMCP
 
             // Press button
             MouseInputState.SetButtonDown(button);
+            SimulateMouseInputOverlayState.SetButtonHeld(button, true);
             bool pressWasApplied = false;
 
             try
@@ -188,6 +203,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     MouseInputState.SetButtonUp(button);
                 }
+                SimulateMouseInputOverlayState.SetButtonHeld(button, false);
             }
 
             string durationText = parameters.Duration > 0f ? $" for {parameters.Duration:F1}s" : "";
@@ -226,6 +242,7 @@ namespace io.github.hatayama.uLoopMCP
 
             // Press button
             MouseInputState.SetButtonDown(button);
+            SimulateMouseInputOverlayState.SetButtonHeld(button, true);
             bool pressWasApplied = false;
 
             try
@@ -245,6 +262,7 @@ namespace io.github.hatayama.uLoopMCP
                     await ReleaseButtonIfPossible(mouse, button);
                 }
                 MouseInputState.SetButtonUp(button);
+                SimulateMouseInputOverlayState.SetButtonHeld(button, false);
             }
 
             return new SimulateMouseInputResponse
@@ -280,9 +298,19 @@ namespace io.github.hatayama.uLoopMCP
         {
             Vector2 scroll = new Vector2(parameters.ScrollX, parameters.ScrollY);
 
-            await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(
-                () => MouseInputState.SetScrollState(mouse, scroll), ct);
-            await InputSystemUpdateHelper.WaitForObservationFrames(ct);
+            int scrollDir = parameters.ScrollY > 0f ? 1 : parameters.ScrollY < 0f ? -1 : 0;
+            SimulateMouseInputOverlayState.SetScrollDirection(scrollDir);
+
+            try
+            {
+                await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(
+                    () => MouseInputState.SetScrollState(mouse, scroll), ct);
+                await InputSystemUpdateHelper.WaitForObservationFrames(ct);
+            }
+            finally
+            {
+                SimulateMouseInputOverlayState.ClearScroll();
+            }
 
             return new SimulateMouseInputResponse
             {
