@@ -60,7 +60,7 @@ namespace io.github.hatayama.uLoopMCP
             Destroy(bullet, bulletLifetime);
         }
 
-        private static readonly int JumpHash = Animator.StringToHash("Jump");
+        private static readonly int JumpTrigger = Animator.StringToHash("Jump");
 
         private void Jump()
         {
@@ -75,7 +75,7 @@ namespace io.github.hatayama.uLoopMCP
             Animator? animator = GetComponent<Animator>();
             if (animator != null)
             {
-                animator.SetBool(JumpHash, true);
+                animator.SetTrigger(JumpTrigger);
             }
         }
     }

@@ -151,7 +151,7 @@ namespace io.github.hatayama.uLoopMCP
             if (prefab != null)
             {
                 // Prefab needs a parent Canvas; find or create one
-                Canvas? canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
+                Canvas? canvas = UnityEngine.Object.FindObjectOfType<Canvas>();
                 GameObject instance = canvas != null
                     ? (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab, canvas.transform)
                     : (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab);
