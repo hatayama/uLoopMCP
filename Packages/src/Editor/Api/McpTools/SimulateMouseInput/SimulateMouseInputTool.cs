@@ -150,26 +150,22 @@ namespace io.github.hatayama.uLoopMCP
             GameObject? prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(OVERLAY_PREFAB_PATH);
             if (prefab != null)
             {
-                Canvas? canvas = UnityEngine.Object.FindObjectOfType<Canvas>();
-                Transform parentTransform = canvas != null
-                    ? canvas.transform
-                    : CreateOverlayCanvas().transform;
-
+                Transform parentTransform = CreateOverlayCanvas().transform;
                 GameObject instance = (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab, parentTransform);
-                instance.hideFlags = HideFlags.HideAndDontSave;
+                instance.hideFlags = HideFlags.DontSave;
                 return;
             }
 
             // Fallback: build from code
             GameObject overlayGo = new GameObject("SimulateMouseInputOverlay");
-            overlayGo.hideFlags = HideFlags.HideAndDontSave;
+            overlayGo.hideFlags = HideFlags.DontSave;
             overlayGo.AddComponent<SimulateMouseInputOverlay>();
         }
 
         private static Canvas CreateOverlayCanvas()
         {
             GameObject canvasGo = new GameObject("SimulateMouseInputOverlayCanvas");
-            canvasGo.hideFlags = HideFlags.HideAndDontSave;
+            canvasGo.hideFlags = HideFlags.DontSave;
 
             Canvas canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;

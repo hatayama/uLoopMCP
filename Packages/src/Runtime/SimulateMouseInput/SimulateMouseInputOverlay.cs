@@ -50,6 +50,11 @@ namespace io.github.hatayama.uLoopMCP
         private Canvas _canvas = null!;
         private CanvasGroup _canvasGroup = null!;
         private bool _ownsCanvas;
+        private bool _isVisible;
+
+        private Color _leftButtonIdleColor;
+        private Color _rightButtonIdleColor;
+        private Color _scrollWheelIdleColor;
 
         private Texture2D? _bodyTexture;
         private Sprite? _bodySprite;
@@ -77,18 +82,30 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
+        // Immediately destroy this overlay and its topmost DontSave ancestor (the dedicated Canvas).
+        // DontSave objects are not automatically destroyed when PlayMode exits,
+        // so this must be called explicitly from an ExitingPlayMode callback.
+        public static void DestroyWithParentCanvas()
+        {
+            if (Instance == null)
+            {
+                return;
+            }
+
+            Transform root = Instance.transform;
+            while (root.parent != null && (root.parent.gameObject.hideFlags & HideFlags.DontSave) != 0)
+            {
+                root = root.parent;
+            }
+
+            DestroyImmediate(root.gameObject);
+        }
+
         private void OnDestroy()
         {
             if (Instance == this)
             {
                 Instance = null;
-            }
-
-            // CreateOverlayCanvas() creates a parent Canvas with HideAndDontSave;
-            // clean it up to prevent orphaned canvases accumulating across PlayMode sessions.
-            if (!_ownsCanvas && _canvas != null && (_canvas.gameObject.hideFlags & HideFlags.HideAndDontSave) != 0)
-            {
-                Destroy(_canvas.gameObject);
             }
 
             DestroyIfNotNull(_triangleSprite);
@@ -103,7 +120,10 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (SimulateMouseInputOverlayState.HasAnyActivity)
             {
-                SetVisible(true);
+                if (!_isVisible)
+                {
+                    SetVisible(true);
+                }
                 UpdateButtonColors();
                 UpdateScrollIndicator();
                 UpdateMoveDirection();
@@ -114,11 +134,13 @@ namespace io.github.hatayama.uLoopMCP
 
             if (SimulateMouseInputOverlayState.LastActivityTime <= 0f || elapsed > DISPLAY_DURATION)
             {
-                SetVisible(false);
+                if (_isVisible)
+                {
+                    SetVisible(false);
+                }
                 return;
             }
 
-            SetVisible(true);
             UpdateButtonColors();
             UpdateScrollIndicator();
             UpdateMoveDirection();
@@ -126,6 +148,8 @@ namespace io.github.hatayama.uLoopMCP
 
         private void SetVisible(bool visible)
         {
+            _isVisible = visible;
+
             if (_ownsCanvas)
             {
                 _canvas.enabled = visible;
@@ -149,21 +173,34 @@ namespace io.github.hatayama.uLoopMCP
             _canvasGroup.interactable = false;
             _canvasGroup.blocksRaycasts = false;
             _ownsCanvas = false;
+
+            CaptureIdleColors();
+        }
+
+        private void CaptureIdleColors()
+        {
+            Debug.Assert(_leftButton != null, "_leftButton must be assigned before CaptureIdleColors");
+            Debug.Assert(_rightButton != null, "_rightButton must be assigned before CaptureIdleColors");
+            Debug.Assert(_scrollWheel != null, "_scrollWheel must be assigned before CaptureIdleColors");
+
+            _leftButtonIdleColor = _leftButton!.color;
+            _rightButtonIdleColor = _rightButton!.color;
+            _scrollWheelIdleColor = _scrollWheel!.color;
         }
 
         private void UpdateButtonColors()
         {
             _leftButton!.color = SimulateMouseInputOverlayState.IsLeftButtonHeld
                 ? BUTTON_PRESSED_COLOR
-                : BUTTON_IDLE_COLOR;
+                : _leftButtonIdleColor;
 
             _rightButton!.color = SimulateMouseInputOverlayState.IsRightButtonHeld
                 ? BUTTON_PRESSED_COLOR
-                : BUTTON_IDLE_COLOR;
+                : _rightButtonIdleColor;
 
             bool wheelActive = SimulateMouseInputOverlayState.IsMiddleButtonHeld
                                || SimulateMouseInputOverlayState.ScrollDirection != 0;
-            _scrollWheel!.color = wheelActive ? BUTTON_PRESSED_COLOR : BUTTON_IDLE_COLOR;
+            _scrollWheel!.color = wheelActive ? BUTTON_PRESSED_COLOR : _scrollWheelIdleColor;
         }
 
         private void UpdateScrollIndicator()
@@ -309,6 +346,8 @@ namespace io.github.hatayama.uLoopMCP
             arrowBottomRect.sizeDelta = new Vector2(ARROW_SIZE * 2f, ARROW_SIZE * 2f);
             _scrollArrowBottom.color = ARROW_COLOR;
             _scrollArrowBottom.enabled = false;
+
+            CaptureIdleColors();
         }
 
         private static Image CreateImage(string name, Transform parent)
