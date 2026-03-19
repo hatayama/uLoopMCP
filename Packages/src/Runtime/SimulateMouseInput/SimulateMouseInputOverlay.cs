@@ -97,8 +97,11 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // Fade out only — button/scroll state is already idle, no need to update UI elements
+            // Buttons/scroll must reflect idle state during fadeout, otherwise the
+            // last pressed frame's white color lingers and looks like a long-press.
             _canvas.enabled = true;
+            UpdateButtonColors();
+            UpdateScrollIndicator();
             _canvasGroup.alpha = elapsed > DISPLAY_DURATION
                 ? 1f - Mathf.Clamp01((elapsed - DISPLAY_DURATION) / FADE_DURATION)
                 : 1f;
