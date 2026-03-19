@@ -3,7 +3,7 @@
   "project": ["src/**/*.ts"],
   "ignoreDependencies": [
     "@microsoft/eslint-formatter-sarif",
-    "eslint-formatter-@microsoft",
+    "eslint-formatter-",
     "lint-staged"
   ]
 }
