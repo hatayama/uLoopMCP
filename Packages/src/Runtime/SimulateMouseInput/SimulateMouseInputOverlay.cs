@@ -84,6 +84,13 @@ namespace io.github.hatayama.uLoopMCP
                 Instance = null;
             }
 
+            // CreateOverlayCanvas() creates a parent Canvas with HideAndDontSave;
+            // clean it up to prevent orphaned canvases accumulating across PlayMode sessions.
+            if (!_ownsCanvas && _canvas != null && (_canvas.gameObject.hideFlags & HideFlags.HideAndDontSave) != 0)
+            {
+                Destroy(_canvas.gameObject);
+            }
+
             DestroyIfNotNull(_triangleSprite);
             DestroyIfNotNull(_triangleTexture);
             DestroyIfNotNull(_wheelSprite);

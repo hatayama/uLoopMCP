@@ -150,11 +150,12 @@ namespace io.github.hatayama.uLoopMCP
             GameObject? prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(OVERLAY_PREFAB_PATH);
             if (prefab != null)
             {
-                // Prefab needs a parent Canvas; find or create one
                 Canvas? canvas = UnityEngine.Object.FindObjectOfType<Canvas>();
-                GameObject instance = canvas != null
-                    ? (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab, canvas.transform)
-                    : (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab);
+                Transform parentTransform = canvas != null
+                    ? canvas.transform
+                    : CreateOverlayCanvas().transform;
+
+                GameObject instance = (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab, parentTransform);
                 instance.hideFlags = HideFlags.HideAndDontSave;
                 return;
             }
@@ -163,6 +164,18 @@ namespace io.github.hatayama.uLoopMCP
             GameObject overlayGo = new GameObject("SimulateMouseInputOverlay");
             overlayGo.hideFlags = HideFlags.HideAndDontSave;
             overlayGo.AddComponent<SimulateMouseInputOverlay>();
+        }
+
+        private static Canvas CreateOverlayCanvas()
+        {
+            GameObject canvasGo = new GameObject("SimulateMouseInputOverlayCanvas");
+            canvasGo.hideFlags = HideFlags.HideAndDontSave;
+
+            Canvas canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 32000;
+
+            return canvas;
         }
 
         // Input coordinates use top-left origin; Unity Screen space uses bottom-left origin.

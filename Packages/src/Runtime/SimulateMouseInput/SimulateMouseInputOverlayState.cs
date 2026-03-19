@@ -72,15 +72,19 @@ namespace io.github.hatayama.uLoopMCP
 
         public static void SetMoveDelta(Vector2 delta)
         {
-            // Accumulate over several frames to avoid angle quantization
-            // from small integer per-frame deltas, without lerp artifacts
-            // that cause wrong intermediate directions on direction reversal.
             _moveAccumulator += delta;
             _moveFrameCount++;
 
-            if (_moveFrameCount >= MOVE_SAMPLE_FRAMES)
+            // Update direction every frame from accumulated delta so single-call
+            // MoveDelta actions are visible, while the accumulator reset every N
+            // frames smooths out per-frame integer quantization noise.
+            if (_moveAccumulator != Vector2.zero)
             {
                 _moveDelta = _moveAccumulator.normalized;
+            }
+
+            if (_moveFrameCount >= MOVE_SAMPLE_FRAMES)
+            {
                 _moveAccumulator = Vector2.zero;
                 _moveFrameCount = 0;
             }
