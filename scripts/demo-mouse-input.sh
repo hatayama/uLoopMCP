@@ -67,7 +67,42 @@ wait_sec 2
 
 log "=== Mouse Input Demo Start ==="
 
-# --- Phase 1: Look around (SmoothDelta) ---
+# --- Phase 1: Click demos (Left, Right, Middle) ---
+log "Left Click x3..."
+shoot
+wait_sec 0.5
+shoot
+wait_sec 0.5
+shoot
+wait_sec 0.8
+
+log "Right Click..."
+right_click
+wait_sec 0.8
+
+log "Middle Click..."
+middle_click
+wait_sec 0.8
+
+log "Scroll Up..."
+scroll 120
+wait_sec 0.8
+
+log "Scroll Down..."
+scroll -120
+wait_sec 0.8
+
+log "Left Click rapid fire..."
+shoot
+wait_sec 0.2
+shoot
+wait_sec 0.2
+shoot
+wait_sec 0.2
+shoot
+wait_sec 0.8
+
+# --- Phase 2: Look around (SmoothDelta) ---
 log "Looking around (SmoothDelta)..."
 look 200 0 0.6
 wait_sec 0.2
@@ -76,8 +111,8 @@ wait_sec 0.2
 look 200 0 0.6
 wait_sec 0.3
 
-# --- Phase 2: Shoot with default color (Click - Left) ---
-log "Shooting (Left Click) - Yellow bullets"
+# --- Phase 3: Shoot with default color ---
+log "Shooting - Yellow bullets"
 shoot
 wait_sec 0.3
 shoot
@@ -85,40 +120,64 @@ wait_sec 0.3
 shoot
 wait_sec 0.5
 
-# --- Phase 3: Switch weapon color (Scroll Up) ---
-log "Switching weapon color (Scroll Up)..."
+# --- Phase 3-8: Color switch + shoot cycle ---
+log "Switch to Red..."
 scroll 120
-wait_sec 0.5
-
-log "Shooting - Red bullets"
+wait_sec 0.4
+shoot
+wait_sec 0.3
 shoot
 wait_sec 0.3
 shoot
 wait_sec 0.5
 
-# --- Phase 4: Switch again (Scroll Up) ---
-log "Switching weapon color (Scroll Up)..."
+log "Switch to Blue..."
 scroll 120
-wait_sec 0.5
-
-log "Shooting - Blue bullets"
+wait_sec 0.4
+look -100 0 0.3
 shoot
 wait_sec 0.3
 shoot
 wait_sec 0.5
 
-# --- Phase 5: Switch back (Scroll Down) ---
-log "Switching weapon color (Scroll Down)..."
-scroll -120
-wait_sec 0.5
-
-log "Shooting - Red bullets again"
+log "Switch to Green..."
+scroll 120
+wait_sec 0.4
+shoot
+wait_sec 0.3
 shoot
 wait_sec 0.3
 shoot
 wait_sec 0.5
 
-# --- Phase 6: Pan camera + shoot (combined mouse actions) ---
+log "Switch to Orange..."
+scroll 120
+wait_sec 0.4
+look 150 0 0.4
+shoot
+wait_sec 0.3
+shoot
+wait_sec 0.5
+
+log "Switch to Magenta..."
+scroll 120
+wait_sec 0.4
+shoot
+wait_sec 0.3
+shoot
+wait_sec 0.3
+shoot
+wait_sec 0.5
+
+log "Back to Yellow..."
+scroll 120
+wait_sec 0.4
+shoot
+wait_sec 0.3
+shoot
+wait_sec 0.5
+
+# --- Phase 9: Pan camera + shoot ---
 log "Pan and shoot combo..."
 look 150 0 0.4
 wait_sec 0.1
@@ -131,35 +190,12 @@ wait_sec 0.2
 shoot
 wait_sec 0.5
 
-# --- Phase 7: Right Click demo ---
-log "Right Click demo..."
-right_click
-wait_sec 0.5
-
-# --- Phase 8: Middle Click demo ---
-log "Middle Click demo..."
-middle_click
-wait_sec 0.5
-
-# --- Phase 9: Long Press demo ---
+# --- Phase 10: Long Press demo ---
 log "Long Press demo (1.5s)..."
 long_press 1.5
 wait_sec 0.5
 
-# --- Phase 10: Rapid scroll cycle through all colors ---
-log "Rapid weapon cycling..."
-scroll 120
-wait_sec 0.2
-scroll 120
-wait_sec 0.2
-scroll 120
-wait_sec 0.2
-scroll 120
-wait_sec 0.2
-scroll 120
-wait_sec 0.2
-
-# --- Phase 11: Final burst with last color ---
+# --- Phase 11: Final burst ---
 log "Final burst!"
 look -100 0 0.3
 shoot

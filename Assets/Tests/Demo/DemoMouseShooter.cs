@@ -10,6 +10,7 @@ namespace io.github.hatayama.uLoopMCP
         [SerializeField] private float bulletSpeed = 20f;
         [SerializeField] private float bulletLifetime = 3f;
         [SerializeField] private float bulletSpawnOffset = 0.3f;
+        [SerializeField] private float jumpPower = 5f;
 
         private DemoWeaponSelector? _weaponSelector;
 
@@ -29,6 +30,11 @@ namespace io.github.hatayama.uLoopMCP
             if (mouse.leftButton.wasPressedThisFrame)
             {
                 FireBullet();
+            }
+
+            if (mouse.middleButton.wasPressedThisFrame)
+            {
+                Jump();
             }
         }
 
@@ -52,6 +58,25 @@ namespace io.github.hatayama.uLoopMCP
             rb.AddForce(fireDirection * bulletSpeed, ForceMode.VelocityChange);
 
             Destroy(bullet, bulletLifetime);
+        }
+
+        private static readonly int JumpHash = Animator.StringToHash("Jump");
+
+        private void Jump()
+        {
+            Rigidbody? rb = GetComponent<Rigidbody>();
+            if (rb == null)
+            {
+                return;
+            }
+
+            rb.AddForce(Vector3.up * jumpPower, ForceMode.VelocityChange);
+
+            Animator? animator = GetComponent<Animator>();
+            if (animator != null)
+            {
+                animator.SetBool(JumpHash, true);
+            }
         }
     }
 }

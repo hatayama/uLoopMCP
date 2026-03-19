@@ -138,6 +138,8 @@ namespace io.github.hatayama.uLoopMCP
         }
 
 #if ULOOPMCP_HAS_INPUT_SYSTEM
+        private const string OVERLAY_PREFAB_PATH = "Packages/io.github.hatayama.uloopmcp/Runtime/SimulateMouseInput/SimulateMouseInputOverlay.prefab";
+
         private static void EnsureOverlayExists()
         {
             if (SimulateMouseInputOverlay.Instance != null)
@@ -145,6 +147,19 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            GameObject? prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(OVERLAY_PREFAB_PATH);
+            if (prefab != null)
+            {
+                // Prefab needs a parent Canvas; find or create one
+                Canvas? canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
+                GameObject instance = canvas != null
+                    ? (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab, canvas.transform)
+                    : (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab);
+                instance.hideFlags = HideFlags.HideAndDontSave;
+                return;
+            }
+
+            // Fallback: build from code
             GameObject overlayGo = new GameObject("SimulateMouseInputOverlay");
             overlayGo.hideFlags = HideFlags.HideAndDontSave;
             overlayGo.AddComponent<SimulateMouseInputOverlay>();
@@ -280,6 +295,7 @@ namespace io.github.hatayama.uLoopMCP
             Mouse mouse, SimulateMouseInputSchema parameters, CancellationToken ct)
         {
             Vector2 delta = new Vector2(parameters.DeltaX, parameters.DeltaY);
+            SimulateMouseInputOverlayState.SetMoveDelta(delta);
 
             await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(
                 () => MouseInputState.SetDeltaState(mouse, delta), ct);
@@ -301,16 +317,9 @@ namespace io.github.hatayama.uLoopMCP
             int scrollDir = parameters.ScrollY > 0f ? 1 : parameters.ScrollY < 0f ? -1 : 0;
             SimulateMouseInputOverlayState.SetScrollDirection(scrollDir);
 
-            try
-            {
-                await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(
-                    () => MouseInputState.SetScrollState(mouse, scroll), ct);
-                await InputSystemUpdateHelper.WaitForObservationFrames(ct);
-            }
-            finally
-            {
-                SimulateMouseInputOverlayState.ClearScroll();
-            }
+            await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(
+                () => MouseInputState.SetScrollState(mouse, scroll), ct);
+            await InputSystemUpdateHelper.WaitForObservationFrames(ct);
 
             return new SimulateMouseInputResponse
             {
@@ -348,8 +357,8 @@ namespace io.github.hatayama.uLoopMCP
 
                 float frameFraction = t - previousT;
                 Vector2 frameDelta = totalDelta * frameFraction;
+                SimulateMouseInputOverlayState.SetMoveDelta(frameDelta);
 
-                // Inject delta just before the next Input System update so game code reads it
                 await InputSystemUpdateHelper.ApplyOnNextConfiguredUpdate(
                     () => MouseInputState.InjectDelta(mouse, frameDelta), ct);
 

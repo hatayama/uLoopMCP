@@ -11,8 +11,7 @@ namespace io.github.hatayama.uLoopMCP
         public static SimulateMouseInputOverlay? Instance { get; private set; }
 
         private const int CANVAS_SORT_ORDER = 32000;
-        private const float DISPLAY_DURATION = 0.5f;
-        private const float FADE_DURATION = 0.3f;
+        private const float DISPLAY_DURATION = 1.0f;
 
         private const float MOUSE_WIDTH = 60f;
         private const float MOUSE_HEIGHT = 100f;
@@ -41,13 +40,16 @@ namespace io.github.hatayama.uLoopMCP
         private static readonly Color WHEEL_OUTLINE_COLOR = new Color(0.1f, 0.1f, 0.1f, 0.9f);
         private static readonly Color ARROW_COLOR = new Color(0.1f, 0.1f, 0.1f, 1f);
 
+        [SerializeField] private Image? _leftButton;
+        [SerializeField] private Image? _rightButton;
+        [SerializeField] private Image? _scrollWheel;
+        [SerializeField] private Image? _scrollArrowTop;
+        [SerializeField] private Image? _scrollArrowBottom;
+        [SerializeField] private RectTransform? _moveDirectionGroup;
+
         private Canvas _canvas = null!;
         private CanvasGroup _canvasGroup = null!;
-        private Image _leftButton = null!;
-        private Image _rightButton = null!;
-        private Image _scrollWheel = null!;
-        private Image _scrollArrowTop = null!;
-        private Image _scrollArrowBottom = null!;
+        private bool _ownsCanvas;
 
         private Texture2D? _bodyTexture;
         private Sprite? _bodySprite;
@@ -58,9 +60,21 @@ namespace io.github.hatayama.uLoopMCP
 
         private void Awake()
         {
-            Debug.Assert(Instance == null, "SimulateMouseInputOverlay instance already exists");
+            // HideAndDontSave objects from a previous PlayMode session may linger
+            if (Instance != null && Instance != this)
+            {
+                Destroy(Instance.gameObject);
+            }
             Instance = this;
-            BuildCanvasHierarchy();
+
+            if (_leftButton != null)
+            {
+                ResolveCanvasFromHierarchy();
+            }
+            else
+            {
+                BuildCanvasHierarchy();
+            }
         }
 
         private void OnDestroy()
@@ -82,44 +96,67 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (SimulateMouseInputOverlayState.HasAnyActivity)
             {
-                _canvas.enabled = true;
-                _canvasGroup.alpha = 1f;
+                SetVisible(true);
                 UpdateButtonColors();
                 UpdateScrollIndicator();
+                UpdateMoveDirection();
                 return;
             }
 
             float elapsed = Time.realtimeSinceStartup - SimulateMouseInputOverlayState.LastActivityTime;
 
-            if (SimulateMouseInputOverlayState.LastActivityTime <= 0f || elapsed > DISPLAY_DURATION + FADE_DURATION)
+            if (SimulateMouseInputOverlayState.LastActivityTime <= 0f || elapsed > DISPLAY_DURATION)
             {
-                if (_canvas.enabled) _canvas.enabled = false;
+                SetVisible(false);
                 return;
             }
 
-            // Buttons/scroll must reflect idle state during fadeout, otherwise the
-            // last pressed frame's white color lingers and looks like a long-press.
-            _canvas.enabled = true;
+            SetVisible(true);
             UpdateButtonColors();
             UpdateScrollIndicator();
-            _canvasGroup.alpha = elapsed > DISPLAY_DURATION
-                ? 1f - Mathf.Clamp01((elapsed - DISPLAY_DURATION) / FADE_DURATION)
-                : 1f;
+            UpdateMoveDirection();
+        }
+
+        private void SetVisible(bool visible)
+        {
+            if (_ownsCanvas)
+            {
+                _canvas.enabled = visible;
+                return;
+            }
+
+            _canvasGroup.alpha = visible ? 1f : 0f;
+        }
+
+        private void ResolveCanvasFromHierarchy()
+        {
+            _canvas = GetComponentInParent<Canvas>();
+            Debug.Assert(_canvas != null, "SimulateMouseInputOverlay requires a parent Canvas when used as prefab");
+
+            // CanvasGroup on our own GO so we can toggle visibility without affecting siblings
+            _canvasGroup = GetComponent<CanvasGroup>();
+            if (_canvasGroup == null)
+            {
+                _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            }
+            _canvasGroup.interactable = false;
+            _canvasGroup.blocksRaycasts = false;
+            _ownsCanvas = false;
         }
 
         private void UpdateButtonColors()
         {
-            _leftButton.color = SimulateMouseInputOverlayState.IsLeftButtonHeld
+            _leftButton!.color = SimulateMouseInputOverlayState.IsLeftButtonHeld
                 ? BUTTON_PRESSED_COLOR
                 : BUTTON_IDLE_COLOR;
 
-            _rightButton.color = SimulateMouseInputOverlayState.IsRightButtonHeld
+            _rightButton!.color = SimulateMouseInputOverlayState.IsRightButtonHeld
                 ? BUTTON_PRESSED_COLOR
                 : BUTTON_IDLE_COLOR;
 
             bool wheelActive = SimulateMouseInputOverlayState.IsMiddleButtonHeld
                                || SimulateMouseInputOverlayState.ScrollDirection != 0;
-            _scrollWheel.color = wheelActive ? BUTTON_PRESSED_COLOR : BUTTON_IDLE_COLOR;
+            _scrollWheel!.color = wheelActive ? BUTTON_PRESSED_COLOR : BUTTON_IDLE_COLOR;
         }
 
         private void UpdateScrollIndicator()
@@ -128,21 +165,43 @@ namespace io.github.hatayama.uLoopMCP
 
             if (dir == 0)
             {
-                _scrollArrowTop.enabled = false;
-                _scrollArrowBottom.enabled = false;
+                _scrollArrowTop!.enabled = false;
+                _scrollArrowBottom!.enabled = false;
                 return;
             }
 
-            _scrollArrowTop.enabled = true;
-            _scrollArrowBottom.enabled = true;
+            _scrollArrowTop!.enabled = true;
+            _scrollArrowBottom!.enabled = true;
 
             float rotation = dir > 0 ? 0f : 180f;
             _scrollArrowTop.rectTransform.localRotation = Quaternion.Euler(0f, 0f, rotation);
             _scrollArrowBottom.rectTransform.localRotation = Quaternion.Euler(0f, 0f, rotation);
         }
 
+        private void UpdateMoveDirection()
+        {
+            if (_moveDirectionGroup == null)
+            {
+                return;
+            }
+
+            Vector2 delta = SimulateMouseInputOverlayState.MoveDelta;
+
+            if (delta == Vector2.zero)
+            {
+                _moveDirectionGroup.gameObject.SetActive(false);
+                return;
+            }
+
+            _moveDirectionGroup.gameObject.SetActive(true);
+            float angle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg;
+            _moveDirectionGroup.localRotation = Quaternion.Euler(0f, 0f, angle);
+        }
+
         private void BuildCanvasHierarchy()
         {
+            _ownsCanvas = true;
+
             _canvas = gameObject.AddComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             _canvas.sortingOrder = CANVAS_SORT_ORDER;

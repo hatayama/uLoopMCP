@@ -9,13 +9,32 @@ namespace io.github.hatayama.uLoopMCP
         public static bool IsRightButtonHeld { get; private set; }
         public static bool IsMiddleButtonHeld { get; private set; }
 
-        // 1 = up, -1 = down, 0 = none
-        public static int ScrollDirection { get; private set; }
+        private const float SCROLL_DISPLAY_DURATION = 0.05f;
+        private static int _scrollDirection;
+        private static float _scrollActiveUntil;
+
+        public static int ScrollDirection =>
+            _scrollDirection != 0 && Time.realtimeSinceStartup < _scrollActiveUntil
+                ? _scrollDirection
+                : 0;
+
+        private const float MOVE_DISPLAY_DURATION = 0.3f;
+        private const int MOVE_SAMPLE_FRAMES = 5;
+        private static Vector2 _moveDelta;
+        private static Vector2 _moveAccumulator;
+        private static int _moveFrameCount;
+        private static float _moveActiveUntil;
+
+        public static Vector2 MoveDelta =>
+            _moveDelta != Vector2.zero && Time.realtimeSinceStartup < _moveActiveUntil
+                ? _moveDelta
+                : Vector2.zero;
 
         public static float LastActivityTime { get; private set; }
 
         public static bool HasAnyActivity =>
-            IsLeftButtonHeld || IsRightButtonHeld || IsMiddleButtonHeld || ScrollDirection != 0;
+            IsLeftButtonHeld || IsRightButtonHeld || IsMiddleButtonHeld
+            || ScrollDirection != 0 || MoveDelta != Vector2.zero;
 
         public static void SetButtonHeld(MouseButton button, bool held)
         {
@@ -41,13 +60,33 @@ namespace io.github.hatayama.uLoopMCP
         public static void SetScrollDirection(int direction)
         {
             Debug.Assert(direction >= -1 && direction <= 1, $"direction must be -1, 0, or 1, got: {direction}");
-            ScrollDirection = direction;
+            _scrollDirection = direction;
+            _scrollActiveUntil = Time.realtimeSinceStartup + SCROLL_DISPLAY_DURATION;
             LastActivityTime = Time.realtimeSinceStartup;
         }
 
         public static void ClearScroll()
         {
-            ScrollDirection = 0;
+            _scrollActiveUntil = 0f;
+        }
+
+        public static void SetMoveDelta(Vector2 delta)
+        {
+            // Accumulate over several frames to avoid angle quantization
+            // from small integer per-frame deltas, without lerp artifacts
+            // that cause wrong intermediate directions on direction reversal.
+            _moveAccumulator += delta;
+            _moveFrameCount++;
+
+            if (_moveFrameCount >= MOVE_SAMPLE_FRAMES)
+            {
+                _moveDelta = _moveAccumulator.normalized;
+                _moveAccumulator = Vector2.zero;
+                _moveFrameCount = 0;
+            }
+
+            _moveActiveUntil = Time.realtimeSinceStartup + MOVE_DISPLAY_DURATION;
+            LastActivityTime = Time.realtimeSinceStartup;
         }
 
         public static void Clear()
@@ -55,7 +94,12 @@ namespace io.github.hatayama.uLoopMCP
             IsLeftButtonHeld = false;
             IsRightButtonHeld = false;
             IsMiddleButtonHeld = false;
-            ScrollDirection = 0;
+            _scrollDirection = 0;
+            _scrollActiveUntil = 0f;
+            _moveDelta = Vector2.zero;
+            _moveAccumulator = Vector2.zero;
+            _moveFrameCount = 0;
+            _moveActiveUntil = 0f;
             LastActivityTime = 0f;
         }
     }
