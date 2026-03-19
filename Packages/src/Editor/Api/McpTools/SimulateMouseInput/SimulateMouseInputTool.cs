@@ -148,18 +148,11 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             GameObject? prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(OVERLAY_PREFAB_PATH);
-            if (prefab != null)
-            {
-                Transform parentTransform = CreateOverlayCanvas().transform;
-                GameObject instance = (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab, parentTransform);
-                instance.hideFlags = HideFlags.DontSave;
-                return;
-            }
+            Debug.Assert(prefab != null, $"SimulateMouseInputOverlay prefab not found at {OVERLAY_PREFAB_PATH}");
 
-            // Fallback: build from code
-            GameObject overlayGo = new GameObject("SimulateMouseInputOverlay");
-            overlayGo.hideFlags = HideFlags.DontSave;
-            overlayGo.AddComponent<SimulateMouseInputOverlay>();
+            Transform parentTransform = CreateOverlayCanvas().transform;
+            GameObject instance = (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab, parentTransform);
+            instance.hideFlags = HideFlags.DontSave;
         }
 
         private static Canvas CreateOverlayCanvas()
