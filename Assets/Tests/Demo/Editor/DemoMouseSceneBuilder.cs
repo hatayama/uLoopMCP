@@ -61,6 +61,7 @@ namespace io.github.hatayama.uLoopMCP
             Renderer renderer = player.GetComponent<Renderer>();
             renderer.material.color = new Color(0.2f, 0.6f, 1f);
 
+            player.AddComponent<DemoWeaponSelector>();
             player.AddComponent<DemoMouseShooter>();
             player.AddComponent<DemoMouseLook>();
 

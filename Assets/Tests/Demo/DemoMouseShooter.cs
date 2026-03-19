@@ -11,6 +11,13 @@ namespace io.github.hatayama.uLoopMCP
         [SerializeField] private float bulletLifetime = 3f;
         [SerializeField] private float bulletSpawnOffset = 0.3f;
 
+        private DemoWeaponSelector? _weaponSelector;
+
+        private void Awake()
+        {
+            _weaponSelector = GetComponent<DemoWeaponSelector>();
+        }
+
         private void Update()
         {
             Mouse? mouse = Mouse.current;
@@ -35,8 +42,9 @@ namespace io.github.hatayama.uLoopMCP
             bullet.transform.position = spawnPosition;
             bullet.transform.localScale = Vector3.one * 0.3f;
 
+            Color bulletColor = _weaponSelector != null ? _weaponSelector.SelectedColor : Color.yellow;
             Renderer renderer = bullet.GetComponent<Renderer>();
-            renderer.material.color = Color.yellow;
+            renderer.material.color = bulletColor;
 
             Rigidbody rb = bullet.AddComponent<Rigidbody>();
             rb.useGravity = true;
