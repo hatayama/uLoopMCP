@@ -8603,6 +8603,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100326, guid: 8f0565f23a2b58541a475bd3c1393052, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2125221191}
+    - targetCorrespondingSourceObject: {fileID: 100326, guid: 8f0565f23a2b58541a475bd3c1393052, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2125221193}
   m_SourcePrefab: {fileID: 100100000, guid: 8f0565f23a2b58541a475bd3c1393052, type: 3}
 --- !u!1 &1574842830
 GameObject:
@@ -11816,6 +11819,18 @@ MonoBehaviour:
   bulletSpeed: 20
   bulletLifetime: 3
   bulletSpawnOffset: 0.3
+--- !u!114 &2125221193
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2125221184}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5242dc2590a8c4b8f8f41c501353d897, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2128339043
 GameObject:
   m_ObjectHideFlags: 0
