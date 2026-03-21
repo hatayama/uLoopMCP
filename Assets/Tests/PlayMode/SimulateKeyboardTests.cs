@@ -180,8 +180,10 @@ namespace Tests.PlayMode
             SimulateKeyboardOverlayState.AddHeldKey("LeftShift");
             SimulateKeyboardOverlayState.ShowPress("Space");
 
-            GameObject overlayGo = new GameObject("OverlayFadeTest");
-            overlayGo.AddComponent<SimulateKeyboardOverlay>();
+            GameObject? canvasPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Packages/io.github.hatayama.uloopmcp/Runtime/Common/InputVisualizationCanvas.prefab");
+            Debug.Assert(canvasPrefab != null, "InputVisualizationCanvas prefab must exist");
+            Object.Instantiate(canvasPrefab!);
 
             yield return null;
             yield return new WaitForSecondsRealtime(0.55f);
