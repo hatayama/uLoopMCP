@@ -40,7 +40,7 @@ Output: one orphaned `.meta` path per line. Empty output means no orphans found.
 After user approves, delete the orphaned `.meta` files:
 
 ```bash
-rm <orphaned-meta-path>
+rm -- "<orphaned-meta-path>"
 ```
 
 Then run `uloop compile` to verify Unity no longer reports warnings about missing assets.
