@@ -53,9 +53,11 @@ namespace Tests.PlayMode
             Time.timeScale = originalTimeScale;
             KeyboardKeyState.ReleaseAllKeys();
             SimulateKeyboardOverlayState.Clear();
-            if (SimulateKeyboardOverlay.Instance != null)
+            InputVisualizationCanvas[] canvases =
+                Object.FindObjectsByType<InputVisualizationCanvas>(FindObjectsSortMode.None);
+            for (int i = 0; i < canvases.Length; i++)
             {
-                Object.Destroy(SimulateKeyboardOverlay.Instance.gameObject);
+                Object.DestroyImmediate(canvases[i].gameObject);
             }
             Object.Destroy(framePressObserverGo);
             Object.Destroy(eventSystemGo);
@@ -183,8 +185,10 @@ namespace Tests.PlayMode
             SimulateKeyboardOverlayState.AddHeldKey("LeftShift");
             SimulateKeyboardOverlayState.ShowPress("Space");
 
-            GameObject overlayGo = new GameObject("OverlayFadeTest");
-            overlayGo.AddComponent<SimulateKeyboardOverlay>();
+            GameObject? canvasPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Packages/io.github.hatayama.uloopmcp/Runtime/Common/InputVisualizationCanvas.prefab");
+            Debug.Assert(canvasPrefab != null, "InputVisualizationCanvas prefab must exist");
+            Object.Instantiate(canvasPrefab!);
 
             yield return null;
             yield return new WaitForSecondsRealtime(0.55f);
@@ -538,9 +542,10 @@ namespace Tests.PlayMode
 
         private static BadgeVisual RequireBadgeVisual(string keyName)
         {
-            SimulateKeyboardOverlay? overlay = SimulateKeyboardOverlay.Instance;
-            Debug.Assert(overlay != null, "SimulateKeyboardOverlay must exist before reading badge visuals.");
-            Assert.IsNotNull(overlay, "SimulateKeyboardOverlay must exist before reading badge visuals.");
+            InputVisualizationCanvas canvas = Object.FindAnyObjectByType<InputVisualizationCanvas>();
+            Debug.Assert(canvas != null, "InputVisualizationCanvas must exist");
+            SimulateKeyboardOverlay overlay = canvas!.KeyboardOverlay;
+            Assert.IsNotNull(overlay, "KeyboardOverlay must exist before reading badge visuals.");
 
             // Container Image holds the shared background alpha for all badges
             Image? containerImage = overlay!.GetComponentInChildren<Image>(true);

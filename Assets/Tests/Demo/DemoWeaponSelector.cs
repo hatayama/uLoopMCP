@@ -89,10 +89,10 @@ namespace io.github.hatayama.uLoopMCP
             GameObject containerGo = new GameObject("Container");
             containerGo.transform.SetParent(canvasGo.transform, false);
             RectTransform containerRect = containerGo.AddComponent<RectTransform>();
-            containerRect.anchorMin = new Vector2(0f, 0f);
-            containerRect.anchorMax = new Vector2(0f, 0f);
-            containerRect.pivot = new Vector2(0f, 0f);
-            containerRect.anchoredPosition = new Vector2(24f, 24f);
+            containerRect.anchorMin = new Vector2(1f, 0f);
+            containerRect.anchorMax = new Vector2(1f, 0f);
+            containerRect.pivot = new Vector2(1f, 0f);
+            containerRect.anchoredPosition = new Vector2(-24f, 24f);
             containerRect.sizeDelta = new Vector2(180f, 40f);
 
             Image containerBg = containerGo.AddComponent<Image>();

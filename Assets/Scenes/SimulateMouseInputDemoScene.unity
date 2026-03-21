@@ -611,7 +611,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d16062957ccf949c38386d7ae818635d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sensitivity: 0.2
+  horizontalSensitivity: 0.4
+  verticalSensitivity: 0.05
   minPitch: -60
   maxPitch: 60
 --- !u!114 &544856061
@@ -629,6 +630,7 @@ MonoBehaviour:
   bulletSpeed: 20
   bulletLifetime: 3
   bulletSpawnOffset: 1.2
+  jumpPower: 5
 --- !u!23 &544856062
 MeshRenderer:
   m_ObjectHideFlags: 0

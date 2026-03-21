@@ -53,7 +53,7 @@ From the `AnnotatedElements` array in the response, extract `SimX` and `SimY` fo
 
 **Phase 1 — Button clicks**: Alternate ClickButton1 and ClickButton2 four times.
 
-**Phase 1.5 — LongPress**: LongPress on LongPressButton for 5 seconds. The button gradually changes color during the hold. On first activation it turns orange and shows "Activated!"; on second activation it toggles back to purple and shows "Hold 5s".
+**Phase 1.5 — LongPress**: LongPress on LongPressButton for 3 seconds. The button gradually changes color during the hold. On first activation it turns orange and shows "Activated!"; on second activation it toggles back to purple and shows "Hold 3s".
 
 **Phase 2 — One-shot Drag**: Drag RedBox to DropZone top area (Y offset -80 from center) so it doesn't overlap subsequent drops.
 
@@ -81,28 +81,28 @@ Waypoint design (offsets from VirtualPadBackground center):
 - DragEnd: back to center (0, 0)
 
 ```bash
-uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && sleep 0.3 && \
-uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && sleep 0.3 && \
-uloop simulate-mouse --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && sleep 0.3 && \
-uloop simulate-mouse --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && sleep 0.3 && \
-uloop simulate-mouse --action LongPress --x <LongPressButton.SimX> --y <LongPressButton.SimY> --duration 5.0 && sleep 0.3 && \
-uloop simulate-mouse --action Drag --from-x <RedBox.SimX> --from-y <RedBox.SimY> --x <RedBox.SimX> --y <DropZone.SimY - 80> --drag-speed 700 && sleep 0.3 && \
-uloop simulate-mouse --action DragStart --x <GreenBox.SimX> --y <GreenBox.SimY> && sleep 0.3 && \
-uloop simulate-mouse --action DragMove --x <DropZone.SimX + 150> --y <GreenBox.SimY - 50> --drag-speed 400 && sleep 0.3 && \
-uloop simulate-mouse --action DragMove --x <DropZone.SimX - 150> --y <DropZone.SimY + 50> --drag-speed 400 && sleep 0.3 && \
-uloop simulate-mouse --action DragMove --x <DropZone.SimX> --y <DropZone.SimY - 80> --drag-speed 400 && sleep 0.3 && \
-uloop simulate-mouse --action DragEnd --x <DropZone.SimX> --y <DropZone.SimY> --drag-speed 400 && sleep 0.3 && \
-uloop simulate-mouse --action Drag --from-x <BlueBox.SimX> --from-y <BlueBox.SimY> --x <BlueBox.SimX> --y <DropZone.SimY + 80> --drag-speed 700 && sleep 0.3 && \
-uloop simulate-mouse --action DragStart --x <Pad.SimX> --y <Pad.SimY> && sleep 0.3 && \
-uloop simulate-mouse --action DragMove --x <Pad.SimX + 60> --y <Pad.SimY - 60> --drag-speed 300 && sleep 0.4 && \
-uloop simulate-mouse --action DragMove --x <Pad.SimX - 70> --y <Pad.SimY + 50> --drag-speed 300 && sleep 0.4 && \
-uloop simulate-mouse --action DragMove --x <Pad.SimX> --y <Pad.SimY - 75> --drag-speed 300 && sleep 0.4 && \
-uloop simulate-mouse --action DragMove --x <Pad.SimX + 80> --y <Pad.SimY> --drag-speed 300 && sleep 0.4 && \
-uloop simulate-mouse --action DragMove --x <Pad.SimX + 50> --y <Pad.SimY + 60> --drag-speed 300 && sleep 0.4 && \
-uloop simulate-mouse --action DragMove --x <Pad.SimX - 80> --y <Pad.SimY> --drag-speed 300 && sleep 0.4 && \
-uloop simulate-mouse --action DragMove --x <Pad.SimX - 55> --y <Pad.SimY - 65> --drag-speed 300 && sleep 0.4 && \
-uloop simulate-mouse --action DragMove --x <Pad.SimX> --y <Pad.SimY + 75> --drag-speed 300 && sleep 0.4 && \
-uloop simulate-mouse --action DragEnd --x <Pad.SimX> --y <Pad.SimY> --drag-speed 300
+uloop simulate-mouse-ui --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && sleep 0.3 && \
+uloop simulate-mouse-ui --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && sleep 0.3 && \
+uloop simulate-mouse-ui --action Click --x <ClickButton1.SimX> --y <ClickButton1.SimY> && sleep 0.3 && \
+uloop simulate-mouse-ui --action Click --x <ClickButton2.SimX> --y <ClickButton2.SimY> && sleep 0.3 && \
+uloop simulate-mouse-ui --action LongPress --x <LongPressButton.SimX> --y <LongPressButton.SimY> --duration 3.0 && sleep 0.3 && \
+uloop simulate-mouse-ui --action Drag --from-x <RedBox.SimX> --from-y <RedBox.SimY> --x <RedBox.SimX> --y <DropZone.SimY - 80> --drag-speed 700 && sleep 0.3 && \
+uloop simulate-mouse-ui --action DragStart --x <GreenBox.SimX> --y <GreenBox.SimY> && sleep 0.3 && \
+uloop simulate-mouse-ui --action DragMove --x <DropZone.SimX + 150> --y <GreenBox.SimY - 50> --drag-speed 400 && sleep 0.3 && \
+uloop simulate-mouse-ui --action DragMove --x <DropZone.SimX - 150> --y <DropZone.SimY + 50> --drag-speed 400 && sleep 0.3 && \
+uloop simulate-mouse-ui --action DragMove --x <DropZone.SimX> --y <DropZone.SimY - 80> --drag-speed 400 && sleep 0.3 && \
+uloop simulate-mouse-ui --action DragEnd --x <DropZone.SimX> --y <DropZone.SimY> --drag-speed 400 && sleep 0.3 && \
+uloop simulate-mouse-ui --action Drag --from-x <BlueBox.SimX> --from-y <BlueBox.SimY> --x <BlueBox.SimX> --y <DropZone.SimY + 80> --drag-speed 700 && sleep 0.3 && \
+uloop simulate-mouse-ui --action DragStart --x <Pad.SimX> --y <Pad.SimY> && sleep 0.3 && \
+uloop simulate-mouse-ui --action DragMove --x <Pad.SimX + 60> --y <Pad.SimY - 60> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse-ui --action DragMove --x <Pad.SimX - 70> --y <Pad.SimY + 50> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse-ui --action DragMove --x <Pad.SimX> --y <Pad.SimY - 75> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse-ui --action DragMove --x <Pad.SimX + 80> --y <Pad.SimY> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse-ui --action DragMove --x <Pad.SimX + 50> --y <Pad.SimY + 60> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse-ui --action DragMove --x <Pad.SimX - 80> --y <Pad.SimY> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse-ui --action DragMove --x <Pad.SimX - 55> --y <Pad.SimY - 65> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse-ui --action DragMove --x <Pad.SimX> --y <Pad.SimY + 75> --drag-speed 300 && sleep 0.4 && \
+uloop simulate-mouse-ui --action DragEnd --x <Pad.SimX> --y <Pad.SimY> --drag-speed 300
 ```
 
 ### Step 3: Verify results
