@@ -5,9 +5,21 @@ namespace io.github.hatayama.uLoopMCP
 {
     public static class SimulateMouseInputOverlayState
     {
-        public static bool IsLeftButtonHeld { get; private set; }
-        public static bool IsRightButtonHeld { get; private set; }
-        public static bool IsMiddleButtonHeld { get; private set; }
+        private const float BUTTON_MIN_DISPLAY_DURATION = 0.05f;
+
+        private static bool _leftButtonHeld;
+        private static bool _rightButtonHeld;
+        private static bool _middleButtonHeld;
+        private static float _leftButtonActiveUntil;
+        private static float _rightButtonActiveUntil;
+        private static float _middleButtonActiveUntil;
+
+        public static bool IsLeftButtonHeld =>
+            _leftButtonHeld || Time.realtimeSinceStartup < _leftButtonActiveUntil;
+        public static bool IsRightButtonHeld =>
+            _rightButtonHeld || Time.realtimeSinceStartup < _rightButtonActiveUntil;
+        public static bool IsMiddleButtonHeld =>
+            _middleButtonHeld || Time.realtimeSinceStartup < _middleButtonActiveUntil;
 
         private const float SCROLL_DISPLAY_DURATION = 0.05f;
         private static int _scrollDirection;
@@ -38,16 +50,22 @@ namespace io.github.hatayama.uLoopMCP
 
         public static void SetButtonHeld(MouseButton button, bool held)
         {
+            // When releasing, set a minimum display time so short clicks are always visible
+            float activeUntil = held ? 0f : Time.realtimeSinceStartup + BUTTON_MIN_DISPLAY_DURATION;
+
             switch (button)
             {
                 case MouseButton.Left:
-                    IsLeftButtonHeld = held;
+                    _leftButtonHeld = held;
+                    if (!held) _leftButtonActiveUntil = activeUntil;
                     break;
                 case MouseButton.Right:
-                    IsRightButtonHeld = held;
+                    _rightButtonHeld = held;
+                    if (!held) _rightButtonActiveUntil = activeUntil;
                     break;
                 case MouseButton.Middle:
-                    IsMiddleButtonHeld = held;
+                    _middleButtonHeld = held;
+                    if (!held) _middleButtonActiveUntil = activeUntil;
                     break;
                 default:
                     Debug.Assert(false, $"Unexpected MouseButton value: {button}");
@@ -95,9 +113,12 @@ namespace io.github.hatayama.uLoopMCP
 
         public static void Clear()
         {
-            IsLeftButtonHeld = false;
-            IsRightButtonHeld = false;
-            IsMiddleButtonHeld = false;
+            _leftButtonHeld = false;
+            _rightButtonHeld = false;
+            _middleButtonHeld = false;
+            _leftButtonActiveUntil = 0f;
+            _rightButtonActiveUntil = 0f;
+            _middleButtonActiveUntil = 0f;
             _scrollDirection = 0;
             _scrollActiveUntil = 0f;
             _moveDelta = Vector2.zero;

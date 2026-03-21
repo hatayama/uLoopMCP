@@ -7,7 +7,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     public class DemoLongPressButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
     {
-        [SerializeField] private float requiredHoldTime = 5f;
+        [SerializeField] private float requiredHoldTime = 3f;
         [SerializeField] private Color activatedColor = new Color(1f, 0.4f, 0f, 1f);
 
         private Image image = null!;
@@ -63,7 +63,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 if (label != null)
                 {
-                    label.text = isActivated ? "Activated!" : "Hold 5s";
+                    label.text = isActivated ? "Activated!" : $"Hold {requiredHoldTime:F0}s";
                 }
 
                 Debug.Log($"[Demo] LongPressButton: toggled (held {heldDuration:F1}s)");

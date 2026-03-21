@@ -633,7 +633,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Hold 5s
+  m_Text: Hold 3s
 --- !u!222 &742517708
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1574,7 +1574,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fdaceecc7ed0a4ec18a59a7294732656, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  requiredHoldTime: 5
+  requiredHoldTime: 3
   activatedColor: {r: 1, g: 0.4, b: 0, a: 1}
 --- !u!114 &1252822997
 MonoBehaviour:

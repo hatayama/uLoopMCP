@@ -133,14 +133,7 @@ namespace io.github.hatayama.uLoopMCP
 #if ULOOPMCP_HAS_INPUT_SYSTEM
         private static void EnsureOverlayExists()
         {
-            if (SimulateKeyboardOverlay.Instance != null)
-            {
-                return;
-            }
-
-            GameObject overlayGo = new GameObject("SimulateKeyboardOverlay");
-            overlayGo.hideFlags = HideFlags.HideAndDontSave;
-            overlayGo.AddComponent<SimulateKeyboardOverlay>();
+            OverlayCanvasFactory.EnsureExists();
         }
 
         private async Task<SimulateKeyboardResponse> ExecutePress(

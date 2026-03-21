@@ -134,14 +134,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void EnsureOverlayExists()
         {
-            if (SimulateMouseUiOverlay.Instance != null)
-            {
-                return;
-            }
-
-            GameObject overlayGo = new GameObject("SimulateMouseUiOverlay");
-            overlayGo.hideFlags = HideFlags.HideAndDontSave;
-            overlayGo.AddComponent<SimulateMouseUiOverlay>();
+            OverlayCanvasFactory.EnsureExists();
         }
 
         private static PointerEventData.InputButton ToInputButton(MouseButton button)
@@ -748,11 +741,10 @@ namespace io.github.hatayama.uLoopMCP
 
         private static async Task PlayExpandAnimation(CancellationToken ct)
         {
-            SimulateMouseUiOverlay? overlay = SimulateMouseUiOverlay.Instance;
-            Debug.Assert(overlay != null, "Overlay must exist before playing animation");
+            SimulateMouseUiOverlay overlay = OverlayCanvasFactory.VisualizationCanvas.MouseUiOverlay;
 
             // Previous dissipate sets alpha to 0; restore before expand starts
-            overlay!.SetAlpha(1f);
+            overlay.SetAlpha(1f);
 
             float startTime = Time.realtimeSinceStartup;
             float elapsed = 0f;
@@ -768,16 +760,15 @@ namespace io.github.hatayama.uLoopMCP
 
         private static async Task PlayDissipateAnimation(CancellationToken ct)
         {
-            SimulateMouseUiOverlay? overlay = SimulateMouseUiOverlay.Instance;
-            Debug.Assert(overlay != null, "Overlay must exist before playing animation");
+            SimulateMouseUiOverlay overlay = OverlayCanvasFactory.VisualizationCanvas.MouseUiOverlay;
 
             float startTime = Time.realtimeSinceStartup;
             float elapsed = 0f;
             while (elapsed < DISSIPATE_DURATION)
             {
                 float t = elapsed / DISSIPATE_DURATION;
-                overlay!.SetCursorScale(Mathf.Lerp(1f, 0f, t));
-                overlay!.SetAlpha(Mathf.Lerp(1f, 0f, t));
+                overlay.SetCursorScale(Mathf.Lerp(1f, 0f, t));
+                overlay.SetAlpha(Mathf.Lerp(1f, 0f, t));
                 await EditorDelay.DelayFrame(1, ct);
                 elapsed = Time.realtimeSinceStartup - startTime;
             }

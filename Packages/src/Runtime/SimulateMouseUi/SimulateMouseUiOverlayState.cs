@@ -17,7 +17,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public static float LongPressElapsed { get; private set; }
 
-        private const int MAX_DRAG_WAYPOINTS = 10;
+        private const int MAX_DRAG_WAYPOINTS = 4;
 
         private static readonly List<Vector2> _dragWaypoints = new List<Vector2>();
 

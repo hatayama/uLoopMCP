@@ -8,8 +8,6 @@ namespace io.github.hatayama.uLoopMCP
     // pressed buttons / scroll direction during simulate-mouse-input tool calls.
     public class SimulateMouseInputOverlay : MonoBehaviour
     {
-        public static SimulateMouseInputOverlay? Instance { get; private set; }
-
         private const float DISPLAY_DURATION = 1.0f;
 
         private static readonly Color BUTTON_PRESSED_COLOR = new Color(1f, 1f, 1f, 0.95f);
@@ -21,7 +19,6 @@ namespace io.github.hatayama.uLoopMCP
         [SerializeField] private Image? _scrollArrowBottom;
         [SerializeField] private RectTransform? _moveDirectionGroup;
 
-        private Canvas _canvas = null!;
         private CanvasGroup _canvasGroup = null!;
         private bool _isVisible;
 
@@ -31,52 +28,17 @@ namespace io.github.hatayama.uLoopMCP
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(Instance.gameObject);
-            }
-            Instance = this;
-
-            _canvas = GetComponentInParent<Canvas>();
-            Debug.Assert(_canvas != null, "SimulateMouseInputOverlay requires a parent Canvas");
-
             _canvasGroup = GetComponent<CanvasGroup>();
             if (_canvasGroup == null)
             {
                 _canvasGroup = gameObject.AddComponent<CanvasGroup>();
             }
+
             _canvasGroup.interactable = false;
             _canvasGroup.blocksRaycasts = false;
 
             SetVisible(false);
             CaptureIdleColors();
-        }
-
-        // Immediately destroy this overlay and its topmost DontSave ancestor (the dedicated Canvas).
-        // DontSave objects are not automatically destroyed when PlayMode exits,
-        // so this must be called explicitly from an ExitingPlayMode callback.
-        public static void DestroyWithParentCanvas()
-        {
-            if (Instance == null)
-            {
-                return;
-            }
-
-            Transform root = Instance.transform;
-            while (root.parent != null && (root.parent.gameObject.hideFlags & HideFlags.DontSave) != 0)
-            {
-                root = root.parent;
-            }
-
-            DestroyImmediate(root.gameObject);
-        }
-
-        private void OnDestroy()
-        {
-            if (Instance == this)
-            {
-                Instance = null;
-            }
         }
 
         private void LateUpdate()
@@ -87,6 +49,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     SetVisible(true);
                 }
+
                 UpdateButtonColors();
                 UpdateScrollIndicator();
                 UpdateMoveDirection();
@@ -101,6 +64,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     SetVisible(false);
                 }
+
                 return;
             }
 
