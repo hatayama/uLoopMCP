@@ -11,46 +11,26 @@ namespace io.github.hatayama.uLoopMCP
 
         public const float CONTAINER_BACKGROUND_ALPHA = 0.8f;
 
-        private const int CANVAS_SORT_ORDER = 32000;
         private const float PRESS_DISPLAY_DURATION = 0.5f;
         private const float FADE_DURATION = 0.2f;
-        private const float BOTTOM_MARGIN = 100f;
-        private const float CONTAINER_PADDING_H = 24f;
-        private const float CONTAINER_PADDING_V = 16f;
-        private const float KEY_SPACING = 8f;
         private const int FONT_SIZE = 48;
         private const int GLYPH_FONT_SIZE = 64;
-        private const int CORNER_RADIUS = 16;
-        private const int ROUNDED_RECT_TEXTURE_SIZE = 64;
         private static readonly Color ContainerBackgroundColor = new Color(0.15f, 0.15f, 0.15f, CONTAINER_BACKGROUND_ALPHA);
 
-        private Canvas _canvas = null!;
-        private GameObject _container = null!;
-        private RectTransform _containerRect = null!;
-        private Image _containerImage = null!;
+        [SerializeField] private GameObject _container = null!;
+        [SerializeField] private Image _containerImage = null!;
+
         private readonly List<BadgeEntry> _badgePool = new();
         private readonly List<string> _cachedKeyNames = new();
         private readonly List<string> _displayKeys = new();
-
-        private Texture2D? _roundedRectTexture;
-        private Sprite? _roundedRectSprite;
 
         private void Awake()
         {
             Debug.Assert(Instance == null, "SimulateKeyboardOverlay instance already exists");
             Instance = this;
 
-            _canvas = gameObject.AddComponent<Canvas>();
-            _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            _canvas.sortingOrder = CANVAS_SORT_ORDER;
-
-            gameObject.AddComponent<CanvasScaler>();
-
-            CanvasGroup canvasGroup = gameObject.AddComponent<CanvasGroup>();
-            canvasGroup.interactable = false;
-            canvasGroup.blocksRaycasts = false;
-
-            BuildContainer();
+            Debug.Assert(_container != null, "_container must be assigned in prefab");
+            Debug.Assert(_containerImage != null, "_containerImage must be assigned in prefab");
         }
 
         private void OnDestroy()
@@ -59,16 +39,16 @@ namespace io.github.hatayama.uLoopMCP
             {
                 Instance = null;
             }
+        }
 
-            if (_roundedRectSprite != null)
+        public static void DestroyWithParentCanvas()
+        {
+            if (Instance == null)
             {
-                Destroy(_roundedRectSprite);
+                return;
             }
 
-            if (_roundedRectTexture != null)
-            {
-                Destroy(_roundedRectTexture);
-            }
+            OverlayHelper.DestroyOverlay(Instance.gameObject);
         }
 
         private void LateUpdate()
@@ -126,43 +106,6 @@ namespace io.github.hatayama.uLoopMCP
                 ContainerBackgroundColor.g,
                 ContainerBackgroundColor.b,
                 ContainerBackgroundColor.a * maxAlpha);
-        }
-
-        private void BuildContainer()
-        {
-            EnsureRoundedRectSprite();
-
-            _container = new GameObject("Container");
-            _container.transform.SetParent(_canvas.transform, false);
-
-            _containerRect = _container.AddComponent<RectTransform>();
-            _containerRect.anchorMin = new Vector2(0.5f, 0f);
-            _containerRect.anchorMax = new Vector2(0.5f, 0f);
-            _containerRect.pivot = new Vector2(0.5f, 0f);
-            _containerRect.anchoredPosition = new Vector2(0f, BOTTOM_MARGIN);
-
-            _containerImage = _container.AddComponent<Image>();
-            _containerImage.sprite = _roundedRectSprite;
-            _containerImage.type = Image.Type.Sliced;
-            _containerImage.color = ContainerBackgroundColor;
-            _containerImage.raycastTarget = false;
-
-            HorizontalLayoutGroup layout = _container.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = KEY_SPACING;
-            layout.padding = new RectOffset(
-                (int)CONTAINER_PADDING_H, (int)CONTAINER_PADDING_H,
-                (int)CONTAINER_PADDING_V, (int)CONTAINER_PADDING_V);
-            layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.childControlWidth = false;
-            layout.childControlHeight = false;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = false;
-
-            ContentSizeFitter fitter = _container.AddComponent<ContentSizeFitter>();
-            fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            _container.SetActive(false);
         }
 
         private void SetBadgeCount(int count)
@@ -253,50 +196,6 @@ namespace io.github.hatayama.uLoopMCP
 
             float fadeT = Mathf.Clamp01((pressElapsedSinceRelease - PRESS_DISPLAY_DURATION) / FADE_DURATION);
             return 1f - fadeT;
-        }
-
-        private void EnsureRoundedRectSprite()
-        {
-            if (_roundedRectSprite != null)
-            {
-                return;
-            }
-
-            int size = ROUNDED_RECT_TEXTURE_SIZE;
-            _roundedRectTexture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            _roundedRectTexture.hideFlags = HideFlags.HideAndDontSave;
-
-            float radius = CORNER_RADIUS * (size / 64f);
-
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    float px = x + 0.5f;
-                    float py = y + 0.5f;
-
-                    // SDF for rounded rectangle
-                    float dx = Mathf.Max(radius - px, px - (size - radius), 0f);
-                    float dy = Mathf.Max(radius - py, py - (size - radius), 0f);
-                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
-
-                    float alpha = Mathf.Clamp01(radius - dist + 1f);
-                    _roundedRectTexture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
-                }
-            }
-
-            _roundedRectTexture.Apply();
-
-            float border = radius;
-            _roundedRectSprite = Sprite.Create(
-                _roundedRectTexture,
-                new Rect(0, 0, size, size),
-                new Vector2(0.5f, 0.5f),
-                100f,
-                0,
-                SpriteMeshType.FullRect,
-                new Vector4(border, border, border, border));
-            _roundedRectSprite.hideFlags = HideFlags.HideAndDontSave;
         }
 
         private readonly struct BadgeEntry

@@ -32,6 +32,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 Clear();
                 SimulateMouseUiOverlayState.Clear();
+                SimulateMouseUiOverlay.DestroyWithParentCanvas();
             }
         }
     }

@@ -11,41 +11,37 @@ namespace io.github.hatayama.uLoopMCP
     {
         public static SimulateMouseUiOverlay? Instance { get; private set; }
 
-        private const int CANVAS_SORT_ORDER = 32000;
-
-        private const float CURSOR_CIRCLE_DIAMETER = 70f;
-        private const float CURSOR_CROSSHAIR_SIZE = 20f;
-        private const float CURSOR_CROSSHAIR_THICKNESS = 3f;
-        private const int CIRCLE_TEXTURE_SIZE = 64;
-
-        private const float START_MARKER_SIZE = 8f;
         private const float WAYPOINT_MARKER_DIAMETER = 12f;
         private const float LINE_THICKNESS = 2f;
 
-        private static readonly Color CURSOR_COLOR = new Color(1f, 1f, 1f, 0.8f);
         private static readonly Color CLICK_COLOR = new Color(0f, 1f, 0.4f, 0.9f);
         private static readonly Color DRAG_COLOR = new Color(1f, 0.6f, 0f, 0.9f);
 
-        private Canvas _canvas = null!;
-        private CanvasGroup _canvasGroup = null!;
-        private RectTransform _cursorGroup = null!;
-        private Image _circleImage = null!;
-        private Image _crosshairH = null!;
-        private Image _crosshairV = null!;
-        private Text _longPressText = null!;
-        private Outline _longPressOutline = null!;
-        private Image _dragStartMarker = null!;
+        [SerializeField] private CanvasGroup _canvasGroup = null!;
+        [SerializeField] private RectTransform _cursorGroup = null!;
+        [SerializeField] private Image _circleImage = null!;
+        [SerializeField] private Image _crosshairH = null!;
+        [SerializeField] private Image _crosshairV = null!;
+        [SerializeField] private Text _longPressText = null!;
+        [SerializeField] private Image _dragStartMarker = null!;
+        [SerializeField] private Sprite _circleSprite = null!;
+
         private readonly List<Image> _pathSegments = new List<Image>();
         private readonly List<Image> _waypointMarkers = new List<Image>();
-
-        private Texture2D? _circleTexture;
-        private Sprite? _circleSprite;
 
         private void Awake()
         {
             Debug.Assert(Instance == null, "SimulateMouseUiOverlay instance already exists");
             Instance = this;
-            BuildCanvasHierarchy();
+
+            Debug.Assert(_canvasGroup != null, "_canvasGroup must be assigned in prefab");
+            Debug.Assert(_cursorGroup != null, "_cursorGroup must be assigned in prefab");
+            Debug.Assert(_circleImage != null, "_circleImage must be assigned in prefab");
+            Debug.Assert(_crosshairH != null, "_crosshairH must be assigned in prefab");
+            Debug.Assert(_crosshairV != null, "_crosshairV must be assigned in prefab");
+            Debug.Assert(_longPressText != null, "_longPressText must be assigned in prefab");
+            Debug.Assert(_dragStartMarker != null, "_dragStartMarker must be assigned in prefab");
+            Debug.Assert(_circleSprite != null, "_circleSprite must be assigned in prefab");
         }
 
         private void OnDestroy()
@@ -54,27 +50,26 @@ namespace io.github.hatayama.uLoopMCP
             {
                 Instance = null;
             }
+        }
 
-            if (_circleSprite != null)
+        public static void DestroyWithParentCanvas()
+        {
+            if (Instance == null)
             {
-                Destroy(_circleSprite);
+                return;
             }
 
-            if (_circleTexture != null)
-            {
-                Destroy(_circleTexture);
-            }
+            OverlayHelper.DestroyOverlay(Instance.gameObject);
         }
 
         private void LateUpdate()
         {
             if (!SimulateMouseUiOverlayState.IsActive)
             {
-                if (_canvas.enabled) _canvas.enabled = false;
+                _canvasGroup.alpha = 0;
                 return;
             }
 
-            _canvas.enabled = true;
             UpdateCursorPosition();
             UpdateCursorMode();
             UpdateDragPath();
@@ -207,7 +202,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private Image CreatePooledWaypointMarker()
         {
-            EnsureCircleSprite();
             Image marker = CreateImage("WaypointMarker", gameObject.transform);
             marker.rectTransform.sizeDelta = new Vector2(WAYPOINT_MARKER_DIAMETER, WAYPOINT_MARKER_DIAMETER);
             marker.sprite = _circleSprite;
@@ -257,57 +251,6 @@ namespace io.github.hatayama.uLoopMCP
                 : DRAG_COLOR;
         }
 
-        private void BuildCanvasHierarchy()
-        {
-            _canvas = gameObject.AddComponent<Canvas>();
-            _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            _canvas.sortingOrder = CANVAS_SORT_ORDER;
-            // No GraphicRaycaster — overlay must not block UI interaction behind it
-
-            _canvasGroup = gameObject.AddComponent<CanvasGroup>();
-            _canvasGroup.interactable = false;
-            _canvasGroup.blocksRaycasts = false;
-
-            _dragStartMarker = CreateImage("DragStartMarker", gameObject.transform);
-            _dragStartMarker.rectTransform.sizeDelta = new Vector2(START_MARKER_SIZE, START_MARKER_SIZE);
-            _dragStartMarker.enabled = false;
-
-            GameObject cursorGroupGo = new GameObject("CursorGroup");
-            cursorGroupGo.transform.SetParent(gameObject.transform, false);
-            _cursorGroup = cursorGroupGo.AddComponent<RectTransform>();
-            _cursorGroup.sizeDelta = Vector2.zero;
-
-            _circleImage = CreateImage("Circle", _cursorGroup);
-            _circleImage.rectTransform.sizeDelta = new Vector2(CURSOR_CIRCLE_DIAMETER, CURSOR_CIRCLE_DIAMETER);
-            _circleImage.color = CURSOR_COLOR;
-            EnsureCircleSprite();
-            _circleImage.sprite = _circleSprite;
-
-            _crosshairH = CreateImage("CrosshairH", _cursorGroup);
-            _crosshairH.rectTransform.sizeDelta = new Vector2(CURSOR_CROSSHAIR_SIZE * 2f, CURSOR_CROSSHAIR_THICKNESS);
-            _crosshairH.color = Color.black;
-
-            _crosshairV = CreateImage("CrosshairV", _cursorGroup);
-            _crosshairV.rectTransform.sizeDelta = new Vector2(CURSOR_CROSSHAIR_THICKNESS, CURSOR_CROSSHAIR_SIZE * 2f);
-            _crosshairV.color = Color.black;
-
-            GameObject textGo = new GameObject("LongPressText");
-            textGo.transform.SetParent(_cursorGroup, false);
-            RectTransform textRect = textGo.AddComponent<RectTransform>();
-            textRect.sizeDelta = new Vector2(CURSOR_CIRCLE_DIAMETER * 2f, CURSOR_CIRCLE_DIAMETER);
-            _longPressText = textGo.AddComponent<Text>();
-            _longPressText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            _longPressText.fontSize = 28;
-            _longPressText.alignment = TextAnchor.MiddleCenter;
-            _longPressText.color = Color.black;
-            _longPressText.raycastTarget = false;
-            _longPressText.enabled = false;
-
-            _longPressOutline = textGo.AddComponent<Outline>();
-            _longPressOutline.effectColor = Color.white;
-            _longPressOutline.effectDistance = new Vector2(1.5f, -1.5f);
-        }
-
         private static Image CreateImage(string name, Transform parent)
         {
             GameObject go = new GameObject(name);
@@ -319,41 +262,6 @@ namespace io.github.hatayama.uLoopMCP
             Image image = go.AddComponent<Image>();
             image.raycastTarget = false;
             return image;
-        }
-
-        private void EnsureCircleSprite()
-        {
-            if (_circleSprite != null)
-            {
-                return;
-            }
-
-            _circleTexture = new Texture2D(CIRCLE_TEXTURE_SIZE, CIRCLE_TEXTURE_SIZE, TextureFormat.RGBA32, false);
-            _circleTexture.hideFlags = HideFlags.HideAndDontSave;
-
-            float center = CIRCLE_TEXTURE_SIZE / 2f;
-            float radius = center - 1f;
-
-            for (int y = 0; y < CIRCLE_TEXTURE_SIZE; y++)
-            {
-                for (int x = 0; x < CIRCLE_TEXTURE_SIZE; x++)
-                {
-                    float dx = x + 0.5f - center;
-                    float dy = y + 0.5f - center;
-                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
-
-                    float alpha = Mathf.Clamp01(radius - dist + 1f);
-                    _circleTexture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
-                }
-            }
-
-            _circleTexture.Apply();
-
-            _circleSprite = Sprite.Create(
-                _circleTexture,
-                new Rect(0, 0, CIRCLE_TEXTURE_SIZE, CIRCLE_TEXTURE_SIZE),
-                new Vector2(0.5f, 0.5f));
-            _circleSprite.hideFlags = HideFlags.HideAndDontSave;
         }
     }
 }

@@ -21,7 +21,6 @@ namespace io.github.hatayama.uLoopMCP
         [SerializeField] private Image? _scrollArrowBottom;
         [SerializeField] private RectTransform? _moveDirectionGroup;
 
-        private Canvas _canvas = null!;
         private CanvasGroup _canvasGroup = null!;
         private bool _isVisible;
 
@@ -37,9 +36,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             Instance = this;
 
-            _canvas = GetComponentInParent<Canvas>();
-            Debug.Assert(_canvas != null, "SimulateMouseInputOverlay requires a parent Canvas");
-
             _canvasGroup = GetComponent<CanvasGroup>();
             if (_canvasGroup == null)
             {
@@ -52,9 +48,6 @@ namespace io.github.hatayama.uLoopMCP
             CaptureIdleColors();
         }
 
-        // Immediately destroy this overlay and its topmost DontSave ancestor (the dedicated Canvas).
-        // DontSave objects are not automatically destroyed when PlayMode exits,
-        // so this must be called explicitly from an ExitingPlayMode callback.
         public static void DestroyWithParentCanvas()
         {
             if (Instance == null)
@@ -62,13 +55,7 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            Transform root = Instance.transform;
-            while (root.parent != null && (root.parent.gameObject.hideFlags & HideFlags.DontSave) != 0)
-            {
-                root = root.parent;
-            }
-
-            DestroyImmediate(root.gameObject);
+            OverlayHelper.DestroyOverlay(Instance.gameObject);
         }
 
         private void OnDestroy()

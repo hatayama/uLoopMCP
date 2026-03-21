@@ -131,16 +131,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
 #if ULOOPMCP_HAS_INPUT_SYSTEM
+        private const string OVERLAY_PREFAB_PATH = "Packages/io.github.hatayama.uloopmcp/Runtime/SimulateKeyboard/SimulateKeyboardOverlay.prefab";
+
         private static void EnsureOverlayExists()
         {
-            if (SimulateKeyboardOverlay.Instance != null)
-            {
-                return;
-            }
-
-            GameObject overlayGo = new GameObject("SimulateKeyboardOverlay");
-            overlayGo.hideFlags = HideFlags.HideAndDontSave;
-            overlayGo.AddComponent<SimulateKeyboardOverlay>();
+            OverlayCanvasFactory.EnsureOverlayExists(SimulateKeyboardOverlay.Instance, OVERLAY_PREFAB_PATH);
         }
 
         private async Task<SimulateKeyboardResponse> ExecutePress(

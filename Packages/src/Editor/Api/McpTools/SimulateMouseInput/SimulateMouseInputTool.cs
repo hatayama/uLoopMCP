@@ -142,29 +142,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void EnsureOverlayExists()
         {
-            if (SimulateMouseInputOverlay.Instance != null)
-            {
-                return;
-            }
-
-            GameObject? prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(OVERLAY_PREFAB_PATH);
-            Debug.Assert(prefab != null, $"SimulateMouseInputOverlay prefab not found at {OVERLAY_PREFAB_PATH}");
-
-            Transform parentTransform = CreateOverlayCanvas().transform;
-            GameObject instance = (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab, parentTransform);
-            instance.hideFlags = HideFlags.DontSave;
-        }
-
-        private static Canvas CreateOverlayCanvas()
-        {
-            GameObject canvasGo = new GameObject("SimulateMouseInputOverlayCanvas");
-            canvasGo.hideFlags = HideFlags.DontSave;
-
-            Canvas canvas = canvasGo.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 32000;
-
-            return canvas;
+            OverlayCanvasFactory.EnsureOverlayExists(SimulateMouseInputOverlay.Instance, OVERLAY_PREFAB_PATH);
         }
 
         // Input coordinates use top-left origin; Unity Screen space uses bottom-left origin.

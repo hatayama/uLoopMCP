@@ -112,6 +112,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 ReleaseAllKeys();
                 SimulateKeyboardOverlayState.Clear();
+                SimulateKeyboardOverlay.DestroyWithParentCanvas();
             }
         }
     }
