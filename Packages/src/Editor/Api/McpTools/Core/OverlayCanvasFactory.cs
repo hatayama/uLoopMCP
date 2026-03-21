@@ -34,6 +34,13 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            // Domain Reload resets _instance but DontSave objects survive; reclaim before creating a new one
+            _instance = Object.FindAnyObjectByType<InputVisualizationCanvas>();
+            if (_instance != null)
+            {
+                return;
+            }
+
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CANVAS_PREFAB_PATH);
             Debug.Assert(prefab != null, $"InputVisualizationCanvas prefab not found at {CANVAS_PREFAB_PATH}");
 
