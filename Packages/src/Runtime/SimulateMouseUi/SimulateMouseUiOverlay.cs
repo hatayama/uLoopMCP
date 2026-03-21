@@ -37,6 +37,8 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(_longPressText != null, "_longPressText must be assigned in prefab");
             Debug.Assert(_dragStartMarker != null, "_dragStartMarker must be assigned in prefab");
             Debug.Assert(_circleSprite != null, "_circleSprite must be assigned in prefab");
+
+            _canvasGroup!.alpha = 0;
         }
 
         private void LateUpdate()
@@ -107,8 +109,8 @@ namespace io.github.hatayama.uLoopMCP
                 HidePool(_pathSegments);
                 HidePool(_waypointMarkers);
                 // Keep a reasonable number of pooled objects for reuse across drags
-                TrimPool(_pathSegments, 11);
-                TrimPool(_waypointMarkers, 10);
+                TrimPool(_pathSegments, 5);
+                TrimPool(_waypointMarkers, 4);
                 return;
             }
 
@@ -128,26 +130,31 @@ namespace io.github.hatayama.uLoopMCP
             EnsurePoolCount(_pathSegments, segmentCount, CreatePooledSegment);
             EnsurePoolCount(_waypointMarkers, waypoints.Count, CreatePooledWaypointMarker);
 
-            // Older segments fade out — the first segment is nearly invisible, the latest is fully opaque
+            // All segments fade: oldest = transparent, newest = most visible (but not fully opaque)
+            float canvasScale = _pathSegments.Count > 0 ? _pathSegments[0].rectTransform.lossyScale.x : 1f;
             Vector2 prev = startScreen;
-            for (int i = 0; i < waypoints.Count; i++)
+            for (int i = 0; i < segmentCount; i++)
             {
-                Vector2 wp = SimToScreen(waypoints[i]);
-                float alpha = (float)(i + 1) / segmentCount;
+                Vector2 to = (i < waypoints.Count) ? SimToScreen(waypoints[i]) : currentScreen;
+                float alpha = (float)(i + 1) / (segmentCount + 1);
                 Color fadedColor = activeColor;
                 fadedColor.a = activeColor.a * alpha;
-                DrawSegment(_pathSegments[i], prev, wp, fadedColor);
-                _waypointMarkers[i].enabled = true;
-                _waypointMarkers[i].color = fadedColor;
-                _waypointMarkers[i].rectTransform.position = new Vector3(wp.x, wp.y, 0f);
-                prev = wp;
+                DrawSegment(_pathSegments[i], prev, to, fadedColor, canvasScale);
+
+                if (i < waypoints.Count)
+                {
+                    _waypointMarkers[i].enabled = true;
+                    _waypointMarkers[i].color = fadedColor;
+                    _waypointMarkers[i].rectTransform.position = new Vector3(to.x, to.y, 0f);
+                }
+
+                prev = to;
             }
-            DrawSegment(_pathSegments[waypoints.Count], prev, currentScreen, activeColor);
             HidePoolFrom(_pathSegments, segmentCount);
             HidePoolFrom(_waypointMarkers, waypoints.Count);
         }
 
-        private void DrawSegment(Image line, Vector2 from, Vector2 to, Color color)
+        private void DrawSegment(Image line, Vector2 from, Vector2 to, Color color, float canvasScale)
         {
             Vector2 delta = to - from;
             float length = delta.magnitude;
@@ -164,7 +171,8 @@ namespace io.github.hatayama.uLoopMCP
 
             RectTransform rect = line.rectTransform;
             rect.position = new Vector3(from.x, from.y, 0f);
-            rect.sizeDelta = new Vector2(length, LINE_THICKNESS);
+            // sizeDelta is in local space; convert screen-pixel length via lossyScale
+            rect.sizeDelta = new Vector2(length / canvasScale, LINE_THICKNESS / canvasScale);
             rect.localRotation = Quaternion.Euler(0f, 0f, angle);
         }
 

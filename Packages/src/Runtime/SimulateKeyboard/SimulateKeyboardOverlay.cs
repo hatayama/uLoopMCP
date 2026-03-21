@@ -26,6 +26,14 @@ namespace io.github.hatayama.uLoopMCP
         {
             Debug.Assert(_container != null, "_container must be assigned in prefab");
             Debug.Assert(_containerImage != null, "_containerImage must be assigned in prefab");
+
+            // Prefab contains preview badges for editor inspection; remove them before runtime
+            for (int i = _container!.transform.childCount - 1; i >= 0; i--)
+            {
+                Destroy(_container.transform.GetChild(i).gameObject);
+            }
+
+            _container.SetActive(false);
         }
 
         private void LateUpdate()

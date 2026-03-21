@@ -34,6 +34,7 @@ uloop simulate-mouse-ui --action <action> --x <x> --y <y> [options]
 | `--from-y` | number | `0` | Start Y position for Drag action. Drag starts here and moves to x,y. |
 | `--drag-speed` | number | `2000` | Drag speed in pixels per second (0 for instant). 2000 is fast (default), 200 is slow enough to watch. Applies to Drag, DragMove, and DragEnd actions. |
 | `--duration` | number | `0.5` | Hold duration in seconds for LongPress action. |
+| `--button` | enum | `Left` | Mouse button: `Left`, `Right`, `Middle`. Used by Click and LongPress. |
 
 ### Actions
 

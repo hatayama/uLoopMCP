@@ -33,6 +33,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 _canvasGroup = gameObject.AddComponent<CanvasGroup>();
             }
+
             _canvasGroup.interactable = false;
             _canvasGroup.blocksRaycasts = false;
 
@@ -48,6 +49,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     SetVisible(true);
                 }
+
                 UpdateButtonColors();
                 UpdateScrollIndicator();
                 UpdateMoveDirection();
@@ -62,6 +64,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     SetVisible(false);
                 }
+
                 return;
             }
 
