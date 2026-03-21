@@ -7,6 +7,8 @@ namespace io.github.hatayama.uLoopMCP
     // and instantiates overlay prefabs as children of it.
     internal static class OverlayCanvasFactory
     {
+        private const string CANVAS_PREFAB_PATH = "Packages/io.github.hatayama.uloopmcp/Runtime/Common/InputVisualizationCanvas.prefab";
+
         private static Canvas _sharedCanvas;
 
         public static void EnsureOverlayExists(MonoBehaviour instance, string prefabPath)
@@ -32,12 +34,14 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            GameObject canvasGo = new GameObject("InputVisualizationCanvas");
-            canvasGo.hideFlags = HideFlags.DontSave;
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CANVAS_PREFAB_PATH);
+            Debug.Assert(prefab != null, $"InputVisualizationCanvas prefab not found at {CANVAS_PREFAB_PATH}");
 
-            _sharedCanvas = canvasGo.AddComponent<Canvas>();
-            _sharedCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            _sharedCanvas.sortingOrder = OverlayHelper.CANVAS_SORT_ORDER;
+            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            instance.hideFlags = HideFlags.DontSave;
+
+            _sharedCanvas = instance.GetComponent<Canvas>();
+            Debug.Assert(_sharedCanvas != null, "InputVisualizationCanvas prefab must have a Canvas component");
         }
     }
 }
