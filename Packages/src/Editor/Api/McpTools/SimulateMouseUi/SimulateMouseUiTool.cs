@@ -741,7 +741,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static async Task PlayExpandAnimation(CancellationToken ct)
         {
-            SimulateMouseUiOverlay overlay = InputVisualizationCanvas.Instance!.MouseUiOverlay;
+            SimulateMouseUiOverlay overlay = OverlayCanvasFactory.VisualizationCanvas.MouseUiOverlay;
 
             // Previous dissipate sets alpha to 0; restore before expand starts
             overlay.SetAlpha(1f);
@@ -760,7 +760,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static async Task PlayDissipateAnimation(CancellationToken ct)
         {
-            SimulateMouseUiOverlay overlay = InputVisualizationCanvas.Instance!.MouseUiOverlay;
+            SimulateMouseUiOverlay overlay = OverlayCanvasFactory.VisualizationCanvas.MouseUiOverlay;
 
             float startTime = Time.realtimeSinceStartup;
             float elapsed = 0f;

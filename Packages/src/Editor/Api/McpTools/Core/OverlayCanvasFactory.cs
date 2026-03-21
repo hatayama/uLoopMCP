@@ -9,6 +9,18 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const string CANVAS_PREFAB_PATH = "Packages/io.github.hatayama.uloopmcp/Runtime/Common/InputVisualizationCanvas.prefab";
 
+        private static InputVisualizationCanvas _instance;
+
+        public static InputVisualizationCanvas VisualizationCanvas
+        {
+            get
+            {
+                EnsureExists();
+                Debug.Assert(_instance != null, "InputVisualizationCanvas instance must exist after EnsureExists");
+                return _instance!;
+            }
+        }
+
         static OverlayCanvasFactory()
         {
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
@@ -17,7 +29,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public static void EnsureExists()
         {
-            if (InputVisualizationCanvas.Instance != null)
+            if (_instance != null)
             {
                 return;
             }
@@ -25,16 +37,26 @@ namespace io.github.hatayama.uLoopMCP
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CANVAS_PREFAB_PATH);
             Debug.Assert(prefab != null, $"InputVisualizationCanvas prefab not found at {CANVAS_PREFAB_PATH}");
 
-            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-            instance.hideFlags = HideFlags.DontSave;
+            GameObject go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            go.hideFlags = HideFlags.DontSave;
+            _instance = go.GetComponent<InputVisualizationCanvas>();
+            Debug.Assert(_instance != null, "InputVisualizationCanvas component not found on prefab");
         }
 
         private static void OnPlayModeStateChanged(PlayModeStateChange state)
         {
-            if (state == PlayModeStateChange.ExitingPlayMode)
+            if (state != PlayModeStateChange.ExitingPlayMode)
             {
-                InputVisualizationCanvas.DestroyAll();
+                return;
             }
+
+            if (_instance == null)
+            {
+                return;
+            }
+
+            Object.DestroyImmediate(_instance.gameObject);
+            _instance = null;
         }
     }
 }
