@@ -33,6 +33,25 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            // Domain Reload resets _instance but DontDestroyOnLoad objects survive; reclaim one and destroy duplicates
+            InputVisualizationCanvas[] existing =
+                Object.FindObjectsByType<InputVisualizationCanvas>(FindObjectsSortMode.None);
+            for (int i = 0; i < existing.Length; i++)
+            {
+                if (_instance == null)
+                {
+                    _instance = existing[i];
+                }
+                else
+                {
+                    Object.DestroyImmediate(existing[i].gameObject);
+                }
+            }
+            if (_instance != null)
+            {
+                return;
+            }
+
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CANVAS_PREFAB_PATH);
             Debug.Assert(prefab != null, $"InputVisualizationCanvas prefab not found at {CANVAS_PREFAB_PATH}");
 
