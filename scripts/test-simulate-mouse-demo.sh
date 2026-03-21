@@ -35,7 +35,7 @@ uloop simulate-mouse-ui --action Click --x $CB2_X --y $CB2_Y && sleep 0.3
 uloop simulate-mouse-ui --action Click --x $CB1_X --y $CB1_Y && sleep 0.3
 uloop simulate-mouse-ui --action Click --x $CB2_X --y $CB2_Y && sleep 0.3
 
-# --- Phase 1.5: LongPress (5 seconds) ---
+# --- Phase 1.5: LongPress (3 seconds) ---
 
 echo "[2/5] LongPress"
 uloop simulate-mouse-ui --action LongPress --x $LP_X --y $LP_Y --duration 3.0 && sleep 0.3

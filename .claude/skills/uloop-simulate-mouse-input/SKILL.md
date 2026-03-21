@@ -1,6 +1,6 @@
 ---
 name: uloop-simulate-mouse-input
-description: "Simulate mouse input in PlayMode via Input System. Injects button clicks, mouse delta, and scroll wheel directly into Mouse.current. Use when you need to: (1) Click in games that read Mouse.current.leftButton.WasPressedThisFrame(), (2) Right-click for actions like block placement, (3) Inject mouse delta for FPS camera control, (4) Inject scroll wheel for hotbar switching or zoom. For UI elements with IPointerClickHandler, use simulate-mouse-ui instead."
+description: "Simulate mouse input in PlayMode via Input System. Injects button clicks, mouse delta, and scroll wheel directly into Mouse.current. Use when you need to: (1) Click in games that read Mouse.current.leftButton.wasPressedThisFrame, (2) Right-click for actions like block placement, (3) Inject mouse delta for FPS camera control, (4) Inject scroll wheel for hotbar switching or zoom. For UI elements with IPointerClickHandler, use simulate-mouse-ui instead."
 context: fork
 ---
 
@@ -8,7 +8,31 @@ context: fork
 
 Simulate mouse input via Input System in Unity PlayMode: $ARGUMENTS
 
-## Workflow
+## What
+
+Inject low-level mouse input (button clicks, mouse delta, scroll wheel) directly into `Mouse.current` via the Input System. Unlike `simulate-mouse-ui` which fires EventSystem pointer events for uGUI, this tool targets game logic that reads `Mouse.current` directly.
+
+## When
+
+Use when you need to:
+1. Click in games that read `Mouse.current.leftButton.wasPressedThisFrame`
+2. Right-click for actions like block placement
+3. Inject mouse delta for FPS camera rotation or look controls
+4. Inject scroll wheel for hotbar switching or zoom
+5. Smoothly move the mouse over a duration for continuous camera panning
+
+For UI elements with `IPointerClickHandler` / `GraphicRaycaster`, use `simulate-mouse-ui` instead.
+
+| Scenario | Tool |
+|----------|------|
+| Click a Unity UI Button (IPointerClickHandler) | `simulate-mouse-ui` |
+| Destroy a block in Minecraft (reads `Mouse.current.leftButton`) | `simulate-mouse-input` |
+| Place a block with right-click | `simulate-mouse-input --button Right` |
+| Drag a UI slider | `simulate-mouse-ui --action Drag` |
+| Look around with mouse (FPS camera) | `simulate-mouse-input --action MoveDelta` |
+| Scroll hotbar slots | `simulate-mouse-input --action Scroll` |
+
+## How
 
 1. Ensure Unity is in PlayMode (use `uloop control-play-mode --action Play` if not)
 2. For Click/LongPress: determine the target screen position (use `uloop screenshot` to find coordinates)
@@ -54,17 +78,6 @@ Usually not needed — the CLI auto-detects the Unity project from the current w
 |--------|-------------|
 | `--project-path <path>` | Override auto-detection to target a specific Unity project |
 | `-p, --port <port>` | Specify Unity TCP port directly |
-
-## When to use this vs simulate-mouse-ui
-
-| Scenario | Tool |
-|----------|------|
-| Click a Unity UI Button (IPointerClickHandler) | `simulate-mouse-ui` |
-| Destroy a block in Minecraft (reads `Mouse.current.leftButton`) | `simulate-mouse-input` |
-| Place a block with right-click | `simulate-mouse-input --button Right` |
-| Drag a UI slider | `simulate-mouse-ui --action Drag` |
-| Look around with mouse (FPS camera) | `simulate-mouse-input --action MoveDelta` |
-| Scroll hotbar slots | `simulate-mouse-input --action Scroll` |
 
 ## Examples
 
