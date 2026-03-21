@@ -138,11 +138,9 @@ namespace io.github.hatayama.uLoopMCP
         }
 
 #if ULOOPMCP_HAS_INPUT_SYSTEM
-        private const string OVERLAY_PREFAB_PATH = "Packages/io.github.hatayama.uloopmcp/Runtime/SimulateMouseInput/SimulateMouseInputOverlay.prefab";
-
         private static void EnsureOverlayExists()
         {
-            OverlayCanvasFactory.EnsureOverlayExists(SimulateMouseInputOverlay.Instance, OVERLAY_PREFAB_PATH);
+            OverlayCanvasFactory.EnsureExists();
         }
 
         // Input coordinates use top-left origin; Unity Screen space uses bottom-left origin.

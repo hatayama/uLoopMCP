@@ -3,33 +3,16 @@ using UnityEditor;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    // Manages a single shared Canvas for all input visualization overlays
-    // and instantiates overlay prefabs as children of it.
+    // Manages a single shared Canvas prefab that contains all input visualization overlays.
     internal static class OverlayCanvasFactory
     {
         private const string CANVAS_PREFAB_PATH = "Packages/io.github.hatayama.uloopmcp/Runtime/Common/InputVisualizationCanvas.prefab";
 
-        private static Canvas _sharedCanvas;
+        private static GameObject _instance;
 
-        public static void EnsureOverlayExists(MonoBehaviour instance, string prefabPath)
+        public static void EnsureExists()
         {
-            if (instance != null)
-            {
-                return;
-            }
-
-            EnsureSharedCanvas();
-
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-            Debug.Assert(prefab != null, $"Overlay prefab not found at {prefabPath}");
-
-            GameObject overlayInstance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, _sharedCanvas.transform);
-            overlayInstance.hideFlags = HideFlags.DontSave;
-        }
-
-        private static void EnsureSharedCanvas()
-        {
-            if (_sharedCanvas != null)
+            if (_instance != null)
             {
                 return;
             }
@@ -37,11 +20,8 @@ namespace io.github.hatayama.uLoopMCP
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CANVAS_PREFAB_PATH);
             Debug.Assert(prefab != null, $"InputVisualizationCanvas prefab not found at {CANVAS_PREFAB_PATH}");
 
-            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-            instance.hideFlags = HideFlags.DontSave;
-
-            _sharedCanvas = instance.GetComponent<Canvas>();
-            Debug.Assert(_sharedCanvas != null, "InputVisualizationCanvas prefab must have a Canvas component");
+            _instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            _instance.hideFlags = HideFlags.DontSave;
         }
     }
 }

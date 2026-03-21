@@ -132,11 +132,9 @@ namespace io.github.hatayama.uLoopMCP
             return response;
         }
 
-        private const string OVERLAY_PREFAB_PATH = "Packages/io.github.hatayama.uloopmcp/Runtime/SimulateMouseUi/SimulateMouseUiOverlay.prefab";
-
         private static void EnsureOverlayExists()
         {
-            OverlayCanvasFactory.EnsureOverlayExists(SimulateMouseUiOverlay.Instance, OVERLAY_PREFAB_PATH);
+            OverlayCanvasFactory.EnsureExists();
         }
 
         private static PointerEventData.InputButton ToInputButton(MouseButton button)
