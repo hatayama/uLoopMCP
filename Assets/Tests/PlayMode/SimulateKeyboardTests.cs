@@ -53,10 +53,11 @@ namespace Tests.PlayMode
             Time.timeScale = originalTimeScale;
             KeyboardKeyState.ReleaseAllKeys();
             SimulateKeyboardOverlayState.Clear();
-            InputVisualizationCanvas canvas = Object.FindAnyObjectByType<InputVisualizationCanvas>();
-            if (canvas != null)
+            InputVisualizationCanvas[] canvases =
+                Object.FindObjectsByType<InputVisualizationCanvas>(FindObjectsSortMode.None);
+            for (int i = 0; i < canvases.Length; i++)
             {
-                Object.DestroyImmediate(canvas.gameObject);
+                Object.DestroyImmediate(canvases[i].gameObject);
             }
             Object.Destroy(framePressObserverGo);
             Object.Destroy(eventSystemGo);

@@ -34,10 +34,16 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // Domain Reload resets _instance but DontSave objects survive; reclaim before creating a new one
-            _instance = Object.FindAnyObjectByType<InputVisualizationCanvas>();
-            if (_instance != null)
+            // Domain Reload resets _instance but DontSave objects survive; reclaim one and destroy duplicates
+            InputVisualizationCanvas[] existing =
+                Object.FindObjectsByType<InputVisualizationCanvas>(FindObjectsSortMode.None);
+            if (existing.Length > 0)
             {
+                _instance = existing[0];
+                for (int i = 1; i < existing.Length; i++)
+                {
+                    Object.DestroyImmediate(existing[i].gameObject);
+                }
                 return;
             }
 
@@ -57,12 +63,12 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            if (_instance == null)
+            InputVisualizationCanvas[] canvases =
+                Object.FindObjectsByType<InputVisualizationCanvas>(FindObjectsSortMode.None);
+            for (int i = 0; i < canvases.Length; i++)
             {
-                return;
+                Object.DestroyImmediate(canvases[i].gameObject);
             }
-
-            Object.DestroyImmediate(_instance.gameObject);
             _instance = null;
         }
     }
