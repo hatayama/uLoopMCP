@@ -3,10 +3,17 @@ using UnityEditor;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    // Instantiates the InputVisualizationCanvas prefab which contains all input visualization overlays.
+    // Instantiates the InputVisualizationCanvas prefab and manages its lifecycle.
+    [InitializeOnLoad]
     internal static class OverlayCanvasFactory
     {
         private const string CANVAS_PREFAB_PATH = "Packages/io.github.hatayama.uloopmcp/Runtime/Common/InputVisualizationCanvas.prefab";
+
+        static OverlayCanvasFactory()
+        {
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
 
         public static void EnsureExists()
         {
@@ -20,6 +27,14 @@ namespace io.github.hatayama.uLoopMCP
 
             GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             instance.hideFlags = HideFlags.DontSave;
+        }
+
+        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingPlayMode)
+            {
+                InputVisualizationCanvas.DestroyAll();
+            }
         }
     }
 }

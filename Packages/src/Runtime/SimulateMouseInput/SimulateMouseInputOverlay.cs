@@ -48,16 +48,6 @@ namespace io.github.hatayama.uLoopMCP
             CaptureIdleColors();
         }
 
-        public static void DestroyWithParentCanvas()
-        {
-            if (Instance == null)
-            {
-                return;
-            }
-
-            OverlayHelper.DestroyOverlay(Instance.gameObject);
-        }
-
         private void OnDestroy()
         {
             if (Instance == this)

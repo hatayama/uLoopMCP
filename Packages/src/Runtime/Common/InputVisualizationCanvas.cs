@@ -26,6 +26,16 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(_mouseInputOverlay != null, "_mouseInputOverlay must be assigned in prefab");
         }
 
+        public static void DestroyAll()
+        {
+            if (Instance == null)
+            {
+                return;
+            }
+
+            DestroyImmediate(Instance.gameObject);
+        }
+
         private void OnDestroy()
         {
             if (Instance == this)

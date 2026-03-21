@@ -52,16 +52,6 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        public static void DestroyWithParentCanvas()
-        {
-            if (Instance == null)
-            {
-                return;
-            }
-
-            OverlayHelper.DestroyOverlay(Instance.gameObject);
-        }
-
         private void LateUpdate()
         {
             if (!SimulateMouseUiOverlayState.IsActive)
