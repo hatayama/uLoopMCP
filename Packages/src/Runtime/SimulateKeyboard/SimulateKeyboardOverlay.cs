@@ -7,8 +7,6 @@ namespace io.github.hatayama.uLoopMCP
 {
     public class SimulateKeyboardOverlay : MonoBehaviour
     {
-        public static SimulateKeyboardOverlay? Instance { get; private set; }
-
         public const float CONTAINER_BACKGROUND_ALPHA = 0.8f;
 
         private const float PRESS_DISPLAY_DURATION = 0.5f;
@@ -26,19 +24,8 @@ namespace io.github.hatayama.uLoopMCP
 
         private void Awake()
         {
-            Debug.Assert(Instance == null, "SimulateKeyboardOverlay instance already exists");
-            Instance = this;
-
             Debug.Assert(_container != null, "_container must be assigned in prefab");
             Debug.Assert(_containerImage != null, "_containerImage must be assigned in prefab");
-        }
-
-        private void OnDestroy()
-        {
-            if (Instance == this)
-            {
-                Instance = null;
-            }
         }
 
         private void LateUpdate()

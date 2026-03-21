@@ -53,10 +53,7 @@ namespace Tests.PlayMode
             Time.timeScale = originalTimeScale;
             KeyboardKeyState.ReleaseAllKeys();
             SimulateKeyboardOverlayState.Clear();
-            if (SimulateKeyboardOverlay.Instance != null)
-            {
-                Object.Destroy(SimulateKeyboardOverlay.Instance.gameObject);
-            }
+            InputVisualizationCanvas.DestroyAll();
             Object.Destroy(framePressObserverGo);
             Object.Destroy(eventSystemGo);
             base.TearDown();
@@ -538,9 +535,8 @@ namespace Tests.PlayMode
 
         private static BadgeVisual RequireBadgeVisual(string keyName)
         {
-            SimulateKeyboardOverlay? overlay = SimulateKeyboardOverlay.Instance;
-            Debug.Assert(overlay != null, "SimulateKeyboardOverlay must exist before reading badge visuals.");
-            Assert.IsNotNull(overlay, "SimulateKeyboardOverlay must exist before reading badge visuals.");
+            SimulateKeyboardOverlay overlay = InputVisualizationCanvas.Instance!.KeyboardOverlay;
+            Assert.IsNotNull(overlay, "KeyboardOverlay must exist before reading badge visuals.");
 
             // Container Image holds the shared background alpha for all badges
             Image? containerImage = overlay!.GetComponentInChildren<Image>(true);

@@ -9,8 +9,6 @@ namespace io.github.hatayama.uLoopMCP
     // Animation is driven externally via SetCursorScale/SetAlpha from async functions in SimulateMouseUiTool.
     public class SimulateMouseUiOverlay : MonoBehaviour
     {
-        public static SimulateMouseUiOverlay? Instance { get; private set; }
-
         private const float WAYPOINT_MARKER_DIAMETER = 12f;
         private const float LINE_THICKNESS = 2f;
 
@@ -31,9 +29,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private void Awake()
         {
-            Debug.Assert(Instance == null, "SimulateMouseUiOverlay instance already exists");
-            Instance = this;
-
             Debug.Assert(_canvasGroup != null, "_canvasGroup must be assigned in prefab");
             Debug.Assert(_cursorGroup != null, "_cursorGroup must be assigned in prefab");
             Debug.Assert(_circleImage != null, "_circleImage must be assigned in prefab");
@@ -42,14 +37,6 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(_longPressText != null, "_longPressText must be assigned in prefab");
             Debug.Assert(_dragStartMarker != null, "_dragStartMarker must be assigned in prefab");
             Debug.Assert(_circleSprite != null, "_circleSprite must be assigned in prefab");
-        }
-
-        private void OnDestroy()
-        {
-            if (Instance == this)
-            {
-                Instance = null;
-            }
         }
 
         private void LateUpdate()

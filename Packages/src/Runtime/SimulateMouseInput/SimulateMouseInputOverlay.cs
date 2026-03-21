@@ -8,8 +8,6 @@ namespace io.github.hatayama.uLoopMCP
     // pressed buttons / scroll direction during simulate-mouse-input tool calls.
     public class SimulateMouseInputOverlay : MonoBehaviour
     {
-        public static SimulateMouseInputOverlay? Instance { get; private set; }
-
         private const float DISPLAY_DURATION = 1.0f;
 
         private static readonly Color BUTTON_PRESSED_COLOR = new Color(1f, 1f, 1f, 0.95f);
@@ -30,12 +28,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(Instance.gameObject);
-            }
-            Instance = this;
-
             _canvasGroup = GetComponent<CanvasGroup>();
             if (_canvasGroup == null)
             {
@@ -46,14 +38,6 @@ namespace io.github.hatayama.uLoopMCP
 
             SetVisible(false);
             CaptureIdleColors();
-        }
-
-        private void OnDestroy()
-        {
-            if (Instance == this)
-            {
-                Instance = null;
-            }
         }
 
         private void LateUpdate()
