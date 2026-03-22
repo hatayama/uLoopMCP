@@ -10,8 +10,8 @@ namespace io.github.hatayama.uLoopMCP
 {
     public class RecordingsEditorWindow : EditorWindow
     {
-        private const string UXML_PATH = "Assets/Editor/CustomCommandSamples/Recordings/RecordingsEditorWindow.uxml";
-        private const string USS_PATH = "Assets/Editor/CustomCommandSamples/Recordings/RecordingsEditorWindow.uss";
+        private const string UXML_RELATIVE_PATH = "Editor/UI/Recordings/RecordingsEditorWindow.uxml";
+        private const string USS_RELATIVE_PATH = "Editor/UI/Recordings/RecordingsEditorWindow.uss";
 
         private Button _recordButton;
         private Button _replayButton;
@@ -42,12 +42,14 @@ namespace io.github.hatayama.uLoopMCP
 
         private void CreateGUI()
         {
-            VisualTreeAsset uxml = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UXML_PATH);
-            Debug.Assert(uxml != null, "UXML not found at " + UXML_PATH);
+            string uxmlPath = $"{McpConstants.PackageAssetPath}/{UXML_RELATIVE_PATH}";
+            VisualTreeAsset uxml = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(uxmlPath);
+            Debug.Assert(uxml != null, "UXML not found at " + uxmlPath);
             uxml.CloneTree(rootVisualElement);
 
-            StyleSheet uss = AssetDatabase.LoadAssetAtPath<StyleSheet>(USS_PATH);
-            Debug.Assert(uss != null, "USS not found at " + USS_PATH);
+            string ussPath = $"{McpConstants.PackageAssetPath}/{USS_RELATIVE_PATH}";
+            StyleSheet uss = AssetDatabase.LoadAssetAtPath<StyleSheet>(ussPath);
+            Debug.Assert(uss != null, "USS not found at " + ussPath);
             rootVisualElement.styleSheets.Add(uss);
 
             QueryElements();

@@ -634,6 +634,71 @@
           }
         }
       }
+    },
+    {
+      "name": "record-input",
+      "description": "Record keyboard and mouse input during PlayMode. Captures key presses, mouse clicks, mouse delta, and scroll events frame-by-frame. Saves to JSON for later replay.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "Action": {
+            "type": "string",
+            "enum": ["Start", "Stop"],
+            "description": "Recording action: Start - begin recording input, Stop - stop recording and save to file",
+            "default": "Start"
+          },
+          "OutputPath": {
+            "type": "string",
+            "description": "Output file path for the recording JSON. If empty, auto-generates under .uloop/outputs/InputRecordings/",
+            "default": ""
+          },
+          "Keys": {
+            "type": "string",
+            "description": "Comma-separated key filter. Only record specified keys (e.g. 'W,A,S,D,Space'). Empty means record all common game keys.",
+            "default": ""
+          },
+          "DelaySeconds": {
+            "type": "number",
+            "description": "Countdown delay in seconds before recording starts (0-10). Gives time to switch focus to Game View.",
+            "default": 3
+          },
+          "ShowOverlay": {
+            "type": "boolean",
+            "description": "Show recording overlay (countdown + REC indicator)",
+            "default": true
+          }
+        }
+      }
+    },
+    {
+      "name": "replay-input",
+      "description": "Replay recorded keyboard and mouse input during PlayMode. Injects recorded events frame-by-frame via Input System to reproduce exact input sequences.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "Action": {
+            "type": "string",
+            "enum": ["Start", "Stop", "Status"],
+            "description": "Replay action: Start - begin replaying, Stop - stop mid-way, Status - check progress",
+            "default": "Start"
+          },
+          "InputPath": {
+            "type": "string",
+            "description": "Path to recording JSON file. If empty, auto-detects the latest recording in .uloop/outputs/InputRecordings/",
+            "default": ""
+          },
+          "ShowOverlay": {
+            "type": "boolean",
+            "description": "Show visualization overlay during replay",
+            "default": true
+          },
+          "Loop": {
+            "type": "boolean",
+            "description": "Loop replay continuously",
+            "default": false
+          }
+        }
+      }
     }
   ]
 }

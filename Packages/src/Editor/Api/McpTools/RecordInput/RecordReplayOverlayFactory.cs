@@ -8,8 +8,8 @@ namespace io.github.hatayama.uLoopMCP
     // package-side canvas so they need to be loaded on demand from Assets/.
     internal static class RecordReplayOverlayFactory
     {
-        private const string RECORD_OVERLAY_PREFAB_PATH = "Assets/Scripts/RecordInput/RecordInputOverlay.prefab";
-        private const string REPLAY_OVERLAY_PREFAB_PATH = "Assets/Scripts/ReplayInput/ReplayInputOverlay.prefab";
+        private const string RECORD_OVERLAY_RELATIVE_PATH = "Runtime/RecordInput/RecordInputOverlay.prefab";
+        private const string REPLAY_OVERLAY_RELATIVE_PATH = "Runtime/ReplayInput/ReplayInputOverlay.prefab";
 
         private static RecordInputOverlayPresenter _recordPresenter;
         private static ReplayInputOverlay _replayOverlay;
@@ -35,8 +35,9 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             InputVisualizationCanvas canvas = OverlayCanvasFactory.VisualizationCanvas;
+            string recordPath = $"{McpConstants.PackageAssetPath}/{RECORD_OVERLAY_RELATIVE_PATH}";
             _recordPresenter = InstantiateOverlayChild<RecordInputOverlayPresenter>(
-                RECORD_OVERLAY_PREFAB_PATH, canvas.transform);
+                recordPath, canvas.transform);
         }
 
         public static void EnsureReplayOverlay()
@@ -53,8 +54,9 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             InputVisualizationCanvas canvas = OverlayCanvasFactory.VisualizationCanvas;
+            string replayPath = $"{McpConstants.PackageAssetPath}/{REPLAY_OVERLAY_RELATIVE_PATH}";
             _replayOverlay = InstantiateOverlayChild<ReplayInputOverlay>(
-                REPLAY_OVERLAY_PREFAB_PATH, canvas.transform);
+                replayPath, canvas.transform);
         }
 
         private static T InstantiateOverlayChild<T>(string prefabPath, Transform parent) where T : Component
