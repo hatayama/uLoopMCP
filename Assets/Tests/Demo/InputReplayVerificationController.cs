@@ -18,14 +18,19 @@ namespace io.github.hatayama.uLoopMCP
         private const float ROTATE_SENSITIVITY = 0.5f;
         private const float SCALE_STEP = 0.1f;
         private const int TARGET_FRAME_RATE = 60;
+        private const float ROUND_MULTIPLIER = 10000f;
 
         [SerializeField] private Text? _frameText;
         [SerializeField] private Text? _positionText;
         [SerializeField] private Text? _rotationText;
         [SerializeField] private Text? _scaleText;
         [SerializeField] private Text? _inputText;
+        [SerializeField] private Text? _startPromptText;
         [SerializeField] private MeshRenderer? _cubeRenderer;
 
+        private Vector3 _initialPosition;
+        private Vector3 _initialEulerAngles;
+        private bool _isActive;
         private int _startFrame;
         private readonly List<string> _eventLog = new();
         private Vector3 _lastLoggedPosition;
@@ -35,8 +40,9 @@ namespace io.github.hatayama.uLoopMCP
         private void Start()
         {
             Application.targetFrameRate = TARGET_FRAME_RATE;
-            _startFrame = Time.frameCount;
-            _lastLoggedPosition = transform.position;
+            _initialPosition = transform.position;
+            _initialEulerAngles = transform.eulerAngles;
+            ShowStartPrompt();
         }
 
         private void Update()
@@ -48,6 +54,17 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            if (!_isActive)
+            {
+                // Left click activates and resets to a known clean state
+                if (mouse.leftButton.wasPressedThisFrame)
+                {
+                    Activate();
+                }
+                UpdateWaitingUI();
+                return;
+            }
+
             int relativeFrame = Time.frameCount - _startFrame;
 
             ProcessMovement(keyboard, relativeFrame);
@@ -55,6 +72,38 @@ namespace io.github.hatayama.uLoopMCP
             ProcessClicks(mouse, relativeFrame);
             ProcessScroll(mouse, relativeFrame);
             UpdateUI(keyboard, mouse, relativeFrame);
+        }
+
+        private void Activate()
+        {
+            ResetState();
+            _isActive = true;
+            _startFrame = Time.frameCount;
+
+            if (_startPromptText != null)
+            {
+                _startPromptText.gameObject.SetActive(false);
+            }
+        }
+
+        private void ResetState()
+        {
+            transform.position = _initialPosition;
+            transform.eulerAngles = _initialEulerAngles;
+            transform.localScale = Vector3.one;
+            _colorToggleRed = false;
+            _colorToggleBlue = false;
+            UpdateCubeColor();
+            _eventLog.Clear();
+            _lastLoggedPosition = _initialPosition;
+        }
+
+        private void ShowStartPrompt()
+        {
+            if (_startPromptText != null)
+            {
+                _startPromptText.gameObject.SetActive(true);
+            }
         }
 
         private void ProcessMovement(Keyboard keyboard, int frame)
@@ -74,7 +123,7 @@ namespace io.github.hatayama.uLoopMCP
             transform.Translate(movement, Space.World);
 
             // Rounding avoids float noise that would make logs differ between runs
-            Vector3 rounded = RoundVector3(transform.position, 4);
+            Vector3 rounded = RoundVector3(transform.position);
             if (rounded != _lastLoggedPosition)
             {
                 _eventLog.Add($"Frame {frame}: Position {FormatVector3(rounded)}");
@@ -154,6 +203,15 @@ namespace io.github.hatayama.uLoopMCP
             return "White";
         }
 
+        private void UpdateWaitingUI()
+        {
+            if (_frameText != null) _frameText.text = "Frame: ---";
+            if (_positionText != null) _positionText.text = "Pos: (waiting)";
+            if (_rotationText != null) _rotationText.text = "Rot Y: ---";
+            if (_scaleText != null) _scaleText.text = "Scale: ---";
+            if (_inputText != null) _inputText.text = "Input: [waiting for click]";
+        }
+
         private void UpdateUI(Keyboard keyboard, Mouse mouse, int frame)
         {
             if (_frameText != null)
@@ -198,10 +256,7 @@ namespace io.github.hatayama.uLoopMCP
         public void SaveLog(string path)
         {
             string directory = Path.GetDirectoryName(path)!;
-            if (!Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
+            Directory.CreateDirectory(directory);
 
             File.WriteAllLines(path, _eventLog);
             Debug.Log($"[InputReplayVerification] Event log saved to {path} ({_eventLog.Count} entries)");
@@ -209,21 +264,17 @@ namespace io.github.hatayama.uLoopMCP
 
         public void ClearLog()
         {
-            _eventLog.Clear();
-            _lastLoggedPosition = transform.position;
-            _startFrame = Time.frameCount;
-            _colorToggleRed = false;
-            _colorToggleBlue = false;
-            UpdateCubeColor();
+            _isActive = false;
+            ResetState();
+            ShowStartPrompt();
         }
 
-        private static Vector3 RoundVector3(Vector3 v, int decimals)
+        private static Vector3 RoundVector3(Vector3 v)
         {
-            float multiplier = Mathf.Pow(10f, decimals);
             return new Vector3(
-                Mathf.Round(v.x * multiplier) / multiplier,
-                Mathf.Round(v.y * multiplier) / multiplier,
-                Mathf.Round(v.z * multiplier) / multiplier
+                Mathf.Round(v.x * ROUND_MULTIPLIER) / ROUND_MULTIPLIER,
+                Mathf.Round(v.y * ROUND_MULTIPLIER) / ROUND_MULTIPLIER,
+                Mathf.Round(v.z * ROUND_MULTIPLIER) / ROUND_MULTIPLIER
             );
         }
 

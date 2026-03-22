@@ -127,14 +127,18 @@ namespace io.github.hatayama.uLoopMCP
                 new Vector2(20f, yOffset - lineHeight * 4), new Vector2(400f, lineHeight),
                 20, FontStyle.Normal, Color.yellow, TextAnchor.MiddleLeft);
 
-            // Instructions (bottom)
+            Text startPromptText = CreateText(canvasGo.transform, "StartPromptText",
+                "Click to Start",
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(0f, -80f), new Vector2(500f, 60f),
+                40, FontStyle.Bold, new Color(1f, 0.9f, 0.3f, 1f), TextAnchor.MiddleCenter);
+
             CreateText(canvasGo.transform, "Instructions",
                 "WASD: Move | Mouse: Rotate | LClick: Red toggle | RClick: Blue toggle | Scroll: Scale",
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 20f), new Vector2(900f, 30f),
                 16, FontStyle.Normal, new Color(0.7f, 0.7f, 0.7f, 1f), TextAnchor.MiddleCenter);
 
-            // Wire controller component onto the cube
             MeshRenderer? renderer = cube.GetComponent<MeshRenderer>();
             InputReplayVerificationController controller = cube.AddComponent<InputReplayVerificationController>();
             SerializedObject so = new SerializedObject(controller);
@@ -143,6 +147,7 @@ namespace io.github.hatayama.uLoopMCP
             so.FindProperty("_rotationText").objectReferenceValue = rotationText;
             so.FindProperty("_scaleText").objectReferenceValue = scaleText;
             so.FindProperty("_inputText").objectReferenceValue = inputText;
+            so.FindProperty("_startPromptText").objectReferenceValue = startPromptText;
             so.FindProperty("_cubeRenderer").objectReferenceValue = renderer;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
