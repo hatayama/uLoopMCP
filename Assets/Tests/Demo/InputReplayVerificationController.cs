@@ -55,10 +55,17 @@ namespace io.github.hatayama.uLoopMCP
 
         private void Update()
         {
-            // Wait until the Game View receives focus at least once
+            // In Editor, mouse input is reported even without Game View focus.
+            // Require a click inside the Game View to activate.
             if (!_activated)
             {
-                if (!Application.isFocused)
+                Mouse? earlyMouse = Mouse.current;
+                if (earlyMouse == null || !earlyMouse.leftButton.wasPressedThisFrame)
+                {
+                    return;
+                }
+                Vector2 pos = earlyMouse.position.ReadValue();
+                if (pos.x < 0 || pos.x > Screen.width || pos.y < 0 || pos.y > Screen.height)
                 {
                     return;
                 }
