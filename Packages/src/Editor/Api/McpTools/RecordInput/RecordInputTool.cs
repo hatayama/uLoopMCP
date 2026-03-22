@@ -139,24 +139,17 @@ namespace io.github.hatayama.uLoopMCP
 
             if (delaySeconds > 0)
             {
-                if (parameters.ShowOverlay)
-                {
-                    RecordInputOverlayState.StartCountdown(delaySeconds);
-                }
+                RecordInputOverlayState.StartCountdown(delaySeconds);
 
                 await TimerDelay.WaitThenExecuteOnMainThread(delaySeconds * 1000, () =>
                 {
-                    if (!EditorApplication.isPlaying)
+                    if (!EditorApplication.isPlaying || RecordInputOverlayState.Phase != RecordInputOverlayPhase.Countdown)
                     {
                         RecordInputOverlayState.Clear();
                         return;
                     }
 
-                    if (parameters.ShowOverlay)
-                    {
-                        RecordInputOverlayState.StartRecording();
-                    }
-
+                    RecordInputOverlayState.StartRecording();
                     InputRecorder.StartRecording(keyFilter);
                 }, ct);
 
@@ -173,11 +166,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                if (parameters.ShowOverlay)
-                {
-                    RecordInputOverlayState.StartRecording();
-                }
-
+                RecordInputOverlayState.StartRecording();
                 InputRecorder.StartRecording(keyFilter);
             }
 

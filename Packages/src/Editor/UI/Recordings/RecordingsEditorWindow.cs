@@ -105,6 +105,12 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            if (RecordInputOverlayState.Phase == RecordInputOverlayPhase.Countdown)
+            {
+                RecordInputOverlayState.Clear();
+                return;
+            }
+
             if (InputRecorder.IsRecording)
             {
                 InputRecordingData data = InputRecorder.StopRecording();
@@ -128,9 +134,10 @@ namespace io.github.hatayama.uLoopMCP
             {
                 RecordInputOverlayState.StartCountdown(delaySeconds);
                 int delayMs = delaySeconds * 1000;
+                // Countdown may be cancelled before callback fires
                 TimerDelay.WaitThenExecuteOnMainThread(delayMs, () =>
                 {
-                    if (!EditorApplication.isPlaying)
+                    if (!EditorApplication.isPlaying || RecordInputOverlayState.Phase != RecordInputOverlayPhase.Countdown)
                     {
                         RecordInputOverlayState.Clear();
                         return;

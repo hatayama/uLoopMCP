@@ -70,6 +70,7 @@ namespace io.github.hatayama.uLoopMCP
 
             CaptureInitialKeyStates();
             CaptureInitialButtonStates();
+            EmitInitialHeldEvents();
 
             InputSystem.onAfterUpdate -= OnAfterUpdate;
             InputSystem.onAfterUpdate += OnAfterUpdate;
@@ -319,6 +320,40 @@ namespace io.github.hatayama.uLoopMCP
             Key[] filtered = new Key[keyFilter.Count];
             keyFilter.CopyTo(filtered);
             return filtered;
+        }
+
+        // Keys/buttons already held when recording starts need explicit DOWN events,
+        // otherwise replay starts with those controls released until a state change occurs.
+        private static void EmitInitialHeldEvents()
+        {
+            List<RecordedInputEvent> events = new List<RecordedInputEvent>();
+
+            foreach (Key key in _previousKeyStates)
+            {
+                events.Add(new RecordedInputEvent
+                {
+                    Type = InputEventTypes.KEY_DOWN,
+                    Data = key.ToString()
+                });
+            }
+
+            foreach (MouseButton button in _previousButtonStates)
+            {
+                events.Add(new RecordedInputEvent
+                {
+                    Type = InputEventTypes.MOUSE_CLICK,
+                    Data = button.ToString()
+                });
+            }
+
+            if (events.Count > 0)
+            {
+                _recordedFrames.Add(new InputFrameEvents
+                {
+                    Frame = 0,
+                    Events = events
+                });
+            }
         }
 
         private static void CaptureInitialKeyStates()
