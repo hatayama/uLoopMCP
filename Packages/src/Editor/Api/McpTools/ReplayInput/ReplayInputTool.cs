@@ -124,7 +124,7 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            string inputPath = ResolveInputPath(parameters.InputPath);
+            string inputPath = InputRecordingFileHelper.ResolveLatestRecording(parameters.InputPath);
             if (string.IsNullOrEmpty(inputPath))
             {
                 return new ReplayInputResponse
@@ -145,14 +145,9 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            string json = File.ReadAllText(inputPath);
-            JsonSerializerSettings jsonSettings = new JsonSerializerSettings
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
-            };
-            InputRecordingData? data = JsonConvert.DeserializeObject<InputRecordingData>(json, jsonSettings);
+            InputRecordingData? data = InputRecordingFileHelper.Load(inputPath);
 
-            if (data == null || data.Frames == null)
+            if (data == null)
             {
                 return new ReplayInputResponse
                 {
@@ -231,28 +226,6 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        private static string ResolveInputPath(string inputPath)
-        {
-            if (!string.IsNullOrEmpty(inputPath))
-            {
-                return inputPath;
-            }
-
-            string outputDir = RecordInputConstants.DEFAULT_OUTPUT_DIR;
-            if (!Directory.Exists(outputDir))
-            {
-                return "";
-            }
-
-            string[] files = Directory.GetFiles(outputDir, ReplayInputConstants.JSON_FILE_PATTERN);
-            if (files.Length == 0)
-            {
-                return "";
-            }
-
-            // Return the most recently modified file
-            return files.OrderByDescending(f => File.GetLastWriteTimeUtc(f)).First();
-        }
 #endif
     }
 }

@@ -120,7 +120,7 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            HashSet<Key>? keyFilter = ParseKeyFilter(parameters.Keys);
+            HashSet<Key>? keyFilter = InputRecordingFileHelper.ParseKeyFilter(parameters.Keys);
             InputRecorder.StartRecording(keyFilter);
 
             string filterMessage = keyFilter != null ? $" (filtering: {parameters.Keys})" : "";
@@ -146,17 +146,8 @@ namespace io.github.hatayama.uLoopMCP
 
             InputRecordingData data = InputRecorder.StopRecording();
 
-            string outputPath = ResolveOutputPath(parameters.OutputPath);
-            string directoryPath = Path.GetDirectoryName(outputPath)!;
-            Directory.CreateDirectory(directoryPath);
-
-            JsonSerializerSettings jsonSettings = new JsonSerializerSettings
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                Formatting = Formatting.Indented
-            };
-            string json = JsonConvert.SerializeObject(data, jsonSettings);
-            File.WriteAllText(outputPath, json);
+            string outputPath = InputRecordingFileHelper.ResolveOutputPath(parameters.OutputPath);
+            InputRecordingFileHelper.Save(data, outputPath);
 
             int eventCount = data.GetTotalEventCount();
 
@@ -171,47 +162,6 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        private static string ResolveOutputPath(string outputPath)
-        {
-            if (!string.IsNullOrEmpty(outputPath))
-            {
-                return outputPath;
-            }
-
-            string timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-            return $"{RecordInputConstants.DEFAULT_OUTPUT_DIR}/{RecordInputConstants.RECORDING_FILE_PREFIX}{timestamp}.json";
-        }
-
-        private static HashSet<Key>? ParseKeyFilter(string keys)
-        {
-            if (string.IsNullOrEmpty(keys))
-            {
-                return null;
-            }
-
-            HashSet<Key> filter = new HashSet<Key>();
-            string[] parts = keys.Split(',');
-
-            for (int i = 0; i < parts.Length; i++)
-            {
-                string trimmed = parts[i].Trim();
-                if (string.IsNullOrEmpty(trimmed))
-                {
-                    continue;
-                }
-
-                if (Enum.TryParse<Key>(trimmed, ignoreCase: true, out Key key) && key != Key.None)
-                {
-                    filter.Add(key);
-                }
-                else
-                {
-                    Debug.LogWarning($"[RecordInputTool] Unknown key name in filter: '{trimmed}'");
-                }
-            }
-
-            return filter.Count > 0 ? filter : null;
-        }
 #endif
     }
 }
