@@ -35,6 +35,7 @@ namespace io.github.hatayama.uLoopMCP
         private Vector3 _initialPosition;
         private Vector3 _initialEulerAngles;
         private int _startFrame;
+        private bool _activated;
         private readonly List<string> _eventLog = new();
         private Vector3 _lastLoggedPosition;
         private bool _colorToggleRed;
@@ -54,6 +55,16 @@ namespace io.github.hatayama.uLoopMCP
 
         private void Update()
         {
+            // Wait until the Game View receives focus at least once
+            if (!_activated)
+            {
+                if (!Application.isFocused)
+                {
+                    return;
+                }
+                _activated = true;
+            }
+
             Keyboard? keyboard = Keyboard.current;
             Mouse? mouse = Mouse.current;
             if (keyboard == null || mouse == null)
@@ -93,6 +104,7 @@ namespace io.github.hatayama.uLoopMCP
         private void Activate()
         {
             ResetState();
+            _activated = true;
             _startFrame = Time.frameCount;
             HidePanel(_verifyPanel);
         }
