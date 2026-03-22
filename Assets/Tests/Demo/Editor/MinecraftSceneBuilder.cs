@@ -10,7 +10,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     public static class MinecraftSceneBuilder
     {
-        private const string ScenePath = "Assets/Tests/Demo/Minecraft/Scenes/SampleScene.unity";
+        private const string ScenePath = "Assets/Scenes/Minecraft.unity";
         private const string InputActionsPath = "Assets/Tests/Demo/Minecraft/InputSystem_Actions.inputactions";
         private const string BlockRegistryPath = "Assets/Tests/Demo/Minecraft/ScriptableObjects/BlockRegistry.asset";
         private const string BlockAtlasMaterialPath = "Assets/Tests/Demo/Minecraft/Materials/BlockAtlas.mat";
