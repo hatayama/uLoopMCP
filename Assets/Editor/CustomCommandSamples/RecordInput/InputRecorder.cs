@@ -44,6 +44,9 @@ namespace io.github.hatayama.uLoopMCP
         private static readonly HashSet<Key> _currentKeyStates = new();
         private static readonly HashSet<MouseButton> _currentButtonStates = new();
 
+        public static event Action? RecordingStarted;
+        public static event Action? RecordingStopped;
+
         public static bool IsRecording => _isRecording;
         public static string? LastAutoSavePath { get; internal set; }
 
@@ -73,6 +76,8 @@ namespace io.github.hatayama.uLoopMCP
 
             InputSystem.onAfterUpdate -= OnAfterUpdate;
             InputSystem.onAfterUpdate += OnAfterUpdate;
+
+            RecordingStarted?.Invoke();
         }
 
         public static InputRecordingData StopRecording()
@@ -98,6 +103,7 @@ namespace io.github.hatayama.uLoopMCP
             };
 
             Reset();
+            RecordingStopped?.Invoke();
             return data;
         }
 

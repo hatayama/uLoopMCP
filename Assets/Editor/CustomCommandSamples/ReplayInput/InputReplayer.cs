@@ -29,6 +29,7 @@ namespace io.github.hatayama.uLoopMCP
         private static readonly HashSet<Key> _replayHeldKeys = new();
         private static readonly HashSet<MouseButton> _replayHeldButtons = new();
 
+        public static event Action? ReplayStarted;
         public static event Action? ReplayCompleted;
 
         public static bool IsReplaying => _isReplaying;
@@ -69,6 +70,8 @@ namespace io.github.hatayama.uLoopMCP
             // events that were processed earlier in the same frame.
             InputSystem.onAfterUpdate -= OnAfterUpdate;
             InputSystem.onAfterUpdate += OnAfterUpdate;
+
+            ReplayStarted?.Invoke();
         }
 
         public static void StopReplay()

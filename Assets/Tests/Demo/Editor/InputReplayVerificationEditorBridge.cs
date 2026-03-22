@@ -5,53 +5,26 @@ using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    // Detects InputRecorder/InputReplayer state transitions and drives the
+    // Subscribes to InputRecorder/InputReplayer lifecycle events and drives the
     // verification controller accordingly. The Recordings EditorWindow (or CLI)
     // starts recording/replay; this bridge resets the controller so logging
-    // stays in sync.
+    // stays in sync within the same frame.
     [InitializeOnLoad]
     internal static class InputReplayVerificationEditorBridge
     {
-        private static bool _prevIsRecording;
-        private static bool _prevIsReplaying;
-
         static InputReplayVerificationEditorBridge()
         {
-            EditorApplication.update -= OnEditorUpdate;
-            EditorApplication.update += OnEditorUpdate;
+            InputRecorder.RecordingStarted -= OnRecordingStarted;
+            InputRecorder.RecordingStarted += OnRecordingStarted;
+
+            InputRecorder.RecordingStopped -= OnRecordingStopped;
+            InputRecorder.RecordingStopped += OnRecordingStopped;
+
+            InputReplayer.ReplayStarted -= OnReplayStarted;
+            InputReplayer.ReplayStarted += OnReplayStarted;
 
             InputReplayer.ReplayCompleted -= OnReplayCompleted;
             InputReplayer.ReplayCompleted += OnReplayCompleted;
-        }
-
-        private static void OnEditorUpdate()
-        {
-            if (!EditorApplication.isPlaying)
-            {
-                _prevIsRecording = false;
-                _prevIsReplaying = false;
-                return;
-            }
-
-            bool isRecording = InputRecorder.IsRecording;
-            bool isReplaying = InputReplayer.IsReplaying;
-
-            if (isRecording && !_prevIsRecording)
-            {
-                OnRecordingStarted();
-            }
-            else if (!isRecording && _prevIsRecording)
-            {
-                OnRecordingStopped();
-            }
-
-            if (isReplaying && !_prevIsReplaying)
-            {
-                OnReplayStarted();
-            }
-
-            _prevIsRecording = isRecording;
-            _prevIsReplaying = isReplaying;
         }
 
         private static void OnRecordingStarted()
@@ -63,7 +36,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             controller.ActivateForExternalControl();
-            Debug.Log("[VerificationBridge] Recording detected, controller reset");
+            Debug.Log("[VerificationBridge] Recording started, controller reset");
         }
 
         private static void OnRecordingStopped()
@@ -87,7 +60,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             controller.ActivateForExternalReplay();
-            Debug.Log("[VerificationBridge] Replay detected, controller reset");
+            Debug.Log("[VerificationBridge] Replay started, controller reset");
         }
 
         private static void OnReplayCompleted()
