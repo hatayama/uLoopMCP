@@ -23,7 +23,7 @@ namespace io.github.hatayama.uLoopMCP
         private bool _isInstallingSkills;
         private bool _isRefreshingVersion;
 
-        [MenuItem("Window/uLoop")]
+        [MenuItem("Window/uLoop/Settings")]
         public static void ShowWindow()
         {
             McpEditorWindow window = GetWindow<McpEditorWindow>("uLoop");
