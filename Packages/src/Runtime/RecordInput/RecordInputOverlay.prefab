@@ -18,7 +18,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &3582369045929623476
 RectTransform:
   m_ObjectHideFlags: 0
@@ -152,7 +152,7 @@ CanvasGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5910659660082971454}
   m_Enabled: 1
-  m_Alpha: 0
+  m_Alpha: 1
   m_Interactable: 0
   m_BlocksRaycasts: 0
   m_IgnoreParentGroups: 0
@@ -168,12 +168,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 626f611c789dd4febbff8920eeb25837, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _canvasGroup: {fileID: 0}
-  _countdownGroup: {fileID: 0}
-  _countdownText: {fileID: 0}
-  _recordingGroup: {fileID: 0}
-  _recDotText: {fileID: 0}
-  _statusText: {fileID: 0}
+  _canvasGroup: {fileID: 1629439249830669379}
+  _countdownGroup: {fileID: 8747864644649913744}
+  _countdownText: {fileID: 5505213563100565343}
+  _recordingGroup: {fileID: 22181428640489494}
+  _recDotText: {fileID: 8821962787790114429}
+  _statusText: {fileID: 681519330149296984}
 --- !u!114 &7304014939787943379
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -439,7 +439,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &8858599889832361986
 RectTransform:
   m_ObjectHideFlags: 0
