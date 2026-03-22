@@ -50,7 +50,8 @@ namespace io.github.hatayama.uLoopMCP
 
             SetRuntimeState(data, registry, worldBlockGetter);
             CacheComponents();
-            mesh = meshFilter.sharedMesh;
+            // mesh intentionally left null: RebuildMesh would Clear() it, destroying
+            // the persistent .asset. A new Mesh is created on first SetBlock instead.
         }
 
         private void SetRuntimeState(ChunkData data, BlockRegistry registry,
