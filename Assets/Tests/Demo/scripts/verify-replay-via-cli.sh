@@ -105,11 +105,17 @@ echo "========================================="
 echo ""
 read dummy
 
-echo "[4/8] Stopping recording via CLI..."
-uloop record-input --action Stop $PROJECT_OPTS
+echo "[4/8] Saving event log + deactivating controller..."
+uloop execute-dynamic-code $PROJECT_OPTS --code '
+var cube = GameObject.Find("VerificationCube");
+if (cube == null) return "ERROR: VerificationCube not found";
+cube.SendMessage("SaveLog", ".uloop/outputs/InputRecordings/recording-event-log.txt");
+cube.SendMessage("ClearLog");
+return "OK: log saved, controller deactivated";
+'
 
-echo "  Saving recording event log..."
-save_log ".uloop/outputs/InputRecordings/recording-event-log.txt"
+echo "  Stopping recording via CLI..."
+uloop record-input --action Stop $PROJECT_OPTS
 
 # ---- Phase 2: Replay via CLI ----
 
@@ -128,17 +134,18 @@ REPLAY_RESULT=$(uloop replay-input --action Start $PROJECT_OPTS 2>&1) || true
 echo "  $REPLAY_RESULT"
 
 echo "  Waiting for replay to finish..."
+sleep 2
 waited=0
 while [ $waited -lt 60 ]; do
     STATUS_RESULT=$(uloop replay-input --action Status $PROJECT_OPTS 2>&1) || true
-    playing=$(echo "$STATUS_RESULT" | grep -o '"IsReplaying":[a-z]*' | cut -d: -f2)
+    playing=$(echo "$STATUS_RESULT" | grep -o '"IsReplaying": *[a-z]*' | sed 's/.*: *//')
     if [ "$playing" = "false" ]; then
         echo "  Replay completed."
         break
     fi
     if [ $((waited % 5)) -eq 0 ]; then
-        progress=$(echo "$STATUS_RESULT" | grep -o '"Progress":[0-9.]*' | cut -d: -f2)
-        echo "  Progress: $progress"
+        progress=$(echo "$STATUS_RESULT" | grep -o '"Progress": *[0-9.]*' | sed 's/.*: *//')
+        echo "  Progress: ${progress:-...}"
     fi
     sleep 1
     waited=$((waited + 1))
@@ -165,8 +172,12 @@ echo ""
 # CLI commands introduce variable delays, so absolute frame numbers
 # differ, but relative timing between events should be identical.
 normalize_frames() {
-    awk 'NR==1 { match($0, /Frame ([0-9]+):/, a); base=a[1] }
-         { match($0, /Frame ([0-9]+):(.*)/, a); printf "Frame %d:%s\n", a[1]-base, a[2] }' "$1"
+    base=$(head -1 "$1" | sed 's/Frame \([0-9]*\):.*/\1/')
+    sed "s/Frame \([0-9]*\)/Frame \1/" "$1" | while IFS= read -r line; do
+        frame=$(echo "$line" | sed 's/Frame \([0-9]*\):.*/\1/')
+        rest=$(echo "$line" | sed 's/Frame [0-9]*: //')
+        echo "Frame $((frame - base)): $rest"
+    done
 }
 
 normalize_frames "$RECORDING_LOG" > "$RECORDING_LOG.norm"
