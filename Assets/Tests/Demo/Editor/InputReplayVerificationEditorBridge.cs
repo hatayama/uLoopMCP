@@ -51,6 +51,12 @@ namespace io.github.hatayama.uLoopMCP
 
             int eventCount = data.GetTotalEventCount();
             Debug.Log($"[VerificationBridge] Recording stopped: {eventCount} events, {data.Metadata.TotalFrames} frames -> {outputPath}");
+
+            InputReplayVerificationController? controller = Object.FindObjectOfType<InputReplayVerificationController>();
+            if (controller != null)
+            {
+                controller.OnSaveRecordingLog();
+            }
         }
 
         private static void OnReplayStartRequested()
