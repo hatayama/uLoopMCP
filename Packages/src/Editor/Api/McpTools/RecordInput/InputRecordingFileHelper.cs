@@ -62,7 +62,8 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             string timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-            return $"{RecordInputConstants.DEFAULT_OUTPUT_DIR}/{RecordInputConstants.RECORDING_FILE_PREFIX}{timestamp}.json";
+            string fileName = $"{RecordInputConstants.RECORDING_FILE_PREFIX}{timestamp}.json";
+            return Path.Combine(RecordInputConstants.DEFAULT_OUTPUT_DIR, fileName);
         }
 
         public static string ResolveLatestRecording(string inputPath)

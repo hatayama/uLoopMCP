@@ -36,7 +36,7 @@ namespace io.github.hatayama.uLoopMCP
             return new ReplayInputResponse
             {
                 Success = false,
-                Message = "replay-input requires the Input System package (com.unity.inputsystem). Install it via Package Manager.",
+                Message = "replay-input requires the Input System package (com.unity.inputsystem). Install it via Package Manager and set Active Input Handling to 'Input System Package (New)' or 'Both' in Player Settings.",
                 Action = parameters.Action.ToString()
             };
 #else
@@ -147,7 +147,7 @@ namespace io.github.hatayama.uLoopMCP
 
             InputRecordingData? data = InputRecordingFileHelper.Load(inputPath);
 
-            if (data == null)
+            if (data == null || data.Metadata == null)
             {
                 return new ReplayInputResponse
                 {

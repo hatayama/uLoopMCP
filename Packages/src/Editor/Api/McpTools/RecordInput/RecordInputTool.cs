@@ -36,7 +36,7 @@ namespace io.github.hatayama.uLoopMCP
             return new RecordInputResponse
             {
                 Success = false,
-                Message = "record-input requires the Input System package (com.unity.inputsystem). Install it via Package Manager.",
+                Message = "record-input requires the Input System package (com.unity.inputsystem). Install it via Package Manager and set Active Input Handling to 'Input System Package (New)' or 'Both' in Player Settings.",
                 Action = parameters.Action.ToString()
             };
 #else

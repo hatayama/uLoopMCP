@@ -52,6 +52,11 @@ namespace io.github.hatayama.uLoopMCP
 
         private void Start()
         {
+            Debug.Assert(_startPanel != null, "_startPanel must be assigned in scene");
+            Debug.Assert(_stopPanel != null, "_stopPanel must be assigned in scene");
+            Debug.Assert(_verifyPanel != null, "_verifyPanel must be assigned in scene");
+            Debug.Assert(_cubeRenderer != null, "_cubeRenderer must be assigned in scene");
+
             Application.targetFrameRate = TARGET_FRAME_RATE;
             _initialPosition = transform.position;
             _initialEulerAngles = transform.eulerAngles;
@@ -364,7 +369,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static string GetLogPath(string fileName)
         {
-            return $"{LOG_OUTPUT_DIR}/{fileName}";
+            return System.IO.Path.Combine(LOG_OUTPUT_DIR, fileName);
         }
 
         private void SetVerifyResult(string message)

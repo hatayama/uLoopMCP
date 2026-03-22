@@ -38,6 +38,7 @@ namespace io.github.hatayama.uLoopMCP
             if (ReplayInputOverlayState.IsActive)
             {
                 _wasActive = true;
+                _deactivatedTime = 0f;
                 SetVisible(true);
                 UpdateDisplay();
                 return;
