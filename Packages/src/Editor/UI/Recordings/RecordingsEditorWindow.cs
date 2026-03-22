@@ -17,7 +17,6 @@ namespace io.github.hatayama.uLoopMCP
         private Button _recordButton;
         private Button _replayButton;
         private Button _openFolderButton;
-        private Button _refreshButton;
         private IntegerField _delayField;
         private DropdownField _fileDropdown;
         private Label _recordStatusLabel;
@@ -34,7 +33,7 @@ namespace io.github.hatayama.uLoopMCP
         private int _prevSecs = -1;
         private int _prevReplayFrame = -1;
 
-        [MenuItem("Window/uLoop/Recordings")]
+        [MenuItem("Window/Unity CLI Loop/Recordings", priority = 1)]
         public static void ShowWindow()
         {
             RecordingsEditorWindow window = GetWindow<RecordingsEditorWindow>("Recordings");
@@ -76,7 +75,6 @@ namespace io.github.hatayama.uLoopMCP
             if (_recordButton != null) _recordButton.clicked -= OnRecordButtonClicked;
             if (_replayButton != null) _replayButton.clicked -= OnReplayButtonClicked;
             if (_openFolderButton != null) _openFolderButton.clicked -= OnOpenFolderClicked;
-            if (_refreshButton != null) _refreshButton.clicked -= RefreshFileList;
         }
 
         private void QueryElements()
@@ -84,7 +82,6 @@ namespace io.github.hatayama.uLoopMCP
             _recordButton = rootVisualElement.Q<Button>("record-button");
             _replayButton = rootVisualElement.Q<Button>("replay-button");
             _openFolderButton = rootVisualElement.Q<Button>("open-folder-button");
-            _refreshButton = rootVisualElement.Q<Button>("refresh-button");
             _delayField = rootVisualElement.Q<IntegerField>("delay-field");
             _fileDropdown = rootVisualElement.Q<DropdownField>("file-dropdown");
             _recordStatusLabel = rootVisualElement.Q<Label>("record-status-label");
@@ -98,7 +95,6 @@ namespace io.github.hatayama.uLoopMCP
             _recordButton.clicked += OnRecordButtonClicked;
             _replayButton.clicked += OnReplayButtonClicked;
             _openFolderButton.clicked += OnOpenFolderClicked;
-            _refreshButton.clicked += RefreshFileList;
         }
 
         private void OnRecordButtonClicked()

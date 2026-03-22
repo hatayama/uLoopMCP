@@ -31,22 +31,16 @@
             </ui:VisualElement>
 
             <ui:VisualElement class="rec-row">
+                <ui:Button name="open-folder-button" text="Open Folder" class="rec-button" />
+            </ui:VisualElement>
+
+            <ui:VisualElement class="rec-row">
                 <ui:Button name="replay-button" text="Start Replay" class="rec-button rec-button--replay" />
             </ui:VisualElement>
 
             <ui:VisualElement class="rec-status-row">
                 <ui:VisualElement name="replay-status-indicator" class="rec-status-indicator" />
                 <ui:Label name="replay-status-label" text="Idle" class="rec-status-label" />
-            </ui:VisualElement>
-        </ui:VisualElement>
-
-        <!-- Files Section -->
-        <ui:VisualElement name="files-section" class="rec-section rec-section--box">
-            <ui:Label text="Recordings" class="rec-section__header" />
-            <ui:ListView name="files-list" class="rec-files-list" />
-            <ui:VisualElement class="rec-row">
-                <ui:Button name="open-folder-button" text="Open Folder" class="rec-button" />
-                <ui:Button name="refresh-button" text="Refresh" class="rec-button" />
             </ui:VisualElement>
         </ui:VisualElement>
 

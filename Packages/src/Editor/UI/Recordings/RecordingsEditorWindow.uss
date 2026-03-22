@@ -20,6 +20,7 @@
     border-width: 1px;
     border-radius: 3px;
     padding: 8px;
+    overflow: hidden;
 }
 
 .rec-section__header {
@@ -46,6 +47,9 @@
 
 .rec-row__dropdown {
     flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 
 /* Buttons */
@@ -105,9 +109,3 @@
     color: var(--unity-colors-default-text);
 }
 
-/* Files list */
-.rec-files-list {
-    min-height: 80px;
-    max-height: 200px;
-    margin-bottom: 4px;
-}
