@@ -5,6 +5,7 @@ using System.Globalization;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.LowLevel;
 
 namespace io.github.hatayama.uLoopMCP
@@ -13,12 +14,15 @@ namespace io.github.hatayama.uLoopMCP
     internal static class InputReplayer
     {
         private static readonly Dictionary<string, Key> _keyLookup = BuildKeyLookup();
+        private static readonly Key[] _allKeys = BuildAllKeys();
         private static readonly Dictionary<string, MouseButton> _buttonLookup = new(StringComparer.OrdinalIgnoreCase)
         {
             { "Left", MouseButton.Left },
             { "Right", MouseButton.Right },
             { "Middle", MouseButton.Middle }
         };
+        private static readonly Key[] _emptyKeys = Array.Empty<Key>();
+        private static readonly MouseButton[] _emptyButtons = Array.Empty<MouseButton>();
 
         private static bool _isReplaying;
         private static InputRecordingData? _data;
@@ -66,8 +70,6 @@ namespace io.github.hatayama.uLoopMCP
             _replayHeldButtons.Clear();
             _isReplaying = true;
 
-            // Use onAfterUpdate so injected values overwrite physical mouse
-            // events that were processed earlier in the same frame.
             InputSystem.onAfterUpdate -= OnAfterUpdate;
             InputSystem.onAfterUpdate += OnAfterUpdate;
 
@@ -109,18 +111,11 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            Keyboard? keyboard = Keyboard.current;
-            Mouse? mouse = Mouse.current;
+            Vector2 frameDelta = Vector2.zero;
+            Vector2 frameScroll = Vector2.zero;
 
-            while (_eventIndex < _data.Frames.Count && _data.Frames[_eventIndex].Frame <= _currentFrame)
-            {
-                InputFrameEvents frameEvents = _data.Frames[_eventIndex];
-                for (int i = 0; i < frameEvents.Events.Count; i++)
-                {
-                    ProcessEvent(frameEvents.Events[i], keyboard, mouse);
-                }
-                _eventIndex++;
-            }
+            CollectFrameState(ref frameDelta, ref frameScroll);
+            ApplyCurrentFrameSnapshot(Keyboard.current, Mouse.current, frameDelta, frameScroll);
 
             if (_showOverlay)
             {
@@ -145,131 +140,179 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private static void ProcessEvent(RecordedInputEvent evt, Keyboard? keyboard, Mouse? mouse)
+        private static void CollectFrameState(ref Vector2 frameDelta, ref Vector2 frameScroll)
+        {
+            Debug.Assert(_data != null, "_data must not be null while replaying");
+
+            while (_eventIndex < _data!.Frames.Count && _data.Frames[_eventIndex].Frame <= _currentFrame)
+            {
+                InputFrameEvents frameEvents = _data.Frames[_eventIndex];
+                for (int i = 0; i < frameEvents.Events.Count; i++)
+                {
+                    ProcessEvent(frameEvents.Events[i], ref frameDelta, ref frameScroll);
+                }
+
+                _eventIndex++;
+            }
+        }
+
+        private static void ApplyCurrentFrameSnapshot(
+            Keyboard? keyboard,
+            Mouse? mouse,
+            Vector2 frameDelta,
+            Vector2 frameScroll)
+        {
+            if (keyboard != null)
+            {
+                ApplyKeyboardSnapshot(keyboard, _replayHeldKeys);
+            }
+
+            if (mouse != null)
+            {
+                ApplyMouseSnapshot(mouse, _replayHeldButtons, frameDelta, frameScroll);
+            }
+        }
+
+        private static void ProcessEvent(
+            RecordedInputEvent evt,
+            ref Vector2 frameDelta,
+            ref Vector2 frameScroll)
         {
             switch (evt.Type)
             {
                 case InputEventTypes.KEY_DOWN:
-                    ProcessKeyDown(evt.Data, keyboard);
+                    ProcessKeyDown(evt.Data);
                     break;
                 case InputEventTypes.KEY_UP:
-                    ProcessKeyUp(evt.Data, keyboard);
+                    ProcessKeyUp(evt.Data);
                     break;
                 case InputEventTypes.MOUSE_CLICK:
-                    ProcessMouseClick(evt.Data, mouse);
+                    ProcessMouseClick(evt.Data);
                     break;
                 case InputEventTypes.MOUSE_RELEASE:
-                    ProcessMouseRelease(evt.Data, mouse);
+                    ProcessMouseRelease(evt.Data);
                     break;
                 case InputEventTypes.MOUSE_DELTA:
-                    ProcessMouseDelta(evt.Data, mouse);
+                    ProcessMouseDelta(evt.Data, ref frameDelta);
                     break;
                 case InputEventTypes.MOUSE_SCROLL:
-                    ProcessMouseScroll(evt.Data, mouse);
+                    ProcessMouseScroll(evt.Data, ref frameScroll);
                     break;
             }
         }
 
-        private static void ProcessKeyDown(string keyName, Keyboard? keyboard)
+        private static void ProcessKeyDown(string keyName)
         {
-            if (keyboard == null)
-            {
-                return;
-            }
-
             if (!_keyLookup.TryGetValue(keyName, out Key key))
             {
                 return;
             }
 
-            KeyboardKeyState.SetKeyDown(key);
-            KeyboardKeyState.SetKeyState(keyboard, key, true);
             _replayHeldKeys.Add(key);
             SimulateKeyboardOverlayState.AddHeldKey(keyName);
         }
 
-        private static void ProcessKeyUp(string keyName, Keyboard? keyboard)
+        private static void ProcessKeyUp(string keyName)
         {
-            if (keyboard == null)
-            {
-                return;
-            }
-
             if (!_keyLookup.TryGetValue(keyName, out Key key))
             {
                 return;
             }
 
-            KeyboardKeyState.SetKeyState(keyboard, key, false);
-            KeyboardKeyState.SetKeyUp(key);
             _replayHeldKeys.Remove(key);
             SimulateKeyboardOverlayState.RemoveHeldKey(keyName);
         }
 
-        private static void ProcessMouseClick(string buttonName, Mouse? mouse)
+        private static void ProcessMouseClick(string buttonName)
         {
-            if (mouse == null)
-            {
-                return;
-            }
-
             if (!_buttonLookup.TryGetValue(buttonName, out MouseButton button))
             {
                 return;
             }
 
-            MouseInputState.SetButtonDown(button);
-            MouseInputState.SetButtonState(mouse, button, true);
             _replayHeldButtons.Add(button);
             SimulateMouseInputOverlayState.SetButtonHeld(button, true);
         }
 
-        private static void ProcessMouseRelease(string buttonName, Mouse? mouse)
+        private static void ProcessMouseRelease(string buttonName)
         {
-            if (mouse == null)
-            {
-                return;
-            }
-
             if (!_buttonLookup.TryGetValue(buttonName, out MouseButton button))
             {
                 return;
             }
 
-            MouseInputState.SetButtonState(mouse, button, false);
-            MouseInputState.SetButtonUp(button);
             _replayHeldButtons.Remove(button);
             SimulateMouseInputOverlayState.SetButtonHeld(button, false);
         }
 
-        private static void ProcessMouseDelta(string data, Mouse? mouse)
+        private static void ProcessMouseDelta(string data, ref Vector2 frameDelta)
         {
-            if (mouse == null)
-            {
-                return;
-            }
-
-            Vector2 delta = InputRecorder.ParseVector2(data);
-            MouseInputState.SetDeltaState(mouse, delta);
-            SimulateMouseInputOverlayState.SetMoveDelta(delta);
+            frameDelta = InputRecorder.ParseVector2(data);
+            SimulateMouseInputOverlayState.SetMoveDelta(frameDelta);
         }
 
-        private static void ProcessMouseScroll(string data, Mouse? mouse)
+        private static void ProcessMouseScroll(string data, ref Vector2 frameScroll)
         {
-            if (mouse == null)
-            {
-                return;
-            }
-
             if (!float.TryParse(data, NumberStyles.Float, CultureInfo.InvariantCulture, out float scrollY))
             {
                 return;
             }
 
-            Vector2 scroll = new Vector2(0f, scrollY);
-            MouseInputState.SetScrollState(mouse, scroll);
+            frameScroll = new Vector2(0f, scrollY);
             int direction = scrollY > 0f ? 1 : scrollY < 0f ? -1 : 0;
             SimulateMouseInputOverlayState.SetScrollDirection(direction);
+        }
+
+        private static void ApplyKeyboardSnapshot(Keyboard keyboard, IReadOnlyCollection<Key> heldKeys)
+        {
+            InputUpdateType updateType = InputUpdateTypeResolver.Resolve();
+            using (StateEvent.From(keyboard, out InputEventPtr eventPtr))
+            {
+                // Zero all keys that have a valid control on this keyboard layout
+                for (int i = 0; i < _allKeys.Length; i++)
+                {
+                    KeyControl? control = keyboard[_allKeys[i]];
+                    if (control != null)
+                    {
+                        control.WriteValueIntoEvent(0f, eventPtr);
+                    }
+                }
+
+                foreach (Key key in heldKeys)
+                {
+                    KeyControl? control = keyboard[key];
+                    if (control != null)
+                    {
+                        control.WriteValueIntoEvent(1f, eventPtr);
+                    }
+                }
+
+                InputState.Change(keyboard, eventPtr, updateType);
+            }
+        }
+
+        private static void ApplyMouseSnapshot(
+            Mouse mouse,
+            IReadOnlyCollection<MouseButton> heldButtons,
+            Vector2 delta,
+            Vector2 scroll)
+        {
+            InputUpdateType updateType = InputUpdateTypeResolver.Resolve();
+            using (StateEvent.From(mouse, out InputEventPtr eventPtr))
+            {
+                mouse.leftButton.WriteValueIntoEvent(0f, eventPtr);
+                mouse.rightButton.WriteValueIntoEvent(0f, eventPtr);
+                mouse.middleButton.WriteValueIntoEvent(0f, eventPtr);
+                mouse.delta.WriteValueIntoEvent(delta, eventPtr);
+                mouse.scroll.WriteValueIntoEvent(scroll, eventPtr);
+
+                foreach (MouseButton button in heldButtons)
+                {
+                    MouseInputState.GetButtonControl(mouse, button).WriteValueIntoEvent(1f, eventPtr);
+                }
+
+                InputState.Change(mouse, eventPtr, updateType);
+            }
         }
 
         private static void ReleaseAllHeldInputs()
@@ -277,27 +320,45 @@ namespace io.github.hatayama.uLoopMCP
             Keyboard? keyboard = Keyboard.current;
             if (keyboard != null)
             {
-                foreach (Key key in _replayHeldKeys)
-                {
-                    KeyboardKeyState.SetKeyState(keyboard, key, false);
-                    KeyboardKeyState.SetKeyUp(key);
-                    SimulateKeyboardOverlayState.RemoveHeldKey(key.ToString());
-                }
+                ApplyKeyboardSnapshot(keyboard, _emptyKeys);
             }
 
             Mouse? mouse = Mouse.current;
             if (mouse != null)
             {
-                foreach (MouseButton button in _replayHeldButtons)
-                {
-                    MouseInputState.SetButtonState(mouse, button, false);
-                    MouseInputState.SetButtonUp(button);
-                    SimulateMouseInputOverlayState.SetButtonHeld(button, false);
-                }
+                ApplyMouseSnapshot(mouse, _emptyButtons, Vector2.zero, Vector2.zero);
             }
 
+            foreach (Key key in _replayHeldKeys)
+            {
+                SimulateKeyboardOverlayState.RemoveHeldKey(key.ToString());
+            }
+
+            foreach (MouseButton button in _replayHeldButtons)
+            {
+                SimulateMouseInputOverlayState.SetButtonHeld(button, false);
+            }
+
+            SimulateMouseInputOverlayState.SetMoveDelta(Vector2.zero);
+            SimulateMouseInputOverlayState.SetScrollDirection(0);
             _replayHeldKeys.Clear();
             _replayHeldButtons.Clear();
+        }
+
+        private static Key[] BuildAllKeys()
+        {
+            List<Key> keys = new List<Key>();
+            foreach (Key key in Enum.GetValues(typeof(Key)))
+            {
+                if (key == Key.None)
+                {
+                    continue;
+                }
+
+                keys.Add(key);
+            }
+
+            return keys.ToArray();
         }
 
         private static Dictionary<string, Key> BuildKeyLookup()
@@ -316,6 +377,7 @@ namespace io.github.hatayama.uLoopMCP
                     lookup[name] = key;
                 }
             }
+
             return lookup;
         }
 

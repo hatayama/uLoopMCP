@@ -61,12 +61,16 @@ namespace io.github.hatayama.uLoopMCP
         {
             EditorApplication.update += OnEditorUpdate;
             InputReplayer.ReplayCompleted += OnReplayCompleted;
+            InputRecorder.RecordingStopped += OnRecordingStopped;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
         private void OnDisable()
         {
             EditorApplication.update -= OnEditorUpdate;
             InputReplayer.ReplayCompleted -= OnReplayCompleted;
+            InputRecorder.RecordingStopped -= OnRecordingStopped;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             UnbindEvents();
         }
 
@@ -117,7 +121,6 @@ namespace io.github.hatayama.uLoopMCP
                 InputRecordingData data = InputRecorder.StopRecording();
                 string outputPath = InputRecordingFileHelper.ResolveOutputPath("");
                 InputRecordingFileHelper.Save(data, outputPath);
-                RefreshFileList();
                 return;
             }
 
@@ -204,6 +207,19 @@ namespace io.github.hatayama.uLoopMCP
                 Directory.CreateDirectory(dir);
             }
             EditorUtility.RevealInFinder(dir);
+        }
+
+        private void OnRecordingStopped()
+        {
+            RefreshFileList();
+        }
+
+        private void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.EnteredPlayMode || state == PlayModeStateChange.EnteredEditMode)
+            {
+                RefreshFileList();
+            }
         }
 
         private void OnReplayCompleted()

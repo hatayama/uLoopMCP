@@ -81,6 +81,13 @@ namespace io.github.hatayama.uLoopMCP
 
             int relativeFrame = Time.frameCount - _startFrame;
 
+            // Recorder/replayer start capturing/injecting at the next onAfterUpdate
+            // after Activate(). Skip the activation frame to stay in sync.
+            if (relativeFrame < 0)
+            {
+                return;
+            }
+
             ProcessMovement(keyboard, relativeFrame);
             ProcessRotation(mouse, relativeFrame);
             ProcessClicks(mouse, relativeFrame);
@@ -88,19 +95,16 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUI(keyboard, mouse, relativeFrame);
         }
 
-        // Resets state for a new recording session.
-        // Called by EditorBridge when recording starts, or by CLI via SendMessage.
+        // Called by EditorBridge when recording/replay starts, or by CLI via SendMessage.
         public void ActivateForExternalControl()
         {
             Activate();
         }
 
-        // Resets state for a new replay session with the 1-frame offset
-        // needed when replay injection starts next frame.
+        // Alias kept for CLI compatibility (verify-replay-via-cli.sh).
         public void ActivateForExternalReplay()
         {
             Activate();
-            _startFrame = Time.frameCount + 1;
         }
 
         public void OnReplayCompleted()
@@ -112,7 +116,8 @@ namespace io.github.hatayama.uLoopMCP
         {
             ResetState();
             _activated = true;
-            _startFrame = Time.frameCount;
+            // +1: recorder/replayer first capture/inject at the next onAfterUpdate
+            _startFrame = Time.frameCount + 1;
             HidePanel(_verifyPanel);
         }
 
