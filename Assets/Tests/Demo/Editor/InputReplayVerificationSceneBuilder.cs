@@ -127,8 +127,11 @@ namespace io.github.hatayama.uLoopMCP
                 new Vector2(20f, yOffset - lineHeight * 4), new Vector2(400f, lineHeight),
                 20, FontStyle.Normal, Color.yellow, TextAnchor.MiddleLeft);
 
-            // Start panel with two buttons
             GameObject startPanel = CreateStartPanel(canvasGo.transform, cube);
+
+            // Stop panel (shown during recording/replay, initially hidden)
+            GameObject stopPanel = CreateStopPanel(canvasGo.transform);
+            stopPanel.SetActive(false);
 
             CreateText(canvasGo.transform, "Instructions",
                 "WASD: Move | Mouse: Rotate | LClick: Red toggle | RClick: Blue toggle | Scroll: Scale",
@@ -149,6 +152,7 @@ namespace io.github.hatayama.uLoopMCP
             so.FindProperty("_scaleText").objectReferenceValue = scaleText;
             so.FindProperty("_inputText").objectReferenceValue = inputText;
             so.FindProperty("_startPanel").objectReferenceValue = startPanel;
+            so.FindProperty("_stopPanel").objectReferenceValue = stopPanel;
             so.FindProperty("_verifyPanel").objectReferenceValue = verifyPanel;
             so.FindProperty("_verifyResultText").objectReferenceValue = verifyPanel.transform.Find("ResultText").GetComponent<Text>();
             so.FindProperty("_cubeRenderer").objectReferenceValue = renderer;
@@ -158,6 +162,9 @@ namespace io.github.hatayama.uLoopMCP
             Button replayButton = startPanel.transform.Find("ReplayButton").GetComponent<Button>();
             UnityEditor.Events.UnityEventTools.AddPersistentListener(recordButton.onClick, controller.OnStartRecording);
             UnityEditor.Events.UnityEventTools.AddPersistentListener(replayButton.onClick, controller.OnStartReplay);
+
+            Button stopButton = stopPanel.transform.Find("StopButton").GetComponent<Button>();
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(stopButton.onClick, controller.OnStop);
 
             Button saveRecBtn = verifyPanel.transform.Find("SaveRecordingLogButton").GetComponent<Button>();
             Button saveRepBtn = verifyPanel.transform.Find("SaveReplayLogButton").GetComponent<Button>();
@@ -190,6 +197,24 @@ namespace io.github.hatayama.uLoopMCP
 
             CreateButton(panel.transform, "ReplayButton", "\u25b6 Start Replay",
                 new Vector2(0.75f, 0f), -80f, new Color(0.2f, 0.6f, 0.8f, 1f));
+
+            return panel;
+        }
+
+        private static GameObject CreateStopPanel(Transform canvasTransform)
+        {
+            GameObject panel = new GameObject("StopPanel");
+            panel.transform.SetParent(canvasTransform, false);
+
+            RectTransform panelRect = panel.AddComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.anchoredPosition = new Vector2(0f, -60f);
+            panelRect.sizeDelta = new Vector2(300f, 80f);
+
+            CreateButton(panel.transform, "StopButton", "\u25a0 Stop",
+                new Vector2(0.5f, 0.5f), 0f, new Color(0.7f, 0.2f, 0.2f, 1f));
 
             return panel;
         }

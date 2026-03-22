@@ -1,5 +1,6 @@
 #if ULOOPMCP_HAS_INPUT_SYSTEM
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -23,12 +24,18 @@ namespace io.github.hatayama.uLoopMCP
         private const string RECORDING_LOG_FILE = "recording-event-log.txt";
         private const string REPLAY_LOG_FILE = "replay-event-log.txt";
 
+        // Editor bridge subscribes to these to call InputRecorder/InputReplayer
+        public static event Action? RecordingStartRequested;
+        public static event Action? RecordingStopRequested;
+        public static event Action? ReplayStartRequested;
+
         [SerializeField] private Text? _frameText;
         [SerializeField] private Text? _positionText;
         [SerializeField] private Text? _rotationText;
         [SerializeField] private Text? _scaleText;
         [SerializeField] private Text? _inputText;
         [SerializeField] private GameObject? _startPanel;
+        [SerializeField] private GameObject? _stopPanel;
         [SerializeField] private GameObject? _verifyPanel;
         [SerializeField] private Text? _verifyResultText;
         [SerializeField] private MeshRenderer? _cubeRenderer;
@@ -47,7 +54,9 @@ namespace io.github.hatayama.uLoopMCP
             Application.targetFrameRate = TARGET_FRAME_RATE;
             _initialPosition = transform.position;
             _initialEulerAngles = transform.eulerAngles;
-            ShowStartPanel();
+            ShowPanel(_startPanel);
+            HidePanel(_stopPanel);
+            HidePanel(_verifyPanel);
         }
 
         private void Update()
@@ -77,12 +86,24 @@ namespace io.github.hatayama.uLoopMCP
         public void OnStartRecording()
         {
             Activate();
+            RecordingStartRequested?.Invoke();
         }
 
         // Called by UI Button "Start Replay"
         public void OnStartReplay()
         {
             Activate();
+            ReplayStartRequested?.Invoke();
+        }
+
+        // Called by UI Button "Stop"
+        public void OnStop()
+        {
+            _isActive = false;
+            RecordingStopRequested?.Invoke();
+            HidePanel(_stopPanel);
+            ShowPanel(_startPanel);
+            ShowPanel(_verifyPanel);
         }
 
         private void Activate()
@@ -90,8 +111,9 @@ namespace io.github.hatayama.uLoopMCP
             ResetState();
             _isActive = true;
             _startFrame = Time.frameCount;
-            HideStartPanel();
-            ShowVerifyPanel();
+            HidePanel(_startPanel);
+            ShowPanel(_stopPanel);
+            HidePanel(_verifyPanel);
         }
 
         private void ResetState()
@@ -106,20 +128,14 @@ namespace io.github.hatayama.uLoopMCP
             _lastLoggedPosition = _initialPosition;
         }
 
-        private void ShowStartPanel()
+        private static void ShowPanel(GameObject? panel)
         {
-            if (_startPanel != null)
-            {
-                _startPanel.SetActive(true);
-            }
+            if (panel != null) panel.SetActive(true);
         }
 
-        private void HideStartPanel()
+        private static void HidePanel(GameObject? panel)
         {
-            if (_startPanel != null)
-            {
-                _startPanel.SetActive(false);
-            }
+            if (panel != null) panel.SetActive(false);
         }
 
         private void ProcessMovement(Keyboard keyboard, int frame)
@@ -221,30 +237,11 @@ namespace io.github.hatayama.uLoopMCP
 
         private void UpdateUI(Keyboard keyboard, Mouse mouse, int frame)
         {
-            if (_frameText != null)
-            {
-                _frameText.text = $"Frame: {frame}";
-            }
-
-            if (_positionText != null)
-            {
-                _positionText.text = $"Pos: {FormatVector3(transform.position)}";
-            }
-
-            if (_rotationText != null)
-            {
-                _rotationText.text = $"Rot Y: {transform.eulerAngles.y:F2}";
-            }
-
-            if (_scaleText != null)
-            {
-                _scaleText.text = $"Scale: {transform.localScale.x:F2}";
-            }
-
-            if (_inputText != null)
-            {
-                _inputText.text = BuildInputStateText(keyboard, mouse);
-            }
+            if (_frameText != null) _frameText.text = $"Frame: {frame}";
+            if (_positionText != null) _positionText.text = $"Pos: {FormatVector3(transform.position)}";
+            if (_rotationText != null) _rotationText.text = $"Rot Y: {transform.eulerAngles.y:F2}";
+            if (_scaleText != null) _scaleText.text = $"Scale: {transform.localScale.x:F2}";
+            if (_inputText != null) _inputText.text = BuildInputStateText(keyboard, mouse);
         }
 
         private static string BuildInputStateText(Keyboard keyboard, Mouse mouse)
@@ -264,33 +261,21 @@ namespace io.github.hatayama.uLoopMCP
         {
             string directory = Path.GetDirectoryName(path)!;
             Directory.CreateDirectory(directory);
-
             File.WriteAllLines(path, _eventLog);
             Debug.Log($"[InputReplayVerification] Event log saved to {path} ({_eventLog.Count} entries)");
-        }
-
-        public void ClearLog()
-        {
-            _isActive = false;
-            ResetState();
-            ShowStartPanel();
         }
 
         // Called by UI Button "Save Recording Log"
         public void OnSaveRecordingLog()
         {
-            string path = GetLogPath(RECORDING_LOG_FILE);
-            SaveLog(path);
-            ShowVerifyPanel();
+            SaveLog(GetLogPath(RECORDING_LOG_FILE));
             SetVerifyResult($"Recording log saved ({_eventLog.Count} entries)");
         }
 
         // Called by UI Button "Save Replay Log"
         public void OnSaveReplayLog()
         {
-            string path = GetLogPath(REPLAY_LOG_FILE);
-            SaveLog(path);
-            ShowVerifyPanel();
+            SaveLog(GetLogPath(REPLAY_LOG_FILE));
             SetVerifyResult($"Replay log saved ({_eventLog.Count} entries)");
         }
 
@@ -347,8 +332,17 @@ namespace io.github.hatayama.uLoopMCP
             else
             {
                 string details = diffCount > 5 ? $"\n...and {diffCount - 5} more" : "";
-                SetVerifyResult($"MISMATCH: {diffCount} differences\n(rec: {recordingLines.Length} lines, rep: {replayLines.Length} lines)\n{sb}{details}");
+                SetVerifyResult($"MISMATCH: {diffCount} differences\n(rec: {recordingLines.Length}, rep: {replayLines.Length})\n{sb}{details}");
             }
+        }
+
+        public void ClearLog()
+        {
+            _isActive = false;
+            ResetState();
+            ShowPanel(_startPanel);
+            HidePanel(_stopPanel);
+            HidePanel(_verifyPanel);
         }
 
         private static string GetLogPath(string fileName)
@@ -356,20 +350,9 @@ namespace io.github.hatayama.uLoopMCP
             return $"{LOG_OUTPUT_DIR}/{fileName}";
         }
 
-        private void ShowVerifyPanel()
-        {
-            if (_verifyPanel != null)
-            {
-                _verifyPanel.SetActive(true);
-            }
-        }
-
         private void SetVerifyResult(string message)
         {
-            if (_verifyResultText != null)
-            {
-                _verifyResultText.text = message;
-            }
+            if (_verifyResultText != null) _verifyResultText.text = message;
             Debug.Log($"[InputReplayVerification] {message}");
         }
 
