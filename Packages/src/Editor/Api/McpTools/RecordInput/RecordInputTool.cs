@@ -136,6 +136,20 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (!InputRecorder.IsRecording)
             {
+                // Recording may have been auto-stopped at the duration limit
+                if (InputRecorder.LastAutoSavePath != null)
+                {
+                    string savedPath = InputRecorder.LastAutoSavePath;
+                    InputRecorder.LastAutoSavePath = null;
+                    return new RecordInputResponse
+                    {
+                        Success = true,
+                        Message = $"Recording was auto-saved at duration limit: {savedPath}",
+                        Action = RecordInputAction.Stop.ToString(),
+                        OutputPath = savedPath
+                    };
+                }
+
                 return new RecordInputResponse
                 {
                     Success = false,

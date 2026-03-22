@@ -28,6 +28,7 @@ namespace io.github.hatayama.uLoopMCP
         public static event Action? RecordingStartRequested;
         public static event Action? RecordingStopRequested;
         public static event Action? ReplayStartRequested;
+        public static event Action? ReplayStopRequested;
 
         [SerializeField] private Text? _frameText;
         [SerializeField] private Text? _positionText;
@@ -104,6 +105,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             _isActive = false;
             RecordingStopRequested?.Invoke();
+            ReplayStopRequested?.Invoke();
             ShowPostSessionUI();
         }
 

@@ -30,8 +30,10 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(data != null, "data must not be null");
 
             string? directoryPath = Path.GetDirectoryName(outputPath);
-            Debug.Assert(directoryPath != null, "outputPath must contain a directory component");
-            Directory.CreateDirectory(directoryPath!);
+            if (!string.IsNullOrEmpty(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
 
             string json = JsonConvert.SerializeObject(data, WRITE_SETTINGS);
             File.WriteAllText(outputPath, json);

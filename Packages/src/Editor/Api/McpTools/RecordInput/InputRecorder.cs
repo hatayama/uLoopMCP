@@ -46,6 +46,7 @@ namespace io.github.hatayama.uLoopMCP
         private static readonly HashSet<MouseButton> _currentButtonStates = new();
 
         public static bool IsRecording => _isRecording;
+        public static string? LastAutoSavePath { get; internal set; }
 
         static InputRecorder()
         {
@@ -58,6 +59,7 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(!_isRecording, "Cannot start recording while already recording");
             Debug.Assert(EditorApplication.isPlaying, "PlayMode must be active to start recording");
 
+            LastAutoSavePath = null;
             _cachedKeysToScan = BuildKeysToScan(keyFilter);
             _recordedFrames = new List<InputFrameEvents>();
             _previousKeyStates.Clear();
@@ -135,8 +137,11 @@ namespace io.github.hatayama.uLoopMCP
             float elapsed = Time.realtimeSinceStartup - _startTime;
             if (elapsed > RecordInputConstants.MAX_RECORDING_DURATION_SECONDS)
             {
-                Debug.LogWarning($"[InputRecorder] Recording auto-stopped after {RecordInputConstants.MAX_RECORDING_DURATION_SECONDS}s limit");
-                ForceStop();
+                InputRecordingData data = StopRecording();
+                string outputPath = InputRecordingFileHelper.ResolveOutputPath("");
+                InputRecordingFileHelper.Save(data, outputPath);
+                LastAutoSavePath = outputPath;
+                Debug.LogWarning($"[InputRecorder] Recording auto-stopped after {RecordInputConstants.MAX_RECORDING_DURATION_SECONDS}s limit. Saved to {outputPath}");
                 return;
             }
 
