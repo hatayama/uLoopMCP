@@ -116,6 +116,7 @@ namespace io.github.hatayama.uLoopMCP
             if (parameters.ShowOverlay)
             {
                 OverlayCanvasFactory.EnsureExists();
+                RecordReplayOverlayFactory.EnsureRecordOverlay();
             }
 
             if (delaySeconds > 0)
@@ -163,6 +164,17 @@ namespace io.github.hatayama.uLoopMCP
 
         private static RecordInputResponse ExecuteStop(RecordInputSchema parameters)
         {
+            if (RecordInputOverlayState.Phase == RecordInputOverlayPhase.Countdown)
+            {
+                RecordInputOverlayState.Clear();
+                return new RecordInputResponse
+                {
+                    Success = true,
+                    Message = "Recording countdown cancelled.",
+                    Action = RecordInputAction.Stop.ToString()
+                };
+            }
+
             if (!InputRecorder.IsRecording)
             {
                 // Recording may have been auto-stopped at the duration limit

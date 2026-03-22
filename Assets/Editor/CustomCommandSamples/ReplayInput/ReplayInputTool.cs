@@ -139,6 +139,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             OverlayCanvasFactory.EnsureExists();
+            RecordReplayOverlayFactory.EnsureReplayOverlay();
             InputReplayer.StartReplay(data, parameters.Loop, parameters.ShowOverlay);
 
             int eventCount = data.GetTotalEventCount();

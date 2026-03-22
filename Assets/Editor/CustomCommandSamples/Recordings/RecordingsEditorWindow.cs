@@ -130,6 +130,7 @@ namespace io.github.hatayama.uLoopMCP
             int delaySeconds = Mathf.Clamp(_delayField.value, RecordInputConstants.MIN_DELAY_SECONDS, RecordInputConstants.MAX_DELAY_SECONDS);
 
             OverlayCanvasFactory.EnsureExists();
+            RecordReplayOverlayFactory.EnsureRecordOverlay();
 
             if (delaySeconds > 0)
             {
@@ -191,6 +192,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             OverlayCanvasFactory.EnsureExists();
+            RecordReplayOverlayFactory.EnsureReplayOverlay();
             InputReplayer.StartReplay(data, false, true);
         }
 
