@@ -2,6 +2,7 @@
 #nullable enable
 using System;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -12,10 +13,13 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const float REPAINT_INTERVAL = 0.1f;
         private const float FILE_LIST_REFRESH_INTERVAL = 2.0f;
+        private const string RECORDING_EVENT_LOG = "recording-event-log.txt";
+        private const string REPLAY_EVENT_LOG = "replay-event-log.txt";
 
         private static readonly GUILayoutOption BUTTON_HEIGHT = GUILayout.Height(30f);
         private static readonly GUILayoutOption BROWSE_BUTTON_WIDTH = GUILayout.Width(30f);
         private static readonly GUILayoutOption FILE_LIST_MAX_HEIGHT = GUILayout.MaxHeight(150f);
+        private static readonly GUILayoutOption VERIFY_BUTTON_HEIGHT = GUILayout.Height(25f);
 
         private string _keyFilter = "";
         private string _outputPath = "";
@@ -29,6 +33,10 @@ namespace io.github.hatayama.uLoopMCP
 
         private string[]? _cachedFileList;
         private double _lastFileListRefreshTime;
+
+        private string _verifyResult = "";
+        private MessageType _verifyResultType = MessageType.Info;
+        private Vector2 _verifyResultScrollPosition;
 
         [MenuItem("uLoopMCP/Windows/Input Recorder")]
         public static void ShowWindow()
@@ -77,6 +85,8 @@ namespace io.github.hatayama.uLoopMCP
             DrawRecordSection();
             GUILayout.Space(10f);
             DrawReplaySection();
+            GUILayout.Space(10f);
+            DrawVerificationSection();
             GUILayout.Space(10f);
             DrawRecordingFileList();
         }
@@ -190,6 +200,141 @@ namespace io.github.hatayama.uLoopMCP
                 Rect rect = GUILayoutUtility.GetRect(0f, 18f, GUILayout.ExpandWidth(true));
                 EditorGUI.ProgressBar(rect, progress, $"{InputReplayer.CurrentFrame} / {InputReplayer.TotalFrames}");
             }
+        }
+
+        private void DrawVerificationSection()
+        {
+            GUILayout.Label("Verification", EditorStyles.boldLabel);
+
+            bool isPlaying = EditorApplication.isPlaying;
+            MonoBehaviour? controller = isPlaying ? FindVerificationController() : null;
+            bool hasController = controller != null;
+
+            EditorGUILayout.BeginHorizontal();
+
+            EditorGUI.BeginDisabledGroup(!hasController);
+            if (GUILayout.Button("Save Recording Log", VERIFY_BUTTON_HEIGHT))
+            {
+                SaveVerificationLog(RECORDING_EVENT_LOG);
+            }
+
+            if (GUILayout.Button("Save Replay Log", VERIFY_BUTTON_HEIGHT))
+            {
+                SaveVerificationLog(REPLAY_EVENT_LOG);
+            }
+            EditorGUI.EndDisabledGroup();
+
+            EditorGUILayout.EndHorizontal();
+
+            bool hasBothLogs = File.Exists(GetVerificationLogPath(RECORDING_EVENT_LOG))
+                            && File.Exists(GetVerificationLogPath(REPLAY_EVENT_LOG));
+
+            EditorGUI.BeginDisabledGroup(!hasBothLogs);
+            if (GUILayout.Button("\u2714 Compare Logs", VERIFY_BUTTON_HEIGHT))
+            {
+                CompareLogs();
+            }
+            EditorGUI.EndDisabledGroup();
+
+            if (!hasController && isPlaying)
+            {
+                EditorGUILayout.HelpBox("InputReplayVerificationController not found in scene.", MessageType.Info);
+            }
+
+            if (!string.IsNullOrEmpty(_verifyResult))
+            {
+                _verifyResultScrollPosition = EditorGUILayout.BeginScrollView(_verifyResultScrollPosition, GUILayout.MaxHeight(120f));
+                EditorGUILayout.HelpBox(_verifyResult, _verifyResultType);
+                EditorGUILayout.EndScrollView();
+            }
+        }
+
+        private void SaveVerificationLog(string fileName)
+        {
+            MonoBehaviour? controller = FindVerificationController();
+            if (controller == null)
+            {
+                SetStatus("InputReplayVerificationController not found in scene.", MessageType.Error);
+                return;
+            }
+
+            string path = GetVerificationLogPath(fileName);
+            // SendMessage avoids a direct assembly reference to the test project
+            controller.SendMessage("SaveLog", path);
+            SetStatus($"Event log saved: {path}", MessageType.Info);
+        }
+
+        private void CompareLogs()
+        {
+            string recordingPath = GetVerificationLogPath(RECORDING_EVENT_LOG);
+            string replayPath = GetVerificationLogPath(REPLAY_EVENT_LOG);
+
+            string[] recordingLines = File.ReadAllLines(recordingPath);
+            string[] replayLines = File.ReadAllLines(replayPath);
+
+            if (recordingLines.Length == 0 && replayLines.Length == 0)
+            {
+                _verifyResult = "Both logs are empty.";
+                _verifyResultType = MessageType.Warning;
+                Repaint();
+                return;
+            }
+
+            int maxLines = Mathf.Max(recordingLines.Length, replayLines.Length);
+            int diffCount = 0;
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+            for (int i = 0; i < maxLines; i++)
+            {
+                string recordLine = i < recordingLines.Length ? recordingLines[i] : "(missing)";
+                string replayLine = i < replayLines.Length ? replayLines[i] : "(missing)";
+
+                if (recordLine != replayLine)
+                {
+                    diffCount++;
+                    sb.AppendLine($"Line {i + 1}:");
+                    sb.AppendLine($"  Rec: {recordLine}");
+                    sb.AppendLine($"  Rep: {replayLine}");
+
+                    if (diffCount >= 10)
+                    {
+                        sb.AppendLine($"... and more ({maxLines - i - 1} lines remaining)");
+                        break;
+                    }
+                }
+            }
+
+            if (diffCount == 0)
+            {
+                _verifyResult = $"MATCH: {recordingLines.Length} lines identical. Replay is accurate.";
+                _verifyResultType = MessageType.Info;
+            }
+            else
+            {
+                _verifyResult = $"MISMATCH: {diffCount}+ differences found (recording: {recordingLines.Length} lines, replay: {replayLines.Length} lines)\n\n{sb}";
+                _verifyResultType = MessageType.Error;
+            }
+
+            Repaint();
+        }
+
+        private static string GetVerificationLogPath(string fileName)
+        {
+            return $"{RecordInputConstants.DEFAULT_OUTPUT_DIR}/{fileName}";
+        }
+
+        private static MonoBehaviour? FindVerificationController()
+        {
+            // Search by type name to avoid assembly reference to test project
+            MonoBehaviour[] behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                if (behaviours[i].GetType().Name == "InputReplayVerificationController")
+                {
+                    return behaviours[i];
+                }
+            }
+            return null;
         }
 
         private void DrawRecordingFileList()
