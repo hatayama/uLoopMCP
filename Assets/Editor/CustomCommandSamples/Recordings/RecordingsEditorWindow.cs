@@ -31,6 +31,7 @@ namespace io.github.hatayama.uLoopMCP
         private int _prevMinutes = -1;
         private int _prevSecs = -1;
         private int _prevReplayFrame = -1;
+        private int _countdownGeneration;
 
         [MenuItem("uLoopMCP/Recordings")]
         public static void ShowWindow()
@@ -106,6 +107,7 @@ namespace io.github.hatayama.uLoopMCP
 
             if (RecordInputOverlayState.Phase == RecordInputOverlayPhase.Countdown)
             {
+                _countdownGeneration++;
                 RecordInputOverlayState.Clear();
                 return;
             }
@@ -131,12 +133,14 @@ namespace io.github.hatayama.uLoopMCP
 
             if (delaySeconds > 0)
             {
+                int generation = ++_countdownGeneration;
                 RecordInputOverlayState.StartCountdown(delaySeconds);
                 int delayMs = delaySeconds * 1000;
-                // Countdown may be cancelled before callback fires
                 TimerDelay.WaitThenExecuteOnMainThread(delayMs, () =>
                 {
-                    if (!EditorApplication.isPlaying || RecordInputOverlayState.Phase != RecordInputOverlayPhase.Countdown)
+                    if (!EditorApplication.isPlaying
+                        || generation != _countdownGeneration
+                        || RecordInputOverlayState.Phase != RecordInputOverlayPhase.Countdown)
                     {
                         RecordInputOverlayState.Clear();
                         return;

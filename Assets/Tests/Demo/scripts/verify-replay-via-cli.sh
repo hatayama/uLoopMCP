@@ -9,10 +9,18 @@
 
 set -e
 
-PROJECT_OPTS=""
+PROJECT_PATH=""
 if [ "$1" = "--project-path" ] && [ -n "$2" ]; then
-    PROJECT_OPTS="--project-path \"$2\""
+    PROJECT_PATH="$2"
 fi
+
+run_uloop() {
+    if [ -n "$PROJECT_PATH" ]; then
+        uloop "$@" --project-path "$PROJECT_PATH"
+    else
+        uloop "$@"
+    fi
+}
 
 RECORDING_LOG=".uloop/outputs/InputRecordings/recording-event-log.txt"
 REPLAY_LOG=".uloop/outputs/InputRecordings/replay-event-log.txt"
@@ -20,7 +28,7 @@ REPLAY_LOG=".uloop/outputs/InputRecordings/replay-event-log.txt"
 wait_for_unity() {
     i=0
     while [ $i -lt 15 ]; do
-        if uloop get-logs --max-count 1 $PROJECT_OPTS > /dev/null 2>&1; then
+        if run_uloop get-logs --max-count 1 > /dev/null 2>&1; then
             return 0
         fi
         sleep 2
@@ -33,7 +41,7 @@ wait_for_unity() {
 # activate_controller uses Canvas/Transform.Find to locate children
 # because GameObject.Find cannot find inactive GameObjects
 activate_for_record() {
-    uloop execute-dynamic-code $PROJECT_OPTS --code '
+    run_uloop execute-dynamic-code --code '
 var cube = GameObject.Find("VerificationCube");
 if (cube == null) return "ERROR: VerificationCube not found";
 cube.SendMessage("ActivateForExternalControl");
@@ -48,7 +56,7 @@ return "OK: activated for recording";
 }
 
 activate_for_replay() {
-    uloop execute-dynamic-code $PROJECT_OPTS --code '
+    run_uloop execute-dynamic-code --code '
 var cube = GameObject.Find("VerificationCube");
 if (cube == null) return "ERROR: VerificationCube not found";
 cube.SendMessage("ActivateForExternalReplay");
@@ -63,7 +71,7 @@ return "OK: activated for replay";
 }
 
 save_log() {
-    uloop execute-dynamic-code $PROJECT_OPTS --code "
+    run_uloop execute-dynamic-code --code "
 var cube = GameObject.Find(\"VerificationCube\");
 if (cube == null) return \"ERROR: VerificationCube not found\";
 cube.SendMessage(\"SaveLog\", \"$1\");
@@ -80,7 +88,7 @@ echo "========================================="
 
 echo ""
 echo "[1/8] Starting PlayMode..."
-uloop control-play-mode --action Play $PROJECT_OPTS
+run_uloop control-play-mode --action Play
 echo "  Waiting for Unity..."
 sleep 6
 wait_for_unity
@@ -89,7 +97,7 @@ echo "[2/8] Activating controller..."
 activate_for_record
 
 echo "[3/8] Starting recording via CLI..."
-uloop record-input --action Start $PROJECT_OPTS
+run_uloop record-input --action Start
 
 echo ""
 echo "========================================="
@@ -106,7 +114,7 @@ echo ""
 read dummy
 
 echo "[4/8] Saving event log + deactivating controller..."
-uloop execute-dynamic-code $PROJECT_OPTS --code '
+run_uloop execute-dynamic-code --code '
 var cube = GameObject.Find("VerificationCube");
 if (cube == null) return "ERROR: VerificationCube not found";
 cube.SendMessage("SaveLog", ".uloop/outputs/InputRecordings/recording-event-log.txt");
@@ -115,14 +123,14 @@ return "OK: log saved, controller deactivated";
 '
 
 echo "  Stopping recording via CLI..."
-uloop record-input --action Stop $PROJECT_OPTS
+run_uloop record-input --action Stop
 
 # ---- Phase 2: Replay via CLI ----
 
 echo "[5/8] Restarting PlayMode..."
-uloop control-play-mode --action Stop $PROJECT_OPTS
+run_uloop control-play-mode --action Stop
 sleep 3
-uloop control-play-mode --action Play $PROJECT_OPTS
+run_uloop control-play-mode --action Play
 echo "  Waiting for Unity..."
 sleep 6
 wait_for_unity
@@ -130,21 +138,21 @@ wait_for_unity
 echo "[6/8] Activating controller + starting replay via CLI..."
 activate_for_replay
 echo "  Starting replay..."
-REPLAY_RESULT=$(uloop replay-input --action Start $PROJECT_OPTS 2>&1) || true
+REPLAY_RESULT=$(run_uloop replay-input --action Start 2>&1) || true
 echo "  $REPLAY_RESULT"
 
 echo "  Waiting for replay to finish..."
 sleep 2
 waited=0
 while [ $waited -lt 60 ]; do
-    STATUS_RESULT=$(uloop replay-input --action Status $PROJECT_OPTS 2>&1) || true
-    playing=$(echo "$STATUS_RESULT" | grep -o '"IsReplaying": *[a-z]*' | sed 's/.*: *//')
+    STATUS_RESULT=$(run_uloop replay-input --action Status 2>&1) || true
+    playing=$(echo "$STATUS_RESULT" | grep -o '"isReplaying": *[a-z]*' | sed 's/.*: *//')
     if [ "$playing" = "false" ]; then
         echo "  Replay completed."
         break
     fi
     if [ $((waited % 5)) -eq 0 ]; then
-        progress=$(echo "$STATUS_RESULT" | grep -o '"Progress": *[0-9.]*' | sed 's/.*: *//')
+        progress=$(echo "$STATUS_RESULT" | grep -o '"progress": *[0-9.]*' | sed 's/.*: *//')
         echo "  Progress: ${progress:-...}"
     fi
     sleep 1
