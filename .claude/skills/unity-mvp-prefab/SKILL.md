@@ -54,6 +54,8 @@ namespace io.github.hatayama.uLoopMCP
         private void Awake()
         {
             Debug.Assert(_canvasGroup != null, "_canvasGroup must be assigned in prefab");
+            Debug.Assert(_messageText != null, "_messageText must be assigned in prefab");
+            Debug.Assert(_contentGroup != null, "_contentGroup must be assigned in prefab");
 
             _canvasGroup.interactable = false;
             _canvasGroup.blocksRaycasts = false;

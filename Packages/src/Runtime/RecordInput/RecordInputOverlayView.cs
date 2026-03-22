@@ -15,6 +15,11 @@ namespace io.github.hatayama.uLoopMCP
         private void Awake()
         {
             Debug.Assert(_canvasGroup != null, "_canvasGroup must be assigned in prefab");
+            Debug.Assert(_countdownGroup != null, "_countdownGroup must be assigned in prefab");
+            Debug.Assert(_countdownText != null, "_countdownText must be assigned in prefab");
+            Debug.Assert(_recordingGroup != null, "_recordingGroup must be assigned in prefab");
+            Debug.Assert(_recDotText != null, "_recDotText must be assigned in prefab");
+            Debug.Assert(_statusText != null, "_statusText must be assigned in prefab");
 
             _canvasGroup.interactable = false;
             _canvasGroup.blocksRaycasts = false;

@@ -11,7 +11,7 @@ set -e
 
 PROJECT_OPTS=""
 if [ "$1" = "--project-path" ] && [ -n "$2" ]; then
-    PROJECT_OPTS="--project-path $2"
+    PROJECT_OPTS="--project-path \"$2\""
 fi
 
 RECORDING_LOG=".uloop/outputs/InputRecordings/recording-event-log.txt"
@@ -51,7 +51,7 @@ activate_for_replay() {
     uloop execute-dynamic-code $PROJECT_OPTS --code '
 var cube = GameObject.Find("VerificationCube");
 if (cube == null) return "ERROR: VerificationCube not found";
-cube.SendMessage("ActivateForExternalControl");
+cube.SendMessage("ActivateForExternalReplay");
 var canvas = GameObject.Find("Canvas");
 if (canvas == null) return "OK: activated (no canvas)";
 var sp = canvas.transform.Find("StartPanel");

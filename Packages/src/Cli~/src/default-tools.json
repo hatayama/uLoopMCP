@@ -661,7 +661,9 @@
           "DelaySeconds": {
             "type": "integer",
             "description": "Countdown delay in seconds before recording starts (0-10). Gives time to switch focus to Game View.",
-            "default": 3
+            "default": 3,
+            "minimum": 0,
+            "maximum": 10
           },
           "ShowOverlay": {
             "type": "boolean",
