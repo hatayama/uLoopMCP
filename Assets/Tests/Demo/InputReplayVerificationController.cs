@@ -105,6 +105,21 @@ namespace io.github.hatayama.uLoopMCP
             ReplayStartRequested?.Invoke();
         }
 
+        // Resets state and accepts input without triggering record/replay.
+        // Use when record/replay is started externally (e.g. via CLI).
+        public void ActivateForExternalControl()
+        {
+            Activate();
+        }
+
+        // Same as ActivateForExternalControl but with the 1-frame offset
+        // needed when replay injection starts next frame.
+        public void ActivateForExternalReplay()
+        {
+            Activate();
+            _startFrame = Time.frameCount + 1;
+        }
+
         // Called by UI Button "Stop"
         public void OnStop()
         {
