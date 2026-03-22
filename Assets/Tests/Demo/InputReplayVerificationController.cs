@@ -101,6 +101,18 @@ namespace io.github.hatayama.uLoopMCP
         {
             _isActive = false;
             RecordingStopRequested?.Invoke();
+            ShowPostSessionUI();
+        }
+
+        // Called by EditorBridge via SendMessage when replay finishes
+        public void OnReplayCompleted()
+        {
+            _isActive = false;
+            ShowPostSessionUI();
+        }
+
+        private void ShowPostSessionUI()
+        {
             HidePanel(_stopPanel);
             ShowPanel(_startPanel);
             ShowPanel(_verifyPanel);

@@ -31,6 +31,8 @@ namespace io.github.hatayama.uLoopMCP
         private static readonly HashSet<MouseButton> _replayHeldButtons = new();
         private static bool _mouseWasDisabled;
 
+        public static event Action? ReplayCompleted;
+
         public static bool IsReplaying => _isReplaying;
         public static int CurrentFrame => _currentFrame;
         public static int TotalFrames => _data?.Metadata.TotalFrames ?? 0;
@@ -142,6 +144,7 @@ namespace io.github.hatayama.uLoopMCP
                 else
                 {
                     StopReplay();
+                    ReplayCompleted?.Invoke();
                 }
             }
         }

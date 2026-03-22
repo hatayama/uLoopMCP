@@ -22,6 +22,9 @@ namespace io.github.hatayama.uLoopMCP
 
             InputReplayVerificationController.ReplayStartRequested -= OnReplayStartRequested;
             InputReplayVerificationController.ReplayStartRequested += OnReplayStartRequested;
+
+            InputReplayer.ReplayCompleted -= OnReplayCompleted;
+            InputReplayer.ReplayCompleted += OnReplayCompleted;
         }
 
         private static void OnRecordingStartRequested()
@@ -76,6 +79,21 @@ namespace io.github.hatayama.uLoopMCP
 
             int eventCount = data.GetTotalEventCount();
             Debug.Log($"[VerificationBridge] Replay started: {eventCount} events, {data.Metadata.TotalFrames} frames from {inputPath}");
+        }
+
+        private static void OnReplayCompleted()
+        {
+            Debug.Log("[VerificationBridge] Replay completed, running auto-verification");
+
+            InputReplayVerificationController? controller = Object.FindObjectOfType<InputReplayVerificationController>();
+            if (controller == null)
+            {
+                return;
+            }
+
+            controller.OnReplayCompleted();
+            controller.OnSaveReplayLog();
+            controller.OnCompareLogs();
         }
     }
 }
