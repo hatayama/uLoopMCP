@@ -10,8 +10,8 @@ namespace io.github.hatayama.uLoopMCP
 {
     public class RecordingsEditorWindow : EditorWindow
     {
-        private const string UXML_PATH = "Packages/io.github.hatayama.uloopmcp/Editor/UI/Recordings/RecordingsEditorWindow.uxml";
-        private const string USS_PATH = "Packages/io.github.hatayama.uloopmcp/Editor/UI/Recordings/RecordingsEditorWindow.uss";
+        private const string UXML_PATH = "Assets/Editor/CustomCommandSamples/Recordings/RecordingsEditorWindow.uxml";
+        private const string USS_PATH = "Assets/Editor/CustomCommandSamples/Recordings/RecordingsEditorWindow.uss";
 
         private Button _recordButton;
         private Button _replayButton;
@@ -32,7 +32,7 @@ namespace io.github.hatayama.uLoopMCP
         private int _prevSecs = -1;
         private int _prevReplayFrame = -1;
 
-        [MenuItem("Window/Unity CLI Loop/Recordings", priority = 1)]
+        [MenuItem("uLoopMCP/Recordings")]
         public static void ShowWindow()
         {
             RecordingsEditorWindow window = GetWindow<RecordingsEditorWindow>("Recordings");
