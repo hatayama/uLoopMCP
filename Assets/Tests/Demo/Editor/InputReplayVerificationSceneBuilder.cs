@@ -228,8 +228,8 @@ namespace io.github.hatayama.uLoopMCP
             panelRect.anchorMin = new Vector2(1f, 0f);
             panelRect.anchorMax = new Vector2(1f, 0f);
             panelRect.pivot = new Vector2(1f, 0f);
-            panelRect.anchoredPosition = new Vector2(-10f, 60f);
-            panelRect.sizeDelta = new Vector2(320f, 200f);
+            panelRect.anchoredPosition = new Vector2(-20f, 60f);
+            panelRect.sizeDelta = new Vector2(640f, 400f);
 
             Image panelBg = panel.AddComponent<Image>();
             panelBg.color = new Color(0f, 0f, 0f, 0.5f);
@@ -237,23 +237,23 @@ namespace io.github.hatayama.uLoopMCP
             CreateText(panel.transform, "VerifyTitle",
                 "Verification",
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, -5f), new Vector2(300f, 25f),
-                18, FontStyle.Bold, Color.white, TextAnchor.MiddleCenter);
+                new Vector2(0f, -10f), new Vector2(600f, 40f),
+                28, FontStyle.Bold, Color.white, TextAnchor.MiddleCenter);
 
             CreateButton(panel.transform, "SaveRecordingLogButton", "Save Recording Log",
-                new Vector2(0.5f, 1f), -35f, new Color(0.3f, 0.5f, 0.3f, 1f));
+                new Vector2(0.5f, 1f), -60f, new Color(0.3f, 0.5f, 0.3f, 1f));
 
             CreateButton(panel.transform, "SaveReplayLogButton", "Save Replay Log",
-                new Vector2(0.5f, 1f), -70f, new Color(0.3f, 0.4f, 0.6f, 1f));
+                new Vector2(0.5f, 1f), -110f, new Color(0.3f, 0.4f, 0.6f, 1f));
 
             CreateButton(panel.transform, "CompareLogsButton", "\u2714 Compare Logs",
-                new Vector2(0.5f, 1f), -105f, new Color(0.5f, 0.4f, 0.2f, 1f));
+                new Vector2(0.5f, 1f), -160f, new Color(0.5f, 0.4f, 0.2f, 1f));
 
             Text resultText = CreateText(panel.transform, "ResultText",
                 "",
                 new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 5f), new Vector2(-10f, 55f),
-                12, FontStyle.Normal, Color.white, TextAnchor.UpperLeft);
+                new Vector2(0f, 10f), new Vector2(-20f, 180f),
+                18, FontStyle.Normal, Color.white, TextAnchor.UpperLeft);
 
             return panel;
         }
