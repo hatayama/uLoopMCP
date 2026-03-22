@@ -127,12 +127,6 @@ namespace io.github.hatayama.uLoopMCP
                 new Vector2(20f, yOffset - lineHeight * 4), new Vector2(400f, lineHeight),
                 20, FontStyle.Normal, Color.yellow, TextAnchor.MiddleLeft);
 
-            GameObject startPanel = CreateStartPanel(canvasGo.transform, cube);
-
-            // Stop panel (shown during recording/replay, initially hidden)
-            GameObject stopPanel = CreateStopPanel(canvasGo.transform);
-            stopPanel.SetActive(false);
-
             CreateText(canvasGo.transform, "Instructions",
                 "WASD: Move | Mouse: Rotate | LClick: Red toggle | RClick: Blue toggle | Scroll: Scale",
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
@@ -151,20 +145,10 @@ namespace io.github.hatayama.uLoopMCP
             so.FindProperty("_rotationText").objectReferenceValue = rotationText;
             so.FindProperty("_scaleText").objectReferenceValue = scaleText;
             so.FindProperty("_inputText").objectReferenceValue = inputText;
-            so.FindProperty("_startPanel").objectReferenceValue = startPanel;
-            so.FindProperty("_stopPanel").objectReferenceValue = stopPanel;
             so.FindProperty("_verifyPanel").objectReferenceValue = verifyPanel;
             so.FindProperty("_verifyResultText").objectReferenceValue = verifyPanel.transform.Find("ResultText").GetComponent<Text>();
             so.FindProperty("_cubeRenderer").objectReferenceValue = renderer;
             so.ApplyModifiedPropertiesWithoutUndo();
-
-            Button recordButton = startPanel.transform.Find("RecordButton").GetComponent<Button>();
-            Button replayButton = startPanel.transform.Find("ReplayButton").GetComponent<Button>();
-            UnityEditor.Events.UnityEventTools.AddPersistentListener(recordButton.onClick, controller.OnStartRecording);
-            UnityEditor.Events.UnityEventTools.AddPersistentListener(replayButton.onClick, controller.OnStartReplay);
-
-            Button stopButton = stopPanel.transform.Find("StopButton").GetComponent<Button>();
-            UnityEditor.Events.UnityEventTools.AddPersistentListener(stopButton.onClick, controller.OnStop);
 
             Button saveRecBtn = verifyPanel.transform.Find("SaveRecordingLogButton").GetComponent<Button>();
             Button saveRepBtn = verifyPanel.transform.Find("SaveReplayLogButton").GetComponent<Button>();
@@ -172,51 +156,6 @@ namespace io.github.hatayama.uLoopMCP
             UnityEditor.Events.UnityEventTools.AddPersistentListener(saveRecBtn.onClick, controller.OnSaveRecordingLog);
             UnityEditor.Events.UnityEventTools.AddPersistentListener(saveRepBtn.onClick, controller.OnSaveReplayLog);
             UnityEditor.Events.UnityEventTools.AddPersistentListener(compareBtn.onClick, controller.OnCompareLogs);
-        }
-
-        private static GameObject CreateStartPanel(Transform canvasTransform, GameObject cube)
-        {
-            GameObject panel = new GameObject("StartPanel");
-            panel.transform.SetParent(canvasTransform, false);
-
-            RectTransform panelRect = panel.AddComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-            panelRect.pivot = new Vector2(0.5f, 0.5f);
-            panelRect.anchoredPosition = new Vector2(0f, -60f);
-            panelRect.sizeDelta = new Vector2(500f, 120f);
-
-            CreateText(panel.transform, "Title",
-                "Select Mode",
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(0f, 0f), new Vector2(400f, 40f),
-                32, FontStyle.Bold, new Color(1f, 0.9f, 0.3f, 1f), TextAnchor.MiddleCenter);
-
-            CreateButton(panel.transform, "RecordButton", "\u25cf Start Recording",
-                new Vector2(0.25f, 0f), -80f, new Color(0.8f, 0.2f, 0.2f, 1f));
-
-            CreateButton(panel.transform, "ReplayButton", "\u25b6 Start Replay",
-                new Vector2(0.75f, 0f), -80f, new Color(0.2f, 0.6f, 0.8f, 1f));
-
-            return panel;
-        }
-
-        private static GameObject CreateStopPanel(Transform canvasTransform)
-        {
-            GameObject panel = new GameObject("StopPanel");
-            panel.transform.SetParent(canvasTransform, false);
-
-            RectTransform panelRect = panel.AddComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-            panelRect.pivot = new Vector2(0.5f, 0.5f);
-            panelRect.anchoredPosition = new Vector2(0f, -60f);
-            panelRect.sizeDelta = new Vector2(300f, 80f);
-
-            CreateButton(panel.transform, "StopButton", "\u25a0 Stop",
-                new Vector2(0.5f, 0.5f), 0f, new Color(0.7f, 0.2f, 0.2f, 1f));
-
-            return panel;
         }
 
         private static GameObject CreateVerifyPanel(Transform canvasTransform)

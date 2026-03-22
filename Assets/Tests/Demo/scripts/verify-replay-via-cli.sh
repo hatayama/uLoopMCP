@@ -38,19 +38,11 @@ wait_for_unity() {
     exit 1
 }
 
-# activate_controller uses Canvas/Transform.Find to locate children
-# because GameObject.Find cannot find inactive GameObjects
 activate_for_record() {
     run_uloop execute-dynamic-code --code '
 var cube = GameObject.Find("VerificationCube");
 if (cube == null) return "ERROR: VerificationCube not found";
 cube.SendMessage("ActivateForExternalControl");
-var canvas = GameObject.Find("Canvas");
-if (canvas == null) return "OK: activated (no canvas)";
-var sp = canvas.transform.Find("StartPanel");
-if (sp != null) sp.gameObject.SetActive(false);
-var tp = canvas.transform.Find("StopPanel");
-if (tp != null) tp.gameObject.SetActive(false);
 return "OK: activated for recording";
 '
 }
@@ -60,12 +52,6 @@ activate_for_replay() {
 var cube = GameObject.Find("VerificationCube");
 if (cube == null) return "ERROR: VerificationCube not found";
 cube.SendMessage("ActivateForExternalReplay");
-var canvas = GameObject.Find("Canvas");
-if (canvas == null) return "OK: activated (no canvas)";
-var sp = canvas.transform.Find("StartPanel");
-if (sp != null) sp.gameObject.SetActive(false);
-var tp = canvas.transform.Find("StopPanel");
-if (tp != null) tp.gameObject.SetActive(false);
 return "OK: activated for replay";
 '
 }

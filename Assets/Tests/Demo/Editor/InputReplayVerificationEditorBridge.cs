@@ -5,108 +5,94 @@ using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    // Bridges the Runtime verification controller's UI events to
-    // Editor-only InputRecorder/InputReplayer. Necessary because
-    // the controller lives in a Runtime assembly and cannot reference
-    // Editor classes directly.
+    // Detects InputRecorder/InputReplayer state transitions and drives the
+    // verification controller accordingly. The Recordings EditorWindow (or CLI)
+    // starts recording/replay; this bridge resets the controller so logging
+    // stays in sync.
     [InitializeOnLoad]
     internal static class InputReplayVerificationEditorBridge
     {
+        private static bool _prevIsRecording;
+        private static bool _prevIsReplaying;
+
         static InputReplayVerificationEditorBridge()
         {
-            InputReplayVerificationController.RecordingStartRequested -= OnRecordingStartRequested;
-            InputReplayVerificationController.RecordingStartRequested += OnRecordingStartRequested;
-
-            InputReplayVerificationController.RecordingStopRequested -= OnRecordingStopRequested;
-            InputReplayVerificationController.RecordingStopRequested += OnRecordingStopRequested;
-
-            InputReplayVerificationController.ReplayStartRequested -= OnReplayStartRequested;
-            InputReplayVerificationController.ReplayStartRequested += OnReplayStartRequested;
-
-            InputReplayVerificationController.ReplayStopRequested -= OnReplayStopRequested;
-            InputReplayVerificationController.ReplayStopRequested += OnReplayStopRequested;
+            EditorApplication.update -= OnEditorUpdate;
+            EditorApplication.update += OnEditorUpdate;
 
             InputReplayer.ReplayCompleted -= OnReplayCompleted;
             InputReplayer.ReplayCompleted += OnReplayCompleted;
         }
 
-        private static void OnRecordingStartRequested()
+        private static void OnEditorUpdate()
         {
             if (!EditorApplication.isPlaying)
             {
+                _prevIsRecording = false;
+                _prevIsReplaying = false;
                 return;
             }
 
-            InputRecorder.StartRecording(keyFilter: null);
-            Debug.Log("[VerificationBridge] Recording started");
+            bool isRecording = InputRecorder.IsRecording;
+            bool isReplaying = InputReplayer.IsReplaying;
+
+            if (isRecording && !_prevIsRecording)
+            {
+                OnRecordingStarted();
+            }
+            else if (!isRecording && _prevIsRecording)
+            {
+                OnRecordingStopped();
+            }
+
+            if (isReplaying && !_prevIsReplaying)
+            {
+                OnReplayStarted();
+            }
+
+            _prevIsRecording = isRecording;
+            _prevIsReplaying = isReplaying;
         }
 
-        private static void OnRecordingStopRequested()
+        private static void OnRecordingStarted()
         {
-            if (!InputRecorder.IsRecording)
+            InputReplayVerificationController? controller = FindController();
+            if (controller == null)
             {
                 return;
             }
 
-            InputRecordingData data = InputRecorder.StopRecording();
-            string outputPath = InputRecordingFileHelper.ResolveOutputPath("");
-            InputRecordingFileHelper.Save(data, outputPath);
-
-            int eventCount = data.GetTotalEventCount();
-            Debug.Log($"[VerificationBridge] Recording stopped: {eventCount} events, {data.Metadata.TotalFrames} frames -> {outputPath}");
-
-            InputReplayVerificationController? controller = Object.FindObjectOfType<InputReplayVerificationController>();
-            if (controller != null)
-            {
-                controller.OnSaveRecordingLog();
-            }
+            controller.ActivateForExternalControl();
+            Debug.Log("[VerificationBridge] Recording detected, controller reset");
         }
 
-        private static void OnReplayStartRequested()
+        private static void OnRecordingStopped()
         {
-            if (!EditorApplication.isPlaying)
+            InputReplayVerificationController? controller = FindController();
+            if (controller == null)
             {
                 return;
             }
 
-            string inputPath = InputRecordingFileHelper.ResolveLatestRecording("");
-            if (string.IsNullOrEmpty(inputPath))
-            {
-                Debug.LogWarning("[VerificationBridge] No recording file found");
-                return;
-            }
-
-            InputRecordingData? data = InputRecordingFileHelper.Load(inputPath);
-            if (data == null)
-            {
-                Debug.LogWarning($"[VerificationBridge] Failed to load recording: {inputPath}");
-                return;
-            }
-
-            OverlayCanvasFactory.EnsureExists();
-            RecordReplayOverlayFactory.EnsureReplayOverlay();
-            InputReplayer.StartReplay(data, loop: false, showOverlay: true);
-
-            int eventCount = data.GetTotalEventCount();
-            Debug.Log($"[VerificationBridge] Replay started: {eventCount} events, {data.Metadata.TotalFrames} frames from {inputPath}");
+            controller.OnSaveRecordingLog();
+            Debug.Log("[VerificationBridge] Recording stopped, log saved");
         }
 
-        private static void OnReplayStopRequested()
+        private static void OnReplayStarted()
         {
-            if (!InputReplayer.IsReplaying)
+            InputReplayVerificationController? controller = FindController();
+            if (controller == null)
             {
                 return;
             }
 
-            InputReplayer.StopReplay();
-            Debug.Log("[VerificationBridge] Replay stopped by user");
+            controller.ActivateForExternalReplay();
+            Debug.Log("[VerificationBridge] Replay detected, controller reset");
         }
 
         private static void OnReplayCompleted()
         {
-            Debug.Log("[VerificationBridge] Replay completed, running auto-verification");
-
-            InputReplayVerificationController? controller = Object.FindObjectOfType<InputReplayVerificationController>();
+            InputReplayVerificationController? controller = FindController();
             if (controller == null)
             {
                 return;
@@ -115,6 +101,12 @@ namespace io.github.hatayama.uLoopMCP
             controller.OnReplayCompleted();
             controller.OnSaveReplayLog();
             controller.OnCompareLogs();
+            Debug.Log("[VerificationBridge] Replay completed, auto-verification done");
+        }
+
+        private static InputReplayVerificationController? FindController()
+        {
+            return Object.FindAnyObjectByType<InputReplayVerificationController>();
         }
     }
 }

@@ -1,6 +1,5 @@
 #if ULOOPMCP_HAS_INPUT_SYSTEM
 #nullable enable
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -24,26 +23,17 @@ namespace io.github.hatayama.uLoopMCP
         private const string RECORDING_LOG_FILE = "recording-event-log.txt";
         private const string REPLAY_LOG_FILE = "replay-event-log.txt";
 
-        // Editor bridge subscribes to these to call InputRecorder/InputReplayer
-        public static event Action? RecordingStartRequested;
-        public static event Action? RecordingStopRequested;
-        public static event Action? ReplayStartRequested;
-        public static event Action? ReplayStopRequested;
-
         [SerializeField] private Text? _frameText;
         [SerializeField] private Text? _positionText;
         [SerializeField] private Text? _rotationText;
         [SerializeField] private Text? _scaleText;
         [SerializeField] private Text? _inputText;
-        [SerializeField] private GameObject? _startPanel;
-        [SerializeField] private GameObject? _stopPanel;
         [SerializeField] private GameObject? _verifyPanel;
         [SerializeField] private Text? _verifyResultText;
         [SerializeField] private MeshRenderer? _cubeRenderer;
 
         private Vector3 _initialPosition;
         private Vector3 _initialEulerAngles;
-        private bool _isActive;
         private int _startFrame;
         private readonly List<string> _eventLog = new();
         private Vector3 _lastLoggedPosition;
@@ -52,26 +42,18 @@ namespace io.github.hatayama.uLoopMCP
 
         private void Start()
         {
-            Debug.Assert(_startPanel != null, "_startPanel must be assigned in scene");
-            Debug.Assert(_stopPanel != null, "_stopPanel must be assigned in scene");
             Debug.Assert(_verifyPanel != null, "_verifyPanel must be assigned in scene");
             Debug.Assert(_cubeRenderer != null, "_cubeRenderer must be assigned in scene");
 
             Application.targetFrameRate = TARGET_FRAME_RATE;
             _initialPosition = transform.position;
             _initialEulerAngles = transform.eulerAngles;
-            ShowPanel(_startPanel);
-            HidePanel(_stopPanel);
+            _startFrame = Time.frameCount;
             HidePanel(_verifyPanel);
         }
 
         private void Update()
         {
-            if (!_isActive)
-            {
-                return;
-            }
-
             Keyboard? keyboard = Keyboard.current;
             Mouse? mouse = Mouse.current;
             if (keyboard == null || mouse == null)
@@ -88,31 +70,14 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUI(keyboard, mouse, relativeFrame);
         }
 
-        // Called by UI Button "Start Recording"
-        public void OnStartRecording()
-        {
-            Activate();
-            RecordingStartRequested?.Invoke();
-        }
-
-        // Called by UI Button "Start Replay"
-        public void OnStartReplay()
-        {
-            Activate();
-            // First onAfterUpdate injection happens next frame because
-            // this frame's onAfterUpdate already fired before this button click.
-            _startFrame = Time.frameCount + 1;
-            ReplayStartRequested?.Invoke();
-        }
-
-        // Resets state and accepts input without triggering record/replay.
-        // Use when record/replay is started externally (e.g. via CLI).
+        // Resets state for a new recording session.
+        // Called by EditorBridge when recording starts, or by CLI via SendMessage.
         public void ActivateForExternalControl()
         {
             Activate();
         }
 
-        // Same as ActivateForExternalControl but with the 1-frame offset
+        // Resets state for a new replay session with the 1-frame offset
         // needed when replay injection starts next frame.
         public void ActivateForExternalReplay()
         {
@@ -120,36 +85,15 @@ namespace io.github.hatayama.uLoopMCP
             _startFrame = Time.frameCount + 1;
         }
 
-        // Called by UI Button "Stop"
-        public void OnStop()
-        {
-            _isActive = false;
-            RecordingStopRequested?.Invoke();
-            ReplayStopRequested?.Invoke();
-            ShowPostSessionUI();
-        }
-
-        // Called by EditorBridge via SendMessage when replay finishes
         public void OnReplayCompleted()
         {
-            _isActive = false;
-            ShowPostSessionUI();
-        }
-
-        private void ShowPostSessionUI()
-        {
-            HidePanel(_stopPanel);
-            ShowPanel(_startPanel);
             ShowPanel(_verifyPanel);
         }
 
         private void Activate()
         {
             ResetState();
-            _isActive = true;
             _startFrame = Time.frameCount;
-            HidePanel(_startPanel);
-            ShowPanel(_stopPanel);
             HidePanel(_verifyPanel);
         }
 
@@ -378,10 +322,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public void ClearLog()
         {
-            _isActive = false;
             ResetState();
-            ShowPanel(_startPanel);
-            HidePanel(_stopPanel);
             HidePanel(_verifyPanel);
         }
 
