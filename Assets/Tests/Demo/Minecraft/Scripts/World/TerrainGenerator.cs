@@ -181,7 +181,15 @@ namespace io.github.hatayama.uLoopMCP
         private static void CarveRiver(ChunkData chunkData, int x, int z,
             int surfaceHeight, int worldX, int worldZ)
         {
-            // Perlin noise generates meandering river center line crossing spawn area
+            // Keep spawn flat area intact so the player doesn't start in water
+            float distFromSpawn = Mathf.Sqrt(
+                (worldX - WorldConstants.SpawnX) * (worldX - WorldConstants.SpawnX) +
+                (worldZ - WorldConstants.SpawnZ) * (worldZ - WorldConstants.SpawnZ));
+            if (distFromSpawn < WorldConstants.SpawnFlatRadius)
+            {
+                return;
+            }
+
             float riverMeander = Mathf.PerlinNoise(worldX * WorldConstants.RiverNoiseScale, 0.5f);
             float riverCenterAtX = WorldConstants.RiverCenterZ + (riverMeander - 0.5f) * 20f;
             float distFromRiverCenter = Mathf.Abs(worldZ - riverCenterAtX);

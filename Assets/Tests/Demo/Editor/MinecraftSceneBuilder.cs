@@ -158,9 +158,10 @@ namespace io.github.hatayama.uLoopMCP
         private static GameObject CreatePlayer(InputActionAsset inputActions, GameObject worldObj)
         {
             GameObject playerObj = new GameObject("Player");
+            // +1: surface block top face, +0.1: small margin above ground
             playerObj.transform.position = new Vector3(
                 WorldConstants.SpawnX + 0.5f,
-                WorldConstants.SpawnFlatHeight + 2f,
+                WorldConstants.SpawnFlatHeight + 1f + 0.1f,
                 WorldConstants.SpawnZ + 0.5f);
 
             CharacterController cc = playerObj.AddComponent<CharacterController>();
