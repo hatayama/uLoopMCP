@@ -8,5 +8,6 @@ namespace io.github.hatayama.uLoopMCP
         public const int AtlasGridSize = 4;
         public const int TexturePixelSize = 16;
         public const float RaycastNormalOffset = 0.01f;
+        public const float RaycastOriginPullback = 1.5f;
     }
 }
