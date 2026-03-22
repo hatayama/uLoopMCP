@@ -93,6 +93,9 @@ namespace io.github.hatayama.uLoopMCP
         public void OnStartReplay()
         {
             Activate();
+            // First onAfterUpdate injection happens next frame because
+            // this frame's onAfterUpdate already fired before this button click.
+            _startFrame = Time.frameCount + 1;
             ReplayStartRequested?.Invoke();
         }
 
