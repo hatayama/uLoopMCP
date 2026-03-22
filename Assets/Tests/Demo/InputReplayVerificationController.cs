@@ -343,14 +343,17 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            int maxLines = Mathf.Max(recordingLines.Length, replayLines.Length);
+            string[] normalizedRecording = NormalizeFrameNumbers(recordingLines);
+            string[] normalizedReplay = NormalizeFrameNumbers(replayLines);
+
+            int maxLines = Mathf.Max(normalizedRecording.Length, normalizedReplay.Length);
             int diffCount = 0;
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
             for (int i = 0; i < maxLines; i++)
             {
-                string recordLine = i < recordingLines.Length ? recordingLines[i] : "(missing)";
-                string replayLine = i < replayLines.Length ? replayLines[i] : "(missing)";
+                string recordLine = i < normalizedRecording.Length ? normalizedRecording[i] : "(missing)";
+                string replayLine = i < normalizedReplay.Length ? normalizedReplay[i] : "(missing)";
 
                 if (recordLine != replayLine)
                 {
@@ -364,12 +367,12 @@ namespace io.github.hatayama.uLoopMCP
 
             if (diffCount == 0)
             {
-                SetVerifyResult($"MATCH: {recordingLines.Length} lines identical.\nReplay is accurate!");
+                SetVerifyResult($"MATCH: {normalizedRecording.Length} events identical.\nReplay is accurate!");
             }
             else
             {
                 string details = diffCount > 5 ? $"\n...and {diffCount - 5} more" : "";
-                SetVerifyResult($"MISMATCH: {diffCount} differences\n(rec: {recordingLines.Length}, rep: {replayLines.Length})\n{sb}{details}");
+                SetVerifyResult($"MISMATCH: {diffCount} differences\n(rec: {normalizedRecording.Length}, rep: {normalizedReplay.Length})\n{sb}{details}");
             }
         }
 
@@ -391,6 +394,52 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (_verifyResultText != null) _verifyResultText.text = message;
             Debug.Log($"[InputReplayVerification] {message}");
+        }
+
+        // Normalizes absolute frame numbers to relative (first event = frame 0).
+        // CLI commands introduce variable delays between controller activation
+        // and record/replay start, so absolute frame numbers differ. Relative
+        // frame numbers preserve inter-event timing for accurate comparison.
+        private static string[] NormalizeFrameNumbers(string[] lines)
+        {
+            if (lines.Length == 0)
+            {
+                return lines;
+            }
+
+            int firstFrame = ParseFrameNumber(lines[0]);
+            string[] normalized = new string[lines.Length];
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                int absoluteFrame = ParseFrameNumber(lines[i]);
+                int relativeFrame = absoluteFrame - firstFrame;
+                int colonIndex = lines[i].IndexOf(':');
+                string content = colonIndex >= 0 ? lines[i].Substring(colonIndex + 2) : lines[i];
+                normalized[i] = $"Frame {relativeFrame}: {content}";
+            }
+
+            return normalized;
+        }
+
+        private static int ParseFrameNumber(string line)
+        {
+            // "Frame 123: ..."
+            if (!line.StartsWith("Frame "))
+            {
+                return 0;
+            }
+            int colonIndex = line.IndexOf(':');
+            if (colonIndex < 0)
+            {
+                return 0;
+            }
+            string frameStr = line.Substring(6, colonIndex - 6);
+            if (int.TryParse(frameStr, out int frame))
+            {
+                return frame;
+            }
+            return 0;
         }
 
         private static Vector3 RoundVector3(Vector3 v)
