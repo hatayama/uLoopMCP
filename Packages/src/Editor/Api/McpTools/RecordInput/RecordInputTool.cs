@@ -54,7 +54,7 @@ namespace io.github.hatayama.uLoopMCP
             switch (parameters.Action)
             {
                 case RecordInputAction.Start:
-                    response = ExecuteStart(parameters);
+                    response = await ExecuteStartAsync(parameters, ct);
                     break;
 
                 case RecordInputAction.Stop:
@@ -72,13 +72,12 @@ namespace io.github.hatayama.uLoopMCP
                 correlationId: correlationId
             );
 
-            await Task.CompletedTask;
             return response;
 #endif
         }
 
 #if ULOOPMCP_HAS_INPUT_SYSTEM
-        private static RecordInputResponse ExecuteStart(RecordInputSchema parameters)
+        private static async Task<RecordInputResponse> ExecuteStartAsync(RecordInputSchema parameters, CancellationToken ct)
         {
             if (!EditorApplication.isPlaying)
             {
@@ -120,14 +119,74 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
+            if (RecordInputOverlayState.Phase == RecordInputOverlayPhase.Countdown)
+            {
+                return new RecordInputResponse
+                {
+                    Success = false,
+                    Message = "Recording countdown already in progress.",
+                    Action = RecordInputAction.Start.ToString()
+                };
+            }
+
+            int delaySeconds = Mathf.Clamp(parameters.DelaySeconds, RecordInputConstants.MIN_DELAY_SECONDS, RecordInputConstants.MAX_DELAY_SECONDS);
             HashSet<Key>? keyFilter = InputRecordingFileHelper.ParseKeyFilter(parameters.Keys);
-            InputRecorder.StartRecording(keyFilter);
+
+            if (parameters.ShowOverlay)
+            {
+                OverlayCanvasFactory.EnsureExists();
+            }
+
+            if (delaySeconds > 0)
+            {
+                if (parameters.ShowOverlay)
+                {
+                    RecordInputOverlayState.StartCountdown(delaySeconds);
+                }
+
+                await TimerDelay.WaitThenExecuteOnMainThread(delaySeconds * 1000, () =>
+                {
+                    if (!EditorApplication.isPlaying)
+                    {
+                        RecordInputOverlayState.Clear();
+                        return;
+                    }
+
+                    if (parameters.ShowOverlay)
+                    {
+                        RecordInputOverlayState.StartRecording();
+                    }
+
+                    InputRecorder.StartRecording(keyFilter);
+                }, ct);
+
+                if (!EditorApplication.isPlaying || !InputRecorder.IsRecording)
+                {
+                    RecordInputOverlayState.Clear();
+                    return new RecordInputResponse
+                    {
+                        Success = false,
+                        Message = "Recording cancelled (PlayMode ended during countdown).",
+                        Action = RecordInputAction.Start.ToString()
+                    };
+                }
+            }
+            else
+            {
+                if (parameters.ShowOverlay)
+                {
+                    RecordInputOverlayState.StartRecording();
+                }
+
+                InputRecorder.StartRecording(keyFilter);
+            }
 
             string filterMessage = keyFilter != null ? $" (filtering: {parameters.Keys})" : "";
+            string delayMessage = delaySeconds > 0 ? $" (after {delaySeconds}s countdown)" : "";
             return new RecordInputResponse
             {
                 Success = true,
-                Message = $"Recording started{filterMessage}. Use Stop to save.",
+                Message = $"Recording started{filterMessage}{delayMessage}. Use Stop to save.",
                 Action = RecordInputAction.Start.ToString()
             };
         }

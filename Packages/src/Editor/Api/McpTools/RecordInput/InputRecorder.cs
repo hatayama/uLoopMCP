@@ -81,6 +81,7 @@ namespace io.github.hatayama.uLoopMCP
 
             InputSystem.onAfterUpdate -= OnAfterUpdate;
             _isRecording = false;
+            RecordInputOverlayState.Clear();
 
             int totalFrames = Time.frameCount - _startFrameCount;
             float duration = Time.realtimeSinceStartup - _startTime;
@@ -109,6 +110,7 @@ namespace io.github.hatayama.uLoopMCP
 
             InputSystem.onAfterUpdate -= OnAfterUpdate;
             _isRecording = false;
+            RecordInputOverlayState.Clear();
             Reset();
         }
 

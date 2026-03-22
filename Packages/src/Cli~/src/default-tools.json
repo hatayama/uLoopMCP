@@ -657,6 +657,16 @@
           "Keys": {
             "type": "string",
             "description": "Comma-separated key filter. Only record specified keys (e.g. 'W,A,S,D,Space'). Empty means record all common game keys."
+          },
+          "DelaySeconds": {
+            "type": "integer",
+            "description": "Countdown delay in seconds before recording starts (0-10). Gives time to switch focus to Game View.",
+            "default": 3
+          },
+          "ShowOverlay": {
+            "type": "boolean",
+            "description": "Show recording overlay (countdown + REC indicator)",
+            "default": true
           }
         }
       }

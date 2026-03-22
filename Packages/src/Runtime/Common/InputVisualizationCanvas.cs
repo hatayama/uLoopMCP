@@ -9,11 +9,13 @@ namespace io.github.hatayama.uLoopMCP
         [SerializeField] private SimulateMouseUiOverlay _mouseUiOverlay = null!;
         [SerializeField] private SimulateMouseInputOverlay _mouseInputOverlay = null!;
         [SerializeField] private ReplayInputOverlay _replayInputOverlay = null!;
+        [SerializeField] private RecordInputOverlayView _recordInputOverlayView = null!;
 
         public SimulateKeyboardOverlay KeyboardOverlay => _keyboardOverlay;
         public SimulateMouseUiOverlay MouseUiOverlay => _mouseUiOverlay;
         public SimulateMouseInputOverlay MouseInputOverlay => _mouseInputOverlay;
         public ReplayInputOverlay ReplayInputOverlay => _replayInputOverlay;
+        public RecordInputOverlayView RecordInputOverlayView => _recordInputOverlayView;
 
         private void Awake()
         {
@@ -21,6 +23,7 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(_mouseUiOverlay != null, "_mouseUiOverlay must be assigned in prefab");
             Debug.Assert(_mouseInputOverlay != null, "_mouseInputOverlay must be assigned in prefab");
             Debug.Assert(_replayInputOverlay != null, "_replayInputOverlay must be assigned in prefab");
+            Debug.Assert(_recordInputOverlayView != null, "_recordInputOverlayView must be assigned in prefab");
         }
     }
 }

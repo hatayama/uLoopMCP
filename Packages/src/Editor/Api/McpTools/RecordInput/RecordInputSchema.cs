@@ -12,5 +12,11 @@ namespace io.github.hatayama.uLoopMCP
 
         [Description("Comma-separated key filter. Only record specified keys (e.g. 'W,A,S,D,Space'). Empty means record all common game keys.")]
         public string Keys { get; set; } = "";
+
+        [Description("Countdown delay in seconds before recording starts (0-10). Gives time to switch focus to Game View.")]
+        public int DelaySeconds { get; set; } = 3;
+
+        [Description("Show recording overlay (countdown + REC indicator)")]
+        public bool ShowOverlay { get; set; } = true;
     }
 }
