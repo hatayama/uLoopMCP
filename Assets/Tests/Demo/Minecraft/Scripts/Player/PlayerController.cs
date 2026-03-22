@@ -47,12 +47,12 @@ namespace io.github.hatayama.uLoopMCP
             Vector2 moveInput = moveAction.action.ReadValue<Vector2>();
             bool isSprinting = sprintAction.action.IsPressed();
 
-            float step = isSprinting
-                ? PlayerConstants.MoveStep * PlayerConstants.SprintMultiplier
-                : PlayerConstants.MoveStep;
+            float speed = isSprinting
+                ? PlayerConstants.MoveSpeed * PlayerConstants.SprintMultiplier
+                : PlayerConstants.MoveSpeed;
 
             Vector3 moveDirection = transform.right * moveInput.x + transform.forward * moveInput.y;
-            moveDirection *= step;
+            moveDirection *= speed;
 
             if (characterController.isGrounded)
             {
@@ -61,16 +61,16 @@ namespace io.github.hatayama.uLoopMCP
 
                 if (jumpAction.action.WasPressedThisFrame())
                 {
-                    verticalVelocity = PlayerConstants.JumpVelocity;
+                    verticalVelocity = PlayerConstants.JumpForce;
                 }
             }
             else
             {
-                verticalVelocity += PlayerConstants.GravityStep;
+                verticalVelocity += PlayerConstants.Gravity * PlayerConstants.FixedDeltaTime;
             }
 
             moveDirection.y = verticalVelocity;
-            characterController.Move(moveDirection);
+            characterController.Move(moveDirection * PlayerConstants.FixedDeltaTime);
         }
     }
 }
