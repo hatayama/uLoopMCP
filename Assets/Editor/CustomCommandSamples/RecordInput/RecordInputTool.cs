@@ -6,9 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
-#if ULOOPMCP_HAS_INPUT_SYSTEM
 using UnityEngine.InputSystem;
-#endif
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
@@ -19,27 +17,12 @@ namespace io.github.hatayama.uLoopMCP
     {
         public override string ToolName => "record-input";
 
-        protected override
-#if !ULOOPMCP_HAS_INPUT_SYSTEM
-#pragma warning disable CS1998
-#endif
-            async Task<RecordInputResponse> ExecuteAsync(
+        protected override async Task<RecordInputResponse> ExecuteAsync(
             RecordInputSchema parameters,
             CancellationToken ct)
-#if !ULOOPMCP_HAS_INPUT_SYSTEM
-#pragma warning restore CS1998
-#endif
         {
             ct.ThrowIfCancellationRequested();
 
-#if !ULOOPMCP_HAS_INPUT_SYSTEM
-            return new RecordInputResponse
-            {
-                Success = false,
-                Message = "record-input requires the Input System package (com.unity.inputsystem). Install it via Package Manager and set Active Input Handling to 'Input System Package (New)' or 'Both' in Player Settings.",
-                Action = parameters.Action.ToString()
-            };
-#else
             string correlationId = McpConstants.GenerateCorrelationId();
 
             VibeLogger.LogInfo(
@@ -73,10 +56,8 @@ namespace io.github.hatayama.uLoopMCP
             );
 
             return response;
-#endif
         }
 
-#if ULOOPMCP_HAS_INPUT_SYSTEM
         private static async Task<RecordInputResponse> ExecuteStartAsync(RecordInputSchema parameters, CancellationToken ct)
         {
             if (!EditorApplication.isPlaying)
@@ -224,6 +205,5 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-#endif
     }
 }

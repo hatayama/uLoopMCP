@@ -4,9 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
-#if ULOOPMCP_HAS_INPUT_SYSTEM
 using UnityEngine.InputSystem;
-#endif
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
@@ -88,7 +86,6 @@ namespace io.github.hatayama.uLoopMCP
             return files.OrderByDescending(f => File.GetLastWriteTimeUtc(f)).First();
         }
 
-#if ULOOPMCP_HAS_INPUT_SYSTEM
         public static HashSet<Key>? ParseKeyFilter(string keys)
         {
             if (string.IsNullOrEmpty(keys))
@@ -119,6 +116,5 @@ namespace io.github.hatayama.uLoopMCP
 
             return filter.Count > 0 ? filter : null;
         }
-#endif
     }
 }
