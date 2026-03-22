@@ -158,6 +158,9 @@ namespace io.github.hatayama.uLoopMCP
         private static GameObject CreatePlayer(InputActionAsset inputActions, GameObject worldObj)
         {
             GameObject playerObj = new GameObject("Player");
+            // CharacterController is a Collider; without this, downward raycasts
+            // hit the player's own capsule before reaching ground blocks
+            playerObj.layer = LayerMask.NameToLayer("Ignore Raycast");
             // +1: surface block top face, +0.1: small margin above ground
             playerObj.transform.position = new Vector3(
                 WorldConstants.SpawnX + 0.5f,
