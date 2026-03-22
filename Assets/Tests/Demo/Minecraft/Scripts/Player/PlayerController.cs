@@ -19,6 +19,11 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(characterController != null, "CharacterController component required");
         }
 
+        private void Start()
+        {
+            Application.targetFrameRate = PlayerConstants.TargetFrameRate;
+        }
+
         private void OnEnable()
         {
             Debug.Assert(moveAction != null, "moveAction must be assigned in Inspector");
@@ -42,12 +47,12 @@ namespace io.github.hatayama.uLoopMCP
             Vector2 moveInput = moveAction.action.ReadValue<Vector2>();
             bool isSprinting = sprintAction.action.IsPressed();
 
-            float speed = isSprinting
-                ? PlayerConstants.MoveSpeed * PlayerConstants.SprintMultiplier
-                : PlayerConstants.MoveSpeed;
+            float step = isSprinting
+                ? PlayerConstants.MoveStep * PlayerConstants.SprintMultiplier
+                : PlayerConstants.MoveStep;
 
             Vector3 moveDirection = transform.right * moveInput.x + transform.forward * moveInput.y;
-            moveDirection *= speed;
+            moveDirection *= step;
 
             if (characterController.isGrounded)
             {
@@ -56,16 +61,16 @@ namespace io.github.hatayama.uLoopMCP
 
                 if (jumpAction.action.WasPressedThisFrame())
                 {
-                    verticalVelocity = PlayerConstants.JumpForce;
+                    verticalVelocity = PlayerConstants.JumpVelocity;
                 }
             }
             else
             {
-                verticalVelocity += PlayerConstants.Gravity * Time.deltaTime;
+                verticalVelocity += PlayerConstants.GravityStep;
             }
 
             moveDirection.y = verticalVelocity;
-            characterController.Move(moveDirection * Time.deltaTime);
+            characterController.Move(moveDirection);
         }
     }
 }
