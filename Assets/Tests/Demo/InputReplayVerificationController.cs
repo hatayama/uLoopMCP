@@ -91,6 +91,7 @@ namespace io.github.hatayama.uLoopMCP
             _isActive = true;
             _startFrame = Time.frameCount;
             HideStartPanel();
+            ShowVerifyPanel();
         }
 
         private void ResetState()
