@@ -19,6 +19,9 @@ namespace io.github.hatayama.uLoopMCP
         private const float SCALE_STEP = 0.1f;
         private const int TARGET_FRAME_RATE = 60;
         private const float ROUND_MULTIPLIER = 10000f;
+        private const string LOG_OUTPUT_DIR = ".uloop/outputs/InputRecordings";
+        private const string RECORDING_LOG_FILE = "recording-event-log.txt";
+        private const string REPLAY_LOG_FILE = "replay-event-log.txt";
 
         [SerializeField] private Text? _frameText;
         [SerializeField] private Text? _positionText;
@@ -26,6 +29,8 @@ namespace io.github.hatayama.uLoopMCP
         [SerializeField] private Text? _scaleText;
         [SerializeField] private Text? _inputText;
         [SerializeField] private GameObject? _startPanel;
+        [SerializeField] private GameObject? _verifyPanel;
+        [SerializeField] private Text? _verifyResultText;
         [SerializeField] private MeshRenderer? _cubeRenderer;
 
         private Vector3 _initialPosition;
@@ -268,6 +273,103 @@ namespace io.github.hatayama.uLoopMCP
             _isActive = false;
             ResetState();
             ShowStartPanel();
+        }
+
+        // Called by UI Button "Save Recording Log"
+        public void OnSaveRecordingLog()
+        {
+            string path = GetLogPath(RECORDING_LOG_FILE);
+            SaveLog(path);
+            ShowVerifyPanel();
+            SetVerifyResult($"Recording log saved ({_eventLog.Count} entries)");
+        }
+
+        // Called by UI Button "Save Replay Log"
+        public void OnSaveReplayLog()
+        {
+            string path = GetLogPath(REPLAY_LOG_FILE);
+            SaveLog(path);
+            ShowVerifyPanel();
+            SetVerifyResult($"Replay log saved ({_eventLog.Count} entries)");
+        }
+
+        // Called by UI Button "Compare Logs"
+        public void OnCompareLogs()
+        {
+            string recordingPath = GetLogPath(RECORDING_LOG_FILE);
+            string replayPath = GetLogPath(REPLAY_LOG_FILE);
+
+            if (!File.Exists(recordingPath))
+            {
+                SetVerifyResult("Recording log not found. Save it first.");
+                return;
+            }
+
+            if (!File.Exists(replayPath))
+            {
+                SetVerifyResult("Replay log not found. Save it first.");
+                return;
+            }
+
+            string[] recordingLines = File.ReadAllLines(recordingPath);
+            string[] replayLines = File.ReadAllLines(replayPath);
+
+            if (recordingLines.Length == 0 && replayLines.Length == 0)
+            {
+                SetVerifyResult("Both logs are empty.");
+                return;
+            }
+
+            int maxLines = Mathf.Max(recordingLines.Length, replayLines.Length);
+            int diffCount = 0;
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+            for (int i = 0; i < maxLines; i++)
+            {
+                string recordLine = i < recordingLines.Length ? recordingLines[i] : "(missing)";
+                string replayLine = i < replayLines.Length ? replayLines[i] : "(missing)";
+
+                if (recordLine != replayLine)
+                {
+                    diffCount++;
+                    if (diffCount <= 5)
+                    {
+                        sb.AppendLine($"L{i + 1}: Rec[{recordLine}] Rep[{replayLine}]");
+                    }
+                }
+            }
+
+            if (diffCount == 0)
+            {
+                SetVerifyResult($"MATCH: {recordingLines.Length} lines identical.\nReplay is accurate!");
+            }
+            else
+            {
+                string details = diffCount > 5 ? $"\n...and {diffCount - 5} more" : "";
+                SetVerifyResult($"MISMATCH: {diffCount} differences\n(rec: {recordingLines.Length} lines, rep: {replayLines.Length} lines)\n{sb}{details}");
+            }
+        }
+
+        private static string GetLogPath(string fileName)
+        {
+            return $"{LOG_OUTPUT_DIR}/{fileName}";
+        }
+
+        private void ShowVerifyPanel()
+        {
+            if (_verifyPanel != null)
+            {
+                _verifyPanel.SetActive(true);
+            }
+        }
+
+        private void SetVerifyResult(string message)
+        {
+            if (_verifyResultText != null)
+            {
+                _verifyResultText.text = message;
+            }
+            Debug.Log($"[InputReplayVerification] {message}");
         }
 
         private static Vector3 RoundVector3(Vector3 v)

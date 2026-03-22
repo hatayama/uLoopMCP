@@ -136,6 +136,10 @@ namespace io.github.hatayama.uLoopMCP
                 new Vector2(0f, 20f), new Vector2(900f, 30f),
                 16, FontStyle.Normal, new Color(0.7f, 0.7f, 0.7f, 1f), TextAnchor.MiddleCenter);
 
+            // Verify panel (bottom-right, initially hidden)
+            GameObject verifyPanel = CreateVerifyPanel(canvasGo.transform);
+            verifyPanel.SetActive(false);
+
             MeshRenderer? renderer = cube.GetComponent<MeshRenderer>();
             InputReplayVerificationController controller = cube.AddComponent<InputReplayVerificationController>();
             SerializedObject so = new SerializedObject(controller);
@@ -145,14 +149,22 @@ namespace io.github.hatayama.uLoopMCP
             so.FindProperty("_scaleText").objectReferenceValue = scaleText;
             so.FindProperty("_inputText").objectReferenceValue = inputText;
             so.FindProperty("_startPanel").objectReferenceValue = startPanel;
+            so.FindProperty("_verifyPanel").objectReferenceValue = verifyPanel;
+            so.FindProperty("_verifyResultText").objectReferenceValue = verifyPanel.transform.Find("ResultText").GetComponent<Text>();
             so.FindProperty("_cubeRenderer").objectReferenceValue = renderer;
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            // Wire button onClick after controller is added
             Button recordButton = startPanel.transform.Find("RecordButton").GetComponent<Button>();
             Button replayButton = startPanel.transform.Find("ReplayButton").GetComponent<Button>();
             UnityEditor.Events.UnityEventTools.AddPersistentListener(recordButton.onClick, controller.OnStartRecording);
             UnityEditor.Events.UnityEventTools.AddPersistentListener(replayButton.onClick, controller.OnStartReplay);
+
+            Button saveRecBtn = verifyPanel.transform.Find("SaveRecordingLogButton").GetComponent<Button>();
+            Button saveRepBtn = verifyPanel.transform.Find("SaveReplayLogButton").GetComponent<Button>();
+            Button compareBtn = verifyPanel.transform.Find("CompareLogsButton").GetComponent<Button>();
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(saveRecBtn.onClick, controller.OnSaveRecordingLog);
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(saveRepBtn.onClick, controller.OnSaveReplayLog);
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(compareBtn.onClick, controller.OnCompareLogs);
         }
 
         private static GameObject CreateStartPanel(Transform canvasTransform, GameObject cube)
@@ -178,6 +190,45 @@ namespace io.github.hatayama.uLoopMCP
 
             CreateButton(panel.transform, "ReplayButton", "\u25b6 Start Replay",
                 new Vector2(0.75f, 0f), -80f, new Color(0.2f, 0.6f, 0.8f, 1f));
+
+            return panel;
+        }
+
+        private static GameObject CreateVerifyPanel(Transform canvasTransform)
+        {
+            GameObject panel = new GameObject("VerifyPanel");
+            panel.transform.SetParent(canvasTransform, false);
+
+            RectTransform panelRect = panel.AddComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(1f, 0f);
+            panelRect.anchorMax = new Vector2(1f, 0f);
+            panelRect.pivot = new Vector2(1f, 0f);
+            panelRect.anchoredPosition = new Vector2(-10f, 60f);
+            panelRect.sizeDelta = new Vector2(320f, 200f);
+
+            Image panelBg = panel.AddComponent<Image>();
+            panelBg.color = new Color(0f, 0f, 0f, 0.5f);
+
+            CreateText(panel.transform, "VerifyTitle",
+                "Verification",
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -5f), new Vector2(300f, 25f),
+                18, FontStyle.Bold, Color.white, TextAnchor.MiddleCenter);
+
+            CreateButton(panel.transform, "SaveRecordingLogButton", "Save Recording Log",
+                new Vector2(0.5f, 1f), -35f, new Color(0.3f, 0.5f, 0.3f, 1f));
+
+            CreateButton(panel.transform, "SaveReplayLogButton", "Save Replay Log",
+                new Vector2(0.5f, 1f), -70f, new Color(0.3f, 0.4f, 0.6f, 1f));
+
+            CreateButton(panel.transform, "CompareLogsButton", "\u2714 Compare Logs",
+                new Vector2(0.5f, 1f), -105f, new Color(0.5f, 0.4f, 0.2f, 1f));
+
+            Text resultText = CreateText(panel.transform, "ResultText",
+                "",
+                new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 5f), new Vector2(-10f, 55f),
+                12, FontStyle.Normal, Color.white, TextAnchor.UpperLeft);
 
             return panel;
         }
