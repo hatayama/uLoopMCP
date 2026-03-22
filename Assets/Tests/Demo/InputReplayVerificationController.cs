@@ -25,7 +25,7 @@ namespace io.github.hatayama.uLoopMCP
         [SerializeField] private Text? _rotationText;
         [SerializeField] private Text? _scaleText;
         [SerializeField] private Text? _inputText;
-        [SerializeField] private Text? _startPromptText;
+        [SerializeField] private GameObject? _startPanel;
         [SerializeField] private MeshRenderer? _cubeRenderer;
 
         private Vector3 _initialPosition;
@@ -42,26 +42,20 @@ namespace io.github.hatayama.uLoopMCP
             Application.targetFrameRate = TARGET_FRAME_RATE;
             _initialPosition = transform.position;
             _initialEulerAngles = transform.eulerAngles;
-            ShowStartPrompt();
+            ShowStartPanel();
         }
 
         private void Update()
         {
-            Keyboard? keyboard = Keyboard.current;
-            Mouse? mouse = Mouse.current;
-            if (keyboard == null || mouse == null)
+            if (!_isActive)
             {
                 return;
             }
 
-            if (!_isActive)
+            Keyboard? keyboard = Keyboard.current;
+            Mouse? mouse = Mouse.current;
+            if (keyboard == null || mouse == null)
             {
-                // Left click activates and resets to a known clean state
-                if (mouse.leftButton.wasPressedThisFrame)
-                {
-                    Activate();
-                }
-                UpdateWaitingUI();
                 return;
             }
 
@@ -74,16 +68,24 @@ namespace io.github.hatayama.uLoopMCP
             UpdateUI(keyboard, mouse, relativeFrame);
         }
 
+        // Called by UI Button "Start Recording"
+        public void OnStartRecording()
+        {
+            Activate();
+        }
+
+        // Called by UI Button "Start Replay"
+        public void OnStartReplay()
+        {
+            Activate();
+        }
+
         private void Activate()
         {
             ResetState();
             _isActive = true;
             _startFrame = Time.frameCount;
-
-            if (_startPromptText != null)
-            {
-                _startPromptText.gameObject.SetActive(false);
-            }
+            HideStartPanel();
         }
 
         private void ResetState()
@@ -98,11 +100,19 @@ namespace io.github.hatayama.uLoopMCP
             _lastLoggedPosition = _initialPosition;
         }
 
-        private void ShowStartPrompt()
+        private void ShowStartPanel()
         {
-            if (_startPromptText != null)
+            if (_startPanel != null)
             {
-                _startPromptText.gameObject.SetActive(true);
+                _startPanel.SetActive(true);
+            }
+        }
+
+        private void HideStartPanel()
+        {
+            if (_startPanel != null)
+            {
+                _startPanel.SetActive(false);
             }
         }
 
@@ -203,15 +213,6 @@ namespace io.github.hatayama.uLoopMCP
             return "White";
         }
 
-        private void UpdateWaitingUI()
-        {
-            if (_frameText != null) _frameText.text = "Frame: ---";
-            if (_positionText != null) _positionText.text = "Pos: (waiting)";
-            if (_rotationText != null) _rotationText.text = "Rot Y: ---";
-            if (_scaleText != null) _scaleText.text = "Scale: ---";
-            if (_inputText != null) _inputText.text = "Input: [waiting for click]";
-        }
-
         private void UpdateUI(Keyboard keyboard, Mouse mouse, int frame)
         {
             if (_frameText != null)
@@ -266,7 +267,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             _isActive = false;
             ResetState();
-            ShowStartPrompt();
+            ShowStartPanel();
         }
 
         private static Vector3 RoundVector3(Vector3 v)

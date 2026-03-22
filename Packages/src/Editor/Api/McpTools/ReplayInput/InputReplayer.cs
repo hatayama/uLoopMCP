@@ -29,6 +29,7 @@ namespace io.github.hatayama.uLoopMCP
         private static bool _showOverlay;
         private static readonly HashSet<Key> _replayHeldKeys = new();
         private static readonly HashSet<MouseButton> _replayHeldButtons = new();
+        private static bool _mouseWasDisabled;
 
         public static bool IsReplaying => _isReplaying;
         public static int CurrentFrame => _currentFrame;
@@ -64,6 +65,12 @@ namespace io.github.hatayama.uLoopMCP
             _replayHeldButtons.Clear();
             _isReplaying = true;
 
+            // Physical mouse events (delta, scroll) overwrite injected values
+            // because native events are processed after onBeforeUpdate injection.
+            // Disabling the device blocks native events while InputState.Change
+            // still writes directly to the device state buffer.
+            DisablePhysicalMouse();
+
             InputSystem.onBeforeUpdate -= OnBeforeUpdate;
             InputSystem.onBeforeUpdate += OnBeforeUpdate;
         }
@@ -79,6 +86,7 @@ namespace io.github.hatayama.uLoopMCP
             _isReplaying = false;
 
             ReleaseAllHeldInputs();
+            EnablePhysicalMouse();
 
             _data = null;
             _eventIndex = 0;
@@ -310,6 +318,33 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             return lookup;
+        }
+
+        private static void DisablePhysicalMouse()
+        {
+            Mouse? mouse = Mouse.current;
+            if (mouse == null || !mouse.enabled)
+            {
+                _mouseWasDisabled = true;
+                return;
+            }
+
+            _mouseWasDisabled = false;
+            InputSystem.DisableDevice(mouse);
+        }
+
+        private static void EnablePhysicalMouse()
+        {
+            if (_mouseWasDisabled)
+            {
+                return;
+            }
+
+            Mouse? mouse = Mouse.current;
+            if (mouse != null && !mouse.enabled)
+            {
+                InputSystem.EnableDevice(mouse);
+            }
         }
 
         private static void OnPlayModeStateChanged(PlayModeStateChange state)

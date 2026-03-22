@@ -127,11 +127,8 @@ namespace io.github.hatayama.uLoopMCP
                 new Vector2(20f, yOffset - lineHeight * 4), new Vector2(400f, lineHeight),
                 20, FontStyle.Normal, Color.yellow, TextAnchor.MiddleLeft);
 
-            Text startPromptText = CreateText(canvasGo.transform, "StartPromptText",
-                "Click to Start",
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0f, -80f), new Vector2(500f, 60f),
-                40, FontStyle.Bold, new Color(1f, 0.9f, 0.3f, 1f), TextAnchor.MiddleCenter);
+            // Start panel with two buttons
+            GameObject startPanel = CreateStartPanel(canvasGo.transform, cube);
 
             CreateText(canvasGo.transform, "Instructions",
                 "WASD: Move | Mouse: Rotate | LClick: Red toggle | RClick: Blue toggle | Scroll: Scale",
@@ -147,9 +144,77 @@ namespace io.github.hatayama.uLoopMCP
             so.FindProperty("_rotationText").objectReferenceValue = rotationText;
             so.FindProperty("_scaleText").objectReferenceValue = scaleText;
             so.FindProperty("_inputText").objectReferenceValue = inputText;
-            so.FindProperty("_startPromptText").objectReferenceValue = startPromptText;
+            so.FindProperty("_startPanel").objectReferenceValue = startPanel;
             so.FindProperty("_cubeRenderer").objectReferenceValue = renderer;
             so.ApplyModifiedPropertiesWithoutUndo();
+
+            // Wire button onClick after controller is added
+            Button recordButton = startPanel.transform.Find("RecordButton").GetComponent<Button>();
+            Button replayButton = startPanel.transform.Find("ReplayButton").GetComponent<Button>();
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(recordButton.onClick, controller.OnStartRecording);
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(replayButton.onClick, controller.OnStartReplay);
+        }
+
+        private static GameObject CreateStartPanel(Transform canvasTransform, GameObject cube)
+        {
+            GameObject panel = new GameObject("StartPanel");
+            panel.transform.SetParent(canvasTransform, false);
+
+            RectTransform panelRect = panel.AddComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.anchoredPosition = new Vector2(0f, -60f);
+            panelRect.sizeDelta = new Vector2(500f, 120f);
+
+            CreateText(panel.transform, "Title",
+                "Select Mode",
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, 0f), new Vector2(400f, 40f),
+                32, FontStyle.Bold, new Color(1f, 0.9f, 0.3f, 1f), TextAnchor.MiddleCenter);
+
+            CreateButton(panel.transform, "RecordButton", "\u25cf Start Recording",
+                new Vector2(0.25f, 0f), -80f, new Color(0.8f, 0.2f, 0.2f, 1f));
+
+            CreateButton(panel.transform, "ReplayButton", "\u25b6 Start Replay",
+                new Vector2(0.75f, 0f), -80f, new Color(0.2f, 0.6f, 0.8f, 1f));
+
+            return panel;
+        }
+
+        private static void CreateButton(Transform parent, string name, string label, Vector2 anchorPos, float yOffset, Color bgColor)
+        {
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+
+            RectTransform rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(anchorPos.x, anchorPos.y);
+            rect.anchorMax = new Vector2(anchorPos.x, anchorPos.y);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(0f, yOffset);
+            rect.sizeDelta = new Vector2(220f, 50f);
+
+            Image image = go.AddComponent<Image>();
+            image.color = bgColor;
+
+            go.AddComponent<Button>();
+
+            GameObject textGo = new GameObject("Text");
+            textGo.transform.SetParent(go.transform, false);
+
+            RectTransform textRect = textGo.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+
+            Text text = textGo.AddComponent<Text>();
+            text.text = label;
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = 22;
+            text.fontStyle = FontStyle.Bold;
+            text.color = Color.white;
+            text.alignment = TextAnchor.MiddleCenter;
         }
 
         private static Text CreateText(
