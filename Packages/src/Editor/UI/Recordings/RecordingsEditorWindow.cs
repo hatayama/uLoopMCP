@@ -33,7 +33,7 @@ namespace io.github.hatayama.uLoopMCP
         private int _prevReplayFrame = -1;
         private int _countdownGeneration;
 
-        [MenuItem("uLoopMCP/Recordings")]
+        [MenuItem("Window/Unity CLI Loop/Recordings", priority = 1)]
         public static void ShowWindow()
         {
             RecordingsEditorWindow window = GetWindow<RecordingsEditorWindow>("Recordings");

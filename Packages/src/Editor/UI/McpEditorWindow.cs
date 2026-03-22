@@ -23,7 +23,7 @@ namespace io.github.hatayama.uLoopMCP
         private bool _isInstallingSkills;
         private bool _isRefreshingVersion;
 
-        [MenuItem("Window/Unity CLI Loop")]
+        [MenuItem("Window/Unity CLI Loop/Settings", priority = 0)]
         public static void ShowWindow()
         {
             McpEditorWindow window = GetWindow<McpEditorWindow>("Unity CLI Loop");
