@@ -123,6 +123,7 @@ namespace io.github.hatayama.uLoopMCP
                 InputRecordingData data = InputRecorder.StopRecording();
                 string outputPath = InputRecordingFileHelper.ResolveOutputPath("");
                 InputRecordingFileHelper.Save(data, outputPath);
+                InputRecorder.NotifyRecordingStopped();
                 return;
             }
 

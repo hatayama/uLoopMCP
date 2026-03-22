@@ -5,6 +5,7 @@ using System.Globalization;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.LowLevel;
 
 namespace io.github.hatayama.uLoopMCP
@@ -103,8 +104,14 @@ namespace io.github.hatayama.uLoopMCP
             };
 
             Reset();
-            RecordingStopped?.Invoke();
             return data;
+        }
+
+        // Call after the recording data has been saved to disk,
+        // so subscribers (e.g. RecordingsEditorWindow) see the new file
+        public static void NotifyRecordingStopped()
+        {
+            RecordingStopped?.Invoke();
         }
 
         public static void ForceStop()
@@ -149,6 +156,7 @@ namespace io.github.hatayama.uLoopMCP
                 string outputPath = InputRecordingFileHelper.ResolveOutputPath("");
                 InputRecordingFileHelper.Save(data, outputPath);
                 LastAutoSavePath = outputPath;
+                NotifyRecordingStopped();
                 Debug.LogWarning($"[InputRecorder] Recording auto-stopped after {RecordInputConstants.MAX_RECORDING_DURATION_SECONDS}s limit. Saved to {outputPath}");
                 return;
             }
@@ -186,7 +194,8 @@ namespace io.github.hatayama.uLoopMCP
             for (int i = 0; i < keysToScan.Length; i++)
             {
                 Key key = keysToScan[i];
-                if (keyboard[key].isPressed)
+                KeyControl? control = keyboard[key];
+                if (control != null && control.isPressed)
                 {
                     _currentKeyStates.Add(key);
                 }
@@ -372,7 +381,8 @@ namespace io.github.hatayama.uLoopMCP
             Key[] keysToScan = _cachedKeysToScan ?? DEFAULT_SCAN_KEYS;
             for (int i = 0; i < keysToScan.Length; i++)
             {
-                if (keyboard[keysToScan[i]].isPressed)
+                KeyControl? control = keyboard[keysToScan[i]];
+                if (control != null && control.isPressed)
                 {
                     _previousKeyStates.Add(keysToScan[i]);
                 }

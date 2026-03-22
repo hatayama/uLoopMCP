@@ -203,6 +203,7 @@ namespace io.github.hatayama.uLoopMCP
 
             string outputPath = InputRecordingFileHelper.ResolveOutputPath(parameters.OutputPath);
             InputRecordingFileHelper.Save(data, outputPath);
+            InputRecorder.NotifyRecordingStopped();
 
             int eventCount = data.GetTotalEventCount();
 
