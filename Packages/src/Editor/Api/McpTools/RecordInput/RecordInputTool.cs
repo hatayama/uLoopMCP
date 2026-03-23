@@ -123,21 +123,32 @@ namespace io.github.hatayama.uLoopMCP
             {
                 RecordInputOverlayState.StartCountdown(delaySeconds);
 
-                await TimerDelay.WaitThenExecuteOnMainThread(delaySeconds * 1000, () =>
+                try
                 {
-                    if (!EditorApplication.isPlaying || RecordInputOverlayState.Phase != RecordInputOverlayPhase.Countdown)
+                    await TimerDelay.WaitThenExecuteOnMainThread(delaySeconds * 1000, () =>
+                    {
+                        if (!EditorApplication.isPlaying || RecordInputOverlayState.Phase != RecordInputOverlayPhase.Countdown)
+                        {
+                            RecordInputOverlayState.Clear();
+                            return;
+                        }
+
+                        RecordInputOverlayState.StartRecording();
+                        InputRecorder.StartRecording(keyFilter);
+                    }, ct);
+                }
+                finally
+                {
+                    // Cancelled mid-countdown: clear stale countdown state so next Start isn't blocked
+                    if (!InputRecorder.IsRecording &&
+                        RecordInputOverlayState.Phase == RecordInputOverlayPhase.Countdown)
                     {
                         RecordInputOverlayState.Clear();
-                        return;
                     }
-
-                    RecordInputOverlayState.StartRecording();
-                    InputRecorder.StartRecording(keyFilter);
-                }, ct);
+                }
 
                 if (!EditorApplication.isPlaying || !InputRecorder.IsRecording)
                 {
-                    RecordInputOverlayState.Clear();
                     return new RecordInputResponse
                     {
                         Success = false,

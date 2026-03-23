@@ -58,13 +58,7 @@ namespace io.github.hatayama.uLoopMCP
                 Graphic[] graphics = canvas.GetComponentsInChildren<Graphic>();
                 foreach (Graphic graphic in graphics)
                 {
-                    if (!graphic.raycastTarget || graphic.depth == -1)
-                    {
-                        continue;
-                    }
-
-                    if (!RectTransformUtility.RectangleContainsScreenPoint(
-                            graphic.rectTransform, canvasPosition, null))
+                    if (!IsRaycastCandidate(graphic, canvasPosition))
                     {
                         continue;
                     }
@@ -91,6 +85,28 @@ namespace io.github.hatayama.uLoopMCP
                 gameObject = bestHit.gameObject,
                 sortingOrder = bestSortingOrder
             };
+        }
+
+        // Respects CanvasGroup.blocksRaycasts, Mask, RectMask2D, and custom ICanvasRaycastFilter
+        private static bool IsRaycastCandidate(Graphic graphic, Vector2 canvasPosition)
+        {
+            if (!graphic.gameObject.activeInHierarchy || !graphic.enabled)
+            {
+                return false;
+            }
+
+            if (!graphic.raycastTarget || graphic.depth == -1 || graphic.canvasRenderer.cull)
+            {
+                return false;
+            }
+
+            if (!RectTransformUtility.RectangleContainsScreenPoint(
+                    graphic.rectTransform, canvasPosition, null))
+            {
+                return false;
+            }
+
+            return graphic.Raycast(canvasPosition, null);
         }
     }
 }
