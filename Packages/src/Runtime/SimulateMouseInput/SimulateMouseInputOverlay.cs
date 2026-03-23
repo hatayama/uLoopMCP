@@ -43,6 +43,12 @@ namespace io.github.hatayama.uLoopMCP
 
         private void LateUpdate()
         {
+            if (SimulateMouseInputOverlayState.Suppressed)
+            {
+                if (_isVisible) SetVisible(false);
+                return;
+            }
+
             if (SimulateMouseInputOverlayState.HasAnyActivity)
             {
                 if (!_isVisible)

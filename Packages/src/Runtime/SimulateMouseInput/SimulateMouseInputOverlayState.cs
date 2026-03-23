@@ -43,6 +43,7 @@ namespace io.github.hatayama.uLoopMCP
                 : Vector2.zero;
 
         public static float LastActivityTime { get; private set; }
+        public static bool Suppressed { get; set; }
 
         public static bool HasAnyActivity =>
             IsLeftButtonHeld || IsRightButtonHeld || IsMiddleButtonHeld

@@ -4,7 +4,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     public class SimulateMouseUiSchema : BaseToolSchema
     {
-        [Description("Mouse action: Click(0) - click with selected Button, Drag(1) - one-shot drag, DragStart(2) - begin drag and hold, DragMove(3) - move while holding drag, DragEnd(4) - release drag, LongPress(5) - press and hold for Duration seconds")]
+        [Description("Mouse action: Click(0), Drag(1), DragStart(2), DragMove(3), DragEnd(4), LongPress(5), Replay(6) - replay a recording JSON file")]
         public MouseAction Action { get; set; } = MouseAction.Click;
 
         [Description("Target X position in screen pixels (origin: top-left). For Drag action, this is the destination.")]
@@ -27,5 +27,8 @@ namespace io.github.hatayama.uLoopMCP
 
         [Description("Mouse button: Left(0, default), Right(1), Middle(2).")]
         public MouseButton Button { get; set; } = MouseButton.Left;
+
+        [Description("Path to recording JSON file (required for Replay action).")]
+        public string RecordingFilePath { get; set; } = "";
     }
 }
