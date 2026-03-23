@@ -156,6 +156,15 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            // Keep spawn area clear so the player starts in an open plain
+            float distFromSpawn = Mathf.Sqrt(
+                (worldX - WorldConstants.SpawnX) * (worldX - WorldConstants.SpawnX) +
+                (worldZ - WorldConstants.SpawnZ) * (worldZ - WorldConstants.SpawnZ));
+            if (distFromSpawn < WorldConstants.SpawnFlatRadius)
+            {
+                return;
+            }
+
             // Sparse tree placement using pseudo-random Perlin noise
             float treeNoise = Mathf.PerlinNoise(worldX * 0.8f, worldZ * 0.8f);
             if (treeNoise > WorldConstants.TreeDensity * 100f)
