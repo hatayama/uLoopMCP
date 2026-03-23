@@ -132,7 +132,7 @@ sleep 2
 waited=0
 while [ $waited -lt 60 ]; do
     STATUS_RESULT=$(run_uloop replay-input --action Status 2>&1) || true
-    playing=$(echo "$STATUS_RESULT" | grep -o '"isReplaying": *[a-z]*' | sed 's/.*: *//')
+    playing=$(echo "$STATUS_RESULT" | grep -o '"IsReplaying": *[a-z]*' | sed 's/.*: *//')
     if [ "$playing" = "false" ]; then
         echo "  Replay completed."
         break

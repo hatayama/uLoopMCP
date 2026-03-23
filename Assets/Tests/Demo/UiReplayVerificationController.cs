@@ -25,7 +25,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             base.Start();
 
-            _dropZones = FindObjectsByType<DropZone>(FindObjectsSortMode.None);
+            _dropZones = FindObjectsByType<DropZone>(FindObjectsSortMode.InstanceID);
             _lastDropTexts = new string[_dropZones.Length];
         }
 

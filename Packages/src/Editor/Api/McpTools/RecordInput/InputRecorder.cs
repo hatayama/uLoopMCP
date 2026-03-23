@@ -129,6 +129,7 @@ namespace io.github.hatayama.uLoopMCP
             _isRecording = false;
             RecordInputOverlayState.Clear();
             Reset();
+            RecordingStopped?.Invoke();
         }
 
         private static void Reset()

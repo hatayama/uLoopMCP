@@ -125,6 +125,7 @@ namespace io.github.hatayama.uLoopMCP
                         (wx, wy, wz) => GetWorldBlock(allChunkData, wx, wy, wz));
 
                     string meshPath = $"{MeshAssetDir}/Chunk_{cx}_{cz}.asset";
+                    AssetDatabase.DeleteAsset(meshPath);
                     AssetDatabase.CreateAsset(mesh, meshPath);
 
                     GameObject chunkObj = new GameObject($"Chunk_{cx}_{cz}");

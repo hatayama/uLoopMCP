@@ -340,6 +340,7 @@ namespace io.github.hatayama.uLoopMCP
             material.SetFloat("_Metallic", 0f);
             material.SetFloat("_Smoothness", 0f);
 
+            AssetDatabase.DeleteAsset(MaterialPath);
             AssetDatabase.CreateAsset(material, MaterialPath);
             return material;
         }

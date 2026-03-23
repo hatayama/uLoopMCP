@@ -34,6 +34,7 @@ namespace io.github.hatayama.uLoopMCP
         protected virtual void Start()
         {
             Debug.Assert(_verifyPanel != null, "_verifyPanel must be assigned in scene");
+            Debug.Assert(_verifyResultText != null, "_verifyResultText must be assigned in scene");
 
             Application.targetFrameRate = TARGET_FRAME_RATE;
             _startFrame = Time.frameCount;
@@ -188,7 +189,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void SetVerifyResult(string message)
         {
-            if (_verifyResultText != null) _verifyResultText.text = message;
+            _verifyResultText!.text = message;
             Debug.Log($"[ReplayVerification] {message}");
         }
 
