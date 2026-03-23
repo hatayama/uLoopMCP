@@ -8,5 +8,6 @@ namespace io.github.hatayama.uLoopMCP
         public const string MOUSE_RELEASE = "mouse_release";
         public const string MOUSE_DELTA = "mouse_delta";
         public const string MOUSE_SCROLL = "mouse_scroll";
+        public const string MOUSE_POSITION = "mouse_position";
     }
 }

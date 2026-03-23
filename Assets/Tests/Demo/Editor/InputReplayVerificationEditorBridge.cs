@@ -29,7 +29,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void OnRecordingStarted()
         {
-            InputReplayVerificationController? controller = FindController();
+            ReplayVerificationControllerBase? controller = FindController();
             if (controller == null)
             {
                 return;
@@ -41,7 +41,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void OnRecordingStopped()
         {
-            InputReplayVerificationController? controller = FindController();
+            ReplayVerificationControllerBase? controller = FindController();
             if (controller == null)
             {
                 return;
@@ -53,7 +53,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void OnReplayStarted()
         {
-            InputReplayVerificationController? controller = FindController();
+            ReplayVerificationControllerBase? controller = FindController();
             if (controller == null)
             {
                 return;
@@ -65,7 +65,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void OnReplayCompleted()
         {
-            InputReplayVerificationController? controller = FindController();
+            ReplayVerificationControllerBase? controller = FindController();
             if (controller == null)
             {
                 return;
@@ -77,9 +77,9 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Log("[VerificationBridge] Replay completed, auto-verification done");
         }
 
-        private static InputReplayVerificationController? FindController()
+        private static ReplayVerificationControllerBase? FindController()
         {
-            return Object.FindAnyObjectByType<InputReplayVerificationController>();
+            return Object.FindAnyObjectByType<ReplayVerificationControllerBase>();
         }
     }
 }

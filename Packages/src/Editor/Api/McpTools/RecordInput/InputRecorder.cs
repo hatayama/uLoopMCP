@@ -165,9 +165,16 @@ namespace io.github.hatayama.uLoopMCP
             _frameEvents.Clear();
 
             RecordKeyboardEvents(_frameEvents);
+
+            int mouseEventStartIndex = _frameEvents.Count;
             RecordMouseButtonEvents(_frameEvents);
             RecordMouseDeltaEvents(_frameEvents);
             RecordMouseScrollEvents(_frameEvents);
+
+            if (_frameEvents.Count > mouseEventStartIndex)
+            {
+                RecordMousePositionEvents(_frameEvents);
+            }
 
             if (_frameEvents.Count > 0)
             {
@@ -303,6 +310,22 @@ namespace io.github.hatayama.uLoopMCP
             });
         }
 
+        private static void RecordMousePositionEvents(List<RecordedInputEvent> events)
+        {
+            Mouse? mouse = Mouse.current;
+            if (mouse == null)
+            {
+                return;
+            }
+
+            Vector2 position = mouse.position.ReadValue();
+            events.Add(new RecordedInputEvent
+            {
+                Type = InputEventTypes.MOUSE_POSITION,
+                Data = FormatVector2(position)
+            });
+        }
+
         private static void RecordMouseScrollEvents(List<RecordedInputEvent> events)
         {
             Mouse? mouse = Mouse.current;
@@ -357,6 +380,16 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     Type = InputEventTypes.MOUSE_CLICK,
                     Data = button.ToString()
+                });
+            }
+
+            Mouse? mouse = Mouse.current;
+            if (mouse != null)
+            {
+                events.Add(new RecordedInputEvent
+                {
+                    Type = InputEventTypes.MOUSE_POSITION,
+                    Data = FormatVector2(mouse.position.ReadValue())
                 });
             }
 
