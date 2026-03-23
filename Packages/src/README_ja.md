@@ -76,7 +76,7 @@ Scope(s): io.github.hatayama.uloopmcp
 
 ## ステップ1: CLIのインストール
 
-Window > uLoopを選択します。専用ウィンドウが開くので **CLI** ボタンが青くなっている事を確認します。
+Window > Unity CLI Loop > Settingsを選択します。専用ウィンドウが開くので **CLI** ボタンが青くなっている事を確認します。
 
 **Install CLI** ボタンを押します。  
 <img width="277" height="327" alt="CleanShot 2026-02-26 at 20 14 25" src="https://github.com/user-attachments/assets/680b9586-6323-4bde-a2f0-1c3166f0c224" />
@@ -239,7 +239,7 @@ MCP（Model Context Protocol）経由でも接続できます。MCPの場合、C
 
 ### MCP接続の手順
 
-1. Window > uLoopを選択します。専用ウィンドウが開くので **MCP** ボタンを押してください。
+1. Window > Unity CLI Loop > Settingsを選択します。専用ウィンドウが開くので **MCP** ボタンを押してください。
 <img width="274" height="289" alt="CleanShot 2026-02-26 at 20 37 16" src="https://github.com/user-attachments/assets/5f2fc5db-fd33-4b5d-9f0e-3e2e0d134cf6" />
 
 2. 次に、LLM Tool SettingsセクションでターゲットIDEを選択します。黄色い「Configure {LLM Tool名}」ボタンを押してIDEに自動接続してください。
