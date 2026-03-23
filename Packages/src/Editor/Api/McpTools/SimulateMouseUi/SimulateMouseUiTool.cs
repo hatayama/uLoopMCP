@@ -811,6 +811,19 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
+            int replayedActions = await ReplayRecordingAsync(data, eventSystem, ct);
+
+            return new SimulateMouseUiResponse
+            {
+                Success = true,
+                Message = $"Replay completed: {replayedActions} UI actions across {data.Metadata.TotalFrames} frames",
+                Action = MouseAction.Replay.ToString()
+            };
+        }
+
+        internal static async Task<int> ReplayRecordingAsync(
+            InputRecordingData data, EventSystem eventSystem, CancellationToken ct)
+        {
             SimulateMouseInputOverlayState.Suppressed = true;
             Vector2 gameViewSize = Handles.GetMainGameViewSize();
 
@@ -1067,12 +1080,7 @@ namespace io.github.hatayama.uLoopMCP
             SimulateMouseUiOverlayState.Clear();
             SimulateMouseInputOverlayState.Suppressed = false;
 
-            return new SimulateMouseUiResponse
-            {
-                Success = true,
-                Message = $"Replay completed: {replayedActions} UI actions across {totalFrames} frames",
-                Action = MouseAction.Replay.ToString()
-            };
+            return replayedActions;
         }
 
         private static bool IsDragAction(MouseAction action)
