@@ -1,0 +1,11 @@
+Frame 0: MousePos (960.0000, 540.0000)
+Frame 0: Counter "Total Clicks: 0"
+Frame 0: DropZone "Drop items here"
+Frame 59: MousePos (332.0000, 825.0000)
+Frame 59: LeftButton Down
+Frame 60: LeftButton Up
+Frame 60: Counter "Total Clicks: 1"
+Frame 119: MousePos (652.0000, 825.0000)
+Frame 119: LeftButton Down
+Frame 120: LeftButton Up
+Frame 120: Counter "Total Clicks: 2"

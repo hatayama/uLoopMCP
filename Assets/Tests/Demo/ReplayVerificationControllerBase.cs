@@ -14,9 +14,9 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const int TARGET_FRAME_RATE = 60;
         private const float ROUND_MULTIPLIER = 10000f;
-        private const string LOG_OUTPUT_DIR = ".uloop/outputs/InputRecordings";
-        private const string RECORDING_LOG_FILE = "recording-event-log.txt";
-        private const string REPLAY_LOG_FILE = "replay-event-log.txt";
+        public const string LOG_OUTPUT_DIR = ".uloop/outputs/InputRecordings";
+        public const string RECORDING_LOG_FILE = "recording-event-log.txt";
+        public const string REPLAY_LOG_FILE = "replay-event-log.txt";
 
         [SerializeField] private GameObject? _verifyPanel;
         [SerializeField] private Text? _verifyResultText;
@@ -24,6 +24,8 @@ namespace io.github.hatayama.uLoopMCP
         private int _startFrame;
         private bool _activated;
         private readonly List<string> _eventLog = new();
+
+        public int LastComparisonDiffCount { get; private set; } = -1;
 
         protected bool Activated => _activated;
         protected int RelativeFrame => Time.frameCount - _startFrame;
@@ -121,6 +123,7 @@ namespace io.github.hatayama.uLoopMCP
 
             if (recordingLines.Length == 0 && replayLines.Length == 0)
             {
+                LastComparisonDiffCount = 0;
                 SetVerifyResult("Both logs are empty.");
                 return;
             }
@@ -146,6 +149,8 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }
             }
+
+            LastComparisonDiffCount = diffCount;
 
             if (diffCount == 0)
             {

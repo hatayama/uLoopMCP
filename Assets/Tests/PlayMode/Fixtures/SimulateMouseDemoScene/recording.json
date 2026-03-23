@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "recordedAt": "2026-03-23T00:00:00Z",
+    "totalFrames": 180,
+    "durationSeconds": 3.0
+  },
+  "frames": [
+    {
+      "frame": 0,
+      "events": [
+        { "type": "mouse_position", "data": "960,540" }
+      ]
+    },
+    {
+      "frame": 60,
+      "events": [
+        { "type": "mouse_position", "data": "332,825" },
+        { "type": "mouse_click", "data": "Left" }
+      ]
+    },
+    {
+      "frame": 61,
+      "events": [
+        { "type": "mouse_position", "data": "332,825" },
+        { "type": "mouse_release", "data": "Left" }
+      ]
+    },
+    {
+      "frame": 120,
+      "events": [
+        { "type": "mouse_position", "data": "652,825" },
+        { "type": "mouse_click", "data": "Left" }
+      ]
+    },
+    {
+      "frame": 121,
+      "events": [
+        { "type": "mouse_position", "data": "652,825" },
+        { "type": "mouse_release", "data": "Left" }
+      ]
+    },
+    {
+      "frame": 180,
+      "events": [
+        { "type": "mouse_position", "data": "652,825" }
+      ]
+    }
+  ]
+}
