@@ -49,6 +49,14 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            // SimulateMouseUiTool controls alpha via SetAlpha during animations.
+            // For non-animated callers (e.g. InputReplayer), auto-show on first active frame.
+            if (_canvasGroup.alpha == 0f)
+            {
+                _canvasGroup.alpha = 1f;
+                _cursorGroup.localScale = Vector3.one;
+            }
+
             UpdateCursorPosition();
             UpdateCursorMode();
             UpdateDragPath();

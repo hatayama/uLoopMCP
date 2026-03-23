@@ -11,6 +11,8 @@ namespace io.github.hatayama.uLoopMCP
         [SerializeField] private Text? statusText;
         [SerializeField] private Color highlightColor = new Color(0.5f, 1f, 0.5f, 1f);
 
+        public string StatusMessage => statusText != null ? statusText.text : "";
+
         private Image image = null!;
         private Color normalColor;
 

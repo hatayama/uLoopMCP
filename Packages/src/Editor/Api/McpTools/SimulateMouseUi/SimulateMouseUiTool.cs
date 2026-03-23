@@ -463,7 +463,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // Same Canvas-space fallback as RaycastUI for scaled Game view
-            RaycastResult? fallback = RaycastCanvasSpace(pointerData.position);
+            RaycastResult? fallback = UiRaycastHelper.RaycastCanvasSpace(pointerData.position);
             pointerData.pointerCurrentRaycast = fallback ?? new RaycastResult();
         }
 
@@ -777,89 +777,9 @@ namespace io.github.hatayama.uLoopMCP
             SimulateMouseUiOverlayState.Clear();
         }
 
-        private RaycastResult? RaycastUI(Vector2 screenPosition, EventSystem eventSystem)
+        private static RaycastResult? RaycastUI(Vector2 screenPosition, EventSystem eventSystem)
         {
-            PointerEventData pointerData = new PointerEventData(eventSystem)
-            {
-                position = screenPosition
-            };
-            List<RaycastResult> results = new List<RaycastResult>();
-            eventSystem.RaycastAll(pointerData, results);
-
-            if (results.Count > 0)
-            {
-                return results[0];
-            }
-
-            // EventSystem clips at Screen.width/height, which can be smaller than the
-            // Canvas layout space (Game view target resolution). Fall back to manual hit testing.
-            return RaycastCanvasSpace(screenPosition);
-        }
-
-        // Bypass EventSystem's Screen-bounds clipping by directly testing Graphic rects in Canvas space.
-        // Only supports ScreenSpaceOverlay canvases where world positions equal Canvas-space positions.
-        private static RaycastResult? RaycastCanvasSpace(Vector2 canvasPosition)
-        {
-            Canvas[] canvases = UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None);
-            Graphic? bestHit = null;
-            int bestSortingOrder = int.MinValue;
-            int bestDepth = -1;
-
-            foreach (Canvas canvas in canvases)
-            {
-                if (!canvas.gameObject.activeInHierarchy)
-                {
-                    continue;
-                }
-
-                // Camera-based canvases require the render camera for hit testing
-                if (canvas.renderMode != RenderMode.ScreenSpaceOverlay)
-                {
-                    continue;
-                }
-
-                GraphicRaycaster? raycaster = canvas.GetComponent<GraphicRaycaster>();
-                if (raycaster == null || !raycaster.enabled)
-                {
-                    continue;
-                }
-
-                Graphic[] graphics = canvas.GetComponentsInChildren<Graphic>();
-                foreach (Graphic graphic in graphics)
-                {
-                    if (!graphic.raycastTarget || graphic.depth == -1)
-                    {
-                        continue;
-                    }
-
-                    if (!RectTransformUtility.RectangleContainsScreenPoint(
-                            graphic.rectTransform, canvasPosition, null))
-                    {
-                        continue;
-                    }
-
-                    int sortingOrder = canvas.sortingOrder;
-
-                    if (sortingOrder > bestSortingOrder ||
-                        (sortingOrder == bestSortingOrder && graphic.depth > bestDepth))
-                    {
-                        bestHit = graphic;
-                        bestSortingOrder = sortingOrder;
-                        bestDepth = graphic.depth;
-                    }
-                }
-            }
-
-            if (bestHit == null)
-            {
-                return null;
-            }
-
-            return new RaycastResult
-            {
-                gameObject = bestHit.gameObject,
-                sortingOrder = bestSortingOrder
-            };
+            return UiRaycastHelper.RaycastUI(screenPosition, eventSystem);
         }
 
         private static bool IsDragAction(MouseAction action)
