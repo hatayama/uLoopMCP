@@ -31,6 +31,22 @@ uloop record-input --action Stop --output-path scripts/my-play.json
 | `--output-path` | string | auto | Save path. Auto-generates under `.uloop/outputs/InputRecordings/` |
 | `--keys` | string | `""` | Comma-separated key filter. Empty = all common game keys |
 
+## Design Guidelines for Deterministic Replay
+
+Replay injects input frame-by-frame, so the game must produce identical results given identical input on each run. The following patterns break determinism and must be avoided in replay-targeted code:
+
+| Avoid | Use Instead | Why |
+|-------|-------------|-----|
+| `Time.deltaTime` for movement | Fixed per-frame constant (e.g. `MOVE_SPEED = 0.1f`) | deltaTime varies between runs even at the same target frame rate |
+| `Random.Range()` / `UnityEngine.Random` | Seeded random (`new System.Random(fixedSeed)`) or remove randomness | Different random sequence each run |
+| `Rigidbody` / Physics simulation | Kinematic movement via `Transform.Translate` | Physics is non-deterministic across runs |
+| `WaitForSeconds(n)` in coroutines | `WaitForEndOfFrame` or frame counting | Real-time waits depend on frame timing |
+| `Time.time` / `Time.realtimeSinceStartup` | Frame counter (`Time.frameCount - startFrame`) | Time values drift between runs |
+| `FindObjectsOfType` without sort | `FindObjectsByType(FindObjectsSortMode.InstanceID)` | Iteration order is non-deterministic |
+| `async/await` with `Task.Delay` | Frame-based waiting | Real-time delays are non-deterministic |
+
+Set `Application.targetFrameRate = 60` (or your target) to reduce frame timing variance. See `InputReplayVerificationController` for a complete example of deterministic game logic.
+
 ## Output
 
 Returns JSON with:
