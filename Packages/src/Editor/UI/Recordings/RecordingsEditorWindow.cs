@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
@@ -200,22 +198,8 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             OverlayCanvasFactory.EnsureExists();
-
-            if (HasMousePositionEvents(data))
-            {
-                EventSystem eventSystem = EventSystem.current;
-                if (eventSystem == null)
-                {
-                    EditorUtility.DisplayDialog("Recordings", "No EventSystem found in the scene.", "OK");
-                    return;
-                }
-                SimulateMouseUiTool.ReplayRecordingAsync(data, eventSystem, CancellationToken.None).Forget();
-            }
-            else
-            {
-                RecordReplayOverlayFactory.EnsureReplayOverlay();
-                InputReplayer.StartReplay(data, false, true);
-            }
+            RecordReplayOverlayFactory.EnsureReplayOverlay();
+            InputReplayer.StartReplay(data, false, true);
         }
 
         private void OnOpenFolderClicked()
@@ -391,22 +375,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 indicator.AddToClassList(activeClass);
             }
-        }
-
-        private static bool HasMousePositionEvents(InputRecordingData data)
-        {
-            for (int i = 0; i < data.Frames.Count; i++)
-            {
-                List<RecordedInputEvent> events = data.Frames[i].Events;
-                for (int j = 0; j < events.Count; j++)
-                {
-                    if (events[j].Type == InputEventTypes.MOUSE_POSITION)
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
         }
     }
 }
