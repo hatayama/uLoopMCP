@@ -44,6 +44,7 @@ namespace io.github.hatayama.uLoopMCP
         private static GameObject? _currentDragTarget;
         private static bool _isDragging;
         private static Vector2 _pressScreenPosition;
+        private static float _pressTime;
 
         public static event Action? ReplayStarted;
         public static event Action? ReplayCompleted;
@@ -458,21 +459,42 @@ namespace io.github.hatayama.uLoopMCP
 
             Vector2 gameViewSize = Handles.GetMainGameViewSize();
             Vector2 inputPos = new Vector2(screenPos.x, gameViewSize.y - screenPos.y);
-            SimulateMouseUiOverlayState.Update(
-                MouseAction.Click, inputPos, null, null, gameViewSize);
 
             if (justPressed)
             {
+                _pressTime = Time.realtimeSinceStartup;
                 OnUiPointerDown(screenPos, eventSystem);
+                SimulateMouseUiOverlayState.Update(
+                    MouseAction.Click, inputPos, null, _currentPressTarget?.name, gameViewSize);
             }
             else if (leftHeld && (_currentPressTarget != null || _currentDragTarget != null))
             {
                 OnUiDrag(screenPos);
+
+                if (_isDragging)
+                {
+                    Vector2 pressInputPos = new Vector2(_pressScreenPosition.x, gameViewSize.y - _pressScreenPosition.y);
+                    SimulateMouseUiOverlayState.Update(
+                        MouseAction.Drag, inputPos, pressInputPos, null, gameViewSize);
+                }
+                else
+                {
+                    float elapsed = Time.realtimeSinceStartup - _pressTime;
+                    SimulateMouseUiOverlayState.Update(
+                        MouseAction.LongPress, inputPos, null, _currentPressTarget?.name, gameViewSize);
+                    SimulateMouseUiOverlayState.UpdateLongPressElapsed(elapsed);
+                }
+            }
+            else
+            {
+                SimulateMouseUiOverlayState.Update(
+                    MouseAction.Click, inputPos, null, null, gameViewSize);
             }
 
             if (justReleased)
             {
                 OnUiPointerUp(screenPos, eventSystem);
+                SimulateMouseUiOverlayState.Clear();
             }
         }
 
@@ -622,6 +644,7 @@ namespace io.github.hatayama.uLoopMCP
             _currentPressTarget = null;
             _currentDragTarget = null;
             _isDragging = false;
+            _pressTime = 0f;
         }
 
         private static void OnPlayModeStateChanged(PlayModeStateChange state)
