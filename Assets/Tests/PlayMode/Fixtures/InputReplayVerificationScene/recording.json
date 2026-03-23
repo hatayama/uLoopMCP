@@ -1,0 +1,7985 @@
+{
+  "metadata": {
+    "recordedAt": "2026-03-23T14:18:15.3640560Z",
+    "totalFrames": 795,
+    "durationSeconds": 13.3586254
+  },
+  "frames": [
+    {
+      "frame": 0,
+      "events": [
+        {
+          "type": "key_down",
+          "data": "P"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 1,
+      "events": [
+        {
+          "type": "key_up",
+          "data": "P"
+        },
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 2,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 3,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 4,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 5,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 6,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 7,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 8,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 9,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 10,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 11,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 12,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 13,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 14,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 15,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 16,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 17,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 18,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 19,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 20,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 21,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 22,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 23,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 24,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 25,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 26,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 27,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 28,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 29,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 30,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 31,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 32,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 33,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 34,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 35,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 36,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 37,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 38,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 39,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 40,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 41,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 42,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 43,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 44,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 45,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 46,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 47,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 48,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 49,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 50,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 51,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 52,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 53,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 54,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 55,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 56,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 57,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 58,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 59,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 60,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 61,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 62,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 63,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 64,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 65,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 66,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 67,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 68,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 69,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 70,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 71,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 72,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 73,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 74,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 75,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 76,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 77,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 78,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 79,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 80,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 81,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 82,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 83,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 84,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 85,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 86,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 87,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 88,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 89,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 90,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 91,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2323,500"
+        }
+      ]
+    },
+    {
+      "frame": 92,
+      "events": [
+        {
+          "type": "mouse_click",
+          "data": "Left"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 93,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 94,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 95,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 96,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 97,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 98,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 99,
+      "events": [
+        {
+          "type": "mouse_release",
+          "data": "Left"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 100,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 101,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 102,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 103,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 104,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 105,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 106,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 107,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 108,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "2.000122"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 109,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 110,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "94.73389"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 111,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "113.2312"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 112,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "129.9323"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 113,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "142.2491"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 114,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 115,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "151.3705"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 116,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 117,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 118,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 119,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 120,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 121,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 122,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 123,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 124,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 125,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "2.000122"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 126,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "20.74493"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 127,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "84.26178"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 128,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "248.4161"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 129,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 130,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "144.5712"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 131,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 132,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 133,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 134,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 135,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 136,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 137,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-6.026306"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 138,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-154.3323"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 139,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-142.8946"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 140,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-154.9258"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 141,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 142,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 143,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 144,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 145,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 146,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 147,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 148,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 149,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 150,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 151,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 152,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 153,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 154,
+      "events": [
+        {
+          "type": "key_down",
+          "data": "A"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 155,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 156,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 157,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 158,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 159,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 160,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 161,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 162,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 163,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 164,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 165,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 166,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 167,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 168,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 169,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 170,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 171,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 172,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 173,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 174,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 175,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 176,
+      "events": [
+        {
+          "type": "key_down",
+          "data": "W"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 177,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 178,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 179,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "2.000122"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 180,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 181,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "16.51001"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 182,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "72.68463"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 183,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "107.0416"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 184,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 185,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "120.3247"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 186,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 187,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 188,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 189,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 190,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 191,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 192,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 193,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 194,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 195,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 196,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 197,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 198,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 199,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 200,
+      "events": [
+        {
+          "type": "key_up",
+          "data": "A"
+        },
+        {
+          "type": "mouse_scroll",
+          "data": "-2.000122"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 201,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 202,
+      "events": [
+        {
+          "type": "key_up",
+          "data": "W"
+        },
+        {
+          "type": "mouse_scroll",
+          "data": "-16.51184"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 203,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 204,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-168.7909"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 205,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 206,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-120.0906"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 207,
+      "events": [
+        {
+          "type": "key_down",
+          "data": "D"
+        },
+        {
+          "type": "mouse_scroll",
+          "data": "-135.3378"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 208,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 209,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 210,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 211,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 212,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 213,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 214,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 215,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 216,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 217,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 218,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 219,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 220,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 221,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 222,
+      "events": [
+        {
+          "type": "mouse_click",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 223,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 224,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 225,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 226,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 227,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 228,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 229,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 230,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 231,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 232,
+      "events": [
+        {
+          "type": "mouse_release",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 233,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 234,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 235,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 236,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 237,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 238,
+      "events": [
+        {
+          "type": "mouse_click",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 239,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 240,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 241,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 242,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 243,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 244,
+      "events": [
+        {
+          "type": "mouse_release",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 245,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 246,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 247,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 248,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 249,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 250,
+      "events": [
+        {
+          "type": "mouse_click",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 251,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 252,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 253,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 254,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 255,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 256,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 257,
+      "events": [
+        {
+          "type": "mouse_release",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 258,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 259,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 260,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 261,
+      "events": [
+        {
+          "type": "mouse_click",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 262,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 263,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 264,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 265,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 266,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 267,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 268,
+      "events": [
+        {
+          "type": "mouse_release",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 269,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 270,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 271,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 272,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 273,
+      "events": [
+        {
+          "type": "mouse_click",
+          "data": "Left"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 274,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 275,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 276,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 277,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 278,
+      "events": [
+        {
+          "type": "mouse_release",
+          "data": "Left"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 279,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 280,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 281,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 282,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 283,
+      "events": [
+        {
+          "type": "mouse_click",
+          "data": "Left"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 284,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 285,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 286,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 287,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 288,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 289,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 290,
+      "events": [
+        {
+          "type": "mouse_release",
+          "data": "Left"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 291,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 292,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 293,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 294,
+      "events": [
+        {
+          "type": "mouse_click",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 295,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 296,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 297,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 298,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 299,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 300,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 301,
+      "events": [
+        {
+          "type": "key_up",
+          "data": "D"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 302,
+      "events": [
+        {
+          "type": "key_down",
+          "data": "W"
+        },
+        {
+          "type": "mouse_release",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 303,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 304,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 305,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 306,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 307,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 308,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 309,
+      "events": [
+        {
+          "type": "key_down",
+          "data": "A"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 310,
+      "events": [
+        {
+          "type": "key_up",
+          "data": "W"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 311,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 312,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 313,
+      "events": [
+        {
+          "type": "key_down",
+          "data": "W"
+        },
+        {
+          "type": "mouse_scroll",
+          "data": "2.000122"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 314,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "69.77051"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 315,
+      "events": [
+        {
+          "type": "key_up",
+          "data": "A"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 316,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "123.6618"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 317,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 318,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 319,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 320,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 321,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 322,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 323,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 324,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 325,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 326,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 327,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-2.000122"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 328,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 329,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-95.48828"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 330,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-243.6487"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 331,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-144.8206"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 332,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-157.9681"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 333,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 334,
+      "events": [
+        {
+          "type": "key_up",
+          "data": "W"
+        },
+        {
+          "type": "mouse_scroll",
+          "data": "-165.9735"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 335,
+      "events": [
+        {
+          "type": "key_down",
+          "data": "A"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 336,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-180.5289"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 337,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 338,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 339,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 340,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 341,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 342,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 343,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 344,
+      "events": [
+        {
+          "type": "key_up",
+          "data": "A"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 345,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 346,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-2.000122"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 347,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-104.4751"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 348,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-115.7565"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 349,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-279.7806"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 350,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-160.1376"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 351,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 352,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 353,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 354,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 355,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 356,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 357,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 358,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "2.747192"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 359,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "117.7972"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 360,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "119.8923"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 361,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "286.4505"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 362,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 363,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "158.9026"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 364,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 365,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 366,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 367,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 368,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 369,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 370,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 371,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 372,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 373,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "25.3241"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 374,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "209.9316"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 375,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "135.2899"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 376,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 377,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "307.4176"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 378,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 379,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 380,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 381,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 382,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 383,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 384,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 385,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 386,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 387,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 388,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "25.09827"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 389,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "84.09027"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 390,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "115.9509"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 391,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "279.4766"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 392,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 393,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 394,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 395,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "151.4334"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 396,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 397,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 398,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 399,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 400,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 401,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 402,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "143.8638"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 403,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "168.4326"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 404,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "335.2298"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 405,
+      "events": [
+        {
+          "type": "key_down",
+          "data": "S"
+        },
+        {
+          "type": "mouse_scroll",
+          "data": "178.4586"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 406,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 407,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "175.7855"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 408,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 409,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 410,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 411,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 412,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 413,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 414,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 415,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 416,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 417,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 418,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 419,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 420,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "2.000122"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 421,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 422,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "16.51642"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 423,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "72.67242"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 424,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "110.5334"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 425,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 426,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "262.4493"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 427,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "151.1118"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 428,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 429,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 430,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 431,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 432,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 433,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 434,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 435,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 436,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 437,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 438,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 439,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "22.74017"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 440,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "83.86658"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 441,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "248.0408"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 442,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 443,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "144.9316"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 444,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 445,
+      "events": [
+        {
+          "type": "key_down",
+          "data": "A"
+        },
+        {
+          "type": "mouse_scroll",
+          "data": "151.3284"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 446,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 447,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 448,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 449,
+      "events": [
+        {
+          "type": "key_up",
+          "data": "S"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 450,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 451,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 452,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 453,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 454,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 455,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 456,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 457,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 458,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 459,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 460,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 461,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-2.000122"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 462,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-20.69214"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 463,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-78.65509"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 464,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-113.3212"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 465,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 466,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-301.7413"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 467,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 468,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 469,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-162.5592"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 470,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 471,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 472,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 473,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 474,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "21.74042"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 475,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 476,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "152.7252"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 477,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "128.1912"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 478,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 479,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "140.9921"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 480,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "152.4915"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 481,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "162.9727"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 482,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 483,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 484,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "168.5547"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 485,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 486,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 487,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 488,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 489,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 490,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 491,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 492,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 493,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-2.000122"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 494,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 495,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 496,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 497,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 498,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 499,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 500,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 501,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 502,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 503,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 504,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 505,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 506,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "2.000122"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 507,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 508,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 509,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 510,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 511,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 512,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 513,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 514,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 515,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 516,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 517,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-2.000122"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 518,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 519,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 520,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 521,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 522,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 523,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 524,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 525,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 526,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 527,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 528,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 529,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 530,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 531,
+      "events": [
+        {
+          "type": "key_up",
+          "data": "A"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 532,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 533,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 534,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-22.9483"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 535,
+      "events": [
+        {
+          "type": "key_down",
+          "data": "W"
+        },
+        {
+          "type": "mouse_scroll",
+          "data": "-221.2424"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 536,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-151.3962"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 537,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-165.2045"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 538,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 539,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 540,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 541,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 542,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 543,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 544,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 545,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 546,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 547,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 548,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 549,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 550,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-2.000122"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 551,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 552,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 553,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-275.5487"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 554,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "-165.0574"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 555,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 556,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 557,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 558,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 559,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 560,
+      "events": [
+        {
+          "type": "key_down",
+          "data": "D"
+        },
+        {
+          "type": "key_up",
+          "data": "W"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 561,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 562,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 563,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 564,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 565,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 566,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 567,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 568,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 569,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 570,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 571,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 572,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 573,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 574,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 575,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "115.5563"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 576,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "118.797"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 577,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "284.4891"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 578,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 579,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "158.0173"
+        },
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 580,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 581,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 582,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 583,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 584,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 585,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "0.25,0"
+        },
+        {
+          "type": "mouse_position",
+          "data": "944,492"
+        }
+      ]
+    },
+    {
+      "frame": 586,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "945,491"
+        }
+      ]
+    },
+    {
+      "frame": 587,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "945,491"
+        }
+      ]
+    },
+    {
+      "frame": 588,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "0.25,0"
+        },
+        {
+          "type": "mouse_scroll",
+          "data": "145.5652"
+        },
+        {
+          "type": "mouse_position",
+          "data": "946,491"
+        }
+      ]
+    },
+    {
+      "frame": 589,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "0.25,-0.25"
+        },
+        {
+          "type": "mouse_scroll",
+          "data": "338.7939"
+        },
+        {
+          "type": "mouse_position",
+          "data": "950,489"
+        }
+      ]
+    },
+    {
+      "frame": 590,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "178.4314"
+        },
+        {
+          "type": "mouse_position",
+          "data": "950,489"
+        }
+      ]
+    },
+    {
+      "frame": 591,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "177.0273"
+        },
+        {
+          "type": "mouse_position",
+          "data": "950,489"
+        }
+      ]
+    },
+    {
+      "frame": 592,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "950,489"
+        }
+      ]
+    },
+    {
+      "frame": 593,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "174.3591"
+        },
+        {
+          "type": "mouse_position",
+          "data": "950,489"
+        }
+      ]
+    },
+    {
+      "frame": 594,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "950,489"
+        }
+      ]
+    },
+    {
+      "frame": 595,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "950,489"
+        }
+      ]
+    },
+    {
+      "frame": 596,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "950,489"
+        }
+      ]
+    },
+    {
+      "frame": 597,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "950,489"
+        }
+      ]
+    },
+    {
+      "frame": 598,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "0.25,0"
+        },
+        {
+          "type": "mouse_position",
+          "data": "951,488"
+        }
+      ]
+    },
+    {
+      "frame": 599,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "0.25,-0.25"
+        },
+        {
+          "type": "mouse_position",
+          "data": "952,487"
+        }
+      ]
+    },
+    {
+      "frame": 600,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 601,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 602,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "307.9938"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 603,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "178.4137"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 604,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "356.7807"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 605,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 606,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "164.3942"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 607,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 608,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 609,
+      "events": [
+        {
+          "type": "key_up",
+          "data": "D"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 610,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 611,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 612,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 613,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 614,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 615,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "142.6953"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 616,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "146.2433"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 617,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "355.3793"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 618,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "177.074"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 619,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "175.6552"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 620,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 621,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 622,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 623,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 624,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 625,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 626,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 627,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 628,
+      "events": [
+        {
+          "type": "key_down",
+          "data": "S"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 629,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "22.74323"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 630,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "84.30023"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 631,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "115.9369"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 632,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "279.4263"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 633,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 634,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "155.7419"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 635,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 636,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 637,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 638,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 639,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 640,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 641,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 642,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 643,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 644,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 645,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 646,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "2.000122"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 647,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "20.74615"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 648,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "200.2399"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 649,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "132.4615"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 650,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "306.9257"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 651,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 652,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 653,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 654,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "163.559"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 655,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 656,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 657,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 658,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 659,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 660,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 661,
+      "events": [
+        {
+          "type": "key_up",
+          "data": "S"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 662,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "164.3933"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 663,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "164.3378"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 664,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "164.3887"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 665,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "328.7885"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 666,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 667,
+      "events": [
+        {
+          "type": "mouse_scroll",
+          "data": "162.3404"
+        },
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 668,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 669,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 670,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 671,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 672,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 673,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 674,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 675,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 676,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "953,486"
+        }
+      ]
+    },
+    {
+      "frame": 677,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "0.25,-0.25"
+        },
+        {
+          "type": "mouse_position",
+          "data": "954,485"
+        }
+      ]
+    },
+    {
+      "frame": 678,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "1.75,-0.25"
+        },
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 679,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 680,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 681,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 682,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 683,
+      "events": [
+        {
+          "type": "mouse_click",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 684,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 685,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 686,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 687,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 688,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 689,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 690,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 691,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 692,
+      "events": [
+        {
+          "type": "mouse_release",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 693,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 694,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 695,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 696,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 697,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 698,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 699,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 700,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 701,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 702,
+      "events": [
+        {
+          "type": "mouse_click",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 703,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 704,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 705,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 706,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 707,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 708,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 709,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 710,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 711,
+      "events": [
+        {
+          "type": "mouse_release",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 712,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 713,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 714,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 715,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 716,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 717,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 718,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 719,
+      "events": [
+        {
+          "type": "mouse_click",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 720,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 721,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 722,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 723,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 724,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 725,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 726,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 727,
+      "events": [
+        {
+          "type": "mouse_release",
+          "data": "Right"
+        },
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 728,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 729,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 730,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 731,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 732,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 733,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 734,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 735,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 736,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 737,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 738,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 739,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 740,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 741,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 742,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 743,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 744,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "969,482"
+        }
+      ]
+    },
+    {
+      "frame": 745,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "0.25,-0.25"
+        },
+        {
+          "type": "mouse_position",
+          "data": "970,482"
+        }
+      ]
+    },
+    {
+      "frame": 746,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "9.75,-5"
+        },
+        {
+          "type": "mouse_position",
+          "data": "1048,440"
+        }
+      ]
+    },
+    {
+      "frame": 747,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "7,-3.5"
+        },
+        {
+          "type": "mouse_position",
+          "data": "1106,413"
+        }
+      ]
+    },
+    {
+      "frame": 748,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "20,-9.25"
+        },
+        {
+          "type": "mouse_position",
+          "data": "1265,339"
+        }
+      ]
+    },
+    {
+      "frame": 749,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "14.5,-5.75"
+        },
+        {
+          "type": "mouse_position",
+          "data": "1380,293"
+        }
+      ]
+    },
+    {
+      "frame": 750,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "19.5,-5.25"
+        },
+        {
+          "type": "mouse_position",
+          "data": "1537,251"
+        }
+      ]
+    },
+    {
+      "frame": 751,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "36.5,-5.75"
+        },
+        {
+          "type": "mouse_position",
+          "data": "1829,205"
+        }
+      ]
+    },
+    {
+      "frame": 752,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "13.75,-0.75"
+        },
+        {
+          "type": "mouse_position",
+          "data": "1938,198"
+        }
+      ]
+    },
+    {
+      "frame": 753,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "12,-1.75"
+        },
+        {
+          "type": "mouse_position",
+          "data": "2034,186"
+        }
+      ]
+    },
+    {
+      "frame": 754,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "2.75,-0.75"
+        },
+        {
+          "type": "mouse_position",
+          "data": "2056,179"
+        }
+      ]
+    },
+    {
+      "frame": 755,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "3.75,-1.5"
+        },
+        {
+          "type": "mouse_position",
+          "data": "2087,167"
+        }
+      ]
+    },
+    {
+      "frame": 756,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "3,-1.75"
+        },
+        {
+          "type": "mouse_position",
+          "data": "2110,153"
+        }
+      ]
+    },
+    {
+      "frame": 757,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "4.25,-1.75"
+        },
+        {
+          "type": "mouse_position",
+          "data": "2144,138"
+        }
+      ]
+    },
+    {
+      "frame": 758,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "0.75,-0.25"
+        },
+        {
+          "type": "mouse_position",
+          "data": "2150,137"
+        }
+      ]
+    },
+    {
+      "frame": 759,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2151,137"
+        }
+      ]
+    },
+    {
+      "frame": 760,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2151,137"
+        }
+      ]
+    },
+    {
+      "frame": 761,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2151,137"
+        }
+      ]
+    },
+    {
+      "frame": 762,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "0.25,0"
+        },
+        {
+          "type": "mouse_position",
+          "data": "2152,137"
+        }
+      ]
+    },
+    {
+      "frame": 763,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "1.75,0"
+        },
+        {
+          "type": "mouse_position",
+          "data": "2167,137"
+        }
+      ]
+    },
+    {
+      "frame": 764,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "1.75,0"
+        },
+        {
+          "type": "mouse_position",
+          "data": "2181,137"
+        }
+      ]
+    },
+    {
+      "frame": 765,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "3,0"
+        },
+        {
+          "type": "mouse_position",
+          "data": "2204,137"
+        }
+      ]
+    },
+    {
+      "frame": 766,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "1.25,0"
+        },
+        {
+          "type": "mouse_position",
+          "data": "2215,137"
+        }
+      ]
+    },
+    {
+      "frame": 767,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "4,-0.25"
+        },
+        {
+          "type": "mouse_position",
+          "data": "2246,135"
+        }
+      ]
+    },
+    {
+      "frame": 768,
+      "events": [
+        {
+          "type": "mouse_delta",
+          "data": "1,-0.25"
+        },
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 769,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 770,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 771,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 772,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 773,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 774,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 775,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 776,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 777,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 778,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 779,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 780,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 781,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 782,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 783,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 784,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 785,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 786,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 787,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 788,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 789,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "2255,133"
+        }
+      ]
+    },
+    {
+      "frame": 790,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 791,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 792,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 793,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 794,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    },
+    {
+      "frame": 795,
+      "events": [
+        {
+          "type": "mouse_position",
+          "data": "943,493"
+        }
+      ]
+    }
+  ]
+}
