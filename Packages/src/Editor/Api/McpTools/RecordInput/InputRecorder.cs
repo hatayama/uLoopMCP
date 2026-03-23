@@ -169,10 +169,16 @@ namespace io.github.hatayama.uLoopMCP
             _frameEvents.Clear();
 
             RecordKeyboardEvents(_frameEvents);
+
+            int mouseEventStartIndex = _frameEvents.Count;
             RecordMouseButtonEvents(_frameEvents);
             RecordMouseDeltaEvents(_frameEvents);
             RecordMouseScrollEvents(_frameEvents);
-            RecordMousePositionEvents(_frameEvents);
+
+            if (_frameEvents.Count > mouseEventStartIndex)
+            {
+                RecordMousePositionEvents(_frameEvents);
+            }
 
             if (_frameEvents.Count > 0)
             {
