@@ -82,6 +82,10 @@ namespace io.github.hatayama.uLoopMCP
             _replayHeldButtons.Clear();
             _hasMousePosition = DetectMousePositionEvents(data!);
             ResetUiReplayState();
+            if (_hasMousePosition)
+            {
+                SimulateMouseInputOverlayState.Clear();
+            }
             _isReplaying = true;
 
             InputSystem.onAfterUpdate -= OnAfterUpdate;
