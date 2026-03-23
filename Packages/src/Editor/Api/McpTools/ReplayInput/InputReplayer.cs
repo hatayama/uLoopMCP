@@ -465,7 +465,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 OnUiPointerDown(screenPos, eventSystem);
             }
-            else if (leftHeld && _currentPressTarget != null)
+            else if (leftHeld && (_currentPressTarget != null || _currentDragTarget != null))
             {
                 OnUiDrag(screenPos);
             }

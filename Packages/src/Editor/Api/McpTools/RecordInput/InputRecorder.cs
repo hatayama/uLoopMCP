@@ -71,6 +71,10 @@ namespace io.github.hatayama.uLoopMCP
             _startTime = Time.realtimeSinceStartup;
             _isRecording = true;
 
+            // Recording captures real user input; clear simulate-mouse-input overlay
+            // so it doesn't linger from a previous tool call.
+            SimulateMouseInputOverlayState.Clear();
+
             CaptureInitialKeyStates();
             CaptureInitialButtonStates();
             EmitInitialHeldEvents();
