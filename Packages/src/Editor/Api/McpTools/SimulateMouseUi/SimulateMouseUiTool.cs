@@ -1074,7 +1074,13 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }
 
-                await EditorDelay.DelayFrame(1, ct);
+                // EditorApplication.update fires faster than game frames;
+                // wait for Time.frameCount to advance to stay in sync with game loop.
+                int waitFrame = Time.frameCount;
+                while (Time.frameCount == waitFrame)
+                {
+                    await EditorDelay.DelayFrame(1, ct);
+                }
             }
 
             SimulateMouseUiOverlayState.Clear();
