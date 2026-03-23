@@ -423,7 +423,7 @@ uloop completion --shell powershell --install  # PowerShell
 
 - **Node.js 22.0 or later**
 - **Unity 2022.3 or later** with [uLoopMCP](https://github.com/hatayama/uLoopMCP) installed
-- uLoopMCP server running (Window > uLoopMCP > Start Server)
+- uLoopMCP server running (Window > Unity CLI Loop > Start Server)
 
 ## Links
 
