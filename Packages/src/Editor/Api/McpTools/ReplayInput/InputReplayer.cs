@@ -480,9 +480,12 @@ namespace io.github.hatayama.uLoopMCP
                 else
                 {
                     float elapsed = Time.realtimeSinceStartup - _pressTime;
-                    SimulateMouseUiOverlayState.Update(
-                        MouseAction.LongPress, inputPos, null, _currentPressTarget?.name, gameViewSize);
-                    SimulateMouseUiOverlayState.UpdateLongPressElapsed(elapsed);
+                    if (elapsed >= 0.5f)
+                    {
+                        SimulateMouseUiOverlayState.Update(
+                            MouseAction.LongPress, inputPos, null, _currentPressTarget?.name, gameViewSize);
+                        SimulateMouseUiOverlayState.UpdateLongPressElapsed(elapsed);
+                    }
                 }
             }
             else

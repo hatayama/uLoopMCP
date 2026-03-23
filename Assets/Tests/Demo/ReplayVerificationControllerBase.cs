@@ -74,7 +74,12 @@ namespace io.github.hatayama.uLoopMCP
 
         public void ActivateForExternalReplay()
         {
-            Activate();
+            // +2 instead of +1: InputReplayer injects state in onAfterUpdate,
+            // which takes effect one frame later when Update() reads it.
+            ResetState();
+            _activated = true;
+            _startFrame = Time.frameCount + 2;
+            HidePanel(_verifyPanel);
         }
 
         public void OnReplayCompleted()
