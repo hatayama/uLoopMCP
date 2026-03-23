@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.LowLevel;
@@ -33,6 +34,16 @@ namespace io.github.hatayama.uLoopMCP
         private static readonly HashSet<Key> _replayHeldKeys = new();
         private static readonly HashSet<MouseButton> _replayHeldButtons = new();
         private static Vector2? _replayMousePosition;
+
+        // InputModule (StandaloneInputModule / InputSystemUIInputModule) ignores injected
+        // Mouse.current state, so UI interactions must go through ExecuteEvents directly.
+        private static bool _hasMousePosition;
+        private static bool _prevLeftButtonHeld;
+        private static PointerEventData? _pointerData;
+        private static GameObject? _currentPressTarget;
+        private static GameObject? _currentDragTarget;
+        private static bool _isDragging;
+        private static Vector2 _pressScreenPosition;
 
         public static event Action? ReplayStarted;
         public static event Action? ReplayCompleted;
@@ -69,7 +80,12 @@ namespace io.github.hatayama.uLoopMCP
             _showOverlay = showOverlay;
             _replayHeldKeys.Clear();
             _replayHeldButtons.Clear();
-            _replayMousePosition = null;
+            _hasMousePosition = DetectMousePositionEvents(data!);
+            ResetUiReplayState();
+            if (_hasMousePosition)
+            {
+                SimulateMouseInputOverlayState.Clear();
+            }
             _isReplaying = true;
 
             InputSystem.onAfterUpdate -= OnAfterUpdate;
@@ -95,9 +111,13 @@ namespace io.github.hatayama.uLoopMCP
             _currentFrame = 0;
             _replayHeldKeys.Clear();
             _replayHeldButtons.Clear();
-            _replayMousePosition = null;
+            ResetUiReplayState();
 
             ReplayInputOverlayState.Clear();
+            if (_hasMousePosition)
+            {
+                SimulateMouseUiOverlayState.Clear();
+            }
         }
 
         private static void OnAfterUpdate()
@@ -120,6 +140,11 @@ namespace io.github.hatayama.uLoopMCP
             CollectFrameState(ref frameDelta, ref frameScroll);
             ApplyCurrentFrameSnapshot(Keyboard.current, Mouse.current, frameDelta, frameScroll);
 
+            if (_hasMousePosition)
+            {
+                ApplyUiEvents();
+            }
+
             if (_showOverlay)
             {
                 ReplayInputOverlayState.Update(_currentFrame, _data.Metadata.TotalFrames, _loop);
@@ -134,7 +159,7 @@ namespace io.github.hatayama.uLoopMCP
                     ReleaseAllHeldInputs();
                     _eventIndex = 0;
                     _currentFrame = 0;
-                    _replayMousePosition = null;
+                    ResetUiReplayState();
                 }
                 else
                 {
@@ -238,7 +263,10 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             _replayHeldButtons.Add(button);
-            SimulateMouseInputOverlayState.SetButtonHeld(button, true);
+            if (!_hasMousePosition)
+            {
+                SimulateMouseInputOverlayState.SetButtonHeld(button, true);
+            }
         }
 
         private static void ProcessMouseRelease(string buttonName)
@@ -249,13 +277,19 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             _replayHeldButtons.Remove(button);
-            SimulateMouseInputOverlayState.SetButtonHeld(button, false);
+            if (!_hasMousePosition)
+            {
+                SimulateMouseInputOverlayState.SetButtonHeld(button, false);
+            }
         }
 
         private static void ProcessMouseDelta(string data, ref Vector2 frameDelta)
         {
             frameDelta = InputRecorder.ParseVector2(data);
-            SimulateMouseInputOverlayState.SetMoveDelta(frameDelta);
+            if (!_hasMousePosition)
+            {
+                SimulateMouseInputOverlayState.SetMoveDelta(frameDelta);
+            }
         }
 
         private static void ProcessMousePosition(string data)
@@ -271,11 +305,14 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             frameScroll = new Vector2(0f, scrollY);
-            int direction = scrollY > 0f ? 1 : scrollY < 0f ? -1 : 0;
-            SimulateMouseInputOverlayState.SetScrollDirection(direction);
+            if (!_hasMousePosition)
+            {
+                int direction = scrollY > 0f ? 1 : scrollY < 0f ? -1 : 0;
+                SimulateMouseInputOverlayState.SetScrollDirection(direction);
+            }
         }
 
-        internal static void ApplyKeyboardSnapshot(Keyboard keyboard, IReadOnlyCollection<Key> heldKeys)
+        private static void ApplyKeyboardSnapshot(Keyboard keyboard, IReadOnlyCollection<Key> heldKeys)
         {
             InputUpdateType updateType = InputUpdateTypeResolver.Resolve();
             using (StateEvent.From(keyboard, out InputEventPtr eventPtr))
@@ -304,7 +341,7 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        internal static void ApplyMouseSnapshot(
+        private static void ApplyMouseSnapshot(
             Mouse mouse,
             IReadOnlyCollection<MouseButton> heldButtons,
             Vector2 delta,
@@ -398,6 +435,193 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return lookup;
+        }
+
+        private static void ApplyUiEvents()
+        {
+            if (!_replayMousePosition.HasValue)
+            {
+                return;
+            }
+
+            EventSystem? eventSystem = EventSystem.current;
+            if (eventSystem == null)
+            {
+                return;
+            }
+
+            Vector2 screenPos = _replayMousePosition.Value;
+            bool leftHeld = _replayHeldButtons.Contains(MouseButton.Left);
+            bool justPressed = leftHeld && !_prevLeftButtonHeld;
+            bool justReleased = !leftHeld && _prevLeftButtonHeld;
+            _prevLeftButtonHeld = leftHeld;
+
+            Vector2 gameViewSize = Handles.GetMainGameViewSize();
+            Vector2 inputPos = new Vector2(screenPos.x, gameViewSize.y - screenPos.y);
+            SimulateMouseUiOverlayState.Update(
+                MouseAction.Click, inputPos, null, null, gameViewSize);
+
+            if (justPressed)
+            {
+                OnUiPointerDown(screenPos, eventSystem);
+            }
+            else if (leftHeld && (_currentPressTarget != null || _currentDragTarget != null))
+            {
+                OnUiDrag(screenPos);
+            }
+
+            if (justReleased)
+            {
+                OnUiPointerUp(screenPos, eventSystem);
+            }
+        }
+
+        private static void OnUiPointerDown(Vector2 screenPos, EventSystem eventSystem)
+        {
+            RaycastResult? hit = UiRaycastHelper.RaycastUI(screenPos, eventSystem);
+
+            _pointerData = new PointerEventData(eventSystem)
+            {
+                position = screenPos,
+                pressPosition = screenPos,
+                button = PointerEventData.InputButton.Left
+            };
+            _pressScreenPosition = screenPos;
+            _isDragging = false;
+            _currentDragTarget = null;
+
+            if (hit == null)
+            {
+                _currentPressTarget = null;
+                return;
+            }
+
+            GameObject rawTarget = hit.Value.gameObject;
+            _pointerData.pointerCurrentRaycast = hit.Value;
+            _pointerData.pointerPressRaycast = hit.Value;
+
+            _currentPressTarget = ExecuteEvents.GetEventHandler<IPointerDownHandler>(rawTarget)
+                                  ?? ExecuteEvents.GetEventHandler<IPointerClickHandler>(rawTarget);
+
+            if (_currentPressTarget != null)
+            {
+                _pointerData.pointerPress = _currentPressTarget;
+                _pointerData.rawPointerPress = rawTarget;
+                ExecuteEvents.ExecuteHierarchy(rawTarget, _pointerData, ExecuteEvents.pointerDownHandler);
+            }
+
+            // initializePotentialDrag must fire before beginDrag per StandaloneInputModule contract
+            _currentDragTarget = ExecuteEvents.GetEventHandler<IDragHandler>(rawTarget);
+            if (_currentDragTarget != null)
+            {
+                ExecuteEvents.Execute(_currentDragTarget, _pointerData, ExecuteEvents.initializePotentialDrag);
+            }
+        }
+
+        private static void OnUiDrag(Vector2 screenPos)
+        {
+            if (_pointerData == null)
+            {
+                return;
+            }
+
+            Vector2 delta = screenPos - _pointerData.position;
+            if (delta == Vector2.zero)
+            {
+                return;
+            }
+
+            _pointerData.position = screenPos;
+            _pointerData.delta = delta;
+
+            if (!_isDragging && _currentDragTarget != null)
+            {
+                float distance = (screenPos - _pressScreenPosition).magnitude;
+                if (distance > EventSystem.current.pixelDragThreshold)
+                {
+                    _isDragging = true;
+                    _pointerData.dragging = true;
+                    _pointerData.pointerDrag = _currentDragTarget;
+                    ExecuteEvents.Execute(_currentDragTarget, _pointerData, ExecuteEvents.beginDragHandler);
+                }
+            }
+
+            if (_isDragging && _currentDragTarget != null)
+            {
+                ExecuteEvents.Execute(_currentDragTarget, _pointerData, ExecuteEvents.dragHandler);
+            }
+        }
+
+        private static void OnUiPointerUp(Vector2 screenPos, EventSystem eventSystem)
+        {
+            if (_pointerData == null)
+            {
+                return;
+            }
+
+            _pointerData.position = screenPos;
+
+            if (_currentPressTarget != null)
+            {
+                ExecuteEvents.Execute(_currentPressTarget, _pointerData, ExecuteEvents.pointerUpHandler);
+            }
+
+            if (_isDragging && _currentDragTarget != null)
+            {
+                RaycastResult? dropHit = UiRaycastHelper.RaycastUI(screenPos, eventSystem);
+                if (dropHit != null)
+                {
+                    _pointerData.pointerCurrentRaycast = dropHit.Value;
+                    GameObject? dropTarget = ExecuteEvents.GetEventHandler<IDropHandler>(dropHit.Value.gameObject);
+                    if (dropTarget != null)
+                    {
+                        ExecuteEvents.Execute(dropTarget, _pointerData, ExecuteEvents.dropHandler);
+                    }
+                }
+
+                ExecuteEvents.Execute(_currentDragTarget, _pointerData, ExecuteEvents.endDragHandler);
+            }
+            else if (_currentPressTarget != null)
+            {
+                // StandaloneInputModule skips click when dragged; match that behavior
+                GameObject? clickTarget = ExecuteEvents.GetEventHandler<IPointerClickHandler>(
+                    _pointerData.rawPointerPress ?? _currentPressTarget);
+                if (clickTarget != null)
+                {
+                    ExecuteEvents.Execute(clickTarget, _pointerData, ExecuteEvents.pointerClickHandler);
+                }
+            }
+
+            _currentPressTarget = null;
+            _currentDragTarget = null;
+            _isDragging = false;
+            _pointerData = null;
+        }
+
+        private static bool DetectMousePositionEvents(InputRecordingData data)
+        {
+            for (int i = 0; i < data.Frames.Count; i++)
+            {
+                List<RecordedInputEvent> events = data.Frames[i].Events;
+                for (int j = 0; j < events.Count; j++)
+                {
+                    if (events[j].Type == InputEventTypes.MOUSE_POSITION)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static void ResetUiReplayState()
+        {
+            _replayMousePosition = null;
+            _prevLeftButtonHeld = false;
+            _pointerData = null;
+            _currentPressTarget = null;
+            _currentDragTarget = null;
+            _isDragging = false;
         }
 
         private static void OnPlayModeStateChanged(PlayModeStateChange state)
