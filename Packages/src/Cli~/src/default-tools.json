@@ -1,5 +1,5 @@
 {
-  "version": "1.2.1",
+  "version": "1.3.0",
   "tools": [
     {
       "name": "compile",
@@ -643,7 +643,10 @@
         "properties": {
           "Action": {
             "type": "string",
-            "enum": ["Start", "Stop"],
+            "enum": [
+              "Start",
+              "Stop"
+            ],
             "description": "Recording action: Start - begin recording input, Stop - stop recording and save to file",
             "default": "Start"
           },
@@ -678,7 +681,11 @@
         "properties": {
           "Action": {
             "type": "string",
-            "enum": ["Start", "Stop", "Status"],
+            "enum": [
+              "Start",
+              "Stop",
+              "Status"
+            ],
             "description": "Replay action: Start - begin replaying, Stop - stop mid-way, Status - check progress",
             "default": "Start"
           },
