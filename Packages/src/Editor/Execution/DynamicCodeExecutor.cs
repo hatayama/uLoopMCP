@@ -190,7 +190,6 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>Asynchronous Code Execution</summary>
-#pragma warning disable CS1998 // Async method lacks 'await' operators (Occurs only when Roslyn is not available)
         public async Task<ExecutionResult> ExecuteCodeAsync(
             string code,
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
@@ -198,7 +197,6 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false)
         {
-#pragma warning restore CS1998
             // Runtime Security Check (also blocks compilation at Level 0)
             if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
             {
@@ -222,7 +220,7 @@ namespace io.github.hatayama.uLoopMCP
                         McpConstants.ERROR_COMPILATION_DISABLED_LEVEL0,
                         McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0);
                 }
-                CompilationResult compilationResult = CompileCode(code, className, correlationId);
+                CompilationResult compilationResult = await CompileCodeAsync(code, className, correlationId, cancellationToken).ConfigureAwait(false);
                 ExecutionResult compilationErrorResult = HandleCompilationResult(compilationResult, stopwatch);
                 if (compilationErrorResult != null) return compilationErrorResult;
 
@@ -342,6 +340,11 @@ namespace io.github.hatayama.uLoopMCP
 
         private CompilationResult CompileCode(string code, string className, string correlationId)
         {
+            return CompileCodeAsync(code, className, correlationId, CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        private async Task<CompilationResult> CompileCodeAsync(string code, string className, string correlationId, CancellationToken ct)
+        {
             CompilationRequest request = new CompilationRequest
             {
                 Code = code,
@@ -349,7 +352,7 @@ namespace io.github.hatayama.uLoopMCP
                 Namespace = DynamicCodeConstants.DEFAULT_NAMESPACE
             };
 
-            CompilationResult result = _compiler.Compile(request);
+            CompilationResult result = await _compiler.CompileAsync(request, ct).ConfigureAwait(false);
 
             if (!result.Success)
             {

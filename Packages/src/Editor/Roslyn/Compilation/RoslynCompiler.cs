@@ -9,6 +9,8 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.PortableExecutable;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -37,8 +39,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (!_disposed)
             {
-                // Clear cache
-                _cacheManager.ClearReferenceCache();
                 _cacheManager.ClearCache();
                 _defaultReferences.Clear();
 
@@ -534,6 +534,11 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return HandleCompilationException(ex, request, correlationId);
             }
+        }
+
+        public Task<CompilationResult> CompileAsync(CompilationRequest request, CancellationToken ct = default)
+        {
+            return Task.FromResult(Compile(request));
         }
 
         public void ClearCache()
