@@ -220,7 +220,8 @@ namespace io.github.hatayama.uLoopMCP
                         McpConstants.ERROR_COMPILATION_DISABLED_LEVEL0,
                         McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0);
                 }
-                CompilationResult compilationResult = await CompileCodeAsync(code, className, correlationId, cancellationToken).ConfigureAwait(false);
+                // Unity Editor APIs (Undo, AssetDatabase) require the main thread, so do not use ConfigureAwait(false) here
+                CompilationResult compilationResult = await CompileCodeAsync(code, className, correlationId, cancellationToken);
                 ExecutionResult compilationErrorResult = HandleCompilationResult(compilationResult, stopwatch);
                 if (compilationErrorResult != null) return compilationErrorResult;
 
@@ -238,7 +239,7 @@ namespace io.github.hatayama.uLoopMCP
                     CancellationToken = cancellationToken
                 };
 
-                ExecutionResult executionResult = await _runner.ExecuteAsync(context).ConfigureAwait(false);
+                ExecutionResult executionResult = await _runner.ExecuteAsync(context);
                 executionResult.ExecutionTime = stopwatch.Elapsed;
                 UpdateStatistics(executionResult, stopwatch.Elapsed);
                 return executionResult;
@@ -352,7 +353,7 @@ namespace io.github.hatayama.uLoopMCP
                 Namespace = DynamicCodeConstants.DEFAULT_NAMESPACE
             };
 
-            CompilationResult result = await _compiler.CompileAsync(request, ct).ConfigureAwait(false);
+            CompilationResult result = await _compiler.CompileAsync(request, ct);
 
             if (!result.Success)
             {
