@@ -48,6 +48,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             Debug.Assert(request != null, "request must not be null");
             Debug.Assert(!string.IsNullOrWhiteSpace(request.Code), "request.Code must not be empty");
+            ct.ThrowIfCancellationRequested();
 
             CompilationResult cachedResult = _cacheManager.CheckCache(request);
             if (cachedResult != null)

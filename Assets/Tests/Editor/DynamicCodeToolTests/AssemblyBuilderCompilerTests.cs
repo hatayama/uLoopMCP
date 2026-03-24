@@ -159,7 +159,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             using CancellationTokenSource cts = new CancellationTokenSource();
             cts.Cancel();
 
-            Assert.ThrowsAsync<OperationCanceledException>(async () => await compiler.CompileAsync(request, cts.Token));
+            Assert.That(
+                async () => await compiler.CompileAsync(request, cts.Token),
+                Throws.InstanceOf<OperationCanceledException>());
         }
 
         [Test]
