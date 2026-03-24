@@ -17,6 +17,10 @@ namespace io.github.hatayama.uLoopMCP
 
         public static float LongPressElapsed { get; private set; }
 
+        // Animation request flags survive Clear() — they are consumed by the overlay in LateUpdate
+        private static bool _pendingExpandAnimation;
+        private static bool _pendingDissipateAnimation;
+
         private const int MAX_DRAG_WAYPOINTS = 4;
 
         private static readonly List<Vector2> _dragWaypoints = new List<Vector2>();
@@ -65,6 +69,38 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             _dragWaypoints.Add(position);
+        }
+
+        public static void RequestExpandAnimation()
+        {
+            _pendingExpandAnimation = true;
+        }
+
+        public static void RequestDissipateAnimation()
+        {
+            _pendingDissipateAnimation = true;
+        }
+
+        public static bool ConsumePendingExpandAnimation()
+        {
+            if (!_pendingExpandAnimation)
+            {
+                return false;
+            }
+
+            _pendingExpandAnimation = false;
+            return true;
+        }
+
+        public static bool ConsumePendingDissipateAnimation()
+        {
+            if (!_pendingDissipateAnimation)
+            {
+                return false;
+            }
+
+            _pendingDissipateAnimation = false;
+            return true;
         }
 
         public static void Clear()
