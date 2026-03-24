@@ -38,6 +38,11 @@ namespace io.github.hatayama.uLoopMCP
 
         private static bool StartsWithReturn(string s, int pos, int length)
         {
+            // "return" must not be part of a longer identifier (e.g. "myreturn", "returnValue")
+            if (pos > 0 && (char.IsLetterOrDigit(s[pos - 1]) || s[pos - 1] == '_'))
+            {
+                return false;
+            }
             if (pos + 6 > length) return false;
             if (s[pos + 1] != 'e' || s[pos + 2] != 't' || s[pos + 3] != 'u' ||
                 s[pos + 4] != 'r' || s[pos + 5] != 'n')
@@ -45,7 +50,6 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
             int afterReturn = pos + 6;
-            // Must not be part of a longer identifier
             if (afterReturn < length && (char.IsLetterOrDigit(s[afterReturn]) || s[afterReturn] == '_'))
             {
                 return false;

@@ -177,6 +177,7 @@ namespace io.github.hatayama.uLoopMCP
                 // File.Delete is a no-op if the file does not exist (.NET behavior)
                 File.Delete(sourcePath);
                 File.Delete(dllPath);
+                File.Delete(Path.ChangeExtension(dllPath, ".pdb"));
             }
         }
 

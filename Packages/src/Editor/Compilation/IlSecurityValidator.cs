@@ -12,8 +12,6 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     internal sealed class IlSecurityValidator
     {
-        private const byte OpCode_Ldtoken = 0xD0;
-
         private static readonly OpCode[] SingleByteOpCodes = BuildOpCodeTable(singleByte: true);
         private static readonly OpCode[] MultiByteOpCodes = BuildOpCodeTable(singleByte: false);
 
@@ -138,7 +136,6 @@ namespace io.github.hatayama.uLoopMCP
             if (il == null) return;
 
             ValidateIlCalls(method, il, result);
-            ValidateTypeofReferences(method, il, result);
         }
 
         private static void ValidateIlCalls(MethodBase method, byte[] il, SecurityValidationResult result)
@@ -158,7 +155,8 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     int token = ReadInt32(il, offset);
 
-                    if (opCode == OpCodes.Call || opCode == OpCodes.Callvirt || opCode == OpCodes.Newobj)
+                    if (opCode == OpCodes.Call || opCode == OpCodes.Callvirt || opCode == OpCodes.Newobj ||
+                        opCode == OpCodes.Ldftn || opCode == OpCodes.Ldvirtftn)
                     {
                         MethodBase calledMethod;
                         try
@@ -181,50 +179,43 @@ namespace io.github.hatayama.uLoopMCP
                                 Type = SecurityViolationType.DangerousApiCall,
                                 ApiName = $"{declaringType}.{memberName}",
                                 Message = $"Dangerous API call: {declaringType}.{memberName}",
-                                Description = $"IL call to '{declaringType}.{memberName}' in {method.DeclaringType?.FullName}.{method.Name}"
+                                Description = $"IL {opCode.Name} to '{declaringType}.{memberName}' in {method.DeclaringType?.FullName}.{method.Name}"
                             });
                         }
                     }
                 }
 
-                offset += GetOperandSize(opCode.OperandType, il, offset);
-            }
-        }
-
-        private static void ValidateTypeofReferences(MethodBase method, byte[] il, SecurityValidationResult result)
-        {
-            Module module = method.Module;
-
-            for (int i = 0; i < il.Length; i++)
-            {
-                if (il[i] != OpCode_Ldtoken || i + 4 >= il.Length) continue;
-
-                int token = il[i + 1] | (il[i + 2] << 8) | (il[i + 3] << 16) | (il[i + 4] << 24);
-
-                Type resolvedType;
-                try
+                // ldtoken with InlineTok operand: detect typeof(DangerousType)
+                if (opCode == OpCodes.Ldtoken && opCode.OperandType == OperandType.InlineTok)
                 {
-                    resolvedType = module.ResolveType(token);
-                }
-                catch
-                {
-                    // ldtoken can also reference fields/methods, not just types
-                    continue;
-                }
+                    int token = ReadInt32(il, offset);
 
-                string fullName = resolvedType.FullName;
-                if (fullName != null && DangerousApiCatalog.IsDangerousType(fullName))
-                {
-                    result.Violations.Add(new SecurityViolation
+                    Type resolvedType;
+                    try
                     {
-                        Type = SecurityViolationType.DangerousApiCall,
-                        ApiName = fullName,
-                        Message = $"typeof() reference to dangerous type: {fullName}",
-                        Description = $"typeof({fullName}) in {method.DeclaringType?.FullName}.{method.Name}"
-                    });
+                        resolvedType = module.ResolveType(token, typeArgs, methodArgs);
+                    }
+                    catch
+                    {
+                        // ldtoken can also reference fields/methods, not just types
+                        offset += GetOperandSize(opCode.OperandType, il, offset);
+                        continue;
+                    }
+
+                    string fullName = resolvedType.FullName;
+                    if (fullName != null && DangerousApiCatalog.IsDangerousType(fullName))
+                    {
+                        result.Violations.Add(new SecurityViolation
+                        {
+                            Type = SecurityViolationType.DangerousApiCall,
+                            ApiName = fullName,
+                            Message = $"typeof() reference to dangerous type: {fullName}",
+                            Description = $"typeof({fullName}) in {method.DeclaringType?.FullName}.{method.Name}"
+                        });
+                    }
                 }
 
-                i += 4;
+                offset += GetOperandSize(opCode.OperandType, il, offset);
             }
         }
 

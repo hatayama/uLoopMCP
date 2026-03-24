@@ -83,9 +83,8 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     "Monitor execution flow and performance"
                 );
                 
-                // In Restricted mode, security validation is handled by SourceSecurityScanner + IlSecurityValidator
-                // Remove regex-based checks, SecurityValidator of RoslynCompiler handles this
-                // This allows proper handling of user-defined classes (Assembly-CSharp)
+                // In Restricted mode, security validation is handled by SourceSecurityScanner + IlSecurityValidator.
+                // This allows proper handling of user-defined classes (Assembly-CSharp).
                 
                 // Retrieve code
                 string originalCode = parameters.Code ?? "";

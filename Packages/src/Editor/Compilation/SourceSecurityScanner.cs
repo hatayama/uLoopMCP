@@ -51,7 +51,7 @@ namespace io.github.hatayama.uLoopMCP
             new("GCSettings", "LatencyMode", @"\bGCSettings\s*\.\s*LatencyMode\s*="),
 
             // Thread manipulation
-            new("Thread", "Abort", @"\b\.Abort\s*\(\s*\)"),
+            new("Thread", "Abort", @"\bThread\s*\.\s*Abort\s*\("),
 
             // Asset deletion
             new("AssetDatabase", "DeleteAsset", @"\bAssetDatabase\s*\.\s*DeleteAsset\b"),
