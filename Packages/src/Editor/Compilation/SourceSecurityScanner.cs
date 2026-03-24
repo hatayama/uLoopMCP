@@ -41,13 +41,11 @@ namespace io.github.hatayama.uLoopMCP
             new("Assembly", "Load", @"\bAssembly\s*\.\s*Load\b"),
             new("Assembly", "LoadFrom", @"\bAssembly\s*\.\s*LoadFrom\b"),
             new("Type", "InvokeMember", @"\bInvokeMember\s*\("),
-            new("Activator", "CreateInstance", @"\bActivator\s*\.\s*CreateInstance\b"),
             new("Activator", "CreateComInstanceFrom", @"\bActivator\s*\.\s*CreateComInstanceFrom\b"),
 
             // Environment
             new("Environment", "Exit", @"\bEnvironment\s*\.\s*Exit\b"),
             new("Environment", "FailFast", @"\bEnvironment\s*\.\s*FailFast\b"),
-            new("Environment", "SetEnvironmentVariable", @"\bEnvironment\s*\.\s*SetEnvironmentVariable\b"),
 
             // GC manipulation
             new("GCSettings", "LatencyMode", @"\bGCSettings\s*\.\s*LatencyMode\s*="),

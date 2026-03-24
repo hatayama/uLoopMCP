@@ -56,10 +56,10 @@ namespace io.github.hatayama.uLoopMCP
             ["System.Type"] = new() { "InvokeMember" },
             ["System.Reflection.MethodInfo"] = new() { "Invoke" },
             ["System.Reflection.ConstructorInfo"] = new() { "Invoke" },
-            ["System.Activator"] = new() { "CreateComInstanceFrom", "CreateInstance" },
+            ["System.Activator"] = new() { "CreateComInstanceFrom" },
             ["UnityEditor.AssetDatabase"] = new() { "DeleteAsset" },
             ["UnityEditor.FileUtil"] = new() { "DeleteFileOrDirectory" },
-            ["System.Environment"] = new() { "Exit", "FailFast", "SetEnvironmentVariable" },
+            ["System.Environment"] = new() { "Exit", "FailFast" },
             ["System.Threading.Thread"] = new() { "Abort", "Suspend", "Resume" },
             ["io.github.hatayama.uLoopMCP.DynamicCodeSecurityManager"] = new() { "InitializeFromSettings" },
             ["io.github.hatayama.uLoopMCP.ULoopSettings"] = new() { "SetDynamicCodeSecurityLevel" }
