@@ -57,25 +57,39 @@ namespace io.github.hatayama.uLoopMCP
 
         public static int GetMinimumObservationFrameCount()
         {
-            return InputUpdateTypeResolver.RequiresExplicitUpdate() ? 2 : 1;
+            if (!InputUpdateTypeResolver.RequiresExplicitUpdate())
+            {
+                return 1;
+            }
+
+            InputUpdateType targetUpdateType = InputUpdateTypeResolver.Resolve();
+            if (targetUpdateType != InputUpdateType.Manual)
+            {
+                return 2;
+            }
+
+            // Manual-mode projects often call InputSystem.Update from their own Update loop,
+            // so zero-duration taps need one extra frame to remain visible to gameplay code.
+            return 3;
         }
 
         public static async Task WaitForObservationFrames(CancellationToken ct)
         {
-            await EditorDelay.DelayFrame(GetMinimumObservationFrameCount(), ct);
+            await WaitForRuntimeFrames(GetMinimumObservationFrameCount(), ct);
         }
 
         public static async Task WaitForPressLifetime(float duration, CancellationToken ct)
         {
             int minimumObservationFrames = GetMinimumObservationFrameCount();
-            int observedFrames = 0;
+            int startFrameCount = Time.frameCount;
             float startTime = Time.realtimeSinceStartup;
             float elapsed = 0f;
+            int observedFrames = 0;
 
             while (observedFrames < minimumObservationFrames || elapsed < duration)
             {
                 await EditorDelay.DelayFrame(1, ct);
-                observedFrames++;
+                observedFrames = Time.frameCount - startFrameCount;
                 elapsed = Time.realtimeSinceStartup - startTime;
             }
         }
@@ -176,6 +190,18 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return fallbackUpdateMode;
+        }
+
+        private static async Task WaitForRuntimeFrames(int frameCount, CancellationToken ct)
+        {
+            int startFrameCount = Time.frameCount;
+            int observedFrames = 0;
+
+            while (observedFrames < frameCount)
+            {
+                await EditorDelay.DelayFrame(1, ct);
+                observedFrames = Time.frameCount - startFrameCount;
+            }
         }
     }
 }
