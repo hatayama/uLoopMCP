@@ -49,11 +49,6 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(request != null, "request must not be null");
             Debug.Assert(!string.IsNullOrWhiteSpace(request.Code), "request.Code must not be empty");
 
-            if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
-            {
-                return CreateDisabledResult(request);
-            }
-
             if (request.AssemblyMode == AssemblyLoadingMode.SelectiveReference)
             {
                 return CreateUnsupportedModeResult(request);
@@ -316,26 +311,6 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             return "UNKNOWN";
-        }
-
-        private static CompilationResult CreateDisabledResult(CompilationRequest request)
-        {
-            return new CompilationResult
-            {
-                Success = false,
-                Errors = new List<CompilationError>
-                {
-                    new CompilationError
-                    {
-                        Message = McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0,
-                        ErrorCode = McpConstants.ERROR_COMPILATION_DISABLED_LEVEL0,
-                        Line = 0,
-                        Column = 0
-                    }
-                },
-                FailureReason = CompilationFailureReason.CompilationError,
-                UpdatedCode = request.Code
-            };
         }
 
         private static CompilationResult CreateUnsupportedModeResult(CompilationRequest request)

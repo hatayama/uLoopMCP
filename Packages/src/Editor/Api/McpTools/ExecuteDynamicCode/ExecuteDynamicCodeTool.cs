@@ -83,30 +83,7 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     "Monitor execution flow and performance"
                 );
                 
-                // Level 0: Preempt with unified error (compilation and execution not allowed)
-                if (_currentSecurityLevel == DynamicCodeSecurityLevel.Disabled)
-                {
-                    VibeLogger.LogWarning(
-                        "execute_dynamic_code_blocked_level0",
-                        "Dynamic code request blocked at security level 0",
-                        new { level = _currentSecurityLevel.ToString(), compileOnly = parameters.CompileOnly },
-                        correlationId,
-                        "Compilation is disabled at isolation level 0",
-                        "Raise to level 1+ to compile or execute"
-                    );
-
-                    return new ExecuteDynamicCodeResponse
-                    {
-                        Success = false,
-                        Result = "",
-                        Logs = new List<string>(),
-                        CompilationErrors = new List<CompilationErrorDto>(),
-                        ErrorMessage = McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0,
-                        SecurityLevel = _currentSecurityLevel.ToString()
-                    };
-                }
-                
-                // Level 1: In Restricted mode, delegate to Roslyn-based validation
+                // In Restricted mode, security validation is handled by SourceSecurityScanner + IlSecurityValidator
                 // Remove regex-based checks, SecurityValidator of RoslynCompiler handles this
                 // This allows proper handling of user-defined classes (Assembly-CSharp)
                 

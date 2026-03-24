@@ -202,7 +202,7 @@ namespace io.github.hatayama.uLoopMCP
                 enableTestsExecution = false,
                 allowMenuItemExecution = true,
                 allowThirdPartyTools = false,
-                dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Disabled,
+                dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted,
                 customPort = 12345
             }, true);
             File.WriteAllText(LegacySettingsFilePath, legacyJson);
@@ -288,7 +288,7 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsFalse(result.enableTestsExecution);
             Assert.IsFalse(result.allowMenuItemExecution);
             Assert.IsFalse(result.allowThirdPartyTools);
-            Assert.AreEqual((int)DynamicCodeSecurityLevel.Disabled, result.dynamicCodeSecurityLevel);
+            Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel);
             Assert.IsFalse(File.Exists(LegacySettingsFilePath),
                 "Legacy file should not be created when both files are absent");
         }
@@ -546,7 +546,7 @@ namespace io.github.hatayama.uLoopMCP
             public bool enableTestsExecution = false;
             public bool allowMenuItemExecution = false;
             public bool allowThirdPartyTools = false;
-            public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Disabled;
+            public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted;
             public int customPort = McpServerConfig.DEFAULT_PORT;
             public bool showDeveloperTools = false;
         }
@@ -561,7 +561,7 @@ namespace io.github.hatayama.uLoopMCP
             public bool enableTestsExecution = false;
             public bool allowMenuItemExecution = false;
             public bool allowThirdPartyTools = false;
-            public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Disabled;
+            public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted;
             public bool autoStartServer = true;
             public int customPort = McpServerConfig.DEFAULT_PORT;
             public bool showDeveloperTools = false;
@@ -577,7 +577,7 @@ namespace io.github.hatayama.uLoopMCP
             public bool enableTestsExecution = false;
             public bool allowMenuItemExecution = false;
             public bool allowThirdPartyTools = false;
-            public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Disabled;
+            public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted;
             public bool isAfterCompile = false;
             public int customPort = McpServerConfig.DEFAULT_PORT;
             public bool showDeveloperTools = false;

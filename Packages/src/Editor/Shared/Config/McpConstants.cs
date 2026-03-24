@@ -148,11 +148,6 @@ namespace io.github.hatayama.uLoopMCP
         public const int CORRELATION_ID_LENGTH = 8; // Length for correlation ID generation
         public const string GUID_FORMAT_NO_HYPHENS = "N"; // GUID format without hyphens
         
-        // Error message constants
-        public const string ERROR_EXECUTION_DISABLED = "EXECUTION_DISABLED";
-        public const string ERROR_COMPILATION_DISABLED_LEVEL0 = "COMPILATION_DISABLED_AT_LEVEL0";
-        public static readonly string ERROR_MESSAGE_EXECUTION_DISABLED = $"Dynamic code execution is currently disabled. Enable in {ULOOP_DIR}/{ULOOP_SETTINGS_FILE_NAME} or uLoopMCP Security Settings UI.";
-        public const string ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0 = "Compilation is disabled at isolation level 0. Raise to level 1+ to compile.";
         public const string ERROR_MESSAGE_DUPLICATE_ASMDEF = "Duplicate asmdef assembly name detected. Unity may not start compilation until duplicates are removed.";
         
         public const string ERROR_MESSAGE_EXECUTION_IN_PROGRESS = "Another execution is already in progress";

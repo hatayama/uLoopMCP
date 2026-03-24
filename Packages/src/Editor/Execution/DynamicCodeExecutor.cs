@@ -43,46 +43,19 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                // Level 0: Compilation and execution are prohibited
-                if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
-                {
-                    return CreateSecurityBlockedResult(
-                        McpConstants.ERROR_COMPILATION_DISABLED_LEVEL0,
-                        McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0);
-                }
-
                 LogExecutionStart(className, parameters, code, compileOnly, correlationId);
 
-                // Phase 1: Security Validation
                 ExecutionResult securityResult = PerformSecurityValidation(code, correlationId, stopwatch);
                 if (!securityResult.Success) return securityResult;
 
-                // Phase 2: Compilation (blocked at Level 0)
-                if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
-                {
-                    return CreateSecurityBlockedResult(
-                        McpConstants.ERROR_COMPILATION_DISABLED_LEVEL0,
-                        McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0);
-                }
                 CompilationResult compilationResult = CompileCode(code, className, correlationId);
                 ExecutionResult compilationErrorResult = HandleCompilationResult(compilationResult, stopwatch);
                 if (compilationErrorResult != null) return compilationErrorResult;
 
-                // Phase 3: Check Compile-Only Mode
                 if (compileOnly)
                 {
                     return CreateCompileOnlySuccessResult(compilationResult, correlationId, stopwatch);
                 }
-
-                // Runtime Guard: Level 0 blocks execution (defensive; should be caught earlier)
-                if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
-                {
-                    return CreateSecurityBlockedResult(
-                        McpConstants.ERROR_COMPILATION_DISABLED_LEVEL0,
-                        McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0);
-                }
-
-                // Phase 4: Execution
                 ExecutionResult executionResult = PerformExecution(
                     compilationResult.CompiledAssembly,
                     className,
@@ -197,29 +170,13 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false)
         {
-            // Runtime Security Check (also blocks compilation at Level 0)
-            if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
-            {
-                return CreateSecurityBlockedResult(
-                    McpConstants.ERROR_COMPILATION_DISABLED_LEVEL0,
-                    McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0);
-            }
-
             string correlationId = McpConstants.GenerateCorrelationId();
             Stopwatch stopwatch = Stopwatch.StartNew();
             try
             {
-                // Phase 1: Security Validation
                 ExecutionResult securityResult = PerformSecurityValidation(code, correlationId, stopwatch);
                 if (!securityResult.Success) return securityResult;
 
-                // Phase 2: Compilation
-                if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
-                {
-                    return CreateSecurityBlockedResult(
-                        McpConstants.ERROR_COMPILATION_DISABLED_LEVEL0,
-                        McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0);
-                }
                 // Unity Editor APIs (Undo, AssetDatabase) require the main thread, so do not use ConfigureAwait(false) here
                 CompilationResult compilationResult = await CompileCodeAsync(code, className, correlationId, cancellationToken);
                 ExecutionResult compilationErrorResult = HandleCompilationResult(compilationResult, stopwatch);
@@ -250,45 +207,6 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private ExecutionResult PerformRuntimeSecurityCheck(string code)
-        {
-            // Execution Disabled Check (Level 0 immediate block)
-            if (_securityLevel == DynamicCodeSecurityLevel.Disabled)
-            {
-                return CreateSecurityBlockedResult(
-                    McpConstants.ERROR_EXECUTION_DISABLED,
-                    McpConstants.ERROR_MESSAGE_EXECUTION_DISABLED);
-            }
-
-            return new ExecutionResult { Success = true };
-        }
-
-        private ExecutionResult CreateSecurityBlockedResult(string errorCode, string errorMessage)
-        {
-            ExecutionStatistics stats;
-            lock (_statsLock)
-            {
-                stats = new ExecutionStatistics
-                {
-                    TotalExecutions = _statistics.TotalExecutions,
-                    SuccessfulExecutions = _statistics.SuccessfulExecutions,
-                    FailedExecutions = _statistics.FailedExecutions,
-                    AverageExecutionTime = _statistics.AverageExecutionTime,
-                    SecurityViolations = _statistics.SecurityViolations,
-                    CompilationErrors = _statistics.CompilationErrors
-                };
-            }
-
-            return new ExecutionResult
-            {
-                Success = false,
-                ErrorMessage = $"{errorCode}: {errorMessage}",
-                ExecutionTime = TimeSpan.Zero,
-                Result = null,
-                Statistics = stats
-            };
-        }
-
         /// <summary>Get execution statistics</summary>
         public ExecutionStatistics GetStatistics()
         {
@@ -304,39 +222,6 @@ namespace io.github.hatayama.uLoopMCP
                     CompilationErrors = _statistics.CompilationErrors
                 };
             }
-        }
-
-        // Private Helper Methods
-        private SecurityValidationResult ValidateCodeSecurity(string code, string correlationId)
-        {
-            // In Restricted Mode, defer security validation to Roslyn
-            // Perform only basic checks here (such as empty string check)
-            if (string.IsNullOrWhiteSpace(code))
-            {
-                return new SecurityValidationResult
-                {
-                    IsValid = false,
-                    Violations = new List<SecurityViolation>
-                    {
-                        new SecurityViolation
-                        {
-                            Type = SecurityViolationType.DangerousApiCall,
-                            Description = "Code is empty",
-                            LineNumber = 0,
-                            CodeSnippet = string.Empty
-                        }
-                    }
-                };
-            }
-
-            // Since detailed checks are performed by SecurityValidator during Roslyn compilation
-            // Pass through with only basic validation here
-
-            return new SecurityValidationResult
-            {
-                IsValid = true,
-                Violations = new List<SecurityViolation>()
-            };
         }
 
         private CompilationResult CompileCode(string code, string className, string correlationId)
