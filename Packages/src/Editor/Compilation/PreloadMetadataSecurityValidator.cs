@@ -7,7 +7,7 @@ namespace io.github.hatayama.uLoopMCP
     /// Validates compiled assemblies before Assembly.Load by scanning raw metadata strings.
     /// This keeps the first enforcement step ahead of load-time side effects even when deeper IL validation still runs later.
     /// </summary>
-    internal sealed class PreloadMetadataSecurityValidator
+    internal sealed class PreloadMetadataSecurityValidator : IPreloadAssemblySecurityValidator
     {
         private const string ModuleInitializerAttributeName = "System.Runtime.CompilerServices.ModuleInitializerAttribute";
 

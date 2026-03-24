@@ -4,9 +4,9 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// Roslyn-independent catalog of dangerous API types and members.
-    /// Data migrated from DangerousApiDetector for use with IL-based security validation.
+    /// Data stays shared because both preload and post-load validators must make identical decisions.
     /// </summary>
-    internal static class DangerousApiCatalog
+    public static class DangerousApiCatalog
     {
         private static readonly HashSet<string> DangerousTypes = new(System.StringComparer.Ordinal)
         {
@@ -65,20 +65,31 @@ namespace io.github.hatayama.uLoopMCP
 
         public static bool IsDangerousType(string fullTypeName)
         {
-            if (string.IsNullOrEmpty(fullTypeName)) return false;
+            if (string.IsNullOrEmpty(fullTypeName))
+            {
+                return false;
+            }
+
             return DangerousTypes.Contains(fullTypeName);
         }
 
         public static bool IsDangerousApi(string fullTypeName, string memberName)
         {
-            if (string.IsNullOrEmpty(fullTypeName) || string.IsNullOrEmpty(memberName)) return false;
+            if (string.IsNullOrEmpty(fullTypeName) || string.IsNullOrEmpty(memberName))
+            {
+                return false;
+            }
 
-            if (DangerousTypes.Contains(fullTypeName)) return true;
+            if (DangerousTypes.Contains(fullTypeName))
+            {
+                return true;
+            }
 
             if (DangerousMembers.TryGetValue(fullTypeName, out HashSet<string> members))
             {
                 return members.Contains(memberName);
             }
+
             return false;
         }
 

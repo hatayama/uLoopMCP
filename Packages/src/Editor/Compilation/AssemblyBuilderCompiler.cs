@@ -134,9 +134,7 @@ namespace io.github.hatayama.uLoopMCP
                 byte[] assemblyBytes = File.ReadAllBytes(dllPath);
                 if (_securityLevel == DynamicCodeSecurityLevel.Restricted)
                 {
-                    PreloadMetadataSecurityValidator metadataValidator = new PreloadMetadataSecurityValidator();
-                    SecurityValidationResult metadataSecurityResult = metadataValidator.Validate(assemblyBytes);
-
+                    SecurityValidationResult metadataSecurityResult = ValidateBeforeAssemblyLoad(assemblyBytes);
                     if (!metadataSecurityResult.IsValid)
                     {
                         return new CompilationResult
@@ -235,6 +233,20 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return await tcs.Task.ConfigureAwait(false);
+        }
+
+        private static SecurityValidationResult ValidateBeforeAssemblyLoad(byte[] assemblyBytes)
+        {
+            Debug.Assert(assemblyBytes != null, "assemblyBytes must not be null");
+
+            IPreloadAssemblySecurityValidator registeredValidator;
+            if (PreloadAssemblySecurityValidatorRegistry.TryGetValidator(out registeredValidator))
+            {
+                return registeredValidator.Validate(assemblyBytes);
+            }
+
+            SystemReflectionMetadataPreloadValidator fallbackValidator = new SystemReflectionMetadataPreloadValidator();
+            return fallbackValidator.Validate(assemblyBytes);
         }
 
         private string[] CollectReferences(List<string> additionalRefs)

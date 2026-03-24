@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -7,6 +8,20 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
     [TestFixture]
     public class AssemblyBuilderCompilerTests
     {
+        private IPreloadAssemblySecurityValidator _previousValidator;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _previousValidator = PreloadAssemblySecurityValidatorRegistry.SwapValidatorForTests(new SystemReflectionMetadataPreloadValidator());
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            PreloadAssemblySecurityValidatorRegistry.SwapValidatorForTests(_previousValidator);
+        }
+
         [Test]
         public async Task CompileAsync_WhenAssemblyModeIsSelectiveReference_ShouldIgnoreLegacyModeAndSucceed()
         {
@@ -73,6 +88,79 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.IsTrue(result.Success, result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Safe reflection should compile");
             Assert.IsFalse(result.HasSecurityViolations, "Safe reflection should not be flagged");
+        }
+
+        [Test]
+        public async Task CompileAsync_Restricted_WhenRegistryValidatorRejects_ShouldReturnSecurityViolation()
+        {
+            PreloadAssemblySecurityValidatorRegistry.SwapValidatorForTests(new RejectingPreloadAssemblySecurityValidator());
+
+            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = "return 42;",
+                ClassName = "RegistryValidatorCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.IsFalse(result.Success, "Injected registry validator should block assembly load");
+            Assert.IsTrue(result.HasSecurityViolations, "Injected registry validator should surface a security violation");
+            Assert.That(result.SecurityViolations, Has.Count.EqualTo(1));
+            Assert.That(result.SecurityViolations[0].ApiName, Is.EqualTo("Injected.Validator"));
+        }
+
+        [Test]
+        public async Task CompileAsync_Restricted_WhenRegistryHasNoValidator_ShouldUseMetadataValidatorFallback()
+        {
+            PreloadAssemblySecurityValidatorRegistry.SwapValidatorForTests(null);
+
+            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = @"
+                    using System.Runtime.CompilerServices;
+
+                    public static class FallbackModuleInitializer
+                    {
+                        [ModuleInitializer]
+                        public static void Initialize()
+                        {
+                            UnityEngine.Debug.Log(""should not run"");
+                        }
+                    }
+                ",
+                ClassName = "FallbackModuleInitializerCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.IsFalse(result.Success, "Fallback metadata validator should still block ModuleInitializer");
+            Assert.IsTrue(result.HasSecurityViolations, "Fallback metadata validator should report a security violation");
+        }
+
+        private sealed class RejectingPreloadAssemblySecurityValidator : IPreloadAssemblySecurityValidator
+        {
+            public SecurityValidationResult Validate(byte[] assemblyBytes)
+            {
+                return new SecurityValidationResult
+                {
+                    IsValid = false,
+                    Violations = new List<SecurityViolation>
+                    {
+                        new SecurityViolation
+                        {
+                            Type = SecurityViolationType.DangerousApiCall,
+                            ApiName = "Injected.Validator",
+                            Message = "Injected validator rejected the assembly",
+                            Description = "The test validator forces the compiler to use the registry result.",
+                            Location = "test"
+                        }
+                    }
+                };
+            }
         }
     }
 }
