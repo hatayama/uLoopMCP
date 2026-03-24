@@ -27,7 +27,7 @@ Unity CLI Loop is built around three core ideas:
 
 1. **A self-hosted development loop where AI autonomously compiles, tests, inspects logs, and fixes issues.** Uses `compile`, `run-tests`, `get-logs`, `clear-console`.
 2. **AI-driven Unity Editor operation—scene building, object manipulation, menu execution, and UI refinement from screenshots.** Uses `execute-dynamic-code`, `execute-menu-item`, `screenshot`.
-3. **PlayMode automated testing—AI clicks buttons, drags elements, and verifies game behavior.** Uses `simulate-mouse-ui`, `simulate-mouse-input`, `simulate-keyboard`, `record-input`, `replay-input`, `execute-dynamic-code`, `screenshot`.
+3. **PlayMode automated testing—AI clicks buttons, drags elements, presses keys, records and replays input, and verifies game behavior.** Uses `simulate-mouse-ui`, `simulate-mouse-input`, `simulate-keyboard`, `record-input`, `replay-input`, `execute-dynamic-code`, `screenshot`.
 
 https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 
