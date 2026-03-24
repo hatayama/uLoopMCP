@@ -414,29 +414,6 @@ Unity EditorのPlay Modeを制御します。Play（再生開始/一時停止解
 ### 14. execute-dynamic-code - 動的C#コード実行
 Unity Editor内で動的にC#コードを実行します。
 
-> **⚠️ 重要な前提条件**
-> このツールを使用するには、[OpenUPM NuGet](https://openupm.com/nuget/)を使用して`Microsoft.CodeAnalysis.CSharp`パッケージをインストールする必要があります。
-
-<details>
-<summary>Microsoft.CodeAnalysis.CSharpのインストール手順を見る</summary>
-
-**インストール手順:**
-
-OpenUPM経由（推奨）で、Unity Package Manager の Scoped Registry を使用します。
-
-1. Project Settingsウィンドウを開き、Package Managerページに移動
-2. Scoped Registriesリストに以下のエントリを追加：
-
-```yaml
-Name: OpenUPM
-URL: https://package.openupm.com
-Scope(s): org.nuget
-```
-
-3. Package Managerウィンドウを開き、My RegistriesセクションのOpenUPMを選択。Microsoft.CodeAnalysis.CSharpをインストールします。
-
-</details>
-
 **Async対応**:
 - スニペット内で await が利用可能です（Task / ValueTask / UniTask など awaitable 全般）
 - CancellationToken をツールに渡すと、キャンセルが末端まで伝播します

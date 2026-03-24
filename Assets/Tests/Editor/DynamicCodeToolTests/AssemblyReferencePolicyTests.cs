@@ -14,17 +14,6 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
     public class AssemblyReferencePolicyTests
     {
         [Test]
-        public void Level0_GetAssemblies_Returns_Empty_List()
-        {
-            // Act
-            IReadOnlyList<string> assemblies = AssemblyReferencePolicy.GetAssemblies(DynamicCodeSecurityLevel.Disabled);
-            
-            // Assert
-            Assert.IsNotNull(assemblies);
-            Assert.AreEqual(0, assemblies.Count);
-        }
-
-        [Test]
         public void Level1_GetAssemblies_Includes_UnityEngine()
         {
             // Act
@@ -103,15 +92,6 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsNotNull(assemblies);
             // Assembly-CSharp is available in Level 2 (FullAccess)
             Assert.IsTrue(assemblies.Any(a => a == "Assembly-CSharp"), "Level 2 (FullAccess) should include Assembly-CSharp");
-        }
-
-        [Test]
-        public void IsAssemblyAllowed_Level0_Denies_All()
-        {
-            // Act & Assert
-            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("UnityEngine", DynamicCodeSecurityLevel.Disabled));
-            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System", DynamicCodeSecurityLevel.Disabled));
-            Assert.IsFalse(AssemblyReferencePolicy.IsAssemblyAllowed("System.IO", DynamicCodeSecurityLevel.Disabled));
         }
 
         [Test]

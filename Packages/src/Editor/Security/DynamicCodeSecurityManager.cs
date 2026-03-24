@@ -15,18 +15,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             switch (level)
             {
-                case DynamicCodeSecurityLevel.Disabled:
-                    // Level 0: Execution completely prohibited
-                    VibeLogger.LogWarning(
-                        "security_execution_blocked",
-                        "Execution blocked at Disabled security level",
-                        new { level = level.ToString() },
-                        correlationId: McpConstants.GenerateCorrelationId(),
-                        humanNote: "Code execution prevented by security policy",
-                        aiTodo: "Track execution attempts at disabled level"
-                    );
-                    return false;
-
                 case DynamicCodeSecurityLevel.Restricted:
                 case DynamicCodeSecurityLevel.FullAccess:
                     // Level 1, 2: Execution permitted

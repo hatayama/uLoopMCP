@@ -31,10 +31,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             switch (level)
             {
-                case DynamicCodeSecurityLevel.Disabled:
-                    // Level 0: Add Nothing (Compilation Not Allowed)
-                    return new List<string>();
-
                 case DynamicCodeSecurityLevel.Restricted:
                 case DynamicCodeSecurityLevel.FullAccess:
                     // Level 1 & 2: All Assemblies Referenceable
@@ -95,10 +91,6 @@ namespace io.github.hatayama.uLoopMCP
 
             switch (level)
             {
-                case DynamicCodeSecurityLevel.Disabled:
-                    // Level 0: Allow Nothing
-                    return false;
-
                 case DynamicCodeSecurityLevel.Restricted:
                 case DynamicCodeSecurityLevel.FullAccess:
                     // Level 1 & 2: Allow Everything

@@ -16,29 +16,6 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         // Do not use ExecuteDynamicCodeTool (for test independence)
         // Create independent Executor for each test method
 
-        [Test]
-        public async Task Level0_VerifyCodeExecutionIsBlocked()
-        {
-            // Create Executor directly (not dependent on global state)
-            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
-                DynamicCodeSecurityLevel.Disabled
-            );
-            
-            // Direct execution
-            ExecutionResult result = await executor.ExecuteCodeAsync(
-                "return \"Hello World\";",
-                "DynamicCommand",
-                null,
-                CancellationToken.None,
-                false
-            );
-            
-            // Assert
-            Assert.IsFalse(result.Success);
-            Assert.IsNotNull(result.ErrorMessage);
-            Assert.IsTrue(result.ErrorMessage.Contains("disabled") || 
-                         result.ErrorMessage.Contains("Disabled"));
-        }
 
         [Test]
         public async Task Level1_VerifySystemIOCodeIsBlocked()

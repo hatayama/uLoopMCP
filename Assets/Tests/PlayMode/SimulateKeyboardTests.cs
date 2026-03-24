@@ -59,8 +59,8 @@ namespace Tests.PlayMode
             {
                 Object.DestroyImmediate(canvases[i].gameObject);
             }
-            Object.Destroy(framePressObserverGo);
-            Object.Destroy(eventSystemGo);
+            Object.DestroyImmediate(framePressObserverGo);
+            Object.DestroyImmediate(eventSystemGo);
             base.TearDown();
         }
 
@@ -175,6 +175,22 @@ namespace Tests.PlayMode
             BadgeVisual badge = RequireBadgeVisual("Space");
             Assert.AreEqual(SimulateKeyboardOverlay.CONTAINER_BACKGROUND_ALPHA, badge.BackgroundAlpha, 0.01f, "Released press badge should still be fully visible right after the tool returns.");
             Assert.AreEqual(1f, badge.TextAlpha, 0.01f, "Released press text should still be fully visible right after the tool returns.");
+        }
+
+        [UnityTest]
+        public IEnumerator Press_Should_CreateOverlayCanvas_WithUnitScale()
+        {
+            yield return null;
+
+            yield return RunTool(new JObject
+            {
+                ["action"] = KeyboardAction.Press.ToString(),
+                ["key"] = "Space"
+            });
+
+            InputVisualizationCanvas canvas = Object.FindAnyObjectByType<InputVisualizationCanvas>();
+            Assert.IsNotNull(canvas, "InputVisualizationCanvas must exist after keyboard simulation.");
+            Assert.AreEqual(Vector3.one, canvas.transform.localScale, "Overlay canvas should use unit scale so GameView resolution changes do not collapse the UI.");
         }
 
         [UnityTest]

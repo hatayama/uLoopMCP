@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -36,7 +35,7 @@ Don't:
 Need files/dirs? Run terminal commands.
 
 See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/examples/")]
-    public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
+    public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>, IDisposable
     {
         private IDynamicCodeExecutor _executor;
         private readonly UserFriendlyErrorConverter _errorHandler;
@@ -46,17 +45,9 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
         
         public ExecuteDynamicCodeTool()
         {
-#if ULOOPMCP_HAS_ROSLYN
             _executor = null;
             _errorHandler = new UserFriendlyErrorConverter();
-            // Set initial value to an invalid value (will always be recreated on the first request)
             _currentSecurityLevel = (DynamicCodeSecurityLevel)(-1);
-#else
-            // Null when Roslyn is disabled
-            _executor = null;
-            _errorHandler = null;
-            _currentSecurityLevel = DynamicCodeSecurityLevel.Disabled;
-#endif
         }
         
         protected override async Task<ExecuteDynamicCodeResponse> ExecuteAsync(
@@ -67,16 +58,13 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             
             try
             {
-#if ULOOPMCP_HAS_ROSLYN
                 DynamicCodeSecurityLevel editorLevel = ULoopSettings.GetDynamicCodeSecurityLevel();
-                
-                // Recreate Executor only when editor settings change (cache for performance)
+
                 if (_executor == null || editorLevel != _currentSecurityLevel)
                 {
                     _currentSecurityLevel = editorLevel;
-                    _executor = Factory.DynamicCodeExecutorFactory.Create(_currentSecurityLevel);
+                    this.ReplaceExecutor(Factory.DynamicCodeExecutorFactory.Create(_currentSecurityLevel));
                 }
-#endif
                 
                 // Log execution start with VibeLogger
                 VibeLogger.LogInfo(
@@ -94,59 +82,8 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     "Monitor execution flow and performance"
                 );
                 
-                // Level 0: Preempt with unified error (compilation and execution not allowed)
-                if (_currentSecurityLevel == DynamicCodeSecurityLevel.Disabled)
-                {
-                    VibeLogger.LogWarning(
-                        "execute_dynamic_code_blocked_level0",
-                        "Dynamic code request blocked at security level 0",
-                        new { level = _currentSecurityLevel.ToString(), compileOnly = parameters.CompileOnly },
-                        correlationId,
-                        "Compilation is disabled at isolation level 0",
-                        "Raise to level 1+ to compile or execute"
-                    );
-
-                    return new ExecuteDynamicCodeResponse
-                    {
-                        Success = false,
-                        Result = "",
-                        Logs = new List<string>(),
-                        CompilationErrors = new List<CompilationErrorDto>(),
-                        ErrorMessage = McpConstants.ERROR_MESSAGE_COMPILATION_DISABLED_LEVEL0,
-                        SecurityLevel = _currentSecurityLevel.ToString()
-                    };
-                }
-                
-                // Level 1: In Restricted mode, delegate to Roslyn-based validation
-                // Remove regex-based checks, SecurityValidator of RoslynCompiler handles this
-                // This allows proper handling of user-defined classes (Assembly-CSharp)
-                
                 // Retrieve code
                 string originalCode = parameters.Code ?? "";
-
-                // Pre-execution guard: block file/dir I/O attempts only in Restricted mode (use terminal instead)
-                if (_currentSecurityLevel == DynamicCodeSecurityLevel.Restricted &&
-                    Regex.IsMatch(originalCode, @"\b(System\.IO\.|File\.|Directory\.|AssetDatabase\.CreateFolder\b)"))
-                {
-                    VibeLogger.LogWarning(
-                        "execute_dynamic_code_blocked_io",
-                        "Blocked due to file/dir I/O usage in dynamic code",
-                        new { pattern = "System.IO.*, File.*, Directory.*, Path.*, AssetDatabase.CreateFolder" },
-                        correlationId,
-                        "File/dir I/O is disallowed in ExecuteDynamicCode",
-                        "Use terminal commands for files/dirs"
-                    );
-
-                    return new ExecuteDynamicCodeResponse
-                    {
-                        Success = false,
-                        Result = string.Empty,
-                        Logs = new List<string> { "Explanation: File/dir I/O is disallowed in ExecuteDynamicCode. Use terminal commands instead." },
-                        CompilationErrors = new List<CompilationErrorDto>(),
-                        ErrorMessage = "File/dir I/O is disallowed in ExecuteDynamicCode. Use terminal commands instead.",
-                        SecurityLevel = _currentSecurityLevel.ToString()
-                    };
-                }
 
                 // Convert to parameter array
                 object[] parametersArray = null;
@@ -246,6 +183,11 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                 return CreateErrorResponse(ex.Message);
             }
         }
+
+        public void Dispose()
+        {
+            this.ReplaceExecutor(null);
+        }
         
         private ExecuteDynamicCodeResponse ConvertExecutionResultToResponse(
             ExecutionResult result, string originalCode, string correlationId)
@@ -340,6 +282,16 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             }
 
             return response;
+        }
+
+        private void ReplaceExecutor(IDynamicCodeExecutor nextExecutor)
+        {
+            if (_executor != null)
+            {
+                _executor.Dispose();
+            }
+
+            _executor = nextExecutor;
         }
 
         private static List<CompilationErrorDto> BuildDiagnostics(

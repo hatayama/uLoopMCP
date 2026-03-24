@@ -112,7 +112,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (evt.newValue is DynamicCodeSecurityLevel newLevel)
                 {
-                    HandleSecurityLevelChange(evt.previousValue as DynamicCodeSecurityLevel? ?? DynamicCodeSecurityLevel.Disabled, newLevel);
+                    HandleSecurityLevelChange(evt.previousValue as DynamicCodeSecurityLevel? ?? DynamicCodeSecurityLevel.Restricted, newLevel);
                 }
             });
 
@@ -121,38 +121,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private void HandleSecurityLevelChange(DynamicCodeSecurityLevel previousLevel, DynamicCodeSecurityLevel newLevel)
         {
-            if (previousLevel == DynamicCodeSecurityLevel.Disabled && newLevel != DynamicCodeSecurityLevel.Disabled)
-            {
-                bool roslynAvailable = RoslynAssemblyChecker.IsRoslynAvailable();
-
-                if (!roslynAvailable)
-                {
-                    EditorUtility.DisplayDialog(
-                        "Roslyn Not Installed",
-                        RoslynAssemblyChecker.GetInstallationMessage(),
-                        "OK"
-                    );
-                    ViewDataBinder.UpdateEnumField(_securityLevelField, previousLevel);
-                    return;
-                }
-
-                string version = RoslynAssemblyChecker.GetRoslynVersion();
-                bool confirmed = EditorUtility.DisplayDialog(
-                    "Enable Roslyn Features",
-                    $"Microsoft.CodeAnalysis.CSharp is installed (version: {version}).\n\n" +
-                    "This will enable advanced code analysis and execution features.\n\n" +
-                    "Continue?",
-                    "Enable",
-                    "Cancel"
-                );
-
-                if (!confirmed)
-                {
-                    ViewDataBinder.UpdateEnumField(_securityLevelField, previousLevel);
-                    return;
-                }
-            }
-
             OnSecurityLevelChanged?.Invoke(newLevel);
             UpdateSecurityLevelDescription();
         }
@@ -163,9 +131,8 @@ namespace io.github.hatayama.uLoopMCP
 
             string description = currentLevel switch
             {
-                DynamicCodeSecurityLevel.Disabled => "Level 0: Code execution completely disabled (safest)",
-                DynamicCodeSecurityLevel.Restricted => "Level 1: Dangerous APIs blocked (recommended)",
-                DynamicCodeSecurityLevel.FullAccess => "Level 2: All APIs available (use with caution)",
+                DynamicCodeSecurityLevel.Restricted => "Dangerous APIs blocked (recommended)",
+                DynamicCodeSecurityLevel.FullAccess => "All APIs available (use with caution)",
                 _ => "Unknown level"
             };
 

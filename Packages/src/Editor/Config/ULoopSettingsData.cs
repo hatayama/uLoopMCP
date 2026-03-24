@@ -12,6 +12,6 @@ namespace io.github.hatayama.uLoopMCP
         public bool enableTestsExecution = false;
         public bool allowMenuItemExecution = false;
         public bool allowThirdPartyTools = false;
-        public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Disabled;
+        public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted;
     }
 }
