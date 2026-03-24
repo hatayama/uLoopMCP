@@ -65,6 +65,23 @@ namespace io.github.hatayama.uLoopMCP
                 return cachedResult;
             }
 
+            // Source-level security scan before compilation to prevent dangerous code from executing
+            if (_securityLevel == DynamicCodeSecurityLevel.Restricted)
+            {
+                SecurityValidationResult sourceSecurityResult = SourceSecurityScanner.Scan(request.Code);
+                if (!sourceSecurityResult.IsValid)
+                {
+                    return new CompilationResult
+                    {
+                        Success = false,
+                        HasSecurityViolations = true,
+                        SecurityViolations = sourceSecurityResult.Violations,
+                        UpdatedCode = request.Code,
+                        FailureReason = CompilationFailureReason.SecurityViolation
+                    };
+                }
+            }
+
             string namespaceName = request.Namespace ?? DynamicCodeConstants.DEFAULT_NAMESPACE;
             string className = request.ClassName ?? DynamicCodeConstants.DEFAULT_CLASS_NAME;
             int id = Interlocked.Increment(ref _compileCounter);
@@ -193,7 +210,6 @@ namespace io.github.hatayama.uLoopMCP
             };
 
             bool started = builder.Build();
-            Debug.Assert(started, "AssemblyBuilder.Build() must return true to indicate compilation started");
 
             if (!started)
             {

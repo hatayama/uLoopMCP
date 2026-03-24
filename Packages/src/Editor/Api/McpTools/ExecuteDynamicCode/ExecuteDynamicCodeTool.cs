@@ -46,17 +46,9 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
         
         public ExecuteDynamicCodeTool()
         {
-#if ULOOPMCP_HAS_ROSLYN
             _executor = null;
             _errorHandler = new UserFriendlyErrorConverter();
-            // Set initial value to an invalid value (will always be recreated on the first request)
             _currentSecurityLevel = (DynamicCodeSecurityLevel)(-1);
-#else
-            // Null when Roslyn is disabled
-            _executor = null;
-            _errorHandler = null;
-            _currentSecurityLevel = DynamicCodeSecurityLevel.Disabled;
-#endif
         }
         
         protected override async Task<ExecuteDynamicCodeResponse> ExecuteAsync(
@@ -67,16 +59,13 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             
             try
             {
-#if ULOOPMCP_HAS_ROSLYN
                 DynamicCodeSecurityLevel editorLevel = ULoopSettings.GetDynamicCodeSecurityLevel();
-                
-                // Recreate Executor only when editor settings change (cache for performance)
+
                 if (_executor == null || editorLevel != _currentSecurityLevel)
                 {
                     _currentSecurityLevel = editorLevel;
                     _executor = Factory.DynamicCodeExecutorFactory.Create(_currentSecurityLevel);
                 }
-#endif
                 
                 // Log execution start with VibeLogger
                 VibeLogger.LogInfo(

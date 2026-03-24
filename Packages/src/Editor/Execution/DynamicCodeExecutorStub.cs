@@ -6,9 +6,8 @@ using System.Threading.Tasks;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Stub implementation for DynamicCodeExecutor when Roslyn is disabled
-    /// Minimal implementation that always returns a 'Roslyn Required' error
-    /// Related classes: IDynamicCodeExecutor, DynamicCodeExecutor, DynamicCodeExecutorFactory
+    /// Fallback stub when no compilation provider is registered.
+    /// Returns an error for all execution attempts.
     /// </summary>
     public class DynamicCodeExecutorStub : IDynamicCodeExecutor
     {
@@ -27,7 +26,7 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false)
         {
-            return CreateRoslynRequiredResult();
+            return CreateCompilationProviderUnavailableResult();
         }
 
         /// <summary>Execute code asynchronously (always returns a Roslyn required error)</summary>
@@ -38,7 +37,7 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false)
         {
-            return await Task.FromResult(CreateRoslynRequiredResult());
+            return await Task.FromResult(CreateCompilationProviderUnavailableResult());
         }
 
         /// <summary>Retrieve execution statistics</summary>
@@ -55,12 +54,12 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        private ExecutionResult CreateRoslynRequiredResult()
+        private ExecutionResult CreateCompilationProviderUnavailableResult()
         {
             return new ExecutionResult
             {
                 Success = false,
-                ErrorMessage = $"{McpConstants.ERROR_ROSLYN_REQUIRED}: {McpConstants.ERROR_MESSAGE_ROSLYN_REQUIRED}",
+                ErrorMessage = "COMPILATION_PROVIDER_UNAVAILABLE: No compilation provider is registered. Check initialization.",
                 ExecutionTime = TimeSpan.Zero,
                 Statistics = _statistics
             };

@@ -123,24 +123,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (previousLevel == DynamicCodeSecurityLevel.Disabled && newLevel != DynamicCodeSecurityLevel.Disabled)
             {
-                bool roslynAvailable = RoslynAssemblyChecker.IsRoslynAvailable();
-
-                if (!roslynAvailable)
-                {
-                    EditorUtility.DisplayDialog(
-                        "Roslyn Not Installed",
-                        RoslynAssemblyChecker.GetInstallationMessage(),
-                        "OK"
-                    );
-                    ViewDataBinder.UpdateEnumField(_securityLevelField, previousLevel);
-                    return;
-                }
-
-                string version = RoslynAssemblyChecker.GetRoslynVersion();
                 bool confirmed = EditorUtility.DisplayDialog(
-                    "Enable Roslyn Features",
-                    $"Microsoft.CodeAnalysis.CSharp is installed (version: {version}).\n\n" +
-                    "This will enable advanced code analysis and execution features.\n\n" +
+                    "Enable Dynamic Code Execution",
+                    "This will enable dynamic code compilation and execution features.\n\n" +
                     "Continue?",
                     "Enable",
                     "Cancel"
