@@ -38,36 +38,7 @@ namespace io.github.hatayama.uLoopMCP
             CancellationToken cancellationToken = default,
             bool compileOnly = false)
         {
-            string correlationId = McpConstants.GenerateCorrelationId();
-            Stopwatch stopwatch = Stopwatch.StartNew();
-
-            try
-            {
-                LogExecutionStart(className, parameters, code, compileOnly, correlationId);
-
-                CompilationResult compilationResult = CompileCode(code, className, correlationId);
-                ExecutionResult compilationErrorResult = HandleCompilationResult(compilationResult, stopwatch);
-                if (compilationErrorResult != null) return compilationErrorResult;
-
-                if (compileOnly)
-                {
-                    return CreateCompileOnlySuccessResult(compilationResult, correlationId, stopwatch);
-                }
-                ExecutionResult executionResult = PerformExecution(
-                    compilationResult.CompiledAssembly,
-                    className,
-                    parameters,
-                    correlationId,
-                    cancellationToken,
-                    stopwatch);
-
-                LogExecutionComplete(executionResult, correlationId, stopwatch);
-                return executionResult;
-            }
-            catch (Exception ex)
-            {
-                return HandleExecutionException(ex, correlationId, stopwatch);
-            }
+            throw new NotSupportedException("ExecuteCode blocks Unity's main thread. Use ExecuteCodeAsync instead.");
         }
 
         private void LogExecutionStart(string className, object[] parameters, string code, bool compileOnly, string correlationId)
@@ -219,11 +190,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 disposableCompiler.Dispose();
             }
-        }
-
-        private CompilationResult CompileCode(string code, string className, string correlationId)
-        {
-            return CompileCodeAsync(code, className, correlationId, CancellationToken.None).GetAwaiter().GetResult();
         }
 
         private async Task<CompilationResult> CompileCodeAsync(string code, string className, string correlationId, CancellationToken ct)

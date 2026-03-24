@@ -41,6 +41,20 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public void Compile_WhenCalledSynchronously_ShouldThrowNotSupportedException()
+        {
+            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = "return 1 + 2;",
+                ClassName = "SyncCompileCommand",
+                Namespace = "TestNamespace"
+            };
+
+            Assert.Throws<System.NotSupportedException>(() => compiler.Compile(request));
+        }
+
+        [Test]
         public async Task CompileAsync_Restricted_WhenModuleInitializerExists_ShouldReturnSecurityViolationBeforeLoad()
         {
             AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);

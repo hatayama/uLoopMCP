@@ -95,7 +95,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 body = method.GetMethodBody();
             }
-            catch
+            catch (InvalidOperationException)
             {
                 // Abstract/extern methods have no body
                 return;
@@ -163,7 +163,12 @@ namespace io.github.hatayama.uLoopMCP
                         {
                             calledMethod = module.ResolveMethod(token, typeArgs, methodArgs);
                         }
-                        catch
+                        catch (ArgumentOutOfRangeException)
+                        {
+                            offset += 4;
+                            continue;
+                        }
+                        catch (ArgumentException)
                         {
                             offset += 4;
                             continue;
@@ -195,7 +200,13 @@ namespace io.github.hatayama.uLoopMCP
                     {
                         resolvedType = module.ResolveType(token, typeArgs, methodArgs);
                     }
-                    catch
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        // ldtoken can also reference fields/methods, not just types
+                        offset += GetOperandSize(opCode.OperandType, il, offset);
+                        continue;
+                    }
+                    catch (ArgumentException)
                     {
                         // ldtoken can also reference fields/methods, not just types
                         offset += GetOperandSize(opCode.OperandType, il, offset);

@@ -41,7 +41,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public CompilationResult Compile(CompilationRequest request)
         {
-            return CompileAsync(request, CancellationToken.None).GetAwaiter().GetResult();
+            throw new NotSupportedException("Compile blocks Unity's main thread. Use CompileAsync instead.");
         }
 
         public async Task<CompilationResult> CompileAsync(CompilationRequest request, CancellationToken ct = default)

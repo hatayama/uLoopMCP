@@ -395,6 +395,8 @@ namespace io.github.hatayama.uLoopMCP
             // Interpolated string ($"...")
             if (c == '$' && pos + 1 < s.Length && s[pos + 1] == '"')
             {
+                // This source-shaping fast path does not fully parse interpolation holes.
+                // Nested interpolated strings, braces inside expressions, and format-specifier braces can still confuse depth tracking.
                 int end = pos + 2;
                 int interpDepth = 0;
                 while (end < s.Length)

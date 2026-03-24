@@ -43,7 +43,8 @@ namespace io.github.hatayama.uLoopMCP
             new("Socket", "new", @"\bnew\s+Socket\b"),
             new("TcpClient", "new", @"\bnew\s+TcpClient\b|\bTcpClient\s*\("),
             new("UdpClient", "new", @"\bnew\s+UdpClient\b|\bUdpClient\s*\("),
-            new("ClientWebSocket", "new", @"\bnew\s+.*ClientWebSocket\b|\bClientWebSocket\s*\("),
+            new("ClientWebSocket", "new",
+                @"\bnew\s+(?:global::\s*)?(?:System\s*\.\s*Net\s*\.\s*WebSockets\s*\.\s*)?ClientWebSocket\b|\bClientWebSocket\s*\("),
             new("Dns", "GetHostEntry", @"\bDns\s*\.\s*GetHostEntry\b"),
             new("UnityWebRequest", "new", @"\bnew\s+UnityWebRequest\b"),
 
