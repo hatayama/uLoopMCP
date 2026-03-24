@@ -146,6 +146,27 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task CompileAsync_WhenTypeRequiresMissingUsing_ShouldInjectNamespaceAndSucceed()
+        {
+            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = @"
+                    StringBuilder builder = new StringBuilder();
+                    builder.Append(""ok"");
+                    return builder.ToString();
+                ",
+                ClassName = "MissingUsingCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.IsTrue(result.Success, result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Missing using should be resolved automatically");
+            StringAssert.Contains("using System.Text;", result.UpdatedCode);
+        }
+
+        [Test]
         public void CompileAsync_WhenCanceledBeforeBuild_ShouldThrowOperationCanceledException()
         {
             AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);

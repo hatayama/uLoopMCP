@@ -120,7 +120,7 @@ namespace io.github.hatayama.uLoopMCP
                             cancellationToken,
                             () => canDeleteTempFiles = false,
                             () => canDeleteTempFiles = true),
-                    ct).ConfigureAwait(false);
+                    ct);
 
                 wrappedCode = autoResult.UpdatedSource;
                 CompilerMessage[] messages = autoResult.Messages;

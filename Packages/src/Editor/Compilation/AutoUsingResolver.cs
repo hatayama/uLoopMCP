@@ -33,7 +33,8 @@ namespace io.github.hatayama.uLoopMCP
             for (int attempt = 0; attempt < MaxRetries; attempt++)
             {
                 File.WriteAllText(sourcePath, currentSource);
-                CompilerMessage[] messages = await buildFunc(sourcePath, dllPath, additionalReferences, ct).ConfigureAwait(false);
+                // AssemblyBuilder retries must stay on Unity's main thread because the compiler API is not thread-safe.
+                CompilerMessage[] messages = await buildFunc(sourcePath, dllPath, additionalReferences, ct);
 
                 List<string> unresolvedTypes = ExtractUnresolvedTypes(messages);
                 if (unresolvedTypes.Count == 0)
@@ -67,7 +68,7 @@ namespace io.github.hatayama.uLoopMCP
 
             // Final compilation with all added usings
             File.WriteAllText(sourcePath, currentSource);
-            CompilerMessage[] finalMessages = await buildFunc(sourcePath, dllPath, additionalReferences, ct).ConfigureAwait(false);
+            CompilerMessage[] finalMessages = await buildFunc(sourcePath, dllPath, additionalReferences, ct);
             return new AutoUsingResult(currentSource, finalMessages, ambiguousCandidates);
         }
 
