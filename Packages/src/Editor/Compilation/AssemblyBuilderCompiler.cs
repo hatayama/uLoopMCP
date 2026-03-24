@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor.Compilation;
@@ -79,6 +78,27 @@ namespace io.github.hatayama.uLoopMCP
             try
             {
                 string wrappedCode = WrapCodeIfNeeded(request.Code, namespaceName, className);
+
+                if (wrappedCode == null)
+                {
+                    return new CompilationResult
+                    {
+                        Success = false,
+                        Errors = new List<CompilationError>
+                        {
+                            new CompilationError
+                            {
+                                Message = "Mixed top-level statements and type declarations are not supported. Use a full class definition instead.",
+                                ErrorCode = "MIXED_MODE",
+                                Line = 0,
+                                Column = 0
+                            }
+                        },
+                        FailureReason = CompilationFailureReason.CompilationError,
+                        UpdatedCode = request.Code
+                    };
+                }
+
                 File.WriteAllText(sourcePath, wrappedCode);
 
                 CompilerMessage[] messages = await BuildAssemblyAsync(sourcePath, dllPath, request.AdditionalReferences, ct).ConfigureAwait(false);
@@ -202,53 +222,9 @@ namespace io.github.hatayama.uLoopMCP
             return refs.ToArray();
         }
 
-        /// <summary>
-        /// Minimal code wrapping for Phase 1. Will be replaced by SourceShaper in Phase 2.
-        /// </summary>
         private string WrapCodeIfNeeded(string code, string namespaceName, string className)
         {
-            // TODO: Replace with SourceShaper in Phase 2
-            string trimmed = code.TrimStart();
-
-            // If user provided a full namespace or class definition, pass through
-            if (trimmed.StartsWith("namespace ") || trimmed.StartsWith("public class ") ||
-                trimmed.StartsWith("internal class ") || trimmed.StartsWith("class "))
-            {
-                return code;
-            }
-
-            // Otherwise, wrap as top-level statements
-            return $@"#pragma warning disable CS0162
-#pragma warning disable CS1998
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using UnityEngine;
-using UnityEditor;
-
-namespace {namespaceName}
-{{
-    public class {className}
-    {{
-        public async System.Threading.Tasks.Task<object> ExecuteAsync(
-            System.Collections.Generic.Dictionary<string, object> parameters = null,
-            System.Threading.CancellationToken ct = default)
-        {{
-#line 1 ""user-snippet.cs""
-            {code}
-#line default
-#line hidden
-        }}
-
-        public object Execute(
-            System.Collections.Generic.Dictionary<string, object> parameters = null)
-        {{
-            return ExecuteAsync(parameters, default).GetAwaiter().GetResult();
-        }}
-    }}
-}}";
+            return SourceShaper.WrapIfNeeded(code, namespaceName, className);
         }
 
         private static List<CompilationError> ExtractErrors(CompilerMessage[] messages)
