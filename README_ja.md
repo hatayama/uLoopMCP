@@ -27,7 +27,7 @@ Unity CLI Loopのコアとなるコンセプトは次の3つです。
 
 1. **AIが自律的にビルド・テスト・ログ解析・修正を回し続ける「自律開発ループ」** — `compile`, `run-tests`, `get-logs`, `clear-console`
 2. **シーン構築、オブジェクト操作、メニュー実行、スクリーンショットからのUI改善など、Unity Editorの操作をAIに委任** — `execute-dynamic-code`, `execute-menu-item`, `screenshot`
-3. **PlayMode中のUI自動テスト — ボタンクリック、ドラッグ、ゲーム動作の検証をAIが実行**（現在はマウスシミュレーションが中心、キーボード入力やタッチジェスチャーなど今後拡充予定） — `simulate-mouse`, `execute-dynamic-code`, `screenshot`
+3. **PlayMode中の自動テスト — ボタンクリック、ドラッグ、キーボード入力、入力の記録・再生、ゲーム動作の検証をAIが実行** — `simulate-mouse-ui`, `simulate-mouse-input`, `simulate-keyboard`, `record-input`, `replay-input`, `execute-dynamic-code`, `screenshot`
 
 https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 
@@ -78,12 +78,13 @@ Scope(s): io.github.hatayama.uloopmcp
 
 Window > Unity CLI Loop > Settingsを選択します。専用ウィンドウが開くので **CLI** ボタンが青くなっている事を確認します。
 
-**Install CLI** ボタンを押します。  
-<img width="277" height="327" alt="CleanShot 2026-02-26 at 20 14 25" src="https://github.com/user-attachments/assets/680b9586-6323-4bde-a2f0-1c3166f0c224" />
+**Install CLI** ボタンを押します。
+<img width="277" height="306" alt="1" src="https://github.com/user-attachments/assets/0e25c327-73bf-4af6-997b-eebb3c26b372" />
 
 
-下記の表示になれば成功です。  
-<img width="272" height="332" alt="CleanShot 2026-02-26 at 20 17 08" src="https://github.com/user-attachments/assets/1681b124-fac8-4ac9-8ea3-3e8651be9128" />
+
+下記の表示になれば成功です。
+<img width="272" height="309" alt="2" src="https://github.com/user-attachments/assets/ec14f73b-53be-4435-af95-84bb9125e3e4" />
 
 
 
@@ -99,8 +100,8 @@ npm install -g uloop-cli
 
 ## ステップ2: Skillsのインストール
 
-Claude CodeやCodexなど、対象を選択して **Install Skills** ボタンを押します。  
-<img width="272" height="328" alt="CleanShot 2026-02-26 at 20 20 42" src="https://github.com/user-attachments/assets/79b9514c-cdbf-4eb6-89e9-650ecd3f6f85" />
+Claude CodeやCodexなど、対象を選択して **Install Skills** ボタンを押します。
+<img width="272" height="306" alt="3" src="https://github.com/user-attachments/assets/492e9680-726a-425b-8bf1-e5983f4f15a5" />
 
 
 <details> 
@@ -130,10 +131,12 @@ uloop skills install --claude --global
 | 「Unityを再生させて、Unityを前面に出して」 | `/uloop-control-play-mode` + `/uloop-focus-window` |
 | 「Prefabのパラメータを一括修正して」 | `/uloop-execute-dynamic-code` |
 | 「Game Viewのスクショを撮って、UIレイアウトを調整して」 | `/uloop-screenshot` + `/uloop-execute-dynamic-code` |
+| 「ゲームプレイの入力を記録して」 | `/uloop-record-input` |
+| 「記録した入力を再生して」 | `/uloop-replay-input` |
 
 
 <details>
-<summary>バンドルされている全17個のSkills一覧</summary>
+<summary>バンドルされている全20個のSkills一覧</summary>
 
 - `/uloop-launch` - 正しいバージョンでUnityを起動
 - `/uloop-compile` - コンパイルの実行
@@ -147,8 +150,11 @@ uloop skills install --claude --global
 - `/uloop-execute-menu-item` - メニュー項目の実行
 - `/uloop-find-game-objects` - GameObject検索
 - `/uloop-screenshot` - EditorWindowのキャプチャ
-- `/uloop-simulate-mouse` - PlayMode UIのマウス操作シミュレーション
+- `/uloop-simulate-mouse-ui` - PlayMode UI要素のクリック・長押し・ドラッグシミュレーション
+- `/uloop-simulate-mouse-input` - Input System経由のPlayModeマウス入力シミュレーション
 - `/uloop-simulate-keyboard` - Input System経由のPlayModeキーボード入力シミュレーション
+- `/uloop-record-input` - PlayMode中のキーボード・マウス入力の記録
+- `/uloop-replay-input` - 記録された入力のPlayMode再生
 - `/uloop-control-play-mode` - Play Modeの制御
 - `/uloop-execute-dynamic-code` - 動的C#コード実行
 - `/uloop-get-unity-search-providers` - 検索プロバイダー詳細
@@ -487,24 +493,38 @@ Scope(s): org.nuget
 >
 
 ### PlayMode 自動テスト系ツール
-### 15. simulate-mouse - PlayMode UIのマウス操作シミュレーション
-PlayMode中のUI要素に対してマウスクリック・長押し・ドラッグをシミュレーションします。EventSystemとExecuteEventsを使ってポインタイベントを直接ディスパッチするため、旧Input System・新Input Systemの両方に依存せず動作します。
+### 15. simulate-mouse-ui - PlayMode UI要素のマウス操作シミュレーション
+PlayMode中のUI要素に対してマウスクリック・長押し・ドラッグをシミュレーションします。EventSystemとExecuteEventsを使ってポインタイベントを直接ディスパッチするため、旧Input System・新Input Systemの両方に依存せず動作します。ゲームロジックがInput Systemを直接読み取る場合（例：`Mouse.current.leftButton.wasPressedThisFrame`）は、`simulate-mouse-input` を使用してください。
 
 6つのアクションに対応: Click、LongPress、Drag（ワンショット）、DragStart/DragMove/DragEnd（分割ドラッグ）
 
 ```text
 → screenshot (CaptureMode: rendering, AnnotateElements: true)
 → AnnotatedElementsから要素の座標（SimX/SimY）を取得
-→ simulate-mouse (Action: Click, X: 400, Y: 300)
-→ simulate-mouse (Action: LongPress, X: 400, Y: 300, Duration: 5.0)
-→ simulate-mouse (Action: Drag, FromX: 100, FromY: 500, X: 400, Y: 300)
-→ simulate-mouse (Action: DragStart, X: 100, Y: 500)
-→ simulate-mouse (Action: DragMove, X: 200, Y: 400, DragSpeed: 300)
-→ simulate-mouse (Action: DragEnd, X: 400, Y: 300)
+→ simulate-mouse-ui (Action: Click, X: 400, Y: 300)
+→ simulate-mouse-ui (Action: LongPress, X: 400, Y: 300, Duration: 5.0)
+→ simulate-mouse-ui (Action: Drag, FromX: 100, FromY: 500, X: 400, Y: 300)
+→ simulate-mouse-ui (Action: DragStart, X: 100, Y: 500)
+→ simulate-mouse-ui (Action: DragMove, X: 200, Y: 400, DragSpeed: 300)
+→ simulate-mouse-ui (Action: DragEnd, X: 400, Y: 300)
 ```
 https://github.com/user-attachments/assets/c7ee9103-c282-4f90-8b01-64bb17400f3e
 
-### 16. simulate-keyboard - PlayModeでのキーボード入力シミュレーション
+### 16. simulate-mouse-input - Input System経由のPlayModeマウス入力シミュレーション
+Input System経由でPlayMode中のマウス入力をシミュレーションします。ボタンクリック、マウスデルタ、スクロールホイールを`Mouse.current`に直接注入します。EventSystemのポインタイベントを発火する`simulate-mouse-ui`と異なり、`Mouse.current`を直接読み取るゲームロジック向けのツールです。Input Systemパッケージが必要で、Player SettingsのActive Input Handlingを`Input System Package (New)`または`Both`に設定する必要があります。
+
+5つのアクションに対応: Click、LongPress、MoveDelta、SmoothDelta、Scroll
+
+```text
+→ simulate-mouse-input (Action: Click, X: 400, Y: 300)
+→ simulate-mouse-input (Action: Click, X: 400, Y: 300, Button: Right)
+→ simulate-mouse-input (Action: LongPress, X: 400, Y: 300, Duration: 2.0)
+→ simulate-mouse-input (Action: MoveDelta, DeltaX: 100, DeltaY: 0)
+→ simulate-mouse-input (Action: Scroll, ScrollY: 120)
+→ simulate-mouse-input (Action: SmoothDelta, DeltaX: 300, DeltaY: 0, Duration: 0.5)
+```
+
+### 17. simulate-keyboard - PlayModeでのキーボード入力シミュレーション
 Input System経由でPlayMode中のキーボード入力をシミュレーションします。単発のキータップ、長押し、複数キーの同時押し（例：Shift+Wでスプリント）に対応しています。Input Systemパッケージが必要で、Player SettingsのActive Input Handlingを `Input System Package (New)` または `Both` に設定する必要があります。ゲームコードがInput System API（例: `Keyboard.current[Key.W].isPressed`）で入力を読み取っている必要があり、レガシーの `Input.GetKey()` には対応していません。
 
 3つのアクションに対応: Press（ワンショットタップまたは時間指定ホールド）、KeyDown（キーを押し続ける）、KeyUp（押下中のキーを解放）
@@ -517,6 +537,26 @@ Input System経由でPlayMode中のキーボード入力をシミュレーショ
 → screenshot (CaptureMode: rendering)
 → simulate-keyboard (Action: KeyUp, Key: W)
 → simulate-keyboard (Action: KeyUp, Key: LeftShift)
+```
+
+### 18. record-input - PlayMode中の入力記録
+PlayMode中のキーボード・マウス入力をフレーム単位でJSONファイルに記録します。Input Systemのデバイス状態差分によりキー押下、マウス移動、クリック、スクロールイベントをキャプチャします。Input Systemパッケージが必要です。
+
+```text
+→ record-input (Action: Start)
+→ record-input (Action: Start, Keys: "W,A,S,D,Space")
+→ record-input (Action: Stop)
+→ JSONファイルが .uloop/outputs/InputRecordings/ に保存される
+```
+
+### 19. replay-input - 記録された入力のPlayMode再生
+記録されたキーボード・マウス入力をPlayMode中に再生します。JSON記録を読み込み、Input System経由でフレーム単位で入力を注入します。ループ再生と進捗モニタリングに対応しています。Input Systemパッケージが必要です。
+
+```text
+→ replay-input (Action: Start)
+→ replay-input (Action: Start, InputPath: "scripts/my-play.json", Loop: true)
+→ replay-input (Action: Status)
+→ replay-input (Action: Stop)
 ```
 
 ## ツールリファレンス
