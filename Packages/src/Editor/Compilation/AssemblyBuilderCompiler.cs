@@ -99,9 +99,14 @@ namespace io.github.hatayama.uLoopMCP
                     };
                 }
 
-                File.WriteAllText(sourcePath, wrappedCode);
+                // Auto-using resolution: compile, detect CS0246/CS0103, add usings, retry
+                AutoUsingResolver resolver = new AutoUsingResolver();
+                AutoUsingResult autoResult = await resolver.ResolveAsync(
+                    sourcePath, dllPath, wrappedCode, request.AdditionalReferences,
+                    BuildAssemblyAsync, ct).ConfigureAwait(false);
 
-                CompilerMessage[] messages = await BuildAssemblyAsync(sourcePath, dllPath, request.AdditionalReferences, ct).ConfigureAwait(false);
+                wrappedCode = autoResult.UpdatedSource;
+                CompilerMessage[] messages = autoResult.Messages;
 
                 List<CompilationError> errors = ExtractErrors(messages);
                 List<string> warnings = ExtractWarnings(messages);
@@ -114,19 +119,42 @@ namespace io.github.hatayama.uLoopMCP
                         Errors = errors,
                         Warnings = warnings,
                         UpdatedCode = wrappedCode,
-                        FailureReason = CompilationFailureReason.CompilationError
+                        FailureReason = CompilationFailureReason.CompilationError,
+                        AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates
                     };
                 }
 
                 byte[] assemblyBytes = File.ReadAllBytes(dllPath);
                 Assembly compiledAssembly = Assembly.Load(assemblyBytes);
 
+                // Security validation via reflection after loading
+                if (_securityLevel == DynamicCodeSecurityLevel.Restricted)
+                {
+                    IlSecurityValidator validator = new IlSecurityValidator();
+                    SecurityValidationResult securityResult = validator.Validate(compiledAssembly);
+
+                    if (!securityResult.IsValid)
+                    {
+                        return new CompilationResult
+                        {
+                            Success = false,
+                            HasSecurityViolations = true,
+                            SecurityViolations = securityResult.Violations,
+                            Warnings = warnings,
+                            UpdatedCode = wrappedCode,
+                            FailureReason = CompilationFailureReason.SecurityViolation,
+                            AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates
+                        };
+                    }
+                }
+
                 CompilationResult result = new CompilationResult
                 {
                     Success = true,
                     CompiledAssembly = compiledAssembly,
                     Warnings = warnings,
-                    UpdatedCode = wrappedCode
+                    UpdatedCode = wrappedCode,
+                    AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates
                 };
 
                 _cacheManager.CacheResultIfSuccessful(result, request);
