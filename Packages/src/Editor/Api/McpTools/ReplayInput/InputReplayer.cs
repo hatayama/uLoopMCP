@@ -39,6 +39,8 @@ namespace io.github.hatayama.uLoopMCP
         // Mouse.current state, so UI interactions must go through ExecuteEvents directly.
         private static bool _hasMousePosition;
         private static bool _prevLeftButtonHeld;
+        private static Vector2? _previousReplayMousePosition;
+        private static bool _suppressIdleUiOverlay;
         private static PointerEventData? _pointerData;
         private static GameObject? _currentPressTarget;
         private static GameObject? _currentDragTarget;
@@ -452,6 +454,10 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             Vector2 screenPos = _replayMousePosition.Value;
+            bool mouseMoved = !_previousReplayMousePosition.HasValue
+                              || _previousReplayMousePosition.Value != screenPos;
+            _previousReplayMousePosition = screenPos;
+
             bool leftHeld = _replayHeldButtons.Contains(MouseButton.Left);
             bool justPressed = leftHeld && !_prevLeftButtonHeld;
             bool justReleased = !leftHeld && _prevLeftButtonHeld;
@@ -462,6 +468,7 @@ namespace io.github.hatayama.uLoopMCP
 
             if (justPressed)
             {
+                _suppressIdleUiOverlay = false;
                 _pressTime = Time.realtimeSinceStartup;
                 OnUiPointerDown(screenPos, eventSystem);
                 SimulateMouseUiOverlayState.Update(
@@ -489,8 +496,11 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }
             }
-            else
+            else if (!_suppressIdleUiOverlay || mouseMoved)
             {
+                // Keeping the overlay hidden until the pointer actually moves prevents release fade-out
+                // from being cancelled by the next idle frame at the same position.
+                _suppressIdleUiOverlay = false;
                 SimulateMouseUiOverlayState.Update(
                     MouseAction.Click, inputPos, null, null, gameViewSize);
             }
@@ -498,6 +508,7 @@ namespace io.github.hatayama.uLoopMCP
             if (justReleased)
             {
                 OnUiPointerUp(screenPos, eventSystem);
+                _suppressIdleUiOverlay = true;
                 SimulateMouseUiOverlayState.RequestDissipateAnimation();
                 SimulateMouseUiOverlayState.Clear();
             }
@@ -644,7 +655,9 @@ namespace io.github.hatayama.uLoopMCP
         private static void ResetUiReplayState()
         {
             _replayMousePosition = null;
+            _previousReplayMousePosition = null;
             _prevLeftButtonHeld = false;
+            _suppressIdleUiOverlay = false;
             _pointerData = null;
             _currentPressTarget = null;
             _currentDragTarget = null;
