@@ -172,25 +172,23 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
-                    using System.Runtime.CompilerServices;
-
-                    public static class FallbackModuleInitializer
-                    {
-                        [ModuleInitializer]
-                        public static void Initialize()
-                        {
-                            UnityEngine.Debug.Log(""should not run"");
-                        }
-                    }
+                    System.Type type = typeof(System.IO.FileInfo);
+                    return type.Name;
                 ",
-                ClassName = "FallbackModuleInitializerCommand",
+                ClassName = "FallbackMetadataValidatorCommand",
                 Namespace = "TestNamespace"
             };
 
             CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
 
-            Assert.IsFalse(result.Success, "Fallback metadata validator should still block ModuleInitializer");
+            Assert.IsFalse(result.Success, "Fallback metadata validator should block dangerous type references");
             Assert.IsTrue(result.HasSecurityViolations, "Fallback metadata validator should report a security violation");
+            Assert.That(
+                result.SecurityViolations.Exists(violation =>
+                    violation.Location == "metadata" &&
+                    violation.ApiName == "System.IO.FileInfo"),
+                Is.True,
+                "The rejection should come from the metadata fallback validator");
         }
 
         private sealed class RejectingPreloadAssemblySecurityValidator : IPreloadAssemblySecurityValidator

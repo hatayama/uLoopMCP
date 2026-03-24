@@ -98,9 +98,14 @@ namespace io.github.hatayama.uLoopMCP
             return DangerousTypes;
         }
 
-        public static IEnumerable<KeyValuePair<string, HashSet<string>>> EnumerateDangerousMembers()
+        public static IEnumerable<KeyValuePair<string, IReadOnlyCollection<string>>> EnumerateDangerousMembers()
         {
-            return DangerousMembers;
+            foreach (KeyValuePair<string, HashSet<string>> entry in DangerousMembers)
+            {
+                yield return new KeyValuePair<string, IReadOnlyCollection<string>>(
+                    entry.Key,
+                    new List<string>(entry.Value));
+            }
         }
     }
 }
