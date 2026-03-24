@@ -103,7 +103,18 @@ namespace io.github.hatayama.uLoopMCP
 
         public static DynamicCodeSecurityLevel GetDynamicCodeSecurityLevel()
         {
-            return (DynamicCodeSecurityLevel)GetSettings().dynamicCodeSecurityLevel;
+            ULoopSettingsData settings = GetSettings();
+            int persistedValue = settings.dynamicCodeSecurityLevel;
+
+            // Disabled(0) was removed; migrate any undefined value to Restricted and persist
+            if (!Enum.IsDefined(typeof(DynamicCodeSecurityLevel), persistedValue))
+            {
+                DynamicCodeSecurityLevel fallback = DynamicCodeSecurityLevel.Restricted;
+                ULoopSettingsData migrated = settings with { dynamicCodeSecurityLevel = (int)fallback };
+                SaveSettings(migrated);
+                return fallback;
+            }
+            return (DynamicCodeSecurityLevel)persistedValue;
         }
 
         public static void SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel level)

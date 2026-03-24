@@ -14,7 +14,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Process manipulation
             new("Process", "Start", @"\bProcess\s*\.\s*Start\b"),
-            new("Process", "Kill", @"\bprocess\s*\.\s*Kill\b|\bProcess\s*\.\s*Kill\b|\.Kill\s*\("),
+            new("Process", "Kill", @"\b(?:global::\s*)?(?:System\s*\.\s*Diagnostics\s*\.\s*)?Process\s*\.\s*Kill\b"),
 
             // File system destructive operations
             new("File", "Delete", @"\bFile\s*\.\s*Delete\b"),
@@ -40,7 +40,7 @@ namespace io.github.hatayama.uLoopMCP
             // Reflection execution
             new("Assembly", "Load", @"\bAssembly\s*\.\s*Load\b"),
             new("Assembly", "LoadFrom", @"\bAssembly\s*\.\s*LoadFrom\b"),
-            new("Type", "GetType", @"\bType\s*\.\s*GetType\s*\("),
+            new("Type", "GetType", @"\b(?:global::\s*)?(?:System\s*\.\s*)?Type\s*\.\s*GetType\s*\("),
             new("Activator", "CreateComInstanceFrom", @"\bActivator\s*\.\s*CreateComInstanceFrom\b"),
 
             // Environment

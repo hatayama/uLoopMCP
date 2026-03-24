@@ -53,6 +53,7 @@ namespace io.github.hatayama.uLoopMCP
             ["System.IO.Directory"] = new() { "Delete", "SetCurrentDirectory" },
             ["System.Diagnostics.Process"] = new() { "Start", "Kill" },
             ["System.Reflection.Assembly"] = new() { "Load", "LoadFrom", "LoadFile", "LoadWithPartialName" },
+            ["System.Type"] = new() { "GetType" },
             ["System.Activator"] = new() { "CreateComInstanceFrom" },
             ["UnityEditor.AssetDatabase"] = new() { "DeleteAsset" },
             ["UnityEditor.FileUtil"] = new() { "DeleteFileOrDirectory" },

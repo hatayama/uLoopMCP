@@ -1,16 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Post-compilation security validator using reflection.
-    /// Inspects the compiled assembly's type references and method calls
-    /// against DangerousApiCatalog before allowing execution.
+    /// Post-compilation security validator using IL byte inspection.
+    /// Scans call/callvirt/newobj/ldtoken opcodes to detect dangerous API usage
+    /// that source-level scanning cannot catch (e.g. using aliases, fully-qualified names).
     /// </summary>
     internal sealed class IlSecurityValidator
     {
+        private const byte OpCode_Ldtoken = 0xD0;
+
+        private static readonly OpCode[] SingleByteOpCodes = BuildOpCodeTable(singleByte: true);
+        private static readonly OpCode[] MultiByteOpCodes = BuildOpCodeTable(singleByte: false);
+
         public SecurityValidationResult Validate(Assembly assembly)
         {
             SecurityValidationResult result = new SecurityValidationResult
@@ -128,17 +134,65 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            // typeof(DangerousType) compiles to ldtoken (0xD0) + metadata token
-            ValidateTypeofReferences(method, body, result);
-        }
-
-        private const byte OpCode_Ldtoken = 0xD0;
-
-        private static void ValidateTypeofReferences(MethodBase method, MethodBody body, SecurityValidationResult result)
-        {
             byte[] il = body.GetILAsByteArray();
             if (il == null) return;
 
+            ValidateIlCalls(method, il, result);
+            ValidateTypeofReferences(method, il, result);
+        }
+
+        private static void ValidateIlCalls(MethodBase method, byte[] il, SecurityValidationResult result)
+        {
+            int offset = 0;
+            Module module = method.Module;
+            Type[] typeArgs = method.DeclaringType?.IsGenericType == true
+                ? method.DeclaringType.GetGenericArguments()
+                : null;
+            Type[] methodArgs = method.IsGenericMethod ? method.GetGenericArguments() : null;
+
+            while (offset < il.Length)
+            {
+                OpCode opCode = ReadOpCode(il, ref offset);
+
+                if (opCode.OperandType == OperandType.InlineMethod)
+                {
+                    int token = ReadInt32(il, offset);
+
+                    if (opCode == OpCodes.Call || opCode == OpCodes.Callvirt || opCode == OpCodes.Newobj)
+                    {
+                        MethodBase calledMethod;
+                        try
+                        {
+                            calledMethod = module.ResolveMethod(token, typeArgs, methodArgs);
+                        }
+                        catch
+                        {
+                            offset += 4;
+                            continue;
+                        }
+
+                        string declaringType = calledMethod.DeclaringType?.FullName;
+                        string memberName = calledMethod.Name;
+
+                        if (declaringType != null && DangerousApiCatalog.IsDangerousApi(declaringType, memberName))
+                        {
+                            result.Violations.Add(new SecurityViolation
+                            {
+                                Type = SecurityViolationType.DangerousApiCall,
+                                ApiName = $"{declaringType}.{memberName}",
+                                Message = $"Dangerous API call: {declaringType}.{memberName}",
+                                Description = $"IL call to '{declaringType}.{memberName}' in {method.DeclaringType?.FullName}.{method.Name}"
+                            });
+                        }
+                    }
+                }
+
+                offset += GetOperandSize(opCode.OperandType, il, offset);
+            }
+        }
+
+        private static void ValidateTypeofReferences(MethodBase method, byte[] il, SecurityValidationResult result)
+        {
             Module module = method.Module;
 
             for (int i = 0; i < il.Length; i++)
@@ -172,6 +226,65 @@ namespace io.github.hatayama.uLoopMCP
 
                 i += 4;
             }
+        }
+
+        private static OpCode ReadOpCode(byte[] il, ref int offset)
+        {
+            byte first = il[offset++];
+            if (first != 0xFE) return SingleByteOpCodes[first];
+            byte second = il[offset++];
+            return MultiByteOpCodes[second];
+        }
+
+        private static int ReadInt32(byte[] il, int offset)
+        {
+            return il[offset] | (il[offset + 1] << 8) | (il[offset + 2] << 16) | (il[offset + 3] << 24);
+        }
+
+        private static int GetOperandSize(OperandType operandType, byte[] il, int offset)
+        {
+            switch (operandType)
+            {
+                case OperandType.InlineNone: return 0;
+                case OperandType.ShortInlineBrTarget:
+                case OperandType.ShortInlineI:
+                case OperandType.ShortInlineVar: return 1;
+                case OperandType.InlineVar: return 2;
+                case OperandType.InlineI:
+                case OperandType.InlineBrTarget:
+                case OperandType.InlineField:
+                case OperandType.InlineMethod:
+                case OperandType.InlineSig:
+                case OperandType.InlineString:
+                case OperandType.InlineTok:
+                case OperandType.InlineType:
+                case OperandType.ShortInlineR: return 4;
+                case OperandType.InlineI8:
+                case OperandType.InlineR: return 8;
+                case OperandType.InlineSwitch:
+                    int count = ReadInt32(il, offset);
+                    return 4 + (count * 4);
+                default: return 0;
+            }
+        }
+
+        private static OpCode[] BuildOpCodeTable(bool singleByte)
+        {
+            OpCode[] table = new OpCode[0x100];
+            foreach (FieldInfo field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
+                if (field.GetValue(null) is not OpCode opCode) continue;
+                ushort value = unchecked((ushort)opCode.Value);
+                if (singleByte && value <= 0xFF)
+                {
+                    table[value] = opCode;
+                }
+                else if (!singleByte && (value & 0xFF00) == 0xFE00)
+                {
+                    table[value & 0xFF] = opCode;
+                }
+            }
+            return table;
         }
     }
 }
