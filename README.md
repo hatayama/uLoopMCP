@@ -27,7 +27,7 @@ Unity CLI Loop is built around three core ideas:
 
 1. **A self-hosted development loop where AI autonomously compiles, tests, inspects logs, and fixes issues.** Uses `compile`, `run-tests`, `get-logs`, `clear-console`.
 2. **AI-driven Unity Editor operation—scene building, object manipulation, menu execution, and UI refinement from screenshots.** Uses `execute-dynamic-code`, `execute-menu-item`, `screenshot`.
-3. **PlayMode automated testing—AI clicks buttons, drags elements, and verifies game behavior.** (Currently focused on mouse simulation, with plans to expand to keyboard input, touch gestures, and more.) Uses `simulate-mouse`, `execute-dynamic-code`, `screenshot`.
+3. **PlayMode automated testing—AI clicks buttons, drags elements, and verifies game behavior.** Uses `simulate-mouse-ui`, `simulate-mouse-input`, `simulate-keyboard`, `record-input`, `replay-input`, `execute-dynamic-code`, `screenshot`.
 
 https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 
@@ -132,10 +132,12 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 | "Play the game and bring Unity to the front" | `/uloop-control-play-mode` + `/uloop-focus-window` |
 | "Bulk-update prefab parameters" | `/uloop-execute-dynamic-code` |
 | "Take a screenshot of Game View and adjust the UI layout" | `/uloop-screenshot` + `/uloop-execute-dynamic-code` |
+| "Record my gameplay input" | `/uloop-record-input` |
+| "Replay the recorded input" | `/uloop-replay-input` |
 
 
 <details>
-<summary>All 17 Bundled Skills</summary>
+<summary>All 20 Bundled Skills</summary>
 
 - `/uloop-launch` - Launch Unity with correct version
 - `/uloop-compile` - Execute compilation
@@ -149,8 +151,11 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 - `/uloop-execute-menu-item` - Execute menu item
 - `/uloop-find-game-objects` - Find GameObjects
 - `/uloop-screenshot` - Capture EditorWindow
-- `/uloop-simulate-mouse` - Simulate mouse input on PlayMode UI
+- `/uloop-simulate-mouse-ui` - Simulate mouse click, long-press, and drag on PlayMode UI elements
+- `/uloop-simulate-mouse-input` - Simulate mouse input in PlayMode via Input System
 - `/uloop-simulate-keyboard` - Simulate keyboard input in PlayMode via Input System
+- `/uloop-record-input` - Record keyboard and mouse input during PlayMode
+- `/uloop-replay-input` - Replay recorded input during PlayMode
 - `/uloop-control-play-mode` - Control Play Mode
 - `/uloop-execute-dynamic-code` - Execute dynamic C# code
 - `/uloop-get-unity-search-providers` - Get search provider details
@@ -489,24 +494,38 @@ Async support:
 >
 
 ### PlayMode Automated Testing Tools
-### 15. simulate-mouse - Simulate Mouse Input on PlayMode UI
-Simulate mouse click, long-press, and drag on PlayMode UI elements. Uses EventSystem and ExecuteEvents to dispatch pointer events directly — works independently of both old and new Input System.
+### 15. simulate-mouse-ui - Simulate Mouse Input on PlayMode UI
+Simulate mouse click, long-press, and drag on PlayMode UI elements. Uses EventSystem and ExecuteEvents to dispatch pointer events directly — works independently of both old and new Input System. For game logic that reads Input System (e.g. `Mouse.current.leftButton.wasPressedThisFrame`), use `simulate-mouse-input` instead.
 
 Supports 6 actions: Click, LongPress, Drag (one-shot), DragStart/DragMove/DragEnd (split drag).
 
 ```text
 → screenshot (CaptureMode: rendering, AnnotateElements: true)
 → Get element coordinates from AnnotatedElements (SimX/SimY)
-→ simulate-mouse (Action: Click, X: 400, Y: 300)
-→ simulate-mouse (Action: LongPress, X: 400, Y: 300, Duration: 5.0)
-→ simulate-mouse (Action: Drag, FromX: 100, FromY: 500, X: 400, Y: 300)
-→ simulate-mouse (Action: DragStart, X: 100, Y: 500)
-→ simulate-mouse (Action: DragMove, X: 200, Y: 400, DragSpeed: 300)
-→ simulate-mouse (Action: DragEnd, X: 400, Y: 300)
+→ simulate-mouse-ui (Action: Click, X: 400, Y: 300)
+→ simulate-mouse-ui (Action: LongPress, X: 400, Y: 300, Duration: 5.0)
+→ simulate-mouse-ui (Action: Drag, FromX: 100, FromY: 500, X: 400, Y: 300)
+→ simulate-mouse-ui (Action: DragStart, X: 100, Y: 500)
+→ simulate-mouse-ui (Action: DragMove, X: 200, Y: 400, DragSpeed: 300)
+→ simulate-mouse-ui (Action: DragEnd, X: 400, Y: 300)
 ```
 https://github.com/user-attachments/assets/c7ee9103-c282-4f90-8b01-64bb17400f3e
 
-### 16. simulate-keyboard - Simulate Keyboard Input in PlayMode
+### 16. simulate-mouse-input - Simulate Mouse Input in PlayMode via Input System
+Simulate mouse input in PlayMode via Input System. Injects button clicks, mouse delta, and scroll wheel directly into `Mouse.current` for game logic that reads Input System. Unlike `simulate-mouse-ui` which fires EventSystem pointer events for uGUI, this tool targets game logic that reads `Mouse.current` directly. Requires the Input System package, and Active Input Handling must be set to `Input System Package (New)` or `Both` in Player Settings.
+
+Supports 5 actions: Click, LongPress, MoveDelta, SmoothDelta, Scroll.
+
+```text
+→ simulate-mouse-input (Action: Click, X: 400, Y: 300)
+→ simulate-mouse-input (Action: Click, X: 400, Y: 300, Button: Right)
+→ simulate-mouse-input (Action: LongPress, X: 400, Y: 300, Duration: 2.0)
+→ simulate-mouse-input (Action: MoveDelta, DeltaX: 100, DeltaY: 0)
+→ simulate-mouse-input (Action: Scroll, ScrollY: 120)
+→ simulate-mouse-input (Action: SmoothDelta, DeltaX: 300, DeltaY: 0, Duration: 0.5)
+```
+
+### 17. simulate-keyboard - Simulate Keyboard Input in PlayMode
 Simulate keyboard key input in PlayMode via Input System. Supports single key taps, sustained holds, and multi-key combinations (e.g. Shift+W for sprinting). Requires the Input System package, and Active Input Handling must be set to `Input System Package (New)` or `Both` in Player Settings. Game code must read input via Input System API (e.g. `Keyboard.current[Key.W].isPressed`), not legacy `Input.GetKey()`.
 
 Supports 3 actions: Press (one-shot tap or timed hold), KeyDown (hold key down), KeyUp (release held key).
@@ -519,6 +538,26 @@ Supports 3 actions: Press (one-shot tap or timed hold), KeyDown (hold key down),
 → screenshot (CaptureMode: rendering)
 → simulate-keyboard (Action: KeyUp, Key: W)
 → simulate-keyboard (Action: KeyUp, Key: LeftShift)
+```
+
+### 18. record-input - Record Input During PlayMode
+Record keyboard and mouse input during PlayMode frame-by-frame into a JSON file. Captures key presses, mouse movement, clicks, and scroll events via Input System device state diffing. Requires the Input System package.
+
+```text
+→ record-input (Action: Start)
+→ record-input (Action: Start, Keys: "W,A,S,D,Space")
+→ record-input (Action: Stop)
+→ JSON file saved to .uloop/outputs/InputRecordings/
+```
+
+### 19. replay-input - Replay Recorded Input During PlayMode
+Replay recorded keyboard and mouse input during PlayMode. Loads a JSON recording and injects input frame-by-frame via Input System. Supports looping and progress monitoring. Requires the Input System package.
+
+```text
+→ replay-input (Action: Start)
+→ replay-input (Action: Start, InputPath: "scripts/my-play.json", Loop: true)
+→ replay-input (Action: Status)
+→ replay-input (Action: Stop)
 ```
 
 ## Tool Reference
