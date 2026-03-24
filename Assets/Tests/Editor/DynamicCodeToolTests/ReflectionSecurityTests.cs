@@ -69,6 +69,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 code, "TestCommand", null, CancellationToken.None, compileOnly: false);
 
             Assert.IsFalse(result.Success, "typeof(System.IO.FileInfo) should be blocked");
+            StringAssert.Contains("Dangerous", result.ErrorMessage);
         }
 
         [Test]
@@ -83,6 +84,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 code, "TestCommand", null, CancellationToken.None, compileOnly: false);
 
             Assert.IsFalse(result.Success, "typeof(System.Net.Http.HttpClient) should be blocked");
+            StringAssert.Contains("Dangerous", result.ErrorMessage);
         }
 
         [Test]
@@ -98,6 +100,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 code, "TestCommand", null, CancellationToken.None, compileOnly: false);
 
             Assert.IsFalse(result.Success, "typeof(Socket) reflection should be blocked");
+            StringAssert.Contains("Dangerous", result.ErrorMessage);
         }
 
         #endregion

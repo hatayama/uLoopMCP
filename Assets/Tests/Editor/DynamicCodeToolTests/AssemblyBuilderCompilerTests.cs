@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using System.Collections.Generic;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -102,6 +103,43 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.IsTrue(result.Success, result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Safe reflection should compile");
             Assert.IsFalse(result.HasSecurityViolations, "Safe reflection should not be flagged");
+        }
+
+        [Test]
+        public async Task CompileAsync_WhenInterpolatedHoleContainsNestedStringLiteral_ShouldSucceed()
+        {
+            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = @"
+                    string message = $""x{string.Concat(""}"", ""z"")}y"";
+                    return message;
+                ",
+                ClassName = "NestedInterpolationLiteralCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.IsTrue(result.Success, result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Interpolated string with nested literals should compile");
+            Assert.IsNotNull(result.CompiledAssembly);
+        }
+
+        [Test]
+        public void CompileAsync_WhenCanceledBeforeBuild_ShouldThrowOperationCanceledException()
+        {
+            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = "return 1 + 2;",
+                ClassName = "CanceledBeforeBuildCommand",
+                Namespace = "TestNamespace"
+            };
+
+            using CancellationTokenSource cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            Assert.ThrowsAsync<OperationCanceledException>(async () => await compiler.CompileAsync(request, cts.Token));
         }
 
         [Test]

@@ -12,14 +12,15 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         {
             DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
             ExecuteDynamicCodeTool tool = new ExecuteDynamicCodeTool();
-            JObject paramsToken = new JObject
-            {
-                ["Code"] = "bool exists = System.IO.File.Exists(\"dummy.txt\"); return exists;",
-                ["CompileOnly"] = false
-            };
 
             try
             {
+                JObject paramsToken = new JObject
+                {
+                    ["Code"] = "bool exists = System.IO.File.Exists(\"dummy.txt\"); return exists;",
+                    ["CompileOnly"] = false
+                };
+
                 ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
                 BaseToolResponse response = await tool.ExecuteAsync(paramsToken);
                 ExecuteDynamicCodeResponse typedResponse = response as ExecuteDynamicCodeResponse;
@@ -30,6 +31,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             finally
             {
                 ULoopSettings.SetDynamicCodeSecurityLevel(previous);
+                tool.Dispose();
             }
         }
     }

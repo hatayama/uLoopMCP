@@ -395,22 +395,195 @@ namespace io.github.hatayama.uLoopMCP
             // Interpolated string ($"...")
             if (c == '$' && pos + 1 < s.Length && s[pos + 1] == '"')
             {
-                // This source-shaping fast path does not fully parse interpolation holes.
-                // Nested interpolated strings, braces inside expressions, and format-specifier braces can still confuse depth tracking.
-                int end = pos + 2;
-                int interpDepth = 0;
-                while (end < s.Length)
-                {
-                    if (s[end] == '\\') { end += 2; continue; }
-                    if (s[end] == '{') { interpDepth++; end++; continue; }
-                    if (s[end] == '}') { interpDepth--; end++; continue; }
-                    if (s[end] == '"' && interpDepth == 0) return end + 1;
-                    end++;
-                }
-                return s.Length;
+                return SkipInterpolatedString(s, pos + 2);
             }
 
             return pos + 1;
+        }
+
+        private static int SkipInterpolatedString(string s, int pos)
+        {
+            int end = pos;
+            while (end < s.Length)
+            {
+                if (s[end] == '\\')
+                {
+                    end += 2;
+                    continue;
+                }
+
+                if (s[end] == '{')
+                {
+                    if (end + 1 < s.Length && s[end + 1] == '{')
+                    {
+                        end += 2;
+                        continue;
+                    }
+
+                    end = SkipInterpolationHole(s, end + 1);
+                    continue;
+                }
+
+                if (s[end] == '"' && end + 1 < s.Length && s[end + 1] == '"')
+                {
+                    end += 2;
+                    continue;
+                }
+
+                if (s[end] == '"')
+                {
+                    return end + 1;
+                }
+
+                end++;
+            }
+
+            return s.Length;
+        }
+
+        private static int SkipInterpolationHole(string s, int pos)
+        {
+            int depth = 1;
+            int end = pos;
+
+            while (end < s.Length && depth > 0)
+            {
+                if (s[end] == '\\')
+                {
+                    end += 2;
+                    continue;
+                }
+
+                if (s[end] == '@' && end + 1 < s.Length && s[end + 1] == '"')
+                {
+                    end = SkipVerbatimString(s, end + 2);
+                    continue;
+                }
+
+                if (s[end] == '$' && end + 1 < s.Length && s[end + 1] == '"')
+                {
+                    end = SkipInterpolatedString(s, end + 2);
+                    continue;
+                }
+
+                if (s[end] == '"' && end + 2 < s.Length && s[end + 1] == '"' && s[end + 2] == '"')
+                {
+                    end = SkipRawString(s, end + 3);
+                    continue;
+                }
+
+                if (s[end] == '"')
+                {
+                    end = SkipRegularString(s, end + 1);
+                    continue;
+                }
+
+                if (s[end] == '\'')
+                {
+                    end = SkipCharLiteral(s, end + 1);
+                    continue;
+                }
+
+                if (s[end] == '{')
+                {
+                    if (end + 1 < s.Length && s[end + 1] == '{')
+                    {
+                        end += 2;
+                        continue;
+                    }
+
+                    depth++;
+                    end++;
+                    continue;
+                }
+
+                if (s[end] == '}')
+                {
+                    if (end + 1 < s.Length && s[end + 1] == '}')
+                    {
+                        end += 2;
+                        continue;
+                    }
+
+                    depth--;
+                    end++;
+                    continue;
+                }
+
+                end++;
+            }
+
+            return end;
+        }
+
+        private static int SkipRegularString(string s, int pos)
+        {
+            int end = pos;
+            while (end < s.Length && s[end] != '"')
+            {
+                if (s[end] == '\\')
+                {
+                    end++;
+                }
+
+                end++;
+            }
+
+            return end < s.Length ? end + 1 : s.Length;
+        }
+
+        private static int SkipVerbatimString(string s, int pos)
+        {
+            int end = pos;
+            while (end < s.Length)
+            {
+                if (s[end] == '"')
+                {
+                    if (end + 1 < s.Length && s[end + 1] == '"')
+                    {
+                        end += 2;
+                        continue;
+                    }
+
+                    return end + 1;
+                }
+
+                end++;
+            }
+
+            return s.Length;
+        }
+
+        private static int SkipRawString(string s, int pos)
+        {
+            int end = pos;
+            while (end + 2 < s.Length)
+            {
+                if (s[end] == '"' && s[end + 1] == '"' && s[end + 2] == '"')
+                {
+                    return end + 3;
+                }
+
+                end++;
+            }
+
+            return s.Length;
+        }
+
+        private static int SkipCharLiteral(string s, int pos)
+        {
+            int end = pos;
+            while (end < s.Length && s[end] != '\'')
+            {
+                if (s[end] == '\\')
+                {
+                    end++;
+                }
+
+                end++;
+            }
+
+            return end < s.Length ? end + 1 : s.Length;
         }
     }
 

@@ -79,6 +79,7 @@ namespace io.github.hatayama.uLoopMCP
             string tempDir = Path.Combine("Temp", "uLoopMCPCompilation");
             string sourcePath = Path.Combine(tempDir, $"{uniqueName}.cs");
             string dllPath = Path.Combine(tempDir, $"{uniqueName}.dll");
+            bool canDeleteTempFiles = true;
 
             Directory.CreateDirectory(tempDir);
 
@@ -110,7 +111,15 @@ namespace io.github.hatayama.uLoopMCP
                 AutoUsingResolver resolver = new AutoUsingResolver();
                 AutoUsingResult autoResult = await resolver.ResolveAsync(
                     sourcePath, dllPath, wrappedCode, request.AdditionalReferences,
-                    BuildAssemblyAsync, ct).ConfigureAwait(false);
+                    (resolvedSourcePath, resolvedDllPath, additionalReferences, cancellationToken) =>
+                        this.BuildAssemblyAsync(
+                            resolvedSourcePath,
+                            resolvedDllPath,
+                            additionalReferences,
+                            cancellationToken,
+                            () => canDeleteTempFiles = false,
+                            () => canDeleteTempFiles = true),
+                    ct).ConfigureAwait(false);
 
                 wrappedCode = autoResult.UpdatedSource;
                 CompilerMessage[] messages = autoResult.Messages;
@@ -187,10 +196,13 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
-                // File.Delete is a no-op if the file does not exist (.NET behavior)
-                File.Delete(sourcePath);
-                File.Delete(dllPath);
-                File.Delete(Path.ChangeExtension(dllPath, ".pdb"));
+                if (canDeleteTempFiles)
+                {
+                    // File.Delete is a no-op if the file does not exist (.NET behavior)
+                    File.Delete(sourcePath);
+                    File.Delete(dllPath);
+                    File.Delete(Path.ChangeExtension(dllPath, ".pdb"));
+                }
             }
         }
 
@@ -198,12 +210,12 @@ namespace io.github.hatayama.uLoopMCP
             string sourcePath,
             string dllPath,
             List<string> additionalRefs,
-            CancellationToken ct)
+            CancellationToken ct,
+            Action markBuildStarted,
+            Action markBuildFinished)
         {
             TaskCompletionSource<CompilerMessage[]> tcs = new();
-
-            using CancellationTokenRegistration registration = ct.Register(() =>
-                tcs.TrySetCanceled(ct));
+            ct.ThrowIfCancellationRequested();
 
             string[] references = CollectReferences(additionalRefs);
 
@@ -232,7 +244,11 @@ namespace io.github.hatayama.uLoopMCP
                 };
             }
 
-            return await tcs.Task.ConfigureAwait(false);
+            markBuildStarted();
+            CompilerMessage[] compilerMessages = await tcs.Task.ConfigureAwait(false);
+            markBuildFinished();
+            ct.ThrowIfCancellationRequested();
+            return compilerMessages;
         }
 
         private static SecurityValidationResult ValidateBeforeAssemblyLoad(byte[] assemblyBytes)
