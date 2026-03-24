@@ -15,8 +15,6 @@ namespace io.github.hatayama.uLoopMCP
         private McpEditorModel _model;
         private McpEditorWindowEventHandler _eventHandler;
         private McpServerOperations _serverOperations;
-        private IEnumerable<ConnectedClient> _cachedStoredTools;
-        private float _lastStoredToolsUpdateTime;
 
         private SkillsTarget _skillsTarget = SkillsTarget.Claude;
         private bool _isInstallingCli;
@@ -326,48 +324,14 @@ namespace io.github.hatayama.uLoopMCP
             return new ServerControlsData(_model.UI.CustomPort, isRunning, !isRunning, hasPortWarning, portWarningMessage);
         }
 
-        private IEnumerable<ConnectedClient> GetCachedStoredTools()
-        {
-            const float cacheDuration = 0.1f;
-            float currentTime = Time.realtimeSinceStartup;
-
-            if (_cachedStoredTools == null || (currentTime - _lastStoredToolsUpdateTime) > cacheDuration)
-            {
-                _cachedStoredTools = GetConnectedToolsAsClients();
-                _lastStoredToolsUpdateTime = currentTime;
-            }
-
-            return _cachedStoredTools;
-        }
-
-        private void InvalidateStoredToolsCache()
-        {
-            _cachedStoredTools = null;
-        }
-
         private ConnectedToolsData CreateConnectedToolsData()
         {
             bool isServerRunning = McpServerController.IsServerRunning;
-            IReadOnlyCollection<ConnectedClient> connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
-
+            ConnectedClient[] connectedClients = GetConnectedToolsAsClients().ToArray();
             bool showReconnectingUIFlag = McpEditorSettings.GetShowReconnectingUI();
             bool showPostCompileUIFlag = McpEditorSettings.GetShowPostCompileReconnectingUI();
-
-            bool hasNamedClients = connectedClients != null &&
-                                   connectedClients.Any(client => client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME);
-
-            IEnumerable<ConnectedClient> storedTools = GetCachedStoredTools();
-            bool hasStoredTools = storedTools.Any();
-
-            if (hasStoredTools)
-            {
-                connectedClients = storedTools.ToList();
-                hasNamedClients = true;
-            }
-
-            bool showReconnectingUI = !hasStoredTools &&
-                                      (showReconnectingUIFlag || showPostCompileUIFlag) &&
-                                      !hasNamedClients;
+            bool hasNamedClients = connectedClients.Any();
+            bool showReconnectingUI = (showReconnectingUIFlag || showPostCompileUIFlag) && !hasNamedClients;
 
             if (hasNamedClients && showPostCompileUIFlag)
             {
