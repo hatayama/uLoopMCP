@@ -466,6 +466,7 @@ namespace io.github.hatayama.uLoopMCP
                 OnUiPointerDown(screenPos, eventSystem);
                 SimulateMouseUiOverlayState.Update(
                     MouseAction.Click, inputPos, null, _currentPressTarget?.name, gameViewSize);
+                SimulateMouseUiOverlayState.RequestExpandAnimation();
             }
             else if (leftHeld && (_currentPressTarget != null || _currentDragTarget != null))
             {
@@ -497,6 +498,7 @@ namespace io.github.hatayama.uLoopMCP
             if (justReleased)
             {
                 OnUiPointerUp(screenPos, eventSystem);
+                SimulateMouseUiOverlayState.RequestDissipateAnimation();
                 SimulateMouseUiOverlayState.Clear();
             }
         }

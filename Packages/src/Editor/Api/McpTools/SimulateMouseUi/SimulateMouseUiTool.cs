@@ -15,9 +15,9 @@ namespace io.github.hatayama.uLoopMCP
     {
         public override string ToolName => "simulate-mouse-ui";
 
-        private const float EXPAND_DURATION = 0.1f;
-        private const float EXPAND_START_SCALE = 1.5f;
-        private const float DISSIPATE_DURATION = 0.1f;
+        private const float EXPAND_DURATION = SimulateMouseUiAnimationConstants.EXPAND_DURATION;
+        private const float EXPAND_START_SCALE = SimulateMouseUiAnimationConstants.EXPAND_START_SCALE;
+        private const float DISSIPATE_DURATION = SimulateMouseUiAnimationConstants.DISSIPATE_DURATION;
 
         protected override async Task<SimulateMouseUiResponse> ExecuteAsync(
             SimulateMouseUiSchema parameters,

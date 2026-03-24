@@ -27,6 +27,14 @@ namespace io.github.hatayama.uLoopMCP
         private readonly List<Image> _pathSegments = new List<Image>();
         private readonly List<Image> _waypointMarkers = new List<Image>();
 
+        private const float SELF_EXPAND_DURATION = SimulateMouseUiAnimationConstants.EXPAND_DURATION;
+        private const float SELF_EXPAND_START_SCALE = SimulateMouseUiAnimationConstants.EXPAND_START_SCALE;
+        private const float SELF_DISSIPATE_DURATION = SimulateMouseUiAnimationConstants.DISSIPATE_DURATION;
+
+        private enum SelfAnimState { None, Expanding, Dissipating }
+        private SelfAnimState _selfAnimState = SelfAnimState.None;
+        private float _selfAnimStartTime;
+
         private void Awake()
         {
             Debug.Assert(_canvasGroup != null, "_canvasGroup must be assigned in prefab");
@@ -43,6 +51,23 @@ namespace io.github.hatayama.uLoopMCP
 
         private void LateUpdate()
         {
+            ConsumePendingAnimationRequests();
+
+            // Dissipate runs independently of overlay state (state is already cleared on release)
+            if (_selfAnimState == SelfAnimState.Dissipating)
+            {
+                float elapsed = Time.realtimeSinceStartup - _selfAnimStartTime;
+                float t = Mathf.Clamp01(elapsed / SELF_DISSIPATE_DURATION);
+                _cursorGroup.localScale = Vector3.one * Mathf.Lerp(1f, 0f, t);
+                _canvasGroup.alpha = Mathf.Lerp(1f, 0f, t);
+                if (t >= 1f)
+                {
+                    _selfAnimState = SelfAnimState.None;
+                    _canvasGroup.alpha = 0f;
+                }
+                return;
+            }
+
             if (!SimulateMouseUiOverlayState.IsActive)
             {
                 _canvasGroup.alpha = 0;
@@ -57,19 +82,50 @@ namespace io.github.hatayama.uLoopMCP
                 _cursorGroup.localScale = Vector3.one;
             }
 
+            if (_selfAnimState == SelfAnimState.Expanding)
+            {
+                float elapsed = Time.realtimeSinceStartup - _selfAnimStartTime;
+                float t = Mathf.Clamp01(elapsed / SELF_EXPAND_DURATION);
+                _cursorGroup.localScale = Vector3.one * Mathf.Lerp(SELF_EXPAND_START_SCALE, 1f, t);
+                if (t >= 1f)
+                {
+                    _selfAnimState = SelfAnimState.None;
+                }
+            }
+
             UpdateCursorPosition();
             UpdateCursorMode();
             UpdateDragPath();
         }
 
+        private void ConsumePendingAnimationRequests()
+        {
+            if (SimulateMouseUiOverlayState.ConsumePendingExpandAnimation())
+            {
+                _canvasGroup.alpha = 1f;
+                _cursorGroup.localScale = Vector3.one * SELF_EXPAND_START_SCALE;
+                _selfAnimState = SelfAnimState.Expanding;
+                _selfAnimStartTime = Time.realtimeSinceStartup;
+            }
+
+            if (SimulateMouseUiOverlayState.ConsumePendingDissipateAnimation())
+            {
+                _selfAnimState = SelfAnimState.Dissipating;
+                _selfAnimStartTime = Time.realtimeSinceStartup;
+            }
+        }
+
         public void SetCursorScale(float scale)
         {
             _cursorGroup.localScale = Vector3.one * scale;
+            // SimulateMouseUiTool drives animation externally; cancel any self-driven animation
+            _selfAnimState = SelfAnimState.None;
         }
 
         public void SetAlpha(float alpha)
         {
             _canvasGroup.alpha = alpha;
+            _selfAnimState = SelfAnimState.None;
         }
 
         // sim coordinate: simX = screen pixel X, simY = EditorScreen.height - canvasY (top-left origin)
