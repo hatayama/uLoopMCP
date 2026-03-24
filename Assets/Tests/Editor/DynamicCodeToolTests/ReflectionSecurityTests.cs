@@ -119,6 +119,21 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             StringAssert.Contains("Dangerous", result.ErrorMessage);
         }
 
+        [Test]
+        public async Task Restricted_AssemblyGetType_StringBased_Blocked()
+        {
+            string code = @"
+                var type = typeof(object).Assembly.GetType(""System.IO.File"");
+                return type?.Name ?? ""null"";
+            ";
+
+            ExecutionResult result = await _executor.ExecuteCodeAsync(
+                code, "TestCommand", null, CancellationToken.None, compileOnly: false);
+
+            Assert.IsFalse(result.Success, "Assembly.GetType() should be blocked in Restricted mode");
+            StringAssert.Contains("Dangerous", result.ErrorMessage);
+        }
+
         #endregion
 
         #region Direct dangerous API still blocked
@@ -150,6 +165,29 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 code, "TestCommand", null, CancellationToken.None, compileOnly: false);
 
             Assert.IsFalse(result.Success, "Direct Process.Start should still be blocked");
+            StringAssert.Contains("Dangerous", result.ErrorMessage);
+        }
+
+        [Test]
+        public async Task Restricted_ModuleInitializerAttribute_Blocked()
+        {
+            string code = @"
+                using System.Runtime.CompilerServices;
+
+                public static class DangerousModuleInitializer
+                {
+                    [ModuleInitializer]
+                    public static void Initialize()
+                    {
+                        UnityEngine.Debug.Log(""should not run"");
+                    }
+                }
+            ";
+
+            ExecutionResult result = await _executor.ExecuteCodeAsync(
+                code, "TestCommand", null, CancellationToken.None, compileOnly: false);
+
+            Assert.IsFalse(result.Success, "ModuleInitializer should be blocked in Restricted mode");
             StringAssert.Contains("Dangerous", result.ErrorMessage);
         }
 

@@ -52,7 +52,7 @@ namespace io.github.hatayama.uLoopMCP
             ["System.IO.File"] = new() { "Delete", "WriteAllText", "WriteAllBytes", "Replace", "OpenWrite", "AppendAllText", "AppendText", "SetAttributes", "SetCreationTime", "SetCreationTimeUtc", "SetLastAccessTime", "SetLastAccessTimeUtc", "SetLastWriteTime", "SetLastWriteTimeUtc" },
             ["System.IO.Directory"] = new() { "Delete", "SetCurrentDirectory" },
             ["System.Diagnostics.Process"] = new() { "Start", "Kill" },
-            ["System.Reflection.Assembly"] = new() { "Load", "LoadFrom", "LoadFile", "LoadWithPartialName" },
+            ["System.Reflection.Assembly"] = new() { "Load", "LoadFrom", "LoadFile", "LoadWithPartialName", "GetType" },
             ["System.Type"] = new() { "GetType" },
             ["System.Activator"] = new() { "CreateComInstanceFrom" },
             ["UnityEditor.AssetDatabase"] = new() { "DeleteAsset" },
@@ -80,6 +80,16 @@ namespace io.github.hatayama.uLoopMCP
                 return members.Contains(memberName);
             }
             return false;
+        }
+
+        public static IEnumerable<string> EnumerateDangerousTypes()
+        {
+            return DangerousTypes;
+        }
+
+        public static IEnumerable<KeyValuePair<string, HashSet<string>>> EnumerateDangerousMembers()
+        {
+            return DangerousMembers;
         }
     }
 }

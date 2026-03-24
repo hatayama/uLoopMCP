@@ -13,7 +13,9 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class CompilationCacheManager
     {
+        private const int MaxCacheEntries = 32;
         private readonly Dictionary<string, Assembly> _compilationCache = new();
+        private readonly Queue<string> _cacheOrder = new();
 
         public CompilationResult CheckCache(CompilationRequest request)
         {
@@ -36,13 +38,29 @@ namespace io.github.hatayama.uLoopMCP
             if (result.Success && result.CompiledAssembly != null)
             {
                 string cacheKey = GenerateCacheKey(request);
+                if (_compilationCache.ContainsKey(cacheKey))
+                {
+                    _compilationCache[cacheKey] = result.CompiledAssembly;
+                    return;
+                }
+
+                // Dynamic assemblies cannot be unloaded from the default AppDomain,
+                // so the cache keeps only a small hot set instead of retaining every snippet forever.
+                if (_compilationCache.Count >= MaxCacheEntries)
+                {
+                    string oldestKey = _cacheOrder.Dequeue();
+                    _compilationCache.Remove(oldestKey);
+                }
+
                 _compilationCache[cacheKey] = result.CompiledAssembly;
+                _cacheOrder.Enqueue(cacheKey);
             }
         }
 
         public void ClearCache()
         {
             _compilationCache.Clear();
+            _cacheOrder.Clear();
         }
 
         public string GenerateCacheKey(CompilationRequest request)

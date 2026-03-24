@@ -45,9 +45,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 LogExecutionStart(className, parameters, code, compileOnly, correlationId);
 
-                ExecutionResult securityResult = PerformSecurityValidation(code, correlationId, stopwatch);
-                if (!securityResult.Success) return securityResult;
-
                 CompilationResult compilationResult = CompileCode(code, className, correlationId);
                 ExecutionResult compilationErrorResult = HandleCompilationResult(compilationResult, stopwatch);
                 if (compilationErrorResult != null) return compilationErrorResult;
@@ -75,11 +72,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private void LogExecutionStart(string className, object[] parameters, string code, bool compileOnly, string correlationId)
         {
-        }
-
-        private ExecutionResult PerformSecurityValidation(string code, string correlationId, Stopwatch stopwatch)
-        {
-            return new ExecutionResult { Success = true };
         }
 
         private ExecutionResult HandleCompilationResult(CompilationResult compilationResult, Stopwatch stopwatch)
@@ -174,9 +166,6 @@ namespace io.github.hatayama.uLoopMCP
             Stopwatch stopwatch = Stopwatch.StartNew();
             try
             {
-                ExecutionResult securityResult = PerformSecurityValidation(code, correlationId, stopwatch);
-                if (!securityResult.Success) return securityResult;
-
                 // Unity Editor APIs (Undo, AssetDatabase) require the main thread, so do not use ConfigureAwait(false) here
                 CompilationResult compilationResult = await CompileCodeAsync(code, className, correlationId, cancellationToken);
                 ExecutionResult compilationErrorResult = HandleCompilationResult(compilationResult, stopwatch);
@@ -221,6 +210,14 @@ namespace io.github.hatayama.uLoopMCP
                     SecurityViolations = _statistics.SecurityViolations,
                     CompilationErrors = _statistics.CompilationErrors
                 };
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_compiler is IDisposable disposableCompiler)
+            {
+                disposableCompiler.Dispose();
             }
         }
 

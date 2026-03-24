@@ -10,6 +10,16 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     internal static class SourceSecurityScanner
     {
+        private static readonly Regex StripCommentsAndStringsRegex = new Regex(
+            @"
+                //[^\n]*                    |  # line comment
+                /\*[\s\S]*?\*/              |  # block comment
+                @""(?:""""|[^""])*""        |  # verbatim string
+                ""(?:\\.|[^\\""\n])*""      |  # regular string
+                '(?:\\.|[^\\'\n])*'            # char literal
+            ",
+            RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled);
+
         private static readonly List<DangerousPattern> Patterns = new()
         {
             // Process manipulation
@@ -40,6 +50,7 @@ namespace io.github.hatayama.uLoopMCP
             // Reflection execution
             new("Assembly", "Load", @"\bAssembly\s*\.\s*Load\b"),
             new("Assembly", "LoadFrom", @"\bAssembly\s*\.\s*LoadFrom\b"),
+            new("Assembly", "GetType", @"\b(?:global::\s*)?(?:System\s*\.\s*Reflection\s*\.\s*)?Assembly\s*\.\s*GetType\s*\("),
             new("Type", "GetType", @"\b(?:global::\s*)?(?:System\s*\.\s*)?Type\s*\.\s*GetType\s*\("),
             new("Activator", "CreateComInstanceFrom", @"\bActivator\s*\.\s*CreateComInstanceFrom\b"),
 
@@ -61,6 +72,7 @@ namespace io.github.hatayama.uLoopMCP
             new("unsafe", "block", @"\bunsafe\s*\{|\bunsafe\s+\w"),
             new("DllImport", "attribute", @"\bDllImport\b"),
             new("extern", "declaration", @"\bextern\s+\w"),
+            new("ModuleInitializer", "attribute", @"\bModuleInitializer\b"),
         };
 
         public static SecurityValidationResult Scan(string sourceCode)
@@ -78,7 +90,7 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (DangerousPattern pattern in Patterns)
             {
-                if (Regex.IsMatch(stripped, pattern.RegexPattern, RegexOptions.Singleline))
+                if (pattern.Regex.IsMatch(stripped))
                 {
                     result.Violations.Add(new SecurityViolation
                     {
@@ -98,26 +110,20 @@ namespace io.github.hatayama.uLoopMCP
         {
             // Replace string literals and comments with spaces to avoid false positives
             // while preserving line structure for position tracking
-            return Regex.Replace(source, @"
-                //[^\n]*                    |  # line comment
-                /\*[\s\S]*?\*/              |  # block comment
-                @""(?:""""|[^""])*""        |  # verbatim string
-                ""(?:\\.|[^\\""\n])*""      |  # regular string
-                '(?:\\.|[^\\'\n])*'            # char literal
-            ", match => new string(' ', match.Length), RegexOptions.IgnorePatternWhitespace);
+            return StripCommentsAndStringsRegex.Replace(source, match => new string(' ', match.Length));
         }
 
         private sealed class DangerousPattern
         {
             public string TypeName { get; }
             public string MemberName { get; }
-            public string RegexPattern { get; }
+            public Regex Regex { get; }
 
             public DangerousPattern(string typeName, string memberName, string regexPattern)
             {
                 TypeName = typeName;
                 MemberName = memberName;
-                RegexPattern = regexPattern;
+                Regex = new Regex(regexPattern, RegexOptions.Singleline | RegexOptions.Compiled);
             }
         }
     }

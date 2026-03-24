@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEditor;
 using UnityEditor.Compilation;
 using Assembly = System.Reflection.Assembly;
 using Debug = UnityEngine.Debug;
@@ -15,11 +16,10 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public sealed class AssemblyBuilderCompiler : IDynamicCompilationService, IDisposable
     {
-        private const string ERROR_UNSUPPORTED_SELECTIVE_REFERENCE = "UNSUPPORTED_MODE";
-        private const string ERROR_MESSAGE_UNSUPPORTED_SELECTIVE_REFERENCE =
-            "AssemblyBuilder backend does not support SelectiveReference mode";
-
         private static int _compileCounter;
+        private static readonly object AppDomainReferencesLock = new();
+        private static string[] _cachedAppDomainReferences;
+        private static int _cachedAssemblyCount = -1;
 
         private readonly DynamicCodeSecurityLevel _securityLevel;
         private readonly CompilationCacheManager _cacheManager = new();
@@ -48,11 +48,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             Debug.Assert(request != null, "request must not be null");
             Debug.Assert(!string.IsNullOrWhiteSpace(request.Code), "request.Code must not be empty");
-
-            if (request.AssemblyMode == AssemblyLoadingMode.SelectiveReference)
-            {
-                return CreateUnsupportedModeResult(request);
-            }
 
             CompilationResult cachedResult = _cacheManager.CheckCache(request);
             if (cachedResult != null)
@@ -137,6 +132,26 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 byte[] assemblyBytes = File.ReadAllBytes(dllPath);
+                if (_securityLevel == DynamicCodeSecurityLevel.Restricted)
+                {
+                    PreloadMetadataSecurityValidator metadataValidator = new PreloadMetadataSecurityValidator();
+                    SecurityValidationResult metadataSecurityResult = metadataValidator.Validate(assemblyBytes);
+
+                    if (!metadataSecurityResult.IsValid)
+                    {
+                        return new CompilationResult
+                        {
+                            Success = false,
+                            HasSecurityViolations = true,
+                            SecurityViolations = metadataSecurityResult.Violations,
+                            Warnings = warnings,
+                            UpdatedCode = wrappedCode,
+                            FailureReason = CompilationFailureReason.SecurityViolation,
+                            AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates
+                        };
+                    }
+                }
+
                 Assembly compiledAssembly = Assembly.Load(assemblyBytes);
 
                 // Security validation via reflection after loading
@@ -224,35 +239,28 @@ namespace io.github.hatayama.uLoopMCP
 
         private string[] CollectReferences(List<string> additionalRefs)
         {
-            HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
-            List<string> refs = new();
-
-            foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
+            string[] appDomainReferences = GetCachedAppDomainReferences();
+            if (additionalRefs == null || additionalRefs.Count == 0)
             {
-                if (asm.IsDynamic) continue;
+                return appDomainReferences;
+            }
 
-                // Collectible assemblies and in-memory assemblies throw NotSupportedException on Location access
-                string location;
-                try
+            HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+            List<string> refs = new(appDomainReferences.Length + additionalRefs.Count);
+
+            foreach (string appDomainReference in appDomainReferences)
+            {
+                if (seen.Add(appDomainReference))
                 {
-                    location = asm.Location;
+                    refs.Add(appDomainReference);
                 }
-                catch (NotSupportedException)
-                {
-                    continue;
-                }
-
-                if (string.IsNullOrEmpty(location) || !File.Exists(location)) continue;
-                if (!seen.Add(Path.GetFileName(location))) continue;
-
-                refs.Add(location);
             }
 
             if (additionalRefs != null)
             {
                 foreach (string refPath in additionalRefs)
                 {
-                    if (!string.IsNullOrEmpty(refPath) && File.Exists(refPath) && seen.Add(Path.GetFileName(refPath)))
+                    if (!string.IsNullOrEmpty(refPath) && File.Exists(refPath) && seen.Add(refPath))
                     {
                         refs.Add(refPath);
                     }
@@ -260,6 +268,61 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return refs.ToArray();
+        }
+
+        [InitializeOnLoadMethod]
+        private static void InvalidateReferenceCacheOnDomainReload()
+        {
+            lock (AppDomainReferencesLock)
+            {
+                _cachedAppDomainReferences = null;
+                _cachedAssemblyCount = -1;
+            }
+        }
+
+        private static string[] GetCachedAppDomainReferences()
+        {
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            lock (AppDomainReferencesLock)
+            {
+                if (_cachedAppDomainReferences != null && _cachedAssemblyCount == assemblies.Length)
+                {
+                    return _cachedAppDomainReferences;
+                }
+
+                HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+                List<string> refs = new();
+
+                foreach (Assembly asm in assemblies)
+                {
+                    if (asm.IsDynamic)
+                    {
+                        continue;
+                    }
+
+                    string location;
+                    try
+                    {
+                        location = asm.Location;
+                    }
+                    catch (NotSupportedException)
+                    {
+                        continue;
+                    }
+
+                    if (string.IsNullOrEmpty(location) || !File.Exists(location) || !seen.Add(location))
+                    {
+                        continue;
+                    }
+
+                    refs.Add(location);
+                }
+
+                _cachedAppDomainReferences = refs.ToArray();
+                _cachedAssemblyCount = assemblies.Length;
+                return _cachedAppDomainReferences;
+            }
         }
 
         private string WrapCodeIfNeeded(string code, string namespaceName, string className)
@@ -314,24 +377,5 @@ namespace io.github.hatayama.uLoopMCP
             return "UNKNOWN";
         }
 
-        private static CompilationResult CreateUnsupportedModeResult(CompilationRequest request)
-        {
-            return new CompilationResult
-            {
-                Success = false,
-                Errors = new List<CompilationError>
-                {
-                    new CompilationError
-                    {
-                        Message = ERROR_MESSAGE_UNSUPPORTED_SELECTIVE_REFERENCE,
-                        ErrorCode = ERROR_UNSUPPORTED_SELECTIVE_REFERENCE,
-                        Line = 0,
-                        Column = 0
-                    }
-                },
-                FailureReason = CompilationFailureReason.CompilationError,
-                UpdatedCode = request.Code
-            };
-        }
     }
 }

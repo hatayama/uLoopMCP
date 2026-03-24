@@ -26,7 +26,10 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         public List<string> AdditionalReferences { get; set; } = new();
         
-        /// <summary>Assembly loading mode (default: Add all assemblies)</summary>
+        /// <summary>
+        /// Legacy assembly loading mode hint.
+        /// AssemblyBuilder always compiles against the full reference set, so this value is ignored.
+        /// </summary>
         public AssemblyLoadingMode AssemblyMode { get; set; } = AssemblyLoadingMode.AllAssemblies;
     }
 

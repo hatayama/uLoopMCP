@@ -8,7 +8,7 @@ namespace io.github.hatayama.uLoopMCP
 
     /// Related classes: DynamicCodeExecutor, RoslynCompiler, SecurityValidator, CommandRunner
     /// </summary>
-    public interface IDynamicCodeExecutor
+    public interface IDynamicCodeExecutor : IDisposable
     {
         /// <summary>Code execution</summary>
         ExecutionResult ExecuteCode(

@@ -54,6 +54,10 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
+        public void Dispose()
+        {
+        }
+
         private ExecutionResult CreateCompilationProviderUnavailableResult()
         {
             return new ExecutionResult
