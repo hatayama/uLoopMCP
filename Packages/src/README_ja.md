@@ -78,12 +78,13 @@ Scope(s): io.github.hatayama.uloopmcp
 
 Window > Unity CLI Loop > Settingsを選択します。専用ウィンドウが開くので **CLI** ボタンが青くなっている事を確認します。
 
-**Install CLI** ボタンを押します。  
-<img width="277" height="327" alt="CleanShot 2026-02-26 at 20 14 25" src="https://github.com/user-attachments/assets/680b9586-6323-4bde-a2f0-1c3166f0c224" />
+**Install CLI** ボタンを押します。
+<img width="277" height="306" alt="1" src="https://github.com/user-attachments/assets/0e25c327-73bf-4af6-997b-eebb3c26b372" />
 
 
-下記の表示になれば成功です。  
-<img width="272" height="332" alt="CleanShot 2026-02-26 at 20 17 08" src="https://github.com/user-attachments/assets/1681b124-fac8-4ac9-8ea3-3e8651be9128" />
+
+下記の表示になれば成功です。
+<img width="272" height="309" alt="2" src="https://github.com/user-attachments/assets/ec14f73b-53be-4435-af95-84bb9125e3e4" />
 
 
 
@@ -99,8 +100,8 @@ npm install -g uloop-cli
 
 ## ステップ2: Skillsのインストール
 
-Claude CodeやCodexなど、対象を選択して **Install Skills** ボタンを押します。  
-<img width="272" height="328" alt="CleanShot 2026-02-26 at 20 20 42" src="https://github.com/user-attachments/assets/79b9514c-cdbf-4eb6-89e9-650ecd3f6f85" />
+Claude CodeやCodexなど、対象を選択して **Install Skills** ボタンを押します。
+<img width="272" height="306" alt="3" src="https://github.com/user-attachments/assets/492e9680-726a-425b-8bf1-e5983f4f15a5" />
 
 
 <details> 
