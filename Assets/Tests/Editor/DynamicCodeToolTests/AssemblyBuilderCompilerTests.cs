@@ -126,6 +126,26 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task CompileAsync_WhenInterpolationHoleContainsCollectionInitializer_ShouldSucceed()
+        {
+            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = @"
+                    string message = $""x{new int[] { 1, 2, 3 }.Length}y"";
+                    return message;
+                ",
+                ClassName = "InterpolationCollectionInitializerCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.IsTrue(result.Success, result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Interpolated string with collection initializers should compile");
+            Assert.IsNotNull(result.CompiledAssembly);
+        }
+
+        [Test]
         public void CompileAsync_WhenCanceledBeforeBuild_ShouldThrowOperationCanceledException()
         {
             AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);

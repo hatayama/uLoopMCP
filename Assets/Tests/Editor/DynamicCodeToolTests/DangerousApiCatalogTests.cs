@@ -16,8 +16,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.AreNotEqual(-1, processEntryIndex, "Process entry should exist in the catalog");
 
             KeyValuePair<string, IReadOnlyCollection<string>> processEntry = snapshot[processEntryIndex];
-            List<string> mutableCopy = processEntry.Value as List<string>;
-            Assert.IsNotNull(mutableCopy, "Returned collection should be a defensive copy");
+            List<string> mutableCopy = new List<string>(processEntry.Value);
+            Assert.Contains("Start", mutableCopy, "The defensive copy should contain the dangerous API entry");
 
             mutableCopy.Remove("Start");
 

@@ -486,12 +486,6 @@ namespace io.github.hatayama.uLoopMCP
 
                 if (s[end] == '{')
                 {
-                    if (end + 1 < s.Length && s[end + 1] == '{')
-                    {
-                        end += 2;
-                        continue;
-                    }
-
                     depth++;
                     end++;
                     continue;
@@ -499,12 +493,6 @@ namespace io.github.hatayama.uLoopMCP
 
                 if (s[end] == '}')
                 {
-                    if (end + 1 < s.Length && s[end + 1] == '}')
-                    {
-                        end += 2;
-                        continue;
-                    }
-
                     depth--;
                     end++;
                     continue;
