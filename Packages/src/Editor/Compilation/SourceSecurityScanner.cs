@@ -40,7 +40,7 @@ namespace io.github.hatayama.uLoopMCP
             // Reflection execution
             new("Assembly", "Load", @"\bAssembly\s*\.\s*Load\b"),
             new("Assembly", "LoadFrom", @"\bAssembly\s*\.\s*LoadFrom\b"),
-            new("Type", "InvokeMember", @"\bInvokeMember\s*\("),
+            new("Type", "GetType", @"\bType\s*\.\s*GetType\s*\("),
             new("Activator", "CreateComInstanceFrom", @"\bActivator\s*\.\s*CreateComInstanceFrom\b"),
 
             // Environment

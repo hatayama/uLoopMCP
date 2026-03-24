@@ -98,7 +98,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             if (body == null) return;
 
-            // Inspect local variable types for dangerous type instantiation
             foreach (LocalVariableInfo local in body.LocalVariables)
             {
                 string typeName = local.LocalType?.FullName;
@@ -114,7 +113,6 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            // Inspect parameters for dangerous types
             foreach (System.Reflection.ParameterInfo param in method.GetParameters())
             {
                 string typeName = param.ParameterType?.FullName;
@@ -128,6 +126,51 @@ namespace io.github.hatayama.uLoopMCP
                         Description = $"Parameter '{param.Name}' of type '{typeName}' in {method.DeclaringType?.FullName}.{method.Name}"
                     });
                 }
+            }
+
+            // typeof(DangerousType) compiles to ldtoken (0xD0) + metadata token
+            ValidateTypeofReferences(method, body, result);
+        }
+
+        private const byte OpCode_Ldtoken = 0xD0;
+
+        private static void ValidateTypeofReferences(MethodBase method, MethodBody body, SecurityValidationResult result)
+        {
+            byte[] il = body.GetILAsByteArray();
+            if (il == null) return;
+
+            Module module = method.Module;
+
+            for (int i = 0; i < il.Length; i++)
+            {
+                if (il[i] != OpCode_Ldtoken || i + 4 >= il.Length) continue;
+
+                int token = il[i + 1] | (il[i + 2] << 8) | (il[i + 3] << 16) | (il[i + 4] << 24);
+
+                Type resolvedType;
+                try
+                {
+                    resolvedType = module.ResolveType(token);
+                }
+                catch
+                {
+                    // ldtoken can also reference fields/methods, not just types
+                    continue;
+                }
+
+                string fullName = resolvedType.FullName;
+                if (fullName != null && DangerousApiCatalog.IsDangerousType(fullName))
+                {
+                    result.Violations.Add(new SecurityViolation
+                    {
+                        Type = SecurityViolationType.DangerousApiCall,
+                        ApiName = fullName,
+                        Message = $"typeof() reference to dangerous type: {fullName}",
+                        Description = $"typeof({fullName}) in {method.DeclaringType?.FullName}.{method.Name}"
+                    });
+                }
+
+                i += 4;
             }
         }
     }
