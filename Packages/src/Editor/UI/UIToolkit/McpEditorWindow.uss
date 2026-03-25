@@ -360,6 +360,10 @@
     color: #6B9AFF;
 }
 
+#tool-settings-info-container {
+    padding-left: 14px;
+}
+
 .mcp-tool-settings-card {
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.22);
@@ -391,7 +395,7 @@
     border-top-color: rgba(255, 255, 255, 0.08);
 }
 
-.mcp-permission-item:first-of-type {
+.mcp-permission-item--first {
     margin-top: 0;
     padding-top: 4px;
     border-top-width: 0;
@@ -474,7 +478,7 @@
 .mcp-tool-toggle-row {
     flex-direction: row;
     align-items: center;
-    padding: 2px 4px;
+    padding: 2px 4px 2px 14px;
     margin-top: 1px;
     margin-bottom: 1px;
 }
