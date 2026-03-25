@@ -63,32 +63,6 @@ namespace io.github.hatayama.uLoopMCP
             SaveSettings(updated);
         }
 
-        // Security Settings Getters/Setters
-
-        public static bool GetEnableTestsExecution()
-        {
-            return GetSettings().enableTestsExecution;
-        }
-
-        public static void SetEnableTestsExecution(bool value)
-        {
-            ULoopSettingsData settings = GetSettings();
-            ULoopSettingsData updated = settings with { enableTestsExecution = value };
-            SaveSettings(updated);
-        }
-
-        public static bool GetAllowMenuItemExecution()
-        {
-            return GetSettings().allowMenuItemExecution;
-        }
-
-        public static void SetAllowMenuItemExecution(bool value)
-        {
-            ULoopSettingsData settings = GetSettings();
-            ULoopSettingsData updated = settings with { allowMenuItemExecution = value };
-            SaveSettings(updated);
-        }
-
         public static bool GetAllowThirdPartyTools()
         {
             return GetSettings().allowThirdPartyTools;
@@ -188,6 +162,12 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 _cachedSettings = JsonUtility.FromJson<ULoopSettingsData>(json);
+                bool migratedToolToggles = ApplyLegacyToolToggleMigrations(json);
+                bool normalizedDynamicCode = NormalizeLegacyDisabledDynamicCode();
+                if (migratedToolToggles || normalizedDynamicCode)
+                {
+                    SaveSettings(_cachedSettings);
+                }
                 return;
             }
 
@@ -203,7 +183,8 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             string json = File.ReadAllText(LegacySettingsFilePath);
-            return json.Contains($"\"{nameof(LegacySecuritySettingsProbe.enableTestsExecution)}\"");
+            return json.Contains($"\"{nameof(LegacySecuritySettingsProbe.allowThirdPartyTools)}\"")
+                || json.Contains($"\"{nameof(LegacySecuritySettingsProbe.dynamicCodeSecurityLevel)}\"");
         }
 
         private static void DeleteIfExists(string path)
@@ -221,8 +202,8 @@ namespace io.github.hatayama.uLoopMCP
         [Serializable]
         private class LegacySecuritySettingsProbe
         {
-            public bool enableTestsExecution = false;
-            public bool allowMenuItemExecution = false;
+            public bool enableTestsExecution = true;
+            public bool allowMenuItemExecution = true;
             public bool allowThirdPartyTools = false;
             public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted;
         }
@@ -251,18 +232,62 @@ namespace io.github.hatayama.uLoopMCP
 
             _cachedSettings = new ULoopSettingsData
             {
-                enableTestsExecution = probe.enableTestsExecution,
-                allowMenuItemExecution = probe.allowMenuItemExecution,
                 allowThirdPartyTools = probe.allowThirdPartyTools,
                 dynamicCodeSecurityLevel = probe.dynamicCodeSecurityLevel
             };
 
+            ApplyLegacyToolToggleMigrations(legacyJson);
+            NormalizeLegacyDisabledDynamicCode();
             SaveSettings(_cachedSettings);
 
             // Re-save legacy file to purge security fields that are no longer in
             // McpEditorSettingsData — JsonUtility.ToJson only serializes defined fields,
             // so the 4 removed fields disappear from the JSON on re-serialization.
             McpEditorSettings.SaveSettings(McpEditorSettings.GetSettings());
+        }
+
+        private static bool NormalizeLegacyDisabledDynamicCode()
+        {
+            Debug.Assert(_cachedSettings != null, "_cachedSettings must not be null");
+
+            if (_cachedSettings.dynamicCodeSecurityLevel != 0)
+            {
+                return false;
+            }
+
+            ToolSettings.SetToolEnabled(McpConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE, false);
+            _cachedSettings = _cachedSettings with
+            {
+                dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
+            };
+            return true;
+        }
+
+        private static bool ApplyLegacyToolToggleMigrations(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return false;
+            }
+
+            LegacySecuritySettingsProbe probe = JsonUtility.FromJson<LegacySecuritySettingsProbe>(json);
+            bool migrated = false;
+
+            if (json.Contains($"\"{nameof(LegacySecuritySettingsProbe.enableTestsExecution)}\"")
+                && !probe.enableTestsExecution)
+            {
+                ToolSettings.SetToolEnabled(McpConstants.TOOL_NAME_RUN_TESTS, false);
+                migrated = true;
+            }
+
+            if (json.Contains($"\"{nameof(LegacySecuritySettingsProbe.allowMenuItemExecution)}\"")
+                && !probe.allowMenuItemExecution)
+            {
+                ToolSettings.SetToolEnabled(McpConstants.TOOL_NAME_EXECUTE_MENU_ITEM, false);
+                migrated = true;
+            }
+
+            return migrated;
         }
 
         internal static void InvalidateCache()

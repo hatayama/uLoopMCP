@@ -15,8 +15,6 @@ namespace io.github.hatayama.uLoopMCP
         private McpEditorModel _model;
         private McpEditorWindowEventHandler _eventHandler;
         private McpServerOperations _serverOperations;
-        private IEnumerable<ConnectedClient> _cachedStoredTools;
-        private float _lastStoredToolsUpdateTime;
 
         private SkillsTarget _skillsTarget = SkillsTarget.Claude;
         private bool _isInstallingCli;
@@ -86,9 +84,6 @@ namespace io.github.hatayama.uLoopMCP
             _view.OnOpenSettingsClicked += OpenConfigurationFile;
             _view.OnToolSettingsFoldoutChanged += UpdateShowToolSettings;
             _view.OnToolToggled += HandleToolToggled;
-            _view.OnSecurityFoldoutChanged += UpdateShowSecuritySettings;
-            _view.OnEnableTestsChanged += UpdateEnableTestsExecution;
-            _view.OnAllowMenuChanged += UpdateAllowMenuItemExecution;
             _view.OnAllowThirdPartyChanged += UpdateAllowThirdPartyTools;
             _view.OnSecurityLevelChanged += UpdateDynamicCodeSecurityLevel;
         }
@@ -225,9 +220,6 @@ namespace io.github.hatayama.uLoopMCP
 
             ToolSettingsSectionData toolSettingsData = CreateToolSettingsData();
             _view.UpdateToolSettings(toolSettingsData);
-
-            SecuritySettingsData securityData = CreateSecuritySettingsData();
-            _view.UpdateSecuritySettings(securityData);
         }
 
         private async void RefreshCliVersionInBackground()
@@ -326,48 +318,14 @@ namespace io.github.hatayama.uLoopMCP
             return new ServerControlsData(_model.UI.CustomPort, isRunning, !isRunning, hasPortWarning, portWarningMessage);
         }
 
-        private IEnumerable<ConnectedClient> GetCachedStoredTools()
-        {
-            const float cacheDuration = 0.1f;
-            float currentTime = Time.realtimeSinceStartup;
-
-            if (_cachedStoredTools == null || (currentTime - _lastStoredToolsUpdateTime) > cacheDuration)
-            {
-                _cachedStoredTools = GetConnectedToolsAsClients();
-                _lastStoredToolsUpdateTime = currentTime;
-            }
-
-            return _cachedStoredTools;
-        }
-
-        private void InvalidateStoredToolsCache()
-        {
-            _cachedStoredTools = null;
-        }
-
         private ConnectedToolsData CreateConnectedToolsData()
         {
             bool isServerRunning = McpServerController.IsServerRunning;
-            IReadOnlyCollection<ConnectedClient> connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
-
+            ConnectedClient[] connectedClients = GetConnectedToolsAsClients().ToArray();
             bool showReconnectingUIFlag = McpEditorSettings.GetShowReconnectingUI();
             bool showPostCompileUIFlag = McpEditorSettings.GetShowPostCompileReconnectingUI();
-
-            bool hasNamedClients = connectedClients != null &&
-                                   connectedClients.Any(client => client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME);
-
-            IEnumerable<ConnectedClient> storedTools = GetCachedStoredTools();
-            bool hasStoredTools = storedTools.Any();
-
-            if (hasStoredTools)
-            {
-                connectedClients = storedTools.ToList();
-                hasNamedClients = true;
-            }
-
-            bool showReconnectingUI = !hasStoredTools &&
-                                      (showReconnectingUIFlag || showPostCompileUIFlag) &&
-                                      !hasNamedClients;
+            bool hasNamedClients = connectedClients.Any();
+            bool showReconnectingUI = (showReconnectingUIFlag || showPostCompileUIFlag) && !hasNamedClients;
 
             if (hasNamedClients && showPostCompileUIFlag)
             {
@@ -422,15 +380,6 @@ namespace io.github.hatayama.uLoopMCP
                 _model.UI.ShowRepositoryRootToggle);
         }
 
-        private SecuritySettingsData CreateSecuritySettingsData()
-        {
-            return new SecuritySettingsData(
-                _model.UI.ShowSecuritySettings,
-                ULoopSettings.GetEnableTestsExecution(),
-                ULoopSettings.GetAllowMenuItemExecution(),
-                ULoopSettings.GetAllowThirdPartyTools());
-        }
-
         private ToolSettingsSectionData CreateToolSettingsData()
         {
             UnityToolRegistry registry = CustomToolManager.GetRegistry();
@@ -438,6 +387,8 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return new ToolSettingsSectionData(
                     _model.UI.ShowToolSettings,
+                    ULoopSettings.GetAllowThirdPartyTools(),
+                    ULoopSettings.GetDynamicCodeSecurityLevel(),
                     System.Array.Empty<ToolToggleItem>(),
                     System.Array.Empty<ToolToggleItem>(),
                     false);
@@ -476,6 +427,8 @@ namespace io.github.hatayama.uLoopMCP
 
             return new ToolSettingsSectionData(
                 _model.UI.ShowToolSettings,
+                ULoopSettings.GetAllowThirdPartyTools(),
+                ULoopSettings.GetDynamicCodeSecurityLevel(),
                 builtIn.ToArray(),
                 thirdParty.ToArray(),
                 true);
@@ -630,24 +583,10 @@ namespace io.github.hatayama.uLoopMCP
             _model.UpdateShowConfiguration(show);
         }
 
-        private void UpdateShowSecuritySettings(bool show)
-        {
-            _model.UpdateShowSecuritySettings(show);
-        }
-
-        private void UpdateEnableTestsExecution(bool enable)
-        {
-            _model.UpdateEnableTestsExecution(enable);
-        }
-
-        private void UpdateAllowMenuItemExecution(bool allow)
-        {
-            _model.UpdateAllowMenuItemExecution(allow);
-        }
-
         private void UpdateAllowThirdPartyTools(bool allow)
         {
             _model.UpdateAllowThirdPartyTools(allow);
+            RefreshAllSections();
         }
 
         private void UpdateAddRepositoryRoot(bool addRepositoryRoot)

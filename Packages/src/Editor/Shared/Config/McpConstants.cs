@@ -135,6 +135,11 @@ namespace io.github.hatayama.uLoopMCP
         public const string ULOOP_SETTINGS_FILE_NAME = "settings.permissions.json";
         public const string ULOOP_TOOL_SETTINGS_FILE_NAME = "settings.tools.json";
 
+        // Tool name constants
+        public const string TOOL_NAME_EXECUTE_DYNAMIC_CODE = "execute-dynamic-code";
+        public const string TOOL_NAME_EXECUTE_MENU_ITEM = "execute-menu-item";
+        public const string TOOL_NAME_RUN_TESTS = "run-tests";
+
         // File output directories
         public const string OUTPUT_ROOT_DIR = ".uloop/outputs";
         public const string TEST_RESULTS_DIR = "TestResults";

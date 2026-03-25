@@ -36,6 +36,7 @@
                         <ui:Button name="refresh-cli-version-button" text="↻" class="mcp-button--refresh" />
                     </ui:VisualElement>
                     <ui:Button name="install-cli-button" text="Install CLI" class="mcp-button mcp-button--configure" />
+                    <ui:VisualElement class="mcp-cli-separator" />
 
                     <ui:VisualElement name="skills-subsection">
                         <ui:Label text="Skills" class="mcp-cli-subsection-header" />
@@ -80,41 +81,37 @@
         <!-- Tool Settings Section -->
         <ui:VisualElement name="tool-settings-section" class="mcp-section mcp-section--box">
             <ui:Foldout name="tool-settings-foldout" text="Tool Settings" class="mcp-foldout">
-                <ui:VisualElement name="tool-settings-content">
-                    <ui:Label text="Enable or disable individual tools. Disabled tools are completely hidden from AI agents, eliminating unnecessary context window consumption." class="mcp-tool-settings-info" />
-                    <ui:Label text="Changes are notified to connected MCP clients immediately." class="mcp-tool-settings-note" />
-                    <ui:Label name="cli-reference-link" text="See CLI Command Reference for uloop-cli usage." class="mcp-tool-settings-link" />
+                    <ui:VisualElement name="tool-settings-content" class="mcp-tool-settings-content">
+                        <ui:VisualElement class="mcp-tool-settings-card">
+                            <ui:Label text="Permissions" class="mcp-section-header mcp-tool-settings-card__header" />
+                            <ui:VisualElement class="mcp-permission-item mcp-permission-item--first">
+                                <ui:Label text="Allow Third Party Tools" class="mcp-permission-item__title mcp-section-header--danger" />
+                                <ui:VisualElement class="mcp-permission-item__control-row">
+                                    <ui:VisualElement class="mcp-toggle-row mcp-permission-item__toggle-row">
+                                        <ui:Toggle name="allow-third-party-toggle" class="mcp-toggle-row__toggle" />
+                                        <ui:Label text="Enable" class="mcp-permission-item__control-label" />
+                                        <ui:Label name="allow-third-party-label" text="Allow Third Party Tools" class="mcp-toggle-row__label mcp-toggle-row__label--danger mcp-permission-item__assistive-label" />
+                                    </ui:VisualElement>
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+
+                            <ui:VisualElement class="mcp-permission-item">
+                                <ui:Label text="execute-dynamic-code" class="mcp-permission-item__title mcp-permission-item__title--dynamic-code mcp-section-header--danger" />
+                                <ui:Label text="Security Level" class="mcp-permission-item__control-label" />
+                                <ui:VisualElement class="mcp-segmented-control">
+                                    <ui:Button name="security-level-restricted-button" text="Restricted" class="mcp-segmented-control__button" />
+                                    <ui:Button name="security-level-full-access-button" text="Full Access" class="mcp-segmented-control__button" />
+                                </ui:VisualElement>
+                                <ui:Label name="security-level-description" class="mcp-security-level-description" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+
+                    <ui:VisualElement name="tool-settings-info-container">
+                        <ui:Label text="Enable or disable individual tools. Disabled tools are completely hidden from AI agents, eliminating unnecessary context window consumption." class="mcp-tool-settings-info" />
+                        <ui:Label text="Changes are notified to connected MCP clients immediately." class="mcp-tool-settings-note" />
+                        <ui:Label name="cli-reference-link" text="See CLI Command Reference for uloop-cli usage." class="mcp-tool-settings-link" />
+                    </ui:VisualElement>
                     <ui:VisualElement name="tool-list-container" class="mcp-tool-list-container" />
-                </ui:VisualElement>
-            </ui:Foldout>
-        </ui:VisualElement>
-
-        <!-- Security Settings Section -->
-        <ui:VisualElement name="security-settings-section" class="mcp-section mcp-section--box">
-            <ui:Foldout name="security-foldout" text="Security Settings" class="mcp-foldout">
-                <ui:VisualElement name="security-content">
-                    <ui:Label text="These settings control dangerous operations. Only enable if you trust the AI system.&#10;&#10;For safer operation, consider using sandbox environments or containers.&#10;&#10;Changes take effect immediately - no server restart required." class="mcp-security-warning" />
-
-                    <ui:Label text="Additional Security Options" class="mcp-section-header" />
-
-                    <ui:VisualElement class="mcp-toggle-row">
-                        <ui:Toggle name="enable-tests-toggle" class="mcp-toggle-row__toggle" />
-                        <ui:Label name="enable-tests-label" text="Allow Tests Execution" class="mcp-toggle-row__label mcp-toggle-row__label--danger" />
-                    </ui:VisualElement>
-
-                    <ui:VisualElement class="mcp-toggle-row">
-                        <ui:Toggle name="allow-menu-toggle" class="mcp-toggle-row__toggle" />
-                        <ui:Label name="allow-menu-label" text="Allow Menu Item Execution" class="mcp-toggle-row__label mcp-toggle-row__label--danger" />
-                    </ui:VisualElement>
-
-                    <ui:VisualElement class="mcp-toggle-row">
-                        <ui:Toggle name="allow-third-party-toggle" class="mcp-toggle-row__toggle" />
-                        <ui:Label name="allow-third-party-label" text="Allow Third Party Tools" class="mcp-toggle-row__label mcp-toggle-row__label--danger" />
-                    </ui:VisualElement>
-
-                    <ui:Label text="Dynamic Code Security Level" class="mcp-section-header mcp-section-header--danger" />
-                    <uie:EnumField name="security-level-field" label="Security Level" class="mcp-security-level-field" />
-                    <ui:Label name="security-level-description" class="mcp-security-level-description" />
                 </ui:VisualElement>
             </ui:Foldout>
         </ui:VisualElement>

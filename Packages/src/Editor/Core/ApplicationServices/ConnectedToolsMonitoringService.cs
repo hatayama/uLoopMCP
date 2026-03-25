@@ -35,7 +35,13 @@ namespace io.github.hatayama.uLoopMCP
         private static void Initialize()
         {
             SubscribeToServerEvents();
-            RestoreConnectedToolsFromSettings();
+            if (ShouldRestorePersistedToolsForReconnect())
+            {
+                RestoreConnectedToolsFromSettings();
+                return;
+            }
+
+            SynchronizeConnectedToolsWithCurrentServer();
         }
 
         /// <summary>
@@ -51,20 +57,19 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Handle server stopping event - backup connected tools
+        /// Handle server stopping event - keep the last live snapshot for reconnecting UI
         /// </summary>
         private static void OnServerStopping()
         {
             _toolsBackup = _connectedTools
-                .Where(tool => tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
+                .Where(tool => tool != null && !string.IsNullOrEmpty(tool.Name) && tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
                 .ToList();
-                
-            // Ensure settings are up to date
+
             SyncConnectedToolsToSettings();
         }
 
         /// <summary>
-        /// Handle server started event - restore connected tools
+        /// Handle server started event - restore the reconnecting snapshot first, then cleanup stale tools
         /// </summary>
         private static void OnServerStarted()
         {
@@ -72,7 +77,20 @@ namespace io.github.hatayama.uLoopMCP
             {
                 RestoreConnectedTools(_toolsBackup);
                 _toolsBackup = null;
+                return;
             }
+
+            if (ShouldRestorePersistedToolsForReconnect())
+            {
+                ConnectedLLMToolData[] persistedTools = McpEditorSettings.GetConnectedLLMTools();
+                if (persistedTools != null && persistedTools.Length > 0)
+                {
+                    RestoreConnectedTools(persistedTools.ToList());
+                    return;
+                }
+            }
+
+            SynchronizeConnectedToolsWithCurrentServer();
         }
 
         /// <summary>
@@ -172,29 +190,22 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Restore connected tools from backup after server restart
-        /// First restore all tools immediately, then cleanup disconnected ones after a delay
+        /// Restore connected tools from backup after server restart.
+        /// The reconnecting UI should keep the last live snapshot until clients rejoin.
         /// </summary>
-        public static void RestoreConnectedTools(List<ConnectedLLMToolData> backup)
+        private static void RestoreConnectedTools(List<ConnectedLLMToolData> backup)
         {
             if (backup == null || backup.Count == 0)
             {
                 return;
             }
 
-            // Immediately restore all tools to prevent "No connected tools found" flash
-            foreach (ConnectedLLMToolData toolData in backup)
-            {
-                ConnectedClient restoredClient = new(toolData.Endpoint, null, toolData.Port, toolData.Name);
-                AddConnectedTool(restoredClient);
-            }
+            RestoreConnectedToolsImmediately(backup);
 
-            // Cancel any existing cleanup task
             _cleanupCancellationTokenSource?.Cancel();
             _cleanupCancellationTokenSource?.Dispose();
             _cleanupCancellationTokenSource = new CancellationTokenSource();
 
-            // Schedule cleanup after a short delay to remove actually disconnected tools
             DelayedCleanupAsync(_cleanupCancellationTokenSource.Token).ContinueWith(task =>
             {
                 if (task.IsFaulted && !task.IsCanceled)
@@ -207,20 +218,28 @@ namespace io.github.hatayama.uLoopMCP
             }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
-        /// <summary>
-        /// Clean up disconnected tools after a delay
-        /// </summary>
-        /// <param name="cancellationToken">Cancellation token to cancel the cleanup operation</param>
+        private static void RestoreConnectedToolsImmediately(IEnumerable<ConnectedLLMToolData> tools)
+        {
+            List<ConnectedLLMToolData> restoredTools = tools
+                .Where(tool => tool != null && !string.IsNullOrEmpty(tool.Name) && tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
+                .GroupBy(tool => tool.Name)
+                .Select(group => group.Last())
+                .OrderBy(tool => tool.Name)
+                .ToList();
+
+            _connectedTools = restoredTools;
+            SyncConnectedToolsToSettings();
+            OnConnectedToolsChanged?.Invoke();
+        }
+
         private static async Task DelayedCleanupAsync(CancellationToken cancellationToken = default)
         {
             try
             {
-                // Wait 8 seconds for clients to reconnect
                 await TimerDelay.Wait(8000, cancellationToken);
             }
             catch (OperationCanceledException)
             {
-                // Cleanup was cancelled, which is expected behavior
                 return;
             }
 
@@ -229,21 +248,18 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // Get actually connected clients
             IReadOnlyCollection<ConnectedClient> actualConnectedClients = McpServerController.CurrentServer?.GetConnectedClients();
             if (actualConnectedClients == null || cancellationToken.IsCancellationRequested)
             {
                 return;
             }
 
-            // Get list of actually connected client names
             HashSet<string> actualClientNames = new HashSet<string>(
                 actualConnectedClients
                     .Where(client => client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME)
                     .Select(client => client.ClientName)
             );
 
-            // Remove tools that are no longer connected
             List<ConnectedLLMToolData> toolsToRemove = _connectedTools
                 .Where(tool => !actualClientNames.Contains(tool.Name))
                 .ToList();
@@ -255,36 +271,103 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Restore connected tools from persistent settings
+        /// Rebuild connected tools from the current live server state.
+        /// The connected tools UI must reflect live MCP connections only.
+        /// </summary>
+        private static void SynchronizeConnectedToolsWithCurrentServer()
+        {
+            IReadOnlyCollection<ConnectedClient> liveClients = GetLiveConnectedClients();
+            ReplaceConnectedTools(liveClients);
+        }
+
+        private static bool ShouldRestorePersistedToolsForReconnect()
+        {
+            return McpEditorSettings.GetShowReconnectingUI() || McpEditorSettings.GetShowPostCompileReconnectingUI();
+        }
+
+        /// <summary>
+        /// Get live clients from the current server, ignoring persisted settings.
+        /// </summary>
+        private static IReadOnlyCollection<ConnectedClient> GetLiveConnectedClients()
+        {
+            if (!McpServerController.IsServerRunning)
+            {
+                return Array.Empty<ConnectedClient>();
+            }
+
+            IReadOnlyCollection<ConnectedClient> connectedClients = McpServerController.CurrentServer?.GetConnectedClients();
+            return connectedClients ?? Array.Empty<ConnectedClient>();
+        }
+
+        /// <summary>
+        /// Replace the in-memory and persisted connected tools state with the current live clients.
+        /// </summary>
+        private static void ReplaceConnectedTools(IEnumerable<ConnectedClient> connectedClients)
+        {
+            List<ConnectedLLMToolData> tools = connectedClients
+                .Where(client => client != null && client.ClientName != McpConstants.UNKNOWN_CLIENT_NAME)
+                .Select(client => new ConnectedLLMToolData(
+                    client.ClientName,
+                    client.Endpoint,
+                    client.Port,
+                    client.ConnectedAt
+                ))
+                .GroupBy(tool => tool.Name)
+                .Select(group => group.Last())
+                .OrderBy(tool => tool.Name)
+                .ToList();
+
+            _connectedTools = tools;
+
+            ConnectedLLMToolData[] toolsArray = _connectedTools
+                .Where(tool => tool != null && !string.IsNullOrEmpty(tool.Name))
+                .ToArray();
+            McpEditorSettings.SetConnectedLLMTools(toolsArray);
+
+            OnConnectedToolsChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Restore the persisted connected tools snapshot for reconnecting UI only.
+        /// This path must not be used for normal startup because it can reintroduce stale entries.
         /// </summary>
         private static void RestoreConnectedToolsFromSettings()
         {
             ConnectedLLMToolData[] savedTools = McpEditorSettings.GetConnectedLLMTools();
-            if (savedTools != null && savedTools.Length > 0)
+            if (savedTools == null || savedTools.Length == 0)
             {
-                _connectedTools.Clear();
-                foreach (ConnectedLLMToolData toolData in savedTools)
-                {
-                    if (toolData != null && !string.IsNullOrEmpty(toolData.Name))
-                    {
-                        _connectedTools.Add(toolData);
-                    }
-                }
-                
-                // Notify UI
-                OnConnectedToolsChanged?.Invoke();
+                _connectedTools = new List<ConnectedLLMToolData>();
+                return;
             }
+
+            RestoreConnectedToolsImmediately(savedTools);
         }
 
-        /// <summary>
-        /// Sync current connected tools to settings
-        /// </summary>
         private static void SyncConnectedToolsToSettings()
         {
             ConnectedLLMToolData[] toolsArray = _connectedTools
                 .Where(tool => tool != null && !string.IsNullOrEmpty(tool.Name) && tool.Name != McpConstants.UNKNOWN_CLIENT_NAME)
                 .ToArray();
             McpEditorSettings.SetConnectedLLMTools(toolsArray);
+        }
+
+        internal static void ReplaceConnectedToolsForTests(IReadOnlyCollection<ConnectedClient> connectedClients)
+        {
+            ReplaceConnectedTools(connectedClients);
+        }
+
+        internal static void RestorePersistedConnectedToolsForTests()
+        {
+            RestoreConnectedToolsFromSettings();
+        }
+
+        internal static void ResetStateForTests()
+        {
+            _connectedTools = new List<ConnectedLLMToolData>();
+            _toolsBackup = null;
+            _cleanupCancellationTokenSource?.Cancel();
+            _cleanupCancellationTokenSource?.Dispose();
+            _cleanupCancellationTokenSource = null;
         }
     }
 }
