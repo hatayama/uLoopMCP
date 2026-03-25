@@ -88,25 +88,6 @@ namespace io.github.hatayama.uLoopMCP
         }
     }
 
-    /// <summary>
-    /// Security settings section data for view rendering
-    /// </summary>
-    public record SecuritySettingsData
-    {
-        public readonly bool ShowSecuritySettings;
-        public readonly bool EnableTestsExecution;
-        public readonly bool AllowMenuItemExecution;
-        public readonly bool AllowThirdPartyTools;
-
-        public SecuritySettingsData(bool showSecuritySettings, bool enableTestsExecution, bool allowMenuItemExecution, bool allowThirdPartyTools)
-        {
-            ShowSecuritySettings = showSecuritySettings;
-            EnableTestsExecution = enableTestsExecution;
-            AllowMenuItemExecution = allowMenuItemExecution;
-            AllowThirdPartyTools = allowThirdPartyTools;
-        }
-    }
-
     public record ConnectionModeData
     {
         public readonly ConnectionMode Mode;
@@ -136,13 +117,23 @@ namespace io.github.hatayama.uLoopMCP
     public record ToolSettingsSectionData
     {
         public readonly bool ShowToolSettings;
+        public readonly bool AllowThirdPartyTools;
+        public readonly DynamicCodeSecurityLevel DynamicCodeSecurityLevel;
         public readonly ToolToggleItem[] BuiltInTools;
         public readonly ToolToggleItem[] ThirdPartyTools;
         public readonly bool IsRegistryAvailable;
 
-        public ToolSettingsSectionData(bool showToolSettings, ToolToggleItem[] builtInTools, ToolToggleItem[] thirdPartyTools, bool isRegistryAvailable)
+        public ToolSettingsSectionData(
+            bool showToolSettings,
+            bool allowThirdPartyTools,
+            DynamicCodeSecurityLevel dynamicCodeSecurityLevel,
+            ToolToggleItem[] builtInTools,
+            ToolToggleItem[] thirdPartyTools,
+            bool isRegistryAvailable)
         {
             ShowToolSettings = showToolSettings;
+            AllowThirdPartyTools = allowThirdPartyTools;
+            DynamicCodeSecurityLevel = dynamicCodeSecurityLevel;
             BuiltInTools = builtInTools;
             ThirdPartyTools = thirdPartyTools;
             IsRegistryAvailable = isRegistryAvailable;
