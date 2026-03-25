@@ -80,7 +80,7 @@
         <!-- Tool Settings Section -->
         <ui:VisualElement name="tool-settings-section" class="mcp-section mcp-section--box">
             <ui:Foldout name="tool-settings-foldout" text="Tool Settings" class="mcp-foldout">
-                    <ui:VisualElement name="tool-settings-content">
+                    <ui:VisualElement name="tool-settings-content" class="mcp-tool-settings-content">
                         <ui:VisualElement class="mcp-tool-settings-card">
                             <ui:Label text="Permissions" class="mcp-section-header mcp-tool-settings-card__header" />
                             <ui:VisualElement class="mcp-permission-item mcp-permission-item--first">
