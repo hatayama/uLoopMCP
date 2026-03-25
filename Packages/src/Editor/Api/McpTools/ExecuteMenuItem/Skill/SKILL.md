@@ -46,5 +46,5 @@ Returns JSON with execution result.
 
 ## Notes
 
-- Use `uloop get-menu-items` to discover available menu paths
+- Use `uloop execute-dynamic-code` to discover available menu paths if needed
 - Some menu items may require specific context or selection

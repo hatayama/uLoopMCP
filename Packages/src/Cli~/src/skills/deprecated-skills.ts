@@ -7,4 +7,7 @@
 export const DEPRECATED_SKILLS: string[] = [
   'uloop-capture-window', // renamed to uloop-screenshot in v0.54.0
   'uloop-get-provider-details', // renamed to uloop-get-unity-search-providers
+  'uloop-unity-search', // removed: replaceable by execute-dynamic-code
+  'uloop-get-menu-items', // removed: replaceable by execute-dynamic-code
+  'uloop-get-unity-search-providers', // removed: replaceable by execute-dynamic-code
 ];

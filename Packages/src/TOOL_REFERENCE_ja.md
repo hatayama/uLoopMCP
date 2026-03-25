@@ -126,44 +126,7 @@
 
 ## Unity 検索・発見ツール
 
-### 6. unity-search
-- **説明**: Unity Search APIを使用してUnityプロジェクトを検索し、包括的なフィルタリングとエクスポートオプションを提供します
-- **パラメータ**:
-  - `SearchQuery` (string): 検索クエリ文字列（Unity Search構文をサポート）（デフォルト: ""）
-    - 例: "*.cs", "t:Texture2D", "ref:MyScript", "p:MyPackage"
-    - Unity Search詳細ドキュメント: https://docs.unity3d.com/6000.1/Documentation/Manual/search-expressions.html および https://docs.unity3d.com/6000.0/Documentation/Manual/search-query-operators.html 。よく使うクエリ: "*.cs"（全C#ファイル）, "t:Texture2D"（Texture2Dアセット）, "ref:MyScript"（MyScriptを参照するアセット）, "p:MyPackage"（パッケージ内検索）, "t:MonoScript *.cs"（C#スクリプトのみ）, "Assets/Scripts/*.cs"（特定フォルダのC#ファイル）。日本語ガイド: https://light11.hatenadiary.com/entry/2022/12/12/193119
-  - `Providers` (array): 使用する特定の検索プロバイダー（空 = すべてのアクティブプロバイダー）（デフォルト: []）
-    - 一般的なプロバイダー: "asset", "scene", "menu", "settings", "packages"
-  - `MaxResults` (number): 返す検索結果の最大数（デフォルト: 50）
-  - `IncludeDescription` (boolean): 結果に詳細な説明を含めるかどうか（デフォルト: true）
-  - `IncludeMetadata` (boolean): ファイルメタデータ（サイズ、更新日）を含めるかどうか（デフォルト: false）
-  - `SearchFlags` (enum): Unity Search動作を制御する検索フラグ（デフォルト: "Default"(0), "Synchronous"(1), "WantsMore"(2), "Packages"(4), "Sorted"(8)）
-  - `SaveToFile` (boolean): 大量の結果セットを扱う際のトークン消費を抑えるため、検索結果を外部ファイルに保存するかどうか。結果はJSON/CSVファイルとして保存されます（デフォルト: false）
-  - `OutputFormat` (enum): SaveToFileが有効な場合の出力ファイル形式（デフォルト: "JSON"(0), "CSV"(1), "TSV"(2)）
-  - `AutoSaveThreshold` (number): 自動ファイル保存の閾値（結果数がこの値を超えると自動的にファイルに保存）。0に設定すると自動保存を無効化（デフォルト: 100）
-  - `FileExtensions` (array): ファイル拡張子で結果をフィルタ（例: "cs", "prefab", "mat"）（デフォルト: []）
-  - `AssetTypes` (array): アセットタイプで結果をフィルタ（例: "Texture2D", "GameObject", "MonoScript"）（デフォルト: []）
-  - `PathFilter` (string): パスパターンで結果をフィルタ（ワイルドカードサポート）（デフォルト: ""）
-- **レスポンス**:
-  - `Results` (array): 検索結果アイテムの配列（結果がファイルに保存された場合は空）
-  - `TotalCount` (number): 見つかった検索結果の総数
-  - `DisplayedCount` (number): このレスポンスで表示される結果の数
-  - `SearchQuery` (string): 実行された検索クエリ
-  - `ProvidersUsed` (array): 検索に使用された検索プロバイダー
-  - `SearchDurationMs` (number): 検索時間（ミリ秒）
-  - `Success` (boolean): 検索が正常に完了したかどうか
-  - `ErrorMessage` (string): 検索が失敗した場合のエラーメッセージ
-  - `ResultsFilePath` (string): 保存された検索結果ファイルのパス（SaveToFileが有効な場合）
-  - `ResultsSavedToFile` (boolean): 結果がファイルに保存されたかどうか
-  - `SavedFileFormat` (string): 保存された結果のファイル形式
-  - `SaveToFileReason` (string): 結果がファイルに保存された理由
-  - `AppliedFilters` (object): 適用されたフィルタ情報
-    - `FileExtensions` (array): フィルタされたファイル拡張子
-    - `AssetTypes` (array): フィルタされたアセットタイプ
-    - `PathFilter` (string): 適用されたパスフィルタパターン
-    - `FilteredOutCount` (number): フィルタで除外された結果数
-
-### 7. get-hierarchy
+### 6. get-hierarchy
 - **説明**: Unity階層構造をネストされたJSON形式で取得します
 - **パラメータ**:
   - `IncludeInactive` (boolean): 階層結果に非アクティブなGameObjectを含めるかどうか（デフォルト: true）
@@ -177,29 +140,7 @@
   - `message` (string): クライアントがJSONファイルを参照するための案内メッセージ
   - `hierarchyFilePath` (string): 階層データが保存されたファイルパス（例: "{project_root}/.uloop/outputs/HierarchyResults/hierarchy_2025-07-10_21-30-15.json"）。エクスポートされたJSONファイルには `hierarchy`（GameObjectのネスト配列）と `context`（シーン情報、ノード数、最大深度）が含まれる
 
-### 8. get-menu-items
-- **説明**: プログラム実行のための詳細なメタデータ付きでUnity MenuItemsを取得します。Unity Searchのメニュープロバイダーとは異なり、自動化とデバッグに必要な実装詳細（メソッド名、アセンブリ、実行互換性）を提供します
-- **パラメータ**:
-  - `FilterText` (string): MenuItemパスをフィルタするテキスト（すべてのアイテムの場合は空）（デフォルト: ""）
-  - `FilterType` (enum): 適用するフィルタのタイプ - "contains", "exact", "startswith"（デフォルト: "contains"）
-  - `IncludeValidation` (boolean): 結果に検証関数を含める（デフォルト: false）
-  - `MaxCount` (number): 取得するメニューアイテムの最大数（デフォルト: 200）
-- **レスポンス**:
-  - `MenuItems` (array): フィルタ条件に一致する発見されたMenuItemsのリスト
-    - `Path` (string): MenuItemパス
-    - `MethodName` (string): 実行メソッド名
-    - `TypeName` (string): 実装クラス名
-    - `AssemblyName` (string): アセンブリ名
-    - `Priority` (number): メニューアイテムの優先度
-    - `IsValidateFunction` (boolean): 検証関数かどうか
-    - `CanExecuteViaEditorApplication` (boolean): EditorApplication.ExecuteMenuItemで実行可能かどうか
-    - `WarningMessage` (string): MenuItemに問題がある場合の警告メッセージ（例: 属性の重複）
-  - `TotalCount` (number): フィルタリング前に発見されたMenuItemsの総数
-  - `FilteredCount` (number): フィルタリング後に返されたMenuItemsの数
-  - `AppliedFilter` (string): 適用されたフィルタテキスト
-  - `AppliedFilterType` (string): 適用されたフィルタタイプ
-
-### 9. execute-menu-item
+### 7. execute-menu-item
 - **説明**: パスによってUnity MenuItemを実行します
 - **パラメータ**:
   - `MenuItemPath` (string): 実行するメニューアイテムパス（例: "GameObject/Create Empty"）（デフォルト: ""）
@@ -213,7 +154,7 @@
   - `MenuItemFound` (boolean): メニューアイテムがシステムで見つかったかどうか
   - `WarningMessage` (string): MenuItemに問題がある場合の警告メッセージ（例: 属性の重複）
 
-### 10. execute-dynamic-code
+### 8. execute-dynamic-code
 - **説明**: Unity Editor内で動的C#コードを実行します。セキュリティレベルに応じてAPI利用を制限し、using文の自動処理やエラーメッセージの改善機能を提供します
 - **パラメータ**:
   - `Code` (string): 実行するC#コード（デフォルト: ""）
@@ -238,7 +179,7 @@
   - `DiagnosticsSummary` (string): 診断情報のサマリー（ユニークエラー数、総数、最初のエラー概要）
   - `Diagnostics` (array): リッチクライアント向けの構造化された診断情報（CompilationErrorsと同じ構造）
 
-### 11. focus-window
+### 9. focus-window
 - **説明**: macOSおよびWindowsでUnity Editorウィンドウを前面に表示します
 - **パラメータ**: なし
 - **レスポンス**:
@@ -246,7 +187,7 @@
   - `Message` (string): 操作結果メッセージ
   - `ErrorMessage` (string): 操作が失敗した場合のエラーメッセージ
 
-### 12. screenshot
+### 10. screenshot
 - **説明**: Unity EditorWindowのスクリーンショットを撮影してPNG画像として保存します。名前による柔軟なマッチングモードで任意のEditorWindowをキャプチャ可能です
 - **パラメータ**:
   - `WindowName` (string): キャプチャするウィンドウ名（例: "Game", "Scene", "Console", "Inspector", "Project", "Hierarchy"）（デフォルト: "Game"）
@@ -264,7 +205,7 @@
     - `Width` (number): キャプチャ画像の幅（ピクセル）
     - `Height` (number): キャプチャ画像の高さ（ピクセル）
 
-### 13. control-play-mode
+### 11. control-play-mode
 - **説明**: Unity Editorのプレイモードを制御します（再生/停止/一時停止）
 - **パラメータ**:
   - `Action` (enum): 実行するアクション - "Play", "Stop", "Pause"（デフォルト: "Play"）
@@ -276,7 +217,7 @@
   - `IsPaused` (boolean): プレイモードが一時停止中かどうか
   - `Message` (string): 実行されたアクションの説明
 
-### 14. simulate-mouse-ui
+### 12. simulate-mouse-ui
 - **説明**: PlayMode中のUI要素に対してマウスクリック・長押し・ドラッグをシミュレーション。EventSystemとExecuteEventsを使ってポインタイベントを直接ディスパッチするため、旧・新Input Systemの両方に依存せず動作。Input Systemを読むゲームロジック（`Mouse.current.leftButton.wasPressedThisFrame`等）には `simulate-mouse-input` を使用
 - **パラメータ**:
   - `Action` (enum): マウスアクション - "Click", "Drag", "DragStart", "DragMove", "DragEnd", "LongPress"（デフォルト: "Click"）
@@ -303,7 +244,7 @@
   - `EndPositionX` (number): 終了X座標（Dragアクション用）
   - `EndPositionY` (number): 終了Y座標（Dragアクション用）
 
-### 15. simulate-mouse-input
+### 13. simulate-mouse-input
 - **説明**: Input System経由でPlayMode中のマウス入力をシミュレーション。ボタンクリック、マウスデルタ、スクロールホイールを `Mouse.current` に直接注入。`wasPressedThisFrame`や`Mouse.current.delta`等を読むゲームロジック向け。Input Systemパッケージが必要で、Player SettingsのActive Input Handlingを `Input System Package (New)` または `Both` に設定する必要がある。IPointerClickHandler等のUI要素には `simulate-mouse-ui` を使用
 - **パラメータ**:
   - `Action` (enum): マウス入力アクション - "Click", "LongPress", "MoveDelta", "SmoothDelta", "Scroll"（デフォルト: "Click"）
@@ -328,7 +269,7 @@
   - `PositionX` (number, nullable): 使用されたX座標（位置を使わないアクションではnull）
   - `PositionY` (number, nullable): 使用されたY座標（位置を使わないアクションではnull）
 
-### 16. simulate-keyboard
+### 14. simulate-keyboard
 - **説明**: Input System経由でPlayMode中のキーボード入力をシミュレーション。単発のキータップ、長押し、複数キーの同時押しに対応。Input Systemパッケージが必要で、Player SettingsのActive Input Handlingを `Input System Package (New)` または `Both` に設定する必要がある。ゲームコードがInput System API（例: `Keyboard.current[Key.W].isPressed`）で入力を読み取っている必要があり、レガシーの `Input.GetKey()` には非対応
 - **パラメータ**:
   - `Action` (enum): キーボードアクション - "Press", "KeyDown", "KeyUp"（デフォルト: "Press"）
@@ -342,35 +283,6 @@
   - `Message` (string): 実行されたアクションの説明
   - `Action` (string): 実行されたアクション
   - `KeyName` (string, nullable): 操作対象のキー名
-
-### 17. get-unity-search-providers
-
-Unity Search プロバイダーの詳細情報を取得します。
-
-**パラメータ:**
-
-| パラメータ | 型 | デフォルト | 説明 |
-|-----------|------|---------|-------------|
-| `ProviderId` | string | `""` | 特定のプロバイダーID（空 = 全プロバイダー）。例: `asset`, `scene`, `menu`, `settings` |
-| `ActiveOnly` | boolean | `false` | アクティブなプロバイダーのみ返す |
-| `SortByPriority` | boolean | `true` | 優先度でソート（低い値 = 高優先度） |
-| `IncludeDescriptions` | boolean | `true` | 詳細な説明を含める |
-
-**レスポンス:**
-
-- `Providers` (array): プロバイダー詳細
-  - `Id` (string): プロバイダー識別子
-  - `DisplayName` (string): 表示名
-  - `Description` (string): プロバイダーの説明
-  - `IsActive` (boolean): プロバイダーがアクティブかどうか
-  - `Priority` (integer): プロバイダーの優先度
-- `TotalCount` (integer): 返されたプロバイダーの総数
-- `ActiveCount` (integer): アクティブなプロバイダーの数
-- `InactiveCount` (integer): 非アクティブなプロバイダーの数
-- `Success` (boolean): リクエストが成功したかどうか
-- `ErrorMessage` (string): リクエスト失敗時のエラーメッセージ
-- `AppliedFilter` (string): 適用されたフィルター
-- `SortedByPriority` (boolean): 優先度でソートされているか
 
 ---
 
