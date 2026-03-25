@@ -562,10 +562,6 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 3633262302885763002, guid: 6ddbcdb56af1c46719cf4fa1b302f1b4, type: 3}
-      propertyPath: m_AnchoredPosition.y
-      value: 17.26
-      objectReference: {fileID: 0}
     - target: {fileID: 4291754732258876827, guid: 6ddbcdb56af1c46719cf4fa1b302f1b4, type: 3}
       propertyPath: m_Name
       value: ReplayInputOverlay
