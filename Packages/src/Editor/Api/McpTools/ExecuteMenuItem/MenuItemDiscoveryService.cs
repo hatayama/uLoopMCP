@@ -68,32 +68,32 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
                 }
 
-                // Short-circuit: compare path before creating full MenuItemInfo object
-                if (!string.Equals(menuItemAttributes[0].menuItem, menuItemPath, StringComparison.OrdinalIgnoreCase))
+                // A method can have multiple [MenuItem] attributes with different paths
+                foreach (MenuItem attr in menuItemAttributes)
                 {
-                    continue;
+                    if (string.Equals(attr.menuItem, menuItemPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return CreateMenuItemInfo(method, attr, menuItemAttributes);
+                    }
                 }
-
-                return CreateMenuItemInfo(method, menuItemAttributes);
             }
 
             return null;
         }
 
-        private static MenuItemInfo CreateMenuItemInfo(MethodInfo method, MenuItem[] menuItemAttributes)
+        private static MenuItemInfo CreateMenuItemInfo(MethodInfo method, MenuItem matchedAttribute, MenuItem[] allAttributes)
         {
-            MenuItem menuItemAttribute = menuItemAttributes[0];
             MenuItemInfo menuItemInfo = new MenuItemInfo(
-                menuItemAttribute.menuItem,
+                matchedAttribute.menuItem,
                 method,
-                menuItemAttribute.validate
+                matchedAttribute.validate
             );
 
             // Multiple [MenuItem] attributes on a single method is unusual; record a warning
-            if (menuItemAttributes.Length > 1)
+            if (allAttributes.Length > 1)
             {
                 string methodName = $"{method.DeclaringType?.FullName}.{method.Name}";
-                menuItemInfo.WarningMessage = $"Method '{methodName}' has {menuItemAttributes.Length} duplicate MenuItem attributes for '{menuItemAttribute.menuItem}'. Using the first one.";
+                menuItemInfo.WarningMessage = $"Method '{methodName}' has {allAttributes.Length} [MenuItem] attributes. Matched '{matchedAttribute.menuItem}'.";
             }
 
             return menuItemInfo;
