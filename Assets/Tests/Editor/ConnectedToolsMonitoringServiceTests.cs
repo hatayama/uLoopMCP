@@ -81,6 +81,23 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             Assert.That(persistedTools.Select(tool => tool.Name), Is.EquivalentTo(new[] { "cursor" }));
         }
 
+        [Test]
+        public void RestorePersistedConnectedToolsForTests_RehydratesReconnectSnapshot()
+        {
+            McpEditorSettings.SetConnectedLLMTools(new[]
+            {
+                new ConnectedLLMToolData("claude-code", "127.0.0.1:58784", 58784, new System.DateTime(2026, 3, 24, 22, 19, 27))
+            });
+
+            ConnectedToolsMonitoringService.RestorePersistedConnectedToolsForTests();
+
+            ConnectedClient[] displayedTools = ConnectedToolsMonitoringService.GetConnectedToolsAsClients().ToArray();
+
+            Assert.That(displayedTools, Has.Length.EqualTo(1));
+            Assert.That(displayedTools[0].ClientName, Is.EqualTo("claude-code"));
+            Assert.That(displayedTools[0].Endpoint, Is.EqualTo("127.0.0.1:58784"));
+        }
+
         private static McpEditorSettingsData CloneSettings(McpEditorSettingsData settings)
         {
             string json = UnityEngine.JsonUtility.ToJson(settings);
