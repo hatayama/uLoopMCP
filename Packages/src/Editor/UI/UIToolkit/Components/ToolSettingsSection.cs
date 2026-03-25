@@ -19,6 +19,7 @@ namespace io.github.hatayama.uLoopMCP
         private readonly Button _securityLevelRestrictedButton;
         private readonly Button _securityLevelFullAccessButton;
         private readonly Label _securityLevelDescription;
+        private readonly VisualElement _toolSettingsInfoContainer;
         private readonly VisualElement _toolListContainer;
         private readonly Dictionary<string, Toggle> _togglesByToolName = new();
         private VisualElement _thirdPartyGroupContainer;
@@ -39,10 +40,14 @@ namespace io.github.hatayama.uLoopMCP
             _securityLevelRestrictedButton = root.Q<Button>("security-level-restricted-button");
             _securityLevelFullAccessButton = root.Q<Button>("security-level-full-access-button");
             _securityLevelDescription = root.Q<Label>("security-level-description");
+            _toolSettingsInfoContainer = root.Q<VisualElement>("tool-settings-info-container");
             _toolListContainer = root.Q<VisualElement>("tool-list-container");
 
             Label cliReferenceLink = root.Q<Label>("cli-reference-link");
-            cliReferenceLink.RegisterCallback<ClickEvent>(_ => Application.OpenURL(McpUIConstants.CLI_COMMAND_REFERENCE_URL));
+            if (cliReferenceLink != null)
+            {
+                cliReferenceLink.RegisterCallback<ClickEvent>(_ => Application.OpenURL(McpUIConstants.CLI_COMMAND_REFERENCE_URL));
+            }
 
             SetupBindings();
         }
@@ -101,6 +106,11 @@ namespace io.github.hatayama.uLoopMCP
             if (_isRegistryAvailable || !_isUnavailableStateShown)
             {
                 RebuildUnavailable();
+            }
+
+            if (_toolSettingsInfoContainer != null)
+            {
+                ViewDataBinder.SetVisible(_toolSettingsInfoContainer, false);
             }
 
             _isRegistryAvailable = false;
@@ -186,6 +196,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 VisualElement builtInGroup = CreateGroupContainer();
                 AddGroupHeader(builtInGroup, "Built-in Tools");
+                AddToolSettingsInfo(builtInGroup);
                 foreach (ToolToggleItem item in data.BuiltInTools)
                 {
                     AddToolToggle(builtInGroup, item);
@@ -203,6 +214,17 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 _toolListContainer.Add(_thirdPartyGroupContainer);
             }
+        }
+
+        private void AddToolSettingsInfo(VisualElement container)
+        {
+            if (_toolSettingsInfoContainer == null)
+            {
+                return;
+            }
+
+            ViewDataBinder.SetVisible(_toolSettingsInfoContainer, true);
+            container.Add(_toolSettingsInfoContainer);
         }
 
         private void UpdateToggleStates(IReadOnlyList<ToolToggleItem> items)
