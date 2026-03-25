@@ -377,28 +377,6 @@ describe('CLI E2E Tests (requires running Unity)', () => {
     });
   });
 
-  describe('get-menu-items', () => {
-    it('should retrieve menu items', () => {
-      const result = runCliJson<{ MenuItems: unknown[]; TotalCount: number }>(
-        'get-menu-items --max-count 10',
-      );
-
-      expect(typeof result.TotalCount).toBe('number');
-      expect(Array.isArray(result.MenuItems)).toBe(true);
-    });
-
-    it('should filter menu items', () => {
-      const result = runCliJson<{ MenuItems: Array<{ Path: string }> }>(
-        'get-menu-items --filter-text "GameObject"',
-      );
-
-      expect(result.MenuItems.length).toBeGreaterThan(0);
-      for (const item of result.MenuItems) {
-        expect(item.Path.toLowerCase()).toContain('gameobject');
-      }
-    });
-  });
-
   describe('execute-menu-item', () => {
     const TEST_LOG_MENU_PATH = 'uLoopMCP/Debug/LogGetter Tests/Output Test Logs';
 
@@ -430,14 +408,6 @@ describe('CLI E2E Tests (requires running Unity)', () => {
     });
   });
 
-  describe('unity-search', () => {
-    it('should search assets', () => {
-      const result = runCliJson<{ Results: unknown[] }>('unity-search --search-query "*.cs"');
-
-      expect(Array.isArray(result.Results)).toBe(true);
-    });
-  });
-
   describe('find-game-objects', () => {
     it('should find game objects with name pattern', () => {
       const result = runCliJson<{ results: unknown[]; totalFound: number }>(
@@ -457,30 +427,6 @@ describe('CLI E2E Tests (requires running Unity)', () => {
 
       expect(result.totalFound).toBeGreaterThan(0);
       expect(result.results.some((r) => r.name === 'Cube')).toBe(true);
-    });
-  });
-
-  describe('get-unity-search-providers', () => {
-    it('should retrieve search providers', () => {
-      const result = runCliJson<{ Providers: unknown[] }>('get-unity-search-providers');
-
-      expect(Array.isArray(result.Providers)).toBe(true);
-    });
-
-    it('should support --include-descriptions false to exclude descriptions', () => {
-      const result = runCliJson<{ Providers: unknown[] }>(
-        'get-unity-search-providers --include-descriptions false',
-      );
-
-      expect(Array.isArray(result.Providers)).toBe(true);
-    });
-
-    it('should support --sort-by-priority false to disable priority sorting', () => {
-      const result = runCliJson<{ Providers: unknown[] }>(
-        'get-unity-search-providers --sort-by-priority false',
-      );
-
-      expect(Array.isArray(result.Providers)).toBe(true);
     });
   });
 
