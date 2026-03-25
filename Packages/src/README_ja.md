@@ -418,10 +418,7 @@ Unity Editor内で動的にC#コードを実行します。
 - スニペット内で await が利用可能です（Task / ValueTask / UniTask など awaitable 全般）
 - CancellationToken をツールに渡すと、キャンセルが末端まで伝播します
 
-**セキュリティレベル対応**: 3段階のセキュリティ制御を実装し、実行可能なコードを段階的に制限：
-
-  - **Level 0 - Disabled（無効化）**
-    - コンパイル・実行ともに不可
+**セキュリティレベル対応**: 2段階のセキュリティ制御を実装し、実行可能なコードを制限。ツール自体を無効化するには、MCPツール設定UIのツールon/offトグルを使用してください。
 
   - **Level 1 - Restricted（制限付き）**【推奨設定】
     - 基本的に全てのUnity APIと.NET標準ライブラリが利用可能
@@ -462,9 +459,10 @@ Unity Editor内で動的にC#コードを実行します。
 > - **Allow Third Party Tools**: ユーザーが独自に拡張したtoolを有効化
 >
 > **Dynamic Code Security Level** (`execute-dynamic-code`ツール):
-> - **Level 0 (Disabled)**: コード実行完全無効化（最も安全）
 > - **Level 1 (Restricted)**: Unity APIのみ、危険な操作はブロック（推奨）
 > - **Level 2 (FullAccess)**: 全APIが利用可能（注意して使用）
+>
+> `execute-dynamic-code`を完全に無効化するには、ツールon/offトグルでオフにしてください。
 >
 > 設定変更は即座に反映され、サーバー再起動は不要です。
 >

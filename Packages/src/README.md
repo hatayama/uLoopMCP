@@ -419,10 +419,7 @@ Async support:
 - You can write await in your snippet (Task/ValueTask/UniTask and any awaitable type)
 - Cancellation is propagated when you pass a CancellationToken to the tool
 
-**Security Level Support**: Implements 3-tier security control to progressively restrict executable code:
-
-  - **Level 0 - Disabled**
-    - No compilation or execution allowed
+**Security Level Support**: Implements 2-tier security control to restrict executable code. To disable this tool entirely, use the tool on/off toggle in the MCP tool settings UI.
 
   - **Level 1 - Restricted** 【Recommended Setting】
     - All Unity APIs and .NET standard libraries are generally available
@@ -463,9 +460,10 @@ Async support:
 > - **Allow Third Party Tools**: Enable user-developed custom tools
 >
 > **Dynamic Code Security Level** (`execute-dynamic-code` tool):
-> - **Level 0 (Disabled)**: Complete code execution disabled (safest)
 > - **Level 1 (Restricted)**: Unity API only, dangerous operations blocked (recommended)
 > - **Level 2 (FullAccess)**: All APIs available (use with caution)
+>
+> To disable `execute-dynamic-code` entirely, turn it off using the tool on/off toggle.
 >
 > Setting changes take effect immediately without server restart.
 >
