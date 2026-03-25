@@ -476,6 +476,13 @@
     border-color: rgba(70, 130, 200, 0.4);
 }
 
+#security-level-full-access-button:hover {
+    background-color: rgba(122, 39, 39, 0.35);
+    color: #ffe3e3;
+    border-width: 1px;
+    border-color: rgba(178, 76, 76, 0.55);
+}
+
 .mcp-segmented-control__button--active {
     background-color: rgba(46, 90, 136, 0.8);
     color: #ffffff;
@@ -484,10 +491,10 @@
 }
 
 .mcp-segmented-control__button--warning-active {
-    background-color: rgba(46, 90, 136, 0.8);
-    color: #ffffff;
+    background-color: rgba(122, 39, 39, 0.85);
+    color: #ffd7d7;
     border-width: 1px;
-    border-color: rgba(70, 130, 200, 0.4);
+    border-color: rgba(178, 76, 76, 0.7);
 }
 
 .mcp-tool-toggle-row {
