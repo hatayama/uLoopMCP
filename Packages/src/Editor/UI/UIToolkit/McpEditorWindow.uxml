@@ -36,6 +36,7 @@
                         <ui:Button name="refresh-cli-version-button" text="↻" class="mcp-button--refresh" />
                     </ui:VisualElement>
                     <ui:Button name="install-cli-button" text="Install CLI" class="mcp-button mcp-button--configure" />
+                    <ui:VisualElement class="mcp-cli-separator" />
 
                     <ui:VisualElement name="skills-subsection">
                         <ui:Label text="Skills" class="mcp-cli-subsection-header" />
