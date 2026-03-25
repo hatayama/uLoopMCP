@@ -19,6 +19,14 @@ Designed to keep AI-driven development loops running autonomously inside your ex
 
 > **Note**: This project was formerly known as **uLoopMCP**.
 
+# Design Philosophy
+
+Unity CLI Loop does not chase tool count. With dynamic C# code execution (`execute-dynamic-code`), almost any Unity Editor operation can be accomplished through a single tool.
+
+Too many tools make it harder for AI to choose the right one. And even when tools are packaged as Skills, each tool's description still consumes the context window. We believe keeping tools to the essential minimum is good design.
+
+Dedicated tools exist only for operations that dynamic code execution cannot handle by nature — such as frame-spanning input simulation and screenshot capture — and for operations called so frequently in the development loop, like `compile` and `get-logs`, that generating C# code each time would waste tokens.
+
 # Concept
 Unity CLI Loop is a Unity integration tool designed so that **AI can drive your Unity project forward with minimal human intervention**.
 Tasks that humans typically handle manually—compiling, running the Test Runner, checking logs, editing scenes, and capturing windows to verify UI layouts—are exposed as tools that LLMs can orchestrate.
@@ -128,7 +136,6 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 | "Fix the compile errors" | `/uloop-compile` |
 | "Run the tests and tell me why they failed" | `/uloop-run-tests` + `/uloop-get-logs` |
 | "Check the scene hierarchy" | `/uloop-get-hierarchy` |
-| "Search for prefabs" | `/uloop-unity-search` |
 | "Play the game and bring Unity to the front" | `/uloop-control-play-mode` + `/uloop-focus-window` |
 | "Bulk-update prefab parameters" | `/uloop-execute-dynamic-code` |
 | "Take a screenshot of Game View and adjust the UI layout" | `/uloop-screenshot` + `/uloop-execute-dynamic-code` |
@@ -137,7 +144,7 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 
 
 <details>
-<summary>All 20 Bundled Skills</summary>
+<summary>All 17 Bundled Skills</summary>
 
 - `/uloop-launch` - Launch Unity with correct version
 - `/uloop-compile` - Execute compilation
@@ -146,8 +153,6 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 - `/uloop-clear-console` - Clear console
 - `/uloop-focus-window` - Bring Unity Editor to front
 - `/uloop-get-hierarchy` - Get scene hierarchy
-- `/uloop-unity-search` - Unity Search
-- `/uloop-get-menu-items` - Get menu items
 - `/uloop-execute-menu-item` - Execute menu item
 - `/uloop-find-game-objects` - Find GameObjects
 - `/uloop-screenshot` - Capture EditorWindow
@@ -158,7 +163,6 @@ That's it! After installing Skills, LLM tools can automatically handle instructi
 - `/uloop-replay-input` - Replay recorded input during PlayMode
 - `/uloop-control-play-mode` - Control Play Mode
 - `/uloop-execute-dynamic-code` - Execute dynamic C# code
-- `/uloop-get-unity-search-providers` - Get search provider details
 
 </details>
 
@@ -344,31 +348,14 @@ Clear logs that become noise during log searches.
 → Start new debug session
 ```
 
-### 5. unity-search - Project Search with UnitySearch
-You can use [UnitySearch](https://docs.unity3d.com/Manual/search-overview.html).
-```text
-→ unity-search (SearchQuery: "*.prefab")
-→ List prefabs matching specific conditions
-→ Identify problematic prefabs
-```
-
-### 6. get-unity-search-providers - Check UnitySearch Search Providers
-Retrieve search providers offered by UnitySearch.
-```text
-→ Understand each provider's capabilities, choose optimal search method
-```
-
-### 7. get-menu-items - Retrieve Menu Items
-Retrieve menu items defined with [MenuItem("xxx")] attribute. Can filter by string specification.
-
-### 8. execute-menu-item - Execute Menu Items
+### 5. execute-menu-item - Execute Menu Items
 Execute menu items defined with [MenuItem("xxx")] attribute.
 ```text
 → Execute project-specific tools
 → Check results with get-logs
 ```
 
-### 9. find-game-objects - Search Scene Objects
+### 6. find-game-objects - Search Scene Objects
 Retrieve objects and examine component parameters. Also retrieve information about currently selected GameObjects (multiple selection supported) in Unity Editor.
 ```text
 → find-game-objects (RequiredComponents: ["Camera"])
@@ -378,7 +365,7 @@ Retrieve objects and examine component parameters. Also retrieve information abo
 → Get detailed information about currently selected GameObjects in Unity Editor (supports multiple selection)
 ```
 
-### 10. get-hierarchy - Analyze Scene Structure
+### 7. get-hierarchy - Analyze Scene Structure
 Retrieve information about the currently active Hierarchy in nested JSON format. Works at runtime as well.
 **Automatic File Export**: Retrieved hierarchy data is always saved as JSON in `{project_root}/.uloop/outputs/HierarchyResults/` directory. The response only returns the file path, minimizing token consumption even for large datasets.
 **Selection Mode**: Use `UseSelection: true` to get hierarchy starting from currently selected GameObject(s) in Unity Editor. Supports multiple selection - when parent and child are both selected, only the parent is used as root to avoid duplicate traversal.
@@ -389,11 +376,11 @@ Retrieve information about the currently active Hierarchy in nested JSON format.
 → Get hierarchy of currently selected GameObjects without specifying paths manually
 ```
 
-### 11. focus-window - Bring Unity Editor Window to Front (macOS & Windows)
+### 8. focus-window - Bring Unity Editor Window to Front (macOS & Windows)
 Ensures the Unity Editor window becomes the foreground application on macOS and Windows Editor builds.
 Great for keeping visual feedback in sync after other apps steal focus. (Linux is currently unsupported.)
 
-### 12. screenshot - Take a Screenshot of EditorWindow
+### 9. screenshot - Take a Screenshot of EditorWindow
 Take a screenshot of any EditorWindow as a PNG. Specify the window name (the text displayed in the title bar/tab) to capture.
 When multiple windows of the same type are open (e.g., 3 Inspector windows), all windows are saved with numbered filenames.
 Supports three matching modes: `exact` (default), `prefix`, and `contains` - all case-insensitive.
@@ -403,7 +390,7 @@ Supports three matching modes: `exact` (default), `prefix`, and `contains` - all
 → Provide visual feedback to AI
 ```
 
-### 13. control-play-mode - Control Play Mode
+### 10. control-play-mode - Control Play Mode
 Control Unity Editor's Play Mode. Supports three actions: Play (start/resume), Stop, and Pause.
 ```
 → control-play-mode (Action: Play)
@@ -412,17 +399,14 @@ Control Unity Editor's Play Mode. Supports three actions: Play (start/resume), S
 → Pause to inspect state
 ```
 
-### 14. execute-dynamic-code - Dynamic C# Code Execution
+### 11. execute-dynamic-code - Dynamic C# Code Execution
 Execute C# code dynamically within Unity Editor.
 
 Async support:
 - You can write await in your snippet (Task/ValueTask/UniTask and any awaitable type)
 - Cancellation is propagated when you pass a CancellationToken to the tool
 
-**Security Level Support**: Implements 3-tier security control to progressively restrict executable code:
-
-  - **Level 0 - Disabled**
-    - No compilation or execution allowed
+**Security Level Support**: Implements 2-tier security control to restrict executable code. To disable this tool entirely, use the tool on/off toggle in the MCP tool settings UI.
 
   - **Level 1 - Restricted** 【Recommended Setting】
     - All Unity APIs and .NET standard libraries are generally available
@@ -463,15 +447,16 @@ Async support:
 > - **Allow Third Party Tools**: Enable user-developed custom tools
 >
 > **Dynamic Code Security Level** (`execute-dynamic-code` tool):
-> - **Level 0 (Disabled)**: Complete code execution disabled (safest)
 > - **Level 1 (Restricted)**: Unity API only, dangerous operations blocked (recommended)
 > - **Level 2 (FullAccess)**: All APIs available (use with caution)
+>
+> To disable `execute-dynamic-code` entirely, turn it off using the tool on/off toggle.
 >
 > Setting changes take effect immediately without server restart.
 >
 
 ### PlayMode Automated Testing Tools
-### 15. simulate-mouse-ui - Simulate Mouse Input on PlayMode UI
+### 12. simulate-mouse-ui - Simulate Mouse Input on PlayMode UI
 Simulate mouse click, long-press, and drag on PlayMode UI elements. Uses EventSystem and ExecuteEvents to dispatch pointer events directly — works independently of both old and new Input System. For game logic that reads Input System (e.g. `Mouse.current.leftButton.wasPressedThisFrame`), use `simulate-mouse-input` instead.
 
 Supports 6 actions: Click, LongPress, Drag (one-shot), DragStart/DragMove/DragEnd (split drag).
@@ -488,7 +473,7 @@ Supports 6 actions: Click, LongPress, Drag (one-shot), DragStart/DragMove/DragEn
 ```
 https://github.com/user-attachments/assets/c7ee9103-c282-4f90-8b01-64bb17400f3e
 
-### 16. simulate-mouse-input - Simulate Mouse Input in PlayMode via Input System
+### 13. simulate-mouse-input - Simulate Mouse Input in PlayMode via Input System
 Simulate mouse input in PlayMode via Input System. Injects button clicks, mouse delta, and scroll wheel directly into `Mouse.current` for game logic that reads Input System. Unlike `simulate-mouse-ui` which fires EventSystem pointer events for uGUI, this tool targets game logic that reads `Mouse.current` directly. Requires the Input System package, and Active Input Handling must be set to `Input System Package (New)` or `Both` in Player Settings.
 
 Supports 5 actions: Click, LongPress, MoveDelta, SmoothDelta, Scroll.
@@ -502,7 +487,7 @@ Supports 5 actions: Click, LongPress, MoveDelta, SmoothDelta, Scroll.
 → simulate-mouse-input (Action: SmoothDelta, DeltaX: 300, DeltaY: 0, Duration: 0.5)
 ```
 
-### 17. simulate-keyboard - Simulate Keyboard Input in PlayMode
+### 14. simulate-keyboard - Simulate Keyboard Input in PlayMode
 Simulate keyboard key input in PlayMode via Input System. Supports single key taps, sustained holds, and multi-key combinations (e.g. Shift+W for sprinting). Requires the Input System package, and Active Input Handling must be set to `Input System Package (New)` or `Both` in Player Settings. Game code must read input via Input System API (e.g. `Keyboard.current[Key.W].isPressed`), not legacy `Input.GetKey()`.
 
 Supports 3 actions: Press (one-shot tap or timed hold), KeyDown (hold key down), KeyUp (release held key).
@@ -517,7 +502,7 @@ Supports 3 actions: Press (one-shot tap or timed hold), KeyDown (hold key down),
 → simulate-keyboard (Action: KeyUp, Key: LeftShift)
 ```
 
-### 18. record-input - Record Input During PlayMode
+### 15. record-input - Record Input During PlayMode
 Record keyboard and mouse input during PlayMode frame-by-frame into a JSON file. Captures key presses, mouse movement, clicks, and scroll events via Input System device state diffing. Requires the Input System package.
 
 ```text
@@ -527,7 +512,7 @@ Record keyboard and mouse input during PlayMode frame-by-frame into a JSON file.
 → JSON file saved to .uloop/outputs/InputRecordings/
 ```
 
-### 19. replay-input - Replay Recorded Input During PlayMode
+### 16. replay-input - Replay Recorded Input During PlayMode
 Replay recorded keyboard and mouse input during PlayMode. Loads a JSON recording and injects input frame-by-frame via Input System. Supports looping and progress monitoring. Requires the Input System package.
 
 ```text
@@ -694,7 +679,7 @@ For a more comprehensive example project, see [uLoopMCP-extensions-sample](https
 > [!TIP]
 > **File Output**
 >
-> The `run-tests`, `unity-search`, and `get-hierarchy` tools can save results to the `{project_root}/.uloop/outputs/` directory to avoid massive token consumption when dealing with large datasets.
+> The `run-tests` and `get-hierarchy` tools can save results to the `{project_root}/.uloop/outputs/` directory to avoid massive token consumption when dealing with large datasets.
 > **Recommendation**: Add `.uloop/` to `.gitignore` to exclude from version control.
 
 ## License

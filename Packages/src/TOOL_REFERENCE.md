@@ -126,44 +126,7 @@ All tools automatically include the following property:
 
 ## Unity Search & Discovery Tools
 
-### 6. unity-search
-- **Description**: Search Unity project using Unity Search API with comprehensive filtering and export options
-- **Parameters**:
-  - `SearchQuery` (string): Search query string (supports Unity Search syntax) (default: "")
-    - Examples: "*.cs", "t:Texture2D", "ref:MyScript", "p:MyPackage"
-    - For detailed Unity Search documentation see: https://docs.unity3d.com/6000.1/Documentation/Manual/search-expressions.html and https://docs.unity3d.com/6000.0/Documentation/Manual/search-query-operators.html. Common queries: "*.cs" (all C# files), "t:Texture2D" (Texture2D assets), "ref:MyScript" (assets referencing MyScript), "p:MyPackage" (search in package), "t:MonoScript *.cs" (C# scripts only), "Assets/Scripts/*.cs" (C# files in specific folder). Japanese guide: https://light11.hatenadiary.com/entry/2022/12/12/193119
-  - `Providers` (array): Specific search providers to use (empty = all active providers) (default: [])
-    - Common providers: "asset", "scene", "menu", "settings", "packages"
-  - `MaxResults` (number): Maximum number of search results to return (default: 50)
-  - `IncludeDescription` (boolean): Whether to include detailed descriptions in results (default: true)
-  - `IncludeMetadata` (boolean): Whether to include file metadata (size, modified date) (default: false)
-  - `SearchFlags` (enum): Search flags for controlling Unity Search behavior (default: "Default"(0), "Synchronous"(1), "WantsMore"(2), "Packages"(4), "Sorted"(8))
-  - `SaveToFile` (boolean): Whether to save search results to external file to avoid massive token consumption when dealing with large result sets. Results are saved as JSON/CSV files for external reading (default: false)
-  - `OutputFormat` (enum): Output file format when SaveToFile is enabled (default: "JSON"(0), "CSV"(1), "TSV"(2))
-  - `AutoSaveThreshold` (number): Threshold for automatic file saving (if result count exceeds this, automatically save to file). Set to 0 to disable automatic file saving (default: 100)
-  - `FileExtensions` (array): Filter results by file extension (e.g., "cs", "prefab", "mat") (default: [])
-  - `AssetTypes` (array): Filter results by asset type (e.g., "Texture2D", "GameObject", "MonoScript") (default: [])
-  - `PathFilter` (string): Filter results by path pattern (supports wildcards) (default: "")
-- **Response**:
-  - `Results` (array): Array of search result items (empty if results were saved to file)
-  - `TotalCount` (number): Total number of search results found
-  - `DisplayedCount` (number): Number of results displayed in this response
-  - `SearchQuery` (string): Search query that was executed
-  - `ProvidersUsed` (array): Search providers that were used for the search
-  - `SearchDurationMs` (number): Search duration in milliseconds
-  - `Success` (boolean): Whether the search was completed successfully
-  - `ErrorMessage` (string): Error message if search failed
-  - `ResultsFilePath` (string): Path to saved search results file (when SaveToFile is enabled)
-  - `ResultsSavedToFile` (boolean): Whether results were saved to file
-  - `SavedFileFormat` (string): File format of saved results
-  - `SaveToFileReason` (string): Reason why results were saved to file
-  - `AppliedFilters` (object): Applied filter information
-    - `FileExtensions` (array): Filtered file extensions
-    - `AssetTypes` (array): Filtered asset types
-    - `PathFilter` (string): Applied path filter pattern
-    - `FilteredOutCount` (number): Number of results filtered out
-
-### 7. get-hierarchy
+### 6. get-hierarchy
 - **Description**: Get Unity Hierarchy structure in nested JSON format for AI-friendly processing
 - **Parameters**:
   - `IncludeInactive` (boolean): Whether to include inactive GameObjects in the hierarchy result (default: true)
@@ -177,29 +140,7 @@ All tools automatically include the following property:
   - `message` (string): Human-readable guidance for clients to locate and read the JSON file
   - `hierarchyFilePath` (string): File path where hierarchy data was saved (e.g., "{project_root}/.uloop/outputs/HierarchyResults/hierarchy_2025-07-10_21-30-15.json"). The exported JSON file contains `hierarchy` (nested array of GameObjects) and `context` (scene info, node count, max depth)
 
-### 8. get-menu-items
-- **Description**: Retrieve Unity MenuItems with detailed metadata for programmatic execution. Unlike Unity Search menu provider, this provides implementation details (method names, assemblies, execution compatibility) needed for automation and debugging
-- **Parameters**:
-  - `FilterText` (string): Text to filter MenuItem paths (empty for all items) (default: "")
-  - `FilterType` (enum): Type of filter to apply (contains(0), exact(1), startswith(2)) (default: "contains")
-  - `IncludeValidation` (boolean): Include validation functions in the results (default: false)
-  - `MaxCount` (number): Maximum number of menu items to retrieve (default: 200)
-- **Response**:
-  - `MenuItems` (array): List of discovered MenuItems matching the filter criteria
-    - `Path` (string): MenuItem path
-    - `MethodName` (string): Execution method name
-    - `TypeName` (string): Implementation class name
-    - `AssemblyName` (string): Assembly name
-    - `Priority` (number): Menu item priority
-    - `IsValidateFunction` (boolean): Whether it's a validation function
-    - `CanExecuteViaEditorApplication` (boolean): Whether the menu item can be executed via EditorApplication.ExecuteMenuItem
-    - `WarningMessage` (string): Warning message if there are issues with this MenuItem (e.g., duplicate attributes)
-  - `TotalCount` (number): Total number of MenuItems discovered before filtering
-  - `FilteredCount` (number): Number of MenuItems returned after filtering
-  - `AppliedFilter` (string): The filter text that was applied
-  - `AppliedFilterType` (string): The filter type that was applied
-
-### 9. execute-menu-item
+### 7. execute-menu-item
 - **Description**: Execute Unity MenuItem by path
 - **Parameters**:
   - `MenuItemPath` (string): The menu item path to execute (e.g., "GameObject/Create Empty") (default: "")
@@ -213,7 +154,7 @@ All tools automatically include the following property:
   - `MenuItemFound` (boolean): Whether the menu item was found in the system
   - `WarningMessage` (string): Warning message if there are issues with this MenuItem (e.g., duplicate attributes)
 
-### 10. execute-dynamic-code
+### 8. execute-dynamic-code
 - **Description**: Execute C# code dynamically within Unity Editor. Implements security levels and automatic using statement processing with enhanced error messaging
 - **Parameters**:
   - `Code` (string): The C# code to execute (default: "")
@@ -238,7 +179,7 @@ All tools automatically include the following property:
   - `DiagnosticsSummary` (string): Summary of diagnostics (unique count, total count, first error brief)
   - `Diagnostics` (array): Structured diagnostics for rich clients (same structure as CompilationErrors)
 
-### 11. focus-window
+### 9. focus-window
 - **Description**: Brings Unity Editor window to front on macOS and Windows
 - **Parameters**: None
 - **Response**:
@@ -246,7 +187,7 @@ All tools automatically include the following property:
   - `Message` (string): Operation result message
   - `ErrorMessage` (string): Error message if operation failed
 
-### 12. screenshot
+### 10. screenshot
 - **Description**: Take a screenshot of Unity EditorWindow and save as PNG. Supports capturing any open EditorWindow by name with flexible matching modes
 - **Parameters**:
   - `WindowName` (string): Window name to capture (e.g., "Game", "Scene", "Console", "Inspector", "Project", "Hierarchy") (default: "Game")
@@ -264,7 +205,7 @@ All tools automatically include the following property:
     - `Width` (number): Captured image width in pixels
     - `Height` (number): Captured image height in pixels
 
-### 13. control-play-mode
+### 11. control-play-mode
 - **Description**: Control Unity Editor play mode (play/stop/pause)
 - **Parameters**:
   - `Action` (enum): Action to perform - "Play", "Stop", "Pause" (default: "Play")
@@ -278,7 +219,7 @@ All tools automatically include the following property:
 
 ---
 
-### 14. simulate-mouse-ui
+### 12. simulate-mouse-ui
 - **Description**: Simulate mouse click, long-press, and drag on PlayMode UI elements via EventSystem screen coordinates. Uses EventSystem and ExecuteEvents to dispatch pointer events directly — works independently of both old and new Input System. For game logic that reads Input System (e.g. `Mouse.current.leftButton.wasPressedThisFrame`), use `simulate-mouse-input` instead
 - **Parameters**:
   - `Action` (enum): Mouse action - "Click", "Drag", "DragStart", "DragMove", "DragEnd", "LongPress" (default: "Click")
@@ -305,7 +246,7 @@ All tools automatically include the following property:
   - `EndPositionX` (number): End X position (for Drag actions)
   - `EndPositionY` (number): End Y position (for Drag actions)
 
-### 15. simulate-mouse-input
+### 13. simulate-mouse-input
 - **Description**: Simulate mouse input in PlayMode via Input System. Injects button clicks, mouse delta, and scroll wheel directly into `Mouse.current` for game logic that reads Input System (e.g. `wasPressedThisFrame`, `Mouse.current.delta`). Requires the Input System package and Active Input Handling set to `Input System Package (New)` or `Both` in Player Settings. For UI elements with IPointerClickHandler, use `simulate-mouse-ui` instead
 - **Parameters**:
   - `Action` (enum): Mouse input action - "Click", "LongPress", "MoveDelta", "SmoothDelta", "Scroll" (default: "Click")
@@ -330,7 +271,7 @@ All tools automatically include the following property:
   - `PositionX` (number, nullable): X position used (null for non-positional actions)
   - `PositionY` (number, nullable): Y position used (null for non-positional actions)
 
-### 16. simulate-keyboard
+### 14. simulate-keyboard
 - **Description**: Simulate keyboard key input in PlayMode via Input System. Supports single key taps, sustained holds, and multi-key combinations. Requires the Input System package, and Active Input Handling must be set to `Input System Package (New)` or `Both` in Player Settings. Game code must read input via Input System API (e.g. `Keyboard.current[Key.W].isPressed`), not legacy `Input.GetKey()`
 - **Parameters**:
   - `Action` (enum): Keyboard action - "Press", "KeyDown", "KeyUp" (default: "Press")
@@ -344,35 +285,6 @@ All tools automatically include the following property:
   - `Message` (string): Description of the action performed
   - `Action` (string): The action that was executed
   - `KeyName` (string, nullable): Name of the key that was acted upon
-
-### 17. get-unity-search-providers
-
-Get detailed information about available Unity Search providers.
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `ProviderId` | string | `""` | Specific provider ID (empty = all providers). Examples: `asset`, `scene`, `menu`, `settings` |
-| `ActiveOnly` | boolean | `false` | Return only active providers |
-| `SortByPriority` | boolean | `true` | Sort by priority (lower = higher priority) |
-| `IncludeDescriptions` | boolean | `true` | Include detailed descriptions |
-
-**Response:**
-
-- `Providers` (array): Provider details
-  - `Id` (string): Provider identifier
-  - `DisplayName` (string): Display name
-  - `Description` (string): Provider description
-  - `IsActive` (boolean): Whether the provider is active
-  - `Priority` (integer): Provider priority
-- `TotalCount` (integer): Total number of providers returned
-- `ActiveCount` (integer): Number of active providers in the result
-- `InactiveCount` (integer): Number of inactive providers in the result
-- `Success` (boolean): Whether the request succeeded
-- `ErrorMessage` (string): Error message if the request failed
-- `AppliedFilter` (string): Filter that was applied
-- `SortedByPriority` (boolean): Whether results are sorted by priority
 
 ---
 

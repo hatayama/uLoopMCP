@@ -43,7 +43,6 @@ After installing Skills, LLM tools can automatically handle instructions like:
 | "Fix the compile errors" | `/uloop-compile` |
 | "Run the tests and tell me why they failed" | `/uloop-run-tests` |
 | "Check the scene hierarchy" | `/uloop-get-hierarchy` |
-| "Search for prefabs" | `/uloop-unity-search` |
 
 > **No MCP configuration required!** As long as the server is running in the uLoopMCP Window, LLM tools communicate directly with Unity through Skills.
 
@@ -57,8 +56,6 @@ Skills are dynamically loaded from the uLoopMCP package in your Unity project. T
 - `/uloop-clear-console` - Clear console
 - `/uloop-focus-window` - Bring Unity Editor to front
 - `/uloop-get-hierarchy` - Get scene hierarchy
-- `/uloop-unity-search` - Unity Search
-- `/uloop-get-menu-items` - Get menu items
 - `/uloop-execute-menu-item` - Execute menu item
 - `/uloop-find-game-objects` - Find GameObjects
 - `/uloop-screenshot` - Take a screenshot of EditorWindow
@@ -225,59 +222,6 @@ uloop get-hierarchy --use-selection true
 
 **Output:**
 - `hierarchyFilePath` (string) - Path to saved JSON file containing hierarchy data
-
-### unity-search
-
-Search Unity project.
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--search-query` | string | | Search query (Unity Search syntax) |
-| `--providers` | array | | Search providers (e.g., `asset`, `scene`, `menu`) |
-| `--max-results` | integer | `50` | Maximum number of results |
-| `--include-description` | boolean | `true` | Include detailed descriptions in results |
-| `--include-metadata` | boolean | `false` | Include file metadata (size, modified date) |
-| `--search-flags` | enum | `Default` | Search flags: `Default`, `Synchronous`, `WantsMore`, `Packages`, `Sorted` |
-| `--save-to-file` | boolean | `false` | Save results to file |
-| `--output-format` | enum | `JSON` | Output format when saving: `JSON`, `CSV`, `TSV` |
-| `--auto-save-threshold` | integer | `100` | Auto-save threshold (0 to disable) |
-| `--file-extensions` | array | | Filter by file extension (e.g., `cs`, `prefab`, `mat`) |
-| `--asset-types` | array | | Filter by asset type (e.g., `Texture2D`, `GameObject`) |
-| `--path-filter` | string | | Filter by path pattern (supports wildcards) |
-
-```bash
-uloop unity-search --search-query "*.prefab"
-uloop unity-search --search-query "t:Texture2D" --max-results 10
-uloop unity-search --search-query "t:MonoScript *.cs" --save-to-file true
-```
-
-**Output:**
-- `TotalCount` (integer) - Total results found
-- `DisplayedCount` (integer) - Results returned
-- `Results` (array) - Search result items
-- `SearchDurationMs` (integer) - Search time in milliseconds
-- `ResultsFilePath` (string) - File path when results are saved to file
-
-### get-menu-items
-
-Retrieve Unity MenuItems.
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--filter-text` | string | | Text to filter MenuItem paths |
-| `--filter-type` | enum | `contains` | Filter type: `contains`, `exact`, `startswith` |
-| `--max-count` | integer | `200` | Maximum number of items |
-| `--include-validation` | boolean | `false` | Include validation functions |
-
-```bash
-uloop get-menu-items
-uloop get-menu-items --filter-text "GameObject" --filter-type startswith
-```
-
-**Output:**
-- `TotalCount` (integer) - Total MenuItems before filtering
-- `FilteredCount` (integer) - MenuItems after filtering
-- `MenuItems` (array) - Items with `Path`, `Priority`, `MethodName` fields
 
 ### execute-menu-item
 
