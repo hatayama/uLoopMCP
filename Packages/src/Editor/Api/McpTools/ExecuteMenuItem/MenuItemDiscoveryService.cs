@@ -60,6 +60,8 @@ namespace io.github.hatayama.uLoopMCP
                 BindingFlags.NonPublic
             );
 
+            // Unity requires validate functions to be in the same class as their executable counterpart
+            MenuItemInfo validateCandidate = null;
             foreach (MethodInfo method in methods)
             {
                 MenuItem[] menuItemAttributes = method.GetCustomAttributes<MenuItem>(false).ToArray();
@@ -68,17 +70,24 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
                 }
 
-                // A method can have multiple [MenuItem] attributes with different paths
                 foreach (MenuItem attr in menuItemAttributes)
                 {
-                    if (string.Equals(attr.menuItem, menuItemPath, StringComparison.OrdinalIgnoreCase))
+                    if (!string.Equals(attr.menuItem, menuItemPath, StringComparison.OrdinalIgnoreCase))
                     {
-                        return CreateMenuItemInfo(method, attr, menuItemAttributes);
+                        continue;
                     }
+
+                    MenuItemInfo info = CreateMenuItemInfo(method, attr, menuItemAttributes);
+                    if (!info.IsValidateFunction)
+                    {
+                        return info;
+                    }
+
+                    validateCandidate ??= info;
                 }
             }
 
-            return null;
+            return validateCandidate;
         }
 
         private static MenuItemInfo CreateMenuItemInfo(MethodInfo method, MenuItem matchedAttribute, MenuItem[] allAttributes)
