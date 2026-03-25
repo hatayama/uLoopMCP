@@ -6,7 +6,7 @@
 :root {
     --mcp-color-success: #4caf50;
     --mcp-color-danger: #ef5350;
-    --mcp-color-warning: #ffae00;
+    --mcp-color-warning: #ffd200;
 }
 
 /* Main Container */
