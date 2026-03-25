@@ -28,7 +28,7 @@ Unity CLI Loopのコアとなるコンセプトは次の4つです。
 1. **AIが自律的にビルド・テスト・ログ解析・修正を回し続ける「自律開発ループ」** — `compile`, `run-tests`, `get-logs`, `clear-console`
 2. **シーン構築、オブジェクト操作、メニュー実行、スクリーンショットからのUI改善など、Unity Editorの操作をAIに委任** — `execute-dynamic-code`, `execute-menu-item`, `screenshot`
 3. **PlayMode中の自動テスト — ボタンクリック、ドラッグ、キーボード入力、入力の記録・再生、ゲーム動作の検証をAIが実行** — `simulate-mouse-ui`, `simulate-mouse-input`, `simulate-keyboard`, `record-input`, `replay-input`, `execute-dynamic-code`, `screenshot`
-4. **上記を最小限のツール数で実現する。** → [設計思想](#設計思想)
+4. **上記を最小限のツール数で実現する** → [設計思想](#設計思想)
 
 https://github.com/user-attachments/assets/569a2110-7351-4cf3-8281-3a83fe181817
 
