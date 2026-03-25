@@ -203,6 +203,7 @@ namespace io.github.hatayama.uLoopMCP
         private class LegacySecuritySettingsProbe
         {
             public bool enableTestsExecution = true;
+            public bool allowMenuItemExecution = true;
             public bool allowThirdPartyTools = false;
             public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted;
         }
@@ -276,6 +277,13 @@ namespace io.github.hatayama.uLoopMCP
                 && !probe.enableTestsExecution)
             {
                 ToolSettings.SetToolEnabled(McpConstants.TOOL_NAME_RUN_TESTS, false);
+                migrated = true;
+            }
+
+            if (json.Contains($"\"{nameof(LegacySecuritySettingsProbe.allowMenuItemExecution)}\"")
+                && !probe.allowMenuItemExecution)
+            {
+                ToolSettings.SetToolEnabled(McpConstants.TOOL_NAME_EXECUTE_MENU_ITEM, false);
                 migrated = true;
             }
 

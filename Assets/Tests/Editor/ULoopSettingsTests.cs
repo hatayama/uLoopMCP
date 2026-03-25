@@ -306,6 +306,28 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
+        public void GetSettings_WhenAllowMenuItemExecutionIsFalse_ShouldDisableExecuteMenuItemTool()
+        {
+            string settingsJson = JsonUtility.ToJson(new SettingsFileFixture
+            {
+                allowMenuItemExecution = false,
+                allowThirdPartyTools = true,
+                dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
+            }, true);
+            File.WriteAllText(SettingsFilePath, settingsJson);
+            DeleteIfExists(ToolSettingsFilePath);
+            InvalidateBothCaches();
+            ToolSettings.InvalidateCache();
+
+            ULoopSettings.GetSettings();
+
+            Assert.IsFalse(ToolSettings.IsToolEnabled(McpConstants.TOOL_NAME_EXECUTE_MENU_ITEM));
+
+            string updatedPermissionsJson = File.ReadAllText(SettingsFilePath);
+            StringAssert.DoesNotContain("\"allowMenuItemExecution\"", updatedPermissionsJson);
+        }
+
+        [Test]
         public void SaveSettings_WhenJsonContainsRemovedFields_ShouldRewriteWithoutThem()
         {
             string settingsJson = JsonUtility.ToJson(new SettingsFileFixture

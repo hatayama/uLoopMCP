@@ -137,6 +137,7 @@ namespace io.github.hatayama.uLoopMCP
 
         // Tool name constants
         public const string TOOL_NAME_EXECUTE_DYNAMIC_CODE = "execute-dynamic-code";
+        public const string TOOL_NAME_EXECUTE_MENU_ITEM = "execute-menu-item";
         public const string TOOL_NAME_RUN_TESTS = "run-tests";
 
         // File output directories
