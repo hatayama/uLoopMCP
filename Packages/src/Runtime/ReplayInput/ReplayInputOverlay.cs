@@ -80,7 +80,9 @@ namespace io.github.hatayama.uLoopMCP
 
             if (_progressBarFill != null)
             {
-                _progressBarFill.fillAmount = ReplayInputOverlayState.Progress;
+                Vector3 scale = _progressBarFill.rectTransform.localScale;
+                scale.x = ReplayInputOverlayState.Progress;
+                _progressBarFill.rectTransform.localScale = scale;
             }
 
             if (_loopIcon != null)
