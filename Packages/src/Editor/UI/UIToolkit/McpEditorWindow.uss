@@ -178,6 +178,10 @@
     margin-top: 8px;
 }
 
+#install-cli-button {
+    margin-top: 2px;
+}
+
 .mcp-button--delete {
     margin-top: 12px;
     color: #ff6b6b;
@@ -603,8 +607,15 @@
    =========================================== */
 .mcp-cli-subsection-header {
     -unity-font-style: bold;
-    margin-top: 8px;
+    margin-top: 6px;
     margin-bottom: 4px;
+}
+
+.mcp-cli-separator {
+    height: 1px;
+    margin-top: 10px;
+    margin-bottom: 6px;
+    background-color: rgba(255, 255, 255, 0.12);
 }
 
 .mcp-cli-status-row {
