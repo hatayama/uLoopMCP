@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.4.0](https://github.com/hatayama/unity-cli-loop/compare/v1.3.0...v1.4.0) (2026-03-25)
+
+
+### Features
+
+* Migrate dynamic code compilation from Roslyn to AssemblyBuilder with enhanced security ([#829](https://github.com/hatayama/unity-cli-loop/issues/829)) ([0ab2b87](https://github.com/hatayama/unity-cli-loop/commit/0ab2b8768ea286e3aecae8bd866ee72e2550ce48))
+
+
+### Bug Fixes
+
+* refine MCP tool settings UI ([#836](https://github.com/hatayama/unity-cli-loop/issues/836)) ([16c3c87](https://github.com/hatayama/unity-cli-loop/commit/16c3c87e3b34ca1c3750f0923ec2ecbbfe27d82f))
+* suppress idle overlay reactivation after mouse release during input replay ([#827](https://github.com/hatayama/unity-cli-loop/issues/827)) ([7133e9c](https://github.com/hatayama/unity-cli-loop/commit/7133e9c1a53473b25bcdf6f5712d5806c2147da6))
+
 ## [1.3.0](https://github.com/hatayama/unity-cli-loop/compare/v1.2.1...v1.3.0) (2026-03-23)
 
 
