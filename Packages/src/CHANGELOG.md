@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.0](https://github.com/hatayama/unity-cli-loop/compare/v1.4.0...v1.5.0) (2026-03-25)
+
+
+### Features
+
+* Remove 3 redundant MCP tools and add Design Philosophy section ([#837](https://github.com/hatayama/unity-cli-loop/issues/837)) ([11412b6](https://github.com/hatayama/unity-cli-loop/commit/11412b6de429023b630a24cd3fbf685ae7274048))
+
+
+### Bug Fixes
+
+* replay progress bar always appearing at 100% ([#839](https://github.com/hatayama/unity-cli-loop/issues/839)) ([2880453](https://github.com/hatayama/unity-cli-loop/commit/2880453c747fd66092081f97982867368fdb8997))
+
 ## [1.4.0](https://github.com/hatayama/unity-cli-loop/compare/v1.3.0...v1.4.0) (2026-03-25)
 
 
