@@ -31050,7 +31050,7 @@ var McpKeepaliveService = class {
 };
 
 // src/version.ts
-var VERSION = "1.4.0";
+var VERSION = "1.5.0";
 
 // src/server.ts
 var UnityMcpServer = class {
