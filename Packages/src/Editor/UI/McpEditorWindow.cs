@@ -586,6 +586,7 @@ namespace io.github.hatayama.uLoopMCP
         private void UpdateAllowThirdPartyTools(bool allow)
         {
             _model.UpdateAllowThirdPartyTools(allow);
+            RefreshAllSections();
         }
 
         private void UpdateAddRepositoryRoot(bool addRepositoryRoot)

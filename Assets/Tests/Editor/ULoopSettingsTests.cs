@@ -9,10 +9,14 @@ namespace io.github.hatayama.uLoopMCP
     {
         private static readonly string SettingsFilePath =
             Path.Combine(McpConstants.ULOOP_DIR, McpConstants.ULOOP_SETTINGS_FILE_NAME);
+        private static readonly string ToolSettingsFilePath =
+            Path.Combine(McpConstants.ULOOP_DIR, McpConstants.ULOOP_TOOL_SETTINGS_FILE_NAME);
         private static readonly string LegacySettingsFilePath =
             Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
         private static readonly string SettingsBackupPath = SettingsFilePath + ".bak";
+        private static readonly string ToolSettingsBackupPath = ToolSettingsFilePath + ".bak";
         private static readonly string SettingsTmpPath = SettingsFilePath + ".tmp";
+        private static readonly string ToolSettingsTmpPath = ToolSettingsFilePath + ".tmp";
         private static readonly string LegacyBackupPath = LegacySettingsFilePath + ".bak";
         private static readonly string LegacyTmpPath = LegacySettingsFilePath + ".tmp";
         private static readonly string OldSettingsFilePath =
@@ -21,12 +25,15 @@ namespace io.github.hatayama.uLoopMCP
 
         private static readonly string[] AllSidecarPaths = new[]
         {
-            SettingsBackupPath, SettingsTmpPath, LegacyBackupPath, LegacyTmpPath,
+            SettingsBackupPath, SettingsTmpPath, ToolSettingsBackupPath, ToolSettingsTmpPath,
+            LegacyBackupPath, LegacyTmpPath,
             OldSettingsFilePath, OldSettingsBackupPath
         };
 
         private bool _settingsFileExisted;
         private string _settingsFileContent;
+        private bool _toolSettingsFileExisted;
+        private string _toolSettingsFileContent;
         private bool _legacyFileExisted;
         private string _legacyFileContent;
         private bool[] _sidecarExisted;
@@ -37,6 +44,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             _settingsFileExisted = File.Exists(SettingsFilePath);
             _settingsFileContent = _settingsFileExisted ? File.ReadAllText(SettingsFilePath) : null;
+
+            _toolSettingsFileExisted = File.Exists(ToolSettingsFilePath);
+            _toolSettingsFileContent = _toolSettingsFileExisted ? File.ReadAllText(ToolSettingsFilePath) : null;
 
             _legacyFileExisted = File.Exists(LegacySettingsFilePath);
             _legacyFileContent = _legacyFileExisted ? File.ReadAllText(LegacySettingsFilePath) : null;
@@ -70,6 +80,7 @@ namespace io.github.hatayama.uLoopMCP
         public void TearDown()
         {
             RestoreFile(SettingsFilePath, _settingsFileExisted, _settingsFileContent);
+            RestoreFile(ToolSettingsFilePath, _toolSettingsFileExisted, _toolSettingsFileContent);
             RestoreFile(LegacySettingsFilePath, _legacyFileExisted, _legacyFileContent);
 
             for (int i = 0; i < AllSidecarPaths.Length; i++)
@@ -251,6 +262,50 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         [Test]
+        public void GetSettings_WhenDynamicCodeLevelIsLegacyDisabled_ShouldDisableExecuteDynamicCodeTool()
+        {
+            string settingsJson = JsonUtility.ToJson(new SettingsFileFixture
+            {
+                allowThirdPartyTools = true,
+                dynamicCodeSecurityLevel = 0
+            }, true);
+            File.WriteAllText(SettingsFilePath, settingsJson);
+            DeleteIfExists(ToolSettingsFilePath);
+            InvalidateBothCaches();
+            ToolSettings.InvalidateCache();
+
+            ULoopSettingsData result = ULoopSettings.GetSettings();
+
+            Assert.AreEqual((int)DynamicCodeSecurityLevel.Restricted, result.dynamicCodeSecurityLevel);
+            Assert.IsFalse(ToolSettings.IsToolEnabled(McpConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE));
+
+            string updatedPermissionsJson = File.ReadAllText(SettingsFilePath);
+            StringAssert.Contains("\"dynamicCodeSecurityLevel\": 1", updatedPermissionsJson);
+        }
+
+        [Test]
+        public void GetSettings_WhenEnableTestsExecutionIsFalse_ShouldDisableRunTestsTool()
+        {
+            string settingsJson = JsonUtility.ToJson(new SettingsFileFixture
+            {
+                enableTestsExecution = false,
+                allowThirdPartyTools = true,
+                dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted
+            }, true);
+            File.WriteAllText(SettingsFilePath, settingsJson);
+            DeleteIfExists(ToolSettingsFilePath);
+            InvalidateBothCaches();
+            ToolSettings.InvalidateCache();
+
+            ULoopSettings.GetSettings();
+
+            Assert.IsFalse(ToolSettings.IsToolEnabled(McpConstants.TOOL_NAME_RUN_TESTS));
+
+            string updatedPermissionsJson = File.ReadAllText(SettingsFilePath);
+            StringAssert.DoesNotContain("\"enableTestsExecution\"", updatedPermissionsJson);
+        }
+
+        [Test]
         public void SaveSettings_WhenJsonContainsRemovedFields_ShouldRewriteWithoutThem()
         {
             string settingsJson = JsonUtility.ToJson(new SettingsFileFixture
@@ -300,6 +355,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             ULoopSettings.InvalidateCache();
             McpEditorSettings.InvalidateCache();
+            ToolSettings.InvalidateCache();
         }
 
         [System.Serializable]
