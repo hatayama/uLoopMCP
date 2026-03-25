@@ -38,7 +38,6 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
 
-            // Check if tool requires specific permission
             return IsToolAllowedByAttribute(toolInfo.Value);
         }
 
@@ -90,21 +89,10 @@ namespace io.github.hatayama.uLoopMCP
         /// <returns>True if tool is allowed</returns>
         private static bool IsToolAllowedByAttribute(ToolAttributeInfo toolInfo)
         {
-            // Check by required security setting
             switch (toolInfo.RequiredSecuritySetting)
             {
                 case SecuritySettings.None:
-                    // No explicit security setting - check if it's a third party tool
                     return IsThirdPartyToolAllowed(toolInfo.ToolName);
-                    
-                case SecuritySettings.EnableTestsExecution:
-                    return IsTestsExecutionAllowed();
-                    
-                case SecuritySettings.AllowMenuItemExecution:
-                    return IsMenuItemExecutionAllowed();
-                    
-                
-                    
                 default:
                     return false; // Unknown setting - block by default
             }
@@ -160,19 +148,9 @@ namespace io.github.hatayama.uLoopMCP
                 return $"Tool '{toolName}' is not allowed by security policy.";
             }
 
-            // Generate block reason based on required security setting
             switch (toolInfo.Value.RequiredSecuritySetting)
             {
-                case SecuritySettings.EnableTestsExecution:
-                    return "Tests execution is disabled. Enable 'Enable Tests Execution' in uLoopMCP Security Settings.";
-                    
-                case SecuritySettings.AllowMenuItemExecution:
-                    return "Menu item execution is disabled. Enable 'Allow Menu Item Execution' in uLoopMCP Security Settings.";
-                    
-                
-                    
                 case SecuritySettings.None:
-                    // Check if it's actually a third party tool
                     if (IsThirdPartyTool(toolName))
                     {
                         return "Third party tools execution is disabled. Enable 'Allow Third Party Tools' in uLoopMCP Security Settings.";
@@ -196,26 +174,6 @@ namespace io.github.hatayama.uLoopMCP
             
             return new ToolSecurityInfo(toolName, isAllowed, reason);
         }
-
-        /// <summary>
-        /// Checks if tests execution is allowed
-        /// </summary>
-        /// <returns>True if tests execution is allowed</returns>
-        private static bool IsTestsExecutionAllowed()
-        {
-            return ULoopSettings.GetEnableTestsExecution();
-        }
-
-        /// <summary>
-        /// Checks if menu item execution is allowed
-        /// </summary>
-        /// <returns>True if menu item execution is allowed</returns>
-        private static bool IsMenuItemExecutionAllowed()
-        {
-            return ULoopSettings.GetAllowMenuItemExecution();
-        }
-
-        
 
         /// <summary>
         /// Checks if third party tools execution is allowed

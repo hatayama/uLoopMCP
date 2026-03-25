@@ -296,22 +296,6 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Update EnableTestsExecution setting with persistence
-        /// </summary>
-        public void UpdateEnableTestsExecution(bool enable)
-        {
-            ULoopSettings.SetEnableTestsExecution(enable);
-        }
-
-        /// <summary>
-        /// Update AllowMenuItemExecution setting with persistence
-        /// </summary>
-        public void UpdateAllowMenuItemExecution(bool allow)
-        {
-            ULoopSettings.SetAllowMenuItemExecution(allow);
-        }
-
-        /// <summary>
         /// Update AllowThirdPartyTools setting with persistence
         /// </summary>
         public void UpdateAllowThirdPartyTools(bool allow)

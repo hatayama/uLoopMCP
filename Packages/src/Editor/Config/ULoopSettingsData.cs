@@ -9,8 +9,6 @@ namespace io.github.hatayama.uLoopMCP
     [Serializable]
     public record ULoopSettingsData
     {
-        public bool enableTestsExecution = false;
-        public bool allowMenuItemExecution = false;
         public bool allowThirdPartyTools = false;
         public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted;
     }

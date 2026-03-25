@@ -18,7 +18,6 @@ namespace io.github.hatayama.uLoopMCP
     /// - ExecuteMenuItemResponse: Type-safe response structure
     /// </summary>
     [McpTool(
-        RequiredSecuritySetting = SecuritySettings.AllowMenuItemExecution,
         Description = "Execute Unity MenuItem by path"
     )]
     public class ExecuteMenuItemTool : AbstractUnityTool<ExecuteMenuItemSchema, ExecuteMenuItemResponse>

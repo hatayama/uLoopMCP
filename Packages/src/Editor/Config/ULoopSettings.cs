@@ -63,32 +63,6 @@ namespace io.github.hatayama.uLoopMCP
             SaveSettings(updated);
         }
 
-        // Security Settings Getters/Setters
-
-        public static bool GetEnableTestsExecution()
-        {
-            return GetSettings().enableTestsExecution;
-        }
-
-        public static void SetEnableTestsExecution(bool value)
-        {
-            ULoopSettingsData settings = GetSettings();
-            ULoopSettingsData updated = settings with { enableTestsExecution = value };
-            SaveSettings(updated);
-        }
-
-        public static bool GetAllowMenuItemExecution()
-        {
-            return GetSettings().allowMenuItemExecution;
-        }
-
-        public static void SetAllowMenuItemExecution(bool value)
-        {
-            ULoopSettingsData settings = GetSettings();
-            ULoopSettingsData updated = settings with { allowMenuItemExecution = value };
-            SaveSettings(updated);
-        }
-
         public static bool GetAllowThirdPartyTools()
         {
             return GetSettings().allowThirdPartyTools;
@@ -203,7 +177,8 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             string json = File.ReadAllText(LegacySettingsFilePath);
-            return json.Contains($"\"{nameof(LegacySecuritySettingsProbe.enableTestsExecution)}\"");
+            return json.Contains($"\"{nameof(LegacySecuritySettingsProbe.allowThirdPartyTools)}\"")
+                || json.Contains($"\"{nameof(LegacySecuritySettingsProbe.dynamicCodeSecurityLevel)}\"");
         }
 
         private static void DeleteIfExists(string path)
@@ -221,8 +196,6 @@ namespace io.github.hatayama.uLoopMCP
         [Serializable]
         private class LegacySecuritySettingsProbe
         {
-            public bool enableTestsExecution = false;
-            public bool allowMenuItemExecution = false;
             public bool allowThirdPartyTools = false;
             public int dynamicCodeSecurityLevel = (int)DynamicCodeSecurityLevel.Restricted;
         }
@@ -251,8 +224,6 @@ namespace io.github.hatayama.uLoopMCP
 
             _cachedSettings = new ULoopSettingsData
             {
-                enableTestsExecution = probe.enableTestsExecution,
-                allowMenuItemExecution = probe.allowMenuItemExecution,
                 allowThirdPartyTools = probe.allowThirdPartyTools,
                 dynamicCodeSecurityLevel = probe.dynamicCodeSecurityLevel
             };

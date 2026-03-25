@@ -18,7 +18,6 @@ namespace io.github.hatayama.uLoopMCP
     /// - RunTestsResponse: Type-safe response structure
     /// </summary>
     [McpTool(
-        RequiredSecuritySetting = SecuritySettings.EnableTestsExecution,
         Description = "Execute Unity Test Runner with advanced filtering options - exact test methods, regex patterns for classes/namespaces, assembly filtering"
     )]
     public class RunTestsTool : AbstractUnityTool<RunTestsSchema, RunTestsResponse>
