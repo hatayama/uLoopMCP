@@ -24,7 +24,6 @@ namespace io.github.hatayama.uLoopMCP
         private ConnectedToolsSection _connectedToolsSection;
         private EditorConfigSection _editorConfigSection;
         private ToolSettingsSection _toolSettingsSection;
-        private SecuritySettingsSection _securitySettingsSection;
 
         private VisualElement _cliContent;
         private VisualElement _mcpContent;
@@ -45,9 +44,6 @@ namespace io.github.hatayama.uLoopMCP
         public event Action OnOpenSettingsClicked;
         public event Action<bool> OnToolSettingsFoldoutChanged;
         public event Action<string, bool> OnToolToggled;
-        public event Action<bool> OnSecurityFoldoutChanged;
-        public event Action<bool> OnEnableTestsChanged;
-        public event Action<bool> OnAllowMenuChanged;
         public event Action<bool> OnAllowThirdPartyChanged;
         public event Action<DynamicCodeSecurityLevel> OnSecurityLevelChanged;
 
@@ -126,13 +122,8 @@ namespace io.github.hatayama.uLoopMCP
             _toolSettingsSection = new ToolSettingsSection(_root);
             _toolSettingsSection.OnFoldoutChanged += value => OnToolSettingsFoldoutChanged?.Invoke(value);
             _toolSettingsSection.OnToolToggled += (toolName, enabled) => OnToolToggled?.Invoke(toolName, enabled);
-
-            _securitySettingsSection = new SecuritySettingsSection(_root);
-            _securitySettingsSection.OnFoldoutChanged += value => OnSecurityFoldoutChanged?.Invoke(value);
-            _securitySettingsSection.OnEnableTestsChanged += value => OnEnableTestsChanged?.Invoke(value);
-            _securitySettingsSection.OnAllowMenuChanged += value => OnAllowMenuChanged?.Invoke(value);
-            _securitySettingsSection.OnAllowThirdPartyChanged += value => OnAllowThirdPartyChanged?.Invoke(value);
-            _securitySettingsSection.OnSecurityLevelChanged += value => OnSecurityLevelChanged?.Invoke(value);
+            _toolSettingsSection.OnAllowThirdPartyChanged += value => OnAllowThirdPartyChanged?.Invoke(value);
+            _toolSettingsSection.OnSecurityLevelChanged += value => OnSecurityLevelChanged?.Invoke(value);
         }
 
         public void UpdateServerStatus(ServerStatusData data)
@@ -163,11 +154,6 @@ namespace io.github.hatayama.uLoopMCP
         public void UpdateSingleToolToggle(string toolName, bool enabled)
         {
             _toolSettingsSection?.UpdateSingleToggle(toolName, enabled);
-        }
-
-        public void UpdateSecuritySettings(SecuritySettingsData data)
-        {
-            _securitySettingsSection?.Update(data);
         }
 
         public void UpdateConnectionMode(ConnectionModeData data)
@@ -202,7 +188,6 @@ namespace io.github.hatayama.uLoopMCP
             _connectedToolsSection = null;
             _editorConfigSection = null;
             _toolSettingsSection = null;
-            _securitySettingsSection = null;
         }
     }
 }

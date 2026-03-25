@@ -84,9 +84,6 @@ namespace io.github.hatayama.uLoopMCP
             _view.OnOpenSettingsClicked += OpenConfigurationFile;
             _view.OnToolSettingsFoldoutChanged += UpdateShowToolSettings;
             _view.OnToolToggled += HandleToolToggled;
-            _view.OnSecurityFoldoutChanged += UpdateShowSecuritySettings;
-            _view.OnEnableTestsChanged += UpdateEnableTestsExecution;
-            _view.OnAllowMenuChanged += UpdateAllowMenuItemExecution;
             _view.OnAllowThirdPartyChanged += UpdateAllowThirdPartyTools;
             _view.OnSecurityLevelChanged += UpdateDynamicCodeSecurityLevel;
         }
@@ -223,9 +220,6 @@ namespace io.github.hatayama.uLoopMCP
 
             ToolSettingsSectionData toolSettingsData = CreateToolSettingsData();
             _view.UpdateToolSettings(toolSettingsData);
-
-            SecuritySettingsData securityData = CreateSecuritySettingsData();
-            _view.UpdateSecuritySettings(securityData);
         }
 
         private async void RefreshCliVersionInBackground()
@@ -386,15 +380,6 @@ namespace io.github.hatayama.uLoopMCP
                 _model.UI.ShowRepositoryRootToggle);
         }
 
-        private SecuritySettingsData CreateSecuritySettingsData()
-        {
-            return new SecuritySettingsData(
-                _model.UI.ShowSecuritySettings,
-                ULoopSettings.GetEnableTestsExecution(),
-                ULoopSettings.GetAllowMenuItemExecution(),
-                ULoopSettings.GetAllowThirdPartyTools());
-        }
-
         private ToolSettingsSectionData CreateToolSettingsData()
         {
             UnityToolRegistry registry = CustomToolManager.GetRegistry();
@@ -402,6 +387,8 @@ namespace io.github.hatayama.uLoopMCP
             {
                 return new ToolSettingsSectionData(
                     _model.UI.ShowToolSettings,
+                    ULoopSettings.GetAllowThirdPartyTools(),
+                    ULoopSettings.GetDynamicCodeSecurityLevel(),
                     System.Array.Empty<ToolToggleItem>(),
                     System.Array.Empty<ToolToggleItem>(),
                     false);
@@ -440,6 +427,8 @@ namespace io.github.hatayama.uLoopMCP
 
             return new ToolSettingsSectionData(
                 _model.UI.ShowToolSettings,
+                ULoopSettings.GetAllowThirdPartyTools(),
+                ULoopSettings.GetDynamicCodeSecurityLevel(),
                 builtIn.ToArray(),
                 thirdParty.ToArray(),
                 true);
@@ -592,21 +581,6 @@ namespace io.github.hatayama.uLoopMCP
         private void UpdateShowConfiguration(bool show)
         {
             _model.UpdateShowConfiguration(show);
-        }
-
-        private void UpdateShowSecuritySettings(bool show)
-        {
-            _model.UpdateShowSecuritySettings(show);
-        }
-
-        private void UpdateEnableTestsExecution(bool enable)
-        {
-            _model.UpdateEnableTestsExecution(enable);
-        }
-
-        private void UpdateAllowMenuItemExecution(bool allow)
-        {
-            _model.UpdateAllowMenuItemExecution(allow);
         }
 
         private void UpdateAllowThirdPartyTools(bool allow)
