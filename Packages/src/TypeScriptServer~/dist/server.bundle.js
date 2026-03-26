@@ -24978,6 +24978,10 @@ var Protocol = class {
     this._progressHandlers.clear();
     this._taskProgressTokens.clear();
     this._pendingDebouncedNotifications.clear();
+    for (const info of this._timeoutInfo.values()) {
+      clearTimeout(info.timeoutId);
+    }
+    this._timeoutInfo.clear();
     for (const controller of this._requestHandlerAbortControllers.values()) {
       controller.abort();
     }
@@ -25108,7 +25112,9 @@ var Protocol = class {
         await capturedTransport?.send(errorResponse);
       }
     }).catch((error2) => this._onerror(new Error(`Failed to send response: ${error2}`))).finally(() => {
-      this._requestHandlerAbortControllers.delete(request.id);
+      if (this._requestHandlerAbortControllers.get(request.id) === abortController) {
+        this._requestHandlerAbortControllers.delete(request.id);
+      }
     });
   }
   _onprogress(notification) {
