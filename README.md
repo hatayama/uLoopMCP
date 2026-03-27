@@ -678,7 +678,7 @@ For a more comprehensive example project, see [uLoopMCP-extensions-sample](https
 
 ## Other
 
-### uLoop-related Files
+### Unity CLI Loop Files
 
 `UserSettings/UnityMcpSettings.json` stores per-user editor session state and should always remain local-only.
 

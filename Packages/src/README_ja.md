@@ -676,7 +676,7 @@ description: "ツールの説明と使用タイミング"
 
 ## その他
 
-### uLoop関連ファイル
+### Unity CLI Loop 関連ファイル
 
 `UserSettings/UnityMcpSettings.json` はユーザー個別のエディタセッション状態を保持するため、常にローカル専用です。
 
