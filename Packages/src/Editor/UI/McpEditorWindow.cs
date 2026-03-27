@@ -634,10 +634,10 @@ namespace io.github.hatayama.uLoopMCP
                 needsUpdate = cliVer < pkgVer;
                 needsDowngrade = cliVer > pkgVer;
             }
-            bool isClaudeInstalled = CliInstallationDetector.AreSkillsInstalled("claude");
-            bool isAgentsInstalled = CliInstallationDetector.AreSkillsInstalled("codex");
-            bool isCursorInstalled = CliInstallationDetector.AreSkillsInstalled("cursor");
-            bool isAntigravityInstalled = CliInstallationDetector.AreSkillsInstalled("antigravity");
+            bool isClaudeInstalled = CliInstallationDetector.AreSkillsInstalled(".claude");
+            bool isAgentsInstalled = CliInstallationDetector.AreSkillsInstalled(".agents");
+            bool isCursorInstalled = CliInstallationDetector.AreSkillsInstalled(".cursor");
+            bool isAntigravityInstalled = CliInstallationDetector.AreSkillsInstalled(".agent");
 
             return new CliSetupData(
                 isCliInstalled,

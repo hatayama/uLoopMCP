@@ -16,15 +16,14 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class ToolSkillSynchronizer
     {
-        private static readonly string[] SkillTargetDirs = { ".claude", ".codex", ".cursor", ".gemini", ".windsurf" };
+        private static readonly string[] SkillTargetDirs = { ".claude", ".agents", ".cursor", ".agent" };
 
         private static readonly Dictionary<string, string> TargetFlagMap = new()
         {
             { ".claude", "--claude" },
-            { ".codex", "--codex" },
+            { ".agents", "--codex" },
             { ".cursor", "--cursor" },
-            { ".gemini", "--gemini" },
-            { ".windsurf", "--windsurf" }
+            { ".agent", "--antigravity" }
         };
 
         public static void RemoveSkillFiles(string toolName)
