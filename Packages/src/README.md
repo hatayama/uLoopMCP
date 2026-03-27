@@ -678,7 +678,9 @@ For a more comprehensive example project, see [uLoopMCP-extensions-sample](https
 
 ## Other
 
-### `.uloop/` Directory
+### uLoop-related Files
+
+`UserSettings/UnityMcpSettings.json` stores per-user editor session state and should always remain local-only.
 
 The `.uloop/` directory at the project root stores CLI cache, tool registry, and runtime outputs. Most of its contents are local-only, but some files can optionally be git-tracked for team sharing.
 
@@ -688,8 +690,6 @@ The `.uloop/` directory at the project root stores CLI cache, tool registry, and
 | `settings.tools.json` | Per-tool enable/disable preferences | Optional |
 | `tools.json` | Auto-generated MCP tool registry | No |
 | `outputs/` | Runtime outputs (test results, screenshots, hierarchy dumps) | No |
-
-`UserSettings/UnityMcpSettings.json` stores per-user editor session state and should always remain local-only.
 
 > [!TIP]
 > **Recommended `.gitignore` pattern**
