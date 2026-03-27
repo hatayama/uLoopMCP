@@ -17,9 +17,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private readonly VisualElement _root;
 
-        private ServerStatusSection _serverStatusSection;
         private ConnectionModeSection _connectionModeSection;
-        private ServerControlsSection _serverControlsSection;
         private CliSetupSection _cliSetupSection;
         private ConnectedToolsSection _connectedToolsSection;
         private EditorConfigSection _editorConfigSection;
@@ -29,8 +27,6 @@ namespace io.github.hatayama.uLoopMCP
         private VisualElement _mcpContent;
 
         public event Action<ConnectionMode> OnConnectionModeChanged;
-        public event Action OnToggleServer;
-        public event Action<int> OnPortChanged;
         public event Action OnRefreshCliVersion;
         public event Action OnInstallCli;
         public event Action OnInstallSkills;
@@ -89,15 +85,9 @@ namespace io.github.hatayama.uLoopMCP
 
         private void InitializeSections()
         {
-            _serverStatusSection = new ServerStatusSection(_root);
-
             _connectionModeSection = new ConnectionModeSection(_root);
             _connectionModeSection.OnModeChanged += mode => OnConnectionModeChanged?.Invoke(mode);
             _connectionModeSection.OnFoldoutChanged += value => OnConfigurationFoldoutChanged?.Invoke(value);
-
-            _serverControlsSection = new ServerControlsSection(_root);
-            _serverControlsSection.OnToggleServer += () => OnToggleServer?.Invoke();
-            _serverControlsSection.OnPortChanged += value => OnPortChanged?.Invoke(value);
 
             _cliSetupSection = new CliSetupSection(_root);
             _cliSetupSection.SetupBindings();
@@ -124,16 +114,6 @@ namespace io.github.hatayama.uLoopMCP
             _toolSettingsSection.OnToolToggled += (toolName, enabled) => OnToolToggled?.Invoke(toolName, enabled);
             _toolSettingsSection.OnAllowThirdPartyChanged += value => OnAllowThirdPartyChanged?.Invoke(value);
             _toolSettingsSection.OnSecurityLevelChanged += value => OnSecurityLevelChanged?.Invoke(value);
-        }
-
-        public void UpdateServerStatus(ServerStatusData data)
-        {
-            _serverStatusSection?.Update(data);
-        }
-
-        public void UpdateServerControls(ServerControlsData data)
-        {
-            _serverControlsSection?.Update(data);
         }
 
         public void UpdateConnectedTools(ConnectedToolsData data)
@@ -181,9 +161,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public void Dispose()
         {
-            _serverStatusSection = null;
             _connectionModeSection = null;
-            _serverControlsSection = null;
             _cliSetupSection = null;
             _connectedToolsSection = null;
             _editorConfigSection = null;

@@ -14,7 +14,6 @@ namespace io.github.hatayama.uLoopMCP
         private McpEditorWindowUI _view;
         private McpEditorModel _model;
         private McpEditorWindowEventHandler _eventHandler;
-        private McpServerOperations _serverOperations;
 
         private SkillsTarget _skillsTarget = SkillsTarget.Claude;
         private bool _isInstallingCli;
@@ -49,7 +48,6 @@ namespace io.github.hatayama.uLoopMCP
             InitializeModel();
             InitializeConfigurationServices();
             InitializeEventHandler();
-            InitializeServerOperations();
             LoadSavedSettings();
             RestoreSessionState();
             HandlePostCompileMode();
@@ -69,8 +67,6 @@ namespace io.github.hatayama.uLoopMCP
         private void SetupViewCallbacks()
         {
             _view.OnConnectionModeChanged += UpdateConnectionMode;
-            _view.OnToggleServer += ToggleServer;
-            _view.OnPortChanged += UpdateCustomPort;
             _view.OnRefreshCliVersion += HandleRefreshCliVersion;
             _view.OnInstallCli += HandleInstallCli;
             _view.OnInstallSkills += HandleInstallSkills;
@@ -102,11 +98,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             _eventHandler = new McpEditorWindowEventHandler(_model, this);
             _eventHandler.Initialize();
-        }
-
-        private void InitializeServerOperations()
-        {
-            _serverOperations = new McpServerOperations(_model, _eventHandler);
         }
 
         private void LoadSavedSettings()
@@ -156,15 +147,7 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            bool wasRunning = McpEditorSettings.GetIsServerRunning();
-            bool serverNotRunning = !McpServerController.IsServerRunning;
-            bool isRecoveryInProgress = McpServerController.IsStartupProtectionActive();
-            bool shouldStartServer = wasRunning && serverNotRunning && !isRecoveryInProgress;
-
-            if (shouldStartServer)
-            {
-                _serverOperations.StartServerInternal();
-            }
+            // McpServerController.[InitializeOnLoad] handles automatic server recovery via RestoreServerStateIfNeeded()
         }
 
         private void OnDisable()
@@ -196,18 +179,10 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            SyncPortSettings();
-
-            ServerStatusData statusData = CreateServerStatusData();
-            _view.UpdateServerStatus(statusData);
-
             ConnectionModeData modeData = new ConnectionModeData(_model.UI.ConnectionMode);
             _view.UpdateConnectionMode(modeData);
             _view.UpdateConfigurationFoldout(_model.UI.ShowConfiguration);
             _view.UpdateSectionVisibility(_model.UI.ConnectionMode);
-
-            ServerControlsData controlsData = CreateServerControlsData();
-            _view.UpdateServerControls(controlsData);
 
             RefreshCliSetupSection();
             RefreshCliVersionInBackground();
@@ -267,57 +242,6 @@ namespace io.github.hatayama.uLoopMCP
             _view.UpdateConnectedTools(toolsData);
         }
 
-        private void SyncPortSettings()
-        {
-            bool serverIsRunning = McpServerController.IsServerRunning;
-
-            if (serverIsRunning)
-            {
-                int actualServerPort = McpServerController.ServerPort;
-                bool portMismatch = _model.UI.CustomPort != actualServerPort;
-
-                if (portMismatch)
-                {
-                    _model.UpdateCustomPort(actualServerPort);
-                }
-            }
-        }
-
-        private ServerStatusData CreateServerStatusData()
-        {
-            (bool isRunning, int port, bool _) = McpServerController.GetServerStatus();
-            string status = isRunning ? "Running" : "Stopped";
-            Color statusColor = isRunning ? Color.green : Color.red;
-
-            return new ServerStatusData(isRunning, port, status, statusColor);
-        }
-
-        private ServerControlsData CreateServerControlsData()
-        {
-            bool isRunning = McpServerController.IsServerRunning;
-
-            bool hasPortWarning = false;
-            string portWarningMessage = null;
-
-            if (!isRunning)
-            {
-                int requestedPort = _model.UI.CustomPort;
-
-                if (!McpPortValidator.ValidatePort(requestedPort))
-                {
-                    hasPortWarning = true;
-                    portWarningMessage = $"Port {requestedPort} is invalid. Port must be 1024 or higher and not a reserved system port.";
-                }
-                else if (NetworkUtility.IsPortInUse(requestedPort))
-                {
-                    hasPortWarning = true;
-                    portWarningMessage = $"Port {requestedPort} is already in use. Please choose a different port or stop the other process using this port.";
-                }
-            }
-
-            return new ServerControlsData(_model.UI.CustomPort, isRunning, !isRunning, hasPortWarning, portWarningMessage);
-        }
-
         private ConnectedToolsData CreateConnectedToolsData()
         {
             bool isServerRunning = McpServerController.IsServerRunning;
@@ -360,11 +284,11 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 else
                 {
-                    hasPortMismatch = _model.UI.CustomPort != configuredPort;
+                    hasPortMismatch = McpEditorSettings.GetCustomPort() != configuredPort;
                 }
             }
 
-            int portToCheck = isServerRunning ? currentPort : _model.UI.CustomPort;
+            int portToCheck = isServerRunning ? currentPort : McpEditorSettings.GetCustomPort();
             isUpdateNeeded = configService.IsUpdateNeeded(portToCheck);
 
             return new EditorConfigData(
@@ -475,7 +399,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             IMcpConfigService configService = GetConfigService(_model.UI.SelectedEditorType);
             bool isServerRunning = McpServerController.IsServerRunning;
-            int portToUse = isServerRunning ? McpServerController.ServerPort : _model.UI.CustomPort;
+            int portToUse = isServerRunning ? McpServerController.ServerPort : McpEditorSettings.GetCustomPort();
 
             configService.AutoConfigure(portToUse);
             RefreshAllSections();
@@ -542,29 +466,9 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        private void StartServer()
-        {
-            if (_serverOperations.StartServer())
-            {
-                RefreshAllSections();
-            }
-        }
-
-        private void StopServer()
-        {
-            _serverOperations.StopServer();
-            RefreshAllSections();
-        }
-
         private IMcpConfigService GetConfigService(McpEditorType editorType)
         {
             return _configServiceFactory.GetConfigService(editorType);
-        }
-
-        private void UpdateCustomPort(int port)
-        {
-            _model.UpdateCustomPort(port);
-            RefreshAllSections();
         }
 
         private void UpdateShowConnectedTools(bool show)
@@ -863,16 +767,5 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private void ToggleServer()
-        {
-            if (McpServerController.IsServerRunning)
-            {
-                StopServer();
-            }
-            else
-            {
-                StartServer();
-            }
-        }
     }
 }
