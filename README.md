@@ -677,11 +677,31 @@ See [HelloWorld sample](/Assets/Editor/CustomCommandSamples/HelloWorld/Skill/SKI
 For a more comprehensive example project, see [uLoopMCP-extensions-sample](https://github.com/hatayama/uLoopMCP-extensions-sample).
 
 ## Other
+
+### Unity CLI Loop Files
+
+`UserSettings/UnityMcpSettings.json` stores per-user editor session state and should always remain local-only.
+
+The `.uloop/` directory at the project root stores CLI cache, tool registry, and runtime outputs. Most of its contents are local-only, but some files can optionally be git-tracked for team sharing.
+
+| File | Purpose | Git-track? |
+|------|---------|------------|
+| `settings.permissions.json` | Team-wide security policy (third-party tool access, dynamic code security level) | Optional |
+| `settings.tools.json` | Per-tool enable/disable preferences | Optional |
+| `tools.json` | Auto-generated MCP tool registry | No |
+| `outputs/` | Runtime outputs (test results, screenshots, hierarchy dumps) | No |
+
 > [!TIP]
-> **File Output**
+> **Recommended `.gitignore` pattern**
 >
-> The `run-tests` and `get-hierarchy` tools can save results to the `{project_root}/.uloop/outputs/` directory to avoid massive token consumption when dealing with large datasets.
-> **Recommendation**: Add `.uloop/` to `.gitignore` to exclude from version control.
+> ```gitignore
+> **/.uloop/*
+> !**/.uloop/settings.permissions.json
+> !**/.uloop/settings.tools.json
+> ```
+>
+> This ignores auto-generated files and runtime outputs while allowing team-shared configuration to be tracked.
+> Adjust the `!` lines to match your team's needs — you can remove either line if you don't need to share that file.
 
 ## License
 MIT License
