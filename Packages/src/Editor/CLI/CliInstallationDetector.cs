@@ -50,12 +50,12 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        public static bool AreSkillsInstalled(string target)
+        public static bool AreSkillsInstalled(string targetDir)
         {
-            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(target), "target must not be null or empty");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(targetDir), "targetDir must not be null or empty");
 
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
-            string skillsDir = Path.Combine(projectRoot, $".{target}", "skills");
+            string skillsDir = Path.Combine(projectRoot, targetDir, "skills");
 
             if (!Directory.Exists(skillsDir))
             {

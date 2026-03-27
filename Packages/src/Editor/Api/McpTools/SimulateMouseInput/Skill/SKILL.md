@@ -1,6 +1,6 @@
 ---
 name: uloop-simulate-mouse-input
-description: "Simulate mouse input in PlayMode via Input System. Injects button clicks, mouse delta, and scroll wheel directly into Mouse.current. Use when you need to: (1) Click in games that read Mouse.current.leftButton.WasPressedThisFrame(), (2) Right-click for actions like block placement, (3) Inject mouse delta for FPS camera control, (4) Inject scroll wheel for hotbar switching or zoom. For UI elements with IPointerClickHandler, use simulate-mouse-ui instead."
+description: "Simulate mouse input in PlayMode via Input System. Injects button clicks, mouse delta, and scroll wheel directly into Mouse.current. Use when you need to: (1) Click in games that read Mouse.current.leftButton.wasPressedThisFrame, (2) Right-click for actions like block placement, (3) Inject mouse delta for FPS camera control, (4) Inject scroll wheel for hotbar switching or zoom. For UI elements with IPointerClickHandler, use simulate-mouse-ui instead."
 context: fork
 ---
 
