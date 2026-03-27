@@ -252,7 +252,7 @@ uloop clear-console
 **Step 1**: Start Play mode
 
 ```bash
-uloop control-play-mode --action play
+uloop control-play-mode --action Play
 ```
 
 **Step 2**: Wait for scene initialization, then find and click a button
@@ -285,5 +285,5 @@ uloop get-logs --log-type Error
 **Step 5**: Stop Play mode
 
 ```bash
-uloop control-play-mode --action stop
+uloop control-play-mode --action Stop
 ```
