@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/hatayama/unity-cli-loop/compare/v1.5.0...v1.5.1) (2026-03-27)
+
+
+### Bug Fixes
+
+* clarify execute-dynamic-code skill parameters ([#847](https://github.com/hatayama/unity-cli-loop/issues/847)) ([89bbff8](https://github.com/hatayama/unity-cli-loop/commit/89bbff8fbe9107a20981d239a19f7dccf5e5ae34))
+
 ## [1.5.0](https://github.com/hatayama/unity-cli-loop/compare/v1.4.0...v1.5.0) (2026-03-25)
 
 
