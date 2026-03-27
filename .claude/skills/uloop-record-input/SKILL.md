@@ -47,6 +47,12 @@ Replay injects input frame-by-frame, so the game must produce identical results 
 
 Set `Application.targetFrameRate = 60` (or your target) to reduce frame timing variance. See `InputReplayVerificationController` for a complete example of deterministic game logic.
 
+## Prerequisites
+
+- Unity must be in **PlayMode**
+- **Input System package** must be installed (`com.unity.inputsystem`)
+- Active Input Handling must be set to `Input System Package (New)` or `Both` in Player Settings
+
 ## Output
 
 Returns JSON with:

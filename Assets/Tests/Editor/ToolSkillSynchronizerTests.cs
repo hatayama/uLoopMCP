@@ -16,10 +16,8 @@ namespace io.github.hatayama.uLoopMCP
         {
             _projectRoot = UnityMcpPathResolver.GetProjectRoot();
 
-            // Record which skill target directories do NOT exist before the test
-            string[] targetDirs = { ".claude", ".agents", ".cursor", ".agent" };
-            _nonExistentDirsBefore = targetDirs
-                .Where(dir => !Directory.Exists(Path.Combine(_projectRoot, dir, "skills")))
+            _nonExistentDirsBefore = ToolSkillSynchronizer.SkillTargetDirs
+                .Where(dir => !Directory.Exists(Path.Combine(_projectRoot, dir)))
                 .ToArray();
         }
 
@@ -62,7 +60,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 string fullPath = Path.Combine(_projectRoot, dir);
                 Assert.IsFalse(Directory.Exists(fullPath),
-                    $"Directory '{dir}' should not be created by InstallSkillFiles when '{dir}/skills' did not exist");
+                    $"Directory '{dir}' should not be created by InstallSkillFiles when '{dir}' did not exist");
             }
         }
 

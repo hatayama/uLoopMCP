@@ -16,7 +16,7 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class ToolSkillSynchronizer
     {
-        private static readonly string[] SkillTargetDirs = { ".claude", ".agents", ".cursor", ".agent" };
+        internal static readonly string[] SkillTargetDirs = { ".claude", ".agents", ".cursor", ".agent" };
 
         private static readonly Dictionary<string, string> TargetFlagMap = new()
         {
