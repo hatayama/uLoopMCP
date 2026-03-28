@@ -84,7 +84,7 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
                 }
 
-                string[] skillDirs = Directory.GetDirectories(skillsRoot, "uloop-*");
+                string[] skillDirs = Directory.GetDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB);
                 foreach (string skillDir in skillDirs)
                 {
                     if (SkillMatchesTool(skillDir, toolName))
@@ -109,7 +109,7 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
                 }
 
-                string[] skillDirs = Directory.GetDirectories(skillsRoot, "uloop-*");
+                string[] skillDirs = Directory.GetDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB);
                 foreach (string skillDir in skillDirs)
                 {
                     if (SkillMatchesTool(skillDir, toolName))
@@ -140,8 +140,10 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
                 }
 
-                bool hasSkillsDir = Directory.Exists(Path.Combine(parentDir, "skills"));
-                targets.Add(new SkillTargetInfo(target.DisplayName, target.DirName, hasSkillsDir));
+                string skillsRoot = Path.Combine(parentDir, "skills");
+                bool hasULoopSkills = Directory.Exists(skillsRoot)
+                    && Directory.EnumerateDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB).Any();
+                targets.Add(new SkillTargetInfo(target.DisplayName, target.DirName, hasULoopSkills));
             }
 
             return targets;
@@ -205,7 +207,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             // Fallback: directory name "uloop-{toolName}"
             string dirName = Path.GetFileName(skillDir);
-            return dirName == $"uloop-{toolName}";
+            return dirName == $"{CliConstants.SKILL_DIR_PREFIX}{toolName}";
         }
 
         private static string ParseToolNameFromFrontmatter(string content)
