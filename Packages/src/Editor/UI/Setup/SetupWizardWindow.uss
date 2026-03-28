@@ -1,0 +1,166 @@
+/* ===========================================
+   SetupWizardWindow Stylesheet
+   =========================================== */
+
+:root {
+    --setup-color-success: #4caf50;
+    --setup-color-warning: #ffd200;
+    --setup-color-danger: #ef5350;
+    --setup-color-muted: #999999;
+}
+
+/* ===========================================
+   Block: Main Container
+   =========================================== */
+.setup-main-container {
+    padding: 12px;
+}
+
+/* ===========================================
+   Block: Prerequisite
+   =========================================== */
+.setup-prerequisite {
+    border-width: 1px;
+    border-radius: 3px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+}
+
+.setup-prerequisite--warning {
+    background-color: #5c4a00;
+    border-color: #7a6400;
+}
+
+.setup-prerequisite--ok {
+    background-color: #1b3a1b;
+    border-color: #2e7d32;
+}
+
+.setup-prerequisite__title {
+    -unity-font-style: bold;
+    margin-bottom: 4px;
+}
+
+.setup-prerequisite--warning .setup-prerequisite__title {
+    color: var(--setup-color-warning);
+}
+
+.setup-prerequisite--ok .setup-prerequisite__title {
+    color: var(--setup-color-success);
+}
+
+.setup-prerequisite__message {
+    white-space: normal;
+    margin-bottom: 6px;
+}
+
+/* ===========================================
+   Block: Step
+   =========================================== */
+.setup-step {
+    background-color: var(--unity-colors-helpbox-background);
+    border-color: var(--unity-colors-helpbox-border);
+    border-width: 1px;
+    border-radius: 3px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+}
+
+.setup-step__title {
+    -unity-font-style: bold;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.setup-step__content {
+    padding-left: 4px;
+}
+
+.setup-step__status-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.setup-step__status-label {
+    margin-left: 6px;
+}
+
+/* ===========================================
+   Block: Status Icon
+   =========================================== */
+.setup-status-icon {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.setup-status-icon--pending {
+    background-color: var(--setup-color-muted);
+}
+
+.setup-status-icon--success {
+    background-color: var(--setup-color-success);
+}
+
+/* ===========================================
+   Block: Target List
+   =========================================== */
+.setup-target-list {
+    margin-bottom: 6px;
+}
+
+.setup-target-item {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 2px;
+    margin-left: 4px;
+}
+
+.setup-target-item__label {
+    margin-left: 4px;
+}
+
+/* ===========================================
+   Block: Button
+   =========================================== */
+.setup-button {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.setup-button--small {
+    height: 22px;
+    padding-left: 12px;
+    padding-right: 12px;
+    font-size: 11px;
+    align-self: flex-start;
+}
+
+.setup-button--primary {
+    background-color: #2e7d32;
+    border-color: var(--setup-color-success);
+    color: #ffffff;
+}
+
+.setup-button--primary:hover {
+    background-color: #388e3c;
+}
+
+/* ===========================================
+   Block: Footer
+   =========================================== */
+.setup-footer {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top-width: 1px;
+    border-top-color: var(--unity-colors-helpbox-border);
+}
+
+/* ===========================================
+   Utility: Hidden
+   =========================================== */
+.setup-hidden {
+    display: none;
+}
