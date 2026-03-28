@@ -7,7 +7,7 @@
             <ui:Label text="Please install Node.js to continue." class="setup-prerequisite__message" />
             <ui:Button name="refresh-button" text="Refresh" class="setup-button setup-button--small" />
         </ui:VisualElement>
-        <ui:VisualElement name="nodejs-ok" class="setup-prerequisite setup-prerequisite--ok">
+        <ui:VisualElement name="nodejs-ok" class="setup-prerequisite setup-prerequisite--ok setup-hidden">
             <ui:Label text="✓ Node.js detected" class="setup-prerequisite__title" />
         </ui:VisualElement>
 

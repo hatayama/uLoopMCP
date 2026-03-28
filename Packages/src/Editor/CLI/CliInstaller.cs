@@ -43,8 +43,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(npmPath), "npmPath must not be null or empty");
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(installTarget), "installTarget must not be null or empty");
-            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(nodePath), "nodePath must not be null or empty");
-
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = npmPath,
@@ -55,14 +53,17 @@ namespace io.github.hatayama.uLoopMCP
                 CreateNoWindow = true
             };
 
-            NodeEnvironmentResolver.SetupEnvironmentPath(startInfo, nodePath);
+            if (!string.IsNullOrEmpty(nodePath))
+            {
+                NodeEnvironmentResolver.SetupEnvironmentPath(startInfo, nodePath);
+            }
 
             bool success = false;
             string errorOutput = "";
 
             await Task.Run(() =>
             {
-                Process process = Process.Start(startInfo);
+                Process process = ProcessStartHelper.TryStart(startInfo);
                 if (process == null)
                 {
                     errorOutput = "Failed to start npm process";

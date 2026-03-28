@@ -142,7 +142,8 @@ namespace io.github.hatayama.uLoopMCP
 
                 string skillsRoot = Path.Combine(parentDir, "skills");
                 bool hasULoopSkills = Directory.Exists(skillsRoot)
-                    && Directory.EnumerateDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB).Any();
+                    && Directory.EnumerateDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB)
+                        .Any(skillDir => File.Exists(Path.Combine(skillDir, "SKILL.md")));
                 targets.Add(new SkillTargetInfo(target.DisplayName, target.DirName, hasULoopSkills));
             }
 
