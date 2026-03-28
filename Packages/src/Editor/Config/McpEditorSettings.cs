@@ -54,6 +54,8 @@ namespace io.github.hatayama.uLoopMCP
         public string[] pendingCompileRequestIds = new string[0];
         public CompileRequestData[] compileRequests = new CompileRequestData[0];
         public ConnectedLLMToolData[] connectedLLMTools = new ConnectedLLMToolData[0];
+
+        public string lastSkillPromptVersion = "";
     }
 
     /// <summary>
