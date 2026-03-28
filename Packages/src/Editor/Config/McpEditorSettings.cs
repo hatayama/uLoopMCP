@@ -31,8 +31,8 @@ namespace io.github.hatayama.uLoopMCP
         public string lastUsedConfigPath = "";
 
         // UI State Settings
-        public bool showSecuritySettings = false;
-        public bool showToolSettings = false;
+        public bool showSecuritySettings = true;
+        public bool showToolSettings = true;
 
         // Repository Root Toggle
         public bool addRepositoryRoot = false;
