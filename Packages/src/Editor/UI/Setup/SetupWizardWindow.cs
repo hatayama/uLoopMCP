@@ -128,39 +128,56 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             await CliInstallationDetector.ForceRefreshCliVersionAsync(CancellationToken.None);
-            bool cliInstalled = CliInstallationDetector.IsCliInstalled();
             string cliVersion = CliInstallationDetector.GetCachedCliVersion();
+            bool cliInstalled = cliVersion != null;
+            bool cliVersionMatched = IsCliVersionMatched(cliVersion);
 
-            UpdateCliStep(cliInstalled, cliVersion);
+            UpdateCliStep(cliInstalled, cliVersion, cliVersionMatched);
 
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
-            UpdateSkillsStep(cliInstalled, targets);
+            UpdateSkillsStep(cliVersionMatched, targets);
 
             bool noTargets = targets.Count == 0;
             bool allSkillsInstalled = targets.Count > 0
                 && targets.All(t => t.HasExistingSkills);
             bool step2Done = allSkillsInstalled || noTargets || _isSkipped;
-            _openSettingsButton.SetEnabled(cliInstalled && step2Done);
+            _openSettingsButton.SetEnabled(cliVersionMatched && step2Done);
         }
 
-        private void UpdateCliStep(bool cliInstalled, string cliVersion)
+        private void UpdateCliStep(bool cliInstalled, string cliVersion, bool cliVersionMatched)
         {
-            if (cliInstalled)
+            if (cliInstalled && cliVersionMatched)
             {
                 _cliStatusLabel.text = $"v{cliVersion}";
                 ViewDataBinder.ToggleClass(_cliStatusIcon, "setup-status-icon--success", true);
                 ViewDataBinder.ToggleClass(_cliStatusIcon, "setup-status-icon--pending", false);
                 _installCliButton.SetEnabled(false);
                 _installCliButton.text = "Installed";
+                return;
+            }
+
+            if (cliInstalled)
+            {
+                string requiredVersion = McpConstants.PackageInfo.version;
+                _cliStatusLabel.text = $"v{cliVersion} (requires v{requiredVersion})";
             }
             else
             {
                 _cliStatusLabel.text = "Not installed";
-                ViewDataBinder.ToggleClass(_cliStatusIcon, "setup-status-icon--success", false);
-                ViewDataBinder.ToggleClass(_cliStatusIcon, "setup-status-icon--pending", true);
-                _installCliButton.SetEnabled(!_isInstallingCli);
-                _installCliButton.text = _isInstallingCli ? "Installing..." : "Install CLI";
             }
+
+            ViewDataBinder.ToggleClass(_cliStatusIcon, "setup-status-icon--success", false);
+            ViewDataBinder.ToggleClass(_cliStatusIcon, "setup-status-icon--pending", true);
+            _installCliButton.SetEnabled(!_isInstallingCli);
+            _installCliButton.text = _isInstallingCli ? "Installing..." : "Install CLI";
+        }
+
+        private static bool IsCliVersionMatched(string cliVersion)
+        {
+            if (string.IsNullOrEmpty(cliVersion)) return false;
+            System.Version installed = new System.Version(cliVersion);
+            System.Version required = new System.Version(McpConstants.PackageInfo.version);
+            return installed.CompareTo(required) == 0;
         }
 
         private void UpdateSkillsStep(
@@ -173,6 +190,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 _skillsStatusLabel.text = "";
                 _installSkillsButton.SetEnabled(false);
+                _skipButton.SetEnabled(false);
                 return;
             }
 
@@ -248,7 +266,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             _isInstallingCli = true;
-            UpdateCliStep(false, null);
+            UpdateCliStep(false, null, false);
 
             try
             {
@@ -302,6 +320,7 @@ namespace io.github.hatayama.uLoopMCP
         private void HandleSkip()
         {
             _isSkipped = true;
+            SavePromptVersion();
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
             UpdateSkillsStep(true, targets);
             _openSettingsButton.SetEnabled(true);
@@ -312,6 +331,23 @@ namespace io.github.hatayama.uLoopMCP
             SavePromptVersion();
             McpEditorWindow.ShowWindow();
             Close();
+        }
+
+        private void OnDestroy()
+        {
+            if (_isSkipped) return;
+
+            string cliVersion = CliInstallationDetector.GetCachedCliVersion();
+            if (!IsCliVersionMatched(cliVersion)) return;
+
+            List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
+            bool noTargets = targets.Count == 0;
+            bool allSkillsInstalled = targets.Count > 0
+                && targets.All(t => t.HasExistingSkills);
+            if (noTargets || allSkillsInstalled)
+            {
+                SavePromptVersion();
+            }
         }
 
         private void SavePromptVersion()
