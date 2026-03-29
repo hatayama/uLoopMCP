@@ -175,8 +175,11 @@ namespace io.github.hatayama.uLoopMCP
         private static bool IsCliVersionMatched(string cliVersion)
         {
             if (string.IsNullOrEmpty(cliVersion)) return false;
-            System.Version installed = new System.Version(cliVersion);
-            System.Version required = new System.Version(McpConstants.PackageInfo.version);
+
+            string normalized = cliVersion.Trim().TrimStart('v', 'V');
+            if (!System.Version.TryParse(normalized, out System.Version installed)) return false;
+            if (!System.Version.TryParse(McpConstants.PackageInfo.version, out System.Version required)) return false;
+
             return installed.CompareTo(required) == 0;
         }
 
@@ -319,6 +322,9 @@ namespace io.github.hatayama.uLoopMCP
 
         private void HandleSkip()
         {
+            string cliVersion = CliInstallationDetector.GetCachedCliVersion();
+            Debug.Assert(IsCliVersionMatched(cliVersion), "HandleSkip requires CLI version match");
+
             _isSkipped = true;
             SavePromptVersion();
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
