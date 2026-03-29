@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.6.0](https://github.com/hatayama/unity-cli-loop/compare/v1.5.1...v1.6.0) (2026-03-29)
+
+
+### Features
+
+* Add SetupWizardWindow for step-by-step onboarding ([#855](https://github.com/hatayama/unity-cli-loop/issues/855)) ([a723059](https://github.com/hatayama/unity-cli-loop/commit/a723059b0eebeeaf2b58663ba39293b9453afcca))
+* Extract server status/controls UI into standalone ServerEditorWindow ([#853](https://github.com/hatayama/unity-cli-loop/issues/853)) ([7934fba](https://github.com/hatayama/unity-cli-loop/commit/7934fba02f42e5e042f891b25a0322ea310889fd))
+
+
+### Bug Fixes
+
+* correct skill directory mapping to match CLI target-config ([#852](https://github.com/hatayama/unity-cli-loop/issues/852)) ([4818f52](https://github.com/hatayama/unity-cli-loop/commit/4818f528102def6b7fd4d3071bd88e6400f44a12))
+
 ## [1.5.1](https://github.com/hatayama/unity-cli-loop/compare/v1.5.0...v1.5.1) (2026-03-27)
 
 
