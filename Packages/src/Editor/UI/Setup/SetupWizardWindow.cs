@@ -302,7 +302,9 @@ namespace io.github.hatayama.uLoopMCP
         private void HandleSkip()
         {
             _isSkipped = true;
-            RefreshUI();
+            List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
+            UpdateSkillsStep(true, targets);
+            _openSettingsButton.SetEnabled(true);
         }
 
         private void HandleOpenSettings()
