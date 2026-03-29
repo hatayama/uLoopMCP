@@ -55,6 +55,7 @@ namespace io.github.hatayama.uLoopMCP
         // State
         private bool _isInstallingCli;
         private bool _isInstallingSkills;
+        private bool _isSkipped;
 
         private void CreateGUI()
         {
@@ -135,8 +136,11 @@ namespace io.github.hatayama.uLoopMCP
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
             UpdateSkillsStep(cliInstalled, targets);
 
-            _skipButton.SetEnabled(cliInstalled);
-            _openSettingsButton.SetEnabled(cliInstalled);
+            bool noTargets = targets.Count == 0;
+            bool allSkillsInstalled = targets.Count > 0
+                && targets.All(t => t.HasExistingSkills);
+            bool step2Done = allSkillsInstalled || noTargets || _isSkipped;
+            _openSettingsButton.SetEnabled(cliInstalled && step2Done);
         }
 
         private void UpdateCliStep(bool cliInstalled, string cliVersion)
@@ -198,12 +202,21 @@ namespace io.github.hatayama.uLoopMCP
                 _skillsStatusLabel.text = $"Installed for {targets.Count} targets";
                 _installSkillsButton.SetEnabled(false);
                 _installSkillsButton.text = "Installed";
+                _skipButton.SetEnabled(false);
+            }
+            else if (_isSkipped)
+            {
+                _skillsStatusLabel.text = "";
+                _installSkillsButton.SetEnabled(false);
+                _installSkillsButton.text = "Skipped";
+                _skipButton.SetEnabled(false);
             }
             else
             {
                 _skillsStatusLabel.text = "";
                 _installSkillsButton.SetEnabled(!_isInstallingSkills);
                 _installSkillsButton.text = _isInstallingSkills ? "Installing..." : "Install Skills";
+                _skipButton.SetEnabled(true);
             }
         }
 
@@ -288,8 +301,8 @@ namespace io.github.hatayama.uLoopMCP
 
         private void HandleSkip()
         {
-            SavePromptVersion();
-            Close();
+            _isSkipped = true;
+            RefreshUI();
         }
 
         private void HandleOpenSettings()
