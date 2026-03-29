@@ -149,6 +149,16 @@
 }
 
 /* ===========================================
+   Element: Hint Label
+   =========================================== */
+.setup-step__hint-label {
+    font-size: 11px;
+    color: var(--setup-color-muted);
+    white-space: normal;
+    margin-top: 4px;
+}
+
+/* ===========================================
    Block: Footer
    =========================================== */
 .setup-footer {
@@ -156,6 +166,11 @@
     padding-top: 8px;
     border-top-width: 1px;
     border-top-color: var(--unity-colors-helpbox-border);
+}
+
+.setup-footer__buttons {
+    flex-direction: row;
+    justify-content: space-between;
 }
 
 /* ===========================================

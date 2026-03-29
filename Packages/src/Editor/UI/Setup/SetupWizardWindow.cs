@@ -49,6 +49,7 @@ namespace io.github.hatayama.uLoopMCP
         private Button _installSkillsButton;
 
         // Footer
+        private Button _skipButton;
         private Button _openSettingsButton;
 
         // State
@@ -90,6 +91,7 @@ namespace io.github.hatayama.uLoopMCP
             _skillsStatusLabel = rootVisualElement.Q<Label>("skills-status-label");
             _installSkillsButton = rootVisualElement.Q<Button>("install-skills-button");
 
+            _skipButton = rootVisualElement.Q<Button>("skip-button");
             _openSettingsButton = rootVisualElement.Q<Button>("open-settings-button");
         }
 
@@ -98,6 +100,7 @@ namespace io.github.hatayama.uLoopMCP
             _refreshButton.clicked += () => RefreshUI();
             _installCliButton.clicked += HandleInstallCli;
             _installSkillsButton.clicked += HandleInstallSkills;
+            _skipButton.clicked += HandleSkip;
             _openSettingsButton.clicked += HandleOpenSettings;
         }
 
@@ -118,6 +121,7 @@ namespace io.github.hatayama.uLoopMCP
                 _installSkillsButton.SetEnabled(false);
                 _skillsStatusLabel.text = "";
                 _skillsTargetList.Clear();
+                _skipButton.SetEnabled(false);
                 _openSettingsButton.SetEnabled(false);
                 return;
             }
@@ -131,11 +135,8 @@ namespace io.github.hatayama.uLoopMCP
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
             UpdateSkillsStep(cliInstalled, targets);
 
-            bool noTargets = targets.Count == 0;
-            bool allSkillsInstalled = targets.Count > 0
-                && targets.All(t => t.HasExistingSkills);
-            bool step2Done = allSkillsInstalled || noTargets;
-            _openSettingsButton.SetEnabled(cliInstalled && step2Done);
+            _skipButton.SetEnabled(cliInstalled);
+            _openSettingsButton.SetEnabled(cliInstalled);
         }
 
         private void UpdateCliStep(bool cliInstalled, string cliVersion)
@@ -283,6 +284,12 @@ namespace io.github.hatayama.uLoopMCP
                 _isInstallingSkills = false;
                 RefreshUI();
             }
+        }
+
+        private void HandleSkip()
+        {
+            SavePromptVersion();
+            Close();
         }
 
         private void HandleOpenSettings()

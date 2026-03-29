@@ -25,17 +25,21 @@
 
         <!-- Step 2: Install Skills -->
         <ui:VisualElement name="step-2" class="setup-step">
-            <ui:Label text="Step 2: Install Skills" class="setup-step__title" />
+            <ui:Label text="Step 2: Install Skills (Optional)" class="setup-step__title" />
             <ui:VisualElement class="setup-step__content">
                 <ui:VisualElement name="skills-target-list" class="setup-target-list" />
                 <ui:Label name="skills-status-label" text="" class="setup-step__status-label" />
                 <ui:Button name="install-skills-button" text="Install Skills" class="setup-button" />
+                <ui:Label name="skills-hint-label" text="You can install skills later from Window &gt; Unity CLI Loop &gt; Settings." class="setup-step__hint-label" />
             </ui:VisualElement>
         </ui:VisualElement>
 
         <!-- Footer -->
         <ui:VisualElement class="setup-footer">
-            <ui:Button name="open-settings-button" text="Open Settings" class="setup-button setup-button--primary" />
+            <ui:VisualElement class="setup-footer__buttons">
+                <ui:Button name="skip-button" text="Skip" class="setup-button" />
+                <ui:Button name="open-settings-button" text="Open Settings" class="setup-button setup-button--primary" />
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:ScrollView>
 </ui:UXML>
