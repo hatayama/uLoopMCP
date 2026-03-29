@@ -173,7 +173,8 @@
 }
 
 .setup-step__button-row .setup-button {
-    margin-right: 4px;
+    flex-grow: 1;
+    flex-basis: 0;
 }
 
 /* ===========================================
