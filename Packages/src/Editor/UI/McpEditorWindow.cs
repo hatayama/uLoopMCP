@@ -574,20 +574,16 @@ namespace io.github.hatayama.uLoopMCP
             string packageVersion = McpConstants.PackageInfo.version;
             string installTarget = $"{CliConstants.NPM_PACKAGE_NAME}@{packageVersion}";
 
-            // Windows: npm global prefix often points to admin-only directories (e.g. C:\Program Files\nodejs)
-            if (Application.platform == RuntimePlatform.WindowsEditor)
+            bool permissionOk = CliInstaller.CheckWindowsPermissions(
+                npmPath, installTarget, out string globalPrefix, out string manualCommand);
+            if (!permissionOk)
             {
-                string globalPrefix = NpmInstallDiagnostics.GetGlobalPrefix(npmPath);
-                if (!string.IsNullOrEmpty(globalPrefix) && !NpmInstallDiagnostics.IsGlobalPrefixWritable(globalPrefix))
-                {
-                    string manualCommand = $"npm install -g {installTarget}";
-                    EditorUtility.DisplayDialog(
-                        "Permission Issue Detected",
-                        $"npm's global directory ({globalPrefix}) requires elevated permissions.\n\n"
-                        + NpmInstallDiagnostics.BuildPermissionSolutions(manualCommand),
-                        "OK");
-                    return;
-                }
+                EditorUtility.DisplayDialog(
+                    "Permission Issue Detected",
+                    $"npm's global directory ({globalPrefix}) requires elevated permissions.\n\n"
+                    + NpmInstallDiagnostics.BuildPermissionSolutions(manualCommand),
+                    "OK");
+                return;
             }
 
             _isInstallingCli = true;
@@ -595,71 +591,28 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
+                string nodePath = NodeEnvironmentResolver.FindNodePath();
+                CliInstallResult result = await CliInstaller.InstallAsync(npmPath, installTarget, nodePath);
+
+                if (!result.Success)
                 {
-                    FileName = npmPath,
-                    Arguments = $"install -g {installTarget}",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
-
-                NodeEnvironmentResolver.SetupEnvironmentPath(startInfo, NodeEnvironmentResolver.FindNodePath());
-
-                bool success = false;
-                string errorOutput = "";
-
-                await Task.Run(() =>
-                {
-                    System.Diagnostics.Process process = System.Diagnostics.Process.Start(startInfo);
-                    if (process == null)
-                    {
-                        errorOutput = "Failed to start npm process";
-                        return;
-                    }
-
-                    System.Text.StringBuilder errorBuilder = new System.Text.StringBuilder();
-                    process.OutputDataReceived += (s, e) => { };
-                    process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
-                    process.BeginOutputReadLine();
-                    process.BeginErrorReadLine();
-
-                    if (!process.WaitForExit(30000))
-                    {
-                        try { process.Kill(); } catch (System.InvalidOperationException) { }
-                        process.Dispose();
-                        errorOutput = "Installation timed out after 30 seconds";
-                        return;
-                    }
-
-                    process.WaitForExit();
-                    errorOutput = errorBuilder.ToString();
-                    success = process.ExitCode == 0;
-                    process.Dispose();
-                });
-
-                CliInstallationDetector.InvalidateCache();
-
-                if (!success)
-                {
-                    string manualCommand = $"npm install -g {installTarget}";
+                    string installCommand = $"npm install -g {installTarget}";
 
                     // Classifier emits Windows-specific remediation with the command embedded;
                     // on other platforms (or unrecognized errors) show raw stderr + manual command footer
                     string guidance = Application.platform == RuntimePlatform.WindowsEditor
-                        ? NpmInstallDiagnostics.ClassifyInstallError(errorOutput, manualCommand)
+                        ? NpmInstallDiagnostics.ClassifyInstallError(result.ErrorOutput, installCommand)
                         : null;
 
                     string message;
-                    if (guidance != null && !string.IsNullOrEmpty(errorOutput))
+                    if (guidance != null && !string.IsNullOrEmpty(result.ErrorOutput))
                     {
                         message = "Failed to install uLoop CLI.\n\n"
-                            + NpmInstallDiagnostics.BuildInstallErrorMessage(guidance, errorOutput);
+                            + NpmInstallDiagnostics.BuildInstallErrorMessage(guidance, result.ErrorOutput);
                     }
                     else
                     {
-                        message = $"Failed to install uLoop CLI.\n\n{errorOutput}\n\nYou can try manually:\n{manualCommand}";
+                        message = $"Failed to install uLoop CLI.\n\n{result.ErrorOutput}\n\nYou can try manually:\n{installCommand}";
                     }
 
                     EditorUtility.DisplayDialog("Installation Failed", message, "OK");

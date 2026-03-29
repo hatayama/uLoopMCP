@@ -62,7 +62,7 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
 
-            string[] dirs = Directory.GetDirectories(skillsDir, "uloop-*");
+            string[] dirs = Directory.GetDirectories(skillsDir, CliConstants.SKILL_DIR_GLOB);
             foreach (string dir in dirs)
             {
                 string skillFile = Path.Combine(dir, "SKILL.md");

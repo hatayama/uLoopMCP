@@ -31,8 +31,8 @@ namespace io.github.hatayama.uLoopMCP
         public string lastUsedConfigPath = "";
 
         // UI State Settings
-        public bool showSecuritySettings = false;
-        public bool showToolSettings = false;
+        public bool showSecuritySettings = true;
+        public bool showToolSettings = true;
 
         // Repository Root Toggle
         public bool addRepositoryRoot = false;
@@ -54,6 +54,8 @@ namespace io.github.hatayama.uLoopMCP
         public string[] pendingCompileRequestIds = new string[0];
         public CompileRequestData[] compileRequests = new CompileRequestData[0];
         public ConnectedLLMToolData[] connectedLLMTools = new ConnectedLLMToolData[0];
+
+        public string lastSkillPromptVersion = "";
     }
 
     /// <summary>

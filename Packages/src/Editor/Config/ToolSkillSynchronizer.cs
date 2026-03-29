@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -16,15 +17,58 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class ToolSkillSynchronizer
     {
-        internal static readonly string[] SkillTargetDirs = { ".claude", ".agents", ".cursor", ".agent" };
-
-        private static readonly Dictionary<string, string> TargetFlagMap = new()
+        public readonly struct SkillTargetDefinition
         {
-            { ".claude", "--claude" },
-            { ".agents", "--codex" },
-            { ".cursor", "--cursor" },
-            { ".agent", "--antigravity" }
+            public readonly string DirName;
+            public readonly string Flag;
+            public readonly string DisplayName;
+
+            public SkillTargetDefinition(string dirName, string flag, string displayName)
+            {
+                DirName = dirName;
+                Flag = flag;
+                DisplayName = displayName;
+            }
+        }
+
+        public readonly struct SkillInstallResult
+        {
+            public readonly int AttemptedTargets;
+            public readonly int SucceededTargets;
+
+            public SkillInstallResult(int attemptedTargets, int succeededTargets)
+            {
+                AttemptedTargets = attemptedTargets;
+                SucceededTargets = succeededTargets;
+            }
+
+            public int FailedTargets => AttemptedTargets - SucceededTargets;
+            public bool IsSuccessful => FailedTargets == 0;
+        }
+
+        public readonly struct SkillTargetInfo
+        {
+            public readonly string DisplayName;
+            public readonly string DirName;
+            public readonly bool HasExistingSkills;
+
+            public SkillTargetInfo(string displayName, string dirName, bool hasExistingSkills)
+            {
+                DisplayName = displayName;
+                DirName = dirName;
+                HasExistingSkills = hasExistingSkills;
+            }
+        }
+
+        private static readonly SkillTargetDefinition[] SkillTargets =
+        {
+            new(".claude", "--claude", "Claude Code"),
+            new(".agents", "--codex", "Codex CLI / Gemini CLI"),
+            new(".cursor", "--cursor", "Cursor"),
+            new(".agent", "--antigravity", "Antigravity")
         };
+
+        internal static readonly string[] SkillTargetDirs = SkillTargets.Select(t => t.DirName).ToArray();
 
         public static void RemoveSkillFiles(string toolName)
         {
@@ -40,7 +84,7 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
                 }
 
-                string[] skillDirs = Directory.GetDirectories(skillsRoot, "uloop-*");
+                string[] skillDirs = Directory.GetDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB);
                 foreach (string skillDir in skillDirs)
                 {
                     if (SkillMatchesTool(skillDir, toolName))
@@ -65,7 +109,7 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
                 }
 
-                string[] skillDirs = Directory.GetDirectories(skillsRoot, "uloop-*");
+                string[] skillDirs = Directory.GetDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB);
                 foreach (string skillDir in skillDirs)
                 {
                     if (SkillMatchesTool(skillDir, toolName))
@@ -79,23 +123,75 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Re-install skills for all installed targets.
-        /// Detects which targets have skill directories and runs `uloop skills install` for each.
+        /// Checks parent directories (.claude/, .agents/, etc.), not skills/ subdirectories.
         /// </summary>
-        public static async Task InstallSkillFiles()
+        public static List<SkillTargetInfo> DetectTargets()
         {
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
 
-            foreach (KeyValuePair<string, string> entry in TargetFlagMap)
+            List<SkillTargetInfo> targets = new();
+
+            foreach (SkillTargetDefinition target in SkillTargets)
             {
-                string skillsDir = Path.Combine(projectRoot, entry.Key, "skills");
-                if (!Directory.Exists(skillsDir))
+                string parentDir = Path.Combine(projectRoot, target.DirName);
+                if (!Directory.Exists(parentDir))
                 {
                     continue;
                 }
 
-                await RunSkillsInstall(entry.Value);
+                string skillsRoot = Path.Combine(parentDir, "skills");
+                bool hasULoopSkills = Directory.Exists(skillsRoot)
+                    && Directory.EnumerateDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB)
+                        .Any(skillDir => File.Exists(Path.Combine(skillDir, "SKILL.md")));
+                targets.Add(new SkillTargetInfo(target.DisplayName, target.DirName, hasULoopSkills));
             }
+
+            return targets;
+        }
+
+        /// <summary>
+        /// Re-install skills for all detected targets.
+        /// Checks parent directories (.claude/, .agents/, etc.) to determine targets.
+        /// </summary>
+        public static async Task<SkillInstallResult> InstallSkillFiles()
+        {
+            List<SkillTargetInfo> targets = DetectTargets();
+            return await InstallSkillFiles(targets);
+        }
+
+        public static async Task<SkillInstallResult> InstallSkillFiles(List<SkillTargetInfo> targets)
+        {
+            Debug.Assert(targets != null, "targets must not be null");
+
+            string uloopPath = NodeEnvironmentResolver.FindExecutablePath(CliConstants.EXECUTABLE_NAME);
+            string uloopFileName = uloopPath ?? CliConstants.EXECUTABLE_NAME;
+            string nodePath = NodeEnvironmentResolver.FindNodePath();
+
+            int succeeded = 0;
+
+            // Map DirName -> Flag for the targets we need to install
+            Dictionary<string, string> targetFlagLookup = new();
+            foreach (SkillTargetDefinition def in SkillTargets)
+            {
+                targetFlagLookup[def.DirName] = def.Flag;
+            }
+
+            foreach (SkillTargetInfo target in targets)
+            {
+                if (!targetFlagLookup.TryGetValue(target.DirName, out string flag))
+                {
+                    continue;
+                }
+
+                bool success = await RunSkillsInstall(flag, uloopFileName, nodePath);
+                if (success)
+                {
+                    succeeded++;
+                }
+            }
+
+            return new SkillInstallResult(targets.Count, succeeded);
         }
 
         private static bool SkillMatchesTool(string skillDir, string toolName)
@@ -112,7 +208,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             // Fallback: directory name "uloop-{toolName}"
             string dirName = Path.GetFileName(skillDir);
-            return dirName == $"uloop-{toolName}";
+            return dirName == $"{CliConstants.SKILL_DIR_PREFIX}{toolName}";
         }
 
         private static string ParseToolNameFromFrontmatter(string content)
@@ -133,11 +229,8 @@ namespace io.github.hatayama.uLoopMCP
             return toolNameMatch.Groups[1].Value.Trim();
         }
 
-        private static async Task RunSkillsInstall(string targetFlag)
+        private static async Task<bool> RunSkillsInstall(string targetFlag, string uloopFileName, string nodePath)
         {
-            string uloopPath = NodeEnvironmentResolver.FindExecutablePath(CliConstants.EXECUTABLE_NAME);
-            string uloopFileName = uloopPath ?? CliConstants.EXECUTABLE_NAME;
-
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = uloopFileName,
@@ -147,15 +240,15 @@ namespace io.github.hatayama.uLoopMCP
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
-            NodeEnvironmentResolver.SetupEnvironmentPath(startInfo, NodeEnvironmentResolver.FindNodePath());
+            NodeEnvironmentResolver.SetupEnvironmentPath(startInfo, nodePath);
 
-            await Task.Run(() =>
+            return await Task.Run(() =>
             {
                 Process process = ProcessStartHelper.TryStart(startInfo);
                 if (process == null)
                 {
                     Debug.LogWarning($"[uLoopMCP] Failed to start uloop process for: skills install {targetFlag}");
-                    return;
+                    return false;
                 }
 
                 using (process)
@@ -170,7 +263,10 @@ namespace io.github.hatayama.uLoopMCP
                     if (process.ExitCode != 0)
                     {
                         Debug.LogWarning($"[uLoopMCP] uloop skills install {targetFlag} exited with code {process.ExitCode}: {stderr}");
+                        return false;
                     }
+
+                    return true;
                 }
             });
         }
