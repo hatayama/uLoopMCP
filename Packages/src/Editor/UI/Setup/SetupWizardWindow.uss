@@ -168,9 +168,12 @@
     border-top-color: var(--unity-colors-helpbox-border);
 }
 
-.setup-footer__buttons {
+.setup-step__button-row {
     flex-direction: row;
-    justify-content: space-between;
+}
+
+.setup-step__button-row .setup-button {
+    margin-right: 4px;
 }
 
 /* ===========================================
