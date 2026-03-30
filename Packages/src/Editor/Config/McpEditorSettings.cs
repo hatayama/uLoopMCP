@@ -762,9 +762,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 else
                 {
-                    // Create default settings.
                     _cachedSettings = new McpEditorSettingsData();
-                    SaveSettings(_cachedSettings);
                 }
             }
             catch (Exception ex)
