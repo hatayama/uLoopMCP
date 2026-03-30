@@ -759,7 +759,6 @@ namespace io.github.hatayama.uLoopMCP
                     ULoopSettings.GetSettings();
 
                     MigrateLegacyAutoStartIfNeeded(json);
-                    MigrateLastSkillPromptVersionIfNeeded(json);
                 }
                 else
                 {
@@ -804,24 +803,6 @@ namespace io.github.hatayama.uLoopMCP
 
             _cachedSettings.isServerRunning = probe.autoStartServer;
 
-            SaveSettings(_cachedSettings);
-        }
-
-        /// Existing users upgrading from before the SetupWizardWindow (PR #855) have a settings
-        /// file that lacks lastSkillPromptVersion. The field deserializes to "" and causes the
-        /// wizard to show spuriously. Stamp the current version so the wizard is suppressed.
-        private static void MigrateLastSkillPromptVersionIfNeeded(string json)
-        {
-            bool hasField = json.Contains($"\"{nameof(McpEditorSettingsData.lastSkillPromptVersion)}\"");
-            if (hasField)
-            {
-                return;
-            }
-
-            _cachedSettings = _cachedSettings with
-            {
-                lastSkillPromptVersion = McpVersion.VERSION
-            };
             SaveSettings(_cachedSettings);
         }
 
