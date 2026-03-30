@@ -35,7 +35,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static async void CheckLegacySetupAndMaybeShowWindow()
         {
-            await CliInstallationDetector.RefreshCliVersionAsync(CancellationToken.None);
+            await CliInstallationDetector.ForceRefreshCliVersionAsync(CancellationToken.None);
 
             if (IsSetupComplete())
             {
