@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.2](https://github.com/hatayama/unity-cli-loop/compare/v1.6.1...v1.6.2) (2026-03-30)
+
+
+### Bug Fixes
+
+* Prevent SetupWizardWindow from showing on package upgrade ([#861](https://github.com/hatayama/unity-cli-loop/issues/861)) ([358a32f](https://github.com/hatayama/unity-cli-loop/commit/358a32f8b8821d02e529be104762a3fc59de45a6))
+
 ## [1.6.1](https://github.com/hatayama/unity-cli-loop/compare/v1.6.0...v1.6.1) (2026-03-30)
 
 
