@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 
@@ -19,25 +20,11 @@ namespace io.github.hatayama.uLoopMCP
             if (AssetDatabase.IsAssetImportWorkerProcess()) return;
             if (Application.isBatchMode) return;
 
-            string lastVersion = McpEditorSettings.GetSettings().lastSkillPromptVersion;
-            if (lastVersion == McpVersion.VERSION) return;
+            // GetSettings() auto-creates the file, so calling it first would make the check always pass
+            string settingsPath = Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
+            if (File.Exists(settingsPath)) return;
 
-            // Static constructors cannot run async I/O, but CLI version check requires
-            // spawning a process. Defer to delayCall so we can await the result.
-            EditorApplication.delayCall += CheckSetupAndMaybeShowWindow;
-        }
-
-        private static async void CheckSetupAndMaybeShowWindow()
-        {
-            await CliInstallationDetector.ForceRefreshCliVersionAsync(CancellationToken.None);
-
-            if (IsSetupComplete())
-            {
-                SavePromptVersion();
-                return;
-            }
-
-            ShowWindow();
+            EditorApplication.delayCall += ShowWindow;
         }
 
         [MenuItem("Window/Unity CLI Loop/Setup Wizard", priority = 3)]
@@ -186,19 +173,6 @@ namespace io.github.hatayama.uLoopMCP
             _installCliButton.SetEnabled(!_isInstallingCli);
             _installCliButton.text = _isInstallingCli ? "Installing..." : "Install CLI";
         }
-
-        private static bool IsSetupComplete()
-        {
-            // Version mismatch alone should not trigger the wizard — McpEditorWindow handles CLI update prompts
-            if (!CliInstallationDetector.IsCliInstalled()) return false;
-
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
-            if (targets.Count == 0) return true;
-
-            // Some directories (e.g. .cursor/) exist for IDE config without skills — requiring All would false-negative
-            return targets.Any(t => t.HasExistingSkills);
-        }
-
         private static bool IsCliVersionMatched(string cliVersion)
         {
             if (string.IsNullOrEmpty(cliVersion)) return false;
@@ -353,7 +327,6 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(IsCliVersionMatched(cliVersion), "HandleSkip requires CLI version match");
 
             _isSkipped = true;
-            SavePromptVersion();
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
             UpdateSkillsStep(true, targets);
             _openSettingsButton.SetEnabled(true);
@@ -361,25 +334,8 @@ namespace io.github.hatayama.uLoopMCP
 
         private void HandleOpenSettings()
         {
-            SavePromptVersion();
             McpEditorWindow.ShowWindow();
             Close();
-        }
-
-        private void OnDestroy()
-        {
-            if (_isSkipped) return;
-            if (!IsSetupComplete()) return;
-
-            SavePromptVersion();
-        }
-
-        private static void SavePromptVersion()
-        {
-            McpEditorSettings.UpdateSettings(s => s with
-            {
-                lastSkillPromptVersion = McpVersion.VERSION
-            });
         }
 
     }
