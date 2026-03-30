@@ -195,7 +195,8 @@ namespace io.github.hatayama.uLoopMCP
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
             if (targets.Count == 0) return true;
 
-            return targets.All(t => t.HasExistingSkills);
+            // Some directories (e.g. .cursor/) exist for IDE config without skills — requiring All would false-negative
+            return targets.Any(t => t.HasExistingSkills);
         }
 
         private static bool IsCliVersionMatched(string cliVersion)
