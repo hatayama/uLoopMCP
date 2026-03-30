@@ -22,7 +22,28 @@ namespace io.github.hatayama.uLoopMCP
             string lastVersion = McpEditorSettings.GetSettings().lastSkillPromptVersion;
             if (lastVersion == McpVersion.VERSION) return;
 
+            // Static constructors cannot run async I/O, but CLI version check requires
+            // spawning a process. Defer to delayCall so we can await the result.
+            if (string.IsNullOrEmpty(lastVersion))
+            {
+                EditorApplication.delayCall += CheckLegacySetupAndMaybeShowWindow;
+                return;
+            }
+
             EditorApplication.delayCall += ShowWindow;
+        }
+
+        private static async void CheckLegacySetupAndMaybeShowWindow()
+        {
+            await CliInstallationDetector.ForceRefreshCliVersionAsync(CancellationToken.None);
+
+            if (IsSetupComplete())
+            {
+                SavePromptVersion();
+                return;
+            }
+
+            ShowWindow();
         }
 
         [MenuItem("Window/Unity CLI Loop/Setup Wizard", priority = 3)]
@@ -170,6 +191,17 @@ namespace io.github.hatayama.uLoopMCP
             ViewDataBinder.ToggleClass(_cliStatusIcon, "setup-status-icon--pending", true);
             _installCliButton.SetEnabled(!_isInstallingCli);
             _installCliButton.text = _isInstallingCli ? "Installing..." : "Install CLI";
+        }
+
+        private static bool IsSetupComplete()
+        {
+            string cliVersion = CliInstallationDetector.GetCachedCliVersion();
+            if (!IsCliVersionMatched(cliVersion)) return false;
+
+            List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
+            if (targets.Count == 0) return true;
+
+            return targets.All(t => t.HasExistingSkills);
         }
 
         private static bool IsCliVersionMatched(string cliVersion)
@@ -342,21 +374,12 @@ namespace io.github.hatayama.uLoopMCP
         private void OnDestroy()
         {
             if (_isSkipped) return;
+            if (!IsSetupComplete()) return;
 
-            string cliVersion = CliInstallationDetector.GetCachedCliVersion();
-            if (!IsCliVersionMatched(cliVersion)) return;
-
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
-            bool noTargets = targets.Count == 0;
-            bool allSkillsInstalled = targets.Count > 0
-                && targets.All(t => t.HasExistingSkills);
-            if (noTargets || allSkillsInstalled)
-            {
-                SavePromptVersion();
-            }
+            SavePromptVersion();
         }
 
-        private void SavePromptVersion()
+        private static void SavePromptVersion()
         {
             McpEditorSettings.UpdateSettings(s => s with
             {
