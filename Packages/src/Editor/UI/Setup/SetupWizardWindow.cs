@@ -24,16 +24,10 @@ namespace io.github.hatayama.uLoopMCP
 
             // Static constructors cannot run async I/O, but CLI version check requires
             // spawning a process. Defer to delayCall so we can await the result.
-            if (string.IsNullOrEmpty(lastVersion))
-            {
-                EditorApplication.delayCall += CheckLegacySetupAndMaybeShowWindow;
-                return;
-            }
-
-            EditorApplication.delayCall += ShowWindow;
+            EditorApplication.delayCall += CheckSetupAndMaybeShowWindow;
         }
 
-        private static async void CheckLegacySetupAndMaybeShowWindow()
+        private static async void CheckSetupAndMaybeShowWindow()
         {
             await CliInstallationDetector.ForceRefreshCliVersionAsync(CancellationToken.None);
 
@@ -195,8 +189,8 @@ namespace io.github.hatayama.uLoopMCP
 
         private static bool IsSetupComplete()
         {
-            string cliVersion = CliInstallationDetector.GetCachedCliVersion();
-            if (!IsCliVersionMatched(cliVersion)) return false;
+            // Version mismatch alone should not trigger the wizard — McpEditorWindow handles CLI update prompts
+            if (!CliInstallationDetector.IsCliInstalled()) return false;
 
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
             if (targets.Count == 0) return true;
