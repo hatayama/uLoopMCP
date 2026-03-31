@@ -383,6 +383,10 @@ namespace io.github.hatayama.uLoopMCP
                 // Resources already cleaned up by CleanupAfterUnexpectedLoopExit — just clear the reference
                 mcpServer = null;
 
+                // The server just crashed — startup protection blocks recovery if the crash happens
+                // within the 5-second protection window after a successful start
+                System.Threading.Volatile.Write(ref startupProtectionUntilTicks, 0L);
+
                 _currentRecoveryTask = StartRecoveryIfNeededAsync(portToRecover, false, CancellationToken.None);
                 _ = _currentRecoveryTask.ContinueWith(task =>
                 {
