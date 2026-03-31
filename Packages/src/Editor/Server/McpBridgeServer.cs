@@ -68,6 +68,10 @@ namespace io.github.hatayama.uLoopMCP
         public static event System.Action<ConnectedClient> OnToolConnected;
         public static event System.Action<string> OnToolDisconnected;
         public static event System.Action OnAllToolsCleared;
+
+        // Fired from thread pool when ServerLoopAsync exits while _isRunning is still true.
+        // Subscribers must marshal to main thread before accessing Unity APIs.
+        public static event System.Action OnServerLoopExited;
         
         // HResult error codes for normal disconnection detection
         private static readonly HashSet<int> NormalDisconnectionHResults = new()
@@ -81,7 +85,11 @@ namespace io.github.hatayama.uLoopMCP
         private TcpListener _tcpListener;
         private CancellationTokenSource _cancellationTokenSource;
         private Task _serverTask;
-        private bool _isRunning = false;
+        // Read from thread pool (ServerLoopAsync), written from main thread (StopServer)
+        private volatile bool _isRunning = false;
+
+        // Guard against concurrent cleanup from ServerLoopAsync finally + external disposal
+        private int _unexpectedExitCleanupStarted = 0;
         
         // Client management for broadcasting notifications
         private readonly ConcurrentDictionary<string, ConnectedClient> _connectedClients = new();
@@ -181,6 +189,7 @@ namespace io.github.hatayama.uLoopMCP
 
             Port = port == -1 ? McpEditorSettings.GetCustomPort() : port;
             _cancellationTokenSource = new CancellationTokenSource();
+            _unexpectedExitCleanupStarted = 0;
             
             try
             {
@@ -189,6 +198,20 @@ namespace io.github.hatayama.uLoopMCP
                 _isRunning = true;
                 
                 _serverTask = Task.Run(() => ServerLoopAsync(_cancellationTokenSource.Token));
+
+                // Safety net: log if the server task faults unexpectedly.
+                // Primary detection is in ServerLoopAsync's finally block; this catches unhandled exceptions in Task.Run itself.
+                _serverTask.ContinueWith(task =>
+                {
+                    if (task.IsFaulted)
+                    {
+                        VibeLogger.LogError(
+                            "server_task_faulted",
+                            $"Server task faulted unexpectedly: {task.Exception?.GetBaseException().Message}",
+                            new { exceptionType = task.Exception?.GetBaseException().GetType().Name }
+                        );
+                    }
+                }, TaskScheduler.Default);
 
                 // Server is now ready to accept connections - clean up all lock files
                 CompilationLockService.DeleteLockFile();
@@ -287,13 +310,23 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private void DisconnectAllClients()
         {
+            DisconnectAllClientsCore(notifyLifecycleEvents: true);
+        }
+
+        /// <summary>
+        /// OnAllToolsCleared subscribers (UI components) require the main thread.
+        /// Background-thread callers (CleanupAfterUnexpectedLoopExit) must suppress
+        /// lifecycle events to avoid cross-thread Unity API violations.
+        /// </summary>
+        private void DisconnectAllClientsCore(bool notifyLifecycleEvents)
+        {
             if (_connectedClients.IsEmpty)
             {
                 return;
             }
 
             List<string> clientsToRemove = new List<string>();
-            
+
             foreach (KeyValuePair<string, ConnectedClient> client in _connectedClients)
             {
                 try
@@ -311,17 +344,45 @@ namespace io.github.hatayama.uLoopMCP
                     clientsToRemove.Add(client.Key); // Remove even if disconnect failed
                 }
             }
-            
+
             // Remove all clients from the connected clients list
             foreach (string clientKey in clientsToRemove)
             {
                 _connectedClients.TryRemove(clientKey, out _);
             }
-            
-            // Notify all tools cleared if not during domain reload
-            if (!McpEditorSettings.GetIsDomainReloadInProgress())
+
+            // Lifecycle events require main thread — only fire when explicitly requested
+            if (notifyLifecycleEvents && !McpEditorSettings.GetIsDomainReloadInProgress())
             {
                 OnAllToolsCleared?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// StopServer() guards on _isRunning==true, but by the time this runs _isRunning may already
+        /// be false or the normal shutdown path may race with the finally block.
+        /// A separate cleanup path that skips the _isRunning guard is needed.
+        /// Lifecycle events are deferred to OnServerLoopExited → EditorApplication.delayCall
+        /// because this runs on the thread pool where Unity APIs are unsafe.
+        /// </summary>
+        private void CleanupAfterUnexpectedLoopExit()
+        {
+            if (Interlocked.Exchange(ref _unexpectedExitCleanupStarted, 1) != 0)
+            {
+                return;
+            }
+
+            DisconnectAllClientsCore(notifyLifecycleEvents: false);
+            _cancellationTokenSource?.Cancel();
+
+            try
+            {
+                _tcpListener?.Stop();
+            }
+            finally
+            {
+                _tcpListener = null;
+                _isRunning = false;
             }
         }
 
@@ -330,41 +391,69 @@ namespace io.github.hatayama.uLoopMCP
         /// </summary>
         private async Task ServerLoopAsync(CancellationToken cancellationToken)
         {
-            while (!cancellationToken.IsCancellationRequested && _isRunning)
+            try
             {
-                try
+                while (!cancellationToken.IsCancellationRequested && _isRunning)
                 {
-                    TcpClient client = await AcceptTcpClientAsync(_tcpListener, cancellationToken);
-                    if (client != null)
+                    try
                     {
-                        string clientEndpoint = client.Client.RemoteEndPoint?.ToString() ?? McpServerConfig.UNKNOWN_CLIENT_ENDPOINT;
-                        OnClientConnected?.Invoke(clientEndpoint);
-                        
-                        // Execute client handling in a separate task (fire-and-forget).
-                        Task.Run(() => HandleClientAsync(client, cancellationToken)).Forget();
+                        TcpClient client = await AcceptTcpClientAsync(_tcpListener, cancellationToken);
+                        if (client != null)
+                        {
+                            string clientEndpoint = client.Client.RemoteEndPoint?.ToString() ?? McpServerConfig.UNKNOWN_CLIENT_ENDPOINT;
+                            OnClientConnected?.Invoke(clientEndpoint);
+
+                            // Execute client handling in a separate task (fire-and-forget).
+                            Task.Run(() => HandleClientAsync(client, cancellationToken)).Forget();
+                        }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Expected when StopServer() disposes TcpListener while accept is pending.
+                        // If _isRunning is still true here, this is an unexpected disposal — finally block handles state cleanup.
+                        if (_isRunning)
+                        {
+                            VibeLogger.LogWarning(
+                                "server_loop_disposed_while_running",
+                                "TcpListener disposed while server was still marked as running. Exiting loop."
+                            );
+                        }
+                        break;
+                    }
+                    catch (ThreadAbortException ex)
+                    {
+                        // Log and re-throw ThreadAbortException
+                        if (!McpEditorSettings.GetIsDomainReloadInProgress())
+                        {
+                            OnError?.Invoke($"Unexpected thread abort: {ex.Message}");
+                        }
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (!cancellationToken.IsCancellationRequested)
+                        {
+                            string errorMessage = $"Server loop error: {ex.Message}";
+                            OnError?.Invoke(errorMessage);
+                        }
                     }
                 }
-                catch (ObjectDisposedException)
+            }
+            finally
+            {
+                // StopServer sets _isRunning=false before cancelling, so if it's still true here
+                // the loop exited unexpectedly (e.g. ObjectDisposedException, TcpListener disposed externally)
+                bool wasUnexpectedExit = _isRunning;
+                if (wasUnexpectedExit)
                 {
-                    // Normal exception when stopping the server.
-                    break;
-                }
-                catch (ThreadAbortException ex)
-                {
-                    // Log and re-throw ThreadAbortException
-                    if (!McpEditorSettings.GetIsDomainReloadInProgress())
-                    {
-                        OnError?.Invoke($"Unexpected thread abort: {ex.Message}");
-                    }
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    if (!cancellationToken.IsCancellationRequested)
-                    {
-                        string errorMessage = $"Server loop error: {ex.Message}";
-                                OnError?.Invoke(errorMessage);
-                    }
+                    VibeLogger.LogWarning(
+                        "server_loop_unexpected_exit",
+                        "ServerLoopAsync exited while _isRunning was still true. Cleaning up and triggering recovery.",
+                        new { cancellationRequested = cancellationToken.IsCancellationRequested }
+                    );
+
+                    CleanupAfterUnexpectedLoopExit();
+                    OnServerLoopExited?.Invoke();
                 }
             }
         }
