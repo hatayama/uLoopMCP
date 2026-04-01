@@ -234,14 +234,11 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            bool wasRunning = McpEditorSettings.GetIsServerRunning();
             int savedPort = McpEditorSettings.GetCustomPort();
             bool isAfterCompile = McpEditorSettings.GetIsAfterCompile();
 
-            // If the server is already running (e.g., started from McpEditorWindow).
             if (mcpServer?.IsRunning == true)
             {
-                // Just clear the post-compilation flag and exit.
                 if (isAfterCompile)
                 {
                     McpEditorSettings.ClearAfterCompileFlag();
@@ -250,21 +247,9 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // Clear the post-compilation flag.
             if (isAfterCompile)
             {
                 McpEditorSettings.ClearAfterCompileFlag();
-            }
-
-            if (mcpServer != null && mcpServer.IsRunning)
-            {
-                return;
-            }
-
-            if (!wasRunning && !isAfterCompile)
-            {
-                DeleteAllLockFiles();
-                return;
             }
 
             int portToUse = savedPort;
@@ -347,8 +332,8 @@ namespace io.github.hatayama.uLoopMCP
 
         /// <summary>
         /// Cleanup on Unity exit.
-        /// Disposes the TCP listener but preserves isServerRunning
-        /// so the server state can be restored on next Unity launch.
+        /// Disposes the TCP listener and marks the server as stopped so the CLI
+        /// does not attempt to connect to a stale port after the editor closes.
         /// </summary>
         private static void OnEditorQuitting()
         {
@@ -363,6 +348,7 @@ namespace io.github.hatayama.uLoopMCP
                     mcpServer = null;
                 }
             }
+            McpEditorSettings.ClearServerSession();
         }
 
         /// <summary>

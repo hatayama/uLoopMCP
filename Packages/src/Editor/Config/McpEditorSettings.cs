@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Security;
 
-using UnityEditor;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
@@ -755,8 +754,6 @@ namespace io.github.hatayama.uLoopMCP
                     // If SaveSettings runs first, legacy security fields are stripped from JSON
                     // because McpEditorSettingsData no longer defines them.
                     ULoopSettings.GetSettings();
-
-                    MigrateLegacyAutoStartIfNeeded(json);
                 }
                 else
                 {
@@ -769,37 +766,6 @@ namespace io.github.hatayama.uLoopMCP
                 throw new InvalidOperationException(
                     $"Failed to load MCP Editor settings from: {SettingsFilePath}. Settings file may be corrupted.", ex);
             }
-        }
-        
-        /// <summary>
-        /// One-time migration for legacy autoStartServer field.
-        /// Old versions persisted autoStartServer (true/false) and always set
-        /// isServerRunning=false on quit. New logic relies solely on isServerRunning,
-        /// so we translate the legacy intent: autoStartServer=true → isServerRunning=true.
-        /// After SaveSettings the legacy field disappears from JSON, preventing re-trigger.
-        /// </summary>
-        [Serializable]
-        private class LegacyAutoStartProbe
-        {
-            // Default matches old code's default (true), so missing field → true
-            public bool autoStartServer = true;
-        }
-
-        private static void MigrateLegacyAutoStartIfNeeded(string json)
-        {
-            LegacyAutoStartProbe probe = JsonUtility.FromJson<LegacyAutoStartProbe>(json);
-
-            // Field absent in JSON → probe uses default (true), but no legacy data exists
-            // Field present in JSON → real legacy value
-            bool hasLegacyField = json.Contains("\"autoStartServer\"");
-            if (!hasLegacyField)
-            {
-                return;
-            }
-
-            _cachedSettings.isServerRunning = probe.autoStartServer;
-
-            SaveSettings(_cachedSettings);
         }
 
         /// <summary>
