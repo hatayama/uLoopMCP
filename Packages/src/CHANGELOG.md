@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.6.3](https://github.com/hatayama/unity-cli-loop/compare/v1.6.2...v1.6.3) (2026-04-01)
+
+
+### Bug Fixes
+
+* Detect and auto-recover from silent MCP server loop exit ([#871](https://github.com/hatayama/unity-cli-loop/issues/871)) ([d0430c8](https://github.com/hatayama/unity-cli-loop/commit/d0430c8e0ff1d71e37dabef9099c654565368f61))
+* Hide --port option from help, docs, and skill descriptions ([#873](https://github.com/hatayama/unity-cli-loop/issues/873)) ([eec4831](https://github.com/hatayama/unity-cli-loop/commit/eec48313e3c17d12de424d1eeab3b1a967b1c346))
+* Prevent CLI from connecting to wrong Unity instance via stale port ([#875](https://github.com/hatayama/unity-cli-loop/issues/875)) ([2e577c8](https://github.com/hatayama/unity-cli-loop/commit/2e577c834e23706bc692d2303d3db417c6ef6098))
+
 ## [1.6.2](https://github.com/hatayama/unity-cli-loop/compare/v1.6.1...v1.6.2) (2026-03-30)
 
 
