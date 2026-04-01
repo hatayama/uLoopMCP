@@ -373,7 +373,16 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             DisconnectAllClientsCore(notifyLifecycleEvents: false);
-            _cancellationTokenSource?.Cancel();
+
+            try
+            {
+                _cancellationTokenSource?.Cancel();
+            }
+            finally
+            {
+                _cancellationTokenSource?.Dispose();
+                _cancellationTokenSource = null;
+            }
 
             try
             {

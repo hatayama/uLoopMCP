@@ -274,7 +274,10 @@ namespace io.github.hatayama.uLoopMCP
             _currentRecoveryTask = StartRecoveryIfNeededAsync(portToUse, isAfterCompile, CancellationToken.None);
             _ = _currentRecoveryTask.ContinueWith(task =>
             {
-                _currentRecoveryTask = null;
+                if (ReferenceEquals(_currentRecoveryTask, task))
+                {
+                    _currentRecoveryTask = null;
+                }
                 if (task.IsFaulted)
                 {
                     VibeLogger.LogError("server_startup_restore_failed",
@@ -390,7 +393,10 @@ namespace io.github.hatayama.uLoopMCP
                 _currentRecoveryTask = StartRecoveryIfNeededAsync(portToRecover, false, CancellationToken.None);
                 _ = _currentRecoveryTask.ContinueWith(task =>
                 {
-                    _currentRecoveryTask = null;
+                    if (ReferenceEquals(_currentRecoveryTask, task))
+                    {
+                        _currentRecoveryTask = null;
+                    }
                     if (task.IsFaulted)
                     {
                         VibeLogger.LogError(
