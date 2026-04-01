@@ -7,6 +7,7 @@
 // File paths are constructed from home directory and skill names, not from untrusted user input
 /* eslint-disable security/detect-non-literal-fs-filename */
 
+import { PRODUCT_DISPLAY_NAME } from '../cli-constants';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'fs';
 import { join, dirname, resolve, isAbsolute, sep } from 'path';
 import { homedir } from 'os';
@@ -84,8 +85,8 @@ function getProjectSkillsDir(target: TargetConfig): string {
   }
   if (!status.hasUloop) {
     throw new Error(
-      `uLoopMCP is not installed in this Unity project (${status.path}).\n` +
-        'Please install uLoopMCP package first, then run this command again.',
+      `${PRODUCT_DISPLAY_NAME} is not installed in this Unity project (${status.path}).\n` +
+        `Please install ${PRODUCT_DISPLAY_NAME} package first, then run this command again.`,
     );
   }
   return join(status.path as string, target.projectDir, 'skills');

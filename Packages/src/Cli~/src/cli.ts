@@ -8,6 +8,7 @@
 // and object keys come from tool definitions which are internal trusted data
 /* eslint-disable no-console, security/detect-non-literal-fs-filename, security/detect-object-injection */
 
+import { PRODUCT_DISPLAY_NAME, MENU_PATH_SERVER } from './cli-constants';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
 import { join, basename, dirname } from 'path';
 import { homedir } from 'os';
@@ -382,7 +383,8 @@ function printToolDisabledError(cmdName: string): void {
 
 function printConnectionError(): void {
   console.error('\x1b[31mError: Cannot connect to Unity.\x1b[0m');
-  console.error('Make sure Unity Editor is open and uLoopMCP server is running.');
+  console.error(`Make sure Unity Editor is open and ${PRODUCT_DISPLAY_NAME} server is running.`);
+  console.error(`You can start the server from: ${MENU_PATH_SERVER}`);
   console.error('');
   console.error('[For AI] Please report the above to the user.');
 }

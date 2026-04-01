@@ -6,6 +6,7 @@
 // Paths come from trusted Unity responses and validated project root, console.error for user warnings
 /* eslint-disable security/detect-non-literal-fs-filename, no-console */
 
+import { PRODUCT_DISPLAY_NAME } from './cli-constants';
 import assert from 'node:assert';
 import { realpath } from 'fs/promises';
 import { dirname } from 'path';
@@ -41,7 +42,7 @@ export async function validateConnectedProject(
   try {
     response = await client.sendRequest<GetVersionResponse>('get-version', {});
   } catch (error) {
-    // Method not found: old uLoopMCP version without get-version tool
+    // Method not found: old package version without get-version tool
     if (
       error instanceof Error &&
       (error.message.includes(`${JSON_RPC_METHOD_NOT_FOUND}`) ||
@@ -49,7 +50,7 @@ export async function validateConnectedProject(
         /unknown tool/i.test(error.message))
     ) {
       console.error(
-        'Warning: Could not verify project identity (get-version not available). Consider updating uLoopMCP package.',
+        `Warning: Could not verify project identity (get-version not available). Consider updating ${PRODUCT_DISPLAY_NAME} package.`,
       );
       return;
     }
