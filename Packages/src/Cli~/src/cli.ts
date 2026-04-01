@@ -134,7 +134,7 @@ program.helpCommand(true);
 program
   .command('list')
   .description('List all available tools from Unity')
-  .option('-p, --port <port>', 'Unity TCP port')
+  .addOption(createHiddenPortOption())
   .option('--project-path <path>', 'Unity project path')
   .action(async (options: CliOptions) => {
     await runWithErrorHandling(() => listAvailableTools(extractGlobalOptions(options)));
@@ -143,7 +143,7 @@ program
 program
   .command('sync')
   .description('Sync tool definitions from Unity to local cache')
-  .option('-p, --port <port>', 'Unity TCP port')
+  .addOption(createHiddenPortOption())
   .option('--project-path <path>', 'Unity project path')
   .action(async (options: CliOptions) => {
     await runWithErrorHandling(() => syncTools(extractGlobalOptions(options)));
@@ -211,8 +211,7 @@ function registerToolCommand(tool: ToolDefinition, helpGroup: string): void {
     }
   }
 
-  // Add global options
-  cmd.option('-p, --port <port>', 'Unity TCP port');
+  cmd.addOption(createHiddenPortOption());
   cmd.option('--project-path <path>', 'Unity project path');
 
   cmd.action(async (options: CliOptions) => {
@@ -365,6 +364,11 @@ function getToolHelpGroup(toolName: string, defaultToolNames: ReadonlySet<string
   return defaultToolNames.has(toolName) ? HELP_GROUP_BUILTIN_TOOLS : HELP_GROUP_THIRD_PARTY_TOOLS;
 }
 
+// Option instances are mutated by commander, so each command needs its own
+function createHiddenPortOption(): Option {
+  return new Option('-p, --port <port>', 'Unity TCP port').hideHelp();
+}
+
 function extractGlobalOptions(options: Record<string, unknown>): GlobalOptions {
   return {
     port: options['port'] as string | undefined,
@@ -442,7 +446,7 @@ async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
       console.error('');
       console.error('Another Unity instance was found, but it belongs to a different project.');
       console.error(
-        'Start the Unity Editor for this project, or use --port to specify the target.',
+        'Start the Unity Editor for this project, or use --project-path to specify the target.',
       );
       process.exit(1);
     }

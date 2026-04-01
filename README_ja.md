@@ -212,24 +212,17 @@ uloop completion
 
 </details>
 
-## プロジェクトパス指定 / ポート指定
+## プロジェクトパス指定
 
-`--project-path` / `--port` を省略した場合は、カレントディレクトリの Unity プロジェクトで設定されたポートが自動選択されます。
+`--project-path` を省略した場合は、カレントディレクトリの Unity プロジェクトで設定されたポートが自動選択されます。
 
-一つのLLMツールから複数のUnityインスタンスを操作したい場合、プロジェクトパスまたはポートを明示的に指定します：
+一つのLLMツールから複数のUnityインスタンスを操作したい場合、プロジェクトパスを明示的に指定します：
 
 ```bash
 # プロジェクトパスで指定（絶対パス・相対パスどちらも可）
 uloop compile --project-path /Users/foo/my-unity-project
 uloop compile --project-path ../other-project
-
-# ポート番号で指定
-uloop compile --port {target-port}
 ```
-
-> [!NOTE]
-> - `--project-path` と `--port` は同時に指定できません。
-> - ポート番号は各Unityの uLoopMCP Window で確認できます。
 
 <details>
 <summary>CLIの代わりにMCPを使う場合</summary>

@@ -41,10 +41,7 @@ All commands that communicate with Unity support these global options:
 
 | Option | Description |
 |--------|-------------|
-| `-p, --port <port>` | Specify Unity TCP port directly |
 | `--project-path <path>` | Specify Unity project path to auto-resolve port |
-
-`--port` and `--project-path` are mutually exclusive.
 
 ### --project-path
 
