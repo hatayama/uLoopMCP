@@ -40,8 +40,7 @@ uloop find-game-objects [options]
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project (mutually exclusive with `--port`) |
-| `-p, --port <port>` | Specify Unity TCP port directly (mutually exclusive with `--project-path`) |
+| `--project-path <path>` | Target a specific Unity project |
 
 ## Examples
 

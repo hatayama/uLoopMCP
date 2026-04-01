@@ -53,7 +53,7 @@ Usually not needed — the CLI auto-detects the Unity project from the current w
 | Option | Description |
 |--------|-------------|
 | `--project-path <path>` | Override auto-detection to target a specific Unity project |
-| `-p, --port <port>` | Specify Unity TCP port directly |
+
 
 ## When to use this vs simulate-mouse-ui
 

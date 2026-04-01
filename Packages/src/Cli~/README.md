@@ -70,24 +70,17 @@ Custom skills defined in your project are also automatically detected.
 
 You can also call the CLI directly without using Skills.
 
-### Project Path / Port Specification
+### Project Path Specification
 
-If `--project-path` / `--port` is omitted, the port is automatically selected from the Unity project detected in the current directory.
+If `--project-path` is omitted, the port is automatically selected from the Unity project detected in the current directory.
 
-To operate multiple Unity instances from a single LLM tool, explicitly specify a project path or port:
+To operate multiple Unity instances from a single LLM tool, explicitly specify a project path:
 
 ```bash
 # Specify by project path (absolute or relative)
 uloop compile --project-path /Users/foo/my-unity-project
 uloop compile --project-path ../other-project
-
-# Specify by port number
-uloop compile --port {target-port}
 ```
-
-> [!NOTE]
-> - `--project-path` and `--port` cannot be used together.
-> - You can find the port number in each Unity's uLoopMCP Window.
 
 ### Chaining Commands
 

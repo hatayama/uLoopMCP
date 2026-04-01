@@ -88,9 +88,7 @@ export async function resolveUnityPort(
 
   const projectRoot = findUnityProjectRoot();
   if (projectRoot === null) {
-    throw new Error(
-      'Unity project not found. Use --port or --project-path option to specify the target.',
-    );
+    throw new Error('Unity project not found. Use --project-path option to specify the target.');
   }
 
   return await readPortFromSettingsOrThrow(projectRoot);
@@ -101,7 +99,7 @@ function createSettingsReadError(projectRoot: string): Error {
   return new Error(
     `Could not read Unity server port from settings.\n\n` +
       `  Settings file: ${settingsPath}\n\n` +
-      `Run 'uloop launch -r' to restart Unity, or use --port to specify the port directly.`,
+      `Run 'uloop launch -r' to restart Unity.`,
   );
 }
 
