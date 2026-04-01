@@ -66,6 +66,10 @@ namespace io.github.hatayama.uLoopMCP
             // Processing after assembly reload.
             AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
 
+            // Domain Reload disabled (Enter Play Mode Settings) causes static constructor re-entry
+            McpBridgeServer.OnServerLoopExited -= OnServerLoopUnexpectedlyExited;
+            McpBridgeServer.OnServerLoopExited += OnServerLoopUnexpectedlyExited;
+
             // Initialize connected tools monitoring service
             // Note: ConnectedToolsMonitoringService has [InitializeOnLoad] so it's automatically initialized
             // This comment ensures the service initialization order is documented
@@ -270,7 +274,10 @@ namespace io.github.hatayama.uLoopMCP
             _currentRecoveryTask = StartRecoveryIfNeededAsync(portToUse, isAfterCompile, CancellationToken.None);
             _ = _currentRecoveryTask.ContinueWith(task =>
             {
-                _currentRecoveryTask = null;
+                if (ReferenceEquals(_currentRecoveryTask, task))
+                {
+                    _currentRecoveryTask = null;
+                }
                 if (task.IsFaulted)
                 {
                     VibeLogger.LogError("server_startup_restore_failed",
@@ -356,6 +363,50 @@ namespace io.github.hatayama.uLoopMCP
                     mcpServer = null;
                 }
             }
+        }
+
+        /// <summary>
+        /// OnServerLoopExited fires from the thread pool, but Unity APIs (EditorSettings,
+        /// VibeLogger with SerializedObject, etc.) are main-thread-only.
+        /// EditorApplication.delayCall marshals the recovery to the next editor tick.
+        /// </summary>
+        private static void OnServerLoopUnexpectedlyExited()
+        {
+            // OnServerLoopExited fires from thread pool — marshal to main thread for Unity API safety
+            EditorApplication.delayCall += () =>
+            {
+                VibeLogger.LogWarning(
+                    "server_loop_exit_detected",
+                    "Detected unexpected server loop exit. Initiating automatic recovery.",
+                    new { port = mcpServer?.Port }
+                );
+
+                int portToRecover = mcpServer?.Port ?? McpEditorSettings.GetCustomPort();
+
+                // Resources already cleaned up by CleanupAfterUnexpectedLoopExit — just clear the reference
+                mcpServer = null;
+
+                // The server just crashed — startup protection blocks recovery if the crash happens
+                // within the 5-second protection window after a successful start
+                System.Threading.Volatile.Write(ref startupProtectionUntilTicks, 0L);
+
+                _currentRecoveryTask = StartRecoveryIfNeededAsync(portToRecover, false, CancellationToken.None);
+                _ = _currentRecoveryTask.ContinueWith(task =>
+                {
+                    if (ReferenceEquals(_currentRecoveryTask, task))
+                    {
+                        _currentRecoveryTask = null;
+                    }
+                    if (task.IsFaulted)
+                    {
+                        VibeLogger.LogError(
+                            "server_auto_recovery_failed",
+                            $"Automatic recovery after unexpected exit failed: {task.Exception?.GetBaseException().Message}"
+                        );
+                        McpEditorSettings.SetIsServerRunning(false);
+                    }
+                }, TaskScheduler.FromCurrentSynchronizationContext());
+            };
         }
 
         /// <summary>

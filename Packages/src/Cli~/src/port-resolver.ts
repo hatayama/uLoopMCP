@@ -6,6 +6,7 @@
 // File paths are constructed from Unity project root detection, not from user input
 /* eslint-disable security/detect-non-literal-fs-filename */
 
+import { PRODUCT_DISPLAY_NAME } from './cli-constants';
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, resolve } from 'path';
@@ -61,7 +62,7 @@ export function validateProjectPath(projectPath: string): string {
 
   if (!hasUloopInstalled(resolved)) {
     throw new Error(
-      `uLoopMCP is not installed in this project (UserSettings/UnityMcpSettings.json not found): ${resolved}`,
+      `${PRODUCT_DISPLAY_NAME} is not installed in this project (UserSettings/UnityMcpSettings.json not found): ${resolved}`,
     );
   }
 

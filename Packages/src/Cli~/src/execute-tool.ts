@@ -7,6 +7,7 @@
 // and lock file paths are constructed from trusted project root detection
 /* eslint-disable no-console, security/detect-object-injection, security/detect-non-literal-fs-filename */
 
+import { PRODUCT_DISPLAY_NAME } from './cli-constants';
 import * as readline from 'readline';
 import { existsSync } from 'fs';
 import { join } from 'path';
@@ -138,7 +139,7 @@ function printVersionWarning(cliVersion: string, serverVersion: string): void {
   const isCliOlder = isVersionOlder(cliVersion, serverVersion);
   const updateCommand = isCliOlder
     ? `npm install -g uloop-cli@${serverVersion}`
-    : `Update uLoopMCP package to ${cliVersion} via Unity Package Manager`;
+    : `Update ${PRODUCT_DISPLAY_NAME} package to ${cliVersion} via Unity Package Manager`;
 
   console.error('\x1b[33m⚠️ Version mismatch detected!\x1b[0m');
   console.error(`   uloop-cli version:    ${cliVersion}`);
