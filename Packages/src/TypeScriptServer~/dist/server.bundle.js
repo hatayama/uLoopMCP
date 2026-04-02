@@ -29968,6 +29968,7 @@ var DomainError = class extends Error {
     this.name = this.constructor.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
+  details;
 };
 var ConnectionError = class extends DomainError {
   code = "CONNECTION_ERROR";
@@ -29994,6 +29995,8 @@ var InfrastructureError = class extends Error {
     this.name = this.constructor.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
+  technicalDetails;
+  originalError;
   /**
    * 技術的詳細を含む完全なエラー情報を取得
    */
@@ -30013,6 +30016,8 @@ var UnityCommunicationError = class extends InfrastructureError {
     this.unityEndpoint = unityEndpoint;
     this.requestData = requestData;
   }
+  unityEndpoint;
+  requestData;
   category = "UNITY_COMMUNICATION";
 };
 var ToolManagementError = class extends InfrastructureError {
@@ -30021,6 +30026,8 @@ var ToolManagementError = class extends InfrastructureError {
     this.toolName = toolName;
     this.toolData = toolData;
   }
+  toolName;
+  toolData;
   category = "TOOL_MANAGEMENT";
 };
 
