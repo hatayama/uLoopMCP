@@ -23241,9 +23241,10 @@ var ProgressTokenSchema = union([string2(), number2().int()]);
 var CursorSchema = string2();
 var TaskCreationParamsSchema = looseObject({
   /**
-   * Requested duration in milliseconds to retain task from creation.
+   * Time in milliseconds to keep task results available after completion.
+   * If null, the task has unlimited lifetime until manually cleaned up.
    */
-  ttl: number2().optional(),
+  ttl: union([number2(), _null3()]).optional(),
   /**
    * Time in milliseconds to wait between task status requests.
    */
@@ -23543,11 +23544,7 @@ var ClientCapabilitiesSchema = object2({
   /**
    * Present if the client supports task creation.
    */
-  tasks: ClientTasksCapabilitySchema.optional(),
-  /**
-   * Extensions that the client supports. Keys are extension identifiers (vendor-prefix/extension-name).
-   */
-  extensions: record(string2(), AssertObjectSchema).optional()
+  tasks: ClientTasksCapabilitySchema.optional()
 });
 var InitializeRequestParamsSchema = BaseRequestParamsSchema.extend({
   /**
@@ -23608,11 +23605,7 @@ var ServerCapabilitiesSchema = object2({
   /**
    * Present if the server supports task creation.
    */
-  tasks: ServerTasksCapabilitySchema.optional(),
-  /**
-   * Extensions that the server supports. Keys are extension identifiers (vendor-prefix/extension-name).
-   */
-  extensions: record(string2(), AssertObjectSchema).optional()
+  tasks: ServerTasksCapabilitySchema.optional()
 });
 var InitializeResultSchema = ResultSchema.extend({
   /**
@@ -23804,12 +23797,6 @@ var ResourceSchema = object2({
    * The MIME type of this resource, if known.
    */
   mimeType: optional(string2()),
-  /**
-   * The size of the raw resource content, in bytes (i.e., before base64 encoding or any tokenization), if known.
-   *
-   * This can be used by Hosts to display file sizes and estimate context window usage.
-   */
-  size: optional(number2()),
   /**
    * Optional annotations for the client.
    */
@@ -24991,10 +24978,6 @@ var Protocol = class {
     this._progressHandlers.clear();
     this._taskProgressTokens.clear();
     this._pendingDebouncedNotifications.clear();
-    for (const info of this._timeoutInfo.values()) {
-      clearTimeout(info.timeoutId);
-    }
-    this._timeoutInfo.clear();
     for (const controller of this._requestHandlerAbortControllers.values()) {
       controller.abort();
     }
@@ -25125,9 +25108,7 @@ var Protocol = class {
         await capturedTransport?.send(errorResponse);
       }
     }).catch((error2) => this._onerror(new Error(`Failed to send response: ${error2}`))).finally(() => {
-      if (this._requestHandlerAbortControllers.get(request.id) === abortController) {
-        this._requestHandlerAbortControllers.delete(request.id);
-      }
+      this._requestHandlerAbortControllers.delete(request.id);
     });
   }
   _onprogress(notification) {
@@ -29968,7 +29949,6 @@ var DomainError = class extends Error {
     this.name = this.constructor.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-  details;
 };
 var ConnectionError = class extends DomainError {
   code = "CONNECTION_ERROR";
@@ -29995,8 +29975,6 @@ var InfrastructureError = class extends Error {
     this.name = this.constructor.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-  technicalDetails;
-  originalError;
   /**
    * 技術的詳細を含む完全なエラー情報を取得
    */
@@ -30016,8 +29994,6 @@ var UnityCommunicationError = class extends InfrastructureError {
     this.unityEndpoint = unityEndpoint;
     this.requestData = requestData;
   }
-  unityEndpoint;
-  requestData;
   category = "UNITY_COMMUNICATION";
 };
 var ToolManagementError = class extends InfrastructureError {
@@ -30026,8 +30002,6 @@ var ToolManagementError = class extends InfrastructureError {
     this.toolName = toolName;
     this.toolData = toolData;
   }
-  toolName;
-  toolData;
   category = "TOOL_MANAGEMENT";
 };
 

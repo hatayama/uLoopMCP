@@ -102,12 +102,7 @@ jobs:
   typescript-security:
     name: TypeScript Security Analysis
     runs-on: ubuntu-latest
-    
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
@@ -123,24 +118,9 @@ jobs:
       working-directory: Packages/src/TypeScriptServer~
       run: npm ci --ignore-scripts=false
 
-    - name: Run TypeScript security-only check
+    - name: Run TypeScript security check
       working-directory: Packages/src/TypeScriptServer~
-      run: |
-        npm run security:sarif || echo "Security ESLint completed with issues - SARIF file generated"
-
-        # Filter out suppressed warnings from SARIF to prevent false positives in GitHub Security tab
-        if [ -f typescript-security.sarif ]; then
-          # Use jq to filter out results that have suppressions (default to empty array if field missing)
-          cat typescript-security.sarif | jq '.runs[].results |= map(select((.suppressions // []) | length == 0))' > typescript-security-filtered.sarif
-          mv typescript-security-filtered.sarif typescript-security.sarif
-        fi
-
-    - name: Upload TypeScript SARIF results
-      uses: github/codeql-action/upload-sarif@v4
-      if: always() && hashFiles('Packages/src/TypeScriptServer~/typescript-security.sarif') != ''
-      with:
-        sarif_file: Packages/src/TypeScriptServer~/typescript-security.sarif
-        category: "ESLint-Security"
+      run: npm run security:check
 
   npm-supply-chain-security:
     name: NPM Supply Chain Security
