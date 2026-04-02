@@ -85,7 +85,7 @@
     "knip": "6.1.1",
     "lint-staged": "16.4.0",
     "prettier": "3.8.1",
-    "ts-jest": "29.4.6",
+    "ts-jest": "29.4.9",
     "tsx": "4.21.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.58.0"
