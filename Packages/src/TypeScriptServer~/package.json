@@ -20,7 +20,6 @@
     "lint:fix": "eslint src --fix",
     "security:check": "eslint src",
     "security:fix": "eslint src --fix",
-    "security:sarif": "eslint src -f @microsoft/eslint-formatter-sarif -o typescript-security.sarif",
     "format": "prettier --write src/**/*.ts",
     "format:check": "prettier --check src/**/*.ts",
     "knip": "knip",
@@ -73,7 +72,6 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
-    "@microsoft/eslint-formatter-sarif": "3.1.0",
     "@types/jest": "30.0.0",
     "@types/node": "25.5.0",
     "cross-env": "10.1.0",
@@ -93,9 +91,6 @@
     "typescript-eslint": "8.58.0"
   },
   "overrides": {
-    "minimatch": "10.2.4",
-    "@microsoft/eslint-formatter-sarif": {
-      "eslint": "$eslint"
-    }
+    "minimatch": "10.2.4"
   }
 }
