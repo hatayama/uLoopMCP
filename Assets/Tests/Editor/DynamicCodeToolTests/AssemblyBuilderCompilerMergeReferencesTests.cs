@@ -1,7 +1,6 @@
 using NUnit.Framework;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
@@ -123,6 +122,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             string[] result = AssemblyBuilderCompiler.MergeReferencesByAssemblyName(baseRefs, additionalRefs);
 
             Assert.That(result, Has.Length.EqualTo(1));
+            Assert.That(result[0], Is.EqualTo(basePath));
         }
 
         private void CreateDummyFile(string path)

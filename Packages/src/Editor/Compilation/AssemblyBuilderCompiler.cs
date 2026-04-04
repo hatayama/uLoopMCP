@@ -279,6 +279,9 @@ namespace io.github.hatayama.uLoopMCP
 
         internal static string[] MergeReferencesByAssemblyName(string[] baseReferences, List<string> additionalRefs)
         {
+            Debug.Assert(baseReferences != null, "baseReferences must not be null");
+            Debug.Assert(additionalRefs != null, "additionalRefs must not be null");
+
             HashSet<string> seenNames = new(StringComparer.OrdinalIgnoreCase);
             List<string> refs = new(baseReferences.Length + additionalRefs.Count);
 
