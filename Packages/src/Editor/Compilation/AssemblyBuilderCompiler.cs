@@ -274,25 +274,34 @@ namespace io.github.hatayama.uLoopMCP
                 return appDomainReferences;
             }
 
-            HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
-            List<string> refs = new(appDomainReferences.Length + additionalRefs.Count);
+            return MergeReferencesByAssemblyName(appDomainReferences, additionalRefs);
+        }
 
-            foreach (string appDomainReference in appDomainReferences)
+        internal static string[] MergeReferencesByAssemblyName(string[] baseReferences, List<string> additionalRefs)
+        {
+            HashSet<string> seenNames = new(StringComparer.OrdinalIgnoreCase);
+            List<string> refs = new(baseReferences.Length + additionalRefs.Count);
+
+            foreach (string baseRef in baseReferences)
             {
-                if (seen.Add(appDomainReference))
+                string name = Path.GetFileNameWithoutExtension(baseRef);
+                if (seenNames.Add(name))
                 {
-                    refs.Add(appDomainReference);
+                    refs.Add(baseRef);
                 }
             }
 
-            if (additionalRefs != null)
+            foreach (string refPath in additionalRefs)
             {
-                foreach (string refPath in additionalRefs)
+                if (string.IsNullOrEmpty(refPath) || !File.Exists(refPath))
                 {
-                    if (!string.IsNullOrEmpty(refPath) && File.Exists(refPath) && seen.Add(refPath))
-                    {
-                        refs.Add(refPath);
-                    }
+                    continue;
+                }
+
+                string name = Path.GetFileNameWithoutExtension(refPath);
+                if (seenNames.Add(name))
+                {
+                    refs.Add(refPath);
                 }
             }
 
@@ -320,7 +329,10 @@ namespace io.github.hatayama.uLoopMCP
                     return _cachedAppDomainReferences;
                 }
 
-                HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+                // CS1703 prevention: deduplicate by assembly name, not file path.
+                // The same assembly (e.g. System.Threading) can exist under both
+                // MonoBleedingEdge and NetStandard directories with different paths.
+                HashSet<string> seenNames = new(StringComparer.OrdinalIgnoreCase);
                 List<string> refs = new();
 
                 foreach (Assembly asm in assemblies)
@@ -340,7 +352,8 @@ namespace io.github.hatayama.uLoopMCP
                         continue;
                     }
 
-                    if (string.IsNullOrEmpty(location) || !File.Exists(location) || !seen.Add(location))
+                    string assemblyName = asm.GetName().Name;
+                    if (string.IsNullOrEmpty(location) || !File.Exists(location) || !seenNames.Add(assemblyName))
                     {
                         continue;
                     }
