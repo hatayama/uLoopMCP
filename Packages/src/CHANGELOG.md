@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.4](https://github.com/hatayama/unity-cli-loop/compare/v1.6.3...v1.6.4) (2026-04-04)
+
+
+### Bug Fixes
+
+* Deduplicate assembly references by name and add architecture overview to CLAUDE.md ([#887](https://github.com/hatayama/unity-cli-loop/issues/887)) ([cb0415e](https://github.com/hatayama/unity-cli-loop/commit/cb0415ed913be4fcf3cb8b90a3d54e3622cc9489))
+
 ## [1.6.3](https://github.com/hatayama/unity-cli-loop/compare/v1.6.2...v1.6.3) (2026-04-01)
 
 
