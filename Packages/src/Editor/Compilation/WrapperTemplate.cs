@@ -9,6 +9,9 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     internal static class WrapperTemplate
     {
+        internal const string UserCodeStartMarker = "#line 1 \"user-snippet.cs\"";
+        internal const string UserCodeEndMarker = "#line default";
+
         public static string Build(
             IReadOnlyList<string> usingDirectives,
             string namespaceName,
@@ -41,14 +44,14 @@ namespace io.github.hatayama.uLoopMCP
             sb.AppendLine("            System.Collections.Generic.Dictionary<string, object> parameters = null,");
             sb.AppendLine("            System.Threading.CancellationToken ct = default)");
             sb.AppendLine("        {");
-            sb.AppendLine("#line 1 \"user-snippet.cs\"");
+            sb.AppendLine(UserCodeStartMarker);
 
             foreach (string line in body.Split('\n'))
             {
                 sb.AppendLine($"            {line.TrimEnd('\r')}");
             }
 
-            sb.AppendLine("#line default");
+            sb.AppendLine(UserCodeEndMarker);
             sb.AppendLine("#line hidden");
             sb.AppendLine("        }");
             sb.AppendLine();

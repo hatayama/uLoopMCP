@@ -120,9 +120,10 @@ namespace io.github.hatayama.uLoopMCP
 
                 string originalWrappedCode = wrappedCode;
                 bool preUsingAdded = false;
+                PreUsingResult preUsingResult = null;
                 if (isScriptMode)
                 {
-                    PreUsingResult preUsingResult = PreUsingResolver.Resolve(wrappedCode, AssemblyTypeIndex.Instance);
+                    preUsingResult = PreUsingResolver.Resolve(wrappedCode, AssemblyTypeIndex.Instance);
                     preUsingAdded = !ReferenceEquals(preUsingResult.UpdatedSource, wrappedCode);
                     wrappedCode = preUsingResult.UpdatedSource;
                 }
@@ -143,6 +144,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 // Pre-using can introduce ambiguity (CS0104) or wrong namespace (CS0234);
                 // if that happened, retry with original source to check regression
+                bool preUsingRolledBack = false;
                 if (errors.Count > 0 && preUsingAdded && HasAmbiguityErrors(errors))
                 {
                     AutoUsingResult rollbackResult = await resolver.ResolveAsync(
@@ -156,8 +158,12 @@ namespace io.github.hatayama.uLoopMCP
                         errors = rollbackErrors;
                         warnings = ExtractWarnings(messages);
                         autoResult = rollbackResult;
+                        preUsingRolledBack = true;
                     }
                 }
+
+                List<string> autoInjectedNamespaces = MergeAutoInjectedNamespaces(
+                    preUsingRolledBack, preUsingResult, autoResult);
 
                 if (errors.Count > 0)
                 {
@@ -168,7 +174,8 @@ namespace io.github.hatayama.uLoopMCP
                         Warnings = warnings,
                         UpdatedCode = wrappedCode,
                         FailureReason = CompilationFailureReason.CompilationError,
-                        AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates
+                        AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates,
+                        AutoInjectedNamespaces = autoInjectedNamespaces
                     };
                 }
 
@@ -186,7 +193,8 @@ namespace io.github.hatayama.uLoopMCP
                             Warnings = warnings,
                             UpdatedCode = wrappedCode,
                             FailureReason = CompilationFailureReason.SecurityViolation,
-                            AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates
+                            AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates,
+                            AutoInjectedNamespaces = autoInjectedNamespaces
                         };
                     }
                 }
@@ -209,7 +217,8 @@ namespace io.github.hatayama.uLoopMCP
                             Warnings = warnings,
                             UpdatedCode = wrappedCode,
                             FailureReason = CompilationFailureReason.SecurityViolation,
-                            AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates
+                            AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates,
+                            AutoInjectedNamespaces = autoInjectedNamespaces
                         };
                     }
                 }
@@ -220,7 +229,8 @@ namespace io.github.hatayama.uLoopMCP
                     CompiledAssembly = compiledAssembly,
                     Warnings = warnings,
                     UpdatedCode = wrappedCode,
-                    AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates
+                    AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates,
+                    AutoInjectedNamespaces = autoInjectedNamespaces
                 };
 
                 _cacheManager.CacheResultIfSuccessful(result, request);
@@ -463,6 +473,33 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             return false;
+        }
+
+        private static List<string> MergeAutoInjectedNamespaces(
+            bool preUsingRolledBack,
+            PreUsingResult preUsingResult,
+            AutoUsingResult autoResult)
+        {
+            List<string> merged = new();
+
+            // On rollback, pre-using additions were reverted so only autoResult's namespaces survive
+            if (!preUsingRolledBack && preUsingResult != null && preUsingResult.AddedNamespaces.Count > 0)
+            {
+                foreach (string ns in preUsingResult.AddedNamespaces)
+                {
+                    merged.Add(ns);
+                }
+            }
+
+            foreach (string ns in autoResult.AddedNamespaces)
+            {
+                if (!merged.Contains(ns))
+                {
+                    merged.Add(ns);
+                }
+            }
+
+            return merged;
         }
 
     }

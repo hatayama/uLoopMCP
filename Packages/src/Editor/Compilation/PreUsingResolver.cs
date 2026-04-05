@@ -36,7 +36,8 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(index != null, "index must not be null");
 
             HashSet<string> existingNamespaces = ExtractExistingNamespaces(wrappedSource);
-            HashSet<string> candidateTypes = ExtractTypeIdentifiers(wrappedSource);
+            string userCodeSection = ExtractUserCodeSection(wrappedSource);
+            HashSet<string> candidateTypes = ExtractTypeIdentifiers(userCodeSection);
 
             HashSet<string> namespacesToAdd = new(System.StringComparer.Ordinal);
             foreach (string typeName in candidateTypes)
@@ -50,11 +51,11 @@ namespace io.github.hatayama.uLoopMCP
 
             if (namespacesToAdd.Count == 0)
             {
-                return new PreUsingResult(wrappedSource);
+                return new PreUsingResult(wrappedSource, System.Array.Empty<string>());
             }
 
             string updatedSource = AutoUsingResolver.InsertUsingDirectives(wrappedSource, namespacesToAdd);
-            return new PreUsingResult(updatedSource);
+            return new PreUsingResult(updatedSource, namespacesToAdd);
         }
 
         private static HashSet<string> ExtractExistingNamespaces(string source)
@@ -181,6 +182,35 @@ namespace io.github.hatayama.uLoopMCP
             return identifiers;
         }
 
+        // WrapperTemplate marks user code with #line directives;
+        // scanning only this region avoids false positives from boilerplate identifiers
+        private static string ExtractUserCodeSection(string wrappedSource)
+        {
+            string startMarker = WrapperTemplate.UserCodeStartMarker;
+            string endMarker = WrapperTemplate.UserCodeEndMarker;
+
+            int startIdx = wrappedSource.IndexOf(startMarker, System.StringComparison.Ordinal);
+            if (startIdx < 0)
+            {
+                return wrappedSource;
+            }
+
+            int codeStart = wrappedSource.IndexOf('\n', startIdx);
+            if (codeStart < 0)
+            {
+                return wrappedSource;
+            }
+            codeStart++;
+
+            int endIdx = wrappedSource.IndexOf(endMarker, codeStart, System.StringComparison.Ordinal);
+            if (endIdx < 0)
+            {
+                return wrappedSource.Substring(codeStart);
+            }
+
+            return wrappedSource.Substring(codeStart, endIdx - codeStart);
+        }
+
         private static int SkipToEndOfLine(string s, int pos)
         {
             while (pos < s.Length && s[pos] != '\n') pos++;
@@ -199,9 +229,12 @@ namespace io.github.hatayama.uLoopMCP
     {
         public string UpdatedSource { get; }
 
-        public PreUsingResult(string updatedSource)
+        public IReadOnlyCollection<string> AddedNamespaces { get; }
+
+        public PreUsingResult(string updatedSource, IReadOnlyCollection<string> addedNamespaces)
         {
             UpdatedSource = updatedSource;
+            AddedNamespaces = addedNamespaces;
         }
     }
 }

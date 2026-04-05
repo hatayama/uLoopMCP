@@ -48,5 +48,11 @@ namespace io.github.hatayama.uLoopMCP
         /// Key: type name, Value: list of candidate namespaces.
         /// </summary>
         public Dictionary<string, List<string>> AmbiguousTypeCandidates { get; set; } = new();
+
+        /// <summary>
+        /// Populated on both success and failure paths;
+        /// without this the tool layer cannot emit performance hints about missing usings.
+        /// </summary>
+        public List<string> AutoInjectedNamespaces { get; set; } = new();
     }
 }

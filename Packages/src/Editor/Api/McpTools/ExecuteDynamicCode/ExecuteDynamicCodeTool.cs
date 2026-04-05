@@ -281,6 +281,17 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                 }
             }
 
+            // AI agents silently get auto-resolved usings without knowing they were missing;
+            // this hint teaches them to include usings upfront for faster compilation
+            if (result.AutoInjectedNamespaces != null && result.AutoInjectedNamespaces.Count > 0)
+            {
+                if (response.Logs == null) response.Logs = new List<string>();
+                string usingList = string.Join(" ", result.AutoInjectedNamespaces.Select(ns => $"using {ns};"));
+                response.Logs.Add(
+                    $"Performance hint: Auto-resolved {result.AutoInjectedNamespaces.Count} missing using directive(s): "
+                    + $"{usingList} — Include them in your code to skip auto-resolution and improve compilation speed.");
+            }
+
             return response;
         }
 
