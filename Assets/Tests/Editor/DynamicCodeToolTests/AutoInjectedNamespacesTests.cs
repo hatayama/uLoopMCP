@@ -29,9 +29,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             PreUsingResult result = PreUsingResolver.Resolve(wrappedSource, AssemblyTypeIndex.Instance);
 
-            // WrapperTemplate code may trigger pre-using for its own identifiers,
-            // but System.Text should not be added when user code has no StringBuilder
-            Assert.That(result.AddedNamespaces, Does.Not.Contain("System.Text"));
+            Assert.That(result.AddedNamespaces, Is.Empty);
         }
 
         [Test]
@@ -115,7 +113,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.IsTrue(result.Success,
                 result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Should compile");
-            Assert.That(result.AutoInjectedNamespaces, Does.Not.Contain("System.Text"));
+            Assert.That(result.AutoInjectedNamespaces, Is.Empty);
         }
 
         [Test]
@@ -138,7 +136,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.IsTrue(result.Success,
                 result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Should compile");
-            Assert.That(result.AutoInjectedNamespaces, Does.Not.Contain("System.Text"));
+            Assert.That(result.AutoInjectedNamespaces, Is.Empty);
         }
 
         [Test]
@@ -162,6 +160,36 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Should compile");
             Assert.That(result.AutoInjectedNamespaces, Does.Contain("System.Text"));
             Assert.That(result.AutoInjectedNamespaces, Does.Contain("System.Text.RegularExpressions"));
+        }
+
+        [Test]
+        public async Task CompileAsync_RawMode_MissingUsing_ShouldReportAutoInjectedNamespaces()
+        {
+            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = @"
+                    public class RawModeMissingUsingTest
+                    {
+                        public async System.Threading.Tasks.Task<object> ExecuteAsync(
+                            System.Collections.Generic.Dictionary<string, object> parameters = null,
+                            System.Threading.CancellationToken ct = default)
+                        {
+                            StringBuilder sb = new StringBuilder();
+                            sb.Append(""raw"");
+                            return sb.ToString();
+                        }
+                    }
+                ",
+                ClassName = "RawModeMissingUsingCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.IsTrue(result.Success,
+                result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Raw mode should compile with auto-using");
+            Assert.That(result.AutoInjectedNamespaces, Does.Contain("System.Text"));
         }
 
         [Test]
