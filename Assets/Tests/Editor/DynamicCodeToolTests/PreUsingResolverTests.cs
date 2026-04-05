@@ -95,6 +95,36 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(result, Does.Contain("HashSet"));
             Assert.That(result, Does.Contain("Regex"));
         }
+
+        [Test]
+        public void ExtractTypeIdentifiers_WhenMemberInitializer_ShouldSkipIt()
+        {
+            HashSet<string> result = PreUsingResolver.ExtractTypeIdentifiers(
+                "new Foo { Name = \"bar\", Count = 1 };");
+
+            Assert.That(result, Does.Contain("Foo"));
+            Assert.That(result, Does.Not.Contain("Name"));
+            Assert.That(result, Does.Not.Contain("Count"));
+        }
+
+        [Test]
+        public void ExtractTypeIdentifiers_WhenNamedArgument_ShouldSkipIt()
+        {
+            HashSet<string> result = PreUsingResolver.ExtractTypeIdentifiers(
+                "DoSomething(Name: \"bar\");");
+
+            Assert.That(result, Does.Contain("DoSomething"));
+            Assert.That(result, Does.Not.Contain("Name"));
+        }
+
+        [Test]
+        public void ExtractTypeIdentifiers_WhenEqualityComparison_ShouldNotSkip()
+        {
+            HashSet<string> result = PreUsingResolver.ExtractTypeIdentifiers(
+                "if (MyEnum == null) {}");
+
+            Assert.That(result, Does.Contain("MyEnum"));
+        }
     }
 
     [TestFixture]

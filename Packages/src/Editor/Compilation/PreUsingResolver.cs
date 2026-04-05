@@ -167,7 +167,17 @@ namespace io.github.hatayama.uLoopMCP
                     if (!prevWasDot && char.IsUpper(c))
                     {
                         string identifier = source.Substring(start, pos - start);
-                        if (!ExcludedIdentifiers.Contains(identifier))
+
+                        // Member initializers (Name = ...), named arguments (Name: ...),
+                        // and labels (Name:) are not type candidates; skip them.
+                        // Exclude == so comparisons are not mistakenly filtered.
+                        int next = SourceShaper.SkipWhitespace(source, pos);
+                        bool looksLikeMemberOrLabel =
+                            next < length &&
+                            (source[next] == ':' ||
+                             (source[next] == '=' && (next + 1 >= length || source[next + 1] != '=')));
+
+                        if (!looksLikeMemberOrLabel && !ExcludedIdentifiers.Contains(identifier))
                         {
                             identifiers.Add(identifier);
                         }
@@ -192,12 +202,15 @@ namespace io.github.hatayama.uLoopMCP
             string endMarker = WrapperTemplate.UserCodeEndMarker;
 
             int startIdx = wrappedSource.IndexOf(startMarker, System.StringComparison.Ordinal);
+            // Wrapped source from WrapperTemplate should always contain the marker
+            Debug.Assert(startIdx >= 0, "UserCodeStartMarker not found in wrappedSource");
             if (startIdx < 0)
             {
                 return wrappedSource;
             }
 
             int codeStart = wrappedSource.IndexOf('\n', startIdx);
+            Debug.Assert(codeStart >= 0, "newline after UserCodeStartMarker not found");
             if (codeStart < 0)
             {
                 return wrappedSource;
@@ -205,6 +218,7 @@ namespace io.github.hatayama.uLoopMCP
             codeStart++;
 
             int endIdx = wrappedSource.IndexOf(endMarker, codeStart, System.StringComparison.Ordinal);
+            Debug.Assert(endIdx >= 0, "UserCodeEndMarker not found in wrappedSource");
             if (endIdx < 0)
             {
                 return wrappedSource.Substring(codeStart);
