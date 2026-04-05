@@ -76,6 +76,17 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public void ExtractTypeIdentifiers_WhenInterpolatedString_ShouldNotExtractFromStringParts()
+        {
+            HashSet<string> result = PreUsingResolver.ExtractTypeIdentifiers(
+                "string s = $\"value is {MyVar} and {\"nested\"}\";");
+
+            Assert.That(result, Does.Contain("MyVar"));
+            Assert.That(result, Does.Not.Contain("value"));
+            Assert.That(result, Does.Not.Contain("nested"));
+        }
+
+        [Test]
         public void ExtractTypeIdentifiers_WhenGenericTypes_ShouldExtractBothNames()
         {
             HashSet<string> result = PreUsingResolver.ExtractTypeIdentifiers(

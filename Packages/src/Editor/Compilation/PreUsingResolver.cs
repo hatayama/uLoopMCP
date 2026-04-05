@@ -75,48 +75,50 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
                 }
 
-                if (!SourceShaper.StartsWithKeyword(source, pos, "using") &&
-                    !SourceShaper.StartsWithKeyword(source, pos, "global"))
+                // Skip comments that appear before using directives
+                int skipped = SourceShaper.AdvanceOneTokenPublic(source, pos);
+                if (skipped > pos + 1 && !char.IsLetterOrDigit(source[pos]) && source[pos] != '_')
+                {
+                    pos = skipped;
+                    continue;
+                }
+
+                // Handle "global using Ns;" — advance past "global" to reach "using"
+                int usingPos = pos;
+                if (SourceShaper.StartsWithKeyword(source, pos, "global"))
+                {
+                    usingPos = SourceShaper.SkipWhitespace(source, pos + 6);
+                }
+
+                if (!SourceShaper.StartsWithKeyword(source, usingPos, "using"))
                 {
                     break;
                 }
 
-                if (SourceShaper.StartsWithKeyword(source, pos, "using"))
-                {
-                    int afterUsing = SourceShaper.SkipWhitespace(source, pos + 5);
-                    if (SourceShaper.StartsWithKeyword(source, afterUsing, "static") ||
-                        SourceShaper.StartsWithKeyword(source, afterUsing, "var") ||
-                        (afterUsing < length && source[afterUsing] == '('))
-                    {
-                        pos = SkipToSemicolon(source, pos);
-                        continue;
-                    }
-
-                    int semiPos = source.IndexOf(';', afterUsing);
-                    if (semiPos > afterUsing)
-                    {
-                        string ns = source.Substring(afterUsing, semiPos - afterUsing).Trim();
-                        int eqIdx = ns.IndexOf('=');
-                        if (eqIdx >= 0)
-                        {
-                            ns = ns.Substring(eqIdx + 1).Trim();
-                        }
-                        if (ns.Length > 0)
-                        {
-                            namespaces.Add(ns);
-                        }
-                    }
-                    pos = semiPos >= 0 ? semiPos + 1 : length;
-                    continue;
-                }
-
-                if (SourceShaper.StartsWithKeyword(source, pos, "global"))
+                int afterUsing = SourceShaper.SkipWhitespace(source, usingPos + 5);
+                if (SourceShaper.StartsWithKeyword(source, afterUsing, "static") ||
+                    SourceShaper.StartsWithKeyword(source, afterUsing, "var") ||
+                    (afterUsing < length && source[afterUsing] == '('))
                 {
                     pos = SkipToSemicolon(source, pos);
                     continue;
                 }
 
-                break;
+                int semiPos = source.IndexOf(';', afterUsing);
+                if (semiPos > afterUsing)
+                {
+                    string ns = source.Substring(afterUsing, semiPos - afterUsing).Trim();
+                    int eqIdx = ns.IndexOf('=');
+                    if (eqIdx >= 0)
+                    {
+                        ns = ns.Substring(eqIdx + 1).Trim();
+                    }
+                    if (ns.Length > 0)
+                    {
+                        namespaces.Add(ns);
+                    }
+                }
+                pos = semiPos >= 0 ? semiPos + 1 : length;
             }
 
             return namespaces;

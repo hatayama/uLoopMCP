@@ -161,12 +161,17 @@ namespace io.github.hatayama.uLoopMCP
 
         internal static int SkipWhitespace(string s, int pos)
         {
+            Debug.Assert(s != null, "s must not be null");
+            Debug.Assert(pos >= 0, "pos must be non-negative");
             while (pos < s.Length && char.IsWhiteSpace(s[pos])) pos++;
             return pos;
         }
 
         internal static bool StartsWithKeyword(string s, int pos, string keyword)
         {
+            Debug.Assert(s != null, "s must not be null");
+            Debug.Assert(keyword != null, "keyword must not be null");
+            Debug.Assert(pos >= 0, "pos must be non-negative");
             if (pos + keyword.Length > s.Length) return false;
             for (int i = 0; i < keyword.Length; i++)
             {
