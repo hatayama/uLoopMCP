@@ -92,7 +92,7 @@ namespace io.github.hatayama.uLoopMCP
             return types;
         }
 
-        private static string InsertUsingDirectives(string source, IEnumerable<string> namespaces)
+        internal static string InsertUsingDirectives(string source, IEnumerable<string> namespaces)
         {
             StringBuilder sb = new StringBuilder();
             foreach (string ns in namespaces)

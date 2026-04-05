@@ -159,13 +159,13 @@ namespace io.github.hatayama.uLoopMCP
             return WrapperTemplate.Build(shape.UsingDirectives, namespaceName, className, body);
         }
 
-        private static int SkipWhitespace(string s, int pos)
+        internal static int SkipWhitespace(string s, int pos)
         {
             while (pos < s.Length && char.IsWhiteSpace(s[pos])) pos++;
             return pos;
         }
 
-        private static bool StartsWithKeyword(string s, int pos, string keyword)
+        internal static bool StartsWithKeyword(string s, int pos, string keyword)
         {
             if (pos + keyword.Length > s.Length) return false;
             for (int i = 0; i < keyword.Length; i++)
