@@ -25,6 +25,12 @@ namespace io.github.hatayama.uLoopMCP
         private readonly CompilationCacheManager _cacheManager = new();
         private bool _disposed;
 
+        /// <summary>
+        /// Number of AssemblyBuilder.Build() invocations during the last CompileAsync call.
+        /// Used by tests to verify that PreUsingResolver reduces compilation retry count.
+        /// </summary>
+        internal int LastBuildCount { get; private set; }
+
         public AssemblyBuilderCompiler(DynamicCodeSecurityLevel securityLevel)
         {
             _securityLevel = securityLevel;
@@ -49,6 +55,7 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(request != null, "request must not be null");
             Debug.Assert(!string.IsNullOrWhiteSpace(request.Code), "request.Code must not be empty");
             ct.ThrowIfCancellationRequested();
+            LastBuildCount = 0;
 
             CompilationResult cachedResult = _cacheManager.CheckCache(request);
             if (cachedResult != null)
@@ -241,6 +248,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             TaskCompletionSource<CompilerMessage[]> tcs = new();
             ct.ThrowIfCancellationRequested();
+            LastBuildCount++;
 
             string[] references = CollectReferences(additionalRefs);
 
