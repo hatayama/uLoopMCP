@@ -76,12 +76,14 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void ExtractTypeIdentifiers_WhenInterpolatedString_ShouldNotExtractFromStringParts()
+        public void ExtractTypeIdentifiers_WhenInterpolatedString_ShouldNotExtractFromIt()
         {
+            // AdvanceOneTokenPublic skips the entire $"..." including interpolation holes;
+            // types inside holes are handled by AutoUsingResolver fallback if needed
             HashSet<string> result = PreUsingResolver.ExtractTypeIdentifiers(
                 "string s = $\"value is {MyVar} and {\"nested\"}\";");
 
-            Assert.That(result, Does.Contain("MyVar"));
+            Assert.That(result, Does.Not.Contain("MyVar"));
             Assert.That(result, Does.Not.Contain("value"));
             Assert.That(result, Does.Not.Contain("nested"));
         }
