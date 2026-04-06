@@ -96,6 +96,7 @@ jobs:
     if: needs.release.outputs.releases_created == 'true'
     uses: ./.github/workflows/npm-publish.yml
     with:
+      ref: ${{ github.sha }}
       dry-run: false
     permissions:
       contents: read
