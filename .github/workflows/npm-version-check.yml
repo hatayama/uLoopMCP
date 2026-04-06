@@ -23,6 +23,11 @@ jobs:
         id: compare
         run: |
           GIT_VERSION=$(git tag --list 'v*' --sort=-version:refname | head -1 | sed 's/^v//')
+          if [ -z "${GIT_VERSION}" ]; then
+            echo "⚠️ No git tags found matching 'v*', skipping check"
+            echo "mismatch=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           NPM_VERSION=$(npm view uloop-cli version 2>/dev/null || echo "not-found")
 
           echo "git_version=${GIT_VERSION}" >> "$GITHUB_OUTPUT"
@@ -72,6 +77,6 @@ jobs:
 
           ### How to fix
 
-          Run the [manual-npm-publish](../actions/workflows/npm-publish.yml) workflow with ref \`v${GIT_VERSION}\`.
+          Run the [manual-npm-publish](https://github.com/${{ github.repository }}/actions/workflows/npm-publish.yml) workflow with ref \`v${GIT_VERSION}\`.
 
-          This issue was created automatically by the [npm version check](../actions/workflows/npm-version-check.yml) workflow."
+          This issue was created automatically by the [npm version check](https://github.com/${{ github.repository }}/actions/workflows/npm-version-check.yml) workflow."
