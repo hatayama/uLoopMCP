@@ -69,7 +69,6 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd Packages/src/Cli~
-          npm install -g npm@latest
           npm publish --access public --provenance
           echo "✅ CLI v${{ steps.version.outputs.version }} published to npm"
 
