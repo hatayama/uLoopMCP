@@ -39,7 +39,7 @@ namespace io.github.hatayama.uLoopMCP
                 List<string> unresolvedTypes = ExtractUnresolvedTypes(messages);
                 if (unresolvedTypes.Count == 0)
                 {
-                    return new AutoUsingResult(currentSource, messages, ambiguousCandidates);
+                    return new AutoUsingResult(currentSource, messages, ambiguousCandidates, addedNamespaces);
                 }
 
                 HashSet<string> namespacesToAdd = new(System.StringComparer.Ordinal);
@@ -69,7 +69,7 @@ namespace io.github.hatayama.uLoopMCP
             // Final compilation with all added usings
             File.WriteAllText(sourcePath, currentSource);
             CompilerMessage[] finalMessages = await buildFunc(sourcePath, dllPath, additionalReferences, ct);
-            return new AutoUsingResult(currentSource, finalMessages, ambiguousCandidates);
+            return new AutoUsingResult(currentSource, finalMessages, ambiguousCandidates, addedNamespaces);
         }
 
         private static List<string> ExtractUnresolvedTypes(CompilerMessage[] messages)
@@ -92,7 +92,7 @@ namespace io.github.hatayama.uLoopMCP
             return types;
         }
 
-        private static string InsertUsingDirectives(string source, IEnumerable<string> namespaces)
+        internal static string InsertUsingDirectives(string source, IEnumerable<string> namespaces)
         {
             StringBuilder sb = new StringBuilder();
             foreach (string ns in namespaces)
@@ -110,14 +110,18 @@ namespace io.github.hatayama.uLoopMCP
         public CompilerMessage[] Messages { get; }
         public Dictionary<string, List<string>> AmbiguousTypeCandidates { get; }
 
+        public IReadOnlyCollection<string> AddedNamespaces { get; }
+
         public AutoUsingResult(
             string updatedSource,
             CompilerMessage[] messages,
-            Dictionary<string, List<string>> ambiguousTypeCandidates)
+            Dictionary<string, List<string>> ambiguousTypeCandidates,
+            IReadOnlyCollection<string> addedNamespaces)
         {
             UpdatedSource = updatedSource;
             Messages = messages;
             AmbiguousTypeCandidates = ambiguousTypeCandidates;
+            AddedNamespaces = addedNamespaces;
         }
     }
 }

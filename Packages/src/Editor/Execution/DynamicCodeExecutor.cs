@@ -74,7 +74,8 @@ namespace io.github.hatayama.uLoopMCP
                 Success = true,
                 Result = null,
                 ExecutionTime = stopwatch.Elapsed,
-                Logs = new List<string> { "Code compiled successfully (no execution)" }
+                Logs = new List<string> { "Code compiled successfully (no execution)" },
+                AutoInjectedNamespaces = compilationResult.AutoInjectedNamespaces
             };
         }
 
@@ -158,6 +159,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 ExecutionResult executionResult = await _runner.ExecuteAsync(context);
                 executionResult.ExecutionTime = stopwatch.Elapsed;
+                executionResult.AutoInjectedNamespaces = compilationResult.AutoInjectedNamespaces;
                 UpdateStatistics(executionResult, stopwatch.Elapsed);
                 return executionResult;
             }
@@ -279,7 +281,8 @@ namespace io.github.hatayama.uLoopMCP
                 ExecutionTime = executionTime,
                 CompilationErrors = compilationResult.Errors,
                 UpdatedCode = compilationResult.UpdatedCode,
-                AmbiguousTypeCandidates = compilationResult.AmbiguousTypeCandidates
+                AmbiguousTypeCandidates = compilationResult.AmbiguousTypeCandidates,
+                AutoInjectedNamespaces = compilationResult.AutoInjectedNamespaces
             };
         }
 

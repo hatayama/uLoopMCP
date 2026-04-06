@@ -42,6 +42,12 @@ namespace io.github.hatayama.uLoopMCP
         /// Key: type name, Value: list of candidate namespaces.
         /// </summary>
         public Dictionary<string, List<string>> AmbiguousTypeCandidates { get; set; } = new();
+
+        /// <summary>
+        /// Without this, callers cannot tell which namespaces were auto-resolved
+        /// and cannot advise users to include them for faster compilation.
+        /// </summary>
+        public List<string> AutoInjectedNamespaces { get; set; } = new();
     }
 
     /// <summary>

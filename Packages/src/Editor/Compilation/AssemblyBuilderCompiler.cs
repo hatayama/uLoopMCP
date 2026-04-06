@@ -25,6 +25,12 @@ namespace io.github.hatayama.uLoopMCP
         private readonly CompilationCacheManager _cacheManager = new();
         private bool _disposed;
 
+        /// <summary>
+        /// Number of AssemblyBuilder.Build() invocations during the last CompileAsync call.
+        /// Used by tests to verify that PreUsingResolver reduces compilation retry count.
+        /// </summary>
+        internal int LastBuildCount { get; private set; }
+
         public AssemblyBuilderCompiler(DynamicCodeSecurityLevel securityLevel)
         {
             _securityLevel = securityLevel;
@@ -49,6 +55,7 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(request != null, "request must not be null");
             Debug.Assert(!string.IsNullOrWhiteSpace(request.Code), "request.Code must not be empty");
             ct.ThrowIfCancellationRequested();
+            LastBuildCount = 0;
 
             CompilationResult cachedResult = _cacheManager.CheckCache(request);
             if (cachedResult != null)
@@ -108,25 +115,55 @@ namespace io.github.hatayama.uLoopMCP
                     };
                 }
 
-                // Auto-using resolution: compile, detect CS0246/CS0103, add usings, retry
+                // Raw mode returns the original reference; script mode returns a new wrapped string
+                bool isScriptMode = !ReferenceEquals(wrappedCode, request.Code);
+
+                string originalWrappedCode = wrappedCode;
+                bool preUsingAdded = false;
+                PreUsingResult preUsingResult = null;
+                if (isScriptMode)
+                {
+                    preUsingResult = PreUsingResolver.Resolve(wrappedCode, AssemblyTypeIndex.Instance);
+                    preUsingAdded = !ReferenceEquals(preUsingResult.UpdatedSource, wrappedCode);
+                    wrappedCode = preUsingResult.UpdatedSource;
+                }
+
+                Task<CompilerMessage[]> BuildFunc(string sp, string dp, List<string> refs, CancellationToken token) =>
+                    this.BuildAssemblyAsync(sp, dp, refs, token,
+                        () => canDeleteTempFiles = false, () => canDeleteTempFiles = true);
+
                 AutoUsingResolver resolver = new AutoUsingResolver();
                 AutoUsingResult autoResult = await resolver.ResolveAsync(
-                    sourcePath, dllPath, wrappedCode, request.AdditionalReferences,
-                    (resolvedSourcePath, resolvedDllPath, additionalReferences, cancellationToken) =>
-                        this.BuildAssemblyAsync(
-                            resolvedSourcePath,
-                            resolvedDllPath,
-                            additionalReferences,
-                            cancellationToken,
-                            () => canDeleteTempFiles = false,
-                            () => canDeleteTempFiles = true),
-                    ct);
+                    sourcePath, dllPath, wrappedCode, request.AdditionalReferences, BuildFunc, ct);
 
                 wrappedCode = autoResult.UpdatedSource;
                 CompilerMessage[] messages = autoResult.Messages;
 
                 List<CompilationError> errors = ExtractErrors(messages);
                 List<string> warnings = ExtractWarnings(messages);
+
+                // Pre-using can introduce ambiguity (CS0104) or wrong namespace (CS0234);
+                // if that happened, retry with original source to check regression
+                bool preUsingRolledBack = false;
+                if (errors.Count > 0 && preUsingAdded && HasAmbiguityErrors(errors))
+                {
+                    AutoUsingResult rollbackResult = await resolver.ResolveAsync(
+                        sourcePath, dllPath, originalWrappedCode, request.AdditionalReferences, BuildFunc, ct);
+
+                    List<CompilationError> rollbackErrors = ExtractErrors(rollbackResult.Messages);
+                    if (rollbackErrors.Count < errors.Count)
+                    {
+                        wrappedCode = rollbackResult.UpdatedSource;
+                        messages = rollbackResult.Messages;
+                        errors = rollbackErrors;
+                        warnings = ExtractWarnings(messages);
+                        autoResult = rollbackResult;
+                        preUsingRolledBack = true;
+                    }
+                }
+
+                List<string> autoInjectedNamespaces = MergeAutoInjectedNamespaces(
+                    preUsingRolledBack, preUsingResult, autoResult);
 
                 if (errors.Count > 0)
                 {
@@ -137,7 +174,8 @@ namespace io.github.hatayama.uLoopMCP
                         Warnings = warnings,
                         UpdatedCode = wrappedCode,
                         FailureReason = CompilationFailureReason.CompilationError,
-                        AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates
+                        AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates,
+                        AutoInjectedNamespaces = autoInjectedNamespaces
                     };
                 }
 
@@ -155,7 +193,8 @@ namespace io.github.hatayama.uLoopMCP
                             Warnings = warnings,
                             UpdatedCode = wrappedCode,
                             FailureReason = CompilationFailureReason.SecurityViolation,
-                            AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates
+                            AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates,
+                            AutoInjectedNamespaces = autoInjectedNamespaces
                         };
                     }
                 }
@@ -178,7 +217,8 @@ namespace io.github.hatayama.uLoopMCP
                             Warnings = warnings,
                             UpdatedCode = wrappedCode,
                             FailureReason = CompilationFailureReason.SecurityViolation,
-                            AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates
+                            AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates,
+                            AutoInjectedNamespaces = autoInjectedNamespaces
                         };
                     }
                 }
@@ -189,7 +229,8 @@ namespace io.github.hatayama.uLoopMCP
                     CompiledAssembly = compiledAssembly,
                     Warnings = warnings,
                     UpdatedCode = wrappedCode,
-                    AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates
+                    AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates,
+                    AutoInjectedNamespaces = autoInjectedNamespaces
                 };
 
                 _cacheManager.CacheResultIfSuccessful(result, request);
@@ -217,6 +258,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             TaskCompletionSource<CompilerMessage[]> tcs = new();
             ct.ThrowIfCancellationRequested();
+            LastBuildCount++;
 
             string[] references = CollectReferences(additionalRefs);
 
@@ -409,7 +451,6 @@ namespace io.github.hatayama.uLoopMCP
 
         private static string ExtractErrorCode(string message)
         {
-            // Extract CS#### pattern from compiler message
             int csIndex = message.IndexOf("CS", StringComparison.Ordinal);
             if (csIndex >= 0 && csIndex + 6 <= message.Length)
             {
@@ -420,6 +461,45 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             return "UNKNOWN";
+        }
+
+        private static bool HasAmbiguityErrors(List<CompilationError> errors)
+        {
+            foreach (CompilationError error in errors)
+            {
+                if (error.ErrorCode == "CS0104" || error.ErrorCode == "CS0234")
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static List<string> MergeAutoInjectedNamespaces(
+            bool preUsingRolledBack,
+            PreUsingResult preUsingResult,
+            AutoUsingResult autoResult)
+        {
+            List<string> merged = new();
+
+            // On rollback, pre-using additions were reverted so only autoResult's namespaces survive
+            if (!preUsingRolledBack && preUsingResult != null && preUsingResult.AddedNamespaces.Count > 0)
+            {
+                foreach (string ns in preUsingResult.AddedNamespaces)
+                {
+                    merged.Add(ns);
+                }
+            }
+
+            foreach (string ns in autoResult.AddedNamespaces)
+            {
+                if (!merged.Contains(ns))
+                {
+                    merged.Add(ns);
+                }
+            }
+
+            return merged;
         }
 
     }
