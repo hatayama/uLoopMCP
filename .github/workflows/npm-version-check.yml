@@ -28,7 +28,21 @@ jobs:
             echo "mismatch=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          NPM_VERSION=$(npm view uloop-cli version 2>/dev/null || echo "not-found")
+
+          # Retry up to 3 times to avoid false positives from transient network errors
+          NPM_VERSION=""
+          for i in 1 2 3; do
+            if NPM_VERSION=$(npm view uloop-cli version 2>/dev/null); then
+              break
+            fi
+            echo "⚠️ npm view attempt ${i} failed, retrying in 10s..."
+            sleep 10
+          done
+
+          if [ -z "${NPM_VERSION}" ]; then
+            echo "❌ npm view failed after 3 attempts — aborting to avoid false positive"
+            exit 1
+          fi
 
           echo "git_version=${GIT_VERSION}" >> "$GITHUB_OUTPUT"
           echo "npm_version=${NPM_VERSION}" >> "$GITHUB_OUTPUT"
