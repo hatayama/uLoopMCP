@@ -61,8 +61,6 @@ jobs:
 
       - name: 🚀 Publish CLI to npm
         if: steps.check.outputs.already_published == 'false'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd Packages/src/Cli~
           npm publish --access public --provenance
