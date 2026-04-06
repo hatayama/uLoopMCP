@@ -58,7 +58,7 @@ jobs:
         if: ${{ steps.release.outputs.pr != '' }}
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: 📦 Rebuild server bundle for Release PR
         if: ${{ steps.release.outputs.pr != '' }}
