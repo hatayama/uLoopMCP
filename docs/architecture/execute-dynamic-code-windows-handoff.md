@@ -145,3 +145,38 @@ Do not optimize Windows first. First make sure:
 - the current tests stay green
 
 Only after that should Windows-specific performance work start.
+
+## Paste this into Windows Codex
+
+Use this prompt as the starting message on Windows:
+
+```text
+Please resume work on branch `codex/rebuild-execute-dynamic-code`.
+
+First read:
+- docs/architecture/execute-dynamic-code-rebuild.md
+- docs/architecture/execute-dynamic-code-windows-handoff.md
+
+Important recent commits:
+- 583cde7e Log dynamic compile fast-path failures for Windows handoff
+- 893f42f2 Route prewarm capability through build facade
+- 0889d2c6 Split dynamic code infrastructure into module facades
+
+Goal:
+- Validate execute-dynamic-code on Windows
+- Confirm whether the fast Roslyn path, one-shot Roslyn path, or AssemblyBuilder fallback is being used
+- If the ideal path is not active, inspect Unity Console error logs and fix the cause
+
+Suggested validation commands:
+1. uloop compile
+2. uloop run-tests --test-mode EditMode --filter-type regex --filter-value 'io.github.hatayama.uLoopMCP.DynamicCodeToolTests'
+3. uloop execute-dynamic-code --code "return 1 + 2;"
+4. uloop execute-dynamic-code --code "StringBuilder builder1002 = new StringBuilder(); builder1002.Append(\"ok-1002\"); return builder1002.ToString();"
+5. uloop execute-dynamic-code --code "DynamicAssemblyTest test1004 = new DynamicAssemblyTest(); return test1004.HelloWorld();"
+
+Watch the Unity Console for:
+- dynamic_code_fast_path_unavailable
+- dynamic_code_shared_worker_fallback
+- dynamic_code_shared_worker_failure
+- dynamic_code_one_shot_compiler_start_failure
+```
