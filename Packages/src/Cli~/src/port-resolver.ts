@@ -10,7 +10,12 @@ import { PRODUCT_DISPLAY_NAME } from './cli-constants';
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, resolve } from 'path';
-import { findUnityProjectRoot, isUnityProject, hasUloopInstalled } from './project-root.js';
+import {
+  findUnityProjectRoot,
+  getUnitySettingsCandidatePaths,
+  isUnityProject,
+  hasUloopInstalled,
+} from './project-root.js';
 
 export class UnityNotRunningError extends Error {
   constructor(public readonly projectRoot: string) {
@@ -103,63 +108,39 @@ function createSettingsReadError(projectRoot: string): Error {
   );
 }
 
-function findSettingsPath(projectRoot: string): string | null {
-  const settingsPath = join(projectRoot, 'UserSettings/UnityMcpSettings.json');
-
-  if (existsSync(settingsPath)) {
-    return settingsPath;
-  }
-
-  const tempPath = `${settingsPath}.tmp`;
-  if (existsSync(tempPath)) {
-    return tempPath;
-  }
-
-  const backupPath = `${settingsPath}.bak`;
-  if (existsSync(backupPath)) {
-    return backupPath;
-  }
-
-  return null;
-}
-
 // File I/O and JSON parsing can fail for external reasons (permissions, corruption, concurrent writes)
 async function readPortFromSettingsOrThrow(projectRoot: string): Promise<number> {
-  const settingsPath = findSettingsPath(projectRoot);
+  for (const settingsPath of getUnitySettingsCandidatePaths(projectRoot)) {
+    let content: string;
+    try {
+      content = await readFile(settingsPath, 'utf-8');
+    } catch {
+      continue;
+    }
 
-  if (settingsPath === null) {
-    throw createSettingsReadError(projectRoot);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      continue;
+    }
+
+    if (typeof parsed !== 'object' || parsed === null) {
+      continue;
+    }
+    const settings = parsed as UnityMcpSettings;
+
+    // Only block when isServerRunning is explicitly false (Unity clean shutdown).
+    // undefined/missing means old settings format — proceed to next validation stage.
+    if (settings.isServerRunning === false) {
+      throw new UnityNotRunningError(projectRoot);
+    }
+
+    const port = resolvePortFromUnitySettings(settings);
+    if (port !== null) {
+      return port;
+    }
   }
 
-  let content: string;
-  try {
-    content = await readFile(settingsPath, 'utf-8');
-  } catch {
-    throw createSettingsReadError(projectRoot);
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    throw createSettingsReadError(projectRoot);
-  }
-
-  if (typeof parsed !== 'object' || parsed === null) {
-    throw createSettingsReadError(projectRoot);
-  }
-  const settings = parsed as UnityMcpSettings;
-
-  // Only block when isServerRunning is explicitly false (Unity clean shutdown).
-  // undefined/missing means old settings format — proceed to next validation stage.
-  if (settings.isServerRunning === false) {
-    throw new UnityNotRunningError(projectRoot);
-  }
-
-  const port = resolvePortFromUnitySettings(settings);
-  if (port === null) {
-    throw createSettingsReadError(projectRoot);
-  }
-
-  return port;
+  throw createSettingsReadError(projectRoot);
 }

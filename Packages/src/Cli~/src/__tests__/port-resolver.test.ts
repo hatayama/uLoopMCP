@@ -162,4 +162,29 @@ describe('resolveUnityPort with project settings', () => {
     const port = await resolveUnityPort(undefined, tempProjectRoot);
     expect(port).toBe(8723);
   });
+
+  it('returns port from temp when both temp and backup exist', async () => {
+    writeFileSync(
+      join(tempProjectRoot, 'UserSettings/UnityMcpSettings.json.tmp'),
+      JSON.stringify({ isServerRunning: true, customPort: 8724 }),
+    );
+    writeFileSync(
+      join(tempProjectRoot, 'UserSettings/UnityMcpSettings.json.bak'),
+      JSON.stringify({ isServerRunning: true, customPort: 8725 }),
+    );
+
+    const port = await resolveUnityPort(undefined, tempProjectRoot);
+    expect(port).toBe(8724);
+  });
+
+  it('falls back to temp when primary settings file contains invalid JSON', async () => {
+    writeFileSync(join(tempProjectRoot, 'UserSettings/UnityMcpSettings.json'), 'not valid json{{{');
+    writeFileSync(
+      join(tempProjectRoot, 'UserSettings/UnityMcpSettings.json.tmp'),
+      JSON.stringify({ isServerRunning: true, customPort: 8726 }),
+    );
+
+    const port = await resolveUnityPort(undefined, tempProjectRoot);
+    expect(port).toBe(8726);
+  });
 });

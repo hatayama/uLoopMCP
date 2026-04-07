@@ -114,6 +114,8 @@ namespace io.github.hatayama.uLoopMCP
             string oldSettingsPath = Path.Combine(McpConstants.ULOOP_DIR, "settings.security.json");
             string oldBackupPath = oldSettingsPath + ".bak";
 
+            AtomicFileWriter.RecoverSidecarFiles(SettingsFilePath);
+
             // When upgrading directly from v0.67 (or earlier) to v0.69+, the legacy
             // file still contains security fields because v0.68's extraction never ran.
             // Legacy file takes priority over any settings.security.json which may hold
@@ -139,8 +141,6 @@ namespace io.github.hatayama.uLoopMCP
                     File.Move(oldBackupPath, SettingsFilePath);
                 }
             }
-
-            AtomicFileWriter.RecoverSidecarFiles(SettingsFilePath);
 
             if (File.Exists(SettingsFilePath))
             {
