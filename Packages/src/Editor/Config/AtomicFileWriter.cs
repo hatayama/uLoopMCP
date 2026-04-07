@@ -35,11 +35,48 @@ namespace io.github.hatayama.uLoopMCP
             File.Move(tempFilePath, filePath);
         }
 
+        internal static void RecoverSidecarFiles(string filePath)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(filePath), "filePath must not be null or empty");
+
+            string tempFilePath = filePath + ".tmp";
+            string backupFilePath = filePath + ".bak";
+
+            if (File.Exists(filePath))
+            {
+                CleanupBackup(backupFilePath);
+                CleanupTemp(tempFilePath);
+                return;
+            }
+
+            // .tmp is newer than .bak once the previous target has been rotated away,
+            // so preferring it avoids rolling back to older session state after a crash.
+            if (File.Exists(tempFilePath))
+            {
+                File.Move(tempFilePath, filePath);
+                CleanupBackup(backupFilePath);
+                return;
+            }
+
+            if (File.Exists(backupFilePath))
+            {
+                File.Move(backupFilePath, filePath);
+            }
+        }
+
         public static void CleanupBackup(string backupFilePath)
         {
             if (File.Exists(backupFilePath))
             {
                 File.Delete(backupFilePath);
+            }
+        }
+
+        private static void CleanupTemp(string tempFilePath)
+        {
+            if (File.Exists(tempFilePath))
+            {
+                File.Delete(tempFilePath);
             }
         }
     }

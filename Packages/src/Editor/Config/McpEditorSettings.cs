@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Security;
 
+using UnityEditor;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
@@ -68,6 +69,27 @@ namespace io.github.hatayama.uLoopMCP
         internal static void InvalidateCache()
         {
             _cachedSettings = null;
+        }
+
+        [InitializeOnLoadMethod]
+        private static void RecoverSettingsFileOnEditorLoad()
+        {
+            if (AssetDatabase.IsAssetImportWorkerProcess())
+            {
+                return;
+            }
+
+            RecoverSettingsFileIfNeeded();
+        }
+
+        internal static void RecoverSettingsFileIfNeeded()
+        {
+            if (!IsValidSettingsPath(SettingsFilePath))
+            {
+                throw new SecurityException($"Invalid settings file path: {SettingsFilePath}");
+            }
+
+            AtomicFileWriter.RecoverSidecarFiles(SettingsFilePath);
         }
 
         /// <summary>
@@ -724,12 +746,7 @@ namespace io.github.hatayama.uLoopMCP
                     throw new SecurityException($"Invalid settings file path: {SettingsFilePath}");
                 }
 
-                // Recover from interrupted atomic write: if target is missing but .bak exists, restore it.
-                string backupPath = SettingsFilePath + ".bak";
-                if (!File.Exists(SettingsFilePath) && File.Exists(backupPath))
-                {
-                    File.Move(backupPath, SettingsFilePath);
-                }
+                RecoverSettingsFileIfNeeded();
 
                 if (File.Exists(SettingsFilePath))
                 {

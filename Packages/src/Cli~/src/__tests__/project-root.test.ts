@@ -4,7 +4,11 @@
 import { mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { findUnityProjectRoot, resetMultipleProjectsWarning } from '../project-root.js';
+import {
+  findUnityProjectRoot,
+  hasUloopInstalled,
+  resetMultipleProjectsWarning,
+} from '../project-root.js';
 
 function createUnityProject(basePath: string, name: string): string {
   const projectPath = join(basePath, name);
@@ -93,5 +97,35 @@ describe('findUnityProjectRoot', () => {
     const result = findUnityProjectRoot(testDir);
 
     expect(result).toBe(join(testDir, 'Alpha'));
+  });
+});
+
+describe('hasUloopInstalled', () => {
+  let testDir: string;
+
+  beforeEach(() => {
+    testDir = join(
+      tmpdir(),
+      `uloop-installed-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
+    mkdirSync(join(testDir, 'Assets'), { recursive: true });
+    mkdirSync(join(testDir, 'ProjectSettings'), { recursive: true });
+    mkdirSync(join(testDir, 'UserSettings'), { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(testDir, { recursive: true, force: true });
+  });
+
+  it('returns true when only backup settings file exists', () => {
+    writeFileSync(join(testDir, 'UserSettings/UnityMcpSettings.json.bak'), '{}');
+
+    expect(hasUloopInstalled(testDir)).toBe(true);
+  });
+
+  it('returns true when only temp settings file exists', () => {
+    writeFileSync(join(testDir, 'UserSettings/UnityMcpSettings.json.tmp'), '{}');
+
+    expect(hasUloopInstalled(testDir)).toBe(true);
   });
 });
