@@ -21,6 +21,10 @@ on:
         type: boolean
         required: false
         default: false
+    secrets:
+      NPM_TOKEN:
+        description: 'npm authentication token for publishing'
+        required: true
 
 permissions:
   contents: read
@@ -80,6 +84,8 @@ jobs:
 
       - name: 🚀 Publish CLI to npm
         if: steps.version.outputs.already_published == 'false' && inputs.dry-run != true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd Packages/src/Cli~
           npm publish --access public --provenance
