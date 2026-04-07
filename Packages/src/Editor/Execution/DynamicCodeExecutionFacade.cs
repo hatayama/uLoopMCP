@@ -11,23 +11,23 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     internal sealed class DynamicCodeExecutionFacade : IDynamicCodeExecutionRuntime, IDisposable
     {
-        private readonly ExternalCompilerPathResolutionService _externalCompilerPathResolver;
+        private readonly ICompiledAssemblyBuilder _assemblyBuilder;
         private readonly IDynamicCodeExecutorPool _executorPool;
         private readonly SemaphoreSlim _executionSemaphore = new(1, 1);
         private bool _disposed;
 
         public DynamicCodeExecutionFacade(
-            ExternalCompilerPathResolutionService externalCompilerPathResolver,
+            ICompiledAssemblyBuilder assemblyBuilder,
             IDynamicCodeExecutorPool executorPool)
         {
-            _externalCompilerPathResolver = externalCompilerPathResolver ?? throw new ArgumentNullException(nameof(externalCompilerPathResolver));
+            _assemblyBuilder = assemblyBuilder ?? throw new ArgumentNullException(nameof(assemblyBuilder));
             _executorPool = executorPool ?? throw new ArgumentNullException(nameof(executorPool));
         }
 
         public bool SupportsAutoPrewarm()
         {
             ThrowIfDisposed();
-            return _externalCompilerPathResolver.Resolve() != null;
+            return _assemblyBuilder.SupportsAutoPrewarm();
         }
 
         public async Task<ExecutionResult> ExecuteAsync(

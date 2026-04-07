@@ -26,6 +26,11 @@ namespace io.github.hatayama.uLoopMCP
             _compilationBackend = compilationBackend;
         }
 
+        public bool SupportsAutoPrewarm()
+        {
+            return _externalCompilerPathResolver.Resolve() != null;
+        }
+
         public async Task<CompiledAssemblyBuildResult> BuildAsync(
             DynamicCompilationPlan plan,
             CancellationToken ct = default)

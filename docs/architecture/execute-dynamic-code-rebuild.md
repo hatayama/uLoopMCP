@@ -77,8 +77,8 @@ flowchart TD
     PrewarmUseCase --> RuntimeContract
     RuntimeContract --> RuntimeFacade
 
-    RuntimeFacade --> PathSvc
     RuntimeFacade --> ExecutorPoolContract
+    RuntimeFacade --> BuilderContract
     ExecutorPoolContract --> ExecutorPool
     ExecutorPool --> Provider
     Provider --> ExecutorContract
@@ -145,8 +145,8 @@ flowchart TD
     Provider --> SourcePrepSvc
     Provider --> EntryResolver
     ExecutorPool --> Provider
-    RuntimeFacade --> PathSvc
     RuntimeFacade --> ExecutorPool
+    RuntimeFacade --> Builder
     ExecuteUseCase --> RuntimeFacade
     PrewarmUseCase --> RuntimeFacade
 ```
@@ -188,7 +188,7 @@ flowchart TD
 - `Runtime access module`
   - Exposes `IDynamicCodeExecutionRuntime` to the use-case layer.
   - Reuses executors per security level through `IDynamicCodeExecutorPool`.
-  - Keeps warm-up capability checks near the runtime gateway.
+  - Queries warm-up capability through the build facade instead of reaching into path resolution directly.
 
 - `Planning module`
   - Turns `CompilationRequest` into `DynamicCompilationPlan`.
@@ -232,8 +232,8 @@ flowchart TD
 
 - `DynamicCodeExecutionFacade`
   - Reuses executors through `IDynamicCodeExecutorPool`.
-  - Checks whether the external Roslyn path is available for warm-up.
-  - Hides provider and pool wiring from use cases.
+  - Checks warm-up capability through `ICompiledAssemblyBuilder`.
+  - Hides provider, pool, and build-capability wiring from use cases.
 
 - `DynamicCodeExecutorPool`
   - Owns executor reuse and disposal per security level.

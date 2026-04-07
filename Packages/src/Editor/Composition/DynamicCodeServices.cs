@@ -41,7 +41,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public static IDynamicCodeExecutionRuntime RuntimeFacade { get; } =
             new DynamicCodeExecutionFacade(
-                ExternalCompilerPathResolver,
+                AssemblyBuilder,
                 ExecutorPool);
 
         public static IExecuteDynamicCodeUseCase ExecuteDynamicCodeUseCase { get; } =
