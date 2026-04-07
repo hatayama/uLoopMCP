@@ -5,12 +5,13 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor.Compilation;
+using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
     internal static class RoslynCompilerBackend
     {
-        public static Task<CompilerMessage[]> CompileAsync(
+        public static async Task<CompilerMessage[]> CompileAsync(
             string sourcePath,
             string dllPath,
             List<string> references,
@@ -27,25 +28,37 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                CompilerMessage[] workerMessages = SharedRoslynCompilerWorkerHost.TryCompile(
-                    workerRequestFilePath,
-                    externalCompilerPaths,
-                    ct,
-                    markBuildStarted,
-                    markBuildFinished,
-                    incrementBuildCount);
-                if (workerMessages != null)
+                if (Application.platform != RuntimePlatform.WindowsEditor)
                 {
-                    return Task.FromResult(workerMessages);
-                }
-
-                DynamicCompilationHealthMonitor.ReportSharedWorkerFallback(
-                    "worker_unavailable",
-                    new
+                    CompilerMessage[] workerMessages = SharedRoslynCompilerWorkerHost.TryCompile(
+                        workerRequestFilePath,
+                        externalCompilerPaths,
+                        ct,
+                        markBuildStarted,
+                        markBuildFinished,
+                        incrementBuildCount);
+                    if (workerMessages != null)
                     {
-                        dotnet_host_path = externalCompilerPaths.DotnetHostPath,
-                        compiler_dll_path = externalCompilerPaths.CompilerDllPath
-                    });
+                        return workerMessages;
+                    }
+
+                    DynamicCompilationHealthMonitor.ReportSharedWorkerFallback(
+                        "worker_unavailable",
+                        new
+                        {
+                            dotnet_host_path = externalCompilerPaths.DotnetHostPath,
+                            compiler_dll_path = externalCompilerPaths.CompilerDllPath
+                        });
+                }
+                else
+                {
+                    DynamicCompilationHealthMonitor.ReportSharedWorkerFallback(
+                        "worker_unsupported_on_windows",
+                        new
+                        {
+                            platform = Application.platform.ToString()
+                        });
+                }
 
                 ct.ThrowIfCancellationRequested();
                 incrementBuildCount();
@@ -71,14 +84,15 @@ namespace io.github.hatayama.uLoopMCP
                         dotnet_host_path = externalCompilerPaths.DotnetHostPath,
                         compiler_dll_path = externalCompilerPaths.CompilerDllPath
                     });
-                    return Task.FromResult(new CompilerMessage[]
-                    {
-                        new CompilerMessage
-                        {
-                            type = CompilerMessageType.Error,
-                            message = "External C# compiler failed to start"
-                        }
-                    });
+
+                    return await AssemblyBuilderFallbackCompilerBackend.CompileAsync(
+                        sourcePath,
+                        dllPath,
+                        references,
+                        ct,
+                        markBuildStarted,
+                        markBuildFinished,
+                        incrementBuildCount).ConfigureAwait(false);
                 }
 
                 string stdout = process.StandardOutput.ReadToEnd();
@@ -87,7 +101,7 @@ namespace io.github.hatayama.uLoopMCP
                 markBuildFinished();
                 ct.ThrowIfCancellationRequested();
 
-                return Task.FromResult(ExternalCompilerMessageParser.Parse(stdout, stderr, process.ExitCode));
+                return ExternalCompilerMessageParser.Parse(stdout, stderr, process.ExitCode);
             }
             finally
             {

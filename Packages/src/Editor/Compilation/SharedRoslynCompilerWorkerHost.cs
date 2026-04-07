@@ -29,6 +29,8 @@ namespace io.github.hatayama.uLoopMCP
         {
             AssemblyReloadEvents.beforeAssemblyReload -= ShutdownForReload;
             AssemblyReloadEvents.beforeAssemblyReload += ShutdownForReload;
+            EditorApplication.quitting -= ShutdownForQuit;
+            EditorApplication.quitting += ShutdownForQuit;
         }
 
         public static CompilerMessage[] TryCompile(
@@ -320,13 +322,15 @@ namespace io.github.hatayama.uLoopMCP
             Debug.Assert(reader != null, "reader must not be null");
 
             Task<string> readTask = Task.Run(() => reader.ReadLine());
-            bool completed = readTask.Wait(SharedCompilerWorkerResponseTimeoutMilliseconds, ct);
-            if (!completed)
+            Task timeoutTask = Task.Delay(SharedCompilerWorkerResponseTimeoutMilliseconds, ct);
+            Task completedTask = Task.WhenAny(readTask, timeoutTask).GetAwaiter().GetResult();
+            if (!ReferenceEquals(completedTask, readTask))
             {
+                Shutdown();
                 return null;
             }
 
-            return readTask.Result;
+            return readTask.GetAwaiter().GetResult();
         }
 
         private static bool HasErrors(IReadOnlyCollection<CompilerMessage> messages)
@@ -356,6 +360,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         private static void ShutdownForReload()
+        {
+            Shutdown();
+        }
+
+        private static void ShutdownForQuit()
         {
             Shutdown();
         }
@@ -450,8 +459,12 @@ namespace io.github.hatayama.uLoopMCP
                 + "                return 0;\n"
                 + "            }\n"
                 + "\n"
-                + "            int exitCode = Compile(requestPath);\n"
-                + "            Console.WriteLine(ResultPrefix + \" \" + exitCode);\n"
+                + "            CompileResponse response = Compile(requestPath);\n"
+                + "            Console.WriteLine(ResultPrefix + \" \" + response.ExitCode);\n"
+                + "            foreach (string diagnosticLine in response.DiagnosticLines)\n"
+                + "            {\n"
+                + "                Console.WriteLine(diagnosticLine);\n"
+                + "            }\n"
                 + "            Console.WriteLine(EndMarker);\n"
                 + "            Console.Out.Flush();\n"
                 + "        }\n"
@@ -459,7 +472,7 @@ namespace io.github.hatayama.uLoopMCP
                 + "        return 0;\n"
                 + "    }\n"
                 + "\n"
-                + "    private static int Compile(string requestPath)\n"
+                + "    private static CompileResponse Compile(string requestPath)\n"
                 + "    {\n"
                 + "        string[] requestLines = File.ReadAllLines(requestPath);\n"
                 + "        string sourcePath = requestLines[0];\n"
@@ -473,6 +486,7 @@ namespace io.github.hatayama.uLoopMCP
                 + "        {\n"
                 + "            EmitResult emitResult = compilation.Emit(peStream);\n"
                 + "            int exitCode = 0;\n"
+                + "            List<string> diagnosticLines = new List<string>();\n"
                 + "            foreach (Diagnostic diagnostic in emitResult.Diagnostics)\n"
                 + "            {\n"
                 + "                if (diagnostic.Severity != DiagnosticSeverity.Error && diagnostic.Severity != DiagnosticSeverity.Warning)\n"
@@ -490,10 +504,10 @@ namespace io.github.hatayama.uLoopMCP
                 + "                int column = lineSpan.StartLinePosition.Character + 1;\n"
                 + "                string file = string.IsNullOrEmpty(lineSpan.Path) ? sourcePath : lineSpan.Path;\n"
                 + "                string severity = diagnostic.Severity == DiagnosticSeverity.Warning ? \"warning\" : \"error\";\n"
-                + "                Console.WriteLine(file + \"(\" + line + \",\" + column + \"): \" + severity + \" \" + diagnostic.Id + \": \" + diagnostic.GetMessage());\n"
+                + "                diagnosticLines.Add(file + \"(\" + line + \",\" + column + \"): \" + severity + \" \" + diagnostic.Id + \": \" + diagnostic.GetMessage());\n"
                 + "            }\n"
                 + "\n"
-                + "            return exitCode;\n"
+                + "            return new CompileResponse(exitCode, diagnosticLines);\n"
                 + "        }\n"
                 + "    }\n"
                 + "\n"
@@ -543,6 +557,18 @@ namespace io.github.hatayama.uLoopMCP
                 + "        public PortableExecutableReference Reference { get; }\n"
                 + "        public long WriteTicks { get; }\n"
                 + "        public long FileLength { get; }\n"
+                + "    }\n"
+                + "\n"
+                + "    private sealed class CompileResponse\n"
+                + "    {\n"
+                + "        public CompileResponse(int exitCode, List<string> diagnosticLines)\n"
+                + "        {\n"
+                + "            ExitCode = exitCode;\n"
+                + "            DiagnosticLines = diagnosticLines;\n"
+                + "        }\n"
+                + "\n"
+                + "        public int ExitCode { get; }\n"
+                + "        public List<string> DiagnosticLines { get; }\n"
                 + "    }\n"
                 + "}\n";
         }

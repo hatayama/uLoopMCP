@@ -51,5 +51,93 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.AreEqual(0, prepared.HoistedLiteralBindings.Count);
             StringAssert.Contains("return $\"outer {$\"inner {1}\"}\";", prepared.PreparedSource);
         }
+
+        [Test]
+        public void Prepare_WhenFloatLiteralExists_ShouldNotHoistNumericLiteral()
+        {
+            PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
+                "float blend = 1.5f; return blend;",
+                DynamicCodeConstants.DEFAULT_NAMESPACE,
+                DynamicCodeConstants.DEFAULT_CLASS_NAME);
+
+            Assert.IsNotNull(prepared.PreparedSource);
+            Assert.AreEqual(0, prepared.HoistedLiteralBindings.Count);
+            StringAssert.Contains("float blend = 1.5f;", prepared.PreparedSource);
+        }
+
+        [Test]
+        public void Prepare_WhenDecimalLiteralExists_ShouldNotHoistNumericLiteral()
+        {
+            PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
+                "double ratio = 0.25; return ratio;",
+                DynamicCodeConstants.DEFAULT_NAMESPACE,
+                DynamicCodeConstants.DEFAULT_CLASS_NAME);
+
+            Assert.IsNotNull(prepared.PreparedSource);
+            Assert.AreEqual(0, prepared.HoistedLiteralBindings.Count);
+            StringAssert.Contains("double ratio = 0.25;", prepared.PreparedSource);
+        }
+
+        [Test]
+        public void Prepare_WhenVerbatimStringContainsCommentLikeText_ShouldNotHoistInsideLiteral()
+        {
+            PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
+                "return @\"http://127.0.0.1\";",
+                DynamicCodeConstants.DEFAULT_NAMESPACE,
+                DynamicCodeConstants.DEFAULT_CLASS_NAME);
+
+            Assert.IsNotNull(prepared.PreparedSource);
+            Assert.AreEqual(0, prepared.HoistedLiteralBindings.Count);
+            StringAssert.Contains("return @\"http://127.0.0.1\";", prepared.PreparedSource);
+        }
+
+        [Test]
+        public void Prepare_WhenCharLiteralContainsDigit_ShouldNotHoistInsideLiteral()
+        {
+            PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
+                "char c = '1'; return c;",
+                DynamicCodeConstants.DEFAULT_NAMESPACE,
+                DynamicCodeConstants.DEFAULT_CLASS_NAME);
+
+            Assert.IsNotNull(prepared.PreparedSource);
+            Assert.AreEqual(0, prepared.HoistedLiteralBindings.Count);
+            StringAssert.Contains("char c = '1';", prepared.PreparedSource);
+        }
+
+        [Test]
+        public void Prepare_WhenRegularStringUsesHexEscape_ShouldHoistDecodedValue()
+        {
+            PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
+                "return \"\\x41\";",
+                DynamicCodeConstants.DEFAULT_NAMESPACE,
+                DynamicCodeConstants.DEFAULT_CLASS_NAME);
+
+            Assert.AreEqual(1, prepared.HoistedLiteralBindings.Count);
+            Assert.AreEqual("A", prepared.HoistedLiteralBindings[0].Value);
+        }
+
+        [Test]
+        public void Prepare_WhenRegularStringUsesUnicodeEscape_ShouldHoistDecodedValue()
+        {
+            PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
+                "return \"\\U0001F600\";",
+                DynamicCodeConstants.DEFAULT_NAMESPACE,
+                DynamicCodeConstants.DEFAULT_CLASS_NAME);
+
+            Assert.AreEqual(1, prepared.HoistedLiteralBindings.Count);
+            Assert.AreEqual(char.ConvertFromUtf32(0x1F600), prepared.HoistedLiteralBindings[0].Value);
+        }
+
+        [Test]
+        public void Prepare_WhenRegularStringUsesBackspaceEscape_ShouldHoistDecodedValue()
+        {
+            PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
+                "return \"\\b\";",
+                DynamicCodeConstants.DEFAULT_NAMESPACE,
+                DynamicCodeConstants.DEFAULT_CLASS_NAME);
+
+            Assert.AreEqual(1, prepared.HoistedLiteralBindings.Count);
+            Assert.AreEqual("\b", prepared.HoistedLiteralBindings[0].Value);
+        }
     }
 }

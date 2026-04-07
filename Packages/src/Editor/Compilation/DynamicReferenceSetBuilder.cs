@@ -50,6 +50,8 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
+            AddLoadedAssemblyReferences(baseReferences, assemblyLocationsByName);
+
             List<string> mergedAdditionalReferences = new List<string>();
             AddExistingReferences(mergedAdditionalReferences, additionalReferences);
             AddExistingReferences(mergedAdditionalReferences, resolvedAssemblyReferences);
@@ -101,6 +103,26 @@ namespace io.github.hatayama.uLoopMCP
             {
                 _cachedAssemblyLocationsByName = null;
                 _cachedAssemblyCount = -1;
+            }
+        }
+
+        private static void AddLoadedAssemblyReferences(
+            List<string> destination,
+            IReadOnlyDictionary<string, string> assemblyLocationsByName)
+        {
+            List<string> assemblyNames = new List<string>(assemblyLocationsByName.Keys);
+            assemblyNames.Sort(StringComparer.OrdinalIgnoreCase);
+
+            foreach (string assemblyName in assemblyNames)
+            {
+                if (!assemblyLocationsByName.TryGetValue(assemblyName, out string assemblyPath)
+                    || string.IsNullOrEmpty(assemblyPath)
+                    || !File.Exists(assemblyPath))
+                {
+                    continue;
+                }
+
+                destination.Add(assemblyPath);
             }
         }
 
