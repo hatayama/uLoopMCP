@@ -15,9 +15,7 @@ namespace io.github.hatayama.uLoopMCP
                 return null;
             }
 
-            string contentsPath = editorPath.EndsWith(".app", StringComparison.OrdinalIgnoreCase)
-                ? Path.Combine(editorPath, "Contents")
-                : Path.GetDirectoryName(Path.GetDirectoryName(editorPath));
+            string contentsPath = ResolveEditorContentsPath(editorPath);
             if (string.IsNullOrEmpty(contentsPath))
             {
                 return null;
@@ -94,6 +92,31 @@ namespace io.github.hatayama.uLoopMCP
                 codeAnalysisDllPath,
                 codeAnalysisCSharpDllPath,
                 netCoreRuntimeSharedDirectoryPath);
+        }
+
+        private static string ResolveEditorContentsPath(string editorPath)
+        {
+            if (editorPath.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
+            {
+                return Path.Combine(editorPath, "Contents");
+            }
+
+            string editorDirectoryPath = Path.GetDirectoryName(editorPath);
+            if (string.IsNullOrEmpty(editorDirectoryPath))
+            {
+                return null;
+            }
+
+            string dataDirectoryPath = Path.Combine(editorDirectoryPath, "Data");
+            if (Directory.Exists(dataDirectoryPath))
+            {
+                return dataDirectoryPath;
+            }
+
+            string installRootPath = Path.GetDirectoryName(editorDirectoryPath);
+            return string.IsNullOrEmpty(installRootPath)
+                ? null
+                : installRootPath;
         }
     }
 }

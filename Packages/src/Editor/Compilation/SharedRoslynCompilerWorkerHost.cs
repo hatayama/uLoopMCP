@@ -38,14 +38,6 @@ namespace io.github.hatayama.uLoopMCP
             Action markBuildFinished,
             Action incrementBuildCount)
         {
-            if (UnityEngine.Application.platform == UnityEngine.RuntimePlatform.WindowsEditor)
-            {
-                DynamicCompilationHealthMonitor.ReportSharedWorkerFallback(
-                    "windows_platform",
-                    new { platform = UnityEngine.Application.platform.ToString() });
-                return null;
-            }
-
             lock (SharedCompilerWorkerLock)
             {
                 EnsureStarted(externalCompilerPaths);
@@ -335,6 +327,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         private static void ShutdownForReload()
+        {
+            Shutdown();
+        }
+
+        internal static void ShutdownForTests()
         {
             Shutdown();
         }
