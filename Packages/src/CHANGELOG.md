@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.7.0](https://github.com/hatayama/unity-cli-loop/compare/v1.6.4...v1.7.0) (2026-04-07)
+
+
+### Features
+
+* Improve execute-dynamic-code performance by pre-resolving using directives ([#889](https://github.com/hatayama/unity-cli-loop/issues/889)) ([ba94c26](https://github.com/hatayama/unity-cli-loop/commit/ba94c268edaa948d53952ae76baa2c99b8ba1d85))
+
+
+### Bug Fixes
+
+* restore Unity settings after interrupted atomic writes ([#898](https://github.com/hatayama/unity-cli-loop/issues/898)) ([887800d](https://github.com/hatayama/unity-cli-loop/commit/887800dc18caa695ee3926827ac51dfe7a18183a))
+
 ## [1.6.4](https://github.com/hatayama/unity-cli-loop/compare/v1.6.3...v1.6.4) (2026-04-04)
 
 
