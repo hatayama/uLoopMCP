@@ -14,7 +14,7 @@ namespace io.github.hatayama.uLoopMCP
             IReadOnlyCollection<string> missingComponents)
         {
             string issueKey = $"fast_path_unavailable::{editorPath}";
-            LogWarningOnce(
+            LogErrorOnce(
                 issueKey,
                 "dynamic_code_fast_path_unavailable",
                 "execute-dynamic-code fast Roslyn path is unavailable; AssemblyBuilder fallback will be used",
@@ -31,7 +31,7 @@ namespace io.github.hatayama.uLoopMCP
         public static void ReportSharedWorkerFallback(string reason, object context = null)
         {
             string issueKey = $"shared_worker_fallback::{reason}";
-            LogWarningOnce(
+            LogErrorOnce(
                 issueKey,
                 "dynamic_code_shared_worker_fallback",
                 "execute-dynamic-code shared Roslyn worker is unavailable; falling back to one-shot compiler execution",
@@ -43,7 +43,7 @@ namespace io.github.hatayama.uLoopMCP
         public static void ReportSharedWorkerFailure(string reason, object context = null)
         {
             string issueKey = $"shared_worker_failure::{reason}";
-            LogWarningOnce(
+            LogErrorOnce(
                 issueKey,
                 "dynamic_code_shared_worker_failure",
                 "execute-dynamic-code shared Roslyn worker failed to operate correctly",
@@ -86,31 +86,6 @@ namespace io.github.hatayama.uLoopMCP
                 humanNote: humanNote,
                 aiTodo: aiTodo);
             Debug.LogError($"[{McpConstants.PROJECT_NAME}] {message}");
-        }
-
-        private static void LogWarningOnce(
-            string issueKey,
-            string operation,
-            string message,
-            object context,
-            string humanNote,
-            string aiTodo)
-        {
-            lock (ReportedIssueLock)
-            {
-                if (!ReportedIssues.Add(issueKey))
-                {
-                    return;
-                }
-            }
-
-            VibeLogger.LogWarning(
-                operation,
-                message,
-                context,
-                humanNote: humanNote,
-                aiTodo: aiTodo);
-            Debug.LogWarning($"[{McpConstants.PROJECT_NAME}] {message}");
         }
     }
 }

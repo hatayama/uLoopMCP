@@ -24,6 +24,123 @@ namespace io.github.hatayama.uLoopMCP
         private static readonly object SharedCompilerWorkerLock = new();
         private static Process _sharedCompilerWorkerProcess;
 
+        private sealed class WorkerAttemptResult
+        {
+            public CompilerMessage[] Messages { get; }
+
+            public bool ShouldRetry { get; }
+
+            public string FailureReason { get; }
+
+            public object FailureContext { get; }
+
+            private WorkerAttemptResult(
+                CompilerMessage[] messages,
+                bool shouldRetry,
+                string failureReason,
+                object failureContext)
+            {
+                Messages = messages;
+                ShouldRetry = shouldRetry;
+                FailureReason = failureReason;
+                FailureContext = failureContext;
+            }
+
+            public bool Succeeded => Messages != null;
+
+            public static WorkerAttemptResult Successful(CompilerMessage[] messages)
+            {
+                return new WorkerAttemptResult(messages, false, null, null);
+            }
+
+            public static WorkerAttemptResult RetryableFailure(string failureReason, object failureContext)
+            {
+                return new WorkerAttemptResult(null, true, failureReason, failureContext);
+            }
+        }
+
+        private sealed class WorkerStartupResult
+        {
+            public bool IsReady { get; }
+
+            public string FailureReason { get; }
+
+            public object FailureContext { get; }
+
+            private WorkerStartupResult(bool isReady, string failureReason, object failureContext)
+            {
+                IsReady = isReady;
+                FailureReason = failureReason;
+                FailureContext = failureContext;
+            }
+
+            public static WorkerStartupResult Ready()
+            {
+                return new WorkerStartupResult(true, null, null);
+            }
+
+            public static WorkerStartupResult Failure(string failureReason, object failureContext)
+            {
+                return new WorkerStartupResult(false, failureReason, failureContext);
+            }
+        }
+
+        private sealed class WorkerAssemblyBuildResult
+        {
+            public bool StartedSuccessfully { get; }
+
+            public CompilerMessage[] Messages { get; }
+
+            public string FailureReason { get; }
+
+            public object FailureContext { get; }
+
+            private WorkerAssemblyBuildResult(
+                bool startedSuccessfully,
+                CompilerMessage[] messages,
+                string failureReason,
+                object failureContext)
+            {
+                StartedSuccessfully = startedSuccessfully;
+                Messages = messages;
+                FailureReason = failureReason;
+                FailureContext = failureContext;
+            }
+
+            public static WorkerAssemblyBuildResult Started(CompilerMessage[] messages)
+            {
+                return new WorkerAssemblyBuildResult(true, messages, null, null);
+            }
+
+            public static WorkerAssemblyBuildResult StartFailure(string failureReason, object failureContext)
+            {
+                return new WorkerAssemblyBuildResult(false, null, failureReason, failureContext);
+            }
+        }
+
+        private sealed class WorkerPaths
+        {
+            public string DirectoryPath { get; }
+
+            public string SourcePath { get; }
+
+            public string AssemblyPath { get; }
+
+            public string CompileResponseFilePath { get; }
+
+            public WorkerPaths(
+                string directoryPath,
+                string sourcePath,
+                string assemblyPath,
+                string compileResponseFilePath)
+            {
+                DirectoryPath = directoryPath;
+                SourcePath = sourcePath;
+                AssemblyPath = assemblyPath;
+                CompileResponseFilePath = compileResponseFilePath;
+            }
+        }
+
         [InitializeOnLoadMethod]
         private static void RegisterLifecycle()
         {
@@ -43,178 +160,315 @@ namespace io.github.hatayama.uLoopMCP
         {
             lock (SharedCompilerWorkerLock)
             {
-                for (int attempt = 1; attempt <= SharedCompilerWorkerMaxAttempts; attempt++)
-                {
-                    EnsureStarted(externalCompilerPaths);
-                    if (_sharedCompilerWorkerProcess == null || _sharedCompilerWorkerProcess.HasExited)
-                    {
-                        if (attempt == SharedCompilerWorkerMaxAttempts)
-                        {
-                            DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
-                                "worker_process_missing",
-                                new { request_file_path = requestFilePath, attempt });
-                            return null;
-                        }
-
-                        Shutdown();
-                        continue;
-                    }
-
-                    ct.ThrowIfCancellationRequested();
-                    incrementBuildCount();
-                    markBuildStarted();
-
-                    try
-                    {
-                        _sharedCompilerWorkerProcess.StandardInput.WriteLine(Path.GetFullPath(requestFilePath));
-                        _sharedCompilerWorkerProcess.StandardInput.Flush();
-
-                        string header = ReadLine(_sharedCompilerWorkerProcess.StandardOutput, ct);
-                        if (string.IsNullOrEmpty(header))
-                        {
-                            if (attempt == SharedCompilerWorkerMaxAttempts)
-                            {
-                                DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
-                                    "worker_empty_header",
-                                    new { request_file_path = requestFilePath, attempt });
-                                return null;
-                            }
-
-                            Shutdown();
-                            continue;
-                        }
-
-                        List<string> outputLines = new List<string>();
-                        while (true)
-                        {
-                            string line = ReadLine(_sharedCompilerWorkerProcess.StandardOutput, ct);
-                            if (line == null)
-                            {
-                                if (attempt == SharedCompilerWorkerMaxAttempts)
-                                {
-                                    DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
-                                        "worker_missing_end_marker",
-                                        new { request_file_path = requestFilePath, attempt });
-                                    return null;
-                                }
-
-                                Shutdown();
-                                goto RetryCompile;
-                            }
-
-                            if (line == SharedCompilerWorkerEndMarker)
-                            {
-                                break;
-                            }
-
-                            outputLines.Add(line);
-                        }
-
-                        ct.ThrowIfCancellationRequested();
-
-                        if (!header.StartsWith(SharedCompilerWorkerResultPrefix, StringComparison.Ordinal))
-                        {
-                            if (attempt == SharedCompilerWorkerMaxAttempts)
-                            {
-                                DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
-                                    "worker_invalid_header",
-                                    new { header, attempt });
-                                return null;
-                            }
-
-                            Shutdown();
-                            continue;
-                        }
-
-                        string statusText = header.Substring(SharedCompilerWorkerResultPrefix.Length).Trim();
-                        int exitCode = int.Parse(statusText);
-                        string combinedOutput = string.Join("\n", outputLines);
-                        return ExternalCompilerMessageParser.Parse(combinedOutput, string.Empty, exitCode);
-                    RetryCompile:
-                        ;
-                    }
-                    finally
-                    {
-                        markBuildFinished();
-                    }
-                }
-
-                return null;
+                return TryCompileWithRetries(
+                    requestFilePath,
+                    externalCompilerPaths,
+                    ct,
+                    markBuildStarted,
+                    markBuildFinished,
+                    incrementBuildCount);
             }
         }
 
-        private static void EnsureStarted(ExternalCompilerPaths externalCompilerPaths)
+        private static CompilerMessage[] TryCompileWithRetries(
+            string requestFilePath,
+            ExternalCompilerPaths externalCompilerPaths,
+            CancellationToken ct,
+            Action markBuildStarted,
+            Action markBuildFinished,
+            Action incrementBuildCount)
         {
-            if (_sharedCompilerWorkerProcess != null && !_sharedCompilerWorkerProcess.HasExited)
+            for (int attempt = 1; attempt <= SharedCompilerWorkerMaxAttempts; attempt++)
+            {
+                WorkerAttemptResult attemptResult = TryCompileOnce(
+                    requestFilePath,
+                    externalCompilerPaths,
+                    ct,
+                    markBuildStarted,
+                    markBuildFinished,
+                    incrementBuildCount);
+
+                if (attemptResult.Succeeded)
+                {
+                    return attemptResult.Messages;
+                }
+
+                ShutdownWorkerProcessLocked();
+
+                if (attemptResult.ShouldRetry && attempt < SharedCompilerWorkerMaxAttempts)
+                {
+                    continue;
+                }
+
+                DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
+                    attemptResult.FailureReason,
+                    AppendAttempt(attemptResult.FailureContext, attempt));
+                return null;
+            }
+
+            return null;
+        }
+
+        private static WorkerAttemptResult TryCompileOnce(
+            string requestFilePath,
+            ExternalCompilerPaths externalCompilerPaths,
+            CancellationToken ct,
+            Action markBuildStarted,
+            Action markBuildFinished,
+            Action incrementBuildCount)
+        {
+            WorkerStartupResult startupResult = EnsureWorkerReady(externalCompilerPaths);
+            if (!startupResult.IsReady)
+            {
+                return WorkerAttemptResult.RetryableFailure(
+                    startupResult.FailureReason,
+                    startupResult.FailureContext);
+            }
+
+            return InvokeWorkerOnce(
+                requestFilePath,
+                ct,
+                markBuildStarted,
+                markBuildFinished,
+                incrementBuildCount);
+        }
+
+        private static WorkerStartupResult EnsureWorkerReady(ExternalCompilerPaths externalCompilerPaths)
+        {
+            if (HasLiveWorkerProcess())
+            {
+                return WorkerStartupResult.Ready();
+            }
+
+            WorkerPaths workerPaths = CreateWorkerPaths();
+            SynchronizeWorkerSource(workerPaths);
+
+            WorkerStartupResult workerAssemblyResult = EnsureWorkerAssemblyBuilt(
+                externalCompilerPaths,
+                workerPaths);
+            if (!workerAssemblyResult.IsReady)
+            {
+                return workerAssemblyResult;
+            }
+
+            return StartWorkerProcess(externalCompilerPaths, workerPaths);
+        }
+
+        private static WorkerStartupResult EnsureWorkerAssemblyBuilt(
+            ExternalCompilerPaths externalCompilerPaths,
+            WorkerPaths workerPaths)
+        {
+            if (File.Exists(workerPaths.AssemblyPath))
+            {
+                return WorkerStartupResult.Ready();
+            }
+
+            WorkerAssemblyBuildResult buildResult = CompileWorkerAssembly(
+                externalCompilerPaths,
+                workerPaths.SourcePath,
+                workerPaths.AssemblyPath,
+                workerPaths.CompileResponseFilePath);
+            if (!buildResult.StartedSuccessfully)
+            {
+                return WorkerStartupResult.Failure(
+                    buildResult.FailureReason,
+                    buildResult.FailureContext);
+            }
+
+            if (!HasErrors(buildResult.Messages))
+            {
+                return WorkerStartupResult.Ready();
+            }
+
+            return WorkerStartupResult.Failure(
+                "worker_build_failed",
+                new
+                {
+                    first_error = FindFirstErrorMessage(buildResult.Messages),
+                    worker_source_path = workerPaths.SourcePath
+                });
+        }
+
+        private static WorkerStartupResult StartWorkerProcess(
+            ExternalCompilerPaths externalCompilerPaths,
+            WorkerPaths workerPaths)
+        {
+            ProcessStartInfo startInfo = CreateWorkerStartInfo(externalCompilerPaths, workerPaths);
+            _sharedCompilerWorkerProcess = ProcessStartHelper.TryStart(startInfo);
+            if (_sharedCompilerWorkerProcess == null)
+            {
+                return WorkerStartupResult.Failure(
+                    "worker_start_failed",
+                    new
+                    {
+                        dotnet_host_path = externalCompilerPaths.DotnetHostPath,
+                        worker_assembly_path = workerPaths.AssemblyPath
+                    });
+            }
+
+            return WorkerStartupResult.Ready();
+        }
+
+        private static WorkerAttemptResult InvokeWorkerOnce(
+            string requestFilePath,
+            CancellationToken ct,
+            Action markBuildStarted,
+            Action markBuildFinished,
+            Action incrementBuildCount)
+        {
+            if (!HasLiveWorkerProcess())
+            {
+                return WorkerAttemptResult.RetryableFailure(
+                    "worker_process_missing",
+                    new { request_file_path = requestFilePath });
+            }
+
+            ct.ThrowIfCancellationRequested();
+            incrementBuildCount();
+            markBuildStarted();
+
+            try
+            {
+                SendCompileRequest(requestFilePath);
+                return ReadWorkerResponse(requestFilePath, ct);
+            }
+            finally
+            {
+                markBuildFinished();
+            }
+        }
+
+        private static void SendCompileRequest(string requestFilePath)
+        {
+            string absoluteRequestFilePath = Path.GetFullPath(requestFilePath);
+            _sharedCompilerWorkerProcess.StandardInput.WriteLine(absoluteRequestFilePath);
+            _sharedCompilerWorkerProcess.StandardInput.Flush();
+        }
+
+        private static WorkerAttemptResult ReadWorkerResponse(
+            string requestFilePath,
+            CancellationToken ct)
+        {
+            string responseHeader = ReadProtocolLine(
+                _sharedCompilerWorkerProcess.StandardOutput,
+                ct);
+            if (string.IsNullOrEmpty(responseHeader))
+            {
+                return WorkerAttemptResult.RetryableFailure(
+                    "worker_empty_header",
+                    new { request_file_path = requestFilePath });
+            }
+
+            if (!TryParseResponseHeader(responseHeader, out int exitCode))
+            {
+                return WorkerAttemptResult.RetryableFailure(
+                    GetResponseHeaderFailureReason(responseHeader),
+                    new { header = responseHeader });
+            }
+
+            List<string> outputLines = ReadDiagnosticLines(ct);
+            if (outputLines == null)
+            {
+                return WorkerAttemptResult.RetryableFailure(
+                    "worker_missing_end_marker",
+                    new { request_file_path = requestFilePath });
+            }
+
+            string combinedOutput = string.Join("\n", outputLines);
+            CompilerMessage[] compilerMessages = ExternalCompilerMessageParser.Parse(combinedOutput, string.Empty, exitCode);
+            return WorkerAttemptResult.Successful(compilerMessages);
+        }
+
+        private static bool TryParseResponseHeader(string responseHeader, out int exitCode)
+        {
+            exitCode = 0;
+
+            if (!responseHeader.StartsWith(SharedCompilerWorkerResultPrefix, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            string statusText = responseHeader.Substring(SharedCompilerWorkerResultPrefix.Length).Trim();
+            return int.TryParse(statusText, out exitCode);
+        }
+
+        private static string GetResponseHeaderFailureReason(string responseHeader)
+        {
+            if (!responseHeader.StartsWith(SharedCompilerWorkerResultPrefix, StringComparison.Ordinal))
+            {
+                return "worker_invalid_header";
+            }
+
+            return "worker_invalid_exit_code";
+        }
+
+        private static List<string> ReadDiagnosticLines(CancellationToken ct)
+        {
+            List<string> outputLines = new List<string>();
+            while (true)
+            {
+                string outputLine = ReadProtocolLine(_sharedCompilerWorkerProcess.StandardOutput, ct);
+                if (outputLine == null)
+                {
+                    return null;
+                }
+
+                if (outputLine == SharedCompilerWorkerEndMarker)
+                {
+                    return outputLines;
+                }
+
+                outputLines.Add(outputLine);
+            }
+        }
+
+        private static WorkerPaths CreateWorkerPaths()
+        {
+            string workerDirectoryPath = Path.Combine(Path.GetTempPath(), "uLoopMCPCompilation", "RoslynWorker");
+            Directory.CreateDirectory(workerDirectoryPath);
+            return new WorkerPaths(
+                workerDirectoryPath,
+                Path.Combine(workerDirectoryPath, RoslynWorkerSourceFileName),
+                Path.Combine(workerDirectoryPath, RoslynWorkerAssemblyFileName),
+                Path.Combine(workerDirectoryPath, RoslynWorkerCompileResponseFileName));
+        }
+
+        private static void SynchronizeWorkerSource(WorkerPaths workerPaths)
+        {
+            string workerSource = CreateProgramSource();
+            if (File.Exists(workerPaths.SourcePath) && File.ReadAllText(workerPaths.SourcePath) == workerSource)
             {
                 return;
             }
 
-            string workerDirectoryPath = Path.Combine(Path.GetTempPath(), "uLoopMCPCompilation", "RoslynWorker");
-            Directory.CreateDirectory(workerDirectoryPath);
-            string workerSourcePath = Path.Combine(workerDirectoryPath, RoslynWorkerSourceFileName);
-            string workerAssemblyPath = Path.Combine(workerDirectoryPath, RoslynWorkerAssemblyFileName);
-            string workerCompileResponseFilePath = Path.Combine(workerDirectoryPath, RoslynWorkerCompileResponseFileName);
-            string workerSource = CreateProgramSource();
-
-            if (!File.Exists(workerSourcePath) || File.ReadAllText(workerSourcePath) != workerSource)
+            File.WriteAllText(workerPaths.SourcePath, workerSource);
+            if (File.Exists(workerPaths.AssemblyPath))
             {
-                File.WriteAllText(workerSourcePath, workerSource);
-                if (File.Exists(workerAssemblyPath))
-                {
-                    File.Delete(workerAssemblyPath);
-                }
+                File.Delete(workerPaths.AssemblyPath);
             }
+        }
 
-            if (!File.Exists(workerAssemblyPath))
-            {
-                CompilerMessage[] buildMessages = BuildWorkerAssembly(
-                    externalCompilerPaths,
-                    workerSourcePath,
-                    workerAssemblyPath,
-                    workerCompileResponseFilePath);
-                if (HasErrors(buildMessages))
-                {
-                    DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
-                        "worker_build_failed",
-                        new
-                        {
-                            first_error = FindFirstErrorMessage(buildMessages),
-                            worker_source_path = workerSourcePath
-                        });
-                    return;
-                }
-            }
-
-            ProcessStartInfo startInfo = new ProcessStartInfo
+        private static ProcessStartInfo CreateWorkerStartInfo(
+            ExternalCompilerPaths externalCompilerPaths,
+            WorkerPaths workerPaths)
+        {
+            return new ProcessStartInfo
             {
                 FileName = externalCompilerPaths.DotnetHostPath,
                 Arguments = "exec"
                     + " --runtimeconfig " + QuoteCommandLineArgument(externalCompilerPaths.CompilerRuntimeConfigPath)
                     + " --depsfile " + QuoteCommandLineArgument(externalCompilerPaths.CompilerDepsFilePath)
-                    + " " + QuoteCommandLineArgument(workerAssemblyPath),
-                WorkingDirectory = workerDirectoryPath,
+                    + " " + QuoteCommandLineArgument(workerPaths.AssemblyPath),
+                WorkingDirectory = workerPaths.DirectoryPath,
                 UseShellExecute = false,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = false,
                 CreateNoWindow = true
             };
-
-            _sharedCompilerWorkerProcess = ProcessStartHelper.TryStart(startInfo);
-            if (_sharedCompilerWorkerProcess == null)
-            {
-                DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
-                    "worker_start_failed",
-                    new
-                    {
-                        dotnet_host_path = externalCompilerPaths.DotnetHostPath,
-                        worker_assembly_path = workerAssemblyPath
-                    });
-            }
         }
 
-        private static CompilerMessage[] BuildWorkerAssembly(
+        private static WorkerAssemblyBuildResult CompileWorkerAssembly(
             ExternalCompilerPaths externalCompilerPaths,
             string workerSourcePath,
             string workerAssemblyPath,
@@ -240,27 +494,20 @@ namespace io.github.hatayama.uLoopMCP
             using Process process = ProcessStartHelper.TryStart(startInfo);
             if (process == null)
             {
-                DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
+                return WorkerAssemblyBuildResult.StartFailure(
                     "worker_compiler_start_failed",
                     new
                     {
                         dotnet_host_path = externalCompilerPaths.DotnetHostPath,
                         compiler_dll_path = externalCompilerPaths.CompilerDllPath
                     });
-                return new CompilerMessage[]
-                {
-                    new CompilerMessage
-                    {
-                        type = CompilerMessageType.Error,
-                        message = "Persistent Roslyn worker compiler failed to start"
-                    }
-                };
             }
 
             string stdout = process.StandardOutput.ReadToEnd();
             string stderr = process.StandardError.ReadToEnd();
             process.WaitForExit();
-            return ExternalCompilerMessageParser.Parse(stdout, stderr, process.ExitCode);
+            CompilerMessage[] compilerMessages = ExternalCompilerMessageParser.Parse(stdout, stderr, process.ExitCode);
+            return WorkerAssemblyBuildResult.Started(compilerMessages);
         }
 
         private static List<string> BuildWorkerReferenceSet(ExternalCompilerPaths externalCompilerPaths)
@@ -317,7 +564,7 @@ namespace io.github.hatayama.uLoopMCP
             File.WriteAllLines(responseFilePath, lines);
         }
 
-        private static string ReadLine(StreamReader reader, CancellationToken ct)
+        private static string ReadProtocolLine(StreamReader reader, CancellationToken ct)
         {
             Debug.Assert(reader != null, "reader must not be null");
 
@@ -326,11 +573,16 @@ namespace io.github.hatayama.uLoopMCP
             Task completedTask = Task.WhenAny(readTask, timeoutTask).GetAwaiter().GetResult();
             if (!ReferenceEquals(completedTask, readTask))
             {
-                Shutdown();
+                ct.ThrowIfCancellationRequested();
                 return null;
             }
 
             return readTask.GetAwaiter().GetResult();
+        }
+
+        private static bool HasLiveWorkerProcess()
+        {
+            return _sharedCompilerWorkerProcess != null && !_sharedCompilerWorkerProcess.HasExited;
         }
 
         private static bool HasErrors(IReadOnlyCollection<CompilerMessage> messages)
@@ -378,27 +630,41 @@ namespace io.github.hatayama.uLoopMCP
         {
             lock (SharedCompilerWorkerLock)
             {
-                if (_sharedCompilerWorkerProcess == null)
-                {
-                    return;
-                }
-
-                if (!_sharedCompilerWorkerProcess.HasExited)
-                {
-                    _sharedCompilerWorkerProcess.StandardInput.WriteLine(SharedCompilerWorkerQuitCommand);
-                    _sharedCompilerWorkerProcess.StandardInput.Flush();
-                    _sharedCompilerWorkerProcess.WaitForExit(500);
-                }
-
-                if (!_sharedCompilerWorkerProcess.HasExited)
-                {
-                    _sharedCompilerWorkerProcess.Kill();
-                    _sharedCompilerWorkerProcess.WaitForExit(500);
-                }
-
-                _sharedCompilerWorkerProcess.Dispose();
-                _sharedCompilerWorkerProcess = null;
+                ShutdownWorkerProcessLocked();
             }
+        }
+
+        private static void ShutdownWorkerProcessLocked()
+        {
+            if (_sharedCompilerWorkerProcess == null)
+            {
+                return;
+            }
+
+            if (!_sharedCompilerWorkerProcess.HasExited)
+            {
+                _sharedCompilerWorkerProcess.StandardInput.WriteLine(SharedCompilerWorkerQuitCommand);
+                _sharedCompilerWorkerProcess.StandardInput.Flush();
+                _sharedCompilerWorkerProcess.WaitForExit(500);
+            }
+
+            if (!_sharedCompilerWorkerProcess.HasExited)
+            {
+                _sharedCompilerWorkerProcess.Kill();
+                _sharedCompilerWorkerProcess.WaitForExit(500);
+            }
+
+            _sharedCompilerWorkerProcess.Dispose();
+            _sharedCompilerWorkerProcess = null;
+        }
+
+        private static object AppendAttempt(object failureContext, int attempt)
+        {
+            return new
+            {
+                attempt,
+                details = failureContext
+            };
         }
 
         private static string QuoteResponseFileArgument(string prefix, string value)
