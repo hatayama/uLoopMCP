@@ -4,20 +4,20 @@ using System.Threading.Tasks;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    internal sealed class DynamicCodePrewarmService
+    internal sealed class PrewarmDynamicCodeUseCase : IPrewarmDynamicCodeUseCase
     {
         private const int AutoPrewarmDelayFrameCount = 5;
         private const string AutoPrewarmCode = "return null;";
         private const string AutoPrewarmClassName = "DynamicCodeAutoPrewarmCommand";
 
-        private readonly DynamicCodeExecutionFacade _executionFacade;
+        private readonly IDynamicCodeExecutionRuntime _runtime;
         private readonly object _autoPrewarmLock = new();
         private Task _autoPrewarmTask;
         private bool _hasCompletedAutoPrewarm;
 
-        public DynamicCodePrewarmService(DynamicCodeExecutionFacade executionFacade)
+        public PrewarmDynamicCodeUseCase(IDynamicCodeExecutionRuntime runtime)
         {
-            _executionFacade = executionFacade ?? throw new ArgumentNullException(nameof(executionFacade));
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         }
 
         public void Request()
@@ -46,7 +46,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private async Task RunAsync()
         {
-            if (!_executionFacade.SupportsAutoPrewarm())
+            if (!_runtime.SupportsAutoPrewarm())
             {
                 lock (_autoPrewarmLock)
                 {
@@ -66,7 +66,7 @@ namespace io.github.hatayama.uLoopMCP
                 CompileOnly = false
             };
 
-            ExecutionResult result = await _executionFacade.ExecuteAsync(
+            ExecutionResult result = await _runtime.ExecuteAsync(
                 request,
                 CancellationToken.None);
 

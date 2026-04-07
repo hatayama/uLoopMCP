@@ -287,8 +287,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task RequestAutoPrewarmAsync_WhenCalledRepeatedly_ShouldReuseSameTask()
         {
-            Task firstTask = DynamicCodeServices.PrewarmService.RequestAsync();
-            Task secondTask = DynamicCodeServices.PrewarmService.RequestAsync();
+            Task firstTask = DynamicCodeServices.PrewarmDynamicCodeUseCase.RequestAsync();
+            Task secondTask = DynamicCodeServices.PrewarmDynamicCodeUseCase.RequestAsync();
 
             Assert.AreSame(firstTask, secondTask);
             await firstTask;

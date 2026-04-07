@@ -11,7 +11,7 @@ namespace io.github.hatayama.uLoopMCP
     /// Provides the runtime-facing facade for execute-dynamic-code.
     /// Entry points depend on this facade instead of reaching into factory and executor wiring directly.
     /// </summary>
-    internal sealed class DynamicCodeExecutionFacade : IDisposable
+    internal sealed class DynamicCodeExecutionFacade : IDynamicCodeExecutionRuntime, IDisposable
     {
         private readonly ExternalCompilerPathResolutionService _externalCompilerPathResolver;
         private readonly IDynamicCodeExecutorProvider _executorProvider;

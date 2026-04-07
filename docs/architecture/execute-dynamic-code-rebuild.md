@@ -1,34 +1,31 @@
 # execute-dynamic-code rebuild
 
-This document describes the rebuilt `execute-dynamic-code` pipeline after the readability-focused refactor.
+This document describes the rebuilt `execute-dynamic-code` pipeline after the layering refactor.
 
-## Runtime flow
+## Layered overview
 
 ```mermaid
 flowchart TD
-    subgraph Entry["Entry points"]
+    subgraph Entry["Entry layer"]
         Tool["ExecuteDynamicCodeTool"]
         Server["McpServerController"]
     end
 
-    subgraph RuntimeFacade["Runtime facade"]
-        ExecutionFacade["DynamicCodeExecutionFacade"]
-        Prewarm["DynamicCodePrewarmService"]
+    subgraph UseCase["UseCase layer"]
+        ExecuteUseCase["IExecuteDynamicCodeUseCase / ExecuteDynamicCodeUseCase"]
+        PrewarmUseCase["IPrewarmDynamicCodeUseCase / PrewarmDynamicCodeUseCase"]
     end
 
-    subgraph Contracts["Runtime contracts"]
+    subgraph Infrastructure["Infrastructure layer"]
+        RuntimeContract["IDynamicCodeExecutionRuntime"]
+        RuntimeFacade["DynamicCodeExecutionFacade"]
+        Provider["RegistryDynamicCodeExecutorFactory"]
         ExecutorContract["IDynamicCodeExecutor"]
-        CompilerContract["IDynamicCompilationService"]
-    end
-
-    subgraph Execution["Execution path"]
         Executor["DynamicCodeExecutor"]
+        CompilerContract["IDynamicCompilationService"]
+        Compiler["DynamicCodeCompiler"]
         Runner["CommandRunner"]
         EntryResolver["CompiledCommandEntryPointResolver"]
-    end
-
-    subgraph Compilation["Compilation path"]
-        Compiler["DynamicCodeCompiler"]
         SourcePrepSvc["DynamicCodeSourcePreparationService"]
         SourcePrep["DynamicCodeSourcePreparer"]
         RefSvc["DynamicReferenceSetBuilderService"]
@@ -38,38 +35,37 @@ flowchart TD
         LoadSvc["CompiledAssemblyLoadService"]
         Loader["CompiledAssemblyLoader"]
         Backend["DynamicCompilationBackend"]
-        Cache["CompilationCacheManager"]
-        Timing["DynamicCompilationTimingFormatter"]
-    end
-
-    subgraph BackendLayer["Compiler backends"]
         PathSvc["ExternalCompilerPathResolutionService"]
         PathResolver["ExternalCompilerPathResolver"]
         Roslyn["RoslynCompilerBackend"]
         Worker["SharedRoslynCompilerWorkerHost"]
-        MessageParser["ExternalCompilerMessageParser"]
         Fallback["AssemblyBuilderFallbackCompilerBackend"]
+        Cache["CompilationCacheManager"]
+        Timing["DynamicCompilationTimingFormatter"]
     end
 
-    Tool --> ExecutionFacade
-    Server --> Prewarm
-    Prewarm --> ExecutionFacade
-    ExecutionFacade --> PathSvc
-    ExecutionFacade --> ExecutorContract
+    Tool --> ExecuteUseCase
+    Server --> PrewarmUseCase
+
+    ExecuteUseCase --> RuntimeContract
+    PrewarmUseCase --> RuntimeContract
+    RuntimeContract --> RuntimeFacade
+
+    RuntimeFacade --> PathSvc
+    RuntimeFacade --> Provider
+    Provider --> ExecutorContract
     ExecutorContract --> Executor
     Executor --> CompilerContract
     CompilerContract --> Compiler
-
-    Executor --> Compiler
     Executor --> Runner
     Executor --> SourcePrepSvc
     Runner --> EntryResolver
 
     Compiler --> SourcePrepSvc
     Compiler --> RefSvc
+    Compiler --> Diagnostics
     Compiler --> LoadSvc
     Compiler --> Backend
-    Compiler --> Diagnostics
     Compiler --> Cache
     Compiler --> Timing
 
@@ -77,13 +73,11 @@ flowchart TD
     RefSvc --> RefBuilder
     RefBuilder --> AutoUsing
     LoadSvc --> Loader
-
     Backend --> PathSvc
     Backend --> Roslyn
     Backend --> Fallback
     PathSvc --> PathResolver
     Roslyn --> Worker
-    Roslyn --> MessageParser
 ```
 
 ## Composition graph
@@ -91,152 +85,129 @@ flowchart TD
 ```mermaid
 flowchart TD
     Services["DynamicCodeServices"]
-    ExecutorProvider["RegistryDynamicCodeExecutorFactory"]
-    ExecutionFacade["DynamicCodeExecutionFacade"]
-    Prewarm["DynamicCodePrewarmService"]
     SourcePrepSvc["DynamicCodeSourcePreparationService"]
+    PathSvc["ExternalCompilerPathResolutionService"]
     RefSvc["DynamicReferenceSetBuilderService"]
     LoadSvc["CompiledAssemblyLoadService"]
     Backend["DynamicCompilationBackend"]
-    PathSvc["ExternalCompilerPathResolutionService"]
     EntryResolver["CompiledCommandEntryPointResolver"]
+    Provider["RegistryDynamicCodeExecutorFactory"]
+    RuntimeFacade["DynamicCodeExecutionFacade"]
+    ExecuteUseCase["ExecuteDynamicCodeUseCase"]
+    PrewarmUseCase["PrewarmDynamicCodeUseCase"]
 
-    Services --> ExecutorProvider
-    Services --> ExecutionFacade
-    Services --> Prewarm
     Services --> SourcePrepSvc
+    Services --> PathSvc
     Services --> RefSvc
     Services --> LoadSvc
     Services --> Backend
-    Services --> PathSvc
     Services --> EntryResolver
+    Services --> Provider
+    Services --> RuntimeFacade
+    Services --> ExecuteUseCase
+    Services --> PrewarmUseCase
 
-    ExecutionFacade --> ExecutorProvider
-    ExecutionFacade --> PathSvc
-    Prewarm --> ExecutionFacade
-    ExecutorProvider --> SourcePrepSvc
-    ExecutorProvider --> EntryResolver
+    Provider --> SourcePrepSvc
+    Provider --> EntryResolver
+    RuntimeFacade --> PathSvc
+    RuntimeFacade --> Provider
+    ExecuteUseCase --> RuntimeFacade
+    PrewarmUseCase --> RuntimeFacade
 ```
 
 ## Reading guide
 
-1. Read `Runtime flow` first.
-2. `ExecuteDynamicCodeTool` and `DynamicCodePrewarmService` both depend on `DynamicCodeExecutionFacade`.
-3. `DynamicCodeExecutionFacade` is the public runtime boundary inside the editor process.
-4. `DynamicCodeExecutor` coordinates the two main flows:
-   - compilation via `DynamicCodeCompiler`
-   - execution via `CommandRunner`
-5. Read `Composition graph` second.
-6. `DynamicCodeServices` is the only place that wires concrete collaborators together.
-7. Cross-box concrete references are acceptable in the composition graph because wiring is its only job.
+1. Start with `Entry layer`.
+   - `ExecuteDynamicCodeTool` only delegates the tool workflow.
+   - `McpServerController` only requests warm-up after server start and recovery.
+2. Move to `UseCase layer`.
+   - `ExecuteDynamicCodeUseCase` owns the user-facing workflow for execute-dynamic-code.
+   - `PrewarmDynamicCodeUseCase` owns the warm-up workflow.
+3. Only then read `Infrastructure layer`.
+   - `DynamicCodeExecutionFacade` is the runtime gateway that hides executor reuse and provider wiring.
+   - `DynamicCodeCompiler` and its collaborators perform the heavy compile/execute work.
+4. Read `Composition graph` last.
+   - `DynamicCodeServices` is the only place that is expected to know many concrete classes at once.
+   - If a concrete-to-concrete edge only appears there, it is a wiring edge rather than a runtime dependency.
 
-## Responsibilities
+## Layer responsibilities
+
+- `Entry layer`
+  - Translate external calls into use-case invocations.
+  - Avoid business workflow logic.
+  - Avoid reaching into executor or compiler wiring directly.
+
+- `UseCase layer`
+  - Own temporal cohesion.
+  - Decide the workflow order for the feature.
+  - Keep user-facing retry rules such as the missing-`return` retry in one place.
+  - Depend on runtime contracts instead of concrete infrastructure types.
+
+- `Infrastructure layer`
+  - Own the mechanics of execution, compilation, loading, caching, path discovery, and worker lifecycle.
+  - Keep low-level concerns isolated behind contracts and focused service classes.
+
+## Class responsibilities
 
 - `ExecuteDynamicCodeTool`
-  - Owns MCP/CLI-facing request and response shaping.
-  - Keeps editor security-level switching outside the compiler.
+  - Thin entry point for the MCP/CLI tool.
+  - Delegates the full workflow to `IExecuteDynamicCodeUseCase`.
 
-- `DynamicCodeServices`
-  - Acts as the small composition root for the dynamic-code subsystem.
-  - Owns the shared service instances that used to be hidden behind static helper calls.
-  - Is the only place that is expected to know many concrete classes at once.
+- `ExecuteDynamicCodeUseCase`
+  - Resolves the current security level.
+  - Converts parameters into the runtime request.
+  - Performs the missing-`return` retry.
+  - Shapes `ExecutionResult` into `ExecuteDynamicCodeResponse`.
+
+- `PrewarmDynamicCodeUseCase`
+  - Owns the single-flight warm-up flow.
+  - Reuses the same runtime contract as the real execution path.
+
+- `IDynamicCodeExecutionRuntime`
+  - Contract between use cases and runtime infrastructure.
+  - Keeps use cases from depending on factory and executor wiring directly.
 
 - `DynamicCodeExecutionFacade`
-  - Provides the runtime-facing facade for entry points.
-  - Owns executor reuse per security level.
-  - Prevents tools and warm-up code from reaching into factory and executor wiring directly.
+  - Reuses executors per security level.
+  - Checks whether the external Roslyn path is available for warm-up.
+  - Delegates executor creation to the provider.
 
 - `RegistryDynamicCodeExecutorFactory`
-  - Resolves the registered compilation provider from the registry.
-  - Wires `DynamicCodeExecutor`, `CommandRunner`, and source preparation dependencies together.
-  - Lives in the composition graph, not in the tool-facing runtime boundary.
-
-- `IDynamicCodeExecutor` / `IDynamicCompilationService`
-  - Expose async-only contracts.
-  - Keep the API honest by not advertising unsupported synchronous execution.
+  - Builds `DynamicCodeExecutor` and `CommandRunner` from registered compiler services.
+  - Lives in the composition graph and runtime infrastructure, not in the entry layer.
 
 - `DynamicCodeExecutor`
   - Bridges compilation and execution.
+  - Merges timing information.
   - Converts hoisted literals into execution parameters.
-  - Merges compilation and execution timings.
-  - Exposes async-only execution so the public contract matches the actual runtime behavior.
 
 - `DynamicCodeCompiler`
-  - Orchestrates the compilation flow.
-  - Owns cache lookup, source security checks, pre-using retry flow, and compiler backend selection.
-  - Depends on explicit collaborator services for source preparation, reference building, backend compilation, and assembly loading.
+  - Orchestrates cache lookup, source security, reference resolution, compilation backend selection, and assembly load.
 
-- `DynamicCodeSourcePreparationService`
-  - Provides an explicit dependency boundary for source preparation.
-  - Keeps the compiler and executor from reaching into static preparation helpers directly.
+- `DynamicCodeSourcePreparationService` / `DynamicCodeSourcePreparer`
+  - Normalize snippets into wrapper code.
+  - Handle top-level mode, return completion, and literal hoisting.
 
-- `DynamicCodeSourcePreparer`
-  - Normalizes snippets into wrapper code.
-  - Handles top-level mode, return completion, and literal hoisting.
-
-- `DynamicReferenceSetBuilderService`
-  - Makes reference resolution a visible dependency of the compiler.
-  - Keeps reference-building policy replaceable without changing compiler orchestration.
-
-- `DynamicReferenceSetBuilder`
-  - Builds the minimal reference set for the current request.
-  - Hides assembly catalog caching and deduplication rules.
-  - Keeps pre-using, auto-using, and assembly-candidate lookup behind one boundary.
-
-- `CompilerDiagnostics`
-  - Converts backend compiler messages into `CompilationError` and warning collections.
-  - Flags ambiguity errors so the compiler can decide whether to retry without pre-using.
-
-- `ExternalCompilerPathResolutionService`
-  - Makes Unity-bundled compiler path discovery explicit.
-  - Keeps prewarm and compiler orchestration from depending on static path lookup directly.
+- `DynamicReferenceSetBuilderService` / `DynamicReferenceSetBuilder`
+  - Build the minimal assembly reference set.
+  - Encapsulate pre-using, auto-using, and assembly candidate logic.
 
 - `DynamicCompilationBackend`
-  - Selects the concrete backend for a build request.
-  - Keeps `DynamicCodeCompiler` from branching across backend implementations directly.
+  - Chooses between the Roslyn path and the AssemblyBuilder fallback path.
 
-- `RoslynCompilerBackend`
-  - Uses Unity-bundled Roslyn when available.
-  - Falls back from the shared worker to one-shot compilation when needed.
+- `RoslynCompilerBackend` / `SharedRoslynCompilerWorkerHost`
+  - Provide the fast path with the shared external worker.
 
-- `SharedRoslynCompilerWorkerHost`
-  - Owns the persistent worker lifecycle.
-  - Is the only place that knows how the worker process is built, started, and invalidated on domain reload.
+- `CompiledAssemblyLoadService` / `CompiledAssemblyLoader`
+  - Keep metadata validation, assembly loading, and IL validation together.
 
-- `AssemblyBuilderFallbackCompilerBackend`
-  - Provides the Unity `AssemblyBuilder` fallback path for environments where the external Roslyn path is unavailable.
-
-- `CompiledAssemblyLoadService`
-  - Makes assembly loading and validation explicit in the compiler constructor.
-  - Keeps the compiler from depending on static load helpers directly.
-
-- `CompiledAssemblyLoader`
-  - Performs metadata validation, assembly load, and IL validation in one place.
-  - Returns a load result so the compiler can shape the final `CompilationResult` without duplicating validation logic.
-
-- `CommandRunner`
-  - Owns execution-time concerns: Undo scope, cancellation wiring, sync/async invocation, and exception conversion.
-
-- `CompiledCommandEntryPointResolver`
-  - Resolves wrapper entry points from compiled assemblies.
-  - Keeps reflection-heavy lookup logic out of `CommandRunner`.
-
-- `DynamicCodePrewarmService`
-  - Owns the single-flight warm-up policy.
-  - Depends on the runtime facade instead of the executor factory directly.
-  - Reuses the same runtime execution path as normal requests so warm-up and production stay aligned.
+- `CommandRunner` / `CompiledCommandEntryPointResolver`
+  - Execute the compiled wrapper method while hiding reflection-heavy lookup.
 
 ## Design intent
 
-- Keep orchestration readable from top to bottom.
-- Keep stateful lifecycle concerns isolated.
-- Prefer explicit helper names over dense multi-purpose classes.
-- Preserve user-facing behavior while making internal ownership obvious.
-- Keep the async-only public contract honest: no interface advertises unsupported synchronous execution.
-- Separate two kinds of edges:
-  - runtime dependencies, where facades and contracts should hide wiring details
-  - composition dependencies, where a composition root is allowed to know concrete classes
-- Make the main dependency directions visible:
-  - entry points depend on the runtime facade
-  - orchestration depends on contracts and collaborator services
-  - low-level helpers do not reach back into the tool layer
+- Make the architecture readable as `Entry -> UseCase -> Infrastructure`.
+- Keep the runtime dependency chain narrower than the composition graph.
+- Allow the composition root to know concrete classes, while runtime layers depend on contracts or use cases.
+- Keep the async-only contracts honest.
+- Keep performance work in infrastructure without leaking that complexity into the entry layer.
