@@ -1,6 +1,6 @@
 namespace io.github.hatayama.uLoopMCP.Factory
 {
-    internal sealed class RegistryDynamicCodeExecutorFactory
+    internal sealed class RegistryDynamicCodeExecutorFactory : IDynamicCodeExecutorProvider
     {
         private readonly DynamicCodeSourcePreparationService _sourcePreparationService;
         private readonly CompiledCommandEntryPointResolver _entryPointResolver;

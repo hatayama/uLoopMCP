@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using io.github.hatayama.uLoopMCP.Factory;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -11,18 +10,14 @@ namespace io.github.hatayama.uLoopMCP
         private const string AutoPrewarmCode = "return null;";
         private const string AutoPrewarmClassName = "DynamicCodeAutoPrewarmCommand";
 
-        private readonly ExternalCompilerPathResolutionService _externalCompilerPathResolver;
-        private readonly RegistryDynamicCodeExecutorFactory _executorFactory;
+        private readonly DynamicCodeExecutionFacade _executionFacade;
         private readonly object _autoPrewarmLock = new();
         private Task _autoPrewarmTask;
         private bool _hasCompletedAutoPrewarm;
 
-        public DynamicCodePrewarmService(
-            ExternalCompilerPathResolutionService externalCompilerPathResolver,
-            RegistryDynamicCodeExecutorFactory executorFactory)
+        public DynamicCodePrewarmService(DynamicCodeExecutionFacade executionFacade)
         {
-            _externalCompilerPathResolver = externalCompilerPathResolver ?? throw new ArgumentNullException(nameof(externalCompilerPathResolver));
-            _executorFactory = executorFactory ?? throw new ArgumentNullException(nameof(executorFactory));
+            _executionFacade = executionFacade ?? throw new ArgumentNullException(nameof(executionFacade));
         }
 
         public void Request()
@@ -51,7 +46,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private async Task RunAsync()
         {
-            if (_externalCompilerPathResolver.Resolve() == null)
+            if (!_executionFacade.SupportsAutoPrewarm())
             {
                 lock (_autoPrewarmLock)
                 {
@@ -63,14 +58,17 @@ namespace io.github.hatayama.uLoopMCP
 
             await EditorDelay.DelayFrame(AutoPrewarmDelayFrameCount, CancellationToken.None);
 
-            using IDynamicCodeExecutor executor = _executorFactory.Create(
-                DynamicCodeSecurityLevel.Restricted);
-            ExecutionResult result = await executor.ExecuteCodeAsync(
-                AutoPrewarmCode,
-                AutoPrewarmClassName,
-                null,
-                CancellationToken.None,
-                false);
+            DynamicCodeExecutionRequest request = new DynamicCodeExecutionRequest
+            {
+                Code = AutoPrewarmCode,
+                ClassName = AutoPrewarmClassName,
+                SecurityLevel = DynamicCodeSecurityLevel.Restricted,
+                CompileOnly = false
+            };
+
+            ExecutionResult result = await _executionFacade.ExecuteAsync(
+                request,
+                CancellationToken.None);
 
             if (!result.Success)
             {

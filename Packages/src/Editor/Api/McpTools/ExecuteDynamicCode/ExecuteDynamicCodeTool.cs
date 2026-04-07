@@ -9,8 +9,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
     /// MCP Dynamic C# Code Execution Tool
-    /// Regenerates Executor only when security level changes, otherwise caches and reuses
-    /// Related Classes: IDynamicCodeExecutor, DynamicCodeExecutorFactory
+    /// Delegates runtime execution to the dynamic-code facade so the tool can stay focused on request and response shaping.
     /// </summary>
     [McpTool(Description = @"Execute C# code dynamically in Unity Editor for editor automation.
 
@@ -35,19 +34,17 @@ Don't:
 Need files/dirs? Run terminal commands.
 
 See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/examples/")]
-    public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>, IDisposable
+    public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
-        private IDynamicCodeExecutor _executor;
+        private readonly DynamicCodeExecutionFacade _executionFacade;
         private readonly UserFriendlyErrorConverter _errorHandler;
-        private DynamicCodeSecurityLevel _currentSecurityLevel;
         
         public override string ToolName => "execute-dynamic-code";
         
         public ExecuteDynamicCodeTool()
         {
-            _executor = null;
+            _executionFacade = DynamicCodeServices.ExecutionFacade;
             _errorHandler = new UserFriendlyErrorConverter();
-            _currentSecurityLevel = (DynamicCodeSecurityLevel)(-1);
         }
         
         protected override async Task<ExecuteDynamicCodeResponse> ExecuteAsync(
@@ -55,16 +52,11 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             CancellationToken cancellationToken)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
+            DynamicCodeSecurityLevel editorLevel = DynamicCodeSecurityLevel.Restricted;
             
             try
             {
-                DynamicCodeSecurityLevel editorLevel = ULoopSettings.GetDynamicCodeSecurityLevel();
-
-                if (_executor == null || editorLevel != _currentSecurityLevel)
-                {
-                    _currentSecurityLevel = editorLevel;
-                    this.ReplaceExecutor(Factory.DynamicCodeExecutorFactory.Create(_currentSecurityLevel));
-                }
+                editorLevel = ULoopSettings.GetDynamicCodeSecurityLevel();
                 
                 // Log execution start with VibeLogger
                 VibeLogger.LogInfo(
@@ -75,7 +67,7 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                         codeLength = parameters.Code?.Length ?? 0,
                         compileOnly = parameters.CompileOnly,
                         parametersCount = parameters.Parameters?.Count ?? 0,
-                        securityLevel = _currentSecurityLevel.ToString()
+                        securityLevel = editorLevel.ToString()
                     },
                     correlationId,
                     "Dynamic code execution request received (return is optional)",
@@ -93,13 +85,17 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                 }
                 
                 // Code execution (RoslynCompiler performs diagnostic-driven modifications)
-                ExecutionResult executionResult = await _executor.ExecuteCodeAsync(
-                    originalCode, // Use original code (RoslynCompiler will perform modifications)
-                    "DynamicCommand",
-                    parametersArray,
-                    cancellationToken,
-                    parameters.CompileOnly
-                );
+                DynamicCodeExecutionRequest executionRequest = new DynamicCodeExecutionRequest
+                {
+                    Code = originalCode,
+                    ClassName = "DynamicCommand",
+                    Parameters = parametersArray,
+                    SecurityLevel = editorLevel,
+                    CompileOnly = parameters.CompileOnly
+                };
+                ExecutionResult executionResult = await _executionFacade.ExecuteAsync(
+                    executionRequest,
+                    cancellationToken);
 
                 // Optional: auto-insert return retry if missing return likely caused failure (unconditional)
                 if (!executionResult.Success)
@@ -117,13 +113,17 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     if (looksLikeMissingReturn && string.IsNullOrEmpty(executionResult.UpdatedCode))
                     {
                         string codeWithReturn = AppendReturnIfMissing(originalCode);
-                        ExecutionResult retryReturnResult = await _executor.ExecuteCodeAsync(
-                            codeWithReturn,
-                            "DynamicCommand",
-                            parametersArray,
-                            cancellationToken,
-                            parameters.CompileOnly
-                        );
+                        DynamicCodeExecutionRequest retryRequest = new DynamicCodeExecutionRequest
+                        {
+                            Code = codeWithReturn,
+                            ClassName = "DynamicCommand",
+                            Parameters = parametersArray,
+                            SecurityLevel = editorLevel,
+                            CompileOnly = parameters.CompileOnly
+                        };
+                        ExecutionResult retryReturnResult = await _executionFacade.ExecuteAsync(
+                            retryRequest,
+                            cancellationToken);
                         if (retryReturnResult.Success)
                         {
                             executionResult = retryReturnResult;
@@ -141,7 +141,7 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                     executionResult, originalCode, correlationId);
                 
                 // Add security level
-                toolResponse.SecurityLevel = _currentSecurityLevel.ToString();
+                toolResponse.SecurityLevel = editorLevel.ToString();
                 
                 return toolResponse;
             }
@@ -176,17 +176,12 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                         }.Where(s => !string.IsNullOrEmpty(s)).ToList(),
                         CompilationErrors = new List<CompilationErrorDto>(),
                         ErrorMessage = exceptionResponse.FriendlyMessage,
-                        SecurityLevel = _currentSecurityLevel.ToString()
+                        SecurityLevel = editorLevel.ToString()
                     };
                 }
 
                 return CreateErrorResponse(ex.Message);
             }
-        }
-
-        public void Dispose()
-        {
-            this.ReplaceExecutor(null);
         }
         
         private ExecuteDynamicCodeResponse ConvertExecutionResultToResponse(
@@ -294,16 +289,6 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
             }
 
             return response;
-        }
-
-        private void ReplaceExecutor(IDynamicCodeExecutor nextExecutor)
-        {
-            if (_executor != null)
-            {
-                _executor.Dispose();
-            }
-
-            _executor = nextExecutor;
         }
 
         private static List<CompilationErrorDto> BuildDiagnostics(

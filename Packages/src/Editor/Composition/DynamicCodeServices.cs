@@ -27,9 +27,13 @@ namespace io.github.hatayama.uLoopMCP
                 SourcePreparationService,
                 CommandEntryPointResolver);
 
-        public static DynamicCodePrewarmService PrewarmService { get; } =
-            new DynamicCodePrewarmService(
+        public static DynamicCodeExecutionFacade ExecutionFacade { get; } =
+            new DynamicCodeExecutionFacade(
                 ExternalCompilerPathResolver,
                 ExecutorFactory);
+
+        public static DynamicCodePrewarmService PrewarmService { get; } =
+            new DynamicCodePrewarmService(
+                ExecutionFacade);
     }
 }
