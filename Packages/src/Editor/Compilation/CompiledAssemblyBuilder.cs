@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor.Compilation;
@@ -41,7 +42,8 @@ namespace io.github.hatayama.uLoopMCP
 
             ExternalCompilerPaths externalCompilerPaths = _externalCompilerPathResolver.Resolve();
             string tempDirectoryPath = Path.Combine("Temp", "uLoopMCPCompilation");
-            string uniqueName = $"{plan.ClassName}_{Interlocked.Increment(ref _compileCounter)}";
+            int compileCounter = Interlocked.Increment(ref _compileCounter);
+            string uniqueName = CreateUniqueCompilationName(plan.ClassName, compileCounter);
             string sourcePath = Path.Combine(tempDirectoryPath, $"{uniqueName}.cs");
             string dllPath = Path.Combine(tempDirectoryPath, $"{uniqueName}.dll");
             bool canDeleteTempFiles = true;
@@ -163,6 +165,66 @@ namespace io.github.hatayama.uLoopMCP
                     File.Delete(Path.ChangeExtension(dllPath, ".pdb"));
                 }
             }
+        }
+
+        internal static string CreateUniqueCompilationName(string className, int compileCounter)
+        {
+            string safeClassName = SanitizeCompilationFileNameSegment(className);
+            return $"{safeClassName}_{compileCounter}";
+        }
+
+        internal static string SanitizeCompilationFileNameSegment(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return DynamicCodeConstants.DEFAULT_CLASS_NAME;
+            }
+
+            StringBuilder builder = new StringBuilder(value.Length);
+            foreach (char ch in value)
+            {
+                builder.Append(IsUnsafeFileNameCharacter(ch) ? '_' : ch);
+            }
+
+            string sanitized = builder.ToString().Trim('.');
+            if (string.IsNullOrWhiteSpace(sanitized))
+            {
+                return DynamicCodeConstants.DEFAULT_CLASS_NAME;
+            }
+
+            return sanitized;
+        }
+
+        private static bool IsUnsafeFileNameCharacter(char value)
+        {
+            if (value == Path.DirectorySeparatorChar || value == Path.AltDirectorySeparatorChar)
+            {
+                return true;
+            }
+
+            switch (value)
+            {
+                case '<':
+                case '>':
+                case ':':
+                case '"':
+                case '/':
+                case '\\':
+                case '|':
+                case '?':
+                case '*':
+                    return true;
+            }
+
+            foreach (char invalidChar in Path.GetInvalidFileNameChars())
+            {
+                if (value == invalidChar)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private List<string> BuildInitialReferences(

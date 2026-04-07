@@ -18,9 +18,7 @@ namespace io.github.hatayama.uLoopMCP
                 false);
             if (wrappedType != null)
             {
-                MethodInfo directMethod = wrappedType.GetMethod(
-                    WrappedExecuteMethodName,
-                    BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo directMethod = FindPreferredExecuteMethod(wrappedType);
                 if (directMethod != null)
                 {
                     return (wrappedType, directMethod);
@@ -30,9 +28,7 @@ namespace io.github.hatayama.uLoopMCP
             Type[] types = assembly.GetTypes();
             foreach (Type type in types)
             {
-                MethodInfo method = type.GetMethod(
-                    WrappedExecuteMethodName,
-                    BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo method = FindPreferredExecuteMethod(type);
                 if (method != null)
                 {
                     return (type, method);
@@ -40,6 +36,27 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return (null, null);
+        }
+
+        private static MethodInfo FindPreferredExecuteMethod(Type type)
+        {
+            MethodInfo methodWithParameters = type.GetMethod(
+                WrappedExecuteMethodName,
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                new Type[] { typeof(Dictionary<string, object>) },
+                null);
+            if (methodWithParameters != null)
+            {
+                return methodWithParameters;
+            }
+
+            return type.GetMethod(
+                WrappedExecuteMethodName,
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                Type.EmptyTypes,
+                null);
         }
 
         public (Type targetType, MethodInfo executeAsyncMethod) TryFindExecuteAsyncMethod(Assembly assembly)

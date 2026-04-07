@@ -18,13 +18,10 @@ namespace io.github.hatayama.uLoopMCP
 
         public IDynamicCodeExecutor GetOrCreate(DynamicCodeSecurityLevel securityLevel)
         {
-            if (_disposed)
-            {
-                throw new ObjectDisposedException(nameof(DynamicCodeExecutorPool));
-            }
-
             lock (_executorsLock)
             {
+                ThrowIfDisposed();
+
                 if (_executorsBySecurityLevel.TryGetValue(securityLevel, out IDynamicCodeExecutor executor))
                 {
                     return executor;
@@ -38,13 +35,15 @@ namespace io.github.hatayama.uLoopMCP
 
         public void Dispose()
         {
-            if (_disposed)
-            {
-                return;
-            }
-
             lock (_executorsLock)
             {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                _disposed = true;
+
                 foreach (IDynamicCodeExecutor executor in _executorsBySecurityLevel.Values)
                 {
                     executor.Dispose();
@@ -52,8 +51,14 @@ namespace io.github.hatayama.uLoopMCP
 
                 _executorsBySecurityLevel.Clear();
             }
+        }
 
-            _disposed = true;
+        private void ThrowIfDisposed()
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(DynamicCodeExecutorPool));
+            }
         }
     }
 }

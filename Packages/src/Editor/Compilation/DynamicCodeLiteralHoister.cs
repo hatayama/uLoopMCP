@@ -277,7 +277,12 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 string longToken = source.Substring(start, suffixIndex - start);
-                long longValue = long.Parse(longToken, CultureInfo.InvariantCulture);
+                if (!long.TryParse(longToken, NumberStyles.None, CultureInfo.InvariantCulture, out long longValue))
+                {
+                    index = start;
+                    return false;
+                }
+
                 string longParameterName = CreateParameterName(bindings.Count);
                 bindings.Add(new HoistedLiteralBinding(longParameterName, "long", longValue));
                 rewrittenSource.Append(longParameterName);
@@ -291,7 +296,12 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             string token = source.Substring(start, index - start);
-            int intValue = int.Parse(token, CultureInfo.InvariantCulture);
+            if (!int.TryParse(token, NumberStyles.None, CultureInfo.InvariantCulture, out int intValue))
+            {
+                index = start;
+                return false;
+            }
+
             string parameterName = CreateParameterName(bindings.Count);
             bindings.Add(new HoistedLiteralBinding(parameterName, "int", intValue));
             rewrittenSource.Append(parameterName);

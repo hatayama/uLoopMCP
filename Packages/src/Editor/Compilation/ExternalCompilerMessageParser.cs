@@ -22,6 +22,11 @@ namespace io.github.hatayama.uLoopMCP
 
             if (messages.Count > 0)
             {
+                if (exitCode != 0 && !HasError(messages))
+                {
+                    messages.Add(CreateInfrastructureFailureMessage(stdout, stderr, exitCode));
+                }
+
                 return messages.ToArray();
             }
 
@@ -40,6 +45,38 @@ namespace io.github.hatayama.uLoopMCP
                         ? "External C# compiler failed without diagnostics"
                         : combinedOutput
                 }
+            };
+        }
+
+        private static bool HasError(IReadOnlyCollection<CompilerMessage> messages)
+        {
+            foreach (CompilerMessage message in messages)
+            {
+                if (message.type == CompilerMessageType.Error)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static CompilerMessage CreateInfrastructureFailureMessage(
+            string stdout,
+            string stderr,
+            int exitCode)
+        {
+            string combinedOutput = CombineOutput(stdout, stderr);
+            string message = $"External C# compiler exited with code {exitCode} without reporting an error diagnostic";
+            if (!string.IsNullOrWhiteSpace(combinedOutput))
+            {
+                message = $"{message}: {combinedOutput}";
+            }
+
+            return new CompilerMessage
+            {
+                type = CompilerMessageType.Error,
+                message = message
             };
         }
 

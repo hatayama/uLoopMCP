@@ -95,14 +95,17 @@ namespace io.github.hatayama.uLoopMCP
                         incrementBuildCount).ConfigureAwait(false);
                 }
 
-                string stdout = process.StandardOutput.ReadToEnd();
-                string stderr = process.StandardError.ReadToEnd();
+                Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+                Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+                await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
                 process.WaitForExit();
                 markBuildFinished();
                 ct.ThrowIfCancellationRequested();
 
                 CompilerMessage[] compilerMessages = ExternalCompilerMessageParser.Parse(
-                    stdout, stderr, process.ExitCode);
+                    stdoutTask.Result,
+                    stderrTask.Result,
+                    process.ExitCode);
 
                 if (ShouldRetryWithAssemblyBuilder(process.ExitCode, compilerMessages))
                 {

@@ -105,7 +105,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public async Task ExecuteCodeAsync_WhenOnlyLiteralValuesDiffer_ShouldReuseCompilationAndKeepExecutionValues()
+        public async Task ExecuteCodeAsync_WhenOnlyLiteralValuesDiffer_ShouldKeepExecutionValues()
         {
             IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
                 DynamicCodeSecurityLevel.Restricted

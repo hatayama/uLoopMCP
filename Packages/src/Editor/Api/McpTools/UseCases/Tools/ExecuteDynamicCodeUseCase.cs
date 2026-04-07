@@ -442,11 +442,15 @@ namespace io.github.hatayama.uLoopMCP
             for (int i = start; i <= end; i++)
             {
                 string line = lines[i - 1].TrimEnd('\r');
-                sb.AppendLine($"L{i}:{line}");
+                string linePrefix = $"L{i}:";
+                sb.AppendLine(linePrefix + line);
                 if (i == lineNumber1Based)
                 {
                     int caretPos = Math.Max(1, column1Based);
-                    sb.AppendLine("   " + new string(' ', Math.Max(0, caretPos - 1)) + "^");
+                    sb.AppendLine(
+                        new string(' ', linePrefix.Length)
+                        + new string(' ', Math.Max(0, caretPos - 1))
+                        + "^");
                 }
             }
 

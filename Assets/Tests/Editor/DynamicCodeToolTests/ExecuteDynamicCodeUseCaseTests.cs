@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -80,6 +81,58 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
                 Assert.That(response.Success, Is.True);
                 Assert.That(runtime.Requests, Has.Count.EqualTo(1));
+            }
+            finally
+            {
+                ULoopSettings.SetDynamicCodeSecurityLevel(previous);
+            }
+        }
+
+        [Test]
+        public async Task ExecuteAsync_WhenDiagnosticLineUsesTwoDigits_ShouldAlignCaretWithRenderedPrefix()
+        {
+            string updatedCode = string.Join(
+                "\n",
+                Enumerable.Range(1, 12).Select(index => index == 10 ? "abcd" : $"line{index}"));
+            FakeDynamicCodeExecutionRuntime runtime = new FakeDynamicCodeExecutionRuntime(
+                new ExecutionResult
+                {
+                    Success = false,
+                    ErrorMessage = "Compilation error occurred",
+                    UpdatedCode = updatedCode,
+                    CompilationErrors = new List<CompilationError>
+                    {
+                        new CompilationError
+                        {
+                            ErrorCode = "CS0103",
+                            Message = "CS0103: The name 'x' does not exist in the current context",
+                            Line = 10,
+                            Column = 2
+                        }
+                    }
+                });
+            ExecuteDynamicCodeUseCase useCase = new ExecuteDynamicCodeUseCase(runtime);
+
+            DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
+            ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+
+            try
+            {
+                ExecuteDynamicCodeResponse response = await useCase.ExecuteAsync(
+                    new ExecuteDynamicCodeSchema
+                    {
+                        Code = "return x;"
+                    },
+                    CancellationToken.None);
+
+                Assert.That(response.Diagnostics, Has.Count.EqualTo(1));
+
+                string[] contextLines = response.Diagnostics[0].Context
+                    .Split(new[] { '\n' }, System.StringSplitOptions.RemoveEmptyEntries);
+                int targetLineIndex = System.Array.FindIndex(contextLines, line => line.StartsWith("L10:"));
+
+                Assert.That(targetLineIndex, Is.GreaterThanOrEqualTo(0));
+                Assert.That(contextLines[targetLineIndex + 1].IndexOf('^'), Is.EqualTo("L10:".Length + 1));
             }
             finally
             {

@@ -36,6 +36,19 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(provider.CreatedExecutors[1].DisposeCallCount, Is.EqualTo(1));
         }
 
+        [Test]
+        public void GetOrCreate_AfterDispose_ShouldThrowObjectDisposedException()
+        {
+            FakeDynamicCodeExecutorProvider provider = new FakeDynamicCodeExecutorProvider();
+            DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
+
+            pool.Dispose();
+
+            Assert.That(
+                () => pool.GetOrCreate(DynamicCodeSecurityLevel.Restricted),
+                Throws.TypeOf<System.ObjectDisposedException>());
+        }
+
         private sealed class FakeDynamicCodeExecutorProvider : IDynamicCodeExecutorProvider
         {
             public Dictionary<DynamicCodeSecurityLevel, int> CreateCallsBySecurityLevel { get; } = new();

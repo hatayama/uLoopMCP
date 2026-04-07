@@ -139,5 +139,18 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.AreEqual(1, prepared.HoistedLiteralBindings.Count);
             Assert.AreEqual("\b", prepared.HoistedLiteralBindings[0].Value);
         }
+
+        [Test]
+        public void Prepare_WhenIntegerLiteralExceedsIntRange_ShouldLeaveLiteralInSource()
+        {
+            PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
+                "return 3000000000;",
+                DynamicCodeConstants.DEFAULT_NAMESPACE,
+                DynamicCodeConstants.DEFAULT_CLASS_NAME);
+
+            Assert.IsNotNull(prepared.PreparedSource);
+            Assert.AreEqual(0, prepared.HoistedLiteralBindings.Count);
+            StringAssert.Contains("return 3000000000;", prepared.PreparedSource);
+        }
     }
 }
