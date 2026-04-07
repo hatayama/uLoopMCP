@@ -12,6 +12,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     internal static class SharedRoslynCompilerWorkerHost
     {
+        private const int SharedCompilerWorkerMaxAttempts = 2;
         private const string SharedCompilerWorkerResultPrefix = "__ULOOP_RESULT__";
         private const string SharedCompilerWorkerEndMarker = "__ULOOP_END__";
         private const string SharedCompilerWorkerQuitCommand = "__QUIT__";
@@ -40,75 +41,103 @@ namespace io.github.hatayama.uLoopMCP
         {
             lock (SharedCompilerWorkerLock)
             {
-                EnsureStarted(externalCompilerPaths);
-                if (_sharedCompilerWorkerProcess == null || _sharedCompilerWorkerProcess.HasExited)
+                for (int attempt = 1; attempt <= SharedCompilerWorkerMaxAttempts; attempt++)
                 {
-                    DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
-                        "worker_process_missing",
-                        new { request_file_path = requestFilePath });
-                    return null;
-                }
-
-                ct.ThrowIfCancellationRequested();
-                incrementBuildCount();
-                markBuildStarted();
-
-                try
-                {
-                    _sharedCompilerWorkerProcess.StandardInput.WriteLine(Path.GetFullPath(requestFilePath));
-                    _sharedCompilerWorkerProcess.StandardInput.Flush();
-
-                    string header = ReadLine(_sharedCompilerWorkerProcess.StandardOutput, ct);
-                    if (string.IsNullOrEmpty(header))
+                    EnsureStarted(externalCompilerPaths);
+                    if (_sharedCompilerWorkerProcess == null || _sharedCompilerWorkerProcess.HasExited)
                     {
-                        DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
-                            "worker_empty_header",
-                            new { request_file_path = requestFilePath });
-                        Shutdown();
-                        return null;
-                    }
-
-                    List<string> outputLines = new List<string>();
-                    while (true)
-                    {
-                        string line = ReadLine(_sharedCompilerWorkerProcess.StandardOutput, ct);
-                        if (line == null)
+                        if (attempt == SharedCompilerWorkerMaxAttempts)
                         {
                             DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
-                                "worker_missing_end_marker",
-                                new { request_file_path = requestFilePath });
-                            Shutdown();
+                                "worker_process_missing",
+                                new { request_file_path = requestFilePath, attempt });
                             return null;
                         }
 
-                        if (line == SharedCompilerWorkerEndMarker)
-                        {
-                            break;
-                        }
-
-                        outputLines.Add(line);
+                        Shutdown();
+                        continue;
                     }
 
                     ct.ThrowIfCancellationRequested();
+                    incrementBuildCount();
+                    markBuildStarted();
 
-                    if (!header.StartsWith(SharedCompilerWorkerResultPrefix, StringComparison.Ordinal))
+                    try
                     {
-                        DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
-                            "worker_invalid_header",
-                            new { header });
-                        Shutdown();
-                        return null;
-                    }
+                        _sharedCompilerWorkerProcess.StandardInput.WriteLine(Path.GetFullPath(requestFilePath));
+                        _sharedCompilerWorkerProcess.StandardInput.Flush();
 
-                    string statusText = header.Substring(SharedCompilerWorkerResultPrefix.Length).Trim();
-                    int exitCode = int.Parse(statusText);
-                    string combinedOutput = string.Join("\n", outputLines);
-                    return ExternalCompilerMessageParser.Parse(combinedOutput, string.Empty, exitCode);
+                        string header = ReadLine(_sharedCompilerWorkerProcess.StandardOutput, ct);
+                        if (string.IsNullOrEmpty(header))
+                        {
+                            if (attempt == SharedCompilerWorkerMaxAttempts)
+                            {
+                                DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
+                                    "worker_empty_header",
+                                    new { request_file_path = requestFilePath, attempt });
+                                return null;
+                            }
+
+                            Shutdown();
+                            continue;
+                        }
+
+                        List<string> outputLines = new List<string>();
+                        while (true)
+                        {
+                            string line = ReadLine(_sharedCompilerWorkerProcess.StandardOutput, ct);
+                            if (line == null)
+                            {
+                                if (attempt == SharedCompilerWorkerMaxAttempts)
+                                {
+                                    DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
+                                        "worker_missing_end_marker",
+                                        new { request_file_path = requestFilePath, attempt });
+                                    return null;
+                                }
+
+                                Shutdown();
+                                goto RetryCompile;
+                            }
+
+                            if (line == SharedCompilerWorkerEndMarker)
+                            {
+                                break;
+                            }
+
+                            outputLines.Add(line);
+                        }
+
+                        ct.ThrowIfCancellationRequested();
+
+                        if (!header.StartsWith(SharedCompilerWorkerResultPrefix, StringComparison.Ordinal))
+                        {
+                            if (attempt == SharedCompilerWorkerMaxAttempts)
+                            {
+                                DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
+                                    "worker_invalid_header",
+                                    new { header, attempt });
+                                return null;
+                            }
+
+                            Shutdown();
+                            continue;
+                        }
+
+                        string statusText = header.Substring(SharedCompilerWorkerResultPrefix.Length).Trim();
+                        int exitCode = int.Parse(statusText);
+                        string combinedOutput = string.Join("\n", outputLines);
+                        return ExternalCompilerMessageParser.Parse(combinedOutput, string.Empty, exitCode);
+                    RetryCompile:
+                        ;
+                    }
+                    finally
+                    {
+                        markBuildFinished();
+                    }
                 }
-                finally
-                {
-                    markBuildFinished();
-                }
+
+                return null;
             }
         }
 

@@ -9,6 +9,7 @@ namespace io.github.hatayama.uLoopMCP
         private const int AutoPrewarmDelayFrameCount = 5;
         private const string AutoPrewarmCode = "return null;";
         private const string AutoPrewarmClassName = "DynamicCodeAutoPrewarmCommand";
+        private const string AutoPrewarmOperation = "dynamic_code_auto_prewarm";
 
         private readonly IDynamicCodeExecutionRuntime _runtime;
         private readonly object _autoPrewarmLock = new();
@@ -48,6 +49,11 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (!_runtime.SupportsAutoPrewarm())
             {
+                VibeLogger.LogInfo(
+                    AutoPrewarmOperation,
+                    "Skipping dynamic code auto prewarm because the fast path is unavailable",
+                    new { reason = "fast_path_unavailable" });
+
                 lock (_autoPrewarmLock)
                 {
                     _hasCompletedAutoPrewarm = true;
@@ -55,6 +61,11 @@ namespace io.github.hatayama.uLoopMCP
 
                 return;
             }
+
+            VibeLogger.LogInfo(
+                AutoPrewarmOperation,
+                "Starting dynamic code auto prewarm",
+                new { delay_frames = AutoPrewarmDelayFrameCount, class_name = AutoPrewarmClassName });
 
             await EditorDelay.DelayFrame(AutoPrewarmDelayFrameCount, CancellationToken.None);
 
@@ -72,8 +83,22 @@ namespace io.github.hatayama.uLoopMCP
 
             if (!result.Success)
             {
+                VibeLogger.LogWarning(
+                    AutoPrewarmOperation,
+                    "Dynamic code auto prewarm failed",
+                    new
+                    {
+                        class_name = AutoPrewarmClassName,
+                        error_message = result.ErrorMessage,
+                        logs = result.Logs
+                    });
                 return;
             }
+
+            VibeLogger.LogInfo(
+                AutoPrewarmOperation,
+                "Dynamic code auto prewarm completed successfully",
+                new { class_name = AutoPrewarmClassName });
 
             lock (_autoPrewarmLock)
             {
