@@ -33,10 +33,10 @@ namespace io.github.hatayama.uLoopMCP.Factory
                 return new DynamicCodeExecutorStub();
             }
 
-            CommandRunner runner = new CommandRunner(_entryPointResolver);
+            ICompiledCommandInvoker invoker = new CommandRunner(_entryPointResolver);
             DynamicCodeExecutor executor = new DynamicCodeExecutor(
                 compiler,
-                runner,
+                invoker,
                 _sourcePreparationService);
 
             VibeLogger.LogInfo(
@@ -46,7 +46,7 @@ namespace io.github.hatayama.uLoopMCP.Factory
                 {
                     security_level = securityLevel.ToString(),
                     compiler_type = compiler.GetType().Name,
-                    runner_type = runner.GetType().Name
+                    runner_type = invoker.GetType().Name
                 },
                 correlationId,
                 "Dynamic code execution system initialization completed",

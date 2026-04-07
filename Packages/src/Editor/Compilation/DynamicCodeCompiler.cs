@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Debug = UnityEngine.Debug;
@@ -14,14 +12,10 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public sealed class DynamicCodeCompiler : IDynamicCompilationService, IDisposable
     {
-        private static int _compileCounter;
-
         private readonly DynamicCodeSecurityLevel _securityLevel;
-        private readonly DynamicCodeSourcePreparationService _sourcePreparationService;
-        private readonly ExternalCompilerPathResolutionService _externalCompilerPathResolver;
-        private readonly DynamicReferenceSetBuilderService _referenceSetBuilder;
-        private readonly CompiledAssemblyLoadService _assemblyLoadService;
-        private readonly DynamicCompilationBackend _compilationBackend;
+        private readonly IDynamicCompilationPlanner _planner;
+        private readonly ICompiledAssemblyBuilder _assemblyBuilder;
+        private readonly ICompiledAssemblyLoader _assemblyLoader;
         private readonly CompilationCacheManager _cacheManager = new();
         private bool _disposed;
 
@@ -30,28 +24,22 @@ namespace io.github.hatayama.uLoopMCP
         public DynamicCodeCompiler(DynamicCodeSecurityLevel securityLevel)
             : this(
                 securityLevel,
-                DynamicCodeServices.SourcePreparationService,
-                DynamicCodeServices.ExternalCompilerPathResolver,
-                DynamicCodeServices.ReferenceSetBuilder,
-                DynamicCodeServices.AssemblyLoadService,
-                DynamicCodeServices.CompilationBackend)
+                DynamicCodeServices.CompilationPlanner,
+                DynamicCodeServices.AssemblyBuilder,
+                DynamicCodeServices.AssemblyLoadService)
         {
         }
 
         internal DynamicCodeCompiler(
             DynamicCodeSecurityLevel securityLevel,
-            DynamicCodeSourcePreparationService sourcePreparationService,
-            ExternalCompilerPathResolutionService externalCompilerPathResolver,
-            DynamicReferenceSetBuilderService referenceSetBuilder,
-            CompiledAssemblyLoadService assemblyLoadService,
-            DynamicCompilationBackend compilationBackend)
+            IDynamicCompilationPlanner planner,
+            ICompiledAssemblyBuilder assemblyBuilder,
+            ICompiledAssemblyLoader assemblyLoader)
         {
             _securityLevel = securityLevel;
-            _sourcePreparationService = sourcePreparationService;
-            _externalCompilerPathResolver = externalCompilerPathResolver;
-            _referenceSetBuilder = referenceSetBuilder;
-            _assemblyLoadService = assemblyLoadService;
-            _compilationBackend = compilationBackend;
+            _planner = planner ?? throw new ArgumentNullException(nameof(planner));
+            _assemblyBuilder = assemblyBuilder ?? throw new ArgumentNullException(nameof(assemblyBuilder));
+            _assemblyLoader = assemblyLoader ?? throw new ArgumentNullException(nameof(assemblyLoader));
         }
 
         public void Dispose()
@@ -73,19 +61,9 @@ namespace io.github.hatayama.uLoopMCP
             ct.ThrowIfCancellationRequested();
             LastBuildCount = 0;
 
-            string namespaceName = request.Namespace ?? DynamicCodeConstants.DEFAULT_NAMESPACE;
-            string className = request.ClassName ?? DynamicCodeConstants.DEFAULT_CLASS_NAME;
-            PreparedDynamicCode preparedCode = _sourcePreparationService.Prepare(
-                request.Code,
-                namespaceName,
-                className);
-            CompilationRequest normalizedRequest = CreateNormalizedRequest(
-                request,
-                preparedCode.PreparedSource,
-                className,
-                namespaceName);
+            DynamicCompilationPlan plan = _planner.CreatePlan(request);
 
-            CompilationResult cachedResult = TryGetCachedResult(normalizedRequest, preparedCode);
+            CompilationResult cachedResult = TryGetCachedResult(plan);
             if (cachedResult != null)
             {
                 return cachedResult;
@@ -97,185 +75,76 @@ namespace io.github.hatayama.uLoopMCP
                 return sourceSecurityFailure;
             }
 
-            ExternalCompilerPaths externalCompilerPaths = _externalCompilerPathResolver.Resolve();
-            string tempDirectoryPath = Path.Combine("Temp", "uLoopMCPCompilation");
-            string uniqueName = $"{className}_{Interlocked.Increment(ref _compileCounter)}";
-            string sourcePath = Path.Combine(tempDirectoryPath, $"{uniqueName}.cs");
-            string dllPath = Path.Combine(tempDirectoryPath, $"{uniqueName}.dll");
-            bool canDeleteTempFiles = true;
-            double referenceResolutionMilliseconds = 0;
-            double buildMilliseconds = 0;
-
-            Directory.CreateDirectory(tempDirectoryPath);
-
-            try
+            if (plan.PreparedCode.PreparedSource == null)
             {
-                string wrappedCode = preparedCode.PreparedSource;
-                if (wrappedCode == null)
+                return CreateMixedModeFailureResult(request.Code, 0, 0);
+            }
+
+            CompiledAssemblyBuildResult buildResult = await _assemblyBuilder.BuildAsync(plan, ct);
+            LastBuildCount = buildResult.BuildCount;
+
+            if (buildResult.Diagnostics.Errors.Count > 0)
+            {
+                return new CompilationResult
                 {
-                    return CreateMixedModeFailureResult(request.Code, referenceResolutionMilliseconds, buildMilliseconds);
-                }
-
-                bool isScriptMode = preparedCode.IsScriptMode;
-                string originalWrappedCode = wrappedCode;
-                bool preUsingAdded = false;
-                PreUsingResult preUsingResult = null;
-
-                Stopwatch initialReferenceResolutionStopwatch = Stopwatch.StartNew();
-                List<string> initialReferences = BuildInitialReferences(
-                    request,
-                    isScriptMode,
-                    externalCompilerPaths,
-                    ref wrappedCode,
-                    ref preUsingAdded,
-                    ref preUsingResult);
-                initialReferenceResolutionStopwatch.Stop();
-                referenceResolutionMilliseconds += initialReferenceResolutionStopwatch.Elapsed.TotalMilliseconds;
-
-                async Task<UnityEditor.Compilation.CompilerMessage[]> BuildFunc(
-                    string resolvedSourcePath,
-                    string resolvedDllPath,
-                    List<string> resolvedReferences,
-                    CancellationToken cancellationToken)
-                {
-                    Stopwatch buildStopwatch = Stopwatch.StartNew();
-                    UnityEditor.Compilation.CompilerMessage[] compilerMessages = await BuildAssemblyAsync(
-                        resolvedSourcePath,
-                        resolvedDllPath,
-                        resolvedReferences,
-                        externalCompilerPaths,
-                        cancellationToken,
-                        () => canDeleteTempFiles = false,
-                        () => canDeleteTempFiles = true);
-                    buildStopwatch.Stop();
-                    buildMilliseconds += buildStopwatch.Elapsed.TotalMilliseconds;
-                    return compilerMessages;
-                }
-
-                AutoUsingResolver resolver = new AutoUsingResolver();
-                AutoUsingResult autoResult = await resolver.ResolveAsync(
-                    sourcePath,
-                    dllPath,
-                    wrappedCode,
-                    initialReferences,
-                    BuildFunc,
-                    ct);
-                referenceResolutionMilliseconds += autoResult.ReferenceResolutionMilliseconds;
-
-                wrappedCode = autoResult.UpdatedSource;
-                UnityEditor.Compilation.CompilerMessage[] messages = autoResult.Messages;
-                CompilerDiagnostics diagnostics = CompilerDiagnostics.FromMessages(messages);
-
-                bool preUsingRolledBack = false;
-                if (diagnostics.Errors.Count > 0 && preUsingAdded && diagnostics.HasAmbiguityErrors)
-                {
-                    Stopwatch rollbackReferenceResolutionStopwatch = Stopwatch.StartNew();
-                    List<string> rollbackReferences = _referenceSetBuilder.BuildReferenceSet(
-                        request.AdditionalReferences,
-                        null,
-                        externalCompilerPaths);
-                    rollbackReferenceResolutionStopwatch.Stop();
-                    referenceResolutionMilliseconds += rollbackReferenceResolutionStopwatch.Elapsed.TotalMilliseconds;
-
-                    AutoUsingResult rollbackResult = await resolver.ResolveAsync(
-                        sourcePath,
-                        dllPath,
-                        originalWrappedCode,
-                        rollbackReferences,
-                        BuildFunc,
-                        ct);
-                    referenceResolutionMilliseconds += rollbackResult.ReferenceResolutionMilliseconds;
-
-                    CompilerDiagnostics rollbackDiagnostics = CompilerDiagnostics.FromMessages(rollbackResult.Messages);
-                    if (rollbackDiagnostics.Errors.Count < diagnostics.Errors.Count)
-                    {
-                        wrappedCode = rollbackResult.UpdatedSource;
-                        messages = rollbackResult.Messages;
-                        diagnostics = rollbackDiagnostics;
-                        autoResult = rollbackResult;
-                        preUsingRolledBack = true;
-                    }
-                }
-
-                List<string> autoInjectedNamespaces = MergeAutoInjectedNamespaces(
-                    preUsingRolledBack,
-                    preUsingResult,
-                    autoResult);
-
-                if (diagnostics.Errors.Count > 0)
-                {
-                    return new CompilationResult
-                    {
-                        Success = false,
-                        Errors = diagnostics.Errors,
-                        Warnings = diagnostics.Warnings,
-                        UpdatedCode = wrappedCode,
-                        FailureReason = CompilationFailureReason.CompilationError,
-                        AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates,
-                        AutoInjectedNamespaces = autoInjectedNamespaces,
-                        Timings = DynamicCompilationTimingFormatter.CreateCompilationTimings(
-                            referenceResolutionMilliseconds,
-                            buildMilliseconds,
-                            0)
-                    };
-                }
-
-                byte[] assemblyBytes = File.ReadAllBytes(dllPath);
-                CompiledAssemblyLoadResult assemblyLoadResult = _assemblyLoadService.Load(
-                    _securityLevel,
-                    assemblyBytes);
-                if (!assemblyLoadResult.Success)
-                {
-                    return CreateAssemblySecurityFailure(
-                        assemblyLoadResult.SecurityViolations,
-                        diagnostics.Warnings,
-                        wrappedCode,
-                        autoResult,
-                        autoInjectedNamespaces,
-                        referenceResolutionMilliseconds,
-                        buildMilliseconds,
-                        assemblyLoadResult.AssemblyLoadMilliseconds);
-                }
-
-                CompilationResult result = new CompilationResult
-                {
-                    Success = true,
-                    CompiledAssembly = assemblyLoadResult.CompiledAssembly,
-                    Warnings = diagnostics.Warnings,
-                    UpdatedCode = wrappedCode,
-                    AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates,
-                    AutoInjectedNamespaces = autoInjectedNamespaces,
+                    Success = false,
+                    Errors = buildResult.Diagnostics.Errors,
+                    Warnings = buildResult.Diagnostics.Warnings,
+                    UpdatedCode = buildResult.UpdatedSource,
+                    FailureReason = CompilationFailureReason.CompilationError,
+                    AmbiguousTypeCandidates = buildResult.AmbiguousTypeCandidates,
+                    AutoInjectedNamespaces = buildResult.AutoInjectedNamespaces,
                     Timings = DynamicCompilationTimingFormatter.CreateCompilationTimings(
-                        referenceResolutionMilliseconds,
-                        buildMilliseconds,
-                        assemblyLoadResult.AssemblyLoadMilliseconds)
+                        buildResult.ReferenceResolutionMilliseconds,
+                        buildResult.BuildMilliseconds,
+                        0)
                 };
+            }
 
-                _cacheManager.CacheResultIfSuccessful(result, normalizedRequest);
-                return result;
-            }
-            finally
+            CompiledAssemblyLoadResult assemblyLoadResult = _assemblyLoader.Load(
+                _securityLevel,
+                buildResult.AssemblyBytes);
+            if (!assemblyLoadResult.Success)
             {
-                if (canDeleteTempFiles)
-                {
-                    File.Delete(sourcePath);
-                    File.Delete(dllPath);
-                    File.Delete(Path.ChangeExtension(dllPath, ".pdb"));
-                }
+                return CreateAssemblySecurityFailure(
+                    assemblyLoadResult.SecurityViolations,
+                    buildResult.Diagnostics.Warnings,
+                    buildResult.UpdatedSource,
+                    buildResult.AmbiguousTypeCandidates,
+                    buildResult.AutoInjectedNamespaces,
+                    buildResult.ReferenceResolutionMilliseconds,
+                    buildResult.BuildMilliseconds,
+                    assemblyLoadResult.AssemblyLoadMilliseconds);
             }
+
+            CompilationResult result = new CompilationResult
+            {
+                Success = true,
+                CompiledAssembly = assemblyLoadResult.CompiledAssembly,
+                Warnings = buildResult.Diagnostics.Warnings,
+                UpdatedCode = buildResult.UpdatedSource,
+                AmbiguousTypeCandidates = buildResult.AmbiguousTypeCandidates,
+                AutoInjectedNamespaces = buildResult.AutoInjectedNamespaces,
+                Timings = DynamicCompilationTimingFormatter.CreateCompilationTimings(
+                    buildResult.ReferenceResolutionMilliseconds,
+                    buildResult.BuildMilliseconds,
+                    assemblyLoadResult.AssemblyLoadMilliseconds)
+            };
+
+            _cacheManager.CacheResultIfSuccessful(result, plan.NormalizedRequest);
+            return result;
         }
 
         private CompilationResult TryGetCachedResult(
-            CompilationRequest normalizedRequest,
-            PreparedDynamicCode preparedCode)
+            DynamicCompilationPlan plan)
         {
-            CompilationResult cachedResult = _cacheManager.CheckCache(normalizedRequest);
+            CompilationResult cachedResult = _cacheManager.CheckCache(plan.NormalizedRequest);
             if (cachedResult == null)
             {
                 return null;
             }
 
-            cachedResult.UpdatedCode = preparedCode.PreparedSource;
+            cachedResult.UpdatedCode = plan.PreparedCode.PreparedSource;
             return cachedResult;
         }
 
@@ -330,61 +199,11 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        private List<string> BuildInitialReferences(
-            CompilationRequest request,
-            bool isScriptMode,
-            ExternalCompilerPaths externalCompilerPaths,
-            ref string wrappedCode,
-            ref bool preUsingAdded,
-            ref PreUsingResult preUsingResult)
-        {
-            if (!isScriptMode)
-            {
-                return _referenceSetBuilder.BuildReferenceSet(
-                    request.AdditionalReferences,
-                    null,
-                    externalCompilerPaths);
-            }
-
-            preUsingResult = PreUsingResolver.Resolve(wrappedCode, AssemblyTypeIndex.Instance);
-            preUsingAdded = !ReferenceEquals(preUsingResult.UpdatedSource, wrappedCode);
-            wrappedCode = preUsingResult.UpdatedSource;
-            return _referenceSetBuilder.BuildReferenceSet(
-                request.AdditionalReferences,
-                preUsingResult.AddedAssemblyReferences,
-                externalCompilerPaths);
-        }
-
-        private async Task<UnityEditor.Compilation.CompilerMessage[]> BuildAssemblyAsync(
-            string sourcePath,
-            string dllPath,
-            List<string> references,
-            ExternalCompilerPaths externalCompilerPaths,
-            CancellationToken ct,
-            Action markBuildStarted,
-            Action markBuildFinished)
-        {
-            return await _compilationBackend.CompileAsync(
-                sourcePath,
-                dllPath,
-                references,
-                externalCompilerPaths,
-                ct,
-                markBuildStarted,
-                markBuildFinished,
-                IncrementBuildCount);
-        }
-
-        private void IncrementBuildCount()
-        {
-            LastBuildCount++;
-        }
-
         private static CompilationResult CreateAssemblySecurityFailure(
             List<SecurityViolation> securityViolations,
             List<string> warnings,
             string updatedCode,
-            AutoUsingResult autoResult,
+            Dictionary<string, List<string>> ambiguousTypeCandidates,
             List<string> autoInjectedNamespaces,
             double referenceResolutionMilliseconds,
             double buildMilliseconds,
@@ -398,7 +217,7 @@ namespace io.github.hatayama.uLoopMCP
                 Warnings = warnings,
                 UpdatedCode = updatedCode,
                 FailureReason = CompilationFailureReason.SecurityViolation,
-                AmbiguousTypeCandidates = autoResult.AmbiguousTypeCandidates,
+                AmbiguousTypeCandidates = ambiguousTypeCandidates,
                 AutoInjectedNamespaces = autoInjectedNamespaces,
                 Timings = DynamicCompilationTimingFormatter.CreateCompilationTimings(
                     referenceResolutionMilliseconds,
@@ -407,48 +226,5 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        private static CompilationRequest CreateNormalizedRequest(
-            CompilationRequest request,
-            string preparedSource,
-            string className,
-            string namespaceName)
-        {
-            return new CompilationRequest
-            {
-                Code = preparedSource ?? request.Code,
-                ClassName = className,
-                Namespace = namespaceName,
-                AdditionalReferences = request.AdditionalReferences != null
-                    ? new List<string>(request.AdditionalReferences)
-                    : new List<string>(),
-                AssemblyMode = request.AssemblyMode
-            };
-        }
-
-        private static List<string> MergeAutoInjectedNamespaces(
-            bool preUsingRolledBack,
-            PreUsingResult preUsingResult,
-            AutoUsingResult autoResult)
-        {
-            List<string> mergedNamespaces = new List<string>();
-
-            if (!preUsingRolledBack && preUsingResult != null && preUsingResult.AddedNamespaces.Count > 0)
-            {
-                foreach (string namespaceName in preUsingResult.AddedNamespaces)
-                {
-                    mergedNamespaces.Add(namespaceName);
-                }
-            }
-
-            foreach (string namespaceName in autoResult.AddedNamespaces)
-            {
-                if (!mergedNamespaces.Contains(namespaceName))
-                {
-                    mergedNamespaces.Add(namespaceName);
-                }
-            }
-
-            return mergedNamespaces;
-        }
     }
 }

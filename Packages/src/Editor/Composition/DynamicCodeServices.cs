@@ -13,11 +13,20 @@ namespace io.github.hatayama.uLoopMCP
         public static DynamicReferenceSetBuilderService ReferenceSetBuilder { get; } =
             new DynamicReferenceSetBuilderService();
 
-        public static CompiledAssemblyLoadService AssemblyLoadService { get; } =
+        public static IDynamicCompilationPlanner CompilationPlanner { get; } =
+            new DynamicCompilationPlanner(SourcePreparationService);
+
+        public static ICompiledAssemblyLoader AssemblyLoadService { get; } =
             new CompiledAssemblyLoadService();
 
         public static DynamicCompilationBackend CompilationBackend { get; } =
             new DynamicCompilationBackend();
+
+        public static ICompiledAssemblyBuilder AssemblyBuilder { get; } =
+            new CompiledAssemblyBuilder(
+                ExternalCompilerPathResolver,
+                ReferenceSetBuilder,
+                CompilationBackend);
 
         public static CompiledCommandEntryPointResolver CommandEntryPointResolver { get; } =
             new CompiledCommandEntryPointResolver();
@@ -27,10 +36,13 @@ namespace io.github.hatayama.uLoopMCP
                 SourcePreparationService,
                 CommandEntryPointResolver);
 
+        public static IDynamicCodeExecutorPool ExecutorPool { get; } =
+            new DynamicCodeExecutorPool(ExecutorFactory);
+
         public static IDynamicCodeExecutionRuntime RuntimeFacade { get; } =
             new DynamicCodeExecutionFacade(
                 ExternalCompilerPathResolver,
-                ExecutorFactory);
+                ExecutorPool);
 
         public static IExecuteDynamicCodeUseCase ExecuteDynamicCodeUseCase { get; } =
             new ExecuteDynamicCodeUseCase(RuntimeFacade);

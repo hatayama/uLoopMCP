@@ -10,7 +10,7 @@ namespace io.github.hatayama.uLoopMCP
     /// <summary>
     /// Runs the prepared wrapper entry point while keeping Undo and cancellation handling consistent.
     /// </summary>
-    public class CommandRunner
+    public class CommandRunner : ICompiledCommandInvoker
     {
         private readonly CompiledCommandEntryPointResolver _entryPointResolver;
         private bool _isRunning = false;

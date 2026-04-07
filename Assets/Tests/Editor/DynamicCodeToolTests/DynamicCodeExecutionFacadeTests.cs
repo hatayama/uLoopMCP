@@ -14,9 +14,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task ExecuteAsync_WhenSameSecurityLevelUsedTwice_ShouldReuseExecutor()
         {
             FakeDynamicCodeExecutorProvider provider = new FakeDynamicCodeExecutorProvider();
+            using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
             using DynamicCodeExecutionFacade facade = new DynamicCodeExecutionFacade(
                 new ExternalCompilerPathResolutionService(),
-                provider);
+                pool);
 
             DynamicCodeExecutionRequest firstRequest = CreateRequest(
                 DynamicCodeSecurityLevel.Restricted,
@@ -35,9 +36,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public async Task ExecuteAsync_WhenSecurityLevelChanges_ShouldCreateSeparateExecutors()
         {
             FakeDynamicCodeExecutorProvider provider = new FakeDynamicCodeExecutorProvider();
+            using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
             using DynamicCodeExecutionFacade facade = new DynamicCodeExecutionFacade(
                 new ExternalCompilerPathResolutionService(),
-                provider);
+                pool);
 
             await facade.ExecuteAsync(
                 CreateRequest(DynamicCodeSecurityLevel.Restricted, "return 1;"),
@@ -54,9 +56,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         public void Dispose_WhenExecutorsWereCreated_ShouldDisposeCachedExecutors()
         {
             FakeDynamicCodeExecutorProvider provider = new FakeDynamicCodeExecutorProvider();
+            using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
             DynamicCodeExecutionFacade facade = new DynamicCodeExecutionFacade(
                 new ExternalCompilerPathResolutionService(),
-                provider);
+                pool);
 
             Assert.DoesNotThrowAsync(async () =>
             {

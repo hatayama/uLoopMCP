@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using io.github.hatayama.uLoopMCP.Factory;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
@@ -14,18 +12,16 @@ namespace io.github.hatayama.uLoopMCP
     internal sealed class DynamicCodeExecutionFacade : IDynamicCodeExecutionRuntime, IDisposable
     {
         private readonly ExternalCompilerPathResolutionService _externalCompilerPathResolver;
-        private readonly IDynamicCodeExecutorProvider _executorProvider;
-        private readonly Dictionary<DynamicCodeSecurityLevel, IDynamicCodeExecutor> _executorsBySecurityLevel = new();
-        private readonly object _executorsLock = new();
+        private readonly IDynamicCodeExecutorPool _executorPool;
         private readonly SemaphoreSlim _executionSemaphore = new(1, 1);
         private bool _disposed;
 
         public DynamicCodeExecutionFacade(
             ExternalCompilerPathResolutionService externalCompilerPathResolver,
-            IDynamicCodeExecutorProvider executorProvider)
+            IDynamicCodeExecutorPool executorPool)
         {
             _externalCompilerPathResolver = externalCompilerPathResolver ?? throw new ArgumentNullException(nameof(externalCompilerPathResolver));
-            _executorProvider = executorProvider ?? throw new ArgumentNullException(nameof(executorProvider));
+            _executorPool = executorPool ?? throw new ArgumentNullException(nameof(executorPool));
         }
 
         public bool SupportsAutoPrewarm()
@@ -47,7 +43,7 @@ namespace io.github.hatayama.uLoopMCP
             await _executionSemaphore.WaitAsync(cancellationToken);
             try
             {
-                IDynamicCodeExecutor executor = GetOrCreateExecutor(request.SecurityLevel);
+                IDynamicCodeExecutor executor = _executorPool.GetOrCreate(request.SecurityLevel);
                 return await executor.ExecuteCodeAsync(
                     request.Code,
                     request.ClassName,
@@ -68,33 +64,9 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            lock (_executorsLock)
-            {
-                foreach (IDynamicCodeExecutor executor in _executorsBySecurityLevel.Values)
-                {
-                    executor.Dispose();
-                }
-
-                _executorsBySecurityLevel.Clear();
-            }
-
+            _executorPool.Dispose();
             _executionSemaphore.Dispose();
             _disposed = true;
-        }
-
-        private IDynamicCodeExecutor GetOrCreateExecutor(DynamicCodeSecurityLevel securityLevel)
-        {
-            lock (_executorsLock)
-            {
-                if (_executorsBySecurityLevel.TryGetValue(securityLevel, out IDynamicCodeExecutor executor))
-                {
-                    return executor;
-                }
-
-                IDynamicCodeExecutor createdExecutor = _executorProvider.Create(securityLevel);
-                _executorsBySecurityLevel.Add(securityLevel, createdExecutor);
-                return createdExecutor;
-            }
         }
 
         private void ThrowIfDisposed()

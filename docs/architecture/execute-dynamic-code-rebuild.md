@@ -17,31 +17,57 @@ flowchart TD
     end
 
     subgraph Infrastructure["Infrastructure layer"]
-        RuntimeContract["IDynamicCodeExecutionRuntime"]
-        RuntimeFacade["DynamicCodeExecutionFacade"]
-        Provider["RegistryDynamicCodeExecutorFactory"]
-        ExecutorContract["IDynamicCodeExecutor"]
-        Executor["DynamicCodeExecutor"]
-        CompilerContract["IDynamicCompilationService"]
-        Compiler["DynamicCodeCompiler"]
-        Runner["CommandRunner"]
-        EntryResolver["CompiledCommandEntryPointResolver"]
-        SourcePrepSvc["DynamicCodeSourcePreparationService"]
-        SourcePrep["DynamicCodeSourcePreparer"]
-        RefSvc["DynamicReferenceSetBuilderService"]
-        RefBuilder["DynamicReferenceSetBuilder"]
-        AutoUsing["PreUsingResolver / AutoUsingResolver / AssemblyTypeIndex"]
-        Diagnostics["CompilerDiagnostics"]
-        LoadSvc["CompiledAssemblyLoadService"]
-        Loader["CompiledAssemblyLoader"]
-        Backend["DynamicCompilationBackend"]
-        PathSvc["ExternalCompilerPathResolutionService"]
-        PathResolver["ExternalCompilerPathResolver"]
-        Roslyn["RoslynCompilerBackend"]
-        Worker["SharedRoslynCompilerWorkerHost"]
-        Fallback["AssemblyBuilderFallbackCompilerBackend"]
-        Cache["CompilationCacheManager"]
-        Timing["DynamicCompilationTimingFormatter"]
+        subgraph RuntimeAccess["Runtime access module"]
+            RuntimeContract["IDynamicCodeExecutionRuntime"]
+            RuntimeFacade["DynamicCodeExecutionFacade"]
+            ExecutorPoolContract["IDynamicCodeExecutorPool"]
+            ExecutorPool["DynamicCodeExecutorPool"]
+            Provider["RegistryDynamicCodeExecutorFactory"]
+        end
+
+        subgraph Invocation["Invocation module"]
+            ExecutorContract["IDynamicCodeExecutor"]
+            Executor["DynamicCodeExecutor"]
+            InvokerContract["ICompiledCommandInvoker"]
+            Runner["CommandRunner"]
+            EntryResolver["CompiledCommandEntryPointResolver"]
+        end
+
+        subgraph CompilationPipeline["Compilation pipeline module"]
+            CompilerContract["IDynamicCompilationService"]
+            Compiler["DynamicCodeCompiler"]
+        end
+
+        subgraph Planning["Planning module"]
+            PlannerContract["IDynamicCompilationPlanner"]
+            Planner["DynamicCompilationPlanner"]
+            Plan["DynamicCompilationPlan"]
+            SourcePrepSvc["DynamicCodeSourcePreparationService"]
+            SourcePrep["DynamicCodeSourcePreparer"]
+        end
+
+        subgraph BackendBuild["Backend build module"]
+            BuilderContract["ICompiledAssemblyBuilder"]
+            Builder["CompiledAssemblyBuilder"]
+            RefSvc["DynamicReferenceSetBuilderService"]
+            RefBuilder["DynamicReferenceSetBuilder"]
+            AutoUsing["PreUsingResolver / AutoUsingResolver / AssemblyTypeIndex"]
+            Diagnostics["CompilerDiagnostics"]
+            Backend["DynamicCompilationBackend"]
+            PathSvc["ExternalCompilerPathResolutionService"]
+            PathResolver["ExternalCompilerPathResolver"]
+            Roslyn["RoslynCompilerBackend"]
+            Worker["SharedRoslynCompilerWorkerHost"]
+            Fallback["AssemblyBuilderFallbackCompilerBackend"]
+        end
+
+        subgraph SafetyLoad["Safety + load module"]
+            LoadContract["ICompiledAssemblyLoader"]
+            LoadSvc["CompiledAssemblyLoadService"]
+            Loader["CompiledAssemblyLoader"]
+            Cache["CompilationCacheManager"]
+            Timing["DynamicCompilationTimingFormatter"]
+        end
     end
 
     Tool --> ExecuteUseCase
@@ -52,20 +78,25 @@ flowchart TD
     RuntimeContract --> RuntimeFacade
 
     RuntimeFacade --> PathSvc
-    RuntimeFacade --> Provider
+    RuntimeFacade --> ExecutorPoolContract
+    ExecutorPoolContract --> ExecutorPool
+    ExecutorPool --> Provider
     Provider --> ExecutorContract
     ExecutorContract --> Executor
     Executor --> CompilerContract
     CompilerContract --> Compiler
-    Executor --> Runner
-    Executor --> SourcePrepSvc
+    Executor --> InvokerContract
+    InvokerContract --> Runner
     Runner --> EntryResolver
 
-    Compiler --> SourcePrepSvc
-    Compiler --> RefSvc
-    Compiler --> Diagnostics
-    Compiler --> LoadSvc
-    Compiler --> Backend
+    Compiler --> PlannerContract
+    PlannerContract --> Planner
+    Planner --> Plan
+    Planner --> SourcePrepSvc
+    Compiler --> BuilderContract
+    BuilderContract --> Builder
+    Compiler --> LoadContract
+    LoadContract --> LoadSvc
     Compiler --> Cache
     Compiler --> Timing
 
@@ -87,30 +118,35 @@ flowchart TD
     Services["DynamicCodeServices"]
     SourcePrepSvc["DynamicCodeSourcePreparationService"]
     PathSvc["ExternalCompilerPathResolutionService"]
-    RefSvc["DynamicReferenceSetBuilderService"]
-    LoadSvc["CompiledAssemblyLoadService"]
+    Planner["IDynamicCompilationPlanner / DynamicCompilationPlanner"]
+    Builder["ICompiledAssemblyBuilder / CompiledAssemblyBuilder"]
+    LoadSvc["ICompiledAssemblyLoader / CompiledAssemblyLoadService"]
     Backend["DynamicCompilationBackend"]
     EntryResolver["CompiledCommandEntryPointResolver"]
     Provider["RegistryDynamicCodeExecutorFactory"]
+    ExecutorPool["IDynamicCodeExecutorPool / DynamicCodeExecutorPool"]
     RuntimeFacade["DynamicCodeExecutionFacade"]
     ExecuteUseCase["ExecuteDynamicCodeUseCase"]
     PrewarmUseCase["PrewarmDynamicCodeUseCase"]
 
     Services --> SourcePrepSvc
     Services --> PathSvc
-    Services --> RefSvc
+    Services --> Planner
+    Services --> Builder
     Services --> LoadSvc
     Services --> Backend
     Services --> EntryResolver
     Services --> Provider
+    Services --> ExecutorPool
     Services --> RuntimeFacade
     Services --> ExecuteUseCase
     Services --> PrewarmUseCase
 
     Provider --> SourcePrepSvc
     Provider --> EntryResolver
+    ExecutorPool --> Provider
     RuntimeFacade --> PathSvc
-    RuntimeFacade --> Provider
+    RuntimeFacade --> ExecutorPool
     ExecuteUseCase --> RuntimeFacade
     PrewarmUseCase --> RuntimeFacade
 ```
@@ -124,8 +160,8 @@ flowchart TD
    - `ExecuteDynamicCodeUseCase` owns the user-facing workflow for execute-dynamic-code.
    - `PrewarmDynamicCodeUseCase` owns the warm-up workflow.
 3. Only then read `Infrastructure layer`.
-   - `DynamicCodeExecutionFacade` is the runtime gateway that hides executor reuse and provider wiring.
-   - `DynamicCodeCompiler` and its collaborators perform the heavy compile/execute work.
+   - `Runtime access module` is the only runtime-facing gateway.
+   - `Planning`, `Backend build`, `Safety + load`, and `Invocation` split the heavy mechanics into named modules.
 4. Read `Composition graph` last.
    - `DynamicCodeServices` is the only place that is expected to know many concrete classes at once.
    - If a concrete-to-concrete edge only appears there, it is a wiring edge rather than a runtime dependency.
@@ -146,6 +182,33 @@ flowchart TD
 - `Infrastructure layer`
   - Own the mechanics of execution, compilation, loading, caching, path discovery, and worker lifecycle.
   - Keep low-level concerns isolated behind contracts and focused service classes.
+
+## Infrastructure module boundaries
+
+- `Runtime access module`
+  - Exposes `IDynamicCodeExecutionRuntime` to the use-case layer.
+  - Reuses executors per security level through `IDynamicCodeExecutorPool`.
+  - Keeps warm-up capability checks near the runtime gateway.
+
+- `Planning module`
+  - Turns `CompilationRequest` into `DynamicCompilationPlan`.
+  - Keeps wrapper generation and literal hoisting together.
+  - Prevents `DynamicCodeCompiler` from knowing preparation details.
+
+- `Backend build module`
+  - Takes a plan and produces `CompiledAssemblyBuildResult`.
+  - Owns reference resolution, auto-using retry, backend selection, temp artifact handling, and build timings.
+  - Hides Roslyn worker details from the compiler orchestration.
+
+- `Safety + load module`
+  - Loads DLL bytes only after build success.
+  - Keeps preload validation, `Assembly.Load`, and IL validation together.
+  - Prevents backend code from leaking security decisions.
+
+- `Invocation module`
+  - Executes the compiled wrapper method through `ICompiledCommandInvoker`.
+  - Keeps reflection-heavy entry-point resolution behind a focused facade.
+  - Lets `DynamicCodeExecutor` stay a thin bridge between compile and invoke.
 
 ## Class responsibilities
 
@@ -168,9 +231,13 @@ flowchart TD
   - Keeps use cases from depending on factory and executor wiring directly.
 
 - `DynamicCodeExecutionFacade`
-  - Reuses executors per security level.
+  - Reuses executors through `IDynamicCodeExecutorPool`.
   - Checks whether the external Roslyn path is available for warm-up.
-  - Delegates executor creation to the provider.
+  - Hides provider and pool wiring from use cases.
+
+- `DynamicCodeExecutorPool`
+  - Owns executor reuse and disposal per security level.
+  - Keeps that caching concern out of the runtime facade itself.
 
 - `RegistryDynamicCodeExecutorFactory`
   - Builds `DynamicCodeExecutor` and `CommandRunner` from registered compiler services.
@@ -182,18 +249,23 @@ flowchart TD
   - Converts hoisted literals into execution parameters.
 
 - `DynamicCodeCompiler`
-  - Orchestrates cache lookup, source security, reference resolution, compilation backend selection, and assembly load.
+  - Orchestrates cache lookup, source security, planning, build, and assembly load.
+  - Depends on module facades instead of low-level helpers directly.
+
+- `DynamicCompilationPlanner`
+  - Produces the normalized `DynamicCompilationPlan`.
+  - Keeps request normalization and source preparation together.
+
+- `CompiledAssemblyBuilder`
+  - Builds the assembly bytes from a plan.
+  - Owns the auto-using retry loop and ambiguity rollback.
 
 - `DynamicCodeSourcePreparationService` / `DynamicCodeSourcePreparer`
   - Normalize snippets into wrapper code.
   - Handle top-level mode, return completion, and literal hoisting.
 
-- `DynamicReferenceSetBuilderService` / `DynamicReferenceSetBuilder`
-  - Build the minimal assembly reference set.
-  - Encapsulate pre-using, auto-using, and assembly candidate logic.
-
 - `DynamicCompilationBackend`
-  - Chooses between the Roslyn path and the AssemblyBuilder fallback path.
+  - Chooses between the Roslyn path and the AssemblyBuilder fallback path inside the build module.
 
 - `RoslynCompilerBackend` / `SharedRoslynCompilerWorkerHost`
   - Provide the fast path with the shared external worker.
@@ -203,11 +275,13 @@ flowchart TD
 
 - `CommandRunner` / `CompiledCommandEntryPointResolver`
   - Execute the compiled wrapper method while hiding reflection-heavy lookup.
+  - Form the `Invocation` facade seen by `DynamicCodeExecutor`.
 
 ## Design intent
 
 - Make the architecture readable as `Entry -> UseCase -> Infrastructure`.
 - Keep the runtime dependency chain narrower than the composition graph.
 - Allow the composition root to know concrete classes, while runtime layers depend on contracts or use cases.
+- Keep the `Infrastructure` layer readable as a set of named module facades instead of one large helper cluster.
 - Keep the async-only contracts honest.
 - Keep performance work in infrastructure without leaking that complexity into the entry layer.

@@ -9,28 +9,28 @@ namespace io.github.hatayama.uLoopMCP
     /// <summary>
     /// Bridges compilation and execution so the tool layer can stay focused on request and response shaping.
     /// </summary>
-    public class DynamicCodeExecutor : IDynamicCodeExecutor
+    internal sealed class DynamicCodeExecutor : IDynamicCodeExecutor
     {
         private readonly IDynamicCompilationService _compiler;
-        private readonly CommandRunner _runner;
+        private readonly ICompiledCommandInvoker _invoker;
         private readonly DynamicCodeSourcePreparationService _sourcePreparationService;
         private readonly ExecutionStatistics _statistics;
         private readonly object _statsLock = new();
 
         public DynamicCodeExecutor(
             IDynamicCompilationService compiler,
-            CommandRunner runner)
-            : this(compiler, runner, DynamicCodeServices.SourcePreparationService)
+            ICompiledCommandInvoker invoker)
+            : this(compiler, invoker, DynamicCodeServices.SourcePreparationService)
         {
         }
 
         internal DynamicCodeExecutor(
             IDynamicCompilationService compiler,
-            CommandRunner runner,
+            ICompiledCommandInvoker invoker,
             DynamicCodeSourcePreparationService sourcePreparationService)
         {
             _compiler = compiler ?? throw new ArgumentNullException(nameof(compiler));
-            _runner = runner ?? throw new ArgumentNullException(nameof(runner));
+            _invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             _sourcePreparationService = sourcePreparationService ?? throw new ArgumentNullException(nameof(sourcePreparationService));
             _statistics = new ExecutionStatistics();
         }
@@ -74,7 +74,7 @@ namespace io.github.hatayama.uLoopMCP
                 };
 
                 Stopwatch executionStopwatch = Stopwatch.StartNew();
-                ExecutionResult executionResult = await _runner.ExecuteAsync(context);
+                ExecutionResult executionResult = await _invoker.ExecuteAsync(context);
                 executionStopwatch.Stop();
 
                 executionResult.ExecutionTime = totalStopwatch.Elapsed;
