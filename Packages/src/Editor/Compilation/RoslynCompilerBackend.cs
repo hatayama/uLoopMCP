@@ -39,6 +39,14 @@ namespace io.github.hatayama.uLoopMCP
                     return Task.FromResult(workerMessages);
                 }
 
+                DynamicCompilationHealthMonitor.ReportSharedWorkerFallback(
+                    "worker_unavailable",
+                    new
+                    {
+                        dotnet_host_path = externalCompilerPaths.DotnetHostPath,
+                        compiler_dll_path = externalCompilerPaths.CompilerDllPath
+                    });
+
                 ct.ThrowIfCancellationRequested();
                 incrementBuildCount();
 
@@ -58,6 +66,11 @@ namespace io.github.hatayama.uLoopMCP
                 if (process == null)
                 {
                     markBuildFinished();
+                    DynamicCompilationHealthMonitor.ReportOneShotCompilerStartFailure(new
+                    {
+                        dotnet_host_path = externalCompilerPaths.DotnetHostPath,
+                        compiler_dll_path = externalCompilerPaths.CompilerDllPath
+                    });
                     return Task.FromResult(new CompilerMessage[]
                     {
                         new CompilerMessage

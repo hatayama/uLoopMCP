@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 
@@ -39,14 +40,48 @@ namespace io.github.hatayama.uLoopMCP
                 ? runtimeDirectories[0]
                 : null;
 
-            if (!File.Exists(dotnetHostPath)
-                || !File.Exists(compilerDllPath)
-                || !File.Exists(compilerRuntimeConfigPath)
-                || !File.Exists(compilerDepsFilePath)
-                || !File.Exists(codeAnalysisDllPath)
-                || !File.Exists(codeAnalysisCSharpDllPath)
-                || string.IsNullOrEmpty(netCoreRuntimeSharedDirectoryPath))
+            List<string> missingComponents = new List<string>();
+            if (!File.Exists(dotnetHostPath))
             {
+                missingComponents.Add(dotnetHostPath);
+            }
+
+            if (!File.Exists(compilerDllPath))
+            {
+                missingComponents.Add(compilerDllPath);
+            }
+
+            if (!File.Exists(compilerRuntimeConfigPath))
+            {
+                missingComponents.Add(compilerRuntimeConfigPath);
+            }
+
+            if (!File.Exists(compilerDepsFilePath))
+            {
+                missingComponents.Add(compilerDepsFilePath);
+            }
+
+            if (!File.Exists(codeAnalysisDllPath))
+            {
+                missingComponents.Add(codeAnalysisDllPath);
+            }
+
+            if (!File.Exists(codeAnalysisCSharpDllPath))
+            {
+                missingComponents.Add(codeAnalysisCSharpDllPath);
+            }
+
+            if (string.IsNullOrEmpty(netCoreRuntimeSharedDirectoryPath))
+            {
+                missingComponents.Add(netCoreRuntimeSharedRootPath);
+            }
+
+            if (missingComponents.Count > 0)
+            {
+                DynamicCompilationHealthMonitor.ReportFastPathUnavailable(
+                    editorPath,
+                    contentsPath,
+                    missingComponents);
                 return null;
             }
 

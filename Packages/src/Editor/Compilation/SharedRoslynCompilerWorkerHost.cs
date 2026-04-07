@@ -40,6 +40,9 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (UnityEngine.Application.platform == UnityEngine.RuntimePlatform.WindowsEditor)
             {
+                DynamicCompilationHealthMonitor.ReportSharedWorkerFallback(
+                    "windows_platform",
+                    new { platform = UnityEngine.Application.platform.ToString() });
                 return null;
             }
 
@@ -48,6 +51,9 @@ namespace io.github.hatayama.uLoopMCP
                 EnsureStarted(externalCompilerPaths);
                 if (_sharedCompilerWorkerProcess == null || _sharedCompilerWorkerProcess.HasExited)
                 {
+                    DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
+                        "worker_process_missing",
+                        new { request_file_path = requestFilePath });
                     return null;
                 }
 
@@ -63,6 +69,9 @@ namespace io.github.hatayama.uLoopMCP
                     string header = ReadLine(_sharedCompilerWorkerProcess.StandardOutput, ct);
                     if (string.IsNullOrEmpty(header))
                     {
+                        DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
+                            "worker_empty_header",
+                            new { request_file_path = requestFilePath });
                         Shutdown();
                         return null;
                     }
@@ -73,6 +82,9 @@ namespace io.github.hatayama.uLoopMCP
                         string line = ReadLine(_sharedCompilerWorkerProcess.StandardOutput, ct);
                         if (line == null)
                         {
+                            DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
+                                "worker_missing_end_marker",
+                                new { request_file_path = requestFilePath });
                             Shutdown();
                             return null;
                         }
@@ -89,6 +101,9 @@ namespace io.github.hatayama.uLoopMCP
 
                     if (!header.StartsWith(SharedCompilerWorkerResultPrefix, StringComparison.Ordinal))
                     {
+                        DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
+                            "worker_invalid_header",
+                            new { header });
                         Shutdown();
                         return null;
                     }
@@ -137,6 +152,13 @@ namespace io.github.hatayama.uLoopMCP
                     workerCompileResponseFilePath);
                 if (HasErrors(buildMessages))
                 {
+                    DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
+                        "worker_build_failed",
+                        new
+                        {
+                            first_error = FindFirstErrorMessage(buildMessages),
+                            worker_source_path = workerSourcePath
+                        });
                     return;
                 }
             }
@@ -157,6 +179,16 @@ namespace io.github.hatayama.uLoopMCP
             };
 
             _sharedCompilerWorkerProcess = ProcessStartHelper.TryStart(startInfo);
+            if (_sharedCompilerWorkerProcess == null)
+            {
+                DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
+                    "worker_start_failed",
+                    new
+                    {
+                        dotnet_host_path = externalCompilerPaths.DotnetHostPath,
+                        worker_assembly_path = workerAssemblyPath
+                    });
+            }
         }
 
         private static CompilerMessage[] BuildWorkerAssembly(
@@ -185,6 +217,13 @@ namespace io.github.hatayama.uLoopMCP
             using Process process = ProcessStartHelper.TryStart(startInfo);
             if (process == null)
             {
+                DynamicCompilationHealthMonitor.ReportSharedWorkerFailure(
+                    "worker_compiler_start_failed",
+                    new
+                    {
+                        dotnet_host_path = externalCompilerPaths.DotnetHostPath,
+                        compiler_dll_path = externalCompilerPaths.CompilerDllPath
+                    });
                 return new CompilerMessage[]
                 {
                     new CompilerMessage
@@ -280,6 +319,19 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return false;
+        }
+
+        private static string FindFirstErrorMessage(IReadOnlyCollection<CompilerMessage> messages)
+        {
+            foreach (CompilerMessage message in messages)
+            {
+                if (message.type == CompilerMessageType.Error)
+                {
+                    return message.message;
+                }
+            }
+
+            return string.Empty;
         }
 
         private static void ShutdownForReload()
