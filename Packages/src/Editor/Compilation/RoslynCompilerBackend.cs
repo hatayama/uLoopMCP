@@ -101,7 +101,22 @@ namespace io.github.hatayama.uLoopMCP
                 markBuildFinished();
                 ct.ThrowIfCancellationRequested();
 
-                return ExternalCompilerMessageParser.Parse(stdout, stderr, process.ExitCode);
+                CompilerMessage[] compilerMessages = ExternalCompilerMessageParser.Parse(
+                    stdout, stderr, process.ExitCode);
+
+                if (ShouldRetryWithAssemblyBuilder(process.ExitCode, compilerMessages))
+                {
+                    return await AssemblyBuilderFallbackCompilerBackend.CompileAsync(
+                        sourcePath,
+                        dllPath,
+                        references,
+                        ct,
+                        markBuildStarted,
+                        markBuildFinished,
+                        incrementBuildCount).ConfigureAwait(false);
+                }
+
+                return compilerMessages;
             }
             finally
             {
@@ -165,6 +180,28 @@ namespace io.github.hatayama.uLoopMCP
         private static string QuoteResponseFilePath(string path)
         {
             return $"\"{path}\"";
+        }
+
+        // Infrastructure-level failures (non-zero exit without file-specific diagnostics)
+        // indicate the compiler itself broke, not the user's code.
+        private static bool ShouldRetryWithAssemblyBuilder(
+            int exitCode,
+            IReadOnlyCollection<CompilerMessage> compilerMessages)
+        {
+            if (exitCode == 0)
+            {
+                return false;
+            }
+
+            foreach (CompilerMessage compilerMessage in compilerMessages)
+            {
+                if (!string.IsNullOrWhiteSpace(compilerMessage.file))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static string QuoteCommandLineArgument(string value)

@@ -10,5 +10,9 @@ namespace io.github.hatayama.uLoopMCP
         Task<ExecutionResult> ExecuteAsync(
             DynamicCodeExecutionRequest request,
             CancellationToken cancellationToken = default);
+
+        Task<(bool Entered, ExecutionResult Result)> TryExecuteIfIdleAsync(
+            DynamicCodeExecutionRequest request,
+            CancellationToken cancellationToken = default);
     }
 }

@@ -117,6 +117,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 });
                 return Task.FromResult(_results.Dequeue());
             }
+
+            public Task<(bool Entered, ExecutionResult Result)> TryExecuteIfIdleAsync(
+                DynamicCodeExecutionRequest request,
+                CancellationToken cancellationToken = default)
+            {
+                return Task.FromResult<(bool, ExecutionResult)>((true, null));
+            }
         }
     }
 }

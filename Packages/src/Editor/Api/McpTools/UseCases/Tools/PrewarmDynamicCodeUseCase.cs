@@ -77,9 +77,22 @@ namespace io.github.hatayama.uLoopMCP
                 CompileOnly = false
             };
 
-            ExecutionResult result = await _runtime.ExecuteAsync(
+            (bool entered, ExecutionResult result) = await _runtime.TryExecuteIfIdleAsync(
                 request,
                 CancellationToken.None);
+
+            if (!entered)
+            {
+                VibeLogger.LogInfo(
+                    AutoPrewarmOperation,
+                    "Skipping dynamic code auto prewarm because execute-dynamic-code is busy",
+                    new
+                    {
+                        class_name = AutoPrewarmClassName,
+                        reason = "runtime_busy"
+                    });
+                return;
+            }
 
             if (!result.Success)
             {

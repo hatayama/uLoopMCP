@@ -61,6 +61,19 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task RequestAsync_WhenRuntimeIsBusy_ShouldSkipExecution()
+        {
+            FakePrewarmRuntime runtime = new FakePrewarmRuntime(
+                true,
+                false);
+            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
+
+            await useCase.RequestAsync();
+
+            Assert.That(runtime.Requests, Is.Empty);
+        }
+
+        [Test]
         public async Task RequestAsync_WhenCalledTwiceBeforeCompletion_ShouldReturnSameTask()
         {
             FakePrewarmRuntime runtime = new FakePrewarmRuntime(
@@ -80,12 +93,22 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         {
             private readonly Queue<ExecutionResult> _results;
             private readonly bool _supportsAutoPrewarm;
+            private readonly bool _idle;
 
             public FakePrewarmRuntime(
                 bool supportsAutoPrewarm,
                 params ExecutionResult[] results)
+                : this(supportsAutoPrewarm, true, results)
+            {
+            }
+
+            public FakePrewarmRuntime(
+                bool supportsAutoPrewarm,
+                bool idle,
+                params ExecutionResult[] results)
             {
                 _supportsAutoPrewarm = supportsAutoPrewarm;
+                _idle = idle;
                 _results = new Queue<ExecutionResult>(results ?? new ExecutionResult[0]);
             }
 
@@ -110,6 +133,27 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 });
 
                 return Task.FromResult(_results.Dequeue());
+            }
+
+            public Task<(bool Entered, ExecutionResult Result)> TryExecuteIfIdleAsync(
+                DynamicCodeExecutionRequest request,
+                CancellationToken cancellationToken = default)
+            {
+                if (!_idle)
+                {
+                    return Task.FromResult<(bool, ExecutionResult)>((false, null));
+                }
+
+                Requests.Add(new DynamicCodeExecutionRequest
+                {
+                    Code = request.Code,
+                    ClassName = request.ClassName,
+                    Parameters = request.Parameters,
+                    CompileOnly = request.CompileOnly,
+                    SecurityLevel = request.SecurityLevel
+                });
+
+                return Task.FromResult<(bool, ExecutionResult)>((true, _results.Dequeue()));
             }
         }
     }

@@ -43,18 +43,52 @@ namespace io.github.hatayama.uLoopMCP
             await _executionSemaphore.WaitAsync(cancellationToken);
             try
             {
-                IDynamicCodeExecutor executor = _executorPool.GetOrCreate(request.SecurityLevel);
-                return await executor.ExecuteCodeAsync(
-                    request.Code,
-                    request.ClassName,
-                    request.Parameters,
-                    cancellationToken,
-                    request.CompileOnly);
+                return await ExecuteCoreAsync(request, cancellationToken);
             }
             finally
             {
                 _executionSemaphore.Release();
             }
+        }
+
+        public async Task<(bool Entered, ExecutionResult Result)> TryExecuteIfIdleAsync(
+            DynamicCodeExecutionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Debug.Assert(request != null, "request must not be null");
+            Debug.Assert(!string.IsNullOrWhiteSpace(request.Code), "request.Code must not be empty");
+
+            ThrowIfDisposed();
+            cancellationToken.ThrowIfCancellationRequested();
+
+            bool entered = await _executionSemaphore.WaitAsync(0, cancellationToken);
+            if (!entered)
+            {
+                return (false, null);
+            }
+
+            try
+            {
+                ExecutionResult result = await ExecuteCoreAsync(request, cancellationToken);
+                return (true, result);
+            }
+            finally
+            {
+                _executionSemaphore.Release();
+            }
+        }
+
+        private async Task<ExecutionResult> ExecuteCoreAsync(
+            DynamicCodeExecutionRequest request,
+            CancellationToken cancellationToken)
+        {
+            IDynamicCodeExecutor executor = _executorPool.GetOrCreate(request.SecurityLevel);
+            return await executor.ExecuteCodeAsync(
+                request.Code,
+                request.ClassName,
+                request.Parameters,
+                cancellationToken,
+                request.CompileOnly);
         }
 
         public void Dispose()
