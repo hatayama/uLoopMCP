@@ -29,7 +29,12 @@ export function isUnityProject(dirPath: string): boolean {
 }
 
 export function hasUloopInstalled(dirPath: string): boolean {
-  return existsSync(join(dirPath, 'UserSettings/UnityMcpSettings.json'));
+  const settingsPath = join(dirPath, 'UserSettings/UnityMcpSettings.json');
+  return (
+    existsSync(settingsPath) ||
+    existsSync(`${settingsPath}.tmp`) ||
+    existsSync(`${settingsPath}.bak`)
+  );
 }
 
 function isUnityProjectWithUloop(dirPath: string): boolean {

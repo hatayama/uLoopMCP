@@ -92,12 +92,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void LoadSettings()
         {
-            // Recover from interrupted atomic write
-            string backupPath = SettingsFilePath + ".bak";
-            if (!File.Exists(SettingsFilePath) && File.Exists(backupPath))
-            {
-                File.Move(backupPath, SettingsFilePath);
-            }
+            AtomicFileWriter.RecoverSidecarFiles(SettingsFilePath);
 
             if (File.Exists(SettingsFilePath))
             {

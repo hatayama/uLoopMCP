@@ -142,4 +142,24 @@ describe('resolveUnityPort with project settings', () => {
       'Could not read Unity server port from settings',
     );
   });
+
+  it('returns port when primary settings file is missing but backup exists', async () => {
+    writeFileSync(
+      join(tempProjectRoot, 'UserSettings/UnityMcpSettings.json.bak'),
+      JSON.stringify({ isServerRunning: true, customPort: 8722 }),
+    );
+
+    const port = await resolveUnityPort(undefined, tempProjectRoot);
+    expect(port).toBe(8722);
+  });
+
+  it('returns port when primary settings file is missing but temp exists', async () => {
+    writeFileSync(
+      join(tempProjectRoot, 'UserSettings/UnityMcpSettings.json.tmp'),
+      JSON.stringify({ isServerRunning: true, customPort: 8723 }),
+    );
+
+    const port = await resolveUnityPort(undefined, tempProjectRoot);
+    expect(port).toBe(8723);
+  });
 });

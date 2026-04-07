@@ -103,11 +103,31 @@ function createSettingsReadError(projectRoot: string): Error {
   );
 }
 
-// File I/O and JSON parsing can fail for external reasons (permissions, corruption, concurrent writes)
-async function readPortFromSettingsOrThrow(projectRoot: string): Promise<number> {
+function findSettingsPath(projectRoot: string): string | null {
   const settingsPath = join(projectRoot, 'UserSettings/UnityMcpSettings.json');
 
-  if (!existsSync(settingsPath)) {
+  if (existsSync(settingsPath)) {
+    return settingsPath;
+  }
+
+  const tempPath = `${settingsPath}.tmp`;
+  if (existsSync(tempPath)) {
+    return tempPath;
+  }
+
+  const backupPath = `${settingsPath}.bak`;
+  if (existsSync(backupPath)) {
+    return backupPath;
+  }
+
+  return null;
+}
+
+// File I/O and JSON parsing can fail for external reasons (permissions, corruption, concurrent writes)
+async function readPortFromSettingsOrThrow(projectRoot: string): Promise<number> {
+  const settingsPath = findSettingsPath(projectRoot);
+
+  if (settingsPath === null) {
     throw createSettingsReadError(projectRoot);
   }
 
