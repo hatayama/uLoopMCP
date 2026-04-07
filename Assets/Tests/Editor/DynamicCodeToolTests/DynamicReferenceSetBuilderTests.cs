@@ -8,12 +8,14 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
     public class DynamicReferenceSetBuilderTests
     {
         private string _tempDir;
+        private DynamicReferenceSetBuilderService _referenceSetBuilder;
 
         [SetUp]
         public void SetUp()
         {
             _tempDir = Path.Combine(Path.GetTempPath(), $"MergeRefsTest_{System.Guid.NewGuid():N}");
             Directory.CreateDirectory(_tempDir);
+            _referenceSetBuilder = new DynamicReferenceSetBuilderService();
         }
 
         [TearDown]
@@ -36,7 +38,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             string[] baseRefs = { basePath };
             List<string> additionalRefs = new() { additionalPath };
 
-            string[] result = DynamicCodeCompiler.MergeReferencesByAssemblyName(baseRefs, additionalRefs);
+            string[] result = _referenceSetBuilder.MergeReferencesByAssemblyName(baseRefs, additionalRefs);
 
             Assert.That(result, Has.Length.EqualTo(1));
             Assert.That(result[0], Is.EqualTo(basePath));
@@ -53,7 +55,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             string[] baseRefs = { threadingPath };
             List<string> additionalRefs = new() { debugPath };
 
-            string[] result = DynamicCodeCompiler.MergeReferencesByAssemblyName(baseRefs, additionalRefs);
+            string[] result = _referenceSetBuilder.MergeReferencesByAssemblyName(baseRefs, additionalRefs);
 
             Assert.That(result, Has.Length.EqualTo(2));
             Assert.That(result, Does.Contain(threadingPath));
@@ -71,7 +73,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             string[] baseRefs = { path1, path2 };
             List<string> additionalRefs = new();
 
-            string[] result = DynamicCodeCompiler.MergeReferencesByAssemblyName(baseRefs, additionalRefs);
+            string[] result = _referenceSetBuilder.MergeReferencesByAssemblyName(baseRefs, additionalRefs);
 
             Assert.That(result, Has.Length.EqualTo(1));
             Assert.That(result[0], Is.EqualTo(path1));
@@ -88,7 +90,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             string[] baseRefs = { lowerPath };
             List<string> additionalRefs = new() { upperPath };
 
-            string[] result = DynamicCodeCompiler.MergeReferencesByAssemblyName(baseRefs, additionalRefs);
+            string[] result = _referenceSetBuilder.MergeReferencesByAssemblyName(baseRefs, additionalRefs);
 
             Assert.That(result, Has.Length.EqualTo(1));
             Assert.That(result[0], Is.EqualTo(lowerPath));
@@ -104,7 +106,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             string[] baseRefs = { basePath };
             List<string> additionalRefs = new() { nonExistentPath };
 
-            string[] result = DynamicCodeCompiler.MergeReferencesByAssemblyName(baseRefs, additionalRefs);
+            string[] result = _referenceSetBuilder.MergeReferencesByAssemblyName(baseRefs, additionalRefs);
 
             Assert.That(result, Has.Length.EqualTo(1));
             Assert.That(result[0], Is.EqualTo(basePath));
@@ -119,7 +121,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             string[] baseRefs = { basePath };
             List<string> additionalRefs = new() { null, "", "  " };
 
-            string[] result = DynamicCodeCompiler.MergeReferencesByAssemblyName(baseRefs, additionalRefs);
+            string[] result = _referenceSetBuilder.MergeReferencesByAssemblyName(baseRefs, additionalRefs);
 
             Assert.That(result, Has.Length.EqualTo(1));
             Assert.That(result[0], Is.EqualTo(basePath));

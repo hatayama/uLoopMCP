@@ -12,10 +12,21 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class CommandRunner
     {
+        private readonly CompiledCommandEntryPointResolver _entryPointResolver;
         private bool _isRunning = false;
         private CancellationTokenSource _cancellationTokenSource;
 
         public bool IsRunning => _isRunning;
+
+        public CommandRunner()
+            : this(DynamicCodeServices.CommandEntryPointResolver)
+        {
+        }
+
+        internal CommandRunner(CompiledCommandEntryPointResolver entryPointResolver)
+        {
+            _entryPointResolver = entryPointResolver;
+        }
 
         private static void LogExecutionError(Exception ex, string correlationId)
         {
@@ -194,7 +205,7 @@ namespace io.github.hatayama.uLoopMCP
             try
             {
                 // Find executable type from assembly (sync only)
-                (Type targetType, MethodInfo executeMethod) = CompiledCommandEntryPointResolver.TryFindExecuteMethod(
+                (Type targetType, MethodInfo executeMethod) = _entryPointResolver.TryFindExecuteMethod(
                     context.CompiledAssembly);
                 
                 if (targetType == null || executeMethod == null)
@@ -266,7 +277,7 @@ namespace io.github.hatayama.uLoopMCP
             try
             {
                 // Prefer async ExecuteAsync; fallback to sync Execute
-                (Type asyncType, MethodInfo executeAsyncMethod) = CompiledCommandEntryPointResolver.TryFindExecuteAsyncMethod(
+                (Type asyncType, MethodInfo executeAsyncMethod) = _entryPointResolver.TryFindExecuteAsyncMethod(
                     context.CompiledAssembly);
                 if (asyncType != null && executeAsyncMethod != null)
                 {

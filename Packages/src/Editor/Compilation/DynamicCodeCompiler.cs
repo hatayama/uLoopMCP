@@ -17,24 +17,41 @@ namespace io.github.hatayama.uLoopMCP
         private static int _compileCounter;
 
         private readonly DynamicCodeSecurityLevel _securityLevel;
+        private readonly DynamicCodeSourcePreparationService _sourcePreparationService;
+        private readonly ExternalCompilerPathResolutionService _externalCompilerPathResolver;
+        private readonly DynamicReferenceSetBuilderService _referenceSetBuilder;
+        private readonly CompiledAssemblyLoadService _assemblyLoadService;
+        private readonly DynamicCompilationBackend _compilationBackend;
         private readonly CompilationCacheManager _cacheManager = new();
         private bool _disposed;
 
         internal int LastBuildCount { get; private set; }
 
         public DynamicCodeCompiler(DynamicCodeSecurityLevel securityLevel)
+            : this(
+                securityLevel,
+                DynamicCodeServices.SourcePreparationService,
+                DynamicCodeServices.ExternalCompilerPathResolver,
+                DynamicCodeServices.ReferenceSetBuilder,
+                DynamicCodeServices.AssemblyLoadService,
+                DynamicCodeServices.CompilationBackend)
+        {
+        }
+
+        internal DynamicCodeCompiler(
+            DynamicCodeSecurityLevel securityLevel,
+            DynamicCodeSourcePreparationService sourcePreparationService,
+            ExternalCompilerPathResolutionService externalCompilerPathResolver,
+            DynamicReferenceSetBuilderService referenceSetBuilder,
+            CompiledAssemblyLoadService assemblyLoadService,
+            DynamicCompilationBackend compilationBackend)
         {
             _securityLevel = securityLevel;
-        }
-
-        internal static void RequestAutoPrewarm()
-        {
-            DynamicCodePrewarmService.Request();
-        }
-
-        internal static Task RequestAutoPrewarmAsync()
-        {
-            return DynamicCodePrewarmService.RequestAsync();
+            _sourcePreparationService = sourcePreparationService;
+            _externalCompilerPathResolver = externalCompilerPathResolver;
+            _referenceSetBuilder = referenceSetBuilder;
+            _assemblyLoadService = assemblyLoadService;
+            _compilationBackend = compilationBackend;
         }
 
         public void Dispose()
@@ -48,11 +65,6 @@ namespace io.github.hatayama.uLoopMCP
             _disposed = true;
         }
 
-        public CompilationResult Compile(CompilationRequest request)
-        {
-            throw new NotSupportedException("Compile blocks Unity's main thread. Use CompileAsync instead.");
-        }
-
         public async Task<CompilationResult> CompileAsync(CompilationRequest request, CancellationToken ct = default)
         {
             Debug.Assert(request != null, "request must not be null");
@@ -63,7 +75,7 @@ namespace io.github.hatayama.uLoopMCP
 
             string namespaceName = request.Namespace ?? DynamicCodeConstants.DEFAULT_NAMESPACE;
             string className = request.ClassName ?? DynamicCodeConstants.DEFAULT_CLASS_NAME;
-            PreparedDynamicCode preparedCode = DynamicCodeSourcePreparer.Prepare(
+            PreparedDynamicCode preparedCode = _sourcePreparationService.Prepare(
                 request.Code,
                 namespaceName,
                 className);
@@ -85,7 +97,7 @@ namespace io.github.hatayama.uLoopMCP
                 return sourceSecurityFailure;
             }
 
-            ExternalCompilerPaths externalCompilerPaths = ExternalCompilerPathResolver.Resolve();
+            ExternalCompilerPaths externalCompilerPaths = _externalCompilerPathResolver.Resolve();
             string tempDirectoryPath = Path.Combine("Temp", "uLoopMCPCompilation");
             string uniqueName = $"{className}_{Interlocked.Increment(ref _compileCounter)}";
             string sourcePath = Path.Combine(tempDirectoryPath, $"{uniqueName}.cs");
@@ -158,7 +170,7 @@ namespace io.github.hatayama.uLoopMCP
                 if (diagnostics.Errors.Count > 0 && preUsingAdded && diagnostics.HasAmbiguityErrors)
                 {
                     Stopwatch rollbackReferenceResolutionStopwatch = Stopwatch.StartNew();
-                    List<string> rollbackReferences = DynamicReferenceSetBuilder.BuildReferenceSet(
+                    List<string> rollbackReferences = _referenceSetBuilder.BuildReferenceSet(
                         request.AdditionalReferences,
                         null,
                         externalCompilerPaths);
@@ -209,7 +221,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 byte[] assemblyBytes = File.ReadAllBytes(dllPath);
-                CompiledAssemblyLoadResult assemblyLoadResult = CompiledAssemblyLoader.Load(
+                CompiledAssemblyLoadResult assemblyLoadResult = _assemblyLoadService.Load(
                     _securityLevel,
                     assemblyBytes);
                 if (!assemblyLoadResult.Success)
@@ -251,11 +263,6 @@ namespace io.github.hatayama.uLoopMCP
                     File.Delete(Path.ChangeExtension(dllPath, ".pdb"));
                 }
             }
-        }
-
-        internal static string[] MergeReferencesByAssemblyName(string[] baseReferences, List<string> additionalReferences)
-        {
-            return DynamicReferenceSetBuilder.MergeReferencesByAssemblyName(baseReferences, additionalReferences);
         }
 
         private CompilationResult TryGetCachedResult(
@@ -333,7 +340,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             if (!isScriptMode)
             {
-                return DynamicReferenceSetBuilder.BuildReferenceSet(
+                return _referenceSetBuilder.BuildReferenceSet(
                     request.AdditionalReferences,
                     null,
                     externalCompilerPaths);
@@ -342,7 +349,7 @@ namespace io.github.hatayama.uLoopMCP
             preUsingResult = PreUsingResolver.Resolve(wrappedCode, AssemblyTypeIndex.Instance);
             preUsingAdded = !ReferenceEquals(preUsingResult.UpdatedSource, wrappedCode);
             wrappedCode = preUsingResult.UpdatedSource;
-            return DynamicReferenceSetBuilder.BuildReferenceSet(
+            return _referenceSetBuilder.BuildReferenceSet(
                 request.AdditionalReferences,
                 preUsingResult.AddedAssemblyReferences,
                 externalCompilerPaths);
@@ -357,23 +364,11 @@ namespace io.github.hatayama.uLoopMCP
             Action markBuildStarted,
             Action markBuildFinished)
         {
-            if (externalCompilerPaths != null)
-            {
-                return await RoslynCompilerBackend.CompileAsync(
-                    sourcePath,
-                    dllPath,
-                    references,
-                    externalCompilerPaths,
-                    ct,
-                    markBuildStarted,
-                    markBuildFinished,
-                    IncrementBuildCount);
-            }
-
-            return await AssemblyBuilderFallbackCompilerBackend.CompileAsync(
+            return await _compilationBackend.CompileAsync(
                 sourcePath,
                 dllPath,
                 references,
+                externalCompilerPaths,
                 ct,
                 markBuildStarted,
                 markBuildFinished,

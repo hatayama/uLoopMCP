@@ -6,12 +6,12 @@ using Assembly = System.Reflection.Assembly;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    internal static class CompiledCommandEntryPointResolver
+    internal sealed class CompiledCommandEntryPointResolver
     {
         private const string WrappedExecuteMethodName = "Execute";
         private const string WrappedExecuteAsyncMethodName = "ExecuteAsync";
 
-        public static (Type targetType, MethodInfo executeMethod) TryFindExecuteMethod(Assembly assembly)
+        public (Type targetType, MethodInfo executeMethod) TryFindExecuteMethod(Assembly assembly)
         {
             Type wrappedType = assembly.GetType(
                 $"{DynamicCodeConstants.DEFAULT_NAMESPACE}.{DynamicCodeConstants.DEFAULT_CLASS_NAME}",
@@ -42,7 +42,7 @@ namespace io.github.hatayama.uLoopMCP
             return (null, null);
         }
 
-        public static (Type targetType, MethodInfo executeAsyncMethod) TryFindExecuteAsyncMethod(Assembly assembly)
+        public (Type targetType, MethodInfo executeAsyncMethod) TryFindExecuteAsyncMethod(Assembly assembly)
         {
             Type wrappedType = assembly.GetType(
                 $"{DynamicCodeConstants.DEFAULT_NAMESPACE}.{DynamicCodeConstants.DEFAULT_CLASS_NAME}",

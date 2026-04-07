@@ -1,26 +1,38 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
+using io.github.hatayama.uLoopMCP.Factory;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    internal static class DynamicCodePrewarmService
+    internal sealed class DynamicCodePrewarmService
     {
         private const int AutoPrewarmDelayFrameCount = 5;
         private const string AutoPrewarmCode = "return null;";
         private const string AutoPrewarmClassName = "DynamicCodeAutoPrewarmCommand";
 
-        private static readonly object AutoPrewarmLock = new();
-        private static Task _autoPrewarmTask;
-        private static bool _hasCompletedAutoPrewarm;
+        private readonly ExternalCompilerPathResolutionService _externalCompilerPathResolver;
+        private readonly RegistryDynamicCodeExecutorFactory _executorFactory;
+        private readonly object _autoPrewarmLock = new();
+        private Task _autoPrewarmTask;
+        private bool _hasCompletedAutoPrewarm;
 
-        public static void Request()
+        public DynamicCodePrewarmService(
+            ExternalCompilerPathResolutionService externalCompilerPathResolver,
+            RegistryDynamicCodeExecutorFactory executorFactory)
+        {
+            _externalCompilerPathResolver = externalCompilerPathResolver ?? throw new ArgumentNullException(nameof(externalCompilerPathResolver));
+            _executorFactory = executorFactory ?? throw new ArgumentNullException(nameof(executorFactory));
+        }
+
+        public void Request()
         {
             RequestAsync().Forget();
         }
 
-        public static Task RequestAsync()
+        public Task RequestAsync()
         {
-            lock (AutoPrewarmLock)
+            lock (_autoPrewarmLock)
             {
                 if (_hasCompletedAutoPrewarm)
                 {
@@ -37,11 +49,11 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private static async Task RunAsync()
+        private async Task RunAsync()
         {
-            if (ExternalCompilerPathResolver.Resolve() == null)
+            if (_externalCompilerPathResolver.Resolve() == null)
             {
-                lock (AutoPrewarmLock)
+                lock (_autoPrewarmLock)
                 {
                     _hasCompletedAutoPrewarm = true;
                 }
@@ -51,7 +63,7 @@ namespace io.github.hatayama.uLoopMCP
 
             await EditorDelay.DelayFrame(AutoPrewarmDelayFrameCount, CancellationToken.None);
 
-            using IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
+            using IDynamicCodeExecutor executor = _executorFactory.Create(
                 DynamicCodeSecurityLevel.Restricted);
             ExecutionResult result = await executor.ExecuteCodeAsync(
                 AutoPrewarmCode,
@@ -65,7 +77,7 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            lock (AutoPrewarmLock)
+            lock (_autoPrewarmLock)
             {
                 _hasCompletedAutoPrewarm = true;
             }

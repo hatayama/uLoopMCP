@@ -132,16 +132,6 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.AreEqual("200", second.Result?.ToString());
         }
 
-        [Test]
-        public void ExecuteCode_WhenCalledSynchronously_ShouldThrowNotSupportedException()
-        {
-            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
-                DynamicCodeSecurityLevel.Restricted
-            );
-
-            Assert.Throws<System.NotSupportedException>(() =>
-                executor.ExecuteCode("return 1 + 2;", "DynamicCommand", null, CancellationToken.None, false));
-        }
     }
 }
 #endif

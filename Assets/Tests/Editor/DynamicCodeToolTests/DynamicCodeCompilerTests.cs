@@ -42,20 +42,6 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void Compile_WhenCalledSynchronously_ShouldThrowNotSupportedException()
-        {
-            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
-            CompilationRequest request = new CompilationRequest
-            {
-                Code = "return 1 + 2;",
-                ClassName = "SyncCompileCommand",
-                Namespace = "TestNamespace"
-            };
-
-            Assert.Throws<System.NotSupportedException>(() => compiler.Compile(request));
-        }
-
-        [Test]
         public async Task CompileAsync_Restricted_WhenModuleInitializerExists_ShouldReturnSecurityViolationBeforeLoad()
         {
             DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
@@ -301,8 +287,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task RequestAutoPrewarmAsync_WhenCalledRepeatedly_ShouldReuseSameTask()
         {
-            Task firstTask = DynamicCodeCompiler.RequestAutoPrewarmAsync();
-            Task secondTask = DynamicCodeCompiler.RequestAutoPrewarmAsync();
+            Task firstTask = DynamicCodeServices.PrewarmService.RequestAsync();
+            Task secondTask = DynamicCodeServices.PrewarmService.RequestAsync();
 
             Assert.AreSame(firstTask, secondTask);
             await firstTask;

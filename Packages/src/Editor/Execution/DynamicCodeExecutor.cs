@@ -13,26 +13,26 @@ namespace io.github.hatayama.uLoopMCP
     {
         private readonly IDynamicCompilationService _compiler;
         private readonly CommandRunner _runner;
+        private readonly DynamicCodeSourcePreparationService _sourcePreparationService;
         private readonly ExecutionStatistics _statistics;
         private readonly object _statsLock = new();
 
         public DynamicCodeExecutor(
             IDynamicCompilationService compiler,
             CommandRunner runner)
+            : this(compiler, runner, DynamicCodeServices.SourcePreparationService)
+        {
+        }
+
+        internal DynamicCodeExecutor(
+            IDynamicCompilationService compiler,
+            CommandRunner runner,
+            DynamicCodeSourcePreparationService sourcePreparationService)
         {
             _compiler = compiler ?? throw new ArgumentNullException(nameof(compiler));
             _runner = runner ?? throw new ArgumentNullException(nameof(runner));
+            _sourcePreparationService = sourcePreparationService ?? throw new ArgumentNullException(nameof(sourcePreparationService));
             _statistics = new ExecutionStatistics();
-        }
-
-        public ExecutionResult ExecuteCode(
-            string code,
-            string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
-            object[] parameters = null,
-            CancellationToken cancellationToken = default,
-            bool compileOnly = false)
-        {
-            throw new NotSupportedException("ExecuteCode blocks Unity's main thread. Use ExecuteCodeAsync instead.");
         }
 
         public async Task<ExecutionResult> ExecuteCodeAsync(
@@ -47,7 +47,7 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                PreparedDynamicCode preparedCode = DynamicCodeSourcePreparer.Prepare(
+                PreparedDynamicCode preparedCode = _sourcePreparationService.Prepare(
                     code,
                     DynamicCodeConstants.DEFAULT_NAMESPACE,
                     className);
