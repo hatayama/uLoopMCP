@@ -167,6 +167,70 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task CompileAsync_WhenOnlyLiteralValuesDiffer_ShouldReuseCompiledAssembly()
+        {
+            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest firstRequest = new CompilationRequest
+            {
+                Code = "int benchNonce = 100; return benchNonce;",
+                ClassName = "LiteralReuseCommand",
+                Namespace = "TestNamespace"
+            };
+            CompilationRequest secondRequest = new CompilationRequest
+            {
+                Code = "int benchNonce = 200; return benchNonce;",
+                ClassName = "LiteralReuseCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult firstResult = await compiler.CompileAsync(firstRequest, CancellationToken.None);
+            CompilationResult secondResult = await compiler.CompileAsync(secondRequest, CancellationToken.None);
+
+            Assert.IsTrue(firstResult.Success, firstResult.Errors != null && firstResult.Errors.Count > 0 ? firstResult.Errors[0].Message : "First compilation should succeed");
+            Assert.IsTrue(secondResult.Success, secondResult.Errors != null && secondResult.Errors.Count > 0 ? secondResult.Errors[0].Message : "Second compilation should succeed");
+            Assert.AreSame(firstResult.CompiledAssembly, secondResult.CompiledAssembly);
+        }
+
+        [Test]
+        public async Task CompileAsync_WhenCustomAsmdefTypeIsReferenced_ShouldAddAssemblyReferenceAndSucceed()
+        {
+            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = @"
+                    DynamicAssemblyTest test = new DynamicAssemblyTest();
+                    return test.HelloWorld();
+                ",
+                ClassName = "CustomAsmdefAssemblyReferenceCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.IsTrue(result.Success, result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Custom asmdef type should compile");
+            StringAssert.Contains("using io.github.hatayama.uLoopMCP;", result.UpdatedCode);
+        }
+
+        [Test]
+        public async Task CompileAsync_WhenFullyQualifiedCustomAsmdefTypeIsReferenced_ShouldSucceed()
+        {
+            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = @"
+                    io.github.hatayama.uLoopMCP.DynamicAssemblyTest test = new io.github.hatayama.uLoopMCP.DynamicAssemblyTest();
+                    return test.HelloWorld();
+                ",
+                ClassName = "FullyQualifiedCustomAsmdefReferenceCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.IsTrue(result.Success, result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Fully-qualified custom asmdef type should compile");
+        }
+
+        [Test]
         public void CompileAsync_WhenCanceledBeforeBuild_ShouldThrowOperationCanceledException()
         {
             AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
@@ -232,6 +296,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                     violation.ApiName == "System.IO.FileInfo"),
                 Is.True,
                 "The rejection should come from the metadata fallback validator");
+        }
+
+        [Test]
+        public async Task RequestAutoPrewarmAsync_WhenCalledRepeatedly_ShouldReuseSameTask()
+        {
+            Task firstTask = AssemblyBuilderCompiler.RequestAutoPrewarmAsync();
+            Task secondTask = AssemblyBuilderCompiler.RequestAutoPrewarmAsync();
+
+            Assert.AreSame(firstTask, secondTask);
+            await firstTask;
         }
 
         private sealed class RejectingPreloadAssemblySecurityValidator : IPreloadAssemblySecurityValidator

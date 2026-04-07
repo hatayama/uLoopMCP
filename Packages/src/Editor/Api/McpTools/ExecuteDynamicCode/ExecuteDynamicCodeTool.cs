@@ -198,7 +198,8 @@ See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/example
                 Result = result.Result?.ToString() ?? "",
                 Logs = result.Logs ?? new List<string>(),
                 CompilationErrors = new List<CompilationErrorDto>(), // Cannot be retrieved from ExecutionResult
-                ErrorMessage = result.ErrorMessage ?? ""
+                ErrorMessage = result.ErrorMessage ?? "",
+                Timings = result.Timings != null ? new List<string>(result.Timings) : new List<string>()
             };
 
             // Use improved message on error

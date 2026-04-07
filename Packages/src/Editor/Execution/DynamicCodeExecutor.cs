@@ -52,7 +52,9 @@ namespace io.github.hatayama.uLoopMCP
                 if (compilationResult.HasSecurityViolations)
                 {
                     return CreateFailureResult("Security violations detected",
-                        stopwatch.Elapsed, ConvertToSecurityViolations(compilationResult.SecurityViolations));
+                        stopwatch.Elapsed,
+                        ConvertToSecurityViolations(compilationResult.SecurityViolations),
+                        compilationResult.Timings);
                 }
                 return CreateCompilationFailureResult("Compilation error occurred",
                     stopwatch.Elapsed, compilationResult);
@@ -61,7 +63,9 @@ namespace io.github.hatayama.uLoopMCP
             if (compilationResult.HasSecurityViolations)
             {
                 return CreateFailureResult("Security violations detected (Dangerous API call)",
-                    stopwatch.Elapsed, compilationResult.SecurityViolations);
+                    stopwatch.Elapsed,
+                    compilationResult.SecurityViolations,
+                    compilationResult.Timings);
             }
 
             return null; // Success
@@ -75,7 +79,8 @@ namespace io.github.hatayama.uLoopMCP
                 Result = null,
                 ExecutionTime = stopwatch.Elapsed,
                 Logs = new List<string> { "Code compiled successfully (no execution)" },
-                AutoInjectedNamespaces = compilationResult.AutoInjectedNamespaces
+                AutoInjectedNamespaces = compilationResult.AutoInjectedNamespaces,
+                Timings = new List<string>(compilationResult.Timings)
             };
         }
 
@@ -138,6 +143,11 @@ namespace io.github.hatayama.uLoopMCP
             Stopwatch stopwatch = Stopwatch.StartNew();
             try
             {
+                PreparedDynamicCode preparedCode = DynamicCodeSourcePreparer.Prepare(
+                    code,
+                    DynamicCodeConstants.DEFAULT_NAMESPACE,
+                    className);
+
                 // Unity Editor APIs (Undo, AssetDatabase) require the main thread, so do not use ConfigureAwait(false) here
                 CompilationResult compilationResult = await CompileCodeAsync(code, className, correlationId, cancellationToken);
                 ExecutionResult compilationErrorResult = HandleCompilationResult(compilationResult, stopwatch);
@@ -153,13 +163,19 @@ namespace io.github.hatayama.uLoopMCP
                 ExecutionContext context = new ExecutionContext
                 {
                     CompiledAssembly = compilationResult.CompiledAssembly,
-                    Parameters = ConvertParametersToDict(parameters ?? new object[0]),
+                    Parameters = ConvertParametersToDict(parameters ?? new object[0], preparedCode.HoistedLiteralBindings),
                     CancellationToken = cancellationToken
                 };
 
+                Stopwatch executionStopwatch = Stopwatch.StartNew();
                 ExecutionResult executionResult = await _runner.ExecuteAsync(context);
+                executionStopwatch.Stop();
                 executionResult.ExecutionTime = stopwatch.Elapsed;
                 executionResult.AutoInjectedNamespaces = compilationResult.AutoInjectedNamespaces;
+                executionResult.Timings = MergeTimings(
+                    compilationResult.Timings,
+                    executionResult.Timings,
+                    $"[Perf] Execution: {executionStopwatch.Elapsed.TotalMilliseconds:F1}ms");
                 UpdateStatistics(executionResult, stopwatch.Elapsed);
                 return executionResult;
             }
@@ -227,14 +243,17 @@ namespace io.github.hatayama.uLoopMCP
             ExecutionContext context = new ExecutionContext
             {
                 CompiledAssembly = assembly,
-                Parameters = ConvertParametersToDict(parameters ?? new object[0]),
+                Parameters = ConvertParametersToDict(parameters ?? new object[0], new List<HoistedLiteralBinding>()),
                 CancellationToken = cancellationToken
             };
             return _runner.Execute(context);
         }
 
-        private ExecutionResult CreateFailureResult(string message, TimeSpan executionTime, 
-            List<SecurityViolation> violations)
+        private ExecutionResult CreateFailureResult(
+            string message,
+            TimeSpan executionTime,
+            List<SecurityViolation> violations,
+            List<string> timings)
         {
             List<string> violationMessages = new List<string>();
             foreach (SecurityViolation violation in violations)
@@ -265,7 +284,8 @@ namespace io.github.hatayama.uLoopMCP
                 Success = false,
                 ErrorMessage = message,
                 Logs = violationMessages,
-                ExecutionTime = executionTime
+                ExecutionTime = executionTime,
+                Timings = timings != null ? new List<string>(timings) : new List<string>()
             };
         }
 
@@ -282,7 +302,8 @@ namespace io.github.hatayama.uLoopMCP
                 CompilationErrors = compilationResult.Errors,
                 UpdatedCode = compilationResult.UpdatedCode,
                 AmbiguousTypeCandidates = compilationResult.AmbiguousTypeCandidates,
-                AutoInjectedNamespaces = compilationResult.AutoInjectedNamespaces
+                AutoInjectedNamespaces = compilationResult.AutoInjectedNamespaces,
+                Timings = new List<string>(compilationResult.Timings)
             };
         }
 
@@ -303,7 +324,8 @@ namespace io.github.hatayama.uLoopMCP
                 ErrorMessage = message,
                 Exception = ex,
                 Logs = new List<string> { ex.ToString() },
-                ExecutionTime = executionTime
+                ExecutionTime = executionTime,
+                Timings = new List<string>()
             };
         }
 
@@ -329,9 +351,19 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private Dictionary<string, object> ConvertParametersToDict(object[] parameters)
+        private Dictionary<string, object> ConvertParametersToDict(
+            object[] parameters,
+            IReadOnlyCollection<HoistedLiteralBinding> hoistedLiteralBindings)
         {
             Dictionary<string, object> dict = new();
+            if (hoistedLiteralBindings != null)
+            {
+                foreach (HoistedLiteralBinding binding in hoistedLiteralBindings)
+                {
+                    dict[binding.ParameterName] = binding.Value;
+                }
+            }
+
             if (parameters != null)
             {
                 for (int i = 0; i < parameters.Length; i++)
@@ -340,6 +372,27 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
             return dict;
+        }
+
+        private List<string> MergeTimings(
+            List<string> compilationTimings,
+            List<string> executionTimings,
+            string executionEntry)
+        {
+            List<string> mergedTimings = new List<string>();
+
+            if (compilationTimings != null)
+            {
+                mergedTimings.AddRange(compilationTimings);
+            }
+
+            if (executionTimings != null)
+            {
+                mergedTimings.AddRange(executionTimings);
+            }
+
+            mergedTimings.Add(executionEntry);
+            return mergedTimings;
         }
     }
 }

@@ -48,6 +48,12 @@ namespace io.github.hatayama.uLoopMCP
         /// and cannot advise users to include them for faster compilation.
         /// </summary>
         public List<string> AutoInjectedNamespaces { get; set; } = new();
+
+        /// <summary>
+        /// Keeps internal phase timings out of normal logs while allowing tests and
+        /// benchmarks to compare where time is spent inside the pipeline.
+        /// </summary>
+        public List<string> Timings { get; set; } = new();
     }
 
     /// <summary>

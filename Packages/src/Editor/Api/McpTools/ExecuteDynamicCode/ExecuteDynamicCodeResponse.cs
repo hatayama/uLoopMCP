@@ -50,6 +50,11 @@ namespace io.github.hatayama.uLoopMCP
         /// Structured diagnostics for rich clients (line/column/code/message/hint/suggestions)
         /// </summary>
         public List<CompilationErrorDto> Diagnostics { get; set; } = new();
+
+        /// <summary>
+        /// Lightweight internal timings for benchmark comparison.
+        /// </summary>
+        public List<string> Timings { get; set; } = new();
         
     }
     

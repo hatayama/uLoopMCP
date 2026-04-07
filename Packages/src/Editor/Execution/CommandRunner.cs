@@ -16,6 +16,8 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class CommandRunner
     {
+        private const string WrappedExecuteMethodName = "Execute";
+        private const string WrappedExecuteAsyncMethodName = "ExecuteAsync";
         private bool _isRunning = false;
         private CancellationTokenSource _cancellationTokenSource;
 
@@ -183,11 +185,24 @@ namespace io.github.hatayama.uLoopMCP
 
         private static (Type targetType, MethodInfo executeMethod) FindExecuteMethod(Assembly assembly)
         {
+            Type wrappedType = assembly.GetType(
+                $"{DynamicCodeConstants.DEFAULT_NAMESPACE}.{DynamicCodeConstants.DEFAULT_CLASS_NAME}",
+                false);
+            if (wrappedType != null)
+            {
+                MethodInfo directMethod = wrappedType.GetMethod(
+                    WrappedExecuteMethodName,
+                    BindingFlags.Public | BindingFlags.Instance);
+                if (directMethod != null)
+                {
+                    return (wrappedType, directMethod);
+                }
+            }
+
             Type[] types = assembly.GetTypes();
-            
             foreach (Type type in types)
             {
-                MethodInfo method = type.GetMethod("Execute", BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo method = type.GetMethod(WrappedExecuteMethodName, BindingFlags.Public | BindingFlags.Instance);
                 if (method != null)
                 {
                     return (type, method);
@@ -199,45 +214,74 @@ namespace io.github.hatayama.uLoopMCP
 
         private static (Type targetType, MethodInfo executeAsyncMethod) FindExecuteAsyncMethod(Assembly assembly)
         {
+            Type wrappedType = assembly.GetType(
+                $"{DynamicCodeConstants.DEFAULT_NAMESPACE}.{DynamicCodeConstants.DEFAULT_CLASS_NAME}",
+                false);
+            if (wrappedType != null)
+            {
+                MethodInfo directMethod = FindPreferredExecuteAsyncMethod(wrappedType);
+                if (directMethod != null)
+                {
+                    return (wrappedType, directMethod);
+                }
+            }
+
             Type[] types = assembly.GetTypes();
 
             foreach (Type type in types)
             {
-                // Prefer parameter-rich overloads first
-                MethodInfo m1 = type.GetMethod(
-                    "ExecuteAsync",
-                    BindingFlags.Public | BindingFlags.Instance,
-                    null,
-                    new Type[] { typeof(Dictionary<string, object>), typeof(CancellationToken) },
-                    null);
-                if (m1 != null) return (type, m1);
-
-                MethodInfo m2 = type.GetMethod(
-                    "ExecuteAsync",
-                    BindingFlags.Public | BindingFlags.Instance,
-                    null,
-                    new Type[] { typeof(Dictionary<string, object>) },
-                    null);
-                if (m2 != null) return (type, m2);
-
-                MethodInfo m3 = type.GetMethod(
-                    "ExecuteAsync",
-                    BindingFlags.Public | BindingFlags.Instance,
-                    null,
-                    new Type[] { typeof(CancellationToken) },
-                    null);
-                if (m3 != null) return (type, m3);
-
-                MethodInfo m4 = type.GetMethod(
-                    "ExecuteAsync",
-                    BindingFlags.Public | BindingFlags.Instance,
-                    null,
-                    Type.EmptyTypes,
-                    null);
-                if (m4 != null) return (type, m4);
+                MethodInfo method = FindPreferredExecuteAsyncMethod(type);
+                if (method != null)
+                {
+                    return (type, method);
+                }
             }
 
             return (null, null);
+        }
+
+        private static MethodInfo FindPreferredExecuteAsyncMethod(Type type)
+        {
+            MethodInfo methodWithParametersAndCancellation = type.GetMethod(
+                WrappedExecuteAsyncMethodName,
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                new Type[] { typeof(Dictionary<string, object>), typeof(CancellationToken) },
+                null);
+            if (methodWithParametersAndCancellation != null)
+            {
+                return methodWithParametersAndCancellation;
+            }
+
+            MethodInfo methodWithParameters = type.GetMethod(
+                WrappedExecuteAsyncMethodName,
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                new Type[] { typeof(Dictionary<string, object>) },
+                null);
+            if (methodWithParameters != null)
+            {
+                return methodWithParameters;
+            }
+
+            MethodInfo methodWithCancellation = type.GetMethod(
+                WrappedExecuteAsyncMethodName,
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                new Type[] { typeof(CancellationToken) },
+                null);
+            if (methodWithCancellation != null)
+            {
+                return methodWithCancellation;
+            }
+
+            MethodInfo parameterlessMethod = type.GetMethod(
+                WrappedExecuteAsyncMethodName,
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                Type.EmptyTypes,
+                null);
+            return parameterlessMethod;
         }
 
         private static object CreateInstance(Type targetType)

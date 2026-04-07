@@ -105,6 +105,34 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task ExecuteCodeAsync_WhenOnlyLiteralValuesDiffer_ShouldReuseCompilationAndKeepExecutionValues()
+        {
+            IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
+                DynamicCodeSecurityLevel.Restricted
+            );
+
+            ExecutionResult first = await executor.ExecuteCodeAsync(
+                "int benchNonce = 100; return benchNonce;",
+                "DynamicCommand",
+                null,
+                CancellationToken.None,
+                false
+            );
+            ExecutionResult second = await executor.ExecuteCodeAsync(
+                "int benchNonce = 200; return benchNonce;",
+                "DynamicCommand",
+                null,
+                CancellationToken.None,
+                false
+            );
+
+            Assert.IsTrue(first.Success, first.ErrorMessage);
+            Assert.IsTrue(second.Success, second.ErrorMessage);
+            Assert.AreEqual("100", first.Result?.ToString());
+            Assert.AreEqual("200", second.Result?.ToString());
+        }
+
+        [Test]
         public void ExecuteCode_WhenCalledSynchronously_ShouldThrowNotSupportedException()
         {
             IDynamicCodeExecutor executor = Factory.DynamicCodeExecutorFactory.Create(
@@ -117,4 +145,3 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
     }
 }
 #endif
-

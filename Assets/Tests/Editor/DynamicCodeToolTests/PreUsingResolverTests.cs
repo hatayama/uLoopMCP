@@ -146,6 +146,18 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public void Resolve_WhenUnresolvedType_ShouldReportAssemblyReference()
+        {
+            string body = "StringBuilder builder = new StringBuilder();\nreturn builder.ToString();";
+            string wrappedSource = WrapperTemplate.Build(
+                new List<string>(), "TestNs", "TestClass", body);
+
+            PreUsingResult result = PreUsingResolver.Resolve(wrappedSource, AssemblyTypeIndex.Instance);
+
+            Assert.That(result.AddedAssemblyReferences, Has.Count.GreaterThan(0));
+        }
+
+        [Test]
         public void Resolve_WhenAlreadyHasUsing_ShouldNotAddDuplicate()
         {
             List<string> usings = new List<string> { "using System.Text;" };
@@ -334,6 +346,27 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Should compile");
             Assert.IsNotNull(result.CompiledAssembly);
             Assert.AreEqual(1, compiler.LastBuildCount, "Simple code needs no retry");
+        }
+
+        [Test]
+        public async Task CompileAsync_ScriptMode_CustomAsmdefType_ShouldResolveAssemblyReference()
+        {
+            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = @"
+                    DynamicAssemblyTest test = new DynamicAssemblyTest();
+                    return test.HelloWorld();
+                ",
+                ClassName = "CustomAsmdefReferenceCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.IsTrue(result.Success,
+                result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Custom asmdef type should compile");
+            Assert.AreEqual(1, compiler.LastBuildCount, "Unique type resolution should avoid extra retries");
         }
     }
 }

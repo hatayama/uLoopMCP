@@ -38,8 +38,10 @@ namespace io.github.hatayama.uLoopMCP
             HashSet<string> existingNamespaces = ExtractExistingNamespaces(wrappedSource);
             string userCodeSection = ExtractUserCodeSection(wrappedSource);
             HashSet<string> candidateTypes = ExtractTypeIdentifiers(userCodeSection);
+            HashSet<string> qualifiedTypeIdentifiers = ExtractQualifiedTypeIdentifiers(userCodeSection);
 
             HashSet<string> namespacesToAdd = new(System.StringComparer.Ordinal);
+            List<string> assemblyReferencesToAdd = new List<string>();
             foreach (string typeName in candidateTypes)
             {
                 List<string> namespaces = index.FindNamespacesForType(typeName);
@@ -47,15 +49,33 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     namespacesToAdd.Add(namespaces[0]);
                 }
+
+                List<string> assemblyReferences = index.FindAssemblyLocationsForType(typeName);
+                if (assemblyReferences.Count == 1)
+                {
+                    AddAssemblyReferenceIfMissing(assemblyReferencesToAdd, assemblyReferences[0]);
+                }
+            }
+
+            foreach (string typeName in qualifiedTypeIdentifiers)
+            {
+                List<string> assemblyReferences = index.FindAssemblyLocationsForType(typeName);
+                if (assemblyReferences.Count == 1)
+                {
+                    AddAssemblyReferenceIfMissing(assemblyReferencesToAdd, assemblyReferences[0]);
+                }
             }
 
             if (namespacesToAdd.Count == 0)
             {
-                return new PreUsingResult(wrappedSource, System.Array.Empty<string>());
+                return new PreUsingResult(
+                    wrappedSource,
+                    System.Array.Empty<string>(),
+                    assemblyReferencesToAdd);
             }
 
             string updatedSource = AutoUsingResolver.InsertUsingDirectives(wrappedSource, namespacesToAdd);
-            return new PreUsingResult(updatedSource, namespacesToAdd);
+            return new PreUsingResult(updatedSource, namespacesToAdd, assemblyReferencesToAdd);
         }
 
         private static HashSet<string> ExtractExistingNamespaces(string source)
@@ -194,6 +214,90 @@ namespace io.github.hatayama.uLoopMCP
             return identifiers;
         }
 
+        internal static HashSet<string> ExtractQualifiedTypeIdentifiers(string source)
+        {
+            HashSet<string> identifiers = new(System.StringComparer.Ordinal);
+            int pos = 0;
+            int length = source.Length;
+            bool sawDot = false;
+            bool inQualifiedChain = false;
+            string chainRootIdentifier = null;
+
+            while (pos < length)
+            {
+                char c = source[pos];
+
+                if (char.IsWhiteSpace(c))
+                {
+                    pos++;
+                    continue;
+                }
+
+                int advanced = SourceShaper.AdvanceOneTokenPublic(source, pos);
+                if (advanced > pos + 1 && !char.IsLetterOrDigit(source[pos]) && source[pos] != '_')
+                {
+                    sawDot = false;
+                    inQualifiedChain = false;
+                    chainRootIdentifier = null;
+                    pos = advanced;
+                    continue;
+                }
+
+                if (c == '.')
+                {
+                    sawDot = true;
+                    pos++;
+                    continue;
+                }
+
+                if (char.IsLetter(c) || c == '_')
+                {
+                    int start = pos;
+                    while (pos < length && (char.IsLetterOrDigit(source[pos]) || source[pos] == '_'))
+                    {
+                        pos++;
+                    }
+
+                    string identifier = source.Substring(start, pos - start);
+                    if (!inQualifiedChain)
+                    {
+                        inQualifiedChain = true;
+                        chainRootIdentifier = identifier;
+                    }
+                    else if (sawDot && char.IsUpper(identifier[0]) && !ExcludedIdentifiers.Contains(identifier) &&
+                             ShouldResolveQualifiedTypeAssembly(chainRootIdentifier))
+                    {
+                        identifiers.Add(identifier);
+                    }
+
+                    sawDot = false;
+                    continue;
+                }
+
+                sawDot = false;
+                inQualifiedChain = false;
+                chainRootIdentifier = null;
+                pos = advanced;
+            }
+
+            return identifiers;
+        }
+
+        private static bool ShouldResolveQualifiedTypeAssembly(string chainRootIdentifier)
+        {
+            if (string.IsNullOrEmpty(chainRootIdentifier))
+            {
+                return false;
+            }
+
+            if (char.IsLower(chainRootIdentifier[0]))
+            {
+                return true;
+            }
+
+            return chainRootIdentifier != "UnityEngine" && chainRootIdentifier != "UnityEditor";
+        }
+
         // WrapperTemplate marks user code with #line directives;
         // scanning only this region avoids false positives from boilerplate identifiers
         private static string ExtractUserCodeSection(string wrappedSource)
@@ -239,6 +343,26 @@ namespace io.github.hatayama.uLoopMCP
             int semi = s.IndexOf(';', pos);
             return semi >= 0 ? semi + 1 : s.Length;
         }
+
+        private static void AddAssemblyReferenceIfMissing(
+            List<string> assemblyReferencesToAdd,
+            string assemblyReference)
+        {
+            if (string.IsNullOrEmpty(assemblyReference))
+            {
+                return;
+            }
+
+            foreach (string existingReference in assemblyReferencesToAdd)
+            {
+                if (string.Equals(existingReference, assemblyReference, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+            }
+
+            assemblyReferencesToAdd.Add(assemblyReference);
+        }
     }
 
     internal sealed class PreUsingResult
@@ -247,10 +371,16 @@ namespace io.github.hatayama.uLoopMCP
 
         public IReadOnlyCollection<string> AddedNamespaces { get; }
 
-        public PreUsingResult(string updatedSource, IReadOnlyCollection<string> addedNamespaces)
+        public IReadOnlyCollection<string> AddedAssemblyReferences { get; }
+
+        public PreUsingResult(
+            string updatedSource,
+            IReadOnlyCollection<string> addedNamespaces,
+            IReadOnlyCollection<string> addedAssemblyReferences)
         {
             UpdatedSource = updatedSource;
             AddedNamespaces = addedNamespaces;
+            AddedAssemblyReferences = addedAssemblyReferences;
         }
     }
 }
