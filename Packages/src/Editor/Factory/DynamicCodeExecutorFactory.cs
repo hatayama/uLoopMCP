@@ -32,7 +32,7 @@ namespace io.github.hatayama.uLoopMCP.Factory
             }
 
             CommandRunner runner = new CommandRunner();
-            DynamicCodeExecutor executor = new DynamicCodeExecutor(compiler, securityLevel, runner);
+            DynamicCodeExecutor executor = new DynamicCodeExecutor(compiler, runner);
 
             VibeLogger.LogInfo(
                 "dynamic_executor_created",

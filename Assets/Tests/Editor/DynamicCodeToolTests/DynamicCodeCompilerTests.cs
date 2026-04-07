@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
     [TestFixture]
-    public class AssemblyBuilderCompilerTests
+    public class DynamicCodeCompilerTests
     {
         private IPreloadAssemblySecurityValidator _previousValidator;
 
@@ -26,7 +26,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_WhenAssemblyModeIsSelectiveReference_ShouldIgnoreLegacyModeAndSucceed()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = "return 1 + 2;",
@@ -44,7 +44,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public void Compile_WhenCalledSynchronously_ShouldThrowNotSupportedException()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = "return 1 + 2;",
@@ -58,7 +58,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_Restricted_WhenModuleInitializerExists_ShouldReturnSecurityViolationBeforeLoad()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -86,7 +86,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_Restricted_WhenSafeReflectionIsUsed_ShouldSucceed()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -108,7 +108,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_WhenInterpolatedHoleContainsNestedStringLiteral_ShouldSucceed()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -128,7 +128,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_WhenInterpolationHoleContainsCollectionInitializer_ShouldSucceed()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -148,7 +148,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_WhenTypeRequiresMissingUsing_ShouldInjectNamespaceAndSucceed()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -169,7 +169,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_WhenOnlyLiteralValuesDiffer_ShouldReuseCompiledAssembly()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest firstRequest = new CompilationRequest
             {
                 Code = "int benchNonce = 100; return benchNonce;",
@@ -194,7 +194,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_WhenCustomAsmdefTypeIsReferenced_ShouldAddAssemblyReferenceAndSucceed()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -214,7 +214,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_WhenFullyQualifiedCustomAsmdefTypeIsReferenced_ShouldSucceed()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -233,7 +233,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public void CompileAsync_WhenCanceledBeforeBuild_ShouldThrowOperationCanceledException()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = "return 1 + 2;",
@@ -254,7 +254,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         {
             PreloadAssemblySecurityValidatorRegistry.SwapValidatorForTests(new RejectingPreloadAssemblySecurityValidator());
 
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = "return 42;",
@@ -275,7 +275,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         {
             PreloadAssemblySecurityValidatorRegistry.SwapValidatorForTests(null);
 
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -301,8 +301,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task RequestAutoPrewarmAsync_WhenCalledRepeatedly_ShouldReuseSameTask()
         {
-            Task firstTask = AssemblyBuilderCompiler.RequestAutoPrewarmAsync();
-            Task secondTask = AssemblyBuilderCompiler.RequestAutoPrewarmAsync();
+            Task firstTask = DynamicCodeCompiler.RequestAutoPrewarmAsync();
+            Task secondTask = DynamicCodeCompiler.RequestAutoPrewarmAsync();
 
             Assert.AreSame(firstTask, secondTask);
             await firstTask;

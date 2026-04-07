@@ -7,30 +7,24 @@ using System.Threading.Tasks;
 namespace io.github.hatayama.uLoopMCP
 {
     /// <summary>
-    /// Integrated Dynamic Code Execution Implementation
-    /// Related Classes: RoslynCompiler, SecurityValidator, CommandRunner
+    /// Bridges compilation and execution so the tool layer can stay focused on request and response shaping.
     /// </summary>
     public class DynamicCodeExecutor : IDynamicCodeExecutor
     {
         private readonly IDynamicCompilationService _compiler;
-        private readonly DynamicCodeSecurityLevel _securityLevel;
         private readonly CommandRunner _runner;
         private readonly ExecutionStatistics _statistics;
         private readonly object _statsLock = new();
 
-        /// <summary>Constructor</summary>
         public DynamicCodeExecutor(
             IDynamicCompilationService compiler,
-            DynamicCodeSecurityLevel securityLevel,
             CommandRunner runner)
         {
             _compiler = compiler ?? throw new ArgumentNullException(nameof(compiler));
-            _securityLevel = securityLevel;
             _runner = runner ?? throw new ArgumentNullException(nameof(runner));
             _statistics = new ExecutionStatistics();
         }
 
-        /// <summary>Code Execution</summary>
         public ExecutionResult ExecuteCode(
             string code,
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
@@ -41,97 +35,6 @@ namespace io.github.hatayama.uLoopMCP
             throw new NotSupportedException("ExecuteCode blocks Unity's main thread. Use ExecuteCodeAsync instead.");
         }
 
-        private void LogExecutionStart(string className, object[] parameters, string code, bool compileOnly, string correlationId)
-        {
-        }
-
-        private ExecutionResult HandleCompilationResult(CompilationResult compilationResult, Stopwatch stopwatch)
-        {
-            if (!compilationResult.Success)
-            {
-                if (compilationResult.HasSecurityViolations)
-                {
-                    return CreateFailureResult("Security violations detected",
-                        stopwatch.Elapsed,
-                        ConvertToSecurityViolations(compilationResult.SecurityViolations),
-                        compilationResult.Timings);
-                }
-                return CreateCompilationFailureResult("Compilation error occurred",
-                    stopwatch.Elapsed, compilationResult);
-            }
-
-            if (compilationResult.HasSecurityViolations)
-            {
-                return CreateFailureResult("Security violations detected (Dangerous API call)",
-                    stopwatch.Elapsed,
-                    compilationResult.SecurityViolations,
-                    compilationResult.Timings);
-            }
-
-            return null; // Success
-        }
-
-        private ExecutionResult CreateCompileOnlySuccessResult(CompilationResult compilationResult, string correlationId, Stopwatch stopwatch)
-        {
-            return new ExecutionResult
-            {
-                Success = true,
-                Result = null,
-                ExecutionTime = stopwatch.Elapsed,
-                Logs = new List<string> { "Code compiled successfully (no execution)" },
-                AutoInjectedNamespaces = compilationResult.AutoInjectedNamespaces,
-                Timings = new List<string>(compilationResult.Timings)
-            };
-        }
-
-        private ExecutionResult PerformExecution(
-            System.Reflection.Assembly assembly,
-            string className,
-            object[] parameters,
-            string correlationId,
-            CancellationToken cancellationToken,
-            Stopwatch stopwatch)
-        {
-            ExecutionResult executionResult = ExecuteCompiledCode(
-                assembly,
-                className,
-                parameters,
-                correlationId,
-                cancellationToken);
-
-            executionResult.ExecutionTime = stopwatch.Elapsed;
-            UpdateStatistics(executionResult, stopwatch.Elapsed);
-
-            return executionResult;
-        }
-
-        private void LogExecutionComplete(ExecutionResult executionResult, string correlationId, Stopwatch stopwatch)
-        {
-        }
-
-        private ExecutionResult HandleExecutionException(Exception ex, string correlationId, Stopwatch stopwatch)
-        {
-            ExecutionResult result = CreateExceptionResult("An unexpected error occurred during execution",
-                ex, stopwatch.Elapsed);
-            UpdateStatistics(result, stopwatch.Elapsed);
-
-            VibeLogger.LogError(
-                "execute_code_exception",
-                "Unexpected error during code execution",
-                new
-                {
-                    exception_type = ex.GetType().Name,
-                    execution_time_ms = stopwatch.ElapsedMilliseconds
-                },
-                correlationId,
-                "Dynamic Code Execution Error",
-                "Investigating Unexpected Exception"
-            );
-
-            return result;
-        }
-
-        /// <summary>Asynchronous Code Execution</summary>
         public async Task<ExecutionResult> ExecuteCodeAsync(
             string code,
             string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
@@ -140,52 +43,59 @@ namespace io.github.hatayama.uLoopMCP
             bool compileOnly = false)
         {
             string correlationId = McpConstants.GenerateCorrelationId();
-            Stopwatch stopwatch = Stopwatch.StartNew();
+            Stopwatch totalStopwatch = Stopwatch.StartNew();
+
             try
             {
                 PreparedDynamicCode preparedCode = DynamicCodeSourcePreparer.Prepare(
                     code,
                     DynamicCodeConstants.DEFAULT_NAMESPACE,
                     className);
+                CompilationResult compilationResult = await CompileCodeAsync(code, className, cancellationToken);
 
-                // Unity Editor APIs (Undo, AssetDatabase) require the main thread, so do not use ConfigureAwait(false) here
-                CompilationResult compilationResult = await CompileCodeAsync(code, className, correlationId, cancellationToken);
-                ExecutionResult compilationErrorResult = HandleCompilationResult(compilationResult, stopwatch);
-                if (compilationErrorResult != null) return compilationErrorResult;
-
-                // Phase 3: Check Compile-Only Mode
-                if (compileOnly)
+                ExecutionResult compilationFailureResult = TryCreateCompilationFailureResult(
+                    compilationResult,
+                    totalStopwatch);
+                if (compilationFailureResult != null)
                 {
-                    return CreateCompileOnlySuccessResult(compilationResult, correlationId, stopwatch);
+                    return compilationFailureResult;
                 }
 
-                // Phase 4: Execution (async via CommandRunner)
+                if (compileOnly)
+                {
+                    return CreateCompileOnlySuccessResult(compilationResult, totalStopwatch.Elapsed);
+                }
+
                 ExecutionContext context = new ExecutionContext
                 {
                     CompiledAssembly = compilationResult.CompiledAssembly,
-                    Parameters = ConvertParametersToDict(parameters ?? new object[0], preparedCode.HoistedLiteralBindings),
+                    Parameters = BuildExecutionParameters(parameters, preparedCode.HoistedLiteralBindings),
                     CancellationToken = cancellationToken
                 };
 
                 Stopwatch executionStopwatch = Stopwatch.StartNew();
                 ExecutionResult executionResult = await _runner.ExecuteAsync(context);
                 executionStopwatch.Stop();
-                executionResult.ExecutionTime = stopwatch.Elapsed;
+
+                executionResult.ExecutionTime = totalStopwatch.Elapsed;
                 executionResult.AutoInjectedNamespaces = compilationResult.AutoInjectedNamespaces;
                 executionResult.Timings = MergeTimings(
                     compilationResult.Timings,
                     executionResult.Timings,
                     $"[Perf] Execution: {executionStopwatch.Elapsed.TotalMilliseconds:F1}ms");
-                UpdateStatistics(executionResult, stopwatch.Elapsed);
+
+                UpdateStatistics(executionResult, totalStopwatch.Elapsed);
                 return executionResult;
             }
             catch (Exception ex)
             {
-                return HandleExecutionException(ex, correlationId, stopwatch);
+                ExecutionResult failureResult = CreateUnexpectedErrorResult(ex, totalStopwatch.Elapsed);
+                UpdateStatistics(failureResult, totalStopwatch.Elapsed);
+                LogUnexpectedExecutionException(ex, correlationId, totalStopwatch.ElapsedMilliseconds);
+                return failureResult;
             }
         }
 
-        /// <summary>Get execution statistics</summary>
         public ExecutionStatistics GetStatistics()
         {
             lock (_statsLock)
@@ -210,7 +120,10 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private async Task<CompilationResult> CompileCodeAsync(string code, string className, string correlationId, CancellationToken ct)
+        private async Task<CompilationResult> CompileCodeAsync(
+            string code,
+            string className,
+            CancellationToken ct)
         {
             CompilationRequest request = new CompilationRequest
             {
@@ -220,7 +133,6 @@ namespace io.github.hatayama.uLoopMCP
             };
 
             CompilationResult result = await _compiler.CompileAsync(request, ct);
-
             if (!result.Success)
             {
                 lock (_statsLock)
@@ -232,49 +144,62 @@ namespace io.github.hatayama.uLoopMCP
             return result;
         }
 
-        private ExecutionResult ExecuteCompiledCode(
-            System.Reflection.Assembly assembly, 
-            string className,
-            object[] parameters, 
-            string correlationId,
-            CancellationToken cancellationToken)
+        private ExecutionResult TryCreateCompilationFailureResult(
+            CompilationResult compilationResult,
+            Stopwatch totalStopwatch)
         {
-            // Create ExecutionContext and call Execute method
-            ExecutionContext context = new ExecutionContext
+            if (!compilationResult.Success)
             {
-                CompiledAssembly = assembly,
-                Parameters = ConvertParametersToDict(parameters ?? new object[0], new List<HoistedLiteralBinding>()),
-                CancellationToken = cancellationToken
-            };
-            return _runner.Execute(context);
+                if (compilationResult.HasSecurityViolations)
+                {
+                    return CreateSecurityFailureResult(
+                        "Security violations detected",
+                        totalStopwatch.Elapsed,
+                        compilationResult.SecurityViolations,
+                        compilationResult.Timings);
+                }
+
+                return CreateCompilationFailureResult(
+                    "Compilation error occurred",
+                    totalStopwatch.Elapsed,
+                    compilationResult);
+            }
+
+            if (compilationResult.HasSecurityViolations)
+            {
+                return CreateSecurityFailureResult(
+                    "Security violations detected (Dangerous API call)",
+                    totalStopwatch.Elapsed,
+                    compilationResult.SecurityViolations,
+                    compilationResult.Timings);
+            }
+
+            return null;
         }
 
-        private ExecutionResult CreateFailureResult(
+        private static ExecutionResult CreateCompileOnlySuccessResult(
+            CompilationResult compilationResult,
+            TimeSpan executionTime)
+        {
+            return new ExecutionResult
+            {
+                Success = true,
+                Result = null,
+                ExecutionTime = executionTime,
+                Logs = new List<string> { "Code compiled successfully (no execution)" },
+                AutoInjectedNamespaces = compilationResult.AutoInjectedNamespaces,
+                Timings = new List<string>(compilationResult.Timings)
+            };
+        }
+
+        private static ExecutionResult CreateSecurityFailureResult(
             string message,
             TimeSpan executionTime,
             List<SecurityViolation> violations,
             List<string> timings)
         {
-            List<string> violationMessages = new List<string>();
-            foreach (SecurityViolation violation in violations)
-            {
-                // Preferentially use new properties (Message, ApiName)
-                string violationMessage = !string.IsNullOrEmpty(violation.Message) 
-                    ? violation.Message 
-                    : violation.Description;
-                    
-                if (!string.IsNullOrEmpty(violation.ApiName))
-                {
-                    violationMessages.Add($"{violation.Type}: {violationMessage} (API: {violation.ApiName})");
-                }
-                else
-                {
-                    violationMessages.Add($"{violation.Type}: {violationMessage}");
-                }
-            }
-
-            // Add details to error message
-            if (violations.Count > 0)
+            List<string> violationMessages = BuildViolationMessages(violations);
+            if (violationMessages.Count > 0)
             {
                 message = $"{message} {string.Join(" ", violationMessages)}";
             }
@@ -289,14 +214,15 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        private ExecutionResult CreateCompilationFailureResult(string message, TimeSpan executionTime,
+        private static ExecutionResult CreateCompilationFailureResult(
+            string message,
+            TimeSpan executionTime,
             CompilationResult compilationResult)
         {
             return new ExecutionResult
             {
                 Success = false,
                 ErrorMessage = message,
-                // Do not include raw per-error lines here; the tool layer will format DiagnosticsSummary
                 Logs = new List<string>(),
                 ExecutionTime = executionTime,
                 CompilationErrors = compilationResult.Errors,
@@ -307,21 +233,14 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
-        /// <summary>
-        /// Convert CompilationResult.SecurityViolations to SecurityValidator's SecurityViolation
-        /// </summary>
-        private List<SecurityViolation> ConvertToSecurityViolations(List<SecurityViolation> compilationSecurityViolations)
-        {
-            // Return as-is since it's the same type
-            return compilationSecurityViolations ?? new List<SecurityViolation>();
-        }
-
-        private ExecutionResult CreateExceptionResult(string message, Exception ex, TimeSpan executionTime)
+        private static ExecutionResult CreateUnexpectedErrorResult(
+            Exception ex,
+            TimeSpan executionTime)
         {
             return new ExecutionResult
             {
                 Success = false,
-                ErrorMessage = message,
+                ErrorMessage = "An unexpected error occurred during execution",
                 Exception = ex,
                 Logs = new List<string> { ex.ToString() },
                 ExecutionTime = executionTime,
@@ -329,12 +248,37 @@ namespace io.github.hatayama.uLoopMCP
             };
         }
 
+        private static List<string> BuildViolationMessages(List<SecurityViolation> violations)
+        {
+            List<string> violationMessages = new List<string>();
+            if (violations == null)
+            {
+                return violationMessages;
+            }
+
+            foreach (SecurityViolation violation in violations)
+            {
+                string violationMessage = !string.IsNullOrEmpty(violation.Message)
+                    ? violation.Message
+                    : violation.Description;
+
+                if (!string.IsNullOrEmpty(violation.ApiName))
+                {
+                    violationMessages.Add($"{violation.Type}: {violationMessage} (API: {violation.ApiName})");
+                    continue;
+                }
+
+                violationMessages.Add($"{violation.Type}: {violationMessage}");
+            }
+
+            return violationMessages;
+        }
+
         private void UpdateStatistics(ExecutionResult result, TimeSpan executionTime)
         {
             lock (_statsLock)
             {
                 _statistics.TotalExecutions++;
-
                 if (result.Success)
                 {
                     _statistics.SuccessfulExecutions++;
@@ -344,23 +288,25 @@ namespace io.github.hatayama.uLoopMCP
                     _statistics.FailedExecutions++;
                 }
 
-                // Update average execution time (simple moving average)
-                double totalMs = _statistics.AverageExecutionTime.TotalMilliseconds * (_statistics.TotalExecutions - 1);
-                totalMs += executionTime.TotalMilliseconds;
-                _statistics.AverageExecutionTime = TimeSpan.FromMilliseconds(totalMs / _statistics.TotalExecutions);
+                double totalMilliseconds =
+                    _statistics.AverageExecutionTime.TotalMilliseconds * (_statistics.TotalExecutions - 1);
+                totalMilliseconds += executionTime.TotalMilliseconds;
+                _statistics.AverageExecutionTime =
+                    TimeSpan.FromMilliseconds(totalMilliseconds / _statistics.TotalExecutions);
             }
         }
 
-        private Dictionary<string, object> ConvertParametersToDict(
+        private static Dictionary<string, object> BuildExecutionParameters(
             object[] parameters,
             IReadOnlyCollection<HoistedLiteralBinding> hoistedLiteralBindings)
         {
-            Dictionary<string, object> dict = new();
+            Dictionary<string, object> executionParameters = new Dictionary<string, object>();
+
             if (hoistedLiteralBindings != null)
             {
                 foreach (HoistedLiteralBinding binding in hoistedLiteralBindings)
                 {
-                    dict[binding.ParameterName] = binding.Value;
+                    executionParameters[binding.ParameterName] = binding.Value;
                 }
             }
 
@@ -368,19 +314,19 @@ namespace io.github.hatayama.uLoopMCP
             {
                 for (int i = 0; i < parameters.Length; i++)
                 {
-                    dict[$"param{i}"] = parameters[i];
+                    executionParameters[$"param{i}"] = parameters[i];
                 }
             }
-            return dict;
+
+            return executionParameters;
         }
 
-        private List<string> MergeTimings(
+        private static List<string> MergeTimings(
             List<string> compilationTimings,
             List<string> executionTimings,
             string executionEntry)
         {
             List<string> mergedTimings = new List<string>();
-
             if (compilationTimings != null)
             {
                 mergedTimings.AddRange(compilationTimings);
@@ -393,6 +339,24 @@ namespace io.github.hatayama.uLoopMCP
 
             mergedTimings.Add(executionEntry);
             return mergedTimings;
+        }
+
+        private static void LogUnexpectedExecutionException(
+            Exception ex,
+            string correlationId,
+            long executionTimeMilliseconds)
+        {
+            VibeLogger.LogError(
+                "execute_code_exception",
+                "Unexpected error during code execution",
+                new
+                {
+                    exception_type = ex.GetType().Name,
+                    execution_time_ms = executionTimeMilliseconds
+                },
+                correlationId,
+                "Dynamic Code Execution Error",
+                "Investigating Unexpected Exception");
         }
     }
 }

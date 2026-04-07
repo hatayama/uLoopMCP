@@ -1,0 +1,148 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using UnityEditor.Compilation;
+
+namespace io.github.hatayama.uLoopMCP
+{
+    internal static class RoslynCompilerBackend
+    {
+        public static Task<CompilerMessage[]> CompileAsync(
+            string sourcePath,
+            string dllPath,
+            List<string> references,
+            ExternalCompilerPaths externalCompilerPaths,
+            CancellationToken ct,
+            Action markBuildStarted,
+            Action markBuildFinished,
+            Action incrementBuildCount)
+        {
+            string responseFilePath = Path.ChangeExtension(sourcePath, ".rsp");
+            string workerRequestFilePath = Path.ChangeExtension(sourcePath, ".worker");
+            WriteCompilerResponseFile(responseFilePath, sourcePath, dllPath, references);
+            WriteWorkerRequestFile(workerRequestFilePath, sourcePath, dllPath, references);
+
+            try
+            {
+                CompilerMessage[] workerMessages = SharedRoslynCompilerWorkerHost.TryCompile(
+                    workerRequestFilePath,
+                    externalCompilerPaths,
+                    ct,
+                    markBuildStarted,
+                    markBuildFinished,
+                    incrementBuildCount);
+                if (workerMessages != null)
+                {
+                    return Task.FromResult(workerMessages);
+                }
+
+                ct.ThrowIfCancellationRequested();
+                incrementBuildCount();
+
+                ProcessStartInfo startInfo = new ProcessStartInfo
+                {
+                    FileName = externalCompilerPaths.DotnetHostPath,
+                    Arguments = $"{QuoteCommandLineArgument(externalCompilerPaths.CompilerDllPath)} @{QuoteCommandLineArgument(responseFilePath)}",
+                    WorkingDirectory = Directory.GetCurrentDirectory(),
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                markBuildStarted();
+                using Process process = ProcessStartHelper.TryStart(startInfo);
+                if (process == null)
+                {
+                    markBuildFinished();
+                    return Task.FromResult(new CompilerMessage[]
+                    {
+                        new CompilerMessage
+                        {
+                            type = CompilerMessageType.Error,
+                            message = "External C# compiler failed to start"
+                        }
+                    });
+                }
+
+                string stdout = process.StandardOutput.ReadToEnd();
+                string stderr = process.StandardError.ReadToEnd();
+                process.WaitForExit();
+                markBuildFinished();
+                ct.ThrowIfCancellationRequested();
+
+                return Task.FromResult(ExternalCompilerMessageParser.Parse(stdout, stderr, process.ExitCode));
+            }
+            finally
+            {
+                if (File.Exists(responseFilePath))
+                {
+                    File.Delete(responseFilePath);
+                }
+
+                if (File.Exists(workerRequestFilePath))
+                {
+                    File.Delete(workerRequestFilePath);
+                }
+            }
+        }
+
+        private static void WriteCompilerResponseFile(
+            string responseFilePath,
+            string sourcePath,
+            string dllPath,
+            IReadOnlyCollection<string> references)
+        {
+            List<string> lines = new List<string>
+            {
+                "-nologo",
+                "-nostdlib+",
+                "-target:library",
+                "-optimize+",
+                "-debug-",
+                QuoteResponseFileArgument("-out:", dllPath)
+            };
+
+            foreach (string reference in references)
+            {
+                lines.Add(QuoteResponseFileArgument("-r:", reference));
+            }
+
+            lines.Add(QuoteResponseFilePath(sourcePath));
+            File.WriteAllLines(responseFilePath, lines);
+        }
+
+        private static void WriteWorkerRequestFile(
+            string requestFilePath,
+            string sourcePath,
+            string dllPath,
+            IReadOnlyCollection<string> references)
+        {
+            List<string> lines = new List<string> { Path.GetFullPath(sourcePath), Path.GetFullPath(dllPath) };
+            foreach (string reference in references)
+            {
+                lines.Add(Path.GetFullPath(reference));
+            }
+
+            File.WriteAllLines(Path.GetFullPath(requestFilePath), lines);
+        }
+
+        private static string QuoteResponseFileArgument(string prefix, string value)
+        {
+            return $"{prefix}{QuoteResponseFilePath(value)}";
+        }
+
+        private static string QuoteResponseFilePath(string path)
+        {
+            return $"\"{path}\"";
+        }
+
+        private static string QuoteCommandLineArgument(string value)
+        {
+            return $"\"{value}\"";
+        }
+    }
+}

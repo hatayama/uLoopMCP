@@ -127,7 +127,7 @@ namespace io.github.hatayama.uLoopMCP
                 // even if mcpServer instance becomes null unexpectedly
                 McpEditorSettings.SetIsServerRunning(true);
                 McpEditorSettings.SetCustomPort(mcpServer.Port);
-                AssemblyBuilderCompiler.RequestAutoPrewarm();
+                DynamicCodeCompiler.RequestAutoPrewarm();
 
             }
             else
@@ -728,7 +728,7 @@ namespace io.github.hatayama.uLoopMCP
                 // Clear reconnection-related flags on successful recovery
                 McpEditorSettings.ClearReconnectingFlags();
                 McpEditorSettings.ClearPostCompileReconnectingUI();
-                AssemblyBuilderCompiler.RequestAutoPrewarm();
+                DynamicCodeCompiler.RequestAutoPrewarm();
 
                 ActivateStartupProtection(5000);
             }

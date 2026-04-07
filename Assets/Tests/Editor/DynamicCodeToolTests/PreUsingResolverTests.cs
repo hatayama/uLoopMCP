@@ -229,7 +229,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_ScriptMode_MissingUsing_ShouldSucceedWithSingleBuild()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -253,7 +253,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_RawMode_FullClass_ShouldSucceedWithoutPreUsingIntervention()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -285,7 +285,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_ScriptMode_AllUsingsPresent_ShouldCompileNormally()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -308,7 +308,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_ScriptMode_MultipleMissingUsings_ShouldPreInjectAllAndSucceed()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -332,7 +332,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_ScriptMode_SimpleArithmetic_ShouldSucceedWithSingleBuild()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = "return 1 + 2;",
@@ -351,7 +351,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_ScriptMode_CustomAsmdefType_ShouldResolveAssemblyReference()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"

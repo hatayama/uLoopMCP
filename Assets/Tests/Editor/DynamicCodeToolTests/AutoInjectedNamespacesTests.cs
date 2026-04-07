@@ -91,7 +91,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_ScriptMode_MissingUsing_ShouldReportAutoInjectedNamespaces()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -113,7 +113,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_ScriptMode_NoMissingUsing_ShouldReportEmptyAutoInjectedNamespaces()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = "return 1 + 2;",
@@ -131,7 +131,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_ScriptMode_WithExistingUsing_ShouldNotReportIt()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -154,7 +154,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_ScriptMode_MultipleMissing_ShouldReportAll()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -177,7 +177,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_RawMode_MissingUsing_ShouldReportAutoInjectedNamespaces()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -207,7 +207,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_RawMode_FullyQualifiedNames_ShouldReportEmptyAutoInjectedNamespaces()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = @"
@@ -238,7 +238,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task CompileAsync_ScriptMode_ShouldPopulateTimings()
         {
-            AssemblyBuilderCompiler compiler = new AssemblyBuilderCompiler(DynamicCodeSecurityLevel.Restricted);
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
             CompilationRequest request = new CompilationRequest
             {
                 Code = "return 1 + 2;",
