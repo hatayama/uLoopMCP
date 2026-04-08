@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -108,6 +109,29 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(messages, Is.Not.Null);
             Assert.That(messages.Any(message => message.type == CompilerMessageType.Error), Is.True);
             Assert.That(File.Exists(dllPath), Is.True);
+            Assert.That(buildCount, Is.EqualTo(1));
+            Assert.That(buildStarted, Is.True);
+            Assert.That(buildFinished, Is.True);
+        }
+
+        [Test]
+        public void TryCompile_WhenWorkerStarts_ShouldUseProcessScopedWorkerDirectory()
+        {
+            CompilerMessage[] messages = CompileWithWorker(
+                "public static class WorkerScopedDirectoryTest { public static int Execute() { return 7; } }",
+                out bool buildStarted,
+                out bool buildFinished,
+                out int buildCount,
+                out string dllPath);
+
+            string workerDirectoryPath = Path.Combine(
+                Path.GetTempPath(),
+                "uLoopMCPCompilation",
+                $"RoslynWorker-{Process.GetCurrentProcess().Id}");
+
+            Assert.That(messages, Is.Not.Null);
+            Assert.That(File.Exists(dllPath), Is.True);
+            Assert.That(Directory.Exists(workerDirectoryPath), Is.True);
             Assert.That(buildCount, Is.EqualTo(1));
             Assert.That(buildStarted, Is.True);
             Assert.That(buildFinished, Is.True);

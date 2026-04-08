@@ -332,6 +332,11 @@ namespace io.github.hatayama.uLoopMCP
                 SendCompileRequest(requestFilePath);
                 return ReadWorkerResponse(requestFilePath, ct);
             }
+            catch (OperationCanceledException)
+            {
+                ShutdownWorkerProcessLocked();
+                throw;
+            }
             finally
             {
                 markBuildFinished();
@@ -424,7 +429,10 @@ namespace io.github.hatayama.uLoopMCP
 
         private static WorkerPaths CreateWorkerPaths()
         {
-            string workerDirectoryPath = Path.Combine(Path.GetTempPath(), "uLoopMCPCompilation", "RoslynWorker");
+            string workerDirectoryPath = Path.Combine(
+                Path.GetTempPath(),
+                "uLoopMCPCompilation",
+                $"RoslynWorker-{Process.GetCurrentProcess().Id}");
             Directory.CreateDirectory(workerDirectoryPath);
             return new WorkerPaths(
                 workerDirectoryPath,
@@ -503,10 +511,14 @@ namespace io.github.hatayama.uLoopMCP
                     });
             }
 
-            string stdout = process.StandardOutput.ReadToEnd();
-            string stderr = process.StandardError.ReadToEnd();
+            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+            Task<string> stderrTask = process.StandardError.ReadToEndAsync();
             process.WaitForExit();
-            CompilerMessage[] compilerMessages = ExternalCompilerMessageParser.Parse(stdout, stderr, process.ExitCode);
+            Task.WaitAll(stdoutTask, stderrTask);
+            CompilerMessage[] compilerMessages = ExternalCompilerMessageParser.Parse(
+                stdoutTask.GetAwaiter().GetResult(),
+                stderrTask.GetAwaiter().GetResult(),
+                process.ExitCode);
             return WorkerAssemblyBuildResult.Started(compilerMessages);
         }
 

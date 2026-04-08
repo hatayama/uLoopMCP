@@ -156,7 +156,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             return CreateErrorResult(
                 McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
-                new List<string> { "Execution cancelled due to timeout" });
+                new List<string> { "Execution cancelled" });
         }
 
         private static ExecutionResult CreateSuccessResult(string result, List<string> logs = null)
@@ -242,10 +242,18 @@ namespace io.github.hatayama.uLoopMCP
                         new List<string> { ex.Message });
                 }
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (TargetInvocationException ex)
             {
                 // Retrieve actual exception
                 Exception innerException = ex.InnerException ?? ex;
+                if (innerException is OperationCanceledException)
+                {
+                    throw innerException;
+                }
                 
                 return CreateErrorResult(
                     innerException.Message,
@@ -302,9 +310,18 @@ namespace io.github.hatayama.uLoopMCP
                 ExecutionResult syncResult = ExecuteInternal(context, cancellationToken);
                 return syncResult;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (TargetInvocationException ex)
             {
                 Exception innerException = ex.InnerException ?? ex;
+                if (innerException is OperationCanceledException)
+                {
+                    throw innerException;
+                }
+
                 return CreateErrorResult(
                     innerException.Message,
                     new List<string>

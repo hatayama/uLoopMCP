@@ -11,6 +11,29 @@ namespace io.github.hatayama.uLoopMCP
 {
     internal static class RoslynCompilerBackend
     {
+        private sealed class OneShotCompileResult
+        {
+            public CompilerMessage[] CompilerMessages { get; }
+
+            public bool ShouldFallback { get; }
+
+            private OneShotCompileResult(CompilerMessage[] compilerMessages, bool shouldFallback)
+            {
+                CompilerMessages = compilerMessages;
+                ShouldFallback = shouldFallback;
+            }
+
+            public static OneShotCompileResult Successful(CompilerMessage[] compilerMessages)
+            {
+                return new OneShotCompileResult(compilerMessages, false);
+            }
+
+            public static OneShotCompileResult Fallback()
+            {
+                return new OneShotCompileResult(null, true);
+            }
+        }
+
         public static async Task<CompilerMessage[]> CompileAsync(
             string sourcePath,
             string dllPath,
@@ -21,15 +44,14 @@ namespace io.github.hatayama.uLoopMCP
             Action markBuildFinished,
             Action incrementBuildCount)
         {
-            string responseFilePath = Path.ChangeExtension(sourcePath, ".rsp");
             string workerRequestFilePath = Path.ChangeExtension(sourcePath, ".worker");
-            WriteCompilerResponseFile(responseFilePath, sourcePath, dllPath, references);
-            WriteWorkerRequestFile(workerRequestFilePath, sourcePath, dllPath, references);
 
             try
             {
                 if (Application.platform != RuntimePlatform.WindowsEditor)
                 {
+                    WriteWorkerRequestFile(workerRequestFilePath, sourcePath, dllPath, references);
+
                     CompilerMessage[] workerMessages = SharedRoslynCompilerWorkerHost.TryCompile(
                         workerRequestFilePath,
                         externalCompilerPaths,
@@ -61,6 +83,53 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 ct.ThrowIfCancellationRequested();
+                OneShotCompileResult oneShotResult = await CompileWithOneShotAsync(
+                    sourcePath,
+                    dllPath,
+                    references,
+                    externalCompilerPaths,
+                    ct,
+                    markBuildStarted,
+                    markBuildFinished,
+                    incrementBuildCount).ConfigureAwait(false);
+                if (oneShotResult.ShouldFallback)
+                {
+                    return await AssemblyBuilderFallbackCompilerBackend.CompileAsync(
+                        sourcePath,
+                        dllPath,
+                        references,
+                        ct,
+                        markBuildStarted,
+                        markBuildFinished,
+                        incrementBuildCount).ConfigureAwait(false);
+                }
+
+                return oneShotResult.CompilerMessages;
+            }
+            finally
+            {
+                if (File.Exists(workerRequestFilePath))
+                {
+                    File.Delete(workerRequestFilePath);
+                }
+            }
+        }
+
+        private static async Task<OneShotCompileResult> CompileWithOneShotAsync(
+            string sourcePath,
+            string dllPath,
+            List<string> references,
+            ExternalCompilerPaths externalCompilerPaths,
+            CancellationToken ct,
+            Action markBuildStarted,
+            Action markBuildFinished,
+            Action incrementBuildCount)
+        {
+            string responseFilePath = Path.ChangeExtension(sourcePath, ".rsp");
+            WriteCompilerResponseFile(responseFilePath, sourcePath, dllPath, references);
+
+            try
+            {
                 incrementBuildCount();
 
                 ProcessStartInfo startInfo = new ProcessStartInfo
@@ -75,62 +144,48 @@ namespace io.github.hatayama.uLoopMCP
                 };
 
                 markBuildStarted();
-                using Process process = ProcessStartHelper.TryStart(startInfo);
-                if (process == null)
+
+                try
+                {
+                    using Process process = ProcessStartHelper.TryStart(startInfo);
+                    if (process == null)
+                    {
+                        DynamicCompilationHealthMonitor.ReportOneShotCompilerStartFailure(new
+                        {
+                            dotnet_host_path = externalCompilerPaths.DotnetHostPath,
+                            compiler_dll_path = externalCompilerPaths.CompilerDllPath
+                        });
+
+                        return OneShotCompileResult.Fallback();
+                    }
+
+                    Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+                    Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+                    await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+                    process.WaitForExit();
+                    ct.ThrowIfCancellationRequested();
+
+                    CompilerMessage[] compilerMessages = ExternalCompilerMessageParser.Parse(
+                        stdoutTask.Result,
+                        stderrTask.Result,
+                        process.ExitCode);
+                    if (ShouldRetryWithAssemblyBuilder(process.ExitCode, compilerMessages))
+                    {
+                        return OneShotCompileResult.Fallback();
+                    }
+
+                    return OneShotCompileResult.Successful(compilerMessages);
+                }
+                finally
                 {
                     markBuildFinished();
-                    DynamicCompilationHealthMonitor.ReportOneShotCompilerStartFailure(new
-                    {
-                        dotnet_host_path = externalCompilerPaths.DotnetHostPath,
-                        compiler_dll_path = externalCompilerPaths.CompilerDllPath
-                    });
-
-                    return await AssemblyBuilderFallbackCompilerBackend.CompileAsync(
-                        sourcePath,
-                        dllPath,
-                        references,
-                        ct,
-                        markBuildStarted,
-                        markBuildFinished,
-                        incrementBuildCount).ConfigureAwait(false);
                 }
-
-                Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
-                Task<string> stderrTask = process.StandardError.ReadToEndAsync();
-                await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
-                process.WaitForExit();
-                markBuildFinished();
-                ct.ThrowIfCancellationRequested();
-
-                CompilerMessage[] compilerMessages = ExternalCompilerMessageParser.Parse(
-                    stdoutTask.Result,
-                    stderrTask.Result,
-                    process.ExitCode);
-
-                if (ShouldRetryWithAssemblyBuilder(process.ExitCode, compilerMessages))
-                {
-                    return await AssemblyBuilderFallbackCompilerBackend.CompileAsync(
-                        sourcePath,
-                        dllPath,
-                        references,
-                        ct,
-                        markBuildStarted,
-                        markBuildFinished,
-                        incrementBuildCount).ConfigureAwait(false);
-                }
-
-                return compilerMessages;
             }
             finally
             {
                 if (File.Exists(responseFilePath))
                 {
                     File.Delete(responseFilePath);
-                }
-
-                if (File.Exists(workerRequestFilePath))
-                {
-                    File.Delete(workerRequestFilePath);
                 }
             }
         }

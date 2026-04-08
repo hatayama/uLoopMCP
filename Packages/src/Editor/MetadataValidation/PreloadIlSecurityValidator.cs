@@ -80,6 +80,18 @@ namespace io.github.hatayama.uLoopMCP
                     $"Dangerous parameter type detected before assembly load: {parameterTypeName}",
                     $"Parameter type '{parameterTypeName}' exists in {declaringTypeName}.{methodName}");
             }
+
+            if (!DangerousApiCatalog.IsDangerousType(signature.ReturnType))
+            {
+                return;
+            }
+
+            this.AddViolation(
+                result,
+                seenViolations,
+                signature.ReturnType,
+                $"Dangerous return type detected before assembly load: {signature.ReturnType}",
+                $"Return type '{signature.ReturnType}' exists in {declaringTypeName}.{methodName}");
         }
 
         private void ValidateMethodBody(

@@ -388,6 +388,39 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task PreloadIlValidator_WhenDangerousReturnTypeExists_ShouldReportViolation()
+        {
+            byte[] assemblyBytes = await BuildAssemblyBytesAsync(
+                @"
+                    using System.IO;
+
+                    namespace TestNamespace
+                    {
+                        public sealed class DangerousReturnTypeContainer
+                        {
+                            public FileInfo Build()
+                            {
+                                return null;
+                            }
+                        }
+                    }
+                ",
+                "PreloadIlDangerousReturnTypeCommand");
+
+            PreloadIlSecurityValidator validator = new PreloadIlSecurityValidator();
+
+            SecurityValidationResult result = validator.Validate(assemblyBytes);
+
+            Assert.IsFalse(result.IsValid, "Dangerous return types should fail before Assembly.Load");
+            Assert.That(
+                result.Violations.Exists(violation =>
+                    violation.Location == "il" &&
+                    violation.ApiName == "System.IO.FileInfo"),
+                Is.True,
+                "The preload IL validator should identify dangerous return types from method signatures");
+        }
+
+        [Test]
         public async Task PreloadIlValidator_WhenAssemblyIsSafe_ShouldRemainValid()
         {
             byte[] assemblyBytes = await BuildAssemblyBytesAsync(
