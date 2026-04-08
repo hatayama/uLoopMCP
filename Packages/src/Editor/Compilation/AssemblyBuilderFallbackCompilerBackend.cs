@@ -50,10 +50,31 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             markBuildStarted();
-            CompilerMessage[] messages = await taskCompletionSource.Task.ConfigureAwait(false);
+            CompilerMessage[] messages = await AwaitBuildCompletionAsync(taskCompletionSource.Task, ct).ConfigureAwait(false);
             markBuildFinished();
             ct.ThrowIfCancellationRequested();
             return messages;
+        }
+
+        internal static async Task<CompilerMessage[]> AwaitBuildCompletionAsync(
+            Task<CompilerMessage[]> buildTask,
+            CancellationToken ct)
+        {
+            TaskCompletionSource<CompilerMessage[]> cancellationTaskCompletionSource =
+                new TaskCompletionSource<CompilerMessage[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            using CancellationTokenRegistration cancellationRegistration =
+                ct.Register(
+                    static state => ((TaskCompletionSource<CompilerMessage[]>)state).TrySetCanceled(),
+                    cancellationTaskCompletionSource);
+
+            Task completedTask = await Task.WhenAny(buildTask, cancellationTaskCompletionSource.Task).ConfigureAwait(false);
+            if (completedTask == cancellationTaskCompletionSource.Task)
+            {
+                return await cancellationTaskCompletionSource.Task.ConfigureAwait(false);
+            }
+
+            return await buildTask.ConfigureAwait(false);
         }
     }
 }

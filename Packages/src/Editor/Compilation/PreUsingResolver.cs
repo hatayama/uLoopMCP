@@ -59,7 +59,7 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (string typeName in qualifiedTypeIdentifiers)
             {
-                List<string> assemblyReferences = index.FindAssemblyLocationsForType(typeName);
+                List<string> assemblyReferences = index.FindAssemblyLocationsForIdentifier(typeName);
                 if (assemblyReferences.Count == 1)
                 {
                     AddAssemblyReferenceIfMissing(assemblyReferencesToAdd, assemblyReferences[0]);
@@ -220,8 +220,7 @@ namespace io.github.hatayama.uLoopMCP
             int pos = 0;
             int length = source.Length;
             bool sawDot = false;
-            bool inQualifiedChain = false;
-            string chainRootIdentifier = null;
+            List<string> qualifiedChainParts = new List<string>();
 
             while (pos < length)
             {
@@ -237,8 +236,7 @@ namespace io.github.hatayama.uLoopMCP
                 if (advanced > pos + 1 && !char.IsLetterOrDigit(source[pos]) && source[pos] != '_')
                 {
                     sawDot = false;
-                    inQualifiedChain = false;
-                    chainRootIdentifier = null;
+                    qualifiedChainParts.Clear();
                     pos = advanced;
                     continue;
                 }
@@ -259,15 +257,18 @@ namespace io.github.hatayama.uLoopMCP
                     }
 
                     string identifier = source.Substring(start, pos - start);
-                    if (!inQualifiedChain)
+                    if (!sawDot)
                     {
-                        inQualifiedChain = true;
-                        chainRootIdentifier = identifier;
+                        qualifiedChainParts.Clear();
+                        qualifiedChainParts.Add(identifier);
                     }
-                    else if (sawDot && char.IsUpper(identifier[0]) && !ExcludedIdentifiers.Contains(identifier) &&
-                             ShouldResolveQualifiedTypeAssembly(chainRootIdentifier))
+                    else
                     {
-                        identifiers.Add(identifier);
+                        qualifiedChainParts.Add(identifier);
+                        if (ShouldResolveQualifiedTypeAssembly(qualifiedChainParts))
+                        {
+                            identifiers.Add(string.Join(".", qualifiedChainParts));
+                        }
                     }
 
                     sawDot = false;
@@ -275,27 +276,16 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 sawDot = false;
-                inQualifiedChain = false;
-                chainRootIdentifier = null;
+                qualifiedChainParts.Clear();
                 pos = advanced;
             }
 
             return identifiers;
         }
 
-        private static bool ShouldResolveQualifiedTypeAssembly(string chainRootIdentifier)
+        private static bool ShouldResolveQualifiedTypeAssembly(IReadOnlyList<string> qualifiedChainParts)
         {
-            if (string.IsNullOrEmpty(chainRootIdentifier))
-            {
-                return false;
-            }
-
-            if (char.IsLower(chainRootIdentifier[0]))
-            {
-                return true;
-            }
-
-            return chainRootIdentifier != "UnityEngine" && chainRootIdentifier != "UnityEditor";
+            return qualifiedChainParts != null && qualifiedChainParts.Count >= 2;
         }
 
         // WrapperTemplate marks user code with #line directives;

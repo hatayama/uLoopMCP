@@ -105,6 +105,19 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public void Prepare_WhenCharLiteralUsesUnicodeEscape_ShouldKeepEntireLiteral()
+        {
+            PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
+                "char c = '\\u0027'; return c;",
+                DynamicCodeConstants.DEFAULT_NAMESPACE,
+                DynamicCodeConstants.DEFAULT_CLASS_NAME);
+
+            Assert.IsNotNull(prepared.PreparedSource);
+            Assert.AreEqual(0, prepared.HoistedLiteralBindings.Count);
+            StringAssert.Contains("char c = '\\u0027';", prepared.PreparedSource);
+        }
+
+        [Test]
         public void Prepare_WhenRegularStringUsesHexEscape_ShouldHoistDecodedValue()
         {
             PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
@@ -138,6 +151,31 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.AreEqual(1, prepared.HoistedLiteralBindings.Count);
             Assert.AreEqual("\b", prepared.HoistedLiteralBindings[0].Value);
+        }
+
+        [Test]
+        public void Prepare_WhenRegularStringContainsUnicodeQuoteEscape_ShouldHoistDecodedValue()
+        {
+            PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
+                "return \"\\u0022\";",
+                DynamicCodeConstants.DEFAULT_NAMESPACE,
+                DynamicCodeConstants.DEFAULT_CLASS_NAME);
+
+            Assert.AreEqual(1, prepared.HoistedLiteralBindings.Count);
+            Assert.AreEqual("\"", prepared.HoistedLiteralBindings[0].Value);
+        }
+
+        [Test]
+        public void Prepare_WhenRegularStringContainsTruncatedUnicodeEscape_ShouldLeaveLiteralInSource()
+        {
+            PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
+                "return \"\\u00\";",
+                DynamicCodeConstants.DEFAULT_NAMESPACE,
+                DynamicCodeConstants.DEFAULT_CLASS_NAME);
+
+            Assert.IsNotNull(prepared.PreparedSource);
+            Assert.AreEqual(0, prepared.HoistedLiteralBindings.Count);
+            StringAssert.Contains("return \"\\u00\";", prepared.PreparedSource);
         }
 
         [Test]

@@ -144,8 +144,7 @@ namespace io.github.hatayama.uLoopMCP
                 return null;
             }
 
-            cachedResult.UpdatedCode = plan.PreparedCode.PreparedSource;
-            return cachedResult;
+            return CloneCachedResult(cachedResult, plan.PreparedCode.PreparedSource);
         }
 
         private CompilationResult CreateSourceSecurityFailure(string originalCode)
@@ -224,6 +223,95 @@ namespace io.github.hatayama.uLoopMCP
                     buildMilliseconds,
                     assemblyLoadMilliseconds)
             };
+        }
+
+        private static CompilationResult CloneCachedResult(
+            CompilationResult cachedResult,
+            string updatedCode)
+        {
+            return new CompilationResult
+            {
+                Success = cachedResult.Success,
+                CompiledAssembly = cachedResult.CompiledAssembly,
+                Errors = CloneCompilationErrors(cachedResult.Errors),
+                Warnings = CloneStrings(cachedResult.Warnings),
+                UpdatedCode = updatedCode,
+                HasSecurityViolations = cachedResult.HasSecurityViolations,
+                SecurityViolations = CloneSecurityViolations(cachedResult.SecurityViolations),
+                FailureReason = cachedResult.FailureReason,
+                AmbiguousTypeCandidates = CloneAmbiguousTypeCandidates(cachedResult.AmbiguousTypeCandidates),
+                AutoInjectedNamespaces = CloneStrings(cachedResult.AutoInjectedNamespaces),
+                Timings = CloneStrings(cachedResult.Timings)
+            };
+        }
+
+        private static List<CompilationError> CloneCompilationErrors(List<CompilationError> errors)
+        {
+            List<CompilationError> clonedErrors = new List<CompilationError>();
+            if (errors == null)
+            {
+                return clonedErrors;
+            }
+
+            foreach (CompilationError error in errors)
+            {
+                clonedErrors.Add(new CompilationError
+                {
+                    Message = error.Message,
+                    Line = error.Line,
+                    Column = error.Column,
+                    ErrorCode = error.ErrorCode
+                });
+            }
+
+            return clonedErrors;
+        }
+
+        private static List<SecurityViolation> CloneSecurityViolations(List<SecurityViolation> violations)
+        {
+            List<SecurityViolation> clonedViolations = new List<SecurityViolation>();
+            if (violations == null)
+            {
+                return clonedViolations;
+            }
+
+            foreach (SecurityViolation violation in violations)
+            {
+                clonedViolations.Add(new SecurityViolation
+                {
+                    Type = violation.Type,
+                    Message = violation.Message,
+                    ApiName = violation.ApiName,
+                    Description = violation.Description,
+                    Location = violation.Location
+                });
+            }
+
+            return clonedViolations;
+        }
+
+        private static Dictionary<string, List<string>> CloneAmbiguousTypeCandidates(
+            Dictionary<string, List<string>> ambiguousTypeCandidates)
+        {
+            Dictionary<string, List<string>> clonedCandidates = new Dictionary<string, List<string>>();
+            if (ambiguousTypeCandidates == null)
+            {
+                return clonedCandidates;
+            }
+
+            foreach (KeyValuePair<string, List<string>> pair in ambiguousTypeCandidates)
+            {
+                clonedCandidates[pair.Key] = CloneStrings(pair.Value);
+            }
+
+            return clonedCandidates;
+        }
+
+        private static List<string> CloneStrings(List<string> values)
+        {
+            return values != null
+                ? new List<string>(values)
+                : new List<string>();
         }
 
     }

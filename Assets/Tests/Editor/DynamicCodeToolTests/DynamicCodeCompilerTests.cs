@@ -178,6 +178,34 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task CompileAsync_WhenReturningCachedAssembly_ShouldReturnDefensiveResultCopies()
+        {
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = "return 42;",
+                ClassName = "CachedResultIsolationCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult firstResult = await compiler.CompileAsync(request, CancellationToken.None);
+            CompilationResult secondResult = await compiler.CompileAsync(request, CancellationToken.None);
+            CompilationResult thirdResult = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.That(firstResult.Success, Is.True);
+            Assert.That(secondResult.Success, Is.True);
+            Assert.That(thirdResult.Success, Is.True);
+            Assert.That(secondResult, Is.Not.SameAs(thirdResult));
+            Assert.That(secondResult.CompiledAssembly, Is.SameAs(thirdResult.CompiledAssembly));
+
+            secondResult.UpdatedCode = "mutated";
+
+            CompilationResult fourthResult = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.That(fourthResult.UpdatedCode, Is.Not.EqualTo("mutated"));
+        }
+
+        [Test]
         public async Task CompileAsync_WhenCustomAsmdefTypeIsReferenced_ShouldAddAssemblyReferenceAndSucceed()
         {
             DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);

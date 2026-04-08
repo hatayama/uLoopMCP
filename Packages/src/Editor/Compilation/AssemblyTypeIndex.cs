@@ -14,6 +14,7 @@ namespace io.github.hatayama.uLoopMCP
         private static AssemblyTypeIndex _instance;
         private readonly Dictionary<string, HashSet<string>> _typeToNamespaces = new(StringComparer.Ordinal);
         private readonly Dictionary<string, HashSet<string>> _typeToAssemblyLocations = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, HashSet<string>> _qualifiedTypeToAssemblyLocations = new(StringComparer.Ordinal);
         private readonly Dictionary<string, HashSet<string>> _namespaceToAssemblyLocations = new(StringComparer.Ordinal);
 
         public static AssemblyTypeIndex Instance
@@ -39,6 +40,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             _typeToNamespaces.Clear();
             _typeToAssemblyLocations.Clear();
+            _qualifiedTypeToAssemblyLocations.Clear();
             _namespaceToAssemblyLocations.Clear();
 
             foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
@@ -80,6 +82,7 @@ namespace io.github.hatayama.uLoopMCP
                     if (!string.IsNullOrEmpty(assemblyLocation))
                     {
                         RegisterTypeAssemblyLocation(typeName, assemblyLocation);
+                        RegisterQualifiedTypeAssemblyLocation(type.Namespace, typeName, assemblyLocation);
                         RegisterNamespaceAssemblyLocation(type.Namespace, assemblyLocation);
                     }
                 }
@@ -119,14 +122,31 @@ namespace io.github.hatayama.uLoopMCP
                 return new List<string>();
             }
 
-            if (_typeToAssemblyLocations.TryGetValue(identifier, out HashSet<string> typeAssemblyLocations))
+            string currentIdentifier = identifier;
+            while (true)
             {
-                return new List<string>(typeAssemblyLocations);
+                if (_qualifiedTypeToAssemblyLocations.TryGetValue(currentIdentifier, out HashSet<string> qualifiedTypeAssemblyLocations))
+                {
+                    return new List<string>(qualifiedTypeAssemblyLocations);
+                }
+
+                if (_namespaceToAssemblyLocations.TryGetValue(currentIdentifier, out HashSet<string> namespaceAssemblyLocations))
+                {
+                    return new List<string>(namespaceAssemblyLocations);
+                }
+
+                int separatorIndex = currentIdentifier.LastIndexOf('.');
+                if (separatorIndex < 0)
+                {
+                    break;
+                }
+
+                currentIdentifier = currentIdentifier.Substring(0, separatorIndex);
             }
 
-            if (_namespaceToAssemblyLocations.TryGetValue(identifier, out HashSet<string> namespaceAssemblyLocations))
+            if (_typeToAssemblyLocations.TryGetValue(currentIdentifier, out HashSet<string> typeAssemblyLocations))
             {
-                return new List<string>(namespaceAssemblyLocations);
+                return new List<string>(typeAssemblyLocations);
             }
 
             return new List<string>();
@@ -150,6 +170,21 @@ namespace io.github.hatayama.uLoopMCP
             {
                 assemblyLocations = new HashSet<string>(StringComparer.Ordinal);
                 _typeToAssemblyLocations[typeName] = assemblyLocations;
+            }
+
+            assemblyLocations.Add(assemblyLocation);
+        }
+
+        private void RegisterQualifiedTypeAssemblyLocation(
+            string namespaceName,
+            string typeName,
+            string assemblyLocation)
+        {
+            string qualifiedTypeName = $"{namespaceName}.{typeName}";
+            if (!_qualifiedTypeToAssemblyLocations.TryGetValue(qualifiedTypeName, out HashSet<string> assemblyLocations))
+            {
+                assemblyLocations = new HashSet<string>(StringComparer.Ordinal);
+                _qualifiedTypeToAssemblyLocations[qualifiedTypeName] = assemblyLocations;
             }
 
             assemblyLocations.Add(assemblyLocation);

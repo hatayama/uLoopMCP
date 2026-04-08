@@ -127,6 +127,25 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.That(result, Does.Contain("MyEnum"));
         }
+
+        [Test]
+        public void ExtractQualifiedTypeIdentifiers_WhenFullyQualifiedType_ShouldKeepFullChain()
+        {
+            HashSet<string> result = PreUsingResolver.ExtractQualifiedTypeIdentifiers(
+                "System.Text.StringBuilder builder = new System.Text.StringBuilder();");
+
+            Assert.That(result, Does.Contain("System.Text"));
+            Assert.That(result, Does.Contain("System.Text.StringBuilder"));
+        }
+
+        [Test]
+        public void ExtractQualifiedTypeIdentifiers_WhenUnityRootedType_ShouldKeepUnityChain()
+        {
+            HashSet<string> result = PreUsingResolver.ExtractQualifiedTypeIdentifiers(
+                "UnityEngine.Object.DestroyImmediate(go);");
+
+            Assert.That(result, Does.Contain("UnityEngine.Object"));
+        }
     }
 
     [TestFixture]
@@ -205,6 +224,18 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.That(result.UpdatedSource, Does.Contain("using System.Text;"));
             Assert.That(result.UpdatedSource, Does.Contain("using System.Text.RegularExpressions;"));
+        }
+
+        [Test]
+        public void Resolve_WhenFullyQualifiedTypeIsUsed_ShouldReportAssemblyReference()
+        {
+            string body = "System.Text.StringBuilder builder = new System.Text.StringBuilder();\nreturn builder.ToString();";
+            string wrappedSource = WrapperTemplate.Build(
+                new List<string>(), "TestNs", "TestClass", body);
+
+            PreUsingResult result = PreUsingResolver.Resolve(wrappedSource, AssemblyTypeIndex.Instance);
+
+            Assert.That(result.AddedAssemblyReferences, Has.Count.GreaterThan(0));
         }
     }
 
@@ -367,6 +398,27 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsTrue(result.Success,
                 result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Custom asmdef type should compile");
             Assert.AreEqual(1, compiler.LastBuildCount, "Unique type resolution should avoid extra retries");
+        }
+
+        [Test]
+        public async Task CompileAsync_ScriptMode_FullyQualifiedCustomAsmdefType_ShouldResolveWithoutRetry()
+        {
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = @"
+                    io.github.hatayama.uLoopMCP.DynamicAssemblyTest test = new io.github.hatayama.uLoopMCP.DynamicAssemblyTest();
+                    return test.HelloWorld();
+                ",
+                ClassName = "FullyQualifiedCustomAsmdefPreUsingCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.IsTrue(result.Success,
+                result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Fully-qualified custom asmdef type should compile");
+            Assert.AreEqual(1, compiler.LastBuildCount, "Qualified assembly resolution should avoid extra retries");
         }
     }
 }

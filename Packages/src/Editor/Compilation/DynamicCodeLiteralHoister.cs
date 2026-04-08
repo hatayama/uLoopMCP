@@ -174,7 +174,7 @@ namespace io.github.hatayama.uLoopMCP
                 char current = source[index];
                 if (current == '\\')
                 {
-                    index += Math.Min(2, source.Length - index);
+                    AdvanceEscapedLiteralSequence(source, ref index);
                     continue;
                 }
 
@@ -216,7 +216,7 @@ namespace io.github.hatayama.uLoopMCP
                 char current = source[index];
                 if (current == '\\')
                 {
-                    index += Math.Min(2, source.Length - index);
+                    AdvanceEscapedLiteralSequence(source, ref index);
                     continue;
                 }
 
@@ -224,8 +224,13 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     index++;
                     string literalToken = source.Substring(start, index - start);
+                    if (!TryUnescapeRegularStringLiteral(literalToken, out string value))
+                    {
+                        rewrittenSource.Append(literalToken);
+                        return true;
+                    }
+
                     string parameterName = CreateParameterName(bindings.Count);
-                    string value = UnescapeRegularStringLiteral(literalToken);
                     bindings.Add(new HoistedLiteralBinding(parameterName, "string", value));
                     rewrittenSource.Append(parameterName);
                     return true;
@@ -324,7 +329,44 @@ namespace io.github.hatayama.uLoopMCP
             return $"{LiteralParameterPrefix}{index}";
         }
 
-        private static string UnescapeRegularStringLiteral(string token)
+        private static void AdvanceEscapedLiteralSequence(string source, ref int index)
+        {
+            index++;
+            if (index >= source.Length)
+            {
+                return;
+            }
+
+            char escape = source[index];
+            index++;
+
+            switch (escape)
+            {
+                case 'u':
+                    index = Math.Min(source.Length, index + 4);
+                    break;
+                case 'U':
+                    index = Math.Min(source.Length, index + 8);
+                    break;
+                case 'x':
+                    index = AdvanceVariableLengthHexDigits(source, index, 4);
+                    break;
+            }
+        }
+
+        private static int AdvanceVariableLengthHexDigits(string value, int index, int maxDigits)
+        {
+            int digitsConsumed = 0;
+            while (index < value.Length && digitsConsumed < maxDigits && IsHexDigit(value[index]))
+            {
+                index++;
+                digitsConsumed++;
+            }
+
+            return index;
+        }
+
+        private static bool TryUnescapeRegularStringLiteral(string token, out string value)
         {
             string inner = token.Substring(1, token.Length - 2);
             StringBuilder unescaped = new StringBuilder(inner.Length);
@@ -340,8 +382,8 @@ namespace io.github.hatayama.uLoopMCP
 
                 if (index + 1 >= inner.Length)
                 {
-                    unescaped.Append('\\');
-                    break;
+                    value = null;
+                    return false;
                 }
 
                 index++;
@@ -382,13 +424,32 @@ namespace io.github.hatayama.uLoopMCP
                         unescaped.Append('\v');
                         break;
                     case 'u':
-                        unescaped.Append((char)ParseHexDigits(inner, ref index, 4));
+                        if (!TryParseHexDigits(inner, ref index, 4, out int unicodeValue))
+                        {
+                            value = null;
+                            return false;
+                        }
+
+                        unescaped.Append((char)unicodeValue);
                         break;
                     case 'U':
-                        unescaped.Append(char.ConvertFromUtf32(ParseHexDigits(inner, ref index, 8)));
+                        if (!TryParseHexDigits(inner, ref index, 8, out int codePoint) ||
+                            !IsValidUtf32CodePoint(codePoint))
+                        {
+                            value = null;
+                            return false;
+                        }
+
+                        unescaped.Append(char.ConvertFromUtf32(codePoint));
                         break;
                     case 'x':
-                        unescaped.Append((char)ParseVariableLengthHexDigits(inner, ref index));
+                        if (!TryParseVariableLengthHexDigits(inner, ref index, out int variableLengthValue))
+                        {
+                            value = null;
+                            return false;
+                        }
+
+                        unescaped.Append((char)variableLengthValue);
                         break;
                     default:
                         unescaped.Append(escape);
@@ -396,31 +457,54 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            return unescaped.ToString();
+            value = unescaped.ToString();
+            return true;
         }
 
-        private static int ParseHexDigits(string value, ref int index, int digitCount)
+        private static bool TryParseHexDigits(string value, ref int index, int digitCount, out int parsedValue)
         {
             int start = index + 1;
-            string hex = value.Substring(start, digitCount);
-            index += digitCount;
-            return int.Parse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-        }
-
-        private static int ParseVariableLengthHexDigits(string value, ref int index)
-        {
-            int start = index + 1;
-            int maxExclusive = Math.Min(value.Length, start + 4);
-            int end = start;
-
-            while (end < maxExclusive && IsHexDigit(value[end]))
+            if (start + digitCount > value.Length)
             {
-                end++;
+                parsedValue = 0;
+                return false;
+            }
+
+            string hex = value.Substring(start, digitCount);
+            if (!int.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out parsedValue))
+            {
+                return false;
+            }
+
+            index += digitCount;
+            return true;
+        }
+
+        private static bool TryParseVariableLengthHexDigits(string value, ref int index, out int parsedValue)
+        {
+            int start = index + 1;
+            int end = AdvanceVariableLengthHexDigits(value, start, 4);
+            if (end == start)
+            {
+                parsedValue = 0;
+                return false;
             }
 
             string hex = value.Substring(start, end - start);
+            if (!int.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out parsedValue))
+            {
+                return false;
+            }
+
             index = end - 1;
-            return int.Parse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            return true;
+        }
+
+        private static bool IsValidUtf32CodePoint(int value)
+        {
+            return value >= 0
+                && value <= 0x10FFFF
+                && (value < 0xD800 || value > 0xDFFF);
         }
 
         private static bool IsHexDigit(char value)
