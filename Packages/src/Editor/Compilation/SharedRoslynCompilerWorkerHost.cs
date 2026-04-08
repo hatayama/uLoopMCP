@@ -22,6 +22,7 @@ namespace io.github.hatayama.uLoopMCP
         private const int SharedCompilerWorkerResponseTimeoutMilliseconds = 30000;
 
         private static readonly object SharedCompilerWorkerLock = new();
+        private static Action<string> s_deleteWorkerDirectory = path => Directory.Delete(path, true);
         private static Process _sharedCompilerWorkerProcess;
         private static string _workerDirectoryPath;
 
@@ -645,6 +646,15 @@ namespace io.github.hatayama.uLoopMCP
             Shutdown();
         }
 
+        internal static Action<string> SwapWorkerDirectoryDeleterForTests(Action<string> deleter)
+        {
+            Debug.Assert(deleter != null, "deleter must not be null");
+
+            Action<string> previous = s_deleteWorkerDirectory;
+            s_deleteWorkerDirectory = deleter;
+            return previous;
+        }
+
         private static void Shutdown()
         {
             lock (SharedCompilerWorkerLock)
@@ -687,8 +697,40 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            Directory.Delete(workerDirectoryPath, true);
+            TryDeleteWorkerDirectory(workerDirectoryPath);
             _workerDirectoryPath = null;
+        }
+
+        private static void TryDeleteWorkerDirectory(string workerDirectoryPath)
+        {
+            try
+            {
+                s_deleteWorkerDirectory(workerDirectoryPath);
+            }
+            catch (IOException ex)
+            {
+                LogWorkerDirectoryCleanupFailure(workerDirectoryPath, ex);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                LogWorkerDirectoryCleanupFailure(workerDirectoryPath, ex);
+            }
+        }
+
+        private static void LogWorkerDirectoryCleanupFailure(string workerDirectoryPath, Exception ex)
+        {
+            VibeLogger.LogWarning(
+                "dynamic_code_shared_worker_cleanup_failed",
+                "execute-dynamic-code shared Roslyn worker directory cleanup failed during shutdown",
+                new
+                {
+                    worker_directory_path = workerDirectoryPath,
+                    exception_type = ex.GetType().FullName,
+                    exception_message = ex.Message
+                },
+                humanNote: "Shared Roslyn worker cleanup could not remove its temporary directory during shutdown.",
+                aiTodo: "Investigate file locks or permission issues if temporary worker directories continue to accumulate.");
+            Debug.LogWarning($"[{McpConstants.PROJECT_NAME}] Failed to delete shared Roslyn worker directory '{workerDirectoryPath}': {ex.Message}");
         }
 
         private static object AppendAttempt(object failureContext, int attempt)

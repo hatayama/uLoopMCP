@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System;
 using NUnit.Framework;
 using UnityEditor.Compilation;
 
@@ -12,6 +13,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
     public class SharedRoslynCompilerWorkerHostTests
     {
         private string _tempDirectoryPath;
+        private Action<string> _previousWorkerDirectoryDeleter;
 
         [SetUp]
         public void SetUp()
@@ -23,6 +25,12 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [TearDown]
         public void TearDown()
         {
+            if (_previousWorkerDirectoryDeleter != null)
+            {
+                SharedRoslynCompilerWorkerHost.SwapWorkerDirectoryDeleterForTests(_previousWorkerDirectoryDeleter);
+                _previousWorkerDirectoryDeleter = null;
+            }
+
             SharedRoslynCompilerWorkerHost.ShutdownForTests();
 
             if (Directory.Exists(_tempDirectoryPath))
@@ -151,6 +159,38 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             SharedRoslynCompilerWorkerHost.ShutdownForTests();
 
+            Assert.That(Directory.Exists(workerDirectoryPath), Is.False);
+        }
+
+        [Test]
+        public void ShutdownForTests_WhenWorkerDirectoryDeletionFails_ShouldNotThrow()
+        {
+            CompilerMessage[] messages = CompileWithWorker(
+                "public static class WorkerDirectoryCleanupFailureTest { public static int Execute() { return 17; } }",
+                out _,
+                out _,
+                out _,
+                out _);
+
+            string workerDirectoryPath = GetWorkerDirectoryPath();
+
+            Assert.That(messages, Is.Not.Null);
+            Assert.That(Directory.Exists(workerDirectoryPath), Is.True);
+
+            _previousWorkerDirectoryDeleter = SharedRoslynCompilerWorkerHost.SwapWorkerDirectoryDeleterForTests(
+                _ => throw new IOException("locked for test"));
+
+            Assert.That(
+                () => SharedRoslynCompilerWorkerHost.ShutdownForTests(),
+                Throws.Nothing);
+            Assert.That(Directory.Exists(workerDirectoryPath), Is.True);
+
+            SharedRoslynCompilerWorkerHost.SwapWorkerDirectoryDeleterForTests(_previousWorkerDirectoryDeleter);
+            _previousWorkerDirectoryDeleter = null;
+
+            Assert.That(
+                () => SharedRoslynCompilerWorkerHost.ShutdownForTests(),
+                Throws.Nothing);
             Assert.That(Directory.Exists(workerDirectoryPath), Is.False);
         }
 
