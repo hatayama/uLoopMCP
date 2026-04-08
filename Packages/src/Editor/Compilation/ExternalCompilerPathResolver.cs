@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 
 namespace io.github.hatayama.uLoopMCP
@@ -31,12 +32,7 @@ namespace io.github.hatayama.uLoopMCP
             string codeAnalysisDllPath = Path.Combine(contentsPath, "DotNetSdkRoslyn", "Microsoft.CodeAnalysis.dll");
             string codeAnalysisCSharpDllPath = Path.Combine(contentsPath, "DotNetSdkRoslyn", "Microsoft.CodeAnalysis.CSharp.dll");
             string netCoreRuntimeSharedRootPath = Path.Combine(contentsPath, "NetCoreRuntime", "shared", "Microsoft.NETCore.App");
-            string[] runtimeDirectories = Directory.Exists(netCoreRuntimeSharedRootPath)
-                ? Directory.GetDirectories(netCoreRuntimeSharedRootPath)
-                : Array.Empty<string>();
-            string netCoreRuntimeSharedDirectoryPath = runtimeDirectories.Length > 0
-                ? runtimeDirectories[0]
-                : null;
+            string netCoreRuntimeSharedDirectoryPath = ResolveNetCoreRuntimeSharedDirectoryPath(netCoreRuntimeSharedRootPath);
 
             List<string> missingComponents = new List<string>();
             if (!File.Exists(dotnetHostPath))
@@ -92,6 +88,41 @@ namespace io.github.hatayama.uLoopMCP
                 codeAnalysisDllPath,
                 codeAnalysisCSharpDllPath,
                 netCoreRuntimeSharedDirectoryPath);
+        }
+
+        internal static string ResolveNetCoreRuntimeSharedDirectoryPath(string netCoreRuntimeSharedRootPath)
+        {
+            if (!Directory.Exists(netCoreRuntimeSharedRootPath))
+            {
+                return null;
+            }
+
+            string[] runtimeDirectories = Directory.GetDirectories(netCoreRuntimeSharedRootPath);
+            if (runtimeDirectories.Length == 0)
+            {
+                return null;
+            }
+
+            string highestVersionDirectoryPath = runtimeDirectories
+                .Select(runtimeDirectoryPath => new
+                {
+                    Path = runtimeDirectoryPath,
+                    VersionText = Path.GetFileName(runtimeDirectoryPath)
+                })
+                .Where(candidate => Version.TryParse(candidate.VersionText, out _))
+                .OrderByDescending(candidate => new Version(candidate.VersionText))
+                .ThenByDescending(candidate => candidate.VersionText, StringComparer.Ordinal)
+                .Select(candidate => candidate.Path)
+                .FirstOrDefault();
+
+            if (!string.IsNullOrEmpty(highestVersionDirectoryPath))
+            {
+                return highestVersionDirectoryPath;
+            }
+
+            return runtimeDirectories
+                .OrderByDescending(Path.GetFileName, StringComparer.Ordinal)
+                .First();
         }
 
         private static string ResolveEditorContentsPath(string editorPath)
