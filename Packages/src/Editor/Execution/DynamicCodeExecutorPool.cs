@@ -28,6 +28,11 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 IDynamicCodeExecutor createdExecutor = _executorProvider.Create(securityLevel);
+                if (createdExecutor is DynamicCodeExecutorStub)
+                {
+                    return createdExecutor;
+                }
+
                 _executorsBySecurityLevel.Add(securityLevel, createdExecutor);
                 return createdExecutor;
             }

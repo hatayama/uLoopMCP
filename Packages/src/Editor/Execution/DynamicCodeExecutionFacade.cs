@@ -40,7 +40,12 @@ namespace io.github.hatayama.uLoopMCP
             ThrowIfDisposed();
             cancellationToken.ThrowIfCancellationRequested();
 
-            await _executionSemaphore.WaitAsync(cancellationToken);
+            bool entered = await _executionSemaphore.WaitAsync(0, cancellationToken);
+            if (!entered)
+            {
+                return CreateExecutionInProgressResult();
+            }
+
             try
             {
                 return await ExecuteCoreAsync(request, cancellationToken);
@@ -89,6 +94,15 @@ namespace io.github.hatayama.uLoopMCP
                 request.Parameters,
                 cancellationToken,
                 request.CompileOnly);
+        }
+
+        private static ExecutionResult CreateExecutionInProgressResult()
+        {
+            return new ExecutionResult
+            {
+                Success = false,
+                ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
+            };
         }
 
         public void Dispose()

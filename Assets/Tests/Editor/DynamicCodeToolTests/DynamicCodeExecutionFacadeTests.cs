@@ -53,6 +53,41 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        [Timeout(3000)]
+        public async Task ExecuteAsync_WhenExecutionIsAlreadyRunning_ShouldFailFast()
+        {
+            BlockingDynamicCodeExecutorProvider provider = new BlockingDynamicCodeExecutorProvider();
+            using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
+            using DynamicCodeExecutionFacade facade = new DynamicCodeExecutionFacade(
+                new FakeCompiledAssemblyBuilder(true),
+                pool);
+            using CancellationTokenSource firstExecutionCts = new CancellationTokenSource(3000);
+            using CancellationTokenSource secondExecutionCts = new CancellationTokenSource(300);
+
+            Task<ExecutionResult> firstExecutionTask = facade.ExecuteAsync(
+                CreateRequest(DynamicCodeSecurityLevel.Restricted, "return 1;"),
+                firstExecutionCts.Token);
+
+            await provider.ExecutionStarted.Task;
+
+            ExecutionResult secondResult = await facade.ExecuteAsync(
+                CreateRequest(DynamicCodeSecurityLevel.Restricted, "return 2;"),
+                secondExecutionCts.Token);
+
+            Assert.That(secondResult.Success, Is.False);
+            Assert.That(secondResult.ErrorMessage, Is.EqualTo(McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS));
+
+            provider.AllowCompletion.SetResult(new ExecutionResult
+            {
+                Success = true,
+                Result = "done"
+            });
+
+            ExecutionResult firstResult = await firstExecutionTask;
+            Assert.That(firstResult.Success, Is.True);
+        }
+
+        [Test]
         public void Dispose_WhenExecutorsWereCreated_ShouldDisposeCachedExecutors()
         {
             FakeDynamicCodeExecutorProvider provider = new FakeDynamicCodeExecutorProvider();
@@ -122,6 +157,20 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             }
         }
 
+        private sealed class BlockingDynamicCodeExecutorProvider : IDynamicCodeExecutorProvider
+        {
+            public TaskCompletionSource<bool> ExecutionStarted { get; } =
+                new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public TaskCompletionSource<ExecutionResult> AllowCompletion { get; } =
+                new TaskCompletionSource<ExecutionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public IDynamicCodeExecutor Create(DynamicCodeSecurityLevel securityLevel)
+            {
+                return new BlockingDynamicCodeExecutor(ExecutionStarted, AllowCompletion);
+            }
+        }
+
         private sealed class FakeDynamicCodeExecutor : IDynamicCodeExecutor
         {
             public int DisposeCallCount { get; private set; }
@@ -148,6 +197,42 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             public void Dispose()
             {
                 DisposeCallCount++;
+            }
+        }
+
+        private sealed class BlockingDynamicCodeExecutor : IDynamicCodeExecutor
+        {
+            private readonly TaskCompletionSource<bool> _executionStarted;
+            private readonly TaskCompletionSource<ExecutionResult> _allowCompletion;
+
+            public BlockingDynamicCodeExecutor(
+                TaskCompletionSource<bool> executionStarted,
+                TaskCompletionSource<ExecutionResult> allowCompletion)
+            {
+                _executionStarted = executionStarted;
+                _allowCompletion = allowCompletion;
+            }
+
+            public async Task<ExecutionResult> ExecuteCodeAsync(
+                string code,
+                string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
+                object[] parameters = null,
+                CancellationToken cancellationToken = default,
+                bool compileOnly = false)
+            {
+                _executionStarted.TrySetResult(true);
+                using CancellationTokenRegistration registration = cancellationToken.Register(
+                    () => _allowCompletion.TrySetCanceled(cancellationToken));
+                return await _allowCompletion.Task;
+            }
+
+            public ExecutionStatistics GetStatistics()
+            {
+                return new ExecutionStatistics();
+            }
+
+            public void Dispose()
+            {
             }
         }
 

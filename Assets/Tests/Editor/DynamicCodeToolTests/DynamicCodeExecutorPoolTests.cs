@@ -49,6 +49,22 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 Throws.TypeOf<System.ObjectDisposedException>());
         }
 
+        [Test]
+        public void GetOrCreate_WhenProviderReturnsStubFirst_ShouldReplaceItWhenRealExecutorBecomesAvailable()
+        {
+            SequenceDynamicCodeExecutorProvider provider = new SequenceDynamicCodeExecutorProvider(
+                new DynamicCodeExecutorStub(),
+                new FakeDynamicCodeExecutor());
+            using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
+
+            IDynamicCodeExecutor first = pool.GetOrCreate(DynamicCodeSecurityLevel.Restricted);
+            IDynamicCodeExecutor second = pool.GetOrCreate(DynamicCodeSecurityLevel.Restricted);
+
+            Assert.That(first, Is.TypeOf<DynamicCodeExecutorStub>());
+            Assert.That(second, Is.TypeOf<FakeDynamicCodeExecutor>());
+            Assert.That(second, Is.Not.SameAs(first));
+        }
+
         private sealed class FakeDynamicCodeExecutorProvider : IDynamicCodeExecutorProvider
         {
             public Dictionary<DynamicCodeSecurityLevel, int> CreateCallsBySecurityLevel { get; } = new();
@@ -67,6 +83,21 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 FakeDynamicCodeExecutor executor = new FakeDynamicCodeExecutor();
                 CreatedExecutors.Add(executor);
                 return executor;
+            }
+        }
+
+        private sealed class SequenceDynamicCodeExecutorProvider : IDynamicCodeExecutorProvider
+        {
+            private readonly Queue<IDynamicCodeExecutor> _executors;
+
+            public SequenceDynamicCodeExecutorProvider(params IDynamicCodeExecutor[] executors)
+            {
+                _executors = new Queue<IDynamicCodeExecutor>(executors);
+            }
+
+            public IDynamicCodeExecutor Create(DynamicCodeSecurityLevel securityLevel)
+            {
+                return _executors.Dequeue();
             }
         }
 
