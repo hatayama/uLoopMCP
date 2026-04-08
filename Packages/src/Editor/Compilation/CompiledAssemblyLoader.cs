@@ -17,34 +17,19 @@ namespace io.github.hatayama.uLoopMCP
 
             if (securityLevel == DynamicCodeSecurityLevel.Restricted)
             {
-                SecurityValidationResult metadataValidationResult = ValidateBeforeAssemblyLoad(assemblyBytes);
-                if (!metadataValidationResult.IsValid)
+                SecurityValidationResult preloadValidationResult = ValidateBeforeAssemblyLoad(assemblyBytes);
+                if (!preloadValidationResult.IsValid)
                 {
                     stopwatch.Stop();
                     return new CompiledAssemblyLoadResult(
                         false,
                         null,
-                        metadataValidationResult.Violations,
+                        preloadValidationResult.Violations,
                         stopwatch.Elapsed.TotalMilliseconds);
                 }
             }
 
             Assembly compiledAssembly = Assembly.Load(assemblyBytes);
-
-            if (securityLevel == DynamicCodeSecurityLevel.Restricted)
-            {
-                IlSecurityValidator validator = new IlSecurityValidator();
-                SecurityValidationResult ilValidationResult = validator.Validate(compiledAssembly);
-                if (!ilValidationResult.IsValid)
-                {
-                    stopwatch.Stop();
-                    return new CompiledAssemblyLoadResult(
-                        false,
-                        null,
-                        ilValidationResult.Violations,
-                        stopwatch.Elapsed.TotalMilliseconds);
-                }
-            }
 
             stopwatch.Stop();
             return new CompiledAssemblyLoadResult(
@@ -56,14 +41,75 @@ namespace io.github.hatayama.uLoopMCP
 
         private static SecurityValidationResult ValidateBeforeAssemblyLoad(byte[] assemblyBytes)
         {
+            SecurityValidationResult aggregatedResult = new SecurityValidationResult
+            {
+                IsValid = true,
+                Violations = new List<SecurityViolation>(),
+                CompilationErrors = new List<string>()
+            };
+
             IPreloadAssemblySecurityValidator registeredValidator;
             if (PreloadAssemblySecurityValidatorRegistry.TryGetValidator(out registeredValidator))
             {
-                return registeredValidator.Validate(assemblyBytes);
+                MergeValidationResult(aggregatedResult, registeredValidator.Validate(assemblyBytes));
+            }
+            else
+            {
+                SystemReflectionMetadataPreloadValidator fallbackValidator = new SystemReflectionMetadataPreloadValidator();
+                MergeValidationResult(aggregatedResult, fallbackValidator.Validate(assemblyBytes));
             }
 
-            SystemReflectionMetadataPreloadValidator fallbackValidator = new SystemReflectionMetadataPreloadValidator();
-            return fallbackValidator.Validate(assemblyBytes);
+            PreloadIlSecurityValidator ilValidator = new PreloadIlSecurityValidator();
+            MergeValidationResult(aggregatedResult, ilValidator.Validate(assemblyBytes));
+
+            aggregatedResult.IsValid = aggregatedResult.Violations.Count == 0 &&
+                                       aggregatedResult.CompilationErrors.Count == 0;
+            return aggregatedResult;
+        }
+
+        private static void MergeValidationResult(
+            SecurityValidationResult target,
+            SecurityValidationResult source)
+        {
+            if (source == null)
+            {
+                return;
+            }
+
+            HashSet<string> seenViolations = new HashSet<string>(System.StringComparer.Ordinal);
+            foreach (SecurityViolation violation in target.Violations)
+            {
+                seenViolations.Add(CreateViolationKey(violation));
+            }
+
+            if (source.Violations != null)
+            {
+                foreach (SecurityViolation violation in source.Violations)
+                {
+                    if (seenViolations.Add(CreateViolationKey(violation)))
+                    {
+                        target.Violations.Add(violation);
+                    }
+                }
+            }
+
+            if (source.CompilationErrors == null)
+            {
+                return;
+            }
+
+            foreach (string error in source.CompilationErrors)
+            {
+                if (!target.CompilationErrors.Contains(error))
+                {
+                    target.CompilationErrors.Add(error);
+                }
+            }
+        }
+
+        private static string CreateViolationKey(SecurityViolation violation)
+        {
+            return $"{violation.Location}|{violation.ApiName}|{violation.Message}";
         }
     }
 }

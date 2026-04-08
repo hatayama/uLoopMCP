@@ -25,6 +25,7 @@ The public contract must stay stable even when the internal compiler strategy ch
 ## Invariants
 
 - Security validation always runs in Unity after compilation and before execution.
+- In restricted mode, metadata validation and IL validation must both complete before `Assembly.Load`.
 - Tool entry points and use cases depend on runtime-facing facades, not compiler backend details.
 - Worker state is disposable. Domain reload or worker protocol failure must be handled by rebuilding state, not by preserving it.
 - The compile backend may change, but `ExecuteDynamicCodeResponse` shape and user-facing behavior must remain stable.

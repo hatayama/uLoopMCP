@@ -313,6 +313,70 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task CompileAsync_Restricted_WhenDangerousTypeTokenExists_ShouldReportPreloadIlViolation()
+        {
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = @"
+                    System.Type dangerousType = typeof(System.IO.FileInfo);
+                    return dangerousType.Name;
+                ",
+                ClassName = "PreloadIlViolationCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.IsFalse(result.Success, "Restricted mode should reject dangerous type tokens before load");
+            Assert.IsTrue(result.HasSecurityViolations, "Dangerous type tokens should surface as security violations");
+            Assert.That(
+                result.SecurityViolations.Exists(violation =>
+                    violation.Location == "il" &&
+                    violation.ApiName == "System.IO.FileInfo"),
+                Is.True,
+                "The preload IL validator should report the dangerous type token before Assembly.Load");
+        }
+
+        [Test]
+        public async Task PreloadIlValidator_WhenDangerousMethodReferenceExists_ShouldReportViolation()
+        {
+            byte[] assemblyBytes = await BuildAssemblyBytesAsync(
+                @"
+                    System.Diagnostics.Process.Start(""ls"");
+                    return null;
+                ",
+                "PreloadIlDangerousMethodReferenceCommand");
+
+            PreloadIlSecurityValidator validator = new PreloadIlSecurityValidator();
+
+            SecurityValidationResult result = validator.Validate(assemblyBytes);
+
+            Assert.IsFalse(result.IsValid, "Dangerous IL method references should fail before Assembly.Load");
+            Assert.That(
+                result.Violations.Exists(violation =>
+                    violation.Location == "il" &&
+                    violation.ApiName == "System.Diagnostics.Process.Start"),
+                Is.True,
+                "The preload IL validator should identify dangerous method references from IL tokens");
+        }
+
+        [Test]
+        public async Task PreloadIlValidator_WhenAssemblyIsSafe_ShouldRemainValid()
+        {
+            byte[] assemblyBytes = await BuildAssemblyBytesAsync(
+                "return 42;",
+                "PreloadIlSafeAssemblyCommand");
+
+            PreloadIlSecurityValidator validator = new PreloadIlSecurityValidator();
+
+            SecurityValidationResult result = validator.Validate(assemblyBytes);
+
+            Assert.IsTrue(result.IsValid, "Safe assemblies should not fail preload IL validation");
+            Assert.That(result.Violations, Is.Empty);
+        }
+
+        [Test]
         public async Task RequestAutoPrewarmAsync_WhenCalledRepeatedly_ShouldReuseSameTask()
         {
             Task firstTask = DynamicCodeServices.PrewarmDynamicCodeUseCase.RequestAsync();
@@ -320,6 +384,25 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.AreSame(firstTask, secondTask);
             await firstTask;
+        }
+
+        private static async Task<byte[]> BuildAssemblyBytesAsync(string code, string className)
+        {
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = code,
+                ClassName = className,
+                Namespace = "TestNamespace"
+            };
+
+            DynamicCompilationPlan plan = DynamicCodeServices.CompilationPlanner.CreatePlan(request);
+            CompiledAssemblyBuildResult buildResult = await DynamicCodeServices.AssemblyBuilder.BuildAsync(
+                plan,
+                CancellationToken.None);
+
+            Assert.That(buildResult.Diagnostics.Errors, Is.Empty, "The helper assembly should compile cleanly for validator tests");
+            Assert.That(buildResult.AssemblyBytes, Is.Not.Null);
+            return buildResult.AssemblyBytes;
         }
 
         private sealed class RejectingPreloadAssemblySecurityValidator : IPreloadAssemblySecurityValidator
