@@ -50,10 +50,16 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             markBuildStarted();
-            CompilerMessage[] messages = await AwaitBuildCompletionAsync(taskCompletionSource.Task, ct).ConfigureAwait(false);
-            markBuildFinished();
-            ct.ThrowIfCancellationRequested();
-            return messages;
+            try
+            {
+                CompilerMessage[] messages = await AwaitBuildCompletionAsync(taskCompletionSource.Task, ct).ConfigureAwait(false);
+                ct.ThrowIfCancellationRequested();
+                return messages;
+            }
+            finally
+            {
+                markBuildFinished();
+            }
         }
 
         internal static async Task<CompilerMessage[]> AwaitBuildCompletionAsync(

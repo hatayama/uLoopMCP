@@ -29,7 +29,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task RequestAsync_WhenFastPathIsUnavailable_ShouldSkipExecution()
         {
-            FakePrewarmRuntime runtime = new FakePrewarmRuntime(false);
+            FakePrewarmRuntime runtime = new FakePrewarmRuntime(false, System.Array.Empty<ExecutionResult>());
             PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
 
             await useCase.RequestAsync();
@@ -65,7 +65,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         {
             FakePrewarmRuntime runtime = new FakePrewarmRuntime(
                 true,
-                false);
+                false,
+                System.Array.Empty<ExecutionResult>());
             PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
 
             await useCase.RequestAsync();
@@ -76,22 +77,25 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task RequestAsync_WhenCalledTwiceBeforeCompletion_ShouldReturnSameTask()
         {
+            TaskCompletionSource<ExecutionResult> completionSource =
+                new TaskCompletionSource<ExecutionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
             FakePrewarmRuntime runtime = new FakePrewarmRuntime(
                 true,
-                new ExecutionResult { Success = true });
+                new[] { completionSource.Task });
             PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
 
             Task firstTask = useCase.RequestAsync();
             Task secondTask = useCase.RequestAsync();
 
             Assert.That(secondTask, Is.SameAs(firstTask));
+            completionSource.SetResult(new ExecutionResult { Success = true });
             await firstTask;
             Assert.That(runtime.Requests, Has.Count.EqualTo(1));
         }
 
         private sealed class FakePrewarmRuntime : IDynamicCodeExecutionRuntime
         {
-            private readonly Queue<ExecutionResult> _results;
+            private readonly Queue<Task<ExecutionResult>> _resultTasks;
             private readonly bool _supportsAutoPrewarm;
             private readonly bool _idle;
 
@@ -106,10 +110,28 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 bool supportsAutoPrewarm,
                 bool idle,
                 params ExecutionResult[] results)
+                : this(
+                    supportsAutoPrewarm,
+                    idle,
+                    WrapResults(results))
+            {
+            }
+
+            public FakePrewarmRuntime(
+                bool supportsAutoPrewarm,
+                params Task<ExecutionResult>[] resultTasks)
+                : this(supportsAutoPrewarm, true, resultTasks)
+            {
+            }
+
+            public FakePrewarmRuntime(
+                bool supportsAutoPrewarm,
+                bool idle,
+                params Task<ExecutionResult>[] resultTasks)
             {
                 _supportsAutoPrewarm = supportsAutoPrewarm;
                 _idle = idle;
-                _results = new Queue<ExecutionResult>(results ?? new ExecutionResult[0]);
+                _resultTasks = new Queue<Task<ExecutionResult>>(resultTasks ?? new Task<ExecutionResult>[0]);
             }
 
             public List<DynamicCodeExecutionRequest> Requests { get; } = new List<DynamicCodeExecutionRequest>();
@@ -132,16 +154,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                     SecurityLevel = request.SecurityLevel
                 });
 
-                return Task.FromResult(_results.Dequeue());
+                return _resultTasks.Dequeue();
             }
 
-            public Task<(bool Entered, ExecutionResult Result)> TryExecuteIfIdleAsync(
+            public async Task<(bool Entered, ExecutionResult Result)> TryExecuteIfIdleAsync(
                 DynamicCodeExecutionRequest request,
                 CancellationToken cancellationToken = default)
             {
                 if (!_idle)
                 {
-                    return Task.FromResult<(bool, ExecutionResult)>((false, null));
+                    return (false, null);
                 }
 
                 Requests.Add(new DynamicCodeExecutionRequest
@@ -153,7 +175,24 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                     SecurityLevel = request.SecurityLevel
                 });
 
-                return Task.FromResult<(bool, ExecutionResult)>((true, _results.Dequeue()));
+                ExecutionResult result = await _resultTasks.Dequeue();
+                return (true, result);
+            }
+
+            private static Task<ExecutionResult>[] WrapResults(ExecutionResult[] results)
+            {
+                if (results == null)
+                {
+                    return new Task<ExecutionResult>[0];
+                }
+
+                Task<ExecutionResult>[] wrappedResults = new Task<ExecutionResult>[results.Length];
+                for (int index = 0; index < results.Length; index++)
+                {
+                    wrappedResults[index] = Task.FromResult(results[index]);
+                }
+
+                return wrappedResults;
             }
         }
     }

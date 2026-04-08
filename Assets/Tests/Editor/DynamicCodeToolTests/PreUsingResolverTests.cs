@@ -146,6 +146,15 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.That(result, Does.Contain("UnityEngine.Object"));
         }
+
+        [Test]
+        public void FindAssemblyLocationsForIdentifier_WhenQualifiedPrefixIsUnknown_ShouldFallbackToTerminalTypeName()
+        {
+            List<string> result = AssemblyTypeIndex.Instance.FindAssemblyLocationsForIdentifier(
+                "Made.Up.StringBuilder");
+
+            Assert.That(result, Is.Not.Empty);
+        }
     }
 
     [TestFixture]

@@ -198,7 +198,8 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (CompilerMessage compilerMessage in compilerMessages)
             {
-                if (!string.IsNullOrWhiteSpace(compilerMessage.file))
+                if (compilerMessage.type == CompilerMessageType.Error &&
+                    !string.IsNullOrWhiteSpace(compilerMessage.file))
                 {
                     return false;
                 }

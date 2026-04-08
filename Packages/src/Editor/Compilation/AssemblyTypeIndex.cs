@@ -122,6 +122,10 @@ namespace io.github.hatayama.uLoopMCP
                 return new List<string>();
             }
 
+            int terminalSeparatorIndex = identifier.LastIndexOf('.');
+            string terminalTypeName = terminalSeparatorIndex >= 0
+                ? identifier.Substring(terminalSeparatorIndex + 1)
+                : identifier;
             string currentIdentifier = identifier;
             while (true)
             {
@@ -144,7 +148,7 @@ namespace io.github.hatayama.uLoopMCP
                 currentIdentifier = currentIdentifier.Substring(0, separatorIndex);
             }
 
-            if (_typeToAssemblyLocations.TryGetValue(currentIdentifier, out HashSet<string> typeAssemblyLocations))
+            if (_typeToAssemblyLocations.TryGetValue(terminalTypeName, out HashSet<string> typeAssemblyLocations))
             {
                 return new List<string>(typeAssemblyLocations);
             }

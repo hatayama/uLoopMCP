@@ -206,6 +206,32 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task CompileAsync_WhenReturningCachedAssembly_ShouldPreserveCompilationMetadata()
+        {
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = @"
+                    StringBuilder builder = new StringBuilder();
+                    builder.Append(""ok"");
+                    return builder.ToString();
+                ",
+                ClassName = "CachedMetadataCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult firstResult = await compiler.CompileAsync(request, CancellationToken.None);
+            CompilationResult secondResult = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.That(firstResult.Success, Is.True);
+            Assert.That(secondResult.Success, Is.True);
+            Assert.That(secondResult.UpdatedCode, Is.EqualTo(firstResult.UpdatedCode));
+            Assert.That(secondResult.AutoInjectedNamespaces, Is.EquivalentTo(firstResult.AutoInjectedNamespaces));
+            Assert.That(secondResult.AutoInjectedNamespaces, Does.Contain("System.Text"));
+            Assert.That(secondResult.Timings, Is.EquivalentTo(firstResult.Timings));
+        }
+
+        [Test]
         public async Task CompileAsync_WhenCustomAsmdefTypeIsReferenced_ShouldAddAssemblyReferenceAndSucceed()
         {
             DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
@@ -374,16 +400,6 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.IsTrue(result.IsValid, "Safe assemblies should not fail preload IL validation");
             Assert.That(result.Violations, Is.Empty);
-        }
-
-        [Test]
-        public async Task RequestAutoPrewarmAsync_WhenCalledRepeatedly_ShouldReuseSameTask()
-        {
-            Task firstTask = DynamicCodeServices.PrewarmDynamicCodeUseCase.RequestAsync();
-            Task secondTask = DynamicCodeServices.PrewarmDynamicCodeUseCase.RequestAsync();
-
-            Assert.AreSame(firstTask, secondTask);
-            await firstTask;
         }
 
         private static async Task<byte[]> BuildAssemblyBytesAsync(string code, string className)
