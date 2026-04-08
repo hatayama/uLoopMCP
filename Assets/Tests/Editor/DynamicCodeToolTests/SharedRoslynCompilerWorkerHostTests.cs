@@ -124,10 +124,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 out int buildCount,
                 out string dllPath);
 
-            string workerDirectoryPath = Path.Combine(
-                Path.GetTempPath(),
-                "uLoopMCPCompilation",
-                $"RoslynWorker-{Process.GetCurrentProcess().Id}");
+            string workerDirectoryPath = GetWorkerDirectoryPath();
 
             Assert.That(messages, Is.Not.Null);
             Assert.That(File.Exists(dllPath), Is.True);
@@ -135,6 +132,26 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(buildCount, Is.EqualTo(1));
             Assert.That(buildStarted, Is.True);
             Assert.That(buildFinished, Is.True);
+        }
+
+        [Test]
+        public void ShutdownForTests_WhenWorkerDirectoryExists_ShouldDeleteWorkerDirectory()
+        {
+            CompilerMessage[] messages = CompileWithWorker(
+                "public static class WorkerDirectoryCleanupTest { public static int Execute() { return 11; } }",
+                out _,
+                out _,
+                out _,
+                out _);
+
+            string workerDirectoryPath = GetWorkerDirectoryPath();
+
+            Assert.That(messages, Is.Not.Null);
+            Assert.That(Directory.Exists(workerDirectoryPath), Is.True);
+
+            SharedRoslynCompilerWorkerHost.ShutdownForTests();
+
+            Assert.That(Directory.Exists(workerDirectoryPath), Is.False);
         }
 
         private CompilerMessage[] CompileWithWorker(
@@ -179,6 +196,14 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             buildStarted = localBuildStarted;
             buildFinished = localBuildFinished;
             return messages;
+        }
+
+        private static string GetWorkerDirectoryPath()
+        {
+            return Path.Combine(
+                Path.GetTempPath(),
+                "uLoopMCPCompilation",
+                $"RoslynWorker-{Process.GetCurrentProcess().Id}");
         }
     }
 }

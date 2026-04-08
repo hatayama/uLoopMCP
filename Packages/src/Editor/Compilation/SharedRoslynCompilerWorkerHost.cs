@@ -23,6 +23,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static readonly object SharedCompilerWorkerLock = new();
         private static Process _sharedCompilerWorkerProcess;
+        private static string _workerDirectoryPath;
 
         private sealed class WorkerAttemptResult
         {
@@ -429,16 +430,22 @@ namespace io.github.hatayama.uLoopMCP
 
         private static WorkerPaths CreateWorkerPaths()
         {
-            string workerDirectoryPath = Path.Combine(
-                Path.GetTempPath(),
-                "uLoopMCPCompilation",
-                $"RoslynWorker-{Process.GetCurrentProcess().Id}");
+            string workerDirectoryPath = GetWorkerDirectoryPath();
             Directory.CreateDirectory(workerDirectoryPath);
+            _workerDirectoryPath = workerDirectoryPath;
             return new WorkerPaths(
                 workerDirectoryPath,
                 Path.Combine(workerDirectoryPath, RoslynWorkerSourceFileName),
                 Path.Combine(workerDirectoryPath, RoslynWorkerAssemblyFileName),
                 Path.Combine(workerDirectoryPath, RoslynWorkerCompileResponseFileName));
+        }
+
+        private static string GetWorkerDirectoryPath()
+        {
+            return Path.Combine(
+                Path.GetTempPath(),
+                "uLoopMCPCompilation",
+                $"RoslynWorker-{Process.GetCurrentProcess().Id}");
         }
 
         private static void SynchronizeWorkerSource(WorkerPaths workerPaths)
@@ -643,6 +650,7 @@ namespace io.github.hatayama.uLoopMCP
             lock (SharedCompilerWorkerLock)
             {
                 ShutdownWorkerProcessLocked();
+                CleanupWorkerDirectoryLocked();
             }
         }
 
@@ -668,6 +676,19 @@ namespace io.github.hatayama.uLoopMCP
 
             _sharedCompilerWorkerProcess.Dispose();
             _sharedCompilerWorkerProcess = null;
+        }
+
+        private static void CleanupWorkerDirectoryLocked()
+        {
+            string workerDirectoryPath = _workerDirectoryPath ?? GetWorkerDirectoryPath();
+            if (!Directory.Exists(workerDirectoryPath))
+            {
+                _workerDirectoryPath = null;
+                return;
+            }
+
+            Directory.Delete(workerDirectoryPath, true);
+            _workerDirectoryPath = null;
         }
 
         private static object AppendAttempt(object failureContext, int attempt)
