@@ -131,7 +131,10 @@ namespace io.github.hatayama.uLoopMCP
                     assemblyLoadResult.AssemblyLoadMilliseconds)
             };
 
-            _cacheManager.CacheResultIfSuccessful(result, plan.NormalizedRequest);
+            if (buildResult.ShouldCacheResult)
+            {
+                _cacheManager.CacheResultIfSuccessful(result, plan.NormalizedRequest);
+            }
             return result;
         }
 

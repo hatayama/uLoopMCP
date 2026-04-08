@@ -12,10 +12,38 @@ namespace io.github.hatayama.uLoopMCP
     internal sealed class CompiledAssemblyBuilder : ICompiledAssemblyBuilder
     {
         private static int _compileCounter;
+        private static readonly string[] LiteralHoistingFallbackErrorCodes = { "CS0133", "CS0150", "CS0182", "CS1736" };
 
         private readonly ExternalCompilerPathResolutionService _externalCompilerPathResolver;
         private readonly DynamicReferenceSetBuilderService _referenceSetBuilder;
         private readonly DynamicCompilationBackend _compilationBackend;
+
+        private sealed class BuildAttemptResult
+        {
+            public string UpdatedSource { get; }
+
+            public CompilerDiagnostics Diagnostics { get; }
+
+            public Dictionary<string, List<string>> AmbiguousTypeCandidates { get; }
+
+            public List<string> AutoInjectedNamespaces { get; }
+
+            public byte[] AssemblyBytes { get; }
+
+            public BuildAttemptResult(
+                string updatedSource,
+                CompilerDiagnostics diagnostics,
+                Dictionary<string, List<string>> ambiguousTypeCandidates,
+                List<string> autoInjectedNamespaces,
+                byte[] assemblyBytes)
+            {
+                UpdatedSource = updatedSource;
+                Diagnostics = diagnostics;
+                AmbiguousTypeCandidates = ambiguousTypeCandidates;
+                AutoInjectedNamespaces = autoInjectedNamespaces;
+                AssemblyBytes = assemblyBytes;
+            }
+        }
 
         public CompiledAssemblyBuilder(
             ExternalCompilerPathResolutionService externalCompilerPathResolver,
@@ -55,22 +83,6 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                string wrappedCode = plan.PreparedCode.PreparedSource;
-                bool isScriptMode = plan.PreparedCode.IsScriptMode;
-                string originalWrappedCode = wrappedCode;
-                bool preUsingAdded = false;
-                PreUsingResult preUsingResult = null;
-
-                Stopwatch initialReferenceResolutionStopwatch = Stopwatch.StartNew();
-                List<string> initialReferences = BuildInitialReferences(
-                    plan,
-                    externalCompilerPaths,
-                    ref wrappedCode,
-                    ref preUsingAdded,
-                    ref preUsingResult);
-                initialReferenceResolutionStopwatch.Stop();
-                referenceResolutionMilliseconds += initialReferenceResolutionStopwatch.Elapsed.TotalMilliseconds;
-
                 async Task<CompilerMessage[]> BuildFunc(
                     string resolvedSourcePath,
                     string resolvedDllPath,
@@ -92,69 +104,111 @@ namespace io.github.hatayama.uLoopMCP
                     return compilerMessages;
                 }
 
-                AutoUsingResolver resolver = new AutoUsingResolver();
-                AutoUsingResult autoResult = await resolver.ResolveAsync(
-                    sourcePath,
-                    dllPath,
-                    wrappedCode,
-                    initialReferences,
-                    BuildFunc,
-                    ct);
-                referenceResolutionMilliseconds += autoResult.ReferenceResolutionMilliseconds;
+                BuildAttemptResult attemptResult = await BuildPreparedCodeAsync(plan.PreparedCode, ct);
+                bool shouldCacheResult = true;
 
-                wrappedCode = autoResult.UpdatedSource;
-                CompilerDiagnostics diagnostics = CompilerDiagnostics.FromMessages(autoResult.Messages);
-
-                bool preUsingRolledBack = false;
-                if (diagnostics.Errors.Count > 0 && preUsingAdded && diagnostics.HasAmbiguityErrors)
+                if (ShouldRetryWithoutLiteralHoisting(plan.PreparedCode, attemptResult.Diagnostics))
                 {
-                    Stopwatch rollbackReferenceResolutionStopwatch = Stopwatch.StartNew();
-                    List<string> rollbackReferences = _referenceSetBuilder.BuildReferenceSet(
-                        plan.OriginalRequest.AdditionalReferences,
-                        null,
-                        externalCompilerPaths);
-                    rollbackReferenceResolutionStopwatch.Stop();
-                    referenceResolutionMilliseconds += rollbackReferenceResolutionStopwatch.Elapsed.TotalMilliseconds;
-
-                    AutoUsingResult rollbackResult = await resolver.ResolveAsync(
-                        sourcePath,
-                        dllPath,
-                        originalWrappedCode,
-                        rollbackReferences,
-                        BuildFunc,
-                        ct);
-                    referenceResolutionMilliseconds += rollbackResult.ReferenceResolutionMilliseconds;
-
-                    CompilerDiagnostics rollbackDiagnostics = CompilerDiagnostics.FromMessages(rollbackResult.Messages);
-                    if (rollbackDiagnostics.Errors.Count < diagnostics.Errors.Count)
-                    {
-                        wrappedCode = rollbackResult.UpdatedSource;
-                        diagnostics = rollbackDiagnostics;
-                        autoResult = rollbackResult;
-                        preUsingRolledBack = true;
-                    }
-                }
-
-                List<string> autoInjectedNamespaces = MergeAutoInjectedNamespaces(
-                    preUsingRolledBack,
-                    preUsingResult,
-                    autoResult);
-
-                byte[] assemblyBytes = null;
-                if (diagnostics.Errors.Count == 0)
-                {
-                    assemblyBytes = File.ReadAllBytes(dllPath);
+                    PreparedDynamicCode fallbackPreparedCode = DynamicCodeSourcePreparer.PrepareWithoutLiteralHoisting(
+                        plan.OriginalRequest.Code,
+                        plan.NamespaceName,
+                        plan.ClassName);
+                    attemptResult = await BuildPreparedCodeAsync(fallbackPreparedCode, ct);
+                    shouldCacheResult = false;
                 }
 
                 return new CompiledAssemblyBuildResult(
-                    wrappedCode,
-                    diagnostics,
-                    autoResult.AmbiguousTypeCandidates,
-                    autoInjectedNamespaces,
-                    assemblyBytes,
+                    attemptResult.UpdatedSource,
+                    attemptResult.Diagnostics,
+                    attemptResult.AmbiguousTypeCandidates,
+                    attemptResult.AutoInjectedNamespaces,
+                    attemptResult.AssemblyBytes,
                     referenceResolutionMilliseconds,
                     buildMilliseconds,
-                    buildCount);
+                    buildCount,
+                    shouldCacheResult);
+
+                async Task<BuildAttemptResult> BuildPreparedCodeAsync(
+                    PreparedDynamicCode preparedCode,
+                    CancellationToken cancellationToken)
+                {
+                    string wrappedCode = preparedCode.PreparedSource;
+                    string originalWrappedCode = wrappedCode;
+                    bool preUsingAdded = false;
+                    PreUsingResult preUsingResult = null;
+
+                    Stopwatch initialReferenceResolutionStopwatch = Stopwatch.StartNew();
+                    List<string> initialReferences = BuildInitialReferences(
+                        plan,
+                        externalCompilerPaths,
+                        preparedCode,
+                        ref wrappedCode,
+                        ref preUsingAdded,
+                        ref preUsingResult);
+                    initialReferenceResolutionStopwatch.Stop();
+                    referenceResolutionMilliseconds += initialReferenceResolutionStopwatch.Elapsed.TotalMilliseconds;
+
+                    AutoUsingResolver resolver = new AutoUsingResolver();
+                    AutoUsingResult autoResult = await resolver.ResolveAsync(
+                        sourcePath,
+                        dllPath,
+                        wrappedCode,
+                        initialReferences,
+                        BuildFunc,
+                        cancellationToken);
+                    referenceResolutionMilliseconds += autoResult.ReferenceResolutionMilliseconds;
+
+                    wrappedCode = autoResult.UpdatedSource;
+                    CompilerDiagnostics diagnostics = CompilerDiagnostics.FromMessages(autoResult.Messages);
+
+                    bool preUsingRolledBack = false;
+                    if (diagnostics.Errors.Count > 0 && preUsingAdded && diagnostics.HasAmbiguityErrors)
+                    {
+                        Stopwatch rollbackReferenceResolutionStopwatch = Stopwatch.StartNew();
+                        List<string> rollbackReferences = _referenceSetBuilder.BuildReferenceSet(
+                            plan.OriginalRequest.AdditionalReferences,
+                            null,
+                            externalCompilerPaths);
+                        rollbackReferenceResolutionStopwatch.Stop();
+                        referenceResolutionMilliseconds += rollbackReferenceResolutionStopwatch.Elapsed.TotalMilliseconds;
+
+                        AutoUsingResult rollbackResult = await resolver.ResolveAsync(
+                            sourcePath,
+                            dllPath,
+                            originalWrappedCode,
+                            rollbackReferences,
+                            BuildFunc,
+                            cancellationToken);
+                        referenceResolutionMilliseconds += rollbackResult.ReferenceResolutionMilliseconds;
+
+                        CompilerDiagnostics rollbackDiagnostics = CompilerDiagnostics.FromMessages(rollbackResult.Messages);
+                        if (rollbackDiagnostics.Errors.Count < diagnostics.Errors.Count)
+                        {
+                            wrappedCode = rollbackResult.UpdatedSource;
+                            diagnostics = rollbackDiagnostics;
+                            autoResult = rollbackResult;
+                            preUsingRolledBack = true;
+                        }
+                    }
+
+                    List<string> autoInjectedNamespaces = MergeAutoInjectedNamespaces(
+                        preUsingRolledBack,
+                        preUsingResult,
+                        autoResult);
+
+                    byte[] assemblyBytes = null;
+                    if (diagnostics.Errors.Count == 0)
+                    {
+                        assemblyBytes = File.ReadAllBytes(dllPath);
+                    }
+
+                    return new BuildAttemptResult(
+                        wrappedCode,
+                        diagnostics,
+                        autoResult.AmbiguousTypeCandidates,
+                        autoInjectedNamespaces,
+                        assemblyBytes);
+                }
             }
             finally
             {
@@ -230,11 +284,12 @@ namespace io.github.hatayama.uLoopMCP
         private List<string> BuildInitialReferences(
             DynamicCompilationPlan plan,
             ExternalCompilerPaths externalCompilerPaths,
+            PreparedDynamicCode preparedCode,
             ref string wrappedCode,
             ref bool preUsingAdded,
             ref PreUsingResult preUsingResult)
         {
-            if (!plan.PreparedCode.IsScriptMode)
+            if (!preparedCode.IsScriptMode)
             {
                 return _referenceSetBuilder.BuildReferenceSet(
                     plan.OriginalRequest.AdditionalReferences,
@@ -249,6 +304,34 @@ namespace io.github.hatayama.uLoopMCP
                 plan.OriginalRequest.AdditionalReferences,
                 preUsingResult.AddedAssemblyReferences,
                 externalCompilerPaths);
+        }
+
+        private static bool ShouldRetryWithoutLiteralHoisting(
+            PreparedDynamicCode preparedCode,
+            CompilerDiagnostics diagnostics)
+        {
+            if (preparedCode == null || diagnostics == null)
+            {
+                return false;
+            }
+
+            if (!preparedCode.IsScriptMode || preparedCode.HoistedLiteralBindings.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (CompilationError error in diagnostics.Errors)
+            {
+                foreach (string errorCode in LiteralHoistingFallbackErrorCodes)
+                {
+                    if (error.ErrorCode == errorCode)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private static List<string> MergeAutoInjectedNamespaces(

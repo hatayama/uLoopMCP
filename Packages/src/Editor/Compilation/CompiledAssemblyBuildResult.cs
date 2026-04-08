@@ -20,6 +20,8 @@ namespace io.github.hatayama.uLoopMCP
 
         public int BuildCount { get; }
 
+        public bool ShouldCacheResult { get; }
+
         public CompiledAssemblyBuildResult(
             string updatedSource,
             CompilerDiagnostics diagnostics,
@@ -28,7 +30,8 @@ namespace io.github.hatayama.uLoopMCP
             byte[] assemblyBytes,
             double referenceResolutionMilliseconds,
             double buildMilliseconds,
-            int buildCount)
+            int buildCount,
+            bool shouldCacheResult)
         {
             UpdatedSource = updatedSource;
             Diagnostics = diagnostics;
@@ -38,6 +41,7 @@ namespace io.github.hatayama.uLoopMCP
             ReferenceResolutionMilliseconds = referenceResolutionMilliseconds;
             BuildMilliseconds = buildMilliseconds;
             BuildCount = buildCount;
+            ShouldCacheResult = shouldCacheResult;
         }
     }
 }

@@ -178,6 +178,115 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task CompileAsync_WhenConstLiteralRequiresCompileTimeConstant_ShouldFallbackToNonHoistedSource()
+        {
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = @"
+                    const string message = ""hello"";
+                    return message;
+                ",
+                ClassName = "ConstLiteralFallbackCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.That(result.Success, Is.True, result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Const literal should compile");
+            Assert.That(result.UpdatedCode, Does.Contain("const string message = \"hello\";"));
+            Assert.That(result.UpdatedCode, Does.Not.Contain("__uloop_literal_0"));
+        }
+
+        [Test]
+        public async Task CompileAsync_WhenSwitchCaseLiteralRequiresCompileTimeConstant_ShouldFallbackToNonHoistedSource()
+        {
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = @"
+                    int value = 2;
+                    switch (value)
+                    {
+                        case 1:
+                            return ""one"";
+                        case 2:
+                            return ""two"";
+                    }
+
+                    return ""other"";
+                ",
+                ClassName = "SwitchLiteralFallbackCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.That(result.Success, Is.True, result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Switch case literals should compile");
+            Assert.That(result.UpdatedCode, Does.Contain("case 1:"));
+            Assert.That(result.UpdatedCode, Does.Contain("case 2:"));
+            Assert.That(result.UpdatedCode, Does.Not.Contain("__uloop_literal_0"));
+        }
+
+        [Test]
+        public async Task CompileAsync_WhenAttributeArgumentLiteralRequiresCompileTimeConstant_ShouldFallbackToNonHoistedSource()
+        {
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest request = new CompilationRequest
+            {
+                Code = @"
+                    [System.Obsolete(""legacy"")]
+                    void Annotated()
+                    {
+                    }
+
+                    return null;
+                ",
+                ClassName = "AttributeLiteralFallbackCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult result = await compiler.CompileAsync(request, CancellationToken.None);
+
+            Assert.That(result.Success, Is.True, result.Errors != null && result.Errors.Count > 0 ? result.Errors[0].Message : "Attribute argument literals should compile");
+            Assert.That(result.UpdatedCode, Does.Contain("[System.Obsolete(\"legacy\")]"));
+            Assert.That(result.UpdatedCode, Does.Not.Contain("__uloop_literal_0"));
+        }
+
+        [Test]
+        public async Task CompileAsync_WhenLiteralHoistingFallbackIsUsed_ShouldNotReuseCachedAssembly()
+        {
+            DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);
+            CompilationRequest firstRequest = new CompilationRequest
+            {
+                Code = @"
+                    const string message = ""hello"";
+                    return message;
+                ",
+                ClassName = "ConstLiteralCacheIsolationCommand",
+                Namespace = "TestNamespace"
+            };
+            CompilationRequest secondRequest = new CompilationRequest
+            {
+                Code = @"
+                    const string message = ""world"";
+                    return message;
+                ",
+                ClassName = "ConstLiteralCacheIsolationCommand",
+                Namespace = "TestNamespace"
+            };
+
+            CompilationResult firstResult = await compiler.CompileAsync(firstRequest, CancellationToken.None);
+            CompilationResult secondResult = await compiler.CompileAsync(secondRequest, CancellationToken.None);
+
+            Assert.That(firstResult.Success, Is.True);
+            Assert.That(secondResult.Success, Is.True);
+            Assert.That(firstResult.UpdatedCode, Does.Contain("const string message = \"hello\";"));
+            Assert.That(secondResult.UpdatedCode, Does.Contain("const string message = \"world\";"));
+            Assert.That(firstResult.CompiledAssembly, Is.Not.SameAs(secondResult.CompiledAssembly));
+        }
+
+        [Test]
         public async Task CompileAsync_WhenReturningCachedAssembly_ShouldReturnDefensiveResultCopies()
         {
             DynamicCodeCompiler compiler = new DynamicCodeCompiler(DynamicCodeSecurityLevel.Restricted);

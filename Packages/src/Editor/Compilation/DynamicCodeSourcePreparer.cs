@@ -8,10 +8,27 @@ namespace io.github.hatayama.uLoopMCP
         private const string InterpolatedVerbatimStringMarker = "$@\"";
         private const string VerbatimInterpolatedStringMarker = "@$\"";
 
+        public static PreparedDynamicCode PrepareWithoutLiteralHoisting(
+            string source,
+            string namespaceName,
+            string className)
+        {
+            return Prepare(source, namespaceName, className, false);
+        }
+
         public static PreparedDynamicCode Prepare(
             string source,
             string namespaceName,
             string className)
+        {
+            return Prepare(source, namespaceName, className, true);
+        }
+
+        private static PreparedDynamicCode Prepare(
+            string source,
+            string namespaceName,
+            string className,
+            bool enableLiteralHoisting)
         {
             SourceShapeResult shape = SourceShaper.Analyze(source);
 
@@ -34,7 +51,7 @@ namespace io.github.hatayama.uLoopMCP
                     : body + "\nreturn null;";
             }
 
-            HoistedLiteralRewriteResult hoistedResult = ShouldSkipLiteralHoisting(body)
+            HoistedLiteralRewriteResult hoistedResult = !enableLiteralHoisting || ShouldSkipLiteralHoisting(body)
                 ? new HoistedLiteralRewriteResult(body, new List<HoistedLiteralBinding>(), new List<string>())
                 : DynamicCodeLiteralHoister.Rewrite(body);
             string preparedSource = WrapperTemplate.Build(

@@ -159,16 +159,13 @@ namespace io.github.hatayama.uLoopMCP
                         return OneShotCompileResult.Fallback();
                     }
 
-                    Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
-                    Task<string> stderrTask = process.StandardError.ReadToEndAsync();
-                    await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
-                    process.WaitForExit();
-                    ct.ThrowIfCancellationRequested();
+                    OneShotProcessCompletionResult completionResult = await WaitForOneShotCompilerAsync(process, ct)
+                        .ConfigureAwait(false);
 
                     CompilerMessage[] compilerMessages = ExternalCompilerMessageParser.Parse(
-                        stdoutTask.Result,
-                        stderrTask.Result,
-                        process.ExitCode);
+                        completionResult.StandardOutput,
+                        completionResult.StandardError,
+                        completionResult.ExitCode);
                     if (ShouldRetryWithAssemblyBuilder(process.ExitCode, compilerMessages))
                     {
                         return OneShotCompileResult.Fallback();
@@ -266,6 +263,75 @@ namespace io.github.hatayama.uLoopMCP
         private static string QuoteCommandLineArgument(string value)
         {
             return $"\"{value}\"";
+        }
+
+        internal sealed class OneShotProcessCompletionResult
+        {
+            public string StandardOutput { get; }
+
+            public string StandardError { get; }
+
+            public int ExitCode { get; }
+
+            public OneShotProcessCompletionResult(
+                string standardOutput,
+                string standardError,
+                int exitCode)
+            {
+                StandardOutput = standardOutput;
+                StandardError = standardError;
+                ExitCode = exitCode;
+            }
+        }
+
+        private static async Task<OneShotProcessCompletionResult> WaitForOneShotCompilerAsync(
+            Process process,
+            CancellationToken ct)
+        {
+            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+            Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+            Task waitForExitTask = Task.Run(() => process.WaitForExit());
+            return await AwaitOneShotProcessCompletionAsync(
+                stdoutTask,
+                stderrTask,
+                waitForExitTask,
+                () => process.ExitCode,
+                () => RequestCancellation(process),
+                ct).ConfigureAwait(false);
+        }
+
+        private static void RequestCancellation(Process process)
+        {
+            if (!process.HasExited)
+            {
+                process.Kill();
+            }
+        }
+
+        internal static async Task<OneShotProcessCompletionResult> AwaitOneShotProcessCompletionAsync(
+            Task<string> stdoutTask,
+            Task<string> stderrTask,
+            Task waitForExitTask,
+            Func<int> getExitCode,
+            Action requestCancellation,
+            CancellationToken ct)
+        {
+            Task completionTask = Task.WhenAll(stdoutTask, stderrTask, waitForExitTask);
+            Task cancellationTask = Task.Delay(Timeout.Infinite, ct);
+
+            Task finishedTask = await Task.WhenAny(completionTask, cancellationTask).ConfigureAwait(false);
+            if (!ReferenceEquals(finishedTask, completionTask))
+            {
+                requestCancellation();
+                await completionTask.ConfigureAwait(false);
+                ct.ThrowIfCancellationRequested();
+            }
+
+            await completionTask.ConfigureAwait(false);
+            return new OneShotProcessCompletionResult(
+                stdoutTask.Result,
+                stderrTask.Result,
+                getExitCode());
         }
     }
 }
