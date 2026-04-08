@@ -1,6 +1,6 @@
 {
   "name": "uloopmcp-server",
-  "version": "1.6.4",
+  "version": "1.7.0",
   "//version": "x-release-please-version",
   "description": "TypeScript MCP Server for Unity Editor integration",
   "private": true,

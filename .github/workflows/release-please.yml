@@ -98,6 +98,8 @@ jobs:
     with:
       ref: ${{ github.sha }}
       dry-run: false
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     permissions:
       contents: read
       id-token: write
