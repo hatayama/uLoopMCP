@@ -87,6 +87,12 @@ namespace io.github.hatayama.uLoopMCP
                 UpdateStatistics(executionResult, totalStopwatch.Elapsed);
                 return executionResult;
             }
+            catch (OperationCanceledException)
+            {
+                ExecutionResult cancelledResult = CreateCancelledResult(totalStopwatch.Elapsed);
+                UpdateStatistics(cancelledResult, totalStopwatch.Elapsed);
+                return cancelledResult;
+            }
             catch (Exception ex)
             {
                 ExecutionResult failureResult = CreateUnexpectedErrorResult(ex, totalStopwatch.Elapsed);
@@ -188,7 +194,19 @@ namespace io.github.hatayama.uLoopMCP
                 ExecutionTime = executionTime,
                 Logs = new List<string> { "Code compiled successfully (no execution)" },
                 AutoInjectedNamespaces = compilationResult.AutoInjectedNamespaces,
-                Timings = new List<string>(compilationResult.Timings)
+                Timings = CloneTimings(compilationResult.Timings)
+            };
+        }
+
+        private static ExecutionResult CreateCancelledResult(TimeSpan executionTime)
+        {
+            return new ExecutionResult
+            {
+                Success = false,
+                ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
+                Logs = new List<string> { "Execution cancelled" },
+                ExecutionTime = executionTime,
+                Timings = new List<string>()
             };
         }
 
@@ -229,7 +247,7 @@ namespace io.github.hatayama.uLoopMCP
                 UpdatedCode = compilationResult.UpdatedCode,
                 AmbiguousTypeCandidates = compilationResult.AmbiguousTypeCandidates,
                 AutoInjectedNamespaces = compilationResult.AutoInjectedNamespaces,
-                Timings = new List<string>(compilationResult.Timings)
+                Timings = CloneTimings(compilationResult.Timings)
             };
         }
 
@@ -339,6 +357,11 @@ namespace io.github.hatayama.uLoopMCP
 
             mergedTimings.Add(executionEntry);
             return mergedTimings;
+        }
+
+        private static List<string> CloneTimings(List<string> timings)
+        {
+            return timings != null ? new List<string>(timings) : new List<string>();
         }
 
         private static void LogUnexpectedExecutionException(

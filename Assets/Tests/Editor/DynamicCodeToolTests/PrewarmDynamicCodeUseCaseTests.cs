@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,21 +10,23 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
     public class PrewarmDynamicCodeUseCaseTests
     {
         [Test]
-        public async Task RequestAsync_WhenSupportedAndWarmupSucceeds_ShouldExecuteOnce()
+        public async Task RequestAsync_WhenSupportedAndWarmupSucceeds_ShouldRetryOnNextRequest()
         {
             FakePrewarmRuntime runtime = new FakePrewarmRuntime(
                 true,
+                new ExecutionResult { Success = true },
                 new ExecutionResult { Success = true });
             PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
 
             await useCase.RequestAsync();
             await useCase.RequestAsync();
 
-            Assert.That(runtime.Requests, Has.Count.EqualTo(1));
+            Assert.That(runtime.Requests, Has.Count.EqualTo(2));
             Assert.That(runtime.Requests[0].Code, Is.EqualTo("return null;"));
             Assert.That(runtime.Requests[0].ClassName, Is.EqualTo("DynamicCodeAutoPrewarmCommand"));
             Assert.That(runtime.Requests[0].SecurityLevel, Is.EqualTo(DynamicCodeSecurityLevel.Restricted));
             Assert.That(runtime.Requests[0].CompileOnly, Is.False);
+            Assert.That(runtime.Requests[0].YieldToForegroundRequests, Is.True);
         }
 
         [Test]
@@ -93,6 +96,23 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(runtime.Requests, Has.Count.EqualTo(1));
         }
 
+        [Test]
+        public async Task RequestAsync_WhenLifecycleIsCancelled_ShouldStopBeforeExecution()
+        {
+            using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource.Cancel();
+            FakePrewarmRuntime runtime = new FakePrewarmRuntime(
+                true,
+                new ExecutionResult { Success = true });
+            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(
+                runtime,
+                cancellationTokenSource.Token);
+
+            await useCase.RequestAsync();
+
+            Assert.That(runtime.Requests, Is.Empty);
+        }
+
         private sealed class FakePrewarmRuntime : IDynamicCodeExecutionRuntime
         {
             private readonly Queue<Task<ExecutionResult>> _resultTasks;
@@ -151,7 +171,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                     ClassName = request.ClassName,
                     Parameters = request.Parameters,
                     CompileOnly = request.CompileOnly,
-                    SecurityLevel = request.SecurityLevel
+                    SecurityLevel = request.SecurityLevel,
+                    YieldToForegroundRequests = request.YieldToForegroundRequests
                 });
 
                 return _resultTasks.Dequeue();
@@ -172,7 +193,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                     ClassName = request.ClassName,
                     Parameters = request.Parameters,
                     CompileOnly = request.CompileOnly,
-                    SecurityLevel = request.SecurityLevel
+                    SecurityLevel = request.SecurityLevel,
+                    YieldToForegroundRequests = request.YieldToForegroundRequests
                 });
 
                 ExecutionResult result = await _resultTasks.Dequeue();

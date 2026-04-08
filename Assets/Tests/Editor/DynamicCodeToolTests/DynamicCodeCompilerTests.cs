@@ -530,6 +530,40 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task PreloadIlValidator_WhenDangerousGenericArgumentExists_ShouldReportViolation()
+        {
+            byte[] assemblyBytes = await BuildAssemblyBytesAsync(
+                @"
+                    using System.Collections.Generic;
+                    using System.IO;
+
+                    namespace TestNamespace
+                    {
+                        public sealed class DangerousGenericReturnTypeContainer
+                        {
+                            public List<FileInfo> Build()
+                            {
+                                return null;
+                            }
+                        }
+                    }
+                ",
+                "PreloadIlDangerousGenericReturnTypeCommand");
+
+            PreloadIlSecurityValidator validator = new PreloadIlSecurityValidator();
+
+            SecurityValidationResult result = validator.Validate(assemblyBytes);
+
+            Assert.IsFalse(result.IsValid, "Dangerous generic arguments should fail before Assembly.Load");
+            Assert.That(
+                result.Violations.Exists(violation =>
+                    violation.Location == "il" &&
+                    violation.ApiName == "System.IO.FileInfo"),
+                Is.True,
+                "The preload IL validator should identify dangerous generic type arguments from method signatures");
+        }
+
+        [Test]
         public async Task PreloadIlValidator_WhenAssemblyIsSafe_ShouldRemainValid()
         {
             byte[] assemblyBytes = await BuildAssemblyBytesAsync(

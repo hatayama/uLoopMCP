@@ -23,6 +23,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static readonly object SharedCompilerWorkerLock = new();
         private static Action<string> s_deleteWorkerDirectory = path => Directory.Delete(path, true);
+        private static Action<Process, string> s_sendCompileRequest = SendCompileRequestCore;
         private static Process _sharedCompilerWorkerProcess;
         private static string _workerDirectoryPath;
 
@@ -334,6 +335,14 @@ namespace io.github.hatayama.uLoopMCP
                 SendCompileRequest(requestFilePath);
                 return ReadWorkerResponse(requestFilePath, ct);
             }
+            catch (IOException ex)
+            {
+                return CreateRetryableWorkerCommunicationFailure(requestFilePath, ex);
+            }
+            catch (ObjectDisposedException ex)
+            {
+                return CreateRetryableWorkerCommunicationFailure(requestFilePath, ex);
+            }
             catch (OperationCanceledException)
             {
                 ShutdownWorkerProcessLocked();
@@ -348,8 +357,13 @@ namespace io.github.hatayama.uLoopMCP
         private static void SendCompileRequest(string requestFilePath)
         {
             string absoluteRequestFilePath = Path.GetFullPath(requestFilePath);
-            _sharedCompilerWorkerProcess.StandardInput.WriteLine(absoluteRequestFilePath);
-            _sharedCompilerWorkerProcess.StandardInput.Flush();
+            s_sendCompileRequest(_sharedCompilerWorkerProcess, absoluteRequestFilePath);
+        }
+
+        private static void SendCompileRequestCore(Process workerProcess, string requestFilePath)
+        {
+            workerProcess.StandardInput.WriteLine(requestFilePath);
+            workerProcess.StandardInput.Flush();
         }
 
         private static WorkerAttemptResult ReadWorkerResponse(
@@ -655,6 +669,15 @@ namespace io.github.hatayama.uLoopMCP
             return previous;
         }
 
+        internal static Action<Process, string> SwapCompileRequestSenderForTests(Action<Process, string> sender)
+        {
+            Debug.Assert(sender != null, "sender must not be null");
+
+            Action<Process, string> previous = s_sendCompileRequest;
+            s_sendCompileRequest = sender;
+            return previous;
+        }
+
         private static void Shutdown()
         {
             lock (SharedCompilerWorkerLock)
@@ -666,26 +689,44 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void ShutdownWorkerProcessLocked()
         {
-            if (_sharedCompilerWorkerProcess == null)
+            Process workerProcess = _sharedCompilerWorkerProcess;
+            _sharedCompilerWorkerProcess = null;
+            if (workerProcess == null)
             {
                 return;
             }
 
-            if (!_sharedCompilerWorkerProcess.HasExited)
+            try
             {
-                _sharedCompilerWorkerProcess.StandardInput.WriteLine(SharedCompilerWorkerQuitCommand);
-                _sharedCompilerWorkerProcess.StandardInput.Flush();
-                _sharedCompilerWorkerProcess.WaitForExit(500);
-            }
+                if (!workerProcess.HasExited)
+                {
+                    workerProcess.StandardInput.WriteLine(SharedCompilerWorkerQuitCommand);
+                    workerProcess.StandardInput.Flush();
+                    workerProcess.WaitForExit(500);
+                }
 
-            if (!_sharedCompilerWorkerProcess.HasExited)
+                if (!workerProcess.HasExited)
+                {
+                    workerProcess.Kill();
+                    workerProcess.WaitForExit(500);
+                }
+            }
+            catch (IOException ex)
             {
-                _sharedCompilerWorkerProcess.Kill();
-                _sharedCompilerWorkerProcess.WaitForExit(500);
+                LogWorkerShutdownFailure(ex);
             }
-
-            _sharedCompilerWorkerProcess.Dispose();
-            _sharedCompilerWorkerProcess = null;
+            catch (ObjectDisposedException ex)
+            {
+                LogWorkerShutdownFailure(ex);
+            }
+            catch (InvalidOperationException ex)
+            {
+                LogWorkerShutdownFailure(ex);
+            }
+            finally
+            {
+                workerProcess.Dispose();
+            }
         }
 
         private static void CleanupWorkerDirectoryLocked()
@@ -731,6 +772,34 @@ namespace io.github.hatayama.uLoopMCP
                 humanNote: "Shared Roslyn worker cleanup could not remove its temporary directory during shutdown.",
                 aiTodo: "Investigate file locks or permission issues if temporary worker directories continue to accumulate.");
             Debug.LogWarning($"[{McpConstants.PROJECT_NAME}] Failed to delete shared Roslyn worker directory '{workerDirectoryPath}': {ex.Message}");
+        }
+
+        private static WorkerAttemptResult CreateRetryableWorkerCommunicationFailure(
+            string requestFilePath,
+            Exception ex)
+        {
+            return WorkerAttemptResult.RetryableFailure(
+                "worker_communication_failed",
+                new
+                {
+                    request_file_path = requestFilePath,
+                    exception_type = ex.GetType().FullName,
+                    exception_message = ex.Message
+                });
+        }
+
+        private static void LogWorkerShutdownFailure(Exception ex)
+        {
+            VibeLogger.LogWarning(
+                "dynamic_code_shared_worker_shutdown_failed",
+                "execute-dynamic-code shared Roslyn worker shutdown observed a communication failure",
+                new
+                {
+                    exception_type = ex.GetType().FullName,
+                    exception_message = ex.Message
+                },
+                humanNote: "Shared Roslyn worker shutdown saw a broken communication channel while cleaning up a crashed worker.",
+                aiTodo: "Investigate repeated worker shutdown communication failures if shared compilation stops recovering cleanly.");
         }
 
         private static object AppendAttempt(object failureContext, int attempt)
@@ -785,10 +854,11 @@ namespace io.github.hatayama.uLoopMCP
                 + "    private const string ResultPrefix = \"" + SharedCompilerWorkerResultPrefix + "\";\n"
                 + "    private const string EndMarker = \"" + SharedCompilerWorkerEndMarker + "\";\n"
                 + "    private const string QuitCommand = \"" + SharedCompilerWorkerQuitCommand + "\";\n"
+                + "    private const string UnsafePrefix = \"unsafe:\";\n"
+                + "    private const string DefinePrefix = \"define:\";\n"
+                + "    private const string ReferencePrefix = \"ref:\";\n"
                 + "    private static readonly object SyncRoot = new object();\n"
                 + "    private static readonly Dictionary<string, CachedReference> Cache = new Dictionary<string, CachedReference>(StringComparer.OrdinalIgnoreCase);\n"
-                + "    private static readonly CSharpParseOptions ParseOptions = CSharpParseOptions.Default;\n"
-                + "    private static readonly CSharpCompilationOptions CompilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, optimizationLevel: OptimizationLevel.Release);\n"
                 + "\n"
                 + "    public static int Main()\n"
                 + "    {\n"
@@ -818,11 +888,13 @@ namespace io.github.hatayama.uLoopMCP
                 + "        string[] requestLines = File.ReadAllLines(requestPath);\n"
                 + "        string sourcePath = requestLines[0];\n"
                 + "        string dllPath = requestLines[1];\n"
+                + "        bool allowUnsafe = ParseAllowUnsafe(requestLines);\n"
+                + "        string[] defineSymbols = ParseDefineSymbols(requestLines);\n"
                 + "        string source = File.ReadAllText(sourcePath, Encoding.UTF8);\n"
                 + "        SourceText sourceText = SourceText.From(source, Encoding.UTF8);\n"
-                + "        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceText, ParseOptions, sourcePath);\n"
+                + "        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceText, CreateParseOptions(defineSymbols), sourcePath);\n"
                 + "        List<MetadataReference> references = BuildReferences(requestLines);\n"
-                + "        CSharpCompilation compilation = CSharpCompilation.Create(Path.GetFileNameWithoutExtension(dllPath), new[] { syntaxTree }, references, CompilationOptions);\n"
+                + "        CSharpCompilation compilation = CSharpCompilation.Create(Path.GetFileNameWithoutExtension(dllPath), new[] { syntaxTree }, references, CreateCompilationOptions(allowUnsafe));\n"
                 + "        using (FileStream peStream = new FileStream(dllPath, FileMode.Create, FileAccess.Write, FileShare.Read))\n"
                 + "        {\n"
                 + "            EmitResult emitResult = compilation.Emit(peStream);\n"
@@ -852,6 +924,59 @@ namespace io.github.hatayama.uLoopMCP
                 + "        }\n"
                 + "    }\n"
                 + "\n"
+                + "    private static CSharpParseOptions CreateParseOptions(string[] defineSymbols)\n"
+                + "    {\n"
+                + "        return defineSymbols == null || defineSymbols.Length == 0\n"
+                + "            ? CSharpParseOptions.Default\n"
+                + "            : CSharpParseOptions.Default.WithPreprocessorSymbols(defineSymbols);\n"
+                + "    }\n"
+                + "\n"
+                + "    private static CSharpCompilationOptions CreateCompilationOptions(bool allowUnsafe)\n"
+                + "    {\n"
+                + "        return new CSharpCompilationOptions(\n"
+                + "            OutputKind.DynamicallyLinkedLibrary,\n"
+                + "            optimizationLevel: OptimizationLevel.Release,\n"
+                + "            allowUnsafe: allowUnsafe);\n"
+                + "    }\n"
+                + "\n"
+                + "    private static bool ParseAllowUnsafe(string[] requestLines)\n"
+                + "    {\n"
+                + "        for (int i = 2; i < requestLines.Length; i++)\n"
+                + "        {\n"
+                + "            string line = requestLines[i];\n"
+                + "            if (!line.StartsWith(UnsafePrefix, StringComparison.Ordinal))\n"
+                + "            {\n"
+                + "                continue;\n"
+                + "            }\n"
+                + "\n"
+                + "            return string.Equals(line.Substring(UnsafePrefix.Length), \"1\", StringComparison.Ordinal);\n"
+                + "        }\n"
+                + "\n"
+                + "        return false;\n"
+                + "    }\n"
+                + "\n"
+                + "    private static string[] ParseDefineSymbols(string[] requestLines)\n"
+                + "    {\n"
+                + "        for (int i = 2; i < requestLines.Length; i++)\n"
+                + "        {\n"
+                + "            string line = requestLines[i];\n"
+                + "            if (!line.StartsWith(DefinePrefix, StringComparison.Ordinal))\n"
+                + "            {\n"
+                + "                continue;\n"
+                + "            }\n"
+                + "\n"
+                + "            string serializedSymbols = line.Substring(DefinePrefix.Length);\n"
+                + "            if (string.IsNullOrWhiteSpace(serializedSymbols))\n"
+                + "            {\n"
+                + "                return new string[0];\n"
+                + "            }\n"
+                + "\n"
+                + "            return serializedSymbols.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);\n"
+                + "        }\n"
+                + "\n"
+                + "        return new string[0];\n"
+                + "    }\n"
+                + "\n"
                 + "    private static List<MetadataReference> BuildReferences(string[] requestLines)\n"
                 + "    {\n"
                 + "        List<MetadataReference> references = new List<MetadataReference>(Math.Max(0, requestLines.Length - 2));\n"
@@ -860,6 +985,17 @@ namespace io.github.hatayama.uLoopMCP
                 + "            for (int i = 2; i < requestLines.Length; i++)\n"
                 + "            {\n"
                 + "                string referencePath = requestLines[i];\n"
+                + "                if (referencePath.StartsWith(UnsafePrefix, StringComparison.Ordinal)\n"
+                + "                    || referencePath.StartsWith(DefinePrefix, StringComparison.Ordinal))\n"
+                + "                {\n"
+                + "                    continue;\n"
+                + "                }\n"
+                + "\n"
+                + "                if (referencePath.StartsWith(ReferencePrefix, StringComparison.Ordinal))\n"
+                + "                {\n"
+                + "                    referencePath = referencePath.Substring(ReferencePrefix.Length);\n"
+                + "                }\n"
+                + "\n"
                 + "                if (string.IsNullOrWhiteSpace(referencePath) || !File.Exists(referencePath))\n"
                 + "                {\n"
                 + "                    continue;\n"

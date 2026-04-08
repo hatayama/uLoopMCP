@@ -40,6 +40,17 @@ namespace io.github.hatayama.uLoopMCP
 
         private static MethodInfo FindPreferredExecuteMethod(Type type)
         {
+            MethodInfo methodWithParametersAndCancellation = type.GetMethod(
+                WrappedExecuteMethodName,
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                new Type[] { typeof(Dictionary<string, object>), typeof(CancellationToken) },
+                null);
+            if (methodWithParametersAndCancellation != null)
+            {
+                return methodWithParametersAndCancellation;
+            }
+
             MethodInfo methodWithParameters = type.GetMethod(
                 WrappedExecuteMethodName,
                 BindingFlags.Public | BindingFlags.Instance,
@@ -49,6 +60,17 @@ namespace io.github.hatayama.uLoopMCP
             if (methodWithParameters != null)
             {
                 return methodWithParameters;
+            }
+
+            MethodInfo methodWithCancellation = type.GetMethod(
+                WrappedExecuteMethodName,
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                new Type[] { typeof(CancellationToken) },
+                null);
+            if (methodWithCancellation != null)
+            {
+                return methodWithCancellation;
             }
 
             return type.GetMethod(

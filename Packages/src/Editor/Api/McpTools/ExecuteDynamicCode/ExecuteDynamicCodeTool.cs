@@ -32,20 +32,14 @@ Need files/dirs? Run terminal commands.
 See examples at {project_root}/.claude/skills/uloop-execute-dynamic-code/examples/")]
     public class ExecuteDynamicCodeTool : AbstractUnityTool<ExecuteDynamicCodeSchema, ExecuteDynamicCodeResponse>
     {
-        private readonly IExecuteDynamicCodeUseCase _useCase;
-
         public override string ToolName => "execute-dynamic-code";
-
-        public ExecuteDynamicCodeTool()
-        {
-            _useCase = DynamicCodeServices.ExecuteDynamicCodeUseCase;
-        }
 
         protected override async Task<ExecuteDynamicCodeResponse> ExecuteAsync(
             ExecuteDynamicCodeSchema parameters, 
             CancellationToken cancellationToken)
         {
-            return await _useCase.ExecuteAsync(parameters, cancellationToken);
+            IExecuteDynamicCodeUseCase useCase = await DynamicCodeServices.GetExecuteDynamicCodeUseCaseAsync();
+            return await useCase.ExecuteAsync(parameters, cancellationToken);
         }
     }
 }

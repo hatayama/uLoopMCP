@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -140,6 +141,72 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             }
         }
 
+        [Test]
+        public async Task ExecuteAsync_WhenRuntimeThrowsOperationCanceledException_ShouldReturnNeutralCancelledResponse()
+        {
+            CancellingDynamicCodeExecutionRuntime runtime = new CancellingDynamicCodeExecutionRuntime();
+            ExecuteDynamicCodeUseCase useCase = new ExecuteDynamicCodeUseCase(runtime);
+            using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource.Cancel();
+
+            DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
+            ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+
+            try
+            {
+                ExecuteDynamicCodeResponse response = await useCase.ExecuteAsync(
+                    new ExecuteDynamicCodeSchema
+                    {
+                        Code = "return 1;"
+                    },
+                    cancellationTokenSource.Token);
+
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo(McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED));
+                Assert.That(response.Logs, Contains.Item("Execution cancelled"));
+            }
+            finally
+            {
+                ULoopSettings.SetDynamicCodeSecurityLevel(previous);
+            }
+        }
+
+        [Test]
+        public async Task ExecuteAsync_WhenRuntimeReturnsCancelledResult_ShouldPreserveNeutralCancelledResponse()
+        {
+            FakeDynamicCodeExecutionRuntime runtime = new FakeDynamicCodeExecutionRuntime(
+                new ExecutionResult
+                {
+                    Success = false,
+                    ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
+                    Logs = new List<string> { "Execution cancelled" },
+                    Timings = new List<string> { "compile_ms=1" }
+                });
+            ExecuteDynamicCodeUseCase useCase = new ExecuteDynamicCodeUseCase(runtime);
+
+            DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
+            ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+
+            try
+            {
+                ExecuteDynamicCodeResponse response = await useCase.ExecuteAsync(
+                    new ExecuteDynamicCodeSchema
+                    {
+                        Code = "return 1;"
+                    },
+                    CancellationToken.None);
+
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo(McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED));
+                Assert.That(response.Logs, Contains.Item("Execution cancelled"));
+                Assert.That(response.Timings, Contains.Item("compile_ms=1"));
+            }
+            finally
+            {
+                ULoopSettings.SetDynamicCodeSecurityLevel(previous);
+            }
+        }
+
         private sealed class FakeDynamicCodeExecutionRuntime : IDynamicCodeExecutionRuntime
         {
             private readonly Queue<ExecutionResult> _results;
@@ -176,6 +243,28 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 CancellationToken cancellationToken = default)
             {
                 return Task.FromResult<(bool, ExecutionResult)>((true, null));
+            }
+        }
+
+        private sealed class CancellingDynamicCodeExecutionRuntime : IDynamicCodeExecutionRuntime
+        {
+            public bool SupportsAutoPrewarm()
+            {
+                return true;
+            }
+
+            public Task<ExecutionResult> ExecuteAsync(
+                DynamicCodeExecutionRequest request,
+                CancellationToken cancellationToken = default)
+            {
+                throw new OperationCanceledException(cancellationToken);
+            }
+
+            public Task<(bool Entered, ExecutionResult Result)> TryExecuteIfIdleAsync(
+                DynamicCodeExecutionRequest request,
+                CancellationToken cancellationToken = default)
+            {
+                throw new OperationCanceledException(cancellationToken);
             }
         }
     }

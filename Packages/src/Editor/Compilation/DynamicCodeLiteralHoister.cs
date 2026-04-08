@@ -781,8 +781,8 @@ namespace io.github.hatayama.uLoopMCP
                         unescaped.Append((char)variableLengthValue);
                         break;
                     default:
-                        unescaped.Append(escape);
-                        break;
+                        value = null;
+                        return false;
                 }
             }
 

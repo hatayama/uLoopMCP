@@ -35,6 +35,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 taskCompletionSource.TrySetResult(compilerMessages);
             };
+            _ = RegisterBuildFinishedContinuation(taskCompletionSource.Task, markBuildFinished);
 
             bool started = builder.Build();
             if (!started)
@@ -50,16 +51,9 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             markBuildStarted();
-            try
-            {
-                CompilerMessage[] messages = await AwaitBuildCompletionAsync(taskCompletionSource.Task, ct).ConfigureAwait(false);
-                ct.ThrowIfCancellationRequested();
-                return messages;
-            }
-            finally
-            {
-                markBuildFinished();
-            }
+            CompilerMessage[] messages = await AwaitBuildCompletionAsync(taskCompletionSource.Task, ct).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            return messages;
         }
 
         internal static async Task<CompilerMessage[]> AwaitBuildCompletionAsync(
@@ -81,6 +75,18 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return await buildTask.ConfigureAwait(false);
+        }
+
+        internal static Task RegisterBuildFinishedContinuation(
+            Task<CompilerMessage[]> buildTask,
+            Action markBuildFinished)
+        {
+            return buildTask.ContinueWith(
+                static (_, state) => ((Action)state)(),
+                markBuildFinished,
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
         }
     }
 }

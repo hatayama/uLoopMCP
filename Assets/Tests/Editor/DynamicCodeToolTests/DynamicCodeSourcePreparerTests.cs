@@ -53,6 +53,19 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public void Prepare_WhenInterpolatedRawStringExists_ShouldSkipLiteralHoisting()
+        {
+            PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
+                "return $\"\"\"outer {1}\"\"\";",
+                DynamicCodeConstants.DEFAULT_NAMESPACE,
+                DynamicCodeConstants.DEFAULT_CLASS_NAME);
+
+            Assert.IsNotNull(prepared.PreparedSource);
+            Assert.AreEqual(0, prepared.HoistedLiteralBindings.Count);
+            StringAssert.Contains("return $\"\"\"outer {1}\"\"\";", prepared.PreparedSource);
+        }
+
+        [Test]
         public void Prepare_WhenFloatLiteralExists_ShouldNotHoistNumericLiteral()
         {
             PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
@@ -176,6 +189,32 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsNotNull(prepared.PreparedSource);
             Assert.AreEqual(0, prepared.HoistedLiteralBindings.Count);
             StringAssert.Contains("return \"\\u00\";", prepared.PreparedSource);
+        }
+
+        [Test]
+        public void Prepare_WhenRegularStringContainsUnknownEscape_ShouldLeaveLiteralInSource()
+        {
+            PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
+                "return \"\\q\";",
+                DynamicCodeConstants.DEFAULT_NAMESPACE,
+                DynamicCodeConstants.DEFAULT_CLASS_NAME);
+
+            Assert.IsNotNull(prepared.PreparedSource);
+            Assert.AreEqual(0, prepared.HoistedLiteralBindings.Count);
+            StringAssert.Contains("return \"\\q\";", prepared.PreparedSource);
+        }
+
+        [Test]
+        public void Prepare_WhenRegularStringContainsInvalidNumericEscape_ShouldLeaveLiteralInSource()
+        {
+            PreparedDynamicCode prepared = DynamicCodeSourcePreparer.Prepare(
+                "return \"\\8\";",
+                DynamicCodeConstants.DEFAULT_NAMESPACE,
+                DynamicCodeConstants.DEFAULT_CLASS_NAME);
+
+            Assert.IsNotNull(prepared.PreparedSource);
+            Assert.AreEqual(0, prepared.HoistedLiteralBindings.Count);
+            StringAssert.Contains("return \"\\8\";", prepared.PreparedSource);
         }
 
         [Test]

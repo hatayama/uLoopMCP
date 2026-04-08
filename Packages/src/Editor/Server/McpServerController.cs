@@ -127,7 +127,10 @@ namespace io.github.hatayama.uLoopMCP
                 // even if mcpServer instance becomes null unexpectedly
                 McpEditorSettings.SetIsServerRunning(true);
                 McpEditorSettings.SetCustomPort(mcpServer.Port);
-                DynamicCodeServices.PrewarmDynamicCodeUseCase.Request();
+                DynamicCodeServices.ResetServerScopedServices();
+                IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
+                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync();
+                prewarmDynamicCodeUseCase.Request();
 
             }
             else
@@ -170,6 +173,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 // Clear session state to reflect server stopped
                 McpEditorSettings.SetIsServerRunning(false);
+                DynamicCodeServices.ResetServerScopedServices();
             }
             else
             {
@@ -192,6 +196,8 @@ namespace io.github.hatayama.uLoopMCP
             {
                 mcpServer = null;
             }
+
+            DynamicCodeServices.ResetServerScopedServices();
         }
 
         /// <summary>
@@ -349,6 +355,7 @@ namespace io.github.hatayama.uLoopMCP
                     mcpServer = null;
                 }
             }
+            DynamicCodeServices.ResetServerScopedServices();
             McpEditorSettings.ClearServerSession();
         }
 
@@ -728,7 +735,10 @@ namespace io.github.hatayama.uLoopMCP
                 // Clear reconnection-related flags on successful recovery
                 McpEditorSettings.ClearReconnectingFlags();
                 McpEditorSettings.ClearPostCompileReconnectingUI();
-                DynamicCodeServices.PrewarmDynamicCodeUseCase.Request();
+                DynamicCodeServices.ResetServerScopedServices();
+                IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
+                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync();
+                prewarmDynamicCodeUseCase.Request();
 
                 ActivateStartupProtection(5000);
             }

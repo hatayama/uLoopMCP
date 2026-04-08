@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,13 +13,16 @@ namespace io.github.hatayama.uLoopMCP
         private const string AutoPrewarmOperation = "dynamic_code_auto_prewarm";
 
         private readonly IDynamicCodeExecutionRuntime _runtime;
+        private readonly CancellationToken _lifecycleCancellationToken;
         private readonly object _autoPrewarmLock = new();
         private Task _autoPrewarmTask;
-        private bool _hasCompletedAutoPrewarm;
 
-        public PrewarmDynamicCodeUseCase(IDynamicCodeExecutionRuntime runtime)
+        public PrewarmDynamicCodeUseCase(
+            IDynamicCodeExecutionRuntime runtime,
+            CancellationToken lifecycleCancellationToken = default)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            _lifecycleCancellationToken = lifecycleCancellationToken;
         }
 
         public void Request()
@@ -30,11 +34,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             lock (_autoPrewarmLock)
             {
-                if (_hasCompletedAutoPrewarm)
-                {
-                    return Task.CompletedTask;
-                }
-
                 if (_autoPrewarmTask != null && !_autoPrewarmTask.IsCompleted)
                 {
                     return _autoPrewarmTask;
@@ -47,76 +46,150 @@ namespace io.github.hatayama.uLoopMCP
 
         private async Task RunAsync()
         {
-            if (!_runtime.SupportsAutoPrewarm())
+            try
             {
-                VibeLogger.LogInfo(
-                    AutoPrewarmOperation,
-                    "Skipping dynamic code auto prewarm because the fast path is unavailable",
-                    new { reason = "fast_path_unavailable" });
-
-                lock (_autoPrewarmLock)
+                _lifecycleCancellationToken.ThrowIfCancellationRequested();
+                if (!_runtime.SupportsAutoPrewarm())
                 {
-                    _hasCompletedAutoPrewarm = true;
+                    VibeLogger.LogInfo(
+                        AutoPrewarmOperation,
+                        "Skipping dynamic code auto prewarm because the fast path is unavailable",
+                        new { reason = "fast_path_unavailable" });
+
+                    return;
                 }
 
-                return;
-            }
-
-            VibeLogger.LogInfo(
-                AutoPrewarmOperation,
-                "Starting dynamic code auto prewarm",
-                new { delay_frames = AutoPrewarmDelayFrameCount, class_name = AutoPrewarmClassName });
-
-            await EditorDelay.DelayFrame(AutoPrewarmDelayFrameCount, CancellationToken.None);
-
-            DynamicCodeExecutionRequest request = new DynamicCodeExecutionRequest
-            {
-                Code = AutoPrewarmCode,
-                ClassName = AutoPrewarmClassName,
-                SecurityLevel = DynamicCodeSecurityLevel.Restricted,
-                CompileOnly = false
-            };
-
-            (bool entered, ExecutionResult result) = await _runtime.TryExecuteIfIdleAsync(
-                request,
-                CancellationToken.None);
-
-            if (!entered)
-            {
                 VibeLogger.LogInfo(
                     AutoPrewarmOperation,
-                    "Skipping dynamic code auto prewarm because execute-dynamic-code is busy",
-                    new
-                    {
-                        class_name = AutoPrewarmClassName,
-                        reason = "runtime_busy"
-                    });
-                return;
-            }
+                    "Starting dynamic code auto prewarm",
+                    new { delay_frames = AutoPrewarmDelayFrameCount, class_name = AutoPrewarmClassName });
 
-            if (!result.Success)
-            {
-                VibeLogger.LogWarning(
+                await EditorDelay.DelayFrame(AutoPrewarmDelayFrameCount, _lifecycleCancellationToken);
+
+                DynamicCodeExecutionRequest request = new DynamicCodeExecutionRequest
+                {
+                    Code = AutoPrewarmCode,
+                    ClassName = AutoPrewarmClassName,
+                    SecurityLevel = DynamicCodeSecurityLevel.Restricted,
+                    CompileOnly = false,
+                    YieldToForegroundRequests = true
+                };
+
+                Task<(bool Entered, ExecutionResult Result)> executionTask = _runtime.TryExecuteIfIdleAsync(
+                    request,
+                    _lifecycleCancellationToken);
+                await Task.WhenAny(executionTask);
+
+                if (executionTask.IsCanceled)
+                {
+                    if (_lifecycleCancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    LogForegroundPreemption();
+                    return;
+                }
+
+                if (executionTask.IsFaulted)
+                {
+                    Exception exception = executionTask.Exception?.InnerException ?? executionTask.Exception;
+                    if (IsLifecycleCancellation(exception))
+                    {
+                        return;
+                    }
+
+                    if (exception is OperationCanceledException)
+                    {
+                        LogForegroundPreemption();
+                        return;
+                    }
+
+                    ExceptionDispatchInfo.Capture(exception ?? executionTask.Exception).Throw();
+                }
+
+                (bool entered, ExecutionResult result) = executionTask.Result;
+
+                if (!entered)
+                {
+                    VibeLogger.LogInfo(
+                        AutoPrewarmOperation,
+                        "Skipping dynamic code auto prewarm because execute-dynamic-code is busy",
+                        new
+                        {
+                            class_name = AutoPrewarmClassName,
+                            reason = "runtime_busy"
+                        });
+                    return;
+                }
+
+                if (WasCancelledByForegroundRequest(result))
+                {
+                    LogForegroundPreemption();
+                    return;
+                }
+
+                if (!result.Success)
+                {
+                    VibeLogger.LogWarning(
+                        AutoPrewarmOperation,
+                        "Dynamic code auto prewarm failed",
+                        new
+                        {
+                            class_name = AutoPrewarmClassName,
+                            error_message = result.ErrorMessage,
+                            logs = result.Logs
+                        });
+                    return;
+                }
+
+                VibeLogger.LogInfo(
                     AutoPrewarmOperation,
-                    "Dynamic code auto prewarm failed",
-                    new
-                    {
-                        class_name = AutoPrewarmClassName,
-                        error_message = result.ErrorMessage,
-                        logs = result.Logs
-                    });
+                    "Dynamic code auto prewarm completed successfully",
+                    new { class_name = AutoPrewarmClassName });
                 return;
             }
+            catch (OperationCanceledException) when (_lifecycleCancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (ObjectDisposedException) when (_lifecycleCancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+        }
 
+        private static bool WasCancelledByForegroundRequest(ExecutionResult result)
+        {
+            if (result == null)
+            {
+                return false;
+            }
+
+            return !result.Success
+                && string.Equals(
+                    result.ErrorMessage,
+                    McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
+                    StringComparison.Ordinal);
+        }
+
+        private static void LogForegroundPreemption()
+        {
             VibeLogger.LogInfo(
                 AutoPrewarmOperation,
-                "Dynamic code auto prewarm completed successfully",
-                new { class_name = AutoPrewarmClassName });
+                "Dynamic code auto prewarm yielded to a foreground execute-dynamic-code request",
+                new { reason = "foreground_request_preempted" });
+        }
 
-            lock (_autoPrewarmLock)
+        private bool IsLifecycleCancellation(Exception exception)
+        {
+            if (!_lifecycleCancellationToken.IsCancellationRequested)
             {
-                _hasCompletedAutoPrewarm = true;
+                return false;
             }
+
+            return exception is OperationCanceledException
+                || exception is ObjectDisposedException;
         }
     }
 }

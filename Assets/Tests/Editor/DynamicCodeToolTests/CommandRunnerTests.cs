@@ -29,5 +29,23 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(result.Logs, Contains.Item("Execution cancelled"));
             Assert.That(result.Logs, Has.No.Member("Execution cancelled due to timeout"));
         }
+
+        [Test]
+        public async Task ExecuteAsync_WhenSyncFallbackAcceptsCancellationToken_ShouldUseSupportedSignature()
+        {
+            CommandRunner runner = new CommandRunner();
+
+            io.github.hatayama.uLoopMCP.ExecutionContext context = new io.github.hatayama.uLoopMCP.ExecutionContext
+            {
+                CompiledAssembly = typeof(global::uLoopMCP.Dynamic.DynamicCommand).Assembly,
+                Parameters = new Dictionary<string, object>(),
+                CancellationToken = CancellationToken.None
+            };
+
+            ExecutionResult result = await runner.ExecuteAsync(context);
+
+            Assert.That(result.Success, Is.True);
+            Assert.That(result.Result, Is.EqualTo("dictionary-and-cancellation"));
+        }
     }
 }

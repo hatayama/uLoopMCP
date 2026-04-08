@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using NUnit.Framework;
 
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
@@ -17,10 +18,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.That(targetType, Is.EqualTo(typeof(global::uLoopMCP.Dynamic.DynamicCommand)));
             Assert.That(executeMethod, Is.Not.Null);
-            Assert.That(executeMethod.GetParameters(), Has.Length.EqualTo(1));
+            Assert.That(executeMethod.GetParameters(), Has.Length.EqualTo(2));
             Assert.That(
                 executeMethod.GetParameters()[0].ParameterType,
                 Is.EqualTo(typeof(Dictionary<string, object>)));
+            Assert.That(
+                executeMethod.GetParameters()[1].ParameterType,
+                Is.EqualTo(typeof(CancellationToken)));
         }
     }
 }
@@ -32,6 +36,11 @@ namespace uLoopMCP.Dynamic
         public string Execute()
         {
             return "parameterless";
+        }
+
+        public string Execute(Dictionary<string, object> parameters, CancellationToken ct)
+        {
+            return "dictionary-and-cancellation";
         }
 
         public string Execute(Dictionary<string, object> parameters)

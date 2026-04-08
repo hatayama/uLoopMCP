@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEngine;
 
@@ -45,12 +46,20 @@ namespace io.github.hatayama.uLoopMCP
             Action incrementBuildCount)
         {
             string workerRequestFilePath = Path.ChangeExtension(sourcePath, ".worker");
+            string[] defineSymbols = GetActiveDefineSymbols();
+            bool allowUnsafeCode = PlayerSettings.allowUnsafeCode;
 
             try
             {
                 if (Application.platform != RuntimePlatform.WindowsEditor)
                 {
-                    WriteWorkerRequestFile(workerRequestFilePath, sourcePath, dllPath, references);
+                    WriteWorkerRequestFile(
+                        workerRequestFilePath,
+                        sourcePath,
+                        dllPath,
+                        references,
+                        defineSymbols,
+                        allowUnsafeCode);
 
                     CompilerMessage[] workerMessages = SharedRoslynCompilerWorkerHost.TryCompile(
                         workerRequestFilePath,
@@ -87,6 +96,8 @@ namespace io.github.hatayama.uLoopMCP
                     sourcePath,
                     dllPath,
                     references,
+                    defineSymbols,
+                    allowUnsafeCode,
                     externalCompilerPaths,
                     ct,
                     markBuildStarted,
@@ -119,6 +130,8 @@ namespace io.github.hatayama.uLoopMCP
             string sourcePath,
             string dllPath,
             List<string> references,
+            IReadOnlyCollection<string> defineSymbols,
+            bool allowUnsafeCode,
             ExternalCompilerPaths externalCompilerPaths,
             CancellationToken ct,
             Action markBuildStarted,
@@ -126,7 +139,13 @@ namespace io.github.hatayama.uLoopMCP
             Action incrementBuildCount)
         {
             string responseFilePath = Path.ChangeExtension(sourcePath, ".rsp");
-            WriteCompilerResponseFile(responseFilePath, sourcePath, dllPath, references);
+            WriteCompilerResponseFile(
+                responseFilePath,
+                sourcePath,
+                dllPath,
+                references,
+                defineSymbols,
+                allowUnsafeCode);
 
             try
             {
@@ -187,11 +206,13 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private static void WriteCompilerResponseFile(
+        internal static void WriteCompilerResponseFile(
             string responseFilePath,
             string sourcePath,
             string dllPath,
-            IReadOnlyCollection<string> references)
+            IReadOnlyCollection<string> references,
+            IReadOnlyCollection<string> defineSymbols,
+            bool allowUnsafeCode)
         {
             List<string> lines = new List<string>
             {
@@ -200,8 +221,15 @@ namespace io.github.hatayama.uLoopMCP
                 "-target:library",
                 "-optimize+",
                 "-debug-",
+                allowUnsafeCode ? "-unsafe+" : "-unsafe-",
                 QuoteResponseFileArgument("-out:", dllPath)
             };
+
+            string defineOption = BuildDefineOption(defineSymbols);
+            if (!string.IsNullOrEmpty(defineOption))
+            {
+                lines.Add(defineOption);
+            }
 
             foreach (string reference in references)
             {
@@ -212,19 +240,79 @@ namespace io.github.hatayama.uLoopMCP
             File.WriteAllLines(responseFilePath, lines);
         }
 
-        private static void WriteWorkerRequestFile(
+        internal static void WriteWorkerRequestFile(
             string requestFilePath,
             string sourcePath,
             string dllPath,
-            IReadOnlyCollection<string> references)
+            IReadOnlyCollection<string> references,
+            IReadOnlyCollection<string> defineSymbols,
+            bool allowUnsafeCode)
         {
             List<string> lines = new List<string> { Path.GetFullPath(sourcePath), Path.GetFullPath(dllPath) };
+            lines.Add(allowUnsafeCode ? "unsafe:1" : "unsafe:0");
+
+            string serializedDefines = SerializeDefineSymbols(defineSymbols);
+            if (!string.IsNullOrEmpty(serializedDefines))
+            {
+                lines.Add($"define:{serializedDefines}");
+            }
+
             foreach (string reference in references)
             {
-                lines.Add(Path.GetFullPath(reference));
+                lines.Add($"ref:{Path.GetFullPath(reference)}");
             }
 
             File.WriteAllLines(Path.GetFullPath(requestFilePath), lines);
+        }
+
+        private static string[] GetActiveDefineSymbols()
+        {
+            string[] activeDefines = EditorUserBuildSettings.activeScriptCompilationDefines;
+            if (activeDefines == null || activeDefines.Length == 0)
+            {
+                return Array.Empty<string>();
+            }
+
+            List<string> filteredDefines = new List<string>(activeDefines.Length);
+            foreach (string define in activeDefines)
+            {
+                if (!string.IsNullOrWhiteSpace(define))
+                {
+                    filteredDefines.Add(define);
+                }
+            }
+
+            return filteredDefines.ToArray();
+        }
+
+        private static string BuildDefineOption(IReadOnlyCollection<string> defineSymbols)
+        {
+            string serializedDefines = SerializeDefineSymbols(defineSymbols);
+            if (string.IsNullOrEmpty(serializedDefines))
+            {
+                return null;
+            }
+
+            return $"-define:{serializedDefines}";
+        }
+
+        private static string SerializeDefineSymbols(IReadOnlyCollection<string> defineSymbols)
+        {
+            if (defineSymbols == null || defineSymbols.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            List<string> filteredDefines = new List<string>(defineSymbols.Count);
+            foreach (string defineSymbol in defineSymbols)
+            {
+                if (!string.IsNullOrWhiteSpace(defineSymbol))
+                {
+                    filteredDefines.Add(defineSymbol);
+                }
+            }
+
+            return filteredDefines.Count == 0 ? string.Empty : string.Join(";", filteredDefines);
         }
 
         private static string QuoteResponseFileArgument(string prefix, string value)

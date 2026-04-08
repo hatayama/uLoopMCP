@@ -6,6 +6,7 @@ using System.Threading;
 using System;
 using NUnit.Framework;
 using UnityEditor.Compilation;
+using UnityEngine.TestTools;
 
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
@@ -14,6 +15,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
     {
         private string _tempDirectoryPath;
         private Action<string> _previousWorkerDirectoryDeleter;
+        private Action<Process, string> _previousCompileRequestSender;
 
         [SetUp]
         public void SetUp()
@@ -29,6 +31,12 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             {
                 SharedRoslynCompilerWorkerHost.SwapWorkerDirectoryDeleterForTests(_previousWorkerDirectoryDeleter);
                 _previousWorkerDirectoryDeleter = null;
+            }
+
+            if (_previousCompileRequestSender != null)
+            {
+                SharedRoslynCompilerWorkerHost.SwapCompileRequestSenderForTests(_previousCompileRequestSender);
+                _previousCompileRequestSender = null;
             }
 
             SharedRoslynCompilerWorkerHost.ShutdownForTests();
@@ -91,6 +99,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         {
             CompilerMessage[] messages = CompileWithWorker(
                 "public static class WorkerWarningTest { public static int Execute() { int unused = 1; return 3; } }",
+                Array.Empty<string>(),
+                false,
                 out bool buildStarted,
                 out bool buildFinished,
                 out int buildCount,
@@ -109,6 +119,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         {
             CompilerMessage[] messages = CompileWithWorker(
                 "public static class WorkerErrorTest { public static int Execute() { return MissingType.Value; } }",
+                Array.Empty<string>(),
+                false,
                 out bool buildStarted,
                 out bool buildFinished,
                 out int buildCount,
@@ -127,6 +139,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         {
             CompilerMessage[] messages = CompileWithWorker(
                 "public static class WorkerScopedDirectoryTest { public static int Execute() { return 7; } }",
+                Array.Empty<string>(),
+                false,
                 out bool buildStarted,
                 out bool buildFinished,
                 out int buildCount,
@@ -147,6 +161,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         {
             CompilerMessage[] messages = CompileWithWorker(
                 "public static class WorkerDirectoryCleanupTest { public static int Execute() { return 11; } }",
+                Array.Empty<string>(),
+                false,
                 out _,
                 out _,
                 out _,
@@ -167,6 +183,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         {
             CompilerMessage[] messages = CompileWithWorker(
                 "public static class WorkerDirectoryCleanupFailureTest { public static int Execute() { return 17; } }",
+                Array.Empty<string>(),
+                false,
                 out _,
                 out _,
                 out _,
@@ -194,8 +212,94 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(Directory.Exists(workerDirectoryPath), Is.False);
         }
 
+        [Test]
+        public void TryCompile_WhenDefineSymbolIsProvided_ShouldCompileDefinedBranch()
+        {
+            CompilerMessage[] messages = CompileWithWorker(
+                "#if ULOOP_TEST_DEFINE\n"
+                + "public static class WorkerDefinedBranchTest { public static int Execute() { return 23; } }\n"
+                + "#else\n"
+                + "this will not compile\n"
+                + "#endif",
+                new[] { "ULOOP_TEST_DEFINE" },
+                false,
+                out _,
+                out _,
+                out _,
+                out string dllPath);
+
+            Assert.That(messages, Is.Not.Null);
+            Assert.That(messages.Any(message => message.type == CompilerMessageType.Error), Is.False);
+            Assert.That(File.Exists(dllPath), Is.True);
+        }
+
+        [Test]
+        public void TryCompile_WhenUnsafeIsEnabled_ShouldCompileUnsafeCode()
+        {
+            CompilerMessage[] messages = CompileWithWorker(
+                "public static unsafe class WorkerUnsafeTest { public static int Read(int* value) { return *value; } }",
+                Array.Empty<string>(),
+                true,
+                out _,
+                out _,
+                out _,
+                out string dllPath);
+
+            Assert.That(messages, Is.Not.Null);
+            Assert.That(messages.Any(message => message.type == CompilerMessageType.Error), Is.False);
+            Assert.That(File.Exists(dllPath), Is.True);
+        }
+
+        [Test]
+        public void TryCompile_WhenWorkerCommunicationThrowsIOException_ShouldReturnNullWithoutThrowing()
+        {
+            ExternalCompilerPaths externalCompilerPaths = ExternalCompilerPathResolver.Resolve();
+            Assert.That(externalCompilerPaths, Is.Not.Null, "Unity external compiler layout should be available for this test");
+
+            string sourcePath = Path.Combine(_tempDirectoryPath, "WorkerIOExceptionTest.cs");
+            string dllPath = Path.Combine(_tempDirectoryPath, "WorkerIOExceptionTest.dll");
+            string requestFilePath = Path.Combine(_tempDirectoryPath, "WorkerIOExceptionTest.worker");
+            DynamicReferenceSetBuilderService referenceSetBuilder = new DynamicReferenceSetBuilderService();
+            List<string> references = referenceSetBuilder.BuildReferenceSet(
+                new List<string>(),
+                null,
+                externalCompilerPaths);
+
+            File.WriteAllText(
+                sourcePath,
+                "public static class WorkerIOExceptionTest { public static int Execute() { return 29; } }");
+            File.WriteAllLines(
+                requestFilePath,
+                new[] { Path.GetFullPath(sourcePath), Path.GetFullPath(dllPath) }
+                    .Concat(references.Select(Path.GetFullPath)));
+
+            int buildCount = 0;
+            bool buildStarted = false;
+            bool buildFinished = false;
+            _previousCompileRequestSender = SharedRoslynCompilerWorkerHost.SwapCompileRequestSenderForTests(
+                (_, _) => throw new IOException("worker stream broken"));
+            LogAssert.Expect(
+                UnityEngine.LogType.Error,
+                new System.Text.RegularExpressions.Regex("execute-dynamic-code shared Roslyn worker failed to operate correctly"));
+
+            CompilerMessage[] messages = SharedRoslynCompilerWorkerHost.TryCompile(
+                requestFilePath,
+                externalCompilerPaths,
+                CancellationToken.None,
+                () => buildStarted = true,
+                () => buildFinished = true,
+                () => buildCount++);
+
+            Assert.That(messages, Is.Null);
+            Assert.That(buildCount, Is.EqualTo(2));
+            Assert.That(buildStarted, Is.True);
+            Assert.That(buildFinished, Is.True);
+        }
+
         private CompilerMessage[] CompileWithWorker(
             string source,
+            IReadOnlyCollection<string> defineSymbols,
+            bool allowUnsafeCode,
             out bool buildStarted,
             out bool buildFinished,
             out int buildCount,
@@ -215,10 +319,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             string requestFilePath = Path.Combine(_tempDirectoryPath, $"{System.Guid.NewGuid():N}.worker");
 
             File.WriteAllText(sourcePath, source);
-            File.WriteAllLines(
+            RoslynCompilerBackend.WriteWorkerRequestFile(
                 requestFilePath,
-                new[] { Path.GetFullPath(sourcePath), Path.GetFullPath(dllPath) }
-                    .Concat(references.Select(Path.GetFullPath)));
+                sourcePath,
+                dllPath,
+                references,
+                defineSymbols,
+                allowUnsafeCode);
 
             int localBuildCount = 0;
             bool localBuildStarted = false;

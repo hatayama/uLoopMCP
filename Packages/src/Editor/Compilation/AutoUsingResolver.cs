@@ -149,7 +149,7 @@ namespace io.github.hatayama.uLoopMCP
             return sb.ToString();
         }
 
-        private static void AddAssemblyReferenceIfMissing(
+        internal static void AddAssemblyReferenceIfMissing(
             List<string> assemblyReferencesToAdd,
             List<string> currentReferences,
             string assemblyReference)
@@ -172,17 +172,37 @@ namespace io.github.hatayama.uLoopMCP
             assemblyReferencesToAdd.Add(assemblyReference);
         }
 
-        private static bool ContainsAssemblyReference(List<string> references, string assemblyReference)
+        internal static bool ContainsAssemblyReference(List<string> references, string assemblyReference)
         {
+            string assemblyIdentity = GetAssemblyIdentityKey(assemblyReference);
             foreach (string existingReference in references)
             {
-                if (string.Equals(existingReference, assemblyReference, System.StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(
+                    GetAssemblyIdentityKey(existingReference),
+                    assemblyIdentity,
+                    System.StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }
             }
 
             return false;
+        }
+
+        private static string GetAssemblyIdentityKey(string assemblyReference)
+        {
+            if (string.IsNullOrEmpty(assemblyReference))
+            {
+                return string.Empty;
+            }
+
+            string fileName = Path.GetFileNameWithoutExtension(assemblyReference);
+            if (string.IsNullOrEmpty(fileName))
+            {
+                return assemblyReference;
+            }
+
+            return fileName;
         }
     }
 

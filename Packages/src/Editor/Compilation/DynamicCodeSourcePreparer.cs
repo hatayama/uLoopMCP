@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace io.github.hatayama.uLoopMCP
@@ -68,7 +69,32 @@ namespace io.github.hatayama.uLoopMCP
         {
             return body.Contains(InterpolatedStringMarker)
                 || body.Contains(InterpolatedVerbatimStringMarker)
-                || body.Contains(VerbatimInterpolatedStringMarker);
+                || body.Contains(VerbatimInterpolatedStringMarker)
+                || ContainsInterpolatedRawStringMarker(body);
+        }
+
+        private static bool ContainsInterpolatedRawStringMarker(string body)
+        {
+            int quoteIndex = body.IndexOf("\"\"\"", StringComparison.Ordinal);
+            while (quoteIndex >= 0)
+            {
+                int dollarCount = 0;
+                int markerIndex = quoteIndex - 1;
+                while (markerIndex >= 0 && body[markerIndex] == '$')
+                {
+                    dollarCount++;
+                    markerIndex--;
+                }
+
+                if (dollarCount > 0)
+                {
+                    return true;
+                }
+
+                quoteIndex = body.IndexOf("\"\"\"", quoteIndex + 3, StringComparison.Ordinal);
+            }
+
+            return false;
         }
     }
 }

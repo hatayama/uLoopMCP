@@ -11,5 +11,7 @@ namespace io.github.hatayama.uLoopMCP
         public bool CompileOnly { get; set; }
 
         public DynamicCodeSecurityLevel SecurityLevel { get; set; }
+
+        public bool YieldToForegroundRequests { get; set; }
     }
 }

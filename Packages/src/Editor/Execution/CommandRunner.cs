@@ -175,24 +175,14 @@ namespace io.github.hatayama.uLoopMCP
             return Activator.CreateInstance(targetType);
         }
 
-        private static object InvokeExecuteMethod(MethodInfo executeMethod, object instance, Dictionary<string, object> parameters)
+        private static object InvokeExecuteMethod(
+            MethodInfo executeMethod,
+            object instance,
+            Dictionary<string, object> parameters,
+            CancellationToken cancellationToken)
         {
-            System.Reflection.ParameterInfo[] methodParameters = executeMethod.GetParameters();
-            
-            if (methodParameters.Length == 0)
-            {
-                // No parameters
-                return executeMethod.Invoke(instance, null);
-            }
-            else if (methodParameters.Length == 1 && methodParameters[0].ParameterType == typeof(Dictionary<string, object>))
-            {
-                // Parameter dictionary available
-                return executeMethod.Invoke(instance, new object[] { parameters });
-            }
-            else
-            {
-                throw new NotSupportedException("Expected Execute() or Execute(Dictionary<string, object> parameters)");
-            }
+            object[] callArgs = BuildSupportedArguments(executeMethod, parameters, cancellationToken);
+            return executeMethod.Invoke(instance, callArgs);
         }
 
         private ExecutionResult ExecuteInternal(ExecutionContext context, CancellationToken cancellationToken)
@@ -223,12 +213,16 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 // Check cancellation
-                cancellationToken.ThrowIfCancellationRequested();
+                    cancellationToken.ThrowIfCancellationRequested();
 
                 try
                 {
                     // Execute method
-                    object executionResult = InvokeExecuteMethod(executeMethod, instance, context.Parameters);
+                    object executionResult = InvokeExecuteMethod(
+                        executeMethod,
+                        instance,
+                        context.Parameters,
+                        cancellationToken);
                     
                     // Convert result to string
                     string resultString = executionResult?.ToString() ?? "";
@@ -297,7 +291,10 @@ namespace io.github.hatayama.uLoopMCP
 
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    object[] callArgs = BuildArguments(executeAsyncMethod, context.Parameters, cancellationToken);
+                    object[] callArgs = BuildSupportedArguments(
+                        executeAsyncMethod,
+                        context.Parameters,
+                        cancellationToken);
                     object invoked = executeAsyncMethod.Invoke(instance, callArgs);
 
                     object awaitedResult = await io.github.hatayama.uLoopMCP.AwaitableHelper.AwaitIfNeeded(invoked);
@@ -342,7 +339,10 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private static object[] BuildArguments(MethodInfo method, Dictionary<string, object> parameters, CancellationToken cancellationToken)
+        private static object[] BuildSupportedArguments(
+            MethodInfo method,
+            Dictionary<string, object> parameters,
+            CancellationToken cancellationToken)
         {
             System.Reflection.ParameterInfo[] methodParameters = method.GetParameters();
             if (methodParameters.Length == 0)
@@ -362,7 +362,8 @@ namespace io.github.hatayama.uLoopMCP
                 return new object[] { cancellationToken };
             }
 
-            throw new NotSupportedException("Expected ExecuteAsync() overloads with Dictionary<string,object> and/or CancellationToken");
+            throw new NotSupportedException(
+                "Expected Execute/ExecuteAsync overloads with Dictionary<string,object> and/or CancellationToken");
         }
     }
 }

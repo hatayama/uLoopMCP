@@ -14,6 +14,7 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public sealed class PreloadIlSecurityValidator : IPreloadAssemblySecurityValidator
     {
+        private const char DecodedTypeNameSeparator = '|';
         private static readonly OpCode[] SingleByteOpCodes = BuildOpCodeTable(singleByte: true);
         private static readonly OpCode[] MultiByteOpCodes = BuildOpCodeTable(singleByte: false);
 
@@ -68,30 +69,20 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (string parameterTypeName in signature.ParameterTypes)
             {
-                if (!DangerousApiCatalog.IsDangerousType(parameterTypeName))
-                {
-                    continue;
-                }
-
-                this.AddViolation(
+                this.AddDecodedTypeViolations(
                     result,
                     seenViolations,
                     parameterTypeName,
-                    $"Dangerous parameter type detected before assembly load: {parameterTypeName}",
-                    $"Parameter type '{parameterTypeName}' exists in {declaringTypeName}.{methodName}");
+                    dangerousTypeName => $"Dangerous parameter type detected before assembly load: {dangerousTypeName}",
+                    dangerousTypeName => $"Parameter type '{dangerousTypeName}' exists in {declaringTypeName}.{methodName}");
             }
 
-            if (!DangerousApiCatalog.IsDangerousType(signature.ReturnType))
-            {
-                return;
-            }
-
-            this.AddViolation(
+            this.AddDecodedTypeViolations(
                 result,
                 seenViolations,
                 signature.ReturnType,
-                $"Dangerous return type detected before assembly load: {signature.ReturnType}",
-                $"Return type '{signature.ReturnType}' exists in {declaringTypeName}.{methodName}");
+                dangerousTypeName => $"Dangerous return type detected before assembly load: {dangerousTypeName}",
+                dangerousTypeName => $"Return type '{dangerousTypeName}' exists in {declaringTypeName}.{methodName}");
         }
 
         private void ValidateMethodBody(
@@ -132,17 +123,12 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (string localTypeName in localTypes)
             {
-                if (!DangerousApiCatalog.IsDangerousType(localTypeName))
-                {
-                    continue;
-                }
-
-                this.AddViolation(
+                this.AddDecodedTypeViolations(
                     result,
                     seenViolations,
                     localTypeName,
-                    $"Dangerous local variable type detected before assembly load: {localTypeName}",
-                    $"Local variable type '{localTypeName}' exists in {declaringTypeName}.{methodName}");
+                    dangerousTypeName => $"Dangerous local variable type detected before assembly load: {dangerousTypeName}",
+                    dangerousTypeName => $"Local variable type '{dangerousTypeName}' exists in {declaringTypeName}.{methodName}");
             }
         }
 
@@ -183,16 +169,12 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     int token = ReadInt32(ilBytes, offset);
                     string referencedTypeName = this.TryGetTypeReference(MetadataTokens.EntityHandle(token), reader);
-                    if (!string.IsNullOrEmpty(referencedTypeName) &&
-                        DangerousApiCatalog.IsDangerousType(referencedTypeName))
-                    {
-                        this.AddViolation(
-                            result,
-                            seenViolations,
-                            referencedTypeName,
-                            $"Dangerous IL type token detected before assembly load: {referencedTypeName}",
-                            $"IL ldtoken references '{referencedTypeName}' in {declaringTypeName}.{methodName}");
-                    }
+                    this.AddDecodedTypeViolations(
+                        result,
+                        seenViolations,
+                        referencedTypeName,
+                        dangerousTypeName => $"Dangerous IL type token detected before assembly load: {dangerousTypeName}",
+                        dangerousTypeName => $"IL ldtoken references '{dangerousTypeName}' in {declaringTypeName}.{methodName}");
                 }
 
                 offset += GetOperandSize(opCode.OperandType, ilBytes, offset);
@@ -243,6 +225,46 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return string.Empty;
+        }
+
+        private void AddDecodedTypeViolations(
+            SecurityValidationResult result,
+            HashSet<string> seenViolations,
+            string decodedTypeName,
+            System.Func<string, string> createMessage,
+            System.Func<string, string> createDescription)
+        {
+            foreach (string typeName in ExpandDecodedTypeNames(decodedTypeName))
+            {
+                if (!DangerousApiCatalog.IsDangerousType(typeName))
+                {
+                    continue;
+                }
+
+                this.AddViolation(
+                    result,
+                    seenViolations,
+                    typeName,
+                    createMessage(typeName),
+                    createDescription(typeName));
+            }
+        }
+
+        private static IEnumerable<string> ExpandDecodedTypeNames(string decodedTypeName)
+        {
+            if (string.IsNullOrEmpty(decodedTypeName))
+            {
+                yield break;
+            }
+
+            string[] parts = decodedTypeName.Split(DecodedTypeNameSeparator);
+            foreach (string part in parts)
+            {
+                if (!string.IsNullOrEmpty(part))
+                {
+                    yield return part;
+                }
+            }
         }
 
         private void AddViolation(
@@ -461,7 +483,14 @@ namespace io.github.hatayama.uLoopMCP
 
             public string GetGenericInstantiation(string genericType, ImmutableArray<string> typeArguments)
             {
-                return genericType;
+                List<string> flattenedTypeNames = new List<string>();
+                AddFlattenedTypeName(flattenedTypeNames, genericType);
+                foreach (string typeArgument in typeArguments)
+                {
+                    AddFlattenedTypeName(flattenedTypeNames, typeArgument);
+                }
+
+                return string.Join(DecodedTypeNameSeparator.ToString(), flattenedTypeNames);
             }
 
             public string GetGenericMethodParameter(object genericContext, int index)
@@ -512,6 +541,23 @@ namespace io.github.hatayama.uLoopMCP
             public string GetTypeFromSpecification(MetadataReader reader, object genericContext, TypeSpecificationHandle handle, byte rawTypeKind)
             {
                 return _validator.DecodeTypeSpecification(reader, handle);
+            }
+
+            private static void AddFlattenedTypeName(List<string> flattenedTypeNames, string decodedTypeName)
+            {
+                if (string.IsNullOrEmpty(decodedTypeName))
+                {
+                    return;
+                }
+
+                string[] parts = decodedTypeName.Split(DecodedTypeNameSeparator);
+                foreach (string part in parts)
+                {
+                    if (!string.IsNullOrEmpty(part))
+                    {
+                        flattenedTypeNames.Add(part);
+                    }
+                }
             }
         }
     }

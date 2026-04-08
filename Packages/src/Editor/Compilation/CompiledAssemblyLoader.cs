@@ -30,6 +30,20 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             Assembly compiledAssembly = Assembly.Load(assemblyBytes);
+            if (securityLevel == DynamicCodeSecurityLevel.Restricted)
+            {
+                IlSecurityValidator postLoadValidator = new IlSecurityValidator();
+                SecurityValidationResult postLoadValidationResult = postLoadValidator.Validate(compiledAssembly);
+                if (!postLoadValidationResult.IsValid)
+                {
+                    stopwatch.Stop();
+                    return new CompiledAssemblyLoadResult(
+                        false,
+                        null,
+                        postLoadValidationResult.Violations,
+                        stopwatch.Elapsed.TotalMilliseconds);
+                }
+            }
 
             stopwatch.Stop();
             return new CompiledAssemblyLoadResult(
@@ -47,13 +61,16 @@ namespace io.github.hatayama.uLoopMCP
                 Violations = new List<SecurityViolation>(),
                 CompilationErrors = new List<string>()
             };
+            bool shouldRunMetadataFallback = true;
 
             IPreloadAssemblySecurityValidator registeredValidator;
             if (PreloadAssemblySecurityValidatorRegistry.TryGetValidator(out registeredValidator))
             {
                 MergeValidationResult(aggregatedResult, registeredValidator.Validate(assemblyBytes));
+                shouldRunMetadataFallback = registeredValidator is not IOverrideDefaultPreloadAssemblySecurityValidation;
             }
-            else
+
+            if (shouldRunMetadataFallback)
             {
                 SystemReflectionMetadataPreloadValidator fallbackValidator = new SystemReflectionMetadataPreloadValidator();
                 MergeValidationResult(aggregatedResult, fallbackValidator.Validate(assemblyBytes));

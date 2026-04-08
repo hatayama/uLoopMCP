@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor.Compilation;
+using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 namespace io.github.hatayama.uLoopMCP
@@ -57,7 +58,14 @@ namespace io.github.hatayama.uLoopMCP
 
         public bool SupportsAutoPrewarm()
         {
-            return _externalCompilerPathResolver.Resolve() != null;
+            return SupportsAutoPrewarm(_externalCompilerPathResolver.Resolve(), Application.platform);
+        }
+
+        internal static bool SupportsAutoPrewarm(
+            ExternalCompilerPaths externalCompilerPaths,
+            RuntimePlatform platform)
+        {
+            return externalCompilerPaths != null && platform != RuntimePlatform.WindowsEditor;
         }
 
         public async Task<CompiledAssemblyBuildResult> BuildAsync(

@@ -52,11 +52,25 @@ namespace io.github.hatayama.uLoopMCP
                     editorLevel,
                     cancellationToken);
 
+                if (IsCancelledResult(finalResult))
+                {
+                    ExecuteDynamicCodeResponse cancelledResponse = CreateCancelledResponse(editorLevel);
+                    cancelledResponse.Logs = finalResult.Logs ?? cancelledResponse.Logs;
+                    cancelledResponse.Timings = finalResult.Timings != null
+                        ? new List<string>(finalResult.Timings)
+                        : cancelledResponse.Timings;
+                    return cancelledResponse;
+                }
+
                 ExecuteDynamicCodeResponse response = ConvertExecutionResultToResponse(
                     finalResult,
                     originalCode);
                 response.SecurityLevel = editorLevel.ToString();
                 return response;
+            }
+            catch (OperationCanceledException)
+            {
+                return CreateCancelledResponse(editorLevel);
             }
             catch (Exception ex)
             {
@@ -175,6 +189,16 @@ namespace io.github.hatayama.uLoopMCP
             return false;
         }
 
+        private static bool IsCancelledResult(ExecutionResult executionResult)
+        {
+            return executionResult != null
+                && !executionResult.Success
+                && string.Equals(
+                    executionResult.ErrorMessage,
+                    McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
+                    StringComparison.Ordinal);
+        }
+
         private ExecuteDynamicCodeResponse CreateExceptionResponse(
             Exception ex,
             DynamicCodeSecurityLevel securityLevel)
@@ -206,6 +230,20 @@ namespace io.github.hatayama.uLoopMCP
                 Logs = new List<string>(),
                 CompilationErrors = new List<CompilationErrorDto>(),
                 ErrorMessage = ex.Message ?? "Unknown error occurred",
+                SecurityLevel = securityLevel.ToString()
+            };
+        }
+
+        private static ExecuteDynamicCodeResponse CreateCancelledResponse(
+            DynamicCodeSecurityLevel securityLevel)
+        {
+            return new ExecuteDynamicCodeResponse
+            {
+                Success = false,
+                Result = string.Empty,
+                Logs = new List<string> { "Execution cancelled" },
+                CompilationErrors = new List<CompilationErrorDto>(),
+                ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_CANCELLED,
                 SecurityLevel = securityLevel.ToString()
             };
         }
