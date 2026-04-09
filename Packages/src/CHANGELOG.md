@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.2](https://github.com/hatayama/unity-cli-loop/compare/v1.7.1...v1.7.2) (2026-04-09)
+
+
+### Bug Fixes
+
+* remove deprecation warning from uloop update ([#913](https://github.com/hatayama/unity-cli-loop/issues/913)) ([61ed144](https://github.com/hatayama/unity-cli-loop/commit/61ed144ffa1c0b8e2b6a10cb9eb587dada3fc1c6))
+
 ## [1.7.1](https://github.com/hatayama/unity-cli-loop/compare/v1.7.0...v1.7.1) (2026-04-09)
 
 
