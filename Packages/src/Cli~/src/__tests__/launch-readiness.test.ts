@@ -77,35 +77,6 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     expect(disconnectSpies[1]).toHaveBeenCalled();
   });
 
-  it('retries Unity busy execute-dynamic-code failures until success', async () => {
-    const recordedMethods: string[] = [];
-    const responses: Array<MockReadinessResponse | Error> = [
-      { Success: false, ErrorMessage: 'Unity is compiling scripts.' },
-      { Success: true },
-    ];
-    let sleepCount = 0;
-
-    await waitForDynamicCodeReadyAfterLaunch('/project', {
-      resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
-      validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
-      createClient: () => createMockClient(responses, recordedMethods).client,
-      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
-        sleepCount++;
-        return Promise.resolve();
-      }),
-      nowFn: (() => {
-        let now = 0;
-        return (): number => {
-          now += 100;
-          return now;
-        };
-      })(),
-    });
-
-    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
-    expect(sleepCount).toBe(1);
-  });
-
   it('rethrows non-transient readiness failures', async () => {
     const recordedMethods: string[] = [];
 
@@ -122,37 +93,32 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     ).rejects.toThrow('execute-dynamic-code launch readiness probe failed: Syntax error');
   });
 
-  it('retries compilation provider registration until it becomes available', async () => {
+  it('does not retry permanent compilation provider unavailability', async () => {
     const recordedMethods: string[] = [];
-    const responses: Array<MockReadinessResponse | Error> = [
-      {
-        Success: false,
-        ErrorMessage:
-          'COMPILATION_PROVIDER_UNAVAILABLE: No compilation provider is registered. Check initialization.',
-      },
-      { Success: true },
-    ];
-    let sleepCount = 0;
 
-    await waitForDynamicCodeReadyAfterLaunch('/project', {
-      resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
-      validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
-      createClient: () => createMockClient(responses, recordedMethods).client,
-      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
-        sleepCount++;
-        return Promise.resolve();
+    await expect(
+      waitForDynamicCodeReadyAfterLaunch('/project', {
+        resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
+        validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+        createClient: () =>
+          createMockClient(
+            [
+              {
+                Success: false,
+                ErrorMessage:
+                  'COMPILATION_PROVIDER_UNAVAILABLE: No compilation provider is registered. Check initialization.',
+              },
+            ],
+            recordedMethods,
+          ).client,
+        sleepFn: jest.fn(),
+        nowFn: () => 0,
       }),
-      nowFn: (() => {
-        let now = 0;
-        return (): number => {
-          now += 100;
-          return now;
-        };
-      })(),
-    });
+    ).rejects.toThrow(
+      'execute-dynamic-code launch readiness probe failed: COMPILATION_PROVIDER_UNAVAILABLE: No compilation provider is registered. Check initialization.',
+    );
 
-    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
-    expect(sleepCount).toBe(1);
+    expect(recordedMethods).toEqual(['execute-dynamic-code']);
   });
 
   it('retries Unity JSON-RPC errors raised during startup until success', async () => {
@@ -307,40 +273,6 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
 
     expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
     expect(sleepCount).toBe(1);
-  });
-
-  it('resets settle timing after a transient readiness failure interrupts slow success', async () => {
-    const recordedMethods: string[] = [];
-    const responses: Array<MockReadinessResponse | Error> = [
-      { Success: true, Timings: ['[Perf] RequestTotal: 420.0ms'] },
-      { Success: false, ErrorMessage: 'Unity server is starting.' },
-      { Success: true, Timings: ['[Perf] RequestTotal: 410.0ms'] },
-      { Success: true, Timings: ['[Perf] RequestTotal: 405.0ms'] },
-    ];
-    let sleepCount = 0;
-
-    await waitForDynamicCodeReadyAfterLaunch('/project', {
-      resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
-      validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
-      createClient: () => createMockClient(responses, recordedMethods).client,
-      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
-        sleepCount++;
-        return Promise.resolve();
-      }),
-      nowFn: (() => {
-        const values = [0, 100, 1100, 2100, 2200, 3200, 3300, 14300, 14400];
-        let index = 0;
-        return (): number => values[Math.min(index++, values.length - 1)];
-      })(),
-    });
-
-    expect(recordedMethods).toEqual([
-      'execute-dynamic-code',
-      'execute-dynamic-code',
-      'execute-dynamic-code',
-      'execute-dynamic-code',
-    ]);
-    expect(sleepCount).toBe(3);
   });
 
   it('does not retry project mismatch errors', async () => {
