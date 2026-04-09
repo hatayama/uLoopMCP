@@ -188,6 +188,14 @@ function checkUnityBusyState(projectPath?: string): void {
   }
 }
 
+function checkUnityBusyStateBeforeProjectResolution(globalOptions: GlobalOptions): void {
+  if (globalOptions.port !== undefined) {
+    return;
+  }
+
+  checkUnityBusyState(globalOptions.projectPath);
+}
+
 export async function executeToolCommand(
   toolName: string,
   params: Record<string, unknown>,
@@ -201,7 +209,7 @@ export async function executeToolCommand(
     }
     portNumber = parsed;
   }
-  checkUnityBusyState(globalOptions.projectPath);
+  checkUnityBusyStateBeforeProjectResolution(globalOptions);
   const port = await resolveUnityPort(portNumber, globalOptions.projectPath);
   const compileOptions = getCompileExecutionOptions(toolName, params);
   const shouldWaitForDomainReload = compileOptions.waitForDomainReload;
@@ -229,7 +237,7 @@ export async function executeToolCommand(
   let requestDispatched = false;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    checkUnityBusyState(globalOptions.projectPath);
+    checkUnityBusyStateBeforeProjectResolution(globalOptions);
 
     const client = new DirectUnityClient(port);
     try {
@@ -392,7 +400,7 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
     }
     portNumber = parsed;
   }
-  checkUnityBusyState(globalOptions.projectPath);
+  checkUnityBusyStateBeforeProjectResolution(globalOptions);
   const port = await resolveUnityPort(portNumber, globalOptions.projectPath);
   const projectRoot =
     globalOptions.projectPath !== undefined
@@ -405,7 +413,7 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
 
   let lastError: unknown;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    checkUnityBusyState(globalOptions.projectPath);
+    checkUnityBusyStateBeforeProjectResolution(globalOptions);
 
     const client = new DirectUnityClient(port);
     try {
@@ -490,7 +498,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
     }
     portNumber = parsed;
   }
-  checkUnityBusyState(globalOptions.projectPath);
+  checkUnityBusyStateBeforeProjectResolution(globalOptions);
   const port = await resolveUnityPort(portNumber, globalOptions.projectPath);
   const projectRoot =
     globalOptions.projectPath !== undefined
@@ -503,7 +511,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
 
   let lastError: unknown;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    checkUnityBusyState(globalOptions.projectPath);
+    checkUnityBusyStateBeforeProjectResolution(globalOptions);
 
     const client = new DirectUnityClient(port);
     try {

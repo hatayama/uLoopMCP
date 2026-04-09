@@ -55,4 +55,66 @@ describe('busy state detection order', () => {
 
     expect(mockResolveUnityPort).not.toHaveBeenCalled();
   });
+
+  it('skips busy state checks when an explicit port is provided for tool execution', async () => {
+    mockResolveUnityPort.mockRejectedValue(new Error('EXPLICIT_PORT_RESOLVED'));
+
+    await expect(executeToolCommand('get-logs', {}, { port: '8711' })).rejects.toThrow(
+      'EXPLICIT_PORT_RESOLVED',
+    );
+
+    expect(mockResolveUnityPort).toHaveBeenCalledWith(8711, undefined);
+  });
+
+  it('preserves usage errors before busy state checks for tool execution', async () => {
+    mockResolveUnityPort.mockRejectedValue(
+      new Error('Cannot specify both --port and --project-path. Use one or the other.'),
+    );
+
+    await expect(
+      executeToolCommand('get-logs', {}, { port: '8711', projectPath: '/project' }),
+    ).rejects.toThrow('Cannot specify both --port and --project-path. Use one or the other.');
+
+    expect(mockResolveUnityPort).toHaveBeenCalledWith(8711, '/project');
+  });
+
+  it('skips busy state checks when an explicit port is provided for list', async () => {
+    mockResolveUnityPort.mockRejectedValue(new Error('EXPLICIT_PORT_RESOLVED'));
+
+    await expect(listAvailableTools({ port: '8711' })).rejects.toThrow('EXPLICIT_PORT_RESOLVED');
+
+    expect(mockResolveUnityPort).toHaveBeenCalledWith(8711, undefined);
+  });
+
+  it('preserves usage errors before busy state checks for list', async () => {
+    mockResolveUnityPort.mockRejectedValue(
+      new Error('Cannot specify both --port and --project-path. Use one or the other.'),
+    );
+
+    await expect(listAvailableTools({ port: '8711', projectPath: '/project' })).rejects.toThrow(
+      'Cannot specify both --port and --project-path. Use one or the other.',
+    );
+
+    expect(mockResolveUnityPort).toHaveBeenCalledWith(8711, '/project');
+  });
+
+  it('skips busy state checks when an explicit port is provided for sync', async () => {
+    mockResolveUnityPort.mockRejectedValue(new Error('EXPLICIT_PORT_RESOLVED'));
+
+    await expect(syncTools({ port: '8711' })).rejects.toThrow('EXPLICIT_PORT_RESOLVED');
+
+    expect(mockResolveUnityPort).toHaveBeenCalledWith(8711, undefined);
+  });
+
+  it('preserves usage errors before busy state checks for sync', async () => {
+    mockResolveUnityPort.mockRejectedValue(
+      new Error('Cannot specify both --port and --project-path. Use one or the other.'),
+    );
+
+    await expect(syncTools({ port: '8711', projectPath: '/project' })).rejects.toThrow(
+      'Cannot specify both --port and --project-path. Use one or the other.',
+    );
+
+    expect(mockResolveUnityPort).toHaveBeenCalledWith(8711, '/project');
+  });
 });
