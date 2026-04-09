@@ -6,9 +6,24 @@ using UnityEditor.Compilation;
 
 namespace io.github.hatayama.uLoopMCP
 {
+    internal sealed class DynamicCompilationBackendResult
+    {
+        public CompilerMessage[] CompilerMessages { get; }
+
+        public DynamicCompilationBackendKind BackendKind { get; }
+
+        public DynamicCompilationBackendResult(
+            CompilerMessage[] compilerMessages,
+            DynamicCompilationBackendKind backendKind)
+        {
+            CompilerMessages = compilerMessages;
+            BackendKind = backendKind;
+        }
+    }
+
     internal sealed class DynamicCompilationBackend
     {
-        public Task<CompilerMessage[]> CompileAsync(
+        public Task<DynamicCompilationBackendResult> CompileAsync(
             string sourcePath,
             string dllPath,
             List<string> references,

@@ -22,6 +22,8 @@ namespace io.github.hatayama.uLoopMCP
 
         public bool ShouldCacheResult { get; }
 
+        public DynamicCompilationBackendKind CompilationBackendKind { get; }
+
         public CompiledAssemblyBuildResult(
             string updatedSource,
             CompilerDiagnostics diagnostics,
@@ -31,7 +33,8 @@ namespace io.github.hatayama.uLoopMCP
             double referenceResolutionMilliseconds,
             double buildMilliseconds,
             int buildCount,
-            bool shouldCacheResult)
+            bool shouldCacheResult,
+            DynamicCompilationBackendKind compilationBackendKind)
         {
             UpdatedSource = updatedSource;
             Diagnostics = diagnostics;
@@ -42,6 +45,7 @@ namespace io.github.hatayama.uLoopMCP
             BuildMilliseconds = buildMilliseconds;
             BuildCount = buildCount;
             ShouldCacheResult = shouldCacheResult;
+            CompilationBackendKind = compilationBackendKind;
         }
     }
 }

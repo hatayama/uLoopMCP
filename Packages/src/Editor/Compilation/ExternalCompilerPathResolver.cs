@@ -91,6 +91,7 @@ namespace io.github.hatayama.uLoopMCP
 
             return new ExternalCompilerPaths(
                 contentsPath,
+                scriptingRootPath,
                 dotnetHostPath,
                 compilerDllPath,
                 compilerRuntimeConfigPath,
@@ -113,9 +114,12 @@ namespace io.github.hatayama.uLoopMCP
                 return resourcesScriptingRootPath;
             }
 
-            return ContainsExternalCompilerLayout(contentsPath)
-                ? contentsPath
-                : null;
+            if (ContainsExternalCompilerLayout(contentsPath))
+            {
+                return contentsPath;
+            }
+
+            return ResolveScriptingRootPathByScan(contentsPath);
         }
 
         internal static string ResolveNetCoreRuntimeSharedDirectoryPath(string netCoreRuntimeSharedRootPath)
@@ -157,6 +161,38 @@ namespace io.github.hatayama.uLoopMCP
         {
             return Directory.Exists(Path.Combine(rootPath, "NetCoreRuntime"))
                 && Directory.Exists(Path.Combine(rootPath, "DotNetSdkRoslyn"));
+        }
+
+        private static string ResolveScriptingRootPathByScan(string contentsPath)
+        {
+            if (!Directory.Exists(contentsPath))
+            {
+                return null;
+            }
+
+            Queue<(string Path, int Depth)> pendingDirectories = new Queue<(string Path, int Depth)>();
+            pendingDirectories.Enqueue((contentsPath, 0));
+
+            while (pendingDirectories.Count > 0)
+            {
+                (string currentPath, int depth) = pendingDirectories.Dequeue();
+                if (ContainsExternalCompilerLayout(currentPath))
+                {
+                    return currentPath;
+                }
+
+                if (depth >= 4)
+                {
+                    continue;
+                }
+
+                foreach (string childDirectoryPath in Directory.GetDirectories(currentPath).OrderBy(path => path, StringComparer.Ordinal))
+                {
+                    pendingDirectories.Enqueue((childDirectoryPath, depth + 1));
+                }
+            }
+
+            return null;
         }
 
         private static string ResolveEditorContentsPath(string editorPath)

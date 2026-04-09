@@ -83,6 +83,7 @@ namespace io.github.hatayama.uLoopMCP
                     compilationResult.Timings,
                     executionResult.Timings,
                     $"[Perf] Execution: {executionStopwatch.Elapsed.TotalMilliseconds:F1}ms");
+                AppendCompilationAdvisories(executionResult.Logs, compilationResult.AdvisoryLogs);
 
                 UpdateStatistics(executionResult, totalStopwatch.Elapsed);
                 return executionResult;
@@ -192,7 +193,9 @@ namespace io.github.hatayama.uLoopMCP
                 Success = true,
                 Result = null,
                 ExecutionTime = executionTime,
-                Logs = new List<string> { "Code compiled successfully (no execution)" },
+                Logs = MergeCompilationLogs(
+                    new List<string> { "Code compiled successfully (no execution)" },
+                    compilationResult.AdvisoryLogs),
                 AutoInjectedNamespaces = compilationResult.AutoInjectedNamespaces,
                 Timings = CloneTimings(compilationResult.Timings)
             };
@@ -241,7 +244,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 Success = false,
                 ErrorMessage = message,
-                Logs = new List<string>(),
+                Logs = MergeCompilationLogs(new List<string>(), compilationResult.AdvisoryLogs),
                 ExecutionTime = executionTime,
                 CompilationErrors = compilationResult.Errors,
                 UpdatedCode = compilationResult.UpdatedCode,
@@ -290,6 +293,27 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return violationMessages;
+        }
+
+        private static List<string> MergeCompilationLogs(
+            List<string> logs,
+            List<string> advisoryLogs)
+        {
+            List<string> mergedLogs = logs ?? new List<string>();
+            AppendCompilationAdvisories(mergedLogs, advisoryLogs);
+            return mergedLogs;
+        }
+
+        private static void AppendCompilationAdvisories(
+            List<string> destination,
+            List<string> advisoryLogs)
+        {
+            if (destination == null || advisoryLogs == null || advisoryLogs.Count == 0)
+            {
+                return;
+            }
+
+            destination.AddRange(advisoryLogs);
         }
 
         private void UpdateStatistics(ExecutionResult result, TimeSpan executionTime)

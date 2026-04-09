@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -68,6 +69,27 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(invoker.ExecuteAsyncCallCount, Is.EqualTo(0));
         }
 
+        [Test]
+        public async Task ExecuteCodeAsync_WhenCompileOnlyUsesAssemblyBuilderFallback_ShouldSurfaceWarningLog()
+        {
+            AdvisoryCompilationService compiler = AdvisoryCompilationService.CreateSuccessfulCompileOnly();
+            CountingCompiledCommandInvoker invoker = new CountingCompiledCommandInvoker();
+            DynamicCodeExecutor executor = new DynamicCodeExecutor(
+                compiler,
+                invoker,
+                new DynamicCodeSourcePreparationService());
+
+            ExecutionResult result = await executor.ExecuteCodeAsync(
+                "return 1;",
+                cancellationToken: CancellationToken.None,
+                compileOnly: true);
+
+            Assert.That(result.Success, Is.True);
+            Assert.That(result.Logs, Contains.Item("Warning: Fast Roslyn path is unavailable; execute-dynamic-code is using AssemblyBuilder fallback, so new snippets compile slower."));
+            Assert.That(result.Timings, Contains.Item("[Perf] Backend: AssemblyBuilderFallback"));
+            Assert.That(invoker.ExecuteAsyncCallCount, Is.EqualTo(0));
+        }
+
         private sealed class CancelledCompilationService : IDynamicCompilationService
         {
             public Task<CompilationResult> CompileAsync(CompilationRequest request, CancellationToken ct = default)
@@ -111,6 +133,35 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 {
                     Success = false,
                     Timings = null
+                });
+            }
+
+            public Task<CompilationResult> CompileAsync(CompilationRequest request, CancellationToken ct = default)
+            {
+                return Task.FromResult(_result);
+            }
+        }
+
+        private sealed class AdvisoryCompilationService : IDynamicCompilationService
+        {
+            private readonly CompilationResult _result;
+
+            private AdvisoryCompilationService(CompilationResult result)
+            {
+                _result = result;
+            }
+
+            public static AdvisoryCompilationService CreateSuccessfulCompileOnly()
+            {
+                return new AdvisoryCompilationService(new CompilationResult
+                {
+                    Success = true,
+                    Timings = new List<string> { "[Perf] Backend: AssemblyBuilderFallback" },
+                    AdvisoryLogs = new List<string>
+                    {
+                        "Warning: Fast Roslyn path is unavailable; execute-dynamic-code is using AssemblyBuilder fallback, so new snippets compile slower."
+                    },
+                    CompilationBackendKind = DynamicCompilationBackendKind.AssemblyBuilderFallback
                 });
             }
 

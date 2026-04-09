@@ -94,10 +94,13 @@ namespace io.github.hatayama.uLoopMCP
                     FailureReason = CompilationFailureReason.CompilationError,
                     AmbiguousTypeCandidates = buildResult.AmbiguousTypeCandidates,
                     AutoInjectedNamespaces = buildResult.AutoInjectedNamespaces,
+                    AdvisoryLogs = BuildAdvisoryLogs(buildResult.CompilationBackendKind),
+                    CompilationBackendKind = buildResult.CompilationBackendKind,
                     Timings = DynamicCompilationTimingFormatter.CreateCompilationTimings(
                         buildResult.ReferenceResolutionMilliseconds,
                         buildResult.BuildMilliseconds,
-                        0)
+                        0,
+                        buildResult.CompilationBackendKind)
                 };
             }
 
@@ -114,7 +117,8 @@ namespace io.github.hatayama.uLoopMCP
                     buildResult.AutoInjectedNamespaces,
                     buildResult.ReferenceResolutionMilliseconds,
                     buildResult.BuildMilliseconds,
-                    assemblyLoadResult.AssemblyLoadMilliseconds);
+                    assemblyLoadResult.AssemblyLoadMilliseconds,
+                    buildResult.CompilationBackendKind);
             }
 
             CompilationResult result = new CompilationResult
@@ -125,10 +129,13 @@ namespace io.github.hatayama.uLoopMCP
                 UpdatedCode = buildResult.UpdatedSource,
                 AmbiguousTypeCandidates = buildResult.AmbiguousTypeCandidates,
                 AutoInjectedNamespaces = buildResult.AutoInjectedNamespaces,
+                AdvisoryLogs = BuildAdvisoryLogs(buildResult.CompilationBackendKind),
+                CompilationBackendKind = buildResult.CompilationBackendKind,
                 Timings = DynamicCompilationTimingFormatter.CreateCompilationTimings(
                     buildResult.ReferenceResolutionMilliseconds,
                     buildResult.BuildMilliseconds,
-                    assemblyLoadResult.AssemblyLoadMilliseconds)
+                    assemblyLoadResult.AssemblyLoadMilliseconds,
+                    buildResult.CompilationBackendKind)
             };
 
             if (buildResult.ShouldCacheResult)
@@ -164,6 +171,7 @@ namespace io.github.hatayama.uLoopMCP
                 SecurityViolations = sourceSecurityResult.Violations,
                 UpdatedCode = originalCode,
                 FailureReason = CompilationFailureReason.SecurityViolation,
+                CompilationBackendKind = DynamicCompilationBackendKind.Unknown,
                 Timings = DynamicCompilationTimingFormatter.CreateCompilationTimings(0, 0, 0)
             };
         }
@@ -188,6 +196,7 @@ namespace io.github.hatayama.uLoopMCP
                 },
                 FailureReason = CompilationFailureReason.CompilationError,
                 UpdatedCode = originalCode,
+                CompilationBackendKind = DynamicCompilationBackendKind.Unknown,
                 Timings = DynamicCompilationTimingFormatter.CreateCompilationTimings(
                     referenceResolutionMilliseconds,
                     buildMilliseconds,
@@ -203,7 +212,8 @@ namespace io.github.hatayama.uLoopMCP
             List<string> autoInjectedNamespaces,
             double referenceResolutionMilliseconds,
             double buildMilliseconds,
-            double assemblyLoadMilliseconds)
+            double assemblyLoadMilliseconds,
+            DynamicCompilationBackendKind compilationBackendKind)
         {
             return new CompilationResult
             {
@@ -215,11 +225,24 @@ namespace io.github.hatayama.uLoopMCP
                 FailureReason = CompilationFailureReason.SecurityViolation,
                 AmbiguousTypeCandidates = ambiguousTypeCandidates,
                 AutoInjectedNamespaces = autoInjectedNamespaces,
+                AdvisoryLogs = BuildAdvisoryLogs(compilationBackendKind),
+                CompilationBackendKind = compilationBackendKind,
                 Timings = DynamicCompilationTimingFormatter.CreateCompilationTimings(
                     referenceResolutionMilliseconds,
                     buildMilliseconds,
-                    assemblyLoadMilliseconds)
+                    assemblyLoadMilliseconds,
+                    compilationBackendKind)
             };
+        }
+
+        private static List<string> BuildAdvisoryLogs(DynamicCompilationBackendKind compilationBackendKind)
+        {
+            return compilationBackendKind == DynamicCompilationBackendKind.AssemblyBuilderFallback
+                ? new List<string>
+                {
+                    "Warning: Fast Roslyn path is unavailable; execute-dynamic-code is using AssemblyBuilder fallback, so new snippets compile slower."
+                }
+                : new List<string>();
         }
 
     }

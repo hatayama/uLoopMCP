@@ -14,13 +14,6 @@ namespace io.github.hatayama.uLoopMCP
     public class CompilationCacheManager
     {
         private const int MaxCacheEntries = 32;
-        private static readonly List<string> CachedCompilationTimings = new()
-        {
-            "[Perf] ReferenceResolution: 0.0ms",
-            "[Perf] Build: 0.0ms",
-            "[Perf] AssemblyLoad: 0.0ms",
-            "[Perf] CacheHit: true"
-        };
         private readonly Dictionary<string, CachedCompilationResult> _compilationCache = new();
         private readonly Queue<string> _cacheOrder = new();
 
@@ -100,7 +93,9 @@ namespace io.github.hatayama.uLoopMCP
                 result.FailureReason,
                 CloneAmbiguousTypeCandidates(result.AmbiguousTypeCandidates),
                 CloneStrings(result.AutoInjectedNamespaces),
-                CloneStrings(result.Timings));
+                CloneStrings(result.Timings),
+                CloneStrings(result.AdvisoryLogs),
+                result.CompilationBackendKind);
         }
 
         private static CompilationResult CloneCompilationResult(CachedCompilationResult cachedResult)
@@ -117,8 +112,37 @@ namespace io.github.hatayama.uLoopMCP
                 FailureReason = cachedResult.FailureReason,
                 AmbiguousTypeCandidates = CloneAmbiguousTypeCandidates(cachedResult.AmbiguousTypeCandidates),
                 AutoInjectedNamespaces = CloneStrings(cachedResult.AutoInjectedNamespaces),
-                Timings = CloneStrings(CachedCompilationTimings)
+                Timings = BuildCachedCompilationTimings(cachedResult.CompilationBackendKind),
+                AdvisoryLogs = CloneStrings(cachedResult.AdvisoryLogs),
+                CompilationBackendKind = cachedResult.CompilationBackendKind
             };
+        }
+
+        private static List<string> BuildCachedCompilationTimings(
+            DynamicCompilationBackendKind compilationBackendKind)
+        {
+            List<string> timings = new List<string>
+            {
+                "[Perf] ReferenceResolution: 0.0ms",
+                "[Perf] Build: 0.0ms",
+                "[Perf] AssemblyLoad: 0.0ms"
+            };
+
+            switch (compilationBackendKind)
+            {
+                case DynamicCompilationBackendKind.SharedRoslynWorker:
+                    timings.Add("[Perf] Backend: SharedRoslynWorker");
+                    break;
+                case DynamicCompilationBackendKind.OneShotRoslyn:
+                    timings.Add("[Perf] Backend: OneShotRoslyn");
+                    break;
+                case DynamicCompilationBackendKind.AssemblyBuilderFallback:
+                    timings.Add("[Perf] Backend: AssemblyBuilderFallback");
+                    break;
+            }
+
+            timings.Add("[Perf] CacheHit: true");
+            return timings;
         }
 
         private static List<CompilationError> CloneCompilationErrors(List<CompilationError> errors)
@@ -217,6 +241,10 @@ namespace io.github.hatayama.uLoopMCP
 
             public List<string> Timings { get; }
 
+            public List<string> AdvisoryLogs { get; }
+
+            public DynamicCompilationBackendKind CompilationBackendKind { get; }
+
             public CachedCompilationResult(
                 Assembly compiledAssembly,
                 List<CompilationError> errors,
@@ -227,7 +255,9 @@ namespace io.github.hatayama.uLoopMCP
                 CompilationFailureReason failureReason,
                 Dictionary<string, List<string>> ambiguousTypeCandidates,
                 List<string> autoInjectedNamespaces,
-                List<string> timings)
+                List<string> timings,
+                List<string> advisoryLogs,
+                DynamicCompilationBackendKind compilationBackendKind)
             {
                 CompiledAssembly = compiledAssembly;
                 Errors = errors;
@@ -239,6 +269,8 @@ namespace io.github.hatayama.uLoopMCP
                 AmbiguousTypeCandidates = ambiguousTypeCandidates;
                 AutoInjectedNamespaces = autoInjectedNamespaces;
                 Timings = timings;
+                AdvisoryLogs = advisoryLogs;
+                CompilationBackendKind = compilationBackendKind;
             }
         }
     }

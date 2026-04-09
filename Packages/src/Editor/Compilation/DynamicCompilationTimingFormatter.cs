@@ -9,21 +9,42 @@ namespace io.github.hatayama.uLoopMCP
         public static List<string> CreateCompilationTimings(
             double referenceResolutionMilliseconds,
             double buildMilliseconds,
-            double assemblyLoadMilliseconds)
+            double assemblyLoadMilliseconds,
+            DynamicCompilationBackendKind backendKind = DynamicCompilationBackendKind.Unknown)
         {
-            return new List<string>
+            List<string> timings = new List<string>
             {
                 $"[Perf] ReferenceResolution: {referenceResolutionMilliseconds:F1}ms",
                 $"[Perf] Build: {buildMilliseconds:F1}ms",
                 $"[Perf] AssemblyLoad: {assemblyLoadMilliseconds:F1}ms"
             };
+
+            string backendTimingEntry = CreateBackendTimingEntry(backendKind);
+            if (!string.IsNullOrEmpty(backendTimingEntry))
+            {
+                timings.Add(backendTimingEntry);
+            }
+
+            return timings;
         }
 
-        public static List<string> CreateCachedCompilationTimings()
+        public static List<string> CreateCachedCompilationTimings(
+            DynamicCompilationBackendKind backendKind = DynamicCompilationBackendKind.Unknown)
         {
-            List<string> timings = CreateCompilationTimings(0, 0, 0);
+            List<string> timings = CreateCompilationTimings(0, 0, 0, backendKind);
             timings.Add(CacheHitTimingEntry);
             return timings;
+        }
+
+        private static string CreateBackendTimingEntry(DynamicCompilationBackendKind backendKind)
+        {
+            return backendKind switch
+            {
+                DynamicCompilationBackendKind.SharedRoslynWorker => "[Perf] Backend: SharedRoslynWorker",
+                DynamicCompilationBackendKind.OneShotRoslyn => "[Perf] Backend: OneShotRoslyn",
+                DynamicCompilationBackendKind.AssemblyBuilderFallback => "[Perf] Backend: AssemblyBuilderFallback",
+                _ => null
+            };
         }
     }
 }

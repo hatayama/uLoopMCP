@@ -71,6 +71,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 CompiledAssemblyBuilder.SupportsAutoPrewarm(
                     new ExternalCompilerPaths(
                         "Editor",
+                        "Editor",
                         "dotnet",
                         "csc.dll",
                         "csc.runtimeconfig.json",

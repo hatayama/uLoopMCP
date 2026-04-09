@@ -8,7 +8,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     internal static class AssemblyBuilderFallbackCompilerBackend
     {
-        public static async Task<CompilerMessage[]> CompileAsync(
+        public static async Task<DynamicCompilationBackendResult> CompileAsync(
             string sourcePath,
             string dllPath,
             List<string> references,
@@ -40,20 +40,24 @@ namespace io.github.hatayama.uLoopMCP
             bool started = builder.Build();
             if (!started)
             {
-                return new CompilerMessage[]
-                {
-                    new CompilerMessage
+                return new DynamicCompilationBackendResult(
+                    new CompilerMessage[]
                     {
-                        type = CompilerMessageType.Error,
-                        message = "AssemblyBuilder.Build() failed to start compilation"
-                    }
-                };
+                        new CompilerMessage
+                        {
+                            type = CompilerMessageType.Error,
+                            message = "AssemblyBuilder.Build() failed to start compilation"
+                        }
+                    },
+                    DynamicCompilationBackendKind.AssemblyBuilderFallback);
             }
 
             markBuildStarted();
             CompilerMessage[] messages = await AwaitBuildCompletionAsync(taskCompletionSource.Task, ct).ConfigureAwait(false);
             ct.ThrowIfCancellationRequested();
-            return messages;
+            return new DynamicCompilationBackendResult(
+                messages,
+                DynamicCompilationBackendKind.AssemblyBuilderFallback);
         }
 
         internal static async Task<CompilerMessage[]> AwaitBuildCompletionAsync(

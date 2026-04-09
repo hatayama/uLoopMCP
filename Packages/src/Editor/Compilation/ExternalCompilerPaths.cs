@@ -4,6 +4,8 @@ namespace io.github.hatayama.uLoopMCP
     {
         public string EditorContentsPath { get; }
 
+        public string ScriptingRootPath { get; }
+
         public string DotnetHostPath { get; }
 
         public string CompilerDllPath { get; }
@@ -20,6 +22,7 @@ namespace io.github.hatayama.uLoopMCP
 
         public ExternalCompilerPaths(
             string editorContentsPath,
+            string scriptingRootPath,
             string dotnetHostPath,
             string compilerDllPath,
             string compilerRuntimeConfigPath,
@@ -29,6 +32,7 @@ namespace io.github.hatayama.uLoopMCP
             string netCoreRuntimeSharedDirectoryPath)
         {
             EditorContentsPath = editorContentsPath;
+            ScriptingRootPath = scriptingRootPath;
             DotnetHostPath = dotnetHostPath;
             CompilerDllPath = compilerDllPath;
             CompilerRuntimeConfigPath = compilerRuntimeConfigPath;

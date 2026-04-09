@@ -14,19 +14,23 @@ namespace io.github.hatayama.uLoopMCP
     {
         private sealed class OneShotCompileResult
         {
-            public CompilerMessage[] CompilerMessages { get; }
+            public DynamicCompilationBackendResult BackendResult { get; }
 
             public bool ShouldFallback { get; }
 
-            private OneShotCompileResult(CompilerMessage[] compilerMessages, bool shouldFallback)
+            private OneShotCompileResult(DynamicCompilationBackendResult backendResult, bool shouldFallback)
             {
-                CompilerMessages = compilerMessages;
+                BackendResult = backendResult;
                 ShouldFallback = shouldFallback;
             }
 
             public static OneShotCompileResult Successful(CompilerMessage[] compilerMessages)
             {
-                return new OneShotCompileResult(compilerMessages, false);
+                return new OneShotCompileResult(
+                    new DynamicCompilationBackendResult(
+                        compilerMessages,
+                        DynamicCompilationBackendKind.OneShotRoslyn),
+                    false);
             }
 
             public static OneShotCompileResult Fallback()
@@ -35,7 +39,7 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        public static async Task<CompilerMessage[]> CompileAsync(
+        public static async Task<DynamicCompilationBackendResult> CompileAsync(
             string sourcePath,
             string dllPath,
             List<string> references,
@@ -70,7 +74,9 @@ namespace io.github.hatayama.uLoopMCP
                         incrementBuildCount);
                     if (workerMessages != null)
                     {
-                        return workerMessages;
+                        return new DynamicCompilationBackendResult(
+                            workerMessages,
+                            DynamicCompilationBackendKind.SharedRoslynWorker);
                     }
 
                     DynamicCompilationHealthMonitor.ReportSharedWorkerFallback(
@@ -115,7 +121,7 @@ namespace io.github.hatayama.uLoopMCP
                         incrementBuildCount).ConfigureAwait(false);
                 }
 
-                return oneShotResult.CompilerMessages;
+                return oneShotResult.BackendResult;
             }
             finally
             {

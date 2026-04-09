@@ -102,6 +102,19 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(resolvedScriptingRootPath, Is.EqualTo(expectedScriptingRootPath));
         }
 
+        [Test]
+        public void ResolveScriptingRootPath_WhenKnownLayoutsAreMissing_ShouldDiscoverNestedCompilerLayout()
+        {
+            string contentsPath = CreateDirectory("Contents");
+            string expectedScriptingRootPath = CreateDirectory(Path.Combine("Contents", "PlaybackEngines", "Custom", "Scripting"));
+            CreateDirectory(Path.Combine("Contents", "PlaybackEngines", "Custom", "Scripting", "NetCoreRuntime"));
+            CreateDirectory(Path.Combine("Contents", "PlaybackEngines", "Custom", "Scripting", "DotNetSdkRoslyn"));
+
+            string resolvedScriptingRootPath = ExternalCompilerPathResolver.ResolveScriptingRootPath(contentsPath);
+
+            Assert.That(resolvedScriptingRootPath, Is.EqualTo(expectedScriptingRootPath));
+        }
+
         private string CreateDirectory(string relativePath)
         {
             string directoryPath = Path.Combine(_tempDirectoryPath, relativePath);

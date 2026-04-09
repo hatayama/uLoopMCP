@@ -86,6 +86,7 @@ namespace io.github.hatayama.uLoopMCP
             double referenceResolutionMilliseconds = 0;
             double buildMilliseconds = 0;
             int buildCount = 0;
+            DynamicCompilationBackendKind compilationBackendKind = DynamicCompilationBackendKind.Unknown;
 
             Directory.CreateDirectory(tempDirectoryPath);
 
@@ -98,7 +99,7 @@ namespace io.github.hatayama.uLoopMCP
                     CancellationToken cancellationToken)
                 {
                     Stopwatch buildStopwatch = Stopwatch.StartNew();
-                    CompilerMessage[] compilerMessages = await _compilationBackend.CompileAsync(
+                    DynamicCompilationBackendResult backendResult = await _compilationBackend.CompileAsync(
                         resolvedSourcePath,
                         resolvedDllPath,
                         resolvedReferences,
@@ -107,9 +108,10 @@ namespace io.github.hatayama.uLoopMCP
                         () => canDeleteTempFiles = false,
                         () => canDeleteTempFiles = true,
                         () => buildCount++);
+                    compilationBackendKind = backendResult.BackendKind;
                     buildStopwatch.Stop();
                     buildMilliseconds += buildStopwatch.Elapsed.TotalMilliseconds;
-                    return compilerMessages;
+                    return backendResult.CompilerMessages;
                 }
 
                 BuildAttemptResult attemptResult = await BuildPreparedCodeAsync(plan.PreparedCode, ct);
@@ -134,7 +136,8 @@ namespace io.github.hatayama.uLoopMCP
                     referenceResolutionMilliseconds,
                     buildMilliseconds,
                     buildCount,
-                    shouldCacheResult);
+                    shouldCacheResult,
+                    compilationBackendKind);
 
                 async Task<BuildAttemptResult> BuildPreparedCodeAsync(
                     PreparedDynamicCode preparedCode,

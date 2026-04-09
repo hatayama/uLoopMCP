@@ -184,14 +184,25 @@ namespace io.github.hatayama.uLoopMCP
                 return null;
             }
 
-            return ResolvePreferredBaseReferencePath(externalCompilerPaths.EditorContentsPath, assemblyName);
+            return ResolvePreferredBaseReferencePath(
+                externalCompilerPaths.EditorContentsPath,
+                externalCompilerPaths.ScriptingRootPath,
+                assemblyName);
         }
 
         internal static string ResolvePreferredBaseReferencePath(
             string editorContentsPath,
             string assemblyName)
         {
-            foreach (string referenceRootPath in EnumerateReferenceRootPaths(editorContentsPath))
+            return ResolvePreferredBaseReferencePath(editorContentsPath, null, assemblyName);
+        }
+
+        internal static string ResolvePreferredBaseReferencePath(
+            string editorContentsPath,
+            string scriptingRootPath,
+            string assemblyName)
+        {
+            foreach (string referenceRootPath in EnumerateReferenceRootPaths(editorContentsPath, scriptingRootPath))
             {
                 string candidatePath = BuildPreferredBaseReferencePath(referenceRootPath, assemblyName);
                 if (!string.IsNullOrEmpty(candidatePath) && File.Exists(candidatePath))
@@ -203,15 +214,32 @@ namespace io.github.hatayama.uLoopMCP
             return null;
         }
 
-        private static IEnumerable<string> EnumerateReferenceRootPaths(string editorContentsPath)
+        private static IEnumerable<string> EnumerateReferenceRootPaths(
+            string editorContentsPath,
+            string scriptingRootPath)
         {
+            HashSet<string> emittedPaths = new HashSet<string>(StringComparer.Ordinal);
+
+            if (!string.IsNullOrEmpty(scriptingRootPath) && emittedPaths.Add(scriptingRootPath))
+            {
+                yield return scriptingRootPath;
+            }
+
             if (string.IsNullOrEmpty(editorContentsPath))
             {
                 yield break;
             }
 
-            yield return Path.Combine(editorContentsPath, "Resources", "Scripting");
-            yield return editorContentsPath;
+            string resourcesScriptingPath = Path.Combine(editorContentsPath, "Resources", "Scripting");
+            if (emittedPaths.Add(resourcesScriptingPath))
+            {
+                yield return resourcesScriptingPath;
+            }
+
+            if (emittedPaths.Add(editorContentsPath))
+            {
+                yield return editorContentsPath;
+            }
         }
 
         private static string BuildPreferredBaseReferencePath(string referenceRootPath, string assemblyName)

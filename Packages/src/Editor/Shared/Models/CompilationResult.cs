@@ -54,6 +54,10 @@ namespace io.github.hatayama.uLoopMCP
         /// benchmarks to compare where time is spent inside the pipeline.
         /// </summary>
         public List<string> Timings { get; set; } = new();
+
+        public List<string> AdvisoryLogs { get; set; } = new();
+
+        public DynamicCompilationBackendKind CompilationBackendKind { get; set; } = DynamicCompilationBackendKind.Unknown;
     }
 
     /// <summary>
