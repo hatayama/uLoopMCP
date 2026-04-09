@@ -125,26 +125,42 @@ namespace io.github.hatayama.uLoopMCP
             return false;
         }
 
-        /// <summary>
-        /// Checks skills directories (.claude/skills, .agents/skills, etc.) before auto-installing.
-        /// </summary>
         public static List<SkillTargetInfo> DetectTargets()
         {
+            return DetectTargets(requireSkillsDirectory: false);
+        }
+
+        internal static List<SkillTargetInfo> DetectTargets(bool requireSkillsDirectory)
+        {
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+
+            return DetectTargets(projectRoot, requireSkillsDirectory);
+        }
+
+        internal static List<SkillTargetInfo> DetectTargets(string projectRoot, bool requireSkillsDirectory)
+        {
             Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
 
             List<SkillTargetInfo> targets = new();
 
             foreach (SkillTargetDefinition target in SkillTargets)
             {
-                string skillsRoot = Path.Combine(projectRoot, target.DirName, SkillsDirName);
-                if (!Directory.Exists(skillsRoot))
+                string targetRoot = Path.Combine(projectRoot, target.DirName);
+                if (!Directory.Exists(targetRoot))
                 {
                     continue;
                 }
 
-                bool hasULoopSkills = Directory.EnumerateDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB)
-                    .Any(skillDir => File.Exists(Path.Combine(skillDir, SkillFileName)));
+                string skillsRoot = Path.Combine(targetRoot, SkillsDirName);
+                if (requireSkillsDirectory && !Directory.Exists(skillsRoot))
+                {
+                    continue;
+                }
+
+                bool hasULoopSkills = Directory.Exists(skillsRoot)
+                    && Directory.EnumerateDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB)
+                        .Any(skillDir => File.Exists(Path.Combine(skillDir, SkillFileName)));
                 targets.Add(new SkillTargetInfo(target.DisplayName, target.DirName, hasULoopSkills));
             }
 
@@ -152,11 +168,11 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Re-installs skills for targets that already have a skills directory.
+        /// Re-installs skills only for targets that already opted in via an existing skills directory.
         /// </summary>
         public static async Task<SkillInstallResult> InstallSkillFiles()
         {
-            List<SkillTargetInfo> targets = DetectTargets();
+            List<SkillTargetInfo> targets = DetectTargets(requireSkillsDirectory: true);
             return await InstallSkillFiles(targets);
         }
 

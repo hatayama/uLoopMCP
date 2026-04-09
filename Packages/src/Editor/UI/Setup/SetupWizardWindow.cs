@@ -200,7 +200,7 @@ namespace io.github.hatayama.uLoopMCP
 
             if (targets.Count == 0)
             {
-                _skillsStatusLabel.text = "No AI skills directories detected (.claude/skills, .agents/skills, etc.)";
+                _skillsStatusLabel.text = "No AI tool directories detected (.claude/, .agents/, etc.)";
                 _installSkillsButton.SetEnabled(false);
                 return;
             }
