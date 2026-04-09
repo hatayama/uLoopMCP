@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.7.1](https://github.com/hatayama/unity-cli-loop/compare/v1.7.0...v1.7.1) (2026-04-09)
+
+
+### Bug Fixes
+
+* avoid misleading Unity editor availability errors ([#911](https://github.com/hatayama/unity-cli-loop/issues/911)) ([4c2b7a6](https://github.com/hatayama/unity-cli-loop/commit/4c2b7a63bd4a31f0e84fa0964a28c268b33eb9c3))
+* require skills directories for auto-install detection ([#912](https://github.com/hatayama/unity-cli-loop/issues/912)) ([8832050](https://github.com/hatayama/unity-cli-loop/commit/8832050f7f4d9b94072ee33be2be0aeba90edf44))
+* unblock TypeScript server dependency updates by resolving npm audit findings ([#907](https://github.com/hatayama/unity-cli-loop/issues/907)) ([ffa3863](https://github.com/hatayama/unity-cli-loop/commit/ffa386365f31a8e908d2059e986218e1b113bd70))
+
 ## [1.7.0](https://github.com/hatayama/unity-cli-loop/compare/v1.6.4...v1.7.0) (2026-04-07)
 
 
