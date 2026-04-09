@@ -16,12 +16,17 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         private string _tempDirectoryPath;
         private Action<string> _previousWorkerDirectoryDeleter;
         private Action<Process, string> _previousCompileRequestSender;
+        private Func<ExternalCompilerPaths, string, string, string, CompilerMessage[]>
+            _previousWorkerAssemblyCompiler;
+        private bool _workerAssemblyCompilerSwapped;
 
         [SetUp]
         public void SetUp()
         {
             _tempDirectoryPath = Path.Combine(Path.GetTempPath(), $"SharedRoslynCompilerWorkerHostTests_{System.Guid.NewGuid():N}");
             Directory.CreateDirectory(_tempDirectoryPath);
+            DynamicCompilationHealthMonitor.ResetForTests();
+            SharedRoslynCompilerWorkerHost.ShutdownForTests();
         }
 
         [TearDown]
@@ -39,7 +44,15 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 _previousCompileRequestSender = null;
             }
 
+            if (_workerAssemblyCompilerSwapped)
+            {
+                SharedRoslynCompilerWorkerHost.SwapWorkerAssemblyCompilerForTests(_previousWorkerAssemblyCompiler);
+                _previousWorkerAssemblyCompiler = null;
+                _workerAssemblyCompilerSwapped = false;
+            }
+
             SharedRoslynCompilerWorkerHost.ShutdownForTests();
+            DynamicCompilationHealthMonitor.ResetForTests();
 
             if (Directory.Exists(_tempDirectoryPath))
             {
@@ -296,6 +309,62 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(buildFinished, Is.True);
         }
 
+        [Test]
+        public void TryCompile_WhenWorkerAssemblyBuildLeavesStaleDll_ShouldRebuildOnRetry()
+        {
+            ExternalCompilerPaths externalCompilerPaths = ExternalCompilerPathResolver.Resolve();
+            Assert.That(externalCompilerPaths, Is.Not.Null, "Unity external compiler layout should be available for this test");
+
+            string sourcePath = Path.Combine(_tempDirectoryPath, "WorkerRebuildRetryTest.cs");
+            string dllPath = Path.Combine(_tempDirectoryPath, "WorkerRebuildRetryTest.dll");
+            string requestFilePath = Path.Combine(_tempDirectoryPath, "WorkerRebuildRetryTest.worker");
+            DynamicReferenceSetBuilderService referenceSetBuilder = new DynamicReferenceSetBuilderService();
+            List<string> references = referenceSetBuilder.BuildReferenceSet(
+                new List<string>(),
+                null,
+                externalCompilerPaths);
+
+            File.WriteAllText(
+                sourcePath,
+                "public static class WorkerRebuildRetryTest { public static int Execute() { return 31; } }");
+            File.WriteAllLines(
+                requestFilePath,
+                new[] { Path.GetFullPath(sourcePath), Path.GetFullPath(dllPath) }
+                    .Concat(references.Select(Path.GetFullPath)));
+
+            int workerAssemblyBuildCount = 0;
+            _previousWorkerAssemblyCompiler = SharedRoslynCompilerWorkerHost.SwapWorkerAssemblyCompilerForTests(
+                (_, _, workerAssemblyPath, _) =>
+                {
+                    workerAssemblyBuildCount++;
+                    File.WriteAllText(workerAssemblyPath, "invalid worker assembly");
+                    return new[]
+                    {
+                        new CompilerMessage
+                        {
+                            type = CompilerMessageType.Error,
+                            message = "simulated worker assembly build failure"
+                        }
+                    };
+                });
+            _workerAssemblyCompilerSwapped = true;
+            LogAssert.Expect(
+                UnityEngine.LogType.Error,
+                new System.Text.RegularExpressions.Regex("execute-dynamic-code shared Roslyn worker failed to operate correctly"));
+
+            CompilerMessage[] messages = SharedRoslynCompilerWorkerHost.TryCompile(
+                requestFilePath,
+                externalCompilerPaths,
+                CancellationToken.None,
+                () => { },
+                () => { },
+                () => { });
+
+            Assert.That(messages, Is.Null);
+            Assert.That(workerAssemblyBuildCount, Is.EqualTo(2));
+            Assert.That(File.Exists(GetWorkerAssemblyPath()), Is.False);
+        }
+
         private CompilerMessage[] CompileWithWorker(
             string source,
             IReadOnlyCollection<string> defineSymbols,
@@ -351,6 +420,11 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 Path.GetTempPath(),
                 "uLoopMCPCompilation",
                 $"RoslynWorker-{Process.GetCurrentProcess().Id}");
+        }
+
+        private static string GetWorkerAssemblyPath()
+        {
+            return Path.Combine(GetWorkerDirectoryPath(), "RoslynCompilerWorker.dll");
         }
     }
 }

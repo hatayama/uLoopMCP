@@ -87,5 +87,13 @@ namespace io.github.hatayama.uLoopMCP
                 aiTodo: aiTodo);
             Debug.LogError($"[{McpConstants.PROJECT_NAME}] {message}");
         }
+
+        internal static void ResetForTests()
+        {
+            lock (ReportedIssueLock)
+            {
+                ReportedIssues.Clear();
+            }
+        }
     }
 }

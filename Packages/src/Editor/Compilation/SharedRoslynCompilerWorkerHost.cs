@@ -24,6 +24,8 @@ namespace io.github.hatayama.uLoopMCP
         private static readonly object SharedCompilerWorkerLock = new();
         private static Action<string> s_deleteWorkerDirectory = path => Directory.Delete(path, true);
         private static Action<Process, string> s_sendCompileRequest = SendCompileRequestCore;
+        private static Func<ExternalCompilerPaths, string, string, string, CompilerMessage[]>
+            s_compileWorkerAssemblyForTests;
         private static Process _sharedCompilerWorkerProcess;
         private static string _workerDirectoryPath;
 
@@ -283,6 +285,7 @@ namespace io.github.hatayama.uLoopMCP
                 return WorkerStartupResult.Ready();
             }
 
+            DeleteWorkerAssemblyIfPresent(workerPaths.AssemblyPath);
             return WorkerStartupResult.Failure(
                 "worker_build_failed",
                 new
@@ -504,6 +507,16 @@ namespace io.github.hatayama.uLoopMCP
             string workerAssemblyPath,
             string workerCompileResponseFilePath)
         {
+            if (s_compileWorkerAssemblyForTests != null)
+            {
+                return WorkerAssemblyBuildResult.Started(
+                    s_compileWorkerAssemblyForTests(
+                        externalCompilerPaths,
+                        workerSourcePath,
+                        workerAssemblyPath,
+                        workerCompileResponseFilePath));
+            }
+
             WriteWorkerCompilerResponseFile(
                 workerCompileResponseFilePath,
                 workerSourcePath,
@@ -645,6 +658,14 @@ namespace io.github.hatayama.uLoopMCP
             return string.Empty;
         }
 
+        private static void DeleteWorkerAssemblyIfPresent(string assemblyPath)
+        {
+            if (File.Exists(assemblyPath))
+            {
+                File.Delete(assemblyPath);
+            }
+        }
+
         private static void ShutdownForReload()
         {
             Shutdown();
@@ -675,6 +696,16 @@ namespace io.github.hatayama.uLoopMCP
 
             Action<Process, string> previous = s_sendCompileRequest;
             s_sendCompileRequest = sender;
+            return previous;
+        }
+
+        internal static Func<ExternalCompilerPaths, string, string, string, CompilerMessage[]>
+            SwapWorkerAssemblyCompilerForTests(
+                Func<ExternalCompilerPaths, string, string, string, CompilerMessage[]> compiler)
+        {
+            Func<ExternalCompilerPaths, string, string, string, CompilerMessage[]> previous =
+                s_compileWorkerAssemblyForTests;
+            s_compileWorkerAssemblyForTests = compiler;
             return previous;
         }
 

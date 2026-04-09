@@ -8,12 +8,24 @@ const LAUNCH_READINESS_RETRY_MS = 1000;
 const LAUNCH_READINESS_CODE = 'return null;';
 const LAUNCH_READINESS_REQUEST_TOTAL_THRESHOLD_MS = 250;
 const LAUNCH_READINESS_SETTLE_TIMEOUT_MS = 10000;
-const TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_MESSAGES = [
-  'Another execution is already in progress',
-  'Execution was cancelled or timed out',
+const TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_SUBSTRINGS = [
+  'another execution is already in progress',
+  'execution was cancelled or timed out',
+  'unity is busy',
+  'unity is compiling scripts',
+  'unity server is starting',
+  'cannot connect to unity',
+  'unity editor for this project is not running',
 ];
 const TRANSIENT_COMPILATION_PROVIDER_UNAVAILABLE_SUBSTRINGS = ['warming up'];
-const RETRYABLE_UNITY_ERROR_SUBSTRINGS = ['can only be called from the main thread'];
+const RETRYABLE_LAUNCH_READINESS_ERROR_SUBSTRINGS = [
+  'can only be called from the main thread',
+  'unity is busy',
+  'unity is compiling scripts',
+  'unity server is starting',
+  'cannot connect to unity',
+  'unity editor for this project is not running',
+];
 
 interface ExecuteDynamicCodeReadinessResponse {
   Success?: boolean;
@@ -27,6 +39,10 @@ interface DynamicCodeLaunchReadinessDependencies {
   createClient: (port: number) => DirectUnityClient;
   sleepFn: typeof sleep;
   nowFn: () => number;
+}
+
+function isStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
 }
 
 const defaultDependencies: DynamicCodeLaunchReadinessDependencies = {
@@ -53,7 +69,12 @@ function isTransientExecuteDynamicCodeFailure(
     return true;
   }
 
-  if (TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_MESSAGES.includes(errorMessage)) {
+  const normalizedMessage = errorMessage.toLowerCase();
+  if (
+    TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_SUBSTRINGS.some((substring) =>
+      normalizedMessage.includes(substring),
+    )
+  ) {
     return true;
   }
 
@@ -96,12 +117,8 @@ function isRetryableLaunchReadinessError(error: unknown): boolean {
 }
 
 function isRetryableUnityStartupError(message: string): boolean {
-  if (!message.startsWith('Unity error:')) {
-    return false;
-  }
-
   const normalizedMessage = message.toLowerCase();
-  return RETRYABLE_UNITY_ERROR_SUBSTRINGS.some((substring) =>
+  return RETRYABLE_LAUNCH_READINESS_ERROR_SUBSTRINGS.some((substring) =>
     normalizedMessage.includes(substring),
   );
 }
@@ -115,7 +132,7 @@ function parseTimingMilliseconds(
   timings: readonly string[] | undefined,
   label: string,
 ): number | null {
-  if (!Array.isArray(timings)) {
+  if (!isStringArray(timings)) {
     return null;
   }
 
@@ -174,21 +191,24 @@ export async function waitForDynamicCodeReadyAfterLaunch(
 
         if (firstSuccessfulProbeTime === null) {
           firstSuccessfulProbeTime = dependencies.nowFn();
-        }
-        else if (
+        } else if (
           dependencies.nowFn() - firstSuccessfulProbeTime >=
           LAUNCH_READINESS_SETTLE_TIMEOUT_MS
         ) {
           return;
         }
-      }
-      else if (!isTransientExecuteDynamicCodeFailure(payload)) {
-        throw createLaunchReadinessFailure(payload);
+      } else {
+        if (!isTransientExecuteDynamicCodeFailure(payload)) {
+          throw createLaunchReadinessFailure(payload);
+        }
+
+        firstSuccessfulProbeTime = null;
       }
     } catch (error) {
       if (!isRetryableLaunchReadinessError(error)) {
         throw error;
       }
+      firstSuccessfulProbeTime = null;
     } finally {
       client?.disconnect();
     }
