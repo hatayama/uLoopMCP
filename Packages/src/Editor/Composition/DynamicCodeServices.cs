@@ -8,6 +8,7 @@ namespace io.github.hatayama.uLoopMCP
     internal static class DynamicCodeServices
     {
         private static readonly object ServerScopedServicesLock = new();
+        private static TimeSpan s_serverScopedDrainTimeout = TimeSpan.FromSeconds(5);
         private static Task _serverScopedDrainTask = Task.CompletedTask;
         private static CancellationTokenSource _serverScopedLifetimeCancellationTokenSource;
         private static IDynamicCodeExecutorPool _executorPool;
@@ -207,7 +208,29 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            await drainTask;
+            if (drainTask.IsCompleted)
+            {
+                await drainTask;
+                return;
+            }
+
+            TimeSpan timeout = s_serverScopedDrainTimeout;
+            UnityEngine.Debug.Assert(timeout > TimeSpan.Zero, "server-scoped drain timeout must be positive");
+
+            Task completedTask = await Task.WhenAny(drainTask, Task.Delay(timeout));
+            if (completedTask == drainTask)
+            {
+                await drainTask;
+                return;
+            }
+
+            VibeLogger.LogWarning(
+                "server_scoped_shutdown_timeout",
+                "Server-scoped dynamic code shutdown exceeded the drain timeout; continuing with a fresh runtime",
+                new
+                {
+                    timeout_ms = (int)timeout.TotalMilliseconds
+                });
         }
 
         private static async Task ShutdownServerScopedServicesAsync(
@@ -215,6 +238,7 @@ namespace io.github.hatayama.uLoopMCP
             IDynamicCodeExecutionRuntime runtimeFacade)
         {
             lifetimeCancellationTokenSource?.Cancel();
+            SharedRoslynCompilerWorkerHost.ShutdownForServerReset();
 
             if (runtimeFacade is IShutdownAwareDynamicCodeExecutionRuntime shutdownAwareRuntime)
             {
@@ -226,6 +250,50 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             lifetimeCancellationTokenSource?.Dispose();
+        }
+
+        internal static TimeSpan SwapDrainTimeoutForTests(TimeSpan timeout)
+        {
+            UnityEngine.Debug.Assert(timeout > TimeSpan.Zero, "timeout must be positive");
+
+            TimeSpan previous = s_serverScopedDrainTimeout;
+            s_serverScopedDrainTimeout = timeout;
+            return previous;
+        }
+
+        internal static void SetServerScopedServicesForTests(
+            CancellationTokenSource lifetimeCancellationTokenSource,
+            IDynamicCodeExecutorPool executorPool,
+            IDynamicCodeExecutionRuntime runtimeFacade,
+            IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase)
+        {
+            lock (ServerScopedServicesLock)
+            {
+                _serverScopedLifetimeCancellationTokenSource = lifetimeCancellationTokenSource;
+                _executorPool = executorPool;
+                _runtimeFacade = runtimeFacade;
+                _prewarmDynamicCodeUseCase = prewarmDynamicCodeUseCase;
+            }
+        }
+
+        internal static Task GetServerScopedDrainTaskForTests()
+        {
+            lock (ServerScopedServicesLock)
+            {
+                return _serverScopedDrainTask;
+            }
+        }
+
+        internal static void ResetStateForTests()
+        {
+            lock (ServerScopedServicesLock)
+            {
+                _serverScopedLifetimeCancellationTokenSource = null;
+                _executorPool = null;
+                _runtimeFacade = null;
+                _prewarmDynamicCodeUseCase = null;
+                _serverScopedDrainTask = Task.CompletedTask;
+            }
         }
     }
 }

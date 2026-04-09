@@ -192,6 +192,28 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public void ShutdownForServerReset_WhenWorkerDirectoryExists_ShouldDeleteWorkerDirectory()
+        {
+            CompilerMessage[] messages = CompileWithWorker(
+                "public static class WorkerServerResetCleanupTest { public static int Execute() { return 13; } }",
+                Array.Empty<string>(),
+                false,
+                out _,
+                out _,
+                out _,
+                out _);
+
+            string workerDirectoryPath = GetWorkerDirectoryPath();
+
+            Assert.That(messages, Is.Not.Null);
+            Assert.That(Directory.Exists(workerDirectoryPath), Is.True);
+
+            SharedRoslynCompilerWorkerHost.ShutdownForServerReset();
+
+            Assert.That(Directory.Exists(workerDirectoryPath), Is.False);
+        }
+
+        [Test]
         public void ShutdownForTests_WhenWorkerDirectoryDeletionFails_ShouldNotThrow()
         {
             CompilerMessage[] messages = CompileWithWorker(

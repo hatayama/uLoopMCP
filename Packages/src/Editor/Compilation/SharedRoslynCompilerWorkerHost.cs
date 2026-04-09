@@ -676,6 +676,11 @@ namespace io.github.hatayama.uLoopMCP
             Shutdown();
         }
 
+        internal static void ShutdownForServerReset()
+        {
+            Shutdown();
+        }
+
         internal static void ShutdownForTests()
         {
             Shutdown();
