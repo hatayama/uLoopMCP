@@ -39,6 +39,7 @@ import { findUnityProjectRoot } from './project-root.js';
 import { validateProjectPath, UnityNotRunningError } from './port-resolver.js';
 import { ProjectMismatchError } from './project-validator.js';
 import { filterEnabledTools, isToolEnabled } from './tool-settings-loader.js';
+import { getProjectResolutionErrorLines } from './cli-project-error.js';
 
 interface CliOptions extends GlobalOptions {
   [key: string]: unknown;
@@ -430,24 +431,16 @@ async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
     await fn();
   } catch (error) {
     if (error instanceof UnityNotRunningError) {
-      console.error('\x1b[31mError: Unity Editor for this project is not running.\x1b[0m');
-      console.error('');
-      console.error(`  Project: ${error.projectRoot}`);
-      console.error('');
-      console.error('Start the Unity Editor for this project and try again.');
+      for (const line of getProjectResolutionErrorLines(error)) {
+        console.error(line.startsWith('Error: ') ? `\x1b[31m${line}\x1b[0m` : line);
+      }
       process.exit(1);
     }
 
     if (error instanceof ProjectMismatchError) {
-      console.error('\x1b[31mError: Unity Editor for this project is not running.\x1b[0m');
-      console.error('');
-      console.error(`  Project:      ${error.expectedProjectRoot}`);
-      console.error(`  Connected to: ${error.connectedProjectRoot}`);
-      console.error('');
-      console.error('Another Unity instance was found, but it belongs to a different project.');
-      console.error(
-        'Start the Unity Editor for this project, or use --project-path to specify the target.',
-      );
+      for (const line of getProjectResolutionErrorLines(error)) {
+        console.error(line.startsWith('Error: ') ? `\x1b[31m${line}\x1b[0m` : line);
+      }
       process.exit(1);
     }
 

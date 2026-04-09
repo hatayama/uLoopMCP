@@ -201,6 +201,7 @@ export async function executeToolCommand(
     }
     portNumber = parsed;
   }
+  checkUnityBusyState(globalOptions.projectPath);
   const port = await resolveUnityPort(portNumber, globalOptions.projectPath);
   const compileOptions = getCompileExecutionOptions(toolName, params);
   const shouldWaitForDomainReload = compileOptions.waitForDomainReload;
@@ -391,6 +392,7 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
     }
     portNumber = parsed;
   }
+  checkUnityBusyState(globalOptions.projectPath);
   const port = await resolveUnityPort(portNumber, globalOptions.projectPath);
   const projectRoot =
     globalOptions.projectPath !== undefined
@@ -488,6 +490,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
     }
     portNumber = parsed;
   }
+  checkUnityBusyState(globalOptions.projectPath);
   const port = await resolveUnityPort(portNumber, globalOptions.projectPath);
   const projectRoot =
     globalOptions.projectPath !== undefined
