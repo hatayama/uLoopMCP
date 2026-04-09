@@ -99,10 +99,13 @@ program
       }
       for (const item of visibleItems) {
         const group: string = getGroup(item);
-        if (!groupMap.has(group)) {
-          groupMap.set(group, []);
+        let groupedItems: T[] | undefined = groupMap.get(group);
+        if (groupedItems === undefined) {
+          groupedItems = [];
+          groupMap.set(group, groupedItems);
         }
-        groupMap.get(group)!.push(item);
+
+        groupedItems.push(item);
       }
       const ordered = new Map<string, T[]>();
       for (const key of HELP_GROUP_ORDER) {

@@ -121,17 +121,24 @@ function tryParseRequestTotalMilliseconds(timings: unknown): number | undefined 
     return undefined;
   }
 
+  const prefix = '[Perf] RequestTotal: ';
+  const suffix = 'ms';
   for (const timingEntry of timings) {
     if (typeof timingEntry !== 'string') {
       continue;
     }
 
-    const match = /^\[Perf\] RequestTotal: ([0-9]+(?:\.[0-9]+)?)ms$/.exec(timingEntry);
-    if (match === null) {
+    if (!timingEntry.startsWith(prefix) || !timingEntry.endsWith(suffix)) {
       continue;
     }
 
-    return parseFloat(match[1]);
+    const numericText = timingEntry.slice(prefix.length, -suffix.length);
+    const parsedMilliseconds = Number.parseFloat(numericText);
+    if (Number.isNaN(parsedMilliseconds)) {
+      continue;
+    }
+
+    return parsedMilliseconds;
   }
 
   return undefined;

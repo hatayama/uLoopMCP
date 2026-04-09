@@ -115,12 +115,12 @@ function parseTimingMilliseconds(
   timings: readonly string[] | undefined,
   label: string,
 ): number | null {
-  if (!Array.isArray(timings)) {
+  if (timings === undefined) {
     return null;
   }
 
   const prefix = `[Perf] ${label}: `;
-  const entry = timings.find((timing) => timing.startsWith(prefix));
+  const entry = timings.find((timing: string) => timing.startsWith(prefix));
   if (entry === undefined) {
     return null;
   }
@@ -174,15 +174,13 @@ export async function waitForDynamicCodeReadyAfterLaunch(
 
         if (firstSuccessfulProbeTime === null) {
           firstSuccessfulProbeTime = dependencies.nowFn();
-        }
-        else if (
+        } else if (
           dependencies.nowFn() - firstSuccessfulProbeTime >=
           LAUNCH_READINESS_SETTLE_TIMEOUT_MS
         ) {
           return;
         }
-      }
-      else if (!isTransientExecuteDynamicCodeFailure(payload)) {
+      } else if (!isTransientExecuteDynamicCodeFailure(payload)) {
         throw createLaunchReadinessFailure(payload);
       }
     } catch (error) {
