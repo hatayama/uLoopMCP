@@ -17,7 +17,10 @@ const TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_SUBSTRINGS = [
   'cannot connect to unity',
   'unity editor for this project is not running',
 ];
-const TRANSIENT_COMPILATION_PROVIDER_UNAVAILABLE_SUBSTRINGS = ['warming up'];
+const TRANSIENT_COMPILATION_PROVIDER_UNAVAILABLE_SUBSTRINGS = [
+  'warming up',
+  'no compilation provider is registered',
+];
 const RETRYABLE_LAUNCH_READINESS_ERROR_SUBSTRINGS = [
   'can only be called from the main thread',
   'unity is busy',

@@ -159,15 +159,36 @@ namespace io.github.hatayama.uLoopMCP
 
             if (retryResult.Logs?.Any() == true)
             {
-                if (executionResult.Logs == null)
-                {
-                    executionResult.Logs = new List<string>();
-                }
-
-                executionResult.Logs.AddRange(retryResult.Logs);
+                retryResult.Logs = MergeLogs(executionResult.Logs, retryResult.Logs);
+            }
+            else
+            {
+                retryResult.Logs = CloneLogs(executionResult.Logs);
             }
 
-            return executionResult;
+            return retryResult;
+        }
+
+        private static List<string> MergeLogs(List<string> originalLogs, List<string> retryLogs)
+        {
+            List<string> mergedLogs = CloneLogs(originalLogs);
+            if (retryLogs == null || retryLogs.Count == 0)
+            {
+                return mergedLogs;
+            }
+
+            if (mergedLogs == null)
+            {
+                return new List<string>(retryLogs);
+            }
+
+            mergedLogs.AddRange(retryLogs);
+            return mergedLogs;
+        }
+
+        private static List<string> CloneLogs(List<string> logs)
+        {
+            return logs == null ? null : new List<string>(logs);
         }
 
         private static bool LooksLikeMissingReturn(ExecutionResult executionResult)

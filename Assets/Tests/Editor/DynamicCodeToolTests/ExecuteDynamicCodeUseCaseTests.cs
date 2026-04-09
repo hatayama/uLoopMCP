@@ -90,6 +90,70 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task ExecuteAsync_WhenRetryAfterMissingReturnStillFails_ShouldReturnRetryDiagnostics()
+        {
+            FakeDynamicCodeExecutionRuntime runtime = new FakeDynamicCodeExecutionRuntime(
+                new ExecutionResult
+                {
+                    Success = false,
+                    ErrorMessage = "Compilation error occurred",
+                    CompilationErrors = new List<CompilationError>
+                    {
+                        new CompilationError
+                        {
+                            ErrorCode = "CS0161",
+                            Message = "Not all code paths return a value"
+                        }
+                    },
+                    Logs = new List<string> { "initial failure" },
+                    Timings = new List<string> { "initial timing" }
+                },
+                new ExecutionResult
+                {
+                    Success = false,
+                    ErrorMessage = "Compilation error occurred",
+                    UpdatedCode = "int x = 1;\nreturn null;",
+                    CompilationErrors = new List<CompilationError>
+                    {
+                        new CompilationError
+                        {
+                            ErrorCode = "CS0029",
+                            Message = "Cannot implicitly convert type 'string' to 'int'",
+                            Line = 2,
+                            Column = 8
+                        }
+                    },
+                    Logs = new List<string> { "retry failure" },
+                    Timings = new List<string> { "retry timing" }
+                });
+            ExecuteDynamicCodeUseCase useCase = new ExecuteDynamicCodeUseCase(runtime);
+
+            DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
+            ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+
+            try
+            {
+                ExecuteDynamicCodeResponse response = await useCase.ExecuteAsync(
+                    new ExecuteDynamicCodeSchema
+                    {
+                        Code = "int x = 1",
+                        CompileOnly = false
+                    },
+                    CancellationToken.None);
+
+                Assert.That(response.Success, Is.False);
+                Assert.That(runtime.Requests, Has.Count.EqualTo(2));
+                Assert.That(response.Timings, Contains.Item("retry timing"));
+                Assert.That(response.Diagnostics, Has.Count.EqualTo(1));
+                Assert.That(response.Diagnostics[0].ErrorCode, Is.EqualTo("CS0029"));
+            }
+            finally
+            {
+                ULoopSettings.SetDynamicCodeSecurityLevel(previous);
+            }
+        }
+
+        [Test]
         public async Task ExecuteAsync_WhenDiagnosticLineUsesTwoDigits_ShouldAlignCaretWithRenderedPrefix()
         {
             string updatedCode = string.Join(
