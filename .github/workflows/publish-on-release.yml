@@ -5,18 +5,21 @@ on:
     types: [published]
 
 permissions:
+  actions: write
   contents: read
-  id-token: write  # Passed to npm-publish workflow for OIDC trusted publishing
 
 jobs:
-  publish:
+  dispatch-publish:
     if: startsWith(github.event.release.tag_name, 'v')
-    uses: ./.github/workflows/npm-publish.yml
-    with:
-      ref: ${{ github.event.release.tag_name }}
-      dry-run: false
-    secrets:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-    permissions:
-      contents: read
-      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚀 Dispatch npm-publish workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          gh workflow run npm-publish.yml \
+            --ref main \
+            -f ref="${RELEASE_TAG}" \
+            -f dry-run=false \
+            --repo "${GITHUB_REPOSITORY}"
