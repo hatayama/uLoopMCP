@@ -87,6 +87,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(result.Success, Is.True);
             Assert.That(result.Logs, Contains.Item("Warning: Fast Roslyn path is unavailable; execute-dynamic-code is using AssemblyBuilder fallback, so new snippets compile slower."));
             Assert.That(result.Timings, Contains.Item("[Perf] Backend: AssemblyBuilderFallback"));
+            Assert.That(result.Timings, Has.Some.StartsWith("[Perf] SourcePrepare: "));
+            Assert.That(result.Timings, Has.Some.StartsWith("[Perf] CompileTotal: "));
             Assert.That(invoker.ExecuteAsyncCallCount, Is.EqualTo(0));
         }
 

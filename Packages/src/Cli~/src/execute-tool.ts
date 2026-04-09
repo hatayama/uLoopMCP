@@ -19,6 +19,7 @@ import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './
 import { VERSION } from './version.js';
 import { createSpinner } from './spinner.js';
 import { findUnityProjectRoot } from './project-root.js';
+import { getCliProcessAgeMilliseconds } from './process-timing.js';
 import {
   type CompileExecutionOptions,
   ensureCompileRequestId,
@@ -115,6 +116,52 @@ export function isTransportDisconnectError(error: unknown): boolean {
   return message === 'UNITY_NO_RESPONSE' || message.startsWith('Connection lost:');
 }
 
+function tryParseRequestTotalMilliseconds(timings: unknown): number | undefined {
+  if (!Array.isArray(timings)) {
+    return undefined;
+  }
+
+  for (const timingEntry of timings) {
+    if (typeof timingEntry !== 'string') {
+      continue;
+    }
+
+    const match = /^\[Perf\] RequestTotal: ([0-9]+(?:\.[0-9]+)?)ms$/.exec(timingEntry);
+    if (match === null) {
+      continue;
+    }
+
+    return parseFloat(match[1]);
+  }
+
+  return undefined;
+}
+
+export function appendCliTimingsToDynamicCodeResult(
+  result: Record<string, unknown>,
+  cliTotalMilliseconds: number,
+  cliProcessTotalMilliseconds: number,
+): void {
+  const timings = result['Timings'];
+  if (!Array.isArray(timings)) {
+    return;
+  }
+
+  timings.push(`[Perf] CliTotal: ${cliTotalMilliseconds.toFixed(1)}ms`);
+  timings.push(`[Perf] CliProcessTotal: ${cliProcessTotalMilliseconds.toFixed(1)}ms`);
+  timings.push(
+    `[Perf] CliBootstrap: ${Math.max(0, cliProcessTotalMilliseconds - cliTotalMilliseconds).toFixed(1)}ms`,
+  );
+
+  const requestTotalMilliseconds = tryParseRequestTotalMilliseconds(timings);
+  if (requestTotalMilliseconds === undefined) {
+    return;
+  }
+
+  const cliOverheadMilliseconds = Math.max(0, cliTotalMilliseconds - requestTotalMilliseconds);
+  timings.push(`[Perf] CliOverhead: ${cliOverheadMilliseconds.toFixed(1)}ms`);
+}
+
 /**
  * Compare two semantic versions safely.
  * Returns true if v1 < v2, false otherwise.
@@ -193,6 +240,7 @@ export async function executeToolCommand(
   params: Record<string, unknown>,
   globalOptions: GlobalOptions,
 ): Promise<void> {
+  const commandStartedAt: number = Date.now();
   let portNumber: number | undefined;
   if (globalOptions.port) {
     const parsed = parseInt(globalOptions.port, 10);
@@ -254,6 +302,13 @@ export async function executeToolCommand(
         spinner.stop();
         restoreStdin();
 
+        if (toolName === 'execute-dynamic-code') {
+          appendCliTimingsToDynamicCodeResult(
+            result,
+            Date.now() - commandStartedAt,
+            getCliProcessAgeMilliseconds(),
+          );
+        }
         checkServerVersion(result);
         console.log(JSON.stringify(stripInternalFields(result), null, 2));
         return;
@@ -359,6 +414,13 @@ export async function executeToolCommand(
       if (finalResult !== undefined) {
         spinner.stop();
         restoreStdin();
+        if (toolName === 'execute-dynamic-code') {
+          appendCliTimingsToDynamicCodeResult(
+            finalResult,
+            Date.now() - commandStartedAt,
+            getCliProcessAgeMilliseconds(),
+          );
+        }
         checkServerVersion(finalResult);
         console.log(JSON.stringify(stripInternalFields(finalResult), null, 2));
         return;

@@ -717,6 +717,24 @@ describe('CLI E2E Tests (requires running Unity)', () => {
       expect(result.ErrorMessage ?? '').toBe('');
     }, 60000);
 
+    it('should make the first execute-dynamic-code request succeed immediately after restart', () => {
+      const launchResult = runCli('launch -r');
+      expect(launchResult.exitCode).toBe(0);
+
+      const result = runCliParts(['execute-dynamic-code', '--code', 'return "immediate";']);
+      expect(result.exitCode).toBe(0);
+
+      const payload = parseLastJsonObject<{
+        Success: boolean;
+        Result?: string;
+        ErrorMessage?: string;
+      }>(result.stdout);
+
+      expect(payload.Success).toBe(true);
+      expect(payload.Result).toBe('immediate');
+      expect(payload.ErrorMessage ?? '').toBe('');
+    }, 90000);
+
     it('should keep execute-dynamic-code available across consecutive restarts', async () => {
       const firstLaunchResult = runCli('launch -r');
       expect(firstLaunchResult.exitCode).toBe(0);

@@ -175,6 +175,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.IsTrue(firstResult.Success, firstResult.Errors != null && firstResult.Errors.Count > 0 ? firstResult.Errors[0].Message : "First compilation should succeed");
             Assert.IsTrue(secondResult.Success, secondResult.Errors != null && secondResult.Errors.Count > 0 ? secondResult.Errors[0].Message : "Second compilation should succeed");
             Assert.AreSame(firstResult.CompiledAssembly, secondResult.CompiledAssembly);
+            Assert.That(firstResult.Timings, Has.Some.StartsWith("[Perf] CompilerTotal: "));
         }
 
         [Test]

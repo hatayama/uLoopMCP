@@ -127,6 +127,7 @@ namespace io.github.hatayama.uLoopMCP
                 // even if mcpServer instance becomes null unexpectedly
                 McpEditorSettings.SetIsServerRunning(true);
                 McpEditorSettings.SetCustomPort(mcpServer.Port);
+                CustomToolManager.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
                     await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync();
@@ -735,6 +736,8 @@ namespace io.github.hatayama.uLoopMCP
                 // Clear reconnection-related flags on successful recovery
                 McpEditorSettings.ClearReconnectingFlags();
                 McpEditorSettings.ClearPostCompileReconnectingUI();
+                DynamicCodeStartupTelemetry.MarkServerReady();
+                CustomToolManager.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
                     await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync();

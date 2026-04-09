@@ -6,9 +6,23 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
     [TestFixture]
     public class ExecuteDynamicCodeResponseTimingAugmenterTests
     {
+        [SetUp]
+        public void SetUp()
+        {
+            DynamicCodeStartupTelemetry.Reset();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            DynamicCodeStartupTelemetry.Reset();
+        }
+
         [Test]
         public void AppendTimingEntries_WhenResponseHasExistingTimings_ShouldAppendRpcTimings()
         {
+            DynamicCodeStartupTelemetry.MarkServerReady();
+            DynamicCodeStartupTelemetry.MarkPrewarmCompleted();
             ExecuteDynamicCodeResponse response = new ExecuteDynamicCodeResponse
             {
                 Timings = new List<string>
@@ -27,6 +41,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(response.Timings, Has.Member("[Perf] MainThreadWait: 12.3ms"));
             Assert.That(response.Timings, Has.Member("[Perf] ToolTotal: 45.6ms"));
             Assert.That(response.Timings, Has.Member("[Perf] RequestTotal: 78.9ms"));
+            Assert.That(response.Timings, Has.Member("[Perf] WarmReady: True"));
+            Assert.That(response.Timings, Has.Member("[Perf] PrewarmState: Completed"));
         }
 
         [Test]

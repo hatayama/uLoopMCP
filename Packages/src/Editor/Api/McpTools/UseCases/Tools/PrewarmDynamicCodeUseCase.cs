@@ -39,6 +39,7 @@ namespace io.github.hatayama.uLoopMCP
                     return _autoPrewarmTask;
                 }
 
+                DynamicCodeStartupTelemetry.MarkPrewarmQueued();
                 _autoPrewarmTask = RunAsync();
                 return _autoPrewarmTask;
             }
@@ -51,6 +52,7 @@ namespace io.github.hatayama.uLoopMCP
                 _lifecycleCancellationToken.ThrowIfCancellationRequested();
                 if (!_runtime.SupportsAutoPrewarm())
                 {
+                    DynamicCodeStartupTelemetry.MarkPrewarmSkipped("fast_path_unavailable");
                     VibeLogger.LogInfo(
                         AutoPrewarmOperation,
                         "Skipping dynamic code auto prewarm because the fast path is unavailable",
@@ -65,6 +67,7 @@ namespace io.github.hatayama.uLoopMCP
                     new { delay_frames = AutoPrewarmDelayFrameCount, class_name = AutoPrewarmClassName });
 
                 await EditorDelay.DelayFrame(AutoPrewarmDelayFrameCount, _lifecycleCancellationToken);
+                DynamicCodeStartupTelemetry.MarkPrewarmStarted();
 
                 DynamicCodeExecutionRequest request = new DynamicCodeExecutionRequest
                 {
@@ -84,9 +87,11 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     if (_lifecycleCancellationToken.IsCancellationRequested)
                     {
+                        DynamicCodeStartupTelemetry.MarkPrewarmSkipped("lifecycle_cancelled");
                         return;
                     }
 
+                    DynamicCodeStartupTelemetry.MarkPrewarmYielded("foreground_request_preempted");
                     LogForegroundPreemption();
                     return;
                 }
@@ -96,11 +101,13 @@ namespace io.github.hatayama.uLoopMCP
                     Exception exception = executionTask.Exception?.InnerException ?? executionTask.Exception;
                     if (IsLifecycleCancellation(exception))
                     {
+                        DynamicCodeStartupTelemetry.MarkPrewarmSkipped("lifecycle_cancelled");
                         return;
                     }
 
                     if (exception is OperationCanceledException)
                     {
+                        DynamicCodeStartupTelemetry.MarkPrewarmYielded("foreground_request_preempted");
                         LogForegroundPreemption();
                         return;
                     }
@@ -112,6 +119,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 if (!entered)
                 {
+                    DynamicCodeStartupTelemetry.MarkPrewarmSkipped("runtime_busy");
                     VibeLogger.LogInfo(
                         AutoPrewarmOperation,
                         "Skipping dynamic code auto prewarm because execute-dynamic-code is busy",
@@ -125,12 +133,14 @@ namespace io.github.hatayama.uLoopMCP
 
                 if (WasCancelledByForegroundRequest(result))
                 {
+                    DynamicCodeStartupTelemetry.MarkPrewarmYielded("foreground_request_preempted");
                     LogForegroundPreemption();
                     return;
                 }
 
                 if (!result.Success)
                 {
+                    DynamicCodeStartupTelemetry.MarkPrewarmFailed(result.ErrorMessage);
                     VibeLogger.LogWarning(
                         AutoPrewarmOperation,
                         "Dynamic code auto prewarm failed",
@@ -143,6 +153,7 @@ namespace io.github.hatayama.uLoopMCP
                     return;
                 }
 
+                DynamicCodeStartupTelemetry.MarkPrewarmCompleted();
                 VibeLogger.LogInfo(
                     AutoPrewarmOperation,
                     "Dynamic code auto prewarm completed successfully",
@@ -151,10 +162,12 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch (OperationCanceledException) when (_lifecycleCancellationToken.IsCancellationRequested)
             {
+                DynamicCodeStartupTelemetry.MarkPrewarmSkipped("lifecycle_cancelled");
                 return;
             }
             catch (ObjectDisposedException) when (_lifecycleCancellationToken.IsCancellationRequested)
             {
+                DynamicCodeStartupTelemetry.MarkPrewarmSkipped("lifecycle_cancelled");
                 return;
             }
         }

@@ -23,6 +23,7 @@ namespace io.github.hatayama.uLoopMCP
             response.Timings.Add($"[Perf] MainThreadWait: {mainThreadWaitMilliseconds:F1}ms");
             response.Timings.Add($"[Perf] ToolTotal: {toolTotalMilliseconds:F1}ms");
             response.Timings.Add($"[Perf] RequestTotal: {requestTotalMilliseconds:F1}ms");
+            response.Timings.AddRange(DynamicCodeStartupTelemetry.CreateTimingEntries());
         }
     }
 }

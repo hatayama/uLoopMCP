@@ -9,6 +9,18 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
     [TestFixture]
     public class PrewarmDynamicCodeUseCaseTests
     {
+        [SetUp]
+        public void SetUp()
+        {
+            DynamicCodeStartupTelemetry.Reset();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            DynamicCodeStartupTelemetry.Reset();
+        }
+
         [Test]
         public async Task RequestAsync_WhenSupportedAndWarmupSucceeds_ShouldRetryOnNextRequest()
         {
@@ -31,6 +43,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 Assert.That(runtime.Requests[0].SecurityLevel, Is.EqualTo(DynamicCodeSecurityLevel.FullAccess));
                 Assert.That(runtime.Requests[0].CompileOnly, Is.False);
                 Assert.That(runtime.Requests[0].YieldToForegroundRequests, Is.True);
+                Assert.That(DynamicCodeStartupTelemetry.CreateTimingEntries(), Has.Member("[Perf] WarmReady: True"));
             }
             finally
             {
@@ -48,6 +61,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             await useCase.RequestAsync();
 
             Assert.That(runtime.Requests, Is.Empty);
+            Assert.That(
+                DynamicCodeStartupTelemetry.CreateTimingEntries(),
+                Has.Member("[Perf] PrewarmDetail: fast_path_unavailable"));
         }
 
         [Test]

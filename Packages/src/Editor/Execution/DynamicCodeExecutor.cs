@@ -44,6 +44,7 @@ namespace io.github.hatayama.uLoopMCP
         {
             string correlationId = McpConstants.GenerateCorrelationId();
             Stopwatch totalStopwatch = Stopwatch.StartNew();
+            Stopwatch sourcePreparationStopwatch = Stopwatch.StartNew();
 
             try
             {
@@ -51,19 +52,31 @@ namespace io.github.hatayama.uLoopMCP
                     code,
                     DynamicCodeConstants.DEFAULT_NAMESPACE,
                     className);
+                sourcePreparationStopwatch.Stop();
+                Stopwatch compileTotalStopwatch = Stopwatch.StartNew();
                 CompilationResult compilationResult = await CompileCodeAsync(code, className, cancellationToken);
+                compileTotalStopwatch.Stop();
 
                 ExecutionResult compilationFailureResult = TryCreateCompilationFailureResult(
                     compilationResult,
                     totalStopwatch);
                 if (compilationFailureResult != null)
                 {
+                    AppendExecutorStageTimings(
+                        compilationFailureResult.Timings,
+                        sourcePreparationStopwatch.Elapsed.TotalMilliseconds,
+                        compileTotalStopwatch.Elapsed.TotalMilliseconds);
                     return compilationFailureResult;
                 }
 
                 if (compileOnly)
                 {
-                    return CreateCompileOnlySuccessResult(compilationResult, totalStopwatch.Elapsed);
+                    ExecutionResult compileOnlyResult = CreateCompileOnlySuccessResult(compilationResult, totalStopwatch.Elapsed);
+                    AppendExecutorStageTimings(
+                        compileOnlyResult.Timings,
+                        sourcePreparationStopwatch.Elapsed.TotalMilliseconds,
+                        compileTotalStopwatch.Elapsed.TotalMilliseconds);
+                    return compileOnlyResult;
                 }
 
                 ExecutionContext context = new ExecutionContext
@@ -83,6 +96,10 @@ namespace io.github.hatayama.uLoopMCP
                     compilationResult.Timings,
                     executionResult.Timings,
                     $"[Perf] Execution: {executionStopwatch.Elapsed.TotalMilliseconds:F1}ms");
+                AppendExecutorStageTimings(
+                    executionResult.Timings,
+                    sourcePreparationStopwatch.Elapsed.TotalMilliseconds,
+                    compileTotalStopwatch.Elapsed.TotalMilliseconds);
                 AppendCompilationAdvisories(executionResult.Logs, compilationResult.AdvisoryLogs);
 
                 UpdateStatistics(executionResult, totalStopwatch.Elapsed);
@@ -381,6 +398,20 @@ namespace io.github.hatayama.uLoopMCP
 
             mergedTimings.Add(executionEntry);
             return mergedTimings;
+        }
+
+        private static void AppendExecutorStageTimings(
+            List<string> timings,
+            double sourcePreparationMilliseconds,
+            double compileTotalMilliseconds)
+        {
+            if (timings == null)
+            {
+                return;
+            }
+
+            timings.Add($"[Perf] SourcePrepare: {sourcePreparationMilliseconds:F1}ms");
+            timings.Add($"[Perf] CompileTotal: {compileTotalMilliseconds:F1}ms");
         }
 
         private static List<string> CloneTimings(List<string> timings)

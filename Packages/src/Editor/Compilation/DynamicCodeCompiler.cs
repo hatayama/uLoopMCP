@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Debug = UnityEngine.Debug;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -60,32 +61,60 @@ namespace io.github.hatayama.uLoopMCP
 
             ct.ThrowIfCancellationRequested();
             LastBuildCount = 0;
+            Stopwatch compilerTotalStopwatch = Stopwatch.StartNew();
+            Stopwatch planStopwatch = Stopwatch.StartNew();
 
             DynamicCompilationPlan plan = _planner.CreatePlan(request);
+            planStopwatch.Stop();
 
+            Stopwatch cacheStopwatch = Stopwatch.StartNew();
             CompilationResult cachedResult = TryGetCachedResult(plan);
+            cacheStopwatch.Stop();
             if (cachedResult != null)
             {
+                AppendCompilerStageTimings(
+                    cachedResult.Timings,
+                    planStopwatch.Elapsed.TotalMilliseconds,
+                    cacheStopwatch.Elapsed.TotalMilliseconds,
+                    0,
+                    compilerTotalStopwatch.Elapsed.TotalMilliseconds);
                 return cachedResult;
             }
 
+            Stopwatch sourceSecurityStopwatch = Stopwatch.StartNew();
             CompilationResult sourceSecurityFailure = CreateSourceSecurityFailure(request.Code);
+            sourceSecurityStopwatch.Stop();
             if (sourceSecurityFailure != null)
             {
+                AppendCompilerStageTimings(
+                    sourceSecurityFailure.Timings,
+                    planStopwatch.Elapsed.TotalMilliseconds,
+                    cacheStopwatch.Elapsed.TotalMilliseconds,
+                    0,
+                    compilerTotalStopwatch.Elapsed.TotalMilliseconds);
                 return sourceSecurityFailure;
             }
 
             if (plan.PreparedCode.PreparedSource == null)
             {
-                return CreateMixedModeFailureResult(request.Code, 0, 0);
+                CompilationResult mixedModeFailure = CreateMixedModeFailureResult(request.Code, 0, 0);
+                AppendCompilerStageTimings(
+                    mixedModeFailure.Timings,
+                    planStopwatch.Elapsed.TotalMilliseconds,
+                    cacheStopwatch.Elapsed.TotalMilliseconds,
+                    0,
+                    compilerTotalStopwatch.Elapsed.TotalMilliseconds);
+                return mixedModeFailure;
             }
 
+            Stopwatch builderTotalStopwatch = Stopwatch.StartNew();
             CompiledAssemblyBuildResult buildResult = await _assemblyBuilder.BuildAsync(plan, ct);
+            builderTotalStopwatch.Stop();
             LastBuildCount = buildResult.BuildCount;
 
             if (buildResult.Diagnostics.Errors.Count > 0)
             {
-                return new CompilationResult
+                CompilationResult failureResult = new CompilationResult
                 {
                     Success = false,
                     Errors = buildResult.Diagnostics.Errors,
@@ -102,6 +131,13 @@ namespace io.github.hatayama.uLoopMCP
                         0,
                         buildResult.CompilationBackendKind)
                 };
+                AppendCompilerStageTimings(
+                    failureResult.Timings,
+                    planStopwatch.Elapsed.TotalMilliseconds,
+                    cacheStopwatch.Elapsed.TotalMilliseconds,
+                    builderTotalStopwatch.Elapsed.TotalMilliseconds,
+                    compilerTotalStopwatch.Elapsed.TotalMilliseconds);
+                return failureResult;
             }
 
             CompiledAssemblyLoadResult assemblyLoadResult = _assemblyLoader.Load(
@@ -109,7 +145,7 @@ namespace io.github.hatayama.uLoopMCP
                 buildResult.AssemblyBytes);
             if (!assemblyLoadResult.Success)
             {
-                return CreateAssemblySecurityFailure(
+                CompilationResult assemblySecurityFailure = CreateAssemblySecurityFailure(
                     assemblyLoadResult.SecurityViolations,
                     buildResult.Diagnostics.Warnings,
                     buildResult.UpdatedSource,
@@ -119,6 +155,13 @@ namespace io.github.hatayama.uLoopMCP
                     buildResult.BuildMilliseconds,
                     assemblyLoadResult.AssemblyLoadMilliseconds,
                     buildResult.CompilationBackendKind);
+                AppendCompilerStageTimings(
+                    assemblySecurityFailure.Timings,
+                    planStopwatch.Elapsed.TotalMilliseconds,
+                    cacheStopwatch.Elapsed.TotalMilliseconds,
+                    builderTotalStopwatch.Elapsed.TotalMilliseconds,
+                    compilerTotalStopwatch.Elapsed.TotalMilliseconds);
+                return assemblySecurityFailure;
             }
 
             CompilationResult result = new CompilationResult
@@ -137,6 +180,12 @@ namespace io.github.hatayama.uLoopMCP
                     assemblyLoadResult.AssemblyLoadMilliseconds,
                     buildResult.CompilationBackendKind)
             };
+            AppendCompilerStageTimings(
+                result.Timings,
+                planStopwatch.Elapsed.TotalMilliseconds,
+                cacheStopwatch.Elapsed.TotalMilliseconds,
+                builderTotalStopwatch.Elapsed.TotalMilliseconds,
+                compilerTotalStopwatch.Elapsed.TotalMilliseconds);
 
             if (buildResult.ShouldCacheResult)
             {
@@ -243,6 +292,27 @@ namespace io.github.hatayama.uLoopMCP
                     "Warning: Fast Roslyn path is unavailable; execute-dynamic-code is using AssemblyBuilder fallback, so new snippets compile slower."
                 }
                 : new List<string>();
+        }
+
+        private static void AppendCompilerStageTimings(
+            List<string> timings,
+            double planMilliseconds,
+            double cacheMilliseconds,
+            double builderTotalMilliseconds,
+            double compilerTotalMilliseconds)
+        {
+            if (timings == null)
+            {
+                return;
+            }
+
+            timings.Add($"[Perf] CompilePlan: {planMilliseconds:F1}ms");
+            timings.Add($"[Perf] CompileCacheCheck: {cacheMilliseconds:F1}ms");
+            if (builderTotalMilliseconds > 0)
+            {
+                timings.Add($"[Perf] BuilderTotal: {builderTotalMilliseconds:F1}ms");
+            }
+            timings.Add($"[Perf] CompilerTotal: {compilerTotalMilliseconds:F1}ms");
         }
 
     }

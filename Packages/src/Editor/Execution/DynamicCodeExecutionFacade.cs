@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -186,13 +187,27 @@ namespace io.github.hatayama.uLoopMCP
             DynamicCodeExecutionRequest request,
             CancellationToken cancellationToken)
         {
+            Stopwatch executorAcquireStopwatch = Stopwatch.StartNew();
             IDynamicCodeExecutor executor = _executorPool.GetOrCreate(request.SecurityLevel);
-            return await executor.ExecuteCodeAsync(
+            executorAcquireStopwatch.Stop();
+
+            Stopwatch executorTotalStopwatch = Stopwatch.StartNew();
+            ExecutionResult result = await executor.ExecuteCodeAsync(
                 request.Code,
                 request.ClassName,
                 request.Parameters,
                 cancellationToken,
                 request.CompileOnly);
+            executorTotalStopwatch.Stop();
+
+            if (result.Timings == null)
+            {
+                result.Timings = new System.Collections.Generic.List<string>();
+            }
+
+            result.Timings.Add($"[Perf] ExecutorAcquire: {executorAcquireStopwatch.Elapsed.TotalMilliseconds:F1}ms");
+            result.Timings.Add($"[Perf] ExecutorTotal: {executorTotalStopwatch.Elapsed.TotalMilliseconds:F1}ms");
+            return result;
         }
 
         private bool TryCancelBackgroundPrewarmAfterTransition(DynamicCodeExecutionRequest request)
