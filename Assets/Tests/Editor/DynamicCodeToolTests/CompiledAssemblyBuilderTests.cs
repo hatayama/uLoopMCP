@@ -23,7 +23,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void AwaitBuildCompletionAsync_WhenCancellationIsRequested_ShouldCancelPromptly()
+        public async Task AwaitBuildCompletionAsync_WhenCancellationIsRequested_ShouldCancelAfterBuildCompletion()
         {
             TaskCompletionSource<CompilerMessage[]> buildTaskCompletionSource =
                 new TaskCompletionSource<CompilerMessage[]>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -34,6 +34,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 cancellationTokenSource.Token);
 
             cancellationTokenSource.Cancel();
+
+            Assert.That(waitTask.IsCompleted, Is.False);
+
+            buildTaskCompletionSource.SetResult(System.Array.Empty<CompilerMessage>());
 
             Assert.That(async () => await waitTask, Throws.InstanceOf<TaskCanceledException>());
         }
@@ -55,10 +59,10 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             cancellationTokenSource.Cancel();
 
-            Assert.That(async () => await waitTask, Throws.InstanceOf<TaskCanceledException>());
             Assert.That(buildFinished, Is.False);
 
             buildTaskCompletionSource.SetResult(System.Array.Empty<CompilerMessage>());
+            Assert.That(async () => await waitTask, Throws.InstanceOf<TaskCanceledException>());
             await continuationTask;
 
             Assert.That(buildFinished, Is.True);
