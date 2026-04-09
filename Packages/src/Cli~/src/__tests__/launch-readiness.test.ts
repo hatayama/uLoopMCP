@@ -5,6 +5,7 @@ import { ProjectMismatchError } from '../project-validator.js';
 interface MockReadinessResponse {
   Success?: boolean;
   ErrorMessage?: string;
+  Timings?: string[];
 }
 
 function createMockClient(
@@ -145,6 +146,57 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
 
     expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
     expect(sleepCount).toBe(1);
+  });
+
+  it('retries successful probes until RequestTotal settles below threshold', async () => {
+    const recordedMethods: string[] = [];
+    const responses: Array<MockReadinessResponse | Error> = [
+      {
+        Success: true,
+        Timings: ['[Perf] RequestTotal: 420.0ms'],
+      },
+      {
+        Success: true,
+        Timings: ['[Perf] RequestTotal: 180.0ms'],
+      },
+    ];
+    let sleepCount = 0;
+
+    await waitForDynamicCodeReadyAfterLaunch('/project', {
+      resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
+      validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+      createClient: () => createMockClient(responses, recordedMethods).client,
+      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+        sleepCount++;
+        return Promise.resolve();
+      }),
+      nowFn: (() => {
+        let now = 0;
+        return (): number => {
+          now += 100;
+          return now;
+        };
+      })(),
+    });
+
+    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
+    expect(sleepCount).toBe(1);
+  });
+
+  it('accepts successful probes when RequestTotal timing is missing', async () => {
+    const recordedMethods: string[] = [];
+
+    await waitForDynamicCodeReadyAfterLaunch('/project', {
+      resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
+      validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+      createClient: () =>
+        createMockClient([{ Success: true, Timings: ['[Perf] Build: 50.0ms'] }], recordedMethods)
+          .client,
+      sleepFn: jest.fn(),
+      nowFn: () => 0,
+    });
+
+    expect(recordedMethods).toEqual(['execute-dynamic-code']);
   });
 
   it('does not retry project mismatch errors', async () => {

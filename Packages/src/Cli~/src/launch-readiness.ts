@@ -6,6 +6,7 @@ import { ProjectMismatchError, validateConnectedProject } from './project-valida
 const LAUNCH_READINESS_TIMEOUT_MS = 180000;
 const LAUNCH_READINESS_RETRY_MS = 1000;
 const LAUNCH_READINESS_CODE = 'return null;';
+const LAUNCH_READINESS_REQUEST_TOTAL_THRESHOLD_MS = 250;
 const TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_MESSAGES = [
   'Another execution is already in progress',
   'Execution was cancelled or timed out',
@@ -15,6 +16,7 @@ const TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_PREFIXES = ['COMPILATION_PROVIDER_UNA
 interface ExecuteDynamicCodeReadinessResponse {
   Success?: boolean;
   ErrorMessage?: string;
+  Timings?: string[];
 }
 
 interface DynamicCodeLaunchReadinessDependencies {
@@ -87,6 +89,38 @@ function createLaunchReadinessFailure(payload: ExecuteDynamicCodeReadinessRespon
   return new Error(`execute-dynamic-code launch readiness probe failed: ${errorMessage}`);
 }
 
+function parseTimingMilliseconds(
+  timings: readonly string[] | undefined,
+  label: string,
+): number | null {
+  if (!Array.isArray(timings)) {
+    return null;
+  }
+
+  const prefix = `[Perf] ${label}: `;
+  const entry = timings.find((timing) => timing.startsWith(prefix));
+  if (entry === undefined) {
+    return null;
+  }
+
+  const valueText = entry.slice(prefix.length).replace(/ms$/, '');
+  const value = Number.parseFloat(valueText);
+  if (Number.isNaN(value)) {
+    return null;
+  }
+
+  return value;
+}
+
+function isLaunchReadinessStable(payload: ExecuteDynamicCodeReadinessResponse): boolean {
+  const requestTotalMilliseconds = parseTimingMilliseconds(payload.Timings, 'RequestTotal');
+  if (requestTotalMilliseconds === null) {
+    return true;
+  }
+
+  return requestTotalMilliseconds <= LAUNCH_READINESS_REQUEST_TOTAL_THRESHOLD_MS;
+}
+
 export async function waitForDynamicCodeReadyAfterLaunch(
   projectPath: string,
   dependencies: DynamicCodeLaunchReadinessDependencies = defaultDependencies,
@@ -110,11 +144,15 @@ export async function waitForDynamicCodeReadyAfterLaunch(
         },
       );
 
-      if (payload.Success) {
+      if (payload.Success && isLaunchReadinessStable(payload)) {
         return;
       }
 
-      if (!isTransientExecuteDynamicCodeFailure(payload)) {
+      if (payload.Success) {
+        // Success with a still-high RequestTotal means startup work is not fully settled yet.
+        // Retry so the first user-visible execute-dynamic-code request is less likely to pay it.
+      }
+      else if (!isTransientExecuteDynamicCodeFailure(payload)) {
         throw createLaunchReadinessFailure(payload);
       }
     } catch (error) {
