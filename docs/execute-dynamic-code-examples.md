@@ -67,13 +67,13 @@ uloop execute-dynamic-code --code 'using UnityEngine; Debug.Log("compile only sa
 Camera 情報を列挙する。
 
 ```sh
-uloop execute-dynamic-code --code 'using UnityEngine; Camera[] cameras = Object.FindObjectsByType<Camera>(FindObjectsSortMode.None); System.Text.StringBuilder sb = new System.Text.StringBuilder(); foreach (Camera cam in cameras) { sb.AppendLine(cam.name + " depth=" + cam.depth); } return sb.ToString();'
+uloop execute-dynamic-code --code 'using UnityEngine; Camera[] cameras = UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsSortMode.None); System.Text.StringBuilder sb = new System.Text.StringBuilder(); foreach (Camera cam in cameras) { sb.AppendLine(cam.name + " depth=" + cam.depth); } return sb.ToString();'
 ```
 
 Renderer の数を集計する。
 
 ```sh
-uloop execute-dynamic-code --code 'using UnityEngine; Renderer[] renderers = Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None); int enabledCount = 0; foreach (Renderer r in renderers) { if (r.enabled) { enabledCount++; } } return "renderers=" + renderers.Length + ", enabled=" + enabledCount;'
+uloop execute-dynamic-code --code 'using UnityEngine; Renderer[] renderers = UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None); int enabledCount = 0; foreach (Renderer r in renderers) { if (r.enabled) { enabledCount++; } } return "renderers=" + renderers.Length + ", enabled=" + enabledCount;'
 ```
 
 ルート GameObject 名を並べる。
