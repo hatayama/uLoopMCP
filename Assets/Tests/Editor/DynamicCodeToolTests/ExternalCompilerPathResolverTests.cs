@@ -62,6 +62,46 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(resolvedDirectoryPath, Is.EqualTo(expectedDirectoryPath));
         }
 
+        [Test]
+        public void ResolveScriptingRootPath_WhenLegacyLayoutExists_ShouldReturnContentsPath()
+        {
+            string contentsPath = CreateDirectory("Contents");
+            CreateDirectory(Path.Combine("Contents", "NetCoreRuntime"));
+            CreateDirectory(Path.Combine("Contents", "DotNetSdkRoslyn"));
+
+            string resolvedScriptingRootPath = ExternalCompilerPathResolver.ResolveScriptingRootPath(contentsPath);
+
+            Assert.That(resolvedScriptingRootPath, Is.EqualTo(contentsPath));
+        }
+
+        [Test]
+        public void ResolveScriptingRootPath_WhenResourcesScriptingLayoutExists_ShouldReturnResourcesScriptingPath()
+        {
+            string contentsPath = CreateDirectory("Contents");
+            string expectedScriptingRootPath = CreateDirectory(Path.Combine("Contents", "Resources", "Scripting"));
+            CreateDirectory(Path.Combine("Contents", "Resources", "Scripting", "NetCoreRuntime"));
+            CreateDirectory(Path.Combine("Contents", "Resources", "Scripting", "DotNetSdkRoslyn"));
+
+            string resolvedScriptingRootPath = ExternalCompilerPathResolver.ResolveScriptingRootPath(contentsPath);
+
+            Assert.That(resolvedScriptingRootPath, Is.EqualTo(expectedScriptingRootPath));
+        }
+
+        [Test]
+        public void ResolveScriptingRootPath_WhenBothLayoutsExist_ShouldPreferResourcesScriptingLayout()
+        {
+            string contentsPath = CreateDirectory("Contents");
+            CreateDirectory(Path.Combine("Contents", "NetCoreRuntime"));
+            CreateDirectory(Path.Combine("Contents", "DotNetSdkRoslyn"));
+            string expectedScriptingRootPath = CreateDirectory(Path.Combine("Contents", "Resources", "Scripting"));
+            CreateDirectory(Path.Combine("Contents", "Resources", "Scripting", "NetCoreRuntime"));
+            CreateDirectory(Path.Combine("Contents", "Resources", "Scripting", "DotNetSdkRoslyn"));
+
+            string resolvedScriptingRootPath = ExternalCompilerPathResolver.ResolveScriptingRootPath(contentsPath);
+
+            Assert.That(resolvedScriptingRootPath, Is.EqualTo(expectedScriptingRootPath));
+        }
+
         private string CreateDirectory(string relativePath)
         {
             string directoryPath = Path.Combine(_tempDirectoryPath, relativePath);

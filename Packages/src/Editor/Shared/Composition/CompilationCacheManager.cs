@@ -14,6 +14,13 @@ namespace io.github.hatayama.uLoopMCP
     public class CompilationCacheManager
     {
         private const int MaxCacheEntries = 32;
+        private static readonly List<string> CachedCompilationTimings = new()
+        {
+            "[Perf] ReferenceResolution: 0.0ms",
+            "[Perf] Build: 0.0ms",
+            "[Perf] AssemblyLoad: 0.0ms",
+            "[Perf] CacheHit: true"
+        };
         private readonly Dictionary<string, CachedCompilationResult> _compilationCache = new();
         private readonly Queue<string> _cacheOrder = new();
 
@@ -110,7 +117,7 @@ namespace io.github.hatayama.uLoopMCP
                 FailureReason = cachedResult.FailureReason,
                 AmbiguousTypeCandidates = CloneAmbiguousTypeCandidates(cachedResult.AmbiguousTypeCandidates),
                 AutoInjectedNamespaces = CloneStrings(cachedResult.AutoInjectedNamespaces),
-                Timings = CloneStrings(cachedResult.Timings)
+                Timings = CloneStrings(CachedCompilationTimings)
             };
         }
 

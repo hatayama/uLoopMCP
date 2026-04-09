@@ -127,10 +127,54 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(result[0], Is.EqualTo(basePath));
         }
 
-        private void CreateDummyFile(string path)
+        [Test]
+        public void ResolvePreferredBaseReferencePath_WhenLegacyLayoutExists_ShouldReturnLegacyPath()
         {
+            string editorContentsPath = CreateDirectory("Contents");
+            string expectedPath = CreateDummyFile(Path.Combine(
+                "Contents",
+                "UnityReferenceAssemblies",
+                "unity-4.8-api",
+                "mscorlib.dll"));
+
+            string preferredPath = DynamicReferenceSetBuilder.ResolvePreferredBaseReferencePath(
+                editorContentsPath,
+                "mscorlib");
+
+            Assert.That(preferredPath, Is.EqualTo(expectedPath));
+        }
+
+        [Test]
+        public void ResolvePreferredBaseReferencePath_WhenResourcesScriptingLayoutExists_ShouldReturnResourcesScriptingPath()
+        {
+            string editorContentsPath = CreateDirectory("Contents");
+            string expectedPath = CreateDummyFile(Path.Combine(
+                "Contents",
+                "Resources",
+                "Scripting",
+                "Managed",
+                "UnityEngine.dll"));
+
+            string preferredPath = DynamicReferenceSetBuilder.ResolvePreferredBaseReferencePath(
+                editorContentsPath,
+                "UnityEngine");
+
+            Assert.That(preferredPath, Is.EqualTo(expectedPath));
+        }
+
+        private string CreateDirectory(string relativePath)
+        {
+            string directoryPath = Path.Combine(_tempDir, relativePath);
+            Directory.CreateDirectory(directoryPath);
+            return directoryPath;
+        }
+
+        private string CreateDummyFile(string relativePath)
+        {
+            string path = Path.Combine(_tempDir, relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllBytes(path, new byte[] { 0 });
+            return path;
         }
     }
 }

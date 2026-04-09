@@ -337,7 +337,11 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(secondResult.UpdatedCode, Is.EqualTo(firstResult.UpdatedCode));
             Assert.That(secondResult.AutoInjectedNamespaces, Is.EquivalentTo(firstResult.AutoInjectedNamespaces));
             Assert.That(secondResult.AutoInjectedNamespaces, Does.Contain("System.Text"));
-            Assert.That(secondResult.Timings, Is.EquivalentTo(firstResult.Timings));
+            Assert.That(firstResult.Timings, Has.No.Member("[Perf] CacheHit: true"));
+            Assert.That(secondResult.Timings, Has.Member("[Perf] CacheHit: true"));
+            Assert.That(secondResult.Timings, Has.Member("[Perf] ReferenceResolution: 0.0ms"));
+            Assert.That(secondResult.Timings, Has.Member("[Perf] Build: 0.0ms"));
+            Assert.That(secondResult.Timings, Has.Member("[Perf] AssemblyLoad: 0.0ms"));
         }
 
         [Test]

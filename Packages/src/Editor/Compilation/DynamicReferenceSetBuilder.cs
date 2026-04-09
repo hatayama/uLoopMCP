@@ -184,7 +184,38 @@ namespace io.github.hatayama.uLoopMCP
                 return null;
             }
 
-            string contentsPath = externalCompilerPaths.EditorContentsPath;
+            return ResolvePreferredBaseReferencePath(externalCompilerPaths.EditorContentsPath, assemblyName);
+        }
+
+        internal static string ResolvePreferredBaseReferencePath(
+            string editorContentsPath,
+            string assemblyName)
+        {
+            foreach (string referenceRootPath in EnumerateReferenceRootPaths(editorContentsPath))
+            {
+                string candidatePath = BuildPreferredBaseReferencePath(referenceRootPath, assemblyName);
+                if (!string.IsNullOrEmpty(candidatePath) && File.Exists(candidatePath))
+                {
+                    return candidatePath;
+                }
+            }
+
+            return null;
+        }
+
+        private static IEnumerable<string> EnumerateReferenceRootPaths(string editorContentsPath)
+        {
+            if (string.IsNullOrEmpty(editorContentsPath))
+            {
+                yield break;
+            }
+
+            yield return Path.Combine(editorContentsPath, "Resources", "Scripting");
+            yield return editorContentsPath;
+        }
+
+        private static string BuildPreferredBaseReferencePath(string referenceRootPath, string assemblyName)
+        {
             switch (assemblyName)
             {
                 case "mscorlib":
@@ -192,18 +223,18 @@ namespace io.github.hatayama.uLoopMCP
                 case "System":
                 case "System.Core":
                 case "System.Net.Http":
-                    return Path.Combine(contentsPath, "UnityReferenceAssemblies", "unity-4.8-api", $"{assemblyName}.dll");
+                    return Path.Combine(referenceRootPath, "UnityReferenceAssemblies", "unity-4.8-api", $"{assemblyName}.dll");
                 case "System.Runtime":
                 case "System.Collections":
                 case "System.Threading":
                 case "System.Threading.Tasks":
-                    return Path.Combine(contentsPath, "UnityReferenceAssemblies", "unity-4.8-api", "Facades", $"{assemblyName}.dll");
+                    return Path.Combine(referenceRootPath, "UnityReferenceAssemblies", "unity-4.8-api", "Facades", $"{assemblyName}.dll");
                 case "UnityEngine":
                 case "UnityEditor":
-                    return Path.Combine(contentsPath, "Managed", $"{assemblyName}.dll");
+                    return Path.Combine(referenceRootPath, "Managed", $"{assemblyName}.dll");
                 case "UnityEngine.CoreModule":
                 case "UnityEditor.CoreModule":
-                    return Path.Combine(contentsPath, "Managed", "UnityEngine", $"{assemblyName}.dll");
+                    return Path.Combine(referenceRootPath, "Managed", "UnityEngine", $"{assemblyName}.dll");
                 default:
                     return null;
             }
