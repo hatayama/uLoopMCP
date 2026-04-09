@@ -7,7 +7,7 @@ namespace io.github.hatayama.uLoopMCP
 {
     internal sealed class PrewarmDynamicCodeUseCase : IPrewarmDynamicCodeUseCase
     {
-        private const int AutoPrewarmDelayFrameCount = 5;
+        private const int AutoPrewarmDelayFrameCount = 1;
         private const string AutoPrewarmCode = "return null;";
         private const string AutoPrewarmClassName = "DynamicCodeAutoPrewarmCommand";
         private const string AutoPrewarmOperation = "dynamic_code_auto_prewarm";
@@ -70,7 +70,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     Code = AutoPrewarmCode,
                     ClassName = AutoPrewarmClassName,
-                    SecurityLevel = DynamicCodeSecurityLevel.Restricted,
+                    SecurityLevel = ULoopSettings.GetDynamicCodeSecurityLevel(),
                     CompileOnly = false,
                     YieldToForegroundRequests = true
                 };

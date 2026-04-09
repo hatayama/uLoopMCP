@@ -17,16 +17,25 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 new ExecutionResult { Success = true },
                 new ExecutionResult { Success = true });
             PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
+            DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
+            ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
 
-            await useCase.RequestAsync();
-            await useCase.RequestAsync();
+            try
+            {
+                await useCase.RequestAsync();
+                await useCase.RequestAsync();
 
-            Assert.That(runtime.Requests, Has.Count.EqualTo(2));
-            Assert.That(runtime.Requests[0].Code, Is.EqualTo("return null;"));
-            Assert.That(runtime.Requests[0].ClassName, Is.EqualTo("DynamicCodeAutoPrewarmCommand"));
-            Assert.That(runtime.Requests[0].SecurityLevel, Is.EqualTo(DynamicCodeSecurityLevel.Restricted));
-            Assert.That(runtime.Requests[0].CompileOnly, Is.False);
-            Assert.That(runtime.Requests[0].YieldToForegroundRequests, Is.True);
+                Assert.That(runtime.Requests, Has.Count.EqualTo(2));
+                Assert.That(runtime.Requests[0].Code, Is.EqualTo("return null;"));
+                Assert.That(runtime.Requests[0].ClassName, Is.EqualTo("DynamicCodeAutoPrewarmCommand"));
+                Assert.That(runtime.Requests[0].SecurityLevel, Is.EqualTo(DynamicCodeSecurityLevel.FullAccess));
+                Assert.That(runtime.Requests[0].CompileOnly, Is.False);
+                Assert.That(runtime.Requests[0].YieldToForegroundRequests, Is.True);
+            }
+            finally
+            {
+                ULoopSettings.SetDynamicCodeSecurityLevel(previous);
+            }
         }
 
         [Test]
