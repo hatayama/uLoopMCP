@@ -93,6 +93,34 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     ).rejects.toThrow('execute-dynamic-code launch readiness probe failed: Syntax error');
   });
 
+  it('does not retry permanent compilation provider unavailability', async () => {
+    const recordedMethods: string[] = [];
+
+    await expect(
+      waitForDynamicCodeReadyAfterLaunch('/project', {
+        resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
+        validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+        createClient: () =>
+          createMockClient(
+            [
+              {
+                Success: false,
+                ErrorMessage:
+                  'COMPILATION_PROVIDER_UNAVAILABLE: No compilation provider is registered. Check initialization.',
+              },
+            ],
+            recordedMethods,
+          ).client,
+        sleepFn: jest.fn(),
+        nowFn: () => 0,
+      }),
+    ).rejects.toThrow(
+      'execute-dynamic-code launch readiness probe failed: COMPILATION_PROVIDER_UNAVAILABLE: No compilation provider is registered. Check initialization.',
+    );
+
+    expect(recordedMethods).toEqual(['execute-dynamic-code']);
+  });
+
   it('retries Unity JSON-RPC errors raised during startup until success', async () => {
     const recordedMethods: string[] = [];
     const responses: Array<MockReadinessResponse | Error> = [
@@ -120,6 +148,26 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
 
     expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
     expect(sleepCount).toBe(1);
+  });
+
+  it('does not retry non-transient Unity JSON-RPC errors', async () => {
+    const recordedMethods: string[] = [];
+
+    await expect(
+      waitForDynamicCodeReadyAfterLaunch('/project', {
+        resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
+        validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+        createClient: () =>
+          createMockClient(
+            [new Error('Unity error: Internal error (Object reference not set to an instance)')],
+            recordedMethods,
+          ).client,
+        sleepFn: jest.fn(),
+        nowFn: () => 0,
+      }),
+    ).rejects.toThrow('Unity error: Internal error (Object reference not set to an instance)');
+
+    expect(recordedMethods).toEqual(['execute-dynamic-code']);
   });
 
   it('retries indeterminate payloads until success', async () => {
@@ -197,6 +245,34 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     });
 
     expect(recordedMethods).toEqual(['execute-dynamic-code']);
+  });
+
+  it('returns after settle timeout even when RequestTotal stays above threshold', async () => {
+    const recordedMethods: string[] = [];
+    const responses: Array<MockReadinessResponse | Error> = [
+      { Success: true, Timings: ['[Perf] RequestTotal: 420.0ms'] },
+      { Success: true, Timings: ['[Perf] RequestTotal: 410.0ms'] },
+      { Success: true, Timings: ['[Perf] RequestTotal: 405.0ms'] },
+    ];
+    let sleepCount = 0;
+
+    await waitForDynamicCodeReadyAfterLaunch('/project', {
+      resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
+      validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+      createClient: () => createMockClient(responses, recordedMethods).client,
+      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+        sleepCount++;
+        return Promise.resolve();
+      }),
+      nowFn: (() => {
+        const values = [0, 100, 1100, 2100, 11100, 11200];
+        let index = 0;
+        return (): number => values[Math.min(index++, values.length - 1)];
+      })(),
+    });
+
+    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
+    expect(sleepCount).toBe(1);
   });
 
   it('does not retry project mismatch errors', async () => {

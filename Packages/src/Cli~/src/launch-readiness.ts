@@ -7,11 +7,13 @@ const LAUNCH_READINESS_TIMEOUT_MS = 180000;
 const LAUNCH_READINESS_RETRY_MS = 1000;
 const LAUNCH_READINESS_CODE = 'return null;';
 const LAUNCH_READINESS_REQUEST_TOTAL_THRESHOLD_MS = 250;
+const LAUNCH_READINESS_SETTLE_TIMEOUT_MS = 10000;
 const TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_MESSAGES = [
   'Another execution is already in progress',
   'Execution was cancelled or timed out',
 ];
-const TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_PREFIXES = ['COMPILATION_PROVIDER_UNAVAILABLE:'];
+const TRANSIENT_COMPILATION_PROVIDER_UNAVAILABLE_SUBSTRINGS = ['warming up'];
+const RETRYABLE_UNITY_ERROR_SUBSTRINGS = ['can only be called from the main thread'];
 
 interface ExecuteDynamicCodeReadinessResponse {
   Success?: boolean;
@@ -55,8 +57,17 @@ function isTransientExecuteDynamicCodeFailure(
     return true;
   }
 
-  return TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_PREFIXES.some((prefix) =>
-    errorMessage.startsWith(prefix),
+  return isTransientCompilationProviderUnavailable(errorMessage);
+}
+
+function isTransientCompilationProviderUnavailable(errorMessage: string): boolean {
+  if (!errorMessage.startsWith('COMPILATION_PROVIDER_UNAVAILABLE:')) {
+    return false;
+  }
+
+  const normalizedMessage = errorMessage.toLowerCase();
+  return TRANSIENT_COMPILATION_PROVIDER_UNAVAILABLE_SUBSTRINGS.some((substring) =>
+    normalizedMessage.includes(substring),
   );
 }
 
@@ -80,7 +91,18 @@ function isRetryableLaunchReadinessError(error: unknown): boolean {
     message.includes('EADDRNOTAVAIL') ||
     message === 'UNITY_NO_RESPONSE' ||
     message.startsWith('Connection lost:') ||
-    message.startsWith('Unity error:')
+    isRetryableUnityStartupError(message)
+  );
+}
+
+function isRetryableUnityStartupError(message: string): boolean {
+  if (!message.startsWith('Unity error:')) {
+    return false;
+  }
+
+  const normalizedMessage = message.toLowerCase();
+  return RETRYABLE_UNITY_ERROR_SUBSTRINGS.some((substring) =>
+    normalizedMessage.includes(substring),
   );
 }
 
@@ -126,6 +148,7 @@ export async function waitForDynamicCodeReadyAfterLaunch(
   dependencies: DynamicCodeLaunchReadinessDependencies = defaultDependencies,
 ): Promise<void> {
   const startTime: number = dependencies.nowFn();
+  let firstSuccessfulProbeTime: number | null = null;
 
   while (dependencies.nowFn() - startTime < LAUNCH_READINESS_TIMEOUT_MS) {
     let client: DirectUnityClient | null = null;
@@ -144,13 +167,20 @@ export async function waitForDynamicCodeReadyAfterLaunch(
         },
       );
 
-      if (payload.Success && isLaunchReadinessStable(payload)) {
-        return;
-      }
-
       if (payload.Success) {
-        // Success with a still-high RequestTotal means startup work is not fully settled yet.
-        // Retry so the first user-visible execute-dynamic-code request is less likely to pay it.
+        if (isLaunchReadinessStable(payload)) {
+          return;
+        }
+
+        if (firstSuccessfulProbeTime === null) {
+          firstSuccessfulProbeTime = dependencies.nowFn();
+        }
+        else if (
+          dependencies.nowFn() - firstSuccessfulProbeTime >=
+          LAUNCH_READINESS_SETTLE_TIMEOUT_MS
+        ) {
+          return;
+        }
       }
       else if (!isTransientExecuteDynamicCodeFailure(payload)) {
         throw createLaunchReadinessFailure(payload);

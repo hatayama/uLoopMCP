@@ -110,6 +110,8 @@ namespace io.github.hatayama.uLoopMCP
                 await StopServerWithUseCaseAsync();
             }
 
+            DynamicCodeStartupTelemetry.Reset();
+
             // Execute initialization UseCase
             McpServerInitializationUseCase useCase = new();
             ServerInitializationSchema schema = new() { Port = port };
@@ -127,6 +129,7 @@ namespace io.github.hatayama.uLoopMCP
                 // even if mcpServer instance becomes null unexpectedly
                 McpEditorSettings.SetIsServerRunning(true);
                 McpEditorSettings.SetCustomPort(mcpServer.Port);
+                DynamicCodeStartupTelemetry.MarkServerReady();
                 CustomToolManager.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
@@ -174,6 +177,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 // Clear session state to reflect server stopped
                 McpEditorSettings.SetIsServerRunning(false);
+                DynamicCodeStartupTelemetry.Reset();
                 DynamicCodeServices.ResetServerScopedServices();
             }
             else
@@ -198,6 +202,7 @@ namespace io.github.hatayama.uLoopMCP
                 mcpServer = null;
             }
 
+            DynamicCodeStartupTelemetry.Reset();
             DynamicCodeServices.ResetServerScopedServices();
         }
 

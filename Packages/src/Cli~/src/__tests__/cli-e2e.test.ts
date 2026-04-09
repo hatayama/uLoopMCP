@@ -43,7 +43,7 @@ const TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_MESSAGES = [
   'Another execution is already in progress',
   'Execution was cancelled or timed out',
 ];
-const TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_PREFIXES = ['COMPILATION_PROVIDER_UNAVAILABLE:'];
+const TRANSIENT_COMPILATION_PROVIDER_UNAVAILABLE_SUBSTRINGS = ['warming up'];
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -214,8 +214,12 @@ function isTransientExecuteDynamicCodeFailure(payload: {
     return true;
   }
 
-  return TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_PREFIXES.some((prefix) =>
-    errorMessage.startsWith(prefix),
+  if (!errorMessage.startsWith('COMPILATION_PROVIDER_UNAVAILABLE:')) {
+    return false;
+  }
+
+  return TRANSIENT_COMPILATION_PROVIDER_UNAVAILABLE_SUBSTRINGS.some((substring) =>
+    errorMessage.toLowerCase().includes(substring),
   );
 }
 

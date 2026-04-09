@@ -48,6 +48,43 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(entries, Has.Member("[Perf] PrewarmState: Skipped"));
             Assert.That(entries, Has.Member("[Perf] PrewarmDetail: fast_path_unavailable"));
         }
+
+        [Test]
+        public void MarkServerReady_WhenPreviousServerWasWarm_ShouldResetPrewarmState()
+        {
+            DynamicCodeStartupTelemetry.MarkServerReady();
+            DynamicCodeStartupTelemetry.MarkPrewarmQueued();
+            DynamicCodeStartupTelemetry.MarkPrewarmStarted();
+            DynamicCodeStartupTelemetry.MarkPrewarmCompleted();
+
+            DynamicCodeStartupTelemetry.MarkServerReady();
+
+            System.Collections.Generic.List<string> entries =
+                DynamicCodeStartupTelemetry.CreateTimingEntries();
+
+            Assert.That(entries, Has.Member("[Perf] WarmReady: False"));
+            Assert.That(entries, Has.Member("[Perf] PrewarmState: NotRequested"));
+            Assert.That(entries, Has.Some.Contains("[Perf] ServerReadyAge:"));
+            Assert.That(entries, Has.None.Contains("[Perf] PrewarmDuration:"));
+        }
+
+        [Test]
+        public void Reset_WhenPreviousServerWasWarm_ShouldClearServerReadyAge()
+        {
+            DynamicCodeStartupTelemetry.MarkServerReady();
+            DynamicCodeStartupTelemetry.MarkPrewarmQueued();
+            DynamicCodeStartupTelemetry.MarkPrewarmStarted();
+            DynamicCodeStartupTelemetry.MarkPrewarmCompleted();
+
+            DynamicCodeStartupTelemetry.Reset();
+
+            System.Collections.Generic.List<string> entries =
+                DynamicCodeStartupTelemetry.CreateTimingEntries();
+
+            Assert.That(entries, Has.Member("[Perf] WarmReady: False"));
+            Assert.That(entries, Has.Member("[Perf] PrewarmState: NotRequested"));
+            Assert.That(entries, Has.None.Contains("[Perf] ServerReadyAge:"));
+            Assert.That(entries, Has.None.Contains("[Perf] PrewarmDuration:"));
+        }
     }
 }
-

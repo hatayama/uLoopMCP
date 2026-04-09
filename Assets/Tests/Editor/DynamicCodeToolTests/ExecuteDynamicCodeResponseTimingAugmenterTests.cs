@@ -60,7 +60,9 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 3.0);
 
             Assert.That(response.Timings, Is.Not.Null);
-            Assert.That(response.Timings, Has.Count.EqualTo(3));
+            Assert.That(response.Timings, Has.Count.EqualTo(5));
+            Assert.That(response.Timings, Has.Member("[Perf] WarmReady: False"));
+            Assert.That(response.Timings, Has.Member("[Perf] PrewarmState: NotRequested"));
         }
     }
 }
