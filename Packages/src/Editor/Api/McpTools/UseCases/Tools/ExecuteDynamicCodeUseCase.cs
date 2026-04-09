@@ -303,7 +303,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 UserFriendlyErrorDto enhancedError = _errorHandler.ProcessError(result, originalCode);
                 response.ErrorMessage = enhancedError.FriendlyMessage;
-                response.Logs = new List<string>();
+                response.Logs = result.Logs != null ? new List<string>(result.Logs) : new List<string>();
 
                 if (!string.IsNullOrEmpty(enhancedError.Explanation))
                 {

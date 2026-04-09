@@ -271,6 +271,39 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             }
         }
 
+        [Test]
+        public async Task ExecuteAsync_WhenRuntimeFailsAfterProducingLogs_ShouldPreserveOriginalLogs()
+        {
+            FakeDynamicCodeExecutionRuntime runtime = new FakeDynamicCodeExecutionRuntime(
+                new ExecutionResult
+                {
+                    Success = false,
+                    ErrorMessage = "Object reference not set to an instance of an object",
+                    Logs = new List<string> { "partial log" }
+                });
+            ExecuteDynamicCodeUseCase useCase = new ExecuteDynamicCodeUseCase(runtime);
+
+            DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
+            ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+
+            try
+            {
+                ExecuteDynamicCodeResponse response = await useCase.ExecuteAsync(
+                    new ExecuteDynamicCodeSchema
+                    {
+                        Code = "Debug.Log(\"partial log\"); throw new NullReferenceException();"
+                    },
+                    CancellationToken.None);
+
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.Logs, Contains.Item("partial log"));
+            }
+            finally
+            {
+                ULoopSettings.SetDynamicCodeSecurityLevel(previous);
+            }
+        }
+
         private sealed class FakeDynamicCodeExecutionRuntime : IDynamicCodeExecutionRuntime
         {
             private readonly Queue<ExecutionResult> _results;

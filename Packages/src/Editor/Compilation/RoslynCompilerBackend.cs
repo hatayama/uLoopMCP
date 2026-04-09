@@ -193,6 +193,7 @@ namespace io.github.hatayama.uLoopMCP
                         completionResult.ExitCode);
                     if (ShouldRetryWithAssemblyBuilder(process.ExitCode, compilerMessages))
                     {
+                        ReportInfrastructureFallback(externalCompilerPaths, process.ExitCode);
                         return OneShotCompileResult.Fallback();
                     }
 
@@ -417,7 +418,7 @@ namespace io.github.hatayama.uLoopMCP
             if (!ReferenceEquals(finishedTask, completionTask))
             {
                 requestCancellation();
-                await completionTask.ConfigureAwait(false);
+                ObserveTaskFault(completionTask);
                 ct.ThrowIfCancellationRequested();
             }
 
@@ -426,6 +427,28 @@ namespace io.github.hatayama.uLoopMCP
                 stdoutTask.Result,
                 stderrTask.Result,
                 getExitCode());
+        }
+
+        internal static void ReportInfrastructureFallback(
+            ExternalCompilerPaths externalCompilerPaths,
+            int exitCode)
+        {
+            DynamicCompilationHealthMonitor.ReportOneShotCompilerStartFailure(new
+            {
+                reason = "infrastructure_failure",
+                exit_code = exitCode,
+                dotnet_host_path = externalCompilerPaths.DotnetHostPath,
+                compiler_dll_path = externalCompilerPaths.CompilerDllPath
+            });
+        }
+
+        private static void ObserveTaskFault(Task task)
+        {
+            _ = task.ContinueWith(
+                static observedTask => _ = observedTask.Exception,
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
         }
     }
 }

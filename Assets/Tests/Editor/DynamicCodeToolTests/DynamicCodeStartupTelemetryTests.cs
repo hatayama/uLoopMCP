@@ -86,5 +86,21 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(entries, Has.None.Contains("[Perf] ServerReadyAge:"));
             Assert.That(entries, Has.None.Contains("[Perf] PrewarmDuration:"));
         }
+
+        [Test]
+        public void MarkPrewarmQueued_WhenPreviousAttemptCompleted_ShouldClearFinishedTimestamp()
+        {
+            DynamicCodeStartupTelemetry.MarkServerReady();
+            DynamicCodeStartupTelemetry.MarkPrewarmStarted();
+            DynamicCodeStartupTelemetry.MarkPrewarmCompleted();
+
+            DynamicCodeStartupTelemetry.MarkPrewarmQueued();
+
+            System.Collections.Generic.List<string> entries =
+                DynamicCodeStartupTelemetry.CreateTimingEntries();
+
+            Assert.That(entries, Has.Member("[Perf] PrewarmState: Queued"));
+            Assert.That(entries, Has.None.Contains("[Perf] PrewarmDuration:"));
+        }
     }
 }

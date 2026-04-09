@@ -20,6 +20,7 @@ namespace io.github.hatayama.uLoopMCP
         private const string RoslynWorkerAssemblyFileName = "RoslynCompilerWorker.dll";
         private const string RoslynWorkerCompileResponseFileName = "RoslynCompilerWorker.rsp";
         private const int SharedCompilerWorkerResponseTimeoutMilliseconds = 30000;
+        private const int WorkerAssemblyBuildTimeoutMilliseconds = 30000;
 
         private static readonly object SharedCompilerWorkerLock = new();
         private static Action<string> s_deleteWorkerDirectory = path => Directory.Delete(path, true);
@@ -548,7 +549,25 @@ namespace io.github.hatayama.uLoopMCP
 
             Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
             Task<string> stderrTask = process.StandardError.ReadToEndAsync();
-            process.WaitForExit();
+            if (!process.WaitForExit(WorkerAssemblyBuildTimeoutMilliseconds))
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill();
+                    process.WaitForExit(500);
+                }
+
+                Task.WaitAll(stdoutTask, stderrTask);
+                return WorkerAssemblyBuildResult.StartFailure(
+                    "worker_compiler_timeout",
+                    new
+                    {
+                        timeout_ms = WorkerAssemblyBuildTimeoutMilliseconds,
+                        dotnet_host_path = externalCompilerPaths.DotnetHostPath,
+                        compiler_dll_path = externalCompilerPaths.CompilerDllPath
+                    });
+            }
+
             Task.WaitAll(stdoutTask, stderrTask);
             CompilerMessage[] compilerMessages = ExternalCompilerMessageParser.Parse(
                 stdoutTask.GetAwaiter().GetResult(),

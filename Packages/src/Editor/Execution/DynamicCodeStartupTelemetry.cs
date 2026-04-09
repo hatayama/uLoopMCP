@@ -131,7 +131,10 @@ namespace io.github.hatayama.uLoopMCP
                 if (terminal)
                 {
                     _prewarmFinishedTimestamp = _prewarmStateTimestamp;
+                    return;
                 }
+
+                _prewarmFinishedTimestamp = 0;
             }
         }
 

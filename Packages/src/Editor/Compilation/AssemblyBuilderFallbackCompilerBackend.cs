@@ -75,6 +75,7 @@ namespace io.github.hatayama.uLoopMCP
             Task completedTask = await Task.WhenAny(buildTask, cancellationTaskCompletionSource.Task).ConfigureAwait(false);
             if (completedTask == cancellationTaskCompletionSource.Task)
             {
+                await buildTask.ConfigureAwait(false);
                 return await cancellationTaskCompletionSource.Task.ConfigureAwait(false);
             }
 
