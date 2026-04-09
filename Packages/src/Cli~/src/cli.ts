@@ -597,11 +597,9 @@ compdef _uloop uloop`;
 /**
  * Get the currently installed version of uloop-cli from npm.
  */
-function getInstalledVersion(callback: (version: string | null) => void): void {
+export function getInstalledVersion(callback: (version: string | null) => void): void {
   const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const child = spawn(npmCommand, ['list', '-g', 'uloop-cli', '--json'], {
-    shell: true,
-  });
+  const child = spawn(npmCommand, ['list', '-g', 'uloop-cli', '--json']);
 
   let stdout = '';
   child.stdout.on('data', (data: Buffer) => {
@@ -656,14 +654,13 @@ function getInstalledVersion(callback: (version: string | null) => void): void {
 /**
  * Update uloop CLI to the latest version using npm.
  */
-function updateCli(): void {
+export function updateCli(): void {
   const previousVersion = VERSION;
   console.log('Updating uloop-cli to the latest version...');
 
   const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   const child = spawn(npmCommand, ['install', '-g', 'uloop-cli@latest'], {
     stdio: 'inherit',
-    shell: true,
   });
 
   child.on('close', (code) => {
@@ -1032,4 +1029,6 @@ async function main(): Promise<void> {
   program.parse();
 }
 
-void main();
+if (process.env.JEST_WORKER_ID === undefined) {
+  void main();
+}

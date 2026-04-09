@@ -34,7 +34,7 @@ export function getUnitySettingsCandidatePaths(dirPath: string): string[] {
 }
 
 export function hasUloopInstalled(dirPath: string): boolean {
-  return getUnitySettingsCandidatePaths(dirPath).some(path => existsSync(path));
+  return getUnitySettingsCandidatePaths(dirPath).some((path) => existsSync(path));
 }
 
 function isUnityProjectWithUloop(dirPath: string): boolean {
