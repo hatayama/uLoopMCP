@@ -17,6 +17,9 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class ToolSkillSynchronizer
     {
+        private const string SkillsDirName = "skills";
+        private const string SkillFileName = "SKILL.md";
+
         public readonly struct SkillTargetDefinition
         {
             public readonly string DirName;
@@ -78,7 +81,7 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (string targetDir in SkillTargetDirs)
             {
-                string skillsRoot = Path.Combine(projectRoot, targetDir, "skills");
+                string skillsRoot = Path.Combine(projectRoot, targetDir, SkillsDirName);
                 if (!Directory.Exists(skillsRoot))
                 {
                     continue;
@@ -103,7 +106,7 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (string targetDir in SkillTargetDirs)
             {
-                string skillsRoot = Path.Combine(projectRoot, targetDir, "skills");
+                string skillsRoot = Path.Combine(projectRoot, targetDir, SkillsDirName);
                 if (!Directory.Exists(skillsRoot))
                 {
                     continue;
@@ -123,7 +126,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Checks parent directories (.claude/, .agents/, etc.), not skills/ subdirectories.
+        /// Checks skills directories (.claude/skills, .agents/skills, etc.) before auto-installing.
         /// </summary>
         public static List<SkillTargetInfo> DetectTargets()
         {
@@ -134,16 +137,14 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (SkillTargetDefinition target in SkillTargets)
             {
-                string parentDir = Path.Combine(projectRoot, target.DirName);
-                if (!Directory.Exists(parentDir))
+                string skillsRoot = Path.Combine(projectRoot, target.DirName, SkillsDirName);
+                if (!Directory.Exists(skillsRoot))
                 {
                     continue;
                 }
 
-                string skillsRoot = Path.Combine(parentDir, "skills");
-                bool hasULoopSkills = Directory.Exists(skillsRoot)
-                    && Directory.EnumerateDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB)
-                        .Any(skillDir => File.Exists(Path.Combine(skillDir, "SKILL.md")));
+                bool hasULoopSkills = Directory.EnumerateDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB)
+                    .Any(skillDir => File.Exists(Path.Combine(skillDir, SkillFileName)));
                 targets.Add(new SkillTargetInfo(target.DisplayName, target.DirName, hasULoopSkills));
             }
 
@@ -151,8 +152,7 @@ namespace io.github.hatayama.uLoopMCP
         }
 
         /// <summary>
-        /// Re-install skills for all detected targets.
-        /// Checks parent directories (.claude/, .agents/, etc.) to determine targets.
+        /// Re-installs skills for targets that already have a skills directory.
         /// </summary>
         public static async Task<SkillInstallResult> InstallSkillFiles()
         {
@@ -196,7 +196,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private static bool SkillMatchesTool(string skillDir, string toolName)
         {
-            string skillMdPath = Path.Combine(skillDir, "SKILL.md");
+            string skillMdPath = Path.Combine(skillDir, SkillFileName);
             if (File.Exists(skillMdPath))
             {
                 string content = File.ReadAllText(skillMdPath);

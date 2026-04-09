@@ -8,6 +8,8 @@ namespace io.github.hatayama.uLoopMCP
     [TestFixture]
     public class ToolSkillSynchronizerTests
     {
+        private const string SkillsDirName = "skills";
+
         private string _projectRoot;
         private string[] _nonExistentDirsBefore;
 
@@ -31,7 +33,7 @@ namespace io.github.hatayama.uLoopMCP
                 if (Directory.Exists(fullPath))
                 {
                     // Only delete if it was created by this test (didn't exist before)
-                    string skillsPath = Path.Combine(fullPath, "skills");
+                    string skillsPath = Path.Combine(fullPath, SkillsDirName);
                     if (Directory.Exists(skillsPath))
                     {
                         Directory.Delete(skillsPath, true);
@@ -61,6 +63,59 @@ namespace io.github.hatayama.uLoopMCP
                 string fullPath = Path.Combine(_projectRoot, dir);
                 Assert.IsFalse(Directory.Exists(fullPath),
                     $"Directory '{dir}' should not be created by InstallSkillFiles when '{dir}' did not exist");
+            }
+        }
+
+        [Test]
+        public void DetectTargets_DoesNotIncludeTargetsWithOnlyParentDirectory()
+        {
+            // Arrange
+            Assert.IsNotEmpty(_nonExistentDirsBefore,
+                "At least one target directory should not exist for this test to be meaningful");
+
+            foreach (string dir in _nonExistentDirsBefore)
+            {
+                Directory.CreateDirectory(Path.Combine(_projectRoot, dir));
+            }
+
+            // Act
+            string[] detectedTargetDirs = ToolSkillSynchronizer.DetectTargets()
+                .Select(target => target.DirName)
+                .ToArray();
+
+            // Assert
+            foreach (string dir in _nonExistentDirsBefore)
+            {
+                Assert.IsFalse(detectedTargetDirs.Contains(dir),
+                    $"Target '{dir}' should not be detected when only the parent directory exists");
+            }
+        }
+
+        [Test]
+        public void DetectTargets_IncludesTargetsWhenSkillsDirectoryExists()
+        {
+            // Arrange
+            Assert.IsNotEmpty(_nonExistentDirsBefore,
+                "At least one target directory should not exist for this test to be meaningful");
+
+            foreach (string dir in _nonExistentDirsBefore)
+            {
+                Directory.CreateDirectory(Path.Combine(_projectRoot, dir, SkillsDirName));
+            }
+
+            // Act
+            ToolSkillSynchronizer.SkillTargetInfo[] detectedTargets = ToolSkillSynchronizer.DetectTargets()
+                .Where(target => _nonExistentDirsBefore.Contains(target.DirName))
+                .ToArray();
+
+            // Assert
+            Assert.AreEqual(_nonExistentDirsBefore.Length, detectedTargets.Length,
+                "Targets with a skills directory should be detected");
+
+            foreach (ToolSkillSynchronizer.SkillTargetInfo target in detectedTargets)
+            {
+                Assert.IsFalse(target.HasExistingSkills,
+                    $"Target '{target.DirName}' should not be treated as already installed when skills directory is empty");
             }
         }
 
