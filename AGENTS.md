@@ -6,7 +6,7 @@ The MCP server (TypeScriptServer~) exists as a separate component but is not the
 
 The C# namespace is `io.github.hatayama.uLoopMCP` for historical reasons, but this is a CLI-based tool, not an MCP tool.
 
-Comments in the code, commit messages, and PR titles and bodies should be written in English.
+Comments in the code, commit messages, PR titles, and PR descriptions must all be written in English.
 
 ## Skill Description Guidelines
 
