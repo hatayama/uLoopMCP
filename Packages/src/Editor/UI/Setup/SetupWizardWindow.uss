@@ -36,9 +36,18 @@
     border-color: #2e7d32;
 }
 
+.setup-prerequisite--compact {
+    justify-content: center;
+    min-height: 36px;
+}
+
 .setup-prerequisite__title {
     -unity-font-style: bold;
     margin-bottom: 4px;
+}
+
+.setup-prerequisite--compact .setup-prerequisite__title {
+    margin-bottom: 0;
 }
 
 .setup-prerequisite--warning .setup-prerequisite__title {

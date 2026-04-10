@@ -7,7 +7,7 @@
             <ui:Label text="Please install Node.js to continue." class="setup-prerequisite__message" />
             <ui:Button name="refresh-button" text="Refresh" class="setup-button setup-button--small" />
         </ui:VisualElement>
-        <ui:VisualElement name="nodejs-ok" class="setup-prerequisite setup-prerequisite--ok setup-hidden">
+        <ui:VisualElement name="nodejs-ok" class="setup-prerequisite setup-prerequisite--ok setup-prerequisite--compact setup-hidden">
             <ui:Label text="✓ Node.js detected" class="setup-prerequisite__title" />
         </ui:VisualElement>
 
@@ -31,7 +31,6 @@
                 <ui:Label name="skills-status-label" text="" class="setup-step__status-label" />
                 <ui:VisualElement class="setup-step__button-row">
                     <ui:Button name="install-skills-button" text="Install Skills" class="setup-button" />
-                    <ui:Button name="skip-button" text="Skip" class="setup-button" />
                 </ui:VisualElement>
                 <ui:Label name="skills-hint-label" text="You can install skills later from Window &gt; Unity CLI Loop &gt; Settings." class="setup-step__hint-label" />
             </ui:VisualElement>

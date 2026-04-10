@@ -79,14 +79,12 @@ namespace io.github.hatayama.uLoopMCP
         private Button _installSkillsButton;
 
         // Footer
-        private Button _skipButton;
         private Button _openSettingsButton;
         private Button _closeButton;
 
         // State
         private bool _isInstallingCli;
         private bool _isInstallingSkills;
-        private bool _isSkipped;
 
         private void CreateGUI()
         {
@@ -123,7 +121,6 @@ namespace io.github.hatayama.uLoopMCP
             _skillsStatusLabel = rootVisualElement.Q<Label>("skills-status-label");
             _installSkillsButton = rootVisualElement.Q<Button>("install-skills-button");
 
-            _skipButton = rootVisualElement.Q<Button>("skip-button");
             _openSettingsButton = rootVisualElement.Q<Button>("open-settings-button");
             _closeButton = rootVisualElement.Q<Button>("close-button");
         }
@@ -133,7 +130,6 @@ namespace io.github.hatayama.uLoopMCP
             _refreshButton.clicked += () => RefreshUI();
             _installCliButton.clicked += HandleInstallCli;
             _installSkillsButton.clicked += HandleInstallSkills;
-            _skipButton.clicked += HandleSkip;
             _openSettingsButton.clicked += HandleOpenSettings;
             _closeButton.clicked += HandleClose;
         }
@@ -155,7 +151,6 @@ namespace io.github.hatayama.uLoopMCP
                 _installSkillsButton.SetEnabled(false);
                 _skillsStatusLabel.text = "";
                 _skillsTargetList.Clear();
-                _skipButton.SetEnabled(false);
                 return;
             }
 
@@ -218,7 +213,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 _skillsStatusLabel.text = "";
                 _installSkillsButton.SetEnabled(false);
-                _skipButton.SetEnabled(false);
                 return;
             }
 
@@ -248,21 +242,12 @@ namespace io.github.hatayama.uLoopMCP
                 _skillsStatusLabel.text = $"Installed for {targets.Count} targets";
                 _installSkillsButton.SetEnabled(false);
                 _installSkillsButton.text = "Installed";
-                _skipButton.SetEnabled(false);
-            }
-            else if (_isSkipped)
-            {
-                _skillsStatusLabel.text = "";
-                _installSkillsButton.SetEnabled(false);
-                _installSkillsButton.text = "Skipped";
-                _skipButton.SetEnabled(false);
             }
             else
             {
                 _skillsStatusLabel.text = "";
                 _installSkillsButton.SetEnabled(!_isInstallingSkills);
                 _installSkillsButton.text = _isInstallingSkills ? "Installing..." : "Install Skills";
-                _skipButton.SetEnabled(true);
             }
         }
 
@@ -343,17 +328,6 @@ namespace io.github.hatayama.uLoopMCP
                 _isInstallingSkills = false;
                 RefreshUI();
             }
-        }
-
-        private void HandleSkip()
-        {
-            string cliVersion = CliInstallationDetector.GetCachedCliVersion();
-            Debug.Assert(IsCliVersionMatched(cliVersion), "HandleSkip requires CLI version match");
-
-            _isSkipped = true;
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
-            UpdateSkillsStep(true, targets);
-            _openSettingsButton.SetEnabled(true);
         }
 
         private void HandleOpenSettings()
