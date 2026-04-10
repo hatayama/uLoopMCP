@@ -6,7 +6,7 @@ const UNITY_WINDOWS_PROCESS_NAME = 'Unity.exe';
 const WINDOWS_PROCESS_QUERY =
   'Get-CimInstance Win32_Process -Filter "name = \'Unity.exe\'" | Select-Object ProcessId, CommandLine | ConvertTo-Json -Compress';
 
-export interface RunningUnityProcess {
+interface RunningUnityProcess {
   pid: number;
 }
 
