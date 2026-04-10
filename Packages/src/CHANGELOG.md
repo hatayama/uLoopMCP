@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.7.3](https://github.com/hatayama/unity-cli-loop/compare/v1.7.2...v1.7.3) (2026-04-10)
+
+
+### Bug Fixes
+
+* Avoid false "Unity not running" errors when the editor is still open ([#919](https://github.com/hatayama/unity-cli-loop/issues/919)) ([5376279](https://github.com/hatayama/unity-cli-loop/commit/53762791b70192efcf7fea2fcdf8dc8d91aa0c2d))
+* show the setup wizard when the package version changes ([#920](https://github.com/hatayama/unity-cli-loop/issues/920)) ([4f99cbc](https://github.com/hatayama/unity-cli-loop/commit/4f99cbc777d5eb1867815a3f22965205f0e01a69))
+* stabilize npm publishing and remove CLI bin warning ([#918](https://github.com/hatayama/unity-cli-loop/issues/918)) ([1b7a7f1](https://github.com/hatayama/unity-cli-loop/commit/1b7a7f12865767f5faf27529c5aa7a8502cb9a42))
+
 ## [1.7.2](https://github.com/hatayama/unity-cli-loop/compare/v1.7.1...v1.7.2) (2026-04-09)
 
 
