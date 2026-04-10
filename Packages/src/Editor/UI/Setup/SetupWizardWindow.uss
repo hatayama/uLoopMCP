@@ -36,9 +36,18 @@
     border-color: #2e7d32;
 }
 
+.setup-prerequisite--compact {
+    justify-content: center;
+    min-height: 36px;
+}
+
 .setup-prerequisite__title {
     -unity-font-style: bold;
     margin-bottom: 4px;
+}
+
+.setup-prerequisite--compact .setup-prerequisite__title {
+    margin-bottom: 0;
 }
 
 .setup-prerequisite--warning .setup-prerequisite__title {
@@ -166,6 +175,15 @@
     padding-top: 8px;
     border-top-width: 1px;
     border-top-color: var(--unity-colors-helpbox-border);
+}
+
+.setup-footer__button-row {
+    flex-direction: row;
+}
+
+.setup-footer__button-row .setup-button {
+    flex-grow: 1;
+    flex-basis: 0;
 }
 
 .setup-step__button-row {

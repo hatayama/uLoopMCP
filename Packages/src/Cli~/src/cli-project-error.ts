@@ -1,9 +1,19 @@
-import { UnityNotRunningError } from './port-resolver.js';
+import { UnityNotRunningError, UnityServerNotRunningError } from './port-resolver.js';
 import { ProjectMismatchError } from './project-validator.js';
 
 export function getProjectResolutionErrorLines(
-  error: UnityNotRunningError | ProjectMismatchError,
+  error: UnityNotRunningError | UnityServerNotRunningError | ProjectMismatchError,
 ): string[] {
+  if (error instanceof UnityServerNotRunningError) {
+    return [
+      'Error: Unity Editor is running, but Unity CLI Loop server is not.',
+      '',
+      `  Project: ${error.projectRoot}`,
+      '',
+      'Start the server from: Window > Unity CLI Loop > Server',
+    ];
+  }
+
   if (error instanceof UnityNotRunningError) {
     return [
       'Error: Unity Editor for this project is not running.',

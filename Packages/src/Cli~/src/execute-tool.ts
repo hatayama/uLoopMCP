@@ -13,13 +13,19 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import * as semver from 'semver';
 import { DirectUnityClient } from './direct-unity-client.js';
-import { resolveUnityPort, validateProjectPath } from './port-resolver.js';
+import {
+  resolveUnityPort,
+  UnityNotRunningError,
+  UnityServerNotRunningError,
+  validateProjectPath,
+} from './port-resolver.js';
 import { validateConnectedProject } from './project-validator.js';
 import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './tool-cache.js';
 import { VERSION } from './version.js';
 import { createSpinner } from './spinner.js';
 import { findUnityProjectRoot } from './project-root.js';
 import { getCliProcessAgeMilliseconds } from './process-timing.js';
+import { findRunningUnityProcessForProject } from './unity-process.js';
 import {
   type CompileExecutionOptions,
   ensureCompileRequestId,
@@ -78,6 +84,14 @@ const MAX_RETRIES = 3;
 const COMPILE_WAIT_TIMEOUT_MS = 90000;
 const COMPILE_WAIT_POLL_INTERVAL_MS = 100;
 
+interface ConnectionFailureDiagnosisDependencies {
+  findRunningUnityProcessForProjectFn: typeof findRunningUnityProcessForProject;
+}
+
+const defaultConnectionFailureDiagnosisDependencies: ConnectionFailureDiagnosisDependencies = {
+  findRunningUnityProcessForProjectFn: findRunningUnityProcessForProject,
+};
+
 function getCompileExecutionOptions(
   toolName: string,
   params: Record<string, unknown>,
@@ -102,6 +116,54 @@ function isRetryableError(error: unknown): boolean {
     message.includes('EADDRNOTAVAIL') ||
     message === 'UNITY_NO_RESPONSE'
   );
+}
+
+export async function diagnoseRetryableProjectConnectionError(
+  error: unknown,
+  projectRoot: string | null,
+  shouldDiagnoseProjectState: boolean,
+  dependencies: ConnectionFailureDiagnosisDependencies = defaultConnectionFailureDiagnosisDependencies,
+): Promise<unknown> {
+  if (!shouldDiagnoseProjectState || projectRoot === null || !isRetryableError(error)) {
+    return error;
+  }
+
+  const runningProcess = await dependencies
+    .findRunningUnityProcessForProjectFn(projectRoot)
+    .catch(() => undefined);
+
+  if (runningProcess === undefined) {
+    return error;
+  }
+
+  if (runningProcess === null) {
+    return new UnityNotRunningError(projectRoot);
+  }
+
+  return new UnityServerNotRunningError(projectRoot);
+}
+
+async function throwFinalToolError(
+  error: unknown,
+  projectRoot: string | null,
+  shouldDiagnoseProjectState: boolean,
+): Promise<never> {
+  const diagnosedError = await diagnoseRetryableProjectConnectionError(
+    error,
+    projectRoot,
+    shouldDiagnoseProjectState,
+  );
+
+  if (diagnosedError instanceof Error) {
+    throw diagnosedError;
+  }
+
+  if (typeof diagnosedError === 'string') {
+    throw new Error(diagnosedError);
+  }
+
+  const serializedError = JSON.stringify(diagnosedError);
+  throw new Error(serializedError ?? 'Unknown error');
 }
 
 // Distinct from isRetryableError(): that function covers pre-connection failures
@@ -379,8 +441,8 @@ export async function executeToolCommand(
     if (immediateResult === undefined && !requestDispatched) {
       spinner.stop();
       restoreStdin();
-      if (lastError instanceof Error) {
-        throw lastError;
+      if (lastError !== undefined) {
+        await throwFinalToolError(lastError, projectRoot, shouldValidateProject);
       }
       throw new Error(
         'Compile request never reached Unity. Check that Unity is running and retry.',
@@ -449,15 +511,7 @@ export async function executeToolCommand(
   if (lastError === undefined) {
     throw new Error('Tool execution failed without error details.');
   }
-  if (lastError instanceof Error) {
-    throw lastError;
-  }
-  if (typeof lastError === 'string') {
-    throw new Error(lastError);
-  }
-
-  const serializedError = JSON.stringify(lastError);
-  throw new Error(serializedError ?? 'Unknown error');
+  await throwFinalToolError(lastError, projectRoot, shouldValidateProject);
 }
 
 export async function listAvailableTools(globalOptions: GlobalOptions): Promise<void> {
@@ -524,7 +578,7 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
 
   spinner.stop();
   restoreStdin();
-  throw lastError;
+  await throwFinalToolError(lastError, projectRoot, shouldValidateProject);
 }
 
 interface UnityToolInfo {
@@ -642,5 +696,5 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
 
   spinner.stop();
   restoreStdin();
-  throw lastError;
+  await throwFinalToolError(lastError, projectRoot, shouldValidateProject);
 }

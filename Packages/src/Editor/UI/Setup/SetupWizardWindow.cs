@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 
@@ -20,19 +19,48 @@ namespace io.github.hatayama.uLoopMCP
             if (AssetDatabase.IsAssetImportWorkerProcess()) return;
             if (Application.isBatchMode) return;
 
-            // GetSettings() auto-creates the file, so calling it first would make the check always pass
-            string settingsPath = Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
-            if (File.Exists(settingsPath)) return;
-
-            EditorApplication.delayCall += ShowWindow;
+            TryShowOnVersionChange();
         }
 
         [MenuItem("Window/Unity CLI Loop/Setup Wizard", priority = 3)]
         public static void ShowWindow()
         {
+            ShowWindowInternal(false);
+        }
+
+        internal static bool ShouldAutoShowForVersion(string currentVersion, string lastSeenVersion)
+        {
+            return !string.Equals(currentVersion, lastSeenVersion, System.StringComparison.Ordinal);
+        }
+
+        internal static void MaybeRecordLastSeenVersion(bool shouldRecordVersion, string version)
+        {
+            if (!shouldRecordVersion) return;
+
+            Debug.Assert(!string.IsNullOrEmpty(version), "version must not be null or empty");
+            McpEditorSettings.SetLastSeenSetupWizardVersion(version);
+        }
+
+        private static void TryShowOnVersionChange()
+        {
+            string currentVersion = McpConstants.PackageInfo.version;
+            string lastSeenVersion = McpEditorSettings.GetLastSeenSetupWizardVersion();
+            if (!ShouldAutoShowForVersion(currentVersion, lastSeenVersion)) return;
+
+            EditorApplication.delayCall += ShowWindowOnVersionChange;
+        }
+
+        private static void ShowWindowOnVersionChange()
+        {
+            ShowWindowInternal(true);
+        }
+
+        private static void ShowWindowInternal(bool shouldRecordVersion)
+        {
             SetupWizardWindow window = GetWindow<SetupWizardWindow>(true, "Unity CLI Loop Setup");
             window.minSize = new Vector2(400, 350);
             window.ShowUtility();
+            MaybeRecordLastSeenVersion(shouldRecordVersion, McpConstants.PackageInfo.version);
         }
 
         // Prerequisite
@@ -51,13 +79,12 @@ namespace io.github.hatayama.uLoopMCP
         private Button _installSkillsButton;
 
         // Footer
-        private Button _skipButton;
         private Button _openSettingsButton;
+        private Button _closeButton;
 
         // State
         private bool _isInstallingCli;
         private bool _isInstallingSkills;
-        private bool _isSkipped;
 
         private void CreateGUI()
         {
@@ -94,8 +121,8 @@ namespace io.github.hatayama.uLoopMCP
             _skillsStatusLabel = rootVisualElement.Q<Label>("skills-status-label");
             _installSkillsButton = rootVisualElement.Q<Button>("install-skills-button");
 
-            _skipButton = rootVisualElement.Q<Button>("skip-button");
             _openSettingsButton = rootVisualElement.Q<Button>("open-settings-button");
+            _closeButton = rootVisualElement.Q<Button>("close-button");
         }
 
         private void BindEvents()
@@ -103,8 +130,8 @@ namespace io.github.hatayama.uLoopMCP
             _refreshButton.clicked += () => RefreshUI();
             _installCliButton.clicked += HandleInstallCli;
             _installSkillsButton.clicked += HandleInstallSkills;
-            _skipButton.clicked += HandleSkip;
             _openSettingsButton.clicked += HandleOpenSettings;
+            _closeButton.clicked += HandleClose;
         }
 
         private async void RefreshUI()
@@ -124,8 +151,6 @@ namespace io.github.hatayama.uLoopMCP
                 _installSkillsButton.SetEnabled(false);
                 _skillsStatusLabel.text = "";
                 _skillsTargetList.Clear();
-                _skipButton.SetEnabled(false);
-                _openSettingsButton.SetEnabled(false);
                 return;
             }
 
@@ -138,12 +163,6 @@ namespace io.github.hatayama.uLoopMCP
 
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
             UpdateSkillsStep(cliVersionMatched, targets);
-
-            bool noTargets = targets.Count == 0;
-            bool allSkillsInstalled = targets.Count > 0
-                && targets.All(t => t.HasExistingSkills);
-            bool step2Done = allSkillsInstalled || noTargets || _isSkipped;
-            _openSettingsButton.SetEnabled(cliVersionMatched && step2Done);
         }
 
         private void UpdateCliStep(bool cliInstalled, string cliVersion, bool cliVersionMatched)
@@ -194,7 +213,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 _skillsStatusLabel.text = "";
                 _installSkillsButton.SetEnabled(false);
-                _skipButton.SetEnabled(false);
                 return;
             }
 
@@ -224,21 +242,12 @@ namespace io.github.hatayama.uLoopMCP
                 _skillsStatusLabel.text = $"Installed for {targets.Count} targets";
                 _installSkillsButton.SetEnabled(false);
                 _installSkillsButton.text = "Installed";
-                _skipButton.SetEnabled(false);
-            }
-            else if (_isSkipped)
-            {
-                _skillsStatusLabel.text = "";
-                _installSkillsButton.SetEnabled(false);
-                _installSkillsButton.text = "Skipped";
-                _skipButton.SetEnabled(false);
             }
             else
             {
                 _skillsStatusLabel.text = "";
                 _installSkillsButton.SetEnabled(!_isInstallingSkills);
                 _installSkillsButton.text = _isInstallingSkills ? "Installing..." : "Install Skills";
-                _skipButton.SetEnabled(true);
             }
         }
 
@@ -321,20 +330,14 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private void HandleSkip()
-        {
-            string cliVersion = CliInstallationDetector.GetCachedCliVersion();
-            Debug.Assert(IsCliVersionMatched(cliVersion), "HandleSkip requires CLI version match");
-
-            _isSkipped = true;
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
-            UpdateSkillsStep(true, targets);
-            _openSettingsButton.SetEnabled(true);
-        }
-
         private void HandleOpenSettings()
         {
             McpEditorWindow.ShowWindow();
+            Close();
+        }
+
+        private void HandleClose()
+        {
             Close();
         }
 

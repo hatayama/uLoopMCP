@@ -1,8 +1,9 @@
 import {
   appendCliTimingsToDynamicCodeResult,
+  diagnoseRetryableProjectConnectionError,
   isTransportDisconnectError,
 } from '../execute-tool.js';
-import { UnityNotRunningError } from '../port-resolver.js';
+import { UnityNotRunningError, UnityServerNotRunningError } from '../port-resolver.js';
 import { ProjectMismatchError } from '../project-validator.js';
 
 describe('isTransportDisconnectError', () => {
@@ -36,6 +37,10 @@ describe('isTransportDisconnectError', () => {
 
   it('returns false for UnityNotRunningError', () => {
     expect(isTransportDisconnectError(new UnityNotRunningError('/project'))).toBe(false);
+  });
+
+  it('returns false for UnityServerNotRunningError', () => {
+    expect(isTransportDisconnectError(new UnityServerNotRunningError('/project'))).toBe(false);
   });
 
   it('returns false for ProjectMismatchError', () => {
@@ -73,5 +78,63 @@ describe('appendCliTimingsToDynamicCodeResult', () => {
       '[Perf] CliProcessTotal: 260.0ms',
       '[Perf] CliBootstrap: 80.0ms',
     ]);
+  });
+});
+
+describe('diagnoseRetryableProjectConnectionError', () => {
+  it('returns UnityNotRunningError when connection fails and Unity is not running', async () => {
+    const error = await diagnoseRetryableProjectConnectionError(
+      new Error('Connection error: connect ECONNREFUSED 127.0.0.1:8711'),
+      '/project',
+      true,
+      {
+        findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue(null),
+      },
+    );
+
+    expect(error).toBeInstanceOf(UnityNotRunningError);
+  });
+
+  it('returns UnityServerNotRunningError when Unity is running but server is unavailable', async () => {
+    const error = await diagnoseRetryableProjectConnectionError(
+      new Error('UNITY_NO_RESPONSE'),
+      '/project',
+      true,
+      {
+        findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
+      },
+    );
+
+    expect(error).toBeInstanceOf(UnityServerNotRunningError);
+  });
+
+  it('preserves non-retryable errors', async () => {
+    const originalError = new ProjectMismatchError('/expected', '/actual');
+
+    const error = await diagnoseRetryableProjectConnectionError(originalError, '/project', true, {
+      findRunningUnityProcessForProjectFn: jest.fn(),
+    });
+
+    expect(error).toBe(originalError);
+  });
+
+  it('preserves retryable errors when project diagnosis is disabled', async () => {
+    const originalError = new Error('Connection error: connect ECONNREFUSED 127.0.0.1:8711');
+
+    const error = await diagnoseRetryableProjectConnectionError(originalError, '/project', false, {
+      findRunningUnityProcessForProjectFn: jest.fn(),
+    });
+
+    expect(error).toBe(originalError);
+  });
+
+  it('preserves the original error when OS-level process inspection fails', async () => {
+    const originalError = new Error('Connection error: connect ECONNREFUSED 127.0.0.1:8711');
+
+    const error = await diagnoseRetryableProjectConnectionError(originalError, '/project', true, {
+      findRunningUnityProcessForProjectFn: jest.fn().mockRejectedValue(new Error('ps failed')),
+    });
+
+    expect(error).toBe(originalError);
   });
 });
