@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using UnityEditor.Compilation;
 
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
@@ -146,6 +147,46 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(lines, Contains.Item("define:UNITY_EDITOR;CUSTOM_SYMBOL"));
             Assert.That(lines, Contains.Item($"ref:{Path.GetFullPath(references[0])}"));
             Assert.That(lines, Contains.Item($"ref:{Path.GetFullPath(references[1])}"));
+        }
+
+        [Test]
+        public async Task CompileAsync_WhenWorkerCompilationSucceeds_ShouldUseSharedWorkerBackend()
+        {
+            ExternalCompilerPaths externalCompilerPaths = ExternalCompilerPathResolver.Resolve();
+            Assert.That(externalCompilerPaths, Is.Not.Null, "Unity external compiler layout should be available for this test");
+
+            DynamicReferenceSetBuilderService referenceSetBuilder = new DynamicReferenceSetBuilderService();
+            List<string> references = referenceSetBuilder.BuildReferenceSet(
+                new List<string>(),
+                null,
+                externalCompilerPaths);
+            string sourcePath = Path.Combine(_tempDirectoryPath, "BackendWorkerSmokeTest.cs");
+            string dllPath = Path.Combine(_tempDirectoryPath, "BackendWorkerSmokeTest.dll");
+            File.WriteAllText(
+                sourcePath,
+                "public static class BackendWorkerSmokeTest { public static int Execute() { return 5; } }");
+
+            int buildCount = 0;
+            bool buildStarted = false;
+            bool buildFinished = false;
+
+            DynamicCompilationBackendResult result = await RoslynCompilerBackend.CompileAsync(
+                sourcePath,
+                dllPath,
+                references,
+                externalCompilerPaths,
+                CancellationToken.None,
+                () => buildStarted = true,
+                () => buildFinished = true,
+                () => buildCount++);
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.BackendKind, Is.EqualTo(DynamicCompilationBackendKind.SharedRoslynWorker));
+            Assert.That(result.CompilerMessages.Any(message => message.type == CompilerMessageType.Error), Is.False);
+            Assert.That(File.Exists(dllPath), Is.True);
+            Assert.That(buildCount, Is.EqualTo(1));
+            Assert.That(buildStarted, Is.True);
+            Assert.That(buildFinished, Is.True);
         }
     }
 }

@@ -65,7 +65,7 @@ namespace io.github.hatayama.uLoopMCP
             ExternalCompilerPaths externalCompilerPaths,
             RuntimePlatform platform)
         {
-            return externalCompilerPaths != null && platform != RuntimePlatform.WindowsEditor;
+            return externalCompilerPaths != null;
         }
 
         public async Task<CompiledAssemblyBuildResult> BuildAsync(

@@ -55,47 +55,36 @@ namespace io.github.hatayama.uLoopMCP
 
             try
             {
-                if (Application.platform != RuntimePlatform.WindowsEditor)
-                {
-                    WriteWorkerRequestFile(
-                        workerRequestFilePath,
-                        sourcePath,
-                        dllPath,
-                        references,
-                        defineSymbols,
-                        allowUnsafeCode);
+                WriteWorkerRequestFile(
+                    workerRequestFilePath,
+                    sourcePath,
+                    dllPath,
+                    references,
+                    defineSymbols,
+                    allowUnsafeCode);
 
-                    CompilerMessage[] workerMessages = SharedRoslynCompilerWorkerHost.TryCompile(
-                        workerRequestFilePath,
-                        externalCompilerPaths,
-                        ct,
-                        markBuildStarted,
-                        markBuildFinished,
-                        incrementBuildCount);
-                    if (workerMessages != null)
+                CompilerMessage[] workerMessages = SharedRoslynCompilerWorkerHost.TryCompile(
+                    workerRequestFilePath,
+                    externalCompilerPaths,
+                    ct,
+                    markBuildStarted,
+                    markBuildFinished,
+                    incrementBuildCount);
+                if (workerMessages != null)
+                {
+                    return new DynamicCompilationBackendResult(
+                        workerMessages,
+                        DynamicCompilationBackendKind.SharedRoslynWorker);
+                }
+
+                DynamicCompilationHealthMonitor.ReportSharedWorkerFallback(
+                    "worker_unavailable",
+                    new
                     {
-                        return new DynamicCompilationBackendResult(
-                            workerMessages,
-                            DynamicCompilationBackendKind.SharedRoslynWorker);
-                    }
-
-                    DynamicCompilationHealthMonitor.ReportSharedWorkerFallback(
-                        "worker_unavailable",
-                        new
-                        {
-                            dotnet_host_path = externalCompilerPaths.DotnetHostPath,
-                            compiler_dll_path = externalCompilerPaths.CompilerDllPath
-                        });
-                }
-                else
-                {
-                    DynamicCompilationHealthMonitor.ReportSharedWorkerFallback(
-                        "worker_unsupported_on_windows",
-                        new
-                        {
-                            platform = Application.platform.ToString()
-                        });
-                }
+                        platform = Application.platform.ToString(),
+                        dotnet_host_path = externalCompilerPaths.DotnetHostPath,
+                        compiler_dll_path = externalCompilerPaths.CompilerDllPath
+                    });
 
                 ct.ThrowIfCancellationRequested();
                 OneShotCompileResult oneShotResult = await CompileWithOneShotAsync(

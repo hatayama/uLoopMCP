@@ -69,7 +69,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public void SupportsAutoPrewarm_WhenPlatformIsWindows_ShouldReturnFalse()
+        public void SupportsAutoPrewarm_WhenExternalCompilerIsAvailableOnWindows_ShouldReturnTrue()
         {
             Assert.That(
                 CompiledAssemblyBuilder.SupportsAutoPrewarm(
@@ -84,7 +84,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                         "Microsoft.CodeAnalysis.CSharp.dll",
                         "runtime"),
                     RuntimePlatform.WindowsEditor),
-                Is.False);
+                Is.True);
         }
     }
 }
