@@ -23,6 +23,12 @@ export class UnityNotRunningError extends Error {
   }
 }
 
+export class UnityServerNotRunningError extends Error {
+  constructor(public readonly projectRoot: string) {
+    super('UNITY_SERVER_NOT_RUNNING');
+  }
+}
+
 interface UnityMcpSettings {
   isServerRunning?: boolean;
   customPort?: number;
@@ -129,12 +135,6 @@ async function readPortFromSettingsOrThrow(projectRoot: string): Promise<number>
       continue;
     }
     const settings = parsed as UnityMcpSettings;
-
-    // Only block when isServerRunning is explicitly false (Unity clean shutdown).
-    // undefined/missing means old settings format — proceed to next validation stage.
-    if (settings.isServerRunning === false) {
-      throw new UnityNotRunningError(projectRoot);
-    }
 
     const port = resolvePortFromUnitySettings(settings);
     if (port !== null) {
