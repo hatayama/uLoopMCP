@@ -36,7 +36,11 @@ import { registerLaunchCommand } from './commands/launch.js';
 import { registerFocusWindowCommand } from './commands/focus-window.js';
 import { VERSION } from './version.js';
 import { findUnityProjectRoot } from './project-root.js';
-import { validateProjectPath, UnityNotRunningError } from './port-resolver.js';
+import {
+  validateProjectPath,
+  UnityNotRunningError,
+  UnityServerNotRunningError,
+} from './port-resolver.js';
 import { ProjectMismatchError } from './project-validator.js';
 import { filterEnabledTools, isToolEnabled } from './tool-settings-loader.js';
 import { getProjectResolutionErrorLines } from './cli-project-error.js';
@@ -430,7 +434,7 @@ async function runWithErrorHandling(fn: () => Promise<void>): Promise<void> {
   try {
     await fn();
   } catch (error) {
-    if (error instanceof UnityNotRunningError) {
+    if (error instanceof UnityNotRunningError || error instanceof UnityServerNotRunningError) {
       for (const line of getProjectResolutionErrorLines(error)) {
         console.error(line.startsWith('Error: ') ? `\x1b[31m${line}\x1b[0m` : line);
       }

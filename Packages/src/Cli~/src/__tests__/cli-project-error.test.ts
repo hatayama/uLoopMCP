@@ -1,5 +1,5 @@
 import { getProjectResolutionErrorLines } from '../cli-project-error.js';
-import { UnityNotRunningError } from '../port-resolver.js';
+import { UnityNotRunningError, UnityServerNotRunningError } from '../port-resolver.js';
 import { ProjectMismatchError } from '../project-validator.js';
 
 describe('getProjectResolutionErrorLines', () => {
@@ -28,6 +28,18 @@ describe('getProjectResolutionErrorLines', () => {
       '',
       'Another Unity instance was found, but it belongs to a different project.',
       'Start the Unity Editor for this project, or use --project-path to specify the target.',
+    ]);
+  });
+
+  it('returns server-not-running guidance for UnityServerNotRunningError', () => {
+    const lines = getProjectResolutionErrorLines(new UnityServerNotRunningError('/project/root'));
+
+    expect(lines).toEqual([
+      'Error: Unity Editor is running, but Unity CLI Loop server is not.',
+      '',
+      '  Project: /project/root',
+      '',
+      'Start the server from: Window > Unity CLI Loop > Server',
     ]);
   });
 });

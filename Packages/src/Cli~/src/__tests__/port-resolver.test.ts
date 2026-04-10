@@ -5,7 +5,6 @@ import {
   resolvePortFromUnitySettings,
   validateProjectPath,
   resolveUnityPort,
-  UnityNotRunningError,
 } from '../port-resolver.js';
 
 describe('resolvePortFromUnitySettings', () => {
@@ -93,15 +92,14 @@ describe('resolveUnityPort with project settings', () => {
     rmSync(tempProjectRoot, { recursive: true });
   });
 
-  it('throws UnityNotRunningError when isServerRunning is false', async () => {
+  it('returns port when isServerRunning is false', async () => {
     writeFileSync(
       join(tempProjectRoot, 'UserSettings/UnityMcpSettings.json'),
       JSON.stringify({ isServerRunning: false, customPort: 8700 }),
     );
 
-    await expect(resolveUnityPort(undefined, tempProjectRoot)).rejects.toThrow(
-      UnityNotRunningError,
-    );
+    const port = await resolveUnityPort(undefined, tempProjectRoot);
+    expect(port).toBe(8700);
   });
 
   it('returns port when isServerRunning is true', async () => {
