@@ -156,7 +156,6 @@ namespace io.github.hatayama.uLoopMCP
                 _skillsStatusLabel.text = "";
                 _skillsTargetList.Clear();
                 _skipButton.SetEnabled(false);
-                _openSettingsButton.SetEnabled(false);
                 return;
             }
 
@@ -169,12 +168,6 @@ namespace io.github.hatayama.uLoopMCP
 
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
             UpdateSkillsStep(cliVersionMatched, targets);
-
-            bool noTargets = targets.Count == 0;
-            bool allSkillsInstalled = targets.Count > 0
-                && targets.All(t => t.HasExistingSkills);
-            bool step2Done = allSkillsInstalled || noTargets || _isSkipped;
-            _openSettingsButton.SetEnabled(cliVersionMatched && step2Done);
         }
 
         private void UpdateCliStep(bool cliInstalled, string cliVersion, bool cliVersionMatched)
