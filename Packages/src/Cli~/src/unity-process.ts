@@ -153,9 +153,13 @@ function commandLineContainsProjectRoot(
 
   while (projectRootIndex !== -1) {
     const beforeProjectRoot = commandLine[projectRootIndex - 1];
+    const projectPathEndIndex = skipTrailingProjectPathSeparators(
+      commandLine,
+      projectRootIndex + normalizedProjectRoot.length,
+    );
     if (
       isProjectPathBoundaryCharacter(beforeProjectRoot) &&
-      isProjectPathTerminator(commandLine, projectRootIndex + normalizedProjectRoot.length)
+      isProjectPathTerminator(commandLine, projectPathEndIndex)
     ) {
       return true;
     }
@@ -168,6 +172,16 @@ function commandLineContainsProjectRoot(
 
 function isProjectPathBoundaryCharacter(character: string | undefined): boolean {
   return character === undefined || /\s|["']/.test(character);
+}
+
+function skipTrailingProjectPathSeparators(commandLine: string, startIndex: number): number {
+  let index = startIndex;
+
+  while (readCharacterAt(commandLine, index) === '/') {
+    index += 1;
+  }
+
+  return index;
 }
 
 function isProjectPathTerminator(commandLine: string, projectRootEndIndex: number): boolean {

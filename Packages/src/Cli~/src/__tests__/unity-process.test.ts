@@ -124,6 +124,26 @@ describe('isUnityProcessForProject', () => {
     ).toBe(true);
   });
 
+  it('matches a macOS project path when ps output keeps trailing slashes', () => {
+    expect(
+      isUnityProcessForProject(
+        '/Applications/Unity.app/Contents/MacOS/Unity -projectPath /Users/me/My Project/',
+        '/Users/me/My Project',
+        'darwin',
+      ),
+    ).toBe(true);
+  });
+
+  it('matches a macOS project path when ps output keeps repeated trailing slashes', () => {
+    expect(
+      isUnityProcessForProject(
+        '/Applications/Unity.app/Contents/MacOS/Unity -projectPath /Users/me/My Project///',
+        '/Users/me/My Project',
+        'darwin',
+      ),
+    ).toBe(true);
+  });
+
   it('does not match a different macOS project that only shares the prefix', () => {
     expect(
       isUnityProcessForProject(
@@ -209,6 +229,21 @@ describe('findRunningUnityProcessForProject', () => {
       .fn<Promise<string>, [string, string[]]>()
       .mockResolvedValue(
         '222 /Applications/Unity.app/Contents/MacOS/Unity -projectPath /Users/me/My Project',
+      );
+
+    await expect(
+      findRunningUnityProcessForProject('/Users/me/My Project', {
+        platform: 'darwin',
+        runCommand,
+      }),
+    ).resolves.toEqual({ pid: 222 });
+  });
+
+  it('returns a matching macOS Unity process when ps output keeps trailing slashes', async () => {
+    const runCommand = jest
+      .fn<Promise<string>, [string, string[]]>()
+      .mockResolvedValue(
+        '222 /Applications/Unity.app/Contents/MacOS/Unity -projectPath /Users/me/My Project///',
       );
 
     await expect(
