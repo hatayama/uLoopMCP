@@ -1,5 +1,4 @@
 // Test reads the checked-in manifest through a stable relative path during Jest execution.
-/* eslint-disable security/detect-non-literal-fs-filename */
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -10,6 +9,7 @@ type PackageManifest = {
 
 function loadPackageManifest(): PackageManifest {
   const packageJsonPath = join(__dirname, '..', '..', 'package.json');
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   const packageJsonText = readFileSync(packageJsonPath, 'utf8');
   return JSON.parse(packageJsonText) as PackageManifest;
 }
