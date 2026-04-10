@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 
@@ -20,16 +19,45 @@ namespace io.github.hatayama.uLoopMCP
             if (AssetDatabase.IsAssetImportWorkerProcess()) return;
             if (Application.isBatchMode) return;
 
-            // GetSettings() auto-creates the file, so calling it first would make the check always pass
-            string settingsPath = Path.Combine(McpConstants.USER_SETTINGS_FOLDER, McpConstants.SETTINGS_FILE_NAME);
-            if (File.Exists(settingsPath)) return;
-
-            EditorApplication.delayCall += ShowWindow;
+            TryShowOnVersionChange();
         }
 
         [MenuItem("Window/Unity CLI Loop/Setup Wizard", priority = 3)]
         public static void ShowWindow()
         {
+            ShowWindowInternal(false);
+        }
+
+        internal static bool ShouldAutoShowForVersion(string currentVersion, string lastSeenVersion)
+        {
+            return !string.Equals(currentVersion, lastSeenVersion, System.StringComparison.Ordinal);
+        }
+
+        internal static void MaybeRecordLastSeenVersion(bool shouldRecordVersion, string version)
+        {
+            if (!shouldRecordVersion) return;
+
+            Debug.Assert(!string.IsNullOrEmpty(version), "version must not be null or empty");
+            McpEditorSettings.SetLastSeenSetupWizardVersion(version);
+        }
+
+        private static void TryShowOnVersionChange()
+        {
+            string currentVersion = McpConstants.PackageInfo.version;
+            string lastSeenVersion = McpEditorSettings.GetLastSeenSetupWizardVersion();
+            if (!ShouldAutoShowForVersion(currentVersion, lastSeenVersion)) return;
+
+            EditorApplication.delayCall += ShowWindowOnVersionChange;
+        }
+
+        private static void ShowWindowOnVersionChange()
+        {
+            ShowWindowInternal(true);
+        }
+
+        private static void ShowWindowInternal(bool shouldRecordVersion)
+        {
+            MaybeRecordLastSeenVersion(shouldRecordVersion, McpConstants.PackageInfo.version);
             SetupWizardWindow window = GetWindow<SetupWizardWindow>(true, "Unity CLI Loop Setup");
             window.minSize = new Vector2(400, 350);
             window.ShowUtility();

@@ -29,6 +29,7 @@ namespace io.github.hatayama.uLoopMCP
         public bool enableCommunicationLogs = false;
         public bool enableDevelopmentMode = false;
         public string lastUsedConfigPath = "";
+        public string lastSeenSetupWizardVersion = "";
 
         // UI State Settings
         public bool showSecuritySettings = true;
@@ -213,6 +214,19 @@ namespace io.github.hatayama.uLoopMCP
         public static bool GetEnableCommunicationLogs()
         {
             return GetSettings().enableCommunicationLogs;
+        }
+
+        public static string GetLastSeenSetupWizardVersion()
+        {
+            return GetSettings().lastSeenSetupWizardVersion ?? string.Empty;
+        }
+
+        public static void SetLastSeenSetupWizardVersion(string version)
+        {
+            string normalizedVersion = version ?? string.Empty;
+            McpEditorSettingsData settings = GetSettings();
+            McpEditorSettingsData updatedSettings = settings with { lastSeenSetupWizardVersion = normalizedVersion };
+            SaveSettings(updatedSettings);
         }
 
         /// <summary>
