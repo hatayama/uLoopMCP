@@ -5,7 +5,7 @@
   "description": "CLI tool for Unity Editor communication via Unity CLI Loop",
   "main": "dist/cli.bundle.cjs",
   "bin": {
-    "uloop": "./dist/cli.bundle.cjs"
+    "uloop": "dist/cli.bundle.cjs"
   },
   "type": "module",
   "scripts": {
