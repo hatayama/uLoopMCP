@@ -2,7 +2,6 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
-const UNITY_WINDOWS_PROCESS_NAME = 'Unity.exe';
 const WINDOWS_PROCESS_QUERY =
   'Get-CimInstance Win32_Process -Filter "name = \'Unity.exe\'" | Select-Object ProcessId, CommandLine | ConvertTo-Json -Compress';
 
@@ -135,6 +134,37 @@ export function isUnityProcessForProject(
   );
 }
 
+export function isUnityEditorProcess(commandLine: string, platform: NodeJS.Platform): boolean {
+  const lowerCommandLine = commandLine.toLowerCase();
+  if (lowerCommandLine.length === 0) {
+    return false;
+  }
+
+  const projectPathFlagIndex = lowerCommandLine.indexOf(' -projectpath');
+  const executableSection =
+    projectPathFlagIndex === -1
+      ? lowerCommandLine
+      : lowerCommandLine.slice(0, projectPathFlagIndex);
+
+  if (platform === 'win32') {
+    return executableSection.includes('unity.exe');
+  }
+
+  if (platform === 'darwin') {
+    return executableSection.includes('/unity.app/contents/macos/unity');
+  }
+
+  if (platform === 'linux') {
+    return (
+      executableSection.endsWith('/unity') ||
+      executableSection.endsWith('/unity-editor') ||
+      executableSection.includes('/editor/unity')
+    );
+  }
+
+  return false;
+}
+
 export async function findRunningUnityProcessForProject(
   projectRoot: string,
   dependencies: UnityProcessDependencies = defaultDependencies,
@@ -149,8 +179,10 @@ export async function findRunningUnityProcessForProject(
     unityProcessCommand.args,
   );
   const runningProcesses = parseUnityProcesses(dependencies.platform, output);
-  const matchingProcess = runningProcesses.find((processInfo) =>
-    isUnityProcessForProject(processInfo.commandLine, projectRoot, dependencies.platform),
+  const matchingProcess = runningProcesses.find(
+    (processInfo) =>
+      isUnityEditorProcess(processInfo.commandLine, dependencies.platform) &&
+      isUnityProcessForProject(processInfo.commandLine, projectRoot, dependencies.platform),
   );
 
   if (matchingProcess === undefined) {
@@ -198,13 +230,10 @@ function parseWindowsUnityProcesses(output: string): RawUnityProcess[] {
   const parsed = JSON.parse(trimmed) as WindowsUnityProcessJson | WindowsUnityProcessJson[];
   const processArray = Array.isArray(parsed) ? parsed : [parsed];
 
-  return processArray
-    .filter(isWindowsUnityProcessWithCommandLine)
-    .filter((processInfo) => processInfo.CommandLine.includes(UNITY_WINDOWS_PROCESS_NAME))
-    .map((processInfo) => ({
-      pid: processInfo.ProcessId,
-      commandLine: processInfo.CommandLine,
-    }));
+  return processArray.filter(isWindowsUnityProcessWithCommandLine).map((processInfo) => ({
+    pid: processInfo.ProcessId,
+    commandLine: processInfo.CommandLine,
+  }));
 }
 
 interface WindowsUnityProcessJson {

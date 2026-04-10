@@ -2,6 +2,7 @@ import {
   buildUnityProcessCommand,
   extractUnityProjectPath,
   findRunningUnityProcessForProject,
+  isUnityEditorProcess,
   isUnityProcessForProject,
   normalizeUnityProjectPath,
   parseUnityProcesses,
@@ -124,6 +125,35 @@ describe('isUnityProcessForProject', () => {
   });
 });
 
+describe('isUnityEditorProcess', () => {
+  it('detects the Unity editor on macOS', () => {
+    expect(
+      isUnityEditorProcess(
+        '/Applications/Unity/Hub/Editor/2022.3.62f3/Unity.app/Contents/MacOS/Unity -projectPath "/Users/me/Project A"',
+        'darwin',
+      ),
+    ).toBe(true);
+  });
+
+  it('rejects a non-Unity process on macOS even when projectPath is present', () => {
+    expect(
+      isUnityEditorProcess(
+        '/usr/local/bin/custom-tool -projectPath "/Users/me/Project A"',
+        'darwin',
+      ),
+    ).toBe(false);
+  });
+
+  it('detects the Unity editor on Windows without relying on command line casing', () => {
+    expect(
+      isUnityEditorProcess(
+        'C:\\Program Files\\Unity\\Editor\\UNITY.EXE -projectPath "C:\\Work\\Project A"',
+        'win32',
+      ),
+    ).toBe(true);
+  });
+});
+
 describe('findRunningUnityProcessForProject', () => {
   it('returns null when no Unity process is running', async () => {
     const runCommand = jest.fn<Promise<string>, [string, string[]]>().mockResolvedValue('');
@@ -154,11 +184,29 @@ describe('findRunningUnityProcessForProject', () => {
     ).resolves.toEqual({ pid: 222 });
   });
 
+  it('ignores non-Unity processes that happen to share the same projectPath', async () => {
+    const runCommand = jest
+      .fn<Promise<string>, [string, string[]]>()
+      .mockResolvedValue(
+        [
+          '111 /usr/local/bin/custom-tool -projectPath "/Users/me/project"',
+          '222 /Applications/Unity.app/Contents/MacOS/Unity -projectPath "/Users/me/project"',
+        ].join('\n'),
+      );
+
+    await expect(
+      findRunningUnityProcessForProject('/Users/me/project', {
+        platform: 'darwin',
+        runCommand,
+      }),
+    ).resolves.toEqual({ pid: 222 });
+  });
+
   it('returns matching Unity process on Windows', async () => {
     const runCommand = jest
       .fn<Promise<string>, [string, string[]]>()
       .mockResolvedValue(
-        '[{"ProcessId":333,"CommandLine":"C:\\\\Program Files\\\\Unity\\\\Editor\\\\Unity.exe -projectPath \\"C:\\\\Work\\\\My Project\\""}]',
+        '[{"ProcessId":333,"CommandLine":"C:\\\\Program Files\\\\Unity\\\\Editor\\\\UNITY.EXE -projectPath \\"C:\\\\Work\\\\My Project\\""}]',
       );
 
     await expect(
