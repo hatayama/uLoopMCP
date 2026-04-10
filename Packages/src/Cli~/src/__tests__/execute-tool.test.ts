@@ -2,6 +2,7 @@ import {
   appendCliTimingsToDynamicCodeResult,
   diagnoseRetryableProjectConnectionError,
   isTransportDisconnectError,
+  stripInternalFields,
 } from '../execute-tool.js';
 import { UnityNotRunningError, UnityServerNotRunningError } from '../port-resolver.js';
 import { ProjectMismatchError } from '../project-validator.js';
@@ -78,6 +79,48 @@ describe('appendCliTimingsToDynamicCodeResult', () => {
       '[Perf] CliProcessTotal: 260.0ms',
       '[Perf] CliBootstrap: 80.0ms',
     ]);
+  });
+});
+
+describe('stripInternalFields', () => {
+  it('removes ProjectRoot from all tool outputs', () => {
+    const cleaned = stripInternalFields({
+      ProjectRoot: '/project',
+      Success: true,
+    });
+
+    expect(cleaned).toEqual({
+      Success: true,
+    });
+  });
+
+  it('removes Timings from execute-dynamic-code output', () => {
+    const cleaned = stripInternalFields(
+      {
+        Success: true,
+        Timings: ['[Perf] RequestTotal: 84.2ms'],
+      },
+      'execute-dynamic-code',
+    );
+
+    expect(cleaned).toEqual({
+      Success: true,
+    });
+  });
+
+  it('keeps Timings for other tools', () => {
+    const cleaned = stripInternalFields(
+      {
+        Success: true,
+        Timings: ['[Perf] RequestTotal: 84.2ms'],
+      },
+      'compile',
+    );
+
+    expect(cleaned).toEqual({
+      Success: true,
+      Timings: ['[Perf] RequestTotal: 84.2ms'],
+    });
   });
 });
 
