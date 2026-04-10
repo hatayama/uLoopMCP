@@ -9,6 +9,8 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public class ExecuteDynamicCodeResponse : BaseToolResponse
     {
+        private const bool EmitTimingsInJsonResponses = false;
+
         /// <summary>Execution success flag</summary>
         public bool Success { get; set; }
         
@@ -55,7 +57,13 @@ namespace io.github.hatayama.uLoopMCP
         /// Lightweight internal timings for benchmark comparison.
         /// </summary>
         public List<string> Timings { get; set; } = new();
-        
+
+        // Keep timings available in memory for diagnostics and readiness decisions
+        // while avoiding noisy default payloads for normal execute-dynamic-code users.
+        public bool ShouldSerializeTimings()
+        {
+            return EmitTimingsInJsonResponses;
+        }
     }
     
     /// <summary>

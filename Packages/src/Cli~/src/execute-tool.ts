@@ -73,19 +73,9 @@ export interface GlobalOptions {
   projectPath?: string;
 }
 
-// Keep timing collection available for readiness heuristics and quick local profiling
-// without flooding the default execute-dynamic-code output.
-const EMIT_EXECUTE_DYNAMIC_CODE_TIMINGS_TO_STDOUT = false;
-
-export function stripInternalFields(
-  result: Record<string, unknown>,
-  toolName?: string,
-): Record<string, unknown> {
+export function stripInternalFields(result: Record<string, unknown>): Record<string, unknown> {
   const cleaned = { ...result };
   delete cleaned['ProjectRoot'];
-  if (toolName === 'execute-dynamic-code' && !EMIT_EXECUTE_DYNAMIC_CODE_TIMINGS_TO_STDOUT) {
-    delete cleaned['Timings'];
-  }
   return cleaned;
 }
 
@@ -398,7 +388,7 @@ export async function executeToolCommand(
           );
         }
         checkServerVersion(result);
-        console.log(JSON.stringify(stripInternalFields(result, toolName), null, 2));
+        console.log(JSON.stringify(stripInternalFields(result), null, 2));
         return;
       }
 
@@ -471,7 +461,7 @@ export async function executeToolCommand(
       restoreStdin();
       if (immediateResult !== undefined) {
         checkServerVersion(immediateResult);
-        console.log(JSON.stringify(stripInternalFields(immediateResult, toolName), null, 2));
+        console.log(JSON.stringify(stripInternalFields(immediateResult), null, 2));
         return;
       }
       if (lastError instanceof Error) {
@@ -510,7 +500,7 @@ export async function executeToolCommand(
           );
         }
         checkServerVersion(finalResult);
-        console.log(JSON.stringify(stripInternalFields(finalResult, toolName), null, 2));
+        console.log(JSON.stringify(stripInternalFields(finalResult), null, 2));
         return;
       }
     }

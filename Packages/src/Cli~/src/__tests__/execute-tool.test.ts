@@ -93,35 +93,6 @@ describe('stripInternalFields', () => {
       Success: true,
     });
   });
-
-  it('removes Timings from execute-dynamic-code output', () => {
-    const cleaned = stripInternalFields(
-      {
-        Success: true,
-        Timings: ['[Perf] RequestTotal: 84.2ms'],
-      },
-      'execute-dynamic-code',
-    );
-
-    expect(cleaned).toEqual({
-      Success: true,
-    });
-  });
-
-  it('keeps Timings for other tools', () => {
-    const cleaned = stripInternalFields(
-      {
-        Success: true,
-        Timings: ['[Perf] RequestTotal: 84.2ms'],
-      },
-      'compile',
-    );
-
-    expect(cleaned).toEqual({
-      Success: true,
-      Timings: ['[Perf] RequestTotal: 84.2ms'],
-    });
-  });
 });
 
 describe('diagnoseRetryableProjectConnectionError', () => {

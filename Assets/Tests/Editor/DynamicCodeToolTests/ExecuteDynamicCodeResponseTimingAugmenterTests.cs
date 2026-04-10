@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using NUnit.Framework;
 
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
@@ -63,6 +64,25 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(response.Timings, Has.Count.EqualTo(5));
             Assert.That(response.Timings, Has.Member("[Perf] WarmReady: False"));
             Assert.That(response.Timings, Has.Member("[Perf] PrewarmState: NotRequested"));
+        }
+
+        [Test]
+        public void Serialize_WhenTimingsExist_ShouldOmitTimingsFromJson()
+        {
+            ExecuteDynamicCodeResponse response = new ExecuteDynamicCodeResponse
+            {
+                Success = true,
+                Timings = new List<string>
+                {
+                    "[Perf] RequestTotal: 78.9ms"
+                }
+            };
+
+            string json = JsonConvert.SerializeObject(response);
+
+            Assert.That(response.Timings, Has.Member("[Perf] RequestTotal: 78.9ms"));
+            Assert.That(json, Does.Not.Contain("\"Timings\""));
+            Assert.That(json, Does.Contain("\"Success\":true"));
         }
     }
 }
