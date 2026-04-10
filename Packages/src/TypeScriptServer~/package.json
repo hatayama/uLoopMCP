@@ -73,7 +73,7 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/jest": "30.0.0",
-    "@types/node": "25.5.2",
+    "@types/node": "25.6.0",
     "cross-env": "10.1.0",
     "esbuild": "0.28.0",
     "eslint": "10.2.0",
@@ -84,7 +84,7 @@
     "jest": "30.3.0",
     "knip": "6.3.1",
     "lint-staged": "16.4.0",
-    "prettier": "3.8.1",
+    "prettier": "3.8.2",
     "ts-jest": "29.4.9",
     "tsx": "4.21.0",
     "typescript": "5.9.3",
