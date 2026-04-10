@@ -123,6 +123,10 @@ export function isUnityProcessForProject(
   projectRoot: string,
   platform: NodeJS.Platform,
 ): boolean {
+  if (platform !== 'win32') {
+    return commandLineContainsProjectRoot(commandLine, projectRoot, platform);
+  }
+
   const extractedProjectPath = extractUnityProjectPath(commandLine);
   if (extractedProjectPath === null) {
     return false;
@@ -132,6 +136,77 @@ export function isUnityProcessForProject(
     normalizeUnityProjectPath(extractedProjectPath, platform) ===
     normalizeUnityProjectPath(projectRoot, platform)
   );
+}
+
+function commandLineContainsProjectRoot(
+  commandLine: string,
+  projectRoot: string,
+  platform: NodeJS.Platform,
+): boolean {
+  const projectPathFlagIndex = commandLine.toLowerCase().indexOf(' -projectpath');
+  if (projectPathFlagIndex === -1) {
+    return false;
+  }
+
+  const normalizedProjectRoot = normalizeUnityProjectPath(projectRoot, platform);
+  let projectRootIndex = commandLine.indexOf(normalizedProjectRoot, projectPathFlagIndex);
+
+  while (projectRootIndex !== -1) {
+    const beforeProjectRoot = commandLine[projectRootIndex - 1];
+    if (
+      isProjectPathBoundaryCharacter(beforeProjectRoot) &&
+      isProjectPathTerminator(commandLine, projectRootIndex + normalizedProjectRoot.length)
+    ) {
+      return true;
+    }
+
+    projectRootIndex = commandLine.indexOf(normalizedProjectRoot, projectRootIndex + 1);
+  }
+
+  return false;
+}
+
+function isProjectPathBoundaryCharacter(character: string | undefined): boolean {
+  return character === undefined || /\s|["']/.test(character);
+}
+
+function isProjectPathTerminator(commandLine: string, projectRootEndIndex: number): boolean {
+  const character = readCharacterAt(commandLine, projectRootEndIndex);
+  if (character === null) {
+    return true;
+  }
+
+  if (character === '"' || character === "'") {
+    return true;
+  }
+
+  if (!/\s/.test(character)) {
+    return false;
+  }
+
+  for (let i = projectRootEndIndex; i < commandLine.length; i++) {
+    const trailingCharacter = readCharacterAt(commandLine, i);
+    if (trailingCharacter === null) {
+      return true;
+    }
+
+    if (/\s/.test(trailingCharacter)) {
+      continue;
+    }
+
+    return trailingCharacter === '-';
+  }
+
+  return true;
+}
+
+function readCharacterAt(value: string, index: number): string | null {
+  const character = value.slice(index, index + 1);
+  if (character.length === 0) {
+    return null;
+  }
+
+  return character;
 }
 
 export function isUnityEditorProcess(commandLine: string, platform: NodeJS.Platform): boolean {
