@@ -39,7 +39,10 @@
 
         <!-- Footer -->
         <ui:VisualElement class="setup-footer">
-            <ui:Button name="open-settings-button" text="Open Settings" class="setup-button setup-button--primary" />
+            <ui:VisualElement class="setup-footer__button-row">
+                <ui:Button name="open-settings-button" text="Open Settings" class="setup-button setup-button--primary" />
+                <ui:Button name="close-button" text="Close" class="setup-button" />
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:ScrollView>
 </ui:UXML>

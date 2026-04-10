@@ -168,6 +168,15 @@
     border-top-color: var(--unity-colors-helpbox-border);
 }
 
+.setup-footer__button-row {
+    flex-direction: row;
+}
+
+.setup-footer__button-row .setup-button {
+    flex-grow: 1;
+    flex-basis: 0;
+}
+
 .setup-step__button-row {
     flex-direction: row;
 }

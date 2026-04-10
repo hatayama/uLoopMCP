@@ -81,6 +81,7 @@ namespace io.github.hatayama.uLoopMCP
         // Footer
         private Button _skipButton;
         private Button _openSettingsButton;
+        private Button _closeButton;
 
         // State
         private bool _isInstallingCli;
@@ -124,6 +125,7 @@ namespace io.github.hatayama.uLoopMCP
 
             _skipButton = rootVisualElement.Q<Button>("skip-button");
             _openSettingsButton = rootVisualElement.Q<Button>("open-settings-button");
+            _closeButton = rootVisualElement.Q<Button>("close-button");
         }
 
         private void BindEvents()
@@ -133,6 +135,7 @@ namespace io.github.hatayama.uLoopMCP
             _installSkillsButton.clicked += HandleInstallSkills;
             _skipButton.clicked += HandleSkip;
             _openSettingsButton.clicked += HandleOpenSettings;
+            _closeButton.clicked += HandleClose;
         }
 
         private async void RefreshUI()
@@ -363,6 +366,11 @@ namespace io.github.hatayama.uLoopMCP
         private void HandleOpenSettings()
         {
             McpEditorWindow.ShowWindow();
+            Close();
+        }
+
+        private void HandleClose()
+        {
             Close();
         }
 
