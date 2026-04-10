@@ -57,10 +57,10 @@ namespace io.github.hatayama.uLoopMCP
 
         private static void ShowWindowInternal(bool shouldRecordVersion)
         {
-            MaybeRecordLastSeenVersion(shouldRecordVersion, McpConstants.PackageInfo.version);
             SetupWizardWindow window = GetWindow<SetupWizardWindow>(true, "Unity CLI Loop Setup");
             window.minSize = new Vector2(400, 350);
             window.ShowUtility();
+            MaybeRecordLastSeenVersion(shouldRecordVersion, McpConstants.PackageInfo.version);
         }
 
         // Prerequisite
