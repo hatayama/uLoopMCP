@@ -1,7 +1,9 @@
 using System.IO;
+using System.Collections.Generic;
 
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP.Tests.Editor
 {
@@ -116,6 +118,38 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
 
             Assert.That(resizedRect.position, Is.EqualTo(initialRect.position));
             Assert.That(resizedRect.size, Is.EqualTo(contentSize + frameSize));
+        }
+
+        [Test]
+        public void FilterInstallableSkillTargets_ReturnsOnlyOptedInTargets()
+        {
+            List<ToolSkillSynchronizer.SkillTargetInfo> targets = new()
+            {
+                new("Claude Code", ".claude", true, true),
+                new("Cursor", ".cursor", false, false)
+            };
+
+            List<ToolSkillSynchronizer.SkillTargetInfo> installableTargets =
+                SetupWizardWindow.FilterInstallableSkillTargets(targets);
+
+            Assert.That(installableTargets.Count, Is.EqualTo(1));
+            Assert.That(installableTargets[0].DirName, Is.EqualTo(".claude"));
+        }
+
+        [Test]
+        public void SelectPreferredTextRight_WhenTextWraps_UsesLaidOutWidth()
+        {
+            float preferredRight = SetupWizardWindow.SelectPreferredTextRight(180f, 320f, WhiteSpace.Normal);
+
+            Assert.That(preferredRight, Is.EqualTo(180f));
+        }
+
+        [Test]
+        public void SelectPreferredTextRight_WhenTextDoesNotWrap_UsesMeasuredWidth()
+        {
+            float preferredRight = SetupWizardWindow.SelectPreferredTextRight(180f, 320f, WhiteSpace.NoWrap);
+
+            Assert.That(preferredRight, Is.EqualTo(320f));
         }
 
         private static void RestoreFile(string path, bool existed, string content)

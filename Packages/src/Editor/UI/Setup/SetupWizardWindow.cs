@@ -206,14 +206,21 @@ namespace io.github.hatayama.uLoopMCP
 
             UpdateCliStep(cliInstalled, cliVersion, cliVersionMatched);
 
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectSetupWizardSkillTargets();
+            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargets();
             UpdateSkillsStep(cliVersionMatched, targets);
             ScheduleResizeToContent();
         }
 
-        private static List<ToolSkillSynchronizer.SkillTargetInfo> DetectSetupWizardSkillTargets()
+        private static List<ToolSkillSynchronizer.SkillTargetInfo> DetectDisplayedSkillTargets()
         {
-            return ToolSkillSynchronizer.DetectTargets(requireSkillsDirectory: true);
+            return ToolSkillSynchronizer.DetectTargets();
+        }
+
+        internal static List<ToolSkillSynchronizer.SkillTargetInfo> FilterInstallableSkillTargets(
+            IEnumerable<ToolSkillSynchronizer.SkillTargetInfo> targets)
+        {
+            Debug.Assert(targets != null, "targets must not be null");
+            return targets.Where(target => target.HasSkillsDirectory).ToList();
         }
 
         private void UpdateCliStep(bool cliInstalled, string cliVersion, bool cliVersionMatched)
@@ -269,10 +276,12 @@ namespace io.github.hatayama.uLoopMCP
 
             if (targets.Count == 0)
             {
-                _skillsStatusLabel.text = "No opted-in skills directories detected (.claude/skills/, .agents/skills/, etc.)";
+                _skillsStatusLabel.text = "No supported tool directories detected (.claude/, .agents/, etc.)";
                 _installSkillsButton.SetEnabled(false);
                 return;
             }
+
+            List<ToolSkillSynchronizer.SkillTargetInfo> installableTargets = FilterInstallableSkillTargets(targets);
 
             foreach (ToolSkillSynchronizer.SkillTargetInfo target in targets)
             {
@@ -287,16 +296,26 @@ namespace io.github.hatayama.uLoopMCP
                 _skillsTargetList.Add(item);
             }
 
-            bool allSkillsInstalled = targets.All(t => t.HasExistingSkills);
+            if (installableTargets.Count == 0)
+            {
+                _skillsStatusLabel.text = "Create a skills directory to opt in (.claude/skills/, .agents/skills/, etc.)";
+                _installSkillsButton.SetEnabled(false);
+                _installSkillsButton.text = "Install Skills";
+                return;
+            }
+
+            bool allSkillsInstalled = installableTargets.All(t => t.HasExistingSkills);
             if (allSkillsInstalled)
             {
-                _skillsStatusLabel.text = $"Installed for {targets.Count} targets";
+                _skillsStatusLabel.text = $"Installed for {installableTargets.Count} opted-in targets";
                 _installSkillsButton.SetEnabled(false);
                 _installSkillsButton.text = "Installed";
             }
             else
             {
-                _skillsStatusLabel.text = "";
+                _skillsStatusLabel.text = installableTargets.Count == targets.Count
+                    ? ""
+                    : "Only opted-in targets will be installed.";
                 _installSkillsButton.SetEnabled(!_isInstallingSkills);
                 _installSkillsButton.text = _isInstallingSkills ? "Installing..." : "Install Skills";
             }
@@ -355,15 +374,17 @@ namespace io.github.hatayama.uLoopMCP
 
         private async void HandleInstallSkills()
         {
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectSetupWizardSkillTargets();
-            if (targets.Count == 0) return;
+            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargets();
+            List<ToolSkillSynchronizer.SkillTargetInfo> installableTargets = FilterInstallableSkillTargets(targets);
+            if (installableTargets.Count == 0) return;
 
             _isInstallingSkills = true;
             UpdateSkillsStep(true, targets);
 
             try
             {
-                ToolSkillSynchronizer.SkillInstallResult result = await ToolSkillSynchronizer.InstallSkillFiles(targets);
+                ToolSkillSynchronizer.SkillInstallResult result =
+                    await ToolSkillSynchronizer.InstallSkillFiles(installableTargets);
 
                 if (!result.IsSuccessful)
                 {
@@ -446,7 +467,22 @@ namespace io.github.hatayama.uLoopMCP
                 if (!textElement.visible) continue;
                 if (string.IsNullOrEmpty(textElement.text)) continue;
 
-                float right = textElement.worldBound.xMax - contentContainer.worldBound.xMin;
+                float left = textElement.worldBound.xMin - contentContainer.worldBound.xMin;
+                float laidOutRight = textElement.worldBound.xMax - contentContainer.worldBound.xMin;
+                Vector2 measuredTextSize = textElement.MeasureTextSize(
+                    textElement.text,
+                    0f,
+                    VisualElement.MeasureMode.Undefined,
+                    0f,
+                    VisualElement.MeasureMode.Undefined);
+                float measuredRight =
+                    left
+                    + measuredTextSize.x
+                    + textElement.resolvedStyle.paddingLeft
+                    + textElement.resolvedStyle.paddingRight
+                    + textElement.resolvedStyle.borderLeftWidth
+                    + textElement.resolvedStyle.borderRightWidth;
+                float right = SelectPreferredTextRight(laidOutRight, measuredRight, textElement.resolvedStyle.whiteSpace);
                 maxRight = Mathf.Max(maxRight, right);
             }
 
@@ -454,6 +490,11 @@ namespace io.github.hatayama.uLoopMCP
                 mainContainer.resolvedStyle.paddingLeft
                 + maxRight
                 + mainContainer.resolvedStyle.paddingRight);
+        }
+
+        internal static float SelectPreferredTextRight(float laidOutRight, float measuredRight, WhiteSpace whiteSpace)
+        {
+            return whiteSpace == WhiteSpace.Normal ? laidOutRight : measuredRight;
         }
 
         private static float MeasurePreferredContentHeight(VisualElement mainContainer, VisualElement contentContainer)
