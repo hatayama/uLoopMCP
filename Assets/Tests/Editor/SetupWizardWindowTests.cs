@@ -113,7 +113,7 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             Rect resizedRect = SetupWizardWindow.WithFixedSize(initialRect);
 
             Assert.That(resizedRect.position, Is.EqualTo(initialRect.position));
-            Assert.That(resizedRect.size, Is.EqualTo(new Vector2(400f, 440f)));
+            Assert.That(resizedRect.size, Is.EqualTo(new Vector2(400f, 410f)));
         }
 
         private static void RestoreFile(string path, bool existed, string content)

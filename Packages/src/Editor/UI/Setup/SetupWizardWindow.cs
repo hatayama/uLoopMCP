@@ -12,7 +12,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const string UXML_RELATIVE_PATH = "Editor/UI/Setup/SetupWizardWindow.uxml";
         private const string USS_RELATIVE_PATH = "Editor/UI/Setup/SetupWizardWindow.uss";
-        private static readonly Vector2 FixedWindowSize = new(400f, 440f);
+        private static readonly Vector2 FixedWindowSize = new(400f, 410f);
 
         [InitializeOnLoadMethod]
         private static void InitializeOnLoad()
