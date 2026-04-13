@@ -288,7 +288,7 @@ export async function executeToolCommand(
     portNumber = parsed;
   }
   checkUnityBusyStateBeforeProjectResolution(globalOptions);
-  const port = await resolveUnityPort(portNumber, globalOptions.projectPath);
+  let port = await resolveUnityPort(portNumber, globalOptions.projectPath);
   const compileOptions = getCompileExecutionOptions(toolName, params);
   const shouldWaitForDomainReload = compileOptions.waitForDomainReload;
   const compileRequestId = shouldWaitForDomainReload ? ensureCompileRequestId(params) : undefined;
@@ -374,6 +374,9 @@ export async function executeToolCommand(
       if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldValidateProject)) {
         spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
         await sleep(RETRY_DELAY_MS);
+        if (portNumber === undefined) {
+          port = await resolveUnityPort(undefined, globalOptions.projectPath);
+        }
         continue;
       }
 

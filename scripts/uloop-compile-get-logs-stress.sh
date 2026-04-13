@@ -10,6 +10,7 @@ LOG_DIR="${ULOOP_STRESS_LOG_DIR:-.uloop/stress-tests}"
 MAX_ROUNDS="${ULOOP_STRESS_MAX_ROUNDS:-0}"
 WAIT_FOR_READY_SECONDS="${ULOOP_STRESS_WAIT_FOR_READY_SECONDS:-15}"
 CURRENT_CHILD_PID=''
+CURRENT_TIMEOUT_PID=''
 mkdir -p "$LOG_DIR"
 
 timestamp() {
@@ -28,7 +29,13 @@ wait_for_ready() {
     round="$1"
     deadline=$(( $(date +%s) + WAIT_FOR_READY_SECONDS ))
     while :; do
-        if run_quiet uloop_cmd get-logs --max-count 1; then
+        remaining_seconds=$(( deadline - $(date +%s) ))
+        if [ "$remaining_seconds" -le 0 ]; then
+            printf '%s [%s] ready timeout after %ss\n' "$(timestamp)" "$round" "$WAIT_FOR_READY_SECONDS"
+            return 1
+        fi
+
+        if run_quiet_with_timeout "$remaining_seconds" uloop_cmd get-logs --max-count 1; then
             printf '%s [%s] ready\n' "$(timestamp)" "$round"
             return 0
         fi
@@ -44,6 +51,20 @@ wait_for_ready() {
 }
 
 cleanup() {
+    if [ -n "$CURRENT_TIMEOUT_PID" ]; then
+        kill -TERM "$CURRENT_TIMEOUT_PID" 2>/dev/null || :
+        wait "$CURRENT_TIMEOUT_PID" 2>/dev/null || :
+        CURRENT_TIMEOUT_PID=''
+    fi
+
+    if [ -n "$CURRENT_CHILD_PID" ]; then
+        kill -TERM "$CURRENT_CHILD_PID" 2>/dev/null || :
+        sleep 1
+        kill -KILL "$CURRENT_CHILD_PID" 2>/dev/null || :
+        wait "$CURRENT_CHILD_PID" 2>/dev/null || :
+        CURRENT_CHILD_PID=''
+    fi
+
     printf '%s cleanup\n' "$(timestamp)"
 }
 
@@ -53,6 +74,45 @@ run_quiet() {
     wait "$CURRENT_CHILD_PID"
     status="$?"
     CURRENT_CHILD_PID=''
+    return "$status"
+}
+
+run_quiet_with_timeout() {
+    timeout_seconds="$1"
+    shift
+
+    "$@" >/dev/null 2>&1 &
+    CURRENT_CHILD_PID="$!"
+
+    timeout_marker="${LOG_DIR}/.timeout-${CURRENT_CHILD_PID}"
+    rm -f "$timeout_marker"
+
+    (
+        sleep "$timeout_seconds"
+        : > "$timeout_marker"
+        kill -TERM "$CURRENT_CHILD_PID" 2>/dev/null || :
+        sleep 1
+        kill -KILL "$CURRENT_CHILD_PID" 2>/dev/null || :
+    ) &
+    CURRENT_TIMEOUT_PID="$!"
+
+    if wait "$CURRENT_CHILD_PID"; then
+        status=0
+    else
+        status="$?"
+    fi
+
+    kill -TERM "$CURRENT_TIMEOUT_PID" 2>/dev/null || :
+    wait "$CURRENT_TIMEOUT_PID" 2>/dev/null || :
+    CURRENT_TIMEOUT_PID=''
+    CURRENT_CHILD_PID=''
+
+    if [ -e "$timeout_marker" ]; then
+        rm -f "$timeout_marker"
+        return 124
+    fi
+
+    rm -f "$timeout_marker"
     return "$status"
 }
 
@@ -82,9 +142,6 @@ sleep_interruptible() {
 
 handle_interrupt() {
     cleanup
-    if [ -n "$CURRENT_CHILD_PID" ]; then
-        kill -TERM "$CURRENT_CHILD_PID" 2>/dev/null || :
-    fi
     exit 130
 }
 
