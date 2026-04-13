@@ -13,8 +13,6 @@ Bring Unity Editor window to front using OS-level commands.
 uloop focus-window
 ```
 
-Run this from the target Unity project root so the CLI can resolve the current project automatically.
-
 ## Parameters
 
 None.

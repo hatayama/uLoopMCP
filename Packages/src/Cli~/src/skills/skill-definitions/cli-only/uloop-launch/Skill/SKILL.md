@@ -13,8 +13,6 @@ Launch Unity Editor with the correct version for a project.
 uloop launch [project-path] [options]
 ```
 
-Run this from the directory that contains the target Unity project. In the usual case, omit `project-path` and let the CLI search the current directory.
-
 ## Parameters
 
 | Parameter | Type | Description |

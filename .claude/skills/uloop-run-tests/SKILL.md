@@ -13,8 +13,6 @@ Execute Unity Test Runner. When tests fail, NUnit XML results with error message
 uloop run-tests [options]
 ```
 
-Run this from the target Unity project root so the CLI can resolve the current project automatically.
-
 ## Parameters
 
 | Parameter | Type | Default | Description |

@@ -13,8 +13,6 @@ Control Unity Editor play mode (play/stop/pause).
 uloop control-play-mode [options]
 ```
 
-Run this from the target Unity project root so the CLI can resolve the current project automatically.
-
 ## Parameters
 
 | Parameter | Type | Default | Description |

@@ -13,8 +13,6 @@ Retrieve logs from Unity Console.
 uloop get-logs [options]
 ```
 
-Run this from the target Unity project root so the CLI can resolve the current project automatically.
-
 ## Parameters
 
 | Parameter | Type | Default | Description |

@@ -13,8 +13,6 @@ Get Unity Hierarchy structure.
 uloop get-hierarchy [options]
 ```
 
-Run this from the target Unity project root so the CLI can resolve the current project automatically.
-
 ## Parameters
 
 | Parameter | Type | Default | Description |

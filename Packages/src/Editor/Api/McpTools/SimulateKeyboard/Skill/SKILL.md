@@ -21,8 +21,6 @@ Simulate keyboard input on Unity PlayMode: $ARGUMENTS
 uloop simulate-keyboard --action <action> --key <key> [options]
 ```
 
-Run this from the target Unity project root so the CLI can resolve the current project automatically.
-
 ### Parameters
 
 | Parameter | Type | Default | Description |

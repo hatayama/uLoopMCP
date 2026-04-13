@@ -16,8 +16,6 @@ Execute the following request using `uloop execute-dynamic-code`: $ARGUMENTS
 4. If execution fails, adjust code and retry
 5. Report the execution result
 
-Run the command from the target Unity project root so the CLI can resolve the current project automatically.
-
 ## Parameters
 
 - `--code '<code>'` (required): Inline C# statements to execute. Use direct statements only; `return` is optional, and `using` directives may appear at the top of the snippet.
