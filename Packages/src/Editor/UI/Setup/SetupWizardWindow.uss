@@ -177,6 +177,10 @@
     border-top-color: var(--unity-colors-helpbox-border);
 }
 
+.setup-footer__toggle {
+    margin-bottom: 6px;
+}
+
 .setup-footer__button-row {
     flex-direction: row;
 }

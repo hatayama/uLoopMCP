@@ -28,8 +28,13 @@ namespace io.github.hatayama.uLoopMCP
             ShowWindowInternal(false);
         }
 
-        internal static bool ShouldAutoShowForVersion(string currentVersion, string lastSeenVersion)
+        internal static bool ShouldAutoShowForVersion(
+            string currentVersion,
+            string lastSeenVersion,
+            bool suppressAutoShow)
         {
+            if (suppressAutoShow) return false;
+
             return !string.Equals(currentVersion, lastSeenVersion, System.StringComparison.Ordinal);
         }
 
@@ -41,11 +46,21 @@ namespace io.github.hatayama.uLoopMCP
             McpEditorSettings.SetLastSeenSetupWizardVersion(version);
         }
 
+        internal static void MaybeRecordSuppressedVersion(bool suppressAutoShow, string version)
+        {
+            if (!suppressAutoShow) return;
+
+            Debug.Assert(!string.IsNullOrEmpty(version), "version must not be null or empty");
+            McpEditorSettings.SetLastSeenSetupWizardVersion(version);
+        }
+
         private static void TryShowOnVersionChange()
         {
             string currentVersion = McpConstants.PackageInfo.version;
+            bool suppressAutoShow = McpEditorSettings.GetSuppressSetupWizardAutoShow();
+            MaybeRecordSuppressedVersion(suppressAutoShow, currentVersion);
             string lastSeenVersion = McpEditorSettings.GetLastSeenSetupWizardVersion();
-            if (!ShouldAutoShowForVersion(currentVersion, lastSeenVersion)) return;
+            if (!ShouldAutoShowForVersion(currentVersion, lastSeenVersion, suppressAutoShow)) return;
 
             EditorApplication.delayCall += ShowWindowOnVersionChange;
         }
@@ -58,7 +73,7 @@ namespace io.github.hatayama.uLoopMCP
         private static void ShowWindowInternal(bool shouldRecordVersion)
         {
             SetupWizardWindow window = GetWindow<SetupWizardWindow>(true, "Unity CLI Loop Setup");
-            window.minSize = new Vector2(400, 350);
+            window.minSize = new Vector2(400, 380);
             window.ShowUtility();
             MaybeRecordLastSeenVersion(shouldRecordVersion, McpConstants.PackageInfo.version);
         }
@@ -79,6 +94,7 @@ namespace io.github.hatayama.uLoopMCP
         private Button _installSkillsButton;
 
         // Footer
+        private Toggle _suppressAutoShowToggle;
         private Button _openSettingsButton;
         private Button _closeButton;
 
@@ -121,6 +137,7 @@ namespace io.github.hatayama.uLoopMCP
             _skillsStatusLabel = rootVisualElement.Q<Label>("skills-status-label");
             _installSkillsButton = rootVisualElement.Q<Button>("install-skills-button");
 
+            _suppressAutoShowToggle = rootVisualElement.Q<Toggle>("suppress-auto-show-toggle");
             _openSettingsButton = rootVisualElement.Q<Button>("open-settings-button");
             _closeButton = rootVisualElement.Q<Button>("close-button");
         }
@@ -130,12 +147,20 @@ namespace io.github.hatayama.uLoopMCP
             _refreshButton.clicked += () => RefreshUI();
             _installCliButton.clicked += HandleInstallCli;
             _installSkillsButton.clicked += HandleInstallSkills;
+            _suppressAutoShowToggle.RegisterValueChangedCallback(evt => HandleSuppressAutoShowChanged(evt.newValue));
             _openSettingsButton.clicked += HandleOpenSettings;
             _closeButton.clicked += HandleClose;
         }
 
+        private void RefreshAutoShowToggle()
+        {
+            _suppressAutoShowToggle.SetValueWithoutNotify(McpEditorSettings.GetSuppressSetupWizardAutoShow());
+        }
+
         private async void RefreshUI()
         {
+            RefreshAutoShowToggle();
+
             string nodePath = NodeEnvironmentResolver.FindNodePath();
             bool nodeDetected = !string.IsNullOrEmpty(nodePath);
 
@@ -334,6 +359,12 @@ namespace io.github.hatayama.uLoopMCP
         {
             McpEditorWindow.ShowWindow();
             Close();
+        }
+
+        private void HandleSuppressAutoShowChanged(bool suppressAutoShow)
+        {
+            McpEditorSettings.SetSuppressSetupWizardAutoShow(suppressAutoShow);
+            MaybeRecordSuppressedVersion(suppressAutoShow, McpConstants.PackageInfo.version);
         }
 
         private void HandleClose()

@@ -38,6 +38,10 @@
 
         <!-- Footer -->
         <ui:VisualElement class="setup-footer">
+            <ui:Toggle
+                name="suppress-auto-show-toggle"
+                text="Don't show this window automatically"
+                class="setup-footer__toggle" />
             <ui:VisualElement class="setup-footer__button-row">
                 <ui:Button name="open-settings-button" text="Open Settings" class="setup-button setup-button--primary" />
                 <ui:Button name="close-button" text="Close" class="setup-button" />

@@ -34,16 +34,20 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             McpEditorSettings.InvalidateCache();
         }
 
-        [TestCase("", "1.7.3", true)]
-        [TestCase("1.7.2", "1.7.3", true)]
-        [TestCase("1.7.4", "1.7.3", true)]
-        [TestCase("1.7.3", "1.7.3", false)]
+        [TestCase("", "1.7.3", false, true)]
+        [TestCase("1.7.2", "1.7.3", false, true)]
+        [TestCase("1.7.4", "1.7.3", false, true)]
+        [TestCase("1.7.3", "1.7.3", false, false)]
+        [TestCase("", "1.7.3", true, false)]
+        [TestCase("1.7.2", "1.7.3", true, false)]
         public void ShouldAutoShowForVersion_ReturnsExpectedValue(
             string lastSeenVersion,
             string currentVersion,
+            bool suppressAutoShow,
             bool expected)
         {
-            bool shouldAutoShow = SetupWizardWindow.ShouldAutoShowForVersion(currentVersion, lastSeenVersion);
+            bool shouldAutoShow =
+                SetupWizardWindow.ShouldAutoShowForVersion(currentVersion, lastSeenVersion, suppressAutoShow);
 
             Assert.That(shouldAutoShow, Is.EqualTo(expected));
         }
@@ -70,6 +74,32 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             });
 
             SetupWizardWindow.MaybeRecordLastSeenVersion(false, "1.7.3");
+
+            Assert.That(McpEditorSettings.GetLastSeenSetupWizardVersion(), Is.EqualTo("1.7.2"));
+        }
+
+        [Test]
+        public void MaybeRecordSuppressedVersion_WhenAutoShowSuppressed_UpdatesStoredVersion()
+        {
+            McpEditorSettings.SaveSettings(new McpEditorSettingsData
+            {
+                lastSeenSetupWizardVersion = "1.7.2"
+            });
+
+            SetupWizardWindow.MaybeRecordSuppressedVersion(true, "1.7.3");
+
+            Assert.That(McpEditorSettings.GetLastSeenSetupWizardVersion(), Is.EqualTo("1.7.3"));
+        }
+
+        [Test]
+        public void MaybeRecordSuppressedVersion_WhenAutoShowAllowed_KeepsStoredVersion()
+        {
+            McpEditorSettings.SaveSettings(new McpEditorSettingsData
+            {
+                lastSeenSetupWizardVersion = "1.7.2"
+            });
+
+            SetupWizardWindow.MaybeRecordSuppressedVersion(false, "1.7.3");
 
             Assert.That(McpEditorSettings.GetLastSeenSetupWizardVersion(), Is.EqualTo("1.7.2"));
         }
