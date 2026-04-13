@@ -137,19 +137,35 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test]
-        public void SelectPreferredTextRight_WhenTextWraps_UsesLaidOutWidth()
+        public void EstimateWrappedLineCount_WithPositiveHeight_ReturnsRoundedLineCount()
         {
-            float preferredRight = SetupWizardWindow.SelectPreferredTextRight(180f, 320f, WhiteSpace.Normal);
+            int lineCount = SetupWizardWindow.EstimateWrappedLineCount(35f, 12f);
 
-            Assert.That(preferredRight, Is.EqualTo(180f));
+            Assert.That(lineCount, Is.EqualTo(3));
         }
 
         [Test]
-        public void SelectPreferredTextRight_WhenTextDoesNotWrap_UsesMeasuredWidth()
+        public void SelectPreferredTextWidth_WhenWrappedAcrossManyLines_UsesTwoLineTarget()
         {
-            float preferredRight = SetupWizardWindow.SelectPreferredTextRight(180f, 320f, WhiteSpace.NoWrap);
+            float preferredWidth = SetupWizardWindow.SelectPreferredTextWidth(120f, 320f, 4, WhiteSpace.Normal);
 
-            Assert.That(preferredRight, Is.EqualTo(320f));
+            Assert.That(preferredWidth, Is.EqualTo(160f));
+        }
+
+        [Test]
+        public void SelectPreferredTextWidth_WhenWrappedAcrossTwoLines_KeepsLaidOutWidth()
+        {
+            float preferredWidth = SetupWizardWindow.SelectPreferredTextWidth(180f, 320f, 2, WhiteSpace.Normal);
+
+            Assert.That(preferredWidth, Is.EqualTo(180f));
+        }
+
+        [Test]
+        public void SelectPreferredTextWidth_WhenTextDoesNotWrap_UsesMeasuredWidth()
+        {
+            float preferredWidth = SetupWizardWindow.SelectPreferredTextWidth(180f, 320f, 1, WhiteSpace.NoWrap);
+
+            Assert.That(preferredWidth, Is.EqualTo(320f));
         }
 
         private static void RestoreFile(string path, bool existed, string content)

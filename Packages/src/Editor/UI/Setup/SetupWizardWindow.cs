@@ -12,6 +12,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const string UXML_RELATIVE_PATH = "Editor/UI/Setup/SetupWizardWindow.uxml";
         private const string USS_RELATIVE_PATH = "Editor/UI/Setup/SetupWizardWindow.uss";
+        private const int PreferredWrappedTextLineCount = 2;
 
         [InitializeOnLoadMethod]
         private static void InitializeOnLoad()
@@ -468,21 +469,33 @@ namespace io.github.hatayama.uLoopMCP
                 if (string.IsNullOrEmpty(textElement.text)) continue;
 
                 float left = textElement.worldBound.xMin - contentContainer.worldBound.xMin;
-                float laidOutRight = textElement.worldBound.xMax - contentContainer.worldBound.xMin;
+                float horizontalChrome =
+                    textElement.resolvedStyle.paddingLeft
+                    + textElement.resolvedStyle.paddingRight
+                    + textElement.resolvedStyle.borderLeftWidth
+                    + textElement.resolvedStyle.borderRightWidth;
+                float verticalChrome =
+                    textElement.resolvedStyle.paddingTop
+                    + textElement.resolvedStyle.paddingBottom
+                    + textElement.resolvedStyle.borderTopWidth
+                    + textElement.resolvedStyle.borderBottomWidth;
+                float laidOutWidth = textElement.worldBound.width;
                 Vector2 measuredTextSize = textElement.MeasureTextSize(
                     textElement.text,
                     0f,
                     VisualElement.MeasureMode.Undefined,
                     0f,
                     VisualElement.MeasureMode.Undefined);
-                float measuredRight =
-                    left
-                    + measuredTextSize.x
-                    + textElement.resolvedStyle.paddingLeft
-                    + textElement.resolvedStyle.paddingRight
-                    + textElement.resolvedStyle.borderLeftWidth
-                    + textElement.resolvedStyle.borderRightWidth;
-                float right = SelectPreferredTextRight(laidOutRight, measuredRight, textElement.resolvedStyle.whiteSpace);
+                float measuredWidth = measuredTextSize.x + horizontalChrome;
+                int lineCount = EstimateWrappedLineCount(
+                    textElement.worldBound.height - verticalChrome,
+                    measuredTextSize.y);
+                float preferredWidth = SelectPreferredTextWidth(
+                    laidOutWidth,
+                    measuredWidth,
+                    lineCount,
+                    textElement.resolvedStyle.whiteSpace);
+                float right = left + preferredWidth;
                 maxRight = Mathf.Max(maxRight, right);
             }
 
@@ -492,9 +505,23 @@ namespace io.github.hatayama.uLoopMCP
                 + mainContainer.resolvedStyle.paddingRight);
         }
 
-        internal static float SelectPreferredTextRight(float laidOutRight, float measuredRight, WhiteSpace whiteSpace)
+        internal static int EstimateWrappedLineCount(float laidOutTextHeight, float singleLineTextHeight)
         {
-            return whiteSpace == WhiteSpace.Normal ? laidOutRight : measuredRight;
+            if (singleLineTextHeight <= 0f) return 1;
+
+            return Mathf.Max(1, Mathf.RoundToInt(laidOutTextHeight / singleLineTextHeight));
+        }
+
+        internal static float SelectPreferredTextWidth(
+            float laidOutWidth,
+            float measuredWidth,
+            int lineCount,
+            WhiteSpace whiteSpace)
+        {
+            if (whiteSpace != WhiteSpace.Normal) return measuredWidth;
+            if (lineCount <= PreferredWrappedTextLineCount) return laidOutWidth;
+
+            return Mathf.Max(laidOutWidth, measuredWidth / PreferredWrappedTextLineCount);
         }
 
         private static float MeasurePreferredContentHeight(VisualElement mainContainer, VisualElement contentContainer)
