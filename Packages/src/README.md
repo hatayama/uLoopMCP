@@ -690,7 +690,7 @@ The `.uloop/` directory at the project root stores CLI cache, tool registry, and
 > ```gitignore
 > **/.uloop/*
 > !**/.uloop/settings.permissions.json
-> !**/.uloop/settings.tools.json
+> !**/.uloop/tools.json
 > ```
 >
 > This ignores auto-generated files and runtime outputs while allowing team-shared configuration to be tracked.

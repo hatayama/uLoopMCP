@@ -688,7 +688,7 @@ description: "ツールの説明と使用タイミング"
 > ```gitignore
 > **/.uloop/*
 > !**/.uloop/settings.permissions.json
-> !**/.uloop/settings.tools.json
+> !**/.uloop/tools.json
 > ```
 >
 > 自動生成ファイルやランタイム出力を無視しつつ、チーム共有の設定ファイルをgit管理できます。
