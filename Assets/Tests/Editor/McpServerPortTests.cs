@@ -211,13 +211,24 @@ namespace io.github.hatayama.uLoopMCP
         {
             Type controllerType = typeof(McpServerController);
             FieldInfo field = controllerType.GetField("startupProtectionUntilTicks", BindingFlags.NonPublic | BindingFlags.Static);
+            FieldInfo serverField = controllerType.GetField("mcpServer", BindingFlags.NonPublic | BindingFlags.Static);
             MethodInfo method = controllerType.GetMethod("OnBeforeAssemblyReload", BindingFlags.NonPublic | BindingFlags.Static);
 
             Assert.IsNotNull(field, "startupProtectionUntilTicks field should exist");
+            Assert.IsNotNull(serverField, "mcpServer field should exist");
             Assert.IsNotNull(method, "OnBeforeAssemblyReload method should exist");
+
+            object originalServer = serverField.GetValue(null);
+            bool originalIsServerRunning = McpEditorSettings.GetIsServerRunning();
+            bool originalIsAfterCompile = McpEditorSettings.GetIsAfterCompile();
+            bool originalIsDomainReloadInProgress = McpEditorSettings.GetIsDomainReloadInProgress();
+            bool originalIsReconnecting = McpEditorSettings.GetIsReconnecting();
+            bool originalShowReconnectingUi = McpEditorSettings.GetShowReconnectingUI();
+            bool originalShowPostCompileReconnectingUi = McpEditorSettings.GetShowPostCompileReconnectingUI();
 
             try
             {
+                serverField.SetValue(null, new McpBridgeServer());
                 long futureTicks = DateTime.UtcNow.AddMinutes(1).Ticks;
                 field.SetValue(null, futureTicks);
 
@@ -232,6 +243,63 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
+                serverField.SetValue(null, originalServer);
+                McpEditorSettings.SetIsServerRunning(originalIsServerRunning);
+                McpEditorSettings.SetIsAfterCompile(originalIsAfterCompile);
+                McpEditorSettings.SetIsDomainReloadInProgress(originalIsDomainReloadInProgress);
+                McpEditorSettings.SetIsReconnecting(originalIsReconnecting);
+                McpEditorSettings.SetShowReconnectingUI(originalShowReconnectingUi);
+                McpEditorSettings.SetShowPostCompileReconnectingUI(originalShowPostCompileReconnectingUi);
+                DomainReloadDetectionService.DeleteLockFile();
+                field.SetValue(null, 0L);
+            }
+        }
+
+        [Test]
+        public async System.Threading.Tasks.Task StopServerWithUseCaseAsync_ShouldClearStartupProtectionBeforeShutdown()
+        {
+            Type controllerType = typeof(McpServerController);
+            FieldInfo field = controllerType.GetField("startupProtectionUntilTicks", BindingFlags.NonPublic | BindingFlags.Static);
+            FieldInfo serverField = controllerType.GetField("mcpServer", BindingFlags.NonPublic | BindingFlags.Static);
+            MethodInfo method = controllerType.GetMethod("StopServerWithUseCaseAsync", BindingFlags.NonPublic | BindingFlags.Static);
+
+            Assert.IsNotNull(field, "startupProtectionUntilTicks field should exist");
+            Assert.IsNotNull(serverField, "mcpServer field should exist");
+            Assert.IsNotNull(method, "StopServerWithUseCaseAsync method should exist");
+
+            object originalServer = serverField.GetValue(null);
+            bool originalIsServerRunning = McpEditorSettings.GetIsServerRunning();
+            bool originalIsAfterCompile = McpEditorSettings.GetIsAfterCompile();
+            bool originalIsDomainReloadInProgress = McpEditorSettings.GetIsDomainReloadInProgress();
+            bool originalIsReconnecting = McpEditorSettings.GetIsReconnecting();
+            bool originalShowReconnectingUi = McpEditorSettings.GetShowReconnectingUI();
+            bool originalShowPostCompileReconnectingUi = McpEditorSettings.GetShowPostCompileReconnectingUI();
+
+            try
+            {
+                serverField.SetValue(null, new McpBridgeServer());
+                long futureTicks = DateTime.UtcNow.AddMinutes(1).Ticks;
+                field.SetValue(null, futureTicks);
+
+                Assert.IsTrue(McpServerController.IsStartupProtectionActive(), "Startup protection should be active before shutdown");
+
+                System.Threading.Tasks.Task task = (System.Threading.Tasks.Task)method.Invoke(null, null);
+                await task;
+
+                Assert.IsFalse(
+                    McpServerController.IsStartupProtectionActive(),
+                    "Shutdown path should clear startup protection so recovery can restart the server"
+                );
+            }
+            finally
+            {
+                serverField.SetValue(null, originalServer);
+                McpEditorSettings.SetIsServerRunning(originalIsServerRunning);
+                McpEditorSettings.SetIsAfterCompile(originalIsAfterCompile);
+                McpEditorSettings.SetIsDomainReloadInProgress(originalIsDomainReloadInProgress);
+                McpEditorSettings.SetIsReconnecting(originalIsReconnecting);
+                McpEditorSettings.SetShowReconnectingUI(originalShowReconnectingUi);
+                McpEditorSettings.SetShowPostCompileReconnectingUI(originalShowPostCompileReconnectingUi);
                 field.SetValue(null, 0L);
             }
         }
