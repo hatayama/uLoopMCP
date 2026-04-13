@@ -645,7 +645,6 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     SkillsTarget.Claude => "skills install --claude",
                     SkillsTarget.Agents => "skills install --codex",
-                    SkillsTarget.Antigravity => "skills install --antigravity",
                     _ => "skills install --claude"
                 };
 

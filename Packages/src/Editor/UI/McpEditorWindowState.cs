@@ -23,8 +23,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         Claude = 0,
         [InspectorName("Other (.agents)")]
-        Agents = 1,
-        Antigravity = 5
+        Agents = 1
     }
 
     public record UIState

@@ -268,7 +268,6 @@ namespace io.github.hatayama.uLoopMCP
             {
                 SkillsTarget.Claude => new("Claude Code", ".claude", false, false),
                 SkillsTarget.Agents => new("Codex CLI / Gemini CLI", ".agents", false, false),
-                SkillsTarget.Antigravity => new("Antigravity", ".agent", false, false),
                 _ => new("Claude Code", ".claude", false, false)
             };
         }
