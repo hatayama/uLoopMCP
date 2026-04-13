@@ -206,5 +206,35 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
+        [Test]
+        public void OnBeforeAssemblyReload_ShouldClearStartupProtectionBeforeRecovery()
+        {
+            Type controllerType = typeof(McpServerController);
+            FieldInfo field = controllerType.GetField("startupProtectionUntilTicks", BindingFlags.NonPublic | BindingFlags.Static);
+            MethodInfo method = controllerType.GetMethod("OnBeforeAssemblyReload", BindingFlags.NonPublic | BindingFlags.Static);
+
+            Assert.IsNotNull(field, "startupProtectionUntilTicks field should exist");
+            Assert.IsNotNull(method, "OnBeforeAssemblyReload method should exist");
+
+            try
+            {
+                long futureTicks = DateTime.UtcNow.AddMinutes(1).Ticks;
+                field.SetValue(null, futureTicks);
+
+                Assert.IsTrue(McpServerController.IsStartupProtectionActive(), "Startup protection should be active before reload");
+
+                method.Invoke(null, null);
+
+                Assert.IsFalse(
+                    McpServerController.IsStartupProtectionActive(),
+                    "Assembly reload recovery should clear startup protection so the server can restart"
+                );
+            }
+            finally
+            {
+                field.SetValue(null, 0L);
+            }
+        }
+
     }
 }
