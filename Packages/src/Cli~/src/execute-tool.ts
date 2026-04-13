@@ -142,6 +142,20 @@ export async function diagnoseRetryableProjectConnectionError(
   return new UnityServerNotRunningError(projectRoot);
 }
 
+async function shouldRetryWhenUnityProcessIsRunning(
+  projectRoot: string | null,
+  shouldDiagnoseProjectState: boolean,
+): Promise<boolean> {
+  if (!shouldDiagnoseProjectState || projectRoot === null) {
+    return false;
+  }
+
+  const runningProcess = await findRunningUnityProcessForProject(projectRoot).catch(
+    () => undefined,
+  );
+  return runningProcess !== null && runningProcess !== undefined;
+}
+
 async function throwFinalToolError(
   error: unknown,
   projectRoot: string | null,
@@ -353,6 +367,12 @@ export async function executeToolCommand(
         spinner.stop();
         restoreStdin();
         throw error instanceof Error ? error : new Error(String(error));
+      }
+
+      if (await shouldRetryWhenUnityProcessIsRunning(projectRoot, shouldValidateProject)) {
+        spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
+        await sleep(RETRY_DELAY_MS);
+        continue;
       }
 
       if (!isRetryableError(error) || attempt >= MAX_RETRIES) {

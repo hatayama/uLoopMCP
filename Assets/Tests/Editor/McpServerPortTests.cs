@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using System;
+using System.Reflection;
 using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
@@ -176,6 +177,33 @@ namespace io.github.hatayama.uLoopMCP
             Assert.IsFalse(McpPortValidator.ValidatePort(0, "test"), "Port 0 should be invalid");
             Assert.IsFalse(McpPortValidator.ValidatePort(-1, "test"), "Negative port should be invalid");
             Assert.IsFalse(McpPortValidator.ValidatePort(65536, "test"), "Port 65536 should be invalid");
+        }
+
+        [Test]
+        public void ClearStartupProtection_ResetsProtectionWindow()
+        {
+            Type controllerType = typeof(McpServerController);
+            FieldInfo field = controllerType.GetField("startupProtectionUntilTicks", BindingFlags.NonPublic | BindingFlags.Static);
+            MethodInfo method = controllerType.GetMethod("ClearStartupProtection", BindingFlags.NonPublic | BindingFlags.Static);
+
+            Assert.IsNotNull(field, "startupProtectionUntilTicks field should exist");
+            Assert.IsNotNull(method, "ClearStartupProtection method should exist");
+
+            try
+            {
+                long futureTicks = DateTime.UtcNow.AddMinutes(1).Ticks;
+                field.SetValue(null, futureTicks);
+
+                Assert.IsTrue(McpServerController.IsStartupProtectionActive(), "Startup protection should be active after setting future ticks");
+
+                method.Invoke(null, null);
+
+                Assert.IsFalse(McpServerController.IsStartupProtectionActive(), "Startup protection should be cleared by recovery path");
+            }
+            finally
+            {
+                field.SetValue(null, 0L);
+            }
         }
 
     }
