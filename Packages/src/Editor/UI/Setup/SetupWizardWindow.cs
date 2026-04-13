@@ -206,9 +206,14 @@ namespace io.github.hatayama.uLoopMCP
 
             UpdateCliStep(cliInstalled, cliVersion, cliVersionMatched);
 
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
+            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectSetupWizardSkillTargets();
             UpdateSkillsStep(cliVersionMatched, targets);
             ScheduleResizeToContent();
+        }
+
+        private static List<ToolSkillSynchronizer.SkillTargetInfo> DetectSetupWizardSkillTargets()
+        {
+            return ToolSkillSynchronizer.DetectTargets(requireSkillsDirectory: true);
         }
 
         private void UpdateCliStep(bool cliInstalled, string cliVersion, bool cliVersionMatched)
@@ -264,7 +269,7 @@ namespace io.github.hatayama.uLoopMCP
 
             if (targets.Count == 0)
             {
-                _skillsStatusLabel.text = "No AI tool directories detected (.claude/, .agents/, etc.)";
+                _skillsStatusLabel.text = "No opted-in skills directories detected (.claude/skills/, .agents/skills/, etc.)";
                 _installSkillsButton.SetEnabled(false);
                 return;
             }
@@ -350,7 +355,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private async void HandleInstallSkills()
         {
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
+            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectSetupWizardSkillTargets();
             if (targets.Count == 0) return;
 
             _isInstallingSkills = true;
