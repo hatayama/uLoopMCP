@@ -12,6 +12,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const string UXML_RELATIVE_PATH = "Editor/UI/Setup/SetupWizardWindow.uxml";
         private const string USS_RELATIVE_PATH = "Editor/UI/Setup/SetupWizardWindow.uss";
+        private static readonly Vector2 FixedWindowSize = new(400f, 440f);
 
         [InitializeOnLoadMethod]
         private static void InitializeOnLoad()
@@ -73,9 +74,24 @@ namespace io.github.hatayama.uLoopMCP
         private static void ShowWindowInternal(bool shouldRecordVersion)
         {
             SetupWizardWindow window = GetWindow<SetupWizardWindow>(true, "Unity CLI Loop Setup");
-            window.minSize = new Vector2(400, 440);
+            ApplyFixedWindowSize(window);
             window.ShowUtility();
             MaybeRecordLastSeenVersion(shouldRecordVersion, McpConstants.PackageInfo.version);
+        }
+
+        internal static Rect WithFixedSize(Rect currentRect)
+        {
+            currentRect.size = FixedWindowSize;
+            return currentRect;
+        }
+
+        private static void ApplyFixedWindowSize(SetupWizardWindow window)
+        {
+            Debug.Assert(window != null, "window must not be null");
+
+            window.minSize = FixedWindowSize;
+            window.maxSize = FixedWindowSize;
+            window.position = WithFixedSize(window.position);
         }
 
         // Prerequisite

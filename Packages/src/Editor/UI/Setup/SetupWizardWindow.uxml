@@ -44,7 +44,7 @@
             </ui:VisualElement>
             <ui:Toggle
                 name="suppress-auto-show-toggle"
-                text="Don't show this window automatically after updates"
+                text="Don't show this after updates"
                 class="setup-footer__toggle" />
             <ui:Label
                 text="You can re-enable it from Window &gt; Unity CLI Loop &gt; Setup Wizard."

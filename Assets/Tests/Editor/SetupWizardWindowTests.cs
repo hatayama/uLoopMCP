@@ -1,6 +1,7 @@
 using System.IO;
 
 using NUnit.Framework;
+using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP.Tests.Editor
 {
@@ -102,6 +103,17 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             SetupWizardWindow.MaybeRecordSuppressedVersion(false, "1.7.3");
 
             Assert.That(McpEditorSettings.GetLastSeenSetupWizardVersion(), Is.EqualTo("1.7.2"));
+        }
+
+        [Test]
+        public void WithFixedSize_OverridesSizeAndPreservesPosition()
+        {
+            Rect initialRect = new(123f, 456f, 789f, 321f);
+
+            Rect resizedRect = SetupWizardWindow.WithFixedSize(initialRect);
+
+            Assert.That(resizedRect.position, Is.EqualTo(initialRect.position));
+            Assert.That(resizedRect.size, Is.EqualTo(new Vector2(400f, 440f)));
         }
 
         private static void RestoreFile(string path, bool existed, string content)
