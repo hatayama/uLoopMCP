@@ -9,6 +9,7 @@ INTERVAL_SECONDS="${ULOOP_STRESS_INTERVAL_SECONDS:-2}"
 LOG_DIR="${ULOOP_STRESS_LOG_DIR:-.uloop/stress-tests}"
 MAX_ROUNDS="${ULOOP_STRESS_MAX_ROUNDS:-0}"
 WAIT_FOR_READY_SECONDS="${ULOOP_STRESS_WAIT_FOR_READY_SECONDS:-15}"
+CURRENT_CHILD_PID=''
 mkdir -p "$LOG_DIR"
 
 timestamp() {
@@ -27,7 +28,7 @@ wait_for_ready() {
     round="$1"
     deadline=$(( $(date +%s) + WAIT_FOR_READY_SECONDS ))
     while :; do
-        if uloop_cmd get-logs --max-count 1 >/dev/null 2>&1; then
+        if run_quiet uloop_cmd get-logs --max-count 1; then
             printf '%s [%s] ready\n' "$(timestamp)" "$round"
             return 0
         fi
@@ -38,7 +39,7 @@ wait_for_ready() {
             return 1
         fi
 
-        sleep 2
+        sleep_interruptible 2
     done
 }
 
@@ -46,7 +47,48 @@ cleanup() {
     printf '%s cleanup\n' "$(timestamp)"
 }
 
-trap cleanup INT TERM
+run_quiet() {
+    "$@" >/dev/null 2>&1 &
+    CURRENT_CHILD_PID="$!"
+    wait "$CURRENT_CHILD_PID"
+    status="$?"
+    CURRENT_CHILD_PID=''
+    return "$status"
+}
+
+run_with_logs() {
+    stdout_path="$1"
+    stderr_path="$2"
+    shift 2
+
+    "$@" >"$stdout_path" 2>"$stderr_path" &
+    CURRENT_CHILD_PID="$!"
+    wait "$CURRENT_CHILD_PID"
+    status="$?"
+    CURRENT_CHILD_PID=''
+    return "$status"
+}
+
+sleep_interruptible() {
+    duration_seconds="$1"
+
+    sleep "$duration_seconds" &
+    CURRENT_CHILD_PID="$!"
+    wait "$CURRENT_CHILD_PID"
+    status="$?"
+    CURRENT_CHILD_PID=''
+    return "$status"
+}
+
+handle_interrupt() {
+    cleanup
+    if [ -n "$CURRENT_CHILD_PID" ]; then
+        kill -TERM "$CURRENT_CHILD_PID" 2>/dev/null || :
+    fi
+    exit 130
+}
+
+trap handle_interrupt INT TERM
 
 echo "=== uloop compile/get-logs stress test ==="
 echo "log_dir=$LOG_DIR"
@@ -66,7 +108,8 @@ while :; do
         exit 0
     fi
 
-    if ! uloop_cmd compile --wait-for-domain-reload true >"$LOG_DIR/${round}_compile.out" 2>"$LOG_DIR/${round}_compile.err"; then
+    if ! run_with_logs "$LOG_DIR/${round}_compile.out" "$LOG_DIR/${round}_compile.err" \
+        uloop_cmd compile --wait-for-domain-reload true; then
         echo "compile failed at round $round"
         exit 1
     fi
@@ -76,12 +119,13 @@ while :; do
         exit 1
     fi
 
-    if ! uloop_cmd get-logs --max-count 1 >"$LOG_DIR/${round}_get-logs.out" 2>"$LOG_DIR/${round}_get-logs.err"; then
+    if ! run_with_logs "$LOG_DIR/${round}_get-logs.out" "$LOG_DIR/${round}_get-logs.err" \
+        uloop_cmd get-logs --max-count 1; then
         echo "get-logs failed at round $round"
         exit 1
     fi
 
     echo "$(timestamp) [$round] round complete"
     round=$((round + 1))
-    sleep "$INTERVAL_SECONDS"
+    sleep_interruptible "$INTERVAL_SECONDS"
 done
