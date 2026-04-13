@@ -114,8 +114,23 @@
 }
 
 /* ===========================================
-   Block: Target List
+   Block: Target
    =========================================== */
+.setup-target-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.setup-target-row__label {
+    min-width: 42px;
+    margin-right: 6px;
+}
+
+.setup-target-row__field {
+    flex-grow: 1;
+}
+
 .setup-target-list {
     margin-bottom: 6px;
 }
@@ -175,6 +190,18 @@
     padding-top: 8px;
     border-top-width: 1px;
     border-top-color: var(--unity-colors-helpbox-border);
+}
+
+.setup-footer__toggle {
+    margin-top: 6px;
+}
+
+.setup-footer__hint-label {
+    font-size: 11px;
+    color: var(--setup-color-muted);
+    white-space: normal;
+    margin-top: 2px;
+    margin-left: 18px;
 }
 
 .setup-footer__button-row {
