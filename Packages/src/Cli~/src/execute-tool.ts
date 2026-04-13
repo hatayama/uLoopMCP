@@ -142,15 +142,17 @@ export async function diagnoseRetryableProjectConnectionError(
   return new UnityServerNotRunningError(projectRoot);
 }
 
-async function shouldRetryWhenUnityProcessIsRunning(
+export async function shouldRetryWhenUnityProcessIsRunning(
+  error: unknown,
   projectRoot: string | null,
   shouldDiagnoseProjectState: boolean,
+  dependencies: ConnectionFailureDiagnosisDependencies = defaultConnectionFailureDiagnosisDependencies,
 ): Promise<boolean> {
-  if (!shouldDiagnoseProjectState || projectRoot === null) {
+  if (!isRetryableError(error) || !shouldDiagnoseProjectState || projectRoot === null) {
     return false;
   }
 
-  const runningProcess = await findRunningUnityProcessForProject(projectRoot).catch(
+  const runningProcess = await dependencies.findRunningUnityProcessForProjectFn(projectRoot).catch(
     () => undefined,
   );
   return runningProcess !== null && runningProcess !== undefined;
@@ -369,7 +371,7 @@ export async function executeToolCommand(
         throw error instanceof Error ? error : new Error(String(error));
       }
 
-      if (await shouldRetryWhenUnityProcessIsRunning(projectRoot, shouldValidateProject)) {
+      if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldValidateProject)) {
         spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
         await sleep(RETRY_DELAY_MS);
         continue;
