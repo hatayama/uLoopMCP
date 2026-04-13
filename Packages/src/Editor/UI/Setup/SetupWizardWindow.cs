@@ -12,7 +12,6 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const string UXML_RELATIVE_PATH = "Editor/UI/Setup/SetupWizardWindow.uxml";
         private const string USS_RELATIVE_PATH = "Editor/UI/Setup/SetupWizardWindow.uss";
-        private static readonly Vector2 FixedWindowSize = new(400f, 410f);
 
         [InitializeOnLoadMethod]
         private static void InitializeOnLoad()
@@ -74,24 +73,15 @@ namespace io.github.hatayama.uLoopMCP
         private static void ShowWindowInternal(bool shouldRecordVersion)
         {
             SetupWizardWindow window = GetWindow<SetupWizardWindow>(true, "Unity CLI Loop Setup");
-            ApplyFixedWindowSize(window);
             window.ShowUtility();
+            window.ScheduleResizeToContent();
             MaybeRecordLastSeenVersion(shouldRecordVersion, McpConstants.PackageInfo.version);
         }
 
-        internal static Rect WithFixedSize(Rect currentRect)
+        internal static Rect WithContentSize(Rect currentRect, Vector2 contentSize, Vector2 frameSize)
         {
-            currentRect.size = FixedWindowSize;
+            currentRect.size = contentSize + frameSize;
             return currentRect;
-        }
-
-        private static void ApplyFixedWindowSize(SetupWizardWindow window)
-        {
-            Debug.Assert(window != null, "window must not be null");
-
-            window.minSize = FixedWindowSize;
-            window.maxSize = FixedWindowSize;
-            window.position = WithFixedSize(window.position);
         }
 
         // Prerequisite
@@ -117,13 +107,17 @@ namespace io.github.hatayama.uLoopMCP
         // State
         private bool _isInstallingCli;
         private bool _isInstallingSkills;
+        private bool _isApplyingContentSize;
+        private IVisualElementScheduledItem _resizeScheduledItem;
 
         private void CreateGUI()
         {
             LoadLayout();
             BindElements();
             BindEvents();
+            BindSizeUpdates();
             RefreshUI();
+            ScheduleResizeToContent();
         }
 
         private void LoadLayout()
@@ -168,6 +162,15 @@ namespace io.github.hatayama.uLoopMCP
             _closeButton.clicked += HandleClose;
         }
 
+        private void BindSizeUpdates()
+        {
+            rootVisualElement.RegisterCallback<GeometryChangedEvent>(_ =>
+            {
+                if (_isApplyingContentSize) return;
+                ScheduleResizeToContent();
+            });
+        }
+
         private void RefreshAutoShowToggle()
         {
             _suppressAutoShowToggle.SetValueWithoutNotify(McpEditorSettings.GetSuppressSetupWizardAutoShow());
@@ -192,6 +195,7 @@ namespace io.github.hatayama.uLoopMCP
                 _installSkillsButton.SetEnabled(false);
                 _skillsStatusLabel.text = "";
                 _skillsTargetList.Clear();
+                ScheduleResizeToContent();
                 return;
             }
 
@@ -204,6 +208,7 @@ namespace io.github.hatayama.uLoopMCP
 
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = ToolSkillSynchronizer.DetectTargets();
             UpdateSkillsStep(cliVersionMatched, targets);
+            ScheduleResizeToContent();
         }
 
         private void UpdateCliStep(bool cliInstalled, string cliVersion, bool cliVersionMatched)
@@ -381,11 +386,103 @@ namespace io.github.hatayama.uLoopMCP
         {
             McpEditorSettings.SetSuppressSetupWizardAutoShow(suppressAutoShow);
             MaybeRecordSuppressedVersion(suppressAutoShow, McpConstants.PackageInfo.version);
+            ScheduleResizeToContent();
         }
 
         private void HandleClose()
         {
             Close();
+        }
+
+        private void ScheduleResizeToContent()
+        {
+            _resizeScheduledItem?.Pause();
+            _resizeScheduledItem = rootVisualElement.schedule.Execute(ResizeToContent).StartingIn(0);
+        }
+
+        private void ResizeToContent()
+        {
+            ScrollView mainContainer = rootVisualElement.Q<ScrollView>();
+            if (mainContainer == null) return;
+            if (rootVisualElement.layout.width <= 0f || rootVisualElement.layout.height <= 0f) return;
+
+            Vector2 contentSize = MeasureContentSize(mainContainer);
+            if (contentSize.x <= 0f || contentSize.y <= 0f) return;
+
+            Vector2 frameSize = position.size - rootVisualElement.layout.size;
+            Rect targetRect = WithContentSize(position, contentSize, frameSize);
+            if (Approximately(position.size, targetRect.size))
+            {
+                minSize = targetRect.size;
+                maxSize = targetRect.size;
+                return;
+            }
+
+            _isApplyingContentSize = true;
+            minSize = targetRect.size;
+            maxSize = targetRect.size;
+            position = targetRect;
+            _isApplyingContentSize = false;
+        }
+
+        private static Vector2 MeasureContentSize(ScrollView mainContainer)
+        {
+            VisualElement contentContainer = mainContainer.contentContainer;
+            float width = MeasurePreferredContentWidth(mainContainer, contentContainer);
+            float height = MeasurePreferredContentHeight(mainContainer, contentContainer);
+            return new Vector2(width, height);
+        }
+
+        private static float MeasurePreferredContentWidth(VisualElement mainContainer, VisualElement contentContainer)
+        {
+            float maxRight = 0f;
+            foreach (TextElement textElement in contentContainer.Query<TextElement>().Build())
+            {
+                if (!textElement.visible) continue;
+                if (string.IsNullOrEmpty(textElement.text)) continue;
+
+                float left = textElement.worldBound.xMin - contentContainer.worldBound.xMin;
+                Vector2 measuredTextSize = textElement.MeasureTextSize(
+                    textElement.text,
+                    0f,
+                    VisualElement.MeasureMode.Undefined,
+                    0f,
+                    VisualElement.MeasureMode.Undefined);
+                float preferredWidth =
+                    measuredTextSize.x
+                    + textElement.resolvedStyle.paddingLeft
+                    + textElement.resolvedStyle.paddingRight
+                    + textElement.resolvedStyle.borderLeftWidth
+                    + textElement.resolvedStyle.borderRightWidth;
+                maxRight = Mathf.Max(maxRight, left + preferredWidth);
+            }
+
+            return Mathf.Ceil(
+                mainContainer.resolvedStyle.paddingLeft
+                + maxRight
+                + mainContainer.resolvedStyle.paddingRight);
+        }
+
+        private static float MeasurePreferredContentHeight(VisualElement mainContainer, VisualElement contentContainer)
+        {
+            float maxBottom = 0f;
+            foreach (VisualElement child in contentContainer.Children())
+            {
+                if (!child.visible) continue;
+                float bottom = child.worldBound.yMax - contentContainer.worldBound.yMin;
+                maxBottom = Mathf.Max(maxBottom, bottom);
+            }
+
+            return Mathf.Ceil(
+                mainContainer.resolvedStyle.paddingTop
+                + maxBottom
+                + mainContainer.resolvedStyle.paddingBottom);
+        }
+
+        private static bool Approximately(Vector2 left, Vector2 right)
+        {
+            const float Tolerance = 0.5f;
+            return Mathf.Abs(left.x - right.x) < Tolerance && Mathf.Abs(left.y - right.y) < Tolerance;
         }
 
     }

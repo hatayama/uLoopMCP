@@ -106,14 +106,16 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test]
-        public void WithFixedSize_OverridesSizeAndPreservesPosition()
+        public void WithContentSize_OverridesSizeAndPreservesPosition()
         {
             Rect initialRect = new(123f, 456f, 789f, 321f);
+            Vector2 contentSize = new(350f, 280f);
+            Vector2 frameSize = new(18f, 28f);
 
-            Rect resizedRect = SetupWizardWindow.WithFixedSize(initialRect);
+            Rect resizedRect = SetupWizardWindow.WithContentSize(initialRect, contentSize, frameSize);
 
             Assert.That(resizedRect.position, Is.EqualTo(initialRect.position));
-            Assert.That(resizedRect.size, Is.EqualTo(new Vector2(400f, 410f)));
+            Assert.That(resizedRect.size, Is.EqualTo(contentSize + frameSize));
         }
 
         private static void RestoreFile(string path, bool existed, string content)
