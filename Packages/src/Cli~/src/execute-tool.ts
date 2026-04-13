@@ -158,6 +158,23 @@ export async function shouldRetryWhenUnityProcessIsRunning(
   return runningProcess !== null && runningProcess !== undefined;
 }
 
+export async function resolveRecoveryPortOrKeepCurrent(
+  currentPort: number,
+  explicitPort: number | undefined,
+  projectPath: string | undefined,
+  resolveUnityPortFn: typeof resolveUnityPort = resolveUnityPort,
+): Promise<number> {
+  if (explicitPort !== undefined) {
+    return currentPort;
+  }
+
+  try {
+    return await resolveUnityPortFn(undefined, projectPath);
+  } catch {
+    return currentPort;
+  }
+}
+
 async function throwFinalToolError(
   error: unknown,
   projectRoot: string | null,
@@ -374,9 +391,11 @@ export async function executeToolCommand(
       if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldValidateProject)) {
         spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
         await sleep(RETRY_DELAY_MS);
-        if (portNumber === undefined) {
-          port = await resolveUnityPort(undefined, globalOptions.projectPath);
-        }
+        port = await resolveRecoveryPortOrKeepCurrent(
+          port,
+          portNumber,
+          globalOptions.projectPath,
+        );
         continue;
       }
 

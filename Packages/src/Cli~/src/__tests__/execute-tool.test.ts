@@ -1,6 +1,7 @@
 import {
   diagnoseRetryableProjectConnectionError,
   isTransportDisconnectError,
+  resolveRecoveryPortOrKeepCurrent,
   shouldRetryWhenUnityProcessIsRunning,
 } from '../execute-tool.js';
 import { UnityNotRunningError, UnityServerNotRunningError } from '../port-resolver.js';
@@ -131,5 +132,24 @@ describe('shouldRetryWhenUnityProcessIsRunning', () => {
         },
       ),
     ).resolves.toBe(false);
+  });
+});
+
+describe('resolveRecoveryPortOrKeepCurrent', () => {
+  it('keeps the current port when recovery settings are temporarily unreadable', async () => {
+    await expect(
+      resolveRecoveryPortOrKeepCurrent(8711, undefined, '/project', jest.fn().mockRejectedValue(new Error('busy'))),
+    ).resolves.toBe(8711);
+  });
+
+  it('re-resolves the port when recovery settings are available', async () => {
+    await expect(
+      resolveRecoveryPortOrKeepCurrent(
+        8711,
+        undefined,
+        '/project',
+        jest.fn().mockResolvedValue(8712),
+      ),
+    ).resolves.toBe(8712);
   });
 });
