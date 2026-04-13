@@ -196,6 +196,22 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             Assert.That(preferredWidth, Is.EqualTo(320f));
         }
 
+        [Test]
+        public void HasFiniteSize_WhenVectorContainsNaN_ReturnsFalse()
+        {
+            bool hasFiniteSize = SetupWizardWindow.HasFiniteSize(new Vector2(float.NaN, 120f));
+
+            Assert.That(hasFiniteSize, Is.False);
+        }
+
+        [Test]
+        public void HasFiniteSize_WhenVectorContainsFiniteValues_ReturnsTrue()
+        {
+            bool hasFiniteSize = SetupWizardWindow.HasFiniteSize(new Vector2(240f, 120f));
+
+            Assert.That(hasFiniteSize, Is.True);
+        }
+
         private static void RestoreFile(string path, bool existed, string content)
         {
             if (existed)

@@ -493,10 +493,13 @@ namespace io.github.hatayama.uLoopMCP
             if (rootVisualElement.layout.width <= 0f || rootVisualElement.layout.height <= 0f) return;
 
             Vector2 contentSize = MeasureContentSize(mainContainer);
+            if (!HasFiniteSize(contentSize)) return;
             if (contentSize.x <= 0f || contentSize.y <= 0f) return;
 
             Vector2 frameSize = position.size - rootVisualElement.layout.size;
+            if (!HasFiniteSize(frameSize)) return;
             Rect targetRect = WithContentSize(position, contentSize, frameSize);
+            if (!HasFiniteSize(targetRect.size)) return;
             if (Approximately(position.size, targetRect.size))
             {
                 minSize = targetRect.size;
@@ -526,6 +529,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (!textElement.visible) continue;
                 if (string.IsNullOrEmpty(textElement.text)) continue;
+                if (!HasFiniteRect(textElement.worldBound)) continue;
 
                 float left = textElement.worldBound.xMin - contentContainer.worldBound.xMin;
                 float horizontalChrome =
@@ -545,6 +549,10 @@ namespace io.github.hatayama.uLoopMCP
                     VisualElement.MeasureMode.Undefined,
                     0f,
                     VisualElement.MeasureMode.Undefined);
+                if (!IsFinite(left)) continue;
+                if (!IsFinite(horizontalChrome) || !IsFinite(verticalChrome)) continue;
+                if (!HasFiniteSize(measuredTextSize)) continue;
+                if (!IsFinite(laidOutWidth)) continue;
                 float measuredWidth = measuredTextSize.x + horizontalChrome;
                 int lineCount = EstimateWrappedLineCount(
                     textElement.worldBound.height - verticalChrome,
@@ -554,14 +562,16 @@ namespace io.github.hatayama.uLoopMCP
                     measuredWidth,
                     lineCount,
                     textElement.resolvedStyle.whiteSpace);
+                if (!IsFinite(preferredWidth)) continue;
                 float right = left + preferredWidth;
                 maxRight = Mathf.Max(maxRight, right);
             }
 
-            return Mathf.Ceil(
+            float width =
                 mainContainer.resolvedStyle.paddingLeft
                 + maxRight
-                + mainContainer.resolvedStyle.paddingRight);
+                + mainContainer.resolvedStyle.paddingRight;
+            return IsFinite(width) ? Mathf.Ceil(width) : 0f;
         }
 
         internal static int EstimateWrappedLineCount(float laidOutTextHeight, float singleLineTextHeight)
@@ -589,20 +599,41 @@ namespace io.github.hatayama.uLoopMCP
             foreach (VisualElement child in contentContainer.Children())
             {
                 if (!child.visible) continue;
+                if (!HasFiniteRect(child.worldBound)) continue;
                 float bottom = child.worldBound.yMax - contentContainer.worldBound.yMin;
+                if (!IsFinite(bottom)) continue;
                 maxBottom = Mathf.Max(maxBottom, bottom);
             }
 
-            return Mathf.Ceil(
+            float height =
                 mainContainer.resolvedStyle.paddingTop
                 + maxBottom
-                + mainContainer.resolvedStyle.paddingBottom);
+                + mainContainer.resolvedStyle.paddingBottom;
+            return IsFinite(height) ? Mathf.Ceil(height) : 0f;
         }
 
         private static bool Approximately(Vector2 left, Vector2 right)
         {
             const float Tolerance = 0.5f;
             return Mathf.Abs(left.x - right.x) < Tolerance && Mathf.Abs(left.y - right.y) < Tolerance;
+        }
+
+        internal static bool HasFiniteSize(Vector2 size)
+        {
+            return IsFinite(size.x) && IsFinite(size.y);
+        }
+
+        private static bool HasFiniteRect(Rect rect)
+        {
+            return IsFinite(rect.xMin)
+                && IsFinite(rect.xMax)
+                && IsFinite(rect.yMin)
+                && IsFinite(rect.yMax);
+        }
+
+        private static bool IsFinite(float value)
+        {
+            return !float.IsNaN(value) && !float.IsInfinity(value);
         }
 
     }
