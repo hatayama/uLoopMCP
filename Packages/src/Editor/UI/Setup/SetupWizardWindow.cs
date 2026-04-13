@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -96,6 +97,8 @@ namespace io.github.hatayama.uLoopMCP
         private Button _installCliButton;
 
         // Step 2
+        private VisualElement _skillsTargetRow;
+        private EnumField _skillsTargetField;
         private VisualElement _skillsTargetList;
         private Label _skillsStatusLabel;
         private Button _installSkillsButton;
@@ -109,16 +112,27 @@ namespace io.github.hatayama.uLoopMCP
         private bool _isInstallingCli;
         private bool _isInstallingSkills;
         private bool _isApplyingContentSize;
+        private bool _isSkillsTargetFieldInitialized;
+        private bool _shouldUseFirstInstallSkillsUi;
         private IVisualElementScheduledItem _resizeScheduledItem;
+        private SkillsTarget _skillsTarget = SkillsTarget.Claude;
 
         private void CreateGUI()
         {
+            InitializeFirstInstallSkillsUiState();
             LoadLayout();
             BindElements();
             BindEvents();
             BindSizeUpdates();
             RefreshUI();
             ScheduleResizeToContent();
+        }
+
+        private void InitializeFirstInstallSkillsUiState()
+        {
+            _shouldUseFirstInstallSkillsUi = ShouldUseFirstInstallSkillsUi(
+                McpEditorSettings.GetHasShownSetupWizardSkillsSelection());
+            McpEditorSettings.SetHasShownSetupWizardSkillsSelection(true);
         }
 
         private void LoadLayout()
@@ -144,6 +158,8 @@ namespace io.github.hatayama.uLoopMCP
             _cliStatusLabel = rootVisualElement.Q<Label>("cli-status-label");
             _installCliButton = rootVisualElement.Q<Button>("install-cli-button");
 
+            _skillsTargetRow = rootVisualElement.Q<VisualElement>("skills-target-row");
+            _skillsTargetField = rootVisualElement.Q<EnumField>("skills-target-field");
             _skillsTargetList = rootVisualElement.Q<VisualElement>("skills-target-list");
             _skillsStatusLabel = rootVisualElement.Q<Label>("skills-status-label");
             _installSkillsButton = rootVisualElement.Q<Button>("install-skills-button");
@@ -158,9 +174,25 @@ namespace io.github.hatayama.uLoopMCP
             _refreshButton.clicked += () => RefreshUI();
             _installCliButton.clicked += HandleInstallCli;
             _installSkillsButton.clicked += HandleInstallSkills;
+            InitializeSkillsTargetField();
             _suppressAutoShowToggle.RegisterValueChangedCallback(evt => HandleSuppressAutoShowChanged(evt.newValue));
             _openSettingsButton.clicked += HandleOpenSettings;
             _closeButton.clicked += HandleClose;
+        }
+
+        private void InitializeSkillsTargetField()
+        {
+            if (_isSkillsTargetFieldInitialized) return;
+
+            _skillsTargetField.Init(_skillsTarget);
+            _skillsTargetField.RegisterValueChangedCallback(evt =>
+            {
+                if (evt.newValue is SkillsTarget newTarget)
+                {
+                    _skillsTarget = newTarget;
+                }
+            });
+            _isSkillsTargetFieldInitialized = true;
         }
 
         private void BindSizeUpdates()
@@ -224,6 +256,24 @@ namespace io.github.hatayama.uLoopMCP
             return targets.Where(target => target.HasSkillsDirectory).ToList();
         }
 
+        internal static bool ShouldUseFirstInstallSkillsUi(bool hasShownSetupWizardSkillsSelection)
+        {
+            return !hasShownSetupWizardSkillsSelection;
+        }
+
+        internal static ToolSkillSynchronizer.SkillTargetInfo CreateFirstInstallSkillTarget(
+            SkillsTarget target)
+        {
+            return target switch
+            {
+                SkillsTarget.Claude => new("Claude Code", ".claude", false, false),
+                SkillsTarget.Agents => new("Codex CLI / Gemini CLI", ".agents", false, false),
+                SkillsTarget.Cursor => new("Cursor", ".cursor", false, false),
+                SkillsTarget.Antigravity => new("Antigravity", ".agent", false, false),
+                _ => new("Claude Code", ".claude", false, false)
+            };
+        }
+
         private void UpdateCliStep(bool cliInstalled, string cliVersion, bool cliVersionMatched)
         {
             if (cliInstalled && cliVersionMatched)
@@ -272,13 +322,20 @@ namespace io.github.hatayama.uLoopMCP
             {
                 _skillsStatusLabel.text = "";
                 _installSkillsButton.SetEnabled(false);
+                ViewDataBinder.SetVisible(_skillsTargetRow, false);
+                ViewDataBinder.SetVisible(_skillsTargetList, false);
                 return;
             }
 
-            if (targets.Count == 0)
+            bool useFirstInstallSkillsUi = _shouldUseFirstInstallSkillsUi;
+            ViewDataBinder.SetVisible(_skillsTargetRow, useFirstInstallSkillsUi);
+            ViewDataBinder.SetVisible(_skillsTargetList, !useFirstInstallSkillsUi);
+
+            if (useFirstInstallSkillsUi)
             {
-                _skillsStatusLabel.text = "No supported tool directories detected (.claude/, .agents/, etc.)";
-                _installSkillsButton.SetEnabled(false);
+                _skillsStatusLabel.text = "";
+                _installSkillsButton.SetEnabled(!_isInstallingSkills);
+                _installSkillsButton.text = _isInstallingSkills ? "Installing..." : "Install Skills";
                 return;
             }
 
@@ -376,7 +433,9 @@ namespace io.github.hatayama.uLoopMCP
         private async void HandleInstallSkills()
         {
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargets();
-            List<ToolSkillSynchronizer.SkillTargetInfo> installableTargets = FilterInstallableSkillTargets(targets);
+            List<ToolSkillSynchronizer.SkillTargetInfo> installableTargets = _shouldUseFirstInstallSkillsUi
+                ? new List<ToolSkillSynchronizer.SkillTargetInfo> { CreateFirstInstallSkillTarget(_skillsTarget) }
+                : FilterInstallableSkillTargets(targets);
             if (installableTargets.Count == 0) return;
 
             _isInstallingSkills = true;

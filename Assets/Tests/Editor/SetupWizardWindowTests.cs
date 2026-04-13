@@ -137,6 +137,34 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
         }
 
         [Test]
+        public void ShouldUseFirstInstallSkillsUi_WhenSelectionHasNotBeenShown_ReturnsTrue()
+        {
+            bool shouldUseFirstInstallUi = SetupWizardWindow.ShouldUseFirstInstallSkillsUi(false);
+
+            Assert.That(shouldUseFirstInstallUi, Is.True);
+        }
+
+        [Test]
+        public void ShouldUseFirstInstallSkillsUi_WhenSelectionHasAlreadyBeenShown_ReturnsFalse()
+        {
+            bool shouldUseFirstInstallUi = SetupWizardWindow.ShouldUseFirstInstallSkillsUi(true);
+
+            Assert.That(shouldUseFirstInstallUi, Is.False);
+        }
+
+        [Test]
+        public void CreateFirstInstallSkillTarget_WhenClaudeSelected_ReturnsClaudeProjectTarget()
+        {
+            ToolSkillSynchronizer.SkillTargetInfo target =
+                SetupWizardWindow.CreateFirstInstallSkillTarget(SkillsTarget.Claude);
+
+            Assert.That(target.DisplayName, Is.EqualTo("Claude Code"));
+            Assert.That(target.DirName, Is.EqualTo(".claude"));
+            Assert.That(target.HasSkillsDirectory, Is.False);
+            Assert.That(target.HasExistingSkills, Is.False);
+        }
+
+        [Test]
         public void EstimateWrappedLineCount_WithPositiveHeight_ReturnsRoundedLineCount()
         {
             int lineCount = SetupWizardWindow.EstimateWrappedLineCount(35f, 12f);
