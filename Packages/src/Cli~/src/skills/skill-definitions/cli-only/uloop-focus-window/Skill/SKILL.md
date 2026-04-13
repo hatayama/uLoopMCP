@@ -13,6 +13,8 @@ Bring Unity Editor window to front using OS-level commands.
 uloop focus-window
 ```
 
+Run this from the target Unity project root so the CLI can resolve the current project automatically.
+
 ## Parameters
 
 None.
@@ -21,7 +23,7 @@ None.
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project. Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
+| `--project-path <path>` | Optional. Use only when the target Unity project is not the current directory. Path resolution follows the same rules as `cd` — absolute paths are used as-is, relative paths are resolved from cwd. |
 
 ## Examples
 

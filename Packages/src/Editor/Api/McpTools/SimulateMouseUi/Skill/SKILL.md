@@ -55,11 +55,11 @@ uloop simulate-mouse-ui --action <action> --x <x> --y <y> [options]
 
 ### Global Options (all optional, mutually exclusive)
 
-Usually not needed — the CLI auto-detects the Unity project from the current working directory.
+Usually not needed — when you run this from the target Unity project root, the CLI auto-detects the current project.
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Override auto-detection to target a specific Unity project |
+| `--project-path <path>` | Optional. Use only when the target Unity project is not the current directory. |
 
 
 ## Coordinate System

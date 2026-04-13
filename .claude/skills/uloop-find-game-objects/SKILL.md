@@ -13,6 +13,8 @@ Find GameObjects with search criteria or get currently selected objects.
 uloop find-game-objects [options]
 ```
 
+Run this from the target Unity project root so the CLI can resolve the current project automatically.
+
 ## Parameters
 
 | Parameter | Type | Default | Description |
@@ -40,7 +42,7 @@ uloop find-game-objects [options]
 
 | Option | Description |
 |--------|-------------|
-| `--project-path <path>` | Target a specific Unity project |
+| `--project-path <path>` | Optional. Use only when the target Unity project is not the current directory. |
 
 ## Examples
 
