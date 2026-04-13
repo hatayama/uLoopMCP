@@ -446,20 +446,8 @@ namespace io.github.hatayama.uLoopMCP
                 if (!textElement.visible) continue;
                 if (string.IsNullOrEmpty(textElement.text)) continue;
 
-                float left = textElement.worldBound.xMin - contentContainer.worldBound.xMin;
-                Vector2 measuredTextSize = textElement.MeasureTextSize(
-                    textElement.text,
-                    0f,
-                    VisualElement.MeasureMode.Undefined,
-                    0f,
-                    VisualElement.MeasureMode.Undefined);
-                float preferredWidth =
-                    measuredTextSize.x
-                    + textElement.resolvedStyle.paddingLeft
-                    + textElement.resolvedStyle.paddingRight
-                    + textElement.resolvedStyle.borderLeftWidth
-                    + textElement.resolvedStyle.borderRightWidth;
-                maxRight = Mathf.Max(maxRight, left + preferredWidth);
+                float right = textElement.worldBound.xMax - contentContainer.worldBound.xMin;
+                maxRight = Mathf.Max(maxRight, right);
             }
 
             return Mathf.Ceil(

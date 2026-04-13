@@ -47,7 +47,7 @@
                 text="Don't show this after updates"
                 class="setup-footer__toggle" />
             <ui:Label
-                text="You can re-enable it from Window &gt; Unity CLI Loop &gt; Setup Wizard."
+                text="You can reopen this from Window &gt; Unity CLI Loop &gt; Setup Wizard."
                 class="setup-footer__hint-label" />
         </ui:VisualElement>
     </ui:ScrollView>
