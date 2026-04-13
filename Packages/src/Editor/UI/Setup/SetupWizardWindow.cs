@@ -8,13 +8,13 @@ using UnityEngine.UIElements;
 
 namespace io.github.hatayama.uLoopMCP
 {
-    [InitializeOnLoad]
     public class SetupWizardWindow : EditorWindow
     {
         private const string UXML_RELATIVE_PATH = "Editor/UI/Setup/SetupWizardWindow.uxml";
         private const string USS_RELATIVE_PATH = "Editor/UI/Setup/SetupWizardWindow.uss";
 
-        static SetupWizardWindow()
+        [InitializeOnLoadMethod]
+        private static void InitializeOnLoad()
         {
             if (AssetDatabase.IsAssetImportWorkerProcess()) return;
             if (Application.isBatchMode) return;
