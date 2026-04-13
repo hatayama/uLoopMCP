@@ -89,10 +89,12 @@ run_quiet_with_timeout() {
 
     (
         sleep "$timeout_seconds"
-        : > "$timeout_marker"
-        kill -TERM "$CURRENT_CHILD_PID" 2>/dev/null || :
-        sleep 1
-        kill -KILL "$CURRENT_CHILD_PID" 2>/dev/null || :
+        if kill -0 "$CURRENT_CHILD_PID" 2>/dev/null; then
+            : > "$timeout_marker"
+            kill -TERM "$CURRENT_CHILD_PID" 2>/dev/null || :
+            sleep 1
+            kill -KILL "$CURRENT_CHILD_PID" 2>/dev/null || :
+        fi
     ) &
     CURRENT_TIMEOUT_PID="$!"
 

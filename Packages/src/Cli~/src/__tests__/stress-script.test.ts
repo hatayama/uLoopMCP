@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -79,6 +79,7 @@ function runStressScript(pathEntries: string[]): Promise<ScriptRunResult> {
 
 describe('uloop compile/get-logs stress script', () => {
   let tempDir: string;
+  const scriptPath = resolve(process.cwd(), '../../../scripts/uloop-compile-get-logs-stress.sh');
 
   beforeEach(() => {
     tempDir = mkdtempSync(join(tmpdir(), 'uloop-stress-test-'));
@@ -97,5 +98,13 @@ describe('uloop compile/get-logs stress script', () => {
     expect(result.stdout).toContain('bootstrap failed');
     expect(result.stdout).toContain('ready timeout after 1s');
     expect(result.durationMs).toBeLessThan(4000);
+  });
+
+  it('guards timeout marker creation with a liveness check before killing the child', () => {
+    const script = readFileSync(scriptPath, 'utf8');
+
+    expect(script).toMatch(
+      /if kill -0 "\$CURRENT_CHILD_PID" 2>\/dev\/null; then\s+: > "\$timeout_marker"\s+kill -TERM "\$CURRENT_CHILD_PID" 2>\/dev\/null \|\| :/m,
+    );
   });
 });
