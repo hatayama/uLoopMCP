@@ -191,6 +191,45 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
         [Test]
         [Timeout(3000)]
+        public async Task ExecuteAsync_WhenBackgroundPrewarmIgnoresCancellation_ShouldReturnBusyInsteadOfWaitingIndefinitely()
+        {
+            NonCancelableSequencedDynamicCodeExecutorProvider provider = new NonCancelableSequencedDynamicCodeExecutorProvider();
+            using DynamicCodeExecutorPool pool = new DynamicCodeExecutorPool(provider);
+            using DynamicCodeExecutionFacade facade = new DynamicCodeExecutionFacade(
+                new FakeCompiledAssemblyBuilder(true),
+                pool);
+
+            DynamicCodeExecutionRequest prewarmRequest = CreateRequest(
+                DynamicCodeSecurityLevel.Restricted,
+                "return 1;");
+            prewarmRequest.YieldToForegroundRequests = true;
+            Task<(bool Entered, ExecutionResult Result)> prewarmTask = facade.TryExecuteIfIdleAsync(
+                prewarmRequest,
+                CancellationToken.None);
+
+            await provider.FirstExecutionStarted.Task;
+
+            ExecutionResult foregroundResult = await facade.ExecuteAsync(
+                CreateRequest(DynamicCodeSecurityLevel.Restricted, "return 2;"),
+                CancellationToken.None);
+
+            Assert.That(foregroundResult.Success, Is.False);
+            Assert.That(foregroundResult.ErrorMessage, Is.EqualTo(McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS));
+            Assert.That(provider.SecondExecutionStarted.Task.IsCompleted, Is.False);
+
+            provider.CompleteFirstExecution(new ExecutionResult
+            {
+                Success = true,
+                Result = "prewarm"
+            });
+
+            (bool entered, ExecutionResult prewarmResult) = await prewarmTask;
+            Assert.That(entered, Is.True);
+            Assert.That(prewarmResult.Success, Is.True);
+        }
+
+        [Test]
+        [Timeout(3000)]
         public async Task ExecuteAsync_WhenExecutionCompletesAfterBusyProbe_ShouldRetryBeforeReturningBusy()
         {
             BlockingDynamicCodeExecutorProvider provider = new BlockingDynamicCodeExecutorProvider();
@@ -418,6 +457,31 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             }
         }
 
+        private sealed class NonCancelableSequencedDynamicCodeExecutorProvider : IDynamicCodeExecutorProvider
+        {
+            public TaskCompletionSource<bool> FirstExecutionStarted { get; } =
+                new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public TaskCompletionSource<bool> SecondExecutionStarted { get; } =
+                new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            private readonly TaskCompletionSource<ExecutionResult> _firstExecutionCompletion =
+                new TaskCompletionSource<ExecutionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public IDynamicCodeExecutor Create(DynamicCodeSecurityLevel securityLevel)
+            {
+                return new NonCancelableSequencedDynamicCodeExecutor(
+                    FirstExecutionStarted,
+                    SecondExecutionStarted,
+                    _firstExecutionCompletion);
+            }
+
+            public void CompleteFirstExecution(ExecutionResult result)
+            {
+                _firstExecutionCompletion.TrySetResult(result);
+            }
+        }
+
         private sealed class FakeDynamicCodeExecutor : IDynamicCodeExecutor
         {
             public int DisposeCallCount { get; private set; }
@@ -556,6 +620,55 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 CancellationToken ct = default)
             {
                 throw new NotSupportedException();
+            }
+        }
+
+        private sealed class NonCancelableSequencedDynamicCodeExecutor : IDynamicCodeExecutor
+        {
+            private readonly TaskCompletionSource<bool> _firstExecutionStarted;
+            private readonly TaskCompletionSource<bool> _secondExecutionStarted;
+            private readonly TaskCompletionSource<ExecutionResult> _firstExecutionCompletion;
+            private int _executionCount;
+
+            public NonCancelableSequencedDynamicCodeExecutor(
+                TaskCompletionSource<bool> firstExecutionStarted,
+                TaskCompletionSource<bool> secondExecutionStarted,
+                TaskCompletionSource<ExecutionResult> firstExecutionCompletion)
+            {
+                _firstExecutionStarted = firstExecutionStarted;
+                _secondExecutionStarted = secondExecutionStarted;
+                _firstExecutionCompletion = firstExecutionCompletion;
+            }
+
+            public Task<ExecutionResult> ExecuteCodeAsync(
+                string code,
+                string className = DynamicCodeConstants.DEFAULT_CLASS_NAME,
+                object[] parameters = null,
+                CancellationToken cancellationToken = default,
+                bool compileOnly = false)
+            {
+                _executionCount++;
+                if (_executionCount == 1)
+                {
+                    _firstExecutionStarted.TrySetResult(true);
+                    return _firstExecutionCompletion.Task;
+                }
+
+                _secondExecutionStarted.TrySetResult(true);
+                return Task.FromResult(new ExecutionResult
+                {
+                    Success = true,
+                    Result = "foreground"
+                });
+            }
+
+            public ExecutionStatistics GetStatistics()
+            {
+                return new ExecutionStatistics();
+            }
+
+            public void Dispose()
+            {
             }
         }
     }

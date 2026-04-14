@@ -13,6 +13,7 @@ namespace io.github.hatayama.uLoopMCP
     internal sealed class DynamicCodeExecutionFacade : IShutdownAwareDynamicCodeExecutionRuntime, IDisposable
     {
         private const int BusyHandoffWindowMilliseconds = 50;
+        private const int CancelledPrewarmHandoffWindowMilliseconds = 500;
 
         internal static Action AfterSemaphoreEnteredForTests { get; set; }
         internal static Func<Task> AfterBackgroundExecutionStatePublishedForTests { get; set; }
@@ -70,12 +71,13 @@ namespace io.github.hatayama.uLoopMCP
                 }
                 else
                 {
-                    using CancellationTokenSource waitCancellationTokenSource =
-                        CancellationTokenSource.CreateLinkedTokenSource(
-                            cancellationToken,
-                            _lifetimeCancellationTokenSource.Token);
-                    await _executionSemaphore.WaitAsync(waitCancellationTokenSource.Token);
-                    entered = true;
+                    entered = await TryAcquireAfterBusyHandoffAsync(
+                        cancellationToken,
+                        CancelledPrewarmHandoffWindowMilliseconds);
+                    if (!entered)
+                    {
+                        return CreateExecutionInProgressResult();
+                    }
                 }
             }
 
@@ -259,19 +261,29 @@ namespace io.github.hatayama.uLoopMCP
             await hook();
         }
 
-        private async Task<bool> TryAcquireAfterBusyHandoffAsync(CancellationToken cancellationToken)
+        private async Task<bool> TryAcquireAfterBusyHandoffAsync(
+            CancellationToken cancellationToken,
+            int handoffWindowMilliseconds = BusyHandoffWindowMilliseconds)
         {
             using CancellationTokenSource handoffCancellationTokenSource =
-                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            handoffCancellationTokenSource.CancelAfter(BusyHandoffWindowMilliseconds);
+                CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken,
+                    _lifetimeCancellationTokenSource.Token);
+            handoffCancellationTokenSource.CancelAfter(handoffWindowMilliseconds);
 
             try
             {
                 await _executionSemaphore.WaitAsync(handoffCancellationTokenSource.Token);
                 return true;
             }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException)
             {
+                if (cancellationToken.IsCancellationRequested ||
+                    _lifetimeCancellationTokenSource.IsCancellationRequested)
+                {
+                    throw;
+                }
+
                 return false;
             }
         }
