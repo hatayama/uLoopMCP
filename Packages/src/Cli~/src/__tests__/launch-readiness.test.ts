@@ -163,6 +163,36 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     expect(sleepCount).toBe(1);
   });
 
+  it('retries fast project validation session changes until success', async () => {
+    const recordedMethods: string[] = [];
+    const responses: Array<MockReadinessResponse | Error> = [
+      new Error(
+        'Unity error: Invalid params: Unity CLI Loop server session changed. Retry the command.',
+      ),
+      { Success: true },
+    ];
+    let sleepCount = 0;
+
+    await waitForDynamicCodeReadyAfterLaunch('/project', {
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
+      createClient: () => createMockClient(responses, recordedMethods).client,
+      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+        sleepCount++;
+        return Promise.resolve();
+      }),
+      nowFn: (() => {
+        let now = 0;
+        return (): number => {
+          now += 100;
+          return now;
+        };
+      })(),
+    });
+
+    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
+    expect(sleepCount).toBe(1);
+  });
+
   it('does not retry non-transient Unity JSON-RPC errors', async () => {
     const recordedMethods: string[] = [];
 

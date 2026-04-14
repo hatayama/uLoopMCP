@@ -26,6 +26,7 @@ import { VERSION } from './version.js';
 import { createSpinner } from './spinner.js';
 import { findUnityProjectRoot } from './project-root.js';
 import { getCliProcessAgeMilliseconds } from './process-timing.js';
+import { isRetryableFastProjectValidationErrorMessage } from './request-metadata.js';
 import { findRunningUnityProcessForProject } from './unity-process.js';
 import {
   type CompileExecutionOptions,
@@ -163,7 +164,11 @@ export async function shouldRetryWhenUnityProcessIsRunning(
   shouldDiagnoseProjectState: boolean,
   dependencies: ConnectionFailureDiagnosisDependencies = defaultConnectionFailureDiagnosisDependencies,
 ): Promise<boolean> {
-  if (!isRetryableError(error) || !shouldDiagnoseProjectState || projectRoot === null) {
+  if (
+    !shouldDiagnoseProjectState ||
+    projectRoot === null ||
+    !isRetryableProjectRecoveryError(error)
+  ) {
     return false;
   }
 
@@ -171,6 +176,18 @@ export async function shouldRetryWhenUnityProcessIsRunning(
     .findRunningUnityProcessForProjectFn(projectRoot)
     .catch(() => undefined);
   return runningProcess !== null && runningProcess !== undefined;
+}
+
+function isRetryableProjectRecoveryError(error: unknown): boolean {
+  if (isRetryableError(error)) {
+    return true;
+  }
+
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return isRetryableFastProjectValidationErrorMessage(error.message);
 }
 
 export async function resolveRecoveryPortOrKeepCurrent(
@@ -186,7 +203,15 @@ export async function resolveRecoveryPortOrKeepCurrent(
   try {
     return await resolveUnityConnectionFn(undefined, projectPath);
   } catch {
-    return currentConnection;
+    if (currentConnection.requestMetadata === null || currentConnection.projectRoot === null) {
+      return currentConnection;
+    }
+
+    return {
+      ...currentConnection,
+      requestMetadata: null,
+      shouldValidateProject: true,
+    };
   }
 }
 

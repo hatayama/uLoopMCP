@@ -193,6 +193,21 @@ describe('shouldRetryWhenUnityProcessIsRunning', () => {
       ),
     ).resolves.toBe(false);
   });
+
+  it('returns true for fast project validation session changes when Unity is still running', async () => {
+    await expect(
+      shouldRetryWhenUnityProcessIsRunning(
+        new Error(
+          'Unity error: Invalid params: Unity CLI Loop server session changed. Retry the command.',
+        ),
+        '/project',
+        true,
+        {
+          findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
+        },
+      ),
+    ).resolves.toBe(true);
+  });
 });
 
 describe('resolveRecoveryPortOrKeepCurrent', () => {
@@ -205,6 +220,28 @@ describe('resolveRecoveryPortOrKeepCurrent', () => {
         jest.fn().mockRejectedValue(new Error('busy')),
       ),
     ).resolves.toEqual(createConnection(8711));
+  });
+
+  it('falls back to legacy project validation when recovery settings are temporarily unreadable', async () => {
+    await expect(
+      resolveRecoveryPortOrKeepCurrent(
+        createConnection(8711, {
+          requestMetadata: {
+            expectedProjectRoot: '/project',
+            expectedServerSessionId: 'session-1',
+          },
+          shouldValidateProject: false,
+        }),
+        undefined,
+        '/project',
+        jest.fn().mockRejectedValue(new Error('busy')),
+      ),
+    ).resolves.toEqual(
+      createConnection(8711, {
+        requestMetadata: null,
+        shouldValidateProject: true,
+      }),
+    );
   });
 
   it('re-resolves the port when recovery settings are available', async () => {

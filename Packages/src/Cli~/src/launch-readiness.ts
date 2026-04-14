@@ -6,6 +6,7 @@ import {
   UnityNotRunningError,
 } from './port-resolver.js';
 import { ProjectMismatchError, validateConnectedProject } from './project-validator.js';
+import { isRetryableFastProjectValidationErrorMessage } from './request-metadata.js';
 
 const LAUNCH_READINESS_TIMEOUT_MS = 180000;
 const LAUNCH_READINESS_RETRY_MS = 1000;
@@ -88,6 +89,7 @@ function isRetryableLaunchReadinessError(error: unknown): boolean {
 
   const message: string = error.message;
   return (
+    isRetryableFastProjectValidationErrorMessage(message) ||
     message.includes('Could not read Unity server port from settings') ||
     message.includes('ECONNREFUSED') ||
     message.includes('EADDRNOTAVAIL') ||
