@@ -1,5 +1,6 @@
 import { DirectUnityClient } from '../direct-unity-client.js';
 import { waitForDynamicCodeReadyAfterLaunch } from '../launch-readiness.js';
+import { type ResolvedUnityConnection } from '../port-resolver.js';
 import { ProjectMismatchError } from '../project-validator.js';
 
 interface MockReadinessResponse {
@@ -33,6 +34,22 @@ function createMockClient(
   };
 }
 
+function createConnection(
+  port: number,
+  overrides?: Partial<ResolvedUnityConnection>,
+): ResolvedUnityConnection {
+  return {
+    port,
+    projectRoot: '/project',
+    requestMetadata: {
+      expectedProjectRoot: '/project',
+      expectedServerSessionId: 'session-1',
+    },
+    shouldValidateProject: false,
+    ...overrides,
+  };
+}
+
 describe('waitForDynamicCodeReadyAfterLaunch', () => {
   afterEach(() => {
     jest.restoreAllMocks();
@@ -49,8 +66,7 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     let sleepCount = 0;
 
     await waitForDynamicCodeReadyAfterLaunch('/project', {
-      resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
-      validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
       createClient: () => {
         const mockClient = createMockClient(responses, recordedMethods);
         createdClients.push(mockClient.client);
@@ -82,8 +98,7 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
 
     await expect(
       waitForDynamicCodeReadyAfterLaunch('/project', {
-        resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
-        validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+        resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
         createClient: () =>
           createMockClient([{ Success: false, ErrorMessage: 'Syntax error' }], recordedMethods)
             .client,
@@ -98,8 +113,7 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
 
     await expect(
       waitForDynamicCodeReadyAfterLaunch('/project', {
-        resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
-        validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+        resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
         createClient: () =>
           createMockClient(
             [
@@ -130,8 +144,7 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     let sleepCount = 0;
 
     await waitForDynamicCodeReadyAfterLaunch('/project', {
-      resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
-      validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
       createClient: () => createMockClient(responses, recordedMethods).client,
       sleepFn: jest.fn().mockImplementation((): Promise<void> => {
         sleepCount++;
@@ -155,8 +168,7 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
 
     await expect(
       waitForDynamicCodeReadyAfterLaunch('/project', {
-        resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
-        validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+        resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
         createClient: () =>
           createMockClient(
             [new Error('Unity error: Internal error (Object reference not set to an instance)')],
@@ -176,8 +188,7 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     let sleepCount = 0;
 
     await waitForDynamicCodeReadyAfterLaunch('/project', {
-      resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
-      validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
       createClient: () => createMockClient(responses, recordedMethods).client,
       sleepFn: jest.fn().mockImplementation((): Promise<void> => {
         sleepCount++;
@@ -211,8 +222,7 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     let sleepCount = 0;
 
     await waitForDynamicCodeReadyAfterLaunch('/project', {
-      resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
-      validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
       createClient: () => createMockClient(responses, recordedMethods).client,
       sleepFn: jest.fn().mockImplementation((): Promise<void> => {
         sleepCount++;
@@ -235,8 +245,7 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     const recordedMethods: string[] = [];
 
     await waitForDynamicCodeReadyAfterLaunch('/project', {
-      resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
-      validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
       createClient: () =>
         createMockClient([{ Success: true, Timings: ['[Perf] Build: 50.0ms'] }], recordedMethods)
           .client,
@@ -257,8 +266,7 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     let sleepCount = 0;
 
     await waitForDynamicCodeReadyAfterLaunch('/project', {
-      resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
-      validateConnectedProjectFn: jest.fn().mockResolvedValue(undefined),
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
       createClient: () => createMockClient(responses, recordedMethods).client,
       sleepFn: jest.fn().mockImplementation((): Promise<void> => {
         sleepCount++;
@@ -276,13 +284,12 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
   });
 
   it('does not retry project mismatch errors', async () => {
+    const mismatchClient = createMockClient([new ProjectMismatchError('/expected', '/actual')], []);
+
     await expect(
       waitForDynamicCodeReadyAfterLaunch('/project', {
-        resolveUnityPortFn: jest.fn().mockResolvedValue(8711),
-        validateConnectedProjectFn: jest
-          .fn()
-          .mockRejectedValue(new ProjectMismatchError('/expected', '/actual')),
-        createClient: () => createMockClient([], []).client,
+        resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
+        createClient: () => mismatchClient.client,
         sleepFn: jest.fn(),
         nowFn: () => 0,
       }),

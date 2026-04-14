@@ -6,8 +6,25 @@ import {
   resolveRecoveryPortOrKeepCurrent,
   shouldRetryWhenUnityProcessIsRunning,
 } from '../execute-tool.js';
-import { UnityNotRunningError, UnityServerNotRunningError } from '../port-resolver.js';
+import {
+  type ResolvedUnityConnection,
+  UnityNotRunningError,
+  UnityServerNotRunningError,
+} from '../port-resolver.js';
 import { ProjectMismatchError } from '../project-validator.js';
+
+function createConnection(
+  port: number,
+  overrides?: Partial<ResolvedUnityConnection>,
+): ResolvedUnityConnection {
+  return {
+    port,
+    projectRoot: '/project',
+    requestMetadata: null,
+    shouldValidateProject: true,
+    ...overrides,
+  };
+}
 
 describe('isTransportDisconnectError', () => {
   it('returns true for UNITY_NO_RESPONSE', () => {
@@ -182,22 +199,38 @@ describe('resolveRecoveryPortOrKeepCurrent', () => {
   it('keeps the current port when recovery settings are temporarily unreadable', async () => {
     await expect(
       resolveRecoveryPortOrKeepCurrent(
-        8711,
+        createConnection(8711),
         undefined,
         '/project',
         jest.fn().mockRejectedValue(new Error('busy')),
       ),
-    ).resolves.toBe(8711);
+    ).resolves.toEqual(createConnection(8711));
   });
 
   it('re-resolves the port when recovery settings are available', async () => {
     await expect(
       resolveRecoveryPortOrKeepCurrent(
-        8711,
+        createConnection(8711),
         undefined,
         '/project',
-        jest.fn().mockResolvedValue(8712),
+        jest.fn().mockResolvedValue(
+          createConnection(8712, {
+            requestMetadata: {
+              expectedProjectRoot: '/project',
+              expectedServerSessionId: 'session-2',
+            },
+            shouldValidateProject: false,
+          }),
+        ),
       ),
-    ).resolves.toBe(8712);
+    ).resolves.toEqual(
+      createConnection(8712, {
+        requestMetadata: {
+          expectedProjectRoot: '/project',
+          expectedServerSessionId: 'session-2',
+        },
+        shouldValidateProject: false,
+      }),
+    );
   });
 });

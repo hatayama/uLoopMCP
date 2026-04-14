@@ -107,7 +107,22 @@ namespace io.github.hatayama.uLoopMCP
             {
                 Method = request["method"]?.ToString(),
                 Params = request["params"],
-                Id = request["id"]?.ToObject<object>()
+                Id = request["id"]?.ToObject<object>(),
+                UloopMetadata = ParseUloopMetadata(request["x-uloop"])
+            };
+        }
+
+        private static JsonRpcRequestUloopMetadata ParseUloopMetadata(JToken metadataToken)
+        {
+            if (metadataToken == null || metadataToken.Type == JTokenType.Null)
+            {
+                return null;
+            }
+
+            return new JsonRpcRequestUloopMetadata
+            {
+                ExpectedProjectRoot = metadataToken["expectedProjectRoot"]?.ToString(),
+                ExpectedServerSessionId = metadataToken["expectedServerSessionId"]?.ToString()
             };
         }
 
@@ -154,6 +169,8 @@ namespace io.github.hatayama.uLoopMCP
             Stopwatch requestStopwatch = Stopwatch.StartNew();
             try
             {
+                ValidateClientIdentityIfNeeded(request);
+
                 Stopwatch mainThreadWaitStopwatch = Stopwatch.StartNew();
                 await MainThreadSwitcher.SwitchToMainThread();
                 mainThreadWaitStopwatch.Stop();
@@ -185,6 +202,14 @@ namespace io.github.hatayama.uLoopMCP
                 UnityEngine.Debug.LogError($"[JsonRpcProcessor] Error: {ex.Message}\nStack trace: {ex.StackTrace}");
                 return CreateErrorResponse(request.Id, ex);
             }
+        }
+
+        private static void ValidateClientIdentityIfNeeded(JsonRpcRequest request)
+        {
+            JsonRpcRequestIdentityValidator.Validate(
+                request?.UloopMetadata,
+                McpEditorSettings.GetProjectRootPath(),
+                McpEditorSettings.GetServerSessionId());
         }
 
         private static void AppendExecuteDynamicCodeTimingsIfSupported(

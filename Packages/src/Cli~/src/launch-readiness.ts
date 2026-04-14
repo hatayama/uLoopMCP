@@ -1,6 +1,10 @@
 import { DirectUnityClient } from './direct-unity-client.js';
 import { sleep } from './compile-helpers.js';
-import { resolveUnityPort, UnityNotRunningError } from './port-resolver.js';
+import {
+  type ResolvedUnityConnection,
+  resolveUnityConnection,
+  UnityNotRunningError,
+} from './port-resolver.js';
 import { ProjectMismatchError, validateConnectedProject } from './project-validator.js';
 
 const LAUNCH_READINESS_TIMEOUT_MS = 180000;
@@ -22,16 +26,14 @@ interface ExecuteDynamicCodeReadinessResponse {
 }
 
 interface DynamicCodeLaunchReadinessDependencies {
-  resolveUnityPortFn: typeof resolveUnityPort;
-  validateConnectedProjectFn: typeof validateConnectedProject;
+  resolveUnityConnectionFn: typeof resolveUnityConnection;
   createClient: (port: number) => DirectUnityClient;
   sleepFn: typeof sleep;
   nowFn: () => number;
 }
 
 const defaultDependencies: DynamicCodeLaunchReadinessDependencies = {
-  resolveUnityPortFn: resolveUnityPort,
-  validateConnectedProjectFn: validateConnectedProject,
+  resolveUnityConnectionFn: resolveUnityConnection,
   createClient: (port: number) => new DirectUnityClient(port),
   sleepFn: sleep,
   nowFn: () => Date.now(),
@@ -154,16 +156,24 @@ export async function waitForDynamicCodeReadyAfterLaunch(
     let client: DirectUnityClient | null = null;
 
     try {
-      const port: number = await dependencies.resolveUnityPortFn(undefined, projectPath);
-      client = dependencies.createClient(port);
+      const connection: ResolvedUnityConnection = await dependencies.resolveUnityConnectionFn(
+        undefined,
+        projectPath,
+      );
+      client = dependencies.createClient(connection.port);
       await client.connect();
-      await dependencies.validateConnectedProjectFn(client, projectPath);
+      if (connection.shouldValidateProject && connection.projectRoot !== null) {
+        await validateConnectedProject(client, connection.projectRoot);
+      }
 
       const payload = await client.sendRequest<ExecuteDynamicCodeReadinessResponse>(
         'execute-dynamic-code',
         {
           Code: LAUNCH_READINESS_CODE,
           CompileOnly: false,
+        },
+        {
+          requestMetadata: connection.requestMetadata ?? undefined,
         },
       );
 

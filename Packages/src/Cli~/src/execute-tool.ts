@@ -14,7 +14,8 @@ import { join } from 'path';
 import * as semver from 'semver';
 import { DirectUnityClient } from './direct-unity-client.js';
 import {
-  resolveUnityPort,
+  type ResolvedUnityConnection,
+  resolveUnityConnection,
   UnityNotRunningError,
   UnityServerNotRunningError,
   validateProjectPath,
@@ -71,6 +72,19 @@ function suppressStdinEcho(): () => void {
 export interface GlobalOptions {
   port?: string;
   projectPath?: string;
+}
+
+function parseExplicitPort(portText?: string): number | undefined {
+  if (portText === undefined) {
+    return undefined;
+  }
+
+  const parsed = parseInt(portText, 10);
+  if (isNaN(parsed)) {
+    throw new Error(`Invalid port number: ${portText}`);
+  }
+
+  return parsed;
 }
 
 export function stripInternalFields(result: Record<string, unknown>): Record<string, unknown> {
@@ -160,19 +174,19 @@ export async function shouldRetryWhenUnityProcessIsRunning(
 }
 
 export async function resolveRecoveryPortOrKeepCurrent(
-  currentPort: number,
+  currentConnection: ResolvedUnityConnection,
   explicitPort: number | undefined,
   projectPath: string | undefined,
-  resolveUnityPortFn: typeof resolveUnityPort = resolveUnityPort,
-): Promise<number> {
+  resolveUnityConnectionFn: typeof resolveUnityConnection = resolveUnityConnection,
+): Promise<ResolvedUnityConnection> {
   if (explicitPort !== undefined) {
-    return currentPort;
+    return currentConnection;
   }
 
   try {
-    return await resolveUnityPortFn(undefined, projectPath);
+    return await resolveUnityConnectionFn(undefined, projectPath);
   } catch {
-    return currentPort;
+    return currentConnection;
   }
 }
 
@@ -351,16 +365,9 @@ export async function executeToolCommand(
   globalOptions: GlobalOptions,
 ): Promise<void> {
   const commandStartedAt: number = Date.now();
-  let portNumber: number | undefined;
-  if (globalOptions.port) {
-    const parsed = parseInt(globalOptions.port, 10);
-    if (isNaN(parsed)) {
-      throw new Error(`Invalid port number: ${globalOptions.port}`);
-    }
-    portNumber = parsed;
-  }
+  const portNumber = parseExplicitPort(globalOptions.port);
   checkUnityBusyStateBeforeProjectResolution(globalOptions);
-  let port = await resolveUnityPort(portNumber, globalOptions.projectPath);
+  let connection = await resolveUnityConnection(portNumber, globalOptions.projectPath);
   const compileOptions = getCompileExecutionOptions(toolName, params);
   const shouldWaitForDomainReload = compileOptions.waitForDomainReload;
   const compileRequestId = shouldWaitForDomainReload ? ensureCompileRequestId(params) : undefined;
@@ -370,13 +377,10 @@ export async function executeToolCommand(
 
   let lastError: unknown;
   let immediateResult: Record<string, unknown> | undefined;
-  const projectRoot =
-    globalOptions.projectPath !== undefined
-      ? validateProjectPath(globalOptions.projectPath)
-      : findUnityProjectRoot();
+  const projectRoot = connection.projectRoot;
 
-  // Validate project identity only when port was auto-resolved (not --port) and project root is known
-  const shouldValidateProject = portNumber === undefined && projectRoot !== null;
+  // Validate project identity only when the new request metadata path is unavailable.
+  const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
 
   // Monotonically-increasing flag: once true, retries cannot reset it to false.
   // The retry loop overwrites `lastError` and `immediateResult` on each attempt,
@@ -389,7 +393,7 @@ export async function executeToolCommand(
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     checkUnityBusyStateBeforeProjectResolution(globalOptions);
 
-    const client = new DirectUnityClient(port);
+    const client = new DirectUnityClient(connection.port);
     try {
       await client.connect();
 
@@ -402,7 +406,9 @@ export async function executeToolCommand(
       // synchronously (direct-unity-client.ts:136), so the data reaches the kernel
       // send buffer before any async error can occur. Safe to mark as dispatched here.
       requestDispatched = true;
-      const result = await client.sendRequest<Record<string, unknown>>(toolName, params);
+      const result = await client.sendRequest<Record<string, unknown>>(toolName, params, {
+        requestMetadata: connection.requestMetadata ?? undefined,
+      });
 
       if (result === undefined || result === null) {
         throw new Error('UNITY_NO_RESPONSE');
@@ -453,7 +459,11 @@ export async function executeToolCommand(
       if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldValidateProject)) {
         spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
         await sleep(RETRY_DELAY_MS);
-        port = await resolveRecoveryPortOrKeepCurrent(port, portNumber, globalOptions.projectPath);
+        connection = await resolveRecoveryPortOrKeepCurrent(
+          connection,
+          portNumber,
+          globalOptions.projectPath,
+        );
         continue;
       }
 
@@ -520,7 +530,7 @@ export async function executeToolCommand(
       requestId: compileRequestId,
       timeoutMs: COMPILE_WAIT_TIMEOUT_MS,
       pollIntervalMs: COMPILE_WAIT_POLL_INTERVAL_MS,
-      unityPort: port,
+      unityPort: connection.port,
     });
 
     if (outcome === 'timed_out') {
@@ -555,21 +565,11 @@ export async function executeToolCommand(
 }
 
 export async function listAvailableTools(globalOptions: GlobalOptions): Promise<void> {
-  let portNumber: number | undefined;
-  if (globalOptions.port) {
-    const parsed = parseInt(globalOptions.port, 10);
-    if (isNaN(parsed)) {
-      throw new Error(`Invalid port number: ${globalOptions.port}`);
-    }
-    portNumber = parsed;
-  }
+  const portNumber = parseExplicitPort(globalOptions.port);
   checkUnityBusyStateBeforeProjectResolution(globalOptions);
-  const port = await resolveUnityPort(portNumber, globalOptions.projectPath);
-  const projectRoot =
-    globalOptions.projectPath !== undefined
-      ? validateProjectPath(globalOptions.projectPath)
-      : findUnityProjectRoot();
-  const shouldValidateProject = portNumber === undefined && projectRoot !== null;
+  const connection = await resolveUnityConnection(portNumber, globalOptions.projectPath);
+  const projectRoot = connection.projectRoot;
+  const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
 
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
@@ -578,7 +578,7 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     checkUnityBusyStateBeforeProjectResolution(globalOptions);
 
-    const client = new DirectUnityClient(port);
+    const client = new DirectUnityClient(connection.port);
     try {
       await client.connect();
 
@@ -589,7 +589,11 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
       spinner.update('Fetching tool list...');
       const result = await client.sendRequest<{
         Tools: Array<{ name: string; description: string }>;
-      }>('get-tool-details', { IncludeDevelopmentOnly: false });
+      }>(
+        'get-tool-details',
+        { IncludeDevelopmentOnly: false },
+        { requestMetadata: connection.requestMetadata ?? undefined },
+      );
 
       if (!result.Tools || !Array.isArray(result.Tools)) {
         throw new Error('Unexpected response from Unity: missing Tools array');
@@ -653,21 +657,11 @@ function convertProperties(
 }
 
 export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
-  let portNumber: number | undefined;
-  if (globalOptions.port) {
-    const parsed = parseInt(globalOptions.port, 10);
-    if (isNaN(parsed)) {
-      throw new Error(`Invalid port number: ${globalOptions.port}`);
-    }
-    portNumber = parsed;
-  }
+  const portNumber = parseExplicitPort(globalOptions.port);
   checkUnityBusyStateBeforeProjectResolution(globalOptions);
-  const port = await resolveUnityPort(portNumber, globalOptions.projectPath);
-  const projectRoot =
-    globalOptions.projectPath !== undefined
-      ? validateProjectPath(globalOptions.projectPath)
-      : findUnityProjectRoot();
-  const shouldValidateProject = portNumber === undefined && projectRoot !== null;
+  const connection = await resolveUnityConnection(portNumber, globalOptions.projectPath);
+  const projectRoot = connection.projectRoot;
+  const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
 
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
@@ -676,7 +670,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     checkUnityBusyStateBeforeProjectResolution(globalOptions);
 
-    const client = new DirectUnityClient(port);
+    const client = new DirectUnityClient(connection.port);
     try {
       await client.connect();
 
@@ -688,7 +682,11 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
       const result = await client.sendRequest<{
         Tools: UnityToolInfo[];
         Ver?: string;
-      }>('get-tool-details', { IncludeDevelopmentOnly: false });
+      }>(
+        'get-tool-details',
+        { IncludeDevelopmentOnly: false },
+        { requestMetadata: connection.requestMetadata ?? undefined },
+      );
 
       spinner.stop();
       if (!result.Tools || !Array.isArray(result.Tools)) {

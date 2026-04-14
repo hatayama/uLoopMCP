@@ -127,8 +127,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 // Sync session state with the running server to enable domain reload recovery
                 // even if mcpServer instance becomes null unexpectedly
-                McpEditorSettings.SetIsServerRunning(true);
-                McpEditorSettings.SetCustomPort(mcpServer.Port);
+                SaveRunningServerSession(mcpServer.Port);
                 DynamicCodeStartupTelemetry.MarkServerReady();
                 CustomToolManager.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
@@ -178,7 +177,7 @@ namespace io.github.hatayama.uLoopMCP
                 mcpServer = null;
 
                 // Clear session state to reflect server stopped
-                McpEditorSettings.SetIsServerRunning(false);
+                McpEditorSettings.ClearServerSession();
                 DynamicCodeStartupTelemetry.Reset();
                 DynamicCodeServices.ResetServerScopedServices();
             }
@@ -409,7 +408,7 @@ namespace io.github.hatayama.uLoopMCP
                             "server_auto_recovery_failed",
                             $"Automatic recovery after unexpected exit failed: {task.Exception?.GetBaseException().Message}"
                         );
-                        McpEditorSettings.SetIsServerRunning(false);
+                        McpEditorSettings.ClearServerSession();
                     }
                 }, TaskScheduler.FromCurrentSynchronizationContext());
             };
@@ -746,11 +745,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 // Mark running and update settings
-                McpEditorSettings.SetIsServerRunning(true);
-                if (McpEditorSettings.GetCustomPort() != chosenPort)
-                {
-                    McpEditorSettings.SetCustomPort(chosenPort);
-                }
+                SaveRunningServerSession(chosenPort);
 
                 // Clear reconnection-related flags on successful recovery
                 McpEditorSettings.ClearReconnectingFlags();
@@ -833,6 +828,13 @@ namespace io.github.hatayama.uLoopMCP
                     remainingMs -= delay;
                 }
             }
+        }
+
+        private static void SaveRunningServerSession(int port)
+        {
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            string serverSessionId = Guid.NewGuid().ToString("N");
+            McpEditorSettings.SetRunningServerSession(port, projectRoot, serverSessionId);
         }
     }
 }
