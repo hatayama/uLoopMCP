@@ -126,6 +126,9 @@ namespace io.github.hatayama.uLoopMCP
             _githubLinkRow = _root.Q<VisualElement>("github-link-row");
             _githubLinkLabel = _root.Q<Label>("github-link-label");
             _githubLinkIcon = _root.Q<Image>("github-link-icon");
+            Debug.Assert(_githubLinkRow != null, "github-link-row must not be null");
+            Debug.Assert(_githubLinkLabel != null, "github-link-label must not be null");
+            Debug.Assert(_githubLinkIcon != null, "github-link-icon must not be null");
             _githubLinkRow.RegisterCallback<ClickEvent>(_ => HandleOpenGitHub());
             _githubLinkRow.RegisterCallback<MouseEnterEvent>(_ => HandleGitHubHoverChanged(true));
             _githubLinkRow.RegisterCallback<MouseLeaveEvent>(_ => HandleGitHubHoverChanged(false));
