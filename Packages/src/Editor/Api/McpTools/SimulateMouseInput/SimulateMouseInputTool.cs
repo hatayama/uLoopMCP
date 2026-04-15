@@ -384,6 +384,5 @@ namespace io.github.hatayama.uLoopMCP
         {
             return EditorApplication.isPlaying && !EditorApplication.isPaused && Mouse.current == mouse;
         }
-#endif
     }
 }

@@ -312,6 +312,5 @@ namespace io.github.hatayama.uLoopMCP
         {
             return EditorApplication.isPlaying && !EditorApplication.isPaused && Keyboard.current == keyboard;
         }
-#endif
     }
 }
