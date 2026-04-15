@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using System.Threading;
 using UnityEditor.TestTools.TestRunner.Api;
+using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -30,9 +31,12 @@ namespace io.github.hatayama.uLoopMCP
             TestExecutionService executionService,
             TestExecutionStateValidationService validationService)
         {
-            _filterService = filterService ?? throw new ArgumentNullException(nameof(filterService));
-            _executionService = executionService ?? throw new ArgumentNullException(nameof(executionService));
-            _validationService = validationService ?? throw new ArgumentNullException(nameof(validationService));
+            Debug.Assert(filterService != null, "filterService must not be null");
+            Debug.Assert(executionService != null, "executionService must not be null");
+            Debug.Assert(validationService != null, "validationService must not be null");
+            _filterService = filterService;
+            _executionService = executionService;
+            _validationService = validationService;
         }
 
         /// <summary>
@@ -110,7 +114,7 @@ namespace io.github.hatayama.uLoopMCP
             return new RunTestsResponse(
                 success: false,
                 message: message,
-                completedAt: DateTime.Now.ToString("o"),
+                completedAt: DateTime.UtcNow.ToString("o"),
                 testCount: 0,
                 passedCount: 0,
                 failedCount: 0,
