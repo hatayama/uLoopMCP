@@ -76,6 +76,7 @@ namespace io.github.hatayama.uLoopMCP
 #endif
         }
 
+#if ULOOPMCP_HAS_INPUT_SYSTEM
         private static async Task<RecordInputResponse> ExecuteStartAsync(RecordInputSchema parameters, CancellationToken ct)
         {
             if (!EditorApplication.isPlaying)
@@ -246,6 +247,6 @@ namespace io.github.hatayama.uLoopMCP
                 DurationSeconds = data.Metadata.DurationSeconds
             };
         }
-
+#endif
     }
 }

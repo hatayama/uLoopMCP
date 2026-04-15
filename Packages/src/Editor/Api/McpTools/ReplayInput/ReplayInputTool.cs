@@ -81,6 +81,7 @@ namespace io.github.hatayama.uLoopMCP
 #endif
         }
 
+#if ULOOPMCP_HAS_INPUT_SYSTEM
         private static ReplayInputResponse ExecuteStart(ReplayInputSchema parameters)
         {
             if (!EditorApplication.isPlaying)
@@ -225,6 +226,6 @@ namespace io.github.hatayama.uLoopMCP
                 IsReplaying = true
             };
         }
-
+#endif
     }
 }
