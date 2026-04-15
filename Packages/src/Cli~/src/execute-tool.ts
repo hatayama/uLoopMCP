@@ -75,6 +75,11 @@ export interface GlobalOptions {
   projectPath?: string;
 }
 
+interface SpinnerHandle {
+  update(message: string): void;
+  stop(): void;
+}
+
 function parseExplicitPort(portText?: string): number | undefined {
   if (portText === undefined) {
     return undefined;
@@ -384,6 +389,19 @@ function checkUnityBusyStateBeforeProjectResolution(globalOptions: GlobalOptions
   checkUnityBusyState(globalOptions.projectPath);
 }
 
+function shouldShowInteractiveFeedback(toolName: string): boolean {
+  return toolName !== 'execute-dynamic-code';
+}
+
+function createNoopSpinner(): SpinnerHandle {
+  return {
+    update: (_message: string): void => {},
+    stop: (): void => {},
+  };
+}
+
+function noop(): void {}
+
 export async function executeToolCommand(
   toolName: string,
   params: Record<string, unknown>,
@@ -397,8 +415,13 @@ export async function executeToolCommand(
   const shouldWaitForDomainReload = compileOptions.waitForDomainReload;
   const compileRequestId = shouldWaitForDomainReload ? ensureCompileRequestId(params) : undefined;
 
-  const restoreStdin = suppressStdinEcho();
-  const spinner = createSpinner('Connecting to Unity...');
+  // execute-dynamic-code is latency-sensitive enough that spinner setup costs more than the
+  // feedback is worth, and skipping stdin suppression avoids extra TTY setup on the hot path.
+  const shouldShowFeedback = shouldShowInteractiveFeedback(toolName);
+  const restoreStdin: () => void = shouldShowFeedback ? suppressStdinEcho() : noop;
+  const spinner = shouldShowFeedback
+    ? createSpinner('Connecting to Unity...')
+    : createNoopSpinner();
 
   let lastError: unknown;
   let immediateResult: Record<string, unknown> | undefined;
