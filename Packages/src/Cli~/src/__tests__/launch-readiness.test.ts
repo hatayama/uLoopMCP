@@ -1,5 +1,8 @@
 import { DirectUnityClient } from '../direct-unity-client.js';
-import { waitForDynamicCodeReadyAfterLaunch } from '../launch-readiness.js';
+import {
+  waitForDynamicCodeReadyAfterLaunch,
+  waitForLaunchReadyAfterLaunch,
+} from '../launch-readiness.js';
 import { type ResolvedUnityConnection } from '../port-resolver.js';
 import { ProjectMismatchError } from '../project-validator.js';
 
@@ -727,5 +730,41 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
         nowFn: () => 0,
       }),
     ).rejects.toThrow(ProjectMismatchError);
+  });
+});
+
+describe('waitForLaunchReadyAfterLaunch', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('waits for busy lock files to clear without probing execute-dynamic-code', async () => {
+    const recordedMethods: string[] = [];
+    const isProjectBusyFn = jest
+      .fn<boolean, [string]>()
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(false);
+    let sleepCount = 0;
+
+    await waitForLaunchReadyAfterLaunch('/project', {
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
+      createClient: () => createMockClient([], recordedMethods).client,
+      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+        sleepCount++;
+        return Promise.resolve();
+      }),
+      nowFn: (() => {
+        let now = 0;
+        return (): number => {
+          now += 100;
+          return now;
+        };
+      })(),
+      isProjectBusyFn,
+    });
+
+    expect(recordedMethods).toEqual([]);
+    expect(isProjectBusyFn).toHaveBeenCalledTimes(2);
+    expect(sleepCount).toBe(1);
   });
 });

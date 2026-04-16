@@ -298,3 +298,43 @@ export async function waitForDynamicCodeReadyAfterLaunch(
     `Timed out waiting for execute-dynamic-code to become ready after launch (${LAUNCH_READINESS_TIMEOUT_MS}ms).`,
   );
 }
+
+export async function waitForLaunchReadyAfterLaunch(
+  projectPath: string,
+  dependencies: DynamicCodeLaunchReadinessDependencies = defaultDependencies,
+): Promise<void> {
+  const startTime: number = dependencies.nowFn();
+  const isProjectBusyFn = dependencies.isProjectBusyFn ?? isProjectBusyByLockFiles;
+
+  while (dependencies.nowFn() - startTime < LAUNCH_READINESS_TIMEOUT_MS) {
+    let client: DirectUnityClient | null = null;
+
+    try {
+      const connection: ResolvedUnityConnection = await dependencies.resolveUnityConnectionFn(
+        undefined,
+        projectPath,
+      );
+      client = dependencies.createClient(connection.port);
+      await client.connect();
+      if (connection.shouldValidateProject && connection.projectRoot !== null) {
+        await validateConnectedProject(client, connection.projectRoot);
+      }
+
+      if (!isProjectBusyFn(projectPath)) {
+        return;
+      }
+    } catch (error) {
+      if (!isRetryableLaunchReadinessError(error)) {
+        throw error;
+      }
+    } finally {
+      client?.disconnect();
+    }
+
+    await dependencies.sleepFn(LAUNCH_READINESS_RETRY_MS);
+  }
+
+  throw new Error(
+    `Timed out waiting for Unity to finish launch readiness after launch (${LAUNCH_READINESS_TIMEOUT_MS}ms).`,
+  );
+}
