@@ -524,4 +524,17 @@ describe('resolveUnityConnectionWithStartupDiagnosis', () => {
     existsSpy.mockRestore();
     statSpy.mockRestore();
   });
+
+  it('preserves the original usage error when both --port and --project-path are specified', async () => {
+    await expect(
+      resolveUnityConnectionWithStartupDiagnosis(
+        8711,
+        '/definitely/missing/project',
+        undefined,
+        jest
+          .fn()
+          .mockRejectedValue(new Error('Cannot specify both --port and --project-path')),
+      ),
+    ).rejects.toThrow('Cannot specify both --port and --project-path');
+  });
 });

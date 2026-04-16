@@ -48,6 +48,33 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
+        [Test]
+        public void DeleteOwnedLockFile_WhenNewGenerationRecreatesLockAfterClaim_ShouldPreserveNewLockFile()
+        {
+            string lockFilePath = GetLockFilePath();
+            bool hadExistingLockFile = File.Exists(lockFilePath);
+            string previousLockFileContents = hadExistingLockFile ? File.ReadAllText(lockFilePath) : null;
+            string createdToken = ServerStartingLockService.CreateLockFile();
+            string recreatedToken = "recreated-token";
+            ServerStartingLockService.OnOwnedLockFileClaimedForDeletionForTests = _ =>
+            {
+                File.WriteAllText(lockFilePath, recreatedToken);
+            };
+
+            try
+            {
+                ServerStartingLockService.DeleteOwnedLockFile(createdToken);
+
+                Assert.That(File.Exists(lockFilePath), Is.True);
+                Assert.That(File.ReadAllText(lockFilePath), Is.EqualTo(recreatedToken));
+            }
+            finally
+            {
+                ServerStartingLockService.OnOwnedLockFileClaimedForDeletionForTests = null;
+                RestoreLockFile(lockFilePath, hadExistingLockFile, previousLockFileContents);
+            }
+        }
+
         private static string GetLockFilePath()
         {
             return Path.GetFullPath(

@@ -18,6 +18,8 @@ namespace io.github.hatayama.uLoopMCP
 
         private static string LockFilePath => Path.Combine(UnityEngine.Application.dataPath, "..", "Temp", LOCK_FILE_NAME);
 
+        internal static Action<string> OnOwnedLockFileClaimedForDeletionForTests { get; set; }
+
         /// <summary>
         /// Create lock file to signal server is starting.
         /// </summary>
@@ -44,16 +46,19 @@ namespace io.github.hatayama.uLoopMCP
             string lockPath = LockFilePath;
             if (File.Exists(lockPath))
             {
-                if (!string.IsNullOrEmpty(ownershipToken))
+                if (string.IsNullOrEmpty(ownershipToken))
                 {
-                    string existingOwnershipToken = TryReadOwnershipToken(lockPath);
-                    if (!string.Equals(existingOwnershipToken, ownershipToken, System.StringComparison.Ordinal))
-                    {
-                        return;
-                    }
+                    TryDeleteLockFile(lockPath);
+                    return;
                 }
 
-                TryDeleteLockFile(lockPath);
+                string claimedLockPath = TryClaimOwnedLockFileForDeletion(lockPath, ownershipToken);
+                if (string.IsNullOrEmpty(claimedLockPath))
+                {
+                    return;
+                }
+
+                TryDeleteLockFile(claimedLockPath);
             }
         }
 
@@ -67,13 +72,28 @@ namespace io.github.hatayama.uLoopMCP
             DeleteLockFile(ownershipToken);
         }
 
-        private static string TryReadOwnershipToken(string lockPath)
+        private static string TryClaimOwnedLockFileForDeletion(string lockPath, string ownershipToken)
         {
             for (int attempt = 0; attempt < FILE_OPERATION_RETRY_COUNT; attempt++)
             {
                 try
                 {
-                    return File.ReadAllText(lockPath);
+                    using FileStream stream = new FileStream(lockPath, FileMode.Open, FileAccess.Read, FileShare.Delete);
+                    using StreamReader reader = new StreamReader(stream);
+                    string existingOwnershipToken = reader.ReadToEnd();
+                    if (!string.Equals(existingOwnershipToken, ownershipToken, System.StringComparison.Ordinal))
+                    {
+                        return null;
+                    }
+
+                    string claimedLockPath = CreateClaimedLockFilePath(lockPath);
+                    File.Move(lockPath, claimedLockPath);
+                    // Why: tests need a deterministic point after the old generation has been
+                    // detached from the canonical lock path but before we remove the claimed file.
+                    // Why not observe this with FileSystemWatcher: the editor test runner missed the
+                    // rename often enough to make the race coverage flaky on Windows.
+                    OnOwnedLockFileClaimedForDeletionForTests?.Invoke(claimedLockPath);
+                    return claimedLockPath;
                 }
                 catch (IOException)
                 {
@@ -88,8 +108,13 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
-            VibeLogger.LogWarning("server_starting_lock_read_failed", $"Failed to read ownership token: {lockPath}");
+            VibeLogger.LogWarning("server_starting_lock_claim_failed", $"Failed to claim owned lock file: {lockPath}");
             return null;
+        }
+
+        private static string CreateClaimedLockFilePath(string lockPath)
+        {
+            return $"{lockPath}.{Guid.NewGuid():N}.owneddelete";
         }
 
         private static void TryDeleteLockFile(string lockPath)

@@ -1,0 +1,132 @@
+const mockResolveUnityConnection = jest.fn();
+const mockValidateProjectPath = jest.fn<string, [string]>();
+const mockExistsSync = jest.fn<boolean, [string]>();
+const mockSpawnSync = jest.fn();
+const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+class MockDirectUnityClient {
+  public constructor(private readonly _port: number) {}
+
+  public connect(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  public disconnect(): void {}
+
+  public sendRequest<T>(): Promise<T> {
+    return Promise.resolve({
+      Success: null,
+      ErrorCount: 0,
+      Message: 'Force compilation executed. Use get-logs tool to retrieve compilation messages.',
+      ProjectRoot: '/project',
+      Ver: '1.7.3',
+    } as T);
+  }
+}
+
+jest.mock('../port-resolver.js', () => ({
+  resolveUnityConnection: (
+    explicitPort?: number,
+    projectPath?: string,
+  ): Promise<{
+    port: number;
+    projectRoot: string | null;
+    requestMetadata: null;
+    shouldValidateProject: boolean;
+  }> => mockResolveUnityConnection(explicitPort, projectPath),
+  validateProjectPath: (projectPath: string): string => mockValidateProjectPath(projectPath),
+  UnityNotRunningError: class UnityNotRunningError extends Error {},
+  UnityServerNotRunningError: class UnityServerNotRunningError extends Error {},
+}));
+
+jest.mock('fs', () => ({
+  existsSync: (path: string): boolean => mockExistsSync(path),
+  statSync: jest.fn(),
+}));
+
+jest.mock('child_process', () => ({
+  execFile: jest.fn(),
+  spawnSync: (...args: unknown[]): unknown => mockSpawnSync(...args),
+}));
+
+jest.mock('../project-validator.js', () => ({
+  validateConnectedProject: (): Promise<void> => Promise.resolve(),
+  ProjectMismatchError: class ProjectMismatchError extends Error {},
+}));
+
+jest.mock('../spinner.js', () => ({
+  createSpinner: (): { update: () => void; stop: () => void } => ({
+    update: (): void => {},
+    stop: (): void => {},
+  }),
+}));
+
+jest.mock('../direct-unity-client.js', () => ({
+  DirectUnityClient: MockDirectUnityClient,
+}));
+
+jest.mock('../compile-helpers.js', () => ({
+  ensureCompileRequestId: (params: Record<string, unknown>): string =>
+    (params['RequestId'] as string | undefined) ?? 'compile_request_id',
+  resolveCompileExecutionOptions: (): { forceRecompile: boolean; waitForDomainReload: boolean } => ({
+    forceRecompile: true,
+    waitForDomainReload: true,
+  }),
+  sleep: (): Promise<void> => Promise.resolve(),
+  waitForCompileCompletion: (): Promise<{
+    outcome: 'completed';
+    result: Record<string, unknown>;
+  }> =>
+    Promise.resolve({
+      outcome: 'completed',
+      result: {
+        Success: null,
+        ErrorCount: 0,
+        Message: 'Force compilation executed. Use get-logs tool to retrieve compilation messages.',
+      },
+    }),
+}));
+
+import { executeToolCommand } from '../execute-tool.js';
+
+describe('executeToolCommand compile warmup', () => {
+  beforeEach(() => {
+    mockResolveUnityConnection.mockReset();
+    mockResolveUnityConnection.mockResolvedValue({
+      port: 8711,
+      projectRoot: '/project',
+      requestMetadata: null,
+      shouldValidateProject: true,
+    });
+
+    mockValidateProjectPath.mockReset();
+    mockValidateProjectPath.mockReturnValue('/project');
+
+    mockExistsSync.mockReset();
+    mockExistsSync.mockReturnValue(false);
+
+    mockSpawnSync.mockReset();
+    mockSpawnSync.mockReturnValue({ status: 1 });
+
+    mockConsoleLog.mockClear();
+  });
+
+  afterAll(() => {
+    mockConsoleLog.mockRestore();
+  });
+
+  it('fails compile when post-domain-reload dynamic code warmup fails', async () => {
+    await expect(
+      executeToolCommand(
+        'compile',
+        {
+          ForceRecompile: true,
+          WaitForDomainReload: true,
+        },
+        { projectPath: '/project' },
+      ),
+    ).rejects.toThrow('Post-compile dynamic code prewarm failed.');
+
+    expect(mockConsoleLog).not.toHaveBeenCalled();
+  });
+});

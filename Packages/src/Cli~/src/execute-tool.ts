@@ -305,9 +305,25 @@ export async function resolveUnityConnectionWithStartupDiagnosis(
   try {
     return await resolveUnityConnectionFn(explicitPort, projectPath);
   } catch (error) {
+    if (!isRetryableProjectRecoveryError(error) && !isSettingsReadError(error)) {
+      throw error;
+    }
+
+    const shouldDiagnoseProjectState: boolean = explicitPort === undefined;
     const projectRoot =
-      projectPath !== undefined ? validateProjectPath(projectPath) : findUnityProjectRoot();
-    if (await shouldPromoteToServerStartingError(error, projectRoot, true, dependencies)) {
+      shouldDiagnoseProjectState && projectPath !== undefined
+        ? validateProjectPath(projectPath)
+        : shouldDiagnoseProjectState
+          ? findUnityProjectRoot()
+          : null;
+    if (
+      await shouldPromoteToServerStartingError(
+        error,
+        projectRoot,
+        shouldDiagnoseProjectState,
+        dependencies,
+      )
+    ) {
       throw new Error('UNITY_SERVER_STARTING');
     }
 
@@ -786,10 +802,11 @@ export async function executeToolCommand(
           // Why: one hidden execute-dynamic-code request after domain reload warms the same
           // isolated CLI process boundary and Debug.Log path that the next user-visible dynamic
           // execution will use.
-          // Why not treat this optimization as part of compile correctness: a successful
-          // compile result must still be returned even if the latency warmup misses.
+          // Why not swallow warmup failures here: wait-for-domain-reload is the contract that the
+          // next dynamic code request is usable, so returning success before this probe completes
+          // would report a ready editor while the first execute-dynamic-code can still fail.
           spinner.update('Finalizing dynamic code warmup...');
-          await prewarmDynamicCodeAfterCompile(effectiveProjectRoot, connection.port).catch(() => undefined);
+          await prewarmDynamicCodeAfterCompile(effectiveProjectRoot, connection.port);
         }
 
         spinner.stop();
