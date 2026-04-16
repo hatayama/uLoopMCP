@@ -12,6 +12,7 @@ import {
   prewarmDynamicCodeAfterCompile,
   shouldPrewarmDynamicCodeAfterCompile,
 } from './dynamic-code-post-compile-warmup.js';
+import { resolveCompileTargetProjectRoot } from './compile-target-project-root.js';
 import { VibeLogger } from '../utils/vibe-logger.js';
 
 // Type definitions for Unity parameter schema
@@ -284,11 +285,17 @@ export class DynamicUnityCommandTool extends BaseTool {
         );
       }
 
+      const compileTargetProjectRoot: string = resolveCompileTargetProjectRoot(
+        finalResult,
+        projectRootFromUnity,
+        this.resolveProjectRoot(),
+      );
+
       // Why: compile completion means the result file and reload locks settled, but it does not
       // guarantee that execute-dynamic-code has finished its own post-reload cold path yet.
       if (
         shouldPrewarmDynamicCodeAfterCompile(finalResult) &&
-        isDynamicCodeWarmupEnabledForProject(this.resolveProjectRoot())
+        isDynamicCodeWarmupEnabledForProject(compileTargetProjectRoot)
       ) {
         await prewarmDynamicCodeAfterCompile(this.context.unityClient);
       }

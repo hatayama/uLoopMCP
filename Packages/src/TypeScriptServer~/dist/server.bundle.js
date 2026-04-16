@@ -29852,6 +29852,21 @@ function toError(error2) {
   return new Error("Unknown error");
 }
 
+// src/tools/compile-target-project-root.ts
+function resolveCompileTargetProjectRoot(finalResult, projectRootFromUnity, fallbackProjectRoot) {
+  if (typeof finalResult === "object" && finalResult !== null) {
+    const resultRecord = finalResult;
+    const projectRoot = resultRecord["ProjectRoot"];
+    if (typeof projectRoot === "string" && projectRoot.length > 0) {
+      return projectRoot;
+    }
+  }
+  if (typeof projectRootFromUnity === "string" && projectRootFromUnity.length > 0) {
+    return projectRootFromUnity;
+  }
+  return fallbackProjectRoot;
+}
+
 // src/tools/dynamic-unity-command-tool.ts
 var DynamicUnityCommandTool = class _DynamicUnityCommandTool extends BaseTool {
   static COMPILE_WAIT_TIMEOUT_MS = 9e4;
@@ -30012,7 +30027,12 @@ var DynamicUnityCommandTool = class _DynamicUnityCommandTool extends BaseTool {
           "Compile result was unavailable after domain reload. Run compile again or use get-logs."
         );
       }
-      if (shouldPrewarmDynamicCodeAfterCompile(finalResult) && isDynamicCodeWarmupEnabledForProject(this.resolveProjectRoot())) {
+      const compileTargetProjectRoot = resolveCompileTargetProjectRoot(
+        finalResult,
+        projectRootFromUnity,
+        this.resolveProjectRoot()
+      );
+      if (shouldPrewarmDynamicCodeAfterCompile(finalResult) && isDynamicCodeWarmupEnabledForProject(compileTargetProjectRoot)) {
         await prewarmDynamicCodeAfterCompile(this.context.unityClient);
       }
       const cleanedResult = this.stripInternalFields(finalResult);
