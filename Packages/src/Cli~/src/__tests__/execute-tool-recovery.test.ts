@@ -1,4 +1,14 @@
-const mockResolveUnityPort = jest.fn<Promise<number>, [number | undefined, string | undefined]>();
+interface MockResolvedUnityConnection {
+  port: number;
+  projectRoot: string | null;
+  requestMetadata: null;
+  shouldValidateProject: boolean;
+}
+
+const mockResolveUnityConnection = jest.fn<
+  Promise<MockResolvedUnityConnection>,
+  [number | undefined, string | undefined]
+>();
 const mockValidateProjectPath = jest.fn<string, [string]>();
 const mockFindUnityProjectRoot = jest.fn<string | null, []>();
 const mockExistsSync = jest.fn<boolean, [string]>();
@@ -31,14 +41,18 @@ class MockDirectUnityClient {
   public sendRequest<T>(): Promise<T> {
     return Promise.resolve({
       Logs: [],
+      Tools: [],
       Ver: '1.7.3',
     } as T);
   }
 }
 
 jest.mock('../port-resolver.js', () => ({
-  resolveUnityPort: (explicitPort?: number, projectPath?: string): Promise<number> =>
-    mockResolveUnityPort(explicitPort, projectPath),
+  resolveUnityConnection: (
+    explicitPort?: number,
+    projectPath?: string,
+  ): Promise<MockResolvedUnityConnection> =>
+    mockResolveUnityConnection(explicitPort, projectPath),
   validateProjectPath: (projectPath: string): string => mockValidateProjectPath(projectPath),
   UnityNotRunningError: class UnityNotRunningError extends Error {},
   UnityServerNotRunningError: class UnityServerNotRunningError extends Error {},
@@ -50,6 +64,8 @@ jest.mock('../project-root.js', () => ({
 
 jest.mock('fs', () => ({
   existsSync: (path: string): boolean => mockExistsSync(path),
+  mkdirSync: jest.fn(),
+  writeFileSync: jest.fn(),
 }));
 
 jest.mock('../unity-process.js', () => ({
@@ -88,11 +104,24 @@ jest.mock('../direct-unity-client.js', () => ({
 }));
 
 import { executeToolCommand } from '../execute-tool.js';
+import { listAvailableTools, syncTools } from '../execute-tool.js';
 
 describe('executeToolCommand recovery', () => {
   beforeEach(() => {
-    mockResolveUnityPort.mockReset();
-    mockResolveUnityPort.mockResolvedValueOnce(8711).mockResolvedValueOnce(8712);
+    mockResolveUnityConnection.mockReset();
+    mockResolveUnityConnection
+      .mockResolvedValueOnce({
+        port: 8711,
+        projectRoot: '/project',
+        requestMetadata: null,
+        shouldValidateProject: true,
+      })
+      .mockResolvedValueOnce({
+        port: 8712,
+        projectRoot: '/project',
+        requestMetadata: null,
+        shouldValidateProject: true,
+      });
 
     mockValidateProjectPath.mockReset();
     mockValidateProjectPath.mockReturnValue('/project');
@@ -125,7 +154,21 @@ describe('executeToolCommand recovery', () => {
       undefined,
     );
 
-    expect(mockResolveUnityPort).toHaveBeenCalledTimes(2);
+    expect(mockResolveUnityConnection).toHaveBeenCalledTimes(2);
+    expect(constructedPorts).toEqual([8711, 8712]);
+  });
+
+  it('re-resolves the Unity port for list while Unity is still running', async () => {
+    await expect(listAvailableTools({ projectPath: '/project' })).resolves.toBeUndefined();
+
+    expect(mockResolveUnityConnection).toHaveBeenCalledTimes(2);
+    expect(constructedPorts).toEqual([8711, 8712]);
+  });
+
+  it('re-resolves the Unity port for sync while Unity is still running', async () => {
+    await expect(syncTools({ projectPath: '/project' })).resolves.toBeUndefined();
+
+    expect(mockResolveUnityConnection).toHaveBeenCalledTimes(2);
     expect(constructedPorts).toEqual([8711, 8712]);
   });
 });

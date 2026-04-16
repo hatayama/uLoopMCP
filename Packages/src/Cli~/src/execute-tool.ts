@@ -240,11 +240,24 @@ export async function resolveRecoveryPortOrKeepCurrent(
   }
 }
 
+function isServerStarting(projectRoot: string | null): boolean {
+  if (projectRoot === null) {
+    return false;
+  }
+
+  const serverStartingLockPath = join(projectRoot, 'Temp', 'serverstarting.lock');
+  return existsSync(serverStartingLockPath);
+}
+
 async function throwFinalToolError(
   error: unknown,
   projectRoot: string | null,
   shouldDiagnoseProjectState: boolean,
 ): Promise<never> {
+  if (isRetryableProjectRecoveryError(error) && isServerStarting(projectRoot)) {
+    throw new Error('UNITY_SERVER_STARTING');
+  }
+
   const diagnosedError = await diagnoseRetryableProjectConnectionError(
     error,
     projectRoot,
@@ -732,9 +745,7 @@ export async function executeToolCommand(
 export async function listAvailableTools(globalOptions: GlobalOptions): Promise<void> {
   const portNumber = parseExplicitPort(globalOptions.port);
   checkUnityBusyStateBeforeProjectResolution(globalOptions);
-  const connection = await resolveUnityConnection(portNumber, globalOptions.projectPath);
-  const projectRoot = connection.projectRoot;
-  const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
+  let connection = await resolveUnityConnection(portNumber, globalOptions.projectPath);
 
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
@@ -742,6 +753,8 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
   let lastError: unknown;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     checkUnityBusyStateBeforeProjectResolution(globalOptions);
+    const projectRoot = connection.projectRoot;
+    const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
 
     const client = new DirectUnityClient(connection.port);
     try {
@@ -775,6 +788,17 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
       lastError = error;
       client.disconnect();
 
+      if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldValidateProject)) {
+        spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
+        await sleep(RETRY_DELAY_MS);
+        connection = await resolveRecoveryPortOrKeepCurrent(
+          connection,
+          portNumber,
+          globalOptions.projectPath,
+        );
+        continue;
+      }
+
       if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
         break;
       }
@@ -787,7 +811,11 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
 
   spinner.stop();
   restoreStdin();
-  await throwFinalToolError(lastError, projectRoot, shouldValidateProject);
+  await throwFinalToolError(
+    lastError,
+    connection.projectRoot,
+    connection.shouldValidateProject && connection.projectRoot !== null,
+  );
 }
 
 interface UnityToolInfo {
@@ -824,9 +852,7 @@ function convertProperties(
 export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
   const portNumber = parseExplicitPort(globalOptions.port);
   checkUnityBusyStateBeforeProjectResolution(globalOptions);
-  const connection = await resolveUnityConnection(portNumber, globalOptions.projectPath);
-  const projectRoot = connection.projectRoot;
-  const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
+  let connection = await resolveUnityConnection(portNumber, globalOptions.projectPath);
 
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
@@ -834,6 +860,8 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     checkUnityBusyStateBeforeProjectResolution(globalOptions);
+    const projectRoot = connection.projectRoot;
+    const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
 
     const client = new DirectUnityClient(connection.port);
     try {
@@ -887,6 +915,17 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
       lastError = error;
       client.disconnect();
 
+      if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldValidateProject)) {
+        spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
+        await sleep(RETRY_DELAY_MS);
+        connection = await resolveRecoveryPortOrKeepCurrent(
+          connection,
+          portNumber,
+          globalOptions.projectPath,
+        );
+        continue;
+      }
+
       if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
         break;
       }
@@ -899,5 +938,9 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
 
   spinner.stop();
   restoreStdin();
-  await throwFinalToolError(lastError, projectRoot, shouldValidateProject);
+  await throwFinalToolError(
+    lastError,
+    connection.projectRoot,
+    connection.shouldValidateProject && connection.projectRoot !== null,
+  );
 }
