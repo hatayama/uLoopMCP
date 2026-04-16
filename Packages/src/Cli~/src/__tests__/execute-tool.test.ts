@@ -256,6 +256,27 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       }),
     ).rejects.toThrow('Post-compile dynamic code prewarm failed.');
   });
+
+  it('retries when the isolated CLI reports that Unity is still starting', async () => {
+    const spawnCliProcess = jest
+      .fn()
+      .mockReturnValueOnce({
+        status: 1,
+        stderr: 'Unity server is starting',
+      })
+      .mockReturnValue({
+        status: 0,
+        stdout: JSON.stringify({ Success: true }),
+      });
+
+    await expect(
+      prewarmDynamicCodeAfterCompile('/project', {
+        spawnCliProcess,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(spawnCliProcess).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe('stripInternalFields', () => {

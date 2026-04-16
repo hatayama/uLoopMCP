@@ -16,6 +16,7 @@ namespace io.github.hatayama.uLoopMCP
         private const int AutoPrewarmDelayFrameCount = 1;
         private const int AutoPrewarmPassCount = 3;
         private const int AutoPrewarmMaxAttempts = 6;
+        private const int AutoPrewarmBusyRetryDelayFrameCount = 1;
         // Why: startup measurements showed the first user-visible execute-dynamic-code request
         // stayed cold until the default wrapper shape and Unity's logging path had both run once.
         // Why not a cheaper "return null;" snippet or a dedicated prewarm class name: those warm
@@ -129,6 +130,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 int successfulPassCount = 0;
                 bool sawTransientTransportFailure = false;
+                int transientBusyRetryCount = 0;
                 for (int attemptIndex = 0;
                      attemptIndex < AutoPrewarmMaxAttempts && successfulPassCount < AutoPrewarmPassCount;
                      attemptIndex++)
@@ -152,6 +154,12 @@ namespace io.github.hatayama.uLoopMCP
                     {
                         if (sawTransientTransportFailure)
                         {
+                            transientBusyRetryCount++;
+                            if (transientBusyRetryCount >= AutoPrewarmMaxAttempts)
+                            {
+                                break;
+                            }
+
                             VibeLogger.LogInfo(
                                 AutoPrewarmOperation,
                                 "Dynamic code auto prewarm is waiting for an earlier transient attempt to finish",
@@ -161,6 +169,10 @@ namespace io.github.hatayama.uLoopMCP
                                     attempt_index = attemptIndex + 1,
                                     max_attempts = AutoPrewarmMaxAttempts
                                 });
+                            await EditorDelay.DelayFrame(
+                                AutoPrewarmBusyRetryDelayFrameCount,
+                                _lifecycleCancellationToken);
+                            attemptIndex--;
                             continue;
                         }
 
@@ -188,6 +200,7 @@ namespace io.github.hatayama.uLoopMCP
                     if (IsTransientTransportFailure(result))
                     {
                         sawTransientTransportFailure = true;
+                        transientBusyRetryCount = 0;
                         VibeLogger.LogWarning(
                             AutoPrewarmOperation,
                             "Dynamic code auto prewarm hit a transient loopback failure and will retry",
@@ -218,6 +231,7 @@ namespace io.github.hatayama.uLoopMCP
                     }
 
                     sawTransientTransportFailure = false;
+                    transientBusyRetryCount = 0;
                     successfulPassCount++;
                     VibeLogger.LogInfo(
                         AutoPrewarmOperation,

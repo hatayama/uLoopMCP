@@ -176,6 +176,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                     Success = false,
                     ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
                 },
+                new DynamicCodeAutoPrewarmResult
+                {
+                    Success = false,
+                    ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
+                },
+                new DynamicCodeAutoPrewarmResult
+                {
+                    Success = false,
+                    ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
+                },
                 new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true });
@@ -183,7 +193,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             await useCase.RequestAsync();
 
-            Assert.That(executor.Requests, Has.Count.EqualTo(5));
+            Assert.That(executor.Requests, Has.Count.EqualTo(7));
             Assert.That(DynamicCodeStartupTelemetry.CreateTimingEntries(), Has.Member("[Perf] WarmReady: True"));
         }
 

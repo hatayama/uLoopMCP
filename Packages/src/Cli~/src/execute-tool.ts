@@ -121,13 +121,13 @@ const EXECUTION_IN_PROGRESS_ERROR_MESSAGE = 'Another execution is already in pro
 const EXECUTION_CANCELLED_ERROR_MESSAGE = 'Execution was cancelled or timed out';
 
 interface PostCompileDynamicCodePrewarmDependencies {
-  spawnCliProcess: (args: string[]) => { status: number | null; error?: Error; stdout?: string };
+  spawnCliProcess: (args: string[]) => { status: number | null; error?: Error; stdout?: string; stderr?: string };
 }
 
 const defaultPostCompileDynamicCodePrewarmDependencies: PostCompileDynamicCodePrewarmDependencies = {
   spawnCliProcess: (args: string[]) =>
     spawnSync(process.execPath, [process.argv[1], ...args], {
-      stdio: ['ignore', 'pipe', 'ignore'],
+      stdio: ['ignore', 'pipe', 'pipe'],
       encoding: 'utf8',
       timeout: POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS,
       windowsHide: true,
@@ -514,9 +514,14 @@ function createPostCompileDynamicCodePrewarmError(result: {
   status: number | null;
   error?: Error;
   stdout?: string;
+  stderr?: string;
 }): Error {
   if (result.error !== undefined) {
     return result.error;
+  }
+
+  if (typeof result.stderr === 'string' && result.stderr.includes('Unity server is starting')) {
+    return new Error('UNITY_SERVER_STARTING');
   }
 
   if (result.status === 0 && typeof result.stdout === 'string' && result.stdout.trim().length > 0) {
@@ -545,6 +550,7 @@ function tryParsePostCompileDynamicCodePrewarmStdout(
 function isRetryablePostCompileDynamicCodePrewarmError(error: Error): boolean {
   return error.message === EXECUTION_IN_PROGRESS_ERROR_MESSAGE
     || error.message === EXECUTION_CANCELLED_ERROR_MESSAGE
+    || error.message === 'UNITY_SERVER_STARTING'
     || isRetryableCompilationProviderUnavailable(error.message)
     || isRetryableUnityStartupMainThreadError(error.message);
 }
