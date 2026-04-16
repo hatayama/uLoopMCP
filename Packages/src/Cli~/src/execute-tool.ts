@@ -103,6 +103,7 @@ export function stripInternalFields(result: Record<string, unknown>): Record<str
 
 const RETRY_DELAY_MS = 500;
 const MAX_RETRIES = 3;
+const SERVER_STARTING_LOCK_STALE_THRESHOLD_MS = 30000;
 const COMPILE_WAIT_TIMEOUT_MS = 90000;
 const COMPILE_WAIT_POLL_INTERVAL_MS = 100;
 const FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX = 'Force compilation executed.';
@@ -317,7 +318,7 @@ function isServerStarting(
 
   try {
     const lockStat: Stats = statSyncFn(serverStartingLockPath);
-    return lockStat.mtimeMs >= 0;
+    return Date.now() - lockStat.mtimeMs <= SERVER_STARTING_LOCK_STALE_THRESHOLD_MS;
   } catch {
     return false;
   }
