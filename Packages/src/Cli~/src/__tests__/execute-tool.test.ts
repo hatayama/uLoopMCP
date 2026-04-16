@@ -18,6 +18,7 @@ import {
   UnityServerNotRunningError,
 } from '../port-resolver.js';
 import { ProjectMismatchError } from '../project-validator.js';
+import * as fs from 'fs';
 
 function createConnection(
   port: number,
@@ -171,25 +172,34 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       spawnCliProcess,
     });
 
-    expect(spawnCliProcess).toHaveBeenCalledTimes(2);
+    expect(spawnCliProcess).toHaveBeenCalledTimes(3);
     expect(spawnCliProcess).toHaveBeenNthCalledWith(1, [
       'execute-dynamic-code',
       '--code',
       'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
       '--yield-to-foreground-requests',
       'true',
-        '--project-path',
-        '/project',
-      ]);
+      '--project-path',
+      '/project',
+    ]);
     expect(spawnCliProcess).toHaveBeenNthCalledWith(2, [
       'execute-dynamic-code',
       '--code',
       'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
       '--yield-to-foreground-requests',
       'true',
-        '--project-path',
-        '/project',
-      ]);
+      '--project-path',
+      '/project',
+    ]);
+    expect(spawnCliProcess).toHaveBeenNthCalledWith(3, [
+      'execute-dynamic-code',
+      '--code',
+      'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
+      '--yield-to-foreground-requests',
+      'true',
+      '--project-path',
+      '/project',
+    ]);
   });
 
   it('throws when the isolated CLI prewarm fails', async () => {
@@ -214,7 +224,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
     ).rejects.toThrow('Another execution is already in progress');
   });
 
-  it('retries transient busy warmup failures until both passes complete successfully', async () => {
+  it('retries transient busy warmup failures until all passes complete successfully', async () => {
     const spawnCliProcess = jest
       .fn()
       .mockReturnValueOnce({
@@ -235,13 +245,15 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       }),
     ).resolves.toBeUndefined();
 
-    expect(spawnCliProcess).toHaveBeenCalledTimes(3);
+    expect(spawnCliProcess).toHaveBeenCalledTimes(4);
   });
 
   it('throws when spawning the isolated CLI prewarm process fails', async () => {
     await expect(
       prewarmDynamicCodeAfterCompile('/project', {
-        spawnCliProcess: jest.fn().mockReturnValue({ status: null, error: new Error('spawn failed') }),
+        spawnCliProcess: jest
+          .fn()
+          .mockReturnValue({ status: null, error: new Error('spawn failed') }),
       }),
     ).rejects.toThrow('spawn failed');
   });
@@ -275,7 +287,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       }),
     ).resolves.toBeUndefined();
 
-    expect(spawnCliProcess).toHaveBeenCalledTimes(3);
+    expect(spawnCliProcess).toHaveBeenCalledTimes(4);
   });
 
   it('retries when the isolated CLI process times out once during warmup', async () => {
@@ -296,7 +308,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       }),
     ).resolves.toBeUndefined();
 
-    expect(spawnCliProcess).toHaveBeenCalledTimes(3);
+    expect(spawnCliProcess).toHaveBeenCalledTimes(4);
   });
 
   it('retries when the isolated CLI loses its response once during warmup', async () => {
@@ -320,7 +332,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       }),
     ).resolves.toBeUndefined();
 
-    expect(spawnCliProcess).toHaveBeenCalledTimes(3);
+    expect(spawnCliProcess).toHaveBeenCalledTimes(4);
   });
 });
 
@@ -500,14 +512,12 @@ describe('shouldReportServerStarting', () => {
     const dependencies = {
       findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
     };
-    const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+    const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
     const statSpy = jest
-      .spyOn(require('fs'), 'statSync')
+      .spyOn(fs, 'statSync')
       .mockReturnValue({ mtimeMs: Date.now() } as { mtimeMs: number });
 
-    await expect(
-      shouldReportServerStarting('/project', true, dependencies),
-    ).resolves.toBe(true);
+    await expect(shouldReportServerStarting('/project', true, dependencies)).resolves.toBe(true);
 
     existsSpy.mockRestore();
     statSpy.mockRestore();
@@ -517,14 +527,12 @@ describe('shouldReportServerStarting', () => {
     const dependencies = {
       findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue(null),
     };
-    const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+    const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
     const statSpy = jest
-      .spyOn(require('fs'), 'statSync')
+      .spyOn(fs, 'statSync')
       .mockReturnValue({ mtimeMs: Date.now() } as { mtimeMs: number });
 
-    await expect(
-      shouldReportServerStarting('/project', true, dependencies),
-    ).resolves.toBe(false);
+    await expect(shouldReportServerStarting('/project', true, dependencies)).resolves.toBe(false);
 
     existsSpy.mockRestore();
     statSpy.mockRestore();
@@ -534,14 +542,12 @@ describe('shouldReportServerStarting', () => {
     const dependencies = {
       findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
     };
-    const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+    const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
     const statSpy = jest
-      .spyOn(require('fs'), 'statSync')
+      .spyOn(fs, 'statSync')
       .mockReturnValue({ mtimeMs: Date.now() - 80000 } as { mtimeMs: number });
 
-    await expect(
-      shouldReportServerStarting('/project', true, dependencies),
-    ).resolves.toBe(false);
+    await expect(shouldReportServerStarting('/project', true, dependencies)).resolves.toBe(false);
 
     existsSpy.mockRestore();
     statSpy.mockRestore();
@@ -551,14 +557,12 @@ describe('shouldReportServerStarting', () => {
     const dependencies = {
       findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
     };
-    const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
-    const statSpy = jest.spyOn(require('fs'), 'statSync').mockImplementation(() => {
+    const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+    const statSpy = jest.spyOn(fs, 'statSync').mockImplementation(() => {
       throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
     });
 
-    await expect(
-      shouldReportServerStarting('/project', true, dependencies),
-    ).resolves.toBe(false);
+    await expect(shouldReportServerStarting('/project', true, dependencies)).resolves.toBe(false);
 
     existsSpy.mockRestore();
     statSpy.mockRestore();
@@ -570,9 +574,9 @@ describe('shouldPromoteToServerStartingError', () => {
     const dependencies = {
       findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
     };
-    const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+    const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
     const statSpy = jest
-      .spyOn(require('fs'), 'statSync')
+      .spyOn(fs, 'statSync')
       .mockReturnValue({ mtimeMs: Date.now() } as { mtimeMs: number });
 
     await expect(
@@ -593,7 +597,9 @@ describe('isSettingsReadError', () => {
   it('returns true for settings read failures', () => {
     expect(
       isSettingsReadError(
-        new Error('Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json'),
+        new Error(
+          'Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
+        ),
       ),
     ).toBe(true);
   });
@@ -604,9 +610,9 @@ describe('resolveUnityConnectionWithStartupDiagnosis', () => {
     const dependencies = {
       findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
     };
-    const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+    const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
     const statSpy = jest
-      .spyOn(require('fs'), 'statSync')
+      .spyOn(fs, 'statSync')
       .mockReturnValue({ mtimeMs: Date.now() } as { mtimeMs: number });
 
     await expect(
@@ -614,11 +620,13 @@ describe('resolveUnityConnectionWithStartupDiagnosis', () => {
         undefined,
         '/project',
         dependencies,
-        jest.fn().mockRejectedValue(
-          new Error(
-            'Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
+        jest
+          .fn()
+          .mockRejectedValue(
+            new Error(
+              'Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
+            ),
           ),
-        ),
       ),
     ).rejects.toThrow('UNITY_SERVER_STARTING');
 
@@ -632,9 +640,7 @@ describe('resolveUnityConnectionWithStartupDiagnosis', () => {
         8711,
         '/definitely/missing/project',
         undefined,
-        jest
-          .fn()
-          .mockRejectedValue(new Error('Cannot specify both --port and --project-path')),
+        jest.fn().mockRejectedValue(new Error('Cannot specify both --port and --project-path')),
       ),
     ).rejects.toThrow('Cannot specify both --port and --project-path');
   });

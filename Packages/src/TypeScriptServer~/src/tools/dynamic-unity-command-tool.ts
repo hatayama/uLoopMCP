@@ -7,6 +7,10 @@ import {
   getCompileBooleanArg,
   waitForCompileCompletion,
 } from '../compile/compile-domain-reload-helpers.js';
+import {
+  prewarmDynamicCodeAfterCompile,
+  shouldPrewarmDynamicCodeAfterCompile,
+} from './dynamic-code-post-compile-warmup.js';
 import { VibeLogger } from '../utils/vibe-logger.js';
 
 // Type definitions for Unity parameter schema
@@ -277,6 +281,12 @@ export class DynamicUnityCommandTool extends BaseTool {
         throw new Error(
           'Compile result was unavailable after domain reload. Run compile again or use get-logs.',
         );
+      }
+
+      // Why: compile completion means the result file and reload locks settled, but it does not
+      // guarantee that execute-dynamic-code has finished its own post-reload cold path yet.
+      if (shouldPrewarmDynamicCodeAfterCompile(finalResult)) {
+        await prewarmDynamicCodeAfterCompile(this.context.unityClient);
       }
 
       const cleanedResult = this.stripInternalFields(finalResult);

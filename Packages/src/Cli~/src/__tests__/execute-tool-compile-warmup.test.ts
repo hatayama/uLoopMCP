@@ -33,7 +33,13 @@ jest.mock('../port-resolver.js', () => ({
     projectRoot: string | null;
     requestMetadata: null;
     shouldValidateProject: boolean;
-  }> => mockResolveUnityConnection(explicitPort, projectPath),
+  }> =>
+    mockResolveUnityConnection(explicitPort, projectPath) as Promise<{
+      port: number;
+      projectRoot: string | null;
+      requestMetadata: null;
+      shouldValidateProject: boolean;
+    }>,
   validateProjectPath: (projectPath: string): string => mockValidateProjectPath(projectPath),
   UnityNotRunningError: class UnityNotRunningError extends Error {},
   UnityServerNotRunningError: class UnityServerNotRunningError extends Error {},
@@ -68,7 +74,10 @@ jest.mock('../direct-unity-client.js', () => ({
 jest.mock('../compile-helpers.js', () => ({
   ensureCompileRequestId: (params: Record<string, unknown>): string =>
     (params['RequestId'] as string | undefined) ?? 'compile_request_id',
-  resolveCompileExecutionOptions: (): { forceRecompile: boolean; waitForDomainReload: boolean } => ({
+  resolveCompileExecutionOptions: (): {
+    forceRecompile: boolean;
+    waitForDomainReload: boolean;
+  } => ({
     forceRecompile: true,
     waitForDomainReload: true,
   }),
@@ -155,7 +164,7 @@ describe('executeToolCommand compile warmup', () => {
       ),
     ).resolves.toBeUndefined();
 
-    expect(mockSpawnSync).toHaveBeenCalledTimes(3);
+    expect(mockSpawnSync).toHaveBeenCalledTimes(4);
     expect(mockConsoleLog).toHaveBeenCalledTimes(1);
   });
 
@@ -165,8 +174,7 @@ describe('executeToolCommand compile warmup', () => {
         status: 0,
         stdout: JSON.stringify({
           Success: false,
-          ErrorMessage:
-            'COMPILATION_PROVIDER_UNAVAILABLE: dynamic compiler is still warming up',
+          ErrorMessage: 'COMPILATION_PROVIDER_UNAVAILABLE: dynamic compiler is still warming up',
         }),
       })
       .mockReturnValue({
@@ -185,7 +193,7 @@ describe('executeToolCommand compile warmup', () => {
       ),
     ).resolves.toBeUndefined();
 
-    expect(mockSpawnSync).toHaveBeenCalledTimes(3);
+    expect(mockSpawnSync).toHaveBeenCalledTimes(4);
     expect(mockConsoleLog).toHaveBeenCalledTimes(1);
   });
 
@@ -216,7 +224,7 @@ describe('executeToolCommand compile warmup', () => {
       ),
     ).resolves.toBeUndefined();
 
-    expect(mockSpawnSync).toHaveBeenCalledTimes(9);
+    expect(mockSpawnSync).toHaveBeenCalledTimes(10);
     expect(mockConsoleLog).toHaveBeenCalledTimes(1);
   });
 
@@ -242,7 +250,7 @@ describe('executeToolCommand compile warmup', () => {
       ),
     ).resolves.toBeUndefined();
 
-    expect(mockSpawnSync).toHaveBeenCalledTimes(3);
+    expect(mockSpawnSync).toHaveBeenCalledTimes(4);
     expect(mockConsoleLog).toHaveBeenCalledTimes(1);
   });
 });

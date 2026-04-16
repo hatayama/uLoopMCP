@@ -108,7 +108,7 @@ const FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX = 'Force compilation executed.'
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE =
   'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }';
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 2;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 3;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS = 20;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS = 10000;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_COMPILATION_PROVIDER_SUBSTRINGS = ['warming up'];
@@ -121,22 +121,28 @@ const EXECUTION_IN_PROGRESS_ERROR_MESSAGE = 'Another execution is already in pro
 const EXECUTION_CANCELLED_ERROR_MESSAGE = 'Execution was cancelled or timed out';
 
 interface PostCompileDynamicCodePrewarmDependencies {
-  spawnCliProcess: (args: string[]) => { status: number | null; error?: Error; stdout?: string; stderr?: string };
+  spawnCliProcess: (args: string[]) => {
+    status: number | null;
+    error?: Error;
+    stdout?: string;
+    stderr?: string;
+  };
 }
 
-const defaultPostCompileDynamicCodePrewarmDependencies: PostCompileDynamicCodePrewarmDependencies = {
-  spawnCliProcess: (args: string[]) =>
-    spawnSync(process.execPath, [process.argv[1], ...args], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      encoding: 'utf8',
-      timeout: POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS,
-      windowsHide: true,
-      env: {
-        ...process.env,
-        [SKIP_SERVER_STARTING_BUSY_CHECK_ENV_KEY]: '1',
-      },
-    }),
-};
+const defaultPostCompileDynamicCodePrewarmDependencies: PostCompileDynamicCodePrewarmDependencies =
+  {
+    spawnCliProcess: (args: string[]) =>
+      spawnSync(process.execPath, [process.argv[1], ...args], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        encoding: 'utf8',
+        timeout: POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS,
+        windowsHide: true,
+        env: {
+          ...process.env,
+          [SKIP_SERVER_STARTING_BUSY_CHECK_ENV_KEY]: '1',
+        },
+      }),
+  };
 
 interface ConnectionFailureDiagnosisDependencies {
   findRunningUnityProcessForProjectFn: typeof findRunningUnityProcessForProject;
@@ -275,8 +281,10 @@ function isServerStarting(projectRoot: string | null): boolean {
 }
 
 export function isSettingsReadError(error: unknown): boolean {
-  return error instanceof Error
-    && error.message.startsWith('Could not read Unity server port from settings.');
+  return (
+    error instanceof Error &&
+    error.message.startsWith('Could not read Unity server port from settings.')
+  );
 }
 
 export async function shouldReportServerStarting(
@@ -335,7 +343,7 @@ export async function resolveUnityConnectionWithStartupDiagnosis(
         dependencies,
       )
     ) {
-      throw new Error('UNITY_SERVER_STARTING');
+      throw createServerStartingError(error);
     }
 
     throw error;
@@ -348,7 +356,7 @@ async function throwFinalToolError(
   shouldDiagnoseProjectState: boolean,
 ): Promise<never> {
   if (await shouldPromoteToServerStartingError(error, projectRoot, shouldDiagnoseProjectState)) {
-    throw new Error('UNITY_SERVER_STARTING');
+    throw createServerStartingError(error);
   }
 
   const diagnosedError = await diagnoseRetryableProjectConnectionError(
@@ -367,6 +375,14 @@ async function throwFinalToolError(
 
   const serializedError = JSON.stringify(diagnosedError);
   throw new Error(serializedError ?? 'Unknown error');
+}
+
+function createServerStartingError(cause: unknown): Error {
+  if (cause instanceof Error) {
+    return new Error('UNITY_SERVER_STARTING', { cause });
+  }
+
+  return new Error('UNITY_SERVER_STARTING');
 }
 
 // Distinct from isRetryableError(): that function covers pre-connection failures
@@ -446,20 +462,30 @@ export function shouldPrewarmDynamicCodeAfterCompile(result: Record<string, unkn
   // response because Unity cannot summarize compiler messages until after reload.
   // Why not gate the hidden prewarm on Success===true: that would skip the exact domain-reload
   // path we need to warm, leaving the next user-visible execute-dynamic-code request cold.
-  return success === null
-    && errorCount === 0
-    && typeof message === 'string'
-    && message.startsWith(FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX);
+  return (
+    success === null &&
+    errorCount === 0 &&
+    typeof message === 'string' &&
+    message.startsWith(FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX)
+  );
 }
 
 export async function prewarmDynamicCodeAfterCompile(
   projectRoot: string,
   dependencies: PostCompileDynamicCodePrewarmDependencies = defaultPostCompileDynamicCodePrewarmDependencies,
 ): Promise<void> {
-  for (let successfulRuns = 0; successfulRuns < POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT; successfulRuns++) {
+  for (
+    let successfulRuns = 0;
+    successfulRuns < POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT;
+    successfulRuns++
+  ) {
     let lastError: Error | undefined;
 
-    for (let attempt = 0; attempt < POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS; attempt++) {
+    for (
+      let attempt = 0;
+      attempt < POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS;
+      attempt++
+    ) {
       if (attempt > 0) {
         await sleep(POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS);
       }
@@ -548,13 +574,15 @@ function tryParsePostCompileDynamicCodePrewarmStdout(
 }
 
 function isRetryablePostCompileDynamicCodePrewarmError(error: Error): boolean {
-  return error.message === EXECUTION_IN_PROGRESS_ERROR_MESSAGE
-    || error.message === EXECUTION_CANCELLED_ERROR_MESSAGE
-    || error.message === 'UNITY_SERVER_STARTING'
-    || isRetryablePostCompileDynamicCodePrewarmDisconnect(error)
-    || isRetryablePostCompileDynamicCodePrewarmSpawnError(error)
-    || isRetryableCompilationProviderUnavailable(error.message)
-    || isRetryableUnityStartupMainThreadError(error.message);
+  return (
+    error.message === EXECUTION_IN_PROGRESS_ERROR_MESSAGE ||
+    error.message === EXECUTION_CANCELLED_ERROR_MESSAGE ||
+    error.message === 'UNITY_SERVER_STARTING' ||
+    isRetryablePostCompileDynamicCodePrewarmDisconnect(error) ||
+    isRetryablePostCompileDynamicCodePrewarmSpawnError(error) ||
+    isRetryableCompilationProviderUnavailable(error.message) ||
+    isRetryableUnityStartupMainThreadError(error.message)
+  );
 }
 
 function isRetryablePostCompileDynamicCodePrewarmDisconnect(error: Error): boolean {
@@ -641,8 +669,8 @@ async function checkUnityBusyState(projectPath?: string): Promise<void> {
   }
 
   if (
-    !shouldSkipServerStartingBusyCheck()
-    && (await shouldReportServerStarting(projectRoot, true))
+    !shouldSkipServerStartingBusyCheck() &&
+    (await shouldReportServerStarting(projectRoot, true))
   ) {
     throw new Error('UNITY_SERVER_STARTING');
   }
@@ -656,14 +684,15 @@ async function checkUnityBusyState(projectPath?: string): Promise<void> {
   if (existsSync(domainReloadLock)) {
     throw new Error('UNITY_DOMAIN_RELOAD');
   }
-
 }
 
 function shouldSkipServerStartingBusyCheck(): boolean {
   return process.env[SKIP_SERVER_STARTING_BUSY_CHECK_ENV_KEY] === '1';
 }
 
-async function checkUnityBusyStateBeforeProjectResolution(globalOptions: GlobalOptions): Promise<void> {
+async function checkUnityBusyStateBeforeProjectResolution(
+  globalOptions: GlobalOptions,
+): Promise<void> {
   if (globalOptions.port !== undefined) {
     return;
   }
@@ -724,189 +753,195 @@ export async function executeToolCommand(
     let currentProjectRoot = connection.projectRoot;
     let currentShouldDiagnoseProjectState = currentProjectRoot !== null;
 
-  // Monotonically-increasing flag: once true, retries cannot reset it to false.
-  // The retry loop overwrites `lastError` and `immediateResult` on each attempt,
-  // which destroys the evidence of whether an earlier attempt successfully dispatched
-  // the request to Unity. This flag preserves that information across retries.
-  // See: git log cb3d63e..HEAD for the history of oscillating fixes caused by
-  // inferring dispatch status from `immediateResult` alone.
-  let requestDispatched = false;
+    // Monotonically-increasing flag: once true, retries cannot reset it to false.
+    // The retry loop overwrites `lastError` and `immediateResult` on each attempt,
+    // which destroys the evidence of whether an earlier attempt successfully dispatched
+    // the request to Unity. This flag preserves that information across retries.
+    // See: git log cb3d63e..HEAD for the history of oscillating fixes caused by
+    // inferring dispatch status from `immediateResult` alone.
+    let requestDispatched = false;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       await checkUnityBusyStateBeforeProjectResolution(globalOptions);
-    const projectRoot = connection.projectRoot;
-    const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
-    const shouldDiagnoseProjectState = projectRoot !== null;
-    currentProjectRoot = projectRoot;
-    currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
+      const projectRoot = connection.projectRoot;
+      const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
+      const shouldDiagnoseProjectState = projectRoot !== null;
+      currentProjectRoot = projectRoot;
+      currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
 
       const client = new DirectUnityClient(connection.port);
       try {
-      await client.connect();
+        await client.connect();
 
-      if (shouldValidateProject) {
-        await validateConnectedProject(client, projectRoot);
-      }
-
-      spinner.update(`Executing ${toolName}...`);
-      // connect() succeeded: socket is established. sendRequest() calls socket.write()
-      // synchronously (direct-unity-client.ts:136), so the data reaches the kernel
-      // send buffer before any async error can occur. Safe to mark as dispatched here.
-      requestDispatched = true;
-      const result = await client.sendRequest<Record<string, unknown>>(toolName, params, {
-        requestMetadata: connection.requestMetadata ?? undefined,
-      });
-
-      if (result === undefined || result === null) {
-        throw new Error('UNITY_NO_RESPONSE');
-      }
-
-      immediateResult = result;
-      if (!shouldWaitForDomainReload) {
-        cleanup();
-
-        if (toolName === 'execute-dynamic-code') {
-          appendCliTimingsToDynamicCodeResult(
-            result,
-            Date.now() - commandStartedAt,
-            getCliProcessAgeMilliseconds(),
-          );
+        if (shouldValidateProject) {
+          await validateConnectedProject(client, projectRoot);
         }
-        checkServerVersion(result);
-        console.log(JSON.stringify(stripInternalFields(result), null, 2));
-        return;
-      }
 
-      break;
-    } catch (error) {
-      lastError = error;
-      client.disconnect();
+        spinner.update(`Executing ${toolName}...`);
+        // connect() succeeded: socket is established. sendRequest() calls socket.write()
+        // synchronously (direct-unity-client.ts:136), so the data reaches the kernel
+        // send buffer before any async error can occur. Safe to mark as dispatched here.
+        requestDispatched = true;
+        const result = await client.sendRequest<Record<string, unknown>>(toolName, params, {
+          requestMetadata: connection.requestMetadata ?? undefined,
+        });
 
-      // After a compile request has been dispatched, retrying is counterproductive:
-      // the next loop iteration calls checkUnityBusyState() OUTSIDE the try block,
-      // which throws UNITY_DOMAIN_RELOAD during domain reload and escapes the
-      // entire function — bypassing waitForCompileCompletion() recovery.
-      if (requestDispatched && shouldWaitForDomainReload) {
-        if (isTransportDisconnectError(error)) {
-          // Unity may have received the request before the TCP drop.
-          // Break out of retry loop → proceed to file-based recovery below.
-          spinner.update('Connection lost during compile. Waiting for result file...');
+        if (result === undefined || result === null) {
+          throw new Error('UNITY_NO_RESPONSE');
+        }
+
+        immediateResult = result;
+        if (!shouldWaitForDomainReload) {
+          cleanup();
+
+          if (toolName === 'execute-dynamic-code') {
+            appendCliTimingsToDynamicCodeResult(
+              result,
+              Date.now() - commandStartedAt,
+              getCliProcessAgeMilliseconds(),
+            );
+          }
+          checkServerVersion(result);
+          console.log(JSON.stringify(stripInternalFields(result), null, 2));
+          return;
+        }
+
+        break;
+      } catch (error) {
+        lastError = error;
+        client.disconnect();
+
+        // After a compile request has been dispatched, retrying is counterproductive:
+        // the next loop iteration calls checkUnityBusyState() OUTSIDE the try block,
+        // which throws UNITY_DOMAIN_RELOAD during domain reload and escapes the
+        // entire function — bypassing waitForCompileCompletion() recovery.
+        if (requestDispatched && shouldWaitForDomainReload) {
+          if (isTransportDisconnectError(error)) {
+            // Unity may have received the request before the TCP drop.
+            // Break out of retry loop → proceed to file-based recovery below.
+            spinner.update('Connection lost during compile. Waiting for result file...');
+            break;
+          }
+          // JSON-RPC error (e.g. "Unity error: ..."): Unity processed the request
+          // and returned an explicit error. No result file will be written
+          // (confirmed: CompileUseCase.ExecuteAsync() is not reached when
+          // JSON-RPC error occurs at parameter validation / security check).
+          cleanup();
+          throw error instanceof Error ? error : new Error(String(error));
+        }
+
+        if (
+          await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldDiagnoseProjectState)
+        ) {
+          spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
+          await sleep(RETRY_DELAY_MS);
+          connection = await resolveRecoveryPortOrKeepCurrent(
+            connection,
+            portNumber,
+            globalOptions.projectPath,
+          );
+          continue;
+        }
+
+        if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
           break;
         }
-        // JSON-RPC error (e.g. "Unity error: ..."): Unity processed the request
-        // and returned an explicit error. No result file will be written
-        // (confirmed: CompileUseCase.ExecuteAsync() is not reached when
-        // JSON-RPC error occurs at parameter validation / security check).
-        cleanup();
-        throw error instanceof Error ? error : new Error(String(error));
-      }
-
-      if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldDiagnoseProjectState)) {
-        spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
+        spinner.update('Retrying connection...');
         await sleep(RETRY_DELAY_MS);
-        connection = await resolveRecoveryPortOrKeepCurrent(
-          connection,
-          portNumber,
-          globalOptions.projectPath,
-        );
-        continue;
-      }
-
-      if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
-        break;
-      }
-      spinner.update('Retrying connection...');
-      await sleep(RETRY_DELAY_MS);
       } finally {
         client.disconnect();
       }
     }
 
     if (shouldWaitForDomainReload && compileRequestId) {
-    // Fail fast when the compile request never reached Unity.
-    // Without this guard, unreachable Unity would cause a 90-second wait for a
-    // result file that will never be created.
-    // We check both conditions because:
-    //  - immediateResult === undefined: no JSON-RPC response was received
-    //  - !requestDispatched: no attempt ever successfully connected and called sendRequest()
-    // If requestDispatched is true but immediateResult is undefined, the request was sent
-    // but the TCP connection dropped before the response arrived (domain reload scenario).
-    // In that case, Unity may have already written the result file, so we proceed to
-    // file-based polling recovery.
-    if (immediateResult === undefined && !requestDispatched) {
-      cleanup();
-      if (lastError !== undefined) {
-        await throwFinalToolError(lastError, currentProjectRoot, currentShouldDiagnoseProjectState);
-      }
-      throw new Error(
-        'Compile request never reached Unity. Check that Unity is running and retry.',
-      );
-    }
-
-    const projectRootFromUnity: string | undefined =
-      immediateResult !== undefined
-        ? (immediateResult['ProjectRoot'] as string | undefined)
-        : undefined;
-    const effectiveProjectRoot: string | null = projectRootFromUnity ?? currentProjectRoot;
-
-    // File-based polling requires a known project root
-    if (effectiveProjectRoot === null) {
-      cleanup();
-      if (immediateResult !== undefined) {
-        checkServerVersion(immediateResult);
-        console.log(JSON.stringify(stripInternalFields(immediateResult), null, 2));
-        return;
-      }
-      if (lastError instanceof Error) {
-        throw lastError;
-      }
-      throw new Error(
-        'Compile request failed and project root is unknown. Check connection and retry.',
-      );
-    }
-
-    spinner.update('Waiting for domain reload to complete...');
-    const { outcome, result: storedResult } = await waitForCompileCompletion<
-      Record<string, unknown>
-    >({
-      projectRoot: effectiveProjectRoot,
-      requestId: compileRequestId,
-      timeoutMs: COMPILE_WAIT_TIMEOUT_MS,
-      pollIntervalMs: COMPILE_WAIT_POLL_INTERVAL_MS,
-      unityPort: connection.port,
-    });
-
-    if (outcome === 'timed_out') {
-      lastError = new Error(
-        `Compile wait timed out after ${COMPILE_WAIT_TIMEOUT_MS}ms. Run 'uloop fix' and retry.`,
-      );
-    } else {
-      const finalResult = storedResult ?? immediateResult;
-      if (finalResult !== undefined) {
-        if (toolName === 'compile' && shouldPrewarmDynamicCodeAfterCompile(finalResult)) {
-          // Why: one hidden execute-dynamic-code request after domain reload warms the same
-          // isolated CLI process boundary and Debug.Log path that the next user-visible dynamic
-          // execution will use.
-          // Why not swallow warmup failures here: wait-for-domain-reload is the contract that the
-          // next dynamic code request is usable, so returning success before this probe completes
-          // would report a ready editor while the first execute-dynamic-code can still fail.
-          spinner.update('Finalizing dynamic code warmup...');
-          await prewarmDynamicCodeAfterCompile(effectiveProjectRoot);
-        }
-
+      // Fail fast when the compile request never reached Unity.
+      // Without this guard, unreachable Unity would cause a 90-second wait for a
+      // result file that will never be created.
+      // We check both conditions because:
+      //  - immediateResult === undefined: no JSON-RPC response was received
+      //  - !requestDispatched: no attempt ever successfully connected and called sendRequest()
+      // If requestDispatched is true but immediateResult is undefined, the request was sent
+      // but the TCP connection dropped before the response arrived (domain reload scenario).
+      // In that case, Unity may have already written the result file, so we proceed to
+      // file-based polling recovery.
+      if (immediateResult === undefined && !requestDispatched) {
         cleanup();
-        if (toolName === 'execute-dynamic-code') {
-          appendCliTimingsToDynamicCodeResult(
-            finalResult,
-            Date.now() - commandStartedAt,
-            getCliProcessAgeMilliseconds(),
+        if (lastError !== undefined) {
+          await throwFinalToolError(
+            lastError,
+            currentProjectRoot,
+            currentShouldDiagnoseProjectState,
           );
         }
-        checkServerVersion(finalResult);
-        console.log(JSON.stringify(stripInternalFields(finalResult), null, 2));
-        return;
+        throw new Error(
+          'Compile request never reached Unity. Check that Unity is running and retry.',
+        );
       }
-    }
+
+      const projectRootFromUnity: string | undefined =
+        immediateResult !== undefined
+          ? (immediateResult['ProjectRoot'] as string | undefined)
+          : undefined;
+      const effectiveProjectRoot: string | null = projectRootFromUnity ?? currentProjectRoot;
+
+      // File-based polling requires a known project root
+      if (effectiveProjectRoot === null) {
+        cleanup();
+        if (immediateResult !== undefined) {
+          checkServerVersion(immediateResult);
+          console.log(JSON.stringify(stripInternalFields(immediateResult), null, 2));
+          return;
+        }
+        if (lastError instanceof Error) {
+          throw lastError;
+        }
+        throw new Error(
+          'Compile request failed and project root is unknown. Check connection and retry.',
+        );
+      }
+
+      spinner.update('Waiting for domain reload to complete...');
+      const { outcome, result: storedResult } = await waitForCompileCompletion<
+        Record<string, unknown>
+      >({
+        projectRoot: effectiveProjectRoot,
+        requestId: compileRequestId,
+        timeoutMs: COMPILE_WAIT_TIMEOUT_MS,
+        pollIntervalMs: COMPILE_WAIT_POLL_INTERVAL_MS,
+        unityPort: connection.port,
+      });
+
+      if (outcome === 'timed_out') {
+        lastError = new Error(
+          `Compile wait timed out after ${COMPILE_WAIT_TIMEOUT_MS}ms. Run 'uloop fix' and retry.`,
+        );
+      } else {
+        const finalResult = storedResult ?? immediateResult;
+        if (finalResult !== undefined) {
+          if (toolName === 'compile' && shouldPrewarmDynamicCodeAfterCompile(finalResult)) {
+            // Why: one hidden execute-dynamic-code request after domain reload warms the same
+            // isolated CLI process boundary and Debug.Log path that the next user-visible dynamic
+            // execution will use.
+            // Why not swallow warmup failures here: wait-for-domain-reload is the contract that the
+            // next dynamic code request is usable, so returning success before this probe completes
+            // would report a ready editor while the first execute-dynamic-code can still fail.
+            spinner.update('Finalizing dynamic code warmup...');
+            await prewarmDynamicCodeAfterCompile(effectiveProjectRoot);
+          }
+
+          cleanup();
+          if (toolName === 'execute-dynamic-code') {
+            appendCliTimingsToDynamicCodeResult(
+              finalResult,
+              Date.now() - commandStartedAt,
+              getCliProcessAgeMilliseconds(),
+            );
+          }
+          checkServerVersion(finalResult);
+          console.log(JSON.stringify(stripInternalFields(finalResult), null, 2));
+          return;
+        }
+      }
     }
 
     cleanup();
@@ -946,70 +981,68 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
     let currentShouldDiagnoseProjectState = currentProjectRoot !== null;
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       await checkUnityBusyStateBeforeProjectResolution(globalOptions);
-    const projectRoot = connection.projectRoot;
-    const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
-    const shouldDiagnoseProjectState = projectRoot !== null;
-    currentProjectRoot = projectRoot;
-    currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
+      const projectRoot = connection.projectRoot;
+      const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
+      const shouldDiagnoseProjectState = projectRoot !== null;
+      currentProjectRoot = projectRoot;
+      currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
 
       const client = new DirectUnityClient(connection.port);
       try {
-      await client.connect();
+        await client.connect();
 
-      if (shouldValidateProject) {
-        await validateConnectedProject(client, projectRoot);
-      }
+        if (shouldValidateProject) {
+          await validateConnectedProject(client, projectRoot);
+        }
 
-      spinner.update('Fetching tool list...');
-      const result = await client.sendRequest<{
-        Tools: Array<{ name: string; description: string }>;
-      }>(
-        'get-tool-details',
-        { IncludeDevelopmentOnly: false },
-        { requestMetadata: connection.requestMetadata ?? undefined },
-      );
-
-      if (!result.Tools || !Array.isArray(result.Tools)) {
-        throw new Error('Unexpected response from Unity: missing Tools array');
-      }
-
-      // Success - stop spinner and output result
-      cleanup();
-      for (const tool of result.Tools) {
-        console.log(`  - ${tool.name}`);
-      }
-      return;
-      } catch (error) {
-      lastError = error;
-      client.disconnect();
-
-      if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldDiagnoseProjectState)) {
-        spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
-        await sleep(RETRY_DELAY_MS);
-        connection = await resolveRecoveryPortOrKeepCurrent(
-          connection,
-          portNumber,
-          globalOptions.projectPath,
+        spinner.update('Fetching tool list...');
+        const result = await client.sendRequest<{
+          Tools: Array<{ name: string; description: string }>;
+        }>(
+          'get-tool-details',
+          { IncludeDevelopmentOnly: false },
+          { requestMetadata: connection.requestMetadata ?? undefined },
         );
-        continue;
-      }
 
-      if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
-        break;
-      }
-      spinner.update('Retrying connection...');
-      await sleep(RETRY_DELAY_MS);
+        if (!result.Tools || !Array.isArray(result.Tools)) {
+          throw new Error('Unexpected response from Unity: missing Tools array');
+        }
+
+        // Success - stop spinner and output result
+        cleanup();
+        for (const tool of result.Tools) {
+          console.log(`  - ${tool.name}`);
+        }
+        return;
+      } catch (error) {
+        lastError = error;
+        client.disconnect();
+
+        if (
+          await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldDiagnoseProjectState)
+        ) {
+          spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
+          await sleep(RETRY_DELAY_MS);
+          connection = await resolveRecoveryPortOrKeepCurrent(
+            connection,
+            portNumber,
+            globalOptions.projectPath,
+          );
+          continue;
+        }
+
+        if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
+          break;
+        }
+        spinner.update('Retrying connection...');
+        await sleep(RETRY_DELAY_MS);
       } finally {
         client.disconnect();
       }
     }
 
     cleanup();
-    await throwFinalToolError(
-      lastError,
-      currentProjectRoot,
-      currentShouldDiagnoseProjectState,
-    );
+    await throwFinalToolError(lastError, currentProjectRoot, currentShouldDiagnoseProjectState);
   } finally {
     cleanup();
   }
@@ -1073,89 +1106,87 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
     let currentShouldDiagnoseProjectState = currentProjectRoot !== null;
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       await checkUnityBusyStateBeforeProjectResolution(globalOptions);
-    const projectRoot = connection.projectRoot;
-    const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
-    const shouldDiagnoseProjectState = projectRoot !== null;
-    currentProjectRoot = projectRoot;
-    currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
+      const projectRoot = connection.projectRoot;
+      const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
+      const shouldDiagnoseProjectState = projectRoot !== null;
+      currentProjectRoot = projectRoot;
+      currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
 
       const client = new DirectUnityClient(connection.port);
       try {
-      await client.connect();
+        await client.connect();
 
-      if (shouldValidateProject) {
-        await validateConnectedProject(client, projectRoot);
-      }
+        if (shouldValidateProject) {
+          await validateConnectedProject(client, projectRoot);
+        }
 
-      spinner.update('Syncing tools...');
-      const result = await client.sendRequest<{
-        Tools: UnityToolInfo[];
-        Ver?: string;
-      }>(
-        'get-tool-details',
-        { IncludeDevelopmentOnly: false },
-        { requestMetadata: connection.requestMetadata ?? undefined },
-      );
-
-      cleanup();
-      if (!result.Tools || !Array.isArray(result.Tools)) {
-        throw new Error('Unexpected response from Unity: missing Tools array');
-      }
-
-      const cache: ToolsCache = {
-        version: VERSION,
-        serverVersion: result.Ver,
-        updatedAt: new Date().toISOString(),
-        tools: result.Tools.map((tool) => ({
-          name: tool.name,
-          description: tool.description,
-          inputSchema: {
-            type: 'object',
-            properties: convertProperties(tool.parameterSchema.Properties),
-            required: tool.parameterSchema.Required,
-          },
-        })),
-      };
-
-      saveToolsCache(cache);
-
-      console.log(`Synced ${cache.tools.length} tools to ${getCacheFilePath()}`);
-      console.log('\nTools:');
-      for (const tool of cache.tools) {
-        console.log(`  - ${tool.name}`);
-      }
-      return;
-      } catch (error) {
-      lastError = error;
-      client.disconnect();
-
-      if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldDiagnoseProjectState)) {
-        spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
-        await sleep(RETRY_DELAY_MS);
-        connection = await resolveRecoveryPortOrKeepCurrent(
-          connection,
-          portNumber,
-          globalOptions.projectPath,
+        spinner.update('Syncing tools...');
+        const result = await client.sendRequest<{
+          Tools: UnityToolInfo[];
+          Ver?: string;
+        }>(
+          'get-tool-details',
+          { IncludeDevelopmentOnly: false },
+          { requestMetadata: connection.requestMetadata ?? undefined },
         );
-        continue;
-      }
 
-      if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
-        break;
-      }
-      spinner.update('Retrying connection...');
-      await sleep(RETRY_DELAY_MS);
+        cleanup();
+        if (!result.Tools || !Array.isArray(result.Tools)) {
+          throw new Error('Unexpected response from Unity: missing Tools array');
+        }
+
+        const cache: ToolsCache = {
+          version: VERSION,
+          serverVersion: result.Ver,
+          updatedAt: new Date().toISOString(),
+          tools: result.Tools.map((tool) => ({
+            name: tool.name,
+            description: tool.description,
+            inputSchema: {
+              type: 'object',
+              properties: convertProperties(tool.parameterSchema.Properties),
+              required: tool.parameterSchema.Required,
+            },
+          })),
+        };
+
+        saveToolsCache(cache);
+
+        console.log(`Synced ${cache.tools.length} tools to ${getCacheFilePath()}`);
+        console.log('\nTools:');
+        for (const tool of cache.tools) {
+          console.log(`  - ${tool.name}`);
+        }
+        return;
+      } catch (error) {
+        lastError = error;
+        client.disconnect();
+
+        if (
+          await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldDiagnoseProjectState)
+        ) {
+          spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
+          await sleep(RETRY_DELAY_MS);
+          connection = await resolveRecoveryPortOrKeepCurrent(
+            connection,
+            portNumber,
+            globalOptions.projectPath,
+          );
+          continue;
+        }
+
+        if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
+          break;
+        }
+        spinner.update('Retrying connection...');
+        await sleep(RETRY_DELAY_MS);
       } finally {
         client.disconnect();
       }
     }
 
     cleanup();
-    await throwFinalToolError(
-      lastError,
-      currentProjectRoot,
-      currentShouldDiagnoseProjectState,
-    );
+    await throwFinalToolError(lastError, currentProjectRoot, currentShouldDiagnoseProjectState);
   } finally {
     cleanup();
   }
