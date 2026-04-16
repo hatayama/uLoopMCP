@@ -103,7 +103,6 @@ namespace io.github.hatayama.uLoopMCP
 
             // Signal server is starting for CLI detection
             string serverStartingLockToken = ServerStartingLockService.CreateLockFile();
-            bool serverStartingLockReleasedByPrewarm = false;
             UnityEngine.Debug.Assert(
                 !string.IsNullOrEmpty(serverStartingLockToken),
                 "serverstarting.lock must be created before starting the server");
@@ -149,14 +148,11 @@ namespace io.github.hatayama.uLoopMCP
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
                     await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
                 prewarmDynamicCodeUseCase.Request();
-                serverStartingLockReleasedByPrewarm = !string.IsNullOrEmpty(serverStartingLockToken);
+                ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
             }
             finally
             {
-                if (!serverStartingLockReleasedByPrewarm)
-                {
-                    ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
-                }
+                ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
             }
         }
 
@@ -783,6 +779,7 @@ namespace io.github.hatayama.uLoopMCP
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
                     await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
                 prewarmDynamicCodeUseCase.Request();
+                ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
 
                 ActivateStartupProtection(5000);
             }

@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 {
@@ -240,6 +242,37 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             await useCase.RequestAsync();
 
             Assert.That(executor.Requests, Is.Empty);
+        }
+
+        [Test]
+        public async Task RequestAsync_WhenStartupLockTokenIsAttached_ShouldNotDeleteStartupLock()
+        {
+            string createdToken = ServerStartingLockService.CreateLockFile();
+            Assert.That(createdToken, Is.Not.Null.And.Not.Empty);
+
+            string lockPath = Path.GetFullPath(
+                Path.Combine(Application.dataPath, "..", "Temp", "serverstarting.lock"));
+            FakePrewarmRuntime runtime = new FakePrewarmRuntime(true);
+            FakeDynamicCodeAutoPrewarmExecutor executor = new FakeDynamicCodeAutoPrewarmExecutor(
+                new DynamicCodeAutoPrewarmResult { Success = true },
+                new DynamicCodeAutoPrewarmResult { Success = true },
+                new DynamicCodeAutoPrewarmResult { Success = true });
+            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(
+                runtime,
+                default,
+                executor,
+                createdToken);
+
+            try
+            {
+                await useCase.RequestAsync();
+
+                Assert.That(File.Exists(lockPath), Is.True);
+            }
+            finally
+            {
+                ServerStartingLockService.DeleteOwnedLockFile(createdToken);
+            }
         }
 
         private sealed class FakePrewarmRuntime : IDynamicCodeExecutionRuntime

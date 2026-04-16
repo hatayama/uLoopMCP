@@ -10,7 +10,7 @@
 import { PRODUCT_DISPLAY_NAME } from './cli-constants';
 import * as readline from 'readline';
 import { spawnSync } from 'child_process';
-import { existsSync, statSync } from 'fs';
+import { existsSync, statSync, Stats } from 'fs';
 import { join } from 'path';
 import * as semver from 'semver';
 import { DirectUnityClient } from './direct-unity-client.js';
@@ -129,6 +129,11 @@ interface PostCompileDynamicCodePrewarmDependencies {
   };
 }
 
+interface PostCompileDynamicCodePrewarmTarget {
+  projectRoot?: string;
+  port?: number;
+}
+
 const defaultPostCompileDynamicCodePrewarmDependencies: PostCompileDynamicCodePrewarmDependencies =
   {
     spawnCliProcess: (args: string[]) =>
@@ -146,10 +151,14 @@ const defaultPostCompileDynamicCodePrewarmDependencies: PostCompileDynamicCodePr
 
 interface ConnectionFailureDiagnosisDependencies {
   findRunningUnityProcessForProjectFn: typeof findRunningUnityProcessForProject;
+  existsSyncFn?: typeof existsSync;
+  statSyncFn?: typeof statSync;
 }
 
 const defaultConnectionFailureDiagnosisDependencies: ConnectionFailureDiagnosisDependencies = {
   findRunningUnityProcessForProjectFn: findRunningUnityProcessForProject,
+  existsSyncFn: existsSync,
+  statSyncFn: statSync,
 };
 
 function getCompileExecutionOptions(
@@ -260,19 +269,26 @@ export async function resolveRecoveryPortOrKeepCurrent(
   }
 }
 
-function isServerStarting(projectRoot: string | null): boolean {
+function isServerStarting(
+  projectRoot: string | null,
+  dependencies: ConnectionFailureDiagnosisDependencies = defaultConnectionFailureDiagnosisDependencies,
+): boolean {
   if (projectRoot === null) {
     return false;
   }
 
   const serverStartingLockPath = join(projectRoot, 'Temp', 'serverstarting.lock');
-  if (!existsSync(serverStartingLockPath)) {
+  const existsSyncFn = dependencies.existsSyncFn ?? existsSync;
+  const statSyncFn = dependencies.statSyncFn ?? statSync;
+
+  if (!existsSyncFn(serverStartingLockPath)) {
     return false;
   }
 
   let lockAgeMilliseconds: number;
   try {
-    lockAgeMilliseconds = Date.now() - statSync(serverStartingLockPath).mtimeMs;
+    const lockStat: Stats = statSyncFn(serverStartingLockPath);
+    lockAgeMilliseconds = Date.now() - lockStat.mtimeMs;
   } catch {
     return false;
   }
@@ -292,7 +308,11 @@ export async function shouldReportServerStarting(
   shouldDiagnoseProjectState: boolean,
   dependencies: ConnectionFailureDiagnosisDependencies = defaultConnectionFailureDiagnosisDependencies,
 ): Promise<boolean> {
-  if (!shouldDiagnoseProjectState || !isServerStarting(projectRoot) || projectRoot === null) {
+  if (
+    !shouldDiagnoseProjectState ||
+    !isServerStarting(projectRoot, dependencies) ||
+    projectRoot === null
+  ) {
     return false;
   }
 
@@ -471,9 +491,11 @@ export function shouldPrewarmDynamicCodeAfterCompile(result: Record<string, unkn
 }
 
 export async function prewarmDynamicCodeAfterCompile(
-  projectRoot: string,
+  target: PostCompileDynamicCodePrewarmTarget,
   dependencies: PostCompileDynamicCodePrewarmDependencies = defaultPostCompileDynamicCodePrewarmDependencies,
 ): Promise<void> {
+  const args = createPostCompileDynamicCodePrewarmArgs(target);
+
   for (
     let successfulRuns = 0;
     successfulRuns < POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT;
@@ -489,15 +511,6 @@ export async function prewarmDynamicCodeAfterCompile(
       if (attempt > 0) {
         await sleep(POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS);
       }
-      const args = [
-        'execute-dynamic-code',
-        '--code',
-        POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE,
-        '--yield-to-foreground-requests',
-        'true',
-        '--project-path',
-        projectRoot,
-      ];
       const prewarmResult = dependencies.spawnCliProcess(args);
       if (didPostCompileDynamicCodePrewarmSucceed(prewarmResult)) {
         lastError = undefined;
@@ -514,6 +527,36 @@ export async function prewarmDynamicCodeAfterCompile(
       throw lastError;
     }
   }
+}
+
+function createPostCompileDynamicCodePrewarmArgs(
+  target: PostCompileDynamicCodePrewarmTarget,
+): string[] {
+  if (target.port !== undefined) {
+    return [
+      'execute-dynamic-code',
+      '--code',
+      POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE,
+      '--yield-to-foreground-requests',
+      'true',
+      '--port',
+      target.port.toString(),
+    ];
+  }
+
+  if (target.projectRoot !== undefined) {
+    return [
+      'execute-dynamic-code',
+      '--code',
+      POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE,
+      '--yield-to-foreground-requests',
+      'true',
+      '--project-path',
+      target.projectRoot,
+    ];
+  }
+
+  throw new Error('Post-compile dynamic code prewarm requires a project path or port.');
 }
 
 function didPostCompileDynamicCodePrewarmSucceed(result: {
@@ -926,7 +969,10 @@ export async function executeToolCommand(
             // next dynamic code request is usable, so returning success before this probe completes
             // would report a ready editor while the first execute-dynamic-code can still fail.
             spinner.update('Finalizing dynamic code warmup...');
-            await prewarmDynamicCodeAfterCompile(effectiveProjectRoot);
+            await prewarmDynamicCodeAfterCompile({
+              projectRoot: portNumber === undefined ? effectiveProjectRoot : undefined,
+              port: portNumber,
+            });
           }
 
           cleanup();
