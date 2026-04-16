@@ -740,7 +740,12 @@ namespace io.github.hatayama.uLoopMCP
                     LogRecoveryFallback(savedPort, chosenPort, "saved_port_in_use_before_bind");
                 }
 
-                bool started = await TryBindWithWaitAsync(chosenPort, 5000, 250, cancellationToken);
+                bool started = await TryBindWithWaitAsync(
+                    chosenPort,
+                    5000,
+                    250,
+                    cancellationToken,
+                    clearServerStartingLockWhenReady: false);
 
                 if (!started)
                 {
@@ -749,7 +754,12 @@ namespace io.github.hatayama.uLoopMCP
                         int previousAttemptPort = chosenPort;
                         chosenPort = fallbackPort;
                         LogRecoveryFallback(previousAttemptPort, chosenPort, "bind_retry_timeout");
-                        started = await TryBindWithWaitAsync(chosenPort, 5000, 250, cancellationToken);
+                        started = await TryBindWithWaitAsync(
+                            chosenPort,
+                            5000,
+                            250,
+                            cancellationToken,
+                            clearServerStartingLockWhenReady: false);
                     }
                 }
 
@@ -801,7 +811,12 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private static async Task<bool> TryBindWithWaitAsync(int port, int maxWaitMs, int stepMs, CancellationToken cancellationToken)
+        private static async Task<bool> TryBindWithWaitAsync(
+            int port,
+            int maxWaitMs,
+            int stepMs,
+            CancellationToken cancellationToken,
+            bool clearServerStartingLockWhenReady = true)
         {
             int remainingMs = maxWaitMs;
             while (true)
@@ -829,7 +844,7 @@ namespace io.github.hatayama.uLoopMCP
                     }
 
                     server = new McpBridgeServer();
-                    server.StartServer(port);
+                    server.StartServer(port, clearServerStartingLockWhenReady);
                     mcpServer = server;
                     VibeLogger.LogInfo("binding_success", $"port={port}");
                     return true;

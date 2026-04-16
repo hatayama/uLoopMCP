@@ -1,4 +1,5 @@
 import {
+  isDynamicCodeWarmupEnabledForProject,
   prewarmDynamicCodeAfterCompile,
   shouldPrewarmDynamicCodeAfterCompile,
 } from '../../tools/dynamic-code-post-compile-warmup.js';
@@ -84,5 +85,27 @@ describe('prewarmDynamicCodeAfterCompile', () => {
     await expect(
       prewarmDynamicCodeAfterCompile(createUnityClient(executeTool), async (): Promise<void> => {}),
     ).rejects.toThrow('Compilation failed permanently');
+  });
+});
+
+describe('isDynamicCodeWarmupEnabledForProject', () => {
+  it('returns false when execute-dynamic-code is disabled in tool settings', () => {
+    expect(
+      isDynamicCodeWarmupEnabledForProject('/project', {
+        existsSyncFn: jest.fn().mockReturnValue(true),
+        readFileSyncFn: jest
+          .fn()
+          .mockReturnValue(JSON.stringify({ disabledTools: ['execute-dynamic-code'] })),
+      }),
+    ).toBe(false);
+  });
+
+  it('returns true when tool settings do not disable execute-dynamic-code', () => {
+    expect(
+      isDynamicCodeWarmupEnabledForProject('/project', {
+        existsSyncFn: jest.fn().mockReturnValue(true),
+        readFileSyncFn: jest.fn().mockReturnValue(JSON.stringify({ disabledTools: ['compile'] })),
+      }),
+    ).toBe(true);
   });
 });

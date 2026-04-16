@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 import { UnityClient } from '../types/tool-types.js';
 
 const FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX = 'Force compilation executed.';
@@ -18,15 +20,27 @@ const RETRYABLE_DISPATCH_GUIDANCE_SUBSTRINGS = [
   'unity is currently compiling or reloading',
   'retry after the operation completes',
 ];
+const TOOL_SETTINGS_DIRECTORY = '.uloop';
+const TOOL_SETTINGS_FILE_NAME = 'settings.tools.json';
+const EXECUTE_DYNAMIC_CODE_TOOL_NAME = 'execute-dynamic-code';
 
 interface DynamicCodeWarmupResponse {
   Success?: boolean;
   ErrorMessage?: string;
 }
 
+interface ToolSettingsData {
+  disabledTools?: unknown;
+}
+
 interface WarmupAttemptResult {
   response?: unknown;
   error?: unknown;
+}
+
+interface DynamicCodeWarmupToolSettingsDependencies {
+  existsSyncFn?: typeof existsSync;
+  readFileSyncFn?: typeof readFileSync;
 }
 
 export function shouldPrewarmDynamicCodeAfterCompile(result: unknown): boolean {
@@ -48,6 +62,49 @@ export function shouldPrewarmDynamicCodeAfterCompile(result: unknown): boolean {
     typeof message === 'string' &&
     message.startsWith(FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX)
   );
+}
+
+export function isDynamicCodeWarmupEnabledForProject(
+  projectRoot: string,
+  dependencies: DynamicCodeWarmupToolSettingsDependencies = {},
+): boolean {
+  const existsSyncFn = dependencies.existsSyncFn ?? existsSync;
+  const readFileSyncFn = dependencies.readFileSyncFn ?? readFileSync;
+  const toolSettingsPath = join(projectRoot, TOOL_SETTINGS_DIRECTORY, TOOL_SETTINGS_FILE_NAME);
+
+  if (!existsSyncFn(toolSettingsPath)) {
+    return true;
+  }
+
+  let content: string;
+  try {
+    content = readFileSyncFn(toolSettingsPath, 'utf8');
+  } catch {
+    return true;
+  }
+
+  if (content.trim().length === 0) {
+    return true;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return true;
+  }
+
+  if (typeof parsed !== 'object' || parsed === null) {
+    return true;
+  }
+
+  const toolSettings = parsed as ToolSettingsData;
+  const disabledTools = toolSettings.disabledTools;
+  if (!Array.isArray(disabledTools)) {
+    return true;
+  }
+
+  return !disabledTools.includes(EXECUTE_DYNAMIC_CODE_TOOL_NAME);
 }
 
 export async function prewarmDynamicCodeAfterCompile(

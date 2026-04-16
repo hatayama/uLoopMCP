@@ -31,6 +31,7 @@ namespace io.github.hatayama.uLoopMCP
                 // Server is running, clean up lock files
                 CompilationLockService.DeleteLockFile();
                 DomainReloadDetectionService.DeleteLockFile();
+                ServerStartingLockService.DeleteLockFile();
 
                 if (isAfterCompile)
                 {

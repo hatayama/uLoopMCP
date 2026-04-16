@@ -8,6 +8,7 @@ import {
   waitForCompileCompletion,
 } from '../compile/compile-domain-reload-helpers.js';
 import {
+  isDynamicCodeWarmupEnabledForProject,
   prewarmDynamicCodeAfterCompile,
   shouldPrewarmDynamicCodeAfterCompile,
 } from './dynamic-code-post-compile-warmup.js';
@@ -285,7 +286,10 @@ export class DynamicUnityCommandTool extends BaseTool {
 
       // Why: compile completion means the result file and reload locks settled, but it does not
       // guarantee that execute-dynamic-code has finished its own post-reload cold path yet.
-      if (shouldPrewarmDynamicCodeAfterCompile(finalResult)) {
+      if (
+        shouldPrewarmDynamicCodeAfterCompile(finalResult) &&
+        isDynamicCodeWarmupEnabledForProject(this.resolveProjectRoot())
+      ) {
         await prewarmDynamicCodeAfterCompile(this.context.unityClient);
       }
 
