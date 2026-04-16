@@ -235,6 +235,58 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task ExecuteAsync_WhenWarmupFailsButForegroundExecutionSucceeds_ShouldNotRepeatWarmupOnNextRequest()
+        {
+            FakeDynamicCodeExecutionRuntime runtime = new FakeDynamicCodeExecutionRuntime(
+                new ExecutionResult
+                {
+                    Success = false,
+                    ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
+                },
+                new ExecutionResult
+                {
+                    Success = true,
+                    Result = "first"
+                },
+                new ExecutionResult
+                {
+                    Success = true,
+                    Result = "second"
+                });
+            ExecuteDynamicCodeUseCase useCase = new ExecuteDynamicCodeUseCase(runtime);
+
+            DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
+            ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+
+            try
+            {
+                ExecuteDynamicCodeResponse firstResponse = await useCase.ExecuteAsync(
+                    new ExecuteDynamicCodeSchema
+                    {
+                        Code = "return 1;"
+                    },
+                    CancellationToken.None);
+                ExecuteDynamicCodeResponse secondResponse = await useCase.ExecuteAsync(
+                    new ExecuteDynamicCodeSchema
+                    {
+                        Code = "return 2;"
+                    },
+                    CancellationToken.None);
+
+                Assert.That(firstResponse.Success, Is.True);
+                Assert.That(secondResponse.Success, Is.True);
+                Assert.That(runtime.Requests, Has.Count.EqualTo(3));
+                Assert.That(runtime.Requests[0].Code, Does.Contain("Unity CLI Loop dynamic code prewarm"));
+                Assert.That(runtime.Requests[1].Code, Is.EqualTo("return 1;"));
+                Assert.That(runtime.Requests[2].Code, Is.EqualTo("return 2;"));
+            }
+            finally
+            {
+                ULoopSettings.SetDynamicCodeSecurityLevel(previous);
+            }
+        }
+
+        [Test]
         public async Task ExecuteAsync_WhenRequestIsCompileOnly_ShouldSkipForegroundWarmup()
         {
             FakeDynamicCodeExecutionRuntime runtime = new FakeDynamicCodeExecutionRuntime(

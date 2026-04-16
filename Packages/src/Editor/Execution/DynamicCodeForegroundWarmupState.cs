@@ -44,6 +44,18 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
+        internal static void MarkCompletedByForegroundExecution()
+        {
+            lock (SyncRoot)
+            {
+                // Why: a real foreground execution succeeding after a transient hidden-warmup miss
+                // proves the user-visible path is already usable for the next request.
+                // Why not insist on the hidden warmup succeeding first: that keeps Pending alive
+                // after the exact success case we care about and injects another needless warmup.
+                _status = ForegroundWarmupStatus.Completed;
+            }
+        }
+
         internal static void ResetAfterIncompleteAttempt()
         {
             lock (SyncRoot)

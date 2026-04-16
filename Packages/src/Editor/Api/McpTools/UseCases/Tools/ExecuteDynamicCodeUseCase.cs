@@ -36,6 +36,7 @@ namespace io.github.hatayama.uLoopMCP
                 editorLevel = ULoopSettings.GetDynamicCodeSecurityLevel();
                 object[] parametersArray = ConvertParameters(parameters.Parameters);
                 string originalCode = parameters.Code ?? string.Empty;
+                bool shouldWarmForegroundExecutionPath = ShouldWarmForegroundExecutionPath(parameters);
 
                 LogExecutionStart(parameters, editorLevel, correlationId);
 
@@ -56,6 +57,11 @@ namespace io.github.hatayama.uLoopMCP
                     editorLevel,
                     parameters.YieldToForegroundRequests,
                     cancellationToken);
+
+                if (shouldWarmForegroundExecutionPath && finalResult.Success)
+                {
+                    DynamicCodeForegroundWarmupState.MarkCompletedByForegroundExecution();
+                }
 
                 if (IsCancelledResult(finalResult))
                 {
