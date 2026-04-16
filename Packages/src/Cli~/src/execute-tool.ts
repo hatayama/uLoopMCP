@@ -109,7 +109,7 @@ const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE =
   'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }';
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 2;
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS = 6;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS = 20;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS = 10000;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_COMPILATION_PROVIDER_SUBSTRINGS = ['warming up'];
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_UNITY_ERROR_SUBSTRINGS = [

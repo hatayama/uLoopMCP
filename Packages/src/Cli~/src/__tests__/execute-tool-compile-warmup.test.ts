@@ -188,4 +188,35 @@ describe('executeToolCommand compile warmup', () => {
     expect(mockSpawnSync).toHaveBeenCalledTimes(3);
     expect(mockConsoleLog).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps compile successful while startup prewarm stays busy longer than the old retry budget', async () => {
+    for (let attempt = 0; attempt < 7; attempt++) {
+      mockSpawnSync.mockReturnValueOnce({
+        status: 0,
+        stdout: JSON.stringify({
+          Success: false,
+          ErrorMessage: 'Another execution is already in progress',
+        }),
+      });
+    }
+
+    mockSpawnSync.mockReturnValue({
+      status: 0,
+      stdout: JSON.stringify({ Success: true }),
+    });
+
+    await expect(
+      executeToolCommand(
+        'compile',
+        {
+          ForceRecompile: true,
+          WaitForDomainReload: true,
+        },
+        { projectPath: '/project' },
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(mockSpawnSync).toHaveBeenCalledTimes(9);
+    expect(mockConsoleLog).toHaveBeenCalledTimes(1);
+  });
 });

@@ -104,6 +104,7 @@ namespace io.github.hatayama.uLoopMCP
             // Signal server is starting for CLI detection
             string serverStartingLockToken = ServerStartingLockService.CreateLockFile();
             bool serverStartingLockReleasedByPrewarm = false;
+            bool serverStartedSuccessfully = false;
 
             try
             {
@@ -132,6 +133,7 @@ namespace io.github.hatayama.uLoopMCP
                 // UseCase creates a new server instance, so we keep a reference here
                 // for compatibility with existing code
                 mcpServer = result.ServerInstance;
+                serverStartedSuccessfully = true;
 
                 // Sync session state with the running server to enable domain reload recovery
                 // even if mcpServer instance becomes null unexpectedly
@@ -142,13 +144,26 @@ namespace io.github.hatayama.uLoopMCP
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
                     await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
                 prewarmDynamicCodeUseCase.Request();
-                serverStartingLockReleasedByPrewarm = true;
+                serverStartingLockReleasedByPrewarm = !string.IsNullOrEmpty(serverStartingLockToken);
             }
             finally
             {
                 if (!serverStartingLockReleasedByPrewarm)
                 {
-                    ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
+                    // Why: if lock creation failed we cannot prove ownership, but leaving a fresh
+                    // stale lock behind after a successful startup blocks the CLI for the full stale
+                    // timeout even though this generation is already running.
+                    // Why not keep waiting for auto-prewarm in that path: without an ownership token
+                    // the prewarm use case cannot release the lock later, so the stale busy signal
+                    // would persist until timeout.
+                    if (serverStartedSuccessfully && string.IsNullOrEmpty(serverStartingLockToken))
+                    {
+                        ServerStartingLockService.DeleteLockFile();
+                    }
+                    else
+                    {
+                        ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
+                    }
                 }
             }
         }
