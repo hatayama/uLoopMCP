@@ -219,4 +219,30 @@ describe('executeToolCommand compile warmup', () => {
     expect(mockSpawnSync).toHaveBeenCalledTimes(9);
     expect(mockConsoleLog).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps compile successful when the child warmup process times out once and then succeeds', async () => {
+    mockSpawnSync
+      .mockReturnValueOnce({
+        status: null,
+        error: new Error('spawnSync ETIMEDOUT'),
+      })
+      .mockReturnValue({
+        status: 0,
+        stdout: JSON.stringify({ Success: true }),
+      });
+
+    await expect(
+      executeToolCommand(
+        'compile',
+        {
+          ForceRecompile: true,
+          WaitForDomainReload: true,
+        },
+        { projectPath: '/project' },
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(mockSpawnSync).toHaveBeenCalledTimes(3);
+    expect(mockConsoleLog).toHaveBeenCalledTimes(1);
+  });
 });

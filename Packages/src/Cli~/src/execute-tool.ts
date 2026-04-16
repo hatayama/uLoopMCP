@@ -551,8 +551,13 @@ function isRetryablePostCompileDynamicCodePrewarmError(error: Error): boolean {
   return error.message === EXECUTION_IN_PROGRESS_ERROR_MESSAGE
     || error.message === EXECUTION_CANCELLED_ERROR_MESSAGE
     || error.message === 'UNITY_SERVER_STARTING'
+    || isRetryablePostCompileDynamicCodePrewarmSpawnError(error)
     || isRetryableCompilationProviderUnavailable(error.message)
     || isRetryableUnityStartupMainThreadError(error.message);
+}
+
+function isRetryablePostCompileDynamicCodePrewarmSpawnError(error: Error): boolean {
+  return error.message.includes('ETIMEDOUT') || error.message.toLowerCase().includes('timed out');
 }
 
 function isRetryableCompilationProviderUnavailable(errorMessage: string): boolean {
