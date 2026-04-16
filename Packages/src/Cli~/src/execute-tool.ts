@@ -10,7 +10,7 @@
 import { PRODUCT_DISPLAY_NAME } from './cli-constants';
 import * as readline from 'readline';
 import { spawnSync } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, statSync } from 'fs';
 import { join } from 'path';
 import * as semver from 'semver';
 import { DirectUnityClient } from './direct-unity-client.js';
@@ -111,6 +111,7 @@ const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 2;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_RETRIES = 3;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS = 5000;
+const SERVER_STARTING_STALE_LOCK_MAX_AGE_MS = 30000;
 
 interface PostCompileDynamicCodePrewarmDependencies {
   spawnCliProcess: (args: string[]) => { status: number | null; error?: Error; stdout?: string };
@@ -248,7 +249,17 @@ function isServerStarting(projectRoot: string | null): boolean {
   }
 
   const serverStartingLockPath = join(projectRoot, 'Temp', 'serverstarting.lock');
-  return existsSync(serverStartingLockPath);
+  if (!existsSync(serverStartingLockPath)) {
+    return false;
+  }
+
+  const lockAgeMilliseconds = Date.now() - statSync(serverStartingLockPath).mtimeMs;
+  return lockAgeMilliseconds <= SERVER_STARTING_STALE_LOCK_MAX_AGE_MS;
+}
+
+export function isSettingsReadError(error: unknown): boolean {
+  return error instanceof Error
+    && error.message.startsWith('Could not read Unity server port from settings.');
 }
 
 export async function shouldReportServerStarting(
@@ -266,12 +277,25 @@ export async function shouldReportServerStarting(
   return runningProcess !== null && runningProcess !== undefined;
 }
 
+export async function shouldPromoteToServerStartingError(
+  error: unknown,
+  projectRoot: string | null,
+  shouldDiagnoseProjectState: boolean,
+  dependencies: ConnectionFailureDiagnosisDependencies = defaultConnectionFailureDiagnosisDependencies,
+): Promise<boolean> {
+  if (!isRetryableProjectRecoveryError(error) && !isSettingsReadError(error)) {
+    return false;
+  }
+
+  return shouldReportServerStarting(projectRoot, shouldDiagnoseProjectState, dependencies);
+}
+
 async function throwFinalToolError(
   error: unknown,
   projectRoot: string | null,
   shouldDiagnoseProjectState: boolean,
 ): Promise<never> {
-  if (await shouldReportServerStarting(projectRoot, shouldDiagnoseProjectState)) {
+  if (await shouldPromoteToServerStartingError(error, projectRoot, shouldDiagnoseProjectState)) {
     throw new Error('UNITY_SERVER_STARTING');
   }
 

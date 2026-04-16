@@ -2,9 +2,11 @@ import {
   appendCliTimingsToDynamicCodeResult,
   diagnoseRetryableProjectConnectionError,
   isTransportDisconnectError,
+  isSettingsReadError,
   prewarmDynamicCodeAfterCompile,
   stripInternalFields,
   resolveRecoveryPortOrKeepCurrent,
+  shouldPromoteToServerStartingError,
   shouldReportServerStarting,
   shouldPrewarmDynamicCodeAfterCompile,
   shouldRetryWhenUnityProcessIsRunning,
@@ -387,12 +389,16 @@ describe('shouldReportServerStarting', () => {
       findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
     };
     const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+    const statSpy = jest
+      .spyOn(require('fs'), 'statSync')
+      .mockReturnValue({ mtimeMs: Date.now() } as { mtimeMs: number });
 
     await expect(
       shouldReportServerStarting('/project', true, dependencies),
     ).resolves.toBe(true);
 
     existsSpy.mockRestore();
+    statSpy.mockRestore();
   });
 
   it('returns false when startup lock exists but Unity is not running', async () => {
@@ -400,11 +406,66 @@ describe('shouldReportServerStarting', () => {
       findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue(null),
     };
     const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+    const statSpy = jest
+      .spyOn(require('fs'), 'statSync')
+      .mockReturnValue({ mtimeMs: Date.now() } as { mtimeMs: number });
 
     await expect(
       shouldReportServerStarting('/project', true, dependencies),
     ).resolves.toBe(false);
 
     existsSpy.mockRestore();
+    statSpy.mockRestore();
+  });
+
+  it('returns false when the startup lock is stale', async () => {
+    const dependencies = {
+      findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
+    };
+    const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+    const statSpy = jest
+      .spyOn(require('fs'), 'statSync')
+      .mockReturnValue({ mtimeMs: Date.now() - 60000 } as { mtimeMs: number });
+
+    await expect(
+      shouldReportServerStarting('/project', true, dependencies),
+    ).resolves.toBe(false);
+
+    existsSpy.mockRestore();
+    statSpy.mockRestore();
+  });
+});
+
+describe('shouldPromoteToServerStartingError', () => {
+  it('returns false for non-retryable errors even when startup lock exists', async () => {
+    const dependencies = {
+      findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
+    };
+    const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+    const statSpy = jest
+      .spyOn(require('fs'), 'statSync')
+      .mockReturnValue({ mtimeMs: Date.now() } as { mtimeMs: number });
+
+    await expect(
+      shouldPromoteToServerStartingError(
+        new Error('Unexpected response from Unity: missing Tools array'),
+        '/project',
+        true,
+        dependencies,
+      ),
+    ).resolves.toBe(false);
+
+    existsSpy.mockRestore();
+    statSpy.mockRestore();
+  });
+});
+
+describe('isSettingsReadError', () => {
+  it('returns true for settings read failures', () => {
+    expect(
+      isSettingsReadError(
+        new Error('Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json'),
+      ),
+    ).toBe(true);
   });
 });
