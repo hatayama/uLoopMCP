@@ -123,7 +123,11 @@ namespace io.github.hatayama.uLoopMCP
 
                 // Execute initialization UseCase
                 McpServerInitializationUseCase useCase = new();
-                ServerInitializationSchema schema = new() { Port = port };
+                ServerInitializationSchema schema = new()
+                {
+                    Port = port,
+                    PreserveStartupLockUntilExplicitRelease = true
+                };
                 System.Threading.CancellationToken cancellationToken = System.Threading.CancellationToken.None;
 
                 var result = await useCase.ExecuteAsync(schema, cancellationToken);
@@ -145,9 +149,8 @@ namespace io.github.hatayama.uLoopMCP
                 DynamicCodeStartupTelemetry.MarkServerReady();
                 CustomToolManager.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
-                string dynamicCodeWarmupLockToken = ServerStartingLockService.CreateLockFile();
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
-                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(dynamicCodeWarmupLockToken);
+                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
                 prewarmDynamicCodeUseCase.Request();
             }
             finally
@@ -776,9 +779,8 @@ namespace io.github.hatayama.uLoopMCP
                 DynamicCodeStartupTelemetry.MarkServerReady();
                 CustomToolManager.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
-                string dynamicCodeWarmupLockToken = ServerStartingLockService.CreateLockFile();
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
-                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(dynamicCodeWarmupLockToken);
+                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
                 prewarmDynamicCodeUseCase.Request();
 
                 ActivateStartupProtection(5000);
