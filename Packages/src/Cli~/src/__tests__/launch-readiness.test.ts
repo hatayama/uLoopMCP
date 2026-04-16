@@ -248,10 +248,7 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     await waitForDynamicCodeReadyAfterLaunch('/project', {
       resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
       createClient: () =>
-        createMockClient(
-          responses as Array<MockReadinessResponse | Error>,
-          recordedMethods,
-        ).client,
+        createMockClient(responses as Array<MockReadinessResponse | Error>, recordedMethods).client,
       sleepFn: jest.fn().mockImplementation((): Promise<void> => {
         sleepCount++;
         return Promise.resolve();
@@ -269,24 +266,31 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     expect(sleepCount).toBe(1);
   });
 
-  it('fails fast after repeated malformed payloads', async () => {
+  it('keeps retrying malformed payloads until a later successful probe arrives', async () => {
     const recordedMethods: string[] = [];
     const responses: Array<MockReadinessResponse | Error | undefined> = [
       undefined,
       undefined,
       undefined,
       undefined,
+      undefined,
+      { Success: true },
     ];
+    let sleepCount = 0;
 
     await expect(
       waitForDynamicCodeReadyAfterLaunch('/project', {
         resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
-        createClient: () =>
-          createMockClient(
+        createClient: () => {
+          return createMockClient(
             responses as Array<MockReadinessResponse | Error>,
             recordedMethods,
-          ).client,
-        sleepFn: jest.fn().mockResolvedValue(undefined),
+          ).client;
+        },
+        sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+          sleepCount++;
+          return Promise.resolve();
+        }),
         nowFn: (() => {
           let now = 0;
           return (): number => {
@@ -295,14 +299,17 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
           };
         })(),
       }),
-    ).rejects.toThrow('execute-dynamic-code launch readiness probe returned malformed payload');
+    ).resolves.toBeUndefined();
 
     expect(recordedMethods).toEqual([
       'execute-dynamic-code',
       'execute-dynamic-code',
       'execute-dynamic-code',
       'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
     ]);
+    expect(sleepCount).toBe(5);
   });
 
   it('retries payload errors that indicate Unity startup is still on the loading thread', async () => {

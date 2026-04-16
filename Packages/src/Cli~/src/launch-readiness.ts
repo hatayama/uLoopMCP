@@ -13,7 +13,6 @@ const LAUNCH_READINESS_RETRY_MS = 1000;
 const LAUNCH_READINESS_CODE = 'return null;';
 const LAUNCH_READINESS_REQUEST_TOTAL_THRESHOLD_MS = 250;
 const LAUNCH_READINESS_SETTLE_TIMEOUT_MS = 10000;
-const MAX_TRANSIENT_MALFORMED_PAYLOAD_COUNT = 3;
 const TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_MESSAGES = [
   'Another execution is already in progress',
   'Execution was cancelled or timed out',
@@ -65,8 +64,10 @@ function isTransientExecuteDynamicCodeFailure(
     return true;
   }
 
-  return isTransientCompilationProviderUnavailable(errorMessage)
-    || isRetryableUnityStartupError(`Unity error: ${errorMessage}`);
+  return (
+    isTransientCompilationProviderUnavailable(errorMessage) ||
+    isRetryableUnityStartupError(`Unity error: ${errorMessage}`)
+  );
 }
 
 function isTransientCompilationProviderUnavailable(errorMessage: string): boolean {
@@ -159,7 +160,6 @@ export async function waitForDynamicCodeReadyAfterLaunch(
 ): Promise<void> {
   const startTime: number = dependencies.nowFn();
   let firstSuccessfulProbeTime: number | null = null;
-  let malformedPayloadCount = 0;
 
   while (dependencies.nowFn() - startTime < LAUNCH_READINESS_TIMEOUT_MS) {
     let client: DirectUnityClient | null = null;
@@ -188,13 +188,7 @@ export async function waitForDynamicCodeReadyAfterLaunch(
 
       const isMalformedPayload =
         payload === undefined || payload === null || typeof payload.Success !== 'boolean';
-      if (isMalformedPayload) {
-        malformedPayloadCount++;
-        if (malformedPayloadCount > MAX_TRANSIENT_MALFORMED_PAYLOAD_COUNT) {
-          throw new Error('execute-dynamic-code launch readiness probe returned malformed payload');
-        }
-      } else {
-        malformedPayloadCount = 0;
+      if (!isMalformedPayload) {
         if (payload.Success) {
           if (isLaunchReadinessStable(payload)) {
             return;

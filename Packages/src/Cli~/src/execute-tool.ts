@@ -23,6 +23,7 @@ import {
 } from './port-resolver.js';
 import { validateConnectedProject } from './project-validator.js';
 import { saveToolsCache, getCacheFilePath, ToolsCache, ToolDefinition } from './tool-cache.js';
+import { isToolEnabled } from './tool-settings-loader.js';
 import { VERSION } from './version.js';
 import { createSpinner } from './spinner.js';
 import { findUnityProjectRoot } from './project-root.js';
@@ -1029,14 +1030,19 @@ export async function executeToolCommand(
             // Why: one hidden execute-dynamic-code request after domain reload warms the same
             // isolated CLI process boundary and Debug.Log path that the next user-visible dynamic
             // execution will use.
-            // Why not swallow warmup failures here: wait-for-domain-reload is the contract that the
-            // next dynamic code request is usable, so returning success before this probe completes
-            // would report a ready editor while the first execute-dynamic-code can still fail.
-            spinner.update('Finalizing dynamic code warmup...');
-            await prewarmDynamicCodeAfterCompile({
-              projectRoot: portNumber === undefined ? effectiveProjectRoot : undefined,
-              port: portNumber,
-            });
+            // Why not force the hidden warmup when execute-dynamic-code is disabled: compile must
+            // stay usable in projects that intentionally turn that tool off, and running a hidden
+            // child command would turn a successful compile into a configuration error.
+            if (isToolEnabled('execute-dynamic-code', effectiveProjectRoot)) {
+              // Why not swallow warmup failures here: wait-for-domain-reload is the contract that the
+              // next dynamic code request is usable, so returning success before this probe completes
+              // would report a ready editor while the first execute-dynamic-code can still fail.
+              spinner.update('Finalizing dynamic code warmup...');
+              await prewarmDynamicCodeAfterCompile({
+                projectRoot: portNumber === undefined ? effectiveProjectRoot : undefined,
+                port: portNumber,
+              });
+            }
           }
 
           cleanup();

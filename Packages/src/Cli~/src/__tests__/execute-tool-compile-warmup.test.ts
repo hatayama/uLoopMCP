@@ -2,6 +2,7 @@ const mockResolveUnityConnection = jest.fn();
 const mockValidateProjectPath = jest.fn<string, [string]>();
 const mockExistsSync = jest.fn<boolean, [string]>();
 const mockSpawnSync = jest.fn();
+const mockIsToolEnabled = jest.fn<boolean, [string, string | undefined]>();
 const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
 
 class MockDirectUnityClient {
@@ -96,6 +97,11 @@ jest.mock('../compile-helpers.js', () => ({
     }),
 }));
 
+jest.mock('../tool-settings-loader.js', () => ({
+  isToolEnabled: (toolName: string, projectPath?: string): boolean =>
+    mockIsToolEnabled(toolName, projectPath),
+}));
+
 import { executeToolCommand } from '../execute-tool.js';
 
 describe('executeToolCommand compile warmup', () => {
@@ -116,6 +122,9 @@ describe('executeToolCommand compile warmup', () => {
 
     mockSpawnSync.mockReset();
     mockSpawnSync.mockReturnValue({ status: 1 });
+
+    mockIsToolEnabled.mockReset();
+    mockIsToolEnabled.mockReturnValue(true);
 
     mockConsoleLog.mockClear();
   });
@@ -251,6 +260,24 @@ describe('executeToolCommand compile warmup', () => {
     ).resolves.toBeUndefined();
 
     expect(mockSpawnSync).toHaveBeenCalledTimes(4);
+    expect(mockConsoleLog).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps compile successful when execute-dynamic-code is disabled for the project', async () => {
+    mockIsToolEnabled.mockReturnValue(false);
+
+    await expect(
+      executeToolCommand(
+        'compile',
+        {
+          ForceRecompile: true,
+          WaitForDomainReload: true,
+        },
+        { projectPath: '/project' },
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(mockSpawnSync).not.toHaveBeenCalled();
     expect(mockConsoleLog).toHaveBeenCalledTimes(1);
   });
 });
