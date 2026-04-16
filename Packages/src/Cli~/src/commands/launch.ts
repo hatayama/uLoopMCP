@@ -80,10 +80,16 @@ async function runLaunchCommand(
     return;
   }
 
+  const isDynamicCodeEnabled: boolean = isToolEnabled(
+    'execute-dynamic-code',
+    launchResult.projectPath,
+  );
+  if (!isDynamicCodeEnabled) {
+    return;
+  }
+
   console.log('Waiting for execute-dynamic-code warmup...');
   await waitForDynamicCodeReadyAfterLaunch(launchResult.projectPath);
-  if (isToolEnabled('execute-dynamic-code', launchResult.projectPath)) {
-    await prewarmDynamicCodeAfterLaunch({ projectRoot: launchResult.projectPath });
-  }
+  await prewarmDynamicCodeAfterLaunch({ projectRoot: launchResult.projectPath });
   console.log('execute-dynamic-code is ready.');
 }
