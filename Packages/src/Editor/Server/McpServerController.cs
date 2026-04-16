@@ -353,7 +353,6 @@ namespace io.github.hatayama.uLoopMCP
         {
             CompilationLockService.DeleteLockFile();
             DomainReloadDetectionService.DeleteLockFile();
-            ServerStartingLockService.DeleteLockFile();
         }
 
         /// <summary>

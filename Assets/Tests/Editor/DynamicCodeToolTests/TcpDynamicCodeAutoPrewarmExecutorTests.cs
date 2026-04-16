@@ -1,0 +1,59 @@
+using System.Threading;
+using System.Threading.Tasks;
+using NUnit.Framework;
+
+namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
+{
+    [TestFixture]
+    public class TcpDynamicCodeAutoPrewarmExecutorTests
+    {
+        [Test]
+        public async Task ExecuteAsync_WhenTransportReturnsSuccessfulResult_ShouldReturnSuccess()
+        {
+            TcpDynamicCodeAutoPrewarmExecutor executor = new TcpDynamicCodeAutoPrewarmExecutor(
+                (requestJson, ct) => Task.FromResult(
+                    "{\"jsonrpc\":\"2.0\",\"id\":\"dynamic-code-auto-prewarm\",\"result\":{\"success\":true}}"));
+
+            DynamicCodeAutoPrewarmResult result = await executor.ExecuteAsync(
+                new ExecuteDynamicCodeSchema { Code = "return 1;" },
+                CancellationToken.None);
+
+            Assert.That(result.Success, Is.True);
+            Assert.That(result.ErrorMessage, Is.Null.Or.EqualTo(string.Empty));
+        }
+
+        [Test]
+        public async Task ExecuteAsync_WhenTransportReturnsJsonRpcError_ShouldReturnFailure()
+        {
+            TcpDynamicCodeAutoPrewarmExecutor executor = new TcpDynamicCodeAutoPrewarmExecutor(
+                (requestJson, ct) => Task.FromResult(
+                    "{\"jsonrpc\":\"2.0\",\"id\":\"dynamic-code-auto-prewarm\",\"error\":{\"message\":\"server session changed\"}}"));
+
+            DynamicCodeAutoPrewarmResult result = await executor.ExecuteAsync(
+                new ExecuteDynamicCodeSchema { Code = "return 1;" },
+                CancellationToken.None);
+
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorMessage, Is.EqualTo("server session changed"));
+        }
+
+        [Test]
+        public async Task ExecuteAsync_WhenTransportTimesOut_ShouldReturnTimeoutFailure()
+        {
+            TcpDynamicCodeAutoPrewarmExecutor executor = new TcpDynamicCodeAutoPrewarmExecutor(
+                async (requestJson, ct) =>
+                {
+                    await Task.Delay(Timeout.Infinite, ct);
+                    return string.Empty;
+                },
+                50);
+
+            DynamicCodeAutoPrewarmResult result = await executor.ExecuteAsync(
+                new ExecuteDynamicCodeSchema { Code = "return 1;" },
+                CancellationToken.None);
+
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorMessage, Is.EqualTo("dynamic code auto prewarm timed out"));
+        }
+    }
+}

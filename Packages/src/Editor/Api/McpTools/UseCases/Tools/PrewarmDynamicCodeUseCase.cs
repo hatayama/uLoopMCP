@@ -247,6 +247,21 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const string AutoPrewarmRequestId = "dynamic-code-auto-prewarm";
         private const int LoopbackPrewarmTimeoutMilliseconds = 10000;
+        private readonly Func<string, CancellationToken, Task<string>> _sendRequestAsync;
+        private readonly int _timeoutMilliseconds;
+
+        public TcpDynamicCodeAutoPrewarmExecutor()
+            : this(SendRequestOverLoopbackAsync, LoopbackPrewarmTimeoutMilliseconds)
+        {
+        }
+
+        internal TcpDynamicCodeAutoPrewarmExecutor(
+            Func<string, CancellationToken, Task<string>> sendRequestAsync,
+            int timeoutMilliseconds = LoopbackPrewarmTimeoutMilliseconds)
+        {
+            _sendRequestAsync = sendRequestAsync ?? throw new ArgumentNullException(nameof(sendRequestAsync));
+            _timeoutMilliseconds = timeoutMilliseconds;
+        }
 
         public async Task<DynamicCodeAutoPrewarmResult> ExecuteAsync(
             ExecuteDynamicCodeSchema parameters,
@@ -262,10 +277,10 @@ namespace io.github.hatayama.uLoopMCP
             // that real Unity CLI Loop requests still have to pay on their first trip after reload.
             using CancellationTokenSource timeoutCancellationTokenSource =
                 CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeoutCancellationTokenSource.CancelAfter(LoopbackPrewarmTimeoutMilliseconds);
+            timeoutCancellationTokenSource.CancelAfter(_timeoutMilliseconds);
             try
             {
-                string responseJson = await SendRequestOverLoopbackAsync(
+                string responseJson = await _sendRequestAsync(
                     requestJson,
                     timeoutCancellationTokenSource.Token);
 
