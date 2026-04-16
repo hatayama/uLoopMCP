@@ -104,9 +104,11 @@ const RETRY_DELAY_MS = 500;
 const MAX_RETRIES = 3;
 const COMPILE_WAIT_TIMEOUT_MS = 90000;
 const COMPILE_WAIT_POLL_INTERVAL_MS = 100;
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE = 'using UnityEngine; return Mathf.PI;';
+const FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX = 'Force compilation executed.';
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE =
+  'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }';
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 2;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 1;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_RETRIES = 3;
 
 interface PostCompileDynamicCodePrewarmDependencies {
@@ -328,7 +330,18 @@ export function appendCliTimingsToDynamicCodeResult(
 export function shouldPrewarmDynamicCodeAfterCompile(result: Record<string, unknown>): boolean {
   const success = result['Success'];
   const errorCount = result['ErrorCount'];
-  return success === true && errorCount === 0;
+  if (success === true && errorCount === 0) {
+    return true;
+  }
+
+  const message = result['Message'];
+  // Why: force-recompile + wait-for-domain-reload intentionally persists an indeterminate
+  // response because Unity cannot summarize compiler messages until after reload.
+  // Why not gate the hidden prewarm on Success===true: that would skip the exact domain-reload
+  // path we need to warm, leaving the next user-visible execute-dynamic-code request cold.
+  return success === null
+    && typeof message === 'string'
+    && message.startsWith(FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX);
 }
 
 export async function prewarmDynamicCodeAfterCompile(
@@ -644,7 +657,8 @@ export async function executeToolCommand(
       if (finalResult !== undefined) {
         if (toolName === 'compile' && shouldPrewarmDynamicCodeAfterCompile(finalResult)) {
           // Why: one hidden execute-dynamic-code request after domain reload warms the same
-          // isolated CLI process boundary that the next user-visible dynamic execution will use.
+          // isolated CLI process boundary and Debug.Log path that the next user-visible dynamic
+          // execution will use.
           // Why not treat this optimization as part of compile correctness: a successful
           // compile result must still be returned even if the latency warmup misses.
           spinner.update('Finalizing dynamic code warmup...');

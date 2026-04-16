@@ -113,6 +113,16 @@ describe('shouldPrewarmDynamicCodeAfterCompile', () => {
     ).toBe(true);
   });
 
+  it('returns true for force-recompile responses that stay indeterminate across domain reload', () => {
+    expect(
+      shouldPrewarmDynamicCodeAfterCompile({
+        Success: null,
+        ErrorCount: null,
+        Message: 'Force compilation executed. Use get-logs tool to retrieve compilation messages.',
+      }),
+    ).toBe(true);
+  });
+
   it('returns false when compile failed or reported errors', () => {
     expect(
       shouldPrewarmDynamicCodeAfterCompile({
@@ -126,6 +136,13 @@ describe('shouldPrewarmDynamicCodeAfterCompile', () => {
         ErrorCount: 2,
       }),
     ).toBe(false);
+    expect(
+      shouldPrewarmDynamicCodeAfterCompile({
+        Success: null,
+        ErrorCount: null,
+        Message: 'Compilation did not start.',
+      }),
+    ).toBe(false);
   });
 });
 
@@ -137,18 +154,11 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       spawnCliProcess,
     });
 
-    expect(spawnCliProcess).toHaveBeenCalledTimes(2);
+    expect(spawnCliProcess).toHaveBeenCalledTimes(1);
     expect(spawnCliProcess).toHaveBeenNthCalledWith(1, [
       'execute-dynamic-code',
       '--code',
-      'using UnityEngine; return Mathf.PI;',
-      '--project-path',
-      '/project',
-    ]);
-    expect(spawnCliProcess).toHaveBeenNthCalledWith(2, [
-      'execute-dynamic-code',
-      '--code',
-      'using UnityEngine; return Mathf.PI;',
+      'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
       '--project-path',
       '/project',
     ]);
