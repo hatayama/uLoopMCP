@@ -70,6 +70,22 @@ describe('busy state detection order', () => {
     expect(mockResolveUnityConnection).not.toHaveBeenCalled();
   });
 
+  it('allows the internal post-compile warmup path to bypass only serverstarting.lock', async () => {
+    process.env['ULOOP_INTERNAL_SKIP_SERVER_STARTING_BUSY_CHECK'] = '1';
+    mockResolveUnityConnection.mockRejectedValue(new Error('RESOLVE_CALLED_AFTER_SKIP'));
+    mockExistsSync.mockImplementation((path: string) => path.endsWith('serverstarting.lock'));
+
+    try {
+      await expect(listAvailableTools({ projectPath: '/project' })).rejects.toThrow(
+        'RESOLVE_CALLED_AFTER_SKIP',
+      );
+    } finally {
+      delete process.env['ULOOP_INTERNAL_SKIP_SERVER_STARTING_BUSY_CHECK'];
+    }
+
+    expect(mockResolveUnityConnection).toHaveBeenCalled();
+  });
+
   it('skips busy state checks when an explicit port is provided for tool execution', async () => {
     mockResolveUnityConnection.mockRejectedValue(new Error('EXPLICIT_PORT_RESOLVED'));
 

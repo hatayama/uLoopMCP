@@ -116,6 +116,7 @@ const POST_COMPILE_DYNAMIC_CODE_PREWARM_UNITY_ERROR_SUBSTRINGS = [
   'can only be called from the main thread',
 ];
 const SERVER_STARTING_STALE_LOCK_MAX_AGE_MS = 70000;
+const SKIP_SERVER_STARTING_BUSY_CHECK_ENV_KEY = 'ULOOP_INTERNAL_SKIP_SERVER_STARTING_BUSY_CHECK';
 const EXECUTION_IN_PROGRESS_ERROR_MESSAGE = 'Another execution is already in progress';
 const EXECUTION_CANCELLED_ERROR_MESSAGE = 'Execution was cancelled or timed out';
 
@@ -130,6 +131,10 @@ const defaultPostCompileDynamicCodePrewarmDependencies: PostCompileDynamicCodePr
       encoding: 'utf8',
       timeout: POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS,
       windowsHide: true,
+      env: {
+        ...process.env,
+        [SKIP_SERVER_STARTING_BUSY_CHECK_ENV_KEY]: '1',
+      },
     }),
 };
 
@@ -619,7 +624,7 @@ function checkUnityBusyState(projectPath?: string): void {
     return;
   }
 
-  if (isServerStarting(projectRoot)) {
+  if (!shouldSkipServerStartingBusyCheck() && isServerStarting(projectRoot)) {
     throw new Error('UNITY_SERVER_STARTING');
   }
 
@@ -633,6 +638,10 @@ function checkUnityBusyState(projectPath?: string): void {
     throw new Error('UNITY_DOMAIN_RELOAD');
   }
 
+}
+
+function shouldSkipServerStartingBusyCheck(): boolean {
+  return process.env[SKIP_SERVER_STARTING_BUSY_CHECK_ENV_KEY] === '1';
 }
 
 function checkUnityBusyStateBeforeProjectResolution(globalOptions: GlobalOptions): void {

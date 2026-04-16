@@ -104,7 +104,13 @@ namespace io.github.hatayama.uLoopMCP
             // Signal server is starting for CLI detection
             string serverStartingLockToken = ServerStartingLockService.CreateLockFile();
             bool serverStartingLockReleasedByPrewarm = false;
-            bool serverStartedSuccessfully = false;
+            UnityEngine.Debug.Assert(
+                !string.IsNullOrEmpty(serverStartingLockToken),
+                "serverstarting.lock must be created before starting the server");
+            if (string.IsNullOrEmpty(serverStartingLockToken))
+            {
+                throw new InvalidOperationException("Failed to create serverstarting.lock.");
+            }
 
             try
             {
@@ -133,7 +139,6 @@ namespace io.github.hatayama.uLoopMCP
                 // UseCase creates a new server instance, so we keep a reference here
                 // for compatibility with existing code
                 mcpServer = result.ServerInstance;
-                serverStartedSuccessfully = true;
 
                 // Sync session state with the running server to enable domain reload recovery
                 // even if mcpServer instance becomes null unexpectedly
@@ -150,20 +155,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (!serverStartingLockReleasedByPrewarm)
                 {
-                    // Why: if lock creation failed we cannot prove ownership, but leaving a fresh
-                    // stale lock behind after a successful startup blocks the CLI for the full stale
-                    // timeout even though this generation is already running.
-                    // Why not keep waiting for auto-prewarm in that path: without an ownership token
-                    // the prewarm use case cannot release the lock later, so the stale busy signal
-                    // would persist until timeout.
-                    if (serverStartedSuccessfully && string.IsNullOrEmpty(serverStartingLockToken))
-                    {
-                        ServerStartingLockService.DeleteLockFile();
-                    }
-                    else
-                    {
-                        ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
-                    }
+                    ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
                 }
             }
         }
@@ -700,7 +692,6 @@ namespace io.github.hatayama.uLoopMCP
 
             await StartupSemaphore.WaitAsync(cancellationToken);
             string serverStartingLockToken = null;
-            bool serverStartedSuccessfully = false;
             try
             {
                 // If any server is already running, ignore this request to prevent double-binding
@@ -711,6 +702,13 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 serverStartingLockToken = ServerStartingLockService.CreateLockFile();
+                UnityEngine.Debug.Assert(
+                    !string.IsNullOrEmpty(serverStartingLockToken),
+                    "serverstarting.lock must be created before server recovery starts");
+                if (string.IsNullOrEmpty(serverStartingLockToken))
+                {
+                    throw new InvalidOperationException("Failed to create serverstarting.lock.");
+                }
 
                 // Ensure previous instance is fully disposed before trying to bind a new one
                 if (mcpServer != null)
@@ -775,7 +773,6 @@ namespace io.github.hatayama.uLoopMCP
 
                 // Mark running and update settings
                 SaveRunningServerSession(chosenPort);
-                serverStartedSuccessfully = true;
 
                 // Clear reconnection-related flags on successful recovery
                 McpEditorSettings.ClearReconnectingFlags();
@@ -786,23 +783,12 @@ namespace io.github.hatayama.uLoopMCP
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
                     await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
                 prewarmDynamicCodeUseCase.Request();
-                if (string.IsNullOrEmpty(serverStartingLockToken))
-                {
-                    ServerStartingLockService.DeleteLockFile();
-                }
 
                 ActivateStartupProtection(5000);
             }
             catch
             {
-                if (serverStartedSuccessfully && string.IsNullOrEmpty(serverStartingLockToken))
-                {
-                    ServerStartingLockService.DeleteLockFile();
-                }
-                else
-                {
-                    ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
-                }
+                ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
                 throw;
             }
             finally
