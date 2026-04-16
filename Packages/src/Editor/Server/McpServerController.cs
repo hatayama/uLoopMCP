@@ -700,6 +700,7 @@ namespace io.github.hatayama.uLoopMCP
 
             await StartupSemaphore.WaitAsync(cancellationToken);
             string serverStartingLockToken = null;
+            bool serverStartedSuccessfully = false;
             try
             {
                 // If any server is already running, ignore this request to prevent double-binding
@@ -774,6 +775,7 @@ namespace io.github.hatayama.uLoopMCP
 
                 // Mark running and update settings
                 SaveRunningServerSession(chosenPort);
+                serverStartedSuccessfully = true;
 
                 // Clear reconnection-related flags on successful recovery
                 McpEditorSettings.ClearReconnectingFlags();
@@ -784,12 +786,23 @@ namespace io.github.hatayama.uLoopMCP
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
                     await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
                 prewarmDynamicCodeUseCase.Request();
+                if (string.IsNullOrEmpty(serverStartingLockToken))
+                {
+                    ServerStartingLockService.DeleteLockFile();
+                }
 
                 ActivateStartupProtection(5000);
             }
             catch
             {
-                ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
+                if (serverStartedSuccessfully && string.IsNullOrEmpty(serverStartingLockToken))
+                {
+                    ServerStartingLockService.DeleteLockFile();
+                }
+                else
+                {
+                    ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
+                }
                 throw;
             }
             finally

@@ -449,7 +449,6 @@ export function shouldPrewarmDynamicCodeAfterCompile(result: Record<string, unkn
 
 export async function prewarmDynamicCodeAfterCompile(
   projectRoot: string,
-  unityPort?: number,
   dependencies: PostCompileDynamicCodePrewarmDependencies = defaultPostCompileDynamicCodePrewarmDependencies,
 ): Promise<void> {
   for (let successfulRuns = 0; successfulRuns < POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT; successfulRuns++) {
@@ -465,12 +464,9 @@ export async function prewarmDynamicCodeAfterCompile(
         POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE,
         '--yield-to-foreground-requests',
         'true',
+        '--project-path',
+        projectRoot,
       ];
-      if (unityPort !== undefined) {
-        args.push('--port', unityPort.toString());
-      } else {
-        args.push('--project-path', projectRoot);
-      }
       const prewarmResult = dependencies.spawnCliProcess(args);
       if (didPostCompileDynamicCodePrewarmSucceed(prewarmResult)) {
         lastError = undefined;
@@ -501,7 +497,11 @@ function didPostCompileDynamicCodePrewarmSucceed(result: {
     return false;
   }
 
-  const parsed = JSON.parse(result.stdout) as Record<string, unknown>;
+  const parsed = tryParsePostCompileDynamicCodePrewarmStdout(result.stdout);
+  if (parsed === undefined) {
+    return false;
+  }
+
   return parsed['Success'] === true;
 }
 
@@ -515,14 +515,26 @@ function createPostCompileDynamicCodePrewarmError(result: {
   }
 
   if (result.status === 0 && typeof result.stdout === 'string' && result.stdout.trim().length > 0) {
-    const parsed = JSON.parse(result.stdout) as Record<string, unknown>;
-    const errorMessage = parsed['ErrorMessage'];
-    if (typeof errorMessage === 'string' && errorMessage.length > 0) {
-      return new Error(errorMessage);
+    const parsed = tryParsePostCompileDynamicCodePrewarmStdout(result.stdout);
+    if (parsed !== undefined) {
+      const errorMessage = parsed['ErrorMessage'];
+      if (typeof errorMessage === 'string' && errorMessage.length > 0) {
+        return new Error(errorMessage);
+      }
     }
   }
 
   return new Error('Post-compile dynamic code prewarm failed.');
+}
+
+function tryParsePostCompileDynamicCodePrewarmStdout(
+  stdout: string,
+): Record<string, unknown> | undefined {
+  try {
+    return JSON.parse(stdout) as Record<string, unknown>;
+  } catch {
+    return undefined;
+  }
 }
 
 function isRetryablePostCompileDynamicCodePrewarmError(error: Error): boolean {
@@ -851,7 +863,7 @@ export async function executeToolCommand(
           // next dynamic code request is usable, so returning success before this probe completes
           // would report a ready editor while the first execute-dynamic-code can still fail.
           spinner.update('Finalizing dynamic code warmup...');
-          await prewarmDynamicCodeAfterCompile(effectiveProjectRoot, connection.port);
+          await prewarmDynamicCodeAfterCompile(effectiveProjectRoot);
         }
 
         cleanup();

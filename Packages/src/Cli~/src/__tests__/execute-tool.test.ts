@@ -167,7 +167,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       stdout: JSON.stringify({ Success: true }),
     });
 
-    await prewarmDynamicCodeAfterCompile('/project', 8711, {
+    await prewarmDynamicCodeAfterCompile('/project', {
       spawnCliProcess,
     });
 
@@ -178,23 +178,23 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
       '--yield-to-foreground-requests',
       'true',
-      '--port',
-      '8711',
-    ]);
+        '--project-path',
+        '/project',
+      ]);
     expect(spawnCliProcess).toHaveBeenNthCalledWith(2, [
       'execute-dynamic-code',
       '--code',
       'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
       '--yield-to-foreground-requests',
       'true',
-      '--port',
-      '8711',
-    ]);
+        '--project-path',
+        '/project',
+      ]);
   });
 
   it('throws when the isolated CLI prewarm fails', async () => {
     await expect(
-      prewarmDynamicCodeAfterCompile('/project', 8711, {
+      prewarmDynamicCodeAfterCompile('/project', {
         spawnCliProcess: jest.fn().mockReturnValue({ status: 1 }),
       }),
     ).rejects.toThrow('Post-compile dynamic code prewarm failed.');
@@ -202,7 +202,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
 
   it('throws when the isolated CLI prewarm returns Success=false with exit code 0', async () => {
     await expect(
-      prewarmDynamicCodeAfterCompile('/project', 8711, {
+      prewarmDynamicCodeAfterCompile('/project', {
         spawnCliProcess: jest.fn().mockReturnValue({
           status: 0,
           stdout: JSON.stringify({
@@ -230,7 +230,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       });
 
     await expect(
-      prewarmDynamicCodeAfterCompile('/project', 8711, {
+      prewarmDynamicCodeAfterCompile('/project', {
         spawnCliProcess,
       }),
     ).resolves.toBeUndefined();
@@ -240,10 +240,21 @@ describe('prewarmDynamicCodeAfterCompile', () => {
 
   it('throws when spawning the isolated CLI prewarm process fails', async () => {
     await expect(
-      prewarmDynamicCodeAfterCompile('/project', 8711, {
+      prewarmDynamicCodeAfterCompile('/project', {
         spawnCliProcess: jest.fn().mockReturnValue({ status: null, error: new Error('spawn failed') }),
       }),
     ).rejects.toThrow('spawn failed');
+  });
+
+  it('throws a generic warmup failure when the isolated CLI prints malformed stdout', async () => {
+    await expect(
+      prewarmDynamicCodeAfterCompile('/project', {
+        spawnCliProcess: jest.fn().mockReturnValue({
+          status: 0,
+          stdout: 'not-json',
+        }),
+      }),
+    ).rejects.toThrow('Post-compile dynamic code prewarm failed.');
   });
 });
 
