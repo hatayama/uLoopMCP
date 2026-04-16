@@ -473,6 +473,30 @@ describe('prewarmDynamicCodeAfterCompile', () => {
 
     expect(spawnCliProcess).toHaveBeenCalledTimes(5);
   });
+
+  it('retries transient disconnect failures reported through non-SGR ANSI stderr', async () => {
+    const spawnCliProcess = jest
+      .fn()
+      .mockReturnValueOnce({
+        status: 1,
+        stderr: '\u001b[2K\u001b[1GError: UNITY_NO_RESPONSE',
+      })
+      .mockReturnValue({
+        status: 0,
+        stdout: JSON.stringify({ Success: true }),
+      });
+
+    await expect(
+      prewarmDynamicCodeAfterCompile(
+        { projectRoot: '/project' },
+        {
+          spawnCliProcess,
+        },
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(spawnCliProcess).toHaveBeenCalledTimes(5);
+  });
 });
 
 describe('prewarmDynamicCodeAfterLaunch', () => {

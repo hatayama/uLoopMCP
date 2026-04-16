@@ -24,4 +24,10 @@ describe('resolveCompileTargetProjectRoot', () => {
       '/logger-project',
     );
   });
+
+  it('ignores whitespace-only project roots before falling back', () => {
+    expect(resolveCompileTargetProjectRoot({ ProjectRoot: '   ' }, '  ', '/logger-project')).toBe(
+      '/logger-project',
+    );
+  });
 });

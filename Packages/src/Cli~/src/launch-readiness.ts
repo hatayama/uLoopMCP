@@ -273,12 +273,14 @@ export async function waitForDynamicCodeReadyAfterLaunch(
             }
           }
         } else {
+          currentProbeStage = 0;
           firstSuccessfulProbeTime = null;
           if (!isTransientExecuteDynamicCodeFailure(payload)) {
             throw createLaunchReadinessFailure(payload);
           }
         }
       } else {
+        currentProbeStage = 0;
         firstSuccessfulProbeTime = null;
       }
     } catch (error) {
@@ -286,6 +288,7 @@ export async function waitForDynamicCodeReadyAfterLaunch(
         throw error;
       }
 
+      currentProbeStage = 0;
       firstSuccessfulProbeTime = null;
     } finally {
       client?.disconnect();

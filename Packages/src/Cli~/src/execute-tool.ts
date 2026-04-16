@@ -684,7 +684,8 @@ function stripAnsiControlSequences(text: string): string {
     }
 
     if (isInsideEscapeSequence) {
-      if (character === 'm') {
+      const code = character.charCodeAt(0);
+      if (code >= 0x40 && code <= 0x7e) {
         isInsideEscapeSequence = false;
       }
       continue;

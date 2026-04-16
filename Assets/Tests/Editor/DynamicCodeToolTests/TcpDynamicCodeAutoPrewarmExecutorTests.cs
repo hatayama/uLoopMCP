@@ -45,7 +45,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             TcpDynamicCodeAutoPrewarmExecutor executor = new TcpDynamicCodeAutoPrewarmExecutor(
                 async (requestJson, ct) =>
                 {
-                    await Task.Delay(Timeout.Infinite, ct);
+                    await Task.Delay(TimeSpan.FromSeconds(5), ct);
                     return string.Empty;
                 },
                 50);

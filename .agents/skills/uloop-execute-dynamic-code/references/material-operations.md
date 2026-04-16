@@ -23,6 +23,10 @@ using UnityEditor;
 
 string matPath = "Assets/Materials/MyMaterial.mat";
 Material mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+if (mat == null)
+{
+    return $"Material not found at {matPath}";
+}
 mat.SetColor("_Color", new Color(1f, 0.5f, 0f, 1f));
 EditorUtility.SetDirty(mat);
 AssetDatabase.SaveAssets();
@@ -134,6 +138,10 @@ string sourcePath = "Assets/Materials/MyMaterial.mat";
 string destPath = "Assets/Materials/MyMaterial_Copy.mat";
 
 Material source = AssetDatabase.LoadAssetAtPath<Material>(sourcePath);
+if (source == null)
+{
+    return $"Material not found at {sourcePath}";
+}
 Material copy = new Material(source);
 AssetDatabase.CreateAsset(copy, destPath);
 AssetDatabase.SaveAssets();

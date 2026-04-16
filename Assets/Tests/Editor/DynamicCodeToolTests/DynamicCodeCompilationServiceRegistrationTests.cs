@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 using io.github.hatayama.uLoopMCP.Factory;
 using NUnit.Framework;
 
-namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
+namespace io.github.hatayama.uLoopMCP
 {
     [TestFixture]
     public class DynamicCodeCompilationServiceRegistrationTests
@@ -19,11 +19,17 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [TearDown]
         public async Task TearDown()
         {
-            DynamicCodeServices.ResetServerScopedServices();
-            Task drainTask = DynamicCodeServices.GetServerScopedDrainTaskForTests();
-            await DynamicCodeServices.AwaitDrainTaskAsync(drainTask);
-            DynamicCodeServices.ResetStateForTests();
-            DynamicCompilationServiceRegistry.SwapFactoryForTests(_previousFactory);
+            try
+            {
+                DynamicCodeServices.ResetServerScopedServices();
+                Task drainTask = DynamicCodeServices.GetServerScopedDrainTaskForTests();
+                await DynamicCodeServices.AwaitDrainTaskAsync(drainTask);
+            }
+            finally
+            {
+                DynamicCodeServices.ResetStateForTests();
+                DynamicCompilationServiceRegistry.SwapFactoryForTests(_previousFactory);
+            }
         }
 
         [Test]

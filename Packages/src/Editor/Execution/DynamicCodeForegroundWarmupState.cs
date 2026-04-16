@@ -23,6 +23,11 @@ namespace io.github.hatayama.uLoopMCP
         {
             lock (SyncRoot)
             {
+                if (_status == ForegroundWarmupStatus.Completed)
+                {
+                    return;
+                }
+
                 System.Diagnostics.Debug.Assert(
                     _status == ForegroundWarmupStatus.Running,
                     "Foreground warmup must only complete after it has started.");
