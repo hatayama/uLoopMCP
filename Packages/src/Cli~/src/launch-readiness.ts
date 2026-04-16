@@ -272,14 +272,21 @@ export async function waitForDynamicCodeReadyAfterLaunch(
               }
             }
           }
-        } else if (!isTransientExecuteDynamicCodeFailure(payload)) {
-          throw createLaunchReadinessFailure(payload);
+        } else {
+          firstSuccessfulProbeTime = null;
+          if (!isTransientExecuteDynamicCodeFailure(payload)) {
+            throw createLaunchReadinessFailure(payload);
+          }
         }
+      } else {
+        firstSuccessfulProbeTime = null;
       }
     } catch (error) {
       if (!isRetryableLaunchReadinessError(error)) {
         throw error;
       }
+
+      firstSuccessfulProbeTime = null;
     } finally {
       client?.disconnect();
     }

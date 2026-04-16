@@ -675,6 +675,47 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     expect(sleepCount).toBe(4);
   });
 
+  it('resets the settle timer after transient payload failures', async () => {
+    const recordedMethods: string[] = [];
+    const responses: Array<MockReadinessResponse | Error> = [
+      { Success: true, Timings: ['[Perf] RequestTotal: 420.0ms'] },
+      { Success: false, ErrorMessage: 'Internal error' },
+      { Success: true, Timings: ['[Perf] RequestTotal: 410.0ms'] },
+      { Success: true, Timings: ['[Perf] RequestTotal: 405.0ms'] },
+      { Success: true, Timings: ['[Perf] RequestTotal: 180.0ms'] },
+      { Success: true, Timings: ['[Perf] RequestTotal: 170.0ms'] },
+      { Success: true, Timings: ['[Perf] RequestTotal: 160.0ms'] },
+    ];
+    let sleepCount = 0;
+
+    await waitForDynamicCodeReadyAfterLaunch('/project', {
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
+      createClient: () => createMockClient(responses, recordedMethods).client,
+      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+        sleepCount++;
+        return Promise.resolve();
+      }),
+      nowFn: (() => {
+        const values = [
+          0, 100, 200, 1200, 11500, 11600, 22000, 22100, 22300, 22500, 22700,
+        ];
+        let index = 0;
+        return (): number => values[Math.min(index++, values.length - 1)];
+      })(),
+    });
+
+    expect(recordedMethods).toEqual([
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+    ]);
+    expect(sleepCount).toBe(6);
+  });
+
   it('does not retry project mismatch errors', async () => {
     const mismatchClient = createMockClient([new ProjectMismatchError('/expected', '/actual')], []);
 
