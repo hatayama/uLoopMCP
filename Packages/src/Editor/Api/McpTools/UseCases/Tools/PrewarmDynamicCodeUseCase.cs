@@ -246,6 +246,7 @@ namespace io.github.hatayama.uLoopMCP
     internal sealed class TcpDynamicCodeAutoPrewarmExecutor : IDynamicCodeAutoPrewarmExecutor
     {
         private const string AutoPrewarmRequestId = "dynamic-code-auto-prewarm";
+        private const int LoopbackPrewarmTimeoutMilliseconds = 10000;
 
         public async Task<DynamicCodeAutoPrewarmResult> ExecuteAsync(
             ExecuteDynamicCodeSchema parameters,
@@ -259,10 +260,26 @@ namespace io.github.hatayama.uLoopMCP
             // warmed the remaining listener/frame-parser path.
             // Why not stop at JsonRpcProcessor.ProcessRequest: that bypasses the transport layer
             // that real Unity CLI Loop requests still have to pay on their first trip after reload.
-            string responseJson = await SendRequestOverLoopbackAsync(requestJson, ct);
+            using CancellationTokenSource timeoutCancellationTokenSource =
+                CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCancellationTokenSource.CancelAfter(LoopbackPrewarmTimeoutMilliseconds);
+            try
+            {
+                string responseJson = await SendRequestOverLoopbackAsync(
+                    requestJson,
+                    timeoutCancellationTokenSource.Token);
 
-            ct.ThrowIfCancellationRequested();
-            return ParseResponse(responseJson);
+                ct.ThrowIfCancellationRequested();
+                return ParseResponse(responseJson);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                return new DynamicCodeAutoPrewarmResult
+                {
+                    Success = false,
+                    ErrorMessage = "dynamic code auto prewarm timed out"
+                };
+            }
         }
 
         private static string CreateRequestJson(ExecuteDynamicCodeSchema parameters)

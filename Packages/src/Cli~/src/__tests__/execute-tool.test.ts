@@ -150,7 +150,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
   it('spawns an isolated execute-dynamic-code process against the same project', async () => {
     const spawnCliProcess = jest.fn().mockReturnValue({ status: 0 });
 
-    await prewarmDynamicCodeAfterCompile('/project', {
+    await prewarmDynamicCodeAfterCompile('/project', 8711, {
       spawnCliProcess,
     });
 
@@ -161,6 +161,8 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
       '--project-path',
       '/project',
+      '--port',
+      '8711',
     ]);
     expect(spawnCliProcess).toHaveBeenNthCalledWith(2, [
       'execute-dynamic-code',
@@ -168,12 +170,14 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
       '--project-path',
       '/project',
+      '--port',
+      '8711',
     ]);
   });
 
   it('throws when the isolated CLI prewarm fails', async () => {
     await expect(
-      prewarmDynamicCodeAfterCompile('/project', {
+      prewarmDynamicCodeAfterCompile('/project', 8711, {
         spawnCliProcess: jest.fn().mockReturnValue({ status: 1 }),
       }),
     ).rejects.toThrow('Post-compile dynamic code prewarm failed.');
@@ -181,7 +185,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
 
   it('throws when spawning the isolated CLI prewarm process fails', async () => {
     await expect(
-      prewarmDynamicCodeAfterCompile('/project', {
+      prewarmDynamicCodeAfterCompile('/project', 8711, {
         spawnCliProcess: jest.fn().mockReturnValue({ status: null, error: new Error('spawn failed') }),
       }),
     ).rejects.toThrow('spawn failed');

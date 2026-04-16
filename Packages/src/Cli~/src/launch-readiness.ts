@@ -64,7 +64,8 @@ function isTransientExecuteDynamicCodeFailure(
     return true;
   }
 
-  return isTransientCompilationProviderUnavailable(errorMessage);
+  return isTransientCompilationProviderUnavailable(errorMessage)
+    || isRetryableUnityStartupError(`Unity error: ${errorMessage}`);
 }
 
 function isTransientCompilationProviderUnavailable(errorMessage: string): boolean {

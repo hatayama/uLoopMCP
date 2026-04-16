@@ -43,7 +43,7 @@ namespace io.github.hatayama.uLoopMCP
                     parameters.CompileOnly,
                     editorLevel,
                     parameters.YieldToForegroundRequests);
-                ExecutionResult executionResult = await _runtime.ExecuteAsync(request, cancellationToken);
+                ExecutionResult executionResult = await ExecuteRequestAsync(request, cancellationToken);
 
                 ExecutionResult finalResult = await RetryMissingReturnIfNeeded(
                     executionResult,
@@ -154,7 +154,7 @@ namespace io.github.hatayama.uLoopMCP
                 parameters,
                 compileOnly,
                 securityLevel);
-            ExecutionResult retryResult = await _runtime.ExecuteAsync(retryRequest, cancellationToken);
+            ExecutionResult retryResult = await ExecuteRequestAsync(retryRequest, cancellationToken);
             if (retryResult.Success)
             {
                 return retryResult;
@@ -211,6 +211,30 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return false;
+        }
+
+        private async Task<ExecutionResult> ExecuteRequestAsync(
+            DynamicCodeExecutionRequest request,
+            CancellationToken cancellationToken)
+        {
+            if (!request.YieldToForegroundRequests)
+            {
+                return await _runtime.ExecuteAsync(request, cancellationToken);
+            }
+
+            (bool entered, ExecutionResult result) = await _runtime.TryExecuteIfIdleAsync(
+                request,
+                cancellationToken);
+            if (entered)
+            {
+                return result;
+            }
+
+            return new ExecutionResult
+            {
+                Success = false,
+                ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
+            };
         }
 
         private static bool IsCancelledResult(ExecutionResult executionResult)

@@ -269,6 +269,38 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     expect(sleepCount).toBe(1);
   });
 
+  it('retries payload errors that indicate Unity startup is still on the loading thread', async () => {
+    const recordedMethods: string[] = [];
+    const responses: Array<MockReadinessResponse | Error> = [
+      {
+        Success: false,
+        ErrorMessage:
+          'An unexpected error occurred during execution UnityEngine.UnityException: get_activeScriptCompilationDefines can only be called from the main thread.',
+      },
+      { Success: true },
+    ];
+    let sleepCount = 0;
+
+    await waitForDynamicCodeReadyAfterLaunch('/project', {
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
+      createClient: () => createMockClient(responses, recordedMethods).client,
+      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+        sleepCount++;
+        return Promise.resolve();
+      }),
+      nowFn: (() => {
+        let now = 0;
+        return (): number => {
+          now += 100;
+          return now;
+        };
+      })(),
+    });
+
+    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
+    expect(sleepCount).toBe(1);
+  });
+
   it('retries successful probes until RequestTotal settles below threshold', async () => {
     const recordedMethods: string[] = [];
     const responses: Array<MockReadinessResponse | Error> = [

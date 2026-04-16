@@ -105,7 +105,6 @@ const MAX_RETRIES = 3;
 const COMPILE_WAIT_TIMEOUT_MS = 90000;
 const COMPILE_WAIT_POLL_INTERVAL_MS = 100;
 const FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX = 'Force compilation executed.';
-const SKIP_SERVER_STARTING_CHECK_ENV = 'ULOOP_SKIP_SERVER_STARTING_CHECK';
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE =
   'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }';
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
@@ -121,10 +120,6 @@ const defaultPostCompileDynamicCodePrewarmDependencies: PostCompileDynamicCodePr
     spawnSync(process.execPath, [process.argv[1], ...args], {
       stdio: 'ignore',
       windowsHide: true,
-      env: {
-        ...process.env,
-        [SKIP_SERVER_STARTING_CHECK_ENV]: '1',
-      },
     }),
 };
 
@@ -351,6 +346,7 @@ export function shouldPrewarmDynamicCodeAfterCompile(result: Record<string, unkn
 
 export async function prewarmDynamicCodeAfterCompile(
   projectRoot: string,
+  unityPort?: number,
   dependencies: PostCompileDynamicCodePrewarmDependencies = defaultPostCompileDynamicCodePrewarmDependencies,
 ): Promise<void> {
   for (let successfulRuns = 0; successfulRuns < POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT; successfulRuns++) {
@@ -358,13 +354,17 @@ export async function prewarmDynamicCodeAfterCompile(
 
     for (let attempt = 0; attempt < POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_RETRIES; attempt++) {
       await sleep(POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS);
-      const prewarmResult = dependencies.spawnCliProcess([
+      const args = [
         'execute-dynamic-code',
         '--code',
         POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE,
         '--project-path',
         projectRoot,
-      ]);
+      ];
+      if (unityPort !== undefined) {
+        args.push('--port', unityPort.toString());
+      }
+      const prewarmResult = dependencies.spawnCliProcess(args);
       if (prewarmResult.status === 0) {
         lastError = undefined;
         break;
@@ -448,9 +448,6 @@ function checkUnityBusyState(projectPath?: string): void {
   }
 
   const serverStartingLock = join(projectRoot, 'Temp', 'serverstarting.lock');
-  if (process.env[SKIP_SERVER_STARTING_CHECK_ENV] === '1') {
-    return;
-  }
   if (existsSync(serverStartingLock)) {
     throw new Error('UNITY_SERVER_STARTING');
   }
@@ -654,7 +651,6 @@ export async function executeToolCommand(
       timeoutMs: COMPILE_WAIT_TIMEOUT_MS,
       pollIntervalMs: COMPILE_WAIT_POLL_INTERVAL_MS,
       unityPort: connection.port,
-      includeServerStartingLock: false,
     });
 
     if (outcome === 'timed_out') {
@@ -671,7 +667,7 @@ export async function executeToolCommand(
           // Why not treat this optimization as part of compile correctness: a successful
           // compile result must still be returned even if the latency warmup misses.
           spinner.update('Finalizing dynamic code warmup...');
-          await prewarmDynamicCodeAfterCompile(effectiveProjectRoot).catch(() => undefined);
+          await prewarmDynamicCodeAfterCompile(effectiveProjectRoot, connection.port).catch(() => undefined);
         }
 
         spinner.stop();
