@@ -96,6 +96,8 @@ namespace io.github.hatayama.uLoopMCP
 
         private static async Task EnsureServerScopedServicesInitializedAsync()
         {
+            DynamicCodeCompilationServiceRegistration.EnsureRegistered();
+
             Task drainTask;
 
             lock (ServerScopedServicesLock)
