@@ -216,6 +216,7 @@ namespace io.github.hatayama.uLoopMCP
                 // Server is now ready to accept connections - clean up compilation/reload locks.
                 CompilationLockService.DeleteLockFile();
                 DomainReloadDetectionService.DeleteLockFile();
+                ServerStartingLockService.DeleteLockFile();
 
                 // Notify that server has started
                 OnServerStarted?.Invoke();

@@ -197,8 +197,8 @@ describe('executeToolCommand compile warmup', () => {
     expect(mockConsoleLog).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps compile successful while startup prewarm stays busy longer than the old retry budget', async () => {
-    for (let attempt = 0; attempt < 7; attempt++) {
+  it('keeps compile successful while startup prewarm needs short retries before all passes complete', async () => {
+    for (let attempt = 0; attempt < 3; attempt++) {
       mockSpawnSync.mockReturnValueOnce({
         status: 0,
         stdout: JSON.stringify({
@@ -224,7 +224,7 @@ describe('executeToolCommand compile warmup', () => {
       ),
     ).resolves.toBeUndefined();
 
-    expect(mockSpawnSync).toHaveBeenCalledTimes(10);
+    expect(mockSpawnSync).toHaveBeenCalledTimes(6);
     expect(mockConsoleLog).toHaveBeenCalledTimes(1);
   });
 

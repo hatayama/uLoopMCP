@@ -392,6 +392,24 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       '8901',
     ]);
   });
+
+  it('caps retryable warmup failures so compile cannot hang for minutes', async () => {
+    const spawnCliProcess = jest.fn().mockReturnValue({
+      status: null,
+      error: new Error('spawnSync ETIMEDOUT'),
+    });
+
+    await expect(
+      prewarmDynamicCodeAfterCompile(
+        { projectRoot: '/project' },
+        {
+          spawnCliProcess,
+        },
+      ),
+    ).rejects.toThrow('spawnSync ETIMEDOUT');
+
+    expect(spawnCliProcess).toHaveBeenCalledTimes(6);
+  });
 });
 
 describe('stripInternalFields', () => {

@@ -109,8 +109,8 @@ const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE =
   'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }';
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 3;
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS = 20;
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS = 10000;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_TOTAL_ATTEMPTS = 6;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS = 5000;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_COMPILATION_PROVIDER_SUBSTRINGS = ['warming up'];
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_UNITY_ERROR_SUBSTRINGS = [
   'can only be called from the main thread',
@@ -495,6 +495,7 @@ export async function prewarmDynamicCodeAfterCompile(
   dependencies: PostCompileDynamicCodePrewarmDependencies = defaultPostCompileDynamicCodePrewarmDependencies,
 ): Promise<void> {
   const args = createPostCompileDynamicCodePrewarmArgs(target);
+  let totalAttemptCount = 0;
 
   for (
     let successfulRuns = 0;
@@ -503,14 +504,11 @@ export async function prewarmDynamicCodeAfterCompile(
   ) {
     let lastError: Error | undefined;
 
-    for (
-      let attempt = 0;
-      attempt < POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS;
-      attempt++
-    ) {
-      if (attempt > 0) {
+    while (totalAttemptCount < POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_TOTAL_ATTEMPTS) {
+      if (totalAttemptCount > 0) {
         await sleep(POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS);
       }
+      totalAttemptCount++;
       const prewarmResult = dependencies.spawnCliProcess(args);
       if (didPostCompileDynamicCodePrewarmSucceed(prewarmResult)) {
         lastError = undefined;
