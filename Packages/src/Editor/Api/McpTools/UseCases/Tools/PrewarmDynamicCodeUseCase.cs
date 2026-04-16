@@ -15,6 +15,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const int AutoPrewarmDelayFrameCount = 1;
         private const int AutoPrewarmPassCount = 3;
+        private const int AutoPrewarmMaxAttempts = 6;
         // Why: startup measurements showed the first user-visible execute-dynamic-code request
         // stayed cold until the default wrapper shape and Unity's logging path had both run once.
         // Why not a cheaper "return null;" snippet or a dedicated prewarm class name: those warm
@@ -126,7 +127,10 @@ namespace io.github.hatayama.uLoopMCP
                 await EditorDelay.DelayFrame(AutoPrewarmDelayFrameCount, _lifecycleCancellationToken);
                 DynamicCodeStartupTelemetry.MarkPrewarmStarted();
 
-                for (int passIndex = 0; passIndex < AutoPrewarmPassCount; passIndex++)
+                int successfulPassCount = 0;
+                for (int attemptIndex = 0;
+                     attemptIndex < AutoPrewarmMaxAttempts && successfulPassCount < AutoPrewarmPassCount;
+                     attemptIndex++)
                 {
                     ExecuteDynamicCodeSchema parameters = new ExecuteDynamicCodeSchema
                     {
@@ -153,7 +157,7 @@ namespace io.github.hatayama.uLoopMCP
                             {
                                 class_name = AutoPrewarmClassName,
                                 reason = "runtime_busy",
-                                pass_index = passIndex + 1,
+                                pass_index = successfulPassCount + 1,
                                 pass_count = AutoPrewarmPassCount
                             });
                         return;
@@ -166,6 +170,21 @@ namespace io.github.hatayama.uLoopMCP
                         return;
                     }
 
+                    if (IsTransientTransportFailure(result))
+                    {
+                        VibeLogger.LogWarning(
+                            AutoPrewarmOperation,
+                            "Dynamic code auto prewarm hit a transient loopback failure and will retry",
+                            new
+                            {
+                                class_name = AutoPrewarmClassName,
+                                error_message = result.ErrorMessage,
+                                attempt_index = attemptIndex + 1,
+                                max_attempts = AutoPrewarmMaxAttempts
+                            });
+                        continue;
+                    }
+
                     if (!result.Success)
                     {
                         DynamicCodeStartupTelemetry.MarkPrewarmFailed(result.ErrorMessage);
@@ -176,21 +195,38 @@ namespace io.github.hatayama.uLoopMCP
                             {
                                 class_name = AutoPrewarmClassName,
                                 error_message = result.ErrorMessage,
-                                pass_index = passIndex + 1,
+                                pass_index = successfulPassCount + 1,
                                 pass_count = AutoPrewarmPassCount
                             });
                         return;
                     }
 
+                    successfulPassCount++;
                     VibeLogger.LogInfo(
                         AutoPrewarmOperation,
                         "Dynamic code auto prewarm pass completed successfully",
                         new
                         {
                             class_name = AutoPrewarmClassName,
-                            pass_index = passIndex + 1,
+                            pass_index = successfulPassCount,
                             pass_count = AutoPrewarmPassCount
                         });
+                }
+
+                if (successfulPassCount < AutoPrewarmPassCount)
+                {
+                    DynamicCodeStartupTelemetry.MarkPrewarmFailed(TcpDynamicCodeAutoPrewarmExecutor.TimeoutErrorMessage);
+                    VibeLogger.LogWarning(
+                        AutoPrewarmOperation,
+                        "Dynamic code auto prewarm exhausted its transient retries",
+                        new
+                        {
+                            class_name = AutoPrewarmClassName,
+                            successful_pass_count = successfulPassCount,
+                            pass_count = AutoPrewarmPassCount,
+                            max_attempts = AutoPrewarmMaxAttempts
+                        });
+                    return;
                 }
 
                 DynamicCodeStartupTelemetry.MarkPrewarmCompleted();
@@ -256,6 +292,20 @@ namespace io.github.hatayama.uLoopMCP
                 new { reason = "foreground_request_preempted" });
         }
 
+        private static bool IsTransientTransportFailure(DynamicCodeAutoPrewarmResult result)
+        {
+            if (result == null)
+            {
+                return false;
+            }
+
+            return !result.Success
+                && string.Equals(
+                    result.ErrorMessage,
+                    TcpDynamicCodeAutoPrewarmExecutor.TimeoutErrorMessage,
+                    StringComparison.Ordinal);
+        }
+
     }
 
     internal interface IDynamicCodeAutoPrewarmExecutor
@@ -276,6 +326,7 @@ namespace io.github.hatayama.uLoopMCP
     {
         private const string AutoPrewarmRequestId = "dynamic-code-auto-prewarm";
         private const int LoopbackPrewarmTimeoutMilliseconds = 10000;
+        internal const string TimeoutErrorMessage = "dynamic code auto prewarm timed out";
         private readonly Func<string, CancellationToken, Task<string>> _sendRequestAsync;
         private readonly int _timeoutMilliseconds;
 
@@ -321,7 +372,7 @@ namespace io.github.hatayama.uLoopMCP
                 return new DynamicCodeAutoPrewarmResult
                 {
                     Success = false,
-                    ErrorMessage = "dynamic code auto prewarm timed out"
+                    ErrorMessage = TimeoutErrorMessage
                 };
             }
         }

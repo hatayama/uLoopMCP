@@ -136,7 +136,7 @@ describe('executeToolCommand compile warmup', () => {
         status: 0,
         stdout: JSON.stringify({
           Success: false,
-          ErrorMessage: 'Another execution is already in progress.',
+          ErrorMessage: 'Another execution is already in progress',
         }),
       })
       .mockReturnValue({

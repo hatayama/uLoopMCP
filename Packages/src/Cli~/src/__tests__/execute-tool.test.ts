@@ -207,11 +207,11 @@ describe('prewarmDynamicCodeAfterCompile', () => {
           status: 0,
           stdout: JSON.stringify({
             Success: false,
-            ErrorMessage: 'Another execution is already in progress.',
+            ErrorMessage: 'Another execution is already in progress',
           }),
         }),
       }),
-    ).rejects.toThrow('Another execution is already in progress.');
+    ).rejects.toThrow('Another execution is already in progress');
   });
 
   it('retries transient busy warmup failures until both passes complete successfully', async () => {
@@ -221,7 +221,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
         status: 0,
         stdout: JSON.stringify({
           Success: false,
-          ErrorMessage: 'Another execution is already in progress.',
+          ErrorMessage: 'Another execution is already in progress',
         }),
       })
       .mockReturnValue({

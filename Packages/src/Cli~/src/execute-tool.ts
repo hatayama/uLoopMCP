@@ -112,8 +112,8 @@ const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 2;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS = 6;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS = 1000;
 const SERVER_STARTING_STALE_LOCK_MAX_AGE_MS = 30000;
-const EXECUTION_IN_PROGRESS_ERROR_MESSAGE = 'Another execution is already in progress.';
-const EXECUTION_CANCELLED_ERROR_MESSAGE = 'Execution was cancelled or timed out.';
+const EXECUTION_IN_PROGRESS_ERROR_MESSAGE = 'Another execution is already in progress';
+const EXECUTION_CANCELLED_ERROR_MESSAGE = 'Execution was cancelled or timed out';
 
 interface PostCompileDynamicCodePrewarmDependencies {
   spawnCliProcess: (args: string[]) => { status: number | null; error?: Error; stdout?: string };
@@ -643,7 +643,7 @@ export async function executeToolCommand(
   let lastError: unknown;
   let immediateResult: Record<string, unknown> | undefined;
   let currentProjectRoot = connection.projectRoot;
-  let currentShouldValidateProject = connection.shouldValidateProject && currentProjectRoot !== null;
+  let currentShouldDiagnoseProjectState = currentProjectRoot !== null;
 
   // Monotonically-increasing flag: once true, retries cannot reset it to false.
   // The retry loop overwrites `lastError` and `immediateResult` on each attempt,
@@ -657,8 +657,9 @@ export async function executeToolCommand(
     checkUnityBusyStateBeforeProjectResolution(globalOptions);
     const projectRoot = connection.projectRoot;
     const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
+    const shouldDiagnoseProjectState = projectRoot !== null;
     currentProjectRoot = projectRoot;
-    currentShouldValidateProject = shouldValidateProject;
+    currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
 
     const client = new DirectUnityClient(connection.port);
     try {
@@ -723,7 +724,7 @@ export async function executeToolCommand(
         throw error instanceof Error ? error : new Error(String(error));
       }
 
-      if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldValidateProject)) {
+      if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldDiagnoseProjectState)) {
         spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
         await sleep(RETRY_DELAY_MS);
         connection = await resolveRecoveryPortOrKeepCurrent(
@@ -759,7 +760,7 @@ export async function executeToolCommand(
       spinner.stop();
       restoreStdin();
       if (lastError !== undefined) {
-        await throwFinalToolError(lastError, currentProjectRoot, currentShouldValidateProject);
+        await throwFinalToolError(lastError, currentProjectRoot, currentShouldDiagnoseProjectState);
       }
       throw new Error(
         'Compile request never reached Unity. Check that Unity is running and retry.',
@@ -839,7 +840,7 @@ export async function executeToolCommand(
   if (lastError === undefined) {
     throw new Error('Tool execution failed without error details.');
   }
-  await throwFinalToolError(lastError, currentProjectRoot, currentShouldValidateProject);
+  await throwFinalToolError(lastError, currentProjectRoot, currentShouldDiagnoseProjectState);
 }
 
 export async function listAvailableTools(globalOptions: GlobalOptions): Promise<void> {
@@ -854,10 +855,15 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
   const spinner = createSpinner('Connecting to Unity...');
 
   let lastError: unknown;
+  let currentProjectRoot = connection.projectRoot;
+  let currentShouldDiagnoseProjectState = currentProjectRoot !== null;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     checkUnityBusyStateBeforeProjectResolution(globalOptions);
     const projectRoot = connection.projectRoot;
     const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
+    const shouldDiagnoseProjectState = projectRoot !== null;
+    currentProjectRoot = projectRoot;
+    currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
 
     const client = new DirectUnityClient(connection.port);
     try {
@@ -891,7 +897,7 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
       lastError = error;
       client.disconnect();
 
-      if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldValidateProject)) {
+      if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldDiagnoseProjectState)) {
         spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
         await sleep(RETRY_DELAY_MS);
         connection = await resolveRecoveryPortOrKeepCurrent(
@@ -916,8 +922,8 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
   restoreStdin();
   await throwFinalToolError(
     lastError,
-    connection.projectRoot,
-    connection.shouldValidateProject && connection.projectRoot !== null,
+    currentProjectRoot,
+    currentShouldDiagnoseProjectState,
   );
 }
 
@@ -964,10 +970,15 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
   const spinner = createSpinner('Connecting to Unity...');
 
   let lastError: unknown;
+  let currentProjectRoot = connection.projectRoot;
+  let currentShouldDiagnoseProjectState = currentProjectRoot !== null;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     checkUnityBusyStateBeforeProjectResolution(globalOptions);
     const projectRoot = connection.projectRoot;
     const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
+    const shouldDiagnoseProjectState = projectRoot !== null;
+    currentProjectRoot = projectRoot;
+    currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
 
     const client = new DirectUnityClient(connection.port);
     try {
@@ -1021,7 +1032,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
       lastError = error;
       client.disconnect();
 
-      if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldValidateProject)) {
+      if (await shouldRetryWhenUnityProcessIsRunning(error, projectRoot, shouldDiagnoseProjectState)) {
         spinner.update('Unity Editor is running, waiting for CLI Loop server to recover...');
         await sleep(RETRY_DELAY_MS);
         connection = await resolveRecoveryPortOrKeepCurrent(
@@ -1046,7 +1057,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
   restoreStdin();
   await throwFinalToolError(
     lastError,
-    connection.projectRoot,
-    connection.shouldValidateProject && connection.projectRoot !== null,
+    currentProjectRoot,
+    currentShouldDiagnoseProjectState,
   );
 }
