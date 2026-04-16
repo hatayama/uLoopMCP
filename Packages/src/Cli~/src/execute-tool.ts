@@ -118,6 +118,7 @@ const POST_COMPILE_DYNAMIC_CODE_PREWARM_UNITY_ERROR_SUBSTRINGS = [
 const SKIP_SERVER_STARTING_BUSY_CHECK_ENV_KEY = 'ULOOP_INTERNAL_SKIP_SERVER_STARTING_BUSY_CHECK';
 const EXECUTION_IN_PROGRESS_ERROR_MESSAGE = 'Another execution is already in progress';
 const EXECUTION_CANCELLED_ERROR_MESSAGE = 'Execution was cancelled or timed out';
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_REQUEST_TIMEOUT_MESSAGE = 'Request timed out';
 
 interface PostCompileDynamicCodePrewarmDependencies {
   spawnCliProcess: (args: string[]) => {
@@ -583,8 +584,11 @@ function createPostCompileDynamicCodePrewarmError(result: {
     return result.error;
   }
 
-  if (typeof result.stderr === 'string' && result.stderr.includes('Unity server is starting')) {
-    return new Error('UNITY_SERVER_STARTING');
+  if (typeof result.stderr === 'string') {
+    const stderrError = tryParsePostCompileDynamicCodePrewarmStderr(result.stderr);
+    if (stderrError !== undefined) {
+      return stderrError;
+    }
   }
 
   if (result.status === 0 && typeof result.stdout === 'string' && result.stdout.trim().length > 0) {
@@ -598,6 +602,65 @@ function createPostCompileDynamicCodePrewarmError(result: {
   }
 
   return new Error('Post-compile dynamic code prewarm failed.');
+}
+
+function stripAnsiControlSequences(text: string): string {
+  let result = '';
+  let isInsideEscapeSequence = false;
+
+  for (const character of text) {
+    if (character === String.fromCharCode(27)) {
+      isInsideEscapeSequence = true;
+      continue;
+    }
+
+    if (isInsideEscapeSequence) {
+      if (character === 'm') {
+        isInsideEscapeSequence = false;
+      }
+      continue;
+    }
+
+    result += character;
+  }
+
+  return result;
+}
+
+function tryParsePostCompileDynamicCodePrewarmStderr(stderr: string): Error | undefined {
+  const normalizedStderr = stripAnsiControlSequences(stderr).replace(/\r/g, '');
+
+  if (normalizedStderr.includes(EXECUTION_IN_PROGRESS_ERROR_MESSAGE)) {
+    return new Error(EXECUTION_IN_PROGRESS_ERROR_MESSAGE);
+  }
+
+  if (normalizedStderr.includes(EXECUTION_CANCELLED_ERROR_MESSAGE)) {
+    return new Error(EXECUTION_CANCELLED_ERROR_MESSAGE);
+  }
+
+  if (normalizedStderr.includes('Unity server is starting')) {
+    return new Error('UNITY_SERVER_STARTING');
+  }
+
+  if (
+    normalizedStderr.includes('UNITY_NO_RESPONSE') ||
+    normalizedStderr.includes('Cannot connect to Unity')
+  ) {
+    return new Error('UNITY_NO_RESPONSE');
+  }
+
+  const connectionLostPrefix = 'Connection lost:';
+  const connectionLostIndex = normalizedStderr.indexOf(connectionLostPrefix);
+  if (connectionLostIndex >= 0) {
+    const connectionLostLine = normalizedStderr.slice(connectionLostIndex).split('\n')[0].trim();
+    return new Error(connectionLostLine);
+  }
+
+  if (normalizedStderr.includes(POST_COMPILE_DYNAMIC_CODE_PREWARM_REQUEST_TIMEOUT_MESSAGE)) {
+    return new Error(POST_COMPILE_DYNAMIC_CODE_PREWARM_REQUEST_TIMEOUT_MESSAGE);
+  }
+
+  return undefined;
 }
 
 function tryParsePostCompileDynamicCodePrewarmStdout(
@@ -614,6 +677,7 @@ function isRetryablePostCompileDynamicCodePrewarmError(error: Error): boolean {
   return (
     error.message === EXECUTION_IN_PROGRESS_ERROR_MESSAGE ||
     error.message === EXECUTION_CANCELLED_ERROR_MESSAGE ||
+    error.message === POST_COMPILE_DYNAMIC_CODE_PREWARM_REQUEST_TIMEOUT_MESSAGE ||
     error.message === 'UNITY_SERVER_STARTING' ||
     isRetryablePostCompileDynamicCodePrewarmDisconnect(error) ||
     isRetryablePostCompileDynamicCodePrewarmSpawnError(error) ||

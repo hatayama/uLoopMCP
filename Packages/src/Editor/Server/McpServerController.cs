@@ -111,6 +111,7 @@ namespace io.github.hatayama.uLoopMCP
                 throw new InvalidOperationException("Failed to create serverstarting.lock.");
             }
 
+            bool startupLockReleasedByPrewarm = false;
             try
             {
                 // Always stop the existing server first (to release the port)
@@ -152,10 +153,14 @@ namespace io.github.hatayama.uLoopMCP
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
                     await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
                 prewarmDynamicCodeUseCase.Request();
+                startupLockReleasedByPrewarm = true;
             }
             finally
             {
-                ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
+                if (!startupLockReleasedByPrewarm)
+                {
+                    ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
+                }
             }
         }
 
