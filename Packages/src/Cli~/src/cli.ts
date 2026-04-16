@@ -395,6 +395,7 @@ const FAST_EXECUTE_DYNAMIC_CODE_OPTIONS = new Map<string, string>([
   ['--code', 'code'],
   ['--parameters', 'parameters'],
   ['--compile-only', 'compileOnly'],
+  ['--yield-to-foreground-requests', 'yieldToForegroundRequests'],
   ['--project-path', 'projectPath'],
   ['--port', 'port'],
   ['-p', 'port'],

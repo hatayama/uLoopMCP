@@ -23,6 +23,8 @@ describe('tryParseFastExecuteDynamicCodeCommand', () => {
       '{}',
       '--compile-only',
       'true',
+      '--yield-to-foreground-requests',
+      'true',
       '--project-path',
       '/project',
     ]);
@@ -32,6 +34,7 @@ describe('tryParseFastExecuteDynamicCodeCommand', () => {
         Code: 'return "ok";',
         Parameters: {},
         CompileOnly: true,
+        YieldToForegroundRequests: true,
       },
       globalOptions: {
         projectPath: '/project',
