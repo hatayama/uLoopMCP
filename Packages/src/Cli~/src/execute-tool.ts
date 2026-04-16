@@ -358,11 +358,11 @@ export async function prewarmDynamicCodeAfterCompile(
         'execute-dynamic-code',
         '--code',
         POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE,
-        '--project-path',
-        projectRoot,
       ];
       if (unityPort !== undefined) {
         args.push('--port', unityPort.toString());
+      } else {
+        args.push('--project-path', projectRoot);
       }
       const prewarmResult = dependencies.spawnCliProcess(args);
       if (prewarmResult.status === 0) {

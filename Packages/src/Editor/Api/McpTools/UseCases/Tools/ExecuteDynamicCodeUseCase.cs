@@ -51,6 +51,7 @@ namespace io.github.hatayama.uLoopMCP
                     parametersArray,
                     parameters.CompileOnly,
                     editorLevel,
+                    parameters.YieldToForegroundRequests,
                     cancellationToken);
 
                 if (IsCancelledResult(finalResult))
@@ -135,6 +136,7 @@ namespace io.github.hatayama.uLoopMCP
             object[] parameters,
             bool compileOnly,
             DynamicCodeSecurityLevel securityLevel,
+            bool yieldToForegroundRequests,
             CancellationToken cancellationToken)
         {
             if (executionResult.Success)
@@ -153,7 +155,8 @@ namespace io.github.hatayama.uLoopMCP
                 codeWithReturn,
                 parameters,
                 compileOnly,
-                securityLevel);
+                securityLevel,
+                yieldToForegroundRequests);
             ExecutionResult retryResult = await ExecuteRequestAsync(retryRequest, cancellationToken);
             if (retryResult.Success)
             {

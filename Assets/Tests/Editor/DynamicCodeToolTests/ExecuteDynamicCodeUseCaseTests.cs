@@ -57,6 +57,53 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task ExecuteAsync_WhenYieldingRequestNeedsMissingReturnRetry_ShouldPreserveYieldingOnRetry()
+        {
+            FakeDynamicCodeExecutionRuntime runtime = new FakeDynamicCodeExecutionRuntime(
+                new ExecutionResult
+                {
+                    Success = false,
+                    CompilationErrors = new List<CompilationError>
+                    {
+                        new CompilationError
+                        {
+                            ErrorCode = "CS0161",
+                            Message = "Not all code paths return a value"
+                        }
+                    }
+                },
+                new ExecutionResult
+                {
+                    Success = true,
+                    Result = "ok"
+                });
+            ExecuteDynamicCodeUseCase useCase = new ExecuteDynamicCodeUseCase(runtime);
+
+            DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
+            ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.Restricted);
+
+            try
+            {
+                ExecuteDynamicCodeResponse response = await useCase.ExecuteAsync(
+                    new ExecuteDynamicCodeSchema
+                    {
+                        Code = "int x = 1",
+                        YieldToForegroundRequests = true
+                    },
+                    CancellationToken.None);
+
+                Assert.That(response.Success, Is.True);
+                Assert.That(runtime.TryExecuteRequests, Has.Count.EqualTo(2));
+                Assert.That(runtime.TryExecuteRequests[0].YieldToForegroundRequests, Is.True);
+                Assert.That(runtime.TryExecuteRequests[1].YieldToForegroundRequests, Is.True);
+            }
+            finally
+            {
+                ULoopSettings.SetDynamicCodeSecurityLevel(previous);
+            }
+        }
+
+        [Test]
         public async Task ExecuteAsync_WhenInitialExecutionSucceeds_ShouldNotRetry()
         {
             FakeDynamicCodeExecutionRuntime runtime = new FakeDynamicCodeExecutionRuntime(
@@ -314,6 +361,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             }
 
             public List<DynamicCodeExecutionRequest> Requests { get; } = new List<DynamicCodeExecutionRequest>();
+            public List<DynamicCodeExecutionRequest> TryExecuteRequests { get; } = new List<DynamicCodeExecutionRequest>();
 
             public bool SupportsAutoPrewarm()
             {
@@ -330,7 +378,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                     ClassName = request.ClassName,
                     Parameters = request.Parameters,
                     CompileOnly = request.CompileOnly,
-                    SecurityLevel = request.SecurityLevel
+                    SecurityLevel = request.SecurityLevel,
+                    YieldToForegroundRequests = request.YieldToForegroundRequests
                 });
                 return Task.FromResult(_results.Dequeue());
             }
@@ -339,7 +388,16 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 DynamicCodeExecutionRequest request,
                 CancellationToken cancellationToken = default)
             {
-                return Task.FromResult<(bool, ExecutionResult)>((true, null));
+                TryExecuteRequests.Add(new DynamicCodeExecutionRequest
+                {
+                    Code = request.Code,
+                    ClassName = request.ClassName,
+                    Parameters = request.Parameters,
+                    CompileOnly = request.CompileOnly,
+                    SecurityLevel = request.SecurityLevel,
+                    YieldToForegroundRequests = request.YieldToForegroundRequests
+                });
+                return Task.FromResult<(bool, ExecutionResult)>((true, _results.Dequeue()));
             }
         }
 

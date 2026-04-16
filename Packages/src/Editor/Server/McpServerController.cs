@@ -697,7 +697,10 @@ namespace io.github.hatayama.uLoopMCP
                     return;
                 }
 
-                serverStartingLockToken = ServerStartingLockService.CreateLockFile();
+                if (!isAfterCompile)
+                {
+                    serverStartingLockToken = ServerStartingLockService.CreateLockFile();
+                }
 
                 // Ensure previous instance is fully disposed before trying to bind a new one
                 if (mcpServer != null)
