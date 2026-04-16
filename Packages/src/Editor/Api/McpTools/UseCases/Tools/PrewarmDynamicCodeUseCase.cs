@@ -8,8 +8,9 @@ namespace io.github.hatayama.uLoopMCP
     internal sealed class PrewarmDynamicCodeUseCase : IPrewarmDynamicCodeUseCase
     {
         private const int AutoPrewarmDelayFrameCount = 1;
-        private const string AutoPrewarmCode = "return null;";
-        private const string AutoPrewarmClassName = "DynamicCodeAutoPrewarmCommand";
+        private const string AutoPrewarmCode =
+            "using UnityEngine; Debug.Log(\"Unity CLI Loop dynamic code prewarm\"); return \"Unity CLI Loop dynamic code prewarm\";";
+        private const string AutoPrewarmClassName = DynamicCodeConstants.DEFAULT_CLASS_NAME;
         private const string AutoPrewarmOperation = "dynamic_code_auto_prewarm";
 
         private readonly IDynamicCodeExecutionRuntime _runtime;

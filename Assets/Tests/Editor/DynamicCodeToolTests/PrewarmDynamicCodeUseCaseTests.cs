@@ -38,8 +38,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 await useCase.RequestAsync();
 
                 Assert.That(runtime.Requests, Has.Count.EqualTo(2));
-                Assert.That(runtime.Requests[0].Code, Is.EqualTo("return null;"));
-                Assert.That(runtime.Requests[0].ClassName, Is.EqualTo("DynamicCodeAutoPrewarmCommand"));
+                Assert.That(
+                    runtime.Requests[0].Code,
+                    Does.Contain("Debug.Log(\"Unity CLI Loop dynamic code prewarm\");"));
+                Assert.That(
+                    runtime.Requests[0].Code,
+                    Does.Contain("return \"Unity CLI Loop dynamic code prewarm\";"));
+                Assert.That(runtime.Requests[0].ClassName, Is.EqualTo(DynamicCodeConstants.DEFAULT_CLASS_NAME));
                 Assert.That(runtime.Requests[0].SecurityLevel, Is.EqualTo(DynamicCodeSecurityLevel.FullAccess));
                 Assert.That(runtime.Requests[0].CompileOnly, Is.False);
                 Assert.That(runtime.Requests[0].YieldToForegroundRequests, Is.True);
