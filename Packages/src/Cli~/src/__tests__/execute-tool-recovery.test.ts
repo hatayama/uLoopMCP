@@ -12,6 +12,7 @@ const mockResolveUnityConnection = jest.fn<
 const mockValidateProjectPath = jest.fn<string, [string]>();
 const mockFindUnityProjectRoot = jest.fn<string | null, []>();
 const mockExistsSync = jest.fn<boolean, [string]>();
+const mockStatSync = jest.fn<{ mtimeMs: number }, [string]>();
 const mockFindRunningUnityProcessForProject = jest.fn<Promise<{ pid: number } | null>, [string]>();
 const mockSleep = jest.fn<Promise<void>, [number]>();
 const mockSpinnerUpdate = jest.fn<void, [string]>();
@@ -65,6 +66,7 @@ jest.mock('../project-root.js', () => ({
 
 jest.mock('fs', () => ({
   existsSync: (path: string): boolean => mockExistsSync(path),
+  statSync: (path: string): { mtimeMs: number } => mockStatSync(path),
   mkdirSync: jest.fn(),
   writeFileSync: jest.fn(),
 }));
@@ -133,6 +135,8 @@ describe('executeToolCommand recovery', () => {
 
     mockExistsSync.mockReset();
     mockExistsSync.mockReturnValue(false);
+    mockStatSync.mockReset();
+    mockStatSync.mockReturnValue({ mtimeMs: Date.now() });
 
     mockFindRunningUnityProcessForProject.mockReset();
     mockFindRunningUnityProcessForProject.mockResolvedValue({ pid: 1234 });
@@ -160,6 +164,20 @@ describe('executeToolCommand recovery', () => {
 
     expect(mockResolveUnityConnection).toHaveBeenCalledTimes(2);
     expect(constructedPorts).toEqual([8711, 8712]);
+  });
+
+  it('cleans up interactive feedback when server startup blocks the next retry iteration', async () => {
+    let lockVisible = false;
+    mockExistsSync.mockImplementation((path: string) => path.endsWith('serverstarting.lock') && lockVisible);
+    mockSleep.mockImplementation(async () => {
+      lockVisible = true;
+    });
+
+    await expect(executeToolCommand('get-logs', {}, { projectPath: '/project' })).rejects.toThrow(
+      'UNITY_SERVER_STARTING',
+    );
+
+    expect(mockSpinnerStop).toHaveBeenCalledTimes(1);
   });
 
   it('re-resolves the Unity port for command execution when request metadata disables project validation', async () => {

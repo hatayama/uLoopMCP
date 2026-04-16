@@ -408,6 +408,14 @@ namespace io.github.hatayama.uLoopMCP
                     ErrorMessage = TransportErrorMessage
                 };
             }
+            catch (InvalidOperationException) when (!ct.IsCancellationRequested)
+            {
+                return new DynamicCodeAutoPrewarmResult
+                {
+                    Success = false,
+                    ErrorMessage = TransportErrorMessage
+                };
+            }
         }
 
         private static string CreateRequestJson(ExecuteDynamicCodeSchema parameters)

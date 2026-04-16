@@ -667,11 +667,22 @@ export async function executeToolCommand(
   const spinner = shouldShowFeedback
     ? createSpinner('Connecting to Unity...')
     : createNoopSpinner();
+  let didCleanup = false;
+  const cleanup = (): void => {
+    if (didCleanup) {
+      return;
+    }
 
-  let lastError: unknown;
-  let immediateResult: Record<string, unknown> | undefined;
-  let currentProjectRoot = connection.projectRoot;
-  let currentShouldDiagnoseProjectState = currentProjectRoot !== null;
+    didCleanup = true;
+    spinner.stop();
+    restoreStdin();
+  };
+
+  try {
+    let lastError: unknown;
+    let immediateResult: Record<string, unknown> | undefined;
+    let currentProjectRoot = connection.projectRoot;
+    let currentShouldDiagnoseProjectState = currentProjectRoot !== null;
 
   // Monotonically-increasing flag: once true, retries cannot reset it to false.
   // The retry loop overwrites `lastError` and `immediateResult` on each attempt,
@@ -681,7 +692,7 @@ export async function executeToolCommand(
   // inferring dispatch status from `immediateResult` alone.
   let requestDispatched = false;
 
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     checkUnityBusyStateBeforeProjectResolution(globalOptions);
     const projectRoot = connection.projectRoot;
     const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
@@ -689,8 +700,8 @@ export async function executeToolCommand(
     currentProjectRoot = projectRoot;
     currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
 
-    const client = new DirectUnityClient(connection.port);
-    try {
+      const client = new DirectUnityClient(connection.port);
+      try {
       await client.connect();
 
       if (shouldValidateProject) {
@@ -712,8 +723,7 @@ export async function executeToolCommand(
 
       immediateResult = result;
       if (!shouldWaitForDomainReload) {
-        spinner.stop();
-        restoreStdin();
+        cleanup();
 
         if (toolName === 'execute-dynamic-code') {
           appendCliTimingsToDynamicCodeResult(
@@ -747,8 +757,7 @@ export async function executeToolCommand(
         // and returned an explicit error. No result file will be written
         // (confirmed: CompileUseCase.ExecuteAsync() is not reached when
         // JSON-RPC error occurs at parameter validation / security check).
-        spinner.stop();
-        restoreStdin();
+        cleanup();
         throw error instanceof Error ? error : new Error(String(error));
       }
 
@@ -768,12 +777,12 @@ export async function executeToolCommand(
       }
       spinner.update('Retrying connection...');
       await sleep(RETRY_DELAY_MS);
-    } finally {
-      client.disconnect();
+      } finally {
+        client.disconnect();
+      }
     }
-  }
 
-  if (shouldWaitForDomainReload && compileRequestId) {
+    if (shouldWaitForDomainReload && compileRequestId) {
     // Fail fast when the compile request never reached Unity.
     // Without this guard, unreachable Unity would cause a 90-second wait for a
     // result file that will never be created.
@@ -785,8 +794,7 @@ export async function executeToolCommand(
     // In that case, Unity may have already written the result file, so we proceed to
     // file-based polling recovery.
     if (immediateResult === undefined && !requestDispatched) {
-      spinner.stop();
-      restoreStdin();
+      cleanup();
       if (lastError !== undefined) {
         await throwFinalToolError(lastError, currentProjectRoot, currentShouldDiagnoseProjectState);
       }
@@ -803,8 +811,7 @@ export async function executeToolCommand(
 
     // File-based polling requires a known project root
     if (effectiveProjectRoot === null) {
-      spinner.stop();
-      restoreStdin();
+      cleanup();
       if (immediateResult !== undefined) {
         checkServerVersion(immediateResult);
         console.log(JSON.stringify(stripInternalFields(immediateResult), null, 2));
@@ -847,8 +854,7 @@ export async function executeToolCommand(
           await prewarmDynamicCodeAfterCompile(effectiveProjectRoot, connection.port);
         }
 
-        spinner.stop();
-        restoreStdin();
+        cleanup();
         if (toolName === 'execute-dynamic-code') {
           appendCliTimingsToDynamicCodeResult(
             finalResult,
@@ -861,14 +867,16 @@ export async function executeToolCommand(
         return;
       }
     }
-  }
+    }
 
-  spinner.stop();
-  restoreStdin();
-  if (lastError === undefined) {
-    throw new Error('Tool execution failed without error details.');
+    cleanup();
+    if (lastError === undefined) {
+      throw new Error('Tool execution failed without error details.');
+    }
+    await throwFinalToolError(lastError, currentProjectRoot, currentShouldDiagnoseProjectState);
+  } finally {
+    cleanup();
   }
-  await throwFinalToolError(lastError, currentProjectRoot, currentShouldDiagnoseProjectState);
 }
 
 export async function listAvailableTools(globalOptions: GlobalOptions): Promise<void> {
@@ -881,11 +889,22 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
 
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
+  let didCleanup = false;
+  const cleanup = (): void => {
+    if (didCleanup) {
+      return;
+    }
 
-  let lastError: unknown;
-  let currentProjectRoot = connection.projectRoot;
-  let currentShouldDiagnoseProjectState = currentProjectRoot !== null;
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    didCleanup = true;
+    spinner.stop();
+    restoreStdin();
+  };
+
+  try {
+    let lastError: unknown;
+    let currentProjectRoot = connection.projectRoot;
+    let currentShouldDiagnoseProjectState = currentProjectRoot !== null;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     checkUnityBusyStateBeforeProjectResolution(globalOptions);
     const projectRoot = connection.projectRoot;
     const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
@@ -893,8 +912,8 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
     currentProjectRoot = projectRoot;
     currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
 
-    const client = new DirectUnityClient(connection.port);
-    try {
+      const client = new DirectUnityClient(connection.port);
+      try {
       await client.connect();
 
       if (shouldValidateProject) {
@@ -915,13 +934,12 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
       }
 
       // Success - stop spinner and output result
-      spinner.stop();
-      restoreStdin();
+      cleanup();
       for (const tool of result.Tools) {
         console.log(`  - ${tool.name}`);
       }
       return;
-    } catch (error) {
+      } catch (error) {
       lastError = error;
       client.disconnect();
 
@@ -941,18 +959,20 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
       }
       spinner.update('Retrying connection...');
       await sleep(RETRY_DELAY_MS);
-    } finally {
-      client.disconnect();
+      } finally {
+        client.disconnect();
+      }
     }
-  }
 
-  spinner.stop();
-  restoreStdin();
-  await throwFinalToolError(
-    lastError,
-    currentProjectRoot,
-    currentShouldDiagnoseProjectState,
-  );
+    cleanup();
+    await throwFinalToolError(
+      lastError,
+      currentProjectRoot,
+      currentShouldDiagnoseProjectState,
+    );
+  } finally {
+    cleanup();
+  }
 }
 
 interface UnityToolInfo {
@@ -996,11 +1016,22 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
 
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
+  let didCleanup = false;
+  const cleanup = (): void => {
+    if (didCleanup) {
+      return;
+    }
 
-  let lastError: unknown;
-  let currentProjectRoot = connection.projectRoot;
-  let currentShouldDiagnoseProjectState = currentProjectRoot !== null;
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    didCleanup = true;
+    spinner.stop();
+    restoreStdin();
+  };
+
+  try {
+    let lastError: unknown;
+    let currentProjectRoot = connection.projectRoot;
+    let currentShouldDiagnoseProjectState = currentProjectRoot !== null;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     checkUnityBusyStateBeforeProjectResolution(globalOptions);
     const projectRoot = connection.projectRoot;
     const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
@@ -1008,8 +1039,8 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
     currentProjectRoot = projectRoot;
     currentShouldDiagnoseProjectState = shouldDiagnoseProjectState;
 
-    const client = new DirectUnityClient(connection.port);
-    try {
+      const client = new DirectUnityClient(connection.port);
+      try {
       await client.connect();
 
       if (shouldValidateProject) {
@@ -1026,9 +1057,8 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
         { requestMetadata: connection.requestMetadata ?? undefined },
       );
 
-      spinner.stop();
+      cleanup();
       if (!result.Tools || !Array.isArray(result.Tools)) {
-        restoreStdin();
         throw new Error('Unexpected response from Unity: missing Tools array');
       }
 
@@ -1054,9 +1084,8 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
       for (const tool of cache.tools) {
         console.log(`  - ${tool.name}`);
       }
-      restoreStdin();
       return;
-    } catch (error) {
+      } catch (error) {
       lastError = error;
       client.disconnect();
 
@@ -1076,16 +1105,18 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
       }
       spinner.update('Retrying connection...');
       await sleep(RETRY_DELAY_MS);
-    } finally {
-      client.disconnect();
+      } finally {
+        client.disconnect();
+      }
     }
-  }
 
-  spinner.stop();
-  restoreStdin();
-  await throwFinalToolError(
-    lastError,
-    currentProjectRoot,
-    currentShouldDiagnoseProjectState,
-  );
+    cleanup();
+    await throwFinalToolError(
+      lastError,
+      currentProjectRoot,
+      currentShouldDiagnoseProjectState,
+    );
+  } finally {
+    cleanup();
+  }
 }
