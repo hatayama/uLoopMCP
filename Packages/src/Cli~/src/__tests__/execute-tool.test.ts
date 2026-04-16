@@ -148,7 +148,10 @@ describe('shouldPrewarmDynamicCodeAfterCompile', () => {
 
 describe('prewarmDynamicCodeAfterCompile', () => {
   it('spawns an isolated execute-dynamic-code process against the same project', async () => {
-    const spawnCliProcess = jest.fn().mockReturnValue({ status: 0 });
+    const spawnCliProcess = jest.fn().mockReturnValue({
+      status: 0,
+      stdout: JSON.stringify({ Success: true }),
+    });
 
     await prewarmDynamicCodeAfterCompile('/project', 8711, {
       spawnCliProcess,
@@ -181,6 +184,20 @@ describe('prewarmDynamicCodeAfterCompile', () => {
         spawnCliProcess: jest.fn().mockReturnValue({ status: 1 }),
       }),
     ).rejects.toThrow('Post-compile dynamic code prewarm failed.');
+  });
+
+  it('throws when the isolated CLI prewarm returns Success=false with exit code 0', async () => {
+    await expect(
+      prewarmDynamicCodeAfterCompile('/project', 8711, {
+        spawnCliProcess: jest.fn().mockReturnValue({
+          status: 0,
+          stdout: JSON.stringify({
+            Success: false,
+            ErrorMessage: 'Another execution is already in progress.',
+          }),
+        }),
+      }),
+    ).rejects.toThrow('Another execution is already in progress.');
   });
 
   it('throws when spawning the isolated CLI prewarm process fails', async () => {

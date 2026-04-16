@@ -54,6 +54,16 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
+        public static void DeleteOwnedLockFile(string ownershipToken)
+        {
+            if (string.IsNullOrEmpty(ownershipToken))
+            {
+                return;
+            }
+
+            DeleteLockFile(ownershipToken);
+        }
+
         private static string TryReadOwnershipToken(string lockPath)
         {
             try

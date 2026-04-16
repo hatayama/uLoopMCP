@@ -112,13 +112,14 @@ const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 2;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_RETRIES = 3;
 
 interface PostCompileDynamicCodePrewarmDependencies {
-  spawnCliProcess: (args: string[]) => { status: number | null; error?: Error };
+  spawnCliProcess: (args: string[]) => { status: number | null; error?: Error; stdout?: string };
 }
 
 const defaultPostCompileDynamicCodePrewarmDependencies: PostCompileDynamicCodePrewarmDependencies = {
   spawnCliProcess: (args: string[]) =>
     spawnSync(process.execPath, [process.argv[1], ...args], {
-      stdio: 'ignore',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      encoding: 'utf8',
       windowsHide: true,
     }),
 };
@@ -367,19 +368,55 @@ export async function prewarmDynamicCodeAfterCompile(
         args.push('--project-path', projectRoot);
       }
       const prewarmResult = dependencies.spawnCliProcess(args);
-      if (prewarmResult.status === 0) {
+      if (didPostCompileDynamicCodePrewarmSucceed(prewarmResult)) {
         lastError = undefined;
         break;
       }
 
       lastError =
-        prewarmResult.error ?? new Error('Post-compile dynamic code prewarm failed.');
+        createPostCompileDynamicCodePrewarmError(prewarmResult);
     }
 
     if (lastError !== undefined) {
       throw lastError;
     }
   }
+}
+
+function didPostCompileDynamicCodePrewarmSucceed(result: {
+  status: number | null;
+  stdout?: string;
+}): boolean {
+  if (result.status !== 0) {
+    return false;
+  }
+
+  if (typeof result.stdout !== 'string' || result.stdout.trim().length === 0) {
+    return false;
+  }
+
+  const parsed = JSON.parse(result.stdout) as Record<string, unknown>;
+  return parsed['Success'] === true;
+}
+
+function createPostCompileDynamicCodePrewarmError(result: {
+  status: number | null;
+  error?: Error;
+  stdout?: string;
+}): Error {
+  if (result.error !== undefined) {
+    return result.error;
+  }
+
+  if (result.status === 0 && typeof result.stdout === 'string' && result.stdout.trim().length > 0) {
+    const parsed = JSON.parse(result.stdout) as Record<string, unknown>;
+    const errorMessage = parsed['ErrorMessage'];
+    if (typeof errorMessage === 'string' && errorMessage.length > 0) {
+      return new Error(errorMessage);
+    }
+  }
+
+  return new Error('Post-compile dynamic code prewarm failed.');
 }
 
 /**

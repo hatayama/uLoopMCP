@@ -141,7 +141,7 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     if (prewarmDynamicCodeUseCase == null)
                     {
-                        ServerStartingLockService.DeleteLockFile(serverStartingLockToken);
+                        ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
                     }
                 }
                 prewarmDynamicCodeUseCase.Request();
@@ -149,7 +149,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                ServerStartingLockService.DeleteLockFile(serverStartingLockToken);
+                ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
                 // Error message already handled by UseCase
                 UnityEngine.Debug.LogError($"Server startup failed: {result.Message}");
             }
@@ -780,7 +780,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             catch
             {
-                ServerStartingLockService.DeleteLockFile(serverStartingLockToken);
+                ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
                 throw;
             }
             finally

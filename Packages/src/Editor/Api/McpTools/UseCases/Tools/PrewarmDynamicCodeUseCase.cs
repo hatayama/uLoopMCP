@@ -187,7 +187,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
-                ServerStartingLockService.DeleteLockFile(_serverStartingLockToken);
+                ServerStartingLockService.DeleteOwnedLockFile(_serverStartingLockToken);
             }
         }
 
