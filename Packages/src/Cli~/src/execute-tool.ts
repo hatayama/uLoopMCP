@@ -109,8 +109,8 @@ const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE =
   'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }';
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 2;
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_RETRIES = 3;
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS = 5000;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_RETRIES = 1;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS = 1000;
 const SERVER_STARTING_STALE_LOCK_MAX_AGE_MS = 30000;
 
 interface PostCompileDynamicCodePrewarmDependencies {
@@ -420,6 +420,7 @@ export function shouldPrewarmDynamicCodeAfterCompile(result: Record<string, unkn
   // Why not gate the hidden prewarm on Success===true: that would skip the exact domain-reload
   // path we need to warm, leaving the next user-visible execute-dynamic-code request cold.
   return success === null
+    && errorCount === 0
     && typeof message === 'string'
     && message.startsWith(FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX);
 }
@@ -433,7 +434,9 @@ export async function prewarmDynamicCodeAfterCompile(
     let lastError: Error | undefined;
 
     for (let attempt = 0; attempt < POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_RETRIES; attempt++) {
-      await sleep(POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS);
+      if (attempt > 0) {
+        await sleep(POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS);
+      }
       const args = [
         'execute-dynamic-code',
         '--code',

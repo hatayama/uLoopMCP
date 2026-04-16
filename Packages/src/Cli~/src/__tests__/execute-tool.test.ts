@@ -121,10 +121,20 @@ describe('shouldPrewarmDynamicCodeAfterCompile', () => {
     expect(
       shouldPrewarmDynamicCodeAfterCompile({
         Success: null,
-        ErrorCount: null,
+        ErrorCount: 0,
         Message: 'Force compilation executed. Use get-logs tool to retrieve compilation messages.',
       }),
     ).toBe(true);
+  });
+
+  it('returns false for indeterminate force-recompile responses with compiler errors', () => {
+    expect(
+      shouldPrewarmDynamicCodeAfterCompile({
+        Success: null,
+        ErrorCount: 2,
+        Message: 'Force compilation executed. Use get-logs tool to retrieve compilation messages.',
+      }),
+    ).toBe(false);
   });
 
   it('returns false when compile failed or reported errors', () => {
