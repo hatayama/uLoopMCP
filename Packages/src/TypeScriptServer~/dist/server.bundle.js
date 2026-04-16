@@ -23241,10 +23241,9 @@ var ProgressTokenSchema = union([string2(), number2().int()]);
 var CursorSchema = string2();
 var TaskCreationParamsSchema = looseObject({
   /**
-   * Time in milliseconds to keep task results available after completion.
-   * If null, the task has unlimited lifetime until manually cleaned up.
+   * Requested duration in milliseconds to retain task from creation.
    */
-  ttl: union([number2(), _null3()]).optional(),
+  ttl: number2().optional(),
   /**
    * Time in milliseconds to wait between task status requests.
    */
@@ -23544,7 +23543,11 @@ var ClientCapabilitiesSchema = object2({
   /**
    * Present if the client supports task creation.
    */
-  tasks: ClientTasksCapabilitySchema.optional()
+  tasks: ClientTasksCapabilitySchema.optional(),
+  /**
+   * Extensions that the client supports. Keys are extension identifiers (vendor-prefix/extension-name).
+   */
+  extensions: record(string2(), AssertObjectSchema).optional()
 });
 var InitializeRequestParamsSchema = BaseRequestParamsSchema.extend({
   /**
@@ -23605,7 +23608,11 @@ var ServerCapabilitiesSchema = object2({
   /**
    * Present if the server supports task creation.
    */
-  tasks: ServerTasksCapabilitySchema.optional()
+  tasks: ServerTasksCapabilitySchema.optional(),
+  /**
+   * Extensions that the server supports. Keys are extension identifiers (vendor-prefix/extension-name).
+   */
+  extensions: record(string2(), AssertObjectSchema).optional()
 });
 var InitializeResultSchema = ResultSchema.extend({
   /**
@@ -23797,6 +23804,12 @@ var ResourceSchema = object2({
    * The MIME type of this resource, if known.
    */
   mimeType: optional(string2()),
+  /**
+   * The size of the raw resource content, in bytes (i.e., before base64 encoding or any tokenization), if known.
+   *
+   * This can be used by Hosts to display file sizes and estimate context window usage.
+   */
+  size: optional(number2()),
   /**
    * Optional annotations for the client.
    */
@@ -24978,6 +24991,10 @@ var Protocol = class {
     this._progressHandlers.clear();
     this._taskProgressTokens.clear();
     this._pendingDebouncedNotifications.clear();
+    for (const info of this._timeoutInfo.values()) {
+      clearTimeout(info.timeoutId);
+    }
+    this._timeoutInfo.clear();
     for (const controller of this._requestHandlerAbortControllers.values()) {
       controller.abort();
     }
@@ -25108,7 +25125,9 @@ var Protocol = class {
         await capturedTransport?.send(errorResponse);
       }
     }).catch((error2) => this._onerror(new Error(`Failed to send response: ${error2}`))).finally(() => {
-      this._requestHandlerAbortControllers.delete(request.id);
+      if (this._requestHandlerAbortControllers.get(request.id) === abortController) {
+        this._requestHandlerAbortControllers.delete(request.id);
+      }
     });
   }
   _onprogress(notification) {
@@ -29663,6 +29682,8 @@ function sleep(ms) {
 }
 
 // src/tools/dynamic-code-post-compile-warmup.ts
+import { existsSync as existsSync3, readFileSync as readFileSync2 } from "fs";
+import { join as join4 } from "path";
 var FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX = "Force compilation executed.";
 var POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE = 'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }';
 var POST_COMPILE_DYNAMIC_CODE_PREWARM_PASS_COUNT = 3;
@@ -29676,6 +29697,9 @@ var RETRYABLE_DISPATCH_GUIDANCE_SUBSTRINGS = [
   "unity is currently compiling or reloading",
   "retry after the operation completes"
 ];
+var TOOL_SETTINGS_DIRECTORY = ".uloop";
+var TOOL_SETTINGS_FILE_NAME = "settings.tools.json";
+var EXECUTE_DYNAMIC_CODE_TOOL_NAME = "execute-dynamic-code";
 function shouldPrewarmDynamicCodeAfterCompile(result) {
   if (typeof result !== "object" || result === null) {
     return false;
@@ -29688,6 +29712,38 @@ function shouldPrewarmDynamicCodeAfterCompile(result) {
   }
   const message = record2["Message"];
   return success2 === null && errorCount === 0 && typeof message === "string" && message.startsWith(FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX);
+}
+function isDynamicCodeWarmupEnabledForProject(projectRoot, dependencies = {}) {
+  const existsSyncFn = dependencies.existsSyncFn ?? existsSync3;
+  const readFileSyncFn = dependencies.readFileSyncFn ?? readFileSync2;
+  const toolSettingsPath = join4(projectRoot, TOOL_SETTINGS_DIRECTORY, TOOL_SETTINGS_FILE_NAME);
+  if (!existsSyncFn(toolSettingsPath)) {
+    return true;
+  }
+  let content;
+  try {
+    content = readFileSyncFn(toolSettingsPath, "utf8");
+  } catch {
+    return true;
+  }
+  if (content.trim().length === 0) {
+    return true;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return true;
+  }
+  if (typeof parsed !== "object" || parsed === null) {
+    return true;
+  }
+  const toolSettings = parsed;
+  const disabledTools = toolSettings.disabledTools;
+  if (!Array.isArray(disabledTools)) {
+    return true;
+  }
+  return !disabledTools.includes(EXECUTE_DYNAMIC_CODE_TOOL_NAME);
 }
 async function prewarmDynamicCodeAfterCompile(unityClient, sleepFn = sleep2) {
   for (let successfulPassCount = 0; successfulPassCount < POST_COMPILE_DYNAMIC_CODE_PREWARM_PASS_COUNT; successfulPassCount++) {
@@ -29939,7 +29995,7 @@ var DynamicUnityCommandTool = class _DynamicUnityCommandTool extends BaseTool {
           "Compile result was unavailable after domain reload. Run compile again or use get-logs."
         );
       }
-      if (shouldPrewarmDynamicCodeAfterCompile(finalResult)) {
+      if (shouldPrewarmDynamicCodeAfterCompile(finalResult) && isDynamicCodeWarmupEnabledForProject(this.resolveProjectRoot())) {
         await prewarmDynamicCodeAfterCompile(this.context.unityClient);
       }
       const cleanedResult = this.stripInternalFields(finalResult);
@@ -30065,6 +30121,7 @@ var DomainError = class extends Error {
     this.name = this.constructor.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
+  details;
 };
 var ConnectionError = class extends DomainError {
   code = "CONNECTION_ERROR";
@@ -30091,6 +30148,8 @@ var InfrastructureError = class extends Error {
     this.name = this.constructor.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
+  technicalDetails;
+  originalError;
   /**
    * 技術的詳細を含む完全なエラー情報を取得
    */
@@ -30110,6 +30169,8 @@ var UnityCommunicationError = class extends InfrastructureError {
     this.unityEndpoint = unityEndpoint;
     this.requestData = requestData;
   }
+  unityEndpoint;
+  requestData;
   category = "UNITY_COMMUNICATION";
 };
 var ToolManagementError = class extends InfrastructureError {
@@ -30118,6 +30179,8 @@ var ToolManagementError = class extends InfrastructureError {
     this.toolName = toolName;
     this.toolData = toolData;
   }
+  toolName;
+  toolData;
   category = "TOOL_MANAGEMENT";
 };
 
