@@ -61,5 +61,19 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(DynamicCompilationServiceRegistry.HasRegisteredFactory, Is.True);
             Assert.That(executor, Is.Not.TypeOf<DynamicCodeExecutorStub>());
         }
+
+        [Test]
+        public async Task GetPrewarmDynamicCodeUseCaseAsync_WhenRuntimeWasInitializedFirst_ShouldAttachStartupLockToken()
+        {
+            await DynamicCodeServices.GetExecuteDynamicCodeUseCaseAsync();
+
+            IPrewarmDynamicCodeUseCase useCase =
+                await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync("startup-token");
+
+            Assert.That(useCase, Is.TypeOf<PrewarmDynamicCodeUseCase>());
+            Assert.That(
+                ((PrewarmDynamicCodeUseCase)useCase).GetServerStartingLockTokenForTests(),
+                Is.EqualTo("startup-token"));
+        }
     }
 }

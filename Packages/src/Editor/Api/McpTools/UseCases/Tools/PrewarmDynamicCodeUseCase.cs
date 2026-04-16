@@ -32,7 +32,7 @@ namespace io.github.hatayama.uLoopMCP
         private readonly IDynamicCodeExecutionRuntime _runtime;
         private readonly IDynamicCodeAutoPrewarmExecutor _executor;
         private readonly CancellationToken _lifecycleCancellationToken;
-        private readonly string _serverStartingLockToken;
+        private string _serverStartingLockToken;
         private readonly object _autoPrewarmLock = new();
         private Task _autoPrewarmTask;
 
@@ -46,6 +46,35 @@ namespace io.github.hatayama.uLoopMCP
             _executor = executor ?? new TcpDynamicCodeAutoPrewarmExecutor();
             _lifecycleCancellationToken = lifecycleCancellationToken;
             _serverStartingLockToken = serverStartingLockToken;
+        }
+
+        internal void AttachServerStartingLockToken(string serverStartingLockToken)
+        {
+            if (string.IsNullOrEmpty(serverStartingLockToken))
+            {
+                return;
+            }
+
+            lock (_autoPrewarmLock)
+            {
+                if (string.IsNullOrEmpty(_serverStartingLockToken))
+                {
+                    _serverStartingLockToken = serverStartingLockToken;
+                    return;
+                }
+
+                UnityEngine.Debug.Assert(
+                    string.Equals(_serverStartingLockToken, serverStartingLockToken, StringComparison.Ordinal),
+                    "serverStartingLockToken must not change once attached");
+            }
+        }
+
+        internal string GetServerStartingLockTokenForTests()
+        {
+            lock (_autoPrewarmLock)
+            {
+                return _serverStartingLockToken;
+            }
         }
 
         public void Request()
@@ -187,7 +216,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
-                ServerStartingLockService.DeleteOwnedLockFile(_serverStartingLockToken);
+                ServerStartingLockService.DeleteOwnedLockFile(GetServerStartingLockTokenForTests());
             }
         }
 

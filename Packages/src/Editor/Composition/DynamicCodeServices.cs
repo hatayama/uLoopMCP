@@ -106,6 +106,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (_runtimeFacade != null)
                 {
+                    AttachServerStartingLockTokenIfNeeded(serverStartingLockToken);
                     return;
                 }
 
@@ -118,6 +119,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (_runtimeFacade != null)
                 {
+                    AttachServerStartingLockTokenIfNeeded(serverStartingLockToken);
                     return;
                 }
 
@@ -131,6 +133,19 @@ namespace io.github.hatayama.uLoopMCP
                     _serverScopedLifetimeCancellationTokenSource.Token,
                     null,
                     serverStartingLockToken);
+            }
+        }
+
+        private static void AttachServerStartingLockTokenIfNeeded(string serverStartingLockToken)
+        {
+            if (string.IsNullOrEmpty(serverStartingLockToken))
+            {
+                return;
+            }
+
+            if (_prewarmDynamicCodeUseCase is PrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase)
+            {
+                prewarmDynamicCodeUseCase.AttachServerStartingLockToken(serverStartingLockToken);
             }
         }
 
