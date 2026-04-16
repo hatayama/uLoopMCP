@@ -108,7 +108,7 @@ const FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX = 'Force compilation executed.'
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE =
   'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }';
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 1;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 2;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_RETRIES = 3;
 
 interface PostCompileDynamicCodePrewarmDependencies {

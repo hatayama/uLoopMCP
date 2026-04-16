@@ -154,8 +154,15 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       spawnCliProcess,
     });
 
-    expect(spawnCliProcess).toHaveBeenCalledTimes(1);
+    expect(spawnCliProcess).toHaveBeenCalledTimes(2);
     expect(spawnCliProcess).toHaveBeenNthCalledWith(1, [
+      'execute-dynamic-code',
+      '--code',
+      'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
+      '--project-path',
+      '/project',
+    ]);
+    expect(spawnCliProcess).toHaveBeenNthCalledWith(2, [
       'execute-dynamic-code',
       '--code',
       'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
