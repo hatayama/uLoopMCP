@@ -358,6 +358,8 @@ export async function prewarmDynamicCodeAfterCompile(
         'execute-dynamic-code',
         '--code',
         POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE,
+        '--yield-to-foreground-requests',
+        'true',
       ];
       if (unityPort !== undefined) {
         args.push('--port', unityPort.toString());

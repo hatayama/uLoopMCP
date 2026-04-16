@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 
 namespace io.github.hatayama.uLoopMCP
@@ -42,14 +43,44 @@ namespace io.github.hatayama.uLoopMCP
             {
                 if (!string.IsNullOrEmpty(ownershipToken))
                 {
-                    string existingOwnershipToken = File.ReadAllText(lockPath);
+                    string existingOwnershipToken = TryReadOwnershipToken(lockPath);
                     if (!string.Equals(existingOwnershipToken, ownershipToken, System.StringComparison.Ordinal))
                     {
                         return;
                     }
                 }
 
+                TryDeleteLockFile(lockPath);
+            }
+        }
+
+        private static string TryReadOwnershipToken(string lockPath)
+        {
+            try
+            {
+                return File.ReadAllText(lockPath);
+            }
+            catch (IOException)
+            {
+                return null;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+
+        private static void TryDeleteLockFile(string lockPath)
+        {
+            try
+            {
                 File.Delete(lockPath);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
             }
         }
     }

@@ -159,6 +159,8 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       'execute-dynamic-code',
       '--code',
       'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
+      '--yield-to-foreground-requests',
+      'true',
       '--port',
       '8711',
     ]);
@@ -166,6 +168,8 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       'execute-dynamic-code',
       '--code',
       'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
+      '--yield-to-foreground-requests',
+      'true',
       '--port',
       '8711',
     ]);

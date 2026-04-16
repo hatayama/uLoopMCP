@@ -673,10 +673,10 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // Ensure stale reload locks are cleaned up before recovery.
-            // serverstarting.lock is recreated below and is released by the prewarm path.
+            // Why not clear serverstarting.lock here: a previous generation may still be finishing
+            // and ownership is now tracked per startup token below.
             DomainReloadDetectionService.DeleteLockFile();
             CompilationLockService.DeleteLockFile();
-            ServerStartingLockService.DeleteLockFile();
 
             VibeLogger.LogInfo("startup_request", $"port={savedPort}");
 
