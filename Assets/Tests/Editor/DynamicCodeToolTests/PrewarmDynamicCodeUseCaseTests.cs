@@ -75,6 +75,43 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task RequestAsync_WhenExecuteDynamicCodeIsDisabled_ShouldSkipExecution()
+        {
+            string settingsPath = Path.Combine(McpConstants.ULOOP_DIR, McpConstants.ULOOP_TOOL_SETTINGS_FILE_NAME);
+            bool hadSettingsFile = File.Exists(settingsPath);
+            string originalSettingsJson = hadSettingsFile ? File.ReadAllText(settingsPath) : null;
+            ToolSettings.InvalidateCache();
+            ToolSettings.SetToolEnabled(McpConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE, false);
+
+            FakePrewarmRuntime runtime = new FakePrewarmRuntime(true);
+            FakeDynamicCodeAutoPrewarmExecutor executor = new FakeDynamicCodeAutoPrewarmExecutor();
+            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime, default, executor);
+
+            try
+            {
+                await useCase.RequestAsync();
+
+                Assert.That(executor.Requests, Is.Empty);
+                Assert.That(
+                    DynamicCodeStartupTelemetry.CreateTimingEntries(),
+                    Has.Member("[Perf] PrewarmDetail: tool_disabled"));
+            }
+            finally
+            {
+                if (hadSettingsFile)
+                {
+                    File.WriteAllText(settingsPath, originalSettingsJson);
+                }
+                else if (File.Exists(settingsPath))
+                {
+                    File.Delete(settingsPath);
+                }
+
+                ToolSettings.InvalidateCache();
+            }
+        }
+
+        [Test]
         public async Task RequestAsync_WhenWarmupFails_ShouldRetryOnNextRequest()
         {
             FakePrewarmRuntime runtime = new FakePrewarmRuntime(true);

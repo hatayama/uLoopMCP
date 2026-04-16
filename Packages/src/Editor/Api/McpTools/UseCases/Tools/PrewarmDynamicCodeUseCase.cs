@@ -115,6 +115,16 @@ namespace io.github.hatayama.uLoopMCP
                     return;
                 }
 
+                if (!ToolSettings.IsToolEnabled(McpConstants.TOOL_NAME_EXECUTE_DYNAMIC_CODE))
+                {
+                    DynamicCodeStartupTelemetry.MarkPrewarmSkipped("tool_disabled");
+                    VibeLogger.LogInfo(
+                        AutoPrewarmOperation,
+                        "Skipping dynamic code auto prewarm because execute-dynamic-code is disabled",
+                        new { reason = "tool_disabled" });
+                    return;
+                }
+
                 VibeLogger.LogInfo(
                     AutoPrewarmOperation,
                     "Starting dynamic code auto prewarm",
