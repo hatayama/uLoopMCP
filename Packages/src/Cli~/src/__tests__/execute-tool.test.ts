@@ -460,7 +460,7 @@ describe('shouldReportServerStarting', () => {
     const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
     const statSpy = jest
       .spyOn(require('fs'), 'statSync')
-      .mockReturnValue({ mtimeMs: Date.now() - 60000 } as { mtimeMs: number });
+      .mockReturnValue({ mtimeMs: Date.now() - 80000 } as { mtimeMs: number });
 
     await expect(
       shouldReportServerStarting('/project', true, dependencies),

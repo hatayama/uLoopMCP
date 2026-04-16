@@ -158,4 +158,34 @@ describe('executeToolCommand compile warmup', () => {
     expect(mockSpawnSync).toHaveBeenCalledTimes(3);
     expect(mockConsoleLog).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps compile successful when warmup only hits compilation provider startup', async () => {
+    mockSpawnSync
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: JSON.stringify({
+          Success: false,
+          ErrorMessage:
+            'COMPILATION_PROVIDER_UNAVAILABLE: dynamic compiler is still warming up',
+        }),
+      })
+      .mockReturnValue({
+        status: 0,
+        stdout: JSON.stringify({ Success: true }),
+      });
+
+    await expect(
+      executeToolCommand(
+        'compile',
+        {
+          ForceRecompile: true,
+          WaitForDomainReload: true,
+        },
+        { projectPath: '/project' },
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(mockSpawnSync).toHaveBeenCalledTimes(3);
+    expect(mockConsoleLog).toHaveBeenCalledTimes(1);
+  });
 });

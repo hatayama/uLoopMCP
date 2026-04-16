@@ -111,7 +111,11 @@ const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 2;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS = 6;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS = 10000;
-const SERVER_STARTING_STALE_LOCK_MAX_AGE_MS = 30000;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_COMPILATION_PROVIDER_SUBSTRINGS = ['warming up'];
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_UNITY_ERROR_SUBSTRINGS = [
+  'can only be called from the main thread',
+];
+const SERVER_STARTING_STALE_LOCK_MAX_AGE_MS = 70000;
 const EXECUTION_IN_PROGRESS_ERROR_MESSAGE = 'Another execution is already in progress';
 const EXECUTION_CANCELLED_ERROR_MESSAGE = 'Execution was cancelled or timed out';
 
@@ -523,7 +527,27 @@ function createPostCompileDynamicCodePrewarmError(result: {
 
 function isRetryablePostCompileDynamicCodePrewarmError(error: Error): boolean {
   return error.message === EXECUTION_IN_PROGRESS_ERROR_MESSAGE
-    || error.message === EXECUTION_CANCELLED_ERROR_MESSAGE;
+    || error.message === EXECUTION_CANCELLED_ERROR_MESSAGE
+    || isRetryableCompilationProviderUnavailable(error.message)
+    || isRetryableUnityStartupMainThreadError(error.message);
+}
+
+function isRetryableCompilationProviderUnavailable(errorMessage: string): boolean {
+  if (!errorMessage.startsWith('COMPILATION_PROVIDER_UNAVAILABLE:')) {
+    return false;
+  }
+
+  const normalizedMessage = errorMessage.toLowerCase();
+  return POST_COMPILE_DYNAMIC_CODE_PREWARM_COMPILATION_PROVIDER_SUBSTRINGS.some((substring) =>
+    normalizedMessage.includes(substring),
+  );
+}
+
+function isRetryableUnityStartupMainThreadError(errorMessage: string): boolean {
+  const normalizedMessage = errorMessage.toLowerCase();
+  return POST_COMPILE_DYNAMIC_CODE_PREWARM_UNITY_ERROR_SUBSTRINGS.some((substring) =>
+    normalizedMessage.includes(substring),
+  );
 }
 
 /**
