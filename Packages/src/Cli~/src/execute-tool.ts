@@ -466,7 +466,7 @@ function checkServerVersion(result: Record<string, unknown>): void {
 }
 
 /**
- * Check if Unity is in a busy state (compiling, reloading, or server starting).
+ * Check if Unity is in a busy state (compiling or reloading).
  * Throws an error with appropriate message if busy.
  */
 function checkUnityBusyState(projectPath?: string): void {
@@ -486,10 +486,6 @@ function checkUnityBusyState(projectPath?: string): void {
     throw new Error('UNITY_DOMAIN_RELOAD');
   }
 
-  const serverStartingLock = join(projectRoot, 'Temp', 'serverstarting.lock');
-  if (existsSync(serverStartingLock)) {
-    throw new Error('UNITY_SERVER_STARTING');
-  }
 }
 
 function checkUnityBusyStateBeforeProjectResolution(globalOptions: GlobalOptions): void {
