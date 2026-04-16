@@ -42,13 +42,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(executor.Requests, Has.Count.EqualTo(6));
             Assert.That(
                 executor.Requests[0].Code,
+                Does.Contain("Debug.unityLogger.logEnabled = false;"));
+            Assert.That(
+                executor.Requests[0].Code,
                 Does.Contain("Debug.Log(\"Unity CLI Loop dynamic code prewarm\");"));
             Assert.That(
                 executor.Requests[0].Code,
                 Does.Contain("return \"Unity CLI Loop dynamic code prewarm\";"));
-            Assert.That(
-                executor.Requests[0].Code,
-                Does.Not.Contain("DynamicCodePrewarmLogSilencer"));
             Assert.That(executor.Requests[0].CompileOnly, Is.False);
             Assert.That(executor.Requests[1].Code, Is.EqualTo(executor.Requests[0].Code));
             Assert.That(executor.Requests[2].Code, Is.EqualTo(executor.Requests[0].Code));

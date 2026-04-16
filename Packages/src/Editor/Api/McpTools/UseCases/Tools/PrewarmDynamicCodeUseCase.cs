@@ -25,7 +25,7 @@ namespace io.github.hatayama.uLoopMCP
         // Why not stop at two passes: that still leaves the first post-reload user-visible request
         // hundreds of milliseconds slower than the warmed path, which is the exact regression we need to avoid.
         private const string AutoPrewarmCode =
-            "using UnityEngine; Debug.Log(\"Unity CLI Loop dynamic code prewarm\"); return \"Unity CLI Loop dynamic code prewarm\";";
+            "using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log(\"Unity CLI Loop dynamic code prewarm\"); return \"Unity CLI Loop dynamic code prewarm\"; } finally { Debug.unityLogger.logEnabled = previous; }";
         private const string AutoPrewarmClassName = DynamicCodeConstants.DEFAULT_CLASS_NAME;
         private const string AutoPrewarmOperation = "dynamic_code_auto_prewarm";
 
@@ -106,7 +106,6 @@ namespace io.github.hatayama.uLoopMCP
                     // full execute-dynamic-code entry path, not just the runtime facade underneath it.
                     // Why not keep the runtime-direct prewarm: that warmed compiler startup, but it still
                     // left the first real CLI request paying extra cost in the tool/JSON-RPC layers.
-                    using DynamicCodePrewarmLogSilencer logSilencer = new DynamicCodePrewarmLogSilencer();
                     DynamicCodeAutoPrewarmResult result = await _executor.ExecuteAsync(
                         parameters,
                         _lifecycleCancellationToken);
@@ -184,11 +183,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
-                // Why: CLI readiness checks already respect serverstarting.lock, so keeping the lock
-                // until prewarm finishes prevents the first post-reload foreground request from
-                // racing ahead of the startup warmup sequence.
-                // Why not clear the lock when the TCP listener starts: compile/domain-reload callers
-                // can reach execute-dynamic-code before prewarm completes, which reproduces the cold-start spike.
                 ServerStartingLockService.DeleteLockFile();
             }
         }

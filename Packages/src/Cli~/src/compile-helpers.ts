@@ -43,6 +43,7 @@ interface CompileCompletionWaitOptions {
   pollIntervalMs: number;
   unityPort?: number;
   isUnityReadyWhenIdle?: () => Promise<boolean>;
+  includeServerStartingLock?: boolean;
 }
 
 type CompileCompletionOutcome = 'completed' | 'timed_out';
@@ -125,7 +126,10 @@ function getCompileResultFilePath(projectRoot: string, requestId: string): strin
   return join(projectRoot, 'Temp', 'uLoopMCP', 'compile-results', `${requestId}.json`);
 }
 
-function isUnityBusyByLockFiles(projectRoot: string): boolean {
+function isUnityBusyByLockFiles(
+  projectRoot: string,
+  includeServerStartingLock: boolean = true,
+): boolean {
   const compilingLockPath = join(projectRoot, 'Temp', 'compiling.lock');
   if (existsSync(compilingLockPath)) {
     return true;
@@ -134,6 +138,10 @@ function isUnityBusyByLockFiles(projectRoot: string): boolean {
   const domainReloadLockPath = join(projectRoot, 'Temp', 'domainreload.lock');
   if (existsSync(domainReloadLockPath)) {
     return true;
+  }
+
+  if (!includeServerStartingLock) {
+    return false;
   }
 
   const serverStartingLockPath = join(projectRoot, 'Temp', 'serverstarting.lock');
@@ -233,7 +241,10 @@ export async function waitForCompileCompletion<T>(
 
   while (Date.now() - startTime < options.timeoutMs) {
     const result: T | undefined = tryReadCompileResult<T>(options.projectRoot, options.requestId);
-    const isBusy: boolean = isUnityBusyByLockFiles(options.projectRoot);
+    const isBusy: boolean = isUnityBusyByLockFiles(
+      options.projectRoot,
+      options.includeServerStartingLock,
+    );
 
     if (result !== undefined && !isBusy) {
       const now: number = Date.now();
@@ -265,10 +276,13 @@ export async function waitForCompileCompletion<T>(
   }
 
   const lastResult: T | undefined = tryReadCompileResult<T>(options.projectRoot, options.requestId);
-  if (lastResult !== undefined && !isUnityBusyByLockFiles(options.projectRoot)) {
+  if (
+    lastResult !== undefined
+    && !isUnityBusyByLockFiles(options.projectRoot, options.includeServerStartingLock)
+  ) {
     // Guard the compilationFinished→beforeAssemblyReload gap, same as the main loop
     await sleep(LOCK_GRACE_PERIOD_MS);
-    if (isUnityBusyByLockFiles(options.projectRoot)) {
+    if (isUnityBusyByLockFiles(options.projectRoot, options.includeServerStartingLock)) {
       return { outcome: 'timed_out' };
     }
 

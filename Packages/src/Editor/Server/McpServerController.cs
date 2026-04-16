@@ -131,8 +131,19 @@ namespace io.github.hatayama.uLoopMCP
                 DynamicCodeStartupTelemetry.MarkServerReady();
                 CustomToolManager.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
-                IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
-                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync();
+                IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase = null;
+                try
+                {
+                    prewarmDynamicCodeUseCase =
+                        await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync();
+                }
+                finally
+                {
+                    if (prewarmDynamicCodeUseCase == null)
+                    {
+                        ServerStartingLockService.DeleteLockFile();
+                    }
+                }
                 prewarmDynamicCodeUseCase.Request();
 
             }
