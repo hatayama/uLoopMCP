@@ -53,9 +53,10 @@ namespace io.github.hatayama.uLoopMCP
             return new ExecuteDynamicCodeUseCase(runtimeFacade);
         }
 
-        public static async Task<IPrewarmDynamicCodeUseCase> GetPrewarmDynamicCodeUseCaseAsync()
+        public static async Task<IPrewarmDynamicCodeUseCase> GetPrewarmDynamicCodeUseCaseAsync(
+            string serverStartingLockToken = null)
         {
-            await EnsureServerScopedServicesInitializedAsync();
+            await EnsureServerScopedServicesInitializedAsync(serverStartingLockToken);
 
             lock (ServerScopedServicesLock)
             {
@@ -94,7 +95,8 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
-        private static async Task EnsureServerScopedServicesInitializedAsync()
+        private static async Task EnsureServerScopedServicesInitializedAsync(
+            string serverStartingLockToken = null)
         {
             DynamicCodeCompilationServiceRegistration.EnsureRegistered();
 
@@ -126,7 +128,9 @@ namespace io.github.hatayama.uLoopMCP
                     _executorPool);
                 _prewarmDynamicCodeUseCase = new PrewarmDynamicCodeUseCase(
                     _runtimeFacade,
-                    _serverScopedLifetimeCancellationTokenSource.Token);
+                    _serverScopedLifetimeCancellationTokenSource.Token,
+                    null,
+                    serverStartingLockToken);
             }
         }
 

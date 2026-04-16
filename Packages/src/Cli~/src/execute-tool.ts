@@ -105,6 +105,7 @@ const MAX_RETRIES = 3;
 const COMPILE_WAIT_TIMEOUT_MS = 90000;
 const COMPILE_WAIT_POLL_INTERVAL_MS = 100;
 const FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX = 'Force compilation executed.';
+const SKIP_SERVER_STARTING_CHECK_ENV = 'ULOOP_SKIP_SERVER_STARTING_CHECK';
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE =
   'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }';
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
@@ -120,6 +121,10 @@ const defaultPostCompileDynamicCodePrewarmDependencies: PostCompileDynamicCodePr
     spawnSync(process.execPath, [process.argv[1], ...args], {
       stdio: 'ignore',
       windowsHide: true,
+      env: {
+        ...process.env,
+        [SKIP_SERVER_STARTING_CHECK_ENV]: '1',
+      },
     }),
 };
 
@@ -443,6 +448,9 @@ function checkUnityBusyState(projectPath?: string): void {
   }
 
   const serverStartingLock = join(projectRoot, 'Temp', 'serverstarting.lock');
+  if (process.env[SKIP_SERVER_STARTING_CHECK_ENV] === '1') {
+    return;
+  }
   if (existsSync(serverStartingLock)) {
     throw new Error('UNITY_SERVER_STARTING');
   }

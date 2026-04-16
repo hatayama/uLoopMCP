@@ -17,27 +17,38 @@ namespace io.github.hatayama.uLoopMCP
         /// <summary>
         /// Create lock file to signal server is starting.
         /// </summary>
-        public static void CreateLockFile()
+        public static string CreateLockFile()
         {
             string lockPath = LockFilePath;
             string tempDir = Path.GetDirectoryName(lockPath);
 
             if (!Directory.Exists(tempDir))
             {
-                return;
+                return null;
             }
 
-            File.WriteAllText(lockPath, System.DateTime.UtcNow.ToString("o"));
+            string ownershipToken = System.Guid.NewGuid().ToString("N");
+            File.WriteAllText(lockPath, ownershipToken);
+            return ownershipToken;
         }
 
         /// <summary>
         /// Delete lock file. Called when server startup completes or on crash recovery.
         /// </summary>
-        public static void DeleteLockFile()
+        public static void DeleteLockFile(string ownershipToken = null)
         {
             string lockPath = LockFilePath;
             if (File.Exists(lockPath))
             {
+                if (!string.IsNullOrEmpty(ownershipToken))
+                {
+                    string existingOwnershipToken = File.ReadAllText(lockPath);
+                    if (!string.Equals(existingOwnershipToken, ownershipToken, System.StringComparison.Ordinal))
+                    {
+                        return;
+                    }
+                }
+
                 File.Delete(lockPath);
             }
         }

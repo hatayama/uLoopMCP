@@ -102,7 +102,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // Signal server is starting for CLI detection
-            ServerStartingLockService.CreateLockFile();
+            string serverStartingLockToken = ServerStartingLockService.CreateLockFile();
 
             // Always stop the existing server first (to release the port)
             if (mcpServer != null)
@@ -135,13 +135,13 @@ namespace io.github.hatayama.uLoopMCP
                 try
                 {
                     prewarmDynamicCodeUseCase =
-                        await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync();
+                        await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
                 }
                 finally
                 {
                     if (prewarmDynamicCodeUseCase == null)
                     {
-                        ServerStartingLockService.DeleteLockFile();
+                        ServerStartingLockService.DeleteLockFile(serverStartingLockToken);
                     }
                 }
                 prewarmDynamicCodeUseCase.Request();
@@ -149,7 +149,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                ServerStartingLockService.DeleteLockFile();
+                ServerStartingLockService.DeleteLockFile(serverStartingLockToken);
                 // Error message already handled by UseCase
                 UnityEngine.Debug.LogError($"Server startup failed: {result.Message}");
             }
@@ -687,6 +687,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             await StartupSemaphore.WaitAsync(cancellationToken);
+            string serverStartingLockToken = null;
             try
             {
                 // If any server is already running, ignore this request to prevent double-binding
@@ -696,7 +697,7 @@ namespace io.github.hatayama.uLoopMCP
                     return;
                 }
 
-                ServerStartingLockService.CreateLockFile();
+                serverStartingLockToken = ServerStartingLockService.CreateLockFile();
 
                 // Ensure previous instance is fully disposed before trying to bind a new one
                 if (mcpServer != null)
@@ -769,14 +770,14 @@ namespace io.github.hatayama.uLoopMCP
                 CustomToolManager.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
-                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync();
+                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
                 prewarmDynamicCodeUseCase.Request();
 
                 ActivateStartupProtection(5000);
             }
             catch
             {
-                ServerStartingLockService.DeleteLockFile();
+                ServerStartingLockService.DeleteLockFile(serverStartingLockToken);
                 throw;
             }
             finally

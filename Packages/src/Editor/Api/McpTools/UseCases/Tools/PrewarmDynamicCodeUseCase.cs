@@ -32,17 +32,20 @@ namespace io.github.hatayama.uLoopMCP
         private readonly IDynamicCodeExecutionRuntime _runtime;
         private readonly IDynamicCodeAutoPrewarmExecutor _executor;
         private readonly CancellationToken _lifecycleCancellationToken;
+        private readonly string _serverStartingLockToken;
         private readonly object _autoPrewarmLock = new();
         private Task _autoPrewarmTask;
 
         public PrewarmDynamicCodeUseCase(
             IDynamicCodeExecutionRuntime runtime,
             CancellationToken lifecycleCancellationToken = default,
-            IDynamicCodeAutoPrewarmExecutor executor = null)
+            IDynamicCodeAutoPrewarmExecutor executor = null,
+            string serverStartingLockToken = null)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _executor = executor ?? new TcpDynamicCodeAutoPrewarmExecutor();
             _lifecycleCancellationToken = lifecycleCancellationToken;
+            _serverStartingLockToken = serverStartingLockToken;
         }
 
         public void Request()
@@ -99,7 +102,8 @@ namespace io.github.hatayama.uLoopMCP
                     ExecuteDynamicCodeSchema parameters = new ExecuteDynamicCodeSchema
                     {
                         Code = AutoPrewarmCode,
-                        CompileOnly = false
+                        CompileOnly = false,
+                        YieldToForegroundRequests = true
                     };
 
                     // Why: the remaining domain-reload spike only disappeared when measurements warmed the
@@ -183,7 +187,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
-                ServerStartingLockService.DeleteLockFile();
+                ServerStartingLockService.DeleteLockFile(_serverStartingLockToken);
             }
         }
 

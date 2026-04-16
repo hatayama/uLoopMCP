@@ -50,6 +50,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 executor.Requests[0].Code,
                 Does.Contain("return \"Unity CLI Loop dynamic code prewarm\";"));
             Assert.That(executor.Requests[0].CompileOnly, Is.False);
+            Assert.That(executor.Requests[0].YieldToForegroundRequests, Is.True);
             Assert.That(executor.Requests[1].Code, Is.EqualTo(executor.Requests[0].Code));
             Assert.That(executor.Requests[2].Code, Is.EqualTo(executor.Requests[0].Code));
             Assert.That(DynamicCodeStartupTelemetry.CreateTimingEntries(), Has.Member("[Perf] WarmReady: True"));
@@ -225,7 +226,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 Requests.Add(new ExecuteDynamicCodeSchema
                 {
                     Code = parameters.Code,
-                    CompileOnly = parameters.CompileOnly
+                    CompileOnly = parameters.CompileOnly,
+                    YieldToForegroundRequests = parameters.YieldToForegroundRequests
                 });
 
                 return _resultTasks.Dequeue();

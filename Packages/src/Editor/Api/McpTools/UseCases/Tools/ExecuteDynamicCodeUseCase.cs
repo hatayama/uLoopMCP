@@ -41,7 +41,8 @@ namespace io.github.hatayama.uLoopMCP
                     originalCode,
                     parametersArray,
                     parameters.CompileOnly,
-                    editorLevel);
+                    editorLevel,
+                    parameters.YieldToForegroundRequests);
                 ExecutionResult executionResult = await _runtime.ExecuteAsync(request, cancellationToken);
 
                 ExecutionResult finalResult = await RetryMissingReturnIfNeeded(
@@ -114,7 +115,8 @@ namespace io.github.hatayama.uLoopMCP
             string code,
             object[] parameters,
             bool compileOnly,
-            DynamicCodeSecurityLevel securityLevel)
+            DynamicCodeSecurityLevel securityLevel,
+            bool yieldToForegroundRequests = false)
         {
             return new DynamicCodeExecutionRequest
             {
@@ -122,7 +124,8 @@ namespace io.github.hatayama.uLoopMCP
                 ClassName = "DynamicCommand",
                 Parameters = parameters,
                 CompileOnly = compileOnly,
-                SecurityLevel = securityLevel
+                SecurityLevel = securityLevel,
+                YieldToForegroundRequests = yieldToForegroundRequests
             };
         }
 
