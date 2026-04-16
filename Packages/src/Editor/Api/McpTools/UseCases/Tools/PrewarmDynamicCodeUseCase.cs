@@ -128,6 +128,7 @@ namespace io.github.hatayama.uLoopMCP
                 DynamicCodeStartupTelemetry.MarkPrewarmStarted();
 
                 int successfulPassCount = 0;
+                bool sawTransientTransportFailure = false;
                 for (int attemptIndex = 0;
                      attemptIndex < AutoPrewarmMaxAttempts && successfulPassCount < AutoPrewarmPassCount;
                      attemptIndex++)
@@ -149,6 +150,20 @@ namespace io.github.hatayama.uLoopMCP
 
                     if (IsExecutionBusy(result))
                     {
+                        if (sawTransientTransportFailure)
+                        {
+                            VibeLogger.LogInfo(
+                                AutoPrewarmOperation,
+                                "Dynamic code auto prewarm is waiting for an earlier transient attempt to finish",
+                                new
+                                {
+                                    class_name = AutoPrewarmClassName,
+                                    attempt_index = attemptIndex + 1,
+                                    max_attempts = AutoPrewarmMaxAttempts
+                                });
+                            continue;
+                        }
+
                         DynamicCodeStartupTelemetry.MarkPrewarmSkipped("runtime_busy");
                         VibeLogger.LogInfo(
                             AutoPrewarmOperation,
@@ -172,6 +187,7 @@ namespace io.github.hatayama.uLoopMCP
 
                     if (IsTransientTransportFailure(result))
                     {
+                        sawTransientTransportFailure = true;
                         VibeLogger.LogWarning(
                             AutoPrewarmOperation,
                             "Dynamic code auto prewarm hit a transient loopback failure and will retry",
@@ -201,6 +217,7 @@ namespace io.github.hatayama.uLoopMCP
                         return;
                     }
 
+                    sawTransientTransportFailure = false;
                     successfulPassCount++;
                     VibeLogger.LogInfo(
                         AutoPrewarmOperation,

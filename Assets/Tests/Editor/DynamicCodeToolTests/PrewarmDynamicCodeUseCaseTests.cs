@@ -162,6 +162,32 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
+        public async Task RequestAsync_WhenTransportFailsThenExecutionStaysBusy_ShouldWaitForTheEarlierAttemptToFinish()
+        {
+            FakePrewarmRuntime runtime = new FakePrewarmRuntime(true);
+            FakeDynamicCodeAutoPrewarmExecutor executor = new FakeDynamicCodeAutoPrewarmExecutor(
+                new DynamicCodeAutoPrewarmResult
+                {
+                    Success = false,
+                    ErrorMessage = TcpDynamicCodeAutoPrewarmExecutor.TransportErrorMessage
+                },
+                new DynamicCodeAutoPrewarmResult
+                {
+                    Success = false,
+                    ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
+                },
+                new DynamicCodeAutoPrewarmResult { Success = true },
+                new DynamicCodeAutoPrewarmResult { Success = true },
+                new DynamicCodeAutoPrewarmResult { Success = true });
+            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime, default, executor);
+
+            await useCase.RequestAsync();
+
+            Assert.That(executor.Requests, Has.Count.EqualTo(5));
+            Assert.That(DynamicCodeStartupTelemetry.CreateTimingEntries(), Has.Member("[Perf] WarmReady: True"));
+        }
+
+        [Test]
         public async Task RequestAsync_WhenCalledTwiceBeforeCompletion_ShouldReturnSameTask()
         {
             TaskCompletionSource<DynamicCodeAutoPrewarmResult> completionSource =

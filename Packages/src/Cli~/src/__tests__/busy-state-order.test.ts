@@ -3,6 +3,7 @@ const mockValidateProjectPath = jest.fn<string, [string]>();
 const mockFindUnityProjectRoot = jest.fn<string | null, []>();
 const mockExistsSync = jest.fn<boolean, [string]>();
 const mockStatSync = jest.fn<{ mtimeMs: number }, [string]>();
+const mockFindRunningUnityProcessForProject = jest.fn<Promise<{ pid: number } | null>, [string]>();
 
 jest.mock('../port-resolver.js', () => ({
   resolveUnityConnection: (...args: unknown[]) => mockResolveUnityConnection(...args),
@@ -18,6 +19,11 @@ jest.mock('../project-root.js', () => ({
 jest.mock('fs', () => ({
   existsSync: (path: string): boolean => mockExistsSync(path),
   statSync: (path: string): { mtimeMs: number } => mockStatSync(path),
+}));
+
+jest.mock('../unity-process.js', () => ({
+  findRunningUnityProcessForProject: (projectRoot: string): Promise<{ pid: number } | null> =>
+    mockFindRunningUnityProcessForProject(projectRoot),
 }));
 
 import { executeToolCommand, listAvailableTools, syncTools } from '../execute-tool.js';
@@ -38,6 +44,9 @@ describe('busy state detection order', () => {
 
     mockStatSync.mockReset();
     mockStatSync.mockReturnValue({ mtimeMs: Date.now() });
+
+    mockFindRunningUnityProcessForProject.mockReset();
+    mockFindRunningUnityProcessForProject.mockResolvedValue({ pid: 1234 });
   });
 
   it('checks busy state before resolving port for tool execution', async () => {
@@ -68,6 +77,18 @@ describe('busy state detection order', () => {
     );
 
     expect(mockResolveUnityConnection).not.toHaveBeenCalled();
+  });
+
+  it('does not treat a fresh serverstarting.lock as busy when no Unity process is running', async () => {
+    mockFindRunningUnityProcessForProject.mockResolvedValue(null);
+    mockResolveUnityConnection.mockRejectedValue(new Error('RESOLVE_CALLED_WITHOUT_RUNNING_UNITY'));
+    mockExistsSync.mockImplementation((path: string) => path.endsWith('serverstarting.lock'));
+
+    await expect(listAvailableTools({ projectPath: '/project' })).rejects.toThrow(
+      'RESOLVE_CALLED_WITHOUT_RUNNING_UNITY',
+    );
+
+    expect(mockResolveUnityConnection).toHaveBeenCalled();
   });
 
   it('allows the internal post-compile warmup path to bypass only serverstarting.lock', async () => {
