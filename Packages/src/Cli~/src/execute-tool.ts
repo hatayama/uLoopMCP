@@ -357,7 +357,7 @@ export async function shouldPromoteToServerStartingError(
   shouldDiagnoseProjectState: boolean,
   dependencies: ConnectionFailureDiagnosisDependencies = defaultConnectionFailureDiagnosisDependencies,
 ): Promise<boolean> {
-  if (!shouldTreatServerStartingAsBusy(toolName)) {
+  if (!shouldPromoteServerStartingResolutionFailures(toolName)) {
     return false;
   }
 
@@ -857,6 +857,14 @@ function checkServerVersion(result: Record<string, unknown>): void {
  */
 function shouldTreatServerStartingAsBusy(toolName: string): boolean {
   return toolName === 'execute-dynamic-code';
+}
+
+// Why: non-dynamic tools should stop pre-blocking on serverstarting.lock once the listener is up,
+// but fresh-lock resolution failures still need the retryable UNITY_SERVER_STARTING surface.
+// Why not reuse shouldTreatServerStartingAsBusy for both paths: that collapses two different
+// contracts and turns normal startup resolution failures back into raw config/connection errors.
+function shouldPromoteServerStartingResolutionFailures(_toolName: string): boolean {
+  return true;
 }
 
 async function checkUnityBusyState(toolName: string, projectPath?: string): Promise<void> {

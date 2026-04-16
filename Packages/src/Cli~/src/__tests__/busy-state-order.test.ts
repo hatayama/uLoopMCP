@@ -95,12 +95,46 @@ describe('busy state detection order', () => {
     expect(mockResolveUnityConnection).not.toHaveBeenCalled();
   });
 
-  it('does not block list operations on serverstarting.lock once the listener is up', async () => {
+  it('promotes get-logs resolution failures to UNITY_SERVER_STARTING when startup lock is fresh', async () => {
     mockExistsSync.mockImplementation((path: string) => path.endsWith('serverstarting.lock'));
-    mockResolveUnityConnection.mockRejectedValue(new Error('RESOLVE_AFTER_STARTUP_LOCK'));
+    mockResolveUnityConnection.mockRejectedValue(
+      new Error(
+        'Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
+      ),
+    );
+
+    await expect(executeToolCommand('get-logs', {}, { projectPath: '/project' })).rejects.toThrow(
+      'UNITY_SERVER_STARTING',
+    );
+
+    expect(mockResolveUnityConnection).toHaveBeenCalled();
+  });
+
+  it('promotes list resolution failures to UNITY_SERVER_STARTING when startup lock is fresh', async () => {
+    mockExistsSync.mockImplementation((path: string) => path.endsWith('serverstarting.lock'));
+    mockResolveUnityConnection.mockRejectedValue(
+      new Error(
+        'Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
+      ),
+    );
 
     await expect(listAvailableTools({ projectPath: '/project' })).rejects.toThrow(
-      'RESOLVE_AFTER_STARTUP_LOCK',
+      'UNITY_SERVER_STARTING',
+    );
+
+    expect(mockResolveUnityConnection).toHaveBeenCalled();
+  });
+
+  it('promotes sync resolution failures to UNITY_SERVER_STARTING when startup lock is fresh', async () => {
+    mockExistsSync.mockImplementation((path: string) => path.endsWith('serverstarting.lock'));
+    mockResolveUnityConnection.mockRejectedValue(
+      new Error(
+        'Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
+      ),
+    );
+
+    await expect(syncTools({ projectPath: '/project' })).rejects.toThrow(
+      'UNITY_SERVER_STARTING',
     );
 
     expect(mockResolveUnityConnection).toHaveBeenCalled();

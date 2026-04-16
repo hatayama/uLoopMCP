@@ -749,7 +749,7 @@ describe('shouldPromoteToServerStartingError', () => {
     ).resolves.toBe(false);
   });
 
-  it('returns false for retryable startup errors when the tool should ignore startup lock promotion', async () => {
+  it('returns true for retryable startup errors when startup lock promotion should surface a retryable busy signal', async () => {
     const dependencies = {
       findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
       existsSyncFn: jest.fn().mockReturnValue(true),
@@ -764,7 +764,7 @@ describe('shouldPromoteToServerStartingError', () => {
         true,
         dependencies,
       ),
-    ).resolves.toBe(false);
+    ).resolves.toBe(true);
   });
 });
 
@@ -818,7 +818,7 @@ describe('resolveUnityConnectionWithStartupDiagnosis', () => {
     ).rejects.toThrow('Cannot specify both --port and --project-path');
   });
 
-  it('preserves retryable settings-read failures for non-dynamic-code tools', async () => {
+  it('promotes retryable settings-read failures for non-dynamic-code tools when startup lock is fresh', async () => {
     const projectRoot = resolvePath(process.cwd(), '..', '..', '..');
     const dependencies = {
       findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
@@ -838,8 +838,8 @@ describe('resolveUnityConnectionWithStartupDiagnosis', () => {
             new Error(
               `Could not read Unity server port from settings.\n\n  Settings file: ${projectRoot}/UserSettings/UnityMcpSettings.json`,
             ),
-          ),
+        ),
       ),
-    ).rejects.toThrow('Could not read Unity server port from settings.');
+    ).rejects.toThrow('UNITY_SERVER_STARTING');
   });
 });
