@@ -84,6 +84,7 @@ namespace io.github.hatayama.uLoopMCP
                     YieldToForegroundRequests = true
                 };
 
+                using DynamicCodePrewarmLogSilencer logSilencer = new DynamicCodePrewarmLogSilencer();
                 Task<(bool Entered, ExecutionResult Result)> executionTask = _runtime.TryExecuteIfIdleAsync(
                     request,
                     _lifecycleCancellationToken);
