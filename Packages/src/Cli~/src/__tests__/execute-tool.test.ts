@@ -604,14 +604,14 @@ describe('shouldReportServerStarting', () => {
     await expect(shouldReportServerStarting('/project', true, dependencies)).resolves.toBe(false);
   });
 
-  it('returns false when the startup lock is stale', async () => {
+  it('keeps reporting startup while the lock exists and Unity is still running', async () => {
     const dependencies = {
       findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
       existsSyncFn: jest.fn().mockReturnValue(true),
       statSyncFn: jest.fn().mockReturnValue(createStatResult(Date.now() - 80000)),
     };
 
-    await expect(shouldReportServerStarting('/project', true, dependencies)).resolves.toBe(false);
+    await expect(shouldReportServerStarting('/project', true, dependencies)).resolves.toBe(true);
   });
 
   it('returns false when the startup lock disappears before statSync', async () => {

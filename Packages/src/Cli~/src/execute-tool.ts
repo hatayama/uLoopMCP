@@ -115,7 +115,6 @@ const POST_COMPILE_DYNAMIC_CODE_PREWARM_COMPILATION_PROVIDER_SUBSTRINGS = ['warm
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_UNITY_ERROR_SUBSTRINGS = [
   'can only be called from the main thread',
 ];
-const SERVER_STARTING_STALE_LOCK_MAX_AGE_MS = 70000;
 const SKIP_SERVER_STARTING_BUSY_CHECK_ENV_KEY = 'ULOOP_INTERNAL_SKIP_SERVER_STARTING_BUSY_CHECK';
 const EXECUTION_IN_PROGRESS_ERROR_MESSAGE = 'Another execution is already in progress';
 const EXECUTION_CANCELLED_ERROR_MESSAGE = 'Execution was cancelled or timed out';
@@ -285,15 +284,12 @@ function isServerStarting(
     return false;
   }
 
-  let lockAgeMilliseconds: number;
   try {
     const lockStat: Stats = statSyncFn(serverStartingLockPath);
-    lockAgeMilliseconds = Date.now() - lockStat.mtimeMs;
+    return lockStat.mtimeMs >= 0;
   } catch {
     return false;
   }
-
-  return lockAgeMilliseconds <= SERVER_STARTING_STALE_LOCK_MAX_AGE_MS;
 }
 
 export function isSettingsReadError(error: unknown): boolean {
@@ -702,7 +698,11 @@ function checkServerVersion(result: Record<string, unknown>): void {
  * Check if Unity is in a busy state (compiling or reloading).
  * Throws an error with appropriate message if busy.
  */
-async function checkUnityBusyState(projectPath?: string): Promise<void> {
+function shouldTreatServerStartingAsBusy(toolName: string): boolean {
+  return toolName === 'execute-dynamic-code';
+}
+
+async function checkUnityBusyState(toolName: string, projectPath?: string): Promise<void> {
   const projectRoot =
     projectPath !== undefined ? validateProjectPath(projectPath) : findUnityProjectRoot();
   if (projectRoot === null) {
@@ -710,6 +710,7 @@ async function checkUnityBusyState(projectPath?: string): Promise<void> {
   }
 
   if (
+    shouldTreatServerStartingAsBusy(toolName) &&
     !shouldSkipServerStartingBusyCheck() &&
     (await shouldReportServerStarting(projectRoot, true))
   ) {
@@ -732,13 +733,14 @@ function shouldSkipServerStartingBusyCheck(): boolean {
 }
 
 async function checkUnityBusyStateBeforeProjectResolution(
+  toolName: string,
   globalOptions: GlobalOptions,
 ): Promise<void> {
   if (globalOptions.port !== undefined) {
     return;
   }
 
-  await checkUnityBusyState(globalOptions.projectPath);
+  await checkUnityBusyState(toolName, globalOptions.projectPath);
 }
 
 function shouldShowInteractiveFeedback(toolName: string): boolean {
@@ -761,7 +763,7 @@ export async function executeToolCommand(
 ): Promise<void> {
   const commandStartedAt: number = Date.now();
   const portNumber = parseExplicitPort(globalOptions.port);
-  await checkUnityBusyStateBeforeProjectResolution(globalOptions);
+  await checkUnityBusyStateBeforeProjectResolution(toolName, globalOptions);
   let connection = await resolveUnityConnectionWithStartupDiagnosis(
     portNumber,
     globalOptions.projectPath,
@@ -803,7 +805,7 @@ export async function executeToolCommand(
     let requestDispatched = false;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      await checkUnityBusyStateBeforeProjectResolution(globalOptions);
+      await checkUnityBusyStateBeforeProjectResolution(toolName, globalOptions);
       const projectRoot = connection.projectRoot;
       const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
       const shouldDiagnoseProjectState = projectRoot !== null;
@@ -1000,7 +1002,7 @@ export async function executeToolCommand(
 
 export async function listAvailableTools(globalOptions: GlobalOptions): Promise<void> {
   const portNumber = parseExplicitPort(globalOptions.port);
-  await checkUnityBusyStateBeforeProjectResolution(globalOptions);
+  await checkUnityBusyStateBeforeProjectResolution('get-tool-details', globalOptions);
   let connection = await resolveUnityConnectionWithStartupDiagnosis(
     portNumber,
     globalOptions.projectPath,
@@ -1024,7 +1026,7 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
     let currentProjectRoot = connection.projectRoot;
     let currentShouldDiagnoseProjectState = currentProjectRoot !== null;
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      await checkUnityBusyStateBeforeProjectResolution(globalOptions);
+      await checkUnityBusyStateBeforeProjectResolution('get-tool-details', globalOptions);
       const projectRoot = connection.projectRoot;
       const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
       const shouldDiagnoseProjectState = projectRoot !== null;
@@ -1125,7 +1127,7 @@ function convertProperties(
 
 export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
   const portNumber = parseExplicitPort(globalOptions.port);
-  await checkUnityBusyStateBeforeProjectResolution(globalOptions);
+  await checkUnityBusyStateBeforeProjectResolution('sync-tools', globalOptions);
   let connection = await resolveUnityConnectionWithStartupDiagnosis(
     portNumber,
     globalOptions.projectPath,
@@ -1149,7 +1151,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
     let currentProjectRoot = connection.projectRoot;
     let currentShouldDiagnoseProjectState = currentProjectRoot !== null;
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      await checkUnityBusyStateBeforeProjectResolution(globalOptions);
+      await checkUnityBusyStateBeforeProjectResolution('sync-tools', globalOptions);
       const projectRoot = connection.projectRoot;
       const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
       const shouldDiagnoseProjectState = projectRoot !== null;

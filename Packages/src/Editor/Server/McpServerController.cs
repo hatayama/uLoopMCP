@@ -145,10 +145,10 @@ namespace io.github.hatayama.uLoopMCP
                 DynamicCodeStartupTelemetry.MarkServerReady();
                 CustomToolManager.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
+                string dynamicCodeWarmupLockToken = ServerStartingLockService.CreateLockFile();
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
-                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
+                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(dynamicCodeWarmupLockToken);
                 prewarmDynamicCodeUseCase.Request();
-                ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
             }
             finally
             {
@@ -776,10 +776,10 @@ namespace io.github.hatayama.uLoopMCP
                 DynamicCodeStartupTelemetry.MarkServerReady();
                 CustomToolManager.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
+                string dynamicCodeWarmupLockToken = ServerStartingLockService.CreateLockFile();
                 IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
-                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
+                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(dynamicCodeWarmupLockToken);
                 prewarmDynamicCodeUseCase.Request();
-                ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
 
                 ActivateStartupProtection(5000);
             }

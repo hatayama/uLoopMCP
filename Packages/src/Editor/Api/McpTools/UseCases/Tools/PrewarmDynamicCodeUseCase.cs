@@ -281,6 +281,10 @@ namespace io.github.hatayama.uLoopMCP
                 DynamicCodeStartupTelemetry.MarkPrewarmSkipped("lifecycle_cancelled");
                 return;
             }
+            finally
+            {
+                ServerStartingLockService.DeleteOwnedLockFile(GetServerStartingLockTokenForTests());
+            }
         }
 
         private static bool WasCancelledByForegroundRequest(DynamicCodeAutoPrewarmResult result)

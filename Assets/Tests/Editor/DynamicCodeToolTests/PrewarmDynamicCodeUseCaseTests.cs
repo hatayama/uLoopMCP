@@ -245,7 +245,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public async Task RequestAsync_WhenStartupLockTokenIsAttached_ShouldNotDeleteStartupLock()
+        public async Task RequestAsync_WhenStartupLockTokenIsAttached_ShouldDeleteStartupLockAfterCompletion()
         {
             string createdToken = ServerStartingLockService.CreateLockFile();
             Assert.That(createdToken, Is.Not.Null.And.Not.Empty);
@@ -267,7 +267,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             {
                 await useCase.RequestAsync();
 
-                Assert.That(File.Exists(lockPath), Is.True);
+                Assert.That(File.Exists(lockPath), Is.False);
             }
             finally
             {

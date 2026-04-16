@@ -6,7 +6,20 @@ const mockStatSync = jest.fn<{ mtimeMs: number }, [string]>();
 const mockFindRunningUnityProcessForProject = jest.fn<Promise<{ pid: number } | null>, [string]>();
 
 jest.mock('../port-resolver.js', () => ({
-  resolveUnityConnection: (...args: unknown[]) => mockResolveUnityConnection(...args),
+  resolveUnityConnection: (
+    ...args: unknown[]
+  ): Promise<{
+    port: number;
+    projectRoot: string | null;
+    requestMetadata: null;
+    shouldValidateProject: boolean;
+  }> =>
+    mockResolveUnityConnection(...args) as Promise<{
+      port: number;
+      projectRoot: string | null;
+      requestMetadata: null;
+      shouldValidateProject: boolean;
+    }>,
   validateProjectPath: (projectPath: string): string => mockValidateProjectPath(projectPath),
   UnityNotRunningError: class UnityNotRunningError extends Error {},
   UnityServerNotRunningError: class UnityServerNotRunningError extends Error {},
@@ -58,7 +71,9 @@ describe('busy state detection order', () => {
   });
 
   it('checks busy state before resolving port for list', async () => {
-    await expect(listAvailableTools({ projectPath: '/project' })).rejects.toThrow('UNITY_COMPILING');
+    await expect(listAvailableTools({ projectPath: '/project' })).rejects.toThrow(
+      'UNITY_COMPILING',
+    );
 
     expect(mockResolveUnityConnection).not.toHaveBeenCalled();
   });
@@ -69,14 +84,26 @@ describe('busy state detection order', () => {
     expect(mockResolveUnityConnection).not.toHaveBeenCalled();
   });
 
-  it('treats a fresh serverstarting.lock as busy before resolving the port', async () => {
+  it('treats a fresh serverstarting.lock as busy for execute-dynamic-code before resolving the port', async () => {
     mockExistsSync.mockImplementation((path: string) => path.endsWith('serverstarting.lock'));
+    mockResolveUnityConnection.mockRejectedValue(new Error('RESOLVE_SHOULD_NOT_RUN'));
 
-    await expect(listAvailableTools({ projectPath: '/project' })).rejects.toThrow(
-      'UNITY_SERVER_STARTING',
-    );
+    await expect(
+      executeToolCommand('execute-dynamic-code', {}, { projectPath: '/project' }),
+    ).rejects.toThrow('UNITY_SERVER_STARTING');
 
     expect(mockResolveUnityConnection).not.toHaveBeenCalled();
+  });
+
+  it('does not block list operations on serverstarting.lock once the listener is up', async () => {
+    mockExistsSync.mockImplementation((path: string) => path.endsWith('serverstarting.lock'));
+    mockResolveUnityConnection.mockRejectedValue(new Error('RESOLVE_AFTER_STARTUP_LOCK'));
+
+    await expect(listAvailableTools({ projectPath: '/project' })).rejects.toThrow(
+      'RESOLVE_AFTER_STARTUP_LOCK',
+    );
+
+    expect(mockResolveUnityConnection).toHaveBeenCalled();
   });
 
   it('does not treat a fresh serverstarting.lock as busy when no Unity process is running', async () => {
