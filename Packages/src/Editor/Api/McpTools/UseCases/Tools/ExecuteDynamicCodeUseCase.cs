@@ -13,6 +13,8 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     internal sealed class ExecuteDynamicCodeUseCase : IExecuteDynamicCodeUseCase
     {
+        private const string ForegroundWarmupCode =
+            "using UnityEngine; LogType previous = Debug.unityLogger.filterLogType; Debug.unityLogger.filterLogType = LogType.Warning; try { Debug.Log(\"Unity CLI Loop dynamic code prewarm\"); return \"Unity CLI Loop dynamic code prewarm\"; } finally { Debug.unityLogger.filterLogType = previous; }";
         private readonly IDynamicCodeExecutionRuntime _runtime;
         private readonly UserFriendlyErrorConverter _errorHandler;
 
@@ -43,6 +45,7 @@ namespace io.github.hatayama.uLoopMCP
                     parameters.CompileOnly,
                     editorLevel,
                     parameters.YieldToForegroundRequests);
+                await WarmForegroundExecutionPathIfNeededAsync(parameters, editorLevel, cancellationToken);
                 ExecutionResult executionResult = await ExecuteRequestAsync(request, cancellationToken);
 
                 ExecutionResult finalResult = await RetryMissingReturnIfNeeded(
@@ -238,6 +241,61 @@ namespace io.github.hatayama.uLoopMCP
                 Success = false,
                 ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
             };
+        }
+
+        private async Task WarmForegroundExecutionPathIfNeededAsync(
+            ExecuteDynamicCodeSchema parameters,
+            DynamicCodeSecurityLevel securityLevel,
+            CancellationToken cancellationToken)
+        {
+            if (!ShouldWarmForegroundExecutionPath(parameters))
+            {
+                return;
+            }
+
+            if (!DynamicCodeForegroundWarmupState.TryBegin())
+            {
+                return;
+            }
+
+            bool completed = false;
+            try
+            {
+                DynamicCodeExecutionRequest warmupRequest = CreateExecutionRequest(
+                    ForegroundWarmupCode,
+                    null,
+                    compileOnly: false,
+                    securityLevel,
+                    yieldToForegroundRequests: false);
+                ExecutionResult warmupResult = await ExecuteRequestAsync(warmupRequest, cancellationToken);
+                completed = warmupResult.Success;
+                if (completed)
+                {
+                    DynamicCodeForegroundWarmupState.MarkCompleted();
+                }
+            }
+            finally
+            {
+                if (!completed)
+                {
+                    DynamicCodeForegroundWarmupState.ResetAfterIncompleteAttempt();
+                }
+            }
+        }
+
+        private static bool ShouldWarmForegroundExecutionPath(ExecuteDynamicCodeSchema parameters)
+        {
+            if (parameters == null)
+            {
+                return false;
+            }
+
+            // Why: this fallback only exists to protect the first real foreground execution that
+            // users see after startup or reload.
+            // Why not run it for compile-only or yield-to-foreground requests: compile validation
+            // does not need the runtime hot path, and the yield-based startup prewarm already uses
+            // those requests as background work that must stay cancellable.
+            return !parameters.CompileOnly && !parameters.YieldToForegroundRequests;
         }
 
         private static bool IsCancelledResult(ExecutionResult executionResult)

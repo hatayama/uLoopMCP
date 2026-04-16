@@ -106,15 +106,44 @@ const MAX_RETRIES = 3;
 const COMPILE_WAIT_TIMEOUT_MS = 90000;
 const COMPILE_WAIT_POLL_INTERVAL_MS = 100;
 const FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX = 'Force compilation executed.';
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE =
-  'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }';
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_STABLE_CODE =
+  'UnityEngine.LogType previous = UnityEngine.Debug.unityLogger.filterLogType; UnityEngine.Debug.unityLogger.filterLogType = UnityEngine.LogType.Warning; try { UnityEngine.Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { UnityEngine.Debug.unityLogger.filterLogType = previous; }';
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_USER_LIKE_CODE =
+  'using UnityEngine; LogType previous = Debug.unityLogger.filterLogType; Debug.unityLogger.filterLogType = LogType.Warning; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.filterLogType = previous; }';
+// Why: the fully-qualified probe keeps post-reload warmup stable while startup state is still
+// settling, but measurements showed the first user-visible `using UnityEngine; Debug.Log(...)`
+// request still paid a separate cold path unless we warmed that wrapper shape too.
+// Why not warm only the stable probe: that avoids startup failures, but it still leaves the first
+// real request noticeably slower than the warmed steady state.
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODES = [
+  POST_COMPILE_DYNAMIC_CODE_PREWARM_STABLE_CODE,
+  POST_COMPILE_DYNAMIC_CODE_PREWARM_STABLE_CODE,
+  POST_COMPILE_DYNAMIC_CODE_PREWARM_STABLE_CODE,
+  POST_COMPILE_DYNAMIC_CODE_PREWARM_USER_LIKE_CODE,
+];
+// Why: launch readiness and startup auto-prewarm already cover Unity-side initialization, but
+// measurements on Unity 2022.3 still showed the first CLI execute-dynamic-code request paying
+// one extra cold pass until a real user-like CLI request had run once.
+// Why not reuse the full post-compile sequence here: launch only needs to warm the isolated CLI
+// boundary one final time, and extra hidden passes would just add restart latency after the editor
+// is already ready.
+const POST_LAUNCH_DYNAMIC_CODE_PREWARM_CODES = [POST_COMPILE_DYNAMIC_CODE_PREWARM_USER_LIKE_CODE];
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 3;
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_TOTAL_ATTEMPTS = 6;
+// Why: four passes now have to survive startup noise plus at least one retryable failure without
+// turning a successful compile into a warmup false negative.
+// Why not keep the old total budget of six: that was tuned for three passes and started failing
+// once the new user-like warmup consumed the remaining retries.
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_TOTAL_ATTEMPTS = 10;
+const POST_LAUNCH_DYNAMIC_CODE_PREWARM_MAX_TOTAL_ATTEMPTS = 3;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS = 5000;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_COMPILATION_PROVIDER_SUBSTRINGS = ['warming up'];
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_UNITY_ERROR_SUBSTRINGS = [
   'can only be called from the main thread',
+];
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_TRANSIENT_ERROR_SUBSTRINGS = [
+  'internal error',
+  'preusingresolver.resolve',
+  'system.nullreferenceexception',
 ];
 const SKIP_SERVER_STARTING_BUSY_CHECK_ENV_KEY = 'ULOOP_INTERNAL_SKIP_SERVER_STARTING_BUSY_CHECK';
 const EXECUTION_IN_PROGRESS_ERROR_MESSAGE = 'Another execution is already in progress';
@@ -492,17 +521,39 @@ export async function prewarmDynamicCodeAfterCompile(
   target: PostCompileDynamicCodePrewarmTarget,
   dependencies: PostCompileDynamicCodePrewarmDependencies = defaultPostCompileDynamicCodePrewarmDependencies,
 ): Promise<void> {
-  const args = createPostCompileDynamicCodePrewarmArgs(target);
+  await prewarmDynamicCodeWithIsolatedCli(
+    target,
+    POST_COMPILE_DYNAMIC_CODE_PREWARM_CODES,
+    POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_TOTAL_ATTEMPTS,
+    dependencies,
+  );
+}
+
+export async function prewarmDynamicCodeAfterLaunch(
+  target: PostCompileDynamicCodePrewarmTarget,
+  dependencies: PostCompileDynamicCodePrewarmDependencies = defaultPostCompileDynamicCodePrewarmDependencies,
+): Promise<void> {
+  await prewarmDynamicCodeWithIsolatedCli(
+    target,
+    POST_LAUNCH_DYNAMIC_CODE_PREWARM_CODES,
+    POST_LAUNCH_DYNAMIC_CODE_PREWARM_MAX_TOTAL_ATTEMPTS,
+    dependencies,
+  );
+}
+
+async function prewarmDynamicCodeWithIsolatedCli(
+  target: PostCompileDynamicCodePrewarmTarget,
+  codes: readonly string[],
+  maxTotalAttemptCount: number,
+  dependencies: PostCompileDynamicCodePrewarmDependencies,
+): Promise<void> {
   let totalAttemptCount = 0;
 
-  for (
-    let successfulRuns = 0;
-    successfulRuns < POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT;
-    successfulRuns++
-  ) {
+  for (const code of codes) {
+    const args = createPostCompileDynamicCodePrewarmArgs(target, code);
     let lastError: Error | undefined;
 
-    while (totalAttemptCount < POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_TOTAL_ATTEMPTS) {
+    while (totalAttemptCount < maxTotalAttemptCount) {
       if (totalAttemptCount > 0) {
         await sleep(POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS);
       }
@@ -527,12 +578,13 @@ export async function prewarmDynamicCodeAfterCompile(
 
 function createPostCompileDynamicCodePrewarmArgs(
   target: PostCompileDynamicCodePrewarmTarget,
+  code: string,
 ): string[] {
   if (target.port !== undefined) {
     return [
       'execute-dynamic-code',
       '--code',
-      POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE,
+      code,
       '--yield-to-foreground-requests',
       'true',
       '--port',
@@ -544,7 +596,7 @@ function createPostCompileDynamicCodePrewarmArgs(
     return [
       'execute-dynamic-code',
       '--code',
-      POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE,
+      code,
       '--yield-to-foreground-requests',
       'true',
       '--project-path',
@@ -644,6 +696,20 @@ function tryParsePostCompileDynamicCodePrewarmStderr(stderr: string): Error | un
   }
 
   if (
+    normalizedStderr.includes('UNITY_DOMAIN_RELOAD') ||
+    normalizedStderr.includes('Unity is reloading (Domain Reload in progress)')
+  ) {
+    return new Error('UNITY_DOMAIN_RELOAD');
+  }
+
+  if (
+    normalizedStderr.includes('UNITY_COMPILING') ||
+    normalizedStderr.includes('Unity is compiling scripts')
+  ) {
+    return new Error('UNITY_COMPILING');
+  }
+
+  if (
     normalizedStderr.includes('UNITY_NO_RESPONSE') ||
     normalizedStderr.includes('Cannot connect to Unity')
   ) {
@@ -680,10 +746,13 @@ function isRetryablePostCompileDynamicCodePrewarmError(error: Error): boolean {
     error.message === EXECUTION_CANCELLED_ERROR_MESSAGE ||
     error.message === POST_COMPILE_DYNAMIC_CODE_PREWARM_REQUEST_TIMEOUT_MESSAGE ||
     error.message === 'UNITY_SERVER_STARTING' ||
+    error.message === 'UNITY_DOMAIN_RELOAD' ||
+    error.message === 'UNITY_COMPILING' ||
     isRetryablePostCompileDynamicCodePrewarmDisconnect(error) ||
     isRetryablePostCompileDynamicCodePrewarmSpawnError(error) ||
     isRetryableCompilationProviderUnavailable(error.message) ||
-    isRetryableUnityStartupMainThreadError(error.message)
+    isRetryableUnityStartupMainThreadError(error.message) ||
+    isRetryablePostCompileDynamicCodeTransientError(error.message)
   );
 }
 
@@ -709,6 +778,13 @@ function isRetryableCompilationProviderUnavailable(errorMessage: string): boolea
 function isRetryableUnityStartupMainThreadError(errorMessage: string): boolean {
   const normalizedMessage = errorMessage.toLowerCase();
   return POST_COMPILE_DYNAMIC_CODE_PREWARM_UNITY_ERROR_SUBSTRINGS.some((substring) =>
+    normalizedMessage.includes(substring),
+  );
+}
+
+function isRetryablePostCompileDynamicCodeTransientError(errorMessage: string): boolean {
+  const normalizedMessage = errorMessage.toLowerCase();
+  return POST_COMPILE_DYNAMIC_CODE_PREWARM_TRANSIENT_ERROR_SUBSTRINGS.some((substring) =>
     normalizedMessage.includes(substring),
   );
 }

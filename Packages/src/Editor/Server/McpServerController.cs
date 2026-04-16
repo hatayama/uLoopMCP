@@ -121,6 +121,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 DynamicCodeStartupTelemetry.Reset();
+                DynamicCodeForegroundWarmupState.Reset();
 
                 // Execute initialization UseCase
                 McpServerInitializationUseCase useCase = new();
@@ -200,6 +201,7 @@ namespace io.github.hatayama.uLoopMCP
                 // Clear session state to reflect server stopped
                 McpEditorSettings.ClearServerSession();
                 DynamicCodeStartupTelemetry.Reset();
+                DynamicCodeForegroundWarmupState.Reset();
                 DynamicCodeServices.ResetServerScopedServices();
             }
             else
@@ -227,6 +229,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             DynamicCodeStartupTelemetry.Reset();
+            DynamicCodeForegroundWarmupState.Reset();
             DynamicCodeServices.ResetServerScopedServices();
         }
 
@@ -384,6 +387,7 @@ namespace io.github.hatayama.uLoopMCP
                     mcpServer = null;
                 }
             }
+            DynamicCodeForegroundWarmupState.Reset();
             DynamicCodeServices.ResetServerScopedServices();
             McpEditorSettings.ClearServerSession();
         }

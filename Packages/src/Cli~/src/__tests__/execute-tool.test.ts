@@ -2,6 +2,7 @@ import {
   appendCliTimingsToDynamicCodeResult,
   diagnoseRetryableProjectConnectionError,
   isTransportDisconnectError,
+  prewarmDynamicCodeAfterLaunch,
   isSettingsReadError,
   prewarmDynamicCodeAfterCompile,
   stripInternalFields,
@@ -167,6 +168,11 @@ describe('shouldPrewarmDynamicCodeAfterCompile', () => {
 });
 
 describe('prewarmDynamicCodeAfterCompile', () => {
+  const stablePrewarmCode =
+    'UnityEngine.LogType previous = UnityEngine.Debug.unityLogger.filterLogType; UnityEngine.Debug.unityLogger.filterLogType = UnityEngine.LogType.Warning; try { UnityEngine.Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { UnityEngine.Debug.unityLogger.filterLogType = previous; }';
+  const userLikePrewarmCode =
+    'using UnityEngine; LogType previous = Debug.unityLogger.filterLogType; Debug.unityLogger.filterLogType = LogType.Warning; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.filterLogType = previous; }';
+
   it('spawns an isolated execute-dynamic-code process against the same project', async () => {
     const spawnCliProcess = jest.fn().mockReturnValue({
       status: 0,
@@ -180,11 +186,11 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       },
     );
 
-    expect(spawnCliProcess).toHaveBeenCalledTimes(3);
+    expect(spawnCliProcess).toHaveBeenCalledTimes(4);
     expect(spawnCliProcess).toHaveBeenNthCalledWith(1, [
       'execute-dynamic-code',
       '--code',
-      'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
+      stablePrewarmCode,
       '--yield-to-foreground-requests',
       'true',
       '--project-path',
@@ -193,7 +199,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
     expect(spawnCliProcess).toHaveBeenNthCalledWith(2, [
       'execute-dynamic-code',
       '--code',
-      'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
+      stablePrewarmCode,
       '--yield-to-foreground-requests',
       'true',
       '--project-path',
@@ -202,7 +208,16 @@ describe('prewarmDynamicCodeAfterCompile', () => {
     expect(spawnCliProcess).toHaveBeenNthCalledWith(3, [
       'execute-dynamic-code',
       '--code',
-      'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
+      stablePrewarmCode,
+      '--yield-to-foreground-requests',
+      'true',
+      '--project-path',
+      '/project',
+    ]);
+    expect(spawnCliProcess).toHaveBeenNthCalledWith(4, [
+      'execute-dynamic-code',
+      '--code',
+      userLikePrewarmCode,
       '--yield-to-foreground-requests',
       'true',
       '--project-path',
@@ -262,7 +277,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       ),
     ).resolves.toBeUndefined();
 
-    expect(spawnCliProcess).toHaveBeenCalledTimes(4);
+    expect(spawnCliProcess).toHaveBeenCalledTimes(5);
   });
 
   it('throws when spawning the isolated CLI prewarm process fails', async () => {
@@ -313,7 +328,31 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       ),
     ).resolves.toBeUndefined();
 
-    expect(spawnCliProcess).toHaveBeenCalledTimes(4);
+    expect(spawnCliProcess).toHaveBeenCalledTimes(5);
+  });
+
+  it('retries when the isolated CLI reports that domain reload is still in progress', async () => {
+    const spawnCliProcess = jest
+      .fn()
+      .mockReturnValueOnce({
+        status: 1,
+        stderr: '⏳ Unity is reloading (Domain Reload in progress).',
+      })
+      .mockReturnValue({
+        status: 0,
+        stdout: JSON.stringify({ Success: true }),
+      });
+
+    await expect(
+      prewarmDynamicCodeAfterCompile(
+        { projectRoot: '/project' },
+        {
+          spawnCliProcess,
+        },
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(spawnCliProcess).toHaveBeenCalledTimes(5);
   });
 
   it('retries when the isolated CLI process times out once during warmup', async () => {
@@ -337,7 +376,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       ),
     ).resolves.toBeUndefined();
 
-    expect(spawnCliProcess).toHaveBeenCalledTimes(4);
+    expect(spawnCliProcess).toHaveBeenCalledTimes(5);
   });
 
   it('retries when the isolated CLI loses its response once during warmup', async () => {
@@ -364,7 +403,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       ),
     ).resolves.toBeUndefined();
 
-    expect(spawnCliProcess).toHaveBeenCalledTimes(4);
+    expect(spawnCliProcess).toHaveBeenCalledTimes(5);
   });
 
   it('targets the explicit compile port when one was provided', async () => {
@@ -385,7 +424,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
     expect(spawnCliProcess).toHaveBeenNthCalledWith(1, [
       'execute-dynamic-code',
       '--code',
-      'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
+      stablePrewarmCode,
       '--yield-to-foreground-requests',
       'true',
       '--port',
@@ -408,7 +447,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       ),
     ).rejects.toThrow('spawnSync ETIMEDOUT');
 
-    expect(spawnCliProcess).toHaveBeenCalledTimes(6);
+    expect(spawnCliProcess).toHaveBeenCalledTimes(10);
   });
 
   it('retries transient disconnect failures reported through ANSI-colored stderr', async () => {
@@ -432,7 +471,37 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       ),
     ).resolves.toBeUndefined();
 
-    expect(spawnCliProcess).toHaveBeenCalledTimes(4);
+    expect(spawnCliProcess).toHaveBeenCalledTimes(5);
+  });
+});
+
+describe('prewarmDynamicCodeAfterLaunch', () => {
+  const userLikePrewarmCode =
+    'using UnityEngine; LogType previous = Debug.unityLogger.filterLogType; Debug.unityLogger.filterLogType = LogType.Warning; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.filterLogType = previous; }';
+
+  it('spawns one isolated user-like execute-dynamic-code pass against the same project', async () => {
+    const spawnCliProcess = jest.fn().mockReturnValue({
+      status: 0,
+      stdout: JSON.stringify({ Success: true }),
+    });
+
+    await prewarmDynamicCodeAfterLaunch(
+      { projectRoot: '/project' },
+      {
+        spawnCliProcess,
+      },
+    );
+
+    expect(spawnCliProcess).toHaveBeenCalledTimes(1);
+    expect(spawnCliProcess).toHaveBeenCalledWith([
+      'execute-dynamic-code',
+      '--code',
+      userLikePrewarmCode,
+      '--yield-to-foreground-requests',
+      'true',
+      '--project-path',
+      '/project',
+    ]);
   });
 });
 

@@ -29685,14 +29685,25 @@ function sleep(ms) {
 import { existsSync as existsSync3, readFileSync as readFileSync2 } from "fs";
 import { join as join4 } from "path";
 var FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX = "Force compilation executed.";
-var POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE = 'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }';
-var POST_COMPILE_DYNAMIC_CODE_PREWARM_PASS_COUNT = 3;
+var POST_COMPILE_DYNAMIC_CODE_PREWARM_STABLE_CODE = 'UnityEngine.LogType previous = UnityEngine.Debug.unityLogger.filterLogType; UnityEngine.Debug.unityLogger.filterLogType = UnityEngine.LogType.Warning; try { UnityEngine.Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { UnityEngine.Debug.unityLogger.filterLogType = previous; }';
+var POST_COMPILE_DYNAMIC_CODE_PREWARM_USER_LIKE_CODE = 'using UnityEngine; LogType previous = Debug.unityLogger.filterLogType; Debug.unityLogger.filterLogType = LogType.Warning; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.filterLogType = previous; }';
+var POST_COMPILE_DYNAMIC_CODE_PREWARM_CODES = [
+  POST_COMPILE_DYNAMIC_CODE_PREWARM_STABLE_CODE,
+  POST_COMPILE_DYNAMIC_CODE_PREWARM_STABLE_CODE,
+  POST_COMPILE_DYNAMIC_CODE_PREWARM_STABLE_CODE,
+  POST_COMPILE_DYNAMIC_CODE_PREWARM_USER_LIKE_CODE
+];
 var POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS = 20;
 var POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
 var EXECUTION_IN_PROGRESS_ERROR_MESSAGE = "Another execution is already in progress";
 var EXECUTION_CANCELLED_ERROR_MESSAGE = "Execution was cancelled or timed out";
 var RETRYABLE_COMPILATION_PROVIDER_UNAVAILABLE_SUBSTRINGS = ["warming up"];
 var RETRYABLE_UNITY_STARTUP_ERROR_SUBSTRINGS = ["can only be called from the main thread"];
+var RETRYABLE_TRANSIENT_ERROR_SUBSTRINGS = [
+  "internal error",
+  "preusingresolver.resolve",
+  "system.nullreferenceexception"
+];
 var RETRYABLE_DISPATCH_GUIDANCE_SUBSTRINGS = [
   "unity is currently compiling or reloading",
   "retry after the operation completes"
@@ -29746,14 +29757,14 @@ function isDynamicCodeWarmupEnabledForProject(projectRoot, dependencies = {}) {
   return !disabledTools.includes(EXECUTE_DYNAMIC_CODE_TOOL_NAME);
 }
 async function prewarmDynamicCodeAfterCompile(unityClient, sleepFn = sleep2) {
-  for (let successfulPassCount = 0; successfulPassCount < POST_COMPILE_DYNAMIC_CODE_PREWARM_PASS_COUNT; successfulPassCount++) {
+  for (const code of POST_COMPILE_DYNAMIC_CODE_PREWARM_CODES) {
     let lastError;
     for (let attemptIndex = 0; attemptIndex < POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS; attemptIndex++) {
       if (attemptIndex > 0) {
         await sleepFn(POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS);
       }
       const attemptResult = await unityClient.executeTool("execute-dynamic-code", {
-        Code: POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE,
+        Code: code,
         CompileOnly: false,
         YieldToForegroundRequests: true
       }).then(
@@ -29799,7 +29810,7 @@ function createWarmupError(response) {
   return new Error("Post-compile dynamic code prewarm failed.");
 }
 function isRetryableWarmupError(error2) {
-  return error2.message === EXECUTION_IN_PROGRESS_ERROR_MESSAGE || error2.message === EXECUTION_CANCELLED_ERROR_MESSAGE || isRetryableDisconnectError(error2.message) || isRetryableCompilationProviderUnavailable(error2.message) || isRetryableUnityStartupError(error2.message) || isRetryableDispatchGuidance(error2.message);
+  return error2.message === EXECUTION_IN_PROGRESS_ERROR_MESSAGE || error2.message === EXECUTION_CANCELLED_ERROR_MESSAGE || isRetryableDisconnectError(error2.message) || isRetryableCompilationProviderUnavailable(error2.message) || isRetryableUnityStartupError(error2.message) || isRetryableTransientError(error2.message) || isRetryableDispatchGuidance(error2.message);
 }
 function isRetryableDisconnectError(errorMessage) {
   return errorMessage === "UNITY_NO_RESPONSE" || errorMessage.startsWith("Connection lost:");
@@ -29816,6 +29827,12 @@ function isRetryableCompilationProviderUnavailable(errorMessage) {
 function isRetryableUnityStartupError(errorMessage) {
   const normalizedMessage = errorMessage.toLowerCase();
   return RETRYABLE_UNITY_STARTUP_ERROR_SUBSTRINGS.some(
+    (substring) => normalizedMessage.includes(substring)
+  );
+}
+function isRetryableTransientError(errorMessage) {
+  const normalizedMessage = errorMessage.toLowerCase();
+  return RETRYABLE_TRANSIENT_ERROR_SUBSTRINGS.some(
     (substring) => normalizedMessage.includes(substring)
   );
 }

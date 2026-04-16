@@ -9,9 +9,15 @@ interface MockReadinessResponse {
   Timings?: string[];
 }
 
+const EXPECTED_STABLE_LAUNCH_READINESS_CODE =
+  'UnityEngine.LogType previous = UnityEngine.Debug.unityLogger.filterLogType; UnityEngine.Debug.unityLogger.filterLogType = UnityEngine.LogType.Warning; try { UnityEngine.Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { UnityEngine.Debug.unityLogger.filterLogType = previous; }';
+const EXPECTED_USER_LIKE_LAUNCH_READINESS_CODE =
+  'using UnityEngine; LogType previous = Debug.unityLogger.filterLogType; Debug.unityLogger.filterLogType = LogType.Warning; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.filterLogType = previous; }';
+
 function createMockClient(
   responses: Array<MockReadinessResponse | Error>,
   recordedMethods: string[],
+  recordedParams?: Array<Record<string, unknown>>,
 ): { client: DirectUnityClient; disconnectSpy: jest.Mock } {
   const disconnectSpy = jest.fn();
 
@@ -21,15 +27,18 @@ function createMockClient(
       connect: jest.fn().mockImplementation((): Promise<void> => Promise.resolve()),
       disconnect: disconnectSpy,
       isConnected: jest.fn().mockReturnValue(true),
-      sendRequest: jest.fn().mockImplementation((method: string) => {
-        recordedMethods.push(method);
-        const next = responses.shift();
-        if (next instanceof Error) {
-          return Promise.reject(next);
-        }
+      sendRequest: jest
+        .fn()
+        .mockImplementation((method: string, params?: Record<string, unknown>) => {
+          recordedMethods.push(method);
+          recordedParams?.push(params ?? {});
+          const next = responses.shift();
+          if (next instanceof Error) {
+            return Promise.reject(next);
+          }
 
-        return Promise.resolve(next);
-      }),
+          return Promise.resolve(next);
+        }),
     } as unknown as DirectUnityClient,
   };
 }
@@ -57,10 +66,14 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
 
   it('retries transient execute-dynamic-code failures until success', async () => {
     const recordedMethods: string[] = [];
+    const recordedParams: Array<Record<string, unknown>> = [];
     const createdClients: DirectUnityClient[] = [];
     const disconnectSpies: jest.Mock[] = [];
     const responses: Array<MockReadinessResponse | Error> = [
       { Success: false, ErrorMessage: 'COMPILATION_PROVIDER_UNAVAILABLE: warming up' },
+      { Success: true },
+      { Success: true },
+      { Success: true },
       { Success: true },
     ];
     let sleepCount = 0;
@@ -68,7 +81,7 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     await waitForDynamicCodeReadyAfterLaunch('/project', {
       resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
       createClient: () => {
-        const mockClient = createMockClient(responses, recordedMethods);
+        const mockClient = createMockClient(responses, recordedMethods, recordedParams);
         createdClients.push(mockClient.client);
         disconnectSpies.push(mockClient.disconnectSpy);
         return mockClient.client;
@@ -86,11 +99,26 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
       })(),
     });
 
-    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
-    expect(sleepCount).toBe(1);
-    expect(createdClients).toHaveLength(2);
+    expect(recordedMethods).toEqual([
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+    ]);
+    expect(recordedParams[0]).toMatchObject({
+      CompileOnly: false,
+      YieldToForegroundRequests: true,
+    });
+    expect(recordedParams[0]['Code']).toBe(EXPECTED_STABLE_LAUNCH_READINESS_CODE);
+    expect(recordedParams[4]['Code']).toBe(EXPECTED_USER_LIKE_LAUNCH_READINESS_CODE);
+    expect(sleepCount).toBe(4);
+    expect(createdClients).toHaveLength(5);
     expect(disconnectSpies[0]).toHaveBeenCalled();
     expect(disconnectSpies[1]).toHaveBeenCalled();
+    expect(disconnectSpies[2]).toHaveBeenCalled();
+    expect(disconnectSpies[3]).toHaveBeenCalled();
+    expect(disconnectSpies[4]).toHaveBeenCalled();
   });
 
   it('rethrows non-transient readiness failures', async () => {
@@ -140,35 +168,8 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     const responses: Array<MockReadinessResponse | Error> = [
       new Error('Unity error: Internal error (can only be called from the main thread.)'),
       { Success: true },
-    ];
-    let sleepCount = 0;
-
-    await waitForDynamicCodeReadyAfterLaunch('/project', {
-      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
-      createClient: () => createMockClient(responses, recordedMethods).client,
-      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
-        sleepCount++;
-        return Promise.resolve();
-      }),
-      nowFn: (() => {
-        let now = 0;
-        return (): number => {
-          now += 100;
-          return now;
-        };
-      })(),
-    });
-
-    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
-    expect(sleepCount).toBe(1);
-  });
-
-  it('retries fast project validation session changes until success', async () => {
-    const recordedMethods: string[] = [];
-    const responses: Array<MockReadinessResponse | Error> = [
-      new Error(
-        'Unity error: Invalid params: Unity CLI Loop server session changed. Retry the command.',
-      ),
+      { Success: true },
+      { Success: true },
       { Success: true },
     ];
     let sleepCount = 0;
@@ -189,8 +190,53 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
       })(),
     });
 
-    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
-    expect(sleepCount).toBe(1);
+    expect(recordedMethods).toEqual([
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+    ]);
+    expect(sleepCount).toBe(4);
+  });
+
+  it('retries fast project validation session changes until success', async () => {
+    const recordedMethods: string[] = [];
+    const responses: Array<MockReadinessResponse | Error> = [
+      new Error(
+        'Unity error: Invalid params: Unity CLI Loop server session changed. Retry the command.',
+      ),
+      { Success: true },
+      { Success: true },
+      { Success: true },
+      { Success: true },
+    ];
+    let sleepCount = 0;
+
+    await waitForDynamicCodeReadyAfterLaunch('/project', {
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
+      createClient: () => createMockClient(responses, recordedMethods).client,
+      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+        sleepCount++;
+        return Promise.resolve();
+      }),
+      nowFn: (() => {
+        let now = 0;
+        return (): number => {
+          now += 100;
+          return now;
+        };
+      })(),
+    });
+
+    expect(recordedMethods).toEqual([
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+    ]);
+    expect(sleepCount).toBe(4);
   });
 
   it('does not retry non-transient Unity JSON-RPC errors', async () => {
@@ -214,7 +260,13 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
 
   it('retries indeterminate payloads until success', async () => {
     const recordedMethods: string[] = [];
-    const responses: Array<MockReadinessResponse | Error> = [{}, { Success: true }];
+    const responses: Array<MockReadinessResponse | Error> = [
+      {},
+      { Success: true },
+      { Success: true },
+      { Success: true },
+      { Success: true },
+    ];
     let sleepCount = 0;
 
     await waitForDynamicCodeReadyAfterLaunch('/project', {
@@ -233,14 +285,23 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
       })(),
     });
 
-    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
-    expect(sleepCount).toBe(1);
+    expect(recordedMethods).toEqual([
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+    ]);
+    expect(sleepCount).toBe(4);
   });
 
   it('retries undefined payloads until success', async () => {
     const recordedMethods: string[] = [];
     const responses: Array<MockReadinessResponse | Error | undefined> = [
       undefined,
+      { Success: true },
+      { Success: true },
+      { Success: true },
       { Success: true },
     ];
     let sleepCount = 0;
@@ -262,8 +323,14 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
       })(),
     });
 
-    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
-    expect(sleepCount).toBe(1);
+    expect(recordedMethods).toEqual([
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+    ]);
+    expect(sleepCount).toBe(4);
   });
 
   it('keeps retrying malformed payloads until a later successful probe arrives', async () => {
@@ -274,6 +341,9 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
       undefined,
       undefined,
       undefined,
+      { Success: true },
+      { Success: true },
+      { Success: true },
       { Success: true },
     ];
     let sleepCount = 0;
@@ -308,8 +378,11 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
       'execute-dynamic-code',
       'execute-dynamic-code',
       'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
     ]);
-    expect(sleepCount).toBe(5);
+    expect(sleepCount).toBe(8);
   });
 
   it('retries payload errors that indicate Unity startup is still on the loading thread', async () => {
@@ -320,6 +393,9 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
         ErrorMessage:
           'An unexpected error occurred during execution UnityEngine.UnityException: get_activeScriptCompilationDefines can only be called from the main thread.',
       },
+      { Success: true },
+      { Success: true },
+      { Success: true },
       { Success: true },
     ];
     let sleepCount = 0;
@@ -340,8 +416,92 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
       })(),
     });
 
-    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
-    expect(sleepCount).toBe(1);
+    expect(recordedMethods).toEqual([
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+    ]);
+    expect(sleepCount).toBe(4);
+  });
+
+  it('retries startup internal errors until later probes succeed', async () => {
+    const recordedMethods: string[] = [];
+    const responses: Array<MockReadinessResponse | Error> = [
+      { Success: false, ErrorMessage: 'Internal error' },
+      { Success: true },
+      { Success: true },
+      { Success: true },
+      { Success: true },
+    ];
+    let sleepCount = 0;
+
+    await waitForDynamicCodeReadyAfterLaunch('/project', {
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
+      createClient: () => createMockClient(responses, recordedMethods).client,
+      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+        sleepCount++;
+        return Promise.resolve();
+      }),
+      nowFn: (() => {
+        let now = 0;
+        return (): number => {
+          now += 100;
+          return now;
+        };
+      })(),
+    });
+
+    expect(recordedMethods).toEqual([
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+    ]);
+    expect(sleepCount).toBe(4);
+  });
+
+  it('retries startup pre-using resolver null references until later probes succeed', async () => {
+    const recordedMethods: string[] = [];
+    const responses: Array<MockReadinessResponse | Error> = [
+      {
+        Success: false,
+        ErrorMessage:
+          'An unexpected error occurred during execution System.NullReferenceException: Object reference not set to an instance of an object at io.github.hatayama.uLoopMCP.PreUsingResolver.Resolve',
+      },
+      { Success: true },
+      { Success: true },
+      { Success: true },
+      { Success: true },
+    ];
+    let sleepCount = 0;
+
+    await waitForDynamicCodeReadyAfterLaunch('/project', {
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
+      createClient: () => createMockClient(responses, recordedMethods).client,
+      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+        sleepCount++;
+        return Promise.resolve();
+      }),
+      nowFn: (() => {
+        let now = 0;
+        return (): number => {
+          now += 100;
+          return now;
+        };
+      })(),
+    });
+
+    expect(recordedMethods).toEqual([
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+    ]);
+    expect(sleepCount).toBe(4);
   });
 
   it('retries successful probes until RequestTotal settles below threshold', async () => {
@@ -354,6 +514,18 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
       {
         Success: true,
         Timings: ['[Perf] RequestTotal: 180.0ms'],
+      },
+      {
+        Success: true,
+        Timings: ['[Perf] RequestTotal: 170.0ms'],
+      },
+      {
+        Success: true,
+        Timings: ['[Perf] RequestTotal: 165.0ms'],
+      },
+      {
+        Success: true,
+        Timings: ['[Perf] RequestTotal: 160.0ms'],
       },
     ];
     let sleepCount = 0;
@@ -374,8 +546,14 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
       })(),
     });
 
-    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
-    expect(sleepCount).toBe(1);
+    expect(recordedMethods).toEqual([
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+    ]);
+    expect(sleepCount).toBe(4);
   });
 
   it('accepts successful probes when RequestTotal timing is missing', async () => {
@@ -384,13 +562,31 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     await waitForDynamicCodeReadyAfterLaunch('/project', {
       resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
       createClient: () =>
-        createMockClient([{ Success: true, Timings: ['[Perf] Build: 50.0ms'] }], recordedMethods)
-          .client,
-      sleepFn: jest.fn(),
-      nowFn: () => 0,
+        createMockClient(
+          [
+            { Success: true, Timings: ['[Perf] Build: 50.0ms'] },
+            { Success: true, Timings: ['[Perf] Build: 55.0ms'] },
+            { Success: true, Timings: ['[Perf] Build: 60.0ms'] },
+            { Success: true, Timings: ['[Perf] Build: 65.0ms'] },
+          ],
+          recordedMethods,
+        ).client,
+      sleepFn: jest.fn().mockResolvedValue(undefined),
+      nowFn: (() => {
+        let now = 0;
+        return (): number => {
+          now += 100;
+          return now;
+        };
+      })(),
     });
 
-    expect(recordedMethods).toEqual(['execute-dynamic-code']);
+    expect(recordedMethods).toEqual([
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+    ]);
   });
 
   it('returns after settle timeout even when RequestTotal stays above threshold', async () => {
@@ -399,6 +595,11 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
       { Success: true, Timings: ['[Perf] RequestTotal: 420.0ms'] },
       { Success: true, Timings: ['[Perf] RequestTotal: 410.0ms'] },
       { Success: true, Timings: ['[Perf] RequestTotal: 405.0ms'] },
+      { Success: true, Timings: ['[Perf] RequestTotal: 400.0ms'] },
+      { Success: true, Timings: ['[Perf] RequestTotal: 395.0ms'] },
+      { Success: true, Timings: ['[Perf] RequestTotal: 390.0ms'] },
+      { Success: true, Timings: ['[Perf] RequestTotal: 385.0ms'] },
+      { Success: true, Timings: ['[Perf] RequestTotal: 380.0ms'] },
     ];
     let sleepCount = 0;
 
@@ -410,14 +611,68 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
         return Promise.resolve();
       }),
       nowFn: (() => {
-        const values = [0, 100, 1100, 2100, 11100, 11200];
+        const values = [
+          0, 100, 1100, 2100, 11100, 11200, 21300, 21400, 31500, 31600, 41700, 41800, 51900, 52000,
+          62100, 62200, 72300, 72400,
+        ];
         let index = 0;
         return (): number => values[Math.min(index++, values.length - 1)];
       })(),
     });
 
-    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
-    expect(sleepCount).toBe(1);
+    expect(recordedMethods).toEqual([
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+    ]);
+    expect(sleepCount).toBe(7);
+  });
+
+  it('waits for busy lock files to clear after the final successful probe', async () => {
+    const recordedMethods: string[] = [];
+    const recordedParams: Array<Record<string, unknown>> = [];
+    const isProjectBusyFn = jest
+      .fn<boolean, [string]>()
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(false);
+    let sleepCount = 0;
+
+    await waitForDynamicCodeReadyAfterLaunch('/project', {
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
+      createClient: () =>
+        createMockClient(
+          [{ Success: true }, { Success: true }, { Success: true }, { Success: true }],
+          recordedMethods,
+          recordedParams,
+        ).client,
+      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+        sleepCount++;
+        return Promise.resolve();
+      }),
+      nowFn: (() => {
+        let now = 0;
+        return (): number => {
+          now += 100;
+          return now;
+        };
+      })(),
+      isProjectBusyFn,
+    });
+
+    expect(recordedMethods).toEqual([
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+      'execute-dynamic-code',
+    ]);
+    expect(recordedParams[3]['Code']).toBe(EXPECTED_USER_LIKE_LAUNCH_READINESS_CODE);
+    expect(isProjectBusyFn).toHaveBeenCalledTimes(2);
+    expect(sleepCount).toBe(4);
   });
 
   it('does not retry project mismatch errors', async () => {

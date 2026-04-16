@@ -14,11 +14,14 @@ namespace io.github.hatayama.uLoopMCP
     internal sealed class PrewarmDynamicCodeUseCase : IPrewarmDynamicCodeUseCase
     {
         private const int AutoPrewarmDelayFrameCount = 1;
-        private const int AutoPrewarmPassCount = 3;
+        private const int AutoPrewarmStablePassCount = 3;
+        private const int AutoPrewarmUserLikePassCount = 1;
+        private const int AutoPrewarmPassCount = AutoPrewarmStablePassCount + AutoPrewarmUserLikePassCount;
         private const int AutoPrewarmMaxAttempts = 6;
         private const int AutoPrewarmBusyRetryDelayFrameCount = 1;
         // Why: startup measurements showed the first user-visible execute-dynamic-code request
-        // stayed cold until the default wrapper shape and Unity's logging path had both run once.
+        // stayed cold until the stable logging path and the default `using UnityEngine;` wrapper
+        // shape had both run at least once.
         // Why not a cheaper "return null;" snippet or a dedicated prewarm class name: those warm
         // compiler registration, but they miss the default execute-dynamic-code cache key and
         // leave the first real request measurably slower.
@@ -26,8 +29,12 @@ namespace io.github.hatayama.uLoopMCP
         // still paid cold-start costs, and only the third pass reached steady-state latency in measurements.
         // Why not stop at two passes: that still leaves the first post-reload user-visible request
         // hundreds of milliseconds slower than the warmed path, which is the exact regression we need to avoid.
-        private const string AutoPrewarmCode =
-            "using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log(\"Unity CLI Loop dynamic code prewarm\"); return \"Unity CLI Loop dynamic code prewarm\"; } finally { Debug.unityLogger.logEnabled = previous; }";
+        // Why not warm only the stable fully-qualified snippet: that keeps startup resilient, but
+        // it still leaves `using UnityEngine; Debug.Log(...)` requests paying a separate cold path.
+        private const string AutoPrewarmStableCode =
+            "UnityEngine.LogType previous = UnityEngine.Debug.unityLogger.filterLogType; UnityEngine.Debug.unityLogger.filterLogType = UnityEngine.LogType.Warning; try { UnityEngine.Debug.Log(\"Unity CLI Loop dynamic code prewarm\"); return \"Unity CLI Loop dynamic code prewarm\"; } finally { UnityEngine.Debug.unityLogger.filterLogType = previous; }";
+        private const string AutoPrewarmUserLikeCode =
+            "using UnityEngine; LogType previous = Debug.unityLogger.filterLogType; Debug.unityLogger.filterLogType = LogType.Warning; try { Debug.Log(\"Unity CLI Loop dynamic code prewarm\"); return \"Unity CLI Loop dynamic code prewarm\"; } finally { Debug.unityLogger.filterLogType = previous; }";
         private const string AutoPrewarmClassName = DynamicCodeConstants.DEFAULT_CLASS_NAME;
         private const string AutoPrewarmOperation = "dynamic_code_auto_prewarm";
 
@@ -139,15 +146,16 @@ namespace io.github.hatayama.uLoopMCP
                 DynamicCodeStartupTelemetry.MarkPrewarmStarted();
 
                 int successfulPassCount = 0;
-                bool sawTransientTransportFailure = false;
+                bool sawTransientPrewarmFailure = false;
                 int transientBusyRetryCount = 0;
                 for (int attemptIndex = 0;
                      attemptIndex < AutoPrewarmMaxAttempts && successfulPassCount < AutoPrewarmPassCount;
                      attemptIndex++)
                 {
+                    string autoPrewarmCode = GetAutoPrewarmCodeForPass(successfulPassCount);
                     ExecuteDynamicCodeSchema parameters = new ExecuteDynamicCodeSchema
                     {
-                        Code = AutoPrewarmCode,
+                        Code = autoPrewarmCode,
                         CompileOnly = false,
                         YieldToForegroundRequests = true
                     };
@@ -162,7 +170,7 @@ namespace io.github.hatayama.uLoopMCP
 
                     if (IsExecutionBusy(result))
                     {
-                        if (sawTransientTransportFailure)
+                        if (sawTransientPrewarmFailure)
                         {
                             transientBusyRetryCount++;
                             if (transientBusyRetryCount >= AutoPrewarmMaxAttempts)
@@ -209,11 +217,28 @@ namespace io.github.hatayama.uLoopMCP
 
                     if (IsTransientTransportFailure(result))
                     {
-                        sawTransientTransportFailure = true;
+                        sawTransientPrewarmFailure = true;
                         transientBusyRetryCount = 0;
                         VibeLogger.LogWarning(
                             AutoPrewarmOperation,
                             "Dynamic code auto prewarm hit a transient loopback failure and will retry",
+                            new
+                            {
+                                class_name = AutoPrewarmClassName,
+                                error_message = result.ErrorMessage,
+                                attempt_index = attemptIndex + 1,
+                                max_attempts = AutoPrewarmMaxAttempts
+                            });
+                        continue;
+                    }
+
+                    if (IsTransientStartupExecutionFailure(result))
+                    {
+                        sawTransientPrewarmFailure = true;
+                        transientBusyRetryCount = 0;
+                        VibeLogger.LogWarning(
+                            AutoPrewarmOperation,
+                            "Dynamic code auto prewarm hit a transient startup execution failure and will retry",
                             new
                             {
                                 class_name = AutoPrewarmClassName,
@@ -240,7 +265,7 @@ namespace io.github.hatayama.uLoopMCP
                         return;
                     }
 
-                    sawTransientTransportFailure = false;
+                    sawTransientPrewarmFailure = false;
                     transientBusyRetryCount = 0;
                     successfulPassCount++;
                     VibeLogger.LogInfo(
@@ -271,6 +296,7 @@ namespace io.github.hatayama.uLoopMCP
                 }
 
                 DynamicCodeStartupTelemetry.MarkPrewarmCompleted();
+                DynamicCodeForegroundWarmupState.MarkCompletedByBackgroundWarmup();
                 VibeLogger.LogInfo(
                     AutoPrewarmOperation,
                     "Dynamic code auto prewarm completed successfully",
@@ -353,6 +379,26 @@ namespace io.github.hatayama.uLoopMCP
                        result.ErrorMessage,
                        TcpDynamicCodeAutoPrewarmExecutor.TransportErrorMessage,
                        StringComparison.Ordinal);
+        }
+
+        private static string GetAutoPrewarmCodeForPass(int successfulPassCount)
+        {
+            return successfulPassCount < AutoPrewarmStablePassCount
+                ? AutoPrewarmStableCode
+                : AutoPrewarmUserLikeCode;
+        }
+
+        private static bool IsTransientStartupExecutionFailure(DynamicCodeAutoPrewarmResult result)
+        {
+            if (result == null || result.Success || string.IsNullOrEmpty(result.ErrorMessage))
+            {
+                return false;
+            }
+
+            string errorMessage = result.ErrorMessage;
+            return errorMessage.IndexOf("Internal error", StringComparison.OrdinalIgnoreCase) >= 0
+                   || errorMessage.IndexOf("PreUsingResolver.Resolve", StringComparison.OrdinalIgnoreCase) >= 0
+                   || errorMessage.IndexOf("System.NullReferenceException", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
     }

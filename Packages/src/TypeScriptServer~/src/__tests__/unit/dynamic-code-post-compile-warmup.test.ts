@@ -45,6 +45,11 @@ describe('shouldPrewarmDynamicCodeAfterCompile', () => {
 });
 
 describe('prewarmDynamicCodeAfterCompile', () => {
+  const stablePrewarmCode =
+    'UnityEngine.LogType previous = UnityEngine.Debug.unityLogger.filterLogType; UnityEngine.Debug.unityLogger.filterLogType = UnityEngine.LogType.Warning; try { UnityEngine.Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { UnityEngine.Debug.unityLogger.filterLogType = previous; }';
+  const userLikePrewarmCode =
+    'using UnityEngine; LogType previous = Debug.unityLogger.filterLogType; Debug.unityLogger.filterLogType = LogType.Warning; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.filterLogType = previous; }';
+
   it('runs three hidden execute-dynamic-code passes after compile', async () => {
     const executeTool = jest.fn().mockResolvedValue({ Success: true });
 
@@ -52,9 +57,14 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       prewarmDynamicCodeAfterCompile(createUnityClient(executeTool), async (): Promise<void> => {}),
     ).resolves.toBeUndefined();
 
-    expect(executeTool).toHaveBeenCalledTimes(3);
+    expect(executeTool).toHaveBeenCalledTimes(4);
     expect(executeTool).toHaveBeenNthCalledWith(1, 'execute-dynamic-code', {
-      Code: 'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }',
+      Code: stablePrewarmCode,
+      CompileOnly: false,
+      YieldToForegroundRequests: true,
+    });
+    expect(executeTool).toHaveBeenNthCalledWith(4, 'execute-dynamic-code', {
+      Code: userLikePrewarmCode,
       CompileOnly: false,
       YieldToForegroundRequests: true,
     });
@@ -73,7 +83,7 @@ describe('prewarmDynamicCodeAfterCompile', () => {
       prewarmDynamicCodeAfterCompile(createUnityClient(executeTool), async (): Promise<void> => {}),
     ).resolves.toBeUndefined();
 
-    expect(executeTool).toHaveBeenCalledTimes(4);
+    expect(executeTool).toHaveBeenCalledTimes(5);
   });
 
   it('throws when warmup keeps failing with a non-retryable error', async () => {

@@ -32,6 +32,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true },
+                new DynamicCodeAutoPrewarmResult { Success = true },
+                new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true });
             PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(
                 runtime,
@@ -41,13 +43,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             await useCase.RequestAsync();
             await useCase.RequestAsync();
 
-            Assert.That(executor.Requests, Has.Count.EqualTo(6));
+            Assert.That(executor.Requests, Has.Count.EqualTo(8));
             Assert.That(
                 executor.Requests[0].Code,
-                Does.Contain("Debug.unityLogger.logEnabled = false;"));
+                Does.Contain("UnityEngine.Debug.unityLogger.filterLogType = UnityEngine.LogType.Warning;"));
             Assert.That(
                 executor.Requests[0].Code,
-                Does.Contain("Debug.Log(\"Unity CLI Loop dynamic code prewarm\");"));
+                Does.Contain("UnityEngine.Debug.Log(\"Unity CLI Loop dynamic code prewarm\");"));
             Assert.That(
                 executor.Requests[0].Code,
                 Does.Contain("return \"Unity CLI Loop dynamic code prewarm\";"));
@@ -55,6 +57,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             Assert.That(executor.Requests[0].YieldToForegroundRequests, Is.True);
             Assert.That(executor.Requests[1].Code, Is.EqualTo(executor.Requests[0].Code));
             Assert.That(executor.Requests[2].Code, Is.EqualTo(executor.Requests[0].Code));
+            Assert.That(executor.Requests[3].Code, Does.StartWith("using UnityEngine;"));
+            Assert.That(executor.Requests[4].Code, Is.EqualTo(executor.Requests[0].Code));
             Assert.That(DynamicCodeStartupTelemetry.CreateTimingEntries(), Has.Member("[Perf] WarmReady: True"));
         }
 
@@ -132,13 +136,17 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 new DynamicCodeAutoPrewarmResult
                 {
                     Success = true
+                },
+                new DynamicCodeAutoPrewarmResult
+                {
+                    Success = true
                 });
             PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime, default, executor);
 
             await useCase.RequestAsync();
             await useCase.RequestAsync();
 
-            Assert.That(executor.Requests, Has.Count.EqualTo(4));
+            Assert.That(executor.Requests, Has.Count.EqualTo(5));
         }
 
         [Test]
@@ -170,12 +178,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 },
                 new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true },
+                new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true });
             PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime, default, executor);
 
             await useCase.RequestAsync();
 
-            Assert.That(executor.Requests, Has.Count.EqualTo(4));
+            Assert.That(executor.Requests, Has.Count.EqualTo(5));
             Assert.That(DynamicCodeStartupTelemetry.CreateTimingEntries(), Has.Member("[Perf] WarmReady: True"));
         }
 
@@ -191,12 +200,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 },
                 new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true },
+                new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true });
             PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime, default, executor);
 
             await useCase.RequestAsync();
 
-            Assert.That(executor.Requests, Has.Count.EqualTo(4));
+            Assert.That(executor.Requests, Has.Count.EqualTo(5));
             Assert.That(DynamicCodeStartupTelemetry.CreateTimingEntries(), Has.Member("[Perf] WarmReady: True"));
         }
 
@@ -227,12 +237,13 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 },
                 new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true },
+                new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true });
             PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime, default, executor);
 
             await useCase.RequestAsync();
 
-            Assert.That(executor.Requests, Has.Count.EqualTo(7));
+            Assert.That(executor.Requests, Has.Count.EqualTo(8));
             Assert.That(DynamicCodeStartupTelemetry.CreateTimingEntries(), Has.Member("[Perf] WarmReady: True"));
         }
 
@@ -249,7 +260,8 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             FakeDynamicCodeAutoPrewarmExecutor executor = new FakeDynamicCodeAutoPrewarmExecutor(
                 completionSource.Task,
                 secondCompletionSource.Task,
-                thirdCompletionSource.Task);
+                thirdCompletionSource.Task,
+                Task.FromResult(new DynamicCodeAutoPrewarmResult { Success = true }));
             PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime, default, executor);
 
             Task firstTask = useCase.RequestAsync();
@@ -260,7 +272,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
             secondCompletionSource.SetResult(new DynamicCodeAutoPrewarmResult { Success = true });
             thirdCompletionSource.SetResult(new DynamicCodeAutoPrewarmResult { Success = true });
             await firstTask;
-            Assert.That(executor.Requests, Has.Count.EqualTo(3));
+            Assert.That(executor.Requests, Has.Count.EqualTo(4));
         }
 
         [Test]
@@ -291,6 +303,7 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 Path.Combine(Application.dataPath, "..", "Temp", "serverstarting.lock"));
             FakePrewarmRuntime runtime = new FakePrewarmRuntime(true);
             FakeDynamicCodeAutoPrewarmExecutor executor = new FakeDynamicCodeAutoPrewarmExecutor(
+                new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true },
                 new DynamicCodeAutoPrewarmResult { Success = true });

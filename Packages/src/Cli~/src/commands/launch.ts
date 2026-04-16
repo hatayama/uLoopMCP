@@ -10,7 +10,9 @@ import { Command } from 'commander';
 import { resolve } from 'path';
 
 import { orchestrateLaunch, type OrchestrateResult } from 'launch-unity';
+import { prewarmDynamicCodeAfterLaunch } from '../execute-tool.js';
 import { waitForDynamicCodeReadyAfterLaunch } from '../launch-readiness.js';
+import { isToolEnabled } from '../tool-settings-loader.js';
 
 interface LaunchCommandOptions {
   restart?: boolean;
@@ -80,5 +82,8 @@ async function runLaunchCommand(
 
   console.log('Waiting for execute-dynamic-code warmup...');
   await waitForDynamicCodeReadyAfterLaunch(launchResult.projectPath);
+  if (isToolEnabled('execute-dynamic-code', launchResult.projectPath)) {
+    await prewarmDynamicCodeAfterLaunch({ projectRoot: launchResult.projectPath });
+  }
   console.log('execute-dynamic-code is ready.');
 }

@@ -3,19 +3,35 @@ import { join } from 'path';
 import { UnityClient } from '../types/tool-types.js';
 
 const FORCE_COMPILE_INDETERMINATE_MESSAGE_PREFIX = 'Force compilation executed.';
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE =
-  'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }';
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_STABLE_CODE =
+  'UnityEngine.LogType previous = UnityEngine.Debug.unityLogger.filterLogType; UnityEngine.Debug.unityLogger.filterLogType = UnityEngine.LogType.Warning; try { UnityEngine.Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { UnityEngine.Debug.unityLogger.filterLogType = previous; }';
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_USER_LIKE_CODE =
+  'using UnityEngine; LogType previous = Debug.unityLogger.filterLogType; Debug.unityLogger.filterLogType = LogType.Warning; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.filterLogType = previous; }';
 // Why: domain-reload measurements still showed two cold execute-dynamic-code requests before
 // the warmed steady state returned, so compile must keep the third pass off the user path.
 // Why not stop at two passes: that reintroduces the "compile finished but first dynamic code is slow"
 // regression for clients that issue execute-dynamic-code immediately after a forced compile.
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_PASS_COUNT = 3;
+// Why: the stable fully-qualified probe alone still left `using UnityEngine; Debug.Log(...)`
+// snippets paying a separate cold path on their first visible execution.
+// Why not warm only the user-like probe: startup traces showed that shape can fail transiently
+// before the first compile fully settles, so we keep the stable passes first.
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODES = [
+  POST_COMPILE_DYNAMIC_CODE_PREWARM_STABLE_CODE,
+  POST_COMPILE_DYNAMIC_CODE_PREWARM_STABLE_CODE,
+  POST_COMPILE_DYNAMIC_CODE_PREWARM_STABLE_CODE,
+  POST_COMPILE_DYNAMIC_CODE_PREWARM_USER_LIKE_CODE,
+];
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS = 20;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
 const EXECUTION_IN_PROGRESS_ERROR_MESSAGE = 'Another execution is already in progress';
 const EXECUTION_CANCELLED_ERROR_MESSAGE = 'Execution was cancelled or timed out';
 const RETRYABLE_COMPILATION_PROVIDER_UNAVAILABLE_SUBSTRINGS = ['warming up'];
 const RETRYABLE_UNITY_STARTUP_ERROR_SUBSTRINGS = ['can only be called from the main thread'];
+const RETRYABLE_TRANSIENT_ERROR_SUBSTRINGS = [
+  'internal error',
+  'preusingresolver.resolve',
+  'system.nullreferenceexception',
+];
 const RETRYABLE_DISPATCH_GUIDANCE_SUBSTRINGS = [
   'unity is currently compiling or reloading',
   'retry after the operation completes',
@@ -111,11 +127,7 @@ export async function prewarmDynamicCodeAfterCompile(
   unityClient: UnityClient,
   sleepFn: (ms: number) => Promise<void> = sleep,
 ): Promise<void> {
-  for (
-    let successfulPassCount = 0;
-    successfulPassCount < POST_COMPILE_DYNAMIC_CODE_PREWARM_PASS_COUNT;
-    successfulPassCount++
-  ) {
+  for (const code of POST_COMPILE_DYNAMIC_CODE_PREWARM_CODES) {
     let lastError: Error | undefined;
 
     for (
@@ -129,7 +141,7 @@ export async function prewarmDynamicCodeAfterCompile(
 
       const attemptResult = await unityClient
         .executeTool('execute-dynamic-code', {
-          Code: POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE,
+          Code: code,
           CompileOnly: false,
           YieldToForegroundRequests: true,
         })
@@ -192,6 +204,7 @@ function isRetryableWarmupError(error: Error): boolean {
     isRetryableDisconnectError(error.message) ||
     isRetryableCompilationProviderUnavailable(error.message) ||
     isRetryableUnityStartupError(error.message) ||
+    isRetryableTransientError(error.message) ||
     isRetryableDispatchGuidance(error.message)
   );
 }
@@ -214,6 +227,13 @@ function isRetryableCompilationProviderUnavailable(errorMessage: string): boolea
 function isRetryableUnityStartupError(errorMessage: string): boolean {
   const normalizedMessage = errorMessage.toLowerCase();
   return RETRYABLE_UNITY_STARTUP_ERROR_SUBSTRINGS.some((substring) =>
+    normalizedMessage.includes(substring),
+  );
+}
+
+function isRetryableTransientError(errorMessage: string): boolean {
+  const normalizedMessage = errorMessage.toLowerCase();
+  return RETRYABLE_TRANSIENT_ERROR_SUBSTRINGS.some((substring) =>
     normalizedMessage.includes(substring),
   );
 }
