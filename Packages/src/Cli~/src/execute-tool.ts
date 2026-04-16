@@ -551,9 +551,14 @@ function isRetryablePostCompileDynamicCodePrewarmError(error: Error): boolean {
   return error.message === EXECUTION_IN_PROGRESS_ERROR_MESSAGE
     || error.message === EXECUTION_CANCELLED_ERROR_MESSAGE
     || error.message === 'UNITY_SERVER_STARTING'
+    || isRetryablePostCompileDynamicCodePrewarmDisconnect(error)
     || isRetryablePostCompileDynamicCodePrewarmSpawnError(error)
     || isRetryableCompilationProviderUnavailable(error.message)
     || isRetryableUnityStartupMainThreadError(error.message);
+}
+
+function isRetryablePostCompileDynamicCodePrewarmDisconnect(error: Error): boolean {
+  return error.message === 'UNITY_NO_RESPONSE' || error.message.startsWith('Connection lost:');
 }
 
 function isRetryablePostCompileDynamicCodePrewarmSpawnError(error: Error): boolean {

@@ -298,6 +298,30 @@ describe('prewarmDynamicCodeAfterCompile', () => {
 
     expect(spawnCliProcess).toHaveBeenCalledTimes(3);
   });
+
+  it('retries when the isolated CLI loses its response once during warmup', async () => {
+    const spawnCliProcess = jest
+      .fn()
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: JSON.stringify({
+          Success: false,
+          ErrorMessage: 'UNITY_NO_RESPONSE',
+        }),
+      })
+      .mockReturnValue({
+        status: 0,
+        stdout: JSON.stringify({ Success: true }),
+      });
+
+    await expect(
+      prewarmDynamicCodeAfterCompile('/project', {
+        spawnCliProcess,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(spawnCliProcess).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe('stripInternalFields', () => {

@@ -13,6 +13,7 @@ const LAUNCH_READINESS_RETRY_MS = 1000;
 const LAUNCH_READINESS_CODE = 'return null;';
 const LAUNCH_READINESS_REQUEST_TOTAL_THRESHOLD_MS = 250;
 const LAUNCH_READINESS_SETTLE_TIMEOUT_MS = 10000;
+const MAX_TRANSIENT_MALFORMED_PAYLOAD_COUNT = 3;
 const TRANSIENT_EXECUTE_DYNAMIC_CODE_ERROR_MESSAGES = [
   'Another execution is already in progress',
   'Execution was cancelled or timed out',
@@ -158,6 +159,7 @@ export async function waitForDynamicCodeReadyAfterLaunch(
 ): Promise<void> {
   const startTime: number = dependencies.nowFn();
   let firstSuccessfulProbeTime: number | null = null;
+  let malformedPayloadCount = 0;
 
   while (dependencies.nowFn() - startTime < LAUNCH_READINESS_TIMEOUT_MS) {
     let client: DirectUnityClient | null = null;
@@ -184,21 +186,31 @@ export async function waitForDynamicCodeReadyAfterLaunch(
         },
       );
 
-      if (payload?.Success) {
-        if (isLaunchReadinessStable(payload)) {
-          return;
+      const isMalformedPayload =
+        payload === undefined || payload === null || typeof payload.Success !== 'boolean';
+      if (isMalformedPayload) {
+        malformedPayloadCount++;
+        if (malformedPayloadCount > MAX_TRANSIENT_MALFORMED_PAYLOAD_COUNT) {
+          throw new Error('execute-dynamic-code launch readiness probe returned malformed payload');
         }
+      } else {
+        malformedPayloadCount = 0;
+        if (payload.Success) {
+          if (isLaunchReadinessStable(payload)) {
+            return;
+          }
 
-        if (firstSuccessfulProbeTime === null) {
-          firstSuccessfulProbeTime = dependencies.nowFn();
-        } else if (
-          dependencies.nowFn() - firstSuccessfulProbeTime >=
-          LAUNCH_READINESS_SETTLE_TIMEOUT_MS
-        ) {
-          return;
+          if (firstSuccessfulProbeTime === null) {
+            firstSuccessfulProbeTime = dependencies.nowFn();
+          } else if (
+            dependencies.nowFn() - firstSuccessfulProbeTime >=
+            LAUNCH_READINESS_SETTLE_TIMEOUT_MS
+          ) {
+            return;
+          }
+        } else if (!isTransientExecuteDynamicCodeFailure(payload)) {
+          throw createLaunchReadinessFailure(payload);
         }
-      } else if (!isTransientExecuteDynamicCodeFailure(payload)) {
-        throw createLaunchReadinessFailure(payload);
       }
     } catch (error) {
       if (!isRetryableLaunchReadinessError(error)) {
