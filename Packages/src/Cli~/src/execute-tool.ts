@@ -617,10 +617,8 @@ export async function executeToolCommand(
 
   let lastError: unknown;
   let immediateResult: Record<string, unknown> | undefined;
-  const projectRoot = connection.projectRoot;
-
-  // Validate project identity only when the new request metadata path is unavailable.
-  const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
+  let currentProjectRoot = connection.projectRoot;
+  let currentShouldValidateProject = connection.shouldValidateProject && currentProjectRoot !== null;
 
   // Monotonically-increasing flag: once true, retries cannot reset it to false.
   // The retry loop overwrites `lastError` and `immediateResult` on each attempt,
@@ -632,6 +630,10 @@ export async function executeToolCommand(
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     checkUnityBusyStateBeforeProjectResolution(globalOptions);
+    const projectRoot = connection.projectRoot;
+    const shouldValidateProject = connection.shouldValidateProject && projectRoot !== null;
+    currentProjectRoot = projectRoot;
+    currentShouldValidateProject = shouldValidateProject;
 
     const client = new DirectUnityClient(connection.port);
     try {
@@ -732,7 +734,7 @@ export async function executeToolCommand(
       spinner.stop();
       restoreStdin();
       if (lastError !== undefined) {
-        await throwFinalToolError(lastError, projectRoot, shouldValidateProject);
+        await throwFinalToolError(lastError, currentProjectRoot, currentShouldValidateProject);
       }
       throw new Error(
         'Compile request never reached Unity. Check that Unity is running and retry.',
@@ -743,7 +745,7 @@ export async function executeToolCommand(
       immediateResult !== undefined
         ? (immediateResult['ProjectRoot'] as string | undefined)
         : undefined;
-    const effectiveProjectRoot: string | null = projectRootFromUnity ?? projectRoot;
+    const effectiveProjectRoot: string | null = projectRootFromUnity ?? currentProjectRoot;
 
     // File-based polling requires a known project root
     if (effectiveProjectRoot === null) {
@@ -811,7 +813,7 @@ export async function executeToolCommand(
   if (lastError === undefined) {
     throw new Error('Tool execution failed without error details.');
   }
-  await throwFinalToolError(lastError, projectRoot, shouldValidateProject);
+  await throwFinalToolError(lastError, currentProjectRoot, currentShouldValidateProject);
 }
 
 export async function listAvailableTools(globalOptions: GlobalOptions): Promise<void> {

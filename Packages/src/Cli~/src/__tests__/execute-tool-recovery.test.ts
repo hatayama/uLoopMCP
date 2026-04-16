@@ -1,7 +1,7 @@
 interface MockResolvedUnityConnection {
   port: number;
   projectRoot: string | null;
-  requestMetadata: null;
+  requestMetadata: { expectedProjectRoot: string; expectedServerSessionId: string } | null;
   shouldValidateProject: boolean;
 }
 
@@ -17,6 +17,7 @@ const mockSleep = jest.fn<Promise<void>, [number]>();
 const mockSpinnerUpdate = jest.fn<void, [string]>();
 const mockSpinnerStop = jest.fn<void, []>();
 const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
+const mockValidateConnectedProject = jest.fn<Promise<void>, [unknown, string]>();
 
 const constructedPorts: number[] = [];
 
@@ -95,7 +96,8 @@ jest.mock('../spinner.js', () => ({
 }));
 
 jest.mock('../project-validator.js', () => ({
-  validateConnectedProject: jest.fn(),
+  validateConnectedProject: (...args: [unknown, string]): Promise<void> =>
+    mockValidateConnectedProject(...args),
   ProjectMismatchError: class ProjectMismatchError extends Error {},
 }));
 
@@ -140,6 +142,8 @@ describe('executeToolCommand recovery', () => {
 
     mockSpinnerUpdate.mockReset();
     mockSpinnerStop.mockReset();
+    mockValidateConnectedProject.mockReset();
+    mockValidateConnectedProject.mockResolvedValue();
 
     mockConsoleLog.mockClear();
     constructedPorts.length = 0;
