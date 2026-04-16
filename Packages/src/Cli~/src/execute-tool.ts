@@ -110,7 +110,7 @@ const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE =
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 2;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS = 6;
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS = 1000;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS = 10000;
 const SERVER_STARTING_STALE_LOCK_MAX_AGE_MS = 30000;
 const EXECUTION_IN_PROGRESS_ERROR_MESSAGE = 'Another execution is already in progress';
 const EXECUTION_CANCELLED_ERROR_MESSAGE = 'Execution was cancelled or timed out';
@@ -581,6 +581,10 @@ function checkUnityBusyState(projectPath?: string): void {
     projectPath !== undefined ? validateProjectPath(projectPath) : findUnityProjectRoot();
   if (projectRoot === null) {
     return;
+  }
+
+  if (isServerStarting(projectRoot)) {
+    throw new Error('UNITY_SERVER_STARTING');
   }
 
   const compilingLock = join(projectRoot, 'Temp', 'compiling.lock');

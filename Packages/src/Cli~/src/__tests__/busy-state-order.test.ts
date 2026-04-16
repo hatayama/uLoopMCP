@@ -2,6 +2,7 @@ const mockResolveUnityConnection = jest.fn();
 const mockValidateProjectPath = jest.fn<string, [string]>();
 const mockFindUnityProjectRoot = jest.fn<string | null, []>();
 const mockExistsSync = jest.fn<boolean, [string]>();
+const mockStatSync = jest.fn<{ mtimeMs: number }, [string]>();
 
 jest.mock('../port-resolver.js', () => ({
   resolveUnityConnection: (...args: unknown[]) => mockResolveUnityConnection(...args),
@@ -16,6 +17,7 @@ jest.mock('../project-root.js', () => ({
 
 jest.mock('fs', () => ({
   existsSync: (path: string): boolean => mockExistsSync(path),
+  statSync: (path: string): { mtimeMs: number } => mockStatSync(path),
 }));
 
 import { executeToolCommand, listAvailableTools, syncTools } from '../execute-tool.js';
@@ -33,6 +35,9 @@ describe('busy state detection order', () => {
 
     mockExistsSync.mockReset();
     mockExistsSync.mockImplementation((path: string) => path.endsWith('compiling.lock'));
+
+    mockStatSync.mockReset();
+    mockStatSync.mockReturnValue({ mtimeMs: Date.now() });
   });
 
   it('checks busy state before resolving port for tool execution', async () => {
@@ -51,6 +56,16 @@ describe('busy state detection order', () => {
 
   it('checks busy state before resolving port for sync', async () => {
     await expect(syncTools({ projectPath: '/project' })).rejects.toThrow('UNITY_COMPILING');
+
+    expect(mockResolveUnityConnection).not.toHaveBeenCalled();
+  });
+
+  it('treats a fresh serverstarting.lock as busy before resolving the port', async () => {
+    mockExistsSync.mockImplementation((path: string) => path.endsWith('serverstarting.lock'));
+
+    await expect(listAvailableTools({ projectPath: '/project' })).rejects.toThrow(
+      'UNITY_SERVER_STARTING',
+    );
 
     expect(mockResolveUnityConnection).not.toHaveBeenCalled();
   });

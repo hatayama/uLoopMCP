@@ -299,11 +299,19 @@ namespace io.github.hatayama.uLoopMCP
                 return false;
             }
 
-            return !result.Success
-                && string.Equals(
-                    result.ErrorMessage,
-                    TcpDynamicCodeAutoPrewarmExecutor.TimeoutErrorMessage,
-                    StringComparison.Ordinal);
+            if (result.Success)
+            {
+                return false;
+            }
+
+            return string.Equals(
+                       result.ErrorMessage,
+                       TcpDynamicCodeAutoPrewarmExecutor.TimeoutErrorMessage,
+                       StringComparison.Ordinal)
+                   || string.Equals(
+                       result.ErrorMessage,
+                       TcpDynamicCodeAutoPrewarmExecutor.TransportErrorMessage,
+                       StringComparison.Ordinal);
         }
 
     }
@@ -327,6 +335,7 @@ namespace io.github.hatayama.uLoopMCP
         private const string AutoPrewarmRequestId = "dynamic-code-auto-prewarm";
         private const int LoopbackPrewarmTimeoutMilliseconds = 10000;
         internal const string TimeoutErrorMessage = "dynamic code auto prewarm timed out";
+        internal const string TransportErrorMessage = "dynamic code auto prewarm transport failed";
         private readonly Func<string, CancellationToken, Task<string>> _sendRequestAsync;
         private readonly int _timeoutMilliseconds;
 
@@ -373,6 +382,30 @@ namespace io.github.hatayama.uLoopMCP
                 {
                     Success = false,
                     ErrorMessage = TimeoutErrorMessage
+                };
+            }
+            catch (IOException) when (!ct.IsCancellationRequested)
+            {
+                return new DynamicCodeAutoPrewarmResult
+                {
+                    Success = false,
+                    ErrorMessage = TransportErrorMessage
+                };
+            }
+            catch (SocketException) when (!ct.IsCancellationRequested)
+            {
+                return new DynamicCodeAutoPrewarmResult
+                {
+                    Success = false,
+                    ErrorMessage = TransportErrorMessage
+                };
+            }
+            catch (JsonException) when (!ct.IsCancellationRequested)
+            {
+                return new DynamicCodeAutoPrewarmResult
+                {
+                    Success = false,
+                    ErrorMessage = TransportErrorMessage
                 };
             }
         }

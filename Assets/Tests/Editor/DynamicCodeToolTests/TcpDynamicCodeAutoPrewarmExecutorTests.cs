@@ -1,3 +1,4 @@
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -54,6 +55,20 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
 
             Assert.That(result.Success, Is.False);
             Assert.That(result.ErrorMessage, Is.EqualTo("dynamic code auto prewarm timed out"));
+        }
+
+        [Test]
+        public async Task ExecuteAsync_WhenTransportThrowsIOException_ShouldReturnTransportFailure()
+        {
+            TcpDynamicCodeAutoPrewarmExecutor executor = new TcpDynamicCodeAutoPrewarmExecutor(
+                (requestJson, ct) => Task.FromException<string>(new IOException("socket closed")));
+
+            DynamicCodeAutoPrewarmResult result = await executor.ExecuteAsync(
+                new ExecuteDynamicCodeSchema { Code = "return 1;" },
+                CancellationToken.None);
+
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorMessage, Is.EqualTo("dynamic code auto prewarm transport failed"));
         }
     }
 }
