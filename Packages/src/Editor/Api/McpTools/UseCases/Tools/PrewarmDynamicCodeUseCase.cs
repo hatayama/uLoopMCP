@@ -8,6 +8,11 @@ namespace io.github.hatayama.uLoopMCP
     internal sealed class PrewarmDynamicCodeUseCase : IPrewarmDynamicCodeUseCase
     {
         private const int AutoPrewarmDelayFrameCount = 1;
+        // Why: startup measurements showed the first user-visible execute-dynamic-code request
+        // stayed cold until the default wrapper shape and Unity's logging path had both run once.
+        // Why not a cheaper "return null;" snippet or a dedicated prewarm class name: those warm
+        // compiler registration, but they miss the default execute-dynamic-code cache key and
+        // leave the first real request measurably slower.
         private const string AutoPrewarmCode =
             "using UnityEngine; Debug.Log(\"Unity CLI Loop dynamic code prewarm\"); return \"Unity CLI Loop dynamic code prewarm\";";
         private const string AutoPrewarmClassName = DynamicCodeConstants.DEFAULT_CLASS_NAME;
