@@ -5,6 +5,7 @@ import {
   prewarmDynamicCodeAfterCompile,
   stripInternalFields,
   resolveRecoveryPortOrKeepCurrent,
+  shouldReportServerStarting,
   shouldPrewarmDynamicCodeAfterCompile,
   shouldRetryWhenUnityProcessIsRunning,
 } from '../execute-tool.js';
@@ -377,5 +378,33 @@ describe('resolveRecoveryPortOrKeepCurrent', () => {
         shouldValidateProject: false,
       }),
     );
+  });
+});
+
+describe('shouldReportServerStarting', () => {
+  it('returns true when startup lock exists and Unity is still running', async () => {
+    const dependencies = {
+      findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
+    };
+    const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+
+    await expect(
+      shouldReportServerStarting('/project', true, dependencies),
+    ).resolves.toBe(true);
+
+    existsSpy.mockRestore();
+  });
+
+  it('returns false when startup lock exists but Unity is not running', async () => {
+    const dependencies = {
+      findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue(null),
+    };
+    const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+
+    await expect(
+      shouldReportServerStarting('/project', true, dependencies),
+    ).resolves.toBe(false);
+
+    existsSpy.mockRestore();
   });
 });

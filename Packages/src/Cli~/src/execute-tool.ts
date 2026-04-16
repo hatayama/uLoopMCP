@@ -110,6 +110,7 @@ const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE =
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 2;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_RETRIES = 3;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS = 5000;
 
 interface PostCompileDynamicCodePrewarmDependencies {
   spawnCliProcess: (args: string[]) => { status: number | null; error?: Error; stdout?: string };
@@ -120,6 +121,7 @@ const defaultPostCompileDynamicCodePrewarmDependencies: PostCompileDynamicCodePr
     spawnSync(process.execPath, [process.argv[1], ...args], {
       stdio: ['ignore', 'pipe', 'ignore'],
       encoding: 'utf8',
+      timeout: POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS,
       windowsHide: true,
     }),
 };
@@ -249,12 +251,27 @@ function isServerStarting(projectRoot: string | null): boolean {
   return existsSync(serverStartingLockPath);
 }
 
+export async function shouldReportServerStarting(
+  projectRoot: string | null,
+  shouldDiagnoseProjectState: boolean,
+  dependencies: ConnectionFailureDiagnosisDependencies = defaultConnectionFailureDiagnosisDependencies,
+): Promise<boolean> {
+  if (!shouldDiagnoseProjectState || !isServerStarting(projectRoot) || projectRoot === null) {
+    return false;
+  }
+
+  const runningProcess = await dependencies
+    .findRunningUnityProcessForProjectFn(projectRoot)
+    .catch(() => undefined);
+  return runningProcess !== null && runningProcess !== undefined;
+}
+
 async function throwFinalToolError(
   error: unknown,
   projectRoot: string | null,
   shouldDiagnoseProjectState: boolean,
 ): Promise<never> {
-  if (isRetryableProjectRecoveryError(error) && isServerStarting(projectRoot)) {
+  if (await shouldReportServerStarting(projectRoot, shouldDiagnoseProjectState)) {
     throw new Error('UNITY_SERVER_STARTING');
   }
 
