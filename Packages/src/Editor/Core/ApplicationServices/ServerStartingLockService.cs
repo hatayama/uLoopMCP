@@ -34,8 +34,28 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             string ownershipToken = System.Guid.NewGuid().ToString("N");
-            File.WriteAllText(lockPath, ownershipToken);
-            return ownershipToken;
+            for (int attempt = 0; attempt < FILE_OPERATION_RETRY_COUNT; attempt++)
+            {
+                try
+                {
+                    File.WriteAllText(lockPath, ownershipToken);
+                    return ownershipToken;
+                }
+                catch (IOException)
+                {
+                }
+                catch (UnauthorizedAccessException)
+                {
+                }
+
+                if (attempt < FILE_OPERATION_RETRY_COUNT - 1)
+                {
+                    Thread.Sleep(FILE_OPERATION_RETRY_DELAY_MILLISECONDS);
+                }
+            }
+
+            VibeLogger.LogWarning("server_starting_lock_create_failed", $"Failed to create lock file: {lockPath}");
+            return null;
         }
 
         /// <summary>

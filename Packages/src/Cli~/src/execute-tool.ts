@@ -109,9 +109,11 @@ const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE =
   'using UnityEngine; bool previous = Debug.unityLogger.logEnabled; Debug.unityLogger.logEnabled = false; try { Debug.Log("Unity CLI Loop dynamic code prewarm"); return "Unity CLI Loop dynamic code prewarm"; } finally { Debug.unityLogger.logEnabled = previous; }';
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 2;
-const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_RETRIES = 1;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS = 6;
 const POST_COMPILE_DYNAMIC_CODE_PREWARM_TIMEOUT_MS = 1000;
 const SERVER_STARTING_STALE_LOCK_MAX_AGE_MS = 30000;
+const EXECUTION_IN_PROGRESS_ERROR_MESSAGE = 'Another execution is already in progress.';
+const EXECUTION_CANCELLED_ERROR_MESSAGE = 'Execution was cancelled or timed out.';
 
 interface PostCompileDynamicCodePrewarmDependencies {
   spawnCliProcess: (args: string[]) => { status: number | null; error?: Error; stdout?: string };
@@ -449,7 +451,7 @@ export async function prewarmDynamicCodeAfterCompile(
   for (let successfulRuns = 0; successfulRuns < POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT; successfulRuns++) {
     let lastError: Error | undefined;
 
-    for (let attempt = 0; attempt < POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt < POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_ATTEMPTS_PER_PASS; attempt++) {
       if (attempt > 0) {
         await sleep(POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS);
       }
@@ -471,8 +473,10 @@ export async function prewarmDynamicCodeAfterCompile(
         break;
       }
 
-      lastError =
-        createPostCompileDynamicCodePrewarmError(prewarmResult);
+      lastError = createPostCompileDynamicCodePrewarmError(prewarmResult);
+      if (!isRetryablePostCompileDynamicCodePrewarmError(lastError)) {
+        break;
+      }
     }
 
     if (lastError !== undefined) {
@@ -515,6 +519,11 @@ function createPostCompileDynamicCodePrewarmError(result: {
   }
 
   return new Error('Post-compile dynamic code prewarm failed.');
+}
+
+function isRetryablePostCompileDynamicCodePrewarmError(error: Error): boolean {
+  return error.message === EXECUTION_IN_PROGRESS_ERROR_MESSAGE
+    || error.message === EXECUTION_CANCELLED_ERROR_MESSAGE;
 }
 
 /**

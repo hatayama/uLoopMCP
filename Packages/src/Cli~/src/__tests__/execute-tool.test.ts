@@ -214,6 +214,30 @@ describe('prewarmDynamicCodeAfterCompile', () => {
     ).rejects.toThrow('Another execution is already in progress.');
   });
 
+  it('retries transient busy warmup failures until both passes complete successfully', async () => {
+    const spawnCliProcess = jest
+      .fn()
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: JSON.stringify({
+          Success: false,
+          ErrorMessage: 'Another execution is already in progress.',
+        }),
+      })
+      .mockReturnValue({
+        status: 0,
+        stdout: JSON.stringify({ Success: true }),
+      });
+
+    await expect(
+      prewarmDynamicCodeAfterCompile('/project', 8711, {
+        spawnCliProcess,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(spawnCliProcess).toHaveBeenCalledTimes(3);
+  });
+
   it('throws when spawning the isolated CLI prewarm process fails', async () => {
     await expect(
       prewarmDynamicCodeAfterCompile('/project', 8711, {

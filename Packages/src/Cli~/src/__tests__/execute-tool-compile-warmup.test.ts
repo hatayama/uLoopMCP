@@ -129,4 +129,33 @@ describe('executeToolCommand compile warmup', () => {
 
     expect(mockConsoleLog).not.toHaveBeenCalled();
   });
+
+  it('keeps compile successful when warmup only hits transient execution contention', async () => {
+    mockSpawnSync
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: JSON.stringify({
+          Success: false,
+          ErrorMessage: 'Another execution is already in progress.',
+        }),
+      })
+      .mockReturnValue({
+        status: 0,
+        stdout: JSON.stringify({ Success: true }),
+      });
+
+    await expect(
+      executeToolCommand(
+        'compile',
+        {
+          ForceRecompile: true,
+          WaitForDomainReload: true,
+        },
+        { projectPath: '/project' },
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(mockSpawnSync).toHaveBeenCalledTimes(3);
+    expect(mockConsoleLog).toHaveBeenCalledTimes(1);
+  });
 });
