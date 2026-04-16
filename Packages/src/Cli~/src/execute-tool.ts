@@ -351,10 +351,15 @@ export async function shouldReportServerStarting(
 
 export async function shouldPromoteToServerStartingError(
   error: unknown,
+  toolName: string,
   projectRoot: string | null,
   shouldDiagnoseProjectState: boolean,
   dependencies: ConnectionFailureDiagnosisDependencies = defaultConnectionFailureDiagnosisDependencies,
 ): Promise<boolean> {
+  if (!shouldTreatServerStartingAsBusy(toolName)) {
+    return false;
+  }
+
   if (!isRetryableProjectRecoveryError(error) && !isSettingsReadError(error)) {
     return false;
   }
@@ -363,6 +368,7 @@ export async function shouldPromoteToServerStartingError(
 }
 
 export async function resolveUnityConnectionWithStartupDiagnosis(
+  toolName: string,
   explicitPort: number | undefined,
   projectPath: string | undefined,
   dependencies: ConnectionFailureDiagnosisDependencies = defaultConnectionFailureDiagnosisDependencies,
@@ -385,6 +391,7 @@ export async function resolveUnityConnectionWithStartupDiagnosis(
     if (
       await shouldPromoteToServerStartingError(
         error,
+        toolName,
         projectRoot,
         shouldDiagnoseProjectState,
         dependencies,
@@ -399,10 +406,18 @@ export async function resolveUnityConnectionWithStartupDiagnosis(
 
 async function throwFinalToolError(
   error: unknown,
+  toolName: string,
   projectRoot: string | null,
   shouldDiagnoseProjectState: boolean,
 ): Promise<never> {
-  if (await shouldPromoteToServerStartingError(error, projectRoot, shouldDiagnoseProjectState)) {
+  if (
+    await shouldPromoteToServerStartingError(
+      error,
+      toolName,
+      projectRoot,
+      shouldDiagnoseProjectState,
+    )
+  ) {
     throw createServerStartingError(error);
   }
 
@@ -906,6 +921,7 @@ export async function executeToolCommand(
   const portNumber = parseExplicitPort(globalOptions.port);
   await checkUnityBusyStateBeforeProjectResolution(toolName, globalOptions);
   let connection = await resolveUnityConnectionWithStartupDiagnosis(
+    toolName,
     portNumber,
     globalOptions.projectPath,
   );
@@ -1053,6 +1069,7 @@ export async function executeToolCommand(
         if (lastError !== undefined) {
           await throwFinalToolError(
             lastError,
+            toolName,
             currentProjectRoot,
             currentShouldDiagnoseProjectState,
           );
@@ -1140,7 +1157,13 @@ export async function executeToolCommand(
     if (lastError === undefined) {
       throw new Error('Tool execution failed without error details.');
     }
-    await throwFinalToolError(lastError, currentProjectRoot, currentShouldDiagnoseProjectState);
+    await throwFinalToolError(
+      lastError,
+      toolName,
+      currentProjectRoot,
+      currentShouldDiagnoseProjectState,
+    );
+
   } finally {
     cleanup();
   }
@@ -1150,6 +1173,7 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
   const portNumber = parseExplicitPort(globalOptions.port);
   await checkUnityBusyStateBeforeProjectResolution('get-tool-details', globalOptions);
   let connection = await resolveUnityConnectionWithStartupDiagnosis(
+    'get-tool-details',
     portNumber,
     globalOptions.projectPath,
   );
@@ -1234,7 +1258,12 @@ export async function listAvailableTools(globalOptions: GlobalOptions): Promise<
     }
 
     cleanup();
-    await throwFinalToolError(lastError, currentProjectRoot, currentShouldDiagnoseProjectState);
+    await throwFinalToolError(
+      lastError,
+      'get-tool-details',
+      currentProjectRoot,
+      currentShouldDiagnoseProjectState,
+    );
   } finally {
     cleanup();
   }
@@ -1275,6 +1304,7 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
   const portNumber = parseExplicitPort(globalOptions.port);
   await checkUnityBusyStateBeforeProjectResolution('sync-tools', globalOptions);
   let connection = await resolveUnityConnectionWithStartupDiagnosis(
+    'sync-tools',
     portNumber,
     globalOptions.projectPath,
   );
@@ -1378,7 +1408,12 @@ export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
     }
 
     cleanup();
-    await throwFinalToolError(lastError, currentProjectRoot, currentShouldDiagnoseProjectState);
+    await throwFinalToolError(
+      lastError,
+      'sync-tools',
+      currentProjectRoot,
+      currentShouldDiagnoseProjectState,
+    );
   } finally {
     cleanup();
   }

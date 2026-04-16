@@ -731,6 +731,25 @@ describe('shouldPromoteToServerStartingError', () => {
     await expect(
       shouldPromoteToServerStartingError(
         new Error('Unexpected response from Unity: missing Tools array'),
+        'execute-dynamic-code',
+        '/project',
+        true,
+        dependencies,
+      ),
+    ).resolves.toBe(false);
+  });
+
+  it('returns false for retryable startup errors when the tool should ignore startup lock promotion', async () => {
+    const dependencies = {
+      findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
+      existsSyncFn: jest.fn().mockReturnValue(true),
+      statSyncFn: jest.fn().mockReturnValue(createStatResult(Date.now())),
+    };
+
+    await expect(
+      shouldPromoteToServerStartingError(
+        new Error('Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json'),
+        'get-tool-details',
         '/project',
         true,
         dependencies,
@@ -762,6 +781,7 @@ describe('resolveUnityConnectionWithStartupDiagnosis', () => {
 
     await expect(
       resolveUnityConnectionWithStartupDiagnosis(
+        'execute-dynamic-code',
         undefined,
         projectRoot,
         dependencies,
@@ -779,11 +799,37 @@ describe('resolveUnityConnectionWithStartupDiagnosis', () => {
   it('preserves the original usage error when both --port and --project-path are specified', async () => {
     await expect(
       resolveUnityConnectionWithStartupDiagnosis(
+        'execute-dynamic-code',
         8711,
         '/definitely/missing/project',
         undefined,
         jest.fn().mockRejectedValue(new Error('Cannot specify both --port and --project-path')),
       ),
     ).rejects.toThrow('Cannot specify both --port and --project-path');
+  });
+
+  it('preserves retryable settings-read failures for non-dynamic-code tools', async () => {
+    const projectRoot = resolvePath(process.cwd(), '..', '..', '..');
+    const dependencies = {
+      findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
+      existsSyncFn: jest.fn().mockReturnValue(true),
+      statSyncFn: jest.fn().mockReturnValue(createStatResult(Date.now())),
+    };
+
+    await expect(
+      resolveUnityConnectionWithStartupDiagnosis(
+        'get-tool-details',
+        undefined,
+        projectRoot,
+        dependencies,
+        jest
+          .fn()
+          .mockRejectedValue(
+            new Error(
+              `Could not read Unity server port from settings.\n\n  Settings file: ${projectRoot}/UserSettings/UnityMcpSettings.json`,
+            ),
+          ),
+      ),
+    ).rejects.toThrow('Could not read Unity server port from settings.');
   });
 });
