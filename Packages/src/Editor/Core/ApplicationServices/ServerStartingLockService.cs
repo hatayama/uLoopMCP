@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 
 namespace io.github.hatayama.uLoopMCP
 {
@@ -12,6 +13,8 @@ namespace io.github.hatayama.uLoopMCP
     public static class ServerStartingLockService
     {
         private const string LOCK_FILE_NAME = "serverstarting.lock";
+        private const int FILE_OPERATION_RETRY_COUNT = 3;
+        private const int FILE_OPERATION_RETRY_DELAY_MILLISECONDS = 50;
 
         private static string LockFilePath => Path.Combine(UnityEngine.Application.dataPath, "..", "Temp", LOCK_FILE_NAME);
 
@@ -66,32 +69,55 @@ namespace io.github.hatayama.uLoopMCP
 
         private static string TryReadOwnershipToken(string lockPath)
         {
-            try
+            for (int attempt = 0; attempt < FILE_OPERATION_RETRY_COUNT; attempt++)
             {
-                return File.ReadAllText(lockPath);
+                try
+                {
+                    return File.ReadAllText(lockPath);
+                }
+                catch (IOException)
+                {
+                }
+                catch (UnauthorizedAccessException)
+                {
+                }
+
+                if (attempt < FILE_OPERATION_RETRY_COUNT - 1)
+                {
+                    Thread.Sleep(FILE_OPERATION_RETRY_DELAY_MILLISECONDS);
+                }
             }
-            catch (IOException)
-            {
-                return null;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return null;
-            }
+
+            VibeLogger.LogWarning("server_starting_lock_read_failed", $"Failed to read ownership token: {lockPath}");
+            return null;
         }
 
         private static void TryDeleteLockFile(string lockPath)
         {
-            try
+            for (int attempt = 0; attempt < FILE_OPERATION_RETRY_COUNT; attempt++)
             {
-                File.Delete(lockPath);
+                try
+                {
+                    File.Delete(lockPath);
+                    if (!File.Exists(lockPath))
+                    {
+                        return;
+                    }
+                }
+                catch (IOException)
+                {
+                }
+                catch (UnauthorizedAccessException)
+                {
+                }
+
+                if (attempt < FILE_OPERATION_RETRY_COUNT - 1)
+                {
+                    Thread.Sleep(FILE_OPERATION_RETRY_DELAY_MILLISECONDS);
+                }
             }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
+
+            VibeLogger.LogWarning("server_starting_lock_delete_failed", $"Failed to delete lock file: {lockPath}");
         }
     }
 }

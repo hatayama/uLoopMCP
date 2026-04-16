@@ -103,24 +103,32 @@ namespace io.github.hatayama.uLoopMCP
 
             // Signal server is starting for CLI detection
             string serverStartingLockToken = ServerStartingLockService.CreateLockFile();
+            bool serverStartingLockReleasedByPrewarm = false;
 
-            // Always stop the existing server first (to release the port)
-            if (mcpServer != null)
+            try
             {
-                await StopServerWithUseCaseAsync();
-            }
+                // Always stop the existing server first (to release the port)
+                if (mcpServer != null)
+                {
+                    await StopServerWithUseCaseAsync();
+                }
 
-            DynamicCodeStartupTelemetry.Reset();
+                DynamicCodeStartupTelemetry.Reset();
 
-            // Execute initialization UseCase
-            McpServerInitializationUseCase useCase = new();
-            ServerInitializationSchema schema = new() { Port = port };
-            System.Threading.CancellationToken cancellationToken = System.Threading.CancellationToken.None;
+                // Execute initialization UseCase
+                McpServerInitializationUseCase useCase = new();
+                ServerInitializationSchema schema = new() { Port = port };
+                System.Threading.CancellationToken cancellationToken = System.Threading.CancellationToken.None;
 
-            var result = await useCase.ExecuteAsync(schema, cancellationToken);
+                var result = await useCase.ExecuteAsync(schema, cancellationToken);
 
-            if (result.Success)
-            {
+                if (!result.Success)
+                {
+                    // Error message already handled by UseCase
+                    UnityEngine.Debug.LogError($"Server startup failed: {result.Message}");
+                    return;
+                }
+
                 // UseCase creates a new server instance, so we keep a reference here
                 // for compatibility with existing code
                 mcpServer = result.ServerInstance;
@@ -131,27 +139,17 @@ namespace io.github.hatayama.uLoopMCP
                 DynamicCodeStartupTelemetry.MarkServerReady();
                 CustomToolManager.WarmupRegistry();
                 DynamicCodeServices.ResetServerScopedServices();
-                IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase = null;
-                try
-                {
-                    prewarmDynamicCodeUseCase =
-                        await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
-                }
-                finally
-                {
-                    if (prewarmDynamicCodeUseCase == null)
-                    {
-                        ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
-                    }
-                }
+                IPrewarmDynamicCodeUseCase prewarmDynamicCodeUseCase =
+                    await DynamicCodeServices.GetPrewarmDynamicCodeUseCaseAsync(serverStartingLockToken);
                 prewarmDynamicCodeUseCase.Request();
-
+                serverStartingLockReleasedByPrewarm = true;
             }
-            else
+            finally
             {
-                ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
-                // Error message already handled by UseCase
-                UnityEngine.Debug.LogError($"Server startup failed: {result.Message}");
+                if (!serverStartingLockReleasedByPrewarm)
+                {
+                    ServerStartingLockService.DeleteOwnedLockFile(serverStartingLockToken);
+                }
             }
         }
 

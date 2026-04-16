@@ -690,6 +690,7 @@ export async function executeToolCommand(
       timeoutMs: COMPILE_WAIT_TIMEOUT_MS,
       pollIntervalMs: COMPILE_WAIT_POLL_INTERVAL_MS,
       unityPort: connection.port,
+      includeServerStartingLock: false,
     });
 
     if (outcome === 'timed_out') {
