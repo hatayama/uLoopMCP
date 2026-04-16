@@ -6,6 +6,7 @@ import {
   prewarmDynamicCodeAfterCompile,
   stripInternalFields,
   resolveRecoveryPortOrKeepCurrent,
+  resolveUnityConnectionWithStartupDiagnosis,
   shouldPromoteToServerStartingError,
   shouldReportServerStarting,
   shouldPrewarmDynamicCodeAfterCompile,
@@ -434,6 +435,23 @@ describe('shouldReportServerStarting', () => {
     existsSpy.mockRestore();
     statSpy.mockRestore();
   });
+
+  it('returns false when the startup lock disappears before statSync', async () => {
+    const dependencies = {
+      findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
+    };
+    const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+    const statSpy = jest.spyOn(require('fs'), 'statSync').mockImplementation(() => {
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    });
+
+    await expect(
+      shouldReportServerStarting('/project', true, dependencies),
+    ).resolves.toBe(false);
+
+    existsSpy.mockRestore();
+    statSpy.mockRestore();
+  });
 });
 
 describe('shouldPromoteToServerStartingError', () => {
@@ -467,5 +485,33 @@ describe('isSettingsReadError', () => {
         new Error('Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json'),
       ),
     ).toBe(true);
+  });
+});
+
+describe('resolveUnityConnectionWithStartupDiagnosis', () => {
+  it('promotes settings read failures to UNITY_SERVER_STARTING when startup lock is fresh', async () => {
+    const dependencies = {
+      findRunningUnityProcessForProjectFn: jest.fn().mockResolvedValue({ pid: 1234 }),
+    };
+    const existsSpy = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+    const statSpy = jest
+      .spyOn(require('fs'), 'statSync')
+      .mockReturnValue({ mtimeMs: Date.now() } as { mtimeMs: number });
+
+    await expect(
+      resolveUnityConnectionWithStartupDiagnosis(
+        undefined,
+        '/project',
+        dependencies,
+        jest.fn().mockRejectedValue(
+          new Error(
+            'Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
+          ),
+        ),
+      ),
+    ).rejects.toThrow('UNITY_SERVER_STARTING');
+
+    existsSpy.mockRestore();
+    statSpy.mockRestore();
   });
 });

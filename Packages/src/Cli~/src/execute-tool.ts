@@ -253,7 +253,13 @@ function isServerStarting(projectRoot: string | null): boolean {
     return false;
   }
 
-  const lockAgeMilliseconds = Date.now() - statSync(serverStartingLockPath).mtimeMs;
+  let lockAgeMilliseconds: number;
+  try {
+    lockAgeMilliseconds = Date.now() - statSync(serverStartingLockPath).mtimeMs;
+  } catch {
+    return false;
+  }
+
   return lockAgeMilliseconds <= SERVER_STARTING_STALE_LOCK_MAX_AGE_MS;
 }
 
@@ -288,6 +294,25 @@ export async function shouldPromoteToServerStartingError(
   }
 
   return shouldReportServerStarting(projectRoot, shouldDiagnoseProjectState, dependencies);
+}
+
+export async function resolveUnityConnectionWithStartupDiagnosis(
+  explicitPort: number | undefined,
+  projectPath: string | undefined,
+  dependencies: ConnectionFailureDiagnosisDependencies = defaultConnectionFailureDiagnosisDependencies,
+  resolveUnityConnectionFn: typeof resolveUnityConnection = resolveUnityConnection,
+): Promise<ResolvedUnityConnection> {
+  try {
+    return await resolveUnityConnectionFn(explicitPort, projectPath);
+  } catch (error) {
+    const projectRoot =
+      projectPath !== undefined ? validateProjectPath(projectPath) : findUnityProjectRoot();
+    if (await shouldPromoteToServerStartingError(error, projectRoot, true, dependencies)) {
+      throw new Error('UNITY_SERVER_STARTING');
+    }
+
+    throw error;
+  }
 }
 
 async function throwFinalToolError(
@@ -571,7 +596,10 @@ export async function executeToolCommand(
   const commandStartedAt: number = Date.now();
   const portNumber = parseExplicitPort(globalOptions.port);
   checkUnityBusyStateBeforeProjectResolution(globalOptions);
-  let connection = await resolveUnityConnection(portNumber, globalOptions.projectPath);
+  let connection = await resolveUnityConnectionWithStartupDiagnosis(
+    portNumber,
+    globalOptions.projectPath,
+  );
   const compileOptions = getCompileExecutionOptions(toolName, params);
   const shouldWaitForDomainReload = compileOptions.waitForDomainReload;
   const compileRequestId = shouldWaitForDomainReload ? ensureCompileRequestId(params) : undefined;
@@ -786,7 +814,10 @@ export async function executeToolCommand(
 export async function listAvailableTools(globalOptions: GlobalOptions): Promise<void> {
   const portNumber = parseExplicitPort(globalOptions.port);
   checkUnityBusyStateBeforeProjectResolution(globalOptions);
-  let connection = await resolveUnityConnection(portNumber, globalOptions.projectPath);
+  let connection = await resolveUnityConnectionWithStartupDiagnosis(
+    portNumber,
+    globalOptions.projectPath,
+  );
 
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
@@ -893,7 +924,10 @@ function convertProperties(
 export async function syncTools(globalOptions: GlobalOptions): Promise<void> {
   const portNumber = parseExplicitPort(globalOptions.port);
   checkUnityBusyStateBeforeProjectResolution(globalOptions);
-  let connection = await resolveUnityConnection(portNumber, globalOptions.projectPath);
+  let connection = await resolveUnityConnectionWithStartupDiagnosis(
+    portNumber,
+    globalOptions.projectPath,
+  );
 
   const restoreStdin = suppressStdinEcho();
   const spinner = createSpinner('Connecting to Unity...');
