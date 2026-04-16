@@ -41,8 +41,12 @@ const defaultDependencies: DynamicCodeLaunchReadinessDependencies = {
 };
 
 function isTransientExecuteDynamicCodeFailure(
-  payload: ExecuteDynamicCodeReadinessResponse,
+  payload: ExecuteDynamicCodeReadinessResponse | undefined | null,
 ): boolean {
+  if (payload === undefined || payload === null) {
+    return true;
+  }
+
   if (typeof payload.Success !== 'boolean') {
     return true;
   }
@@ -179,7 +183,7 @@ export async function waitForDynamicCodeReadyAfterLaunch(
         },
       );
 
-      if (payload.Success) {
+      if (payload?.Success) {
         if (isLaunchReadinessStable(payload)) {
           return;
         }

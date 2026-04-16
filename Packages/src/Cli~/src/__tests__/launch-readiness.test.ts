@@ -237,6 +237,38 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
     expect(sleepCount).toBe(1);
   });
 
+  it('retries undefined payloads until success', async () => {
+    const recordedMethods: string[] = [];
+    const responses: Array<MockReadinessResponse | Error | undefined> = [
+      undefined,
+      { Success: true },
+    ];
+    let sleepCount = 0;
+
+    await waitForDynamicCodeReadyAfterLaunch('/project', {
+      resolveUnityConnectionFn: jest.fn().mockResolvedValue(createConnection(8711)),
+      createClient: () =>
+        createMockClient(
+          responses as Array<MockReadinessResponse | Error>,
+          recordedMethods,
+        ).client,
+      sleepFn: jest.fn().mockImplementation((): Promise<void> => {
+        sleepCount++;
+        return Promise.resolve();
+      }),
+      nowFn: (() => {
+        let now = 0;
+        return (): number => {
+          now += 100;
+          return now;
+        };
+      })(),
+    });
+
+    expect(recordedMethods).toEqual(['execute-dynamic-code', 'execute-dynamic-code']);
+    expect(sleepCount).toBe(1);
+  });
+
   it('retries successful probes until RequestTotal settles below threshold', async () => {
     const recordedMethods: string[] = [];
     const responses: Array<MockReadinessResponse | Error> = [
