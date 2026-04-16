@@ -102,14 +102,7 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             // Signal server is starting for CLI detection
-            string serverStartingLockToken = ServerStartingLockService.CreateLockFile();
-            UnityEngine.Debug.Assert(
-                !string.IsNullOrEmpty(serverStartingLockToken),
-                "serverstarting.lock must be created before starting the server");
-            if (string.IsNullOrEmpty(serverStartingLockToken))
-            {
-                throw new InvalidOperationException("Failed to create serverstarting.lock.");
-            }
+            string serverStartingLockToken = CreateOptionalServerStartingLock();
 
             bool startupLockReleasedByPrewarm = false;
             try
@@ -709,14 +702,7 @@ namespace io.github.hatayama.uLoopMCP
                     return;
                 }
 
-                serverStartingLockToken = ServerStartingLockService.CreateLockFile();
-                UnityEngine.Debug.Assert(
-                    !string.IsNullOrEmpty(serverStartingLockToken),
-                    "serverstarting.lock must be created before server recovery starts");
-                if (string.IsNullOrEmpty(serverStartingLockToken))
-                {
-                    throw new InvalidOperationException("Failed to create serverstarting.lock.");
-                }
+                serverStartingLockToken = CreateOptionalServerStartingLock();
 
                 // Ensure previous instance is fully disposed before trying to bind a new one
                 if (mcpServer != null)
@@ -890,6 +876,25 @@ namespace io.github.hatayama.uLoopMCP
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
             string serverSessionId = Guid.NewGuid().ToString("N");
             McpEditorSettings.SetRunningServerSession(port, projectRoot, serverSessionId);
+        }
+
+        internal static string CreateOptionalServerStartingLock(Func<string> createLockFile = null)
+        {
+            Func<string> createLockFileCore = createLockFile ?? ServerStartingLockService.CreateLockFile;
+            string serverStartingLockToken = createLockFileCore();
+            if (!string.IsNullOrEmpty(serverStartingLockToken))
+            {
+                return serverStartingLockToken;
+            }
+
+            // Why: serverstarting.lock only improves busy diagnostics for external callers; the
+            // listener itself can still start and recover safely without it.
+            // Why not fail fast here: a transient file lock would otherwise turn an optional
+            // readiness hint into a full startup outage for launch and recovery paths.
+            VibeLogger.LogWarning(
+                "server_starting_lock_optional",
+                "Proceeding without serverstarting.lock because the readiness hint could not be created.");
+            return null;
         }
     }
 }
