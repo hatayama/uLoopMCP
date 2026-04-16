@@ -213,10 +213,10 @@ namespace io.github.hatayama.uLoopMCP
                     }
                 }, TaskScheduler.Default);
 
-                // Server is now ready to accept connections - clean up all lock files
+                // Server is now ready to accept connections - clean up compilation/reload locks.
+                // serverstarting.lock stays until dynamic code prewarm completes.
                 CompilationLockService.DeleteLockFile();
                 DomainReloadDetectionService.DeleteLockFile();
-                ServerStartingLockService.DeleteLockFile();
 
                 // Notify that server has started
                 OnServerStarted?.Invoke();

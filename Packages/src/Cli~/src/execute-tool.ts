@@ -9,6 +9,7 @@
 
 import { PRODUCT_DISPLAY_NAME } from './cli-constants';
 import * as readline from 'readline';
+import { spawnSync } from 'child_process';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import * as semver from 'semver';
@@ -103,6 +104,22 @@ const RETRY_DELAY_MS = 500;
 const MAX_RETRIES = 3;
 const COMPILE_WAIT_TIMEOUT_MS = 90000;
 const COMPILE_WAIT_POLL_INTERVAL_MS = 100;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE = 'using UnityEngine; return Mathf.PI;';
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS = 500;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT = 2;
+const POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_RETRIES = 3;
+
+interface PostCompileDynamicCodePrewarmDependencies {
+  spawnCliProcess: (args: string[]) => { status: number | null; error?: Error };
+}
+
+const defaultPostCompileDynamicCodePrewarmDependencies: PostCompileDynamicCodePrewarmDependencies = {
+  spawnCliProcess: (args: string[]) =>
+    spawnSync(process.execPath, [process.argv[1], ...args], {
+      stdio: 'ignore',
+      windowsHide: true,
+    }),
+};
 
 interface ConnectionFailureDiagnosisDependencies {
   findRunningUnityProcessForProjectFn: typeof findRunningUnityProcessForProject;
@@ -306,6 +323,43 @@ export function appendCliTimingsToDynamicCodeResult(
 
   const cliOverheadMilliseconds = Math.max(0, cliTotalMilliseconds - requestTotalMilliseconds);
   timings.push(`[Perf] CliOverhead: ${cliOverheadMilliseconds.toFixed(1)}ms`);
+}
+
+export function shouldPrewarmDynamicCodeAfterCompile(result: Record<string, unknown>): boolean {
+  const success = result['Success'];
+  const errorCount = result['ErrorCount'];
+  return success === true && errorCount === 0;
+}
+
+export async function prewarmDynamicCodeAfterCompile(
+  projectRoot: string,
+  dependencies: PostCompileDynamicCodePrewarmDependencies = defaultPostCompileDynamicCodePrewarmDependencies,
+): Promise<void> {
+  for (let successfulRuns = 0; successfulRuns < POST_COMPILE_DYNAMIC_CODE_PREWARM_PROCESS_COUNT; successfulRuns++) {
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt < POST_COMPILE_DYNAMIC_CODE_PREWARM_MAX_RETRIES; attempt++) {
+      await sleep(POST_COMPILE_DYNAMIC_CODE_PREWARM_DELAY_MS);
+      const prewarmResult = dependencies.spawnCliProcess([
+        'execute-dynamic-code',
+        '--code',
+        POST_COMPILE_DYNAMIC_CODE_PREWARM_CODE,
+        '--project-path',
+        projectRoot,
+      ]);
+      if (prewarmResult.status === 0) {
+        lastError = undefined;
+        break;
+      }
+
+      lastError =
+        prewarmResult.error ?? new Error('Post-compile dynamic code prewarm failed.');
+    }
+
+    if (lastError !== undefined) {
+      throw lastError;
+    }
+  }
 }
 
 /**
@@ -588,6 +642,15 @@ export async function executeToolCommand(
     } else {
       const finalResult = storedResult ?? immediateResult;
       if (finalResult !== undefined) {
+        if (toolName === 'compile' && shouldPrewarmDynamicCodeAfterCompile(finalResult)) {
+          // Why: one hidden execute-dynamic-code request after domain reload warms the same
+          // isolated CLI process boundary that the next user-visible dynamic execution will use.
+          // Why not treat this optimization as part of compile correctness: a successful
+          // compile result must still be returned even if the latency warmup misses.
+          spinner.update('Finalizing dynamic code warmup...');
+          await prewarmDynamicCodeAfterCompile(effectiveProjectRoot).catch(() => undefined);
+        }
+
         spinner.stop();
         restoreStdin();
         if (toolName === 'execute-dynamic-code') {

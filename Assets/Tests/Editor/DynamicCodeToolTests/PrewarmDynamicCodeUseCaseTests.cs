@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,51 +23,49 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task RequestAsync_WhenSupportedAndWarmupSucceeds_ShouldRetryOnNextRequest()
         {
-            FakePrewarmRuntime runtime = new FakePrewarmRuntime(
-                true,
-                new ExecutionResult { Success = true },
-                new ExecutionResult { Success = true });
-            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
-            DynamicCodeSecurityLevel previous = ULoopSettings.GetDynamicCodeSecurityLevel();
-            ULoopSettings.SetDynamicCodeSecurityLevel(DynamicCodeSecurityLevel.FullAccess);
+            FakePrewarmRuntime runtime = new FakePrewarmRuntime(true);
+            FakeDynamicCodeAutoPrewarmExecutor executor = new FakeDynamicCodeAutoPrewarmExecutor(
+                new DynamicCodeAutoPrewarmResult { Success = true },
+                new DynamicCodeAutoPrewarmResult { Success = true },
+                new DynamicCodeAutoPrewarmResult { Success = true },
+                new DynamicCodeAutoPrewarmResult { Success = true },
+                new DynamicCodeAutoPrewarmResult { Success = true },
+                new DynamicCodeAutoPrewarmResult { Success = true });
+            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(
+                runtime,
+                default,
+                executor);
 
-            try
-            {
-                await useCase.RequestAsync();
-                await useCase.RequestAsync();
+            await useCase.RequestAsync();
+            await useCase.RequestAsync();
 
-                Assert.That(runtime.Requests, Has.Count.EqualTo(2));
-                Assert.That(
-                    runtime.Requests[0].Code,
-                    Does.Contain("Debug.Log(\"Unity CLI Loop dynamic code prewarm\");"));
-                Assert.That(
-                    runtime.Requests[0].Code,
-                    Does.Contain("return \"Unity CLI Loop dynamic code prewarm\";"));
-                Assert.That(
-                    runtime.Requests[0].Code,
-                    Does.Not.Contain("DynamicCodePrewarmLogSilencer"));
-                Assert.That(runtime.Requests[0].ClassName, Is.EqualTo(DynamicCodeConstants.DEFAULT_CLASS_NAME));
-                Assert.That(runtime.Requests[0].SecurityLevel, Is.EqualTo(DynamicCodeSecurityLevel.FullAccess));
-                Assert.That(runtime.Requests[0].CompileOnly, Is.False);
-                Assert.That(runtime.Requests[0].YieldToForegroundRequests, Is.True);
-                Assert.That(DynamicCodeStartupTelemetry.CreateTimingEntries(), Has.Member("[Perf] WarmReady: True"));
-            }
-            finally
-            {
-                ULoopSettings.SetDynamicCodeSecurityLevel(previous);
-            }
+            Assert.That(executor.Requests, Has.Count.EqualTo(6));
+            Assert.That(
+                executor.Requests[0].Code,
+                Does.Contain("Debug.Log(\"Unity CLI Loop dynamic code prewarm\");"));
+            Assert.That(
+                executor.Requests[0].Code,
+                Does.Contain("return \"Unity CLI Loop dynamic code prewarm\";"));
+            Assert.That(
+                executor.Requests[0].Code,
+                Does.Not.Contain("DynamicCodePrewarmLogSilencer"));
+            Assert.That(executor.Requests[0].CompileOnly, Is.False);
+            Assert.That(executor.Requests[1].Code, Is.EqualTo(executor.Requests[0].Code));
+            Assert.That(executor.Requests[2].Code, Is.EqualTo(executor.Requests[0].Code));
+            Assert.That(DynamicCodeStartupTelemetry.CreateTimingEntries(), Has.Member("[Perf] WarmReady: True"));
         }
 
         [Test]
         public async Task RequestAsync_WhenFastPathIsUnavailable_ShouldSkipExecution()
         {
-            FakePrewarmRuntime runtime = new FakePrewarmRuntime(false, System.Array.Empty<ExecutionResult>());
-            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
+            FakePrewarmRuntime runtime = new FakePrewarmRuntime(false);
+            FakeDynamicCodeAutoPrewarmExecutor executor = new FakeDynamicCodeAutoPrewarmExecutor();
+            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime, default, executor);
 
             await useCase.RequestAsync();
             await useCase.RequestAsync();
 
-            Assert.That(runtime.Requests, Is.Empty);
+            Assert.That(executor.Requests, Is.Empty);
             Assert.That(
                 DynamicCodeStartupTelemetry.CreateTimingEntries(),
                 Has.Member("[Perf] PrewarmDetail: fast_path_unavailable"));
@@ -77,56 +74,75 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         [Test]
         public async Task RequestAsync_WhenWarmupFails_ShouldRetryOnNextRequest()
         {
-            FakePrewarmRuntime runtime = new FakePrewarmRuntime(
-                true,
-                new ExecutionResult
+            FakePrewarmRuntime runtime = new FakePrewarmRuntime(true);
+            FakeDynamicCodeAutoPrewarmExecutor executor = new FakeDynamicCodeAutoPrewarmExecutor(
+                new DynamicCodeAutoPrewarmResult
                 {
                     Success = false,
                     ErrorMessage = "warmup failed"
                 },
-                new ExecutionResult
+                new DynamicCodeAutoPrewarmResult
+                {
+                    Success = true
+                },
+                new DynamicCodeAutoPrewarmResult
+                {
+                    Success = true
+                },
+                new DynamicCodeAutoPrewarmResult
                 {
                     Success = true
                 });
-            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
+            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime, default, executor);
 
             await useCase.RequestAsync();
             await useCase.RequestAsync();
 
-            Assert.That(runtime.Requests, Has.Count.EqualTo(2));
+            Assert.That(executor.Requests, Has.Count.EqualTo(4));
         }
 
         [Test]
         public async Task RequestAsync_WhenRuntimeIsBusy_ShouldSkipExecution()
         {
-            FakePrewarmRuntime runtime = new FakePrewarmRuntime(
-                true,
-                false,
-                System.Array.Empty<ExecutionResult>());
-            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
+            FakePrewarmRuntime runtime = new FakePrewarmRuntime(true);
+            FakeDynamicCodeAutoPrewarmExecutor executor = new FakeDynamicCodeAutoPrewarmExecutor(
+                new DynamicCodeAutoPrewarmResult
+                {
+                    Success = false,
+                    ErrorMessage = McpConstants.ERROR_MESSAGE_EXECUTION_IN_PROGRESS
+                });
+            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime, default, executor);
 
             await useCase.RequestAsync();
 
-            Assert.That(runtime.Requests, Is.Empty);
+            Assert.That(executor.Requests, Has.Count.EqualTo(1));
         }
 
         [Test]
         public async Task RequestAsync_WhenCalledTwiceBeforeCompletion_ShouldReturnSameTask()
         {
-            TaskCompletionSource<ExecutionResult> completionSource =
-                new TaskCompletionSource<ExecutionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            FakePrewarmRuntime runtime = new FakePrewarmRuntime(
-                true,
-                new[] { completionSource.Task });
-            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime);
+            TaskCompletionSource<DynamicCodeAutoPrewarmResult> completionSource =
+                new TaskCompletionSource<DynamicCodeAutoPrewarmResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<DynamicCodeAutoPrewarmResult> secondCompletionSource =
+                new TaskCompletionSource<DynamicCodeAutoPrewarmResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<DynamicCodeAutoPrewarmResult> thirdCompletionSource =
+                new TaskCompletionSource<DynamicCodeAutoPrewarmResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+            FakePrewarmRuntime runtime = new FakePrewarmRuntime(true);
+            FakeDynamicCodeAutoPrewarmExecutor executor = new FakeDynamicCodeAutoPrewarmExecutor(
+                completionSource.Task,
+                secondCompletionSource.Task,
+                thirdCompletionSource.Task);
+            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime, default, executor);
 
             Task firstTask = useCase.RequestAsync();
             Task secondTask = useCase.RequestAsync();
 
             Assert.That(secondTask, Is.SameAs(firstTask));
-            completionSource.SetResult(new ExecutionResult { Success = true });
+            completionSource.SetResult(new DynamicCodeAutoPrewarmResult { Success = true });
+            secondCompletionSource.SetResult(new DynamicCodeAutoPrewarmResult { Success = true });
+            thirdCompletionSource.SetResult(new DynamicCodeAutoPrewarmResult { Success = true });
             await firstTask;
-            Assert.That(runtime.Requests, Has.Count.EqualTo(1));
+            Assert.That(executor.Requests, Has.Count.EqualTo(3));
         }
 
         [Test]
@@ -134,60 +150,27 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         {
             using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.Cancel();
-            FakePrewarmRuntime runtime = new FakePrewarmRuntime(
-                true,
-                new ExecutionResult { Success = true });
+            FakePrewarmRuntime runtime = new FakePrewarmRuntime(true);
+            FakeDynamicCodeAutoPrewarmExecutor executor = new FakeDynamicCodeAutoPrewarmExecutor(
+                new DynamicCodeAutoPrewarmResult { Success = true });
             PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(
                 runtime,
-                cancellationTokenSource.Token);
+                cancellationTokenSource.Token,
+                executor);
 
             await useCase.RequestAsync();
 
-            Assert.That(runtime.Requests, Is.Empty);
+            Assert.That(executor.Requests, Is.Empty);
         }
 
         private sealed class FakePrewarmRuntime : IDynamicCodeExecutionRuntime
         {
-            private readonly Queue<Task<ExecutionResult>> _resultTasks;
             private readonly bool _supportsAutoPrewarm;
-            private readonly bool _idle;
 
-            public FakePrewarmRuntime(
-                bool supportsAutoPrewarm,
-                params ExecutionResult[] results)
-                : this(supportsAutoPrewarm, true, results)
-            {
-            }
-
-            public FakePrewarmRuntime(
-                bool supportsAutoPrewarm,
-                bool idle,
-                params ExecutionResult[] results)
-                : this(
-                    supportsAutoPrewarm,
-                    idle,
-                    WrapResults(results))
-            {
-            }
-
-            public FakePrewarmRuntime(
-                bool supportsAutoPrewarm,
-                params Task<ExecutionResult>[] resultTasks)
-                : this(supportsAutoPrewarm, true, resultTasks)
-            {
-            }
-
-            public FakePrewarmRuntime(
-                bool supportsAutoPrewarm,
-                bool idle,
-                params Task<ExecutionResult>[] resultTasks)
+            public FakePrewarmRuntime(bool supportsAutoPrewarm)
             {
                 _supportsAutoPrewarm = supportsAutoPrewarm;
-                _idle = idle;
-                _resultTasks = new Queue<Task<ExecutionResult>>(resultTasks ?? new Task<ExecutionResult>[0]);
             }
-
-            public List<DynamicCodeExecutionRequest> Requests { get; } = new List<DynamicCodeExecutionRequest>();
 
             public bool SupportsAutoPrewarm()
             {
@@ -198,50 +181,66 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
                 DynamicCodeExecutionRequest request,
                 CancellationToken cancellationToken = default)
             {
-                Requests.Add(new DynamicCodeExecutionRequest
+                Assert.Fail("Prewarm should go through the execute-dynamic-code entry path instead of the runtime facade.");
+                return Task.FromResult(new ExecutionResult { Success = false });
+            }
+
+            public Task<(bool Entered, ExecutionResult Result)> TryExecuteIfIdleAsync(
+                DynamicCodeExecutionRequest request,
+                CancellationToken cancellationToken = default)
+            {
+                Assert.Fail("Prewarm should no longer rely on the idle-only runtime path.");
+                return Task.FromResult((false, new ExecutionResult { Success = false }));
+            }
+        }
+
+        private sealed class FakeDynamicCodeAutoPrewarmExecutor : IDynamicCodeAutoPrewarmExecutor
+        {
+            private readonly Queue<Task<DynamicCodeAutoPrewarmResult>> _resultTasks;
+
+            public FakeDynamicCodeAutoPrewarmExecutor()
+                : this(System.Array.Empty<Task<DynamicCodeAutoPrewarmResult>>())
+            {
+            }
+
+            public FakeDynamicCodeAutoPrewarmExecutor(
+                params DynamicCodeAutoPrewarmResult[] results)
+                : this(WrapResults(results))
+            {
+            }
+
+            public FakeDynamicCodeAutoPrewarmExecutor(
+                params Task<DynamicCodeAutoPrewarmResult>[] resultTasks)
+            {
+                _resultTasks = new Queue<Task<DynamicCodeAutoPrewarmResult>>(
+                    resultTasks ?? System.Array.Empty<Task<DynamicCodeAutoPrewarmResult>>());
+            }
+
+            public List<ExecuteDynamicCodeSchema> Requests { get; } = new List<ExecuteDynamicCodeSchema>();
+
+            public Task<DynamicCodeAutoPrewarmResult> ExecuteAsync(
+                ExecuteDynamicCodeSchema parameters,
+                CancellationToken cancellationToken)
+            {
+                Requests.Add(new ExecuteDynamicCodeSchema
                 {
-                    Code = request.Code,
-                    ClassName = request.ClassName,
-                    Parameters = request.Parameters,
-                    CompileOnly = request.CompileOnly,
-                    SecurityLevel = request.SecurityLevel,
-                    YieldToForegroundRequests = request.YieldToForegroundRequests
+                    Code = parameters.Code,
+                    CompileOnly = parameters.CompileOnly
                 });
 
                 return _resultTasks.Dequeue();
             }
 
-            public async Task<(bool Entered, ExecutionResult Result)> TryExecuteIfIdleAsync(
-                DynamicCodeExecutionRequest request,
-                CancellationToken cancellationToken = default)
-            {
-                if (!_idle)
-                {
-                    return (false, null);
-                }
-
-                Requests.Add(new DynamicCodeExecutionRequest
-                {
-                    Code = request.Code,
-                    ClassName = request.ClassName,
-                    Parameters = request.Parameters,
-                    CompileOnly = request.CompileOnly,
-                    SecurityLevel = request.SecurityLevel,
-                    YieldToForegroundRequests = request.YieldToForegroundRequests
-                });
-
-                ExecutionResult result = await _resultTasks.Dequeue();
-                return (true, result);
-            }
-
-            private static Task<ExecutionResult>[] WrapResults(ExecutionResult[] results)
+            private static Task<DynamicCodeAutoPrewarmResult>[] WrapResults(
+                DynamicCodeAutoPrewarmResult[] results)
             {
                 if (results == null)
                 {
-                    return new Task<ExecutionResult>[0];
+                    return System.Array.Empty<Task<DynamicCodeAutoPrewarmResult>>();
                 }
 
-                Task<ExecutionResult>[] wrappedResults = new Task<ExecutionResult>[results.Length];
+                Task<DynamicCodeAutoPrewarmResult>[] wrappedResults =
+                    new Task<DynamicCodeAutoPrewarmResult>[results.Length];
                 for (int index = 0; index < results.Length; index++)
                 {
                     wrappedResults[index] = Task.FromResult(results[index]);

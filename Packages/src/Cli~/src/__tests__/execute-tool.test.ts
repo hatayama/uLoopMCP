@@ -2,8 +2,10 @@ import {
   appendCliTimingsToDynamicCodeResult,
   diagnoseRetryableProjectConnectionError,
   isTransportDisconnectError,
+  prewarmDynamicCodeAfterCompile,
   stripInternalFields,
   resolveRecoveryPortOrKeepCurrent,
+  shouldPrewarmDynamicCodeAfterCompile,
   shouldRetryWhenUnityProcessIsRunning,
 } from '../execute-tool.js';
 import {
@@ -98,6 +100,74 @@ describe('appendCliTimingsToDynamicCodeResult', () => {
       '[Perf] CliProcessTotal: 260.0ms',
       '[Perf] CliBootstrap: 80.0ms',
     ]);
+  });
+});
+
+describe('shouldPrewarmDynamicCodeAfterCompile', () => {
+  it('returns true when compile succeeded without errors', () => {
+    expect(
+      shouldPrewarmDynamicCodeAfterCompile({
+        Success: true,
+        ErrorCount: 0,
+      }),
+    ).toBe(true);
+  });
+
+  it('returns false when compile failed or reported errors', () => {
+    expect(
+      shouldPrewarmDynamicCodeAfterCompile({
+        Success: false,
+        ErrorCount: 0,
+      }),
+    ).toBe(false);
+    expect(
+      shouldPrewarmDynamicCodeAfterCompile({
+        Success: true,
+        ErrorCount: 2,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe('prewarmDynamicCodeAfterCompile', () => {
+  it('spawns an isolated execute-dynamic-code process against the same project', async () => {
+    const spawnCliProcess = jest.fn().mockReturnValue({ status: 0 });
+
+    await prewarmDynamicCodeAfterCompile('/project', {
+      spawnCliProcess,
+    });
+
+    expect(spawnCliProcess).toHaveBeenCalledTimes(2);
+    expect(spawnCliProcess).toHaveBeenNthCalledWith(1, [
+      'execute-dynamic-code',
+      '--code',
+      'using UnityEngine; return Mathf.PI;',
+      '--project-path',
+      '/project',
+    ]);
+    expect(spawnCliProcess).toHaveBeenNthCalledWith(2, [
+      'execute-dynamic-code',
+      '--code',
+      'using UnityEngine; return Mathf.PI;',
+      '--project-path',
+      '/project',
+    ]);
+  });
+
+  it('throws when the isolated CLI prewarm fails', async () => {
+    await expect(
+      prewarmDynamicCodeAfterCompile('/project', {
+        spawnCliProcess: jest.fn().mockReturnValue({ status: 1 }),
+      }),
+    ).rejects.toThrow('Post-compile dynamic code prewarm failed.');
+  });
+
+  it('throws when spawning the isolated CLI prewarm process fails', async () => {
+    await expect(
+      prewarmDynamicCodeAfterCompile('/project', {
+        spawnCliProcess: jest.fn().mockReturnValue({ status: null, error: new Error('spawn failed') }),
+      }),
+    ).rejects.toThrow('spawn failed');
   });
 });
 

@@ -138,6 +138,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
+                ServerStartingLockService.DeleteLockFile();
                 // Error message already handled by UseCase
                 UnityEngine.Debug.LogError($"Server startup failed: {result.Message}");
             }
@@ -660,7 +661,8 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
-            // Ensure lock files are cleaned up on server startup (handles crash recovery)
+            // Ensure stale reload locks are cleaned up before recovery.
+            // serverstarting.lock is recreated below and is released by the prewarm path.
             DomainReloadDetectionService.DeleteLockFile();
             CompilationLockService.DeleteLockFile();
             ServerStartingLockService.DeleteLockFile();
@@ -682,6 +684,8 @@ namespace io.github.hatayama.uLoopMCP
                     VibeLogger.LogInfo("server_start_ignored", $"already_running port={mcpServer.Port}");
                     return;
                 }
+
+                ServerStartingLockService.CreateLockFile();
 
                 // Ensure previous instance is fully disposed before trying to bind a new one
                 if (mcpServer != null)
@@ -758,6 +762,11 @@ namespace io.github.hatayama.uLoopMCP
                 prewarmDynamicCodeUseCase.Request();
 
                 ActivateStartupProtection(5000);
+            }
+            catch
+            {
+                ServerStartingLockService.DeleteLockFile();
+                throw;
             }
             finally
             {
