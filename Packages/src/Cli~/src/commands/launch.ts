@@ -92,8 +92,6 @@ async function runLaunchCommand(
     return;
   }
 
-  console.log('Waiting for execute-dynamic-code warmup...');
   await waitForDynamicCodeReadyAfterLaunch(launchResult.projectPath);
   await prewarmDynamicCodeAfterLaunch({ projectRoot: launchResult.projectPath });
-  console.log('execute-dynamic-code is ready.');
 }

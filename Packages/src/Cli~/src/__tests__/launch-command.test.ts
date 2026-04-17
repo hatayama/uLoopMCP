@@ -1,6 +1,10 @@
-jest.mock('launch-unity', () => ({
-  orchestrateLaunch: jest.fn(),
-}), { virtual: true });
+jest.mock(
+  'launch-unity',
+  () => ({
+    orchestrateLaunch: jest.fn(),
+  }),
+  { virtual: true },
+);
 
 jest.mock('../launch-readiness.js', () => ({
   waitForDynamicCodeReadyAfterLaunch: jest.fn(),
@@ -31,9 +35,15 @@ describe('launch command', () => {
   const waitForLaunchReadyAfterLaunchMock = jest.mocked(waitForLaunchReadyAfterLaunch);
   const prewarmDynamicCodeAfterLaunchMock = jest.mocked(prewarmDynamicCodeAfterLaunch);
   const isToolEnabledMock = jest.mocked(isToolEnabled);
+  let consoleLogSpy: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
   });
 
   it('waits for general launch readiness but skips dynamic-code warmup when execute-dynamic-code is disabled', async () => {
@@ -52,5 +62,24 @@ describe('launch command', () => {
     expect(waitForLaunchReadyAfterLaunchMock).toHaveBeenCalledWith('/project');
     expect(waitForDynamicCodeReadyAfterLaunchMock).not.toHaveBeenCalled();
     expect(prewarmDynamicCodeAfterLaunchMock).not.toHaveBeenCalled();
+  });
+
+  it('warms dynamic code after launch without printing internal warmup progress', async () => {
+    orchestrateLaunchMock.mockResolvedValue({
+      action: 'launched',
+      projectPath: '/project',
+      unityVersion: '2022.3.0f1',
+    });
+    isToolEnabledMock.mockReturnValue(true);
+
+    const program = new Command();
+    registerLaunchCommand(program);
+
+    await program.parseAsync(['node', 'uloop', 'launch', '/project']);
+
+    expect(waitForDynamicCodeReadyAfterLaunchMock).toHaveBeenCalledWith('/project');
+    expect(prewarmDynamicCodeAfterLaunchMock).toHaveBeenCalledWith({ projectRoot: '/project' });
+    expect(consoleLogSpy).not.toHaveBeenCalledWith('Waiting for execute-dynamic-code warmup...');
+    expect(consoleLogSpy).not.toHaveBeenCalledWith('execute-dynamic-code is ready.');
   });
 });
