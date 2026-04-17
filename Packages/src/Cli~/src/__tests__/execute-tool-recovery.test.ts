@@ -53,8 +53,7 @@ jest.mock('../port-resolver.js', () => ({
   resolveUnityConnection: (
     explicitPort?: number,
     projectPath?: string,
-  ): Promise<MockResolvedUnityConnection> =>
-    mockResolveUnityConnection(explicitPort, projectPath),
+  ): Promise<MockResolvedUnityConnection> => mockResolveUnityConnection(explicitPort, projectPath),
   validateProjectPath: (projectPath: string): string => mockValidateProjectPath(projectPath),
   UnityNotRunningError: class UnityNotRunningError extends Error {},
   UnityServerNotRunningError: class UnityServerNotRunningError extends Error {},
@@ -107,8 +106,7 @@ jest.mock('../direct-unity-client.js', () => ({
   DirectUnityClient: MockDirectUnityClient,
 }));
 
-import { executeToolCommand } from '../execute-tool.js';
-import { listAvailableTools, syncTools } from '../execute-tool.js';
+import { executeToolCommand, listAvailableTools, syncTools } from '../execute-tool.js';
 
 describe('executeToolCommand recovery', () => {
   beforeEach(() => {
@@ -168,9 +166,12 @@ describe('executeToolCommand recovery', () => {
 
   it('cleans up interactive feedback when server startup blocks the next retry iteration', async () => {
     let lockVisible = false;
-    mockExistsSync.mockImplementation((path: string) => path.endsWith('serverstarting.lock') && lockVisible);
-    mockSleep.mockImplementation(async () => {
+    mockExistsSync.mockImplementation(
+      (path: string) => path.endsWith('serverstarting.lock') && lockVisible,
+    );
+    mockSleep.mockImplementation(async (): Promise<void> => {
       lockVisible = true;
+      await Promise.resolve();
     });
 
     await expect(executeToolCommand('get-logs', {}, { projectPath: '/project' })).rejects.toThrow(

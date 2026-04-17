@@ -782,7 +782,9 @@ describe('shouldPromoteToServerStartingError', () => {
 
     await expect(
       shouldPromoteToServerStartingError(
-        new Error('Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json'),
+        new Error(
+          'Could not read Unity server port from settings.\n\n  Settings file: /project/UserSettings/UnityMcpSettings.json',
+        ),
         'get-tool-details',
         '/project',
         true,
@@ -862,7 +864,7 @@ describe('resolveUnityConnectionWithStartupDiagnosis', () => {
             new Error(
               `Could not read Unity server port from settings.\n\n  Settings file: ${projectRoot}/UserSettings/UnityMcpSettings.json`,
             ),
-        ),
+          ),
       ),
     ).rejects.toThrow('UNITY_SERVER_STARTING');
   });

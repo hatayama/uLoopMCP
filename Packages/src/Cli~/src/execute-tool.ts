@@ -1173,7 +1173,6 @@ export async function executeToolCommand(
       currentProjectRoot,
       currentShouldDiagnoseProjectState,
     );
-
   } finally {
     cleanup();
   }

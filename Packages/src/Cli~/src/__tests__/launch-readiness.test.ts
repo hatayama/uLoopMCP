@@ -778,9 +778,7 @@ describe('waitForDynamicCodeReadyAfterLaunch', () => {
         return Promise.resolve();
       }),
       nowFn: (() => {
-        const values = [
-          0, 100, 200, 1200, 11500, 11600, 22000, 22100, 22300, 22500, 22700,
-        ];
+        const values = [0, 100, 200, 1200, 11500, 11600, 22000, 22100, 22300, 22500, 22700];
         let index = 0;
         return (): number => values[Math.min(index++, values.length - 1)];
       })(),

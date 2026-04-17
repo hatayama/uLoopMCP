@@ -133,9 +133,7 @@ describe('busy state detection order', () => {
       ),
     );
 
-    await expect(syncTools({ projectPath: '/project' })).rejects.toThrow(
-      'UNITY_SERVER_STARTING',
-    );
+    await expect(syncTools({ projectPath: '/project' })).rejects.toThrow('UNITY_SERVER_STARTING');
 
     expect(mockResolveUnityConnection).toHaveBeenCalled();
   });

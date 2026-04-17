@@ -491,7 +491,7 @@ export async function tryHandleFastExecuteDynamicCodeCommand(
   const resolvedProjectPath: string | undefined =
     command.globalOptions.projectPath !== undefined || command.globalOptions.port !== undefined
       ? command.globalOptions.projectPath
-      : dependencies.findUnityProjectRootFn() ?? undefined;
+      : (dependencies.findUnityProjectRootFn() ?? undefined);
   const resolvedGlobalOptions: GlobalOptions = {
     ...command.globalOptions,
     projectPath: resolvedProjectPath,

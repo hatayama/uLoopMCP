@@ -18,7 +18,13 @@ describe('waitForCompileCompletion', () => {
   it('does not let serverstarting.lock block a completed compile result', async () => {
     const projectRoot = createProjectRoot();
     const requestId = 'compile_test_request';
-    const resultPath = join(projectRoot, 'Temp', 'uLoopMCP', 'compile-results', `${requestId}.json`);
+    const resultPath = join(
+      projectRoot,
+      'Temp',
+      'uLoopMCP',
+      'compile-results',
+      `${requestId}.json`,
+    );
     const serverStartingLockPath = join(projectRoot, 'Temp', 'serverstarting.lock');
 
     try {
@@ -30,7 +36,7 @@ describe('waitForCompileCompletion', () => {
         requestId,
         timeoutMs: 2000,
         pollIntervalMs: 10,
-        isUnityReadyWhenIdle: async (): Promise<boolean> => true,
+        isUnityReadyWhenIdle: (): Promise<boolean> => Promise.resolve(true),
       });
 
       expect(completion).toEqual({

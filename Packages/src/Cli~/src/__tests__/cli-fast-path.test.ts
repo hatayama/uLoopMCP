@@ -165,7 +165,7 @@ describe('tryHandleFastExecuteDynamicCodeCommand', () => {
       printToolDisabledErrorFn: jest.fn(),
       exitFn: ((code: number): never => {
         throw new Error(`unexpected exit ${code}`);
-        }) as (code: number) => never,
+      }) as (code: number) => never,
     });
 
     expect(handled).toBe(false);
