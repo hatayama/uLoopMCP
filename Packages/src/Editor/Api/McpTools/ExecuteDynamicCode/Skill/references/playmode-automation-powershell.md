@@ -4,6 +4,21 @@ Code examples for runtime automation during Play mode using `execute-dynamic-cod
 These examples manipulate live scene objects while the game is running.
 Shell command examples in this file target `PowerShell`.
 
+## When to use dedicated mouse simulation tools instead
+
+The examples in this file call UI handlers or runtime methods from C#.
+That is useful for targeted automation, but it is not the same as simulating a real mouse input path.
+
+Use dedicated mouse tools when you want input behavior closer to what a human player produces:
+
+| Scenario | Recommended tool | Why |
+|----------|------------------|-----|
+| Click or drag a uGUI element through the EventSystem path | `simulate-mouse-ui` | Fires `PointerDown` / `PointerUp` / `PointerClick` / drag events through EventSystem raycasts instead of calling handlers from custom C# directly. |
+| Test gameplay that reads `Mouse.current`, button state, delta, or scroll | `simulate-mouse-input` | Injects Input System mouse state into `Mouse.current`, so game code can observe `wasPressedThisFrame`, movement delta, and scroll like player input. |
+| Jump straight to a known button callback or inspect internal state | `execute-dynamic-code` | Best when you intentionally want a direct method call, reflection, or state tweak without reproducing the full input pipeline. |
+
+In short: `execute-dynamic-code` is best for direct automation, while `simulate-mouse-ui` and `simulate-mouse-input` are better when you need the actual input route to be part of the test.
+
 ## PowerShell Quoting Notes
 
 Use these patterns when you need shell-safe inline code:
