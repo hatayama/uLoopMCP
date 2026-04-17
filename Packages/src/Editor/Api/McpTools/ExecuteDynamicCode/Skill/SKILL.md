@@ -57,8 +57,10 @@ For detailed code examples, refer to these files:
   - Undo-aware operations: RecordObject, AddComponent, SetParent, grouping
 - **Selection operations**: See [references/selection-operations.md](references/selection-operations.md)
   - Get/set selection, multi-select, filter by type/editability
-- **PlayMode automation**: See [references/playmode-automation.md](references/playmode-automation.md)
-  - Click UI buttons, raycast interaction, invoke methods, set fields, tool combination workflows
+- **PlayMode automation (zsh)**: See [references/playmode-automation-zsh.md](references/playmode-automation-zsh.md)
+  - Click UI buttons, raycast interaction, invoke methods, set fields, tool combination workflows for zsh users
+- **PlayMode automation (PowerShell)**: See [references/playmode-automation-powershell.md](references/playmode-automation-powershell.md)
+  - Click UI buttons, raycast interaction, invoke methods, set fields, tool combination workflows for PowerShell users
 - **PlayMode UI controls**: See [references/playmode-ui-controls.md](references/playmode-ui-controls.md)
   - InputField, Slider, Toggle, Dropdown, drag & drop simulation, list all UI controls
 - **PlayMode inspection**: See [references/playmode-inspection.md](references/playmode-inspection.md)

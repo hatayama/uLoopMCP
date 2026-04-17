@@ -1,7 +1,67 @@
-# PlayMode Automation
+# PlayMode Automation (PowerShell)
 
 Code examples for runtime automation during Play mode using `execute-dynamic-code`.
 These examples manipulate live scene objects while the game is running.
+Shell command examples in this file target `PowerShell`.
+
+## PowerShell Quoting Notes
+
+Use these patterns when you need shell-safe inline code:
+
+### Double quotes inside C# strings
+
+Single-quote the whole snippet and keep C# string literals unchanged.
+
+```powershell
+uloop execute-dynamic-code --code 'return "Hello from PowerShell";'
+```
+
+### Single quotes inside inline C# code
+
+If the C# snippet itself contains a single quote, double it inside the PowerShell single-quoted string.
+
+```powershell
+uloop execute-dynamic-code --code 'char initial = ''A''; return initial.ToString();'
+```
+
+### JSON-like values passed via `--parameters`
+
+Wrap the whole expression in single quotes so PowerShell passes the inner double quotes through unchanged.
+
+```powershell
+uloop execute-dynamic-code --code 'return parameters["param0"];' --parameters '{"param0":"Hello from PowerShell"}'
+```
+
+### Multi-line C# snippets
+
+Use a here-string when the snippet spans multiple lines.
+
+```powershell
+$code = @'
+using UnityEngine;
+
+GameObject obj = GameObject.Find("Player");
+if (obj == null) return "Player not found";
+
+return obj.name;
+'@
+
+uloop execute-dynamic-code --code $code
+```
+
+You can combine multi-line code with multi-line parameters the same way.
+
+```powershell
+$code = @'
+return parameters["param0"];
+'@
+
+$parameters = @'
+{"param0":"Hello from PowerShell"}
+'@
+
+uloop execute-dynamic-code --code $code --parameters $parameters
+```
 
 ## Click UI Button by Path
 
@@ -135,7 +195,7 @@ Use `find-game-objects` to discover buttons with their hierarchy paths, then cli
 
 **Step 1**: Find all GameObjects with Button component
 
-```bash
+```powershell
 uloop find-game-objects --required-components UnityEngine.UI.Button --include-inactive false
 ```
 
@@ -161,8 +221,8 @@ Use `get-hierarchy` to explore the UI tree structure, then target the right elem
 
 **Step 1**: Get Canvas hierarchy to understand UI structure
 
-```bash
-uloop get-hierarchy --root-path "Canvas" --max-depth 3 --include-components true
+```powershell
+uloop get-hierarchy --root-path 'Canvas' --max-depth 3 --include-components true
 ```
 
 **Step 2**: Based on the hierarchy JSON, click the desired button
@@ -201,7 +261,7 @@ return "Clicked PlayButton";
 
 **Step 2**: Capture Game View to verify the result
 
-```bash
+```powershell
 uloop screenshot --window-name Game
 ```
 
@@ -211,7 +271,7 @@ Run an action then inspect Unity Console logs to verify expected behavior.
 
 **Step 1**: Clear console before the action
 
-```bash
+```powershell
 uloop clear-console
 ```
 
@@ -235,8 +295,8 @@ return "Invoked TakeDamage(50)";
 
 **Step 3**: Check logs for expected output
 
-```bash
-uloop get-logs --log-type Log --search-text "damage"
+```powershell
+uloop get-logs --log-type Log --search-text 'damage'
 ```
 
 ## Full Automation: Play → Act → Capture → Stop
@@ -245,13 +305,13 @@ End-to-end test flow: start Play mode, perform actions, capture evidence, stop.
 
 **Step 0**: Clear console to isolate this run
 
-```bash
+```powershell
 uloop clear-console
 ```
 
 **Step 1**: Start Play mode
 
-```bash
+```powershell
 uloop control-play-mode --action Play
 ```
 
@@ -272,18 +332,18 @@ return $"Clicked {startBtn.gameObject.name}";
 
 **Step 3**: Capture screenshot as evidence
 
-```bash
+```powershell
 uloop screenshot --window-name Game
 ```
 
 **Step 4**: Check logs for errors
 
-```bash
+```powershell
 uloop get-logs --log-type Error
 ```
 
 **Step 5**: Stop Play mode
 
-```bash
+```powershell
 uloop control-play-mode --action Stop
 ```
