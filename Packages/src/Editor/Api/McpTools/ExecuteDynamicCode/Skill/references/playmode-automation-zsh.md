@@ -7,17 +7,20 @@ Shell command examples in this file target `zsh`-style usage.
 ## When to use dedicated mouse simulation tools instead
 
 The examples in this file call UI handlers or runtime methods from C#.
-That is useful for targeted automation, but it is not the same as simulating a real mouse input path.
+That remains the better choice when you want targeted automation, direct state control, or a quick diagnostic path.
+Use dedicated mouse tools only when the input route itself is part of what you need to verify.
 
-Use dedicated mouse tools when you want input behavior closer to what a human player produces:
+Choose the tool based on what you are trying to validate:
 
 | Scenario | Recommended tool | Why |
 |----------|------------------|-----|
-| Click or drag a uGUI element through the EventSystem path | `simulate-mouse-ui` | Fires `PointerDown` / `PointerUp` / `PointerClick` / drag events through EventSystem raycasts instead of calling handlers from custom C# directly. |
+| Verify that a uGUI element responds through the real EventSystem pointer path | `simulate-mouse-ui` | Fires `PointerDown` / `PointerUp` / `PointerClick` / drag events through EventSystem raycasts instead of bypassing the UI input route. |
 | Test gameplay that reads `Mouse.current`, button state, delta, or scroll | `simulate-mouse-input` | Injects Input System mouse state into `Mouse.current`, so game code can observe `wasPressedThisFrame`, movement delta, and scroll like player input. |
-| Jump straight to a known button callback or inspect internal state | `execute-dynamic-code` | Best when you intentionally want a direct method call, reflection, or state tweak without reproducing the full input pipeline. |
+| Jump straight to a known button callback, invoke a method, inspect state, or set up a test precondition | `execute-dynamic-code` | Best when you intentionally want direct automation without reproducing the full input pipeline. |
+| Drive custom runtime behavior that does not map cleanly to the built-in mouse tools | `execute-dynamic-code` | Lets you call project-specific methods, inspect scene objects, and prototype one-off flows immediately. |
 
-In short: `execute-dynamic-code` is best for direct automation, while `simulate-mouse-ui` and `simulate-mouse-input` are better when you need the actual input route to be part of the test.
+In short: do not default everything to mouse simulation.
+Use `execute-dynamic-code` for direct automation and diagnostics, and switch to `simulate-mouse-ui` or `simulate-mouse-input` when reproducing the real input path is the thing you need to test.
 
 ## zsh Quoting Notes
 
@@ -71,43 +74,6 @@ if (target == null) return $"PlayButton not found. Available: {string.Join(", ",
 
 target.onClick.Invoke();
 return $"Clicked {target.gameObject.name}";
-```
-
-## Raycast from Camera Center
-
-```csharp
-Camera cam = Camera.main;
-if (cam == null) return "Main camera not found";
-
-Ray ray = cam.ScreenPointToRay(new Vector3(Screen.width / 2f, Screen.height / 2f, 0));
-if (Physics.Raycast(ray, out RaycastHit hit, 100f))
-{
-    return $"Hit: {hit.collider.gameObject.name} at {hit.point}";
-}
-return "No hit";
-```
-
-## Raycast Click at Screen Position
-
-```csharp
-using UnityEngine.EventSystems;
-using System.Collections.Generic;
-
-if (EventSystem.current == null) return "EventSystem not found";
-
-PointerEventData pointerData = new PointerEventData(EventSystem.current)
-{
-    position = new Vector2(Screen.width / 2f, Screen.height / 2f)
-};
-
-List<RaycastResult> results = new List<RaycastResult>();
-EventSystem.current.RaycastAll(pointerData, results);
-
-if (results.Count == 0) return "No UI element at screen center";
-
-GameObject target = results[0].gameObject;
-ExecuteEvents.ExecuteHierarchy(target, pointerData, ExecuteEvents.pointerClickHandler);
-return $"Clicked UI element: {target.name}";
 ```
 
 ## Toggle GameObject Active State
