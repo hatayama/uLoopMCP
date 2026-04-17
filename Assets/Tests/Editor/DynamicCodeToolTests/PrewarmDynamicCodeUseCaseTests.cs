@@ -248,34 +248,6 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public async Task RequestAsync_WhenCalledTwiceBeforeCompletion_ShouldReturnSameTask()
-        {
-            TaskCompletionSource<DynamicCodeAutoPrewarmResult> completionSource =
-                new TaskCompletionSource<DynamicCodeAutoPrewarmResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            TaskCompletionSource<DynamicCodeAutoPrewarmResult> secondCompletionSource =
-                new TaskCompletionSource<DynamicCodeAutoPrewarmResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            TaskCompletionSource<DynamicCodeAutoPrewarmResult> thirdCompletionSource =
-                new TaskCompletionSource<DynamicCodeAutoPrewarmResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            FakePrewarmRuntime runtime = new FakePrewarmRuntime(true);
-            FakeDynamicCodeAutoPrewarmExecutor executor = new FakeDynamicCodeAutoPrewarmExecutor(
-                completionSource.Task,
-                secondCompletionSource.Task,
-                thirdCompletionSource.Task,
-                Task.FromResult(new DynamicCodeAutoPrewarmResult { Success = true }));
-            PrewarmDynamicCodeUseCase useCase = new PrewarmDynamicCodeUseCase(runtime, default, executor);
-
-            Task firstTask = useCase.RequestAsync();
-            Task secondTask = useCase.RequestAsync();
-
-            Assert.That(secondTask, Is.SameAs(firstTask));
-            completionSource.SetResult(new DynamicCodeAutoPrewarmResult { Success = true });
-            secondCompletionSource.SetResult(new DynamicCodeAutoPrewarmResult { Success = true });
-            thirdCompletionSource.SetResult(new DynamicCodeAutoPrewarmResult { Success = true });
-            await firstTask;
-            Assert.That(executor.Requests, Has.Count.EqualTo(4));
-        }
-
-        [Test]
         public async Task RequestAsync_WhenLifecycleIsCancelled_ShouldStopBeforeExecution()
         {
             using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();

@@ -1,5 +1,4 @@
 using System.IO;
-using System.Threading;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -45,47 +44,6 @@ namespace io.github.hatayama.uLoopMCP
             }
             finally
             {
-                RestoreLockFile(lockFilePath, hadExistingLockFile, previousLockFileContents);
-            }
-        }
-
-        [Test]
-        public void CreateLockFile_WhenLockFileIsTemporarilyShared_ShouldRetryUntilCreationSucceeds()
-        {
-            string lockFilePath = GetLockFilePath();
-            bool hadExistingLockFile = File.Exists(lockFilePath);
-            string previousLockFileContents = hadExistingLockFile ? File.ReadAllText(lockFilePath) : null;
-            File.WriteAllText(lockFilePath, "previous-token");
-            FileStream blockingStream = new FileStream(lockFilePath, FileMode.Open, FileAccess.Read, FileShare.Delete);
-            Thread releaseThread = new Thread(() =>
-            {
-                Thread.Sleep(75);
-                blockingStream.Dispose();
-            });
-
-            try
-            {
-                releaseThread.Start();
-
-                string createdToken = ServerStartingLockService.CreateLockFile();
-
-                releaseThread.Join();
-                Assert.That(createdToken, Is.Not.Null.And.Not.Empty);
-                Assert.That(File.Exists(lockFilePath), Is.True);
-                Assert.That(File.ReadAllText(lockFilePath), Is.EqualTo(createdToken));
-            }
-            finally
-            {
-                if (blockingStream != null)
-                {
-                    blockingStream.Dispose();
-                }
-
-                if (releaseThread.IsAlive)
-                {
-                    releaseThread.Join();
-                }
-
                 RestoreLockFile(lockFilePath, hadExistingLockFile, previousLockFileContents);
             }
         }

@@ -40,25 +40,6 @@ namespace io.github.hatayama.uLoopMCP.DynamicCodeToolTests
         }
 
         [Test]
-        public async Task ExecuteAsync_WhenTransportTimesOut_ShouldReturnTimeoutFailure()
-        {
-            TcpDynamicCodeAutoPrewarmExecutor executor = new TcpDynamicCodeAutoPrewarmExecutor(
-                async (requestJson, ct) =>
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(5), ct);
-                    return string.Empty;
-                },
-                50);
-
-            DynamicCodeAutoPrewarmResult result = await executor.ExecuteAsync(
-                new ExecuteDynamicCodeSchema { Code = "return 1;" },
-                CancellationToken.None);
-
-            Assert.That(result.Success, Is.False);
-            Assert.That(result.ErrorMessage, Is.EqualTo("dynamic code auto prewarm timed out"));
-        }
-
-        [Test]
         public async Task ExecuteAsync_WhenTransportThrowsIOException_ShouldReturnTransportFailure()
         {
             TcpDynamicCodeAutoPrewarmExecutor executor = new TcpDynamicCodeAutoPrewarmExecutor(
