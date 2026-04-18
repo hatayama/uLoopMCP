@@ -9,6 +9,7 @@ import { homedir, tmpdir } from 'os';
 import { join } from 'path';
 
 import {
+  getPreferredSkillDir,
   getInstallDir,
   getManagedSkillsDir,
   migrateLegacyManagedSkills,
@@ -207,6 +208,17 @@ describe('skill install layout', () => {
     );
   });
 
+  it('should resolve the selected skill directory for uninstall operations', () => {
+    const skillsRoot = createSkillsRoot();
+
+    expect(getPreferredSkillDir(skillsRoot, 'uloop-compile', true)).toBe(
+      join(skillsRoot, 'unity-cli-loop', 'uloop-compile'),
+    );
+    expect(getPreferredSkillDir(skillsRoot, 'uloop-compile', false)).toBe(
+      join(skillsRoot, 'uloop-compile'),
+    );
+  });
+
   it('should migrate only managed legacy skills into the unity-cli-loop namespace', () => {
     const skillsRoot = createSkillsRoot();
 
@@ -270,5 +282,24 @@ describe('skill install layout', () => {
     expect(readFileSync(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('fresh');
     expect(readFileSync(join(skillDir, 'references', 'reference.md'), 'utf-8')).toBe('reference');
     expect(existsSync(join(skillDir, 'references', 'stale.md'))).toBe(false);
+  });
+
+  it('should preserve the existing skill directory when sync fails before replacement', () => {
+    const skillsRoot = createSkillsRoot();
+    const skillDir = join(skillsRoot, 'unity-cli-loop', 'uloop-execute-dynamic-code');
+
+    mkdirSync(join(skillDir, 'references'), { recursive: true });
+    writeFileSync(join(skillDir, 'SKILL.md'), 'stable', 'utf-8');
+    writeFileSync(join(skillDir, 'references', 'stable.md'), 'stable', 'utf-8');
+
+    expect(() =>
+      syncInstalledSkillDirectory(skillDir, 'SKILL.md', 'fresh', {
+        '..': Buffer.from('boom', 'utf-8'),
+      }),
+    ).toThrow();
+
+    expect(readFileSync(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('stable');
+    expect(readFileSync(join(skillDir, 'references', 'stable.md'), 'utf-8')).toBe('stable');
+    expect(existsSync(join(skillsRoot, 'unity-cli-loop', 'outside.md'))).toBe(false);
   });
 });

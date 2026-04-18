@@ -11,6 +11,7 @@ import { PRODUCT_DISPLAY_NAME } from '../cli-constants';
 import {
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   writeFileSync,
   rmSync,
@@ -487,7 +488,11 @@ export function getAllSkillStatuses(
   }));
 }
 
-function getPreferredSkillDir(baseDir: string, skillDirName: string, groupManagedSkills: boolean): string {
+export function getPreferredSkillDir(
+  baseDir: string,
+  skillDirName: string,
+  groupManagedSkills: boolean,
+): string {
   return groupManagedSkills
     ? getManagedSkillDir(baseDir, skillDirName)
     : getLegacySkillDir(baseDir, skillDirName);
@@ -515,24 +520,56 @@ export function syncInstalledSkillDirectory(
   skillContent: string,
   additionalFiles?: Record<string, Buffer>,
 ): void {
-  const skillPath = join(skillDir, skillFileName);
+  mkdirSync(dirname(skillDir), { recursive: true });
 
-  rmSync(skillDir, { recursive: true, force: true });
-  mkdirSync(skillDir, { recursive: true });
-  writeFileSync(skillPath, skillContent, 'utf-8');
+  const tempSkillDir = mkdtempSync(`${skillDir}.tmp-`);
+  const skillPath = join(tempSkillDir, skillFileName);
+  let replaced = false;
 
-  if (!additionalFiles) {
-    return;
-  }
+  try {
+    writeFileSync(skillPath, skillContent, 'utf-8');
 
-  for (const [relativePath, content] of Object.entries(additionalFiles)) {
-    const fullPath = join(skillDir, relativePath);
-    mkdirSync(dirname(fullPath), { recursive: true });
-    writeFileSync(fullPath, content);
+    if (additionalFiles) {
+      for (const [relativePath, content] of Object.entries(additionalFiles)) {
+        const fullPath = join(tempSkillDir, relativePath);
+        mkdirSync(dirname(fullPath), { recursive: true });
+        writeFileSync(fullPath, content);
+      }
+    }
+
+    rmSync(skillDir, { recursive: true, force: true });
+    renameSync(tempSkillDir, skillDir);
+    replaced = true;
+  } finally {
+    if (!replaced) {
+      rmSync(tempSkillDir, { recursive: true, force: true });
+    }
   }
 }
 
-function uninstallSkill(skill: SkillDefinition, target: TargetConfig, global: boolean): boolean {
+function uninstallSkill(
+  skill: SkillDefinition,
+  target: TargetConfig,
+  global: boolean,
+  groupManagedSkills: boolean,
+): boolean {
+  const baseDir = getSkillsBaseDir(target, global);
+  const candidateDirs = [getPreferredSkillDir(baseDir, skill.dirName, groupManagedSkills)];
+  let removed = false;
+
+  for (const candidateDir of candidateDirs) {
+    if (!existsSync(candidateDir)) {
+      continue;
+    }
+
+    rmSync(candidateDir, { recursive: true, force: true });
+    removed = true;
+  }
+
+  return removed;
+}
+
+function uninstallSkillFromAllLayouts(skill: SkillDefinition, target: TargetConfig, global: boolean): boolean {
   const baseDir = getSkillsBaseDir(target, global);
   const candidateDirs = [
     getManagedSkillDir(baseDir, skill.dirName),
@@ -592,7 +629,7 @@ export function installAllSkills(
 
   for (const skill of allSkills) {
     if (isSkillDisabledByToolSettings(skill, disabledTools)) {
-      uninstallSkill(skill, target, global);
+      uninstallSkillFromAllLayouts(skill, target, global);
       continue;
     }
 
@@ -632,7 +669,11 @@ interface UninstallResult {
   notFound: number;
 }
 
-export function uninstallAllSkills(target: TargetConfig, global: boolean): UninstallResult {
+export function uninstallAllSkills(
+  target: TargetConfig,
+  global: boolean,
+  groupManagedSkills: boolean = true,
+): UninstallResult {
   const result: UninstallResult = { removed: 0, notFound: 0 };
 
   const baseDir = getSkillsBaseDir(target, global);
@@ -640,7 +681,7 @@ export function uninstallAllSkills(target: TargetConfig, global: boolean): Unins
 
   const allSkills = collectAllSkills();
   for (const skill of allSkills) {
-    if (uninstallSkill(skill, target, global)) {
+    if (uninstallSkill(skill, target, global, groupManagedSkills)) {
       result.removed++;
     } else {
       result.notFound++;

@@ -288,7 +288,8 @@ namespace io.github.hatayama.uLoopMCP
         {
             string cachedCliVersion = CliInstallationDetector.GetCachedCliVersion();
             bool cliVersionMatched = IsCliVersionMatched(cachedCliVersion);
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargetsFast();
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargetsFast(projectRoot);
             UpdateSkillsStep(cliVersionMatched, targets);
             BeginRefreshDisplayedSkillTargets(cliVersionMatched);
             ScheduleResizeToContent();
@@ -326,20 +327,21 @@ namespace io.github.hatayama.uLoopMCP
 
             UpdateCliStep(cliInstalled, cliVersion, cliVersionMatched);
 
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargetsFast();
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargetsFast(projectRoot);
             UpdateSkillsStep(cliVersionMatched, targets);
             BeginRefreshDisplayedSkillTargets(cliVersionMatched);
             ScheduleResizeToContent();
         }
 
-        private List<ToolSkillSynchronizer.SkillTargetInfo> DetectDisplayedSkillTargets()
+        private List<ToolSkillSynchronizer.SkillTargetInfo> DetectDisplayedSkillTargets(string projectRoot)
         {
-            return ToolSkillSynchronizer.DetectTargetsForLayout(!_installSkillsFlat);
+            return ToolSkillSynchronizer.DetectTargetsForLayoutAtProjectRoot(projectRoot, !_installSkillsFlat);
         }
 
-        private List<ToolSkillSynchronizer.SkillTargetInfo> DetectDisplayedSkillTargetsFast()
+        private List<ToolSkillSynchronizer.SkillTargetInfo> DetectDisplayedSkillTargetsFast(string projectRoot)
         {
-            return ToolSkillSynchronizer.DetectTargetsForLayoutFast(!_installSkillsFlat);
+            return ToolSkillSynchronizer.DetectTargetsForLayoutFastAtProjectRoot(projectRoot, !_installSkillsFlat);
         }
 
         private void BeginRefreshDisplayedSkillTargets(bool cliVersionMatched)
@@ -357,8 +359,9 @@ namespace io.github.hatayama.uLoopMCP
 
         private async void RefreshDisplayedSkillTargetsAsync(CancellationToken ct)
         {
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
             List<ToolSkillSynchronizer.SkillTargetInfo> targets =
-                await Task.Run(() => DetectDisplayedSkillTargets());
+                await Task.Run(() => DetectDisplayedSkillTargets(projectRoot));
             if (ct.IsCancellationRequested)
             {
                 return;
@@ -661,7 +664,8 @@ namespace io.github.hatayama.uLoopMCP
         private async void HandleInstallSkills()
         {
             CancelSkillInstallStateRefresh();
-            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargets();
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            List<ToolSkillSynchronizer.SkillTargetInfo> targets = DetectDisplayedSkillTargets(projectRoot);
             List<ToolSkillSynchronizer.SkillTargetInfo> installableTargets = _shouldUseFirstInstallSkillsUi
                 ? new List<ToolSkillSynchronizer.SkillTargetInfo>
                 {

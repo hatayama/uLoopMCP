@@ -521,6 +521,68 @@ namespace io.github.hatayama.uLoopMCP
             Assert.That(detectedTargets[0].HasExistingSkills, Is.False);
         }
 
+        [Test]
+        public void DetectTargets_WhenUnexpectedManagedSkillDirectoryExists_ReportsOutdated()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            CreateFakeSourceSkill(
+                temporaryRoot,
+                "uloop-public-skill",
+                "PublicTool",
+                "reference.md",
+                "reference");
+
+            string targetRoot = Path.Combine(temporaryRoot, ".claude");
+            string installedSkillDir = Path.Combine(
+                targetRoot,
+                SkillInstallLayout.SkillsDirName,
+                SkillInstallLayout.ManagedSkillsDirName,
+                "uloop-public-skill");
+            WriteSkillFile(installedSkillDir, "---\nname: uloop-public-skill\n---\n");
+            File.WriteAllText(Path.Combine(installedSkillDir, "reference.md"), "reference");
+
+            string staleSkillDir = Path.Combine(
+                targetRoot,
+                SkillInstallLayout.SkillsDirName,
+                SkillInstallLayout.ManagedSkillsDirName,
+                "uloop-stale-skill");
+            WriteSkillFile(staleSkillDir, "---\nname: uloop-stale-skill\n---\n");
+
+            ToolSkillSynchronizer.SkillTargetInfo[] detectedTargets = ToolSkillSynchronizer.DetectTargets(
+                    temporaryRoot,
+                    requireSkillsDirectory: true,
+                    groupSkillsUnderUnityCliLoop: true)
+                .ToArray();
+
+            Assert.That(detectedTargets.Length, Is.EqualTo(1));
+            Assert.That(detectedTargets[0].InstallState, Is.EqualTo(SkillInstallState.Outdated));
+        }
+
+        [Test]
+        public void DetectTargets_WhenSourceSkillNameIsNotSafePathComponent_IgnoresIt()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            CreateFakeSourceSkill(
+                temporaryRoot,
+                "../uloop-stale-skill",
+                "UnsafeTool",
+                "reference.md",
+                "reference");
+            Directory.CreateDirectory(Path.Combine(
+                temporaryRoot,
+                ".claude",
+                SkillInstallLayout.SkillsDirName));
+
+            ToolSkillSynchronizer.SkillTargetInfo[] detectedTargets = ToolSkillSynchronizer.DetectTargets(
+                    temporaryRoot,
+                    requireSkillsDirectory: true,
+                    groupSkillsUnderUnityCliLoop: true)
+                .ToArray();
+
+            Assert.That(detectedTargets.Length, Is.EqualTo(1));
+            Assert.That(detectedTargets[0].InstallState, Is.EqualTo(SkillInstallState.Missing));
+        }
+
         private string CreateTemporaryProjectRoot()
         {
             string temporaryRoot = Path.Combine(

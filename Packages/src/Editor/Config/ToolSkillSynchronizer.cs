@@ -151,12 +151,41 @@ namespace io.github.hatayama.uLoopMCP
 
         public static List<SkillTargetInfo> DetectTargetsForLayout(bool groupSkillsUnderUnityCliLoop)
         {
-            return DetectTargets(requireSkillsDirectory: false, groupSkillsUnderUnityCliLoop);
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+
+            return DetectTargetsForLayoutAtProjectRoot(projectRoot, groupSkillsUnderUnityCliLoop);
         }
 
         public static List<SkillTargetInfo> DetectTargetsForLayoutFast(bool groupSkillsUnderUnityCliLoop)
         {
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+
+            return DetectTargetsForLayoutFastAtProjectRoot(projectRoot, groupSkillsUnderUnityCliLoop);
+        }
+
+        internal static List<SkillTargetInfo> DetectTargetsForLayoutAtProjectRoot(
+            string projectRoot,
+            bool groupSkillsUnderUnityCliLoop)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+
             return DetectTargets(
+                projectRoot,
+                requireSkillsDirectory: false,
+                groupSkillsUnderUnityCliLoop,
+                includeFreshnessCheck: true);
+        }
+
+        internal static List<SkillTargetInfo> DetectTargetsForLayoutFastAtProjectRoot(
+            string projectRoot,
+            bool groupSkillsUnderUnityCliLoop)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+
+            return DetectTargets(
+                projectRoot,
                 requireSkillsDirectory: false,
                 groupSkillsUnderUnityCliLoop,
                 includeFreshnessCheck: false);

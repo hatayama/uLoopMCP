@@ -233,7 +233,7 @@ function uninstallSkills(
 
   for (const target of targets) {
     const dir = getInstallDir(target, global, groupManagedSkills);
-    const result = uninstallAllSkills(target, global);
+    const result = uninstallAllSkills(target, global, groupManagedSkills);
 
     console.log(`${target.displayName}:`);
     console.log(`  \x1b[31m✗\x1b[0m Removed: ${result.removed}`);

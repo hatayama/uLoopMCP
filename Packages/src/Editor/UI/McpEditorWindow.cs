@@ -630,9 +630,9 @@ namespace io.github.hatayama.uLoopMCP
 
         private async void RefreshSelectedTargetInstallStateAsync(CancellationToken ct)
         {
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
             SkillInstallState installState = await Task.Run(
-                () => GetSelectedTargetInstallState(includeFreshnessCheck: true),
-                ct);
+                () => GetSelectedTargetInstallState(projectRoot, includeFreshnessCheck: true));
             if (ct.IsCancellationRequested)
             {
                 return;
@@ -644,12 +644,20 @@ namespace io.github.hatayama.uLoopMCP
 
         private SkillInstallState GetSelectedTargetInstallState(bool includeFreshnessCheck)
         {
+            string projectRoot = UnityMcpPathResolver.GetProjectRoot();
+            return GetSelectedTargetInstallState(projectRoot, includeFreshnessCheck);
+        }
+
+        private SkillInstallState GetSelectedTargetInstallState(
+            string projectRoot,
+            bool includeFreshnessCheck)
+        {
             SkillsTargetSelection selection = SkillsTargetSelectionResolver.Resolve(
                 _skillsTarget,
                 !_installSkillsFlat);
             List<ToolSkillSynchronizer.SkillTargetInfo> targets = includeFreshnessCheck
-                ? ToolSkillSynchronizer.DetectTargetsForLayout(!_installSkillsFlat)
-                : ToolSkillSynchronizer.DetectTargetsForLayoutFast(!_installSkillsFlat);
+                ? ToolSkillSynchronizer.DetectTargetsForLayoutAtProjectRoot(projectRoot, !_installSkillsFlat)
+                : ToolSkillSynchronizer.DetectTargetsForLayoutFastAtProjectRoot(projectRoot, !_installSkillsFlat);
             ToolSkillSynchronizer.SkillTargetInfo targetInfo = targets
                 .FirstOrDefault(target => target.DirName == selection.DirectoryName);
 

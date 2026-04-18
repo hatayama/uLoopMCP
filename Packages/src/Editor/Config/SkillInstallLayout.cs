@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+using UnityEngine;
+
 namespace io.github.hatayama.uLoopMCP
 {
     internal static class SkillInstallLayout
@@ -114,6 +116,14 @@ namespace io.github.hatayama.uLoopMCP
                 }
             }
 
+            if (HasUnexpectedInstalledSkillDirectories(
+                targetRoot,
+                expectedSkills.Keys,
+                groupSkillsUnderUnityCliLoop))
+            {
+                return SkillInstallState.Outdated;
+            }
+
             if (!hasInstalledExpectedSkill)
             {
                 return hasLayoutSkills ? SkillInstallState.Outdated : SkillInstallState.Missing;
@@ -186,10 +196,39 @@ namespace io.github.hatayama.uLoopMCP
             string skillName,
             bool groupSkillsUnderUnityCliLoop)
         {
+            Debug.Assert(IsSafeSkillPathComponent(skillName), "skillName must be a single safe path component");
+
             string skillsRoot = groupSkillsUnderUnityCliLoop
                 ? GetManagedSkillsRoot(targetRoot)
                 : GetSkillsRoot(targetRoot);
             return Path.Combine(skillsRoot, skillName);
+        }
+
+        private static bool HasUnexpectedInstalledSkillDirectories(
+            string targetRoot,
+            IEnumerable<string> expectedSkillNames,
+            bool groupSkillsUnderUnityCliLoop)
+        {
+            HashSet<string> expectedSkillNameSet = new(expectedSkillNames, StringComparer.Ordinal);
+            IEnumerable<string> installedSkillDirectories = groupSkillsUnderUnityCliLoop
+                ? EnumerateManagedSkillDirectories(targetRoot)
+                : EnumerateLegacyManagedSkillDirectories(targetRoot);
+
+            foreach (string installedSkillDirectory in installedSkillDirectories)
+            {
+                string installedSkillName = Path.GetFileName(installedSkillDirectory);
+                if (string.IsNullOrEmpty(installedSkillName))
+                {
+                    continue;
+                }
+
+                if (!expectedSkillNameSet.Contains(installedSkillName))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool IsSkillDirectoryOutdated(
@@ -269,7 +308,9 @@ namespace io.github.hatayama.uLoopMCP
                     }
 
                     string skillName = ParseNameFromFrontmatter(skillContent);
-                    if (string.IsNullOrEmpty(skillName) || sources.ContainsKey(skillName))
+                    if (string.IsNullOrEmpty(skillName)
+                        || !IsSafeSkillPathComponent(skillName)
+                        || sources.ContainsKey(skillName))
                     {
                         continue;
                     }
@@ -366,6 +407,26 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return false;
+        }
+
+        private static bool IsSafeSkillPathComponent(string skillName)
+        {
+            if (string.IsNullOrEmpty(skillName))
+            {
+                return false;
+            }
+
+            if (skillName == "." || skillName == "..")
+            {
+                return false;
+            }
+
+            if (skillName.Contains('/') || skillName.Contains('\\'))
+            {
+                return false;
+            }
+
+            return string.Equals(Path.GetFileName(skillName), skillName, StringComparison.Ordinal);
         }
     }
 }
