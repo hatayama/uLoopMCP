@@ -764,63 +764,27 @@ namespace io.github.hatayama.uLoopMCP
                 SkillsTargetSelection selection = SkillsTargetSelectionResolver.Resolve(
                     _skillsTarget,
                     !_installSkillsFlat);
-                string arguments = selection.InstallArguments;
+                ToolSkillSynchronizer.SkillTargetInfo target = new(
+                    selection.DisplayName,
+                    selection.DirectoryName,
+                    selection.InstallFlag,
+                    hasSkillsDirectory: true,
+                    hasExistingSkills: false);
+                ToolSkillSynchronizer.SkillInstallResult result =
+                    await ToolSkillSynchronizer.InstallSkillFiles(
+                        new List<ToolSkillSynchronizer.SkillTargetInfo> { target },
+                        !_installSkillsFlat);
 
-                string uloopPath = NodeEnvironmentResolver.FindExecutablePath(CliConstants.EXECUTABLE_NAME);
-                // FindExecutablePath resolves .cmd shims on Windows via 'where' command
-                string uloopFileName = uloopPath ?? CliConstants.EXECUTABLE_NAME;
-
-                System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = uloopFileName,
-                    Arguments = arguments,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
-
-                NodeEnvironmentResolver.SetupEnvironmentPath(startInfo, NodeEnvironmentResolver.FindNodePath());
-
-                bool success = false;
-                string errorOutput = "";
-
-                await Task.Run(() =>
-                {
-                    System.Diagnostics.Process process = ProcessStartHelper.TryStart(startInfo);
-                    if (process == null)
-                    {
-                        errorOutput = "Failed to start uloop process";
-                        return;
-                    }
-
-                    System.Text.StringBuilder errorBuilder = new System.Text.StringBuilder();
-                    process.OutputDataReceived += (s, e) => { };
-                    process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
-                    process.BeginOutputReadLine();
-                    process.BeginErrorReadLine();
-
-                    if (!process.WaitForExit(30000))
-                    {
-                        try { process.Kill(); } catch (System.InvalidOperationException) { }
-                        process.Dispose();
-                        errorOutput = "Installation timed out after 30 seconds";
-                        return;
-                    }
-
-                    process.WaitForExit();
-                    errorOutput = errorBuilder.ToString();
-                    success = process.ExitCode == 0;
-                    process.Dispose();
-                });
-
-                if (success)
+                if (result.IsSuccessful)
                 {
                     EditorDialogHelper.ShowSkillsInstalledDialog();
                 }
                 else
                 {
-                    EditorUtility.DisplayDialog("Installation Failed", $"Failed to install skills.\n\n{errorOutput}", "OK");
+                    EditorUtility.DisplayDialog(
+                        "Installation Failed",
+                        $"Failed to install skills for {selection.DisplayName}.",
+                        "OK");
                 }
             }
             finally

@@ -13,6 +13,9 @@ namespace io.github.hatayama.uLoopMCP
         internal const string SkillsDirName = "skills";
         internal const string ManagedSkillsDirName = "unity-cli-loop";
         internal const string SkillFileName = "SKILL.md";
+        private const string CliPackageDirName = "Cli~";
+        private const string CliSkillDefinitionsDirName = "skill-definitions";
+        private const string CliOnlySkillDefinitionsDirName = "cli-only";
         private static readonly HashSet<string> ExcludedFileNames = new()
         {
             ".meta",
@@ -23,16 +26,36 @@ namespace io.github.hatayama.uLoopMCP
         private sealed class SkillSourceDefinition
         {
             public readonly string Name;
+            public readonly string ToolName;
             public readonly string SkillDirectoryPath;
             public readonly Dictionary<string, byte[]> SkillFiles;
 
             public SkillSourceDefinition(
                 string name,
+                string toolName,
                 string skillDirectoryPath,
                 Dictionary<string, byte[]> skillFiles)
             {
                 Name = name;
+                ToolName = toolName;
                 SkillDirectoryPath = skillDirectoryPath;
+                SkillFiles = skillFiles;
+            }
+        }
+
+        internal readonly struct SkillSourceInfo
+        {
+            public readonly string Name;
+            public readonly string ToolName;
+            public readonly Dictionary<string, byte[]> SkillFiles;
+
+            public SkillSourceInfo(
+                string name,
+                string toolName,
+                Dictionary<string, byte[]> skillFiles)
+            {
+                Name = name;
+                ToolName = toolName;
                 SkillFiles = skillFiles;
             }
         }
@@ -147,6 +170,22 @@ namespace io.github.hatayama.uLoopMCP
 
             string dirName = Path.GetFileName(skillDir);
             return dirName == $"{CliConstants.SKILL_DIR_PREFIX}{toolName}";
+        }
+
+        internal static List<SkillSourceInfo> GetSkillSourceInfos(string projectRoot)
+        {
+            return GetSkillSources(projectRoot)
+                .Values
+                .Select(source => new SkillSourceInfo(source.Name, source.ToolName, source.SkillFiles))
+                .ToList();
+        }
+
+        internal static string GetInstalledSkillDirectoryPathForLayout(
+            string targetRoot,
+            string skillName,
+            bool groupSkillsUnderUnityCliLoop)
+        {
+            return GetInstalledSkillDirectoryPath(targetRoot, skillName, groupSkillsUnderUnityCliLoop);
         }
 
         private static IEnumerable<string> EnumerateManagedSkillDirectories(string targetRoot)
@@ -290,10 +329,11 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
                 }
 
-                foreach (string skillFilePath in Directory.EnumerateFiles(
-                    searchRoot,
-                    SkillFileName,
-                    SearchOption.AllDirectories))
+                IEnumerable<string> skillFilePaths = IsCliOnlySkillSourceRoot(searchRoot)
+                    ? Directory.EnumerateFiles(searchRoot, SkillFileName, SearchOption.AllDirectories)
+                    : EnumerateEditorFolders(searchRoot, 3).SelectMany(editorFolder =>
+                        Directory.EnumerateFiles(editorFolder, SkillFileName, SearchOption.AllDirectories));
+                foreach (string skillFilePath in skillFilePaths)
                 {
                     string skillDirectory = Path.GetDirectoryName(skillFilePath);
                     if (skillDirectory == null || Path.GetFileName(skillDirectory) != "Skill")
@@ -317,6 +357,7 @@ namespace io.github.hatayama.uLoopMCP
 
                     sources[skillName] = new SkillSourceDefinition(
                         skillName,
+                        ParseToolNameFromFrontmatter(skillContent),
                         skillDirectory,
                         CollectSkillFiles(skillDirectory));
                 }
@@ -329,9 +370,245 @@ namespace io.github.hatayama.uLoopMCP
 
         private static IEnumerable<string> EnumerateSkillSourceRoots(string projectRoot)
         {
-            yield return Path.Combine(projectRoot, "Assets");
-            yield return Path.Combine(projectRoot, "Packages");
-            yield return Path.Combine(projectRoot, "Library", "PackageCache");
+            HashSet<string> seenRoots = new(StringComparer.Ordinal);
+
+            AddSkillSourceRoot(seenRoots, GetCliOnlySkillSourceRoot(projectRoot));
+            AddSkillSourceRoot(seenRoots, Path.Combine(projectRoot, "Assets"));
+            foreach (string packageRoot in EnumerateDirectProjectPackageRoots(projectRoot))
+            {
+                AddSkillSourceRoot(seenRoots, packageRoot);
+            }
+
+            foreach (string packageRoot in EnumerateManifestLocalPackageRoots(projectRoot))
+            {
+                AddSkillSourceRoot(seenRoots, packageRoot);
+            }
+
+            foreach (string packageRoot in EnumerateDependencyPackageCacheRoots(projectRoot))
+            {
+                AddSkillSourceRoot(seenRoots, packageRoot);
+            }
+
+            foreach (string root in seenRoots)
+            {
+                yield return root;
+            }
+        }
+
+        private static void AddSkillSourceRoot(HashSet<string> roots, string root)
+        {
+            if (string.IsNullOrEmpty(root))
+            {
+                return;
+            }
+
+            roots.Add(Path.GetFullPath(root));
+        }
+
+        private static string GetCliOnlySkillSourceRoot(string projectRoot)
+        {
+            string currentProjectRoot = UnityMcpPathResolver.GetProjectRoot();
+            if (!string.Equals(
+                Path.GetFullPath(projectRoot),
+                Path.GetFullPath(currentProjectRoot),
+                StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            return Path.Combine(
+                McpConstants.PackageResolvedPath,
+                CliPackageDirName,
+                McpConstants.SRC_DIR,
+                SkillsDirName,
+                CliSkillDefinitionsDirName,
+                CliOnlySkillDefinitionsDirName);
+        }
+
+        private static bool IsCliOnlySkillSourceRoot(string searchRoot)
+        {
+            return string.Equals(
+                Path.GetFullPath(searchRoot),
+                Path.GetFullPath(GetCliOnlySkillSourceRoot(UnityMcpPathResolver.GetProjectRoot())),
+                StringComparison.Ordinal);
+        }
+
+        private static IEnumerable<string> EnumerateDirectProjectPackageRoots(string projectRoot)
+        {
+            string packagesRoot = Path.Combine(projectRoot, "Packages");
+            if (!Directory.Exists(packagesRoot))
+            {
+                yield break;
+            }
+
+            foreach (string packageDirectory in Directory.EnumerateDirectories(packagesRoot))
+            {
+                yield return ResolveSkillSearchRootCandidate(packageDirectory);
+            }
+        }
+
+        private static IEnumerable<string> EnumerateManifestLocalPackageRoots(string projectRoot)
+        {
+            foreach (KeyValuePair<string, string> dependency in EnumerateManifestDependencies(projectRoot))
+            {
+                string localPath = ResolveLocalDependencyPath(dependency.Value, projectRoot);
+                if (string.IsNullOrEmpty(localPath))
+                {
+                    continue;
+                }
+
+                yield return ResolveSkillSearchRootCandidate(localPath);
+            }
+        }
+
+        private static IEnumerable<string> EnumerateDependencyPackageCacheRoots(string projectRoot)
+        {
+            HashSet<string> dependencyNames = new(
+                EnumerateManifestDependencies(projectRoot).Select(dependency => dependency.Key),
+                StringComparer.OrdinalIgnoreCase);
+            if (dependencyNames.Count == 0)
+            {
+                yield break;
+            }
+
+            string packageCacheRoot = Path.Combine(projectRoot, "Library", "PackageCache");
+            if (!Directory.Exists(packageCacheRoot))
+            {
+                yield break;
+            }
+
+            foreach (string packageDirectory in Directory.EnumerateDirectories(packageCacheRoot))
+            {
+                string packageName = Path.GetFileName(packageDirectory);
+                if (string.IsNullOrEmpty(packageName))
+                {
+                    continue;
+                }
+
+                int separatorIndex = packageName.IndexOf('@');
+                string dependencyName = separatorIndex >= 0 ? packageName.Substring(0, separatorIndex) : packageName;
+                if (!dependencyNames.Contains(dependencyName))
+                {
+                    continue;
+                }
+
+                yield return ResolveSkillSearchRootCandidate(packageDirectory);
+            }
+        }
+
+        private static IEnumerable<KeyValuePair<string, string>> EnumerateManifestDependencies(string projectRoot)
+        {
+            string manifestPath = Path.Combine(projectRoot, "Packages", "manifest.json");
+            if (!File.Exists(manifestPath))
+            {
+                yield break;
+            }
+
+            string manifestContent = File.ReadAllText(manifestPath);
+            Match dependenciesMatch = Regex.Match(
+                manifestContent,
+                "\"dependencies\"\\s*:\\s*\\{(?<body>[\\s\\S]*?)\\}",
+                RegexOptions.Multiline);
+            if (!dependenciesMatch.Success)
+            {
+                yield break;
+            }
+
+            MatchCollection dependencyMatches = Regex.Matches(
+                dependenciesMatch.Groups["body"].Value,
+                "\"(?<name>[^\"]+)\"\\s*:\\s*\"(?<value>[^\"]*)\"");
+            foreach (Match dependencyMatch in dependencyMatches)
+            {
+                string dependencyName = dependencyMatch.Groups["name"].Value;
+                string dependencyValue = dependencyMatch.Groups["value"].Value;
+                if (string.IsNullOrEmpty(dependencyName) || string.IsNullOrEmpty(dependencyValue))
+                {
+                    continue;
+                }
+
+                yield return new KeyValuePair<string, string>(dependencyName, dependencyValue);
+            }
+        }
+
+        private static string ResolveLocalDependencyPath(string dependencyValue, string projectRoot)
+        {
+            const string FilePrefix = "file:";
+            const string PathPrefix = "path:";
+
+            if (dependencyValue.StartsWith(FilePrefix, StringComparison.Ordinal))
+            {
+                return ResolveDependencyPath(dependencyValue.Substring(FilePrefix.Length), projectRoot);
+            }
+
+            if (dependencyValue.StartsWith(PathPrefix, StringComparison.Ordinal))
+            {
+                return ResolveDependencyPath(dependencyValue.Substring(PathPrefix.Length), projectRoot);
+            }
+
+            return null;
+        }
+
+        private static string ResolveDependencyPath(string rawPath, string projectRoot)
+        {
+            if (string.IsNullOrWhiteSpace(rawPath))
+            {
+                return null;
+            }
+
+            string normalizedPath = rawPath.Trim();
+            if (normalizedPath.StartsWith("//", StringComparison.Ordinal))
+            {
+                normalizedPath = normalizedPath.Substring(2);
+            }
+
+            if (Path.IsPathRooted(normalizedPath))
+            {
+                return normalizedPath;
+            }
+
+            return Path.GetFullPath(Path.Combine(projectRoot, normalizedPath));
+        }
+
+        private static string ResolveSkillSearchRootCandidate(string candidate)
+        {
+            string nestedRoot = Path.Combine(candidate, "Packages", "src");
+            if (Directory.Exists(nestedRoot))
+            {
+                return nestedRoot;
+            }
+
+            return candidate;
+        }
+
+        private static IEnumerable<string> EnumerateEditorFolders(string basePath, int maxDepth)
+        {
+            return EnumerateEditorFoldersRecursive(basePath, depth: 0, maxDepth);
+        }
+
+        private static IEnumerable<string> EnumerateEditorFoldersRecursive(
+            string currentPath,
+            int depth,
+            int maxDepth)
+        {
+            if (depth > maxDepth || !Directory.Exists(currentPath))
+            {
+                yield break;
+            }
+
+            foreach (string directory in Directory.EnumerateDirectories(currentPath))
+            {
+                string directoryName = Path.GetFileName(directory);
+                if (string.Equals(directoryName, "Editor", StringComparison.Ordinal))
+                {
+                    yield return directory;
+                    continue;
+                }
+
+                foreach (string editorDirectory in EnumerateEditorFoldersRecursive(directory, depth + 1, maxDepth))
+                {
+                    yield return editorDirectory;
+                }
+            }
         }
 
         private static string ParseToolNameFromFrontmatter(string content)
