@@ -4,7 +4,16 @@
  * Tests pure functions that don't require Unity connection.
  */
 
-import { parseFrontmatter } from '../skills/skills-manager.js';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+
+import {
+  getManagedSkillsDir,
+  migrateLegacyManagedSkills,
+  parseFrontmatter,
+  removeDeprecatedSkillDirs,
+} from '../skills/skills-manager.js';
 
 describe('parseFrontmatter', () => {
   it('should parse basic frontmatter with string values', () => {
@@ -154,5 +163,86 @@ name: minimal-skill
     const result = parseFrontmatter(content);
 
     expect(result.name).toBe('minimal-skill');
+  });
+});
+
+describe('skill install layout', () => {
+  const temporaryRoots: string[] = [];
+
+  afterEach(() => {
+    while (temporaryRoots.length > 0) {
+      const temporaryRoot = temporaryRoots.pop();
+      if (temporaryRoot) {
+        rmSync(temporaryRoot, { recursive: true, force: true });
+      }
+    }
+  });
+
+  function createSkillsRoot(): string {
+    const temporaryRoot = mkdtempSync(join(tmpdir(), 'uloop-skills-manager-'));
+    temporaryRoots.push(temporaryRoot);
+
+    const skillsRoot = join(temporaryRoot, 'skills');
+    mkdirSync(skillsRoot, { recursive: true });
+    return skillsRoot;
+  }
+
+  function writeSkill(skillDir: string, content: string = '---\nname: test-skill\n---\n'): void {
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(join(skillDir, 'SKILL.md'), content, 'utf-8');
+  }
+
+  it('should resolve managed skills under the unity-cli-loop namespace', () => {
+    expect(getManagedSkillsDir('/tmp/example/skills')).toBe(
+      join('/tmp/example/skills', 'unity-cli-loop'),
+    );
+  });
+
+  it('should migrate only managed legacy skills into the unity-cli-loop namespace', () => {
+    const skillsRoot = createSkillsRoot();
+
+    writeSkill(join(skillsRoot, 'uloop-compile'));
+    writeSkill(join(skillsRoot, 'acme-third-party'));
+    writeSkill(join(skillsRoot, 'find-orphaned-meta'));
+
+    const moved = migrateLegacyManagedSkills(skillsRoot, ['uloop-compile', 'acme-third-party']);
+    const managedSkillsRoot = getManagedSkillsDir(skillsRoot);
+
+    expect(moved).toBe(2);
+    expect(existsSync(join(managedSkillsRoot, 'uloop-compile', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(managedSkillsRoot, 'acme-third-party', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(skillsRoot, 'uloop-compile'))).toBe(false);
+    expect(existsSync(join(skillsRoot, 'acme-third-party'))).toBe(false);
+    expect(existsSync(join(skillsRoot, 'find-orphaned-meta', 'SKILL.md'))).toBe(true);
+  });
+
+  it('should not overwrite an existing managed skill during migration', () => {
+    const skillsRoot = createSkillsRoot();
+    const managedSkillsRoot = getManagedSkillsDir(skillsRoot);
+
+    writeSkill(join(skillsRoot, 'uloop-compile'), 'legacy');
+    writeSkill(join(managedSkillsRoot, 'uloop-compile'), 'managed');
+
+    const moved = migrateLegacyManagedSkills(skillsRoot, ['uloop-compile']);
+
+    expect(moved).toBe(0);
+    expect(readFileSync(join(managedSkillsRoot, 'uloop-compile', 'SKILL.md'), 'utf-8')).toBe(
+      'managed',
+    );
+    expect(readFileSync(join(skillsRoot, 'uloop-compile', 'SKILL.md'), 'utf-8')).toBe('legacy');
+  });
+
+  it('should remove deprecated skills from both legacy and managed locations', () => {
+    const skillsRoot = createSkillsRoot();
+    const managedSkillsRoot = getManagedSkillsDir(skillsRoot);
+
+    writeSkill(join(skillsRoot, 'uloop-unity-search'));
+    writeSkill(join(managedSkillsRoot, 'uloop-unity-search'));
+
+    const removed = removeDeprecatedSkillDirs(skillsRoot);
+
+    expect(removed).toBe(2);
+    expect(existsSync(join(skillsRoot, 'uloop-unity-search'))).toBe(false);
+    expect(existsSync(join(managedSkillsRoot, 'uloop-unity-search'))).toBe(false);
   });
 });

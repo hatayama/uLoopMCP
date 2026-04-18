@@ -8,8 +8,6 @@ namespace io.github.hatayama.uLoopMCP
     [TestFixture]
     public class ToolSkillSynchronizerTests
     {
-        private const string SkillsDirName = "skills";
-
         private string _projectRoot;
         private string[] _nonExistentDirsBefore;
         private string[] _temporaryRoots;
@@ -35,7 +33,7 @@ namespace io.github.hatayama.uLoopMCP
                 if (Directory.Exists(fullPath))
                 {
                     // Only delete if it was created by this test (didn't exist before)
-                    string skillsPath = Path.Combine(fullPath, SkillsDirName);
+                    string skillsPath = Path.Combine(fullPath, SkillInstallLayout.SkillsDirName);
                     if (Directory.Exists(skillsPath))
                     {
                         Directory.Delete(skillsPath, true);
@@ -132,7 +130,7 @@ namespace io.github.hatayama.uLoopMCP
             string temporaryRoot = CreateTemporaryProjectRoot();
             foreach (string dir in ToolSkillSynchronizer.SkillTargetDirs)
             {
-                Directory.CreateDirectory(Path.Combine(temporaryRoot, dir, SkillsDirName));
+                Directory.CreateDirectory(Path.Combine(temporaryRoot, dir, SkillInstallLayout.SkillsDirName));
             }
 
             // Act
@@ -188,6 +186,112 @@ namespace io.github.hatayama.uLoopMCP
             }
         }
 
+        [Test]
+        public void DetectTargets_WhenManagedSkillsDirectoryContainsSkills_ReportsInstalled()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            foreach (string dir in ToolSkillSynchronizer.SkillTargetDirs)
+            {
+                string targetRoot = Path.Combine(temporaryRoot, dir);
+                WriteSkillFile(Path.Combine(
+                    targetRoot,
+                    SkillInstallLayout.SkillsDirName,
+                    SkillInstallLayout.ManagedSkillsDirName,
+                    "uloop-compile"));
+            }
+
+            ToolSkillSynchronizer.SkillTargetInfo[] detectedTargets = ToolSkillSynchronizer.DetectTargets(
+                    temporaryRoot,
+                    requireSkillsDirectory: true)
+                .ToArray();
+
+            Assert.AreEqual(ToolSkillSynchronizer.SkillTargetDirs.Length, detectedTargets.Length);
+            foreach (ToolSkillSynchronizer.SkillTargetInfo target in detectedTargets)
+            {
+                Assert.IsTrue(target.HasExistingSkills,
+                    $"Target '{target.DirName}' should detect managed skills under unity-cli-loop");
+            }
+        }
+
+        [Test]
+        public void DetectTargets_WhenLegacyThirdPartySkillsExist_ReportsInstalled()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            foreach (string dir in ToolSkillSynchronizer.SkillTargetDirs)
+            {
+                string targetRoot = Path.Combine(temporaryRoot, dir);
+                WriteSkillFile(
+                    Path.Combine(targetRoot, SkillInstallLayout.SkillsDirName, "acme-third-party"),
+                    "---\nname: acme-third-party\ntoolName: acme-third-party\n---\n");
+            }
+
+            ToolSkillSynchronizer.SkillTargetInfo[] detectedTargets = ToolSkillSynchronizer.DetectTargets(
+                    temporaryRoot,
+                    requireSkillsDirectory: true)
+                .ToArray();
+
+            Assert.AreEqual(ToolSkillSynchronizer.SkillTargetDirs.Length, detectedTargets.Length);
+            foreach (ToolSkillSynchronizer.SkillTargetInfo target in detectedTargets)
+            {
+                Assert.IsTrue(target.HasExistingSkills,
+                    $"Target '{target.DirName}' should treat legacy third-party skills as installed");
+            }
+        }
+
+        [Test]
+        public void DetectTargets_WhenOnlyManualLegacySkillsExist_DoesNotReportInstalled()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+            foreach (string dir in ToolSkillSynchronizer.SkillTargetDirs)
+            {
+                string targetRoot = Path.Combine(temporaryRoot, dir);
+                WriteSkillFile(
+                    Path.Combine(targetRoot, SkillInstallLayout.SkillsDirName, "find-orphaned-meta"),
+                    "---\nname: find-orphaned-meta\n---\n");
+            }
+
+            ToolSkillSynchronizer.SkillTargetInfo[] detectedTargets = ToolSkillSynchronizer.DetectTargets(
+                    temporaryRoot,
+                    requireSkillsDirectory: true)
+                .ToArray();
+
+            Assert.AreEqual(ToolSkillSynchronizer.SkillTargetDirs.Length, detectedTargets.Length);
+            foreach (ToolSkillSynchronizer.SkillTargetInfo target in detectedTargets)
+            {
+                Assert.IsFalse(target.HasExistingSkills,
+                    $"Target '{target.DirName}' should ignore local manual skills outside uLoop management");
+            }
+        }
+
+        [Test]
+        public void AreSkillsInstalled_ReturnsTrueForManagedLegacyAndNamespacedSkillsOnly()
+        {
+            string temporaryRoot = CreateTemporaryProjectRoot();
+
+            string manualTargetRoot = Path.Combine(temporaryRoot, ".claude");
+            WriteSkillFile(
+                Path.Combine(manualTargetRoot, SkillInstallLayout.SkillsDirName, "find-orphaned-meta"),
+                "---\nname: find-orphaned-meta\n---\n");
+            Assert.IsFalse(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".claude"),
+                "Manual local skills should not be treated as installed uLoop skills");
+
+            string legacyTargetRoot = Path.Combine(temporaryRoot, ".codex");
+            WriteSkillFile(
+                Path.Combine(legacyTargetRoot, SkillInstallLayout.SkillsDirName, "acme-third-party"),
+                "---\nname: acme-third-party\ntoolName: acme-third-party\n---\n");
+            Assert.IsTrue(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".codex"),
+                "Legacy third-party managed skills should be detected");
+
+            string managedTargetRoot = Path.Combine(temporaryRoot, ".agents");
+            WriteSkillFile(Path.Combine(
+                managedTargetRoot,
+                SkillInstallLayout.SkillsDirName,
+                SkillInstallLayout.ManagedSkillsDirName,
+                "uloop-compile"));
+            Assert.IsTrue(CliInstallationDetector.AreSkillsInstalled(temporaryRoot, ".agents"),
+                "Namespaced managed skills should be detected");
+        }
+
         private string CreateTemporaryProjectRoot()
         {
             string temporaryRoot = Path.Combine(
@@ -197,6 +301,12 @@ namespace io.github.hatayama.uLoopMCP
             Directory.CreateDirectory(temporaryRoot);
             _temporaryRoots = _temporaryRoots.Append(temporaryRoot).ToArray();
             return temporaryRoot;
+        }
+
+        private static void WriteSkillFile(string skillDir, string content = "---\nname: uloop-compile\n---\n")
+        {
+            Directory.CreateDirectory(skillDir);
+            File.WriteAllText(Path.Combine(skillDir, SkillInstallLayout.SkillFileName), content);
         }
     }
 }

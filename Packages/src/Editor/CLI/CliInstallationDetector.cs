@@ -55,24 +55,16 @@ namespace io.github.hatayama.uLoopMCP
             UnityEngine.Debug.Assert(!string.IsNullOrEmpty(targetDir), "targetDir must not be null or empty");
 
             string projectRoot = UnityMcpPathResolver.GetProjectRoot();
-            string skillsDir = Path.Combine(projectRoot, targetDir, "skills");
+            return AreSkillsInstalled(projectRoot, targetDir);
+        }
 
-            if (!Directory.Exists(skillsDir))
-            {
-                return false;
-            }
+        internal static bool AreSkillsInstalled(string projectRoot, string targetDir)
+        {
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(projectRoot), "projectRoot must not be null or empty");
+            UnityEngine.Debug.Assert(!string.IsNullOrEmpty(targetDir), "targetDir must not be null or empty");
 
-            string[] dirs = Directory.GetDirectories(skillsDir, CliConstants.SKILL_DIR_GLOB);
-            foreach (string dir in dirs)
-            {
-                string skillFile = Path.Combine(dir, "SKILL.md");
-                if (File.Exists(skillFile))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            string targetRoot = Path.Combine(projectRoot, targetDir);
+            return SkillInstallLayout.HasInstalledSkills(targetRoot);
         }
 
         public static async Task ForceRefreshCliVersionAsync(CancellationToken ct)

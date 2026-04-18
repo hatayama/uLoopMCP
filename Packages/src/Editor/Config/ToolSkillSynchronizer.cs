@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 using UnityEngine;
@@ -17,9 +16,6 @@ namespace io.github.hatayama.uLoopMCP
     /// </summary>
     public static class ToolSkillSynchronizer
     {
-        private const string SkillsDirName = "skills";
-        private const string SkillFileName = "SKILL.md";
-
         public readonly struct SkillTargetDefinition
         {
             public readonly string DirName;
@@ -92,16 +88,15 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (string targetDir in SkillTargetDirs)
             {
-                string skillsRoot = Path.Combine(projectRoot, targetDir, SkillsDirName);
-                if (!Directory.Exists(skillsRoot))
+                string targetRoot = Path.Combine(projectRoot, targetDir);
+                if (!Directory.Exists(targetRoot))
                 {
                     continue;
                 }
 
-                string[] skillDirs = Directory.GetDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB);
-                foreach (string skillDir in skillDirs)
+                foreach (string skillDir in SkillInstallLayout.EnumerateInstalledSkillDirectories(targetRoot))
                 {
-                    if (SkillMatchesTool(skillDir, toolName))
+                    if (SkillInstallLayout.SkillMatchesTool(skillDir, toolName))
                     {
                         Directory.Delete(skillDir, true);
                     }
@@ -117,16 +112,15 @@ namespace io.github.hatayama.uLoopMCP
 
             foreach (string targetDir in SkillTargetDirs)
             {
-                string skillsRoot = Path.Combine(projectRoot, targetDir, SkillsDirName);
-                if (!Directory.Exists(skillsRoot))
+                string targetRoot = Path.Combine(projectRoot, targetDir);
+                if (!Directory.Exists(targetRoot))
                 {
                     continue;
                 }
 
-                string[] skillDirs = Directory.GetDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB);
-                foreach (string skillDir in skillDirs)
+                foreach (string skillDir in SkillInstallLayout.EnumerateInstalledSkillDirectories(targetRoot))
                 {
-                    if (SkillMatchesTool(skillDir, toolName))
+                    if (SkillInstallLayout.SkillMatchesTool(skillDir, toolName))
                     {
                         return true;
                     }
@@ -163,16 +157,13 @@ namespace io.github.hatayama.uLoopMCP
                     continue;
                 }
 
-                string skillsRoot = Path.Combine(targetRoot, SkillsDirName);
-                bool hasSkillsDirectory = Directory.Exists(skillsRoot);
+                bool hasSkillsDirectory = SkillInstallLayout.HasOptedInSkillsDirectory(targetRoot);
                 if (requireSkillsDirectory && !hasSkillsDirectory)
                 {
                     continue;
                 }
 
-                bool hasULoopSkills = hasSkillsDirectory
-                    && Directory.EnumerateDirectories(skillsRoot, CliConstants.SKILL_DIR_GLOB)
-                        .Any(skillDir => File.Exists(Path.Combine(skillDir, SkillFileName)));
+                bool hasULoopSkills = hasSkillsDirectory && SkillInstallLayout.HasInstalledSkills(targetRoot);
                 targets.Add(new SkillTargetInfo(
                     target.DisplayName,
                     target.DirName,
@@ -213,41 +204,6 @@ namespace io.github.hatayama.uLoopMCP
             }
 
             return new SkillInstallResult(targets.Count, succeeded);
-        }
-
-        private static bool SkillMatchesTool(string skillDir, string toolName)
-        {
-            string skillMdPath = Path.Combine(skillDir, SkillFileName);
-            if (File.Exists(skillMdPath))
-            {
-                string content = File.ReadAllText(skillMdPath);
-                string parsed = ParseToolNameFromFrontmatter(content);
-                if (!string.IsNullOrEmpty(parsed))
-                {
-                    return parsed == toolName;
-                }
-            }
-            // Fallback: directory name "uloop-{toolName}"
-            string dirName = Path.GetFileName(skillDir);
-            return dirName == $"{CliConstants.SKILL_DIR_PREFIX}{toolName}";
-        }
-
-        private static string ParseToolNameFromFrontmatter(string content)
-        {
-            Match frontmatterMatch = Regex.Match(content, @"^---\r?\n([\s\S]*?)\r?\n---");
-            if (!frontmatterMatch.Success)
-            {
-                return null;
-            }
-
-            string frontmatter = frontmatterMatch.Groups[1].Value;
-            Match toolNameMatch = Regex.Match(frontmatter, @"^toolName:\s*(.+)$", RegexOptions.Multiline);
-            if (!toolNameMatch.Success)
-            {
-                return null;
-            }
-
-            return toolNameMatch.Groups[1].Value.Trim();
         }
 
         private static async Task<bool> RunSkillsInstall(string targetFlag, string uloopFileName, string nodePath)
