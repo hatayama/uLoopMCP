@@ -1,5 +1,7 @@
 namespace io.github.hatayama.uLoopMCP
 {
+    using System;
+
     public readonly struct SkillsTargetSelection
     {
         public readonly string DisplayName;
@@ -27,7 +29,7 @@ namespace io.github.hatayama.uLoopMCP
                 SkillsTarget.Gemini => new("Gemini CLI", ".gemini", "--gemini"),
                 SkillsTarget.Codex => new("Codex CLI", ".codex", "--codex"),
                 SkillsTarget.Agents => new("Other (.agents)", ".agents", "--agents"),
-                _ => new("Claude Code", ".claude", "--claude")
+                _ => throw new ArgumentOutOfRangeException(nameof(target), target, null)
             };
         }
 

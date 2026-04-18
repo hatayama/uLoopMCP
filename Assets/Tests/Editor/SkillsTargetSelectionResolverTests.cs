@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 
 namespace io.github.hatayama.uLoopMCP.Tests.Editor
@@ -51,6 +52,15 @@ namespace io.github.hatayama.uLoopMCP.Tests.Editor
             bool isInstalled = SkillsTargetSelectionResolver.IsInstalled(data, target);
 
             Assert.That(isInstalled, Is.EqualTo(expectedInstalled));
+        }
+
+        [Test]
+        public void Resolve_ThrowsForUnknownTarget()
+        {
+            SkillsTarget invalidTarget = (SkillsTarget)999;
+
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => SkillsTargetSelectionResolver.Resolve(invalidTarget));
         }
     }
 }
