@@ -93,6 +93,5 @@ uloop simulate-mouse-input --action SmoothDelta --delta-x 300 --delta-y 0 --dura
 
 - Unity must be in **PlayMode**
 - **Input System package** must be installed (`com.unity.inputsystem`)
-- This tool assumes Active Input Handling uses the New Input System (`Input System Package (New)` or `Both`)
 - Game code must read input via Input System API (e.g. `Mouse.current.leftButton.wasPressedThisFrame`)
 - If the target project cannot use the New Input System, prefer `execute-dynamic-code` for a project-specific workaround instead of changing project settings just to use this tool
