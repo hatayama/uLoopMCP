@@ -16,9 +16,12 @@ namespace io.github.hatayama.uLoopMCP
         private McpEditorWindowEventHandler _eventHandler;
 
         private SkillsTarget _skillsTarget = SkillsTarget.Claude;
+        private bool _installSkillsFlat;
         private bool _isInstallingCli;
         private bool _isInstallingSkills;
         private bool _isRefreshingVersion;
+        private SkillInstallState _selectedTargetInstallState = SkillInstallState.Missing;
+        private CancellationTokenSource _skillInstallStateRefreshCts;
 
         [MenuItem("Window/Unity CLI Loop/Settings", priority = 0)]
         public static void ShowWindow()
@@ -34,13 +37,14 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnDestroy()
         {
+            CancelSkillInstallStateRefresh();
             _view?.Dispose();
         }
 
         private void CreateGUI()
         {
             InitializeView();
-            RefreshAllSections();
+            RefreshAllSections(refreshSkillInstallState: true);
         }
 
         private void InitializeAll()
@@ -70,7 +74,14 @@ namespace io.github.hatayama.uLoopMCP
             _view.OnRefreshCliVersion += HandleRefreshCliVersion;
             _view.OnInstallCli += HandleInstallCli;
             _view.OnInstallSkills += HandleInstallSkills;
-            _view.OnSkillsTargetChanged += value => { _skillsTarget = value; RefreshCliSetupSection(); };
+            _view.OnRefreshSkillsState += HandleRefreshSkillsState;
+            _view.OnSkillsTargetChanged += value =>
+            {
+                _skillsTarget = value;
+                RefreshSelectedTargetInstallStateFast();
+                RefreshSelectedTargetInstallStateInBackground();
+            };
+            _view.OnGroupSkillsChanged += HandleGroupSkillsChanged;
             _view.OnConfigurationFoldoutChanged += UpdateShowConfiguration;
             _view.OnConnectedToolsFoldoutChanged += UpdateShowConnectedTools;
             _view.OnEditorTypeChanged += UpdateSelectedEditorType;
@@ -103,6 +114,7 @@ namespace io.github.hatayama.uLoopMCP
         private void LoadSavedSettings()
         {
             _model.LoadFromSettings();
+            _installSkillsFlat = McpEditorSettings.GetInstallSkillsFlat();
 
             bool gitRootDiffers = UnityMcpPathResolver.GitRootDiffersFromProjectRoot();
             _model.UpdateSupportsRepositoryRootToggle(gitRootDiffers);
@@ -152,6 +164,7 @@ namespace io.github.hatayama.uLoopMCP
 
         private void OnDisable()
         {
+            CancelSkillInstallStateRefresh();
             CleanupEventHandler();
             SaveSessionState();
             _view?.Dispose();
@@ -172,7 +185,7 @@ namespace io.github.hatayama.uLoopMCP
             RefreshAllSections();
         }
 
-        public void RefreshAllSections()
+        public void RefreshAllSections(bool refreshSkillInstallState = false)
         {
             if (_view == null)
             {
@@ -184,8 +197,17 @@ namespace io.github.hatayama.uLoopMCP
             _view.UpdateConfigurationFoldout(_model.UI.ShowConfiguration);
             _view.UpdateSectionVisibility(_model.UI.ConnectionMode);
 
-            RefreshCliSetupSection();
+            if (refreshSkillInstallState)
+            {
+                RefreshSelectedTargetInstallStateFast();
+            }
+
             RefreshCliVersionInBackground();
+            if (refreshSkillInstallState)
+            {
+                RefreshSelectedTargetInstallStateInBackground();
+            }
+            RefreshCliSetupSection();
 
             ConnectedToolsData toolsData = CreateConnectedToolsData();
             _view.UpdateConnectedTools(toolsData);
@@ -206,6 +228,7 @@ namespace io.github.hatayama.uLoopMCP
 
             await CliInstallationDetector.RefreshCliVersionAsync(CancellationToken.None);
             RefreshCliSetupSection();
+            RefreshSelectedTargetInstallStateInBackground();
         }
 
         private async void HandleRefreshCliVersion()
@@ -228,6 +251,7 @@ namespace io.github.hatayama.uLoopMCP
             {
                 _isRefreshingVersion = false;
                 RefreshCliSetupSection();
+                RefreshSelectedTargetInstallStateInBackground();
             }
         }
 
@@ -382,7 +406,7 @@ namespace io.github.hatayama.uLoopMCP
             }
             else
             {
-                await ToolSkillSynchronizer.InstallSkillFiles();
+                await ToolSkillSynchronizer.InstallSkillFiles(!_installSkillsFlat);
 
                 if (!ToolSkillSynchronizer.IsSkillInstalled(toolName))
                 {
@@ -538,12 +562,25 @@ namespace io.github.hatayama.uLoopMCP
                 needsUpdate = cliVer < pkgVer;
                 needsDowngrade = cliVer > pkgVer;
             }
-            bool isClaudeInstalled = CliInstallationDetector.AreSkillsInstalled(".claude");
-            bool isAgentsInstalled = CliInstallationDetector.AreSkillsInstalled(".agents");
-            bool isCursorInstalled = CliInstallationDetector.AreSkillsInstalled(".cursor");
-            bool isGeminiInstalled = CliInstallationDetector.AreSkillsInstalled(".gemini");
-            bool isCodexInstalled = CliInstallationDetector.AreSkillsInstalled(".codex");
-            bool isAntigravityInstalled = CliInstallationDetector.AreSkillsInstalled(".agent");
+            bool groupSkillsUnderUnityCliLoop = !_installSkillsFlat;
+            bool isClaudeInstalled = CliInstallationDetector.AreSkillsInstalled(
+                ".claude",
+                groupSkillsUnderUnityCliLoop);
+            bool isAgentsInstalled = CliInstallationDetector.AreSkillsInstalled(
+                ".agents",
+                groupSkillsUnderUnityCliLoop);
+            bool isCursorInstalled = CliInstallationDetector.AreSkillsInstalled(
+                ".cursor",
+                groupSkillsUnderUnityCliLoop);
+            bool isGeminiInstalled = CliInstallationDetector.AreSkillsInstalled(
+                ".gemini",
+                groupSkillsUnderUnityCliLoop);
+            bool isCodexInstalled = CliInstallationDetector.AreSkillsInstalled(
+                ".codex",
+                groupSkillsUnderUnityCliLoop);
+            bool isAntigravityInstalled = CliInstallationDetector.AreSkillsInstalled(
+                ".agent",
+                groupSkillsUnderUnityCliLoop);
 
             return new CliSetupData(
                 isCliInstalled,
@@ -559,8 +596,78 @@ namespace io.github.hatayama.uLoopMCP
                 isGeminiInstalled,
                 isCodexInstalled,
                 isAntigravityInstalled,
+                _selectedTargetInstallState,
                 _skillsTarget,
+                groupSkillsUnderUnityCliLoop,
                 _isInstallingSkills);
+        }
+
+        private void RefreshSelectedTargetInstallStateFast()
+        {
+            if (!CliInstallationDetector.IsCliInstalled())
+            {
+                _selectedTargetInstallState = SkillInstallState.Missing;
+                RefreshCliSetupSection();
+                return;
+            }
+
+            _selectedTargetInstallState = GetSelectedTargetInstallState(includeFreshnessCheck: false);
+            RefreshCliSetupSection();
+        }
+
+        private void RefreshSelectedTargetInstallStateInBackground()
+        {
+            CancelSkillInstallStateRefresh();
+            if (!CliInstallationDetector.IsCliInstalled() || _isRefreshingVersion || _isInstallingSkills)
+            {
+                return;
+            }
+
+            CancellationTokenSource cts = new();
+            _skillInstallStateRefreshCts = cts;
+            RefreshSelectedTargetInstallStateAsync(cts.Token);
+        }
+
+        private async void RefreshSelectedTargetInstallStateAsync(CancellationToken ct)
+        {
+            SkillInstallState installState = await Task.Run(
+                () => GetSelectedTargetInstallState(includeFreshnessCheck: true),
+                ct);
+            if (ct.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _selectedTargetInstallState = installState;
+            RefreshCliSetupSection();
+        }
+
+        private SkillInstallState GetSelectedTargetInstallState(bool includeFreshnessCheck)
+        {
+            SkillsTargetSelection selection = SkillsTargetSelectionResolver.Resolve(
+                _skillsTarget,
+                !_installSkillsFlat);
+            List<ToolSkillSynchronizer.SkillTargetInfo> targets = includeFreshnessCheck
+                ? ToolSkillSynchronizer.DetectTargetsForLayout(!_installSkillsFlat)
+                : ToolSkillSynchronizer.DetectTargetsForLayoutFast(!_installSkillsFlat);
+            ToolSkillSynchronizer.SkillTargetInfo targetInfo = targets
+                .FirstOrDefault(target => target.DirName == selection.DirectoryName);
+
+            return string.IsNullOrEmpty(targetInfo.DirName)
+                ? SkillInstallState.Missing
+                : targetInfo.InstallState;
+        }
+
+        private void CancelSkillInstallStateRefresh()
+        {
+            if (_skillInstallStateRefreshCts == null)
+            {
+                return;
+            }
+
+            _skillInstallStateRefreshCts.Cancel();
+            _skillInstallStateRefreshCts.Dispose();
+            _skillInstallStateRefreshCts = null;
         }
 
         private async void HandleInstallCli()
@@ -625,7 +732,7 @@ namespace io.github.hatayama.uLoopMCP
             finally
             {
                 _isInstallingCli = false;
-                RefreshAllSections();
+                RefreshAllSections(refreshSkillInstallState: true);
             }
         }
 
@@ -640,12 +747,15 @@ namespace io.github.hatayama.uLoopMCP
                 return;
             }
 
+            CancelSkillInstallStateRefresh();
             _isInstallingSkills = true;
             RefreshCliSetupSection();
 
             try
             {
-                SkillsTargetSelection selection = SkillsTargetSelectionResolver.Resolve(_skillsTarget);
+                SkillsTargetSelection selection = SkillsTargetSelectionResolver.Resolve(
+                    _skillsTarget,
+                    !_installSkillsFlat);
                 string arguments = selection.InstallArguments;
 
                 string uloopPath = NodeEnvironmentResolver.FindExecutablePath(CliConstants.EXECUTABLE_NAME);
@@ -710,8 +820,22 @@ namespace io.github.hatayama.uLoopMCP
             finally
             {
                 _isInstallingSkills = false;
-                RefreshAllSections();
+                RefreshAllSections(refreshSkillInstallState: true);
             }
+        }
+
+        private void HandleGroupSkillsChanged(bool groupSkillsUnderUnityCliLoop)
+        {
+            _installSkillsFlat = !groupSkillsUnderUnityCliLoop;
+            McpEditorSettings.SetInstallSkillsFlat(_installSkillsFlat);
+            RefreshSelectedTargetInstallStateFast();
+            RefreshSelectedTargetInstallStateInBackground();
+        }
+
+        private void HandleRefreshSkillsState()
+        {
+            RefreshSelectedTargetInstallStateFast();
+            RefreshSelectedTargetInstallStateInBackground();
         }
 
     }
