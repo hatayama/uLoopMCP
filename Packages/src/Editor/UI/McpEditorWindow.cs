@@ -814,8 +814,6 @@ namespace io.github.hatayama.uLoopMCP
                     process.Dispose();
                 });
 
-                CliInstallationDetector.InvalidateCache();
-
                 if (success)
                 {
                     EditorDialogHelper.ShowSkillsInstalledDialog();
@@ -828,7 +826,9 @@ namespace io.github.hatayama.uLoopMCP
             finally
             {
                 _isInstallingSkills = false;
-                RefreshAllSections(refreshSkillInstallState: true);
+                RefreshSelectedTargetInstallStateFast();
+                RefreshSelectedTargetInstallStateInBackground();
+                RefreshCliSetupSection();
             }
         }
 
