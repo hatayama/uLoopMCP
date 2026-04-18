@@ -219,15 +219,15 @@ namespace io.github.hatayama.uLoopMCP
             bool operationCompleted = false;
 
             // Act - This should complete immediately without hanging
-            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(1));
-            var switchTask = Task.Run(async () =>
+            Task timeoutTask = TimerDelay.Wait(1000);
+            Task switchTask = Task.Run(async () =>
             {
                 await MainThreadSwitcher.SwitchToMainThread();
                 operationCompleted = true;
             });
 
             // Wait for either completion or timeout
-            var completedTask = await Task.WhenAny(switchTask, timeoutTask);
+            Task completedTask = await Task.WhenAny(switchTask, timeoutTask);
 
             // Assert
             Assert.That(completedTask, Is.EqualTo(switchTask),

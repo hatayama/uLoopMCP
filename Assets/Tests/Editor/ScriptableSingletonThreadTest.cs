@@ -88,7 +88,7 @@ namespace io.github.hatayama.uLoopMCP
                 Debug.Log($"Background thread wrote: {testManager.GetAllValuesAsString()}");
             });
 
-            await Task.Delay(100);
+            await TimerDelay.Wait(100);
 
             Assert.IsNull(backgroundException, $"Background thread threw exception: {backgroundException?.Message}");
             Assert.IsTrue(backgroundWriteSuccess, "Background thread failed to write values");
