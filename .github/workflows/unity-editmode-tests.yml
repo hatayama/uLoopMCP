@@ -1,26 +1,18 @@
-name: Unity Compile Check
+name: Unity EditMode Tests
 
 on:
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'Packages/src/Editor/**/*.cs'
-      - 'Packages/src/Runtime/**/*.cs'
-      - 'Assets/**/*.cs'
-      - 'tests/**/*.cs'
-      - 'tests/**/*.csproj'
-      - '.github/workflows/unity-compile-check-and-test-runner.yml'
   workflow_dispatch:
+  schedule:
+    - cron: '0 18 * * *'
 
 permissions:
   checks: write
   contents: read
 
 jobs:
-  compile-check:
-    name: Compile Check (Linux)
+  editmode-tests:
+    name: EditMode Tests (Linux)
     runs-on: ubuntu-latest
-    # Dependabot PRs cannot access repository secrets (UNITY_LICENSE etc.)
     env:
       HAS_UNITY_LICENSE: ${{ secrets.UNITY_LICENSE != '' }}
     steps:
@@ -80,10 +72,7 @@ jobs:
           if [ -f "$LOG_FILE" ]; then
             echo "Analyzing log file: $LOG_FILE"
 
-            # Count errors (CS errors from compiler)
             ERROR_COUNT=$(grep -c "error CS[0-9]*:" "$LOG_FILE" 2>/dev/null || echo "0")
-
-            # Count warnings (CS warnings from compiler, excluding specific noise)
             WARNING_COUNT=$(grep -c "warning CS[0-9]*:" "$LOG_FILE" 2>/dev/null || echo "0")
 
             echo ""
@@ -111,9 +100,29 @@ jobs:
             echo "✅ No compile errors or warnings found!"
           else
             echo "::warning::Could not find Unity log file for analysis"
-            # Fall back to checking if build step failed
             if [ "${{ steps.compile.outcome }}" == "failure" ]; then
               echo "::error::Unity compilation failed"
               exit 1
             fi
           fi
+
+      - name: Run EditMode tests
+        if: env.HAS_UNITY_LICENSE == 'true'
+        uses: game-ci/unity-test-runner@v4
+        timeout-minutes: 30
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: 2022.3.62f1
+          testMode: EditMode
+          checkName: Unity Test Results
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v7
+        if: always() && env.HAS_UNITY_LICENSE == 'true'
+        with:
+          name: Unity test results
+          path: artifacts
